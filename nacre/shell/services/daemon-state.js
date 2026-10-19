@@ -30,7 +30,12 @@ function copy(value) {
         return value;
     const result = {};
     for (const key of Object.keys(value))
-        Object.defineProperty(result, key, {value: copy(value[key]), enumerable: true, writable: true, configurable: true});
+        Object.defineProperty(result, key, {
+            value: copy(value[key]),
+            enumerable: true,
+            writable: true,
+            configurable: true
+        });
     return result;
 }
 function equal(left, right) {
