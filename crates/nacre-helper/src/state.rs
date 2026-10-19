@@ -1221,7 +1221,10 @@ mod tests {
             fs::read(paths.config.join("launcher.json.pre-v0-to-v1.bak"))?,
             original
         );
-        assert_eq!(fs::metadata(paths.config.join("launcher.json.pre-v0-to-v1.bak"))?.nlink(), 1);
+        assert_eq!(
+            fs::metadata(paths.config.join("launcher.json.pre-v0-to-v1.bak"))?.nlink(),
+            1
+        );
         assert!(fs::read_dir(&paths.config)?.all(|entry| {
             !entry
                 .unwrap()
@@ -1249,10 +1252,7 @@ mod tests {
         let schema = by_id("battery-alerts")?;
         let value = json!({"version": 1, "severity": 2});
         write_checked_pinned(&lease, &path, schema, &value, None)?;
-        assert_eq!(
-            fs::read(&path)?,
-            json::encode(&value)?.as_bytes()
-        );
+        assert_eq!(fs::read(&path)?, json::encode(&value)?.as_bytes());
         assert!(fs::read_dir(&paths.state)?.all(|entry| {
             !entry
                 .unwrap()
