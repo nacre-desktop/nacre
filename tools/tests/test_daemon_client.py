@@ -124,6 +124,7 @@ class DaemonClientTests(unittest.TestCase):
         settings=False,
         publisher=False,
         launcher=False,
+        render_state=False,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -168,6 +169,15 @@ QtObject {
 }''')
             if menu:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreMenuQuery.qml", services)
+            if render_state:
+                settings = True
+                for folder in ("widgets", "config", "frame"):
+                    (root / folder).mkdir()
+                for name in ("NacreTokens.qml", "size-scale.json"):
+                    shutil.copy2(ROOT / "nacre/shell/widgets" / name, root / "widgets" / name)
+                shutil.copy2(ROOT / "nacre/shell/config/NacreFrame.qml", root / "config")
+                shutil.copy2(ROOT / "nacre/shell/modules/drawers/NacreFrameRim.qml", root / "frame")
+                shutil.copy2(ROOT / "nacre/shell-tools/tests/qml/fixtures/NacreColours.qml", services)
             if settings:
                 for name in ("DesktopSettings.qml", "NacreSettingsStorage.qml"):
                     shutil.copy2(ROOT / "nacre/shell/services" / name, services)
@@ -237,6 +247,10 @@ ShellRoot {
             if publisher:
                 source = source.replace(
                     "import qs.services", "import qs.services\nimport qs.utils"
+                )
+            if render_state:
+                source = source.replace(
+                    "import qs.services", "import qs.services\nimport qs.config\nimport qs.widgets"
                 )
             if compositor:
                 source = source.replace(
@@ -1425,6 +1439,23 @@ ShellRoot {
             desktop.accept('{"data":{"dnd":true,"unknown":{"kept":true}},"pending":false}');
             check(desktop.data.dnd&&desktop.data.unknown.kept,"legacy text response preserves complete data");
         ''', settings=True)
+
+    def test_sparse_file_and_normalized_snapshot_have_identical_frame_and_token_state(self):
+        defaults = json.loads((ROOT / "nacre/shell-tools/desktop-defaults.json").read_text())
+        self.qml(r'''
+            const desktop=DesktopSettings;
+            const rimComponent=Qt.createComponent("frame/NacreFrameRim.qml");
+            check(rimComponent.status===Component.Ready,rimComponent.errorString());
+            const rim=rimComponent.createObject(root,{contour:"M0,0 L100,0 L100,100 Z"});
+            function observed() {
+                return JSON.stringify({frame:[NacreFrame.thickness,NacreFrame.headerHeight,NacreFrame.left,NacreFrame.right,NacreFrame.bottom,NacreFrame.rounding,String(NacreFrame.colour)],text:[NacreTokens.textFamily,NacreTokens.monoFamily,NacreTokens.textSize,NacreTokens.textPointSize],motion:NacreTokens.motionEnabled,gradients:NacreTokens.gradientsEnabled,colours:[String(NacreTokens.body),String(NacreTokens.raised),String(NacreTokens.ink),String(NacreTokens.accent)],rim:[rim.enabled,rim.opacity]});
+            }
+            desktop.persistedData={language:"en"};
+            const sparse=observed();
+            desktop.acceptData({data:Object.assign({},DEFAULTS,{language:"en"}),monitors:[],pending:false});
+            check(observed()===sparse,"normalized native snapshot preserves sparse-file frame geometry, text, colours, rim opacity and effects");
+            check(NacreFrame.headerHeight===50&&NacreFrame.rounding===25&&NacreTokens.textPointSize===12,"seeded defaults resolve to expected visible geometry");
+        '''.replace("DEFAULTS", json.dumps(defaults)), render_state=True)
 
     def test_publisher_projects_snapshot_and_reply_once_and_ignores_older_read(self):
         self.qml(r'''
