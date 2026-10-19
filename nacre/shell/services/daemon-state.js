@@ -1,3 +1,5 @@
+.pragma library
+
 // RFC 7396 with structural sharing. Only changed branches acquire new identities.
 function object(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);

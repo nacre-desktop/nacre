@@ -363,6 +363,18 @@ ShellRoot {
             check(!value.data.windows.w1 && original.windows.w1.id === "w1", "delete without mutation");
         """)
 
+    def test_independent_consumers_share_stateless_script_without_sharing_projections(self):
+        self.qml(r'''
+            const source='import QtQuick; import "services/daemon-state.js" as State; QtObject {readonly property var copier:State.copy;readonly property var merger:State.merge}';
+            const first=Qt.createQmlObject(source,root,"first-consumer");
+            const second=Qt.createQmlObject(source,root,"second-consumer");
+            check(first.copier===second.copier&&first.merger===second.merger,"independent consumers retain one shared function context");
+            const committed={unknown:{values:[1,2]}};
+            const one=first.copier(committed),two=second.copier(committed);
+            one.unknown.values.push(3);
+            check(committed.unknown.values.length===2&&two.unknown.values.length===2,"sharing code never shares mutable projections");
+        ''')
+
     def test_last_subscriber_releases_cache_but_active_disconnect_keeps_state(self):
         self.qml("""
             const value = link.subscribe("fixture");
