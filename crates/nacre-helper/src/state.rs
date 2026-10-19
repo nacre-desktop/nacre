@@ -354,7 +354,7 @@ pub fn write_checked_pinned(
 ) -> Result<()> {
     use nix::{
         fcntl::{openat, renameat, Flock, FlockArg, OFlag},
-        sys::stat::{fstat, fstatat, AtFlags, Mode, SFlag},
+        sys::stat::{fstatat, AtFlags, Mode, SFlag},
         unistd::{linkat, unlinkat, LinkatFlags, UnlinkatFlags},
     };
     use std::{fs::File, io::Write, os::unix::fs::MetadataExt};
@@ -365,6 +365,9 @@ pub fn write_checked_pinned(
         .to_string_lossy();
     if name.is_empty() || name.contains('/') || name == "." || name == ".." {
         return Err("Invalid settings path".into());
+    }
+    if !lease.contains_path(path) {
+        return Err("Settings path does not belong to the leased config directory".into());
     }
     let root = lease.config_dir_fd();
     lease.ensure_valid()?;

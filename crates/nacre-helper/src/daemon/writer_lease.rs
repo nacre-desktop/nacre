@@ -14,6 +14,7 @@ use std::{
 const BUSY: &str = "Nacre destination busy or unsafe";
 
 pub struct WriterLease {
+    config_path: std::path::PathBuf,
     dirs: Vec<File>,
     names: Vec<String>,
     lock: Flock<File>,
@@ -159,7 +160,12 @@ impl WriterLease {
             return Err(BUSY.into());
         }
         let lock = Flock::lock(lock_file, FlockArg::LockExclusiveNonblock).map_err(|_| BUSY)?;
-        let lease = Self { dirs, names, lock };
+        let lease = Self {
+            config_path: config_dir.to_path_buf(),
+            dirs,
+            names,
+            lock,
+        };
         lease.ensure_valid()?;
         Ok(lease)
     }
@@ -184,6 +190,10 @@ impl WriterLease {
 
     pub fn config_dir_fd(&self) -> &File {
         self.dirs.last().expect("lease always pins config root")
+    }
+
+    pub fn contains_path(&self, path: &Path) -> bool {
+        path.parent() == Some(self.config_path.as_path())
     }
 }
 

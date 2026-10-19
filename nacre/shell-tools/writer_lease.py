@@ -105,11 +105,6 @@ class PinnedDirectory:
     def stat(self, name: str):
         if not name or "/" in name or name in (".", ".."):
             _fail()
-
-    def identity(self) -> tuple[int, int]:
-        self.ensure_valid()
-        meta = os.fstat(self._dirs[-1])
-        return meta.st_dev, meta.st_ino
         self.ensure_valid()
         try:
             return os.stat(name, dir_fd=self._dirs[-1], follow_symlinks=False)
@@ -117,6 +112,11 @@ class PinnedDirectory:
             return None
         except OSError:
             _fail()
+
+    def identity(self) -> tuple[int, int]:
+        self.ensure_valid()
+        meta = os.fstat(self._dirs[-1])
+        return meta.st_dev, meta.st_ino
 
     def read(self, name: str, limit: int | None = None) -> bytes | None:
         before = self.stat(name)
