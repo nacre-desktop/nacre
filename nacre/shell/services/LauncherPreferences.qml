@@ -19,19 +19,24 @@ Singleton {
     Connections {
         target: root.daemonStore
         function onDataChanged() {
-            const snapshot = root.daemonStore.data;
-            if (snapshot.store !== "launcher")
-                return;
-            if (snapshot.error)
-                root.error = snapshot.error.message;
-            else {
-                root.acceptData(snapshot.data);
-                root.ready = true;
-            }
+            root.acceptSnapshot(root.daemonStore.data);
         }
     }
-    Component.onCompleted: if (NacreDaemon.enabled)
-        NacreDaemon.subscribe("settings.store.launcher")
+    function acceptSnapshot(snapshot) {
+        if (snapshot?.store !== "launcher")
+            return;
+        if (snapshot.error)
+            error = snapshot.error.message;
+        else {
+            acceptData(snapshot.data);
+            ready = !error;
+        }
+    }
+    Component.onCompleted: if (NacreDaemon.enabled) {
+        NacreDaemon.subscribe("settings.store.launcher");
+        if (daemonStore.fresh)
+            acceptSnapshot(daemonStore.data);
+    }
     Component.onDestruction: if (NacreDaemon.enabled)
         NacreDaemon.unsubscribe("settings.store.launcher")
 

@@ -113,6 +113,7 @@ FileView {
                 stateReceived(JSON.stringify(snapshot.data), missing);
             }
         } else {
+            projectedRevision = undefined;
             stateUnavailable(stateError);
             if (pendingAck && pendingAck.acceptedRevision !== undefined)
                 failPending(stateError);

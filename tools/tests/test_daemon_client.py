@@ -123,6 +123,7 @@ class DaemonClientTests(unittest.TestCase):
         menu=False,
         settings=False,
         publisher=False,
+        launcher=False,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -140,6 +141,31 @@ class DaemonClientTests(unittest.TestCase):
                     shutil.copy2(ROOT / "nacre/shell/services" / name, services / name)
             if network:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreNetwork.qml", services)
+            if launcher:
+                source = (ROOT / "nacre/shell/services/LauncherPreferences.qml").read_text()
+                (services / "LauncherPreferences.qml").write_text(source.replace("NacreDaemon", "FixtureClient"))
+                (services / "FixtureClient.qml").write_text('''pragma Singleton
+import QtQuick
+QtObject {
+ property bool enabled:true
+ property int loads:0
+ property int subscribers:0
+ property QtObject stream: QtObject {property var data:({});property bool fresh:false}
+ function topic(name){return stream}
+ function subscribe(name){subscribers++}
+ function unsubscribe(name){subscribers--}
+}''')
+                (services / "NacreHelperTask.qml").write_text('''import QtQuick
+QtObject {
+ property var command:[]
+ property bool running:false
+ property bool stdinEnabled:false
+ signal output(string line)
+ signal started()
+ signal exited()
+ function write(value){}
+ Component.onCompleted: if(running) FixtureClient.loads++
+}''')
             if menu:
                 shutil.copy2(ROOT / "nacre/shell/services/NacreMenuQuery.qml", services)
             if settings:
@@ -1343,6 +1369,65 @@ ShellRoot {
         self.assertFalse(result["busy"])
         self.assertEqual(result["path"], "")
         self.assertEqual(result["error"], "")
+
+    def test_launcher_snapshot_initial_late_reconnect_and_boot_preserve_seeded_favorites(self):
+        self.qml(r'''
+            const client=FixtureClient;
+            const favorites=Array.from({length:12},(_,i)=>"performance-demo-"+String(i).padStart(2,"0"));
+            const snapshot={store:"launcher",rev:0,exists:true,dirty:false,data:{favorites:favorites,usage:{one:{count:2,last:10}}}};
+            // A late consumer must project the already committed snapshot.
+            client.stream.data=snapshot;client.stream.fresh=true;
+            const preferences=LauncherPreferences;
+            check(preferences.ready&&preferences.favorites.length===12,"late subscription retains all favorites");
+            check(client.loads===0&&client.subscribers===1,"native initialization has one source and no legacy read");
+            preferences.favorites.push("local-only");preferences.usage.one.count=99;
+            check(snapshot.data.favorites.length===12&&snapshot.data.usage.one.count===2,"mutable projection cannot alter committed topic");
+            for(const rev of [1,0]) {
+                client.stream.fresh=false;
+                client.stream.data={store:"launcher",rev:rev,exists:true,dirty:false,data:{favorites:favorites}};
+                client.stream.fresh=true;
+                check(preferences.favorites.length===12&&preferences.ready,"reconnect/new boot retains equivalent seeded count");
+            }
+            client.stream.data={store:"launcher",rev:1,exists:true,dirty:false,data:{favorites:favorites.slice(0,11)}};
+            check(preferences.favorites.length===11,"live update remains reactive");
+        ''', launcher=True)
+
+    def test_publisher_projects_snapshot_and_reply_once_and_ignores_older_read(self):
+        self.qml(r'''
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null}',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property var calls:[];signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls.push({method:method,callback:callback});return calls.length;}}',root);
+            client.topicObject=topic;
+            const component=Qt.createComponent("utils/NacreStateFile.qml");
+            check(component.status===Component.Ready,component.errorString());
+            const store=component.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let projections=0,last=null;store.stateReceived.connect(value=>{projections++;last=JSON.parse(value)});
+            const initial={store:"control-center",rev:0,exists:true,dirty:false,data:{version:2,tiles:["vpn"],unknown:{keep:true}}};
+            topic.data=initial;client.calls[0].callback(initial,null);
+            check(projections===1&&last.unknown.keep,"snapshot plus get reply projects once with unknown fields");
+            topic.data={store:"control-center",rev:1,exists:true,dirty:false,data:{version:2,tiles:["battery"]}};
+            store.accept(initial);
+            check(projections===2&&last.tiles[0]==="battery"&&store.revision===1,"late old reply cannot revert committed projection");
+        ''', publisher=True)
+
+    def test_publisher_shared_subscription_avoids_get_and_recovers_late_reconnect_new_boot(self):
+        self.qml(r'''
+            const topic=Qt.createQmlObject('import QtQuick; QtObject {property var data:null;property bool fresh:false}',root);
+            const client=Qt.createQmlObject('import QtQuick; QtObject {property bool enabled:true;property bool connected:true;property string boot:"b1";property var topicObject:null;property int calls:0;signal newBoot(string id);function topic(name){return topicObject;}function subscribe(name){}function unsubscribe(name){}function call(method,params,callback){calls++;return calls;}}',root);
+            client.topicObject=topic;
+            const component=Qt.createComponent("utils/NacreStateFile.qml");
+            check(component.status===Component.Ready,component.errorString());
+            const store=component.createObject(root,{daemonClient:client,storeId:"control-center"});
+            let projections=0,last=null;store.stateReceived.connect(value=>{projections++;last=JSON.parse(value)});
+            check(client.calls===0,"subscription owns initial read");
+            topic.data={store:"control-center",rev:4,exists:true,dirty:false,data:{tiles:["vpn"]}};topic.fresh=true;
+            store.refresh();check(projections===1&&client.calls===0,"late snapshot projects once");
+            topic.fresh=false;client.connected=false;client.connected=true;
+            topic.data={store:"control-center",rev:5,exists:true,dirty:false,data:{tiles:["battery"]}};topic.fresh=true;
+            check(projections===2&&last.tiles[0]==="battery"&&client.calls===0,"reconnect waits for committed snapshot");
+            topic.fresh=false;client.boot="b2";client.newBoot("b2");
+            topic.data={store:"control-center",rev:0,exists:true,dirty:false,data:{tiles:["volume"]}};topic.fresh=true;
+            check(projections===3&&last.tiles[0]==="volume"&&store.revision===0&&client.calls===0,"new boot replaces old revision namespace");
+        ''', publisher=True)
 
     def test_publisher_rejects_same_field_superseded_after_ack(self):
         result = self.qml(
