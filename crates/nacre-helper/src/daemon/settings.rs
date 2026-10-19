@@ -85,6 +85,7 @@ impl Service {
         writer_lease: Option<Arc<WriterLease>>,
     ) -> Result<Rc<Self>> {
         let service_paths = paths.clone();
+        let read_lease = writer_lease.clone();
         let stores = tokio::task::spawn_blocking(move || -> Result<BTreeMap<String, Store>> {
             let mut stores = BTreeMap::new();
             for schema in state::schemas()
@@ -96,7 +97,11 @@ impl Service {
                 } else {
                     state::settings_path_in(&paths, &schema.id)?
                 };
-                let read = state::read_document(&path, schema);
+                let read = if let Some(lease) = read_lease.as_ref() {
+                    state::read_document_pinned(lease, &path, schema)
+                } else {
+                    state::read_document(&path, schema)
+                };
                 let (data, fingerprint, error) = match read {
                     Ok((data, fingerprint)) if validation::document(&schema.id, &data) => {
                         (data, fingerprint, None)
@@ -623,8 +628,15 @@ impl Service {
         for store in stores.values_mut() {
             let path = store.path.clone();
             let schema = store.schema;
-            let read =
-                tokio::task::spawn_blocking(move || state::read_document(&path, schema)).await?;
+            let lease = self.writer_lease.clone();
+            let read = tokio::task::spawn_blocking(move || {
+                if let Some(lease) = lease.as_ref() {
+                    state::read_document_pinned(lease, &path, schema)
+                } else {
+                    state::read_document(&path, schema)
+                }
+            })
+            .await?;
             match read {
                 Ok((data, fingerprint)) if validation::document(&schema.id, &data) => {
                     if fingerprint == store.fingerprint && store.snapshot.error.is_none() {
@@ -987,6 +999,21 @@ mod tests {
             .unwrap();
         (home, paths, hub, service)
     }
+    fn replace_config_root_with_foreign_link(home: &std::path::Path, paths: &Paths) {
+        let foreign = home.join("foreign-config");
+        std::fs::create_dir(&foreign).unwrap();
+        let mut foreign_paths = paths.clone();
+        foreign_paths.config = foreign.clone();
+        let schema = state::schemas()
+            .iter()
+            .find(|schema| schema.id == "colors")
+            .unwrap();
+        let foreign_file = state::settings_path_in(&foreign_paths, "colors").unwrap();
+        state::write_checked(&foreign_file, schema, &schema.defaults, None).unwrap();
+
+        std::fs::rename(&paths.config, home.join("pinned-config")).unwrap();
+        std::os::unix::fs::symlink(foreign, &paths.config).unwrap();
+    }
     fn change(rev: u64, value: bool) -> SettingsSet {
         SettingsSet {
             store: "power".into(),
@@ -994,6 +1021,45 @@ mod tests {
             value: json!(value),
             rev,
         }
+    }
+    #[tokio::test(flavor = "current_thread")]
+    async fn startup_read_rejects_replaced_config_ancestry() {
+        let home = tempfile::tempdir().unwrap();
+        let paths = Paths::new(home.path());
+        std::fs::create_dir_all(&paths.config).unwrap();
+        std::fs::create_dir_all(&paths.state).unwrap();
+        let lease = Arc::new(WriterLease::acquire_for_paths(&paths.config, &paths.state).unwrap());
+        replace_config_root_with_foreign_link(home.path(), &paths);
+        let hub = super::super::hub::Hub::new(
+            "settings-startup-path-test".into(),
+            false,
+            Duration::from_millis(16),
+        )
+        .shared();
+
+        let service = Service::load(hub, paths.clone(), Some(lease)).await.unwrap();
+        let snapshot = service
+            .get(SettingsGet {
+                store: "colors".into(),
+            })
+            .await
+            .unwrap();
+        assert!(snapshot["error"].is_object());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn refresh_read_rejects_replaced_config_ancestry() {
+        let (home, paths, _hub, service) = fixture().await;
+        replace_config_root_with_foreign_link(home.path(), &paths);
+
+        service.refresh().await.unwrap();
+        let snapshot = service
+            .get(SettingsGet {
+                store: "colors".into(),
+            })
+            .await
+            .unwrap();
+        assert!(snapshot["error"].is_object());
     }
     #[tokio::test(flavor = "current_thread")]
     async fn providers_share_revision_preserve_unknown_fields_and_never_gain_other_stores() {
