@@ -1581,7 +1581,11 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
     let mut client = UnixStream::connect(&endpoint)?;
     client.set_read_timeout(Some(Duration::from_secs(5)))?;
     let mut response = [0];
-    assert_eq!(client.read(&mut response)?, 0, "busy daemon published a service");
+    assert_eq!(
+        client.read(&mut response)?,
+        0,
+        "busy daemon published a service"
+    );
     assert!(
         fs::read_to_string(&activation_log)?.contains("Nacre destination busy or unsafe"),
         "activated daemon failed for an unrelated reason"
