@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: built-in Luna capture worker; lead reviews/integrates
-- Status: In progress — reviewed required-profile readiness
+- Status: Blocked — owner-directed N0007 QML correction
 - Depends on: accepted N0001/N0004 source review; reviewed prospective harness
 - Date: 2026-10-18
 - Size: one focused capture session, through the granted cutoff
@@ -49,7 +49,8 @@ publication/install, live config/unit/keybinding/session changes.
 
 ## Current geometry-corrected harness and exclusive grant
 
-Sole heavy slot: **Oct18 22:50 through Oct19 03:15 UTC**. All other workers IDLE;
+**Heavy window ended; no active capture grant.** The former Oct18 22:50–Oct19
+03:15 window is closed by owner morning guidance. All other workers IDLE;
 B0011 exact source af61d18/CI39147491406 is green and heavy ownership released.
 No other full suite, hosted heavy CI, release build or nested session overlaps.
 

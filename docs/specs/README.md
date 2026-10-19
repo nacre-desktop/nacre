@@ -1,11 +1,12 @@
 # Nacre implementation queue
 
-Current handoff: 2026-10-18 22:50 UTC; supersedes older thread grants.
+Current handoff: owner guidance, morning 2026-10-19; supersedes older thread grants.
 [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | In progress: v14 readiness | Reviewed geometry correction; built-in Luna alone owns 22:50–03:15 UTC for both backend smokes, then a NEW eight-arm batch only if both pass. |
+| 1 | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Ready: one Sol worker | Correct-size Niri +7.343/+10.530MiB; investigate subscriptions/double conversion and data parity; source fix now, no capture/tool changes. |
+| 2 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: product correction | Both v14 geometry checks passed; only Niri A/B valid. H baseline failed whole-wrapper swap-in; no eight-run PASS. |
 | 2 | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Corrected plan retained; F4/package readiness, exclusive installer handoff and managed persistent opt-in/rollback missing. No live action. |
 | 3 | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Source accepted; Done after correct N2 and published-head CI. |
 | 4 | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
@@ -28,13 +29,14 @@ SourceCI39136680743SUCCESS. No rebuild withoutcause.
 
 ## Ownership and next units
 
-Built-in Luna holds the sole heavy slot **Oct18 22:50–Oct19 03:15 UTC**.
-Prospective v14 geometry-only source is independently ACCEPT by Sol and Terra:
-40 manifest/29 plan pins and 69 tests pass. It requires independent actual
-parent/nested IPC and QML geometry proof before readiness/warmup and rechecks
-raw geometry/phase QML dimensions in the validator. First, one <=120s smoke per
-backend (<=240s combined); if BOTH pass with cleanup, run eight NEW arms.
-The prior eight are diagnostics, never reused. No other heavy CI/build/session.
+The heavy window has ended. No capture or heavy job is active. V14 proved both
+screen profiles; Niri baseline/candidate passed, H baseline failed swap-in
+2,592,768B and later five cells did not run. Archive3aae67b5...d84cd retained.
+Niri fresh/closed/after deltas+7.343/+10.530/−3.520MiB at correct geometry.
+Owner directs one Sol QML fix; no more captures now and no v15 tool. Then one
+quick pair per compositor, then full eight-arm confirmation once. If measurement
+tool execution prevents that, use standard five pairs per compositor instead,
+with a separately granted window. Bead restarts independent LIGHT preparation.
 
 Owner allows overnight. Capture cap is 12 GiB; host >=4 GiB start/abort <2 GiB,
 held-child containment and independent guardian, strict whole-wrapper swap-in
