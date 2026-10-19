@@ -3,6 +3,7 @@ import QtQuick
 import qs.utils
 import Quickshell
 import Quickshell.Io
+import "daemon-state.js" as State
 
 Singleton {
     id: root
@@ -24,7 +25,7 @@ Singleton {
             if (snapshot.error)
                 root.error = snapshot.error.message;
             else {
-                root.accept(JSON.stringify(snapshot.data));
+                root.acceptData(snapshot.data);
                 root.ready = true;
             }
         }
@@ -53,7 +54,14 @@ Singleton {
 
     function accept(line) {
         try {
-            const data = JSON.parse(line);
+            acceptData(JSON.parse(line));
+        } catch (e) {
+            error = NacreI18n.tr("ui.launcher-preferences.error.could-not-read-launcher-preferences", "Could not read launcher preferences");
+        }
+    }
+
+    function acceptData(data) {
+        try {
             if (data.error) {
                 error = data.error;
                 return;
@@ -62,17 +70,17 @@ Singleton {
                 error = NacreI18n.tr("ui.launcher-preferences.error.invalid-launcher-preferences-original-file-preserved", "Invalid launcher preferences; original file preserved");
                 return;
             }
-            if (JSON.stringify(favorites) !== JSON.stringify(data.favorites ?? []))
-                favorites = data.favorites ?? [];
+            if (!State.equal(favorites, data.favorites ?? []))
+                favorites = State.copy(data.favorites ?? []);
 
-            if (JSON.stringify(hidden) !== JSON.stringify(data.hidden ?? []))
-                hidden = data.hidden ?? [];
+            if (!State.equal(hidden, data.hidden ?? []))
+                hidden = State.copy(data.hidden ?? []);
 
-            if (JSON.stringify(recent) !== JSON.stringify(data.recent ?? []))
-                recent = data.recent ?? [];
+            if (!State.equal(recent, data.recent ?? []))
+                recent = State.copy(data.recent ?? []);
 
-            if (JSON.stringify(usage) !== JSON.stringify(data.usage || {}))
-                usage = data.usage || {};
+            if (!State.equal(usage, data.usage || {}))
+                usage = State.copy(data.usage || {});
 
             error = "";
         } catch (e) {
@@ -83,7 +91,7 @@ Singleton {
     NacreHelperTask {
         id: reader
 
-        running: true
+        running: !NacreDaemon.enabled
         command: [NacrePaths.helperBinary, "launcher-preferences", "load"]
         onExited: {
             root.ready = true;

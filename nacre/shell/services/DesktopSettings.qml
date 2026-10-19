@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import qs.utils
+import "daemon-state.js" as State
 
 Singleton {
     id: root
@@ -96,7 +97,7 @@ Singleton {
                         message = error;
                     } else {
                         remoteRevision = result.rev;
-                        accept(JSON.stringify(result));
+                        acceptData(result);
                     }
                     daemonBusy = false;
                     finish(failure ? 1 : 0);
@@ -119,11 +120,20 @@ Singleton {
     }
     function accept(text) {
         try {
-            const result = JSON.parse(text);
+            acceptData(JSON.parse(text));
+        } catch (e) {
+            error = NacreI18n.tr("ui.desktop-settings.message.could-not-read-desktop-settings", "Could not read desktop settings");
+            message = error;
+        }
+    }
+    function acceptData(result) {
+        try {
             if (!result.data || typeof result.data !== "object")
                 throw new Error("Invalid settings response");
-            persistedData = result.data;
-            monitors = result.monitors ?? monitors;
+            if (!State.equal(persistedData, result.data))
+                persistedData = State.copy(result.data);
+            if (result.monitors && !State.equal(monitors, result.monitors))
+                monitors = State.copy(result.monitors);
             pending = result.pending ?? false;
             error = result.error || "";
             message = error || result.message || "";
@@ -174,7 +184,7 @@ Singleton {
         target: root.daemonState
         function onDataChanged() {
             if (root.daemonMode && root.daemonState.data.available)
-                root.accept(JSON.stringify(root.daemonState.data));
+                root.acceptData(root.daemonState.data);
         }
     }
     Connections {

@@ -12,6 +12,10 @@ FileView {
     path: daemonMode ? "" : sourcePath
     signal stateReceived(string value, bool missing)
     signal stateUnavailable(string message)
+    // Revisions identify document changes; dirty/exists only change missingness.
+    property var projectedRevision: undefined
+    property int projectedGeneration: -1
+    property bool projectedMissing: false
     property var revision: undefined
     property bool daemonBusy: false
     property var pendingAck: null
@@ -96,10 +100,18 @@ FileView {
     function accept(snapshot) {
         if (!snapshot || snapshot.store !== storeId || snapshot.rev === undefined)
             return;
+        if (revision !== undefined && snapshot.rev < revision)
+            return;
         revision = snapshot.rev;
         stateError = snapshot.error?.message || "";
         if (!stateError) {
-            stateReceived(JSON.stringify(snapshot.data), !snapshot.exists && !snapshot.dirty);
+            const missing = !snapshot.exists && !snapshot.dirty;
+            if (projectedGeneration !== connectionGeneration || projectedRevision !== snapshot.rev || projectedMissing !== missing) {
+                projectedGeneration = connectionGeneration;
+                projectedRevision = snapshot.rev;
+                projectedMissing = missing;
+                stateReceived(JSON.stringify(snapshot.data), missing);
+            }
         } else {
             stateUnavailable(stateError);
             if (pendingAck && pendingAck.acceptedRevision !== undefined)
@@ -111,6 +123,14 @@ FileView {
     function refresh() {
         if (!daemonMode || !daemonClient.connected || daemonBusy)
             return;
+        // The shared client subscribes/resubscribes with a full snapshot. Do not
+        // race that snapshot with a second settings.get response. Older injected
+        // clients without freshness metadata retain the text adapter read path.
+        if (stream && typeof stream.fresh === "boolean") {
+            if (stream.fresh)
+                accept(stream.data);
+            return;
+        }
         daemonBusy = true;
         const generation = connectionGeneration;
         const store = storeId;
