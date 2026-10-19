@@ -1487,10 +1487,11 @@ ShellRoot {
             }
             desktop.persistedData={language:"en"};
             const sparse=observed();
-            desktop.acceptData({data:Object.assign({},DEFAULTS,{language:"en"}),monitors:[],pending:false});
+            desktop.accept(JSON.stringify({data:Object.assign({},DEFAULTS,{language:"en"}),monitors:[],pending:false}));
             check(observed()===sparse,"normalized native snapshot preserves sparse-file frame geometry, text, colours, rim opacity and effects");
             check(NacreFrame.headerHeight===50&&NacreFrame.rounding===25&&NacreTokens.textPointSize===12,"seeded defaults resolve to expected visible geometry");
-        '''.replace("DEFAULTS", json.dumps(defaults)), render_state=True)
+            finish({effective:JSON.parse(observed())});
+        '''.replace("DEFAULTS", json.dumps(defaults)), render_state=True, asynchronous=True)
 
     def test_storage_subscription_lifecycle_uses_snapshots_without_implicit_reads(self):
         self.qml(r'''
