@@ -3,7 +3,7 @@
 - ID: N0009
 - Repo: nacre-desktop/nacre
 - Implementer: one fresh Luna worker; coordinator final review
-- Status: **Ready: local implementation authorized**; integration after green F4
+- Status: **Done** — accepted source `ab3bcae4`, exact-head CI `39431539570` green
 - Depends on: source8a/F4 candidate for local implementation; N0002 PASS and
   exact-head green F4 remain integration gates
 - Date: 2026-10-19
@@ -134,3 +134,28 @@ roots exclude concurrent daemons even with different config/socket roots. Tests
 cover state-root durability, shared-state exclusion and fully disjoint roots.
 This fixes N9 only; frozen N2 source8a remains unchanged. N10 must include actual
 writer roots in its quiescence lease set when restoring those destinations.
+
+
+## Completion — 2026-10-20
+
+Accepted integrated source: `ab3bcae4ff3e6c126bb8d5efb1636f5196c79c41`.
+[Exact-head Source checks 39431539570](https://github.com/nacre-desktop/nacre/actions/runs/39431539570)
+passed both desktop and fresh-install jobs. F4 dependency source `9b37c663`
+already passed exact-head CI39402420054. Coordinator review and the independent
+security/evidence review are complete; N9 is Done.
+
+The hosted run passed native fmt/Clippy/tests/examples/release and consumer
+checks, 405 tools tests (one skip), 116 AI, 45 brain, 459 shell-tool tests,
+534 immutable parity cases with zero failures, and sandbox integrity checks.
+The frozen profile-install reference is unchanged: the paired compatibility
+check permits only its intended new 0700 directories and empty 0600 writer
+lock, while preserving all profile contents and unrelated records. New tests
+also prove existing safe directory modes are not changed. Symlink target reads
+pin the inode and reject replacement/metadata races; focused writer/profile
+suites passed 17/10 cases and the lead independently verified them.
+
+This accepts cooperative destination ownership, not an online hot upgrade.
+Legacy QML and uncooperative writers still require quiescence. No package publication/install, installed file, daemon unit or live session
+was changed. Final full checks ran on GitHub; the earlier private correctness
+receipt remains separate and makes no performance claim.
+N10's complete managed switch/rollback remains a separate unfinished gate.

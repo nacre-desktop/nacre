@@ -5,9 +5,9 @@ still blocked by source work.** N0002 accepted the owner-approved memory-debt
 result, and exact F4 commit `9b37c663` passed CI run `39402420054`
 ([N0002](../specs/0002-f4-whole-group-acceptance.md#final-result--2026-10-20),
 [N0012](../specs/0012-f4-qml-memory-debt.md)). The current N9 integration head
-is `ab3bcae4`; its exact-head CI run `39431539570` is pending, so N9 is not yet
-an accepted green dependency. N10 has local private work at `922377cf` with
-handoff `4bb76bc4`; its focused 154-test result is local evidence only. N10 is
+is `ab3bcae4`; its exact-head CI run `39431539570` passed desktop and fresh-install
+checks, and N9 is accepted. N10 has reviewed local private work at `cfa86087` with
+handoff `d651ff4b`; its focused 156-test result is local evidence only. N10 is
 not integrated or CI-validated, its root helper remains preparation-only, and
 all public switch mutators remain disabled.
 
@@ -18,18 +18,18 @@ has been executed.
 
 ## Source gates before package work
 
-1. N9 must pass exact-head CI on `ab3bcae4` (or its reviewed successor) and be
-   accepted. N9 provides a cooperative lease for daemon and installer writers;
+1. **Completed:** N9 passed exact-head CI on `ab3bcae4` and was accepted.
+   N9 provides a cooperative lease for daemon and installer writers;
    it does not itself switch an active daemon or replace the separate N10
    rollback work ([N0009](../specs/0009-f4-switch-prerequisites.md)).
 2. N10 must finish and pass source review, integrate with accepted N9, and pass
    CI on the exact integrated main commit. N10's current local result records
-   154 focused tests passing, but package execution is still private and the
+   156 focused tests passing, but package execution is still private and the
    public `enable`, `disable`, and `rollback` routes fail closed. The source
-   handoff at local commit `4bb76bc4` identifies the remaining gates: prove the
+   handoff at local commit `d651ff4b` identifies the remaining gates: prove the
    helper-to-pacman lock-descriptor lifetime, complete package/setup/unit
    restoration and fresh-process recovery, and keep the exact package state
-   journaled. The private package API at `922377cf` is not evidence that the
+   journaled. The private package API at `cfa86087` is not evidence that the
    production helper calls pacman safely or that switching is runnable.
 3. Resolve the actual unit origin and package-hook policy before choosing a
    supported path. N10's current fence accepts vendor units under

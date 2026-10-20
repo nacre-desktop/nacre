@@ -52,7 +52,7 @@ Reference outputs are immutable; security additions use explicit new cases.
 Foundation: F0 → F1 → F2 events/session → launcher engine → remaining F2 → F3 → F4; then approved core-switch services/weather/updates block. Core schemas c2b26d98 are published; additive compatibility fields/new transcripts are required before core implementation. Runtime capabilities stay unadvertised until implemented.
 Oct16 order: schema3042f3f2 published first; immutable JS ranking/provider parity, indexed catalog next.
 Long-running or frequently called work → daemon service; rare/heavy/risky → worker.
-F4's single-writer candidate remains unpublished; N0001 source review and N0002 acceptance precede integration.
+F4 is accepted and integrated: exact source `9b37c663` passed CI39402420054; owner-approved QML memory debt is recorded in N0012. N9 installer handoff is accepted at `ab3bcae4` / CI39431539570. N10 managed switch and complete rollback remain local and incomplete; no live daemon switch is authorized.
 Bead owns its ADR/F5 framework work; protocol changes coordinate across agents.
 No live daemon units, notification ownership or keybindings without owner approval.
 Nightly fuzz/soak, Bead hosting and remaining Wave4 ports deferred; menu.query now precedes remaining F2.
@@ -76,5 +76,25 @@ Desktop-PC F1: p99 .018/.027ms; CPU.006/.008ms; PSS10.27/10.08MiB; SwapPss/hosts
 UI fallback only before dispatch; native nice10 notice worker; idle watch detects pipe closure by event.
 Recovery: fmt/clippy/299 Rust/921 repo/534 frozen parity pass; examples/fuzz compile.
 Supervisor's first8s timeout passed an unchanged17-case recheck; no fixture or timeout changes.
-F4 N0001/N0004 candidate: activation no longer blocks the serial menu actor; source overlay75f7e054 / manifestc0abd410 / helpereee97308. Full Rust438, repo952 (1 existing optional skip), immutable parity534 pass; details in private v10 receipt. Historical v25 source44ba7afa/helperabdfc528 has only two valid Niri cells and is not N0002 acceptance; v9 source5495c030/helper2f11566a is separate. Counts: 72 state-file records; 19 Settings schemas plus battery-alerts = 20 actor-owned stores; 132 setting descriptors across17 stores, 110 enabled (`backend != planned`) and22 planned. launcher-menu is write metadata only: no enabled descriptor or daemon-mode writer; its FileViews only read/watch and generic set stays denied. Profile has5 descriptors:4 planned and1 enabled (`aurReview`). `dirty:false` plus error never acknowledges durability. N0004 adds deterministic proof that the actor consumes post-dispatch frecency results; no measurements. N0002 keeps fixed600s warmup +60s idle ABAB and needs a fresh explicit grant. **Switch-on checklist:** profile replacement is offline-only: explicit `nacre setup` / `nacre deploy` (or `tools/manage.py --apply`) must target a destination whose daemon is stopped. This candidate has no enforcement; the selected-service `is-active` read does not prove destination ownership or prevent socket activation/startup races, and inotify is not exclusive ownership. `tools/prepare.py` writes a separate empty staging tree. No ordinary session/UI replacement caller was found. A separate owner-approved installer enforcement/handoff spec must cover destination ownership and startup races before active-daemon deployment is supported. Frozen references unchanged.
+F4 N0001/N0004/N0002 are complete. Activation does not block the serial menu
+actor; handled cancellation/failure tests cover one dispatch and no replay.
+Counts remain 72 state-file records, 19 Settings schemas plus battery-alerts =
+20 actor-owned stores, and 132 descriptors across 17 stores (110 enabled,
+22 planned). Launcher-menu has metadata only, no enabled generic setter;
+its FileViews only read/watch. Profile has one enabled field (`aurReview`)
+and four planned descriptors. `dirty:false` plus error never acknowledges
+successful durability. Frozen validation/controller/rollback references remain
+unchanged. See the current [F4 acceptance report](../research/f4-memory-acceptance-20261020.md)
+for final five-pair memory results; historical v25/v9/v10 receipts are not the
+final capture source or acceptance evidence.
+
+N9 now enforces cooperative config/state-root ownership before daemon startup
+and actual-destination leases before profile installation/restore. Existing
+safe modes remain unchanged; new directories are private. This does not fence
+legacy QML or external editors, so setup/deploy still require those writers to
+be quiescent. `tools/prepare.py` uses a separate staging tree. No ordinary
+session/UI whole-profile replacement caller was found. Exact N9 source
+`ab3bcae4` passed desktop and fresh-install CI39431539570. Complete managed
+unit handoff, persistent opt-in and one-command rollback remain N10's separate
+unfinished source gate; see the [switch plan](f4-switch-on.md).
 No live desktop/config/network changes, tags, releases or package publication.

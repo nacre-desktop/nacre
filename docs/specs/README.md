@@ -1,17 +1,17 @@
 # Nacre implementation queue
 
-Current handoff: 2026-10-20 F4 Done: memory acceptance passed and integrated source9b37c663 has green exact-head CI39402420054. This supersedes older results and grants below; retain them as history.
+Current handoff: 2026-10-20 F4 Done: memory acceptance passed and integrated source9b37c663 has green exact-head CI39402420054. N9 installer handoff is also accepted at ab3bcae4 / exact CI39431539570. N10 remains local and inactive; desktop released after Bead B2 hit its memory stop. This supersedes older results and grants below; retain them as history.
 [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
 | 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Done | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Runtime integrated dfcedea7; checker/test-fixture fixes through 9b37c663, CI39402420054 SUCCESS (desktop + fresh-install). |
-| 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | Review: integrated, full CI pending | Source b5273ab6 includes fixture-only readiness fixes; focused39 tests/Clippy passed, exact-head CI pending. No live action. |
-| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: local implementation | Real N9 API preparation/recovery tests119 pass; complete rollback/helper contract in progress, CLI fail-closed. No live action. |
+| 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | Done | Source ab3bcae4, exact CI39431539570 SUCCESS (desktop + fresh-install); 459 shell-tool tests and 534 parity cases pass, frozen references unchanged. Cooperative destination handoff accepted; no live action. |
+| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: local implementation | Reviewed private source cfa86087 / 156 focused tests pass locally; helper entry preparation-only, public CLI fail-closed. Package transaction confinement and full recovery remain in progress; unintegrated, no live action. |
 | — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
 | — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Done under owner-approved memory-debt decision | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
-| — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Plan needs accepted implementation and green F4; no live execution. |
+| — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Plan refreshed03c2c3ce; F4/N9 green, complete N10 implementation/CI still required. No executable switch or live action. |
 | — | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Done | Accepted N2 and exact-head CI39402420054 passed.
 | — | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |

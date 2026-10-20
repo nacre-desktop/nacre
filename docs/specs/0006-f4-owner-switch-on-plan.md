@@ -3,7 +3,7 @@
 - ID: N0006
 - Repo: nacre-desktop/nacre
 - Implementer: fresh Luna docs worker
-- Status: Ready
+- Status: Review — refreshed plan published; executable switch remains gated on N10
 - Depends on: F4 green publication before executing plan; drafting eligible now
 - Date:2026-10-18
 - Size: one focused session, maximum2hours
