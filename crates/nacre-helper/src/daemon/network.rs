@@ -782,15 +782,69 @@ async fn observe(
     generation: Rc<Cell<u64>>,
     identity_generation: Rc<Cell<u64>>,
 ) -> Result<()> {
-    let builder = match zbus::connection::Builder::system() {
-        Ok(builder) => builder.method_timeout(Duration::from_secs(5)),
-        Err(_) => {
-            return Err("NetworkManager monitoring connection is unavailable".into());
+    observe_with_hooks(
+        hub,
+        generation,
+        identity_generation,
+        ObserveHooks::default(),
+    )
+    .await
+}
+
+async fn observe_with_hooks(
+    hub: Shared,
+    generation: Rc<Cell<u64>>,
+    identity_generation: Rc<Cell<u64>>,
+    hooks: ObserveHooks,
+) -> Result<()> {
+    let mut first_projection = Some(new_projection(&hub, &identity_generation)?);
+    let builder = {
+        #[cfg(test)]
+        if hooks.connection_failure == Some(ConnectionFailure::Builder) {
+            None
+        } else {
+            zbus::connection::Builder::system()
+                .map(|builder| builder.method_timeout(Duration::from_secs(5)))
+                .ok()
+        }
+        #[cfg(not(test))]
+        {
+            zbus::connection::Builder::system()
+                .map(|builder| builder.method_timeout(Duration::from_secs(5)))
+                .ok()
         }
     };
-    let connection = match tokio::time::timeout(Duration::from_secs(5), builder.build()).await {
-        Ok(Ok(connection)) => connection,
-        _ => return Err("NetworkManager monitoring connection is unavailable".into()),
+    let Some(builder) = builder else {
+        first_projection
+            .as_mut()
+            .expect("initial projection is present before connection setup")
+            .publish_failure(&hub, CoreError::Unavailable)?;
+        return Err("NetworkManager monitoring connection is unavailable".into());
+    };
+    let connection = {
+        #[cfg(test)]
+        if hooks.connection_failure == Some(ConnectionFailure::Build) {
+            None
+        } else {
+            match tokio::time::timeout(Duration::from_secs(5), builder.build()).await {
+                Ok(Ok(connection)) => Some(connection),
+                _ => None,
+            }
+        }
+        #[cfg(not(test))]
+        {
+            match tokio::time::timeout(Duration::from_secs(5), builder.build()).await {
+                Ok(Ok(connection)) => Some(connection),
+                _ => None,
+            }
+        }
+    };
+    let Some(connection) = connection else {
+        first_projection
+            .as_mut()
+            .expect("initial projection is present before connection setup")
+            .publish_failure(&hub, CoreError::Unavailable)?;
+        return Err("NetworkManager monitoring connection is unavailable".into());
     };
 
     // Keep the legacy network.watch stream alive across core identity rotations.
@@ -835,6 +889,7 @@ async fn observe(
         .await
     });
     let mut legacy_watcher = AbortWatcher(Some(legacy_watcher));
+    let mut hooks = Some(hooks);
 
     let result = async {
         loop {
@@ -845,7 +900,10 @@ async fn observe(
                 }
                 event = event_rx.changed() => event.map_err(|_| "NetworkManager event watcher stopped")?,
             };
-            let mut projection = new_projection(&hub, &identity_generation)?;
+            let mut projection = match first_projection.take() {
+                Some(projection) => projection,
+                None => new_projection(&hub, &identity_generation)?,
+            };
             if network_manager_owner(&connection).await.is_err() {
                 projection.publish_failure(&hub, CoreError::Unavailable)?;
                 continue;
@@ -855,7 +913,7 @@ async fn observe(
                 generation.clone(),
                 projection,
                 connection.clone(),
-                ObserveHooks::default(),
+                hooks.take().unwrap_or_default(),
             )
             .await;
             if result.is_err() && core_owner_change_published(&hub) {
@@ -890,6 +948,8 @@ fn new_projection(hub: &Shared, identity_generation: &Cell<u64>) -> Result<Netwo
 #[derive(Default)]
 struct ObserveHooks {
     #[cfg(test)]
+    connection_failure: Option<ConnectionFailure>,
+    #[cfg(test)]
     watcher_dropped: Option<tokio::sync::oneshot::Sender<()>>,
     #[cfg(test)]
     watcher_events: Option<tokio::sync::mpsc::UnboundedSender<crate::network_state::NetworkEvent>>,
@@ -902,6 +962,13 @@ struct ObserveHooks {
     )>,
     #[cfg(test)]
     publication_witness: Option<tokio::sync::mpsc::UnboundedSender<NetworkState>>,
+}
+
+#[cfg(test)]
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum ConnectionFailure {
+    Builder,
+    Build,
 }
 
 #[cfg(test)]
@@ -1454,6 +1521,59 @@ mod core_tests {
                 return state;
             }
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn core_network_connection_failure_retires_last_good_snapshot() -> Result<()> {
+        for failure in [ConnectionFailure::Builder, ConnectionFailure::Build] {
+            let mut ids = IdentityTable::new(1);
+            let last_good = project(raw_fixture(), &mut ids)
+                .map_err(|_| "Private raw network fixture failed")?;
+            let hub = super::super::hub::Hub::new(
+                "connection-failure-test".into(),
+                false,
+                Duration::from_millis(16),
+            )
+            .shared();
+            hub.borrow_mut()
+                .publish(CORE_TOPIC, serde_json::to_value(last_good.clone())?)?;
+            publish(&hub, 7, true, None)?;
+            let previous_watch = hub
+                .borrow()
+                .snapshot(TOPIC)
+                .expect("network watch snapshot");
+            let identity_generation = Rc::new(Cell::new(41));
+
+            let result = observe_with_hooks(
+                hub.clone(),
+                Rc::new(Cell::new(7)),
+                identity_generation.clone(),
+                ObserveHooks {
+                    connection_failure: Some(failure),
+                    ..ObserveHooks::default()
+                },
+            )
+            .await;
+            assert!(result.is_err());
+
+            let unavailable: NetworkState = serde_json::from_value(
+                hub.borrow()
+                    .snapshot(CORE_TOPIC)
+                    .expect("core network snapshot"),
+            )?;
+            assert!(!unavailable.health.available);
+            assert!(unavailable.health.stale);
+            assert_eq!(unavailable.devices, last_good.devices);
+            assert_eq!(unavailable.access_points, last_good.access_points);
+            assert_eq!(unavailable.connections, last_good.connections);
+            assert_eq!(
+                unavailable.health.error.expect("unavailable failure").code,
+                ErrorCode::Unavailable
+            );
+            assert_eq!(identity_generation.get(), 42);
+            assert_eq!(hub.borrow().snapshot(TOPIC), Some(previous_watch));
+        }
+        Ok(())
     }
 
     #[test]
