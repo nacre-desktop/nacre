@@ -1,14 +1,7 @@
 //! Read-only availability for AI software; never bootstrap an uninspected repository.
-use crate::{paths::Paths, process};
+use crate::{menu_registry::which, paths::Paths, process};
 use serde_json::{json, Value};
-use std::{fs, os::unix::fs::PermissionsExt, process::Command, time::Duration};
-
-fn which(name: &str) -> bool {
-    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).any(|folder| {
-        let path = folder.join(name);
-        path.is_file() && fs::metadata(path).is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
-    })
-}
+use std::{process::Command, time::Duration};
 fn official_chatgpt_metadata(text: &str) -> bool {
     let fields = text
         .lines()
@@ -24,7 +17,7 @@ fn official_chatgpt_metadata(text: &str) -> bool {
         })
 }
 pub fn snapshot(paths: &Paths) -> Value {
-    let package = if which("pacman") {
+    let package = if which("pacman").is_some() {
         let mut command = Command::new("pacman");
         command
             .args(["-Si", "chatgpt"])
@@ -46,8 +39,8 @@ pub fn snapshot(paths: &Paths) -> Value {
         "brave-browser",
     ]
     .iter()
-    .any(|p| which(p));
-    json!({"chatgptPackage":package,"webApps":web_apps,"terminal":which("kitty")})
+    .any(|p| which(p).is_some());
+    json!({"chatgptPackage":package,"webApps":web_apps,"terminal":which("kitty").is_some()})
 }
 #[cfg(test)]
 mod tests {

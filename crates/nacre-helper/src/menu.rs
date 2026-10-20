@@ -1,5 +1,5 @@
 //! Bounded menu discovery, file/unit readers and package ownership.
-use crate::{files, i18n::tr, paths::Paths, process, Result};
+use crate::{files, i18n::tr, menu_registry::which, paths::Paths, process, Result};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -19,12 +19,6 @@ fn now() -> f64 {
 }
 fn folded(value: &str) -> String {
     value.to_lowercase().case_fold().collect()
-}
-fn which(name: &str) -> bool {
-    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).any(|root| {
-        let path = root.join(name);
-        path.is_file() && fs::metadata(path).is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
-    })
 }
 fn run(program: &str, args: &[&str], seconds: u64) -> Result<std::process::Output> {
     process::run(
@@ -70,7 +64,7 @@ fn active(unit: &str) -> Result<bool> {
     }
 }
 pub fn installed() -> Result<Value> {
-    if !which("pacman") {
+    if which("pacman").is_none() {
         return Ok(json!([]));
     }
     let result = run("pacman", &["-Q"], 10)?;
@@ -86,7 +80,7 @@ pub fn installed() -> Result<Value> {
     ))
 }
 pub fn fonts() -> Result<Value> {
-    if !which("fc-list") {
+    if which("fc-list").is_none() {
         return Ok(json!([]));
     }
     let result = run("fc-list", &[":lang=en", "--format", "%{family}\n"], 5)?;
@@ -140,8 +134,8 @@ pub fn snapshot(force: bool) -> Result<Value> {
         .map(|meta| meta.mtime() * 1_000_000_000 + meta.mtime_nsec())
         .unwrap_or(0);
     snapshot_with(&paths, force, stamp, json!(now()), || {
-        let capture = which("grim") && which("slurp");
-        let caps = json!({"capture":capture,"record":which("wf-recorder")&&which("slurp"),"ocr":which("tesseract")&&capture,"qr":which("zbarimg")&&capture,"color-picker":which("hyprpicker"),"packages":which("pacman"),"aur":which("paru")||which("yay")||(crate::aur_review::available() && crate::aur_review::policy(&paths).is_ok_and(|p|p["mode"]=="required")),"ai":which("nacre-ai"),"brain":paths.share.join("brain/control.py").is_file(),"fonts":which("fc-list")});
+        let capture = which("grim").is_some() && which("slurp").is_some();
+        let caps = json!({"capture":capture,"record":which("wf-recorder").is_some()&&which("slurp").is_some(),"ocr":which("tesseract").is_some()&&capture,"qr":which("zbarimg").is_some()&&capture,"color-picker":which("hyprpicker").is_some(),"packages":which("pacman").is_some(),"aur":which("paru").is_some()||which("yay").is_some()||(crate::aur_review::available() && crate::aur_review::policy(&paths).is_ok_and(|p|p["mode"]=="required")),"ai":which("nacre-ai").is_some(),"brain":paths.share.join("brain/control.py").is_file(),"fonts":which("fc-list").is_some()});
         Ok(
             json!({"capabilities":caps,"packages":installed()?,"fonts":fonts()?,"stayAwake":active("nacre-stay-awake.service")?,"recording":active("nacre-screen-recording.service")?,"reminders":reminders()?,"webapps":webapps()?}),
         )
@@ -199,7 +193,7 @@ pub fn search_files(query: &str) -> Result<Value> {
     if roots.is_empty() {
         return Ok(json!({"rows":[]}));
     }
-    if !which("fd") {
+    if which("fd").is_none() {
         return Ok(
             json!({"rows":[],"message":tr("helper.menu-backend.install-fd-to-search-files","Install fd to search files")}),
         );
@@ -245,7 +239,7 @@ pub fn convert_units(expression: &str) -> Result<Value> {
             json!({"ok":false,"error":tr("helper.menu-backend.try-a-conversion-such-as-10-km-to-miles","Try a conversion such as 10 km to miles")}),
         );
     }
-    if !which("qalc") {
+    if which("qalc").is_none() {
         return Ok(
             json!({"ok":false,"error":tr("helper.menu-backend.install-libqalculate-for-unit-and-currency-conversions","Install libqalculate for unit and currency conversions")}),
         );
@@ -289,7 +283,7 @@ pub fn convert_units(expression: &str) -> Result<Value> {
     )
 }
 pub fn ownership(id: &str) -> Result<Value> {
-    if !regex(r"\A[A-Za-z0-9_.-]{1,200}\z").is_match(id) || !which("pacman") {
+    if !regex(r"\A[A-Za-z0-9_.-]{1,200}\z").is_match(id) || which("pacman").is_none() {
         return Ok(json!({"package":""}));
     }
     let name = if id.ends_with(".desktop") {
@@ -321,7 +315,7 @@ pub fn search_packages(query: &str) -> Result<Value> {
         );
     }
     let mut rows = Vec::new();
-    if which("pacman") {
+    if which("pacman").is_some() {
         let escaped = query
             .chars()
             .flat_map(|ch| {
@@ -351,8 +345,8 @@ pub fn search_packages(query: &str) -> Result<Value> {
         }
     }
     let mut message = String::new();
-    if which("paru")
-        || which("yay")
+    if which("paru").is_some()
+        || which("yay").is_some()
         || (crate::aur_review::available()
             && Paths::environment()
                 .and_then(|paths| crate::aur_review::policy(&paths))

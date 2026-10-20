@@ -543,13 +543,6 @@ mod capture_tests {
     }
 }
 
-fn which(name: &str) -> bool {
-    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()).any(|root| {
-        let path = root.join(name);
-        path.is_file() && fs::metadata(path).is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
-    })
-}
-
 // Python shlex.split(comments=False): these words are argv, never shell code.
 pub(crate) fn editor_words(value: &str) -> Result<Vec<String>> {
     let mut words = Vec::new();
@@ -663,7 +656,9 @@ pub fn edit_config(route: &str) -> Result<i32> {
         Err(std::env::VarError::NotPresent) => String::new(),
         Err(error) => return Err(error.into()),
     };
-    let command = configuration_command(&Paths::environment()?, route, &editor, which)?;
+    let command = configuration_command(&Paths::environment()?, route, &editor, |name| {
+        crate::menu_registry::which(name).is_some()
+    })?;
     let status = std::process::Command::new(&command[0])
         .args(&command[1..])
         .status()?;
