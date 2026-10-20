@@ -161,9 +161,7 @@ class CoverageTests(unittest.TestCase):
         #[cfg(test)] struct TestType;
         #[cfg(test)] impl TestType { fn example() { tr("test.impl", "Test impl"); } }
         #[cfg(test)] mod tests { fn example() { tr("test.only", "Test only"); } }"""
-        self.assertEqual(
-            {key for key, _, _ in rust_messages(source)}, {"test.runtime"}
-        )
+        self.assertEqual({key for key, _, _ in rust_messages(source)}, {"test.runtime"})
 
     def test_deleting_python_keeps_only_ids_owned_by_rust(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -164,9 +164,7 @@ def production_tokens(stream):
         if test_attribute is None or paren_depth:
             result.append(stream[index])
             if stream[index].value is None:
-                paren_depth += (stream[index].text == "(") - (
-                    stream[index].text == ")"
-                )
+                paren_depth += (stream[index].text == "(") - (stream[index].text == ")")
             index += 1
             continue
         index += test_attribute
