@@ -16,7 +16,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 | — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
 | — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Done under owner-approved memory-debt decision | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
-| — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Plan refreshed03c2c3ce; F4/N9 green, complete N10 implementation/CI still required. No executable switch or live action. |
+| — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: owner checklist | Updated for N0014 activation-only flow, source full-installer deployment, N0013 vendor units, TTY journal recovery, and manual package downgrade. N10 full rollback deferred. No live action. |
 | — | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Done | Accepted N2 and exact-head CI39402420054 passed.
 | — | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
