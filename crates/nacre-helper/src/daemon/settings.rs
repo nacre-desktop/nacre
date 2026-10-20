@@ -984,9 +984,16 @@ impl Watcher {
 mod tests {
     use super::*;
     use serde_json::json;
+    use std::os::unix::fs::PermissionsExt;
+
+    fn private_home() -> tempfile::TempDir {
+        let home = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        home
+    }
 
     async fn fixture() -> (tempfile::TempDir, Paths, Shared, Rc<Service>) {
-        let home = tempfile::tempdir().unwrap();
+        let home = private_home();
         let paths = Paths::new(home.path());
         std::fs::create_dir_all(&paths.config).unwrap();
         std::fs::create_dir_all(&paths.state).unwrap();
@@ -1024,7 +1031,7 @@ mod tests {
     }
     #[tokio::test(flavor = "current_thread")]
     async fn startup_read_rejects_replaced_config_ancestry() {
-        let home = tempfile::tempdir().unwrap();
+        let home = private_home();
         let paths = Paths::new(home.path());
         std::fs::create_dir_all(&paths.config).unwrap();
         std::fs::create_dir_all(&paths.state).unwrap();

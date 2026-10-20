@@ -285,9 +285,15 @@ mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
 
+    fn private_home() -> tempfile::TempDir {
+        let home = tempfile::tempdir().unwrap();
+        std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        home
+    }
+
     #[test]
     fn one_destination_has_one_writer_and_different_roots_coexist() {
-        let home = tempfile::tempdir().unwrap();
+        let home = private_home();
         let first = home.path().join("one/.config/nacre");
         let second = home.path().join("two/.config/nacre");
         let lease = WriterLease::acquire(&first).unwrap();
@@ -299,7 +305,7 @@ mod tests {
 
     #[test]
     fn config_and_state_roots_are_locked_as_an_ordered_set() {
-        let home = tempfile::tempdir().unwrap();
+        let home = private_home();
         let config_a = home.path().join("a/config/nacre");
         let config_b = home.path().join("b/config/nacre");
         let state = home.path().join("shared/state/nacre");
@@ -319,8 +325,7 @@ mod tests {
 
     #[test]
     fn ancestry_replacement_and_mode_changes_fail_closed() {
-        let home = tempfile::tempdir().unwrap();
-        std::fs::set_permissions(home.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+        let home = private_home();
         let config = home.path().join(".config");
         let root = config.join("nacre");
         let lease = WriterLease::acquire(&root).unwrap();
