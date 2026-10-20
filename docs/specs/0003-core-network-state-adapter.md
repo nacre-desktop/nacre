@@ -208,9 +208,11 @@ remain queued; no assertion they have been implemented or validated.
 
 ## Reconciliation — 2026-10-20
 
-Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494` (green F4 and
+Base `origin/main`: `0bba97a5d923f8f38ed53b7f57e99df9cb7fab67` (green F4 and
 N9; N0013/N0014 landed). Final network source:
-`b01c9606d4978a94c2620c2a92ebe31376dabfa0`.
+`335f2fa7635709ef35aa0296b6a60385b3014e5d`. Main advanced once during this
+task with F4 tooling-only changes; network Rust files are byte-identical and
+the local evidence below still covers this source.
 The withdrawn acceptance evidence above remains withdrawn; this exact rebased
 source has fresh local evidence, pending independent source review.
 

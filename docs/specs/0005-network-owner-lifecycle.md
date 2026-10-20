@@ -139,8 +139,10 @@ Accepted feature head ecd08dfe8a8449001ac499a14ae92a9620d93fc3 and reported same
 
 ## Reconciliation — 2026-10-20
 
-Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494`. Final network
-source: `b01c9606d4978a94c2620c2a92ebe31376dabfa0`; review remains pending.
+Base `origin/main`: `0bba97a5d923f8f38ed53b7f57e99df9cb7fab67`. Final network
+source: `335f2fa7635709ef35aa0296b6a60385b3014e5d`; review remains pending.
+Main advanced once during this task with F4 tooling-only changes; network Rust
+files are byte-identical to the tested source.
 PASS: `cargo fmt --check`; workspace `cargo clippy -j2 --all-targets -- -D
 warnings`; `cargo test -j2 -p nacre-helper core_network_ -- --nocapture` (13
 passed); `cargo test -j2 -p nacre-helper --quiet` (all package test binaries
