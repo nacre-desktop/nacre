@@ -1,298 +1,155 @@
-# F4 owner switch-on and rollback plan
+# F4 daemon switch-on and recovery plan
 
-**Status:** reviewed-plan draft with execution blockers. The source/N2 gate below
-can authorize a package run. Installation and switch-on remain blocked until a
-successful package/publication gate is recorded, an exclusive daemon ownership
-guard is implemented and source-reviewed, and a bounded managed persistent QML
-opt-in plus rollback is implemented and reviewed. This worker did not publish,
-install, enable, start, or change anything.
+**Current state: F4 acceptance is complete; switching the installed daemon is
+still blocked by source work.** N0002 accepted the owner-approved memory-debt
+result, and exact F4 commit `9b37c663` passed CI run `39402420054`
+([N0002](../specs/0002-f4-whole-group-acceptance.md#final-result--2026-10-20),
+[N0012](../specs/0012-f4-qml-memory-debt.md)). The current N9 integration head
+is `ab3bcae4`; its exact-head CI run `39431539570` is pending, so N9 is not yet
+an accepted green dependency. N10 has local private work at `922377cf` with
+handoff `4bb76bc4`; its focused 154-test result is local evidence only. N10 is
+not integrated or CI-validated, its root helper remains preparation-only, and
+all public switch mutators remain disabled.
 
-The source review used the published repository at this worktree's starting
-revision and read-only F4 candidate
-`1382a28ab544743e32e906f7542bcecdfdfca083` (tracked in
-[`N0001`](../specs/0001-f4-settings-completion-audit.md)).
-That candidate is unpublished. It is not an installed binary or proof that the
-release gate passed. Replace `F4_GREEN_SHA` below with the exact N0002-accepted
-main commit; do not substitute a moving branch or a historical helper receipt.
+This document separates source gates from later owner-controlled package and
+live-session actions. **Every command below is an example for a future run and
+must not be run while any source gate remains open.** No command in this plan
+has been executed.
 
-## Gate before starting the package run
+## Source gates before package work
 
-This gate authorizes only the package workflow. All of these must be recorded
-for the same exact source:
+1. N9 must pass exact-head CI on `ab3bcae4` (or its reviewed successor) and be
+   accepted. N9 provides a cooperative lease for daemon and installer writers;
+   it does not itself switch an active daemon or replace the separate N10
+   rollback work ([N0009](../specs/0009-f4-switch-prerequisites.md)).
+2. N10 must finish and pass source review, integrate with accepted N9, and pass
+   CI on the exact integrated main commit. N10's current local result records
+   154 focused tests passing, but package execution is still private and the
+   public `enable`, `disable`, and `rollback` routes fail closed. The source
+   handoff at local commit `4bb76bc4` identifies the remaining gates: prove the
+   helper-to-pacman lock-descriptor lifetime, complete package/setup/unit
+   restoration and fresh-process recovery, and keep the exact package state
+   journaled. The private package API at `922377cf` is not evidence that the
+   production helper calls pacman safely or that switching is runnable.
+3. Resolve the actual unit origin and package-hook policy before choosing a
+   supported path. N10's current fence accepts vendor units under
+   `/usr/lib/systemd/user` and refuses source-staged units under
+   `~/.config/systemd/user`. Do not recommend a runtime mask for those
+   source-staged units: user unit precedence makes that fence unsupported.
+   N10 also blanket-refuses preparation when ALPM hooks are present; their
+   trigger and effect need review before such a host is supported. These are
+   source limitations, not instructions to edit installed units by hand.
 
-1. N0001 and N0004 remain reviewed Done; the final F4 source passed the fresh
-   N0002 correctness, whole-group, and performance gates and is integrated on
-   `main`.
-2. Source CI is green for `F4_GREEN_SHA`.
+F4 itself is no longer the blocker. The previously described absent ownership
+guard and wholly absent persistent opt-in are outdated: N9 implements the
+destination lease, and N10 has a managed shell-service drop-in design and
+partial private transaction code. Neither makes the switch available today.
+The proposed `nacre f4 enable ...` and rollback forms must not be presented as
+working commands until N10 integrates and its public routes are deliberately
+enabled after all acceptance criteria pass.
 
-If any source/N2 gate is missing, do not start the package workflow. N0002
-requires fresh evidence and does not accept older v25/v9 receipts for the
-current candidate.
+## Package build and signed publication
 
-## 1. Build and publish the reviewed package
+Only after all three source gates above pass may the owner choose to build the
+Core package from the exact green integrated commit. The package workflow and
+signed repository publication are separate gates. Review the successful
+package run's source receipt, install proofs, recipe digest, archive signatures,
+and signed `release.json`; publication normally follows the successful package
+run automatically. Dispatch publication manually only to recover that same
+successful run ([Arch package workflow](../../.github/workflows/arch-packages.yml),
+[publication workflow](../../.github/workflows/publish-arch.yml),
+[package guide](../../packaging/arch/README.md#tested-development-publication)).
 
-Run these owner-controlled GitHub Actions commands only after the source/N2
-gate above.
-The package workflow accepts an exact main ancestor, and repository publication
-admits only a successful package run with passing source CI. The publishing
-workflow normally follows a successful package run automatically; dispatch it
-manually only for recovery, using that same successful run ID.
+Future command template — **DO NOT RUN until N9/N10 are integrated, exact-head
+CI is green, and the owner has chosen to start the package run**:
 
 ```sh
-F4_GREEN_SHA=put_the_full_N0002_accepted_main_commit_here
+# DO NOT RUN while any source gate is pending.
+F4_GREEN_SHA=exact_full_green_integrated_main_commit
 gh workflow run arch-packages.yml --repo nacre-desktop/nacre --ref main \
   -f source_revision="$F4_GREEN_SHA" -f component=core -f use_released_orient=true
-PACKAGE_RUN_ID=put_the_successful_package_workflow_run_id_here
-# After that exact run succeeds, only if automatic publication did not run:
+```
+
+Manual publication recovery template — **DO NOT RUN unless that exact package
+run succeeded and automatic publication did not start**:
+
+```sh
+# DO NOT RUN except to recover publication for the same successful package run.
+PACKAGE_RUN_ID=exact_successful_package_run_id
 gh workflow run publish-arch.yml --repo nacre-desktop/nacre --ref main \
   -f run_id="$PACKAGE_RUN_ID"
 ```
 
-## Gate before installation
+## Install and prepare
 
-Do not install until the pinned Core package run for `F4_GREEN_SHA` succeeds,
-its install proofs and source/package receipt name that exact revision, and the
-signed Arch repository publication completes for that run. Record its
-`PACKAGE_RUN_ID`; check the package index and package/database signatures.
-Also save the exact previously installed `nacre` archive as
-`PREVIOUS_NACRE_ARCHIVE`, verify the existing `nacre` release snapshot is
-rollback-ready, save work, and accept the shell restart/session recovery window.
-Keep the current compositor session and other notification owner unchanged.
-A successful package install is not physical login/display/input acceptance;
-that remains an owner check after the nested gates.
+Installation and setup change system and private user files. They remain
+owner-controlled and are not authorized by F4 acceptance or by this document.
+Before any future install, require the exact Core archive from the successful
+package run, completed signed repository publication, verified package and
+database signatures, and the prior signed Core archive saved at an exact path.
+Record the installed version, unit enablement/active state, manager opt-in value,
+and existing release snapshot for the private recovery record. Preserve the
+current compositor and notification owner.
 
-Review the completed run and signed `release.json` for exact source revision,
-package version, recipe digest, successful runtime proofs, and archive/database
-signatures. Do not publish an AUR package, stable release, or unrelated package.
-The repository's `[no-publish]` convention means a documentation commit does not
-itself trigger binary publication. See
-[`packaging/arch/README.md`](../../packaging/arch/README.md#tested-development-publication),
-[`arch-packages.yml`](../../.github/workflows/arch-packages.yml), and
-[`publish-arch.yml`](../../.github/workflows/publish-arch.yml).
+Install only that verified archive with pacman's local-archive operation; do not
+run a whole-system upgrade to install Nacre. The existing setup flow is plan,
+review, then ordinary interactive apply. A source setup that stages daemon units
+in the user's unit directory is currently unsupported by N10's activation fence;
+stop at that preflight refusal until reviewed source-staged-unit support exists.
 
-## 2. Record the starting session state
-
-Run as the ordinary desktop user before changing package or user files. Save the
-output with the owner’s private release record; it contains only unit state and
-the value of the one opt-in variable.
+Future command template — **DO NOT RUN until N9/N10 source gates pass, the exact
+package is signed and published, and the owner authorizes installation**:
 
 ```sh
-pacman -Q nacre
-systemctl --user is-enabled nacre-daemon.socket || true
-systemctl --user is-active nacre-daemon.socket || true
-systemctl --user is-active nacre-daemon.service || true
-systemctl --user show-environment | grep '^NACRE_DAEMON_CLIENT=' || true
-nacre status
-```
-
-The expected pre-F4 state is an unenabled/inactive daemon socket and no
-`NACRE_DAEMON_CLIENT` value. If the actual state differs, record it for the
-follow-up rollback design; this plan has no executable rollback yet.
-`nacre status` reports the current managed release state. Do not
-overwrite the previous package archive or its user release snapshot. It is a
-release-record check, not the daemon health check used below
-([`tools/releases.py`](../../tools/releases.py#L717)).
-
-## 3. Install and prepare (blocked pending ownership guard)
-
-The package operation updates system-owned files. The setup operation writes
-private profile/configuration files, including the whole profile; F4 supports
-that replacement only while the daemon for this destination is stopped. First
-prevent new socket activation, then stop its service and the shell process that
-currently uses the legacy file path:
-
-```sh
-systemctl --user stop nacre-daemon.socket
-systemctl --user stop nacre-daemon.service
-systemctl --user stop nacre-shell.service
-nacre setup --plan
-```
-
-These stop commands are best-effort quiescence only. Socket/service stop does
-not exclude a racing start or another activation path, and stopping the shell
-does not prove there is no other writer. Nacre stages these user units in
-`~/.config/systemd/user` ([`stage.py`](../../packaging/arch/stage.py#L145),
-[`install.py`](../../nacre/shell-tools/install.py#L418)). systemd documents that
-runtime masks can conflict with local unit files at that path, including in
-user mode; therefore this plan has no compatible verified temporary mask to
-recommend ([systemctl mask documentation](https://www.freedesktop.org/software/systemd/man/258/systemctl.html)).
-The missing exclusive-activation guard is a blocker: do not replace the profile
-until a source-reviewed guard/fence covers racing and alternate activation and
-has a defined restoration path. The installer’s active-service checks and
-inotify/fingerprint checks do not establish that guarantee
-([`tools/releases.py`](../../tools/releases.py#L378),
-[`N0001`](../specs/0001-f4-settings-completion-audit.md)).
-
-After the package gate and ownership-guard follow-up, install the exact verified
-Core archive from that successful run using the source-supported local-archive
-path documented in [`docs/installation.md`](../installation.md#arch-packages-and-setup).
-`pacman -U` is
-the documented archive install operation; do not use `pacman -Syu nacre`, which
-can upgrade unrelated system packages. If the exact archive cannot be obtained
-and verified, or setup requires dependency changes, stop and review the exact
-transaction and its broader system effects separately.
-
-```sh
+# DO NOT RUN before the package and installation gates above pass.
 NACRE_ARCHIVE=/path/to/exact-verified-nacre-core.pkg.tar.zst
 test -r "$NACRE_ARCHIVE"
 sudo pacman -U -- "$NACRE_ARCHIVE"
-```
 
-Review the setup plan and confirm it preserves the installed profile and local
-files. Then apply the ordinary interactive setup without `sudo`:
-
-```sh
+# DO NOT RUN until the owner has reviewed the plan and approved its file changes.
+nacre setup --plan
 nacre setup
 ```
 
-Do not use `--profile default` here: setup without a profile retains the current
-installed profile. If the plan reports a foreign file, a collision, or an
-unreviewed profile change, stop before applying and do not force through it. No
-user-file rollback is needed for a plan-only stop; restore the previous package
-and restart the shell using the recorded state. If `nacre setup` itself fails,
-its apply path restores its own snapshot; do not run `nacre rollback` a second
-time against an older successful snapshot. That automatic restore does not undo
-a successful pacman upgrade. References:
-[`docs/installation.md`](../installation.md#updates) and
-[`tools/releases.py`](../../tools/releases.py#L378) show the package/setup split;
-the latter's source deployment path runs `profile-policy.py install` before
-cutover and checks pre-existing active services, so it is not the supported
-active-daemon installer path.
+Do not substitute `pacman -Syu nacre`; that can upgrade unrelated system
+packages. Do not use `--profile default` when the intended action is to retain
+the installed profile. If plan review finds a foreign file, collision, or
+unreviewed profile change, stop before apply. If setup fails after performing
+its own snapshot restore, do not run an older `nacre rollback` snapshot over it.
+The documented package/setup split is in [installation](../installation.md#arch-packages-and-setup)
+and [release handling](../../tools/releases.py).
 
-The staged unit source has `nacre-daemon.socket` listening on the private
-`%t/nacre/daemon.sock` path, with `RemoveOnStop=yes`; the service requires that
-socket and runs the installed `nacre-daemon` alias. Package staging copies these
-templates but creates no enablement link and starts no daemon. After successful
-setup, reload the user manager's unit files:
+## Switch, verify, and recover
 
-```sh
-systemctl --user daemon-reload
-```
+There is no runnable switch command yet. The existing `nacre rollback` restores
+setup-owned private files; it does not by itself restore the prior package,
+daemon/socket activation, or QML opt-in. N10's proposed
+`nacre f4 rollback --transaction ID` is still fail-closed and is not an
+executable rollback contract until the full transaction and recovery path are
+accepted. Do not improvise a one-command shell rollback from separate commands:
+package and user-file restoration is not atomic, and order/fingerprints matter.
+Keep the exact prior package archive and setup snapshot untouched for the later
+reviewed recovery path.
 
-Source: candidate [`nacre-daemon.socket`](../../nacre/shell-tools/nacre-daemon.socket)
-and [`nacre-daemon.service`](../../nacre/shell-tools/nacre-daemon.service),
-[`packaging/arch/stage.py`](../../packaging/arch/stage.py#L145), and
-[`nacre/shell-tools/install.py`](../../nacre/shell-tools/install.py#L418).
+After N10 is integrated and exposes an accepted command, the switch must preserve
+the recorded unit state and one-writer guarantee, install a managed persistent
+QML opt-in, and fail before mutation on unsupported unit origins, hook effects,
+changed state, or incomplete recovery evidence. It must not create a second
+notification owner. Until then, do not enable the daemon socket, set the manager
+environment manually, edit the installed shell service, or run the proposed
+`nacre f4` mutators.
 
-## 4. Enable daemon ownership and opt QML in (blocked pending persistent opt-in)
+Once a future accepted switch has completed, verify daemon reachability and
+health with the documented `nacrectl` status and settings-read operations; check
+that the desktop settings snapshot is clean, has no error, and contains the
+expected durable value. A CLI connection alone does not prove QML opted in or
+saved a change. Then perform the owner-only reversible Settings write/read-back
+and restore it through Settings. A real logout/login, keyboard/display,
+notification ownership, and compositor recovery remain physical owner checks.
+The F4/N2 nested results do not claim those checks were performed.
 
-The candidate QML reads `NACRE_DAEMON_CLIENT=1` when Quickshell starts. The
-packaged `nacre-shell.service` has no `Environment=` setting, and package/setup
-only stages the daemon templates. The reviewed tree has no managed mechanism
-that persists this QML opt-in. `systemctl --user set-environment` is volatile,
-while enabling the daemon socket is persistent. That creates a mixed reboot
-state: the socket remains enabled while the QML client opt-in can disappear.
-This is a top-level execution blocker. Do not switch on until a bounded,
-Nacre-managed persistent opt-in and its rollback are implemented and reviewed.
-No product command or configuration path is specified here because none is
-currently supported by source. Do not edit the installed service by hand. The
-exact QML gate is in candidate
-[`NacreDaemon.qml`](../../nacre/shell/services/NacreDaemon.qml#L10), and the
-service template is
-[`nacre-shell.service`](../../nacre/shell-tools/nacre-shell.service#L5).
-systemd documents that `set-environment` changes the manager environment inherited
-by user services and that `unset-environment` removes that override
-([`systemctl`](https://www.freedesktop.org/software/systemd/man/258/systemctl.html)).
-
-Do not enable a notification unit or change notification D-Bus ownership as part
-of this switch. A second notification owner is outside F4.
-
-## 5. Verify settings, service health, and recovery
-
-After the ownership guard and persistent opt-in blockers are resolved, run
-these read-only commands after the shell reconnects:
-
-```sh
-systemctl --user is-enabled nacre-daemon.socket
-systemctl --user is-active nacre-daemon.socket
-nacrectl status
-nacrectl call daemon.status
-nacrectl call --list
-nacrectl call settings.get '{"store":"desktop"}'
-nacrectl watch settings.store.desktop
-```
-
-The last command remains attached until stopped with Ctrl-C. Confirm the daemon
-is reachable and safe/healthy, `settings.get` returns the current desktop store,
-and the watched snapshot has the expected revision/data with `dirty:false` and no
-`error`. A CLI connection alone does not prove QML opted in or that a write was
-saved.
-
-Then, as an owner-only interactive check, open Settings in the current session,
-change one reversible preference, and confirm the UI shows the new value with no
-visible save error. Read the same store again with `nacrectl call settings.get
-'{"store":"desktop"}'` and verify the intended value is present at a clean
-revision; restore the preference through Settings and verify again. The QML
-storage exposes per-store errors but has no separate durable-success callback;
-the CLI snapshot is the durable-state check. Do not manufacture a write with a
-guessed revision or replay a timed-out mutation. A failed save must retain its
-existing visible error and must not be called successful merely because a later
-unrelated store revision is clean. N0001 defines the matching-value durable-
-success check; see [`protocol.md`](../architecture/protocol.md#settings-stores),
-the N0001 spec, and `protocol/schema/settings-set.json` at candidate
-`1382a28ab544743e32e906f7542bcecdfdfca083`.
-
-Check restart and session recovery without killing processes:
-
-```sh
-systemctl --user stop nacre-daemon.socket
-systemctl --user stop nacre-daemon.service
-systemctl --user start nacre-daemon.socket
-nacrectl status
-nacrectl call settings.get '{"store":"desktop"}'
-```
-
-After the compatible guard is applied, stopping the socket removes its current
-listening socket and stopping the service terminates the current daemon process;
-the guard must also exclude racing and alternate activation during that interval.
-Starting only the socket lets the next client request activate a fresh daemon.
-Confirm CLI and QML reconnect, the stored value remains present, and there is
-still one settings writer. A real logout/login, keyboard/display, notification
-ownership, and compositor recovery check remains physical owner validation;
-this plan does not claim to have run it.
-
-The CLI grammar is from candidate
-[`client.rs`](../../crates/nacre-helper/src/daemon/client.rs#L293). `settings.get`
-requires a store name; `settings.set` requires a key, value, and current revision
-(`protocol/schema/settings-get.json` and `settings-set.json` at candidate
-`1382a28ab544743e32e906f7542bcecdfdfca083`). The checks above
-avoid a hand-built mutation because they do not retrieve/validate the current
-revision and owner intent on the command line.
-
-## Rollback contract (blocked pending persistent opt-in)
-
-Keep `PREVIOUS_NACRE_ARCHIVE` pointing to the exact signed, previously installed
-Core package archive and keep the successful `nacre setup` release snapshot.
-There is no executable one-block rollback yet: the managed persistent opt-in
-does not exist, its cleanup path is undefined, and the exclusive activation
-guard has no restoration procedure. Those are implementation/review blockers,
-not operator steps to guess. The completed follow-up must define one reviewed
-rollback that restores prior opt-in and unit activation state, setup-owned
-private files, and the exact previous Core package archive. It must preserve
-application settings data.
-
-The source-supported pieces are `nacre rollback` (fingerprint-checked restore
-of setup-owned private files) and `sudo pacman -U -- "$PREVIOUS_NACRE_ARCHIVE"`
-(exact-archive downgrade); they are not by themselves a complete switch rollback.
-If setup fails after its own restore, do not call `nacre rollback` against an
-older successful snapshot.
-
-Source basis: package rollback action and compare-before-restore behavior are in
-[`tools/releases.py`](../../tools/releases.py#L214) and its `rollback` CLI at
-[`tools/releases.py`](../../tools/releases.py#L658); the package-mode restore
-does not stop/restart live units. A future switch rollback must therefore restore
-service, opt-in, package, and setup state explicitly. It will not be a cross-
-pacman/user-file atomic transaction; interruption will require inspecting
-package, unit, manager-environment, and release-snapshot state before resuming.
-
-## Source and command evidence
-
-This is a source-reviewed plan, not an execution record. No package workflow,
-systemd, pacman, Settings write, physical session, or rollback command was run
-for this document. The release commands and package gates are documented in
-[`packaging/arch/README.md`](../../packaging/arch/README.md#tested-development-publication)
-and the two linked Actions workflows. The package install/setup commands are
-documented in [`docs/installation.md`](../installation.md#arch-packages-and-setup).
-Unit, QML, CLI, and rollback command names/flags above are traced to the cited
-source. The cited candidate unit/QML details must be rechecked against the exact
-N0002-green source before the owner executes the plan.
+Source basis: [N0001](../specs/0001-f4-settings-completion-audit.md),
+[N0002](../specs/0002-f4-whole-group-acceptance.md),
+[N0009](../specs/0009-f4-switch-prerequisites.md),
+[N0010](../specs/0010-f4-managed-opt-in-and-rollback.md), the staged daemon
+units, and the QML opt-in at [`NacreDaemon.qml`](../../nacre/shell/services/NacreDaemon.qml#L12).
