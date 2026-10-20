@@ -1,13 +1,16 @@
 # Nacre implementation queue
 
-Current handoff: 2026-10-20 F4 Done: memory acceptance passed and integrated source9b37c663 has green exact-head CI39402420054. N9 installer handoff is also accepted at ab3bcae4 / exact CI39431539570. N10 remains local and inactive; desktop released after Bead B2 hit its memory stop. This supersedes older results and grants below; retain them as history.
+Current handoff: 2026-10-20 lead transfer. F4 and N9 are Done with green
+exact-head CI. N10 is local-only and incomplete. The owner requested that this
+lead finish the current Bead B2 arm, release the desktop, checkpoint both queues
+and stop. The transfer receipt below supersedes older grants and results.
 [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
 | 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Done | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Runtime integrated dfcedea7; checker/test-fixture fixes through 9b37c663, CI39402420054 SUCCESS (desktop + fresh-install). |
 | 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | Done | Source ab3bcae4, exact CI39431539570 SUCCESS (desktop + fresh-install); 459 shell-tool tests and 534 parity cases pass, frozen references unchanged. Cooperative destination handoff accepted; no live action. |
-| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: local implementation | Reviewed private source cfa86087 / 156 focused tests pass locally; helper entry preparation-only, public CLI fail-closed. Package transaction confinement and full recovery remain in progress; unintegrated, no live action. |
+| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: local implementation | Local checkpoint 5a7d5cec; worker reports 180 focused + 15 writer-lease tests pass. New recovery/metadata units await lead review, formatting and integrated CI; helper/public CLI remain fail-closed. No live action. |
 | — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
 | — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Done under owner-approved memory-debt decision | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
@@ -16,6 +19,74 @@ Current handoff: 2026-10-20 F4 Done: memory acceptance passed and integrated sou
 | — | [N0004 activation](0004-f4-activation-progress-and-audit.md) | Done | Exact1382 accepted. |
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
 | — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
+
+## Lead-transfer receipt — 2026-10-20
+
+- **Publication:** F4 source `9b37c663a35280f3fc66b836fed0940eac646aa1`,
+  [CI39402420054](https://github.com/nacre-desktop/nacre/actions/runs/39402420054)
+  green; N9 `ab3bcae4ff3e6c126bb8d5efb1636f5196c79c41`,
+  [CI39431539570](https://github.com/nacre-desktop/nacre/actions/runs/39431539570)
+  green. No package/tag/release/install/live unit or QML action occurred.
+- **N10 local work:** worktree `luna-n10-integration-prep-20261020`, branch
+  `task/n10-integration-prep-20261020`, clean at
+  `5a7d5cecd9de5b1139d0a28898cffea394fcb7f6`; 62 task commits not published.
+  Preserve the branch; do not reset/clean it. Local source milestones:
+  `71cd82ab` observed pacman-policy confinement, `e63e443f` separate prepare and
+  execute requests with durable caller intent before mutation, `4e263b6b`
+  hash-pinned recovery import bundle and private package resume, `f8576de6`
+  non-actionable rollback-package baseline, `78c2c040`/`d0e806b7` setup tree
+  inventory/bound manifest, `ecea997e` fresh-process snapshot WAL reconciliation,
+  `5a7d5cec` typed metadata for new successful setup records. Historical setup
+  records without `nacre-setup-tree-v1` intentionally refuse; none were rewritten.
+- **Evidence limits:** lead independently ran 167 tests through `4e263b6b`;
+  subsequent units have worker-reported 180 six-module tests + 15 writer-lease
+  tests, Ruff check, py_compile and diff-check passing. Full format-check reports
+  differences in existing sections of `tools/releases.py` and its tests. The
+  newer snapshot/metadata diffs still need root review and exact integrated CI;
+  no complete N10 build, full repository pass or runnable switch is claimed.
+- **N10 next:** review all local diffs; finish complete controller, setup/file,
+  package, drop-in/unit/activation rollback and fresh-process crash recovery.
+  Root helper remains preparation-only and public mutators fail-closed.
+  Preserve exact-lock FD lifetime, pidfd, receipt and package-policy constraints;
+  finish deployed pacman child lifetime and ALPM hook gates (hooks currently
+  blanket-refused). Source-staged HOME units remain explicitly unsupported.
+  Reconcile onto accepted N9/main without duplicating F4, run exact-head CI,
+  and update N6 before any owner-controlled publication or live action.
+- **Push safety:** EVERY new Nacre commit, code/tests included, must contain
+  `[no-publish]`; audit `git log origin/main..HEAD --format=%B` before every
+  push. Four preserved unpublished N10 messages currently lack it:
+  `71cd82ab`, `0501b16b`, `4ec15902`, `b430736a`. Reword only those task-owned
+  unpublished commits before any future push; never rewrite published history.
+  Do not push the checkpoint branch as-is. This gate is standing and published.
+- **Other preserved work:** N5 worktree `nacre-network-owner-lifecycle-20261018`
+  clean at `ecd08dfe8a8449001ac499a14ae92a9620d93fc3`, still unpublished Review.
+  N3 `nacre-network-state-adapter` clean at
+  `212c3efe5215a11fbb8f5a9e50d2b7199248464c`; prior acceptance claims remain
+  withdrawn/Blocked. No reruns assigned. Old F4 worktrees are preserved; use
+  accepted main rather than replaying old diagnostic candidates.
+- **Bead/desktop:** stopped after A4 completed17:37:36UTC. Eight Hyprland arms
+  captured (A1–A4/B1–B4), seven controller acceptance markers plus A4 verified
+  after the administrative boundary stop; twelve arms unrun. Four-pair partial
+  opened-once medians total24.199219→24.709961MiB, anonymous5.253906→6.279297
+  (+1.025391); no complete five-pair verdict. See Bead queue for all raw rows,
+  archive hashes and stop-hook typo/reverification. Controller, own processes
+  and scopes ended; bench-lock free. **Heavy slot RELEASED; all workers stopped.**
+  No capture or build is armed; no continuation grant is held by this lead.
+  B2 uses the owner's five-pair medians, not a single 24.5 MiB stop: below25 with
+  explained categories passes; 25–27 only file-backed extra may use the one-time
+  allowance; above27 or unexplained anonymous increase above1 stops. All quiet,
+  swap, geometry, scope and watchdog rules remain. Hosted GitHub CI is not a
+  desktop heavy job. N10 gets priority for the next desktop build; no old capture
+  grant or controller is to be resumed automatically by the successor.
+- **Conditional B2 GC work:** no optimization was implemented. Read-only mapping
+  found the retired panel VM is dropped, but the retained bar VM receives
+  `SceneSource::set_idle(true)` through the owning worker, currently a no-op in
+  shell Runtime. That surviving VM is a plausible full-GC hook; malloc_trim is
+  already called immediately and after100ms. Verify the mlua API and ordering,
+  do not claim this proves the hypothesis. If full Hyprland medians confirm
+  opened-once above25, owner allows only this targeted idle-GC attempt, then
+  three control/three fixed opened-once arms; if below25 and anonymous growth
+  below1, full B2 both compositors. Otherwise stop/report, no speculative fixes.
 
 ## Historical results and preserved work
 
