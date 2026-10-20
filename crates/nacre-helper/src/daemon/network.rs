@@ -782,29 +782,99 @@ async fn observe(
     generation: Rc<Cell<u64>>,
     identity_generation: Rc<Cell<u64>>,
 ) -> Result<()> {
-    let mut projection = new_projection(&hub, &identity_generation)?;
     let builder = match zbus::connection::Builder::system() {
         Ok(builder) => builder.method_timeout(Duration::from_secs(5)),
         Err(_) => {
-            projection.publish_failure(&hub, CoreError::Unavailable)?;
             return Err("NetworkManager monitoring connection is unavailable".into());
         }
     };
     let connection = match tokio::time::timeout(Duration::from_secs(5), builder.build()).await {
         Ok(Ok(connection)) => connection,
-        _ => {
-            projection.publish_failure(&hub, CoreError::Unavailable)?;
-            return Err("NetworkManager monitoring connection is unavailable".into());
-        }
+        _ => return Err("NetworkManager monitoring connection is unavailable".into()),
     };
-    observe_on_connection(
-        hub,
-        generation,
-        projection,
-        connection,
-        ObserveHooks::default(),
-    )
-    .await
+
+    // Keep the legacy network.watch stream alive across core identity rotations.
+    // It shares this connection with the per-owner reader, so old clients still
+    // receive every owner edge without retaining a stale core snapshot reader.
+    let (event_sender, mut event_rx) = tokio::sync::watch::channel(0u64);
+    let event_sequence = Rc::new(Cell::new(0u64));
+    let event_sequence_for_watcher = event_sequence.clone();
+    let event_connection = connection.clone();
+    let event_hub = hub.clone();
+    let event_generation = generation.clone();
+    let legacy_watcher = tokio::task::spawn_local(async move {
+        let mut running = false;
+        crate::network_state::watch_events_tagged(&event_connection, |_event| {
+            let next = event_generation
+                .get()
+                .checked_add(1)
+                .filter(|n| *n <= MAX_SAFE_INTEGER)
+                .ok_or("Network event generation exhausted")?;
+            event_generation.set(next);
+            publish(&event_hub, next, true, None)?;
+            let sequence = event_sequence_for_watcher
+                .get()
+                .checked_add(1)
+                .ok_or("Network event sequence exhausted")?;
+            event_sequence_for_watcher.set(sequence);
+            event_sender.send_replace(sequence);
+            if !running {
+                let failures = event_hub
+                    .borrow()
+                    .services
+                    .get("network-watch")
+                    .and_then(|v| v["failures"].as_u64())
+                    .unwrap_or(0) as usize;
+                event_hub
+                    .borrow_mut()
+                    .service("network-watch", "running", failures)?;
+                running = true;
+            }
+            Ok(true)
+        })
+        .await
+    });
+    let mut legacy_watcher = AbortWatcher(Some(legacy_watcher));
+
+    let result = async {
+        loop {
+            tokio::select! {
+                watcher = legacy_watcher.wait() => {
+                    let _ = watcher;
+                    return Err("NetworkManager event watcher stopped".into());
+                }
+                event = event_rx.changed() => event.map_err(|_| "NetworkManager event watcher stopped")?,
+            };
+            let mut projection = new_projection(&hub, &identity_generation)?;
+            if network_manager_owner(&connection).await.is_err() {
+                projection.publish_failure(&hub, CoreError::Unavailable)?;
+                continue;
+            }
+            let result = observe_on_connection(
+                hub.clone(),
+                generation.clone(),
+                projection,
+                connection.clone(),
+                ObserveHooks::default(),
+            )
+            .await;
+            if result.is_err() && core_owner_change_published(&hub) {
+                continue;
+            }
+            return result;
+        }
+    }
+    .await;
+    legacy_watcher.abort_and_join().await;
+    result
+}
+
+fn core_owner_change_published(hub: &Shared) -> bool {
+    hub.borrow()
+        .snapshot(CORE_TOPIC)
+        .and_then(|value| serde_json::from_value::<NetworkState>(value).ok())
+        .and_then(|state| state.health.error.map(|failure| failure.message))
+        .is_some_and(|message| message == "NetworkManager service owner changed")
 }
 
 fn new_projection(hub: &Shared, identity_generation: &Cell<u64>) -> Result<NetworkProjection> {
@@ -879,7 +949,7 @@ impl Drop for WatcherDropSignal {
 
 async fn observe_on_connection(
     hub: Shared,
-    generation: Rc<Cell<u64>>,
+    _generation: Rc<Cell<u64>>,
     mut projection: NetworkProjection,
     connection: zbus::Connection,
     mut hooks: ObserveHooks,
@@ -899,8 +969,6 @@ async fn observe_on_connection(
     let (owner_changed_tx, mut owner_changed) = tokio::sync::oneshot::channel();
     let owner_boundary = Rc::new(Cell::new(false));
     let event_connection = connection.clone();
-    let event_hub = hub.clone();
-    let event_generation = generation.clone();
     let event_refresh = refresh.clone();
     let event_owner_boundary = owner_boundary.clone();
     let mut owner_changed_tx = Some(owner_changed_tx);
@@ -911,7 +979,6 @@ async fn observe_on_connection(
     let watcher = tokio::task::spawn_local(async move {
         #[cfg(test)]
         let _drop_signal = WatcherDropSignal(watcher_dropped);
-        let mut running = false;
         crate::network_state::watch_events_tagged(&event_connection, |event| {
             #[cfg(test)]
             if let Some(events) = &watcher_events {
@@ -919,48 +986,16 @@ async fn observe_on_connection(
             }
             if event == crate::network_state::NetworkEvent::OwnerChanged {
                 event_owner_boundary.set(true);
-                let next = event_generation
-                    .get()
-                    .checked_add(1)
-                    .filter(|n| *n <= MAX_SAFE_INTEGER)
-                    .ok_or("Network event generation exhausted")?;
-                event_generation.set(next);
-                publish(
-                    &event_hub,
-                    next,
-                    false,
-                    Some("NetworkManager monitoring is unavailable"),
-                )?;
                 if let Some(signal) = owner_changed_tx.take() {
                     let _ = signal.send(());
                 }
                 return Ok(false);
             }
-            let next = event_generation
-                .get()
-                .checked_add(1)
-                .filter(|n| *n <= MAX_SAFE_INTEGER)
-                .ok_or("Network event generation exhausted")?;
-            event_generation.set(next);
-            publish(&event_hub, next, true, None)?;
             if matches!(
                 event_refresh.try_send(()),
                 Err(tokio::sync::mpsc::error::TrySendError::Closed(()))
             ) {
                 return Ok(false);
-            }
-            // The lifecycle state changes once per reader, not once per signal.
-            if !running {
-                let failures = event_hub
-                    .borrow()
-                    .services
-                    .get("network-watch")
-                    .and_then(|v| v["failures"].as_u64())
-                    .unwrap_or(0) as usize;
-                event_hub
-                    .borrow_mut()
-                    .service("network-watch", "running", failures)?;
-                running = true;
             }
             Ok(true)
         })
@@ -1380,6 +1415,13 @@ mod core_tests {
             let generation = self.generation.clone();
             let identity_generation = self.identity_generation.clone();
             tokio::task::spawn_local(async move {
+                let next = generation
+                    .get()
+                    .checked_add(1)
+                    .filter(|value| *value <= MAX_SAFE_INTEGER)
+                    .ok_or("Network event generation exhausted")?;
+                publish(&hub, next, true, None)?;
+                generation.set(next);
                 let projection = new_projection(&hub, &identity_generation)?;
                 observe_on_connection(hub, generation, projection, connection, hooks).await
             })
