@@ -21,9 +21,10 @@ medians, MiB (whole group / QML increases):
 
 Private report SHA256:
 `226ec4f6fd14ac7f5faa7811da68a385c74b783ea9924f983980a47f059412e9`.
-This is the measured Niri debt reference, conditionally approved by the owner;
-F4 still needs five valid Hyprland pairs with group increase <=12 MiB per phase.
-Record the final Hyprland report when available; do not label F4 accepted early.
+This is the measured Niri debt reference. The owner-approved condition of five
+valid Hyprland pairs with group increase <=12 MiB per phase has now passed;
+see the accepted Hyprland reference below. Exact published-head CI remains a
+separate integration gate.
 
 ## Future bounded unit
 
@@ -93,4 +94,5 @@ raw quiet/full-window/containment/cleanup proofs. Full evidence and limitations:
 [acceptance report](../research/f4-memory-acceptance-20261020.md).
 
 This is accepted debt, not a claim that the former QML<=2MiB gate passed.
-Source integrated asdfcedea7; published-head CI39393677394 pending at recording.
+Runtime integrated asdfcedea7; checker-only CI fixes throughd38b38b0.
+Published-head CI39398984664 pending at recording.

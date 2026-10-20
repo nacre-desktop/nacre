@@ -3,7 +3,7 @@
 - ID: N0002
 - Repo: nacre-desktop/nacre
 - Implementer: built-in Luna capture worker; lead reviews/integrates
-- Status: Review — measurement PASS under owner memory-debt decision; exact published-head CI pending
+- Status: Done — owner-approved memory-debt acceptance and exact published-head CI39402420054 PASS
 - Depends on: accepted N0001/N0004 source review; reviewed prospective harness
 - Date: 2026-10-18
 - Size: one focused capture session, through the granted cutoff
@@ -232,6 +232,6 @@ Keep method/geometry/quiet thresholds and scope/host-memory guards unchanged.
 Original8a passed owner-approved fallback: five valid Hyprland pairs,0retries,
 group increases+8.266/+6.868/+0.713MiB (all<=12). Earlier five-pair Niri debt
 retained and approved conditionally; all source/runtime/quiet/safety proofs
-independently audited. Main dfcedea7 exact-headCI39393677394 running.
+independently audited. Main runtime dfcedea7, checker/test-fixture fixes through 9b37c663; exact-headCI39402420054 SUCCESS (desktop + fresh-install).
 See [full report](../research/f4-memory-acceptance-20261020.md) and
 [N0012 debt](0012-f4-qml-memory-debt.md). No packages/live switch.

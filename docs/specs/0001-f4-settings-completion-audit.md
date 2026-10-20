@@ -3,7 +3,7 @@
 - ID: N0001
 - Repo: nacre-desktop/nacre
 - Implementer: NACRE
-- Status: Review
+- Status: Done — N0002 accepted; exact-head CI39402420054 green
 - Depends on: published5f4c0bf3; preserve current unpublished F4 and active captures
 - Date: 2026-10-17
 - Size: one focused session, maximum 4 hours

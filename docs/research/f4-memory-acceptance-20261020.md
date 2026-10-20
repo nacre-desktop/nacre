@@ -1,8 +1,15 @@
 # F4 memory acceptance — 2026-10-20
 
 Status: memory acceptance PASS under the owner-approved debt decision. Source
-integrated on main at dfcedea76e968bd71c62d7c9ea8c1b81dd68e542; exact-head CI
-39393677394 is running. No published-head CI pass is claimed yet.
+integrated at dfcedea76e968bd71c62d7c9ea8c1b81dd68e542. Checker-only CI fixes
+c0f47c80 and d38b38b0 plus fixture-only 9b37c663 leave measured Rust/QML runtime bytes unchanged. Exact-head
+CI39402420054 on 9b37c663a35280f3fc66b836fed0940eac646aa1 completed SUCCESS: desktop and fresh-install passed.
+F4 is accepted and integrated; no package or live action occurred. Earlier39393677394 failed translation
+checker parsing and39396969821 failed only checker-patch formatting; both
+fresh-install jobs passed. Run39398984664 then passed those checks but found a
+QML test fixture missing its newly imported daemon-state.js sibling; 9b37c663
+copies that existing dependency into the isolated fixture. No runtime or catalog
+correction was required.
 Selected source is original `8a1df35c6fec44e660530643ffef367e6b57ef89`,
 baseline `5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57`. Release helper hashes:
 A `4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa`;

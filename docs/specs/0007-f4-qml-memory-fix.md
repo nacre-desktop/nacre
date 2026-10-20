@@ -3,7 +3,7 @@
 - ID: N0007
 - Repo: nacre-desktop/nacre
 - Implementer: one built-in Sol worker
-- Status: In progress (correctness accepted; memory screen failed, source follow-up)
+- Status: Done under owner-approved F4 memory-debt decision; follow-up N0012
 - Depends on: N0001/N0004 accepted source; v14 correct-profile diagnostic pair
 - Date: 2026-10-19
 - Size: one focused source/fix session, then separately granted checks
