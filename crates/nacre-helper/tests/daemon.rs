@@ -59,6 +59,68 @@ fn poll_until_ready(
     }
 }
 
+fn read_until_complete(
+    mut read: impl FnMut(&mut [u8], Duration) -> std::io::Result<usize>,
+    deadline: Instant,
+) -> Result<usize> {
+    let mut response = [0];
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "activated daemon response deadline expired",
+            )
+            .into());
+        }
+        match read(&mut response, remaining) {
+            Ok(bytes) => return Ok(bytes),
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => return Ok(0),
+            Err(error) => {
+                return Err(std::io::Error::new(
+                    error.kind(),
+                    format!("reading activated daemon response: {error}"),
+                )
+                .into());
+            }
+        }
+    }
+}
+
+#[test]
+fn activated_daemon_response_retries_only_interrupted_reads_with_deadline() {
+    let mut calls = 0;
+    let bytes = read_until_complete(
+        |_, _| {
+            calls += 1;
+            if calls == 1 {
+                Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
+            } else {
+                Ok(0)
+            }
+        },
+        Instant::now() + Duration::from_secs(1),
+    )
+    .unwrap();
+    assert_eq!(bytes, 0);
+    assert_eq!(calls, 2);
+
+    let mut interrupted_calls = 0;
+    let persistent = read_until_complete(
+        |_, _| {
+            interrupted_calls += 1;
+            Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
+        },
+        Instant::now() + Duration::from_millis(2),
+    );
+    assert!(
+        persistent.is_err(),
+        "persistent EINTR must exhaust its deadline"
+    );
+    assert!(interrupted_calls > 0);
+}
+
 fn hold_python_lease(config: &Path) -> Result<PythonLease> {
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
     let script = r#"
@@ -1558,7 +1620,12 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
     let config = home.path().join("config/nacre");
     let _python = hold_python_lease(&config)?;
     let lock = config.join(".writer.lock");
-    let before = fs::metadata(&lock)?;
+    let before = fs::metadata(&lock).map_err(|error| {
+        std::io::Error::new(
+            error.kind(),
+            format!("reading initial writer lock identity: {error}"),
+        )
+    })?;
     let folder = home.path().join("private");
     fs::create_dir(&folder)?;
     fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
@@ -1589,50 +1656,117 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
         rustix::event::PollFlags::IN,
     )];
     assert!(
-        poll_until_ready(&mut descriptors, Instant::now() + Duration::from_secs(10),)?,
+        poll_until_ready(&mut descriptors, Instant::now() + Duration::from_secs(10)).map_err(
+            |error| std::io::Error::other(format!(
+                "waiting for activated endpoint creation: {error}"
+            )),
+        )?,
         "Socket activator did not create its private endpoint"
     );
     let connect_deadline = Instant::now() + Duration::from_secs(10);
     let mut client = loop {
         match UnixStream::connect(&endpoint) {
             Ok(client) => break client,
-            Err(error) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
-                if let Some(status) = daemon.0.try_wait()? {
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::Interrupted
+                ) =>
+            {
+                if let Some(status) = daemon.0.try_wait().map_err(|wait_error| {
+                    std::io::Error::new(
+                        wait_error.kind(),
+                        format!("checking activated daemon before retrying connect: {wait_error}"),
+                    )
+                })? {
                     return Err(format!(
                         "Socket activator exited before accepting the connection ({status}): {}",
-                        fs::read_to_string(&activation_log)?
+                        fs::read_to_string(&activation_log).map_err(|log_error| {
+                            std::io::Error::new(
+                                log_error.kind(),
+                                format!(
+                                    "reading socket activation log after early exit: {log_error}"
+                                ),
+                            )
+                        })?
                     )
                     .into());
                 }
                 if Instant::now() >= connect_deadline {
                     return Err(format!(
                         "Socket activator did not begin listening before the deadline: {}",
-                        fs::read_to_string(&activation_log)?
+                        fs::read_to_string(&activation_log).map_err(|log_error| {
+                            std::io::Error::new(
+                                log_error.kind(),
+                                format!("reading socket activation log at connect deadline: {log_error}"),
+                            )
+                        })?
                     )
                     .into());
                 }
                 thread::sleep(Duration::from_millis(10));
             }
-            Err(error) => return Err(error.into()),
+            Err(error) => {
+                return Err(std::io::Error::new(
+                    error.kind(),
+                    format!("connecting to activated daemon socket: {error}"),
+                )
+                .into());
+            }
         }
     };
-    client.set_read_timeout(Some(Duration::from_secs(5)))?;
-    let mut response = [0];
-    match client.read(&mut response) {
-        Ok(0) => {}
-        Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => {}
-        Ok(bytes) => panic!("busy daemon published a service ({bytes} response bytes)"),
-        Err(error) => return Err(error.into()),
-    }
+    let bytes = read_until_complete(
+        |response, remaining| {
+            client.set_read_timeout(Some(remaining))?;
+            client.read(response)
+        },
+        Instant::now() + Duration::from_secs(5),
+    )?;
+    assert_eq!(
+        bytes, 0,
+        "busy daemon published a service ({bytes} response bytes)"
+    );
     assert!(
-        fs::read_to_string(&activation_log)?.contains("Nacre destination busy or unsafe"),
+        fs::read_to_string(&activation_log)
+            .map_err(|error| {
+                std::io::Error::new(
+                    error.kind(),
+                    format!("reading socket activation log: {error}"),
+                )
+            })?
+            .contains("Nacre destination busy or unsafe"),
         "activated daemon failed for an unrelated reason"
     );
-    let after = fs::metadata(&lock)?;
+    let after = fs::metadata(&lock).map_err(|error| {
+        std::io::Error::new(
+            error.kind(),
+            format!("reading final writer lock identity: {error}"),
+        )
+    })?;
     assert_eq!((before.dev(), before.ino()), (after.dev(), after.ino()));
-    if daemon.0.try_wait()?.is_none() {
-        daemon.0.kill()?;
-        daemon.0.wait()?;
+    if daemon
+        .0
+        .try_wait()
+        .map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("checking activated daemon exit: {error}"),
+            )
+        })?
+        .is_none()
+    {
+        daemon.0.kill().map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("stopping activated daemon fixture: {error}"),
+            )
+        })?;
+        daemon.0.wait().map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("reaping activated daemon fixture: {error}"),
+            )
+        })?;
     }
     Ok(())
 }
