@@ -37,6 +37,28 @@ impl Drop for PythonLease {
         let _ = self.child.wait();
     }
 }
+
+fn poll_until_ready(
+    descriptors: &mut [rustix::event::PollFd<'_>],
+    deadline: Instant,
+) -> Result<bool> {
+    loop {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Ok(false);
+        }
+        let timeout = rustix::event::Timespec {
+            tv_sec: remaining.as_secs() as _,
+            tv_nsec: remaining.subsec_nanos() as _,
+        };
+        match rustix::event::poll(descriptors, Some(&timeout)) {
+            Ok(ready) => return Ok(ready > 0),
+            Err(rustix::io::Errno::INTR) => continue,
+            Err(error) => return Err(error.into()),
+        }
+    }
+}
+
 fn hold_python_lease(config: &Path) -> Result<PythonLease> {
     let tools = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
     let script = r#"
@@ -81,11 +103,7 @@ with writer_lease(Path(sys.argv[2])):
         output.get_ref(),
         rustix::event::PollFlags::IN,
     )];
-    let timeout = rustix::event::Timespec {
-        tv_sec: 5,
-        tv_nsec: 0,
-    };
-    if rustix::event::poll(&mut descriptors, Some(&timeout))? == 0 {
+    if !poll_until_ready(&mut descriptors, Instant::now() + Duration::from_secs(5))? {
         return Err("Python lease barrier timed out".into());
     }
     let mut ready = String::new();
@@ -1570,12 +1588,8 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
         &changes,
         rustix::event::PollFlags::IN,
     )];
-    let timeout = rustix::event::Timespec {
-        tv_sec: 10,
-        tv_nsec: 0,
-    };
     assert!(
-        rustix::event::poll(&mut descriptors, Some(&timeout))? > 0,
+        poll_until_ready(&mut descriptors, Instant::now() + Duration::from_secs(10),)?,
         "Socket activator did not create its private endpoint"
     );
     let connect_deadline = Instant::now() + Duration::from_secs(10);
