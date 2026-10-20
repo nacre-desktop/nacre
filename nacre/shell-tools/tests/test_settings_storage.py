@@ -127,6 +127,7 @@ class SettingsStorageTests(unittest.TestCase):
             shutil.copy2(
                 ROOT / "nacre/shell/services/NacreSettingsStorage.qml", services
             )
+            shutil.copy2(ROOT / "nacre/shell/services/daemon-state.js", services)
             (services / "qmldir").write_text(
                 "singleton NacreSettingsStorage 1.0 NacreSettingsStorage.qml\n"
             )
