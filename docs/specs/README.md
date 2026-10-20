@@ -31,6 +31,21 @@ desktop stays quiet for Bead B2 captures. Lead scope decisions:
 source-staged HOME units stay refused, ALPM hooks stay blanket-refused, and
 real-pacman gate 1 is a later phase.
 
+### Lead update — 2026-10-20 night
+
+- N10 phases 1–2 are local checkpoints on `task/n10-complete-20261020` (`41bdb0e0`):
+  the branch is rebased onto main, the combined vendor-unit orchestration and
+  fresh-process recovery work under a single lock, and 189 + 17 focused tests
+  pass on dev-1. Public mutators remain fail-closed. Phase 3, the remaining
+  acceptance matrix, is in progress.
+- Finding: the Arch package stages core user units into HOME
+  (`~/.config/systemd/user`), and N10 deliberately refuses HOME units. The lead
+  decided to ship package-installed core units as vendor units in
+  `/usr/lib/systemd/user`, migrating only exact package-deployed HOME copies;
+  copies with local edits are kept and reported. Source installs are unchanged.
+  This is new unit N0013, assigned to a Sol worker on
+  `task/n0013-vendor-units-20261020`. It has no push and no live action.
+
 ## Lead-transfer receipt — 2026-10-20
 
 - **Publication:** F4 source `9b37c663a35280f3fc66b836fed0940eac646aa1`,
