@@ -39,7 +39,9 @@ def _validate_file(meta) -> None:
         _fail()
 
 
-def _validate_chain(dirs: list[int], names: list[str], *, final_private: bool = True) -> None:
+def _validate_chain(
+    dirs: list[int], names: list[str], *, final_private: bool = True
+) -> None:
     uid = os.getuid()
     root_uid = os.fstat(dirs[0]).st_uid
     anchor_next = False
@@ -57,8 +59,10 @@ def _validate_chain(dirs: list[int], names: list[str], *, final_private: bool = 
             if meta.st_uid != root_uid or stat.S_IMODE(meta.st_mode) != 0o1777:
                 _fail()
             anchor_next = True
-        if final_private and index == len(dirs) - 1 and (
-            meta.st_uid != uid or meta.st_mode & 0o022
+        if (
+            final_private
+            and index == len(dirs) - 1
+            and (meta.st_uid != uid or meta.st_mode & 0o022)
         ):
             _fail()
         if index < len(names):
@@ -200,7 +204,14 @@ class PinnedDirectory:
         except OSError:
             _fail()
 
-    def open_file(self, name: str, *, flags: int = os.O_RDWR, mode: int = 0o600, create: bool = False) -> int:
+    def open_file(
+        self,
+        name: str,
+        *,
+        flags: int = os.O_RDWR,
+        mode: int = 0o600,
+        create: bool = False,
+    ) -> int:
         """Open one checked regular file relative to the pinned directory fd."""
         if not name or "/" in name or name in (".", "..") or mode & 0o022:
             _fail()
@@ -253,13 +264,19 @@ class PinnedDirectory:
             )
             view = memoryview(content)
             while view:
-                view = view[os.write(fd, view):]
+                view = view[os.write(fd, view) :]
             os.fsync(fd)
             os.close(fd)
             fd = -1
             self.ensure_valid()
             try:
-                os.link(temp, name, src_dir_fd=root_fd, dst_dir_fd=root_fd, follow_symlinks=False)
+                os.link(
+                    temp,
+                    name,
+                    src_dir_fd=root_fd,
+                    dst_dir_fd=root_fd,
+                    follow_symlinks=False,
+                )
                 created = True
             except FileExistsError:
                 created = False
@@ -279,6 +296,7 @@ class PinnedDirectory:
             except OSError as error:
                 if error.errno != errno.ENOENT:
                     pass
+
     def sync(self) -> None:
         self.ensure_valid()
         try:
@@ -334,7 +352,8 @@ class PinnedDirectory:
             if (existing is None) != (current is None) or (
                 existing is not None
                 and current is not None
-                and (existing.st_dev, existing.st_ino) != (current.st_dev, current.st_ino)
+                and (existing.st_dev, existing.st_ino)
+                != (current.st_dev, current.st_ino)
             ):
                 _fail()
             os.replace(temp, name, src_dir_fd=root_fd, dst_dir_fd=root_fd)
@@ -370,7 +389,9 @@ class Lease(PinnedDirectory):
         super().ensure_valid()
         uid = os.getuid()
         try:
-            named = os.stat(".writer.lock", dir_fd=self._dirs[-1], follow_symlinks=False)
+            named = os.stat(
+                ".writer.lock", dir_fd=self._dirs[-1], follow_symlinks=False
+            )
             opened = os.fstat(self.fd)
         except OSError:
             _fail()
@@ -408,8 +429,7 @@ def _open_root(path: Path, *, create: bool = False) -> tuple[list[int], list[str
             if parent.st_uid not in (root_uid, uid) or (
                 parent.st_mode & 0o022
                 and not (
-                    parent.st_uid == root_uid
-                    and stat.S_IMODE(parent.st_mode) == 0o1777
+                    parent.st_uid == root_uid and stat.S_IMODE(parent.st_mode) == 0o1777
                 )
             ):
                 _fail()
@@ -439,14 +459,15 @@ def _open_root(path: Path, *, create: bool = False) -> tuple[list[int], list[str
             elif meta.st_uid not in (root_uid, uid) or (
                 meta.st_mode & 0o022
                 and not (
-                    meta.st_uid == root_uid
-                    and stat.S_IMODE(meta.st_mode) == 0o1777
+                    meta.st_uid == root_uid and stat.S_IMODE(meta.st_mode) == 0o1777
                 )
             ):
                 os.close(child)
                 _fail()
             # The destination itself is always caller-owned.
-            if index + 1 == len(components) and (meta.st_uid != uid or meta.st_mode & 0o022):
+            if index + 1 == len(components) and (
+                meta.st_uid != uid or meta.st_mode & 0o022
+            ):
                 os.close(child)
                 _fail()
             names.append(name)
@@ -459,7 +480,9 @@ def _open_root(path: Path, *, create: bool = False) -> tuple[list[int], list[str
         raise
 
 
-def _lock(root: Path, dirs: list[int], names: list[str], inherited_fd: int | None) -> int:
+def _lock(
+    root: Path, dirs: list[int], names: list[str], inherited_fd: int | None
+) -> int:
     uid = os.getuid()
     root_fd = dirs[-1]
     try:

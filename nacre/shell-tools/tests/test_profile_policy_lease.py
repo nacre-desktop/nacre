@@ -8,7 +8,9 @@ import unittest
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS))
-SPEC = importlib.util.spec_from_file_location("profile_policy", TOOLS / "profile-policy.py")
+SPEC = importlib.util.spec_from_file_location(
+    "profile_policy", TOOLS / "profile-policy.py"
+)
 profile_policy = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(profile_policy)
 from writer_lease import Lease, WriterLeaseError, writer_lease
@@ -57,9 +59,7 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
             root = Path(home) / ".config/nacre"
             with writer_lease(root) as lease:
                 value = profile_policy.install(Path(home), lease=lease)
-                self.assertEqual(
-                    json.loads((root / "profile.json").read_text()), value
-                )
+                self.assertEqual(json.loads((root / "profile.json").read_text()), value)
                 with self.assertRaises(WriterLeaseError):
                     with writer_lease(root):
                         self.fail("profile installation dropped its parent lease")

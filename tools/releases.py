@@ -183,11 +183,7 @@ def capture(repo, revision, extra=(), package=False, *, lease=None):
         entries=[],
     )
     captured = set(extra) if package else set(paths(repo)) | set(extra)
-    captured = {
-        path
-        for path in captured
-        if path.name not in LOCKFILES
-    }
+    captured = {path for path in captured if path.name not in LOCKFILES}
     for i, path in enumerate(sorted(captured, key=str)):
         if lease is not None:
             lease.ensure_valid()
@@ -550,7 +546,9 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
                 "brain": [sys.executable, str(repo / "brain/install.py")],
                 "ai": [sys.executable, str(repo / "ai/install-component.py")],
             }
-            subprocess.run(commands[component], env=environment, pass_fds=(lease.fd,), check=True)
+            subprocess.run(
+                commands[component], env=environment, pass_fds=(lease.fd,), check=True
+            )
             if component == "configs" and any(
                 Path(entry["path"]).is_relative_to(HOME / ".config/hypr")
                 and entry["before"] != fingerprint(Path(entry["path"]))
@@ -776,6 +774,7 @@ def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
         restore(release, record, force=True, lease=lease)
         raise
 
+
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "session":
         import package_sessions
@@ -866,11 +865,7 @@ def main():
             with _writer.writer_lease(HOME / ".config/nacre") as lease:
                 print(
                     json.dumps(
-                        dict(
-                            restored=restore(
-                                Path(current["release"]), lease=lease
-                            )
-                        )
+                        dict(restored=restore(Path(current["release"]), lease=lease))
                     )
                 )
 

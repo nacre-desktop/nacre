@@ -128,7 +128,9 @@ class ReleaseTests(unittest.TestCase):
                 m.restore(release, record, force=True, lease=lease)
                 self.assertEqual(profile.read_text(), "before")
                 self.assertFalse(obsolete.exists())
-                self.assertEqual((config / ".writer.lock").stat().st_ino, writer_identity)
+                self.assertEqual(
+                    (config / ".writer.lock").stat().st_ino, writer_identity
+                )
                 self.assertEqual(nested_release_lock.read_text(), "keep")
 
     def test_standalone_restore_locks_release_then_destination(self):
@@ -207,7 +209,9 @@ class ReleaseTests(unittest.TestCase):
                     package=True,
                     lease=lease,
                 )
-            self.assertEqual([Path(item["path"]) for item in record["entries"]], [ordinary])
+            self.assertEqual(
+                [Path(item["path"]) for item in record["entries"]], [ordinary]
+            )
             self.assertEqual(lease_file.read_text(), "lease")
             self.assertEqual(transaction_lock.read_text(), "transaction")
 
@@ -237,7 +241,11 @@ class ReleaseTests(unittest.TestCase):
             with (
                 patch.object(m, "HOME", home),
                 patch.object(m, "STATE", root / "state"),
-                patch.object(m.subprocess, "check_output", side_effect=lambda *a, **k: next(outputs)),
+                patch.object(
+                    m.subprocess,
+                    "check_output",
+                    side_effect=lambda *a, **k: next(outputs),
+                ),
                 patch.object(m.subprocess, "run", side_effect=run),
                 patch.object(m, "capture", return_value=(release, record)),
                 patch.object(m, "atomic"),

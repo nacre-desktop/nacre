@@ -195,7 +195,9 @@ def install(home=None, lease=None):
     home = home or Path.home()
     directory = home / ".config/nacre"
     inherited_fd = inherited_fd_from_env() if lease is None else None
-    manager = writer_lease(directory, inherited_fd=inherited_fd) if lease is None else None
+    manager = (
+        writer_lease(directory, inherited_fd=inherited_fd) if lease is None else None
+    )
     if manager is None:
         lease.ensure_valid()
         if lease.root != directory:
@@ -209,6 +211,7 @@ def install(home=None, lease=None):
 def _install(lease):
     lease.ensure_valid()
     value = selected()
+
     # Snapshot both checked files while the destination lease is held. If the
     # second replace fails, restore the first under the same pinned directory.
     def snapshot(name):
@@ -234,12 +237,16 @@ def _install(lease):
             )
         ):
             raise RuntimeError("Nacre destination busy or unsafe")
-        return None if after is None else {
-            "content": content,
-            "mode": after.st_mode & 0o777,
-            "identity": (after.st_dev, after.st_ino),
-            "change": (after.st_ctime_ns, after.st_mtime_ns),
-        }
+        return (
+            None
+            if after is None
+            else {
+                "content": content,
+                "mode": after.st_mode & 0o777,
+                "identity": (after.st_dev, after.st_ino),
+                "change": (after.st_ctime_ns, after.st_mtime_ns),
+            }
+        )
 
     names = ("profile.json", "profile.lua")
     previous = {name: snapshot(name) for name in names}
@@ -303,9 +310,10 @@ def _install(lease):
                 if before is None:
                     if after is not None:
                         raise RuntimeError("Profile restoration verification failed")
-                elif after is None or (
-                    after["content"], after["mode"]
-                ) != (before["content"], before["mode"]):
+                elif after is None or (after["content"], after["mode"]) != (
+                    before["content"],
+                    before["mode"],
+                ):
                     raise RuntimeError("Profile restoration verification failed")
         except BaseException as restore_error:
             raise RuntimeError(

@@ -9,7 +9,6 @@ import unittest
 from unittest import mock
 
 
-
 MODULE = Path(__file__).parents[1] / "writer_lease.py"
 SPEC = importlib.util.spec_from_file_location("writer_lease", MODULE)
 writer_lease = importlib.util.module_from_spec(SPEC)
@@ -84,6 +83,7 @@ class WriterLeaseTests(unittest.TestCase):
                     {"st_mode": stat.S_IFLNK | 0o755},
                 ):
                     with self.subTest(overrides=overrides):
+
                         def unsafe_link_stat(name, *args, **kwargs):
                             meta = original_stat(name, *args, **kwargs)
                             if (
@@ -211,7 +211,9 @@ class WriterLeaseTests(unittest.TestCase):
                     pass
                 with self.assertRaises(writer_lease.WriterLeaseError):
                     with writer_lease.writer_lease(root):
-                        self.fail("closing inherited duplicate released the parent's lock")
+                        self.fail(
+                            "closing inherited duplicate released the parent's lock"
+                        )
 
                 unlocked = os.open(root / ".writer.lock", os.O_RDWR | os.O_CLOEXEC)
                 try:
