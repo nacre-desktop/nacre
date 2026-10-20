@@ -41,6 +41,11 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
   No live desktop, installed Nacre, live configs, keybindings, autostart or live
   systemd changes without new owner approval. Earlier approval does not carry.
 - No tags, releases, AUR, PyPI or crates.io. All Nacre commits carry [no-publish].
+  Before every push, fetch the destination and inspect every outgoing commit
+  message (`git log origin/main..HEAD --format=%B`). Every new commit, including
+  code and tests, must contain the literal `[no-publish]`; otherwise stop before
+  pushing and correct only unpublished task-owned commits. Never rewrite
+  published history to repair old messages.
   Spec-agent commits begin docs(spec):. Every Bead crate sets publish = false.
 - Never change deliberate AI permissions: Codex danger-full-access with
   approvalPolicy never; Claude --dangerously-skip-permissions; public default
