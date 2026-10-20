@@ -1193,11 +1193,17 @@ pub fn legacy_snapshot(mut files: Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::os::unix::fs::MetadataExt;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
+
+    fn private_home() -> tempfile::TempDir {
+        let home = tempfile::tempdir().unwrap();
+        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        home
+    }
 
     #[test]
     fn pinned_config_root_migrates_backup_and_cleans_temporary_files() -> Result<()> {
-        let home = tempfile::tempdir()?;
+        let home = private_home();
         let paths = crate::paths::Paths::new(home.path());
         fs::create_dir_all(&paths.config)?;
         fs::create_dir_all(&paths.state)?;
@@ -1241,7 +1247,7 @@ mod tests {
 
     #[test]
     fn pinned_battery_alert_state_writes_inside_leased_state_root() -> Result<()> {
-        let home = tempfile::tempdir()?;
+        let home = private_home();
         let paths = crate::paths::Paths::new(home.path());
         fs::create_dir_all(&paths.config)?;
         fs::create_dir_all(&paths.state)?;
