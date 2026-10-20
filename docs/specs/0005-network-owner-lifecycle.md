@@ -135,4 +135,25 @@ capture cap stays2GiB. Existing N3 acceptance claims remain withdrawn.
 
 ## Scoped correctness review — 2026-10-18
 
-Accepted feature head ecd08dfe8a8449001ac499a14ae92a9620d93fc3 and reported same-runtime transfer c992fc58c1166a951dd48a40fdf6561fbfc375c1. Reviewed the private archive checksum and launcher/test records: held-child membership, systemd and effective6GiB limits, swap0, nice10 before same-PID exec, zero OOM events; lifecycle test and Clippy output match reported success. Three N5 tests and seven N3 core-network regressions passed; fmt passed. This is new scoped evidence, not reinstatement of withdrawn N3 runs. Publication remains gated on F4; no full-repo/CI or broader N3 acceptance claim. Explicit network-primary compatibility fixture/legacy-watch coverage must remain mapped to a receipt before final Done; do not repeat already passing lifecycle tests without a new reason. No active host or capture grant follows this review.
+Accepted feature head ecd08dfe8a8449001ac499a14ae92a9620d93fc3 and reported same-runtime transfer c992fc58c1166a951dd48a40fdf6561fbfc375c1. Reviewed the private archive checksum and launcher/test records: held-child membership, systemd and effective6GiB limits, swap0, nice10 before same-PID exec, zero OOM events; lifecycle test and Clippy output match reported success. Three N5 tests and seven N3 core-network regressions passed; fmt passed. This is new scoped evidence, not reinstatement of withdrawn N3 runs. Publication remains gated on F4; no full-repo/CI or broader N3 acceptance claim. Explicit network-primary compatibility fixture/legacy-watch coverage must remain mapped to a receipt before final Done; do not repeat already passing lifecycle tests without a new reason. No active host or capture grant follows.
+
+## Reconciliation — 2026-10-20
+
+Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494`. Final network
+source: `75904d7ff0d4993600f254d3f941509dc1265ace`; review remains pending.
+PASS: `cargo fmt --check`; workspace `cargo clippy -j2 --all-targets -- -D
+warnings`; `cargo test -j2 -p nacre-helper core_network_ -- --nocapture` (13
+passed); `cargo test -j2 -p nacre-helper --quiet` (all package test binaries
+passed); helper examples and locked release helper builds. Private owner fixtures
+prove replacement IDs, stale publication rejection, and watcher teardown on
+error/cancellation. All Cargo jobs ran in transient user scopes capped at 2 GiB.
+The frozen `network.watch` owner-edge transcript also passes in the daemon test.
+
+Compatibility adjustment: the single same-connection legacy event watcher stays
+owned by the network task across core identity rotations, so old `network.watch`
+clients receive each owner edge. Each core reader still exits at the owner
+boundary, publishes stale health, and is aborted/joined; the next projection gets
+a fresh identity generation. The parent task aborts/joins the persistent watcher
+on exit/cancellation. This preserves the old wire contract without a second bus
+connection. Hosted CI, live NetworkManager behavior, and independent source
+review remain outstanding; no live bus or mutation was used.

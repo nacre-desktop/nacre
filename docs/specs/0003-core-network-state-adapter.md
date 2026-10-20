@@ -205,3 +205,29 @@ No N0003 rerun or host access is granted. A future correctness run requires a ne
 explicit exact-source assignment and verified containment. Current work is only
 the local N0002 collector correction. N0005's source-review lifecycle findings
 remain queued; no assertion they have been implemented or validated.
+
+## Reconciliation — 2026-10-20
+
+Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494` (green F4 and
+N9; N0013/N0014 landed). Final network source:
+`75904d7ff0d4993600f254d3f941509dc1265ace`.
+The withdrawn acceptance evidence above remains withdrawn; this exact rebased
+source has fresh local evidence, pending independent source review.
+
+PASS: `cargo fmt --check`; workspace clippy; 13 focused `core_network_*` tests;
+the full `nacre-helper` package suite; helper examples build; locked release
+helper build. The package run replays private legacy network and `network.watch`
+compatibility fixtures. Focused correctness tests use private `dbus-daemon
+--session` fixtures. All Cargo jobs used a transient user scope with
+`MemoryMax=2G`.
+
+```sh
+cargo clippy -j2 --all-targets -- -D warnings
+cargo test -j2 -p nacre-helper core_network_ -- --nocapture
+cargo test -j2 -p nacre-helper --quiet
+cargo build -j2 --locked --examples -p nacre-helper
+cargo build -j2 --locked --release -p nacre-helper --bin nacre-helper
+```
+
+No system bus, live NetworkManager, scan, secret read, or mutation was used.
+Exact-head hosted CI and live-provider behavior remain unverified.
