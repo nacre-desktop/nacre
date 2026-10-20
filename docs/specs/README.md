@@ -716,3 +716,11 @@ pass on the dedicated SSH test host with private HOME/fake systemctl. The owner
 procedure in N0006/f4-switch-on now documents enable, verify, disable/rollback,
 and manual cached-package downgrade only after disable. No push, package or live
 manager action; source review/integration/exact-head CI remain with the lead.
+
+N0014 source extension (`50309bb7`, local for lead review): accepts matching
+receipt-owned HOME units as one consistent source layout, uses the deployed
+helper's ctl interface, reports readiness blockers and skips unrelated dangling
+activation links. Scoped configuration now stages/receipts the three source
+units. Dedicated SSH-host checks: 25 switch tests, 16 release tests and the new
+configuration receipt regression pass; full configure tests require the absent
+native helper. Owner procedure updated; no implementer live probe or push.

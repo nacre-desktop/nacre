@@ -9,6 +9,59 @@ must pass before owner execution. Full N10 transactional package/setup rollback
 remains separate future hardening and is not required by this lite procedure.
 No live command in this document was executed during N0014 development.
 
+## Owner source deployment prerequisites
+
+Source installs are supported when all three loaded units are regular,
+user-owned files under `$XDG_CONFIG_HOME/systemd/user` (default
+`~/.config/systemd/user`) and their SHA-256 digests match the setup receipt in
+`~/.local/state/nacre/configuration.json`. Edited/unreceipted units and mixed
+vendor/HOME layouts refuse. Shell drop-ins without `NACRE_DAEMON_CLIENT` or
+unresolved environment-file inputs may remain in place.
+
+After owner approval and from the exact reviewed, green source checkout, update
+the source shell deployment so its helper is present. This is a live deployment
+and shell restart; review the plan first. It is not executed by `nacre f4`:
+
+```sh
+python3 tools/manage.py --component shell
+python3 tools/manage.py --component shell --apply
+```
+
+The installer deploys the helper at
+`~/.local/share/nacre/shell/tools/nacre-helper`. The switch checks this regular,
+user-owned executable with non-symlink ancestry and invokes its `ctl` interface.
+The code-only source update does not deploy the daemon units, so stage and
+receipt the three unit files through a scoped configuration plan/apply:
+
+```sh
+python3 tools/configure.py \
+  --only .config/systemd/user/nacre-shell.service \
+  --only .config/systemd/user/nacre-daemon.service \
+  --only .config/systemd/user/nacre-daemon.socket
+# After reviewing that plan:
+python3 tools/configure.py \
+  --only .config/systemd/user/nacre-shell.service \
+  --only .config/systemd/user/nacre-daemon.service \
+  --only .config/systemd/user/nacre-daemon.socket --apply
+systemctl --user daemon-reload
+nacre f4 status
+```
+
+These setup commands target the standard HOME layout; an existing custom XDG
+layout must already have matching HOME-relative receipt entries. Do not relocate
+or receipt edited files manually to bypass a refusal. Configuration apply stages
+files without enabling/starting the daemon. A byte-identical existing shell unit
+is receipted alongside newly deployed daemon units. Missing deployment files,
+receipt mismatches and other blockers appear in status's `ready_to_enable` list;
+an empty list means the read-only preflight found no blocker. Enable still
+rechecks under release.lock. Setup must already have created that release lock.
+
+Then use `nacre f4 enable`, verify with `nacre f4 status` and the physical checks
+below, and retain its transaction ID. `nacre f4 rollback --transaction ID`
+restores the source installation's prior activation state. Source installs have
+no pacman downgrade step; activation rollback does not revert the source tree,
+helper deployment or setup receipt.
+
 ## Owner package and setup prerequisites
 
 Package publication, installation and live switching remain owner-controlled.
@@ -34,7 +87,7 @@ Do not substitute a whole-system upgrade. Retain the installed profile unless
 a change is intended. Setup must complete before switching. Its package layout
 must expose all three vendor fragments under `/usr/lib/systemd/user` without
 HOME shadows, and create the existing release lock at
-`~/.local/state/nacre/releases/release.lock`. Source installs are unsupported.
+`~/.local/state/nacre/releases/release.lock`. Source installs use the separate procedure above.
 The CLI's absolute `XDG_CONFIG_HOME` (default `~/.config`) must be in the user
 manager's UnitPath. The controller names unsupported files and refuses before
 writing; do not remove foreign files merely to bypass that refusal.
@@ -58,8 +111,8 @@ protocol, durable/error-free settings snapshots and a stable daemon identity.
 A failure attempts automatic restoration and reports the transaction ID if
 manual recovery is still needed. Repeating successful enable is idempotent.
 
-Status is read-only: inspect `effective`, `manager`, the three unit states and
-`incomplete`. It does not run a protocol probe that could socket-activate the
+Status is read-only: inspect `effective`, `manager`, the three unit states,
+`incomplete`, and the blocking-reason list `ready_to_enable`. It does not run a protocol probe that could socket-activate the
 daemon. Do the owner-only reversible Settings write/read-back and restore its
 original value. Real logout/login, keyboard/display, notification ownership and
 compositor recovery remain owner physical checks; nested F4 evidence does not
