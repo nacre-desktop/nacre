@@ -52,7 +52,11 @@ class Manager:
 
     def __call__(self, command, **kwargs):
         self.calls.append(command)
-        if command[0] == "/usr/bin/nacrectl":
+        if command[0] == "/usr/bin/nacrectl" or command[0].endswith(
+            "/tools/nacre-helper"
+        ):
+            if command[0].endswith("/tools/nacre-helper"):
+                assert command[1] == "ctl"
             if self.bad_health:
                 raise RuntimeError("test protocol failure")
             method = command[-2]
@@ -109,7 +113,7 @@ class Manager:
                     if enabled:
                         link.parent.mkdir(exist_ok=True)
                         if not link.is_symlink():
-                            link.symlink_to("/usr/lib/systemd/user/" + unit)
+                            link.symlink_to(values["FragmentPath"])
                     elif link.is_symlink():
                         link.unlink()
                     if "--now" in args:
@@ -161,6 +165,153 @@ class SwitchTests(unittest.TestCase):
 
     def assertRestored(self, before):
         self.assertEqual(self.prior(), before)
+
+    def source_layout(self):
+        receipt = {}
+        for unit in m.UNITS:
+            path = self.manager.root / unit
+            path.write_text("[Unit]\nDescription=Private fixture " + unit + "\n")
+            receipt[str(path.relative_to(self.home))] = m.digest(path)
+            self.manager.units[unit]["FragmentPath"] = str(path)
+        (self.state / "configuration.json").write_text(json.dumps(receipt))
+        helper = self.home / ".local/share/nacre/shell/tools/nacre-helper"
+        helper.parent.mkdir(parents=True)
+        helper.write_text("private fixture helper")
+        helper.chmod(0o700)
+        return helper
+
+    def test_source_enable_disable_rollback_with_foreign_dropins(self):
+        helper = self.source_layout()
+        directory = self.manager.root / (m.SHELL + ".d")
+        directory.mkdir()
+        for name in ("niri-acceptance.conf", "niri-runtime.conf"):
+            (directory / name).write_text("[Service]\nRestartSec=3\n")
+        self.manager(["systemctl", "--user", "daemon-reload"])
+        before = self.prior()
+        enabled = self.switch.run("enable")
+        link = self.manager.root / "graphical-session.target.wants" / m.SOCKET
+        self.assertEqual(os.readlink(link), str(self.manager.root / m.SOCKET))
+        self.assertTrue(
+            any(c[:3] == [str(helper), "ctl", "call"] for c in self.manager.calls)
+        )
+        self.assertEqual(self.switch.run("status")["ready_to_enable"], [])
+        self.switch.run("disable")
+        self.switch.run("rollback")
+        self.switch.run("rollback", enabled["transaction"])
+        self.assertRestored(before)
+
+    def test_source_interrupted_enable_and_health_failure_restore(self):
+        self.source_layout()
+        before = self.prior()
+
+        def crash(name):
+            if name == "socket":
+                raise Crash(name)
+
+        self.switch.phase_hook = crash
+        with self.assertRaises(Crash):
+            self.switch.run("enable")
+        self.switch.phase_hook = None
+        self.switch.run("rollback")
+        self.assertRestored(before)
+        self.manager.bad_health = True
+        with self.assertRaisesRegex(RuntimeError, "prior state restored"):
+            self.switch.run("enable")
+        self.assertRestored(before)
+
+    def test_source_rejects_socket_link_to_vendor_fragment(self):
+        self.source_layout()
+        self.switch.run("enable")
+        link = self.manager.root / "graphical-session.target.wants" / m.SOCKET
+        link.unlink()
+        link.symlink_to("/usr/lib/systemd/user/" + m.SOCKET)
+        self.manager.calls.clear()
+        with self.assertRaisesRegex(RuntimeError, "Independent daemon activation"):
+            self.switch.run("disable")
+        self.assertEqual(self.manager.mutations(), [])
+
+    def test_dangling_startup_links_are_ignored_except_daemon(self):
+        directory = self.home / ".local/share/dbus-1/services"
+        directory.mkdir(parents=True)
+        link = directory / "org.freedesktop.secrets.service"
+        link.symlink_to(self.home / "missing/ai/dbus")
+        self.assertEqual(self.switch.run("status")["ready_to_enable"], [])
+        self.switch.run("enable")
+        for name, target in (
+            ("nacre-daemon-alias.service", "missing"),
+            ("alias.service", "missing/nacre-daemon"),
+        ):
+            with self.subTest(name=name):
+                other = directory / name
+                other.symlink_to(target)
+                self.manager.calls.clear()
+                with self.assertRaisesRegex(
+                    RuntimeError, "Independent daemon activation"
+                ):
+                    self.switch.run("disable")
+                self.assertEqual(self.manager.mutations(), [])
+                other.unlink()
+
+    def test_source_refusals_before_write(self):
+        for case in (
+            "edited",
+            "unreceipted",
+            "symlink",
+            "mixed",
+            "missing-helper",
+            "symlink-helper",
+            "owner",
+        ):
+            with self.subTest(case=case):
+                self.setUp()
+                helper = self.source_layout()
+                path = self.manager.root / m.DAEMON
+                if case == "edited":
+                    path.write_text("owner edit")
+                elif case == "unreceipted":
+                    (self.state / "configuration.json").write_text("{}")
+                elif case == "symlink":
+                    body = path.read_bytes()
+                    path.unlink()
+                    target = self.home / "alias"
+                    target.write_bytes(body)
+                    path.symlink_to(target)
+                elif case == "mixed":
+                    path.unlink()
+                    self.manager.units[m.DAEMON]["FragmentPath"] = (
+                        "/usr/lib/systemd/user/" + m.DAEMON
+                    )
+                elif case == "missing-helper":
+                    helper.unlink()
+                elif case == "symlink-helper":
+                    helper.unlink()
+                    helper.symlink_to(self.home / "missing")
+                else:
+                    self.manager.units[m.DAEMON]["WantedBy"] = "other.target"
+                status = self.switch.run("status")
+                self.assertTrue(status["ready_to_enable"])
+                with self.assertRaises((RuntimeError, OSError)):
+                    self.switch.run("enable")
+                self.assertFalse(self.switch.index.exists())
+                self.assertEqual(self.manager.mutations(), [])
+
+    def test_missing_source_daemon_units_report_setup_steps(self):
+        self.source_layout()
+        for unit in (m.DAEMON, m.SOCKET):
+            (self.manager.root / unit).unlink()
+            self.manager.units[unit].update(FragmentPath="", LoadState="not-found")
+        status = self.switch.run("status")
+        for unit in (m.DAEMON, m.SOCKET):
+            self.assertTrue(
+                any(
+                    unit in reason and "configure.py --only" in reason
+                    for reason in status["ready_to_enable"]
+                )
+            )
+        with self.assertRaisesRegex(RuntimeError, "Missing deployed unit"):
+            self.switch.run("enable")
+        self.assertFalse(self.switch.index.exists())
+        self.assertEqual(self.manager.mutations(), [])
 
     def test_enable_disable_rollback_and_repeat(self):
         before = self.prior()

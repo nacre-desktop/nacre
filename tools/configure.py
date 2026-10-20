@@ -109,6 +109,16 @@ def files(root=ROOT):
         for source in sorted(collection.glob("*.jpg")):
             result[Path("Pictures/Wallpapers") / ("nacre-" + source.name)] = source
     features = selected_profile(root)["components"]
+    if "shell" in features and not (root / "package.json.installed").exists():
+        # Receipt-owned source units are staged only, never activated here.
+        for unit in (
+            "nacre-shell.service",
+            "nacre-daemon.service",
+            "nacre-daemon.socket",
+        ):
+            result[Path(".config/systemd/user") / unit] = (
+                root / "nacre/shell-tools" / unit
+            )
 
     def included(path):
         name = path.name
@@ -465,6 +475,12 @@ def apply(
             )
             if str(relative) not in seeds:
                 known[str(relative)] = digest(dest)
+    if scope:
+        # Include unchanged, byte-identical scoped files when adopting a receipt.
+        for relative, source in files(root).items():
+            if relative in scope and str(relative) not in seeds:
+                if digest(home / relative) == wanted_digest(source, home):
+                    known[str(relative)] = digest(home / relative)
     atomic(
         home / ".local/state/nacre/configuration.json",
         json.dumps(known, indent=2).encode(),

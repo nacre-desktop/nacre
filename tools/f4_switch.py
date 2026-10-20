@@ -4,6 +4,7 @@
 import argparse
 import base64
 import fcntl
+import importlib.util
 import json
 import os
 import re
@@ -112,6 +113,16 @@ def file_state(path):
     }
 
 
+def digest(path):
+    # Share the setup receipt's byte digest, including in installed controllers.
+    spec = importlib.util.spec_from_file_location(
+        "f4_configuration", Path(__file__).with_name("configure.py")
+    )
+    configuration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(configuration)
+    return configuration.digest(path)
+
+
 def environment(text):
     result = {}
     for token in shlex.split(text):
@@ -218,9 +229,9 @@ class Switch:
                         continue
                     if stat.S_ISLNK(info.st_mode):
                         target = os.readlink(path)
-                        if any(
-                            name in str(path.relative_to(root)) or name in target
-                            for name in (DAEMON, SOCKET)
+                        if (
+                            "nacre-daemon" in str(path.relative_to(root))
+                            or "nacre-daemon" in target
                         ):
                             own = (
                                 allow_socket
@@ -228,7 +239,12 @@ class Switch:
                                 == self.config
                                 / "systemd/user/graphical-session.target.wants"
                                 / SOCKET
-                                and target == "/usr/lib/systemd/user/" + SOCKET
+                                and target
+                                == getattr(
+                                    self,
+                                    "socket_fragment",
+                                    "/usr/lib/systemd/user/" + SOCKET,
+                                )
                             )
                             if not own:
                                 raise RuntimeError(
@@ -237,7 +253,10 @@ class Switch:
                             continue
                         if target == "/dev/null":
                             continue
-                        resolved = path.resolve(strict=True)
+                        try:
+                            resolved = path.resolve(strict=True)
+                        except FileNotFoundError:
+                            continue  # dangling links have no activation target
                         if not unit_root and (
                             info.st_uid != 0 or resolved.stat().st_uid != 0
                         ):
@@ -262,10 +281,108 @@ class Switch:
                     ):
                         raise RuntimeError(f"Independent daemon startup input: {path}")
 
+    def layout(self, units):
+        """Validate one receipt-owned source layout or one vendor layout."""
+        reasons, layouts = [], set()
+        receipt_path = self.home / ".local/state/nacre/configuration.json"
+        receipt = None
+        for unit, values in units.items():
+            fragment = values.get("FragmentPath", "")
+            source = self.config / "systemd/user" / unit
+            vendor = "/usr/lib/systemd/user/" + unit
+            if not fragment:
+                reasons.append(
+                    f"Missing deployed unit {source}; update the source shell/helper deployment, then run tools/configure.py --only .config/systemd/user/{unit} --apply and systemctl --user daemon-reload"
+                )
+                continue
+            try:
+                if fragment == str(source):
+                    checked(source)
+                    if not source.is_file() or source.stat().st_uid != os.getuid():
+                        raise RuntimeError(
+                            f"Source unit must be a user-owned regular file: {source}"
+                        )
+                    if receipt is None:
+                        receipt = json.loads(read(receipt_path))
+                        if not isinstance(receipt, dict):
+                            raise RuntimeError(f"Invalid setup receipt: {receipt_path}")
+                    relative = str(source.relative_to(self.home))
+                    recorded = receipt.get(relative)
+                    if (
+                        not isinstance(recorded, str)
+                        or not re.fullmatch(r"[0-9a-f]{64}", recorded)
+                        or digest(source) != recorded
+                    ):
+                        raise RuntimeError(
+                            f"Unreceipted or edited source unit: {source}; review tools/configure.py --only {relative} --apply"
+                        )
+                    layouts.add("source")
+                elif fragment == vendor:
+                    if os.path.lexists(source):
+                        raise RuntimeError(
+                            f"HOME unit shadows vendor fragment: {source}"
+                        )
+                    layouts.add("package")
+                else:
+                    raise RuntimeError(f"Unsupported unit fragment: {unit}: {fragment}")
+                legacy = self.home / ".config/systemd/user" / unit
+                if legacy != source and os.path.lexists(legacy):
+                    raise RuntimeError(f"Conflicting HOME unit: {legacy}")
+            except (OSError, RuntimeError, ValueError) as error:
+                reasons.append(f"{source}: {error}")
+        if len(layouts) > 1:
+            reasons.append(
+                "Mixed package/source unit layouts: "
+                + ", ".join(values.get("FragmentPath", "") for values in units.values())
+            )
+        layout = next(iter(layouts)) if len(layouts) == 1 else None
+        self.socket_fragment = (
+            str(self.config / "systemd/user" / SOCKET)
+            if layout == "source"
+            else "/usr/lib/systemd/user/" + SOCKET
+        )
+        self.health_binary = (
+            str(self.home / ".local/share/nacre/shell/tools/nacre-helper")
+            if layout == "source"
+            else "/usr/bin/nacrectl"
+        )
+        self.health_command = (
+            [self.health_binary, "ctl"] if layout == "source" else [self.health_binary]
+        )
+        return reasons, layout
+
+    def health_binary_check(self, layout):
+        if layout == "source":
+            helper = checked(Path(self.health_binary))
+            if (
+                not helper.is_file()
+                or helper.stat().st_uid != os.getuid()
+                or not helper.stat().st_mode & 0o111
+            ):
+                raise RuntimeError(
+                    f"Missing/unsafe source health helper: {helper}; update the source shell deployment with tools/manage.py --component shell --apply"
+                )
+        elif self.runner is subprocess.run:
+            alias = Path("/usr/bin/nacrectl")
+            helper = checked(Path("/usr/lib/nacre/nacre-helper"))
+            info = alias.lstat()
+            if (
+                not stat.S_ISLNK(info.st_mode)
+                or info.st_uid != 0
+                or os.readlink(alias) != "../lib/nacre/nacre-helper"
+                or helper.stat().st_uid != 0
+            ):
+                raise RuntimeError(
+                    "Untrusted protocol health binary: /usr/bin/nacrectl"
+                )
+
     def preflight(self, operation, records, recovery=None):
         checked(self.dropin)
         checked(self.state, directory=True)
         units, manager, effective = self.snapshot()
+        reasons, layout = self.layout(units)
+        if reasons:
+            raise RuntimeError("; ".join(reasons))
         roots = shlex.split(self.show().get("UnitPath", ""))
         user_root = self.config / "systemd/user"
         if str(user_root) not in roots:
@@ -288,14 +405,6 @@ class Switch:
         if current is not None and not owned:
             raise RuntimeError(f"Unmanaged drop-in path: {self.dropin}")
         for unit, values in units.items():
-            for root in {self.home / ".config/systemd/user", user_root}:
-                shadow = root / unit
-                if os.path.lexists(shadow):
-                    raise RuntimeError(f"HOME unit shadows vendor fragment: {shadow}")
-            if values.get("FragmentPath") != "/usr/lib/systemd/user/" + unit:
-                raise RuntimeError(
-                    f"Unsupported vendor fragment: {unit}: {values.get('FragmentPath')}"
-                )
             activity = {"active", "inactive"}
             if recovery is not None:
                 activity.update(("failed", "activating", "deactivating"))
@@ -380,20 +489,8 @@ class Switch:
                 binding[key] = value
         if "NACRE_DAEMON_SOCKET" not in binding and "XDG_RUNTIME_DIR" not in binding:
             raise RuntimeError("Unresolved daemon endpoint: XDG_RUNTIME_DIR")
-        if operation == "enable" and self.runner is subprocess.run:
-            alias = Path("/usr/bin/nacrectl")
-            helper = Path("/usr/lib/nacre/nacre-helper")
-            info = alias.lstat()
-            checked(helper)
-            if (
-                not stat.S_ISLNK(info.st_mode)
-                or info.st_uid != 0
-                or os.readlink(alias) != "../lib/nacre/nacre-helper"
-                or helper.stat().st_uid != 0
-            ):
-                raise RuntimeError(
-                    "Untrusted protocol health binary: /usr/bin/nacrectl"
-                )
+        if operation == "enable":
+            self.health_binary_check(layout)
         self.startup(roots, allow_socket=True)
         if operation == "disable":
             # Only a completed enable may own an existing active/enabled daemon.
@@ -433,7 +530,7 @@ class Switch:
                 raise RuntimeError("F4 protocol health timed out")
             result = self.runner(
                 [
-                    "/usr/bin/nacrectl",
+                    *self.health_command,
                     "call",
                     "--timeout",
                     str(max(1, min(3000, int(remaining * 1000)))),
@@ -573,7 +670,21 @@ class Switch:
         records = self.records()
         if operation == "status":
             units, manager, effective = self.snapshot()
+            reasons, layout = self.layout(units)
+            if layout:
+                try:
+                    self.health_binary_check(layout)
+                except (OSError, RuntimeError, ValueError) as error:
+                    reasons.append(str(error))
+            if not reasons:
+                try:
+                    self.preflight("enable", records)
+                except (OSError, RuntimeError, ValueError) as error:
+                    reasons.append(str(error))
+            if any(r["status"] not in {"complete", "rolled-back"} for r in records):
+                reasons.append("Incomplete F4 transaction; rollback before enabling")
             return {
+                "ready_to_enable": list(dict.fromkeys(reasons)),
                 "mode": effective.get(KEY, "legacy"),
                 "effective": effective.get(KEY),
                 "manager": manager.get(KEY),
