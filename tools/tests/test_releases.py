@@ -60,7 +60,9 @@ class ReleaseTests(unittest.TestCase):
             profiles = SimpleNamespace(install=install)
             configure = SimpleNamespace(apply=Mock())
             package_runtime = SimpleNamespace(
-                metadata=Mock(return_value={"revision": "fixture"}), apply=Mock()
+                metadata=Mock(return_value={"revision": "fixture"}),
+                apply=Mock(),
+                legacy_units=Mock(),
             )
             setup = SimpleNamespace(
                 supported_compositors=Mock(return_value=["mock"]),

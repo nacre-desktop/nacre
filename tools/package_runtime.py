@@ -14,6 +14,65 @@ def metadata(root):
     return _state.read_json_file(root / "package.json.installed")
 
 
+CORE_USER_UNITS = tuple(
+    Path(".config/systemd/user") / name
+    for name in (
+        "nacre-shell.service",
+        "nacre-session-watch.service",
+        "nacre-power-key.service",
+        "nacre-niri-widths.service",
+        "nacre-daemon.service",
+        "nacre-daemon.socket",
+    )
+)
+
+
+def vendor_units(root):
+    marker = root / "package.json.installed"
+    return (
+        CORE_USER_UNITS
+        if marker.is_file() and metadata(root).get("vendor_user_units")
+        else ()
+    )
+
+
+def legacy_units(home, root, *, apply=False):
+    """Retire only regular HOME copies verified by the prior setup receipt."""
+    from configure import atomic, digest
+
+    units = vendor_units(root)
+    if not units:
+        return []
+    manifest = home / ".local/state/nacre/configuration.json"
+    known = _state.read_json_file(manifest) if manifest.exists() else {}
+    package_receipt = home / ".local/state/nacre/package-links.json"
+    previously_packaged = package_receipt.is_file()
+    removed = []
+    for relative in units:
+        path = home / relative
+        if not path.exists() and not path.is_symlink():
+            continue
+        if (
+            previously_packaged
+            and not path.is_symlink()
+            and path.is_file()
+            and digest(path) == known.get(str(relative))
+        ):
+            removed.append(path)
+            if apply:
+                path.unlink()
+        elif apply:
+            print(
+                f"Warning: local user unit preserved: {path}; it shadows the package vendor unit"
+            )
+    if apply and any(str(unit) in known for unit in units):
+        # Retire ownership too: a later HOME copy belongs to the user.
+        for unit in units:
+            known.pop(str(unit), None)
+        atomic(manifest, json.dumps(known, indent=2).encode(), 0o600)
+    return removed
+
+
 def files(root, profile):
     result = {}
     for component in (

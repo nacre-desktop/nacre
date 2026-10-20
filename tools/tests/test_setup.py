@@ -357,6 +357,91 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
 
+    def test_vendor_unit_migration_uses_receipts_and_preserves_local_shadows(self):
+        import configure
+
+        for kind, relative in (
+            (kind, unit)
+            for kind in ("exact", "edited", "unrecorded", "absent", "symlink", "source")
+            for unit in package_runtime.CORE_USER_UNITS
+        ):
+            with (
+                self.subTest(kind=kind, unit=relative),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                root, home, profile = self.fixture(folder)
+                marker = root / "package.json.installed"
+                metadata = json.loads(marker.read_text())
+                metadata["vendor_user_units"] = True
+                marker.write_text(json.dumps(metadata))
+                target = home / relative
+                target.parent.mkdir(parents=True)
+                source = root / "legacy.service"
+                source.write_bytes(b"previous package unit")
+                if kind == "symlink":
+                    target.symlink_to(source)
+                elif kind != "absent":
+                    target.write_bytes(source.read_bytes())
+                receipt = home / ".local/state/nacre/configuration.json"
+                receipt.parent.mkdir(parents=True)
+                receipt.write_text(
+                    json.dumps(
+                        {str(relative): configure.digest(source)}
+                        if kind != "unrecorded"
+                        else {}
+                    )
+                )
+                if kind != "source":
+                    (receipt.parent / "package-links.json").write_text("{}")
+                if kind == "edited":
+                    target.write_bytes(b"local edit")
+                with (
+                    patch.object(releases, "HOME", home),
+                    patch.object(releases, "STATE", home / "releases"),
+                    patch.object(releases, "subprocess") as processes,
+                    contextlib.redirect_stdout(io.StringIO()) as output,
+                ):
+                    plan = releases.package_plan(
+                        root, profile, keyboard={"layout": "us"}
+                    )
+                    self.assertEqual(target in plan, kind == "exact")
+                    record = releases.deploy_package(
+                        root, profile, {"layout": "us"}, "hyprland"
+                    )
+                    releases.deploy_package(root, profile, {"layout": "us"}, "hyprland")
+                    processes.run.assert_not_called()
+                self.assertNotIn(str(relative), json.loads(receipt.read_text()))
+                preserved = kind in ("edited", "unrecorded", "symlink", "source")
+                self.assertEqual(target.exists(), preserved)
+                if preserved:
+                    self.assertIn(str(target), output.getvalue())
+                    self.assertIn("shadows the package vendor unit", output.getvalue())
+                else:
+                    self.assertNotIn("Warning:", output.getvalue())
+                if kind == "exact":
+                    target.write_bytes(source.read_bytes())
+                    with contextlib.redirect_stdout(io.StringIO()) as warning:
+                        package_runtime.legacy_units(home, root, apply=True)
+                    self.assertTrue(target.is_file())
+                    self.assertIn(str(target), warning.getvalue())
+                    target.unlink()
+                    with (
+                        patch.object(releases, "HOME", home),
+                        patch.object(releases, "subprocess"),
+                    ):
+                        releases.restore(Path(record["release"]), record)
+                    self.assertEqual(target.read_bytes(), source.read_bytes())
+
+    def test_source_configuration_keeps_home_units(self):
+        import configure
+
+        profile = {"components": ["configs", "shell"]}
+        with patch.object(configure, "selected_profile", return_value=profile):
+            files = configure.files(TOOLS.parent)
+        self.assertIn(Path(".config/systemd/user/nacre-power-key.service"), files)
+        self.assertIn(Path(".config/systemd/user/nacre-niri-widths.service"), files)
+        self.assertEqual(package_runtime.vendor_units(TOOLS.parent), ())
+
     def test_native_aliases_dispatch_without_activation_and_roll_back(self):
         helper = Path(
             os.environ.get(
@@ -369,13 +454,10 @@ class PackageSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root, home, profile = self.fixture(folder)
             shutil.copy2(helper, root / "nacre/shell-tools/nacre-helper")
-            unit_root = root / "deployment/core/.config/systemd/user"
-            unit_root.mkdir(parents=True)
+            metadata = json.loads((root / "package.json.installed").read_text())
+            metadata["vendor_user_units"] = True
+            (root / "package.json.installed").write_text(json.dumps(metadata))
             units = ("nacre-daemon.socket", "nacre-daemon.service")
-            for name in units:
-                shutil.copy2(
-                    TOOLS.parent / "nacre/shell-tools" / name, unit_root / name
-                )
             with (
                 patch.object(releases, "HOME", home),
                 patch.object(releases, "STATE", home / "releases"),
@@ -397,10 +479,7 @@ class PackageSetupTests(unittest.TestCase):
                         root / "nacre/shell-tools/nacre-helper",
                     )
             for name in units:
-                self.assertEqual(
-                    (home / ".config/systemd/user" / name).read_bytes(),
-                    (unit_root / name).read_bytes(),
-                )
+                self.assertFalse((home / ".config/systemd/user" / name).exists())
             self.assertFalse(
                 any(
                     "nacre-daemon" in str(path)
@@ -609,7 +688,13 @@ class PackageSetupTests(unittest.TestCase):
     def niri_fixture(self, folder):
         root, home, profile = self.fixture(folder)
         (root / "package.json.installed").write_text(
-            json.dumps({"revision": "fixture", "compositors": ["hyprland", "niri"]})
+            json.dumps(
+                {
+                    "revision": "fixture",
+                    "compositors": ["hyprland", "niri"],
+                    "vendor_user_units": True,
+                }
+            )
         )
         shutil.copy2(TOOLS / "package_niri.py", root / "tools/package_niri.py")
         for name in ("desktop-defaults.json", "nacre_native_compositor.py"):
@@ -765,6 +850,25 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertTrue(
                     (home / ".config/systemd/user/nacre-hyprland.target").is_file()
                 )
+                for name, wants in (
+                    (
+                        "hyprland",
+                        "nacre-shell.service nacre-session-watch.service nacre-power-key.service hypridle.service",
+                    ),
+                    (
+                        "niri",
+                        "nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service",
+                    ),
+                ):
+                    target = home / f".config/systemd/user/nacre-{name}.target"
+                    self.assertIn("Wants=" + wants + "\n", target.read_text())
+                for unit in package_runtime.CORE_USER_UNITS:
+                    self.assertFalse((home / unit).exists())
+                    self.assertFalse(
+                        list(
+                            (home / ".config/systemd/user").glob("*.wants/" + unit.name)
+                        )
+                    )
                 self.assertEqual(
                     (home / ".config/niri/config.kdl").read_text(),
                     "// Existing CachyOS/Noctalia session\n",
@@ -1378,14 +1482,28 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (base / "core" / relative).resolve(strict=True),
                     base / "core/usr/lib/nacre/nacre-helper",
                 )
-            for name in ("nacre-daemon.socket", "nacre-daemon.service"):
-                relative = Path(".config/systemd/user") / name
-                self.assertIn(relative, deployment_owned)
+            for unit in package_runtime.CORE_USER_UNITS:
+                name = unit.name
+                relative = Path("usr/lib/systemd/user") / name
+                self.assertIn(relative, owned)
+                self.assertNotIn(unit, deployment_owned)
                 self.assertEqual(
-                    (
-                        base / "core/usr/share/nacre/deployment/core" / relative
-                    ).read_bytes(),
+                    (base / "core" / relative).read_bytes(),
                     (TOOLS.parent / "nacre/shell-tools" / name).read_bytes(),
+                )
+            for component, name in (
+                ("ai", "nacre-sidebar-ai.service"),
+                ("brain", "nacre-brain.service"),
+            ):
+                self.assertTrue(
+                    (
+                        base
+                        / component
+                        / "usr/share/nacre/deployment"
+                        / component
+                        / ".config/systemd/user"
+                        / name
+                    ).is_file()
                 )
             self.assertFalse(
                 any(

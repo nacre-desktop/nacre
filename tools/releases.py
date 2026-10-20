@@ -692,6 +692,7 @@ def package_plan(
             )
         runtime = package_runtime.plan(HOME, repo, profile, compositor)
         result = [HOME / relative for relative, _ in changed + runtime]
+        result += package_runtime.legacy_units(HOME, repo)
         result += [
             HOME / ".config/nacre" / name
             for name in ("profile.json", "profile.lua", "keyboard.lua")
@@ -744,6 +745,7 @@ def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
             lease.ensure_valid()
             seed(HOME, keyboard)
             lease.ensure_valid()
+            package_runtime.legacy_units(HOME, repo, apply=True)
             configure.apply(HOME, repo, only=scope)
             profiles = setup.policy(repo)
             profiles.selected = lambda: profile

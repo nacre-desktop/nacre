@@ -79,6 +79,7 @@ def stage(root, destination, component, build):
                     "orient": json.loads((root / "dependencies.lock.json").read_text())[
                         "orient"
                     ],
+                    "vendor_user_units": True,
                     "compositors": list(
                         json.loads((root / "packaging/sessions.json").read_text())
                     ),
@@ -140,12 +141,12 @@ def stage(root, destination, component, build):
         ):
             copy(
                 tools / (name + ".service"),
-                deploy / ".config/systemd/user" / (name + ".service"),
+                destination / "usr/lib/systemd/user" / (name + ".service"),
             )
-        # Stage manual activation templates only. Enabling/starting the socket
+        # Ship manual-only vendor units. Enabling/starting the socket
         # is a separate owner-approved action, never a package/setup side effect.
         for name in ("nacre-daemon.socket", "nacre-daemon.service"):
-            copy(tools / name, deploy / ".config/systemd/user" / name)
+            copy(tools / name, destination / "usr/lib/systemd/user" / name)
         for name, source in (("qs", "launch.sh"), ("nacre_shell", "cli-bridge.sh")):
             copy(tools / source, deploy / ".local/share/nacre/shell/bin" / name)
         for name in ("shortcuts.lua", "cli.json"):

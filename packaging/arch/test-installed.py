@@ -156,14 +156,24 @@ for name in ("nacre-daemon", "nacrectl"):
     public = home / ".local/bin" / name
     assert private.is_symlink() and private.resolve(strict=True) == binary
     assert public.is_symlink() and public.resolve(strict=True) == binary
-for name in ("nacre-daemon.socket", "nacre-daemon.service"):
-    assert (home / ".config/systemd/user" / name).is_file()
+for name in (
+    "nacre-shell.service",
+    "nacre-session-watch.service",
+    "nacre-power-key.service",
+    "nacre-niri-widths.service",
+    "nacre-daemon.socket",
+    "nacre-daemon.service",
+):
+    unit = Path("/usr/lib/systemd/user") / name
+    assert unit.is_file() and unit.stat().st_uid == 0
+    assert run("pacman", "-Qoq", str(unit)).stdout.strip() == "nacre"
+    assert not (home / ".config/systemd/user" / name).exists()
 assert not any(
     "nacre-daemon" in path.name
     for directory in (home / ".config/systemd/user").glob("*.wants")
     for path in directory.iterdir()
 ), "Package setup must not enable foundation units"
-print("Native daemon/controller aliases and manual-only unit templates are prepared.")
+print("Native daemon/controller aliases and manual-only vendor units are prepared.")
 if backend in {"niri", "both"}:
     sys.path.insert(0, "/usr/share/nacre/tools")
     from package_niri import validate, command

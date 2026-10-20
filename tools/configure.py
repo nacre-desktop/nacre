@@ -124,10 +124,12 @@ def files(root=ROOT):
         if source.exists() and included(path)
     }
     if (root / "package.json.installed").exists():
-        from package_runtime import files as package_files
+        from package_runtime import files as package_files, vendor_units
 
         result.pop(Path(".local/bin/orient"), None)
         result.update(package_files(root, selected_profile(root)))
+        for relative in vendor_units(root):
+            result.pop(relative, None)
     return result
 
 
@@ -318,7 +320,12 @@ def plan(
         ):
             raise RuntimeError(f"Local edit preserved: {dest}")
         changed.append((relative, source))
+    from package_runtime import vendor_units
+
+    vendor = vendor_units(root)
     for relative, previous in known.items():
+        if Path(relative) in vendor:
+            continue  # Package migration preserves edited HOME shadows with a warning.
         if relative in {
             ".config/systemd/user/nacre-shell.service",
             ".config/systemd/user/nacre-session-watch.service",
