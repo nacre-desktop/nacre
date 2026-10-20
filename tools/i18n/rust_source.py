@@ -149,6 +149,7 @@ def production_tokens(stream):
     """Do not let test-only calls keep retired runtime catalog entries alive."""
     result = []
     index = 0
+    paren_depth = 0
     while index < len(stream):
         test_attribute = None
         for spelling in (
@@ -160,8 +161,12 @@ def production_tokens(stream):
             ] == spelling:
                 test_attribute = len(spelling)
                 break
-        if test_attribute is None:
+        if test_attribute is None or paren_depth:
             result.append(stream[index])
+            if stream[index].value is None:
+                paren_depth += (stream[index].text == "(") - (
+                    stream[index].text == ")"
+                )
             index += 1
             continue
         index += test_attribute

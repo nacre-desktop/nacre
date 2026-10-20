@@ -150,6 +150,21 @@ class CoverageTests(unittest.TestCase):
         fn real() { tr("test.real", "Real"); }"""
         self.assertEqual({key for key, _, _ in rust_messages(source)}, {"test.real"})
 
+    def test_rust_cfg_test_parameter_does_not_hide_following_runtime_messages(self):
+        source = """async fn run_inner(
+            #[cfg(test)] observer: Option<Sender<()>>,
+        ) {
+            tr("test.runtime", "Runtime");
+        }
+        #[cfg(test)] const TEST_CONST: &str = tr("test.const", "Test const");
+        #[cfg(test)] static TEST_STATIC: &str = tr("test.static", "Test static");
+        #[cfg(test)] struct TestType;
+        #[cfg(test)] impl TestType { fn example() { tr("test.impl", "Test impl"); } }
+        #[cfg(test)] mod tests { fn example() { tr("test.only", "Test only"); } }"""
+        self.assertEqual(
+            {key for key, _, _ in rust_messages(source)}, {"test.runtime"}
+        )
+
     def test_deleting_python_keeps_only_ids_owned_by_rust(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
