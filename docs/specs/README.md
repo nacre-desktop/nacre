@@ -709,21 +709,20 @@ N9 hosted CI may continue; N10 remains local source/private Python tests only.
 
 ## N0014 activation-only switch — 2026-10-20
 
-[N0014](0014-f4-switch-lite.md) splits the owner-approved small F4 activation
-switch from full N10 package/setup rollback. Implementation `aed657f1` is local
-for lead review and integration: 19 focused switch tests and 16 release tests
-pass on the dedicated SSH test host with private HOME/fake systemctl. The owner
-procedure in N0006/f4-switch-on now documents enable, verify, disable/rollback,
-and manual cached-package downgrade only after disable. No push, package or live
-manager action; source review/integration/exact-head CI remain with the lead.
-
-N0014 source extension (`50309bb7`, local for lead review): accepts matching
-receipt-owned HOME units as one consistent source layout, uses the deployed
-helper's ctl interface, reports readiness blockers and skips unrelated dangling
-activation links. Scoped configuration now stages/receipts the three source
-units. Dedicated SSH-host checks: 25 switch tests, 16 release tests and the new
-configuration receipt regression pass; full configure tests require the absent
-native helper. Owner procedure updated; no implementer live probe or push.
+[N0014](0014-f4-switch-lite.md) separates a small F4 activation switch from the
+full N10 package and setup rollback; the owner approved the split, and the full
+N10 branch stays preserved as later hardening. The commands are
+`nacre f4 status|enable|disable|rollback`, and the controller is about 800 lines.
+It journals the exact prior drop-in and socket state and reverts automatically
+on failed health. Rollback works from completed or interrupted transactions, and
+every refusal happens before any write. Both package installs (vendor units,
+N0013) and source installs (installer-owned HOME units with checked
+content/ownership) are supported. Package downgrade remains a documented manual
+step after `disable`. Tests: 26 switch tests and 16 release tests on dev-1. A
+read-only lead probe against the owner's live user manager found clean startup
+inputs; the only blocker is that the daemon units are not yet deployed (a full
+`nacre/shell-tools/install.py` run deploys them). Enabling on the owner's
+desktop remains a supervised owner step.
 
 
 N0014 lead correction (`f45cc8b6`, local for review): installer-owned source
