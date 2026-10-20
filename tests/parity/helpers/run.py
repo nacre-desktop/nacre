@@ -966,6 +966,42 @@ def account_help_reference(expected, case):
     return result
 
 
+def profile_install_reference(expected, actual, case):
+    """Accept only the N9 lease metadata for a new private install root."""
+    if (
+        case.get("helper") != "profile-policy"
+        or case.get("args") != ["install"]
+        or case.get("fixtures", {}) != {}
+        or case.get("env", {}) != {}
+        or case.get("command") is not None
+    ):
+        return expected
+
+    paths = ("home/.config", "home/.config/nacre")
+    expected_files = expected.get("files", {})
+    actual_files = actual.get("files", {})
+    for path in paths:
+        if expected_files.get(path) != {"mode": "0o755", "directory": True}:
+            raise ValueError("Unexpected frozen profile install directory reference")
+        if actual_files.get(path) != {"mode": "0o700", "directory": True}:
+            raise ValueError("New profile install directory must remain private")
+    if "home/.config/nacre/.writer.lock" in expected_files:
+        raise ValueError("Frozen profile install unexpectedly includes a writer lock")
+    if actual_files.get("home/.config/nacre/.writer.lock") != {
+        "mode": "0o600",
+        "text": "",
+    }:
+        raise ValueError("Profile install writer lock must remain empty and private")
+
+    paired = copy.deepcopy(expected)
+    for path in paths:
+        paired["files"][path] = actual_files[path]
+    paired["files"]["home/.config/nacre/.writer.lock"] = actual_files[
+        "home/.config/nacre/.writer.lock"
+    ]
+    return paired
+
+
 def native_exception_reference(expected, actual, case):
     """Only enumerated retired tracebacks become exact class/message lines."""
     rule = case.get("native_exception")
@@ -1188,6 +1224,7 @@ def main():
                 expected = account_help_reference(expected, case)
                 expected = engine_provenance_reference(expected, actual, case)
                 expected = native_exception_reference(expected, actual, case)
+                expected = profile_install_reference(expected, actual, case)
                 expected = compatible_files(recovery_reference(expected, case), case)
                 actual = compatible_files(actual, case)
                 if args.orient_direct or (

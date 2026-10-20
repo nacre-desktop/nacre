@@ -30,11 +30,31 @@ class ProfilePolicyLeaseTests(unittest.TestCase):
     def test_install_publishes_both_artifacts(self):
         with tempfile.TemporaryDirectory() as home:
             value = profile_policy.install(Path(home))
-            root = Path(home) / ".config/nacre"
+            config = Path(home) / ".config"
+            root = config / "nacre"
             self.assertEqual(json.loads((root / "profile.json").read_text()), value)
             self.assertTrue((root / "profile.lua").is_file())
+            self.assertEqual(config.stat().st_mode & 0o777, 0o700)
+            self.assertEqual(root.stat().st_mode & 0o777, 0o700)
+            lock = root / ".writer.lock"
+            self.assertEqual(lock.read_bytes(), b"")
+            self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
             self.assertEqual((root / "profile.json").stat().st_mode & 0o777, 0o600)
             self.assertEqual((root / "profile.lua").stat().st_mode & 0o777, 0o600)
+
+    def test_install_preserves_existing_safe_directory_modes(self):
+        with tempfile.TemporaryDirectory() as home:
+            config = Path(home) / ".config"
+            root = config / "nacre"
+            root.mkdir(mode=0o755, parents=True)
+            config.chmod(0o755)
+            root.chmod(0o755)
+
+            profile_policy.install(Path(home))
+
+            self.assertEqual(config.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(root.stat().st_mode & 0o777, 0o755)
+            self.assertEqual((root / ".writer.lock").stat().st_mode & 0o777, 0o600)
 
     def test_direct_install_contention_refuses_before_profile_read_or_write(self):
         with tempfile.TemporaryDirectory() as home:

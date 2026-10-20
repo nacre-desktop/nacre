@@ -19,6 +19,53 @@ spec.loader.exec_module(runner)
 
 
 class RunnerTests(unittest.TestCase):
+    def test_profile_install_reference_pairs_only_new_private_lease_metadata(self):
+        case = json.loads((HERE / "profile-policy/case-install.json").read_text())
+        expected = json.loads(
+            (HERE / "profile-policy/expected-install.json").read_text()
+        )
+        frozen = copy.deepcopy(expected)
+        actual = copy.deepcopy(expected)
+        actual["files"]["home/.config"]["mode"] = "0o700"
+        actual["files"]["home/.config/nacre"]["mode"] = "0o700"
+        actual["files"]["home/.config/nacre/.writer.lock"] = {
+            "mode": "0o600",
+            "text": "",
+        }
+
+        paired = runner.profile_install_reference(expected, actual, case)
+        self.assertEqual(paired, actual)
+        self.assertEqual(expected, frozen)
+
+        for mutation in (
+            lambda value: value["files"]["home/.config"].update(mode="0o755"),
+            lambda value: value["files"].pop("home/.config/nacre/.writer.lock"),
+            lambda value: value["files"]["home/.config/nacre/.writer.lock"].update(
+                text="unexpected"
+            ),
+            lambda value: value["files"].update(unrelated={"mode": "0o600"}),
+        ):
+            changed = copy.deepcopy(actual)
+            mutation(changed)
+            with self.subTest(changed=changed["files"]):
+                try:
+                    paired_changed = runner.profile_install_reference(
+                        expected, changed, case
+                    )
+                except ValueError:
+                    continue
+                self.assertNotEqual(paired_changed, changed)
+
+        for wrong_case in (
+            {**case, "args": ["show"]},
+            {**case, "helper": "other"},
+            {**case, "fixtures": {"home/file": "data"}},
+        ):
+            self.assertEqual(
+                runner.profile_install_reference(expected, actual, wrong_case),
+                expected,
+            )
+
     def test_supervisor_timeout_identifies_the_case_and_pipe_or_parent_state(self):
         from supervisor_reference import capture
 
