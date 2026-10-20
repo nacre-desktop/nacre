@@ -140,7 +140,7 @@ Accepted feature head ecd08dfe8a8449001ac499a14ae92a9620d93fc3 and reported same
 ## Reconciliation — 2026-10-20
 
 Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494`. Final network
-source: `75904d7ff0d4993600f254d3f941509dc1265ace`; review remains pending.
+source: `b01c9606d4978a94c2620c2a92ebe31376dabfa0`; review remains pending.
 PASS: `cargo fmt --check`; workspace `cargo clippy -j2 --all-targets -- -D
 warnings`; `cargo test -j2 -p nacre-helper core_network_ -- --nocapture` (13
 passed); `cargo test -j2 -p nacre-helper --quiet` (all package test binaries

@@ -210,7 +210,7 @@ remain queued; no assertion they have been implemented or validated.
 
 Base `origin/main`: `5b9631b337b9e96b46b931b71b7ce66949a0a494` (green F4 and
 N9; N0013/N0014 landed). Final network source:
-`75904d7ff0d4993600f254d3f941509dc1265ace`.
+`b01c9606d4978a94c2620c2a92ebe31376dabfa0`.
 The withdrawn acceptance evidence above remains withdrawn; this exact rebased
 source has fresh local evidence, pending independent source review.
 
@@ -222,6 +222,7 @@ compatibility fixtures. Focused correctness tests use private `dbus-daemon
 `MemoryMax=2G`.
 
 ```sh
+PATH=/home/siverteh/.rustup/toolchains/1.99.0-x86_64-unknown-linux-gnu/bin:$PATH cargo fmt --check
 cargo clippy -j2 --all-targets -- -D warnings
 cargo test -j2 -p nacre-helper core_network_ -- --nocapture
 cargo test -j2 -p nacre-helper --quiet
