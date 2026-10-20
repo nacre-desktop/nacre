@@ -1578,7 +1578,30 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
         rustix::event::poll(&mut descriptors, Some(&timeout))? > 0,
         "Socket activator did not create its private endpoint"
     );
-    let mut client = UnixStream::connect(&endpoint)?;
+    let connect_deadline = Instant::now() + Duration::from_secs(10);
+    let mut client = loop {
+        match UnixStream::connect(&endpoint) {
+            Ok(client) => break client,
+            Err(error) if error.kind() == std::io::ErrorKind::ConnectionRefused => {
+                if let Some(status) = daemon.0.try_wait()? {
+                    return Err(format!(
+                        "Socket activator exited before accepting the connection ({status}): {}",
+                        fs::read_to_string(&activation_log)?
+                    )
+                    .into());
+                }
+                if Instant::now() >= connect_deadline {
+                    return Err(format!(
+                        "Socket activator did not begin listening before the deadline: {}",
+                        fs::read_to_string(&activation_log)?
+                    )
+                    .into());
+                }
+                thread::sleep(Duration::from_millis(10));
+            }
+            Err(error) => return Err(error.into()),
+        }
+    };
     client.set_read_timeout(Some(Duration::from_secs(5)))?;
     let mut response = [0];
     match client.read(&mut response) {
