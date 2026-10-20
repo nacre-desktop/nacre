@@ -152,6 +152,8 @@ class PinnedDirectory:
                 meta.st_uid,
                 stat.S_IMODE(meta.st_mode),
                 meta.st_ctime_ns,
+                meta.st_mtime_ns,
+                meta.st_size,
                 meta.st_nlink,
             )
 
@@ -165,16 +167,39 @@ class PinnedDirectory:
             return None
         validate_link(before)
         self.ensure_valid()
+        path_flag = getattr(os, "O_PATH", None)
+        if path_flag is None:
+            _fail()
+        link_fd = None
         try:
-            target = os.readlink(name, dir_fd=self._dirs[-1])
+            link_fd = os.open(
+                name,
+                path_flag | os.O_NOFOLLOW | os.O_CLOEXEC,
+                dir_fd=self._dirs[-1],
+            )
+            pinned_before = os.fstat(link_fd)
+            validate_link(pinned_before)
+            if identity(before) != identity(pinned_before):
+                _fail()
+            self.ensure_valid()
+            target = os.readlink("", dir_fd=link_fd)
+            pinned_after = os.fstat(link_fd)
+            validate_link(pinned_after)
+            if identity(pinned_before) != identity(pinned_after):
+                _fail()
+            named_after = link_stat()
+            validate_link(named_after)
+            if identity(pinned_after) != identity(named_after):
+                _fail()
+            self.ensure_valid()
+            return target
+        except WriterLeaseError:
+            raise
         except OSError:
             _fail()
-        after = link_stat()
-        validate_link(after)
-        if identity(before) != identity(after):
-            _fail()
-        self.ensure_valid()
-        return target
+        finally:
+            if link_fd is not None:
+                os.close(link_fd)
 
     def identity(self) -> tuple[int, int]:
         self.ensure_valid()

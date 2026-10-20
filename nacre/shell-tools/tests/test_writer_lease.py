@@ -32,11 +32,23 @@ class WriterLeaseTests(unittest.TestCase):
                 link = root / "socket-link"
                 link.symlink_to("first-target")
                 original_readlink = os.readlink
+                root_fd = lease._dirs[-1]
 
                 def replace_then_read(name, *, dir_fd=None):
-                    os.unlink(name, dir_fd=dir_fd)
-                    os.symlink("replacement-target", name, dir_fd=dir_fd)
-                    return original_readlink(name, dir_fd=dir_fd)
+                    self.assertEqual(name, "")
+                    os.unlink("socket-link", dir_fd=root_fd)
+                    os.symlink("replacement-target", "socket-link", dir_fd=root_fd)
+                    pinned = os.fstat(dir_fd)
+                    replacement = os.stat(
+                        "socket-link", dir_fd=root_fd, follow_symlinks=False
+                    )
+                    self.assertNotEqual(
+                        (pinned.st_dev, pinned.st_ino),
+                        (replacement.st_dev, replacement.st_ino),
+                    )
+                    target = original_readlink(name, dir_fd=dir_fd)
+                    self.assertEqual(target, "first-target")
+                    return target
 
                 with mock.patch.object(
                     writer_lease.os, "readlink", side_effect=replace_then_read
@@ -45,29 +57,55 @@ class WriterLeaseTests(unittest.TestCase):
                         lease.readlink("socket-link")
                 self.assertEqual(os.readlink(link), "replacement-target")
 
-    def test_readlink_rejects_changed_ctime_during_read(self):
+    def test_readlink_rejects_metadata_change_during_pinned_read(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "private" / "config" / "nacre"
             with writer_lease.writer_lease(root) as lease:
                 link = root / "socket-link"
                 link.symlink_to("target")
                 original_readlink = os.readlink
+                root_fd = lease._dirs[-1]
 
                 def touch_then_read(name, *, dir_fd=None):
-                    current = os.stat(name, dir_fd=dir_fd, follow_symlinks=False)
+                    self.assertEqual(name, "")
+                    current = os.stat(
+                        "socket-link", dir_fd=root_fd, follow_symlinks=False
+                    )
                     os.utime(
-                        name,
+                        "socket-link",
                         ns=(current.st_atime_ns, current.st_mtime_ns + 1_000_000_000),
-                        dir_fd=dir_fd,
+                        dir_fd=root_fd,
                         follow_symlinks=False,
                     )
-                    return original_readlink(name, dir_fd=dir_fd)
+                    target = original_readlink(name, dir_fd=dir_fd)
+                    self.assertEqual(target, "target")
+                    return target
 
                 with mock.patch.object(
                     writer_lease.os, "readlink", side_effect=touch_then_read
                 ):
                     with self.assertRaises(writer_lease.WriterLeaseError):
                         lease.readlink("socket-link")
+
+    def test_readlink_closes_pinned_symlink_after_success_and_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                link = root / "socket-link"
+                link.symlink_to("target")
+                before = set(os.listdir("/proc/self/fd"))
+                self.assertEqual(lease.readlink("socket-link"), "target")
+                self.assertEqual(set(os.listdir("/proc/self/fd")), before)
+
+                def fail_read(*args, **kwargs):
+                    raise OSError("injected pinned read failure")
+
+                with mock.patch.object(
+                    writer_lease.os, "readlink", side_effect=fail_read
+                ):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("socket-link")
+                self.assertEqual(set(os.listdir("/proc/self/fd")), before)
 
     def test_readlink_rejects_foreign_owner_or_unsafe_link_mode(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -95,6 +133,8 @@ class WriterLeaseTests(unittest.TestCase):
                                     "st_uid": meta.st_uid,
                                     "st_mode": meta.st_mode,
                                     "st_ctime_ns": meta.st_ctime_ns,
+                                    "st_mtime_ns": meta.st_mtime_ns,
+                                    "st_size": meta.st_size,
                                     "st_nlink": meta.st_nlink,
                                 }
                                 values.update(expected)
@@ -152,6 +192,15 @@ class WriterLeaseTests(unittest.TestCase):
                 ):
                     with self.assertRaises(writer_lease.WriterLeaseError):
                         lease.readlink(name)
+
+    def test_readlink_fails_closed_without_path_fd_support(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "private" / "config" / "nacre"
+            with writer_lease.writer_lease(root) as lease:
+                (root / "socket-link").symlink_to("target")
+                with mock.patch.object(writer_lease.os, "O_PATH", None):
+                    with self.assertRaises(writer_lease.WriterLeaseError):
+                        lease.readlink("socket-link")
 
     def test_readlink_rejects_unsafe_parent_and_replaced_ancestry(self):
         with tempfile.TemporaryDirectory() as directory:
