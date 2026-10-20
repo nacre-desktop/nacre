@@ -128,8 +128,18 @@ class SettingsStorageTests(unittest.TestCase):
                 ROOT / "nacre/shell/services/NacreSettingsStorage.qml", services
             )
             shutil.copy2(ROOT / "nacre/shell/services/daemon-state.js", services)
+            # This fixture exercises file watching with the daemon disabled.
+            (services / "NacreDaemon.qml").write_text("""pragma Singleton
+import QtQuick
+QtObject {
+    readonly property bool enabled: false
+    readonly property bool connected: false
+    signal newBoot()
+}
+""")
             (services / "qmldir").write_text(
                 "singleton NacreSettingsStorage 1.0 NacreSettingsStorage.qml\n"
+                "singleton NacreDaemon 1.0 NacreDaemon.qml\n"
             )
             (root / "shell.qml").write_text("""import QtQuick
 import Quickshell
