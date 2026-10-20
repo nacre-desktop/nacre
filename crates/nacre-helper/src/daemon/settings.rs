@@ -1037,7 +1037,9 @@ mod tests {
         )
         .shared();
 
-        let service = Service::load(hub, paths.clone(), Some(lease)).await.unwrap();
+        let service = Service::load(hub, paths.clone(), Some(lease))
+            .await
+            .unwrap();
         let snapshot = service
             .get(SettingsGet {
                 store: "colors".into(),
