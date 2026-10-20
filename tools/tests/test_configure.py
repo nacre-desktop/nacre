@@ -28,33 +28,6 @@ class ConfigurationTests(unittest.TestCase):
         selected.start()
         self.addCleanup(selected.stop)
 
-    def test_source_switch_units_are_staged_and_receipted_without_activation(self):
-        units = ("nacre-shell.service", "nacre-daemon.service", "nacre-daemon.socket")
-        paths = tuple(".config/systemd/user/" + unit for unit in units)
-        with tempfile.TemporaryDirectory() as folder:
-            home = Path(folder)
-            existing = home / paths[0]
-            existing.parent.mkdir(parents=True)
-            existing.write_bytes(
-                (module.ROOT / "nacre/shell-tools" / units[0]).read_bytes()
-            )
-            module.apply(home, module.ROOT, only=paths)
-            receipt = json.loads(
-                (home / ".local/state/nacre/configuration.json").read_text()
-            )
-            for path in paths:
-                self.assertEqual(receipt[path], module.digest(home / path))
-            self.assertEqual(
-                sorted(p.name for p in (home / ".config/systemd/user").iterdir()),
-                sorted(units),
-            )
-            module.apply(home, module.ROOT, only=paths)
-            edited = home / paths[1]
-            edited.write_text("owner edit")
-            with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
-                module.apply(home, module.ROOT, only=paths)
-            self.assertEqual(edited.read_text(), "owner edit")
-
     def test_default_wallpapers_are_real_flat_assets_and_personal_files_survive(self):
         from unittest.mock import patch
         import hashlib

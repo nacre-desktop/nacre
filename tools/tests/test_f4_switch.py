@@ -167,13 +167,10 @@ class SwitchTests(unittest.TestCase):
         self.assertEqual(self.prior(), before)
 
     def source_layout(self):
-        receipt = {}
         for unit in m.UNITS:
             path = self.manager.root / unit
             path.write_text("[Unit]\nDescription=Private fixture " + unit + "\n")
-            receipt[str(path.relative_to(self.home))] = m.digest(path)
             self.manager.units[unit]["FragmentPath"] = str(path)
-        (self.state / "configuration.json").write_text(json.dumps(receipt))
         helper = self.home / ".local/share/nacre/shell/tools/nacre-helper"
         helper.parent.mkdir(parents=True)
         helper.write_text("private fixture helper")
@@ -252,10 +249,31 @@ class SwitchTests(unittest.TestCase):
                 self.assertEqual(self.manager.mutations(), [])
                 other.unlink()
 
+    def test_source_units_need_no_receipt_and_are_never_modified(self):
+        self.source_layout()
+        # Installer-owned local content is acceptable without adopting config ownership.
+        (self.manager.root / m.SHELL).write_text("[Service]\nRestartSec=8\n")
+        self.assertFalse((self.state / "configuration.json").exists())
+        before = {u: m.file_state(self.manager.root / u) for u in m.UNITS}
+        self.assertEqual(self.switch.run("status")["ready_to_enable"], [])
+        # Even an unrelated invalid configuration receipt must not affect the switch.
+        (self.state / "configuration.json").write_text("not a switch receipt")
+        self.switch.run("enable")
+        self.switch.run("disable")
+        self.switch.run("rollback")
+        for unit in m.UNITS:
+            self.assertEqual(m.file_state(self.manager.root / unit), before[unit])
+        self.assertEqual(
+            (self.state / "configuration.json").read_text(), "not a switch receipt"
+        )
+
     def test_source_refusals_before_write(self):
         for case in (
-            "edited",
-            "unreceipted",
+            "client-environment",
+            "environment-file",
+            "pass-environment",
+            "unset-environment",
+            "writable",
             "symlink",
             "mixed",
             "missing-helper",
@@ -266,10 +284,16 @@ class SwitchTests(unittest.TestCase):
                 self.setUp()
                 helper = self.source_layout()
                 path = self.manager.root / m.DAEMON
-                if case == "edited":
-                    path.write_text("owner edit")
-                elif case == "unreceipted":
-                    (self.state / "configuration.json").write_text("{}")
+                forbidden = {
+                    "client-environment": "Environment=NACRE_DAEMON_CLIENT=1",
+                    "environment-file": "EnvironmentFile=/private/environment",
+                    "pass-environment": "PassEnvironment=HOME",
+                    "unset-environment": "UnsetEnvironment=HOME",
+                }
+                if case in forbidden:
+                    path.write_text("[Service]\n" + forbidden[case] + "\n")
+                elif case == "writable":
+                    path.chmod(0o660)
                 elif case == "symlink":
                     body = path.read_bytes()
                     path.unlink()
@@ -304,7 +328,9 @@ class SwitchTests(unittest.TestCase):
         for unit in (m.DAEMON, m.SOCKET):
             self.assertTrue(
                 any(
-                    unit in reason and "configure.py --only" in reason
+                    unit in reason
+                    and "python3 nacre/shell-tools/install.py" in reason
+                    and "without --code-only" in reason
                     for reason in status["ready_to_enable"]
                 )
             )

@@ -4,7 +4,6 @@
 import argparse
 import base64
 import fcntl
-import importlib.util
 import json
 import os
 import re
@@ -111,16 +110,6 @@ def file_state(path):
         "data": base64.b64encode(read(path)).decode(),
         "mode": stat.S_IMODE(path.stat().st_mode),
     }
-
-
-def digest(path):
-    # Share the setup receipt's byte digest, including in installed controllers.
-    spec = importlib.util.spec_from_file_location(
-        "f4_configuration", Path(__file__).with_name("configure.py")
-    )
-    configuration = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(configuration)
-    return configuration.digest(path)
 
 
 def environment(text):
@@ -282,17 +271,15 @@ class Switch:
                         raise RuntimeError(f"Independent daemon startup input: {path}")
 
     def layout(self, units):
-        """Validate one receipt-owned source layout or one vendor layout."""
+        """Validate one safe source layout or one vendor layout."""
         reasons, layouts = [], set()
-        receipt_path = self.home / ".local/state/nacre/configuration.json"
-        receipt = None
         for unit, values in units.items():
             fragment = values.get("FragmentPath", "")
             source = self.config / "systemd/user" / unit
             vendor = "/usr/lib/systemd/user/" + unit
             if not fragment:
                 reasons.append(
-                    f"Missing deployed unit {source}; update the source shell/helper deployment, then run tools/configure.py --only .config/systemd/user/{unit} --apply and systemctl --user daemon-reload"
+                    f"Missing deployed unit {source}; deploy the source helper and manual daemon templates with python3 nacre/shell-tools/install.py (full install, without --code-only)"
                 )
                 continue
             try:
@@ -302,20 +289,17 @@ class Switch:
                         raise RuntimeError(
                             f"Source unit must be a user-owned regular file: {source}"
                         )
-                    if receipt is None:
-                        receipt = json.loads(read(receipt_path))
-                        if not isinstance(receipt, dict):
-                            raise RuntimeError(f"Invalid setup receipt: {receipt_path}")
-                    relative = str(source.relative_to(self.home))
-                    recorded = receipt.get(relative)
-                    if (
-                        not isinstance(recorded, str)
-                        or not re.fullmatch(r"[0-9a-f]{64}", recorded)
-                        or digest(source) != recorded
+                    raw = read(source)
+                    for token in (
+                        KEY.encode(),
+                        b"EnvironmentFile",
+                        b"PassEnvironment",
+                        b"UnsetEnvironment",
                     ):
-                        raise RuntimeError(
-                            f"Unreceipted or edited source unit: {source}; review tools/configure.py --only {relative} --apply"
-                        )
+                        if token in raw:
+                            raise RuntimeError(
+                                f"Unsupported {token.decode()} in source fragment: {source}"
+                            )
                     layouts.add("source")
                 elif fragment == vendor:
                     if os.path.lexists(source):
@@ -360,7 +344,7 @@ class Switch:
                 or not helper.stat().st_mode & 0o111
             ):
                 raise RuntimeError(
-                    f"Missing/unsafe source health helper: {helper}; update the source shell deployment with tools/manage.py --component shell --apply"
+                    f"Missing/unsafe source health helper: {helper}; update the source shell deployment with python3 nacre/shell-tools/install.py (full install, without --code-only)"
                 )
         elif self.runner is subprocess.run:
             alias = Path("/usr/bin/nacrectl")
