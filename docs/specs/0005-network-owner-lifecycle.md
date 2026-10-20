@@ -156,4 +156,7 @@ boundary, publishes stale health, and is aborted/joined; the next projection get
 a fresh identity generation. The parent task aborts/joins the persistent watcher
 on exit/cancellation. This preserves the old wire contract without a second bus
 connection. Hosted CI, live NetworkManager behavior, and independent source
-review remain outstanding; no live bus or mutation was used.
+review remain outstanding; no live bus or mutation was used. One lifecycle
+deviation needs lead review: the existing top-level supervisor still owns the
+network task, but per-owner core readers rotate inside it instead of restarting
+that top-level task. This keeps the same-connection legacy watcher alive.
