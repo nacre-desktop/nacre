@@ -41,3 +41,10 @@ Regression tests use private HOMEs, fake systemctl and fixture deployment for
 both install modes. They cover refusal without writes, managed-unit/search-path
 coverage, opt-in selectivity, hash/mode/byte restoration, symlinks, masks, parser
 escapes, unreadable directories, no-drop-in retirement and an absent experiment.
+
+The CLI help change is tracked by the ordinary `install/help` Python reference:
+the case invokes `nacre/shell-tools/install.py --help`, and `install` is not a
+native helper in the parity registry. The documented single-case `--record`
+workflow updates only `expected-help.json` for the intentional
+`--retire-niri-experiment` option. This case is not a frozen F4 or Wave 3 source
+reference.
