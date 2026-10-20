@@ -1150,7 +1150,7 @@ async fn observe_on_connection(
                             return Err("NetworkManager watcher ended during action".into());
                         }
                         result = tokio::time::timeout_at(action.deadline,
-                            controls::execute(&connection, &expected_owner, &projection.ids, &requests, &action)) => {
+                            controls::execute(&connection, &expected_owner, &mut projection.ids, &requests, &action)) => {
                             result.unwrap_or_else(|_| Err(controls::unavailable().dispatch_state(true)))
                         }
                     };

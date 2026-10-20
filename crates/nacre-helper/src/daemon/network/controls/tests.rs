@@ -500,7 +500,7 @@ async fn network_controls_stale_wrong_kind_cross_device_and_denied() -> crate::R
         assert_eq!(f.call("network.disconnect", json!({"device":"/untrusted/path"})).await.unwrap_err().code, ErrorCode::Validation);
         f.backend.state.lock().unwrap().active = true;
         f.backend.state.lock().unwrap().shared = true;
-        assert_eq!(f.call("network.disconnect", json!({"device":device})).await.unwrap_err().code, ErrorCode::StaleRevision);
+        assert_eq!(f.call("network.disconnect", json!({"device":f.device()})).await.unwrap_err().code, ErrorCode::StaleRevision);
         Ok::<(), crate::Error>(())
     })).await??;
     Ok(())
@@ -770,6 +770,46 @@ async fn network_controls_timeout_and_queue_bound() -> crate::Result<()> {
             drop(writer);
             drop(reader);
             session.await??;
+            Ok::<(), crate::Error>(())
+        }),
+    )
+    .await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_controls_preflight_retires_vanished_ids() -> crate::Result<()> {
+    tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            let old = f.device();
+            f.backend.state.lock().unwrap().gone = true;
+            assert_eq!(
+                f.call("network.disconnect", json!({"device":old}))
+                    .await
+                    .unwrap_err()
+                    .code,
+                ErrorCode::StaleRevision
+            );
+            // Return the identical path before the actor's debounced readback. A
+            // disappearance observed by preflight must still retire the old ID.
+            f.backend.state.lock().unwrap().gone = false;
+            f.wait(|state| state.devices.order.first().is_some_and(|id| id != &old))
+                .await;
+            assert_eq!(
+                f.call("network.disconnect", json!({"device":old}))
+                    .await
+                    .unwrap_err()
+                    .code,
+                ErrorCode::StaleRevision
+            );
+            assert_eq!(
+                f.call("network.disconnect", json!({"device":f.device()}))
+                    .await?,
+                json!({"changed":false})
+            );
+            assert!(f.backend.state.lock().unwrap().calls.is_empty());
             Ok::<(), crate::Error>(())
         }),
     )

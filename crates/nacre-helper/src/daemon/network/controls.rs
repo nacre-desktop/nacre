@@ -299,7 +299,7 @@ async fn mutate<A: serde::Serialize + zbus::zvariant::DynamicType>(
 pub(super) async fn execute(
     connection: &zbus::Connection,
     owner: &str,
-    ids: &IdentityTable,
+    ids: &mut IdentityTable,
     requests: &Requests,
     action: &Action,
 ) -> std::result::Result<Value, Failure> {
@@ -315,6 +315,11 @@ pub(super) async fn execute(
     if !CoreSnapshot::Network(state.clone()).valid() {
         return Err(unavailable());
     }
+    // A successful preflight is also an observation of disappearance. Retire
+    // those published identities even if this action fails and the same path
+    // returns before the following topic read. Do not issue unpublished IDs.
+    ids.live
+        .retain(|key, id| fresh_ids.live.get(key) == Some(id));
     let method = match &action.call {
         CoreCall::WifiPower(_) => "network.set_wifi",
         CoreCall::NetworkConnect(_) => "network.connect",
