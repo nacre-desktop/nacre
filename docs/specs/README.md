@@ -558,3 +558,20 @@ exactA5f4/4a vsORIGINAL8a/439, QSH7796116a, hostfb7ab. Preflight available
 13240213504B, swapcapacity15569252352B/use19320832B, geometry/source/runtime
 passed. Worker owns soleheavy10-armbatch. New queued low-priorityN0012 records
 conditional Niri memory debt and no-later-QML-growth rule; NOT F4 accepted yet.
+
+### Morning continuation — Oct20 05:40UTC
+
+Overnight batch stopped before B due swapused>=64MiB; A valid. Root approved
+reset completed23:31UTC, originalcapacity restored/use0; audit
+owner-swap-reset-20261019T2332Z.json. Continuation review then stalled with lead;
+04:30window expired, NO additional arms ran overnight. Do not claim otherwise.
+Root renewed same-batch continuation05:40–10:30UTC. Originalledger/schedule/A
+evidence immutable, Bfirst/importAonce, fresh continuationledger hardbound.
+Adapter4733142e0454fbf872a250da664ec26bd4bdce5880fc3d2512a292bf129f5c6b,
+resumeschedule946f6ecffd8d1810342e1e8b862df6aaa1d63262b900a88df83f4869f6b9c869.
+Rootmocks/actualbatchstaticchecksPASS; only timeaccessorsoverriddenforexactnew
+window, standardv14/runtimeunchanged. ActualSTART05:40:17UTC controller1895596,
+Avalid1/10 andBactive; swapcapacity15569252352/use0, available13227134976B.
+Soleheavyworker luna_n2_colors_diagnostic_prep, nootherbuild/CI. Finish9remaining
+plusmax2quiet-onlyendretries, group<=12MiB allphases, finalrootreview.
+No F4 acceptance/integration or live switch claimed.

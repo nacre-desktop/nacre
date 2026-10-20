@@ -245,3 +245,21 @@ quick/eight-arm gates. Owner-approved <5MiB / explained5–8MiB with QML<=2MiB
 acceptance and quiet-only one-retry/max2-arms policy are specified in N0002.
 This is F4-specific, not a general budget relaxation. No further profiling now.
 N0009/N0010 local implementation is authorized before F4; integration still waits.
+
+## Continuation throughput — owner decision 2026-10-20
+
+A continuation passing the pre-agreed mock tests, swap pre-check, source/window/
+containment checks and the same quiet/safety gates proceeds without waiting for
+lead review; review follows execution. Preserve accepted evidence and the original
+ledger. This grants no source/gate/retry-budget/host-change exception and no heavy
+overlap. Never end a turn while a worker is waiting on the lead: release eligible
+work first, or tell the owner in one line what remains blocked.
+
+## Hosted CI throughput — owner decision 2026-10-20
+
+GitHub-hosted CI running on GitHub servers does not count as a shared-desktop
+heavy job. Bead may push and run hosted CI while F4 captures run. Local desktop
+builds, tests, nested sessions and self-hosted jobs using that desktop still
+require its heavy slot. A GitHub workflow's existence alone is not evidence of
+desktop contention; identify where its payload runs. This supersedes earlier
+blanket no-CI-during-capture rules and terminal-hosted-CI readiness requirements.
