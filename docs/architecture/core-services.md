@@ -58,6 +58,16 @@ A failed or ambiguous operation must not update the UI optimistically.
 | `dashboard.media` | Existing enrichment key, lyrics/line times, palette, cache lifetime | Topic adapter only; not playback controls |
 | `dashboard.system` | Existing process identity/CPU/memory and filesystem capacity snapshot | Read-only topic adapter; no process termination method |
 
+Network controls return `{changed}` at admission: NetworkManager accepted the
+property write or activation/deactivation request. They do not wait for activation
+completion or publish optimistic state. Method errors describe admission failures
+only: policy/authorization is `permission_denied`, vanished targets are
+`stale_revision`, and unavailable/timed-out backends are `unavailable`. Subsequent
+native-agent failures, including missing agents and cancelled prompts, appear in
+authoritative network topic health as one sanitized, retryable authentication
+failure; they are not errors on an already admitted call. This network-specific
+rule qualifies the general agent-error mapping below without changing v1 schemas.
+
 Audio setters accept the application's linear value in **[0,1]**, preserving
 Nacre's current 100% cap; it is not decibels or hardware gain. Readback keeps the
 actual finite backend value, including amplification set by another application.

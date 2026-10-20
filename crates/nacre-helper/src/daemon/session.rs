@@ -46,6 +46,9 @@ async fn dispatch(
 ) -> Result<Value, Failure> {
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
+        method @ ("network.set_wifi" | "network.connect" | "network.disconnect") => {
+            super::network::dispatch(hub, method, params, timeout).await
+        }
         method @ ("settings.get" | "settings.set" | "settings.publish" | "settings.provider"
         | "settings.desktop") => super::settings::dispatch(hub, method, params).await,
         method @ ("niri.source" | "niri.action") => {
@@ -99,9 +102,16 @@ async fn call(
             .map_or(1000, |m| m.timeout)
     });
     let ui = method.starts_with("ui.");
+    let network = matches!(
+        method.as_str(),
+        "network.set_wifi" | "network.connect" | "network.disconnect"
+    );
     let helper = matches!(
         method.as_str(),
         "helper.execute"
+            | "network.set_wifi"
+            | "network.connect"
+            | "network.disconnect"
             | "niri.action"
             | "settings.set"
             | "settings.publish"
@@ -119,7 +129,14 @@ async fn call(
                 failure(ErrorCode::Internal, "Call handler failed", false)
             })
         }
-        Err(_) => Err(if helper {
+        Err(_) => Err(if network {
+            failure(
+                ErrorCode::Unavailable,
+                "Network operation unavailable or outcome uncertain",
+                true,
+            )
+            .dispatch_state(true)
+        } else if helper {
             failure(ErrorCode::Timeout, "Call deadline reached", false).dispatch_state(true)
         } else if ui {
             failure(ErrorCode::Timeout, "Call deadline reached", true).dispatch_state(true)

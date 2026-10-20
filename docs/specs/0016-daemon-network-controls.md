@@ -1,6 +1,6 @@
 # N0016 — Complete daemon network controls
 
-- Status: Blocked (native-agent error semantics; lead decision required)
+- Status: In progress (admission semantics clarified; implementation resumed)
 - Date: 2026-10-21
 
 **Goal.** Implement the reserved `network.set_wifi`, `network.connect` and `network.disconnect` v1 methods in the daemon NetworkManager service, with published state remaining authoritative. These controls are the highest-value next core service step because Bead’s order places device controls after daemon contracts and before hosted notifications (Nacre `docs/architecture/standing-rules.md:21-29`).
@@ -85,3 +85,15 @@ before implementation/validation; this is not acceptance evidence. No local buil
 or test, real bus/NetworkManager call, live desktop change, push or publication
 occurred. Read-only remote Docker/tmux discovery created no task container,
 checkout, session or process requiring cleanup.
+
+
+## Lead clarification — 2026-10-21
+
+The lead accepted the investigation stop and resolved it: network methods succeed
+at backend admission, without waiting for activation completion. Admission-time
+policy failures remain `permission_denied`; stale targets are `stale_revision`;
+unavailable/timed-out sources are `unavailable`. Post-admission `NO_SECRETS`
+failures use one sanitized retryable topic error, without distinguishing missing
+agents from cancelled prompts. The architecture contract now records this behavior;
+no schema or wire-format change is required. Implementation and private-fixture
+validation resume under the original scope and remote-only validation rules.

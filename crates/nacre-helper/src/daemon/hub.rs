@@ -77,6 +77,7 @@ pub struct Hub {
     routes: BTreeMap<Id, (u64, oneshot::Sender<Reply>)>,
     next_route: u64,
     internal: broadcast::Sender<Notice>,
+    pub network: Option<super::network::Requests>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
     pub widths: Option<super::widths::Requests>,
@@ -102,6 +103,7 @@ impl Hub {
             routes: BTreeMap::new(),
             next_route: 0,
             internal,
+            network: None,
             session: None,
             menu: None,
             widths: None,
@@ -255,6 +257,11 @@ impl Hub {
         }
         if !self.safe && self.services.contains_key("niri-widths") {
             methods.extend(super::widths::methods());
+        }
+        if !self.safe {
+            if let Some(network) = &self.network {
+                methods.extend(network.methods());
+            }
         }
         methods
     }

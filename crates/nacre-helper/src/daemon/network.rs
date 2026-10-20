@@ -1,4 +1,7 @@
 //! One NetworkManager signal source; one-release clients retain `changed` lines.
+mod controls;
+pub use controls::{dispatch, Requests};
+
 use super::{client, hub::Shared};
 use crate::Result;
 use nacre_protocol::{
@@ -33,10 +36,12 @@ enum CoreError {
     TooLarge,
     Invalid,
     OwnerChanged,
+    StaleTarget,
 }
 
 #[derive(Clone, Debug)]
 struct IdentityTable {
+    namespace: String,
     generation: u64,
     next: u64,
     live: HashMap<String, EntityId>,
@@ -45,6 +50,7 @@ struct IdentityTable {
 impl IdentityTable {
     fn new(generation: u64) -> Self {
         Self {
+            namespace: String::new(),
             generation,
             next: 0,
             live: HashMap::new(),
@@ -57,7 +63,10 @@ impl IdentityTable {
             return Ok(id.clone());
         }
         self.next = self.next.checked_add(1).ok_or(CoreError::TooLarge)?;
-        let id = EntityId(format!("net:{}:{}", self.generation, self.next));
+        let id = EntityId(format!(
+            "net:{}:{}:{}",
+            self.namespace, self.generation, self.next
+        ));
         if !id.valid() {
             return Err(CoreError::TooLarge);
         }
@@ -88,6 +97,9 @@ impl NetworkProjection {
     }
 
     fn publish_failure(&mut self, hub: &Shared, error: CoreError) -> Result<()> {
+        if let Some(requests) = &hub.borrow().network {
+            requests.disable();
+        }
         let state = unavailable_state(self.last_good.clone(), error);
         hub.borrow_mut()
             .publish(CORE_TOPIC, serde_json::to_value(&state)?)?;
@@ -124,7 +136,9 @@ fn unavailable_state(last_good: Option<NetworkState>, error: CoreError) -> Netwo
             "Network state exceeds the supported limit",
         ),
         CoreError::Unavailable => (ErrorCode::Unavailable, "NetworkManager is unavailable"),
-        CoreError::Invalid => (ErrorCode::Unavailable, "Network state is unavailable"),
+        CoreError::Invalid | CoreError::StaleTarget => {
+            (ErrorCode::Unavailable, "Network state is unavailable")
+        }
         CoreError::OwnerChanged => (
             ErrorCode::Unavailable,
             "NetworkManager service owner changed",
@@ -193,6 +207,7 @@ struct RawDevice {
     kind: u32,
     state: u32,
     active_connection: Option<String>,
+    authentication_failed: bool,
     active_access_point: Option<String>,
     access_points: Vec<RawAccessPoint>,
 }
@@ -362,11 +377,21 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
                 path: point_path,
             });
         }
+        let authentication_failed = state == 120
+            && property::<(u32, u32)>(
+                connection,
+                &object,
+                "org.freedesktop.NetworkManager.Device",
+                "StateReason",
+            )
+            .await
+            .is_ok_and(|(_, reason)| reason == 7);
         devices.push(RawDevice {
             path: object,
             interface,
             kind,
             state,
+            authentication_failed,
             active_connection,
             active_access_point,
             access_points,
@@ -450,6 +475,10 @@ fn project(
     if point_count > MAX_ENTITIES {
         return Err(CoreError::TooLarge);
     }
+    let authentication_failed = raw
+        .devices
+        .iter()
+        .any(|device| device.authentication_failed);
     for device in raw.devices {
         let id = identity(ids, &mut seen, "device", &device.path)?;
         if devices.items.contains_key(&id) {
@@ -549,7 +578,13 @@ fn project(
         health: Health {
             available: true,
             stale: false,
-            error: None,
+            error: authentication_failed.then(|| {
+                Failure::new(
+                    ErrorCode::Unavailable,
+                    "Network authentication required or cancelled",
+                    true,
+                )
+            }),
         },
         wireless_enabled: raw.wireless_enabled,
         devices,
@@ -658,7 +693,17 @@ where
     let reply = connection
         .call_method(Some(NM_SERVICE), path, Some(interface), method, args)
         .await
-        .map_err(|_| CoreError::Unavailable)?;
+        .map_err(|error| match &error {
+            zbus::Error::MethodError(name, _, _)
+                if matches!(
+                    name.as_str().rsplit('.').next(),
+                    Some("UnknownObject" | "UnknownDevice" | "UnknownConnection")
+                ) =>
+            {
+                CoreError::StaleTarget
+            }
+            _ => CoreError::Unavailable,
+        })?;
     if reply.body().len() > MAX_REPLY_BYTES {
         return Err(CoreError::TooLarge);
     }
@@ -950,7 +995,10 @@ fn new_projection(hub: &Shared, identity_generation: &Cell<u64>) -> Result<Netwo
         .and_then(|state| serde_json::from_value::<NetworkState>(state).ok())
         .filter(|state| state.health.available || state.health.stale);
     let service_generation = next_identity_generation(identity_generation)?;
-    Ok(NetworkProjection::new(last_good, service_generation))
+    let mut projection = NetworkProjection::new(last_good, service_generation);
+    use sha2::{Digest, Sha256};
+    projection.ids.namespace = format!("{:x}", Sha256::digest(hub.borrow().boot.as_bytes()));
+    Ok(projection)
 }
 
 #[derive(Default)]
@@ -1079,11 +1127,37 @@ async fn observe_on_connection(
     let mut watcher = AbortWatcher(Some(watcher));
     drop(refresh);
 
+    let (requests, mut actions) = controls::channel(owner_boundary.clone());
+    hub.borrow_mut().network = Some(requests.clone());
+    let _readiness = controls::Readiness(requests.clone());
     let loop_result: Result<()> = async {
         loop {
             let refresh = tokio::select! {
+                biased;
                 _ = &mut owner_changed => return Err("NetworkManager owner changed or watcher stopped".into()),
                 _ = watcher.wait() => return Err("NetworkManager event watcher stopped".into()),
+                action = actions.recv() => {
+                    let Some(action) = action else { return Err("Network control queue ended".into()); };
+                    if action.reply.is_closed() { continue; }
+                    let result = tokio::select! {
+                        biased;
+                        _ = &mut owner_changed => {
+                            let _ = action.reply.send(Err(controls::unavailable()));
+                            return Err("NetworkManager owner changed during action".into());
+                        }
+                        _ = watcher.wait() => {
+                            let _ = action.reply.send(Err(controls::unavailable()));
+                            return Err("NetworkManager watcher ended during action".into());
+                        }
+                        result = tokio::time::timeout_at(action.deadline,
+                            controls::execute(&connection, &expected_owner, &projection.ids, &requests, &action)) => {
+                            result.unwrap_or_else(|_| Err(controls::unavailable().dispatch_state(true)))
+                        }
+                    };
+                    let _ = action.reply.send(result);
+                    // Even an ambiguous failure is reconciled, never replayed.
+                    Some(())
+                }
                 refresh = refreshes.recv() => refresh,
             };
             if refresh.is_none() {
@@ -1106,8 +1180,9 @@ async fn observe_on_connection(
                     &connection,
                     &expected_owner,
                     async {
-                        let snapshot =
-                            read_snapshot_candidate(&connection, &projection.ids).await;
+                        let snapshot = tokio::time::timeout(Duration::from_secs(10),
+                            read_snapshot_candidate(&connection, &projection.ids)).await
+                            .unwrap_or(Err(CoreError::Unavailable));
                         hooks.after_snapshot_read().await;
                         snapshot
                     },
@@ -1140,6 +1215,7 @@ async fn observe_on_connection(
                 projection.publish_failure(&hub, error)?;
                 continue;
             }
+            let capabilities = controls::capabilities(&connection, &expected_owner).await;
             hooks.before_publish().await;
             tokio::select! {
                 biased;
@@ -1166,6 +1242,7 @@ async fn observe_on_connection(
             if let Some(witness) = &projection.publication_witness {
                 let _ = witness.send(state.clone());
             }
+            requests.enable(capabilities);
             projection.ids = candidate_ids;
             projection.last_good = Some(state);
         }
@@ -1947,6 +2024,7 @@ mod core_tests {
                 interface: "wlan0".into(),
                 kind: 2,
                 state: 100,
+                authentication_failed: false,
                 active_connection: Some(ACTIVE_WIFI.into()),
                 active_access_point: Some(AP.into()),
                 access_points: vec![RawAccessPoint {
@@ -2118,6 +2196,7 @@ mod core_tests {
                 interface: format!("eth{index}"),
                 kind: 1,
                 state: 30,
+                authentication_failed: false,
                 active_connection: None,
                 active_access_point: None,
                 access_points: Vec::new(),
