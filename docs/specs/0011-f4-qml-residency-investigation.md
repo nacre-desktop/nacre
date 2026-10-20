@@ -1,6 +1,6 @@
 # N0011 — Explain the validated F4 QML residency regression
 
-- Status: In progress — owner-authorized Luna fix time box
+- Status: Closed — bounded fixes rejected, original8a accepted with tracked memory debt
 - Owner: Luna first; Sol only if Luna is stuck within the same time box
 - Source: baseline5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57 vs candidate8a1df35c6fec44e660530643ffef367e6b57ef89
 
@@ -236,3 +236,12 @@ N10localHEADecaf0500 readonlystatus/recoveryprototype30switchtests+8recovery
 PASS(rootindependentlyrerun), productionmutatorsstillrefuse/fullACnotDone.
 N9local6f048e60 leasehooks/readlink/focusedchecksretainpreviouslimits; notDone.
 Allstate localcommits; no productpush/package/install/liveunitactionauthorized.
+
+## Closure — Oct20
+
+Final67e optimization passed40correctness tests but failed fresh two-pair memory
+screen; park it and Colors94866a as evidence, not source. Owner final-attempt
+allowance exhausted. Original8a then passed five-pair Hyprland fallback<=12MiB,
+with approved Niri debt. [Report](../research/f4-memory-acceptance-20261020.md)
+records categories, causal limits, all per-process medians and rejection reason.
+Follow-up N0012 queued low priority; no further profiling/fix work authorized.

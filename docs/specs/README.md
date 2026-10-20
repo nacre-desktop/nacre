@@ -1,13 +1,15 @@
 # Nacre implementation queue
 
-Current handoff: owner guidance, morning 2026-10-19; supersedes older thread grants.
+Current handoff: 2026-10-20 F4 memory acceptance passed; source integrated, exact-head CI running. This supersedes older results and grants below; retain them as history.
 [Standing rules](../architecture/standing-rules.md) apply.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Blocked: validated Niri memory regression | Ten Niri arms valid; five-pair group/QML medians fail owner budget. Batch stopped; partial Hyprland excluded. N0011 investigation next. |
+| 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Review: memory PASS, published CI pending | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Main dfcedea7; CI39393677394 running. |
 | 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | In progress: Luna local implementation | Separate worktree; private checks before capture, no push/live changes; integration after green F4. |
 | 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: Luna local implementation | Separate worktree; coordinate N9 API, private checks before capture, no push/live changes. |
+| — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
+| — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Source accepted; profiling stopped | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
 | — | [N0006 switch-on plan](0006-f4-owner-switch-on-plan.md) | Review: prerequisites | Plan needs accepted implementation and green F4; no live execution. |
 | — | [N0001 F4 source review](0001-f4-settings-completion-audit.md) | Review | Done after accepted N2 and published-head CI. |
@@ -15,7 +17,7 @@ Current handoff: owner guidance, morning 2026-10-19; supersedes older thread gra
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
 | — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
 
-## Current result and preserved work
+## Historical results and preserved work
 
 Read [eight-arm diagnostic](../research/f4-n0002-eight-arm-diagnostic.md).
 All8v12/v13 arms passed quiet/scope/windows, but actual1920×1080scale1/60Hz
@@ -575,3 +577,16 @@ Avalid1/10 andBactive; swapcapacity15569252352/use0, available13227134976B.
 Soleheavyworker luna_n2_colors_diagnostic_prep, nootherbuild/CI. Finish9remaining
 plusmax2quiet-onlyendretries, group<=12MiB allphases, finalrootreview.
 No F4 acceptance/integration or live switch claimed.
+
+### F4 memory acceptance PASS / source main — Oct20 08:30UTC
+
+All10Hyprprimaries valid,0retries. Root rawauditPASS: original8a/sourcehelpers,
+fullidleactualelapsed>=60, wrapperpswpin<1MiB/processSwapPss0,12GiBswap0,
+zero max/OOM and allcleanup. Groupmedian deltas+8.265625/+6.868164/+0.712891
+MiB<=12allphases. Ownerconditionaloriginal8aNirimemorydebt now accepted;
+no rejected67e/Colors. Full report docs/research/f4-memory-acceptance-20261020.md
+and lowpriorityN0012. Source22commits integratednormally main dfcedea76e968bd71c62d7c9ea8c1b81dd68e542,
+exactheadSourceCI39393677394 running (notgreenclaimed). No packages/liveaction.
+BeadB15audioDone published1e4a2b0 docs source dc8832f+e5fc3d8 CI39390219914green,
+noBeaddesktopjob; nextdesktopB2dashboardmemorythenB3typingaftergrant.
+N9local304d28fe readpinfix stillNOTRUN; N10productionmutatorsstillnotready.

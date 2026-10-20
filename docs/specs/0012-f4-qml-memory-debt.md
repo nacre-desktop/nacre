@@ -1,6 +1,7 @@
 # N0012 — Reduce tracked F4 QML memory debt
 
-Status: Queued, low priority; source/investigation work is not authorized now.
+Status: Queued, low priority; F4 memory debt accepted after the approved Hyprland
+five-pair condition passed. No new investigation work is authorized now.
 Activation depends on F4 acceptance and a separate lead assignment. Owner decision:
 Oct19 final fix attempt, then move on. No switch-on blocker if the approved
 Hyprland acceptance condition passes.
@@ -81,3 +82,15 @@ The earlier Colors lazy-store attempt94866a37 also failed its four valid-arm
 screen: group+14.687/+15.400/+18.709MiB and QML+12.115/+14.829/+15.278MiB
 across fresh/closed/after-latency. It too remains parked, not part of selected8a.
 Owner's final-attempt allowance is exhausted; no more profiling/fix hunt here.
+
+## Accepted Hyprland reference
+
+Original8a versus5f4, five valid pairs, zero retries: group increases fresh
++8.266MiB, closed+6.868MiB, after+0.713MiB (all<=12); QML increases
++6.324,+3.692,-0.276MiB respectively. Daemon+1.413,+0.971,+0.892MiB;
+other helpers+0.658,+0.638,+0.622MiB. Root recalculated all medians and audited
+raw quiet/full-window/containment/cleanup proofs. Full evidence and limitations:
+[acceptance report](../research/f4-memory-acceptance-20261020.md).
+
+This is accepted debt, not a claim that the former QML<=2MiB gate passed.
+Source integrated asdfcedea7; published-head CI39393677394 pending at recording.
