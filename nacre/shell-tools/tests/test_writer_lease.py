@@ -1,4 +1,3 @@
-import fcntl
 import importlib.util
 import os
 from pathlib import Path
@@ -84,7 +83,7 @@ class WriterLeaseTests(unittest.TestCase):
                 ):
                     with self.subTest(overrides=overrides):
 
-                        def unsafe_link_stat(name, *args, **kwargs):
+                        def unsafe_link_stat(name, *args, expected=overrides, **kwargs):
                             meta = original_stat(name, *args, **kwargs)
                             if (
                                 name == "socket-link"
@@ -98,7 +97,7 @@ class WriterLeaseTests(unittest.TestCase):
                                     "st_ctime_ns": meta.st_ctime_ns,
                                     "st_nlink": meta.st_nlink,
                                 }
-                                values.update(overrides)
+                                values.update(expected)
                                 return SimpleNamespace(**values)
                             return meta
 
