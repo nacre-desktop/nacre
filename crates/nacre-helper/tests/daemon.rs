@@ -771,6 +771,9 @@ fn next_line(reader: &mut BufReader<ChildStdout>) -> Result<Vec<u8>> {
         }
     }
 }
+fn next_line_context(reader: &mut BufReader<ChildStdout>, context: &str) -> Result<Vec<u8>> {
+    next_line(reader).map_err(|error| std::io::Error::other(format!("{context}: {error}")).into())
+}
 #[test]
 fn actual_daemon_ready_native_client_restart_safe_mode_and_cleanup() -> Result<()> {
     let home = tempfile::Builder::new().prefix("nd-").tempdir()?;
@@ -2328,7 +2331,7 @@ fn network_watch_shares_signals_preserves_frozen_lines_and_fails_without_replay(
                 .ok_or("Missing network watch output")?,
         );
         assert_eq!(
-            next_line(&mut reader)?,
+            next_line_context(&mut reader, &format!("{name} startup"))?,
             reference["startup_stdout"].as_str().unwrap().as_bytes()
         );
         Ok((process, reader))
@@ -2338,9 +2341,13 @@ fn network_watch_shares_signals_preserves_frozen_lines_and_fails_without_replay(
     let (mut standalone, mut standalone_read) = start_watch("network-standalone.log", true)?;
     server.request_name("org.freedesktop.NetworkManager")?;
     assert!(server.release_name("org.freedesktop.NetworkManager")?);
-    for reader in [&mut first_read, &mut second_read, &mut standalone_read] {
-        let mut lines = next_line(reader)?;
-        lines.extend(next_line(reader)?);
+    for (name, reader) in [
+        ("first", &mut first_read),
+        ("second", &mut second_read),
+        ("standalone", &mut standalone_read),
+    ] {
+        let mut lines = next_line_context(reader, &format!("{name} owner acquire"))?;
+        lines.extend(next_line_context(reader, &format!("{name} owner release"))?);
         assert_eq!(
             lines,
             reference["owner_change_stdout"]
@@ -2385,7 +2392,10 @@ fn network_watch_shares_signals_preserves_frozen_lines_and_fails_without_replay(
     )?;
     assert!(server.release_name("org.freedesktop.NetworkManager")?);
     for _ in 0..3 {
-        assert_eq!(next_line(&mut second_read)?, b"changed\n");
+        assert_eq!(
+            next_line_context(&mut second_read, "second device event")?,
+            b"changed\n"
+        );
     }
     // A lost dispatched stream cannot silently start a second direct watcher.
     daemon.0.kill()?;

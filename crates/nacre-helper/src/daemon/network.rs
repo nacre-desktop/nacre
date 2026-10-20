@@ -916,7 +916,10 @@ async fn observe_with_hooks(
                 hooks.take().unwrap_or_default(),
             )
             .await;
-            if result.is_err() && core_owner_change_published(&hub) {
+            if result.is_err() && core_reader_failure_is_retryable(&hub) {
+                // The legacy watcher owns the bus lifetime; retire only this
+                // core reader when its owner pin is unavailable and retry on
+                // the next persistent-watcher event.
                 continue;
             }
             return result;
@@ -927,12 +930,17 @@ async fn observe_with_hooks(
     result
 }
 
-fn core_owner_change_published(hub: &Shared) -> bool {
+fn core_reader_failure_is_retryable(hub: &Shared) -> bool {
     hub.borrow()
         .snapshot(CORE_TOPIC)
         .and_then(|value| serde_json::from_value::<NetworkState>(value).ok())
-        .and_then(|state| state.health.error.map(|failure| failure.message))
-        .is_some_and(|message| message == "NetworkManager service owner changed")
+        .is_some_and(|state| {
+            !state.health.available
+                && state
+                    .health
+                    .error
+                    .is_some_and(|failure| failure.code == ErrorCode::Unavailable)
+        })
 }
 
 fn new_projection(hub: &Shared, identity_generation: &Cell<u64>) -> Result<NetworkProjection> {
@@ -1584,6 +1592,67 @@ mod core_tests {
         generation.set(MAX_SAFE_INTEGER);
         assert!(next_identity_generation(&generation).is_err());
         assert_eq!(generation.get(), MAX_SAFE_INTEGER);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn core_network_owner_loss_between_precheck_and_reader_start_is_retryable() -> Result<()>
+    {
+        let (_home, _bus, address) = private_bus()?;
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let server = owner_fixture(&address).await?;
+                let client = fixture_client(&address).await?;
+                let pinned_owner = network_manager_owner(&client)
+                    .await
+                    .map_err(|_| "Initial private owner precheck failed")?;
+                let hub = super::super::hub::Hub::new(
+                    "owner-precheck-race-test".into(),
+                    false,
+                    Duration::from_millis(16),
+                )
+                .shared();
+                let mut ids = IdentityTable::new(40);
+                let last_good = project(raw_fixture(), &mut ids)
+                    .map_err(|_| "Private raw network fixture failed")?;
+                hub.borrow_mut()
+                    .publish(CORE_TOPIC, serde_json::to_value(last_good.clone())?)?;
+                publish(&hub, 7, true, None)?;
+                let previous_watch = hub.borrow().snapshot(TOPIC).expect("network watch state");
+                let identity_generation = Rc::new(Cell::new(41));
+                let projection = new_projection(&hub, &identity_generation)?;
+
+                // Force the same boundary between observe's owner precheck and
+                // observe_on_connection's independent reader-start owner pin.
+                assert!(server.release_name(NM_SERVICE).await?);
+                assert!(network_manager_owner(&client).await.is_err());
+                let result = observe_on_connection(
+                    hub.clone(),
+                    Rc::new(Cell::new(7)),
+                    projection,
+                    client,
+                    ObserveHooks::default(),
+                )
+                .await;
+                assert!(result.is_err());
+                assert!(core_reader_failure_is_retryable(&hub));
+
+                let unavailable: NetworkState = serde_json::from_value(
+                    hub.borrow()
+                        .snapshot(CORE_TOPIC)
+                        .expect("core network state after owner loss"),
+                )?;
+                assert!(!unavailable.health.available);
+                assert!(unavailable.health.stale);
+                assert_eq!(unavailable.devices, last_good.devices);
+                assert_eq!(unavailable.access_points, last_good.access_points);
+                assert_eq!(unavailable.connections, last_good.connections);
+                assert_eq!(identity_generation.get(), 42);
+                assert_eq!(hub.borrow().snapshot(TOPIC), Some(previous_watch));
+                assert_ne!(pinned_owner, "");
+                Ok::<(), crate::Error>(())
+            })
+            .await?;
+        Ok(())
     }
 
     #[tokio::test(flavor = "current_thread")]
