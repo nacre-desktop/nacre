@@ -177,7 +177,12 @@ fn backend_error(error: zbus::Error) -> Failure {
                 "UnknownObject"
                 | "UnknownDevice"
                 | "UnknownConnection"
-                | "ConnectionNotAvailable" => ErrorCode::StaleRevision,
+                | "ConnectionNotAvailable"
+                | "ConnectionNotActive"
+                | "NotActive"
+                | "SpecificObjectNotFound"
+                | "InvalidConnection"
+                | "IncompatibleConnection" => ErrorCode::StaleRevision,
                 _ => ErrorCode::Unavailable,
             }
         }
@@ -247,9 +252,17 @@ pub(super) async fn capabilities(connection: &zbus::Connection, owner: &str) -> 
             && node.attribute("type") == Some("b")
             && matches!(node.attribute("access"), Some("write" | "readwrite"))
     });
-    u8::from(wifi) * WIFI
-        | u8::from(method("ActivateConnection") && method("AddAndActivateConnection2")) * CONNECT
-        | u8::from(method("DeactivateConnection")) * DISCONNECT
+    let mut capabilities = 0;
+    if wifi {
+        capabilities |= WIFI;
+    }
+    if method("ActivateConnection") && method("AddAndActivateConnection2") {
+        capabilities |= CONNECT;
+    }
+    if method("DeactivateConnection") {
+        capabilities |= DISCONNECT;
+    }
+    capabilities
 }
 
 fn source<'a>(
