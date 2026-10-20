@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Install or reload Nacre native shell source with a reversible cutover."""
 
+import sys
 import argparse
-from nacre_i18n import tr
 import datetime as dt
 import hashlib
 import json
-import nacre_state as _state
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -15,13 +15,76 @@ import tempfile
 import time
 from pathlib import Path
 
-import nacre_native_compositor as compositor
+# Refusal must not leave import caches behind in the candidate checkout.
+sys.dont_write_bytecode = True
+
+from nacre_i18n import tr  # noqa: E402
+import nacre_state as _state  # noqa: E402
+import nacre_native_compositor as compositor  # noqa: E402
 
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
 SHELL = ROOT.parent / "shell"
 DEST = HOME / ".local/share/nacre/shell"
 STATE = HOME / ".local/state/nacre/shell"
+
+
+RETIRED_HELPERS = (
+    "kde-palette",
+    "terminal-branding",
+    "login-appearance",
+    "colors",
+    "classic-state",
+    "branding",
+    "file-icons",
+    "lock-config",
+    "lock-dashboard",
+    "lock-info",
+    "lock-prepare",
+    "provision",
+    "palette_engine",
+    "wallpaper-watch",
+    "wallpaper-media",
+    "demo-wallpapers",
+    "helper-service",
+    "shell-supervisor",
+    "session-watch",
+    "diagnostics",
+    "menu-backend",
+    "dashboard-data",
+    "dashboard-media",
+    "network-state",
+    "launcher-preferences",
+    "notification-history",
+    "dashboard-system",
+    "resource-state",
+    "window-chat-title",
+    "light-devices",
+    "menu-cli",
+    "pearl-state",
+    "pearl-window",
+    "compositor",
+    "compositor_backends/hyprland",
+    "compositor_backends/niri",
+    "compositor_backends/niri_widths",
+    "compositor_config",
+    "compositor_backends/hyprland_config",
+    "compositor_backends/niri_config",
+)
+RETIRED_NIRI = ("niri-session-runtime", "niri-acceptance-monitor", "niri-preview")
+MANAGED_UNITS = (
+    "nacre-shell.service",
+    "nacre-sidebar-ai.service",
+    "nacre-session-watch.service",
+    "nacre-niri-widths.service",
+    "nacre-power-key.service",
+    "hypridle.service",
+    "nacre-daemon.socket",
+    "nacre-daemon.service",
+    "swaync.service",
+    "waybar.service",
+    "nacre-brain-ui-wallpaper.timer",
+)
 
 
 def refresh_orient(helper):
@@ -45,14 +108,24 @@ def digest(p):
     return hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
 
 
+def unused_config_matches(path):
+    return (
+        path.is_file()
+        and not path.is_symlink()
+        and digest(path)
+        == "05a4a1ffca4933456163dc394e2fe645457787304d2ea715a970b4da84cfe0f1"
+    )
+
+
+def old_dbus_matches(path):
+    return path.is_file() and "start nacre-shell.service" in path.read_text()
+
+
 def retire_unused_config():
     path = HOME / ".config/nacre/shell.json"
     if not path.is_file() or path.is_symlink():
         return
-    if (
-        digest(path)
-        != "05a4a1ffca4933456163dc394e2fe645457787304d2ea715a970b4da84cfe0f1"
-    ):
+    if not unused_config_matches(path):
         print("Unused shell.json has local edits; leaving it private and inactive")
         return
     saved = (
@@ -131,57 +204,203 @@ def install_daemon_links(target):
 
 
 def retire_native_helpers(directory):
-    for retired in (
-        "kde-palette",
-        "terminal-branding",
-        "login-appearance",
-        "colors",
-        "classic-state",
-        "branding",
-        "file-icons",
-        "lock-config",
-        "lock-dashboard",
-        "lock-info",
-        "lock-prepare",
-        "provision",
-        "palette_engine",
-        "wallpaper-watch",
-        "wallpaper-media",
-        "demo-wallpapers",
-        "helper-service",
-        "shell-supervisor",
-        "session-watch",
-        "diagnostics",
-        "menu-backend",
-        "dashboard-data",
-        "dashboard-media",
-        "network-state",
-        "launcher-preferences",
-        "notification-history",
-        "dashboard-system",
-        "resource-state",
-        "window-chat-title",
-        "light-devices",
-        "menu-cli",
-        "pearl-state",
-        "pearl-window",
-        "compositor",
-        "compositor_backends/hyprland",
-        "compositor_backends/niri",
-        "compositor_backends/niri_widths",
-        "compositor_config",
-        "compositor_backends/hyprland_config",
-        "compositor_backends/niri_config",
+    for path in retired_paths(directory):
+        path.unlink(missing_ok=True)
+
+
+def retired_paths(directory=None):
+    directory = DEST / "tools" if directory is None else directory
+    return [directory / (name + ".py") for name in RETIRED_HELPERS] + [
+        directory.parent.parent / "niri-on-pc" / (name + ".py") for name in RETIRED_NIRI
+    ]
+
+
+def user_unit_directories():
+    """Inspect user search locations without querying or changing the manager."""
+    config = Path(os.environ.get("XDG_CONFIG_HOME", HOME / ".config"))
+    data = Path(os.environ.get("XDG_DATA_HOME", HOME / ".local/share"))
+    directories = [
+        config / "systemd/user.control",
+        config / "systemd/user",
+        HOME / ".config/systemd/user",
+        data / "systemd/user",
+    ]
+    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    if runtime:
+        directories += [
+            Path(runtime) / "systemd" / suffix
+            for suffix in (
+                "user.control",
+                "transient",
+                "generator.early",
+                "user",
+                "generator",
+                "generator.late",
+            )
+        ]
+    for variable, default in (
+        ("XDG_CONFIG_DIRS", "/etc/xdg"),
+        ("XDG_DATA_DIRS", "/usr/local/share:/usr/share"),
     ):
-        (directory / (retired + ".py")).unlink(missing_ok=True)
-    # The retired prepared-session controller is code, never user state.
-    for name in ("niri-session-runtime", "niri-acceptance-monitor", "niri-preview"):
-        (directory.parent.parent / "niri-on-pc" / (name + ".py")).unlink(
-            missing_ok=True
+        directories += [
+            Path(part) / "systemd/user"
+            for part in os.environ.get(variable, default).split(":")
+            if part
+        ]
+    directories += [
+        Path(part)
+        for part in (
+            "/etc/systemd/user",
+            "/run/systemd/user",
+            "/usr/local/lib/systemd/user",
+            "/usr/lib/systemd/user",
         )
+    ]
+    directories += [
+        Path(part)
+        for part in os.environ.get("SYSTEMD_UNIT_PATH", "").split(":")
+        if part
+    ]
+    return list(dict.fromkeys(directories))
 
 
-def deploy(code_only=False):
+def retired_dropins(retire_niri_experiment=False):
+    """Fail closed on retired code references; return only opted-in Niri files."""
+    names = {"service.d", "socket.d", "timer.d"}
+    for unit in MANAGED_UNITS:
+        stem, kind = unit.rsplit(".", 1)
+        names.add(unit + ".d")
+        # systemd also loads dash-prefix drop-ins (e.g. nacre-.service.d).
+        for index, character in enumerate(stem):
+            if character == "-":
+                names.add(stem[: index + 1] + "." + kind + ".d")
+    paths = retired_paths() + [DEST / "tools/demo-wallpapers.LICENSE"]
+    config = HOME / ".config/nacre/shell.json"
+    if unused_config_matches(config):
+        paths.append(config)
+    dbus = HOME / ".local/share/dbus-1/services/org.erikreider.swaync.service"
+    if old_dbus_matches(dbus):
+        paths.append(dbus)
+    niri_paths = set(retired_paths()[-len(RETIRED_NIRI) :])
+    matches = {}
+    for directory in user_unit_directories():
+        for name in sorted(names):
+            try:
+                dropins = sorted((directory / name).iterdir())
+            except FileNotFoundError:
+                continue
+            for dropin in dropins:
+                if not dropin.name.endswith(".conf"):
+                    continue
+                # A /dev/null mask has no content and must never be moved.
+                if dropin.is_symlink() and dropin.resolve() == Path("/dev/null"):
+                    continue
+                text = dropin.read_text()
+                values = []
+                continuation = ""
+                for line in text.splitlines():
+                    if line.lstrip().startswith(("#", ";")):
+                        continue
+                    line = continuation + line.strip()
+                    if line.endswith("\\"):
+                        continuation = line[:-1] + " "
+                        continue
+                    continuation = ""
+                    key, separator, value = line.partition("=")
+                    if separator and (
+                        key.strip().startswith(
+                            ("ExecStart", "ExecCondition", "ExecStop", "Environment")
+                        )
+                    ):
+                        values.append(value)
+                value = "\n".join(values)
+                value = re.sub(
+                    r"\\(?:x([0-9a-fA-F]{2})|([0-7]{3})|([abfnrstv\\\"']))",
+                    lambda m: (
+                        chr(int(m[1], 16))
+                        if m[1]
+                        else chr(int(m[2], 8))
+                        if m[2]
+                        else {
+                            "a": "\a",
+                            "b": "\b",
+                            "f": "\f",
+                            "n": "\n",
+                            "r": "\r",
+                            "s": " ",
+                            "t": "\t",
+                            "v": "\v",
+                        }.get(m[3], m[3])
+                    ),
+                    value,
+                )
+                for alias in ("%h", "${HOME}", "$HOME", "~"):
+                    value = value.replace(alias + "/", str(HOME) + "/")
+                references = {
+                    path
+                    for path in paths
+                    if re.search(re.escape(str(path)) + r"(?=$|[^\w./-])", value)
+                }
+                if references:
+                    matches[dropin] = references
+    blocked = {
+        dropin: paths
+        for dropin, paths in matches.items()
+        if not retire_niri_experiment or not paths <= niri_paths
+    }
+    if blocked:
+        details = "\n".join(
+            f"  {dropin}: {path}"
+            for dropin, paths in blocked.items()
+            for path in sorted(paths)
+        )
+        raise RuntimeError(
+            "Refusing install before any changes: user unit drop-ins reference retired files:\n"
+            + details
+            + "\nFor Niri experiment references, rerun this command with --retire-niri-experiment "
+            "to back up and remove only matching drop-ins. For other references, edit or remove "
+            "each named drop-in to use a supported native command, then rerun. "
+            "Do not install while a named retired path remains referenced."
+        )
+    return sorted(matches)
+
+
+def backup_retirements(dropins):
+    """Persist rollback and hashes before removing experiment files or drop-ins."""
+    paths = dropins + retired_paths()[-len(RETIRED_NIRI) :]
+    paths = [path for path in paths if path.exists() or path.is_symlink()]
+    if not paths:
+        return None, []
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    backup = (
+        STATE
+        / "backups"
+        / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    )
+    backup.mkdir(parents=True, mode=0o700)
+    entries = []
+    for path in paths:
+        entry = {"target": str(path), "after_hash": None, "after_link": None}
+        if path.is_symlink():
+            entry.update(
+                type="symlink", link=os.readlink(path), before_hash=digest(path)
+            )
+        else:
+            # Runtime/XDG unit dirs may be outside HOME. Absolute hierarchy avoids collisions.
+            saved = backup / "retired" / path.relative_to(path.anchor)
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, saved)
+            entry.update(type="file", backup=str(saved), before_hash=digest(saved))
+        entries.append(entry)
+    _state.write(backup / "manifest.json", entries)
+    (STATE / "latest-backup").write_text(str(backup))
+    for path in paths:
+        path.unlink()
+    return backup, entries
+
+
+def deploy(code_only=False, retire_niri_experiment=False):
+    dropins = retired_dropins(retire_niri_experiment)
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"
     if not helper.is_file():
@@ -225,6 +444,7 @@ def deploy(code_only=False):
                 "Install system desktop packages and provision the palette engine first",
             )
         )
+    backup, entries = backup_retirements(dropins)
     # The release transaction snapshots the old runtime before this activation.
 
     # Fonts have their own hash/notice/rollback owner; loaded applications stay alive.
@@ -330,7 +550,7 @@ def deploy(code_only=False):
         stdout=subprocess.DEVNULL,
     )
     old_dbus = HOME / ".local/share/dbus-1/services/org.erikreider.swaync.service"
-    if old_dbus.is_file() and "start nacre-shell.service" in old_dbus.read_text():
+    if old_dbus_matches(old_dbus):
         old_dbus.unlink()
     dbus = HOME / ".local/share/dbus-1/services/org.freedesktop.Notifications.service"
     dbus.parent.mkdir(parents=True, exist_ok=True)
@@ -375,14 +595,14 @@ def deploy(code_only=False):
         subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
         validate_live(source_digest(SHELL))
         return
-    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
-    backup = (
-        STATE
-        / "backups"
-        / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
-    )
-    backup.mkdir(parents=True, mode=0o700)
-    entries = []
+    if backup is None:
+        STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+        backup = (
+            STATE
+            / "backups"
+            / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        )
+        backup.mkdir(parents=True, mode=0o700)
 
     def write(path, body=None, link=None, mode=None):
         entry = {"target": str(path), "type": "absent"}
@@ -593,7 +813,8 @@ def restore():
     for e in entries:
         path = Path(e["target"])
         if (
-            digest(path) != e["after_hash"]
+            (path.exists() and not path.is_file() and e["after_link"] is None)
+            or digest(path) != e["after_hash"]
             or (os.readlink(path) if path.is_symlink() else None) != e["after_link"]
         ):
             raise RuntimeError(
@@ -603,9 +824,17 @@ def restore():
                     {"value0": str(path)},
                 )
             )
+    for e in entries:
+        if (
+            e["type"] == "file"
+            and "before_hash" in e
+            and digest(Path(e["backup"])) != e["before_hash"]
+        ):
+            raise RuntimeError("Retirement backup hash mismatch: " + e["backup"])
     subprocess.run(["systemctl", "--user", "stop", "nacre-shell"], check=True)
     for e in reversed(entries):
         path = Path(e["target"])
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.unlink(missing_ok=True)
         if e["type"] == "symlink":
             path.symlink_to(e["link"])
@@ -620,5 +849,10 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--code-only", action="store_true")
     p.add_argument("--restore", action="store_true")
+    p.add_argument(
+        "--retire-niri-experiment",
+        action="store_true",
+        help="Back up and remove drop-ins referencing retired niri-on-pc scripts",
+    )
     a = p.parse_args()
-    restore() if a.restore else deploy(a.code_only)
+    restore() if a.restore else deploy(a.code_only, a.retire_niri_experiment)
