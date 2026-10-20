@@ -149,8 +149,6 @@ class Manager:
 
 class SwitchTests(unittest.TestCase):
     def setUp(self):
-        old_umask = os.umask(0o077)
-        self.addCleanup(os.umask, old_umask)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / "home"
@@ -643,6 +641,36 @@ class SwitchTests(unittest.TestCase):
         self.assertTrue(switch.dropin.is_file())
         switch.run("rollback")
 
+    def test_journal_modes_and_reuse_under_both_umasks(self):
+        for mask in (0o022, 0o077):
+            with self.subTest(umask=oct(mask)):
+                old_umask = os.umask(mask)
+                try:
+                    self.setUp()
+                    enabled = self.switch.run("enable")
+                    self.assertEqual(
+                        stat.S_IMODE(self.switch.index.stat().st_mode), 0o700
+                    )
+                    self.switch.run("status")
+                    self.switch.run("disable")
+                    self.switch.run("rollback")
+                    self.switch.run("rollback", enabled["transaction"])
+                    for directory in self.switch.index.iterdir():
+                        self.assertEqual(directory.stat().st_uid, os.getuid())
+                        self.assertEqual(stat.S_IMODE(directory.stat().st_mode), 0o700)
+                        journal = directory / "journal.json"
+                        self.assertEqual(journal.stat().st_uid, os.getuid())
+                        self.assertEqual(stat.S_IMODE(journal.stat().st_mode), 0o600)
+                finally:
+                    os.umask(old_umask)
+
+    def test_dispatch_root_refusal_is_preserved(self):
+        with patch.object(m.os, "getuid", return_value=0):
+            with self.assertRaisesRegex(RuntimeError, "ordinary desktop user"):
+                m.dispatch(["status"], self.home, self.state / "no-release")
+        self.assertFalse(self.switch.index.exists())
+        self.assertEqual(self.manager.calls, [])
+
     def test_lock_held_through_health_and_recovery(self):
         import fcntl
 
@@ -659,7 +687,8 @@ class SwitchTests(unittest.TestCase):
             return original(command, **kwargs)
 
         with (
-            patch.object(m.os, "getuid", return_value=os.getuid() or 1000),
+            # Bypass only the CLI guard for root CI, preserving real file ownership.
+            patch.object(m, "require_ordinary_user"),
             patch.object(m, "Switch", return_value=self.switch),
         ):
             self.switch.runner = runner

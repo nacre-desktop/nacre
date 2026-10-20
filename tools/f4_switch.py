@@ -775,6 +775,11 @@ def boot_id():
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
+def require_ordinary_user():
+    if os.getuid() == 0:
+        raise RuntimeError("nacre f4 must run as the ordinary desktop user, never sudo")
+
+
 def dispatch(args, home, release_state):
     parser = argparse.ArgumentParser(prog="nacre f4")
     parser.add_argument(
@@ -789,8 +794,7 @@ def dispatch(args, home, release_state):
         parser.error(
             "--transaction requires rollback and a 32-character transaction ID"
         )
-    if os.getuid() == 0:
-        raise RuntimeError("nacre f4 must run as the ordinary desktop user, never sudo")
+    require_ordinary_user()
     # Existing release lock only: refusals and status must not create any files.
     lock_path = checked(Path(release_state) / "release.lock")
     fd = os.open(lock_path, os.O_RDONLY | os.O_NOFOLLOW)
