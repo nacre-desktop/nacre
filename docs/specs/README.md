@@ -6,8 +6,8 @@ Current handoff: 2026-10-20 F4 Done: memory acceptance passed and integrated sou
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
 | 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Done | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Runtime integrated dfcedea7; checker/test-fixture fixes through 9b37c663, CI39402420054 SUCCESS (desktop + fresh-install). |
-| 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | In progress: Luna local implementation | Separate worktree; private checks before capture, no push/live changes; integration after green F4. |
-| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: Luna local implementation | Separate worktree; coordinate N9 API, private checks before capture, no push/live changes. |
+| 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | Review: integrated, full CI pending | Source b5273ab6 includes fixture-only readiness fixes; focused39 tests/Clippy passed, exact-head CI pending. No live action. |
+| 3 | [N0010 opt-in/rollback](0010-f4-managed-opt-in-and-rollback.md) | In progress: local implementation | Real N9 API preparation/recovery tests119 pass; complete rollback/helper contract in progress, CLI fail-closed. No live action. |
 | — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
 | — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
 | — | [N0007 QML memory correction](0007-f4-qml-memory-fix.md) | Done under owner-approved memory-debt decision | Source8a correctness retained. Single-pair veto superseded by owner five-pair rule. No further investigation now. |
@@ -590,3 +590,22 @@ exactheadSourceCI39393677394 running (notgreenclaimed). No packages/liveaction.
 BeadB15audioDone published1e4a2b0 docs source dc8832f+e5fc3d8 CI39390219914green,
 noBeaddesktopjob; nextdesktopB2dashboardmemorythenB3typingaftergrant.
 N9local304d28fe readpinfix stillNOTRUN; N10productionmutatorsstillnotready.
+
+
+## 2026-10-20 N10 bounded lock-ownership design review
+F4 is Done (9b37c663 / CI39402420054 SUCCESS); N9 full CI continues after
+fixture-only corrections. N10 source remains local, fail-closed. Luna identified
+a concrete privileged rollback serialization gap: independent user-bundle and
+root-helper release.lock acquisition can deadlock, while the root helper must
+not trust an unverified caller claim of ownership. Lead authorizes one rare,
+read-only Sol design review (no implementation/live/heavy work) to compare a
+single lock-owner orchestrator with a verified fd handoff and choose the smallest
+contract satisfying N10. This narrow escalation follows Luna analysis and lead
+review; it is not a routine expensive review tier.
+
+
+Owner decision2026-10-20: swap-reset exception is standing for ALL private
+captures; see standing rules. Root reset at11:12:59UTC (425MiB→0, original
+capacity restored; private audit retained). Bead B2 fresh Hyprland batch granted
+11:15–16:30UTC subject to unchanged gates; no desktop heavy overlap. Nacre
+N9 hosted CI may continue; N10 remains local source/private Python tests only.

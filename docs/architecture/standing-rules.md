@@ -263,3 +263,17 @@ builds, tests, nested sessions and self-hosted jobs using that desktop still
 require its heavy slot. A GitHub workflow's existence alone is not evidence of
 desktop contention; identify where its payload runs. This supersedes earlier
 blanket no-CI-during-capture rules and terminal-hosted-CI readiness requirements.
+
+
+## Standing private-capture swap reset — owner decision 2026-10-20
+
+Applies to ALL private captures in Nacre and Bead, superseding earlier F4-only
+limits. Before every arm require host swap used below 64 MiB. If swap used is
+64 MiB or more, reset it with `sudo swapoff -a && sudo swapon -a` only between
+arms, with no arm, build, or CI running on the desktop, and only when
+`MemAvailable > swap_used + 8 GiB`. GitHub-hosted CI is not desktop work. Log
+`free -h` before and after, preserve/restore the existing swap devices and
+capacity, then recheck swap used below 64 MiB before starting. No cache drops,
+sysctl changes, or other host changes. If any condition fails, stop and report.
+The existing per-arm host swap-in, process SwapPss, containment, memory watchdog,
+source, geometry and full-window gates remain unchanged.

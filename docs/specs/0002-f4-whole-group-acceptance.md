@@ -235,3 +235,17 @@ retained and approved conditionally; all source/runtime/quiet/safety proofs
 independently audited. Main runtime dfcedea7, checker/test-fixture fixes through 9b37c663; exact-headCI39402420054 SUCCESS (desktop + fresh-install).
 See [full report](../research/f4-memory-acceptance-20261020.md) and
 [N0012 debt](0012-f4-qml-memory-debt.md). No packages/live switch.
+
+
+## Standing private-capture swap reset — owner decision 2026-10-20
+
+Applies to ALL private captures in Nacre and Bead, superseding earlier F4-only
+limits. Before every arm require host swap used below 64 MiB. If swap used is
+64 MiB or more, reset it with `sudo swapoff -a && sudo swapon -a` only between
+arms, with no arm, build, or CI running on the desktop, and only when
+`MemAvailable > swap_used + 8 GiB`. GitHub-hosted CI is not desktop work. Log
+`free -h` before and after, preserve/restore the existing swap devices and
+capacity, then recheck swap used below 64 MiB before starting. No cache drops,
+sysctl changes, or other host changes. If any condition fails, stop and report.
+The existing per-arm host swap-in, process SwapPss, containment, memory watchdog,
+source, geometry and full-window gates remain unchanged.
