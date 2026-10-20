@@ -32,6 +32,7 @@ impl Lab {
     fn with_fonts(bus: Option<&str>, blocked: bool) -> Result<Self> {
         let home = tempfile::tempdir()?;
         let root = home.path();
+        fs::set_permissions(root, fs::Permissions::from_mode(0o700))?;
         for path in [
             "runtime/private",
             "config/nacre",
