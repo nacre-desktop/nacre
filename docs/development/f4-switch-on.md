@@ -1,155 +1,124 @@
 # F4 daemon switch-on and recovery plan
 
-**Current state: F4 acceptance is complete; switching the installed daemon is
-still blocked by source work.** N0002 accepted the owner-approved memory-debt
-result, and exact F4 commit `9b37c663` passed CI run `39402420054`
-([N0002](../specs/0002-f4-whole-group-acceptance.md#final-result--2026-10-20),
-[N0012](../specs/0012-f4-qml-memory-debt.md)). The current N9 integration head
-is `ab3bcae4`; its exact-head CI run `39431539570` passed desktop and fresh-install
-checks, and N9 is accepted. N10 has reviewed local private work at `cfa86087` with
-handoff `d651ff4b`; its focused 156-test result is local evidence only. N10 is
-not integrated or CI-validated, its root helper remains preparation-only, and
-all public switch mutators remain disabled.
+F4 acceptance is complete: commit `9b37c663` passed CI run `39402420054`
+([N0002](../specs/0002-f4-whole-group-acceptance.md#final-result--2026-10-20)).
+N9 at `ab3bcae4` passed exact-head CI run `39431539570`. N0013 supplies
+package-owned core user units. [N0014](../specs/0014-f4-switch-lite.md) provides
+the bounded activation switch; its lead review, integration and exact-head CI
+must pass before owner execution. Full N10 transactional package/setup rollback
+remains separate future hardening and is not required by this lite procedure.
+No live command in this document was executed during N0014 development.
 
-This document separates source gates from later owner-controlled package and
-live-session actions. **Every command below is an example for a future run and
-must not be run while any source gate remains open.** No command in this plan
-has been executed.
+## Owner package and setup prerequisites
 
-## Source gates before package work
+Package publication, installation and live switching remain owner-controlled.
+Require the exact green integrated revision, verified signed package and database
+metadata, and a readable, verified previous Core package archive retained in
+pacman's cache before installation. Preserve the existing compositor and
+notification owner. Build/publication follow the
+[package guide](../../packaging/arch/README.md#tested-development-publication);
+this switch never publishes, invokes sudo, installs or downgrades packages.
 
-1. **Completed:** N9 passed exact-head CI on `ab3bcae4` and was accepted.
-   N9 provides a cooperative lease for daemon and installer writers;
-   it does not itself switch an active daemon or replace the separate N10
-   rollback work ([N0009](../specs/0009-f4-switch-prerequisites.md)).
-2. N10 must finish and pass source review, integrate with accepted N9, and pass
-   CI on the exact integrated main commit. N10's current local result records
-   156 focused tests passing, but package execution is still private and the
-   public `enable`, `disable`, and `rollback` routes fail closed. The source
-   handoff at local commit `d651ff4b` identifies the remaining gates: prove the
-   helper-to-pacman lock-descriptor lifetime, complete package/setup/unit
-   restoration and fresh-process recovery, and keep the exact package state
-   journaled. The private package API at `cfa86087` is not evidence that the
-   production helper calls pacman safely or that switching is runnable.
-3. Resolve the actual unit origin and package-hook policy before choosing a
-   supported path. N10's current fence accepts vendor units under
-   `/usr/lib/systemd/user` and refuses source-staged units under
-   `~/.config/systemd/user`. Do not recommend a runtime mask for those
-   source-staged units: user unit precedence makes that fence unsupported.
-   N10 also blanket-refuses preparation when ALPM hooks are present; their
-   trigger and effect need review before such a host is supported. These are
-   source limitations, not instructions to edit installed units by hand.
-
-F4 itself is no longer the blocker. The previously described absent ownership
-guard and wholly absent persistent opt-in are outdated: N9 implements the
-destination lease, and N10 has a managed shell-service drop-in design and
-partial private transaction code. Neither makes the switch available today.
-The proposed `nacre f4 enable ...` and rollback forms must not be presented as
-working commands until N10 integrates and its public routes are deliberately
-enabled after all acceptance criteria pass.
-
-## Package build and signed publication
-
-Only after all three source gates above pass may the owner choose to build the
-Core package from the exact green integrated commit. The package workflow and
-signed repository publication are separate gates. Review the successful
-package run's source receipt, install proofs, recipe digest, archive signatures,
-and signed `release.json`; publication normally follows the successful package
-run automatically. Dispatch publication manually only to recover that same
-successful run ([Arch package workflow](../../.github/workflows/arch-packages.yml),
-[publication workflow](../../.github/workflows/publish-arch.yml),
-[package guide](../../packaging/arch/README.md#tested-development-publication)).
-
-Future command template — **DO NOT RUN until N9/N10 are integrated, exact-head
-CI is green, and the owner has chosen to start the package run**:
+After the owner authorizes installation, install the exact verified archive:
 
 ```sh
-# DO NOT RUN while any source gate is pending.
-F4_GREEN_SHA=exact_full_green_integrated_main_commit
-gh workflow run arch-packages.yml --repo nacre-desktop/nacre --ref main \
-  -f source_revision="$F4_GREEN_SHA" -f component=core -f use_released_orient=true
-```
-
-Manual publication recovery template — **DO NOT RUN unless that exact package
-run succeeded and automatic publication did not start**:
-
-```sh
-# DO NOT RUN except to recover publication for the same successful package run.
-PACKAGE_RUN_ID=exact_successful_package_run_id
-gh workflow run publish-arch.yml --repo nacre-desktop/nacre --ref main \
-  -f run_id="$PACKAGE_RUN_ID"
-```
-
-## Install and prepare
-
-Installation and setup change system and private user files. They remain
-owner-controlled and are not authorized by F4 acceptance or by this document.
-Before any future install, require the exact Core archive from the successful
-package run, completed signed repository publication, verified package and
-database signatures, and the prior signed Core archive saved at an exact path.
-Record the installed version, unit enablement/active state, manager opt-in value,
-and existing release snapshot for the private recovery record. Preserve the
-current compositor and notification owner.
-
-Install only that verified archive with pacman's local-archive operation; do not
-run a whole-system upgrade to install Nacre. The existing setup flow is plan,
-review, then ordinary interactive apply. A source setup that stages daemon units
-in the user's unit directory is currently unsupported by N10's activation fence;
-stop at that preflight refusal until reviewed source-staged-unit support exists.
-
-Future command template — **DO NOT RUN until N9/N10 source gates pass, the exact
-package is signed and published, and the owner authorizes installation**:
-
-```sh
-# DO NOT RUN before the package and installation gates above pass.
 NACRE_ARCHIVE=/path/to/exact-verified-nacre-core.pkg.tar.zst
 test -r "$NACRE_ARCHIVE"
 sudo pacman -U -- "$NACRE_ARCHIVE"
-
-# DO NOT RUN until the owner has reviewed the plan and approved its file changes.
 nacre setup --plan
+# Review the plan, then apply only after owner approval:
 nacre setup
 ```
 
-Do not substitute `pacman -Syu nacre`; that can upgrade unrelated system
-packages. Do not use `--profile default` when the intended action is to retain
-the installed profile. If plan review finds a foreign file, collision, or
-unreviewed profile change, stop before apply. If setup fails after performing
-its own snapshot restore, do not run an older `nacre rollback` snapshot over it.
-The documented package/setup split is in [installation](../installation.md#arch-packages-and-setup)
-and [release handling](../../tools/releases.py).
+Do not substitute a whole-system upgrade. Retain the installed profile unless
+a change is intended. Setup must complete before switching. Its package layout
+must expose all three vendor fragments under `/usr/lib/systemd/user` without
+HOME shadows, and create the existing release lock at
+`~/.local/state/nacre/releases/release.lock`. Source installs are unsupported.
+The CLI's absolute `XDG_CONFIG_HOME` (default `~/.config`) must be in the user
+manager's UnitPath. The controller names unsupported files and refuses before
+writing; do not remove foreign files merely to bypass that refusal.
 
-## Switch, verify, and recover
+## Enable and verify
 
-There is no runnable switch command yet. The existing `nacre rollback` restores
-setup-owned private files; it does not by itself restore the prior package,
-daemon/socket activation, or QML opt-in. N10's proposed
-`nacre f4 rollback --transaction ID` is still fail-closed and is not an
-executable rollback contract until the full transaction and recovery path are
-accepted. Do not improvise a one-command shell rollback from separate commands:
-package and user-file restoration is not atomic, and order/fingerprints matter.
-Keep the exact prior package archive and setup snapshot untouched for the later
-reviewed recovery path.
+As the ordinary desktop user, after owner approval:
 
-After N10 is integrated and exposes an accepted command, the switch must preserve
-the recorded unit state and one-writer guarantee, install a managed persistent
-QML opt-in, and fail before mutation on unsupported unit origins, hook effects,
-changed state, or incomplete recovery evidence. It must not create a second
-notification owner. Until then, do not enable the daemon socket, set the manager
-environment manually, edit the installed shell service, or run the proposed
-`nacre f4` mutators.
+```sh
+nacre f4 status
+nacre f4 enable
+nacre f4 status
+```
 
-Once a future accepted switch has completed, verify daemon reachability and
-health with the documented `nacrectl` status and settings-read operations; check
-that the desktop settings snapshot is clean, has no error, and contains the
-expected durable value. A CLI connection alone does not prove QML opted in or
-saved a change. Then perform the owner-only reversible Settings write/read-back
-and restore it through Settings. A real logout/login, keyboard/display,
-notification ownership, and compositor recovery remain physical owner checks.
-The F4/N2 nested results do not claim those checks were performed.
+Retain the returned transaction ID. Enable journals prior state privately under
+`${XDG_STATE_HOME:-$HOME/.local/state}/nacre/f4-switch/ID/journal.json`, writes
+`50-nacre-f4.conf` under the shell's user drop-in directory with client value
+`1`, reloads systemd, enables/starts the socket and restarts the shell. Success
+requires an active shell, effective shell `NACRE_DAEMON_CLIENT=1`, ready daemon
+protocol, durable/error-free settings snapshots and a stable daemon identity.
+A failure attempts automatic restoration and reports the transaction ID if
+manual recovery is still needed. Repeating successful enable is idempotent.
 
-Source basis: [N0001](../specs/0001-f4-settings-completion-audit.md),
-[N0002](../specs/0002-f4-whole-group-acceptance.md),
-[N0009](../specs/0009-f4-switch-prerequisites.md),
-[N0010](../specs/0010-f4-managed-opt-in-and-rollback.md), the staged daemon
-units, and the QML opt-in at [`NacreDaemon.qml`](../../nacre/shell/services/NacreDaemon.qml#L12).
+Status is read-only: inspect `effective`, `manager`, the three unit states and
+`incomplete`. It does not run a protocol probe that could socket-activate the
+daemon. Do the owner-only reversible Settings write/read-back and restore its
+original value. Real logout/login, keyboard/display, notification ownership and
+compositor recovery remain owner physical checks; nested F4 evidence does not
+claim them.
+
+## Disable or restore prior activation
+
+To deliberately return to the legacy client and leave daemon activation off:
+
+```sh
+nacre f4 disable
+nacre f4 status
+```
+
+Disable writes client value `0`, including when the manager contains value `1`,
+disables/stops the socket, stops the daemon and restarts/verifies the shell.
+It refuses independent baseline daemon owners, extra wants/requires links,
+startup inputs or conflicting environments before any write. In particular,
+activation that existed before enable is not assumed to belong to the switch.
+Repeating successful disable is idempotent.
+
+To restore the exact state saved by a completed or interrupted transaction:
+
+```sh
+F4_TRANSACTION=the_32_character_id_returned_by_the_switch
+nacre f4 rollback --transaction "$F4_TRANSACTION"
+nacre f4 status
+```
+
+Without `--transaction`, rollback selects the latest journal. It restores the
+prior managed file bytes/mode or absence, socket enablement/activity, daemon
+activity and shell activity, then verifies them. It restarts the shell during
+restoration. Manager opt-in is recorded and left unchanged; a changed manager
+value or foreign file/activation path requires review rather than overwriting
+it. A different OS boot ID is allowed and reported. Repeating rollback is safe;
+a crash during restoration can be recovered with the same invocation. Preserve
+the journal until recovery is verified. If status reports an incomplete
+transaction, recover it before another enable/disable.
+
+## Manual package downgrade after disable
+
+Package downgrade is a separate, non-atomic owner operation. First complete
+`disable` and inspect status: effective client `0`, daemon and socket inactive,
+socket disabled, and no incomplete transaction. If disable refuses, stop and
+review the named owner/path; do not downgrade around the refusal.
+
+```sh
+nacre f4 disable
+nacre f4 status
+# Only after the successful checks above, select the retained verified archive:
+PREVIOUS_NACRE_ARCHIVE=/var/cache/pacman/pkg/nacre-PREVIOUS_VERSION-x86_64.pkg.tar.zst
+test -r "$PREVIOUS_NACRE_ARCHIVE"
+sudo pacman -U -- "$PREVIOUS_NACRE_ARCHIVE"
+```
+
+Use the exact cached previous `nacre` package, with its verified signature and
+compatible dependencies. The switch does not restore setup files, settings or
+package hooks, and `nacre rollback` is only a setup-file rollback. Do not run an
+F4 activation rollback that re-enables client `1` after downgrading to a package
+without F4 support. If older setup files need restoration, review the retained
+setup snapshot and that package's setup plan separately. Full crash-safe package
+and setup restoration belongs to N10, not this command.

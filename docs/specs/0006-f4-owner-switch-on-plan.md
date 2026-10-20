@@ -3,7 +3,7 @@
 - ID: N0006
 - Repo: nacre-desktop/nacre
 - Implementer: fresh Luna docs worker
-- Status: Review — refreshed plan published; executable switch remains gated on N10
+- Status: Review — activation-only owner procedure updated for N0014
 - Depends on: F4 green publication before executing plan; drafting eligible now
 - Date:2026-10-18
 - Size: one focused session, maximum2hours
@@ -90,3 +90,21 @@ report-only. Coordinator thread supplied privately; one spec per worker.
 N0006 Review: start/final commits, plan path, source citations for commands,
 rollback coverage/limits, unresolved owner decisions and validation. Send to
 coordinator and exit task work; leave visible chat readable.
+
+## N0014 split decision — 2026-10-20
+
+The owner approved a small activation-only switch instead of making the full
+N10 package/setup transaction a prerequisite. N0014 implements ordinary-user
+`nacre f4 status|enable|disable|rollback [--transaction ID]`. After N0014 lead
+review, integration and exact-head CI, use the updated
+[owner procedure](../development/f4-switch-on.md): enable, inspect status and
+perform physical verification; disable to client0 with daemon/socket off, or
+rollback the recorded transaction to its exact prior activation state.
+
+Retain the exact verified previous Core archive in `/var/cache/pacman/pkg`.
+Package downgrade is manual and follows successful `nacre f4 disable` and status
+verification, then `sudo pacman -U -- "$PREVIOUS_NACRE_ARCHIVE"`. It is not part
+of activation rollback and is not atomic with setup-file restoration. Full N10
+transactional package rollback stays deferred on its existing branch. This
+section supersedes this spec's older N10-only execution hold, without granting
+package publication, installation or live switch execution to implementers.

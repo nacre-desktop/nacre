@@ -706,3 +706,13 @@ captures; see standing rules. Root reset at11:12:59UTC (425MiB→0, original
 capacity restored; private audit retained). Bead B2 fresh Hyprland batch granted
 11:15–16:30UTC subject to unchanged gates; no desktop heavy overlap. Nacre
 N9 hosted CI may continue; N10 remains local source/private Python tests only.
+
+## N0014 activation-only switch — 2026-10-20
+
+[N0014](0014-f4-switch-lite.md) splits the owner-approved small F4 activation
+switch from full N10 package/setup rollback. Implementation `aed657f1` is local
+for lead review and integration: 19 focused switch tests and 16 release tests
+pass on the dedicated SSH test host with private HOME/fake systemctl. The owner
+procedure in N0006/f4-switch-on now documents enable, verify, disable/rollback,
+and manual cached-package downgrade only after disable. No push, package or live
+manager action; source review/integration/exact-head CI remain with the lead.
