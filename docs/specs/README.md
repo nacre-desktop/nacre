@@ -20,6 +20,17 @@ and stop. The transfer receipt below supersedes older grants and results.
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
 | — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
 
+## New lead — 2026-10-20 evening
+
+Claude Code (Opus) is now lead, with Codex workers. N10 phase 1 is assigned to
+one Sol worker on branch `task/n10-complete-20261020`, created from `5a7d5cec`;
+the old N10 branch is preserved. Phase 1 covers rebasing onto main with N9,
+completing the controller and recovery, and an AC matrix. It has no push and no
+privileged or live action, and its tests run on the dev-1 build host so the
+desktop stays quiet for Bead B2 captures. Lead scope decisions:
+source-staged HOME units stay refused, ALPM hooks stay blanket-refused, and
+real-pacman gate 1 is a later phase.
+
 ## Lead-transfer receipt — 2026-10-20
 
 - **Publication:** F4 source `9b37c663a35280f3fc66b836fed0940eac646aa1`,
