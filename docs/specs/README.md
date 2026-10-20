@@ -724,3 +724,15 @@ activation links. Scoped configuration now stages/receipts the three source
 units. Dedicated SSH-host checks: 25 switch tests, 16 release tests and the new
 configuration receipt regression pass; full configure tests require the absent
 native helper. Owner procedure updated; no implementer live probe or push.
+
+
+N0014 lead correction (`f45cc8b6`, local for review): installer-owned source
+units require safe regular files
+and bounded environment-content checks, without configuration receipts. Reverted
+the configure file-map/adoption changes and their test. Full source install
+(without --code-only) stages missing daemon templates plus the helper; diagnostics
+and the owner procedure now name that exact installer path. No installer edits,
+implementer live probe or push.
+
+Correction validation: 26 switch tests and 16 release tests pass on the dedicated
+SSH test host; configure and its test exactly match pre-extension 68d28945.

@@ -6,7 +6,8 @@ Status: implementation for lead review; no live activation or publication.
 
 Owner decision, 2026-10-20: split the growing N10 package/setup rollback
 controller. Provide a small ordinary-user activation switch on N0013's packaged
-vendor-unit baseline, extended by the lead's source-install decision below. Package downgrade remains an explicit manual owner step
+vendor-unit baseline, extended by the lead's source-install decision below.
+Package downgrade remains an explicit manual owner step
 following successful disable. No privileged helper, pacman API, setup snapshot
 or package rollback machinery is imported from N10.
 
@@ -22,11 +23,12 @@ field is a list of blocking reasons (empty means ready), including each missing
 daemon unit and the setup/update step that deploys it.
 
 The supported baseline has all three fragments in one layout: vendor units in
-`/usr/lib/systemd/user` without HOME shadows, or receipt-verified source units
-under `$XDG_CONFIG_HOME/systemd/user`. Source fragments must be regular,
-user-owned files without symlink ancestry; their SHA-256 bytes must match the
-HOME-relative entries in `~/.local/state/nacre/configuration.json`, using
-`configure.digest()`. Mixed layouts and edited/unreceipted fragments refuse.
+`/usr/lib/systemd/user` without HOME shadows, or source units under
+`$XDG_CONFIG_HOME/systemd/user`. Source fragments must be regular, user-owned
+files without symlink ancestry or group/other write access. Their contents must
+not mention `NACRE_DAEMON_CLIENT`, `EnvironmentFile`, `PassEnvironment` or
+`UnsetEnvironment`. Mixed vendor/HOME layouts refuse. No source configuration
+receipt or SHA-256 match is required: the switch never modifies unit files.
 The managed drop-in directory must be in the manager's UnitPath. Foreign client
 environment assignments, unresolved
 environment files, endpoint differences, symlink ancestry, unknown activation
@@ -87,42 +89,52 @@ The controller is 708 lines plus nine release-router additions.
 outside this task. The [owner procedure](../development/f4-switch-on.md) includes
 manual cached-package `pacman -U` only after successful disable.
 
-## Lead source-install extension
+## Lead source-install extension and ownership correction
 
 The lead's read-only owner-manager probe found a source deployment with two
 harmless shell drop-ins, absent daemon fragments, and a dangling unrelated D-Bus
-activation link. This supersedes the original package-only restriction: N10's
-HOME-unit fence guarded package transactions, outside this switch's scope.
-Dangling links are skipped, except when their own name or target mentions
-`nacre-daemon`, which still refuses.
+activation link. The implementer did not probe the live manager. N10's HOME-unit
+fence guarded package transactions, outside this switch's scope. Dangling links
+are skipped, except when their own name or target mentions `nacre-daemon`.
+
+The lead superseded the initial source receipt requirement after review of
+`50309bb7`: configuration's file map must not adopt installer-owned shell units.
+The changes to `tools/configure.py` and its test were reverted exactly to their
+pre-extension versions. Installer-deployed content may differ from repository
+unit bytes; only the path, ownership, regular-file, permissions and forbidden
+content rules above apply. Existing effective-environment and foreign-drop-in
+checks remain in force. The switch does not read or change configuration.json.
 
 Source socket enablement accepts only the graphical-session.target wants-link
-to the verified HOME socket fragment. Source protocol health uses the deployed
+to the checked HOME socket fragment. Source protocol health uses the deployed
 regular user-owned executable `~/.local/share/nacre/shell/tools/nacre-helper ctl`;
 package health retains its vendor nacrectl check. Missing units/helper refuse
-before writes and appear in readiness diagnostics. Harmless shell drop-ins stay
-in place. The source configuration map now stages and receipts the three units;
-scoped receipt adoption includes unchanged byte-identical files as well as newly
-written files. The owner procedure updates the source shell/helper, reviews and
-applies the scoped unit plan, reloads, checks status, enables, verifies and rolls
-back activation. No live probe was run by the implementer; the lead reruns it.
+before writes and appear in readiness diagnostics.
 
-Source extension evidence (`50309bb7`, matching local/remote SHA-256 hashes):
-private-HOME tests on the dedicated SSH test host, tmux, `umask 077`:
+Installer verification: `nacre/shell-tools/install.py` deploys the helper at its
+`install_native_helper()` step (around lines 250–252). Its full-install loop
+(around lines 418–423) stages both daemon unit templates without activating
+them. The code-only branch returns earlier and does not reach this loop.
+Therefore missing-unit diagnostics point to
+`python3 nacre/shell-tools/install.py`, without `--code-only`, not configure.py.
+No installer changes were made. The owner procedure distinguishes the managed
+source/controller update from the full installer required for missing units.
+
+Correction evidence is recorded after final private-HOME checks. The earlier
+source extension's configure receipt regression is withdrawn, along with the
+configuration ownership change. Full configure-suite/native-helper limitations
+from that extension do not represent changes to configure in this correction.
+
+Final correction evidence, implementation `f45cc8b6`, dedicated SSH test host
+in tmux with `umask 077`:
 
 - `PYTHONPATH=tools nice -n 10 python3 -m unittest discover -s tools/tests -p test_f4_switch.py`:
-  25 tests passed, including source recovery, helper `ctl` dispatch, harmless
-  shell drop-ins, exact HOME socket links, missing deployment diagnostics,
-  source receipt/layout refusals and dangling-link regression cases.
+  26 tests passed, including forbidden source-fragment tokens, writable/symlink
+  refusals, mixed layouts, missing-unit installer guidance, receipt independence
+  and preservation of unit bytes/modes plus unrelated configuration receipt.
 - `PYTHONPATH=tools nice -n 10 python3 -m unittest discover -s tools/tests -p test_releases.py`:
   16 tests passed.
-- `PYTHONPATH=tools:tools/tests nice -n 10 python3 -m unittest test_configure.ConfigurationTests.test_source_switch_units_are_staged_and_receipted_without_activation`:
-  passed; covers receipt adoption of an existing identical shell unit together
-  with newly staged daemon units, repeat apply and preservation of later edits.
-- Ruff 0.16.10 check/format, py_compile and git diff --check passed.
-
-The optional full configure suite was attempted: existing tests require a native
-`nacre-helper` binary absent on that host (11 errors), so no full-suite pass is
-claimed. The focused new receipt regression passes without native execution.
-The controller is 819 lines; release routing and the bounded configuration
-changes keep the implementation below the 1,000-line target.
+- `git diff 68d28945 --exit-code -- tools/configure.py tools/tests/test_configure.py`:
+  passed; both files exactly match the version before the source extension.
+- Ruff 0.16.10 check/format, py_compile and git diff --check passed. Controller:
+  803 lines; no installer changes, live-manager probe, package operation or push.

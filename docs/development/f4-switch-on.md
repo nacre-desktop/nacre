@@ -11,56 +11,54 @@ No live command in this document was executed during N0014 development.
 
 ## Owner source deployment prerequisites
 
-Source installs are supported when all three loaded units are regular,
+Source installs are supported when all three loaded fragments are regular,
 user-owned files under `$XDG_CONFIG_HOME/systemd/user` (default
-`~/.config/systemd/user`) and their SHA-256 digests match the setup receipt in
-`~/.local/state/nacre/configuration.json`. Edited/unreceipted units and mixed
-vendor/HOME layouts refuse. Shell drop-ins without `NACRE_DAEMON_CLIENT` or
-unresolved environment-file inputs may remain in place.
+`~/.config/systemd/user`), without symlink ancestry or group/other write access.
+They must contain none of `NACRE_DAEMON_CLIENT`, `EnvironmentFile`,
+`PassEnvironment` or `UnsetEnvironment`. Mixed vendor/HOME layouts refuse.
+Source unit files remain owned by the shell installer: no configuration receipt,
+SHA-256 adoption or `configure.py` change is required. Harmless shell drop-ins
+remain in place, subject to the existing environment checks.
 
-After owner approval and from the exact reviewed, green source checkout, update
-the source shell deployment so its helper is present. This is a live deployment
-and shell restart; review the plan first. It is not executed by `nacre f4`:
+Use the exact reviewed, green source checkout. If the installed `nacre` command
+needs updating, review and apply its normal managed source deployment:
 
 ```sh
 python3 tools/manage.py --component shell
 python3 tools/manage.py --component shell --apply
 ```
 
-The installer deploys the helper at
-`~/.local/share/nacre/shell/tools/nacre-helper`. The switch checks this regular,
-user-owned executable with non-symlink ancestry and invokes its `ctl` interface.
-The code-only source update does not deploy the daemon units, so stage and
-receipt the three unit files through a scoped configuration plan/apply:
+An existing source deployment uses code-only updates, which deploy the helper
+but return before staging missing daemon units. To deploy both daemon templates
+and the helper, the owner must approve the **full shell installer**, without
+`--code-only`:
 
 ```sh
-python3 tools/configure.py \
-  --only .config/systemd/user/nacre-shell.service \
-  --only .config/systemd/user/nacre-daemon.service \
-  --only .config/systemd/user/nacre-daemon.socket
-# After reviewing that plan:
-python3 tools/configure.py \
-  --only .config/systemd/user/nacre-shell.service \
-  --only .config/systemd/user/nacre-daemon.service \
-  --only .config/systemd/user/nacre-daemon.socket --apply
-systemctl --user daemon-reload
+python3 nacre/shell-tools/install.py
 nacre f4 status
 ```
 
-These setup commands target the standard HOME layout; an existing custom XDG
-layout must already have matching HOME-relative receipt entries. Do not relocate
-or receipt edited files manually to bypass a refusal. Configuration apply stages
-files without enabling/starting the daemon. A byte-identical existing shell unit
-is receipted alongside newly deployed daemon units. Missing deployment files,
-receipt mismatches and other blockers appear in status's `ready_to_enable` list;
-an empty list means the read-only preflight found no blocker. Enable still
-rechecks under release.lock. Setup must already have created that release lock.
+This full installer changes the source desktop deployment and restarts the
+shell. It has no plan-only mode; review its changes before owner execution. Its
+`install_native_helper()` step deploys
+`~/.local/share/nacre/shell/tools/nacre-helper`, with nacrectl/daemon aliases.
+The later manual-template loop stages `nacre-daemon.service` and
+`nacre-daemon.socket` under `~/.config/systemd/user` without enabling/starting
+them; the installer then reloads the manager. The switch never runs this
+installer itself. See [install.py](../../nacre/shell-tools/install.py).
 
-Then use `nacre f4 enable`, verify with `nacre f4 status` and the physical checks
+The installer targets the default HOME unit directory. For a custom XDG layout,
+the three fragments must already be deployed at the manager's effective unit
+paths; the switch neither relocates them nor modifies the installer. Missing
+units/helper and other blockers appear in status's `ready_to_enable` list.
+An empty list means the read-only preflight found no blocker; enable rechecks
+under the existing release.lock from the managed source deployment.
+
+Then run `nacre f4 enable`, verify with `nacre f4 status` and the physical checks
 below, and retain its transaction ID. `nacre f4 rollback --transaction ID`
-restores the source installation's prior activation state. Source installs have
-no pacman downgrade step; activation rollback does not revert the source tree,
-helper deployment or setup receipt.
+restores prior activation. Unit files are never rewritten by the switch or its
+rollback. Source installs have no pacman downgrade step; activation rollback
+does not revert the source tree or helper deployment.
 
 ## Owner package and setup prerequisites
 
