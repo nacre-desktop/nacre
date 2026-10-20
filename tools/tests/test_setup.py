@@ -272,6 +272,10 @@ class PackageSetupTests(unittest.TestCase):
                     staged / "nacre/shell-tools/nacre_state.py",
                 ),
                 (
+                    TOOLS.parent / "nacre/shell-tools/writer_lease.py",
+                    staged / "nacre/shell-tools/writer_lease.py",
+                ),
+                (
                     TOOLS.parent / "nacre/shell-tools/nacre-state-files.json",
                     staged / "nacre/shell-tools/nacre-state-files.json",
                 ),
