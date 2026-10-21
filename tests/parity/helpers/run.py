@@ -517,6 +517,8 @@ def execute(case, command, trace=None):
             "XDG_CONFIG_HOME": "/case/home/.config",
             "XDG_CACHE_HOME": "/case/home/.cache",
             "XDG_DATA_HOME": "/case/home/.local/share",
+            # System theme availability is fixture input, never host inventory.
+            "XDG_DATA_DIRS": "/case/absent-data",
             "XDG_STATE_HOME": "/case/home/.local/state",
             "DBUS_SESSION_BUS_ADDRESS": "unix:path=/case/runtime/absent-bus",
             "NACRE_COMPOSITOR": "hyprland",
