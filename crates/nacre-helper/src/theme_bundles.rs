@@ -487,7 +487,6 @@ pub fn apply_with(
         )
         .into());
     }
-    classic_state::post_publish_external_targets(&paths, live);
     Ok(json!({"message":"Theme bundle applied","bundle":id,"mode":mode,"scope":scope}))
 }
 pub fn apply(id: &str, input: &Value) -> Result<Value> {
