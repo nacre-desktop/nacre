@@ -3145,7 +3145,7 @@
   "settings.registry.control.available.label": "Other unselected tiles supported on this machine.",
   "settings.registry.ui.confirm-restart": "Confirmation before desktop restart.",
   "settings.registry.ui.confirm-rollback": "Confirmation before release rollback.",
-  "settings.registry.colors.target.chromium.description": "Settings instruction for loading the generated Chromium theme extension once.",
+  "settings.registry.colors.target.chromium.description": "Chromium theme setup: keep browser URLs, Developer mode/Load unpacked names where applicable, --load-extension, ABSOLUTE_THEME_PATH and file paths literal. The placeholder is the full generated theme directory path. Updates take effect on browser restart; Nacre never edits flags or profiles.",
   "settings.registry.colors.target.discord.description": "Settings instruction for enabling the generated Vencord theme once.",
   "settings.registry.colors.target.spotify.description": "One-time Spicetify setup instruction; keep the full command literal, including Nacre, current_theme, color_scheme, inject_theme_js, && and spicetify apply. Nacre itself only runs refresh.",
   "settings.registry.colors.target.description": "Settings application palette followers and dependent control guidance.",
