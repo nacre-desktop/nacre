@@ -69,6 +69,104 @@ TestCase {
         return value;
     }
 
+    function test_reused_hover_preview_tracks_updated_entry() {
+        const original = NacreApps.all;
+        const value = view();
+        value.navigate("apps");
+        value.hoverEntry(value.entries.find(entry => entry.id === "editor"), true);
+        try {
+            NacreApps.all = original.map(entry => entry.id === "editor" ? Object.assign({}, entry, {
+                    name: "Updated editor"
+                }) : entry);
+            compare(value.hoveredEntry.name, "Updated editor");
+            NacreApps.all = original.filter(entry => entry.id !== "editor");
+            compare(value.hoveredEntry, null);
+        } finally {
+            NacreApps.all = original;
+        }
+    }
+
+    function test_search_cache_waits_for_motion_and_is_unused_in_daemon_mode() {
+        const value = view();
+        value.visibilities.launcher = false;
+        value.opening = true;
+        value.visibilities.launcher = true;
+        wait(100);
+        compare(NacreMenu.searchCacheWanted, false);
+        value.opening = false;
+        tryCompare(NacreMenu, "searchCacheWanted", true);
+        value.visibilities.launcher = false;
+        try {
+            NacreDaemon.enabled = true;
+            value.visibilities.launcher = true;
+            wait(100);
+            compare(NacreMenu.searchCacheWanted, false);
+        } finally {
+            value.visibilities.launcher = false;
+            NacreDaemon.enabled = false;
+        }
+    }
+
+    function test_result_rows_keep_delegates_and_refresh_activation_data() {
+        const value = view();
+        value.navigate("actions");
+        wait(30);
+        value.syncRows([
+            {
+                id: "first",
+                name: "First",
+                kind: "action",
+                daemonTicket: "old"
+            },
+            {
+                id: "second",
+                name: "Second",
+                kind: "action"
+            }
+        ]);
+        wait(30);
+        const results = findChild(value, "launcherResults");
+        const first = results.itemAtIndex(0), second = results.itemAtIndex(1);
+        verify(first);
+        verify(second);
+        value.syncRows([
+            {
+                id: "second",
+                name: "Updated second",
+                kind: "action"
+            },
+            {
+                id: "first",
+                name: "Updated first",
+                kind: "action",
+                daemonTicket: "fresh"
+            },
+            {
+                id: "third",
+                name: "Third",
+                kind: "action"
+            }
+        ]);
+        wait(30);
+        compare(results.itemAtIndex(0), second);
+        compare(results.itemAtIndex(1), first);
+        compare(first.modelData.name, "Updated first");
+        compare(first.modelData.daemonTicket, "fresh");
+        value.syncRows([
+            {
+                id: "first",
+                name: "Only first",
+                kind: "action"
+            }
+        ]);
+        wait(30);
+        compare(results.count, 1);
+        compare(results.itemAtIndex(0), first);
+        compare(first.modelData.daemonTicket, undefined);
+        value.syncRows([]);
+        tryCompare(results, "count", 0);
+    }
+
     function test_hidden_or_disabled_launcher_cannot_force_search_focus() {
         const value = view();
         const search = findChild(value, "launcherSearch");
@@ -395,16 +493,22 @@ TestCase {
             };
             query.resultKey = query.key;
             query.resultBoot = NacreDaemon.boot;
-            compare(results.model.map(row => row.name), ["Creative fixture"]);
+            compare(Array.from({
+                length: results.count
+            }, (_, index) => results.model.get(index).modelData.name), ["Creative fixture"]);
 
-            const states = [results.model.map(row => row.name)];
+            const states = [Array.from({
+                    length: results.count
+                }, (_, index) => results.model.get(index).modelData.name)];
             const ai = findChild(value, "softwareCategory_ai");
             verify(ai);
             mouseClick(ai);
             compare(value.softwareCategory, "ai");
             for (let frame = 0; frame < 3; frame++) {
                 wait(16);
-                states.push(results.model.map(row => row.name));
+                states.push(Array.from({
+                    length: results.count
+                }, (_, index) => results.model.get(index).modelData.name));
             }
 
             query.result = {
@@ -424,7 +528,9 @@ TestCase {
             };
             query.resultKey = query.key;
             query.resultBoot = NacreDaemon.boot;
-            states.push(results.model.map(row => row.name));
+            states.push(Array.from({
+                length: results.count
+            }, (_, index) => results.model.get(index).modelData.name));
             compare(states[0], ["Creative fixture"]);
             for (let frame = 1; frame <= 3; frame++)
                 compare(states[frame], []);
@@ -1686,7 +1792,7 @@ TestCase {
         const ai = findChild(grid, "launcherTile_" + aiIndex), editor = findChild(grid, "launcherTile_" + editorIndex);
         verify(findChild(ai, "nacreAiAppLogo").visible);
         verify(findChild(ai, "nacreAiAppLogo").ai);
-        verify(!findChild(editor, "nacreAiAppLogo").visible);
+        verify(!findChild(editor, "nacreAiAppLogo"));
     }
 
     function test_ctrl_d_from_search_and_favorite_keeps_apps_selection() {

@@ -50,6 +50,51 @@ TestCase {
         keyClick(Qt.Key_D);
         compare(search.text, "d");
     }
+    function test_slide_caches_fixed_page_only_during_animation() {
+        const view = createTemporaryObject(scene, this), panel = view.panel;
+        const page = findChild(panel, "launcherPage");
+        panel.state.launcher = true;
+        wait(80);
+        verify(panel.opening);
+        compare(page.height, 300);
+        verify(page.layer.enabled);
+        wait(350);
+        verify(!panel.opening);
+        verify(!page.layer.enabled);
+        compare(page.height, 300);
+    }
+
+    function test_body_and_search_share_one_translation_through_focus_and_close() {
+        const view = createTemporaryObject(scene, this), panel = view.panel;
+        const page = findChild(panel, "launcherPage");
+        panel.state.launcher = true;
+        tryCompare(page, "status", Loader.Ready);
+        const search = findChild(page.item, "launcherSearch");
+        let previousBody = null, previousSearch = null;
+        for (let frame = 0; frame < 24; frame++) {
+            const bodyY = panel.mapToItem(view, 0, 0).y;
+            const searchY = search.mapToItem(view, 0, 0).y;
+            compare(panel.height, 300);
+            compare(page.height, 300);
+            fuzzyCompare(searchY - bodyY, 240, .001);
+            if (previousBody !== null)
+                fuzzyCompare(searchY - previousSearch, bodyY - previousBody, .001);
+            previousBody = bodyY;
+            previousSearch = searchY;
+            if (frame === 4)
+                panel.focusExplicit();
+            wait(16);
+        }
+        verify(search.activeFocus);
+        fuzzyCompare(panel.slideOffset, 0, .001);
+        compare(panel.reveal, 1);
+        panel.state.launcher = false;
+        wait(80);
+        compare(panel.height, 300);
+        verify(panel.reveal > 0 && panel.reveal < 1);
+        tryCompare(panel, "height", 0);
+    }
+
     function test_lazy_open_reversal_and_unload() {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
@@ -63,7 +108,8 @@ TestCase {
         compare(page.item.kind, "apps");
         panel.state.launcher = false;
         wait(80);
-        verify(panel.height > 0 && panel.height < 300);
+        verify(panel.presentedHeight > 0 && panel.presentedHeight < 300);
+        compare(panel.height, 300);
         compare(page.height, 300);
         verify(page.item);
         panel.state.launcher = true;

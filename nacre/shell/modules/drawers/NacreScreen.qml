@@ -90,7 +90,8 @@ NacreWindow {
             contour: chrome.silhouette.rim
             engaged: flags.dashboard || flags.left || flags.osd || flags.session || panelHost.popouts.hasCurrent
             visible: !chrome.gallery
-            z: 2
+            // Content-owned material (launcher) must cover the fixed frame rim.
+            z: panelHost.launcher?.ownsMaterial === true ? .5 : 2
         }
         NacrePanelInput {
             id: inputController

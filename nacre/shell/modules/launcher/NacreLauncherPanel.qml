@@ -16,10 +16,17 @@ Item {
     property bool restoreImmediately: false
     function restoreAttached() {
         edgeOpening.complete();
-        presentedHeight = Qt.binding(() => visibilities.launcher ? contentHeight : 0);
+        reveal = Qt.binding(() => visibilities.launcher && page.status === Loader.Ready ? 1 : 0);
     }
     property bool handoffHidden: false
-    opacity: handoffHidden ? 0 : 1
+    // One progress value moves and fades the entire fixed-size launcher,
+    // including the host-supplied material and the search field.
+    property real reveal: visibilities.launcher && page.status === Loader.Ready ? 1 : 0
+    readonly property real slideOffset: detached ? 0 : (1 - reveal) * 16
+    opacity: handoffHidden ? 0 : reveal
+    transform: Translate {
+        y: root.slideOffset
+    }
     onEnabledChanged: if (enabled)
         handoffHidden = false
     property bool detached: false
@@ -57,10 +64,10 @@ Item {
     readonly property real contentHeight: detached ? viewportHeight : fullScreenGallery ? Math.max(0, viewportHeight) : (page.item?.implicitHeight ?? 300)
     readonly property int galleryCount: mode === "wallpaper" ? page.item?.count ?? 0 : 0
     readonly property int galleryIndex: mode === "wallpaper" ? page.item?.currentIndex ?? -1 : -1
-    property real presentedHeight: visibilities.launcher ? contentHeight : 0
-    implicitHeight: presentedHeight
+    readonly property real presentedHeight: reveal * contentHeight
+    implicitHeight: visibilities.launcher || reveal > 0 ? contentHeight : 0
     implicitWidth: detached ? viewportWidth : fullScreenGallery ? Math.max(0, viewportWidth) : page.item?.implicitWidth ?? 800
-    visible: height > 0
+    visible: height > 0 && (page.status === Loader.Ready || reveal > 0)
     clip: true
     onVisibleChanged: if (visible && visibilities.launcher)
         Qt.callLater(root.focusExplicit)
@@ -88,6 +95,9 @@ Item {
     NacreIdleLoader {
         id: page
         y: 0
+        // Cache the fixed-size page while it slides behind the edge clip. Text
+        // and icons then paint once rather than on every software-rendered frame.
+        layer.enabled: edgeOpening.running
         objectName: "launcherPage"
         wanted: root.visibilities.launcher || root.presentedHeight > 0
         keepWarm: root.mode === "apps"
@@ -111,6 +121,7 @@ Item {
             viewportHeight: root.viewportHeight
             visibilities: root.visibilities
             detached: root.detached
+            opening: root.opening
             menu: root.menuContext
             closeAfterLaunch: root.closeAfterLaunch
             onCloseRequested: root.closeRequested()
@@ -163,8 +174,8 @@ Item {
         }
     }
 
-    Behavior on presentedHeight {
-        enabled: !root.restoreImmediately || !root.visibilities.launcher
+    Behavior on reveal {
+        enabled: !root.detached && (!root.restoreImmediately || !root.visibilities.launcher)
         NumberAnimation {
             id: edgeOpening
             duration: NacreTokens.motionEnabled ? 300 : 0

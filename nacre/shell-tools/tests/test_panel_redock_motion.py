@@ -69,7 +69,7 @@ class RedockMotionTests(unittest.TestCase):
                 "NacreSystemPage": "property bool shouldUpdate:false",
                 "NacreFocusPage": "property bool shouldUpdate:false",
                 "NacreDashboardCustomize": "signal done",
-                "NacreAppBrowser": "property var visibilities;property bool detached:false;property bool closeAfterLaunch:false;property real viewportWidth:0;property real viewportHeight:0;property var menu;signal closeRequested;signal queryChanged;signal routeChanged",
+                "NacreAppBrowser": "property var visibilities;property bool detached:false;property bool opening:false;property bool closeAfterLaunch:false;property real viewportWidth:0;property real viewportHeight:0;property var menu;signal closeRequested;signal queryChanged;signal routeChanged",
                 "NacreWallpaperPicker": "property var visibilities;property bool detached:false",
                 "NacreSearchPanel": "property var visibilities;property bool detached:false",
                 "Palette": "property var visibilities;property bool detached:false",

@@ -71,7 +71,7 @@ Item {
     function box(item, active) {
         if (hidden || !active || !item || item.width <= 0 || item.height <= 0)
             return Qt.rect(0, 0, 0, 0);
-        return Qt.rect(panels.x + item.x, panels.y + item.y, item.width, item.height);
+        return Qt.rect(panels.x + item.x, panels.y + item.y + (item.slideOffset ?? 0), item.width, item.height);
     }
     function expand(rect) {
         return rect.width > 0 && rect.height > 0 ? Qt.rect(rect.x - padding, rect.y - padding, rect.width + padding * 2, rect.height + padding * 2) : rect;

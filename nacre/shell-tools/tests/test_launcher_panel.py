@@ -29,7 +29,7 @@ class LauncherPanelTests(unittest.TestCase):
                 )
             shutil.copy2(SHELL / "widgets/NacreIdleLoader.qml", target)
             (target / "extras").mkdir()
-            stub = "import QtQuick\nItem {required property var visibilities;property bool detached:false;property bool closeAfterLaunch:false;property var menu:null;signal closeRequested;signal queryChanged;signal routeChanged;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300;TextInput {id:search;objectName:'launcherSearch';width:200;height:30}function focusExplicit(){search.forceActiveFocus()}}"
+            stub = "import QtQuick\nItem {required property var visibilities;property bool detached:false;property bool opening:false;property bool closeAfterLaunch:false;property var menu:null;signal closeRequested;signal queryChanged;signal routeChanged;property string kind:KIND;property real viewportWidth:0;property real viewportHeight:0;implicitWidth:800;implicitHeight:300;TextInput {id:search;objectName:'launcherSearch';y:parent.height-60;width:200;height:30}function focusExplicit(){search.forceActiveFocus()}}"
             for mode, name in [
                 ("apps", "NacreAppBrowser"),
                 ("legacy", "NacreSearchPanel"),

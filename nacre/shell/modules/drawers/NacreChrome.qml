@@ -24,7 +24,7 @@ Item {
         if (NacreFrame.bottom > 0)
             rects.push(Qt.rect(0, host.y + host.height, width, height - host.y - host.height));
         for (const panel of [host.leftDrawer, host.osd, host.session, host.dashboard, host.popouts, host.notifications, host.launcher]) {
-            if (!panel.handoffHidden && panel !== NacrePearls.drag?.host && panel.width > 0 && panel.height > 0 && !(panel === host.launcher && gallery))
+            if (!panel.handoffHidden && panel !== NacrePearls.drag?.host && panel.width > 0 && panel.height > 0 && !(panel === host.launcher && (gallery || panel.ownsMaterial === true)))
                 rects.push(Qt.rect(host.x + panel.x, host.y + panel.y, panel.width, panel.height));
         }
         return rects.concat(handles);

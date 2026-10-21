@@ -223,6 +223,29 @@ Item {
         screenName: root.screen.name
         enabled: root.visibilities.launcher
         visibilities: root.visibilities
+        // During motion the page and material move/fade together; at rest the
+        // shared contour preserves seamless unions with other pinned panels.
+        readonly property bool ownsMaterial: root.visibilities.launcher ? launcher.reveal < 1 : launcher.reveal > 0
+        readonly property alias motionMaterial: launcherMaterial
+        // The material shares the launcher's one transform and opacity with its
+        // page. The fixed frame no longer stretches behind a separately moving page.
+        Launcher.NacreLauncherMaterial {
+            id: launcherMaterial
+            objectName: "launcherMaterial"
+            x: -radius
+            width: launcher.width + 2 * cornerRadius
+            height: launcher.height
+            z: -1
+            visible: launcher.ownsMaterial && launcher.fullScreenGallery !== true && root.movingPanel !== launcher
+            cornerRadius: NacreFrame.rounding
+            fillColor: NacreTokens.body
+            highlightColor: NacreTokens.orientHighlight
+            accentColor: NacreTokens.gradientColour(NacreTokens.orientHighlight, NacreTokens.accent)
+            secondaryColor: NacreTokens.gradientColour(NacreTokens.orientHighlight, NacreTokens.orientSecondary)
+            sheenOpacity: DesktopSettings.data.frameSheen === false ? 0 : root.visibilities.dashboard || root.visibilities.left || root.visibilities.osd || root.visibilities.session || popouts.hasCurrent ? .25 : .16
+            gradientStart: Qt.point(-(root.x + launcher.x - radius), -(root.y + launcher.y))
+            gradientEnd: Qt.point((root.parent?.width ?? root.width) + gradientStart.x, (root.parent?.height ?? root.height) + gradientStart.y)
+        }
         Behavior on x {
             NumberAnimation {
                 duration: NacreTokens.motionEnabled && NacrePearls.drag?.released ? 180 : 0
@@ -249,7 +272,7 @@ Item {
             host: launcher
             screen: root.screen
         }
-        clip: true
+        clip: false
         z: 10
     }
     Osd.NacreOsdEvents {

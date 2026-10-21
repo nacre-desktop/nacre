@@ -33,7 +33,8 @@ class PanelHostInputTests(unittest.TestCase):
             manifest = ["singleton NacreFrame 1.0 NacreFrame.qml"]
             for name, body in {
                 "NacrePearls": "property var drag:null",
-                "NacreTokens": 'property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:false;property color body:"#123456";property color orientSecondary:"#abcdef";property color accent:"#fedcba"',
+                "DesktopSettings": "property var data:({frameSheen:true})",
+                "NacreTokens": 'property bool gradientsEnabled:true;function gradientColour(base,shaded){return gradientsEnabled?shaded:base}property bool motionEnabled:false;property color body:"#123456";property color orientHighlight:"#ffffff";property color orientSecondary:"#abcdef";property color accent:"#fedcba"',
             }.items():
                 (fixtures / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
@@ -45,6 +46,11 @@ class PanelHostInputTests(unittest.TestCase):
                 "import QtQuick\nItem {property string kind;property var host;property var screen}"
             )
             manifest.append("NacrePanelDrag 1.0 NacrePanelDrag.qml")
+            stage_qml(
+                SHELL / "modules/launcher/NacreLauncherMaterial.qml",
+                fixtures / "NacreLauncherMaterial.qml",
+            )
+            manifest.append("NacreLauncherMaterial 1.0 NacreLauncherMaterial.qml")
             names = [
                 "LeftDrawer",
                 "NacreOsdPanel",
@@ -65,6 +71,7 @@ Rectangle {
  property string section:"home"
  property string presentation:"sidebar"
  signal sidebarRequested(bool pointerOwned)
+ property real reveal:1
  property bool restoreImmediately:false
  property bool keyboardActive:false
  property bool visibility:false
@@ -95,6 +102,15 @@ TestCase {
   QtObject {id:input;property bool hovered:false;property bool popoutHovered:false;property bool dashboardHovered:false}
   NacrePanelHost {id:host;anchors.fill:parent;screen:({name:"test"});visibilities:flags;input:input}
  }}
+ function test_launcher_material_is_grouped_during_motion_and_shared_at_rest(){
+  const view=createTemporaryObject(scene,this),panel=view.host.launcher;
+  compare(panel.ownsMaterial,false);verify(!panel.motionMaterial.visible);
+  panel.reveal=0;verify(panel.ownsMaterial);verify(panel.motionMaterial.visible);
+  panel.reveal=.5;verify(panel.ownsMaterial);
+  panel.reveal=1;verify(!panel.ownsMaterial);verify(!panel.motionMaterial.visible);
+  view.flags.launcher=false;verify(panel.ownsMaterial);
+  panel.reveal=0;verify(!panel.ownsMaterial);verify(!panel.motionMaterial.visible);
+ }
  function test_status_peeks_follow_the_icon_center_and_clamp_at_the_edge(){
   const view=createTemporaryObject(scene,this),host=view.host,popup=host.popouts;
   popup.currentName="peek";popup.width=100;popup.targetWidth=100;popup.hasCurrent=true;

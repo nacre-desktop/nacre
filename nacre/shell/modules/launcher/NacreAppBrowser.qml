@@ -12,6 +12,7 @@ NacreSurface {
     required property var visibilities
     property var menu: NacreMenu
     property bool detached: false
+    property bool opening: false
     property bool closeAfterLaunch: false
     signal closeRequested
     property real viewportWidth: Quickshell.screens[0].width
@@ -815,7 +816,42 @@ NacreSurface {
         selectedStableId = Menu.stable(entries[selection])
     onSelectionChanged: if (keyboardSelection && entries[selection])
         selectedStableId = Menu.stable(entries[selection])
+    // A JS-array model resets every delegate on each query reply. Keep one
+    // model and update rows by identity, including fresh activation tickets.
+    ListModel {
+        id: entryRows
+        objectName: "launcherEntryRows"
+        dynamicRoles: true
+    }
+    property var rowKeys: []
+    function syncRows(values = entries) {
+        const keys = values.map(entry => Menu.stable(entry));
+        for (let index = 0; index < values.length; index++) {
+            if (rowKeys[index] !== keys[index]) {
+                const previous = rowKeys.indexOf(keys[index], index + 1);
+                if (previous >= 0) {
+                    entryRows.move(previous, index, 1);
+                    rowKeys.splice(index, 0, rowKeys.splice(previous, 1)[0]);
+                } else {
+                    entryRows.insert(index, {
+                        modelData: values[index]
+                    });
+                    rowKeys.splice(index, 0, keys[index]);
+                    continue;
+                }
+            }
+            entryRows.setProperty(index, "modelData", values[index]);
+        }
+        if (entryRows.count > values.length)
+            entryRows.remove(values.length, entryRows.count - values.length);
+        rowKeys = keys;
+    }
     onEntriesChanged: {
+        if (hoveredEntry) {
+            const identity = Menu.stable(hoveredEntry);
+            hoveredEntry = entries.find(entry => Menu.stable(entry) === identity) || null;
+        }
+        syncRows();
         const previous = keyboardSelection ? entries.findIndex(entry => Menu.stable(entry) === selectedStableId) : -1;
         if (previous >= 0)
             selection = previous;
@@ -837,7 +873,10 @@ NacreSurface {
             }
         }
     }
-    Component.onCompleted: reset()
+    Component.onCompleted: {
+        syncRows();
+        reset();
+    }
     Connections {
         target: root.visibilities
         function onLauncherChanged() {
@@ -883,8 +922,8 @@ NacreSurface {
     }
     Timer {
         id: searchWarm
-        interval: 150
-        running: root.visibilities.launcher
+        interval: 16
+        running: root.visibilities.launcher && root.visible && !root.opening && !NacreDaemon.enabled
         onTriggered: root.setSearchCache(true)
     }
     Connections {
@@ -1129,7 +1168,7 @@ NacreSurface {
         cellWidth: width / Math.max(1, Math.floor(width / 116))
         cellHeight: Math.max(72, Math.min(100, height / 5))
         // A hidden view still instantiates delegates; only feed it while this layout is the one in use.
-        model: root.appLayout && !root.form ? root.entries : []
+        model: root.appLayout && !root.form ? entryRows : null
         currentIndex: root.selection
         keyNavigationEnabled: false
         clip: true
@@ -1261,7 +1300,7 @@ NacreSurface {
         y: root.picker ? 54 : root.softwareBrowse ? 126 : 84
         width: root.contentWidth
         height: Math.floor((root.bodyHeight - (root.softwareBrowse ? 42 : 0)) / 58) * 58 + (root.picker ? 30 : 0)
-        model: !root.appLayout && !root.form && !root.calculation ? root.entries : []
+        model: !root.appLayout && !root.form && !root.calculation ? entryRows : null
         currentIndex: root.selection
         keyNavigationEnabled: false
         spacing: 3

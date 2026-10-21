@@ -20,14 +20,17 @@ Item {
         visible: source !== "" && status === Image.Ready
         fillMode: Image.PreserveAspectFit
     }
-    BrandLogo {
-        objectName: "nacreAiAppLogo"
+    // Unbranded rows must not construct/decode an invisible SVG logo.
+    Loader {
         anchors.fill: parent
-        visible: !!root.entry.brand
-        ai: root.entry.brand === "ai"
-        brain: root.entry.brand === "brain"
-        settings: root.entry.brand === "settings"
-        colorsApp: root.entry.brand === "colors"
+        active: !!root.entry.brand
+        sourceComponent: BrandLogo {
+            objectName: "nacreAiAppLogo"
+            ai: root.entry.brand === "ai"
+            brain: root.entry.brand === "brain"
+            settings: root.entry.brand === "settings"
+            colorsApp: root.entry.brand === "colors"
+        }
     }
     NacreText {
         anchors.centerIn: parent

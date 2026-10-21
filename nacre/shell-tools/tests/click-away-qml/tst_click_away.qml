@@ -152,6 +152,14 @@ TestCase {
         compare(view.regions.length, 0);
         compare(view.leftRect.width, 0);
     }
+    function test_input_region_follows_the_launchers_single_translation() {
+        const view = createTemporaryObject(scene, test);
+        view.panels.launcher.slideOffset = 16;
+        compare(view.launcherRect.y, 366);
+        view.panels.launcher.slideOffset = 0;
+        compare(view.launcherRect.y, 350);
+    }
+
     function test_regions_follow_parent_offset_and_size_updates() {
         const view = createTemporaryObject(scene, test);
         view.panels.x = 12;
@@ -396,6 +404,10 @@ TestCase {
                 Item {
                     id: panel
                     property bool opening: false
+                    property real slideOffset: 0
+                    transform: Translate {
+                        y: panel.slideOffset
+                    }
 
                     x: 100
                     y: 350
