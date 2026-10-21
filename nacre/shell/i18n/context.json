@@ -3147,7 +3147,7 @@
   "settings.registry.ui.confirm-rollback": "Confirmation before release rollback.",
   "settings.registry.colors.target.chromium.description": "Settings instruction for loading the generated Chromium theme extension once.",
   "settings.registry.colors.target.discord.description": "Settings instruction for enabling the generated Vencord theme once.",
-  "settings.registry.colors.target.spotify.description": "Settings instruction for setting current_theme = Nacre in Spicetify config once.",
+  "settings.registry.colors.target.spotify.description": "One-time Spicetify setup instruction; keep the full command literal, including Nacre, current_theme, color_scheme, inject_theme_js, && and spicetify apply. Nacre itself only runs refresh.",
   "settings.registry.colors.target.description": "Settings application palette followers and dependent control guidance.",
   "settings.registry.colors.target.unavailable": "Message shown when an app theme target is unavailable on this system.",
   "settings.registry.lock-login.preview.label": "Portable Settings action label or explanation.",
