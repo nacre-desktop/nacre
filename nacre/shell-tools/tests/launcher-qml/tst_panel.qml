@@ -38,7 +38,7 @@ TestCase {
         const search = findChild(page.item, "launcherSearch");
         verify(search);
         tryCompare(search, "activeFocus", true, 1200);
-        keyClick(search, Qt.Key_E);
+        keyClick(Qt.Key_E);
         compare(search.text, "e");
 
         panel.state.launcher = false;
@@ -47,7 +47,7 @@ TestCase {
         search.text = "";
         panel.state.launcher = true;
         tryCompare(search, "activeFocus", true, 1200);
-        keyClick(search, Qt.Key_D);
+        keyClick(Qt.Key_D);
         compare(search.text, "d");
     }
     function test_lazy_open_reversal_and_unload() {

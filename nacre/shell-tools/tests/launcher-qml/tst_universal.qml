@@ -92,14 +92,14 @@ TestCase {
         const search = findChild(value, "launcherSearch");
         verify(search);
         tryCompare(search, "activeFocus", true);
-        keyClick(search, Qt.Key_E);
+        keyClick(Qt.Key_E);
         compare(search.text, "e");
 
         value.visibilities.launcher = false;
         search.focus = false;
         value.visibilities.launcher = true;
         tryCompare(search, "activeFocus", true);
-        keyClick(search, Qt.Key_D);
+        keyClick(Qt.Key_D);
         compare(search.text, "d");
     }
 
@@ -1708,8 +1708,10 @@ TestCase {
         const value = view();
         const field = findChild(value, "launcherSearch");
         field.text = "editor";
-        const favorite = findChild(value, "launcherFavorite_0");
+        tryVerify(() => findChild(value, "launcherRow_0") !== null);
+        const favorite = findChild(findChild(value, "launcherRow_0"), "launcherFavorite_0");
         verify(favorite);
+        compare(favorite.visible, true);
         const glyph = findChild(favorite, "launcherFavoriteGlyph_0");
         verify(glyph);
         compare(glyph.text, "favorite");
