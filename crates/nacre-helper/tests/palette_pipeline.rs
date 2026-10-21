@@ -1039,6 +1039,9 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
         "--background-surface-highest",
         "--bg-base-primary",
         "--text-primary",
+        "--text-default",
+        "--input-border-default",
+        "--control-primary-background-default",
         "--brand-500",
         "--scrollbar-thin-thumb",
     ] {
