@@ -1,6 +1,6 @@
 # N0021 — App theming targets (GTK3 file chooser, Chromium browsers, Discord, Spotify)
 
-- Status: Implemented (live-tested template follow-up validated; lead integration pending)
+- Status: Review
 - Date: 2026-10-21
 - Owner request 2026-10-21: make as many apps as possible follow the Nacre palette, with Settings toggles.
   Owner choices: Discord via Vencord on the official client, Spotify via Spicetify, GTK3 via adw-gtk3.
@@ -25,9 +25,14 @@ Settings → Colors → App theming toggle.
    frame_inactive, toolbar, tab_text, tab_background_text, bookmark_text, ntp_background, ntp_text,
    ntp_link, omnibox_background, omnibox_text, button_background, toolbar_button_icon; `theme.properties`
    ntp_logo_alternate as appropriate). `version` is derived from the palette (for example `1.<hash16>.<hash16>`)
-   so browsers reload a changed theme. Delete a stale `Cached Theme.pak` in that directory on each write.
+   for the next browser start. Delete a stale `Cached Theme.pak` in that directory on each write.
    Presence: any of `google-chrome-stable`, `google-chrome`, `brave`, `brave-browser`, `brave-origin`,
-   `chromium` on PATH. The browser loads it once through Load unpacked; Settings description says so.
+   `chromium` on PATH. Load once through `brave://extensions` or `chrome://extensions` → Developer mode →
+   Load unpacked → `~/.local/share/nacre/themes/chromium`, or manually add
+   `--load-extension=ABSOLUTE_THEME_PATH` to the browser launcher's flags file (for example
+   `~/.config/brave-origin-flags.conf`, `~/.config/chrome-flags.conf` or
+   `~/.config/chromium-flags.conf`). Settings describes both options and restart-based updates.
+   Nacre never edits browser flags files or profiles.
 3. **`discord`: Vencord.** Write `~/.config/Vencord/themes/nacre.theme.css` (BetterDiscord-style meta
    header, `@name Nacre`) that maps the palette onto Discord's current CSS variables (backgrounds, text,
    interactive, brand/accent, scrollbars, input, modifier states; cover both the legacy `--background-primary`
@@ -40,7 +45,7 @@ Settings → Colors → App theming toggle.
    Spicetify keys: text, subtext, main, sidebar, player, card, shadow, selected-row, button, button-active,
    button-disabled, tab-active, notification, notification-error, misc), `user.css` mapping Encore tokens,
    and the static `theme.js` live-reload asset in the same Nacre theme directory. The script checks
-   `colors.css` every two seconds and reloads `link.userCSS` stylesheets when it changes. Presence:
+   `colors.css` every 400 ms and reloads `link.userCSS` stylesheets when it changes. Presence:
    `spicetify` on PATH. When the Spicetify config already selects `current_theme = Nacre`, run
    `spicetify refresh` detached with a 60-second timeout and a one-second kill-after deadline after
    writing. The Settings hint documents the owner's one-time setup command:
@@ -54,11 +59,18 @@ rollback snapshot, settings descriptor `colors/app-theming.targets.<id>` (defaul
 `app-theme`), `appThemes` keys in `settings_validation.rs` and `owned_settings.rs`, `en.json` and
 `context.json` strings, and the QML publisher fixture. Disabled targets leave existing files alone (as tested
 today). All writes go through `atomic_write`, files 0600 and dirs 0700 unless the app needs otherwise.
+Discord, Spotify and Chromium files are written in the same locked publication pass as GTK and Kitty,
+without an extra timer or queued pass. Detached Spicetify refresh starts immediately after successful
+file publication, before desktop consumer reloads on direct paths. Held transactions start refresh
+immediately after their outer commit so failed publications cannot refresh partial state.
+
+The user-facing [app theming guide](../app-theming.md), linked from the README, documents setup,
+live updates, browser restarts and disabling targets.
 
 ## Non-goals
 
 Installing or patching anything (Vencord installer, `spicetify apply`, packages, browser policies,
-`/etc` or `/opt`), editing browser `Preferences`, `theme-targets-original-v1.json` (a frozen historical
+`/etc` or `/opt`), editing browser `Preferences`, flags files or profiles, `theme-targets-original-v1.json` (a frozen historical
 fixture: new rows go into the live registry and new tests, not the frozen reference), Firefox, and any live
 action.
 
@@ -88,20 +100,9 @@ action.
   disabled-target behavior and rollback as the Spotify color/CSS files. No application installer,
   browser profile, or Spotify patching operation is invoked.
 
-## Validation (2026-10-21, live-tested template follow-up)
+## Final polish validation (2026-10-21)
 
-Lead testing supplied the Discord neutral-scale and Spotify Encore templates plus the static reload
-script. These are now the source assets; the browser JavaScript asset is checked with Node and
-Prettier, while Qt JavaScript retains its existing formatter checks.
-
-Validation ran in the isolated remote Arch CI container with `nice -n 10` and Cargo `-j2`:
-
-- Focused palette pipeline: 16/16; settings validation, including frozen values: 4/4.
-- Script publication, private mode, disabled preservation, existing/absent per-target and bundle
-  rollback, all 100 neutral priorities, Encore tokens, and the detached 60-second refresh command pass.
-- Full `check.yml` replica: native workspace tests, formatting/Clippy, Ruff, translations,
-  Python/QML regressions, browser JavaScript checks and all 534 helper parity cases pass.
-  Tooling retains one existing skip.
-- English/pseudo and wide-font galleries, the AUR pager gallery, and fresh default nested-niri
-  installation IPC/screenshot checks pass.
-- Frozen references remain unchanged; `git diff --check` is clean. No live action was performed.
+The 400 ms live CSS polling, post-commit refresh ordering, Chromium setup hint and user guide are
+under review. Focused tests and the complete remote Arch `check.yml` replica are being rerun for this
+revision. Frozen references remain unchanged; no live app, browser flag/profile, installer or permission
+change is performed by this worker.

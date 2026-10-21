@@ -61,6 +61,7 @@ niri differences and the opt-in personal trash bindings.
 - [Installation](docs/installation.md): packages, setup and choosing a compositor.
 - [Usage](docs/usage.md): launcher, colors and shortcuts.
 - [Configuration](docs/configuration.md): profiles, app choices and private settings.
+- [App theming](docs/app-theming.md): live palette colors and one-time app setup.
 - [Updates, recovery and FAQ](docs/recovery.md): TTY recovery, logs and safe resets.
 - [Optional apps](docs/optional-apps.md): AI and Brain setup.
 - [Detachable panels](docs/detachable-panels.md): open panels as windows.
