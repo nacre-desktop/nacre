@@ -933,13 +933,7 @@ fn app_theme_command_with_data_dirs(
     enabled: bool,
     data_dirs: Option<&Path>,
 ) -> Result<std::process::Output> {
-    app_theme_command_with_data_dirs_value(
-        home,
-        path,
-        id,
-        enabled,
-        data_dirs.map(Path::as_os_str),
-    )
+    app_theme_command_with_data_dirs_value(home, path, id, enabled, data_dirs.map(Path::as_os_str))
 }
 
 fn app_theme_command_with_data_dirs_value(
@@ -1320,7 +1314,11 @@ fn gtk_theme_discovery_uses_home_xdg_roots_and_adwaita_fallback() -> Result<()> 
     };
     let publish = |dirs: &Path| -> Result<String> {
         let output = app_theme_command_with_data_dirs(home.path(), &bin, "gtk3", true, Some(dirs))?;
-        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         Ok(fs::read_to_string(&config)?)
     };
 
@@ -1344,14 +1342,13 @@ fn gtk_theme_discovery_uses_home_xdg_roots_and_adwaita_fallback() -> Result<()> 
 
     let roots = std::env::join_paths([empty_data.path(), system_data.path()])?;
     write_mode("light")?;
-    let output = app_theme_command_with_data_dirs_value(
-        home.path(),
-        &bin,
-        "gtk3",
-        true,
-        Some(&roots),
-    )?;
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let output =
+        app_theme_command_with_data_dirs_value(home.path(), &bin, "gtk3", true, Some(&roots))?;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert!(fs::read_to_string(&config)?.contains("gtk-theme-name=adw-gtk3\n"));
 
     write_mode("dark")?;
