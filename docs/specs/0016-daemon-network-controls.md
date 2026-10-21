@@ -1,6 +1,6 @@
 # N0016 — Complete daemon network controls
 
-- Status: In progress (admission semantics clarified; implementation resumed)
+- Status: Review (implementation complete; lead reviews and integrates)
 - Date: 2026-10-21
 
 **Goal.** Implement the reserved `network.set_wifi`, `network.connect` and `network.disconnect` v1 methods in the daemon NetworkManager service, with published state remaining authoritative. These controls are the highest-value next core service step because Bead’s order places device controls after daemon contracts and before hosted notifications (Nacre `docs/architecture/standing-rules.md:21-29`).
@@ -17,83 +17,89 @@
 
 **Size / heavy slot.** Medium, one service-focused unit. No desktop heavy slot expected; CI/build validation only.
 
-
-## Investigation evidence — 2026-10-21
-
-Source baseline: `92af444e` (no product changes made). Read the reserved contract,
-foundation/protocol/standing rules, N0003/N0005, the daemon reader, dispatch and
-welcome registry, and the `04ab16f6` reader-start race fix. The three handlers are
-absent. `network.watch` remains the compatibility change trigger described in
-[protocol](../architecture/protocol.md#network-change-trigger-v1), not an action API.
-
-**Stop condition reached: native-agent errors cannot be distinguished through the
-identified public API.** The [permission boundary](../architecture/core-services.md#permission-boundaries)
-requires `permission_denied` for agent cancellation/denial, but `unavailable` for a
-missing agent. NetworkManager keeps distinct errors internally, then collapses
-both cases into the same public Wi-Fi device failure reason:
-
-- Upstream NetworkManager revision `ed279d788f3b1443254f8ba5a8a3217cf1cf9596`,
-  [nm-agent-manager.c](https://github.com/NetworkManager/NetworkManager/blob/ed279d788f3b1443254f8ba5a8a3217cf1cf9596/src/core/settings/nm-agent-manager.c#L828),
-  emits internal `NM_AGENT_MANAGER_ERROR_NO_SECRETS` when no agent remains;
-  [the cancellation branch](https://github.com/NetworkManager/NetworkManager/blob/ed279d788f3b1443254f8ba5a8a3217cf1cf9596/src/core/settings/nm-agent-manager.c#L927)
-  instead emits `NM_AGENT_MANAGER_ERROR_USER_CANCELED`.
-- In the same revision,
-  [wifi_secrets_cb](https://github.com/NetworkManager/NetworkManager/blob/ed279d788f3b1443254f8ba5a8a3217cf1cf9596/src/core/devices/wifi/nm-device-wifi.c#L2128)
-  handles both errors by publishing `NM_DEVICE_STATE_FAILED` with
-  `NM_DEVICE_STATE_REASON_NO_SECRETS` (line 2183). The distinction remains in a
-  private log message, not that state transition.
-- The public [AgentManager API](https://networkmanager.dev/docs/api/latest/gdbus-org.freedesktop.NetworkManager.AgentManager.html)
-  exposes registration/unregistration, with no agent inventory or availability
-  query. The public [active-connection API](https://networkmanager.dev/docs/api/latest/gdbus-org.freedesktop.NetworkManager.Connection.Active.html)
-  represents an activation attempt; receiving its object path does not establish
-  that subsequent native-agent authentication succeeded.
-
-Consequently, returning success on activation-method acknowledgement would not
-report a later prompt cancellation as the contract requires. Waiting for failure
-still does not recover the missing-agent/cancelled-prompt distinction. A fixture
-that sends distinct activation-method errors for those cases would not prove
-real NetworkManager behavior. No log scraping, credential interception, agent
-replacement or guessed classification was introduced.
-
-**Lead decision needed.** Identify a supported, non-secret public source that
-preserves this distinction, or review a behavior clarification for ambiguous
-`NO_SECRETS` failures. A candidate clarification is a sanitized `unavailable`
-result for that ambiguous reason, retaining `permission_denied` for explicit
-policy/authorization errors. This is a proposal, not an implemented contract
-change. Also specify whether success acknowledges activation admission or waits
-for activation completion when authentication continues after the method reply.
-
-**Implementation outline after resolution.** Keep controls in the existing
-single-connection network service and serialize admission with refreshes. Resolve
-only published opaque IDs after a fresh same-owner read; reject wrong-kind and
-cross-device APs, and use the device's authoritative
-[AvailableConnections](https://networkmanager.dev/docs/api/latest/gdbus-org.freedesktop.NetworkManager.Device.html)
-for saved-profile eligibility. Scope IDs to daemon boot as well as owner generation
-(the present `net:generation:counter` form can repeat across daemon boots). Send
-mutations to the pinned unique owner, honor request deadlines, never queue/replay
-across link loss, and publish only validated same-owner readback. Retain the
-sticky owner-boundary and watcher cleanup protections from N0005/`04ab16f6`.
-Advertise each method only while its handler/backend is usable, per
-[core contracts](../architecture/core-services.md#framing-and-identity). All D-Bus
-work can remain asynchronous; no blocking worker is currently indicated.
-
-**Validation disposition.** Read-only inspection and pinned upstream source
-retrieval succeeded. No implementation or private fixtures were added, so fmt,
-Clippy, full helper tests, protocol consumer, helper parity, full desktop-container
-CI and repeated race tests are **NOT RUN**. Stopped at the explicit semantics gate
-before implementation/validation; this is not acceptance evidence. No local build
-or test, real bus/NetworkManager call, live desktop change, push or publication
-occurred. Read-only remote Docker/tmux discovery created no task container,
-checkout, session or process requiring cleanup.
-
-
 ## Lead clarification — 2026-10-21
 
-The lead accepted the investigation stop and resolved it: network methods succeed
-at backend admission, without waiting for activation completion. Admission-time
-policy failures remain `permission_denied`; stale targets are `stale_revision`;
-unavailable/timed-out sources are `unavailable`. Post-admission `NO_SECRETS`
-failures use one sanitized retryable topic error, without distinguishing missing
-agents from cancelled prompts. The architecture contract now records this behavior;
-no schema or wire-format change is required. Implementation and private-fixture
-validation resume under the original scope and remote-only validation rules.
+The initial stop was accepted: NetworkManager collapses missing-agent and
+cancelled-prompt failures to the same public Wi-Fi `NO_SECRETS` reason
+([upstream source](https://github.com/NetworkManager/NetworkManager/blob/ed279d788f3b1443254f8ba5a8a3217cf1cf9596/src/core/devices/wifi/nm-device-wifi.c#L2128)).
+The lead resolved the behavior without a schema change: success is backend
+admission, not activation completion. Only admission failures are method errors.
+Later secret/agent failures use one sanitized retryable topic error. The short
+network note in [core-services](../architecture/core-services.md#topics-and-calls)
+records this network-specific qualification of the general permission boundary.
+
+## Implementation notes
+
+The existing network task serializes controls and refreshes on its one connection.
+Its queue holds at most eight pending actions plus one in flight; actions have a
+maximum ten-second deadline, snapshots ten seconds, and introspection two seconds.
+All backend work is asynchronous; no worker process, scan or secret read was added.
+Radio writes use `Properties.Set`, saved profiles use `ActivateConnection`, and
+AP activation uses `AddAndActivateConnection2` with an empty template and
+`persist:volatile`. Disconnect deactivates only an unambiguous single-device active
+connection. Unsupported backend methods/properties are omitted from welcome;
+safe mode, read failure, owner loss and task cancellation disable controls.
+
+Only published IDs surviving fresh readback may resolve. AP/device association,
+profile kind and `AvailableConnections` are checked. IDs include a daemon-boot
+namespace and owner generation. A disappearance observed during preflight retires
+its ID even if the same path returns before publication. Mutations use the pinned
+unique owner, never a replaceable destination or replay after lost calls. Existing
+N0005 and `04ab16f6` owner pinning, sticky retirement and watcher ownership remain.
+
+Replies acknowledge admission; topic snapshots still come only from backend reads.
+Authoritative `FAILED/NO_SECRETS` signals survive coalesced property reads, scoped
+to published device IDs. Per-observation markers prevent an admission reply from
+erasing a newer failure. New admission clears only an older matching observation;
+reconnection, radio-off readback and device retirement clear retained errors.
+This implements `core-services.md:3-8,26-41,43-53`; the legacy
+`protocol.md:442-461` trigger contract and all protocol artifacts stay unchanged.
+
+
+## Validation evidence — 2026-10-21
+
+Base: `92af444eb7b0244aeedba8be63fe5af9bc93621e`. Final product source:
+`0fd8cc5ad3c79ba35b7e5c9e983d542f6c96a824`. Approximately 725 added Rust
+lines outside the new fixture file; no dependency or protocol artifact changes.
+No local builds/tests, real system bus/NetworkManager, live desktop, installation,
+push or publication were used. Source review includes the N0003/N0005 lifecycle
+requirements and `04ab16f6`; the lead still owns integration and final acceptance.
+
+All validation runs use the task-private `ghcr.io/archlinux/archlinux:latest`
+container, nice 10, Cargo jobs limited to two, and private D-Bus owner fixtures.
+At the final product source, successful command output establishes:
+
+```sh
+cargo fmt --check
+cargo clippy -j2 --all-targets -- -D warnings
+cargo test -j2 --lib -p nacre-helper core_network_ -- --nocapture
+# 15 passed, including owner replacement, stale publication and watcher teardown.
+for run in $(seq 1 20); do
+    cargo test -j2 --lib -p nacre-helper network_controls_ -- --nocapture
+done
+# 20 runs x 9 tests = 180 passed, zero failures.
+```
+
+The nine control fixtures cover success/admission and authoritative readback,
+stale/wrong-kind/cross-device IDs, denied/failing operations, shared-connection
+ambiguity, unavailable/read-only/safe-mode capabilities, boot scoping, actual
+socket loss with queued cancellation, owner replacement and explicit reconnection,
+timeout/queue bounds, preflight retirement, and authentication failures before and
+after the admission reply, including transitions gone before the property read.
+
+The initial candidate `f20219a3` completed every desktop workflow shell check:
+workspace fmt/Clippy/examples/tests, minimal protocol consumer, locked release
+Orient/helper builds, 28 sandbox-integrity cases, translation checks, source/UI
+regressions, 534 helper parity cases (zero failures), and native English/pseudo,
+AUR pager and wide-font galleries. Tools ran 435 tests with the workflow's one
+opt-in Wayland-soak skip; AI 116, Brain 45 and shell tools 472 all passed. Gallery
+audits reported 178 states per language. A bind-mounted checkout ownership error
+initially stopped the source checker; making only the disposable checkout
+root-owned fixed its private-HOME Git check. No host trust/configuration changed.
+
+The worker's final report records the whole desktop-job rerun on the evidence
+commit, including exact command/result and the retained raw-log location. The
+replication executes `.github/workflows/check.yml` desktop shell steps with
+`CI=true`, `CARGO_BUILD_JOBS=2`, private HOME/buses and the workflow sandbox options.
+Logs/gallery artifacts remain outside Git. Hosted CI and live-provider behavior
+are not claimed; the task requests unpublished private-fixture validation.
