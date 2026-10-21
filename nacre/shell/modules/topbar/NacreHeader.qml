@@ -63,8 +63,13 @@ Item {
         if (pearl?.window?.bodyItem?.item?.navigate) {
             pearl.window.bodyItem.item.navigate(name);
             pearl.window.activate();
-        } else
+        } else if (name === "updates") {
             NacrePanelState.openControls(name, screen.name, true, pointerOwned);
+        } else {
+            // Status controls unfold at their icon; the edge opens the sidebar.
+            if (showPopup(name, item, true))
+                panel.popouts.pinned = true;
+        }
     }
     onVisibleChanged: if (!visible)
         clearPeek()
@@ -211,7 +216,8 @@ Item {
         const target = targets[name] || item;
         const p = target.mapToItem(root, target.width / 2, target.height / 2);
         if (!panel.popouts.hasCurrent || panel.popouts.currentName !== name)
-            NacrePanelState.popout(name, p.x, screen.name);
+            return NacrePanelState.popout(name, p.x, screen.name);
+        return true;
     }
     function statusName(x) {
         const targets = [status.audioItem, status.network, status.bluetoothItem, status.battery, status.notificationsItem];

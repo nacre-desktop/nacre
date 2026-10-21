@@ -58,6 +58,7 @@ TestCase {
             });
         NacreCompositor.requests = [];
         NacrePanelState.calls = [];
+        NacrePanelState.popupRequests = [];
         AppLaunch.calls = [];
         NacrePearls.entries = [];
         NacreCompositor.activeWsId = 2;
@@ -647,6 +648,11 @@ TestCase {
         verify(!popup.hasCurrent);
         view.openStatus("audio", region);
         compare(NacrePanelState.calls[0], "audio");
+        compare(NacrePanelState.popupRequests[0].name, "audio");
+        compare(NacrePanelState.popupRequests[0].screen, "test");
+        const audio = findChild(view, "fixtureHeaderAudio");
+        compare(NacrePanelState.popupRequests[0].center, audio.mapToItem(view, audio.width / 2, audio.height / 2).x);
+        verify(popup.pinned);
         NacrePanelState.panels = {
             test: {
                 popouts: {
@@ -656,7 +662,7 @@ TestCase {
         };
         view.openStatus("notifications", region);
         compare(NacrePanelState.calls[1], "notifications");
-        verify(!NacrePanelState.panels.test.popouts.pinned);
+        verify(NacrePanelState.panels.test.popouts.pinned);
         let selected = "", activated = 0;
         NacrePearls.entries = [
             {

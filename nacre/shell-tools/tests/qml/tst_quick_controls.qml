@@ -351,6 +351,18 @@ TestCase {
         NacreKeyboardLight.available = true;
         NacreAudio.micAvailable = true;
     }
+    function test_attached_control_center_fills_frame_and_resizes_on_every_page() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        for (const section of ["home", "audio", "network", "bluetooth", "battery", "session", "notifications"]) {
+            scene.selectedSection = section;
+            wait(250);
+            compare(panel.height, scene.height);
+        }
+        scene.height = 540;
+        tryCompare(panel, "height", 540);
+        scene.height = 920;
+        tryCompare(panel, "height", 920);
+    }
     function test_profiles_are_navigation_and_power_view_fits_its_actions() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
         wait(40);
@@ -363,11 +375,11 @@ TestCase {
         compare(PowerProfiles.profile, profile);
         scene.selectedSection = "session";
         wait(230);
-        verify(panel.height <= 320);
+        compare(panel.height, scene.height);
         const page = findChild(panel, "controlPageLoader").item;
         page.choose("restart");
         wait(230);
-        verify(panel.height > 320 && panel.height < 480);
+        compare(panel.height, scene.height);
         compare(AppLaunch.calls.length, 0);
     }
     function test_wired_desktop_hides_unsupported_levels_and_has_no_media() {
@@ -387,7 +399,7 @@ TestCase {
         verify(network.selected && network.available);
         const brightness = findChild(panel, "controlBrightnessRow");
         verify(!brightness || !brightness.visible);
-        verify(panel.height < 560);
+        compare(panel.height, scene.height);
         verify(!containsText(panel, "Public demo track"));
         const request = NacreControlActions.lastRequest;
         network.clicked();
@@ -409,7 +421,7 @@ TestCase {
         NacreBrightness.device.available = true;
         wait(250);
         verify(findChild(panel, "controlBrightnessRow").visible);
-        verify(panel.height > compactHeight);
+        compare(panel.height, compactHeight);
     }
     function containsText(item, text) {
         return item.text === text || (item.children || []).some(child => containsText(child, text));

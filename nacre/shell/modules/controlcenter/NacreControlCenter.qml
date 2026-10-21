@@ -31,7 +31,8 @@ FocusScope {
     signal sectionRequested(string section)
     property real presentedWidth: visibility ? contentWidth : 0
     readonly property real contentWidth: Math.max(240, Math.min(detached ? 560 : 424, parent?.width ?? 424))
-    readonly property real contentHeight: Math.max(240, Math.min(detached ? 860 : ["home", "session"].includes(section) ? bodyLoader.item?.preferredHeight || 300 : 650, parent?.height ?? 650))
+    // Attached controls occupy the frame from header to bottom edge.
+    readonly property real contentHeight: detached ? Math.max(240, Math.min(860, parent?.height ?? 860)) : parent?.height ?? 860
     property real presentedHeight: contentHeight
     implicitWidth: Math.min(contentWidth, presentedWidth)
     implicitHeight: Math.min(presentedHeight, parent?.height ?? presentedHeight)
