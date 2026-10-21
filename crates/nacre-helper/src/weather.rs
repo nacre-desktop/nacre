@@ -42,6 +42,12 @@ const WMO: &[(i64, &str, u32)] = &[
     (99, "Thunderstorm with hail", 389),
 ];
 
+fn require_https(url: &str) -> Result<()> {
+    if !url.starts_with("https://") {
+        return Err("weather endpoint must use HTTPS".into());
+    }
+    Ok(())
+}
 pub fn url(base: &str, query: &[(&str, &str)]) -> String {
     let encode = |s: &str| {
         s.bytes()
@@ -64,9 +70,7 @@ pub fn url(base: &str, query: &[(&str, &str)]) -> String {
     )
 }
 fn fetch(url: &str) -> Result<Value> {
-    if !url.starts_with("https://") {
-        return Err("weather endpoint must use HTTPS".into());
-    }
+    require_https(url)?;
     let agent = ureq::Agent::config_builder()
         .timeout_global(Some(Duration::from_secs(8)))
         .https_only(true)
@@ -335,5 +339,11 @@ mod tests {
             ),
             "https://example.invalid?city=Public+City&units=metric"
         );
+    }
+    // Security addition: HTTP and HTTPS-to-HTTP redirect paths are denied by construction.
+    #[test]
+    fn weather_endpoint_requires_https() {
+        assert!(require_https("https://api.open-meteo.com/v1/forecast").is_ok());
+        assert!(require_https("http://api.open-meteo.com/v1/forecast").is_err());
     }
 }
