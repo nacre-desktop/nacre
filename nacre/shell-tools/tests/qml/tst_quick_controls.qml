@@ -83,6 +83,7 @@ TestCase {
             height: 860
             property alias panel: panel
             property string selectedSection: "home"
+            property bool sidebarPointerOwned: false
             NacreControlCenter {
                 id: panel
                 width: implicitWidth
@@ -92,6 +93,11 @@ TestCase {
                     })
                 section: parent.selectedSection
                 onSectionRequested: section => parent.selectedSection = section
+                onSidebarRequested: pointerOwned => {
+                    parent.sidebarPointerOwned = pointerOwned;
+                    presentation = "sidebar";
+                    parent.selectedSection = "home";
+                }
                 visibility: true
             }
         }
@@ -153,6 +159,110 @@ TestCase {
         compare(field.text, "");
         popup.cancelPending();
         compare(popup.pendingNetwork, null);
+    }
+    function test_entry_modes_use_the_whole_viewport_and_release_after_closing() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(350);
+        compare(panel.height, scene.height);
+        scene.selectedSection = "network";
+        wait(350);
+        verify(!findChild(panel, "controlEdit").visible);
+        verify(!findChild(panel, "controlPower").visible);
+        const page = findChild(panel, "controlPageScroll");
+        const networkPage = findChild(panel, "controlPageLoader").item;
+        verify(networkPage.embedded);
+        compare(page.height, panel.height - page.y - 18);
+        panel.presentation = "dropdown";
+        wait(350);
+        verify(panel.height <= scene.height);
+        compare(panel.width, panel.contentWidth);
+        verify(findChild(panel, "controlFullPanel").visible);
+        verify(!findChild(panel, "controlBack").visible);
+        compare(panel.height, Math.min(scene.height, page.y + networkPage.implicitHeight + 18));
+        panel.visibility = false;
+        wait(80);
+        compare(panel.width, panel.contentWidth);
+        verify(panel.height < panel.contentHeight);
+        wait(350);
+        compare(panel.height, 0);
+        compare(findChild(panel, "controlBodyLoader").item, null);
+    }
+    function test_embedded_network_scroll_reaches_its_last_row() {
+        const list = createTemporaryObject(scrollingList, test, {
+            embedded: true
+        });
+        compare(list.implicitHeight, 2200);
+        verify(!list.interactive);
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        scene.selectedSection = "network";
+        panel.presentation = "dropdown";
+        scene.height = 300;
+        wait(350);
+        const page = findChild(panel, "controlPageScroll");
+        verify(page.contentHeight > page.height);
+        page.contentY = page.contentHeight - page.height;
+        verify(page.atYEnd);
+        compare(page.y + page.height, panel.height - 18);
+    }
+    function test_dropdown_starts_below_the_bar_and_peek_handoff_keeps_its_size() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        panel.visibility = false;
+        wait(350);
+        panel.presentation = "dropdown";
+        compare(panel.height, 0);
+        compare(panel.width, panel.contentWidth);
+        panel.seedPreviewPeek(320, 100);
+        compare(panel.presentedHeight, 100);
+        panel.visibility = true;
+        wait(40);
+        verify(panel.height >= 100 && panel.height < panel.contentHeight);
+        wait(350);
+        compare(panel.height, panel.contentHeight);
+    }
+    function test_full_panel_button_keeps_pointer_and_keyboard_ownership() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        panel.presentation = "dropdown";
+        scene.selectedSection = "audio";
+        wait(350);
+        const button = findChild(panel, "controlFullPanelActivation");
+        mouseClick(button, button.width / 2, button.height / 2);
+        compare(panel.presentation, "sidebar");
+        compare(panel.section, "home");
+        verify(scene.sidebarPointerOwned);
+        panel.presentation = "dropdown";
+        scene.selectedSection = "audio";
+        wait(350);
+        const keyboardButton = findChild(panel, "controlFullPanelActivation");
+        keyboardButton.forceActiveFocus(Qt.TabFocusReason);
+        keyClick(Qt.Key_Return);
+        compare(panel.presentation, "sidebar");
+        verify(!scene.sidebarPointerOwned);
+    }
+    function test_calendar_selects_dates_and_resets_to_today() {
+        NacreDashboardState.calendar = {
+            events: [
+                {
+                    title: "Public event",
+                    start: new Date(2026, 9, 9, 14, 0).getTime() / 1000,
+                    time: "14:00"
+                }
+            ]
+        };
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        panel.presentation = "dropdown";
+        scene.selectedSection = "calendar";
+        wait(350);
+        const month = findChild(panel, "controlCalendarMonth");
+        verify(month !== null);
+        compare(findChild(panel, "controlCalendarEventTime").text, "14:00");
+        month.selectedDay = "2026-1-3";
+        compare(month.dateForDay(month.selectedDay).getDate(), 3);
+        findChild(panel, "controlCalendarToday").clicked();
+        compare(month.selectedDay, month.todayKey);
+        verify(!findChild(panel, "controlEdit").visible);
+        NacreDashboardState.calendar = {
+            events: []
+        };
     }
     function test_wifi_open_shows_cache_while_refreshing_and_never_starts_a_scan() {
         NacreNetwork.busy = true;
@@ -365,6 +475,7 @@ TestCase {
     }
     function test_profiles_are_navigation_and_power_view_fits_its_actions() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
+        panel.presentation = "dropdown";
         wait(40);
         const profile = PowerProfiles.profile;
         const mode = findChild(panel, "controlPowerMode");
@@ -892,7 +1003,7 @@ TestCase {
             verify(popup.currentItem !== null && popup.height > 0);
             popup.hasCurrent = false;
             tryCompare(popup, "height", 0, 400);
-            compare(popup.currentItem, null);
+            tryCompare(popup, "currentItem", null, 400);
         }
         popup.currentName = "toString";
         popup.hasCurrent = true;
@@ -912,7 +1023,7 @@ TestCase {
             verify(!popup.pinned);
             popup.hasCurrent = false;
             tryCompare(popup, "height", 0, 400);
-            compare(popup.currentItem, null);
+            tryCompare(popup, "currentItem", null, 400);
         }
     }
     function test_overview_shows_two_latest_notices_and_opens_full_history() {
@@ -959,6 +1070,7 @@ TestCase {
         panel.navigate("notifications");
         wait(40);
         const page = findChild(panel, "controlPageScroll"), history = findChild(panel, "controlPageLoader").item, list = findChild(history, "notificationHistoryList"), bottom = findChild(history, "notificationHistoryBottomFade");
+        compare(history.entries[0].summary, "Public message 17");
         verify(!page.interactive);
         fuzzyCompare(list.y + list.height, page.height, .5);
         verify(list.contentHeight > list.height && bottom.visible);
@@ -996,7 +1108,7 @@ TestCase {
         verify(findChild(page.item, "quickDnd") !== null);
         panel.navigate("home");
         wait(40);
-        verify(findChild(page.item, "quickClearHistory") === null);
+        verify(findChild(page.item, "quickClearHistory") !== null);
         NacreControlPreferences.save(["notifications"]);
         wait(40);
         const tile = findChild(panel, "controlAction-notifications");

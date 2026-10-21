@@ -132,7 +132,7 @@ the main desktop settings and keep their order across sessions; existing optiona
 tile preferences migrate automatically. The same controls work in a detached pearl.
 Hover a bar status icon or the clock for a dropdown after 350 ms. Status
 summaries are read-only; the calendar keeps its month controls. Clicking the
-clock pins its calendar for keyboard use until Escape or dismissal. Status hover
+clock opens Calendar in the shared control surface, with month navigation, day selection, Today and the configured agenda. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
 highlight and filling underline show the wait. The left and right frame edges have thin primary-colored arrows inside the existing border, with an Orient-gradient
@@ -142,8 +142,7 @@ fill; clicks open or close their panels immediately. The middle title and top li
 immediately. The fill follows display frames and stays complete briefly before the panel
 unfolds; delayed frames cannot skip the remaining fill. The underline spans the displayed title and keeps that width when the dashboard opens. Reduced motion keeps the delay with a static highlight. Dropdowns
 unfold from the bar using the same frame and motion as other Nacre popups. Clicking
-a status icon opens its control-center detail page; the bell opens notification history inside the same
-panel. Notification history can also be added as a tile in Edit, or opened by
+a status icon opens a compact detail page downward from the bar; the bell opens notification history. The Full panel button expands the overview to the full right edge. The right-edge arrow opens that full sidebar directly, sliding in from the right, with controls above notification history. Battery status, Edit, Settings and Power appear only on the overview. The top system icons, clock and power button share one pill; their opening cues stay idle while the full sidebar is open. Notification history can also be added as a tile in Edit, or opened by
 right-clicking Do Not Disturb. Pointer-opened controls
 close after leaving the panel; keyboard-opened controls keep their focus. Wi-Fi
 shows cached networks immediately and refreshes passively; use Scan for a fresh
@@ -154,7 +153,7 @@ keyboard backlight. Power mode opens the three profile choices without changing
 the active profile, and session actions use a compact inline page.
 
 Volume, microphone, display and keyboard brightness changes share a compact
-feedback pill below the right side of the bar. Audio feedback names the current
+feedback pill at the bottom center of the screen. Audio feedback names the current
 device; brightness feedback names the display when several are connected.
 Switching outputs, Caps Lock, power mode, night light and Do Not Disturb have
 distinct icons and labels. Repeated changes update the same pill and extend its

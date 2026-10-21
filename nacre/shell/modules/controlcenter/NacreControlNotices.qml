@@ -6,13 +6,22 @@ import qs.modules.notifications
 
 Item {
     id: root
+    property bool expanded: false
+    property real availableHeight: 0
     readonly property var entries: NacreNotifs.retained
     readonly property var preview: entries.slice(-2).reverse()
     signal detailsRequested(string section, bool pointerOwned)
-    implicitHeight: body.implicitHeight
+    implicitHeight: expanded ? availableHeight : body.implicitHeight
+    Loader {
+        anchors.fill: parent
+        active: root.expanded
+        source: Qt.resolvedUrl("../bar/popouts/NacreHistoryPopup.qml")
+        onLoaded: item.availableHeight = Qt.binding(() => root.height)
+    }
     Column {
         id: body
         width: root.width
+        visible: !root.expanded
         spacing: 10
         RowLayout {
             width: parent.width
@@ -54,7 +63,7 @@ Item {
             color: NacreTokens.mutedInk
         }
         Repeater {
-            model: root.preview
+            model: root.expanded ? [] : root.preview
             delegate: NacreNotice {
                 objectName: "controlNotificationPreview"
                 width: body.width

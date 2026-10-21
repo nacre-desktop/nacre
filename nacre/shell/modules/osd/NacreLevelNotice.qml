@@ -32,10 +32,8 @@ NacreWindow {
             easing.type: Easing.OutCubic
         }
     }
-    anchors.top: true
-    anchors.right: true
-    margins.top: NacreFrame.headerHeight + 10
-    margins.right: NacreFrame.right + 12
+    anchors.bottom: true
+    margins.bottom: NacreFrame.bottom + 24
     implicitWidth: Math.min(336, Math.max(200, output?.width - 48))
     implicitHeight: pill.implicitHeight
     WlrLayershell.exclusionMode: ExclusionMode.Ignore

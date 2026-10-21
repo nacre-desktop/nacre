@@ -7,6 +7,7 @@ import qs.modules.controlcenter as Controls
 Item {
     id: root
     property bool showHeading: true
+    property bool embedded: false
     property real maximumListHeight: 420
     property bool discoveryOwned: false
     property var pairingDevice: null
@@ -95,6 +96,7 @@ Item {
             }
         }
         NacreQuickList {
+            embedded: root.embedded
             width: parent.width
             maximumHeight: root.maximumListHeight
             Column {

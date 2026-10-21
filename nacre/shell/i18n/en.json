@@ -3385,5 +3385,10 @@
   "osd.feedback.on": "On",
   "osd.feedback.output": "Audio output",
   "osd.feedback.percent": "{value}%",
-  "osd.feedback.power-mode": "Power mode"
+  "osd.feedback.power-mode": "Power mode",
+  "controlcenter.calendar.all-day": "All day",
+  "controlcenter.calendar.empty": "No events for this day",
+  "controlcenter.calendar.settings": "Calendar settings",
+  "controlcenter.calendar.today": "Today",
+  "controlcenter.navigation.full-panel": "Full panel"
 }

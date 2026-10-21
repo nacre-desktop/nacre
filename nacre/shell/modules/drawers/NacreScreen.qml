@@ -33,6 +33,7 @@ NacreWindow {
         property bool hoverDocked: false
         property bool osd: false
         property bool controlsPointerOwned: false
+        property string controlsMode: "sidebar"
         property bool session: false
         property bool launcher: false
         property bool left: false

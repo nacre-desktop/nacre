@@ -23,24 +23,30 @@ FocusScope {
     onEnabledChanged: if (enabled)
         handoffHidden = false
     property bool detached: false
+    property string presentation: "sidebar"
+    property bool resettingPresentation: false
+    readonly property bool compact: !detached && presentation === "dropdown"
+    readonly property bool fullSidebar: !detached && !compact
     property bool hostActive: true
     required property var screen
     required property bool visibility
     property bool keyboardActive: false
     property string section: "home"
     signal sectionRequested(string section)
-    property real presentedWidth: visibility ? contentWidth : 0
+    signal sidebarRequested(bool pointerOwned)
+    property real presentedWidth: compact || visibility ? contentWidth : 0
     readonly property real contentWidth: Math.max(240, Math.min(detached ? 560 : 424, parent?.width ?? 424))
-    // Attached controls occupy the frame from header to bottom edge.
-    readonly property real contentHeight: detached ? Math.max(240, Math.min(860, parent?.height ?? 860)) : parent?.height ?? 860
-    property real presentedHeight: contentHeight
+    // The sidebar keeps main's full frame height; compact pages fit their content.
+    readonly property real contentHeight: compact ? Math.max(160, Math.min(bodyLoader.item?.preferredHeight || 300, parent?.height ?? 860)) : detached ? Math.max(240, Math.min(860, parent?.height ?? 860)) : parent?.height ?? 860
+    property real presentedHeight: compact && !visibility ? 0 : contentHeight
     implicitWidth: Math.min(contentWidth, presentedWidth)
     implicitHeight: Math.min(presentedHeight, parent?.height ?? presentedHeight)
-    visible: width > 0
+    visible: width > 0 && height > 0
     enabled: visibility
     clip: true
     function syncSize() {
-        presentedWidth = visibility ? contentWidth : 0;
+        presentedWidth = compact || visibility ? contentWidth : 0;
+        presentedHeight = Qt.binding(() => root.compact && !root.visibility ? 0 : root.contentHeight);
     }
     function focusExplicit() {
         if (visibility && (keyboardActive || detached))
@@ -52,12 +58,18 @@ FocusScope {
         Qt.callLater(focusExplicit);
     }
     onContentWidthChanged: syncSize()
+    onCompactChanged: {
+        // A closed sidebar has a full frame height; start a dropdown at zero.
+        resettingPresentation = !visibility;
+        syncSize();
+        resettingPresentation = false;
+    }
     Component.onCompleted: {
         syncSize();
         Qt.callLater(focusExplicit);
     }
     Behavior on presentedWidth {
-        enabled: NacreTokens.motionEnabled && (!root.restoreImmediately || !root.visibility)
+        enabled: !root.resettingPresentation && !root.compact && NacreTokens.motionEnabled && (!root.restoreImmediately || !root.visibility)
         NumberAnimation {
             id: revealMotion
             duration: 280
@@ -65,10 +77,10 @@ FocusScope {
         }
     }
     Behavior on presentedHeight {
-        enabled: !root.detached && root.visibility && !root.restoreImmediately && NacreTokens.motionEnabled
+        enabled: !root.resettingPresentation && !root.detached && !root.restoreImmediately && NacreTokens.motionEnabled
         NumberAnimation {
             id: heightMotion
-            duration: 180
+            duration: 280
             easing.type: Easing.OutCubic
         }
     }
@@ -91,6 +103,7 @@ FocusScope {
             session: NacreI18n.tr("controlcenter.session.title", "Power"),
             notifications: NacreI18n.tr("popouts.history-popup.text.notifications", "Notifications"),
             updates: NacreI18n.tr("status.peek.updates", "Updates"),
+            calendar: NacreI18n.tr("ui.header.hoverHint.calendar", "Calendar"),
             night: NacreI18n.tr("controlcenter.control-center.label.night-light", "Night light"),
             dnd: NacreI18n.tr("controlcenter.overview.do-not-disturb", "Do Not Disturb"),
             awake: NacreI18n.tr("controlcenter.overview.stay-awake", "Stay awake"),
@@ -120,9 +133,9 @@ FocusScope {
     Loader {
         id: bodyLoader
         objectName: "controlBodyLoader"
-        active: root.visibility || root.presentedWidth > 0
+        active: root.visibility || (root.compact ? root.presentedHeight > 0 : root.presentedWidth > 0)
         width: root.contentWidth
-        height: root.contentHeight
+        height: root.height
         onActiveChanged: {
             if (active)
                 setSource(Qt.resolvedUrl("NacreControlSurface.qml"), {

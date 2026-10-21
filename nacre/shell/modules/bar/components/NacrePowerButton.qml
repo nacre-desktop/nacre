@@ -7,7 +7,10 @@ NacreSurface {
     implicitWidth: 30
     implicitHeight: 30
     radius: width / 2
-    color: "transparent"
+    color: selected ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
+    property bool routed: false
+    property bool selected: false
+    signal activated(bool pointerOwned)
     function toggle() {
         NacrePanelState.toggleSession();
     }
@@ -26,7 +29,10 @@ NacreSurface {
         objectName: "nacrePowerActivation"
         accessibleName: NacreI18n.tr("components.power-button.accessibleName.open-power-menu", "Open power menu")
         function onClicked() {
-            root.toggle();
+            if (root.routed)
+                root.activated(focusByPointer);
+            else
+                root.toggle();
         }
     }
 }

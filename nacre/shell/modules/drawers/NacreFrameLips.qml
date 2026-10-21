@@ -62,6 +62,10 @@ Item {
     }
     function openSide(name, pointerOwned) {
         sideDwell(name).cancel();
+        if (name === "osd" && visibilities.osd && visibilities.controlsMode === "dropdown") {
+            NacrePanelState.openControls("home", screen.name, true, pointerOwned);
+            return;
+        }
         if (visibilities[name]) {
             NacreHoverIntent.dismiss(screen, pointerOwned);
             visibilities[name] = false;
@@ -122,7 +126,7 @@ Item {
         }
         if (DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen(name, screen, buttons))
             return;
-        if (!visibilities[name] && !sideDwell(name).waiting)
+        if ((!visibilities[name] || name === "osd" && visibilities.controlsMode === "dropdown") && !sideDwell(name).waiting)
             sideDwell(name).start();
     }
     function leave(name) {

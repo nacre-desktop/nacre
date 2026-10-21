@@ -7,6 +7,8 @@ Column {
     id: root
     required property var screen
     property bool active: true
+    property bool fullSidebar: false
+    property real availableHeight: 0
     signal detailsRequested(string section, bool pointerOwned)
     property bool pointerActivation: false
     readonly property var tileIds: NacreControlPreferences.tiles.filter(id => catalog.supported(id))
@@ -112,6 +114,10 @@ Column {
         width: parent.width
         active: root.active
         source: Qt.resolvedUrl("NacreControlNotices.qml")
+        onLoaded: {
+            item.expanded = Qt.binding(() => root.fullSidebar);
+            item.availableHeight = Qt.binding(() => Math.max(120, root.availableHeight - noticesLoader.y));
+        }
         Connections {
             target: noticesLoader.item
             function onDetailsRequested(section, pointerOwned) {

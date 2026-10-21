@@ -9,6 +9,7 @@ import qs.services
 Item {
     id: root
     property bool showHeading: true
+    property bool embedded: false
     property var pendingNetwork: null
     function connectPending() {
         if (!pendingNetwork)
@@ -216,6 +217,7 @@ Item {
             }
         }
         NacreQuickList {
+            embedded: root.embedded
             width: parent.width
             maximumHeight: root.maximumListHeight
             Column {

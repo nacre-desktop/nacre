@@ -832,7 +832,7 @@ TestCase {
         compare(popup.currentName, "calendar");
         verify(!popup.pinned);
         mouseClick(clock, clock.width / 2, clock.height / 2);
-        verify(popup.pinned);
+        verify(!popup.hasCurrent);
         compare(view.peekName, "");
         compare(NacrePanelState.calls[NacrePanelState.calls.length - 1], "calendar");
     }

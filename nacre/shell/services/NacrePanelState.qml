@@ -80,6 +80,7 @@ Singleton {
         view.previewOnly = false;
         view.edgeMenu = name;
         if (name === "osd") {
+            view.controlsMode = "sidebar";
             view.controlSection = "home";
             view.controlsPointerOwned = true;
         }
@@ -145,6 +146,7 @@ Singleton {
         if (!view.leftPinned)
             view.left = name === "left";
         if (name === "osd") {
+            view.controlsMode = "sidebar";
             view.controlSection = "home";
             view.controlsPointerOwned = true;
         }
@@ -153,15 +155,16 @@ Singleton {
         hidden = false;
         return true;
     }
-    function openControls(section = "home", screenName = "", forceOpen = false, pointerOwned = false) {
+    function openControls(section = "home", screenName = "", forceOpen = false, pointerOwned = false, presentation = "sidebar") {
         const view = screenName ? screens[screenName] : getForActive();
-        if (!view || !panelEnabled("osd") || !["home", "audio", "network", "bluetooth", "battery", "session", "updates", "notifications"].includes(section))
+        if (!view || !panelEnabled("osd") || !["home", "audio", "network", "bluetooth", "battery", "session", "updates", "notifications", "calendar"].includes(section))
             return false;
         const wasOpen = view.osd && view.controlSection === section && view.edgeMenu === "osd";
         clearPopouts();
         closeTransient(view);
         view.previewOnly = false;
         view.controlSection = section;
+        view.controlsMode = presentation === "dropdown" ? "dropdown" : "sidebar";
         view.controlsPointerOwned = pointerOwned === true;
         view.osd = forceOpen || !wasOpen;
         view.edgeMenu = view.osd ? "osd" : "";

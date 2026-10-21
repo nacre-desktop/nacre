@@ -8,13 +8,14 @@ import qs.services
 Item {
     id: content
     readonly property real inset: 18
-    readonly property real preferredHeight: ["home", "session"].includes(panel.section) ? Math.max(300, page.y + page.contentHeight + 18) : 650
+    readonly property real preferredHeight: page.y + (pageLoader.item?.preferredHeight ?? page.contentHeight) + 18
     RowLayout {
         id: status
         x: content.inset
         y: 14
         width: parent.width - content.inset * 2
         height: 32
+        visible: panel.section === "home"
         spacing: 3
         Item {
             Layout.fillWidth: true
@@ -73,13 +74,14 @@ Item {
     RowLayout {
         id: header
         x: content.inset
-        y: status.y + status.height + 12
+        y: 14
         width: parent.width - content.inset * 2
         height: Math.max(36, heading.implicitHeight)
         visible: panel.section !== "home"
         NacreControlButton {
             id: back
             objectName: "controlBack"
+            visible: !panel.compact
             icon: "arrow_back"
             label: NacreI18n.tr("controlcenter.control-center.text.back", "Back")
             onClicked: panel.navigate("home", pointerActivation)
@@ -92,6 +94,39 @@ Item {
             font.pointSize: 18
             font.weight: Font.Medium
             wrapMode: Text.Wrap
+        }
+        NacreSurface {
+            id: fullPanel
+            objectName: "controlFullPanel"
+            visible: panel.compact
+            readonly property string label: NacreI18n.tr("controlcenter.navigation.full-panel", "Full panel")
+            implicitWidth: fullPanelLabel.implicitWidth + 42
+            implicitHeight: 34
+            radius: 17
+            color: NacreTokens.raised
+            Row {
+                anchors.centerIn: parent
+                spacing: 4
+                NacreIcon {
+                    text: "dock_to_right"
+                    font.pointSize: 12
+                }
+                NacreText {
+                    id: fullPanelLabel
+                    text: fullPanel.label
+                    font.pointSize: 10
+                }
+            }
+            NacreInteraction {
+                objectName: "controlFullPanelActivation"
+                accessibleName: fullPanel.label
+                function onClicked() {
+                    const pointerOwned = focusByPointer;
+                    focus = false;
+                    panel.forceActiveFocus(Qt.OtherFocusReason);
+                    panel.sidebarRequested(pointerOwned);
+                }
+            }
         }
     }
     Connections {
@@ -109,13 +144,15 @@ Item {
         x: content.inset
         y: header.visible ? header.y + header.height + 14 : status.y + status.height + 18
         width: parent.width - content.inset * 2
-        height: parent.height - y - 18
+        height: Math.max(0, parent.height - y - 18)
         contentHeight: pageLoader.item?.implicitHeight || 0
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         flickableDirection: Flickable.VerticalFlick
-        interactive: panel.section !== "notifications"
-        ScrollBar.vertical: NacreScrollBar {}
+        interactive: panel.section !== "notifications" && contentHeight > height
+        ScrollBar.vertical: NacreScrollBar {
+            visible: page.interactive
+        }
         FastScroll {
             objectName: "controlPageWheel"
             enabled: page.interactive
@@ -129,7 +166,10 @@ Item {
             onLoaded: {
                 page.contentY = 0;
                 if (panel.section !== "home" && (panel.keyboardActive || panel.detached))
-                    back.focusControl();
+                    if (panel.compact)
+                        pageLoader.item?.forceActiveFocus(Qt.OtherFocusReason);
+                    else
+                        back.focusControl();
                 enter.restart();
             }
         }
@@ -155,13 +195,16 @@ Item {
             battery: "NacreControlPower.qml",
             session: "NacreControlSession.qml",
             notifications: "../bar/popouts/NacreHistoryPopup.qml",
-            updates: "NacreControlUpdates.qml"
+            updates: "NacreControlUpdates.qml",
+            calendar: "NacreControlCalendar.qml"
         };
         const properties = name === "edit" ? {
             screen: panel.screen
         } : name === "home" ? {
             screen: panel.screen,
-            active: Qt.binding(() => panel.hostActive && panel.visibility)
+            active: Qt.binding(() => panel.hostActive && panel.visibility),
+            fullSidebar: Qt.binding(() => panel.fullSidebar),
+            availableHeight: Qt.binding(() => page.height)
         } : ["audio", "session"].includes(name) ? {
             active: Qt.binding(() => panel.hostActive && panel.visibility)
         } : name === "notifications" ? {
@@ -169,7 +212,7 @@ Item {
             availableHeight: Qt.binding(() => page.height)
         } : ["network", "bluetooth"].includes(name) ? {
             showHeading: false,
-            maximumListHeight: Qt.binding(() => Math.max(140, page.height - (name === "network" ? 180 : 130)))
+            embedded: true
         } : !paths[name] ? {
             section: name,
             screen: panel.screen,

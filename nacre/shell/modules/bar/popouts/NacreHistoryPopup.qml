@@ -8,9 +8,10 @@ Item {
     property bool showHeading: true
     property real maximumListHeight: 440
     property real availableHeight: 0
-    readonly property var entries: NacreNotifs.retained
+    readonly property var entries: NacreNotifs.retained.slice().reverse()
     implicitWidth: 380
     implicitHeight: body.implicitHeight
+    readonly property real preferredHeight: toolbar.height + body.spacing + (entries.length ? list.contentHeight : emptyLabel.implicitHeight)
     function clear() {
         if (entries.length)
             NacreNotifs.clearHistory();
@@ -50,6 +51,7 @@ Item {
         }
 
         NacreText {
+            id: emptyLabel
             width: parent.width
             visible: root.entries.length === 0
             text: NacreNotifs.historyReady ? NacreI18n.tr("popouts.history-popup.text.no-notifications", "No notifications") : NacreI18n.tr("popouts.history-popup.text.loading-notifications", "Loading notifications…")

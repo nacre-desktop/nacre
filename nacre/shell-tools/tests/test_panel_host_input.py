@@ -63,6 +63,8 @@ Rectangle {
  property string screenName
  property var visibilities
  property string section:"home"
+ property string presentation:"sidebar"
+ signal sidebarRequested(bool pointerOwned)
  property bool restoreImmediately:false
  property bool keyboardActive:false
  property bool visibility:false

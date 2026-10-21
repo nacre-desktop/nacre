@@ -77,7 +77,7 @@ Item {
         z: 0
     }
     readonly property var leftPosition: position("left", left)
-    readonly property var osdPosition: position("right", osd, session.width)
+    readonly property var osdPosition: Qt.point(width - osd.width - session.width, 0)
     readonly property var sessionPosition: position("right", session)
     readonly property var dashboardPosition: position("top", dashboard)
     readonly property var launcherPosition: position("bottom", launcher)
@@ -121,6 +121,12 @@ Item {
         restoreImmediately: root.visibilities.hoverDocked === true
         enabled: visibility
         section: root.visibilities.controlSection || "home"
+        presentation: root.visibilities.controlsMode || "sidebar"
+        onSidebarRequested: pointerOwned => {
+            root.visibilities.controlsMode = "sidebar";
+            root.visibilities.controlSection = "home";
+            NacrePanelState.pinControls(root.screen.name, pointerOwned);
+        }
         keyboardActive: root.visibilities.edgeMenu === "osd" && !root.visibilities.previewOnly
         onSectionRequested: section => root.visibilities.controlSection = section
         screen: root.screen

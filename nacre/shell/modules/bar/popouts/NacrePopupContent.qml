@@ -50,6 +50,8 @@ Item {
         onLoaded: {
             if (root.currentName === "peek")
                 item.kind = root.peekKind;
+            if (root.currentName === "calendar")
+                item.events = Qt.binding(() => NacreDashboardState.calendar.events || []);
             root.rememberSize();
         }
         onStatusChanged: if (status === Loader.Error) {

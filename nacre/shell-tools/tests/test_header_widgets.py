@@ -40,7 +40,7 @@ class HeaderWidgetTests(unittest.TestCase):
                 'import QtQuick\nItem {objectName:"fixtureActiveTitle";property color colour:"cyan";property bool horizontal:false;property var monitor:null}'
             )
             (fixtures / "NacrePowerButton.qml").write_text(
-                "import QtQuick\nItem {implicitWidth:30;implicitHeight:30}"
+                "import QtQuick\nItem {property bool routed:false;property bool selected:false;signal activated(bool pointerOwned);implicitWidth:30;implicitHeight:30}"
             )
             (target / "NacreStatusHint.qml").write_text(
                 'import QtQuick\nItem {property var output;property string text:"";property real center:0}'

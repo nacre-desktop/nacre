@@ -3439,5 +3439,10 @@
   "osd.feedback.on": "OSD feedback label; keep device names and numeric substitutions unchanged.",
   "osd.feedback.output": "OSD feedback label; keep device names and numeric substitutions unchanged.",
   "osd.feedback.percent": "OSD feedback label; keep device names and numeric substitutions unchanged.",
-  "osd.feedback.power-mode": "OSD feedback label; keep device names and numeric substitutions unchanged."
+  "osd.feedback.power-mode": "OSD feedback label; keep device names and numeric substitutions unchanged.",
+  "controlcenter.calendar.all-day": "Control-center calendar and compact-to-sidebar navigation.",
+  "controlcenter.calendar.empty": "Control-center calendar and compact-to-sidebar navigation.",
+  "controlcenter.calendar.settings": "Control-center calendar and compact-to-sidebar navigation.",
+  "controlcenter.calendar.today": "Control-center calendar and compact-to-sidebar navigation.",
+  "controlcenter.navigation.full-panel": "Control-center calendar and compact-to-sidebar navigation."
 }

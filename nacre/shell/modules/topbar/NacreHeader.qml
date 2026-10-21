@@ -45,6 +45,10 @@ Item {
         }
         if (visibility?.launcher || visibility?.session)
             return;
+        if (visibility?.osd) {
+            clearPeek();
+            return;
+        }
         clearPeek(false);
         popupExpiry.stop();
         hoverHint = "";
@@ -63,12 +67,8 @@ Item {
         if (pearl?.window?.bodyItem?.item?.navigate) {
             pearl.window.bodyItem.item.navigate(name);
             pearl.window.activate();
-        } else if (name === "updates") {
-            NacrePanelState.openControls(name, screen.name, true, pointerOwned);
         } else {
-            // Status controls unfold at their icon; the edge opens the sidebar.
-            if (showPopup(name, item, true))
-                panel.popouts.pinned = true;
+            NacrePanelState.openControls(name, screen.name, true, pointerOwned, "dropdown");
         }
     }
     onVisibleChanged: if (!visible)
@@ -307,191 +307,227 @@ Item {
         text: root.hoverHint
         center: root.hoverHintCenter
     }
-    RowLayout {
-        id: right
+    NacreSurface {
+        id: systemPill
+        objectName: "nacreSystemPill"
         anchors.right: parent.right
         anchors.rightMargin: 15
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 12
-        NacreSurface {
-            id: updatesHolder
-            objectName: "nacreStatusUpdates"
-            implicitWidth: updates.implicitWidth
-            implicitHeight: 34
-            radius: 17
-            color: updatesInput.hovered ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
-            Row {
-                id: updates
-                z: 1
-                anchors.centerIn: parent
-                spacing: 4
-                NacreIcon {
-                    text: "package_2"
-                    color: NacreColours.palette.m3primary
+        implicitWidth: right.implicitWidth + 12
+        height: 34
+        radius: 17
+        color: NacreColours.palette.m3surfaceContainer
+        RowLayout {
+            id: right
+            anchors.fill: parent
+            anchors.leftMargin: 6
+            anchors.rightMargin: 6
+            spacing: 4
+            NacreSurface {
+                id: updatesHolder
+                objectName: "nacreStatusUpdates"
+                implicitWidth: updates.implicitWidth + 12
+                implicitHeight: 30
+                radius: 15
+                color: root.visibility?.osd && root.visibility.controlSection === "updates" ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
+                Row {
+                    id: updates
+                    z: 1
+                    anchors.centerIn: parent
+                    spacing: 4
+                    NacreIcon {
+                        text: "package_2"
+                        color: NacreColours.palette.m3primary
+                    }
+                    NacreText {
+                        text: Updates.message || String(Updates.count)
+                        color: NacreColours.palette.m3primary
+                    }
                 }
-                NacreText {
-                    text: Updates.message || String(Updates.count)
-                    color: NacreColours.palette.m3primary
+                NacreHoverCue {
+                    anchors.fill: parent
+                    progress: root.peekName === "updates" ? root.peekProgress : 0
+                }
+                NacreInteraction {
+                    id: updatesInput
+                    accessibleName: NacreI18n.tr("status.peek.updates", "Updates")
+                    function onClicked() {
+                        root.openStatus("updates", updatesHolder, focusByPointer);
+                    }
+                }
+                HoverHandler {
+                    blocking: false
+                    onHoveredChanged: root.requestPeek("updates", updatesHolder, hovered)
                 }
             }
-            NacreHoverCue {
-                anchors.fill: parent
-                progress: root.peekName === "updates" ? root.peekProgress : 0
-            }
-            NacreInteraction {
-                id: updatesInput
-                accessibleName: NacreI18n.tr("status.peek.updates", "Updates")
-                function onClicked() {
-                    root.openStatus("updates", updatesHolder, focusByPointer);
+            NacreSurface {
+                id: statusHolder
+                objectName: "nacreHeaderStatus"
+                implicitWidth: status.implicitHeight + 20
+                implicitHeight: 34
+                color: "transparent"
+                radius: 6
+                clip: true
+                readonly property var activeIcon: root.visibility?.osd ? ({
+                        audio: status.audioItem,
+                        network: status.network,
+                        bluetooth: status.bluetoothItem,
+                        battery: status.battery,
+                        notifications: status.notificationsItem
+                    })[root.visibility.controlSection] || null : null
+                Rectangle {
+                    visible: !!statusHolder.activeIcon
+                    readonly property point origin: statusHolder.activeIcon?.mapToItem(statusHolder, 0, 0) ?? Qt.point(0, 0)
+                    readonly property point end: statusHolder.activeIcon?.mapToItem(statusHolder, statusHolder.activeIcon.width, statusHolder.activeIcon.height) ?? Qt.point(0, 0)
+                    x: Math.max(0, Math.min(origin.x, end.x) - 2)
+                    y: 2
+                    width: Math.abs(end.x - origin.x) + 4
+                    height: parent.height - 4
+                    radius: 8
+                    color: Qt.alpha(statusHolder.activeIcon?.ink ?? NacreTokens.accent, .22)
+                }
+                readonly property var cueTarget: ({
+                        audio: status.audioItem,
+                        network: status.network,
+                        bluetooth: status.bluetoothItem,
+                        battery: status.battery,
+                        notifications: status.notificationsItem,
+                        recording: status.recordingItem
+                    })[root.statusHoveredName] || null
+                readonly property bool cueFirst: cueTarget === (status.recordingItem?.visible ? status.recordingItem : status.audioItem)
+                readonly property bool cueLast: cueTarget === status.notificationsItem
+                readonly property rect cueBounds: {
+                    const item = cueTarget;
+                    if (!item)
+                        return Qt.rect(0, 0, 0, 0);
+                    // The column is rotated in the header; map both corners to the pill.
+                    const extent = status.implicitHeight, itemX = item.x, itemY = item.y;
+                    const a = item.mapToItem(statusHolder, 0, 0), b = item.mapToItem(statusHolder, item.width, item.height);
+                    const left = cueFirst ? 0 : Math.max(0, Math.min(a.x, b.x) - 1.5);
+                    const right = cueLast ? width : Math.min(width, Math.max(a.x, b.x) + 1.5);
+                    return Qt.rect(left, 0, Math.max(0, right - left), height);
+                }
+                NacreHoverCue {
+                    objectName: "nacreHeaderStatusCue"
+                    x: statusHolder.cueBounds.x
+                    y: 0
+                    width: statusHolder.cueBounds.width
+                    height: statusHolder.height
+                    ink: statusHolder.cueTarget?.ink ?? NacreTokens.orientSecondary
+                    radius: 0
+                    topLeftRadius: statusHolder.cueFirst ? statusHolder.radius : 0
+                    bottomLeftRadius: topLeftRadius
+                    topRightRadius: statusHolder.cueLast ? statusHolder.radius : 0
+                    bottomRightRadius: topRightRadius
+                    traceLeft: statusHolder.cueFirst ? statusHolder.radius : 5
+                    traceRight: statusHolder.cueLast ? statusHolder.radius : 5
+                    halo: false
+                    outline: false
+                    progress: root.statusHoveredName ? root.peekName === root.statusHoveredName ? Math.max(.08, root.peekProgress) : .08 : 0
+                }
+                NacreStatusIcons {
+                    id: status
+                    z: 1
+                    grouped: true
+                    anchors.centerIn: parent
+                    screenName: root.screen.name
+                    horizontal: true
+                    revealName: root.peekName
+                    revealProgress: root.peekProgress
+                    rotation: -90
+                    onActivated: (name, item, pointerOwned) => root.openStatus(name, item, pointerOwned)
+                    onPeekRequested: (name, item, hovered) => {
+                        if (hovered)
+                            root.statusHoveredName = name;
+                        else if (root.statusHoveredName === name)
+                            root.statusHoveredName = "";
+                        root.requestPeek(name, item, hovered);
+                    }
+                    onInteractionStarted: {
+                        root.clearPeek();
+                    }
+                }
+                Item {
+                    id: statusMouse
+                    objectName: "nacreHeaderStatusMouse"
+                    anchors.fill: parent
+                    readonly property bool containsMouse: statusHover.hovered
+                }
+                HoverHandler {
+                    id: statusHover
+                    blocking: false
+                    onHoveredChanged: {
+                        NacreHoverIntent.popupHovered[root.screen.name] = hovered;
+                        if (!hovered)
+                            root.leavePopup();
+                    }
                 }
             }
-            HoverHandler {
-                blocking: false
-                onHoveredChanged: root.requestPeek("updates", updatesHolder, hovered)
+            NacreSurface {
+                id: clockHolder
+                objectName: "nacreHeaderClock"
+                implicitWidth: clock.implicitWidth + 12
+                implicitHeight: 30
+                radius: 15
+                color: root.visibility?.osd && root.visibility.controlSection === "calendar" ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
+                NacreHoverCue {
+                    objectName: "nacreHeaderCalendarCue"
+                    anchors.fill: parent
+                    ink: NacreColours.palette.m3tertiary
+                    progress: root.peekName === "calendar" ? root.peekProgress : 0
+                }
+                Row {
+                    id: clock
+                    anchors.centerIn: parent
+                    spacing: 7
+                    NacreIcon {
+                        text: "calendar_month"
+                        color: NacreColours.palette.m3tertiary
+                    }
+                    NacreText {
+                        text: NacreTime.format("HH:mm")
+                        color: NacreColours.palette.m3tertiary
+                    }
+                }
+                MouseArea {
+                    id: clockMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onEntered: {
+                        NacreHoverIntent.popupHovered[root.screen.name] = true;
+                        root.requestPeek("calendar", clockHolder, true);
+                    }
+                    onExited: root.requestPeek("calendar", clockHolder, false)
+                    activeFocusOnTab: visible && enabled
+                    Accessible.role: Accessible.Button
+                    Accessible.name: NacreI18n.tr("ui.header.hoverHint.calendar", "Calendar")
+                    Accessible.onPressAction: openCalendar()
+                    function openCalendar() {
+                        root.openStatus("calendar", clockHolder, !activeFocus);
+                    }
+                    Keys.onReturnPressed: event => {
+                        openCalendar();
+                        event.accepted = true;
+                    }
+                    Keys.onSpacePressed: event => {
+                        openCalendar();
+                        event.accepted = true;
+                    }
+                    onClicked: openCalendar()
+                }
+            }
+            NacrePowerButton {
+                id: powerHolder
+                routed: true
+                selected: !!root.visibility?.osd && root.visibility.controlSection === "session"
+                onActivated: pointerOwned => root.openStatus("session", powerHolder, pointerOwned)
             }
         }
-        NacreSurface {
-            id: statusHolder
-            objectName: "nacreHeaderStatus"
-            implicitWidth: status.implicitHeight + 20
-            implicitHeight: 34
-            radius: 17
-            color: NacreColours.palette.m3surfaceContainer
-            readonly property var cueTarget: ({
-                    audio: status.audioItem,
-                    network: status.network,
-                    bluetooth: status.bluetoothItem,
-                    battery: status.battery,
-                    notifications: status.notificationsItem,
-                    recording: status.recordingItem
-                })[root.statusHoveredName] || null
-            readonly property bool cueFirst: cueTarget === (status.recordingItem?.visible ? status.recordingItem : status.audioItem)
-            readonly property bool cueLast: cueTarget === status.notificationsItem
-            readonly property rect cueBounds: {
-                const item = cueTarget;
-                if (!item)
-                    return Qt.rect(0, 0, 0, 0);
-                // The column is rotated in the header; map both corners to the pill.
-                const extent = status.implicitHeight, itemX = item.x, itemY = item.y;
-                const a = item.mapToItem(statusHolder, 0, 0), b = item.mapToItem(statusHolder, item.width, item.height);
-                const left = cueFirst ? 0 : Math.max(0, Math.min(a.x, b.x) - 1.5);
-                const right = cueLast ? width : Math.min(width, Math.max(a.x, b.x) + 1.5);
-                return Qt.rect(left, 0, Math.max(0, right - left), height);
-            }
-            NacreHoverCue {
-                objectName: "nacreHeaderStatusCue"
-                x: statusHolder.cueBounds.x
-                y: 0
-                width: statusHolder.cueBounds.width
-                height: statusHolder.height
-                ink: statusHolder.cueTarget?.ink ?? NacreTokens.orientSecondary
-                radius: 0
-                topLeftRadius: statusHolder.cueFirst ? statusHolder.radius : 0
-                bottomLeftRadius: topLeftRadius
-                topRightRadius: statusHolder.cueLast ? statusHolder.radius : 0
-                bottomRightRadius: topRightRadius
-                traceLeft: statusHolder.cueFirst ? statusHolder.radius : 5
-                traceRight: statusHolder.cueLast ? statusHolder.radius : 5
-                halo: false
-                outline: false
-                progress: root.statusHoveredName ? root.peekName === root.statusHoveredName ? Math.max(.08, root.peekProgress) : .08 : 0
-            }
-            NacreStatusIcons {
-                id: status
-                z: 1
-                grouped: true
-                anchors.centerIn: parent
-                screenName: root.screen.name
-                horizontal: true
-                revealName: root.peekName
-                revealProgress: root.peekProgress
-                rotation: -90
-                onActivated: (name, item, pointerOwned) => root.openStatus(name, item, pointerOwned)
-                onPeekRequested: (name, item, hovered) => {
-                    if (hovered)
-                        root.statusHoveredName = name;
-                    else if (root.statusHoveredName === name)
-                        root.statusHoveredName = "";
-                    root.requestPeek(name, item, hovered);
-                }
-                onInteractionStarted: root.clearPeek()
-            }
-            Item {
-                id: statusMouse
-                objectName: "nacreHeaderStatusMouse"
-                anchors.fill: parent
-                readonly property bool containsMouse: statusHover.hovered
-            }
-            HoverHandler {
-                id: statusHover
-                blocking: false
-                onHoveredChanged: {
-                    NacreHoverIntent.popupHovered[root.screen.name] = hovered;
-                    if (!hovered)
-                        root.leavePopup();
-                }
-            }
-        }
-        Item {
-            id: clockHolder
-            objectName: "nacreHeaderClock"
-            implicitWidth: clock.implicitWidth
-            implicitHeight: 34
-            NacreHoverCue {
-                objectName: "nacreHeaderCalendarCue"
-                anchors.fill: parent
-                ink: NacreColours.palette.m3tertiary
-                progress: root.peekName === "calendar" ? root.peekProgress : 0
-            }
-            Row {
-                id: clock
-                anchors.centerIn: parent
-                spacing: 7
-                NacreIcon {
-                    text: "calendar_month"
-                    color: NacreColours.palette.m3tertiary
-                }
-                NacreText {
-                    text: NacreTime.format("HH:mm")
-                    color: NacreColours.palette.m3tertiary
-                }
-            }
-            MouseArea {
-                id: clockMouse
-                anchors.fill: parent
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    NacreHoverIntent.popupHovered[root.screen.name] = true;
-                    root.requestPeek("calendar", clockHolder, true);
-                }
-                onExited: root.requestPeek("calendar", clockHolder, false)
-                activeFocusOnTab: visible && enabled
-                Accessible.role: Accessible.Button
-                Accessible.name: NacreI18n.tr("ui.header.hoverHint.calendar", "Calendar")
-                Accessible.onPressAction: openCalendar()
-                function openCalendar() {
-                    root.clearPeek();
-                    root.hoverHint = "";
-                    root.showPopup("calendar", clockHolder, true);
-                    if (root.panel)
-                        root.panel.popouts.pinned = true;
-                }
-                Keys.onReturnPressed: event => {
-                    openCalendar();
-                    event.accepted = true;
-                }
-                Keys.onSpacePressed: event => {
-                    openCalendar();
-                    event.accepted = true;
-                }
-                onClicked: openCalendar()
-            }
-        }
-        NacrePowerButton {}
     }
     NacreHeaderForwarder {
         screen: root.screen
+        systemItem: systemPill
         statusItem: statusHolder
         updatesItem: updatesHolder
         calendarItem: clockHolder

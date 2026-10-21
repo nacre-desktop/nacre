@@ -9,11 +9,19 @@ Item {
     property int month: NacreTime.date.getMonth()
     property int year: NacreTime.date.getFullYear()
     property int firstWeekday: Qt.locale().firstDayOfWeek % 7
+    property string selectedDay: todayKey
+    property bool interactive: false
+    property var events: []
+    signal daySelected(string day)
     readonly property date displayed: new Date(year, month, 1, 12)
     readonly property var days: Calendar.calendar(year, month, firstWeekday)
     readonly property string todayKey: Calendar.dayKey(NacreTime.date)
     implicitWidth: 280
     implicitHeight: 282
+    function dateForDay(day) {
+        const parts = day.split("-").map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2], 12);
+    }
     function changeMonth(delta) {
         if (!Number.isInteger(delta) || Math.abs(delta) > 1200)
             return;
@@ -67,7 +75,9 @@ Item {
         Repeater {
             model: root.days
             delegate: Item {
+                id: dayCell
                 required property var modelData
+                readonly property bool hasEvents: root.events.some(event => Calendar.dayKey(new Date(event.start * 1000)) === modelData.key)
                 width: root.width / 7
                 height: 34
                 Rectangle {
@@ -75,16 +85,33 @@ Item {
                     width: 30
                     height: 30
                     radius: 15
-                    visible: parent.modelData.key === root.todayKey
-                    color: NacreColours.palette.m3primary
+                    visible: dayCell.modelData.key === root.todayKey || root.interactive && dayCell.modelData.key === root.selectedDay
+                    color: dayCell.modelData.key === root.todayKey ? NacreColours.palette.m3primary : NacreColours.palette.m3secondaryContainer
                 }
                 NacreText {
                     anchors.fill: parent
-                    text: NacreI18n.number(parent.modelData.day)
+                    text: NacreI18n.number(dayCell.modelData.day)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     font.pointSize: 11
-                    color: parent.modelData.key === root.todayKey ? NacreColours.palette.m3onPrimary : parent.modelData.inMonth ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
+                    color: dayCell.modelData.key === root.todayKey ? NacreColours.palette.m3onPrimary : root.interactive && dayCell.modelData.key === root.selectedDay ? NacreColours.palette.m3onSecondaryContainer : dayCell.modelData.inMonth ? NacreColours.palette.m3onSurface : NacreColours.palette.m3onSurfaceVariant
+                }
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: parent.height - 5
+                    width: 4
+                    height: 4
+                    radius: 2
+                    visible: dayCell.hasEvents
+                    color: dayCell.modelData.key === root.todayKey ? NacreColours.palette.m3onPrimary : NacreTokens.accent
+                }
+                NacreInteraction {
+                    enabled: root.interactive
+                    accessibleName: NacreI18n.date(root.dateForDay(dayCell.modelData.key), "dddd, d MMMM yyyy")
+                    function onClicked() {
+                        root.selectedDay = dayCell.modelData.key;
+                        root.daySelected(root.selectedDay);
+                    }
                 }
             }
         }
