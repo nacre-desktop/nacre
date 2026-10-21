@@ -180,6 +180,25 @@ TestCase {
         wait(20);
         verify(!view.shown);
     }
+    function test_missing_compositor_focus_uses_one_active_screen() {
+        const first = armedEvents(), second = createTemporaryObject(events, test, {
+            screen: ({
+                    name: "secondary"
+                })
+        });
+        wait(410);
+        NacreCompositor.focusedMonitor = null;
+        first.show("volume");
+        second.show("volume");
+        tryCompare(first, "shown", true);
+        verify(!second.shown);
+        NacreCompositor.focusedMonitor = {
+            name: "secondary"
+        };
+        verify(!first.shown);
+        second.show("volume");
+        tryCompare(second, "shown", true);
+    }
     SignalSpy {
         id: capsChanges
         target: CapsReader

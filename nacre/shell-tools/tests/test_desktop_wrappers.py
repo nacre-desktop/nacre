@@ -46,7 +46,7 @@ class DesktopWrappersTests(unittest.TestCase):
                 "NacreNotifs": "property bool dnd:false",
                 "WallpaperPlayback": "property bool locked:false;property bool sleeping:false;property bool paused:false;property bool batteryPaused:false;property bool pauseCovered:true",
                 "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var monitors:({values:[]});property var windows:[];property int activeWsId:1',
-                "NacrePanelState": "property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false",
+                "NacrePanelState": 'function activeName(){return NacreCompositor.focusedMonitor?.name || "test";}property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false',
                 "AppLaunch": "property var calls:[];function run(command){calls=[...calls,command]}",
                 "NacreWallpapers": 'property string pendingPoster:"";property bool displayDynamic:false;property bool displayAnimated:false;property string displayPath:""',
                 "NacreFrame": 'property color colour:"#101014"',

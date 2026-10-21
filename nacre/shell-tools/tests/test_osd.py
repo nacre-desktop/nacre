@@ -38,7 +38,7 @@ class OsdTests(unittest.TestCase):
                 "NacreOsd": "property int hideDelay:120",
                 "WallpaperPlayback": "property bool locked:false",
                 "NacreCompositor": 'property var focusedMonitor:({name:"test"})',
-                "NacrePanelState": "property bool hidden:false",
+                "NacrePanelState": 'function activeName(){return NacreCompositor.focusedMonitor?.name || "test";}property bool hidden:false',
             }
             with (fixtures / "qmldir").open("a") as manifest:
                 for name, body in definitions.items():

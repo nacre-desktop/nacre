@@ -26,7 +26,7 @@ Item {
     readonly property alias notice: notice
     property string pendingChannel: ""
     function allowed() {
-        return armed && !visibilities.osd && !visibilities.session && !WallpaperPlayback.locked && !NacrePanelState.hidden && screen.name === NacreCompositor.focusedMonitor?.name;
+        return armed && !visibilities.osd && !visibilities.session && !WallpaperPlayback.locked && !NacrePanelState.hidden && screen.name === NacrePanelState.activeName();
     }
     function cancel() {
         shown = false;
@@ -160,7 +160,7 @@ Item {
     Connections {
         target: NacreCompositor
         function onFocusedMonitorChanged() {
-            if (root.screen.name !== NacreCompositor.focusedMonitor?.name)
+            if (root.screen.name !== NacrePanelState.activeName())
                 root.cancel();
         }
     }
