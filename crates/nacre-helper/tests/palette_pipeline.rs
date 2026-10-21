@@ -917,6 +917,62 @@ fn app_theme_home(home: &Path) -> Result<()> {
     Ok(())
 }
 
+#[test]
+fn palette_scheme_set_refreshes_spicetify_once_after_publishing_files() -> Result<()> {
+    let home = tempfile::tempdir()?;
+    app_theme_home(home.path())?;
+    let bin = home.path().join("bin");
+    fs::create_dir(&bin)?;
+    let refresh_log = home.path().join("refresh.log");
+    let timeout_log = home.path().join("timeout.log");
+    fake_executable(
+        &bin.join("timeout"),
+        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$TIMEOUT_LOG\"\nshift 3\nexec \"$@\"\n",
+    )?;
+    fake_executable(
+        &bin.join("spicetify"),
+        "#!/bin/sh\ntest -s \"$SPICETIFY_THEME_DIR/color.ini\" || exit 41\nprintf '%s\\n' \"$*\" >> \"$SPICETIFY_LOG\"\n",
+    )?;
+    fs::create_dir_all(home.path().join(".config/spicetify"))?;
+    fs::write(
+        home.path().join(".config/spicetify/config-xpui.ini"),
+        "current_theme = Nacre\n",
+    )?;
+    let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+    let output = command
+        .args(["nacre_shell", "scheme", "set", "--mode", "dark"])
+        .env_clear()
+        .env("HOME", home.path())
+        .env("PATH", &bin)
+        .env("NACRE_HELPER_TOOLS", assets())
+        .env("NACRE_COMPOSITOR", "hyprland")
+        .env("SPICETIFY_LOG", &refresh_log)
+        .env("TIMEOUT_LOG", &timeout_log)
+        .env(
+            "SPICETIFY_THEME_DIR",
+            home.path().join(".config/spicetify/Themes/Nacre"),
+        )
+        .output()?;
+    assert!(
+        output.status.success(),
+        "stdout: {}\nstderr: {}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    for _ in 0..100 {
+        if refresh_log.exists() {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    assert_eq!(fs::read_to_string(&refresh_log)?.trim(), "refresh");
+    assert_eq!(
+        fs::read_to_string(&timeout_log)?.trim(),
+        "-k 1s 60s spicetify refresh"
+    );
+    Ok(())
+}
+
 fn app_theme_command(
     home: &Path,
     path: &Path,
