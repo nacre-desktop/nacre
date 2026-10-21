@@ -85,6 +85,23 @@ class NativeRegistryTests(unittest.TestCase):
                             environ={"NACRE_HELPER_BINARY": str(binary)},
                         )
                     )
+
+    def test_weather_and_updates_module_cases_use_standalone_native_commands(self):
+        with tempfile.TemporaryDirectory() as directory:
+            binary = self.executable(Path(directory) / "helper")
+            for helper in ("weather", "updates"):
+                case = {
+                    "helper": helper,
+                    "command": f"python3 tests/parity/helpers/api.py nacre/shell-tools/{helper}.py",
+                }
+                self.assertEqual(
+                    shlex.split(
+                        registry.command(
+                            case, environ={"NACRE_HELPER_BINARY": str(binary)}
+                        )
+                    ),
+                    [str(binary.resolve()), helper],
+                )
                     self.assertEqual(argv[0], str(binary.resolve()))
                     self.assertEqual(
                         argv[1],
@@ -129,7 +146,7 @@ class NativeRegistryTests(unittest.TestCase):
             self.assertEqual(registry.native_binary(root, {}), release)
 
     def test_untouched_helpers_and_explicit_overrides_keep_their_boundary(self):
-        self.assertIsNone(registry.command({"helper": "weather"}, environ={}))
+        self.assertIsNone(registry.command({"helper": "nacre-app"}, environ={}))
         self.assertEqual(
             registry.command({"helper": "menu-backend"}, "candidate {name}"),
             "candidate {name}",

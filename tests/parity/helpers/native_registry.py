@@ -113,6 +113,10 @@ def command(case, override=None, *, root=ROOT, environ=None):
         )
     if helper not in MIGRATED:
         return None
+    # These former module-level Python helpers are now standalone CLI workers;
+    # their historical API adapter command maps directly to the native command.
+    if helper in {"weather", "updates"}:
+        return shlex.join([str(native_binary(root, environ)), helper])
     if helper == "nacre_shell" and original:
         if original == ["python3", "-m", "nacre_shell"]:
             binary = native_binary(root, environ)
