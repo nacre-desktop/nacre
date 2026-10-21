@@ -17,6 +17,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 | 6 | [N0018 native keystroke launchers](0018-native-keystroke-launchers.md) | In progress | Luna; parity cases nacre-app/settings/welcome/startup-apps. |
 | 6 | [N0019 weather/updates workers](0019-weather-updates-workers.md) | In progress | Luna; producer before consumer; outbound consent unchanged. |
 | 6 | [N0020 Brain data layer](0020-brain-data-layer.md) | In progress | Sol; vault integrity, frozen merge references, one-rename rollback. |
+| 7 | [N0021 app theming targets](0021-app-theming-targets.md) | Integrated; exact-head CI pending | GTK3 adw-gtk3, Chromium theme extension, Discord (Vencord), Spotify (Spicetify, live reload) with Settings toggles; user guide docs/app-theming.md. dev-1 Arch CI replica green except 6 Niri fixture tests inherited from 37fa77f0 (fix owned by the other lead). Deployed to the owner laptop on request. |
 | — | [N0010 full package rollback](0010-f4-managed-opt-in-and-rollback.md) | Deferred: hardening before public release | Preserved on `task/n10-complete-20261020` (phases 1–3, about 22.5k lines, unpublished). Superseded for activation by N0014; resume only for crash-safe package downgrade. |
 | — | [N0011 final QML attempt](0011-f4-qml-residency-investigation.md) | Closed: fixes rejected, evidence retained | No more fix hunt; original8a debt accepted. |
 | — | [N0012 memory debt](0012-f4-qml-memory-debt.md) | Queued, low priority | No new work now; later phases may not add QML beyond recorded debt without fixing it. |
