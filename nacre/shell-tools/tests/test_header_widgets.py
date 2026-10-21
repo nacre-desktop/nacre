@@ -64,7 +64,7 @@ Item {
  readonly property Item bluetoothItem:b
  readonly property Item battery:c
  readonly property Item notificationsItem:d
- Column {Item{id:a;objectName:"fixtureHeaderAudio";width:24;height:24}Item{id:n;objectName:"fixtureHeaderNetwork";width:24;height:24;HoverHandler{blocking:false;onHoveredChanged:root.peekRequested("network",n,hovered)}}Item{id:b;width:24;height:24}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
+ Column {Item{id:a;objectName:"fixtureHeaderAudio";width:24;height:24}Item{id:n;objectName:"fixtureHeaderNetwork";width:24;height:24;HoverHandler{blocking:false;onHoveredChanged:root.peekRequested("network",n,hovered)}}Item{id:b;objectName:"fixtureHeaderBluetooth";width:24;height:24;HoverHandler{blocking:false;onHoveredChanged:root.peekRequested("bluetooth",b,hovered)}}Item{id:c;width:24;height:36}Item{id:d;width:24;height:36}}
 }""")
             definitions = {
                 "NacreMenu": "property QtObject workflows:QtObject {property var calls:[];function work(action){calls=[...calls,action]}}",

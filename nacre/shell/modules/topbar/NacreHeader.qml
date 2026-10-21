@@ -317,7 +317,7 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 6
             anchors.rightMargin: 6
-            spacing: 2
+            spacing: 1
             NacreSurface {
                 id: updatesHolder
                 objectName: "nacreStatusUpdates"
@@ -405,7 +405,6 @@ Item {
                 }
                 NacreHoverCue {
                     objectName: "nacreHeaderStatusCue"
-                    visible: root.visibility?.osd !== true
                     x: statusHolder.cueBounds.x
                     y: 0
                     width: statusHolder.cueBounds.width
@@ -471,7 +470,7 @@ Item {
                     objectName: "nacreHeaderCalendarCue"
                     anchors.fill: parent
                     ink: NacreColours.palette.m3tertiary
-                    progress: root.peekName === "calendar" ? root.peekProgress : 0
+                    progress: root.peekName === "calendar" ? root.peekProgress : clockMouse.containsMouse ? .08 : 0
                 }
                 Row {
                     id: clock

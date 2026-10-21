@@ -72,10 +72,10 @@ TestCase {
         });
         wait(30);
         const cells = [view.audioItem, view.network, view.bluetoothItem, view.battery, view.notificationsItem];
-        compare(view.cellSpacing, 2);
+        compare(view.cellSpacing, 1);
         compare(view.cellPadding, 3);
         for (let i = 1; i < cells.length; i++)
-            fuzzyCompare(cells[i].y - cells[i - 1].y - cells[i - 1].height, 2, .1);
+            fuzzyCompare(cells[i].y - cells[i - 1].y - cells[i - 1].height, 1, .1);
     }
     SignalSpy {
         id: statusHoverSpy

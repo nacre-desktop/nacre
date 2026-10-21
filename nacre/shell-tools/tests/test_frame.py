@@ -214,8 +214,10 @@ Item {
  property alias statusItem:forwarder.statusItem
  property int clicks:0
  property alias childHovered:child.containsMouse
- MouseArea {id:child;anchors.fill:parent;hoverEnabled:true;onClicked:root.clicks++}
- NacreHeaderForwarder {id:forwarder;screen:({name:"test"})}
+ property alias childCursor:child.cursorShape
+ MouseArea {id:child;anchors.fill:parent;hoverEnabled:true;cursorShape:Qt.PointingHandCursor;onClicked:root.clicks++}
+ Item {id:systemTarget;x:120;width:80;height:50}
+ NacreHeaderForwarder {id:forwarder;screen:({name:"test"});systemItem:systemTarget}
 }""")
             (target / "NacrePanelState.qml").write_text(
                 "pragma Singleton\nimport QtQuick\nQtObject {property var panels:({})}\n"
@@ -230,6 +232,25 @@ TestCase {
  name:"TopbarModalForwarder";width:300;height:100;visible:true;when:windowShown
  Component{id:scene;Forwarder{}}
  QtObject{id:controller;property bool modal:true;property int calls:0;function outsideClick(point){calls++}}
+ function test_clicked_status_regions_keep_hand_cursor_without_stealing_hover(){
+  const view=createTemporaryObject(scene,this);
+  controller.modal=true;controller.calls=0;
+  NacrePanelState.panels={test:{input:controller,osd:{visibility:true}}};
+  mouseMove(view,160,20);
+  verify(!view.handler.contains(Qt.point(160,20)));
+  tryCompare(view,"childHovered",true);
+  compare(view.childCursor,Qt.PointingHandCursor);
+  mouseClick(view,160,20);
+  compare(view.clicks,1);compare(controller.calls,0);
+  mouseMove(view,80,20);
+  verify(view.handler.contains(Qt.point(80,20)));
+  mouseClick(view,80,20);
+  compare(view.clicks,1);compare(controller.calls,1);
+  NacrePanelState.panels={test:{input:controller,osd:{visibility:false}}};
+  mouseMove(view,160,20);
+  verify(view.handler.contains(Qt.point(160,20)));
+  controller.modal=false;
+ }
  function test_modal_dismissal_does_not_activate_bar_control(){
   const view=createTemporaryObject(scene,this);
   NacrePanelState.panels={test:{input:controller}};

@@ -137,7 +137,8 @@ the main desktop settings and keep their order across sessions; existing optiona
 tile preferences migrate automatically. The same controls work in a detached pearl.
 The top, left and right edge charge-up lines disappear immediately when their
 panels open. While a clicked control page is open, hovering other status icons
-leaves it on its current page. Click another icon to change pages. Moving the pointer away
+keeps the pointing cursor and hover highlight without opening quick-info or changing
+pages. Click another icon to change pages. Moving the pointer away
 closes the panel; quick-info hover peeks then work again.
 
 Hover a bar status icon or the clock for a dropdown after 350 ms. Status

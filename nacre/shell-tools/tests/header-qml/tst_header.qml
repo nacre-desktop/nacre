@@ -56,7 +56,7 @@ TestCase {
             const a = item.mapToItem(view, 0, 0), b = item.mapToItem(view, item.width, item.height);
             const left = Math.min(a.x, b.x), right = Math.max(a.x, b.x);
             if (previous !== null)
-                fuzzyCompare(left - previous, 2, 1, name);
+                fuzzyCompare(left - previous, 1, .1, name);
             previous = right;
         }
     }
@@ -633,7 +633,7 @@ TestCase {
         NacrePanelState.screens.test.session = false;
         NacrePanelState.panels = ({});
     }
-    function test_clicked_control_page_suppresses_hover_peeks_until_closed() {
+    function test_clicked_control_page_keeps_hover_affordance_without_peeks() {
         const view = createTemporaryObject(header, test);
         const flags = {
             session: false,
@@ -662,20 +662,31 @@ TestCase {
                 popouts: popup
             }
         };
-        const icon = findChild(view, "fixtureHeaderAudio");
-        view.requestPeek("bluetooth", icon, true);
+        const icon = findChild(view, "fixtureHeaderBluetooth");
+        mouseMove(icon, icon.width / 2, icon.height / 2);
+        tryCompare(view, "statusHoveredName", "bluetooth");
         compare(view.peekName, "");
         compare(view.peekProgress, 0);
-        verify(!findChild(view, "nacreHeaderStatusCue").visible);
+        const cue = findChild(view, "nacreHeaderStatusCue");
+        verify(cue.visible && cue.width > 0);
+        compare(cue.progress, .08);
         compare(NacrePanelState.calls.length, 0);
         wait(450);
         verify(!popup.hasCurrent && flags.osd);
+        compare(cue.progress, .08);
+        compare(view.peekName, "");
         compare(flags.controlSection, "network");
         view.requestPeek("bluetooth", icon, false);
         verify(flags.osd);
         view.openStatus("bluetooth", icon, true);
         compare(NacrePanelState.calls[0], "bluetooth");
         compare(NacrePanelState.controlsMode, "dropdown");
+        const clock = findChild(view, "nacreHeaderClock");
+        mouseMove(clock, clock.width / 2, clock.height / 2);
+        tryCompare(findChild(view, "nacreHeaderCalendarCue"), "progress", .08);
+        wait(450);
+        verify(!popup.hasCurrent && flags.osd);
+        compare(view.peekName, "");
         flags.osd = false;
         view.requestPeek("network", icon, true);
         tryVerify(() => popup.hasCurrent, 600);
