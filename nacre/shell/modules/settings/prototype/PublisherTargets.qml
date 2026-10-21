@@ -44,9 +44,14 @@ Column {
                     const other = root.registry.schema.settings.find(item => item.id === "colors/app-theming.targets." + row.id);
                     return other?.store.key[1] === canonical && row.id !== modelData.id;
                 }).map(row => root.registry.text(row.labelId));
-                return shared.length ? root.registry.text("settings.registry.colors.target.shared", {
-                    apps: shared.join(", ")
-                }) : root.registry.text("settings.registry.colors.target.description");
+                if (shared.length) {
+                    return root.registry.text("settings.registry.colors.target.shared", {
+                        apps: shared.join(", ")
+                    });
+                }
+                return root.registry.text(
+                    descriptor?.descriptionId || "settings.registry.colors.target.description"
+                );
             }
         }
     }
