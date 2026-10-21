@@ -70,6 +70,24 @@ TestCase {
         verify(!view.shown);
         return view;
     }
+    function test_long_feedback_title_wraps_above_the_level_track() {
+        const view = createTemporaryObject(pill, test, {
+            title: "[Keyboard brightness ~~~~~~~~~~~~]",
+            valueLabel: "[30% ~~]"
+        });
+        wait(40);
+        const title = findChild(view, "feedbackTitle"), track = findChild(view, "feedbackTrack");
+        verify(title.lineCount > 1);
+        verify(!title.truncated);
+        verify(view.height > 60);
+        verify(track.y > title.y + title.height);
+        const english = createTemporaryObject(pill, test, {
+            title: "Keyboard brightness",
+            valueLabel: "30%"
+        });
+        wait(40);
+        compare(english.height, 60);
+    }
     function test_startup_is_quiet_repeats_update_and_extend_deadline() {
         const view = createTemporaryObject(events, test);
         NacreAudio.volume = .5;

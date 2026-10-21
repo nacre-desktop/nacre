@@ -12,7 +12,8 @@ Item {
     property bool muted: false
     property bool animateLevel: true
     implicitWidth: 336
-    implicitHeight: level ? (detail ? 76 : 60) : 68
+    readonly property real textBottom: heading.y + heading.implicitHeight + (detail ? detailText.implicitHeight + 2 : 0)
+    implicitHeight: Math.max(level ? (detail ? 76 : 60) : 68, textBottom + (level ? 27 : 14))
     Accessible.role: Accessible.StaticText
     Accessible.name: [title, valueLabel, detail].filter(part => part !== "").join(". ")
     Connections {
@@ -47,7 +48,7 @@ Item {
         text: root.title
         font.pointSize: 11
         font.weight: Font.Medium
-        elide: Text.ElideRight
+        wrapMode: Text.Wrap
     }
     NacreText {
         id: percentage
@@ -60,6 +61,7 @@ Item {
         color: NacreTokens.mutedInk
     }
     NacreText {
+        id: detailText
         objectName: "feedbackDetail"
         x: heading.x
         y: heading.y + heading.height + 2
