@@ -1102,9 +1102,7 @@ impl Publisher {
     }
     pub fn apply_palette(&mut self, wallpaper: Option<&Path>, live: bool) -> Result<()> {
         let _guard = publication_lock(&self.paths)?;
-        self.apply_locked(wallpaper, live)?;
-        refresh_spicetify(&self.paths, live);
-        Ok(())
+        self.apply_locked(wallpaper, live, true)
     }
     fn selected(&self, wallpaper: Option<&Path>) -> Result<String> {
         if let Some(wallpaper) = wallpaper.filter(|path| !path.as_os_str().is_empty()) {
@@ -1124,7 +1122,12 @@ impl Publisher {
         let preferences = state::read(&self.paths.config.join("desktop.json"), json!({}))?;
         publish_compositor_palette_with(&self.assets, &self.backend, colors, &preferences)
     }
-    fn apply_locked(&mut self, wallpaper: Option<&Path>, live: bool) -> Result<()> {
+    fn apply_locked(
+        &mut self,
+        wallpaper: Option<&Path>,
+        live: bool,
+        refresh_before_reload: bool,
+    ) -> Result<()> {
         let paths = &self.paths;
         let mut data = state::read(&paths.state.join("scheme.json"), Value::Null)?;
         let options = crate::owned_settings::read(
@@ -1242,6 +1245,9 @@ impl Publisher {
                 &self.paths.state.join("wallpaper/last.txt"),
                 &crate::paths::weak_canonical(&crate::paths::expand(wallpaper)?)?.to_string_lossy(),
             )?;
+        }
+        if refresh_before_reload {
+            refresh_spicetify(&self.paths, live);
         }
         if live {
             self.reload_desktop_consumers(&data, &icon_theme, &config, connection.as_ref())?;
@@ -1450,7 +1456,15 @@ impl Publisher {
             return Ok(false);
         };
         let guard = publication_lock(&self.paths)?;
-        self.commit_checked(image, data, thumbnail, live, allow_mode_change, &guard)
+        self.commit_checked(
+            image,
+            data,
+            thumbnail,
+            live,
+            allow_mode_change,
+            true,
+            &guard,
+        )
     }
     pub(crate) fn commit_prepared_held(
         &mut self,
@@ -1464,8 +1478,17 @@ impl Publisher {
         let Some((image, thumbnail)) = self.prepared_inputs(wallpaper, data, thumbnail)? else {
             return Ok(false);
         };
-        self.commit_checked(image, data, thumbnail, live, allow_mode_change, guard)
+        self.commit_checked(
+            image,
+            data,
+            thumbnail,
+            live,
+            allow_mode_change,
+            false,
+            guard,
+        )
     }
+    #[allow(clippy::too_many_arguments)]
     fn commit_checked(
         &mut self,
         image: std::path::PathBuf,
@@ -1473,6 +1496,7 @@ impl Publisher {
         thumbnail: std::path::PathBuf,
         live: bool,
         allow_mode_change: bool,
+        refresh_before_reload: bool,
         guard: &PublicationGuard,
     ) -> Result<bool> {
         if guard.path
@@ -1510,13 +1534,12 @@ impl Publisher {
             &self.paths.state.join("wallpaper/thumbnail.jpg"),
             &thumbnail,
         )?;
-        self.apply_locked(Some(&image), live)?;
-        refresh_spicetify(&self.paths, live);
+        self.apply_locked(Some(&image), live, refresh_before_reload)?;
         Ok(true)
     }
     pub fn restore_demo(&mut self, snapshot: &Value, live: bool) -> Result<Value> {
         self.restore_demo_with_publish(snapshot, live, |publisher, poster, live| {
-            publisher.apply_locked(poster, live)
+            publisher.apply_locked(poster, live, false)
         })
     }
     /// Explicit publisher boundary preserves the historical transaction's fault tests.
@@ -1677,6 +1700,7 @@ impl Publisher {
             }
             return Err(error);
         }
+        refresh_spicetify(&self.paths, live);
         Ok(media.clone())
     }
 }
@@ -1693,7 +1717,7 @@ impl Publisher {
         {
             return Err("Palette lock belongs to a different home".into());
         }
-        self.apply_locked(wallpaper, live)
+        self.apply_locked(wallpaper, live, false)
     }
 }
 

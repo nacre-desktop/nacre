@@ -791,6 +791,7 @@ impl Colors {
             self.media.preference(&Value::Object(previous))?;
             return Err(error);
         }
+        crate::classic_state::post_publish_external_targets(&self.publisher.paths, live);
         let identity = identity.as_str().ok_or("Invalid preview identity")?;
         let history = json!({"id":&identity[..16],"name":item["name"],"time":self.now()/1000,"request":request});
         values["lastApplied"] = json!(identity);
