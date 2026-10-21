@@ -280,7 +280,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             .iter()
             .map(|(k, v)| (k.as_str(), v.as_str().unwrap_or("")))
             .collect::<Vec<_>>();
-        println!("{}", url(base, &pairs));
+        println!("{}", serde_json::to_string(&url(base, &pairs))?);
         return Ok(0);
     }
     let paths = Paths::environment()?;

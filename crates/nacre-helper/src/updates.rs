@@ -152,10 +152,8 @@ fn status(pending: &str) -> Result<Value> {
         &["--version", "-v"],
         Duration::from_secs(10),
         "checking the active Quickshell build",
-    );
-    let local = version
-        .as_ref()
-        .is_some_and(|x| String::from_utf8_lossy(&x.stdout).contains("Nacre local Qt rebuild"));
+    ).ok_or("Could not run the Quickshell version probe")?;
+    let local = String::from_utf8_lossy(&version.stdout).contains("Nacre local Qt rebuild");
     let blocked = local && pending_qt_release_change(pending)?;
     let mut message = if blocked {
         "Quickshell rebuild needed before updating"
