@@ -135,6 +135,10 @@ Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
+While a clicked control page is open, hovering other status icons leaves it on
+its current page. Click another icon to change pages. Moving the pointer away
+closes the panel; quick-info hover peeks then work again.
+
 Hover a bar status icon or the clock for a dropdown after 350 ms. Status
 summaries are read-only and share the control panel's width and left edge, so a
 click expands them in place. The calendar keeps its month controls. Clicking the

@@ -111,7 +111,14 @@ suites = {
         "test_quick_controls",
         "QuickControlsTests",
         "test_popups_and_settings_navigation_in_native_qt",
-        """const panel=createTemporaryObject(center,this);for(const section of ["home","network","bluetooth","audio","battery","session","updates","notifications","edit"]){panel.selectedSection=section;wait(100);capture(panel,"controls-"+section)}const scroll=findChild(panel,"controlPageScroll");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-edit-actions");NacreControlPreferences.save(NacreControlPreferences.allowed);panel.selectedSection="home";wait(100);capture(panel,"controls-custom");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-custom-actions");NacreControlPreferences.reset()""",
+        """const panel=createTemporaryObject(center,this);for(const section of ["home","network","bluetooth","audio","battery","session","updates","notifications","calendar","edit"]){panel.selectedSection=section;wait(100);capture(panel,"controls-"+section)}const scroll=findChild(panel,"controlPageScroll");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-edit-actions");NacreControlPreferences.save(NacreControlPreferences.allowed);panel.selectedSection="home";wait(100);capture(panel,"controls-custom");scroll.contentY=Math.max(0,scroll.contentHeight-scroll.height);wait(100);capture(panel,"controls-custom-actions");NacreControlPreferences.reset();for(const section of ["audio","network","bluetooth","battery","session","calendar"]){panel.panel.presentation="dropdown";panel.selectedSection=section;wait(350);capture(panel,"controls-compact-"+section)}""",
+        "",
+    ),
+    "feedback": (
+        "test_osd",
+        "OsdTests",
+        "test_osd_family_events_and_accessible_presentation",
+        """const data=createTemporaryObject(model,this);const view=createTemporaryObject(pill,this,{width:336});view.title=Qt.binding(()=>data.title);view.detail=Qt.binding(()=>data.detail);view.icon=Qt.binding(()=>data.glyph);view.value=Qt.binding(()=>data.value);view.level=Qt.binding(()=>data.level);view.valueLabel=Qt.binding(()=>!data.level?"":data.muted?NacreI18n.tr("osd.level-notice.text.muted","Muted"):NacreI18n.tr("osd.feedback.percent","{value}%",{value:NacreI18n.number(Math.round(data.value*100))}));for(const channel of ["volume","microphone","display","keyboard","capslock","power-profile","night-light","dnd","output"]){data.channel=channel;wait(180);capture(view,"feedback-"+channel)}""",
         "",
     ),
     "themes": (

@@ -355,6 +355,11 @@ impl Service {
             let valid = if provider {
                 object.get(key) == Some(value)
                     || validation::provider_change(&request.store, key, value, object.get(key))
+            } else if request.store == "control-center" && key == "defaultsRevision" {
+                // UI default rollouts persist their revision beside the tile order.
+                value
+                    .as_u64()
+                    .is_some_and(|v| v > 0 && v <= i32::MAX as u64)
             } else if request.store == "battery-alerts" {
                 key == "severity" && value.as_u64().is_some_and(|n| n <= 2)
             } else {
@@ -1277,6 +1282,46 @@ mod tests {
             .wait_launcher_preferences(1, &expected)
             .await
             .unwrap();
+    }
+
+    #[tokio::test]
+    async fn control_defaults_revision_persists_saved_removals_through_daemon() {
+        let (_home, paths, _hub, service) = fixture().await;
+        let value = json!({"version":2,"defaultsRevision":2,"tiles":["volume","network"]});
+        let result = service
+            .publish_owned(SettingsPublish {
+                store: "control-center".into(),
+                value: value.clone(),
+                rev: 0,
+            })
+            .await
+            .unwrap();
+        assert_eq!(result["rev"], 1);
+        service
+            .stores
+            .lock()
+            .await
+            .get_mut("control-center")
+            .unwrap()
+            .deadline = Some(Instant::now());
+        service.flush().await.unwrap();
+        let saved: Value = serde_json::from_slice(
+            &std::fs::read(paths.config.join("control-center.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(saved, value);
+        for revision in [json!(0), json!(-1), json!(2.5), json!("2"), json!(true)] {
+            let invalid = json!({"version":2,"defaultsRevision":revision,"tiles":[]});
+            let error = service
+                .publish_owned(SettingsPublish {
+                    store: "control-center".into(),
+                    value: invalid,
+                    rev: 1,
+                })
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::PermissionDenied);
+        }
     }
 
     #[tokio::test]

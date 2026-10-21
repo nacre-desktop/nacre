@@ -81,7 +81,7 @@ Item {
     readonly property var sessionPosition: position("right", session)
     readonly property var dashboardPosition: position("top", dashboard)
     readonly property var launcherPosition: position("bottom", launcher)
-    readonly property bool controlDropdown: controlPlacementJoined && ["peek", "calendar"].includes(popouts.currentName)
+    readonly property bool controlDropdown: ["peek", "calendar"].includes(popouts.currentName)
     readonly property var popupPosition: controlDropdown ? ({
             x: Math.max(0, width - popouts.width),
             y: 0,

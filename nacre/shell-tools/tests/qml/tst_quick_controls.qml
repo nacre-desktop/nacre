@@ -207,18 +207,17 @@ TestCase {
         verify(page.atYEnd);
         compare(page.y + page.height, panel.height - 18);
     }
-    function test_dropdown_starts_below_the_bar_and_peek_handoff_keeps_its_size() {
+    function test_dropdown_opens_vertically_and_unloads_without_peek_handoff() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
         panel.visibility = false;
         wait(350);
         panel.presentation = "dropdown";
         compare(panel.height, 0);
         compare(panel.width, panel.contentWidth);
-        panel.seedPreviewPeek(320, 100);
-        compare(panel.presentedHeight, 100);
+        compare(findChild(panel, "controlBodyLoader").item, null);
         panel.visibility = true;
         wait(40);
-        verify(panel.height >= 100 && panel.height < panel.contentHeight);
+        verify(panel.height > 0 && panel.height < panel.contentHeight);
         wait(350);
         compare(panel.height, panel.contentHeight);
     }
@@ -597,12 +596,14 @@ TestCase {
         compare(panel.section, "battery");
         compare(PowerProfiles.profile, profile);
         scene.selectedSection = "session";
-        wait(230);
-        compare(panel.height, scene.height);
+        wait(350);
+        verify(panel.height < scene.height);
+        compare(panel.height, panel.contentHeight);
         const page = findChild(panel, "controlPageLoader").item;
         page.choose("restart");
-        wait(230);
-        compare(panel.height, scene.height);
+        wait(350);
+        verify(panel.height < scene.height);
+        compare(panel.height, panel.contentHeight);
         compare(AppLaunch.calls.length, 0);
     }
     function test_wired_desktop_hides_unsupported_levels_and_has_no_media() {

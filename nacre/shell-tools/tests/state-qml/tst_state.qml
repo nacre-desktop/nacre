@@ -133,6 +133,21 @@ TestCase {
         NacrePanelState.screens = ({});
         NacrePanelState.panels = ({});
     }
+    function test_system_pages_select_compact_mode_and_edges_restore_sidebar() {
+        verify(NacrePanelState.openControls("calendar", "two", true, true, "dropdown"));
+        verify(two.osd && !one.osd);
+        compare(two.controlSection, "calendar");
+        compare(two.controlsMode, "dropdown");
+        verify(two.controlsPointerOwned);
+        verify(!NacrePanelState.openControls("invalid", "two", true, false, "dropdown"));
+        NacrePanelState.close();
+        verify(NacrePanelState.openEdge("osd", "two"));
+        compare(two.controlsMode, "sidebar");
+        compare(two.controlSection, "home");
+        verify(NacrePanelState.openControls("audio", "one", true, false));
+        compare(one.controlsMode, "sidebar");
+        verify(!one.controlsPointerOwned);
+    }
     function test_router_modes_preview_toggle_and_per_output_fallback() {
         verify(NacrePanelState.openMode("wallpaper", "", true));
         verify(one.launcher && one.previewOnly);

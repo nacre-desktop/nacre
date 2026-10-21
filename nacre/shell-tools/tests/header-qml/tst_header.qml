@@ -633,6 +633,54 @@ TestCase {
         NacrePanelState.screens.test.session = false;
         NacrePanelState.panels = ({});
     }
+    function test_clicked_control_page_suppresses_hover_peeks_until_closed() {
+        const view = createTemporaryObject(header, test);
+        const flags = {
+            session: false,
+            launcher: false,
+            dashboard: false,
+            dashboardPinned: false,
+            edgeMenu: "osd",
+            osd: true,
+            controlsMode: "dropdown",
+            controlSection: "network",
+            controlsPointerOwned: true
+        };
+        NacrePanelState.screens = {
+            test: flags
+        };
+        const popup = {
+            hasCurrent: false,
+            currentName: "",
+            peekKind: "",
+            currentCenter: 0,
+            pinned: false,
+            headerHovered: false
+        };
+        NacrePanelState.panels = {
+            test: {
+                popouts: popup
+            }
+        };
+        const icon = findChild(view, "fixtureHeaderAudio");
+        view.requestPeek("bluetooth", icon, true);
+        compare(view.peekName, "");
+        compare(view.peekProgress, 0);
+        compare(NacrePanelState.calls.length, 0);
+        wait(450);
+        verify(!popup.hasCurrent && flags.osd);
+        compare(flags.controlSection, "network");
+        view.requestPeek("bluetooth", icon, false);
+        verify(flags.osd);
+        view.openStatus("bluetooth", icon, true);
+        compare(NacrePanelState.calls[0], "bluetooth");
+        compare(NacrePanelState.controlsMode, "dropdown");
+        flags.osd = false;
+        view.requestPeek("network", icon, true);
+        tryVerify(() => popup.hasCurrent, 600);
+        compare(popup.currentName, "peek");
+        compare(popup.peekKind, "network");
+    }
     function test_status_peeks_delay_release_and_direct_routes() {
         const view = createTemporaryObject(header, test);
         const region = findChild(view, "nacreHeaderStatus");
@@ -664,11 +712,9 @@ TestCase {
         verify(!popup.hasCurrent);
         view.openStatus("audio", region);
         compare(NacrePanelState.calls[0], "audio");
-        compare(NacrePanelState.popupRequests[0].name, "audio");
-        compare(NacrePanelState.popupRequests[0].screen, "test");
-        const audio = findChild(view, "fixtureHeaderAudio");
-        compare(NacrePanelState.popupRequests[0].center, audio.mapToItem(view, audio.width / 2, audio.height / 2).x);
-        verify(popup.pinned);
+        compare(NacrePanelState.controlsMode, "dropdown");
+        verify(NacrePanelState.controlsPointerOwned);
+        verify(!popup.hasCurrent);
         NacrePanelState.panels = {
             test: {
                 popouts: {
@@ -678,7 +724,8 @@ TestCase {
         };
         view.openStatus("notifications", region);
         compare(NacrePanelState.calls[1], "notifications");
-        verify(NacrePanelState.panels.test.popouts.pinned);
+        compare(NacrePanelState.controlsMode, "dropdown");
+        verify(!NacrePanelState.panels.test.popouts.pinned);
         let selected = "", activated = 0;
         NacrePearls.entries = [
             {
