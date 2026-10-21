@@ -399,11 +399,18 @@ mod script_contract_tests {
     #[test]
     fn explicit_upgrade_failure_keeps_step_exit_and_skipreview() -> crate::Result<()> {
         let root = tempfile::tempdir()?;
-        executable(root.path(), "python3", "case \"$*\" in *--needs-host) exit 1;; *--preflight) exit 0;; esac")?;
+        executable(
+            root.path(),
+            "python3",
+            "case \"$*\" in *--needs-host) exit 1;; *--preflight) exit 0;; esac",
+        )?;
         executable(root.path(), "gum", "exit 0")?;
         executable(root.path(), "paru", "printf '%s\\n' \"$*\"; exit 7")?;
         let output = Command::new("bash")
-            .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools/updates.sh"))
+            .arg(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../nacre/shell-tools/updates.sh"),
+            )
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
             .stdin(std::process::Stdio::null())
@@ -417,11 +424,18 @@ mod script_contract_tests {
     #[test]
     fn namespaced_update_routes_before_confirmation() -> crate::Result<()> {
         let root = tempfile::tempdir()?;
-        executable(root.path(), "python3", "case \"$*\" in *--needs-host) exit 0;; esac")?;
+        executable(
+            root.path(),
+            "python3",
+            "case \"$*\" in *--needs-host) exit 0;; esac",
+        )?;
         executable(root.path(), "gum", "echo unexpected-confirmation; exit 99")?;
         executable(root.path(), "systemd-run", "printf '%s\\n' \"$*\"; exit 7")?;
         let output = Command::new("bash")
-            .arg(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools/updates.sh"))
+            .arg(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join("../../nacre/shell-tools/updates.sh"),
+            )
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
             .stdin(std::process::Stdio::null())
@@ -430,7 +444,8 @@ mod script_contract_tests {
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("--user --wait --pipe --collect --quiet -- /usr/bin/bash"));
         assert!(!stdout.contains("unexpected-confirmation"));
-        assert!(String::from_utf8_lossy(&output.stderr).contains("starting the host update service (exit 7)"));
+        assert!(String::from_utf8_lossy(&output.stderr)
+            .contains("starting the host update service (exit 7)"));
         Ok(())
     }
 }
