@@ -71,6 +71,7 @@ Rectangle {
  property bool hovered:false
  property bool hasCurrent:false
  property bool pinned:false
+ property string currentName:""
  property real currentCenter:0
  property real targetWidth:200
  property bool suppressed:false
@@ -92,6 +93,19 @@ TestCase {
   QtObject {id:input;property bool hovered:false;property bool popoutHovered:false;property bool dashboardHovered:false}
   NacrePanelHost {id:host;anchors.fill:parent;screen:({name:"test"});visibilities:flags;input:input}
  }}
+ function test_status_peeks_follow_the_icon_center_and_clamp_at_the_edge(){
+  const view=createTemporaryObject(scene,this),host=view.host,popup=host.popouts;
+  popup.currentName="peek";popup.width=100;popup.targetWidth=100;popup.hasCurrent=true;
+  for(const center of [100,160,220]){
+   popup.currentCenter=center;
+   compare(host.popupPosition.x+popup.width/2+host.x,center);
+   compare(host.popupPosition.y,0);verify(!host.popupPosition.joinsRight);
+  }
+  popup.currentCenter=390;
+  compare(host.popupPosition.x+popup.width,host.width);verify(host.popupPosition.joinsRight);
+  view.width=300;popup.currentCenter=290;
+  compare(host.popupPosition.x+popup.width,host.width);
+ }
  function test_top_dashboard_does_not_hide_corner_notifications(){
   const view=createTemporaryObject(scene,this);
   view.host.popouts.height=0;view.host.session.width=0;view.flags.launcher=false;

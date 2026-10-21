@@ -136,7 +136,8 @@ beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
 Hover a bar status icon or the clock for a dropdown after 350 ms. Status
-summaries are read-only; the calendar keeps its month controls. Clicking the
+summaries are read-only and centered beneath their icon, clamped inside the screen
+edges; the calendar keeps its month controls. Clicking the
 clock opens Calendar in the shared control surface, with month navigation, day selection, Today and the configured agenda. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
