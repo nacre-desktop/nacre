@@ -202,18 +202,9 @@ TestCase {
         const spotifyRow = findChild(view, "colors/app-theming.targets.spotify");
         verify(gtk && thunar && chromium && discord && spotify);
         verify(chromiumRow && discordRow && spotifyRow);
-        compare(
-            chromiumRow.description,
-            RegistryData.messages["settings.registry.colors.target.chromium.description"]
-        );
-        compare(
-            discordRow.description,
-            RegistryData.messages["settings.registry.colors.target.discord.description"]
-        );
-        compare(
-            spotifyRow.description,
-            RegistryData.messages["settings.registry.colors.target.spotify.description"]
-        );
+        compare(chromiumRow.description, RegistryData.messages["settings.registry.colors.target.chromium.description"]);
+        compare(discordRow.description, RegistryData.messages["settings.registry.colors.target.discord.description"]);
+        compare(spotifyRow.description, RegistryData.messages["settings.registry.colors.target.spotify.description"]);
         verify(gtk.checked && thunar.checked && chromium.checked);
         verify(discord.checked && spotify.checked);
         mouseClick(gtk, gtk.width / 2, gtk.height / 2);

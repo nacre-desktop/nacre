@@ -177,8 +177,8 @@ pub fn provider_field(store: &str, key: &str, value: &Value) -> bool {
         ("colors", "appThemes") => value.as_object().is_some_and(|values| {
             values.iter().all(|(key, value)| {
                 [
-                    "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
-                    "chromium", "discord", "spotify",
+                    "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login", "chromium",
+                    "discord", "spotify",
                 ]
                 .contains(&key.as_str())
                     && value.is_boolean()
@@ -368,8 +368,8 @@ pub fn provider_change(store: &str, key: &str, value: &Value, previous: Option<&
         return value.as_object().is_some_and(|values| {
             values.iter().all(|(key, value)| {
                 ([
-                    "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
-                    "chromium", "discord", "spotify",
+                    "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login", "chromium",
+                    "discord", "spotify",
                 ]
                 .contains(&key.as_str())
                     && value.is_boolean())
