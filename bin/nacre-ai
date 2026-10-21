@@ -653,7 +653,7 @@ def ssh_exec(host, command):
 
 
 def history_worker_command(child):
-    """Keep history and resumed workers out of Niri's code-overlay user namespace.
+    """Keep chat, history and resumed workers out of Niri's code-overlay user namespace.
 
     Bubblewrap's single-user mapping hides host root ownership from OpenSSH,
     which then rejects system configuration files. The normal user manager
@@ -767,7 +767,7 @@ def worker_window(args):
     ]
     if args.account is not None:
         child += ["--account", args.account]
-    result = subprocess.run(child)
+    result = subprocess.run(history_worker_command(child))
     if result.returncode:
         print(
             f"\nCould not finish opening this workspace (exit {result.returncode}).",
