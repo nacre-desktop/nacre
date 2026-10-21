@@ -170,6 +170,21 @@ TestCase {
                         id: "kitty",
                         labelId: "settings.publisher.kitty",
                         status: "current"
+                    },
+                    {
+                        id: "chromium",
+                        labelId: "settings.publisher.chromium",
+                        status: "current"
+                    },
+                    {
+                        id: "discord",
+                        labelId: "settings.publisher.discord",
+                        status: "current"
+                    },
+                    {
+                        id: "spotify",
+                        labelId: "settings.publisher.spotify",
+                        status: "current"
                     }
                 ]
             }
@@ -179,16 +194,28 @@ TestCase {
         wait(30);
         const gtk = findChild(view, "control-colors/app-theming.targets.gtk3");
         const thunar = findChild(view, "control-colors/app-theming.targets.thunar");
-        verify(gtk && thunar);
-        verify(gtk.checked && thunar.checked);
+        const chromium = findChild(view, "control-colors/app-theming.targets.chromium");
+        const discord = findChild(view, "control-colors/app-theming.targets.discord");
+        const spotify = findChild(view, "control-colors/app-theming.targets.spotify");
+        verify(gtk && thunar && chromium && discord && spotify);
+        verify(gtk.checked && thunar.checked && chromium.checked);
+        verify(discord.checked && spotify.checked);
         mouseClick(gtk, gtk.width / 2, gtk.height / 2);
         compare(testStore.files.colors.appThemes.gtk3, false);
         verify(!thunar.checked);
+        mouseClick(chromium, chromium.width / 2, chromium.height / 2);
+        compare(testStore.files.colors.appThemes.chromium, false);
+        mouseClick(discord, discord.width / 2, discord.height / 2);
+        compare(testStore.files.colors.appThemes.discord, false);
+        mouseClick(spotify, spotify.width / 2, spotify.height / 2);
+        compare(testStore.files.colors.appThemes.spotify, false);
         mouseClick(thunar, thunar.width / 2, thunar.height / 2);
         verify(gtk.checked && thunar.checked);
         verify(view.results.length === 0);
         view.query = "Thunar";
         verify(view.results.some(item => item.id === "colors/app-theming.targets.thunar"));
+        view.query = "Chromium";
+        verify(view.results.some(item => item.id === "colors/app-theming.targets.chromium"));
         NacreSettingsStorage.documents = {};
     }
     function test_power_master_switch_unlocks_real_profile_choices() {
