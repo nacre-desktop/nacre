@@ -1125,6 +1125,7 @@ def run(args, directory):
                     if action == "launcher" and result.get("readyImages", 0) < 12:
                         raise RuntimeError("Launcher fixture icons are not ready")
                     if action == "launcher" and label == "cold":
+
                         def send_launcher_key(key):
                             before_state = state("performanceFrame", "state")
                             previous_key = before_state.get("keySequence", 0)
@@ -1150,8 +1151,12 @@ def run(args, directory):
                                 "key": key,
                                 "frame_ms": key_result["keyFrameMs"],
                                 "ui_cpu_ms": (cpu_after - cpu_before) / 1e6,
-                                "helper_calls_at_frame": key_result.get("helperCalls", 0),
-                                "emoji_starts_at_frame": key_result.get("emojiCalls", 0),
+                                "helper_calls_at_frame": key_result.get(
+                                    "helperCalls", 0
+                                ),
+                                "emoji_starts_at_frame": key_result.get(
+                                    "emojiCalls", 0
+                                ),
                             }, key_result
 
                         def clear_launcher_query(length):
@@ -1171,10 +1176,18 @@ def run(args, directory):
                                 time.sleep(interval_s)
                                 after = state("performanceFrame", "state")
                                 helper_deltas.append(
-                                    max(0, after.get("helperCalls", 0) - key_state.get("helperCalls", 0))
+                                    max(
+                                        0,
+                                        after.get("helperCalls", 0)
+                                        - key_state.get("helperCalls", 0),
+                                    )
                                 )
                                 emoji_deltas.append(
-                                    max(0, after.get("emojiCalls", 0) - key_state.get("emojiCalls", 0))
+                                    max(
+                                        0,
+                                        after.get("emojiCalls", 0)
+                                        - key_state.get("emojiCalls", 0),
+                                    )
                                 )
                             time.sleep(0.5)
                             settled = state("performanceFrame", "state")
@@ -1182,8 +1195,16 @@ def run(args, directory):
                                 "query": name,
                                 "inter_key_delay_ms": interval_s * 1000,
                                 "samples": samples,
-                                "helper_calls": max(0, settled.get("helperCalls", 0) - before.get("helperCalls", 0)),
-                                "emoji_starts": max(0, settled.get("emojiCalls", 0) - before.get("emojiCalls", 0)),
+                                "helper_calls": max(
+                                    0,
+                                    settled.get("helperCalls", 0)
+                                    - before.get("helperCalls", 0),
+                                ),
+                                "emoji_starts": max(
+                                    0,
+                                    settled.get("emojiCalls", 0)
+                                    - before.get("emojiCalls", 0),
+                                ),
                                 "slow_per_key_helper_deltas": helper_deltas,
                                 "slow_per_key_emoji_deltas": emoji_deltas,
                             }
@@ -1202,8 +1223,16 @@ def run(args, directory):
                                 "query": "firefox",
                                 "inter_key_delay_ms": 80,
                                 "samples": firefox,
-                                "helper_calls": max(0, firefox_state.get("helperCalls", 0) - before_queries.get("helperCalls", 0)),
-                                "emoji_starts": max(0, firefox_state.get("emojiCalls", 0) - before_queries.get("emojiCalls", 0)),
+                                "helper_calls": max(
+                                    0,
+                                    firefox_state.get("helperCalls", 0)
+                                    - before_queries.get("helperCalls", 0),
+                                ),
+                                "emoji_starts": max(
+                                    0,
+                                    firefox_state.get("emojiCalls", 0)
+                                    - before_queries.get("emojiCalls", 0),
+                                ),
                             }
                         ]
                         clear_launcher_query(7)
