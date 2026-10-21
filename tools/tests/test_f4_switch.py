@@ -21,6 +21,19 @@ class Crash(BaseException):
     pass
 
 
+class Clock:
+    def __init__(self):
+        self.now = 0
+        self.sleeps = []
+
+    def monotonic(self):
+        return self.now
+
+    def sleep(self, duration):
+        self.sleeps.append(duration)
+        self.now += duration
+
+
 class Manager:
     def __init__(self, home):
         self.home = home
@@ -48,6 +61,9 @@ class Manager:
         self.calls = []
         self.failure = None
         self.bad_health = False
+        self.ready_after = 0
+        self.status_calls = 0
+        self.status_boots = []
         self.after_mutation = None
 
     def __call__(self, command, **kwargs):
@@ -66,6 +82,12 @@ class Manager:
                 "services": {"settings": {"status": "running"}},
                 "topics": ["settings.store.desktop"],
             }
+            if method == "daemon.status":
+                self.status_calls += 1
+                if self.status_calls <= self.ready_after:
+                    value["services"]["settings"]["status"] = "starting"
+                if self.status_boots:
+                    value["boot"] = self.status_boots.pop(0)
             if method == "settings.get":
                 value = {
                     "store": "desktop",
@@ -359,6 +381,56 @@ class SwitchTests(unittest.TestCase):
         self.assertEqual(self.manager.manager[m.KEY], "1")
         self.switch.run("rollback")
         self.assertFalse(self.switch.dropin.exists())
+
+    def test_health_polls_until_ready_before_checking_stores(self):
+        self.manager.ready_after = 3
+        clock = Clock()
+        with (
+            patch.object(m.time, "monotonic", clock.monotonic),
+            patch.object(m.time, "sleep", clock.sleep),
+        ):
+            self.switch.run("enable")
+        self.assertEqual(
+            self.manager.status_calls, 5
+        )  # startup polls + identity recheck
+        self.assertEqual(clock.sleeps, [0.1, 0.2, 0.4])
+        rpc = [c[-2] for c in self.manager.calls if c[0] == "/usr/bin/nacrectl"]
+        self.assertEqual(rpc, ["daemon.status"] * 4 + ["settings.get", "daemon.status"])
+
+    def test_health_never_ready_hits_deadline_and_restores_prior(self):
+        self.manager.ready_after = 1000
+        before = self.prior()
+        clock = Clock()
+        with (
+            patch.object(m.time, "monotonic", clock.monotonic),
+            patch.object(m.time, "sleep", clock.sleep),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError, "timed out; prior state restored"
+            ):
+                self.switch.run("enable")
+        self.assertEqual(clock.now, 12)
+        self.assertTrue(all(0 < delay <= 0.5 for delay in clock.sleeps))
+        self.assertFalse(any(c[-2] == "settings.get" for c in self.manager.calls))
+        self.assertRestored(before)
+
+    def test_identity_change_while_polling_fails_and_restores_prior(self):
+        self.manager.ready_after = 3
+        self.manager.status_boots = ["boot-a", "boot-b"]
+        before = self.prior()
+        clock = Clock()
+        with (
+            patch.object(m.time, "monotonic", clock.monotonic),
+            patch.object(m.time, "sleep", clock.sleep),
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "identity changed during readiness polling; prior state restored",
+            ):
+                self.switch.run("enable")
+        self.assertEqual(self.manager.status_calls, 2)
+        self.assertEqual(clock.sleeps, [0.1])
+        self.assertRestored(before)
 
     def test_health_failure_restores_exact_prior(self):
         self.switch.run("disable")

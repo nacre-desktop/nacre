@@ -551,7 +551,26 @@ class Switch:
                 raise RuntimeError("F4 daemon status is not ready")
             return value["boot"], stores
 
-        initial = ready(call("daemon.status", {}))
+        observed_boot = None
+        backoff = 0.1
+        while True:
+            status = call("daemon.status", {})
+            boot = status.get("boot")
+            if isinstance(boot, str) and boot:
+                if observed_boot is not None and boot != observed_boot:
+                    raise RuntimeError(
+                        "F4 daemon identity changed during readiness polling"
+                    )
+                observed_boot = boot
+            try:
+                initial = ready(status)
+                break
+            except RuntimeError:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError("F4 protocol health timed out") from None
+                time.sleep(min(backoff, remaining))
+                backoff = min(0.5, backoff * 2)
         for store in initial[1]:
             value = call("settings.get", {"store": store})
             rev = value.get("rev")
