@@ -51,6 +51,7 @@ fn provider_expectations(store: &str, accepted: &Value) -> Vec<state::FieldExpec
         if store == "colors" && key == "appThemes" {
             for theme in [
                 "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
+                "chromium", "discord", "spotify",
             ] {
                 expected.push(state::FieldExpectation::from_data(
                     &accepted["data"],
@@ -193,7 +194,7 @@ mod tests {
         let accepted = json!({
             "data": {
                 "favorites": [],
-                "appThemes": {"gtk3": true, "futureTheme": "kept"},
+                "appThemes": {"gtk3": true, "chromium": true, "futureTheme": "kept"},
                 "futureField": {"kept": true}
             }
         });
@@ -213,7 +214,7 @@ mod tests {
         ));
 
         let mut owned_theme_changed = accepted["data"].clone();
-        owned_theme_changed["appThemes"]["gtk3"] = json!(false);
+        owned_theme_changed["appThemes"]["chromium"] = json!(false);
         assert!(!state::expectations_match(&owned_theme_changed, &expected));
     }
 }
