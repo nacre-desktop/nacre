@@ -190,6 +190,9 @@ def main():
     formatter = Path("/usr/lib/qt6/bin/qmlformat")
     if formatter.exists():
         for path in [*(ROOT / "nacre").rglob("*.qml"), *(ROOT / "nacre").rglob("*.js")]:
+            # The injected Spotify asset is browser JavaScript, checked with Node below.
+            if path == ROOT / "nacre/shell-tools/spicetify-theme.js":
+                continue
             formatted = run([str(formatter), str(path)], stdout_only=True)
             if formatted != path.read_text():
                 raise RuntimeError(
@@ -323,9 +326,13 @@ def main():
     )
     if node_cmd:
         run([*node_cmd, "--check", str(ROOT / "brain/web/app.js")])
+        spotify_script = ROOT / "nacre/shell-tools/spicetify-theme.js"
+        run([*node_cmd, "--check", str(spotify_script)])
         if prettier.is_file():
             run([*node_cmd, str(prettier), "--check", str(ROOT / "brain/web/app.js")])
             print("Brain JavaScript syntax and formatting passed.", flush=True)
+            run([*node_cmd, str(prettier), "--check", str(spotify_script)])
+            print("Spicetify JavaScript syntax and formatting passed.", flush=True)
         elif os.environ.get("CI"):
             raise RuntimeError("Install development formatter with npm ci")
         else:

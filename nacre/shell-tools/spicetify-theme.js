@@ -3,10 +3,13 @@
   let last = null;
   setInterval(async () => {
     try {
-      const text = await (await fetch("colors.css?" + Date.now(), { cache: "no-store" })).text();
+      const text = await (
+        await fetch("colors.css?" + Date.now(), { cache: "no-store" })
+      ).text();
       if (last !== null && text !== last) {
         document.querySelectorAll("link.userCSS").forEach((link) => {
-          link.href = link.getAttribute("href").split("?")[0] + "?" + Date.now();
+          link.href =
+            link.getAttribute("href").split("?")[0] + "?" + Date.now();
         });
       }
       last = text;
