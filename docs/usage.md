@@ -123,8 +123,10 @@ Wi-Fi passwords, Bluetooth devices, audio inputs/outputs and the
 application mixer stay inside the panel. Power details show supported display
 and keyboard brightness controls only.
 Unsupported night light is hidden. Edit can add, remove, and reorder every tile,
-slider, and the appearance selector, with a Reset action. Optional controls include
-microphone and keyboard sliders, airplane mode, VPN, recording, mic mute,
+slider, and the appearance selector, with a Reset action. Sound, microphone, display
+brightness and keyboard-backlight sliders appear by default when their devices are
+available. Removing one in Edit stays remembered. Optional controls include
+airplane mode, VPN, recording, mic mute,
 screenshot, color picker, clipboard, wallpaper, updates, and display settings.
 Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from

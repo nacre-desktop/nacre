@@ -33,6 +33,8 @@ TestCase {
             });
         NacreControlActions.busy = false;
         NacreAudio.writes = 0;
+        NacreAudio.available = true;
+        NacreAudio.micAvailable = true;
         DesktopSettings.writes = [];
         AppLaunch.calls = [];
         DesktopActions.calls = [];
@@ -434,6 +436,8 @@ TestCase {
         }
     }
     function test_detected_input_sliders_are_prominent_and_added_beside_related_levels() {
+        NacreControlPreferences.toggle("mic-volume");
+        NacreControlPreferences.toggle("keyboard");
         const scene = createTemporaryObject(center, test), panel = scene.panel;
         scene.selectedSection = "edit";
         wait(40);
@@ -474,6 +478,48 @@ TestCase {
         tryCompare(panel, "height", 540);
         scene.height = 920;
         tryCompare(panel, "height", 920);
+    }
+    function test_all_detected_sliders_are_default_and_follow_device_availability() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        for (const name of ["Volume", "Microphone", "Brightness", "Keyboard"])
+            verify(findChild(panel, "control" + name).visible);
+        NacreAudio.available = false;
+        NacreAudio.micAvailable = false;
+        NacreBrightness.device.available = false;
+        NacreKeyboardLight.available = false;
+        wait(40);
+        for (const name of ["Volume", "Microphone", "Brightness", "Keyboard"])
+            verify(!findChild(panel, "control" + name));
+        NacreAudio.micAvailable = true;
+        wait(40);
+        verify(findChild(panel, "controlMicrophone").visible);
+        verify(!findChild(panel, "controlVolume"));
+        NacreAudio.available = true;
+        NacreBrightness.device.available = true;
+        NacreKeyboardLight.available = true;
+    }
+    function test_slider_default_rollout_preserves_order_and_saved_removals() {
+        const prefs = NacreControlPreferences;
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            tiles: ["bluetooth", "volume", "network", "brightness", "picker"]
+        })));
+        compare(prefs.tiles.join("|"), "bluetooth|volume|mic-volume|network|brightness|keyboard|picker");
+        prefs.toggle("mic-volume");
+        prefs.toggle("keyboard");
+        const saved = findChild(prefs, "controlPreferencesStore").saved;
+        compare(JSON.parse(saved).defaultsRevision, 1);
+        verify(prefs.receive(saved));
+        compare(prefs.tiles.join("|"), "bluetooth|volume|network|brightness|picker");
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            defaultsRevision: 2,
+            tiles: ["volume"]
+        })));
+        prefs.save(prefs.tiles);
+        compare(JSON.parse(findChild(prefs, "controlPreferencesStore").saved).defaultsRevision, 2);
+        prefs.defaultsRevision = 1;
     }
     function test_profiles_are_navigation_and_power_view_fits_its_actions() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
@@ -566,6 +612,8 @@ TestCase {
         verify(!NacreControlPreferences.tiles.includes("network"));
     }
     function test_editor_detected_and_available_rows_filter_support_and_inherit_disabled() {
+        NacreControlPreferences.toggle("mic-volume");
+        NacreControlPreferences.toggle("keyboard");
         const view = createTemporaryObject(editor, test, {
             section: "detected",
             settingsRows: true,
@@ -622,8 +670,6 @@ TestCase {
         wait(30);
         verify(!NacreControlPreferences.tiles.includes("volume"));
         findChild(panel, "controlAdd-screenshot").clicked();
-        wait(30);
-        findChild(panel, "controlAdd-mic-volume").clicked();
         wait(30);
         scene.selectedSection = "home";
         wait(40);

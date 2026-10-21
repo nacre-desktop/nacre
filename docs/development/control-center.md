@@ -26,3 +26,10 @@ section. All instances share `NacreControlPreferences`; readonly `selectedIds`,
 `lipHoverDelay` is an integer desktop preference from 0 to 800 milliseconds,
 defaulting to 350. It affects the top, left and right frame lips only; zero opens
 immediately. Status-icon and calendar hover delays remain independent.
+
+The QML preferences service applies the supported-slider defaults without changing
+the frozen helper registry. Older saved layouts gain microphone and keyboard
+sliders beside existing output/display sliders. Saves carry `defaultsRevision` so
+subsequent explicit removals remain removed; empty layouts and existing order are
+preserved. Unsupported devices stay selected in preferences but are hidden until
+available.

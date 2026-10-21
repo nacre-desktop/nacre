@@ -221,6 +221,8 @@ QtObject {
     ]
     readonly property var entries: (tiles || []).filter(tile => tile.id !== "theme").concat(extras || [])
     function supported(id) {
+        if (id === "volume")
+            return NacreAudio.available;
         if (id === "night")
             return NacreControlTools.data.nightLightSupported === true;
         if (id === "brightness")

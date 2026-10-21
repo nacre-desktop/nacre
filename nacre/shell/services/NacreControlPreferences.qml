@@ -6,11 +6,12 @@ import qs.utils
 
 Singleton {
     id: root
-    readonly property var defaults: ["volume", "brightness", "network", "bluetooth", "battery", "night", "dnd", "awake", "appearance"]
+    readonly property var defaults: ["volume", "mic-volume", "brightness", "keyboard", "network", "bluetooth", "battery", "night", "dnd", "awake", "appearance"]
+    property int defaultsRevision: 1
     property var tiles: defaults.slice()
     readonly property var optionalTiles: tiles.filter(id => !defaults.includes(id))
     property string error: ""
-    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "mic-volume", "keyboard", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "notifications", "displays"])
+    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "notifications", "displays"])
     function normalize(values) {
         return [...new Set(values.filter(value => typeof value === "string" && allowed.includes(value)))];
     }
@@ -19,8 +20,18 @@ Singleton {
         error = "";
         store.saveText(JSON.stringify({
             version: 2,
+            defaultsRevision: defaultsRevision,
             tiles: tiles
         }));
+    }
+    function withDefaultSliders(values) {
+        const ordered = normalize(values);
+        for (const [after, id] of [["volume", "mic-volume"], ["brightness", "keyboard"]]) {
+            const index = ordered.indexOf(after);
+            if (index >= 0 && !ordered.includes(id))
+                ordered.splice(index + 1, 0, id);
+        }
+        return ordered;
     }
     function toggle(id) {
         if (!allowed.includes(id))
@@ -53,12 +64,15 @@ Singleton {
     function receive(text) {
         try {
             const data = JSON.parse(text);
+            const revision = Number.isInteger(data.defaultsRevision) && data.defaultsRevision > 0 ? data.defaultsRevision : 0;
             if (data.version === 2 && Array.isArray(data.tiles))
-                tiles = normalize(data.tiles);
+                // Keep frozen helper defaults compatible; apply the UI rollout here.
+                tiles = revision ? normalize(data.tiles) : withDefaultSliders(data.tiles);
             else if (data.version === 1 && Array.isArray(data.optionalTiles))
                 tiles = normalize(defaults.concat(data.optionalTiles));
             else
                 throw new Error();
+            defaultsRevision = Math.max(1, revision);
             error = "";
             return true;
         } catch (failure) {
