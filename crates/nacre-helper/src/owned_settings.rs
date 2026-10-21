@@ -50,8 +50,8 @@ fn provider_expectations(store: &str, accepted: &Value) -> Vec<state::FieldExpec
     for key in settings_validation::provider_keys(store) {
         if store == "colors" && key == "appThemes" {
             for theme in [
-                "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
-                "chromium", "discord", "spotify",
+                "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login", "chromium",
+                "discord", "spotify",
             ] {
                 expected.push(state::FieldExpectation::from_data(
                     &accepted["data"],
