@@ -10,6 +10,7 @@ Item {
     property real currentCenter: 0
     property bool hasCurrent: false
     property bool retaining: false
+    property real preferredWidth: 0
     property real lastWidth: 320
     property real lastHeight: 80
     readonly property var routes: ({
@@ -24,7 +25,7 @@ Item {
     readonly property bool validRoute: Object.prototype.hasOwnProperty.call(routes, currentName)
     readonly property bool loaded: body.status === Loader.Ready && !!body.item
     readonly property string error: body.status === Loader.Error ? NacreI18n.tr("popouts.popup-content.status.this-menu-could-not-be-loaded", "This menu could not be loaded.") : ""
-    readonly property real targetWidth: lastWidth + 30
+    readonly property real targetWidth: preferredWidth > 0 ? preferredWidth : lastWidth + 30
     readonly property real targetHeight: lastHeight + 30
     readonly property var currentItem: body.item
     implicitWidth: targetWidth
@@ -45,6 +46,7 @@ Item {
         objectName: "nacrePopupLoader"
         x: 15
         y: 15
+        width: root.targetWidth - 30
         active: root.validRoute && (root.hasCurrent || root.retaining)
         source: root.validRoute ? Qt.resolvedUrl(root.routes[root.currentName]) : ""
         onLoaded: {

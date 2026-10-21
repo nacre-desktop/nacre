@@ -45,6 +45,21 @@ TestCase {
             }
         }
     }
+    function test_system_pill_has_equal_gaps_between_all_targets() {
+        const view = createTemporaryObject(header, test);
+        wait(40);
+        const names = ["nacreStatusUpdates", "nacreHeaderStatus", "nacreHeaderClock", "nacreStatusPower"];
+        let previous = null;
+        for (const name of names) {
+            const item = findChild(view, name);
+            verify(!!item, name);
+            const a = item.mapToItem(view, 0, 0), b = item.mapToItem(view, item.width, item.height);
+            const left = Math.min(a.x, b.x), right = Math.max(a.x, b.x);
+            if (previous !== null)
+                fuzzyCompare(left - previous, 4, 1, name);
+            previous = right;
+        }
+    }
     function init() {
         NacreCompositor.capabilities = ({});
         NacreCompositor.monitors = ({

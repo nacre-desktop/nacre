@@ -336,6 +336,7 @@ Item {
                     anchors.centerIn: parent
                     spacing: 4
                     NacreIcon {
+                        width: 24
                         text: "package_2"
                         color: NacreColours.palette.m3primary
                     }
@@ -363,7 +364,7 @@ Item {
             NacreSurface {
                 id: statusHolder
                 objectName: "nacreHeaderStatus"
-                implicitWidth: status.implicitHeight + 20
+                implicitWidth: status.implicitHeight
                 implicitHeight: 34
                 color: "transparent"
                 radius: 6
@@ -479,8 +480,9 @@ Item {
                 Row {
                     id: clock
                     anchors.centerIn: parent
-                    spacing: 7
+                    spacing: 4
                     NacreIcon {
+                        width: 24
                         text: "calendar_month"
                         color: NacreColours.palette.m3tertiary
                     }
@@ -519,6 +521,8 @@ Item {
             }
             NacrePowerButton {
                 id: powerHolder
+                objectName: "nacreStatusPower"
+                implicitWidth: 36
                 routed: true
                 selected: !!root.visibility?.osd && root.visibility.controlSection === "session"
                 onActivated: pointerOwned => root.openStatus("session", powerHolder, pointerOwned)

@@ -65,6 +65,18 @@ TestCase {
             rotation: -90
         }
     }
+    function test_grouped_status_cells_use_one_gap_and_padding() {
+        const view = createTemporaryObject(status, test, {
+            grouped: true,
+            horizontal: true
+        });
+        wait(30);
+        const cells = [view.audioItem, view.network, view.bluetoothItem, view.battery, view.notificationsItem];
+        compare(view.cellSpacing, 4);
+        compare(view.cellPadding, 6);
+        for (let i = 1; i < cells.length; i++)
+            fuzzyCompare(cells[i].y - cells[i - 1].y - cells[i - 1].height, 4, .1);
+    }
     SignalSpy {
         id: statusHoverSpy
         signalName: "peekRequested"

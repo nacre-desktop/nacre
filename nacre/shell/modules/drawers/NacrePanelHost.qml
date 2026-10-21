@@ -81,7 +81,12 @@ Item {
     readonly property var sessionPosition: position("right", session)
     readonly property var dashboardPosition: position("top", dashboard)
     readonly property var launcherPosition: position("bottom", launcher)
-    readonly property var popupPosition: Layout.popout(x, width, popouts.currentCenter, popouts.width, popouts.targetWidth, NacreFrame.rounding)
+    readonly property bool controlDropdown: controlPlacementJoined && ["peek", "calendar"].includes(popouts.currentName)
+    readonly property var popupPosition: controlDropdown ? ({
+            x: Math.max(0, width - popouts.width),
+            y: 0,
+            joinsRight: true
+        }) : Layout.popout(x, width, popouts.currentCenter, popouts.width, popouts.targetWidth, NacreFrame.rounding)
     Extras.LeftDrawer {
         id: left
         restoreImmediately: root.visibilities.hoverDocked === true
@@ -203,6 +208,7 @@ Item {
     }
     Popouts.NacrePopupPanel {
         id: popouts
+        preferredWidth: root.controlDropdown ? osd.contentWidth : 0
         enabled: hasCurrent
         screen: root.screen
         readonly property bool joinsRight: root.popupPosition.joinsRight

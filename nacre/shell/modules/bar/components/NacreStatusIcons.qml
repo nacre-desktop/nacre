@@ -13,6 +13,8 @@ Item {
     property real revealProgress: 0
     property string screenName: "unknown"
     property bool horizontal: false
+    readonly property real cellSpacing: grouped && horizontal ? 4 : NacreAppearance.spacing.small
+    readonly property real cellPadding: grouped && horizontal ? 6 : 0
     property color colour: NacreColours.palette.m3secondary
     readonly property Item recordingItem: recording
     readonly property Item audioItem: speaker
@@ -68,10 +70,10 @@ Item {
     readonly property bool batteryAvailable: !!device && device.ready && device.isPresent !== false && device.isLaptopBattery && Number.isFinite(device.percentage) && device.percentage >= 0 && device.percentage <= 1
     readonly property int batteryPercent: batteryAvailable ? Math.round(device.percentage * 100) : -1
     implicitWidth: Math.max(recording.visible ? recording.implicitWidth : 0, speaker.implicitWidth, wifi.implicitWidth, bluetooth.implicitWidth, batteryItem.implicitWidth, notices.implicitWidth)
-    implicitHeight: (recording.visible ? recording.implicitHeight + NacreAppearance.spacing.small : 0) + speaker.implicitHeight + wifi.implicitHeight + bluetooth.implicitHeight + batteryItem.implicitHeight + notices.implicitHeight + NacreAppearance.spacing.small * 4
+    implicitHeight: (recording.visible ? recording.implicitHeight + cellSpacing : 0) + speaker.implicitHeight + wifi.implicitHeight + bluetooth.implicitHeight + batteryItem.implicitHeight + notices.implicitHeight + cellSpacing * 4
     Column {
         anchors.centerIn: parent
-        spacing: NacreAppearance.spacing.small
+        spacing: root.cellSpacing
         StatusTarget {
             id: recording
             key: "recording"
@@ -165,7 +167,7 @@ Item {
         property string detail: ""
         required property color ink
         implicitWidth: root.horizontal ? content.implicitHeight : content.implicitWidth
-        implicitHeight: root.horizontal ? content.implicitWidth : content.implicitHeight
+        implicitHeight: root.horizontal ? content.implicitWidth + root.cellPadding * 2 : content.implicitHeight
         width: root.implicitWidth
         height: implicitHeight
         property real radius: 12
@@ -174,7 +176,7 @@ Item {
             z: 1
             anchors.centerIn: parent
             rotation: root.horizontal ? 90 : 0
-            spacing: 2
+            spacing: root.grouped && root.horizontal ? 4 : 2
             NacreIcon {
                 objectName: "nacreStatusGlyph"
                 width: 24

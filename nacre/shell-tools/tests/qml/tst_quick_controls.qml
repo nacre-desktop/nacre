@@ -1148,12 +1148,15 @@ TestCase {
     }
     function test_bar_dropdown_uses_shared_popup_motion_and_unloads() {
         const popup = createTemporaryObject(assembly, test);
+        popup.preferredWidth = 424;
         popup.currentName = "peek";
         for (const kind of ["audio", "network", "bluetooth", "battery", "updates", "notifications"]) {
             popup.peekKind = kind;
             popup.hasCurrent = true;
             tryVerify(() => popup.currentItem !== null, 500);
             compare(popup.currentItem.kind, kind);
+            compare(popup.width, 424);
+            compare(popup.currentItem.width, 394);
             verify(popup.currentItem.summary.length > 0);
             tryVerify(() => popup.height > 0, 300);
             verify(!popup.pinned);

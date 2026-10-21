@@ -7,6 +7,7 @@ Item {
     property alias peekKind: content.peekKind
     property alias currentName: content.currentName
     property alias currentCenter: content.currentCenter
+    property alias preferredWidth: content.preferredWidth
     property alias hasCurrent: content.hasCurrent
     property bool headerHovered: false
     property bool pinned: false
