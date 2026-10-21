@@ -275,7 +275,7 @@ fn app_target_available(paths: &Paths, id: &str) -> bool {
     }
 }
 
-fn role_rgb(colors: &Map<String, Value>, role: &str) -> Result<String> {
+fn role_rgb(colors: &Map<String, Value>, role: &str) -> Result<Vec<u8>> {
     let value = colors
         .get(role)
         .and_then(Value::as_str)
@@ -287,11 +287,7 @@ fn role_rgb(colors: &Map<String, Value>, role: &str) -> Result<String> {
     let channels = (0..3)
         .map(|index| u8::from_str_radix(&value[index * 2..index * 2 + 2], 16))
         .collect::<std::result::Result<Vec<_>, _>>()?;
-    Ok(channels
-        .iter()
-        .map(u8::to_string)
-        .collect::<Vec<_>>()
-        .join(", "))
+    Ok(channels)
 }
 
 fn publish_extended_target(
@@ -308,37 +304,35 @@ fn publish_extended_target(
     match id {
         "chromium" => {
             create_private_dirs(&root, &paths.home)?;
-            let mut values = colors.clone();
-            for (token, role) in [
+            let text = render_template(assets, "", "chromium-theme.json.in", colors)?;
+            let mut manifest: Value = serde_json::from_str(&text)?;
+            for (key, role) in [
                 ("frame", "frame"),
-                ("frameInactive", "surfaceContainerHigh"),
+                ("frame_inactive", "surfaceContainerHigh"),
                 ("toolbar", "surfaceContainer"),
-                ("tabText", "onSurface"),
-                ("tabBackgroundText", "onSurfaceVariant"),
-                ("bookmarkText", "onSurface"),
-                ("ntpBackground", "surface"),
-                ("ntpText", "onSurface"),
-                ("ntpLink", "tertiary"),
-                ("omniboxBackground", "surfaceContainerLow"),
-                ("omniboxText", "onSurface"),
-                ("buttonBackground", "primary"),
-                ("toolbarButtonIcon", "onSurface"),
+                ("tab_text", "onSurface"),
+                ("tab_background_text", "onSurfaceVariant"),
+                ("bookmark_text", "onSurface"),
+                ("ntp_background", "surface"),
+                ("ntp_text", "onSurface"),
+                ("ntp_link", "tertiary"),
+                ("omnibox_background", "surfaceContainerLow"),
+                ("omnibox_text", "onSurface"),
+                ("button_background", "primary"),
+                ("toolbar_button_icon", "onSurface"),
             ] {
-                values.insert(token.into(), json!(role_rgb(colors, role)?));
+                manifest["theme"]["colors"][key] = json!(role_rgb(colors, role)?);
             }
             let digest = sha2::Sha256::digest(serde_json::to_vec(&(data["mode"].clone(), colors))?);
             let major = u16::from_be_bytes([digest[0], digest[1]]);
             let minor = u16::from_be_bytes([digest[2], digest[3]]);
-            values.insert("version".into(), json!(format!("1.{major}.{minor}")));
-            values.insert(
-                "ntpLogoAlternate".into(),
-                json!(if data["mode"] == "dark" { 1 } else { 0 }),
-            );
-            let text = crate::palette_engine::render_values(
-                &fs::read_to_string(assets.join("chromium-theme.json.in"))?,
-                &values,
+            manifest["version"] = json!(format!("1.{major}.{minor}"));
+            manifest["theme"]["properties"]["ntp_logo_alternate"] =
+                json!(if data["mode"] == "dark" { 1 } else { 0 });
+            atomic_write(
+                &root.join("manifest.json"),
+                &(encoded(&manifest)? + "\n"),
             )?;
-            atomic_write(&root.join("manifest.json"), &(text + "\n"))?;
             match fs::remove_file(root.join("Cached Theme.pak")) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
