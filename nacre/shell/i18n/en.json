@@ -3133,7 +3133,7 @@
   "settings.registry.control.available.label": "Available tiles",
   "settings.registry.ui.confirm-restart": "Restart the desktop?",
   "settings.registry.ui.confirm-rollback": "Restore the previous desktop release?",
-  "settings.registry.colors.target.chromium.description": "Follow desktop colors. Load this theme once in your browser with Load unpacked.",
+  "settings.registry.colors.target.chromium.description": "Updates on restart. Once: brave://extensions or chrome://extensions → Developer mode → Load unpacked → ~/.local/share/nacre/themes/chromium. Or add --load-extension=ABSOLUTE_THEME_PATH to brave-origin-flags.conf, chrome-flags.conf or chromium-flags.conf in ~/.config.",
   "settings.registry.colors.target.discord.description": "Follow desktop colors. Enable the Nacre theme once in Vencord.",
   "settings.registry.colors.target.spotify.description": "Follow desktop colors. Once, run: spicetify config current_theme Nacre color_scheme Nacre inject_theme_js 1 && spicetify apply",
   "settings.registry.colors.target.description": "Follow desktop colors. Turn off to keep the current colors.",
