@@ -19,9 +19,23 @@ fn count_updates()->Result<Value>{
 }
 pub fn pending_qt_release_change(pending:&str)->Result<bool>{for line in pending.lines(){let fields=line.split_whitespace().collect::<Vec<_>>();if fields.first().is_none_or(|s|! ["qt6-base","qt6-declarative","qt6-wayland"].contains(s)){continue;}if fields.len()!=4||fields[2]!="->"{return Err("Could not parse the pending Qt update".into());}let release=|s:&str|s.rsplit_once('-').map(|x|x.0).unwrap_or(s);if release(fields[1])!=release(fields[3]){return Ok(true);}}Ok(false)}
 fn status(pending:&str)->Result<Value>{
-    let version=Command::new("quickshell").args(["--version","-v"]).output().ok();let local=version.as_ref().is_some_and(|x|String::from_utf8_lossy(&x.stdout).contains("Nacre local Qt rebuild"));
-    let blocked=local&&pending_qt_release_change(pending)?;let mut message=if blocked{"Quickshell rebuild needed before updating"}else{""}.to_owned();
-    let candidate=Command::new("pacman").args(["-Sp","--print-format","%f","quickshell"]).output().ok();let installed=Command::new("pacman").args(["-Q","qt6-base"]).output().ok();let qt=installed.filter(|o|o.status.success()).and_then(|o|String::from_utf8(o.stdout).ok()).and_then(|s|s.split_whitespace().last().map(str::to_owned)).map(|s|s.rsplit_once('-').map(|x|x.0).unwrap_or(&s).to_owned()).unwrap_or_default();let archive=candidate.and_then(|o|String::from_utf8(o.stdout).ok()).and_then(|s|s.lines().last().map(|s|PathBuf::from("/var/cache/pacman/pkg").join(s)));let ready=if local{if let Some(a)=archive.filter(|p|p.is_file()){Command::new("bsdtar").args(["-xOf",a.to_str().unwrap_or(""),".BUILDINFO"]).output().ok().filter(|x|x.status.success()).is_some_and(|x|String::from_utf8_lossy(&x.stdout).lines().any(|l|l.starts_with(&format!("installed = qt6-base-{qt}-")))}else{false}}else{false};if ready{if !message.is_empty(){message.push_str(". ");}message.push_str("A cached distribution Quickshell matches installed Qt; you can switch back");}Ok(json!({"message":message,"rebuildNeeded":blocked,"distributionReady":ready}))
+    let version = Command::new("quickshell").args(["--version", "-v"]).output().ok();
+    let local = version.as_ref().is_some_and(|x| String::from_utf8_lossy(&x.stdout).contains("Nacre local Qt rebuild"));
+    let blocked = local && pending_qt_release_change(pending)?;
+    let mut message = if blocked { "Quickshell rebuild needed before updating" } else { "" }.to_owned();
+    let candidate = Command::new("pacman").args(["-Sp", "--print-format", "%f", "quickshell"]).output().ok();
+    let installed = Command::new("pacman").args(["-Q", "qt6-base"]).output().ok();
+    let qt = installed.filter(|o| o.status.success()).and_then(|o| String::from_utf8(o.stdout).ok()).and_then(|s| s.split_whitespace().last().map(str::to_owned)).map(|s| s.rsplit_once('-').map(|x| x.0).unwrap_or(&s).to_owned()).unwrap_or_default();
+    let archive = candidate.and_then(|o| String::from_utf8(o.stdout).ok()).and_then(|s| s.lines().last().map(|s| PathBuf::from("/var/cache/pacman/pkg").join(s)));
+    let ready = if local {
+        if let Some(a) = archive.filter(|p| p.is_file()) {
+            Command::new("bsdtar").args(["-xOf", a.to_str().unwrap_or(""), ".BUILDINFO"]).output().ok().filter(|x| x.status.success()).is_some_and(|x| {
+                String::from_utf8_lossy(&x.stdout).lines().any(|l| l.starts_with(&format!("installed = qt6-base-{qt}-")))
+            })
+        } else { false }
+    } else { false };
+    if ready { if !message.is_empty() { message.push_str(". "); } message.push_str("A cached distribution Quickshell matches installed Qt; you can switch back"); }
+    Ok(json!({"message":message,"rebuildNeeded":blocked,"distributionReady":ready}))
 }
 fn preflight()->Result<Value>{let cmd=if available("checkupdates"){vec!["checkupdates".into()]}else{vec!["pacman".into(),"-Qu".into()]};let out=run_command(&cmd,Duration::from_secs(90),"Quickshell/Qt update preflight")?;let code=out.status.code().unwrap_or(1);if ![0,2].contains(&code)&&!(cmd[0]=="pacman"&&code==1&&out.stderr.is_empty()){return Err(format!("Update preflight failed: {}",String::from_utf8_lossy(&out.stderr).trim()).into());}status(&String::from_utf8_lossy(&out.stdout))}
 fn cache(p:&Paths)->PathBuf{p.cache.join("updates.json")}
