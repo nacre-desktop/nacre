@@ -323,6 +323,10 @@ pub fn apply_with(
         .as_array()
         .ok_or("Invalid app export targets")?
     {
+        let home_config_target = matches!(
+            target["id"].as_str(),
+            Some("chromium" | "discord" | "spotify")
+        );
         for name in target["outputs"]
             .as_array()
             .ok_or("Invalid app export paths")?
@@ -335,7 +339,14 @@ pub fn apply_with(
             {
                 return Err("Invalid export path".into());
             }
-            let destination = if let Ok(relative) = name.strip_prefix(".config") {
+            let destination = if home_config_target
+                && name
+                    .components()
+                    .next()
+                    .is_some_and(|component| component.as_os_str() == ".config")
+            {
+                paths.home.join(name)
+            } else if let Ok(relative) = name.strip_prefix(".config") {
                 paths
                     .config
                     .parent()
@@ -476,6 +487,7 @@ pub fn apply_with(
         )
         .into());
     }
+    classic_state::post_publish_external_targets(&paths, live);
     Ok(json!({"message":"Theme bundle applied","bundle":id,"mode":mode,"scope":scope}))
 }
 pub fn apply(id: &str, input: &Value) -> Result<Value> {

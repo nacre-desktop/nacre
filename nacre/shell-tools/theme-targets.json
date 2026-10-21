@@ -92,6 +92,35 @@
       ],
       "template": null,
       "tool": null
+    },
+    {
+      "id": "chromium",
+      "labelId": "settings.publisher.chromium",
+      "outputs": [
+        ".local/share/nacre/themes/chromium/manifest.json",
+        ".local/share/nacre/themes/chromium/Cached Theme.pak"
+      ],
+      "template": "chromium-theme.json.in",
+      "tool": ["google-chrome-stable", "google-chrome", "brave", "brave-browser", "brave-origin", "chromium"]
+    },
+    {
+      "id": "discord",
+      "labelId": "settings.publisher.discord",
+      "outputs": [
+        ".config/Vencord/themes/nacre.theme.css"
+      ],
+      "template": "discord-theme.css.in",
+      "tool": null
+    },
+    {
+      "id": "spotify",
+      "labelId": "settings.publisher.spotify",
+      "outputs": [
+        ".config/spicetify/Themes/Nacre/color.ini",
+        ".config/spicetify/Themes/Nacre/user.css"
+      ],
+      "template": "spicetify-colors.ini.in",
+      "tool": "spicetify"
     }
   ]
 }
