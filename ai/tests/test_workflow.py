@@ -18,7 +18,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 def module(name):
     loader = importlib.machinery.SourceFileLoader(
-        name.replace("-", "_"), str(ROOT / "bin" / name)
+        name.replace("-", "_"),
+        str(ROOT / "bin" / f"{name}.py.rollback")
+        if name.startswith("nacre-brain")
+        else str(ROOT / "bin" / name),
     )
     spec = importlib.util.spec_from_loader(loader.name, loader)
     loaded = importlib.util.module_from_spec(spec)
@@ -128,7 +131,6 @@ class BrainTests(IsolatedWorkflowTest):
         with tempfile.TemporaryDirectory() as tmp:
             for field in ("--title", "--source"):
                 argv = [
-                    sys.executable,
                     str(ROOT / "bin/nacre-brain"),
                     "note",
                     "--title",
@@ -153,7 +155,7 @@ class BrainTests(IsolatedWorkflowTest):
             env = dict(os.environ, NACRE_BRAIN=str(vault))
             # Initialization is done by installation before concurrent writers.
             subprocess.run(
-                [sys.executable, str(ROOT / "bin/nacre-brain"), "init"],
+                [str(ROOT / "bin/nacre-brain"), "init"],
                 env=env,
                 check=True,
                 capture_output=True,
@@ -162,7 +164,6 @@ class BrainTests(IsolatedWorkflowTest):
             def write(index):
                 return subprocess.run(
                     [
-                        sys.executable,
                         str(ROOT / "bin/nacre-brain"),
                         "note",
                         "--title",
@@ -205,7 +206,6 @@ class BrainTests(IsolatedWorkflowTest):
             env = dict(os.environ, NACRE_BRAIN=tmp)
             result = subprocess.run(
                 [
-                    sys.executable,
                     str(ROOT / "bin/nacre-brain"),
                     "note",
                     "--title",

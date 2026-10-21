@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""Check, version, update and restore the private brain without model calls."""
+
+import argparse
+import datetime as dt
+import hashlib
+import importlib.machinery
+import importlib.util
+import nacre_state as _state
+from pathlib import Path
+import re
+import sys
+from urllib.parse import unquote
+
+_sync = Path(__file__).resolve().with_name("nacre-brain-sync.py.rollback")
+if not _sync.exists():
+    _sync = _sync.with_name("nacre-brain-sync")
+loader = importlib.machinery.SourceFileLoader("brain_sync", str(_sync))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+sync = importlib.util.module_from_spec(spec)
+loader.exec_module(sync)
+
+
+def check(root):
+    notes = sync.snapshot(root)
+    findings = []
+    stems = {Path(name).stem for name in notes}
+    for name, body in notes.items():
+        if not name.endswith(".md") or name in sync.ROOT_FILES:
+            continue
+        if name.startswith("wiki/"):
+            for field in ("Source:", "Reviewed:", "Status:"):
+                if field not in body:
+                    findings.append(f"{name}: missing {field}")
+        elif not name.startswith("raw/"):
+            for field in ("Source:", "Confidence:", "Recorded:"):
+                if field not in body:
+                    findings.append(f"{name}: missing {field}")
+        text = re.sub(r"```.*?```", "", body, flags=re.S)
+        for link in re.findall(r"\[\[([^\]]+)\]\]", text):
+            target = link.split("|")[0].split("#")[0]
+            if target and Path(target).stem not in stems:
+                findings.append(f"{name}: missing wiki link {target}")
+        for link in re.findall(r"\]\(([^)]+)\)", text):
+            target = unquote(link.strip("<>").split("#")[0])
+            if (
+                not target
+                or re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", target)
+                or target.startswith("/")
+            ):
+                continue
+            if not (root / Path(name).parent / target).exists():
+                findings.append(f"{name}: missing relative link {target}")
+        reviewed = re.search(r"^Reviewed: (\d{4}-\d{2}-\d{2})", body, re.M)
+        if (
+            reviewed
+            and (dt.date.today() - dt.date.fromisoformat(reviewed[1])).days > 30
+        ):
+            findings.append(
+                f"{name}: review older than 30 days; verify time-sensitive claims"
+            )
+    for path in sorted((root / ".brain-state/conflicts").glob("*.json")):
+        record = _state.read_json_file(path)
+        findings.append(f"Unresolved sync conflict: {record['path']} ({path.stem})")
+    return findings
+
+
+def restore(archive, destination):
+    record = _state.read_json_file(archive)
+    notes = record["files"]
+    if record.get("version") != 1 or sync.digest(notes) != record["sha256"]:
+        raise ValueError("Backup checksum mismatch")
+    if destination.exists():
+        raise ValueError("Restore destination must not exist")
+    for name, body in notes.items():
+        sync.note_path(destination, name)
+        sync.brain.safe_note(body)
+    destination.mkdir(parents=True, mode=0o700)
+    for name, body in notes.items():
+        sync.atomic(sync.note_path(destination, name), body)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("check")
+    sub.add_parser("backup")
+    sub.add_parser("setup")
+    read = sub.add_parser("read")
+    read.add_argument("path")
+    update = sub.add_parser("update")
+    update.add_argument("path")
+    update.add_argument(
+        "--expected-sha256", required=True, help="Hash from read, or new for a new page"
+    )
+    recover = sub.add_parser("restore")
+    recover.add_argument("archive", type=Path)
+    recover.add_argument("destination", type=Path)
+    resolved = sub.add_parser("resolve")
+    resolved.add_argument("conflict_id")
+    args = parser.parse_args()
+    if args.command == "restore":
+        restore(args.archive, args.destination)
+        print(args.destination)
+        return
+    root = sync.brain.initialize()
+    with sync.locked(root):
+        if args.command == "setup":
+            templates = Path(__file__).resolve().parents[1] / "ai/brain"
+            if not templates.is_dir():
+                templates = Path.home() / ".local/share/nacre/brain/templates"
+            for name in ("AGENTS.md", "CLAUDE.md", "INDEX.md"):
+                path = root / name
+                if not path.exists():
+                    sync.atomic(path, (templates / name).read_text())
+            sync.backup(root)
+        elif args.command == "check":
+            findings = check(root)
+            print("\n".join(findings) if findings else "Brain check passed")
+            raise SystemExit(1 if findings else 0)
+        elif args.command == "backup":
+            print(sync.backup(root))
+        elif args.command == "read":
+            path = sync.note_path(root, args.path)
+            body = path.read_text()
+            print("SHA256:", hashlib.sha256(body.encode()).hexdigest())
+            print(body)
+        elif args.command == "update":
+            if not args.path.startswith("wiki/") and args.path not in sync.ROOT_FILES:
+                raise ValueError(
+                    "Only wiki pages and root instructions/index may be updated; preserve evidence"
+                )
+            path = sync.note_path(root, args.path)
+            old = path.read_text() if path.exists() else None
+            actual = (
+                hashlib.sha256(old.encode()).hexdigest() if old is not None else "new"
+            )
+            if actual != args.expected_sha256:
+                raise ValueError("Page changed; reread and reconcile before updating")
+            body = sys.stdin.read()
+            sync.brain.safe_note(body)
+            if not body.strip():
+                raise ValueError("Empty page")
+            sync.backup(root)
+            sync.atomic(path, body)
+            sync.backup(root)
+            print(path)
+        elif args.command == "resolve":
+            if not re.fullmatch("[0-9a-f]{64}", args.conflict_id):
+                raise ValueError("Invalid conflict ID")
+            path = root / ".brain-state/conflicts" / (args.conflict_id + ".json")
+            target = root / ".brain-state/resolved" / path.name
+            target.parent.mkdir(exist_ok=True, mode=0o700)
+            path.rename(target)
+            print("Conflict evidence archived; run sync to verify convergence")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ValueError, KeyError, OSError) as error:
+        print(f"nacre-brain-maintain: {error}", file=sys.stderr)
+        raise SystemExit(1) from None

@@ -250,6 +250,7 @@ def main():
         flush=True,
     )
     for contract in (
+        "brain",
         "colors",
         "palette_cli",
         "wallpaper_watch",

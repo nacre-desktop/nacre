@@ -8,7 +8,9 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def load(name):
-    loader = importlib.machinery.SourceFileLoader(name, str(ROOT / "bin" / name))
+    loader = importlib.machinery.SourceFileLoader(
+        name, str(ROOT / "bin" / f"{name}.py.rollback")
+    )
     spec = importlib.util.spec_from_loader(loader.name, loader)
     module = importlib.util.module_from_spec(spec)
     loader.exec_module(module)

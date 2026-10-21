@@ -17,9 +17,26 @@ fn run() -> Result<i32> {
     let tool = match name.as_deref().and_then(std::ffi::OsStr::to_str) {
         Some("nacrectl") => "ctl".to_owned(),
         Some("nacre-daemon") => "daemon".to_owned(),
+        Some("nacre-brain" | "nacre-brain-sync" | "nacre-brain-maintain") => {
+            let command = name.as_deref().unwrap().to_string_lossy().into_owned();
+            return nacre_helper::brain_data::run(
+                &std::iter::once(command)
+                    .chain(arguments)
+                    .collect::<Vec<_>>(),
+            );
+        }
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    // These commands use files and child executables, with no zbus runtime.
+    // In particular, credential launches must inherit the caller's environment.
+    if matches!(
+        tool.as_str(),
+        "nacre-brain" | "nacre-brain-sync" | "nacre-brain-maintain"
+    ) {
+        let call = std::iter::once(tool).chain(arguments).collect::<Vec<_>>();
+        return nacre_helper::brain_data::run(&call);
+    }
     let inherited_tokio_threads = std::env::var_os("TOKIO_WORKER_THREADS").is_some();
     if !matches!(
         tool.as_str(),

@@ -1,0 +1,374 @@
+#!/usr/bin/env python3
+"""Three-way private vault synchronization; never propagate deletions."""
+
+import argparse
+from contextlib import contextmanager
+import datetime as dt
+import fcntl
+import hashlib
+import importlib.machinery
+import importlib.util
+import json
+import nacre_state as _state
+import os
+from pathlib import Path, PurePosixPath
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+_brain = Path(__file__).resolve().with_name("nacre-brain.py.rollback")
+if not _brain.exists():
+    _brain = _brain.with_name("nacre-brain")
+loader = importlib.machinery.SourceFileLoader("nacre_brain", str(_brain))
+spec = importlib.util.spec_from_loader(loader.name, loader)
+brain = importlib.util.module_from_spec(spec)
+loader.exec_module(brain)
+KINDS = {
+    "inbox",
+    "personal",
+    "projects",
+    "infrastructure",
+    "devices",
+    "runbooks",
+    "decisions",
+    "credentials",
+    "wiki",
+    "raw",
+    "checkpoints",
+}
+ROOT_FILES = {"README.md", "AGENTS.md", "CLAUDE.md", "INDEX.md"}
+SUFFIXES = {".md", ".txt", ".base", ".canvas"}
+
+
+def note_path(root, name):
+    path = PurePosixPath(name)
+    if (
+        path.is_absolute()
+        or ".." in path.parts
+        or str(path) != name
+        or any(p.startswith(".") for p in path.parts)
+    ):
+        raise ValueError("Invalid vault path")
+    if name not in ROOT_FILES and (
+        len(path.parts) < 2 or path.parts[0] not in KINDS or path.suffix not in SUFFIXES
+    ):
+        raise ValueError(
+            "Unsupported vault file; use Markdown sources and source links"
+        )
+    target = root / name
+    for part in [target, *target.parents]:
+        if part == root.parent:
+            break
+        if part.is_symlink():
+            raise ValueError("Symlinked vault paths are not supported")
+    return target
+
+
+def snapshot(root):
+    notes = {}
+    paths = [root / name for name in ROOT_FILES]
+    for kind in sorted(KINDS):
+        folder = root / kind
+        if folder.is_symlink():
+            raise ValueError("Symlinked vault directories are not supported")
+        paths.extend(folder.rglob("*"))
+    for path in sorted(paths):
+        if path.is_symlink():
+            raise ValueError("Symlinked vault files are not supported")
+        if (
+            any(part.startswith(".") for part in path.relative_to(root).parts)
+            or path.suffix not in SUFFIXES
+        ):
+            continue
+        if not path.is_file():
+            continue
+        name = path.relative_to(root).as_posix()
+        target = note_path(root, name)
+        body = target.read_text()
+        brain.safe_note(body)
+        notes[name] = body
+    return notes
+
+
+def atomic(path, body):
+    if _state.write_text_if_managed(path, body):
+        return
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with tempfile.NamedTemporaryFile(
+        mode="w", dir=path.parent, prefix=".pending-", delete=False
+    ) as out:
+        pending = Path(out.name)
+        out.write(body)
+        out.flush()
+        os.fsync(out.fileno())
+    try:
+        os.replace(pending, path)
+    finally:
+        pending.unlink(missing_ok=True)
+
+
+@contextmanager
+def locked(root):
+    state = root / ".brain-state"
+    state.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (state / "lock").open("a") as lock:
+        os.chmod(state / "lock", 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def digest(notes):
+    return hashlib.sha256(json.dumps(notes, sort_keys=True).encode()).hexdigest()
+
+
+def backup(root, notes=None):
+    notes = snapshot(root) if notes is None else notes
+    key = digest(notes)
+    folder = root / ".brain-state/backups"
+    path = folder / (key + ".json")
+    if not path.exists():
+        atomic(
+            path,
+            json.dumps(
+                {
+                    "version": 1,
+                    "created": dt.datetime.now(dt.timezone.utc).isoformat(),
+                    "sha256": key,
+                    "files": notes,
+                },
+                indent=2,
+            )
+            + "\n",
+        )
+    return path
+
+
+def conflict(root, name, local, incoming):
+    item = {"path": name, "local": local, "incoming": incoming}
+    path = root / ".brain-state/conflicts" / (digest(item) + ".json")
+    if not path.exists():
+        atomic(path, json.dumps(item, indent=2) + "\n")
+
+
+def merge(root, incoming, base, excluded=()):
+    # Validate the entire remote batch before changing anything.
+    for name, body in incoming.items():
+        note_path(root, name)
+        if not isinstance(body, str):
+            raise ValueError("Invalid vault content")
+        brain.safe_note(body)
+    current = snapshot(root)
+    backup(root, current)
+    changed = []
+    conflicts = []
+    for name, body in incoming.items():
+        if name in excluded:
+            conflict(root, name, current.get(name), body)
+            continue
+        old = current.get(name)
+        if old == body:
+            continue
+        if old is None or (name in base and old == base[name]):
+            atomic(note_path(root, name), body)
+            changed.append(name)
+        elif name in base and body == base[name]:
+            continue
+        else:
+            conflict(root, name, old, body)
+            conflicts.append(name)
+    backup(root)
+    return changed, conflicts
+
+
+STATUS = Path.home() / ".local/state/nacre/brain-sync.json"
+
+
+def read_status():
+    try:
+        return _state.read_json_file(STATUS)
+    except (OSError, ValueError):
+        return {}
+
+
+def report_status(state, message, **details):
+    previous = read_status()
+    now = time.time()
+    value = dict(previous, state=state, message=message, lastAttempt=now, **details)
+    if state in ("success", "conflicts"):
+        value.update(lastSuccess=now, failures=0, nextRetry=0)
+    elif state == "offline":
+        failures = previous.get("failures", 0) + 1
+        value.update(
+            failures=failures,
+            nextRetry=now + min(3600, 120 * 2 ** min(failures - 1, 5)),
+        )
+    atomic(STATUS, json.dumps(value))
+    return value
+
+
+def exchange_error(code, error):
+    text = error.lower()
+    if "permission denied" in text or "host key verification failed" in text:
+        return (
+            "authentication",
+            "Remote SSH authentication failed; check the existing SSH identity or host key",
+        )
+    if code == 255 and any(
+        word in text
+        for word in (
+            "timed out",
+            "connection refused",
+            "no route",
+            "resolve hostname",
+            "network is unreachable",
+            "connection closed",
+        )
+    ):
+        return (
+            "offline",
+            "Remote host unavailable; local notes are safe and synchronization will retry",
+        )
+    if "protocol" in text or code == 127:
+        return (
+            "protocol",
+            "Remote sync helper is missing or incompatible; both hosts need protocol version 2",
+        )
+    return "failed", "Remote exchange failed; check the remote sync journal"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--exchange", action="store_true")
+    parser.add_argument(
+        "--force", action="store_true", help="retry immediately despite offline backoff"
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path.home() / ".config/nacre/brain-sync.json",
+    )
+    args = parser.parse_args()
+    if not args.exchange and not args.config.exists():
+        return
+    if (
+        not args.exchange
+        and not args.force
+        and read_status().get("nextRetry", 0) > time.time()
+    ):
+        return
+    root = brain.initialize()
+    with locked(root):
+        if args.exchange:
+            request = json.load(sys.stdin)
+            if request.get("version") != 2:
+                raise ValueError("Both hosts require sync protocol version 2")
+            changed, conflicts = merge(root, request["notes"], request["base"])
+            print(
+                json.dumps(
+                    {
+                        "version": 2,
+                        "notes": snapshot(root),
+                        "changed": changed,
+                        "conflicts": conflicts,
+                    }
+                )
+            )
+            return
+        host = _state.read_json_file(args.config)["host"]
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._@-]*", host):
+            raise ValueError("Invalid SSH alias")
+        base_path = (
+            root
+            / ".brain-state/peers"
+            / (hashlib.sha256(host.encode()).hexdigest() + ".json")
+        )
+        base = _state.read_json_file(base_path) if base_path.exists() else {}
+        if not read_status().get("lastSuccess") and base_path.exists():
+            atomic(
+                STATUS,
+                json.dumps(dict(read_status(), lastSuccess=base_path.stat().st_mtime)),
+            )
+        before = snapshot(root)
+        backup(root, before)
+        result = subprocess.run(
+            [
+                "ssh",
+                "-o",
+                "BatchMode=yes",
+                "-o",
+                "ConnectTimeout=10",
+                host,
+                'exec "$HOME/.local/bin/nacre-brain-sync" --exchange',
+            ],
+            input=json.dumps({"version": 2, "notes": before, "base": base}),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode:
+            category, message = exchange_error(result.returncode, result.stderr)
+            report_status(category, message)
+            if category == "offline":
+                print(message, file=sys.stderr)
+                raise SystemExit(75)
+            raise RuntimeError(message)
+        reply = json.loads(result.stdout)
+        if reply.get("version") != 2:
+            raise ValueError("Unexpected sync protocol")
+        changed, conflicts = merge(root, reply["notes"], before, reply["conflicts"])
+        conflicts = sorted(set(conflicts + reply["conflicts"]))
+        after = snapshot(root)
+        for name, body in after.items():
+            if reply["notes"].get(name) == body:
+                base[name] = body
+        atomic(base_path, json.dumps(base) + "\n")
+        print(
+            f"Brain sync: {len(changed)} received, {len(reply['changed'])} sent, {len(conflicts)} conflicts"
+        )
+        report_status(
+            "conflicts" if conflicts else "success",
+            "Sync completed with conflicts to reconcile"
+            if conflicts
+            else "Knowledge synchronized",
+            received=len(changed),
+            sent=len(reply["changed"]),
+            conflicts=len(conflicts),
+        )
+        if conflicts:
+            print(
+                "Conflicts preserved under .brain-state/conflicts; reconcile deliberately.",
+                file=sys.stderr,
+            )
+            raise SystemExit(2)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (
+        ValueError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        subprocess.TimeoutExpired,
+    ) as error:
+        if "--exchange" not in sys.argv:
+            if isinstance(error, subprocess.TimeoutExpired):
+                report_status(
+                    "offline", "Remote exchange timed out; synchronization will retry"
+                )
+                print(
+                    "Remote exchange timed out; synchronization will retry",
+                    file=sys.stderr,
+                )
+                raise SystemExit(75) from None
+            else:
+                current = read_status()
+                if current.get("state") not in ("authentication", "protocol", "failed"):
+                    report_status(
+                        "failed", "Local sync failed; inspect the sync journal"
+                    )
+        print(f"nacre-brain-sync: {error}", file=sys.stderr)
+        raise SystemExit(1) from None

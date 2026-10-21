@@ -33,11 +33,17 @@ def remember(args, body):
     root = Path(
         os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain"))
     )
-    loader = importlib.machinery.SourceFileLoader("memory_brain", helper("nacre-brain"))
+    # Retain the complete raw-metadata check until the N0021 memory port.
+    validation = helper("nacre-brain.py.rollback")
+    if not Path(validation).exists():
+        validation = helper("nacre-brain")
+    loader = importlib.machinery.SourceFileLoader("memory_brain", validation)
     spec = importlib.util.spec_from_loader(loader.name, loader)
-    m = importlib.util.module_from_spec(spec)
-    loader.exec_module(m)
-    m.safe_note("\n".join([args.title, args.source, body, *args.world, *args.topic]))
+    brain = importlib.util.module_from_spec(spec)
+    loader.exec_module(brain)
+    brain.safe_note(
+        "\n".join([args.title, args.source, body, *args.world, *args.topic])
+    )
     if not body.strip():
         raise ValueError("Memory is empty")
     worlds = list(dict.fromkeys(one(w) for w in args.world if slug(w)))

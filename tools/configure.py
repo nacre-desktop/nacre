@@ -65,6 +65,9 @@ def files(root=ROOT):
         "nacre-brain",
         "nacre-brain-maintain",
         "nacre-brain-sync",
+        "nacre-brain.py.rollback",
+        "nacre-brain-maintain.py.rollback",
+        "nacre-brain-sync.py.rollback",
         "xdg-open",
     ):
         result[Path(".local/bin") / name] = root / "bin" / name

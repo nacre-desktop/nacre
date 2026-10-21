@@ -305,6 +305,8 @@ def stage(root, destination, component, build):
         copy(root / "ai/brain", shared / "ai/brain")
         for source in (root / "bin").glob("nacre-brain*"):
             copy(source, shared / "bin" / source.name)
+            if source.name.endswith(".py.rollback"):
+                continue
             public = destination / "usr/bin" / source.name
             public.parent.mkdir(parents=True, exist_ok=True)
             public.symlink_to("../share/nacre/bin/" + source.name)

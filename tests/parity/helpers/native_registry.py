@@ -55,6 +55,9 @@ MIGRATED = frozenset(
         "compositor-backends-hyprland-config",
         "compositor-backends-niri-config",
         "compositor-backends-niri-widths",
+        "nacre-brain",
+        "nacre-brain-sync",
+        "nacre-brain-maintain",
     }
 )
 
@@ -238,10 +241,15 @@ def command(case, override=None, *, root=ROOT, environ=None):
         )
         return shlex.join([str(binary.resolve())])
     module_api = len(original) > 1 and original[1] == "tests/parity/helpers/api.py"
+    module_path = (
+        f"bin/{helper}"
+        if helper in {"nacre-brain", "nacre-brain-sync", "nacre-brain-maintain"}
+        else f"nacre/shell-tools/{helper}.py"
+    )
     if module_api and original != [
         "python3",
         "tests/parity/helpers/api.py",
-        f"nacre/shell-tools/{helper}.py",
+        module_path,
     ]:
         raise ValueError("Unsupported native module contract command")
     binary = native_binary(root, environ, module_api=module_api)

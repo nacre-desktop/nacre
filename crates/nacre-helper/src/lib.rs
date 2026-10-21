@@ -2,6 +2,8 @@
 #![deny(unsafe_code)]
 pub mod arguments;
 pub mod aur_review;
+mod brain_arguments;
+pub mod brain_data;
 pub mod branding;
 pub mod classic_state;
 pub mod colors;

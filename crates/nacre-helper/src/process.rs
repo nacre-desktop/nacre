@@ -46,27 +46,43 @@ pub fn capture(mut command: Command, input: Option<&[u8]>, timeout: Duration) ->
         let mut bytes = Vec::new();
         stderr.read_to_end(&mut bytes).map(|_| bytes)
     });
-    if let Some(input) = input {
-        if let Some(mut stream) = child.stdin.take() {
-            stream.write_all(input)?;
-        }
-    }
+    // Start the deadline while stdin is being written too. A sync peer that
+    // stops reading must not hold a large vault request past its timeout.
+    let input_writer = input.and_then(|input| {
+        child.stdin.take().map(|mut stream| {
+            let input = input.to_vec();
+            thread::spawn(move || stream.write_all(&input))
+        })
+    });
     let status = match child.wait_timeout(timeout)? {
         Some(status) => status,
         None => {
             child.kill()?;
             child.wait()?;
+            if let Some(writer) = input_writer {
+                let _ = writer.join();
+            }
             output.join().map_err(|_| "Child output reader failed")??;
             error.join().map_err(|_| "Child error reader failed")??;
             return Err(format!("Command timed out after {} seconds", timeout.as_secs()).into());
         }
     };
+    if let Some(writer) = input_writer {
+        if let Err(error) = writer.join().map_err(|_| "Child input writer failed")? {
+            // Like subprocess.communicate, preserve an early child's own
+            // exit status and stderr when it closes stdin without reading it.
+            if error.kind() != std::io::ErrorKind::BrokenPipe {
+                return Err(error.into());
+            }
+        }
+    }
     Ok(Output {
         status,
         stdout: output.join().map_err(|_| "Child output reader failed")??,
         stderr: error.join().map_err(|_| "Child error reader failed")??,
     })
 }
+
 pub fn checked(
     program: &str,
     arguments: &[String],
@@ -139,5 +155,25 @@ pub(crate) fn restore_child_signals(command: &mut Command) {
             pthread_sigmask(SigmaskHow::SIG_UNBLOCK, Some(&signals), None)
                 .map_err(|error| std::io::Error::from_raw_os_error(error as i32))
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deadline_includes_a_child_that_never_reads_stdin() {
+        let mut command = Command::new("sleep");
+        command.arg("5");
+        let start = std::time::Instant::now();
+        let error = capture(
+            command,
+            Some(&vec![b'x'; 512 * 1024]),
+            Duration::from_millis(20),
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("timed out"));
+        assert!(start.elapsed() < Duration::from_secs(2));
     }
 }

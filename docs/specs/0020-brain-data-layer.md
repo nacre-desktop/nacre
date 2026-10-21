@@ -1,6 +1,6 @@
 # N0020 — Brain data layer: nacre-brain, brain-sync, brain-maintain
 
-- Status: In progress (Codex worker, lead review)
+- Status: Implemented (pending lead review)
 - Date: 2026-10-21
 - Plan: AI/Brain/Wave-4 migration plan 2026-10-21
 
@@ -26,3 +26,26 @@ kept as Rust tests; security additions are explicit new cases with intended-diff
 desktop, installed Nacre, units, keybindings or publication; existing AI permissions and the paru command
 unchanged; standalone native command ships first, daemon hosting is a separate unit. Status for all: Proposed.
 Numbers are proposals; N0017 is the last used.
+
+## Evidence
+
+- The three entrypoints dispatch to standalone Rust commands sharing `brain_data`;
+  UI delegation and HOME unit placement stay intact. Python `.py.rollback` sources
+  are retained, including memory's raw-metadata validator until N0021.
+- The full `desktop` job from `.github/workflows/check.yml` passed in the Arch CI
+  container, at nice 10 with Cargo `-j2`: formatting, Clippy, builds, Rust tests,
+  protocol consumer, `tools/check.py`, translations and both galleries. Python
+  suites: tools 441 (one opt-in Wayland soak skipped), AI 116, Brain 45, shell-tools 478.
+  Raw log: `.lead/desktop7.log`; tested source hashes match `.lead/code.sha256`.
+- Explicit native replay passed all 10 frozen Brain cases (4 CLI, 3 sync, 3 maintain);
+  the full corpus passed 534/534. No frozen reference was regenerated. Historical
+  sync assertions are retained in Rust, alongside concurrent CLI privacy and
+  non-reading-child deadline regressions.
+- `verify_brain_native.py` passed five Python/native exchange comparisons, including
+  Unicode/backslash names, conflict evidence and backup digests/content. Disposable
+  fake SSH/keyring/terminal checks cover bidirectional sync, no deletes, exit 75,
+  backoff, error status, secret whitespace, child environment and prompt cancellation.
+- Explicit security cases reject linked state/lock targets and malformed peer
+  replies; overflowed retry counters saturate. Status follows the standard absolute-XDG
+  rule. No merge divergence, daemon hosting or live deployment occurred. CPU/RSS
+  benchmarks and a live soak were not run.

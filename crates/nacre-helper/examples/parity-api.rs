@@ -3,7 +3,7 @@ use nacre_helper::{
     dashboard_data, dashboard_media, json, launcher_preferences, menu, notification_history,
     paths::Paths, Result,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json as value, Map, Value};
 use std::{
     fs,
@@ -11,7 +11,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-#[derive(Default, Deserialize)]
+#[derive(Default, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 struct Request {
     #[serde(default)]
@@ -43,6 +43,9 @@ impl Request {
     }
 }
 fn call(helper: &str, operation: &str, request: &Request) -> Result<Value> {
+    if helper == "nacre-brain-sync" {
+        return nacre_helper::brain_data::api(helper, operation, &serde_json::to_value(request)?);
+    }
     if helper == "lock-config" && operation == "output_width" {
         // The historical module never exported this name: preserve missing-attribute failure.
         eprintln!("AttributeError: module has no attribute 'output_width'");
