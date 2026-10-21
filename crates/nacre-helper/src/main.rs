@@ -85,6 +85,12 @@ fn run() -> Result<i32> {
     if tool == "lock-info" {
         return nacre_helper::lock_info::run(&arguments);
     }
+    if tool == "weather" {
+        return nacre_helper::weather::run(&arguments);
+    }
+    if tool == "updates" {
+        return nacre_helper::updates::run(&arguments);
+    }
     if tool == "lock-prepare" {
         return nacre_helper::lock_prepare::run(&arguments);
     }

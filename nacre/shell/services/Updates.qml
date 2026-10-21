@@ -17,7 +17,7 @@ Singleton {
 
     Process {
         id: check
-        command: ["python3", NacrePaths.tools + "/updates.py"]
+        command: ["nice", "-n", "10", NacrePaths.helperBinary, "updates"]
         running: true
     }
     Timer {

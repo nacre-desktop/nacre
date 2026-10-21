@@ -99,7 +99,7 @@ Singleton {
     Process {
         id: reader
         objectName: "weatherReader"
-        command: ["python3", NacrePaths.dashboardTools + "/weather.py"]
+        command: ["nice", "-n", "10", NacrePaths.helperBinary, "weather"]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.requestLocation === root.desiredLocation)

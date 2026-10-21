@@ -75,6 +75,8 @@ mod test_support;
 pub mod unicode;
 pub mod wallpaper_media;
 pub mod wallpaper_watch;
+pub mod weather;
+pub mod updates;
 pub mod window_chat_title;
 pub mod window_hide;
 pub type Error = Box<dyn std::error::Error + Send + Sync>;
