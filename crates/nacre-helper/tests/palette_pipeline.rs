@@ -940,7 +940,14 @@ fn palette_scheme_set_refreshes_spicetify_once_after_publishing_files() -> Resul
     )?;
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     let output = command
-        .args(["nacre_shell", "scheme", "set", "--mode", "dark"])
+        .args([
+            "nacre_shell",
+            "--publish",
+            "scheme",
+            "set",
+            "--mode",
+            "dark",
+        ])
         .env_clear()
         .env("HOME", home.path())
         .env("PATH", &bin)
