@@ -255,6 +255,7 @@ fn refresh(p: &Paths) -> Result<()> {
     let file = fs::OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(false)
         .mode(0o600)
         .open(lock)?;
     file.set_permissions(fs::Permissions::from_mode(0o600))?;
