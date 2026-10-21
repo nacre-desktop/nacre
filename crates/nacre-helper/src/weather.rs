@@ -42,9 +42,12 @@ pub fn normalize(f: &Value, location: &str, latitude: f64, longitude: f64, check
 fn cache(paths:&Paths)->PathBuf { paths.cache.join("weather.json") }
 fn save(path:&PathBuf,data:&Value)->Result<()> {
     fs::create_dir_all(path.parent().ok_or("cache has no parent")?)?;
+    fs::set_permissions(path.parent().ok_or("cache has no parent")?,fs::Permissions::from_mode(0o700))?;
+    if path.exists() && fs::symlink_metadata(path)?.file_type().is_symlink(){return Err("refusing linked weather cache".into());}
     let tmp=path.with_extension("tmp");
     if tmp.exists() && fs::symlink_metadata(&tmp)?.file_type().is_symlink(){return Err("refusing linked weather cache temporary".into())}
-    let mut f=fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(&tmp)?;
+    if tmp.exists(){fs::remove_file(&tmp)?;}
+    let mut f=fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp)?;
     f.write_all(serde_json::to_string(data)?.as_bytes())?; f.sync_all()?; f.set_permissions(fs::Permissions::from_mode(0o600))?; fs::rename(tmp,path)?; Ok(())
 }
 fn stale(previous:Value)->Value {

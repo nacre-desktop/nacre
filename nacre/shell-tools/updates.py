@@ -208,4 +208,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    helper = Path(__file__).with_name("nacre-helper")
+    if not helper.is_file():
+        raise SystemExit("nacre-helper is not installed beside updates.py")
+    os.execv(helper, [str(helper), "updates", *sys.argv[1:]])

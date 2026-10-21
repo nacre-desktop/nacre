@@ -52,6 +52,8 @@ MIGRATED = frozenset(
         "window-chat-title",
         "window-hide",
         "compositor_config",
+        "weather",
+        "updates",
         "compositor-backends-hyprland-config",
         "compositor-backends-niri-config",
         "compositor-backends-niri-widths",

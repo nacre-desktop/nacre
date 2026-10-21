@@ -59,6 +59,8 @@ NATIVE_CLIENT_CALLERS = {
     "wallpaper-media",
     "window-hide",
     "compositor-compat",
+    "weather",
+    "updates",
 }
 
 

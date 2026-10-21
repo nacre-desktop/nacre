@@ -36,13 +36,22 @@ python3 "$script_dir/updates.py" --preflight
 step="system package update"
 if command -v paru >/dev/null; then
     printf '\nUpdating packages without opening the AUR file-review screen.\n'
+    printf 'Starting paru for the explicitly confirmed system package update.\n' >&2
     paru -Syu --skipreview
-elif command -v yay >/dev/null; then yay -Syu
-else sudo pacman -Syu; fi
+elif command -v yay >/dev/null; then
+    printf 'Starting yay for the explicitly confirmed system package update.\n' >&2
+    yay -Syu
+else
+    printf 'Starting pacman for the explicitly confirmed system package update.\n' >&2
+    sudo pacman -Syu
+fi
 step="Quickshell/Qt compatibility check"
 if ! qt_match_check; then qt_recovery_help; false; fi
 step="Flatpak update"
-if command -v flatpak >/dev/null; then flatpak update; fi
+if command -v flatpak >/dev/null; then
+    printf 'Starting flatpak for the explicitly confirmed Flatpak update.\n' >&2
+    flatpak update
+fi
 step="update status refresh"
 python3 "$HOME/.local/share/nacre/shell/tools/updates.py" --refresh
 read -r -p 'Update complete. Press Enter to close.'

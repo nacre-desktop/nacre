@@ -2,6 +2,7 @@
 """One bounded Open-Meteo snapshot for shell and lock weather consumers."""
 
 import json
+import sys
 from nacre_i18n import tr
 import time
 import urllib.parse
@@ -208,4 +209,9 @@ def refresh():
 
 
 if __name__ == "__main__":
-    print(json.dumps(refresh(), allow_nan=False))
+    import os
+
+    helper = Path(__file__).with_name("nacre-helper")
+    if not helper.is_file():
+        raise SystemExit("nacre-helper is not installed beside weather.py")
+    os.execv(helper, [str(helper), "weather", *sys.argv[1:]])
