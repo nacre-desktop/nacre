@@ -34,10 +34,14 @@ QtObject {
     // While typing, the previous rows of the same list stay until the new answer
     // arrives; a different route/filter/category never shows the old rows.
     readonly property bool sameScope: enabled && active && resultScopeKey === scopeKey && resultBoot === NacreDaemon.boot
+    // Rows belong to the visible list: same daemon boot and either the exact query
+    // or (while typing) the same route/filter/category. Not gated on `active`, so a
+    // closing launcher keeps its rows until releaseResult() runs.
+    readonly property bool rowsFit: resultBoot === NacreDaemon.boot && (resultKey === key || resultScopeKey === scopeKey)
     readonly property bool waiting: enabled && active && !matches
     readonly property bool current: matches && NacreDaemon.connected
     readonly property var menuState: NacreDaemon.topic("menu")
-    readonly property var entries: matches || sameScope ? (result.order || []).map(id => {
+    readonly property var entries: rowsFit ? (result.order || []).map(id => {
         const item = result.items[id];
         const view = item.presentation || {};
         const entry = Object.assign({}, view, item, {
