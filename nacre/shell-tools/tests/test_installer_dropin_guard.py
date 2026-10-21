@@ -259,6 +259,81 @@ class InstallerDropinGuardTests(unittest.TestCase):
         ):
             installer.deploy(code_only=code_only, retire_niri_experiment=opt_in)
 
+    def test_source_install_uses_helper_from_build_output(self):
+        root, shell = self.fixture_deployment()
+        (root / "nacre-helper").unlink()
+        helper_log = self.base / "helper.log"
+        helper = self.put(
+            self.base / "target/release/nacre-helper",
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$HELPER_LOG"\n',
+        )
+        helper.chmod(0o755)
+
+        def run(command, **kwargs):
+            if command[0] == "systemctl" or command[1:] == ["desktop-settings", "init"]:
+                return RUN(command, **kwargs)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.multiple(installer, ROOT=root, SHELL=shell),
+            patch.dict(os.environ, {"HELPER_LOG": str(helper_log)}),
+            patch.object(
+                installer.subprocess, "check_output", return_value=str(helper) + "\n"
+            ) as build,
+            patch.object(installer.subprocess, "run", side_effect=run),
+            patch.object(installer, "validate_live"),
+            patch.object(installer, "stop_other_shells"),
+            patch.object(installer.compositor, "reload"),
+        ):
+            installer.deploy()
+        build.assert_called_once_with(
+            ["bash", str(root.parent.parent / "tools/build-helper.sh")], text=True
+        )
+        self.assertFalse((root / "nacre-helper").exists())
+        self.assertEqual(
+            (self.dest / "tools/nacre-helper").read_bytes(), helper.read_bytes()
+        )
+        self.assertEqual(helper_log.read_text(), "desktop-settings init\n")
+
+    def test_validate_live_retries_timed_out_first_qs_answer(self):
+        command = [
+            str(self.dest / "bin/qs"),
+            "-c",
+            "nacre",
+            "ipc",
+            "call",
+            "nacre",
+            "state",
+        ]
+        answers = [
+            subprocess.TimeoutExpired(command, 3),
+            subprocess.CompletedProcess(command, 0, '{"reveal": true}', ""),
+        ]
+        with (
+            patch.dict(os.environ, {"NACRE_RELEASE_TRANSACTION": "1"}),
+            patch.object(installer.subprocess, "run", side_effect=answers) as run,
+            patch.object(installer.time, "sleep") as sleep,
+        ):
+            installer.validate_live()
+        self.assertEqual(run.call_count, 2)
+        for call in run.call_args_list:
+            self.assertEqual(call.args[0], command)
+            self.assertEqual(call.kwargs["timeout"], 3)
+        sleep.assert_called_once_with(0.25)
+
+    def test_validate_live_all_timeouts_exhaust_existing_retry_budget(self):
+        with (
+            patch.object(
+                installer.subprocess,
+                "run",
+                side_effect=subprocess.TimeoutExpired("qs", 3),
+            ) as run,
+            patch.object(installer.time, "sleep"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "Desktop did not load"):
+                installer.validate_live()
+        self.assertEqual(run.call_count, 80)
+
     def test_opt_in_install_and_restore_byte_identical_full_and_code_only(self):
         # Each mode runs as an independent private install/restore transaction.
         for code_only in (False, True):

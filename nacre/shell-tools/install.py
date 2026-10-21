@@ -545,7 +545,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
         capture_output=True,
     )
     subprocess.run(
-        [str(ROOT / "nacre-helper"), "desktop-settings", "init"],
+        [str(target), "desktop-settings", "init"],
         check=True,
         stdout=subprocess.DEVNULL,
     )
@@ -761,23 +761,23 @@ def deploy(code_only=False, retire_niri_experiment=False):
 
 def validate_live(expected=None):
     for _ in range(80):
-        result = subprocess.run(
-            [
-                str(DEST / "bin/qs"),
-                "-c",
-                "nacre",
-                "ipc",
-                "call",
-                "nacre",
-                "state",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=3,
-        )
         try:
+            result = subprocess.run(
+                [
+                    str(DEST / "bin/qs"),
+                    "-c",
+                    "nacre",
+                    "ipc",
+                    "call",
+                    "nacre",
+                    "state",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
             ready = result.returncode == 0 and "reveal" in json.loads(result.stdout)
-        except ValueError:
+        except (subprocess.TimeoutExpired, ValueError):
             ready = False
         if ready:
             if expected is not None and source_digest(DEST / "source") != expected:
