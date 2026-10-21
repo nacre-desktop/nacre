@@ -275,14 +275,10 @@ fn app_target_available(paths: &Paths, id: &str) -> bool {
     }
 }
 
-fn role_rgb(colors: &Map<String, Value>, role: &str) -> Result<Vec<u8>> {
-    let value = colors
-        .get(role)
-        .and_then(Value::as_str)
-        .ok_or_else(|| format!("Missing palette role: {role}"))?;
+fn hex_rgb(value: &str) -> Result<Vec<u8>> {
     let value = value.trim_start_matches('#');
     if value.len() != 6 || !value.is_ascii() {
-        return Err(format!("Invalid palette role: {role}").into());
+        return Err("Invalid Chromium theme color".into());
     }
     let channels = (0..3)
         .map(|index| u8::from_str_radix(&value[index * 2..index * 2 + 2], 16))
@@ -306,22 +302,14 @@ fn publish_extended_target(
             create_private_dirs(&root, &paths.home)?;
             let text = render_template(assets, "", "chromium-theme.json.in", colors)?;
             let mut manifest: Value = serde_json::from_str(&text)?;
-            for (key, role) in [
-                ("frame", "frame"),
-                ("frame_inactive", "surfaceContainerHigh"),
-                ("toolbar", "surfaceContainer"),
-                ("tab_text", "onSurface"),
-                ("tab_background_text", "onSurfaceVariant"),
-                ("bookmark_text", "onSurface"),
-                ("ntp_background", "surface"),
-                ("ntp_text", "onSurface"),
-                ("ntp_link", "tertiary"),
-                ("omnibox_background", "surfaceContainerLow"),
-                ("omnibox_text", "onSurface"),
-                ("button_background", "primary"),
-                ("toolbar_button_icon", "onSurface"),
-            ] {
-                manifest["theme"]["colors"][key] = json!(role_rgb(colors, role)?);
+            for value in manifest["theme"]["colors"]
+                .as_object_mut()
+                .ok_or("Missing Chromium theme colors")?
+                .values_mut()
+            {
+                *value = json!(hex_rgb(
+                    value.as_str().ok_or("Invalid Chromium theme color")?
+                )?);
             }
             let digest = sha2::Sha256::digest(serde_json::to_vec(&(data["mode"].clone(), colors))?);
             let major = u16::from_be_bytes([digest[0], digest[1]]);
@@ -329,10 +317,7 @@ fn publish_extended_target(
             manifest["version"] = json!(format!("1.{major}.{minor}"));
             manifest["theme"]["properties"]["ntp_logo_alternate"] =
                 json!(if data["mode"] == "dark" { 1 } else { 0 });
-            atomic_write(
-                &root.join("manifest.json"),
-                &(encoded(&manifest)? + "\n"),
-            )?;
+            atomic_write(&root.join("manifest.json"), &(encoded(&manifest)? + "\n"))?;
             match fs::remove_file(root.join("Cached Theme.pak")) {
                 Ok(()) => {}
                 Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
