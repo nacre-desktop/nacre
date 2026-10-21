@@ -17,12 +17,13 @@ NacreClip {
     property bool elideDetail: false
     property bool held: false
     property bool pointerActivation: false
+    property bool compact: false
     readonly property color tileInk: !available ? NacreTokens.mutedInk : selected ? NacreColours.palette.m3onPrimaryContainer : NacreTokens.ink
     signal clicked
     signal detailsRequested
-    implicitHeight: Math.max(66, labels.implicitHeight + 16)
+    implicitHeight: compact ? 76 : Math.max(66, labels.implicitHeight + 16)
     implicitWidth: 184
-    radius: 24
+    radius: compact ? 20 : 24
     color: !available ? Qt.alpha(NacreTokens.raised, .4) : selected ? NacreColours.palette.m3primaryContainer : NacreTokens.raised
     border.width: toggleInput.keyboardFocusVisible || detailInput.keyboardFocusVisible ? 2 : 1
     border.color: toggleInput.keyboardFocusVisible || detailInput.keyboardFocusVisible ? NacreTokens.focusInk(root.color) : Qt.alpha(NacreTokens.outline, available ? .12 : .06)
@@ -30,8 +31,9 @@ NacreClip {
         width: parent.width - (root.hasDetails ? 34 : 0)
         height: parent.height
         NacreIcon {
-            x: 14
-            anchors.verticalCenter: parent.verticalCenter
+            x: root.compact ? (parent.width - width) / 2 : 14
+            y: root.compact ? 9 : 0
+            anchors.verticalCenter: root.compact ? undefined : parent.verticalCenter
             text: root.icon
             font.pointSize: 17
             color: root.tileInk
@@ -39,23 +41,25 @@ NacreClip {
         }
         Column {
             id: labels
-            x: 44
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - x - 8 - (root.navigation ? 24 : 0)
+            x: root.compact ? 6 : 44
+            y: root.compact ? 35 : 0
+            anchors.verticalCenter: root.compact ? undefined : parent.verticalCenter
+            width: parent.width - x - (root.compact ? 6 : 8 + (root.navigation ? 24 : 0))
             spacing: 3
             NacreText {
                 width: parent.width
                 text: root.label
                 color: root.tileInk
                 opacity: root.available ? 1 : .55
-                font.pointSize: 10
+                font.pointSize: root.compact ? 9 : 10
                 font.weight: Font.Medium
+                horizontalAlignment: root.compact ? Text.AlignHCenter : Text.AlignLeft
                 wrapMode: Text.Wrap
             }
             NacreText {
                 width: parent.width
                 text: root.detail
-                visible: root.detail !== ""
+                visible: !root.compact && root.detail !== ""
                 font.pointSize: 9
                 color: root.selected && root.available ? root.tileInk : NacreTokens.mutedInk
                 opacity: root.available ? 1 : .55
@@ -165,7 +169,7 @@ NacreClip {
     HoverHandler {
         id: explanationHover
     }
-    ToolTip.visible: explanationHover.hovered && root.explanation !== ""
+    ToolTip.visible: explanationHover.hovered && (root.explanation !== "" || root.compact && root.detail !== "")
     ToolTip.delay: 400
-    ToolTip.text: root.explanation
+    ToolTip.text: root.explanation || (root.compact ? root.label + ": " + root.detail : "")
 }

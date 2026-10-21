@@ -125,9 +125,12 @@ and keyboard brightness controls only.
 Unsupported night light is hidden. Edit can add, remove, and reorder every tile,
 slider, and the appearance selector, with a Reset action. Sound, microphone, display
 brightness and keyboard-backlight sliders appear by default when their devices are
-available. Removing one in Edit stays remembered. Optional controls include
-airplane mode, VPN, recording, mic mute,
-screenshot, color picker, clipboard, wallpaper, updates, and display settings.
+available. All supported controls are included by default: connectivity, airplane
+mode and VPN first, then power, stay awake and notification/microphone toggles.
+Light / Dark / Auto stays full-width above a compact grid of capture, clipboard,
+wallpaper, update, display and notification shortcuts. VPN opens its saved
+connection list. Removing any control in Edit stays remembered, and incomplete
+rows expand evenly when unsupported features are hidden.
 Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional

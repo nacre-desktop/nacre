@@ -72,9 +72,9 @@ QtObject {
             id: "vpn",
             name: NacreI18n.tr("controlcenter.overview.vpn", "VPN"),
             icon: "vpn_key",
-            status: NacreControlPreferences.optionalTiles.includes("vpn") ? NacreVpn.connected[0]?.name || NacreI18n.tr("controlcenter.control-center.detail.off", "Off") : "",
-            on: NacreControlPreferences.optionalTiles.includes("vpn") && NacreVpn.connected.length > 0,
-            available: NacreControlPreferences.optionalTiles.includes("vpn") && NacreVpn.profiles.length > 0 && !NacreVpn.busy
+            status: NacreVpn.connected[0]?.name || offText,
+            on: NacreVpn.connected.length > 0,
+            available: true
         },
         {
             id: "record",
@@ -96,7 +96,7 @@ QtObject {
     function toggle(id) {
         if (!supported(id) || !find(id)?.available)
             return;
-        if (["network", "bluetooth", "battery", "notifications"].includes(id))
+        if (["network", "bluetooth", "battery", "notifications", "vpn"].includes(id))
             root.detailsRequested(id);
         else if (id === "night")
             NacreControlTools.toggleNightLight();
@@ -106,8 +106,6 @@ QtObject {
             NacreMenu.work("tool", "stay-awake");
         else if (id === "record")
             NacreMenu.work("tool", NacreMenu.snapshot.recording ? "record-stop" : "record-start");
-        else if (id === "vpn")
-            NacreVpn.toggle();
         else if (id === "mic")
             NacreAudio.toggleMic();
         else if (id === "airplane")

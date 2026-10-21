@@ -44,6 +44,7 @@ TestCase {
         NacreBrightness.device.available = true;
         NacreKeyboardLight.available = true;
         NacrePlayers.active = null;
+        NacreControlPreferences.defaultsRevision = 2;
         NacreControlPreferences.reset();
         NacreControlTools.data = ({
                 screenshot: true,
@@ -121,7 +122,7 @@ TestCase {
         verify(!findChild(panel, "quickWifiPower"));
         verify(!findChild(panel, "controlDetailsScroll"));
         const scroll = findChild(panel, "controlPageScroll");
-        verify(scroll.contentHeight <= scroll.height);
+        verify(scroll.interactive === (scroll.contentHeight > scroll.height));
         const tile = findChild(panel, "controlWifi");
         const beforeRequest = JSON.stringify(NacreControlActions.lastRequest);
         tile.clicked();
@@ -306,7 +307,7 @@ TestCase {
         panel.keyboardActive = true;
         scene.selectedSection = "edit";
         wait(30);
-        NacreControlPreferences.toggle("mic");
+        NacreControlPreferences.save(NacreControlPreferences.tiles.concat(["mic"]));
         scene.selectedSection = "home";
         wait(30);
         verify(!!findChild(panel, "controlMic"));
@@ -509,17 +510,80 @@ TestCase {
         prefs.toggle("mic-volume");
         prefs.toggle("keyboard");
         const saved = findChild(prefs, "controlPreferencesStore").saved;
-        compare(JSON.parse(saved).defaultsRevision, 1);
+        compare(JSON.parse(saved).defaultsRevision, 2);
         verify(prefs.receive(saved));
         compare(prefs.tiles.join("|"), "bluetooth|volume|network|brightness|picker");
         verify(prefs.receive(JSON.stringify({
             version: 2,
-            defaultsRevision: 2,
+            defaultsRevision: 3,
             tiles: ["volume"]
         })));
         prefs.save(prefs.tiles);
-        compare(JSON.parse(findChild(prefs, "controlPreferencesStore").saved).defaultsRevision, 2);
-        prefs.defaultsRevision = 1;
+        compare(JSON.parse(findChild(prefs, "controlPreferencesStore").saved).defaultsRevision, 3);
+        prefs.defaultsRevision = 2;
+    }
+    function test_complete_defaults_migrate_stock_layouts_but_preserve_custom_choices() {
+        const prefs = NacreControlPreferences;
+        verify(prefs.defaults.includes("airplane") && prefs.defaults.includes("vpn"));
+        verify(prefs.allowed.every(id => prefs.defaults.includes(id)));
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            defaultsRevision: 1,
+            tiles: prefs.sliderDefaults
+        })));
+        compare(prefs.tiles.join("|"), prefs.defaults.join("|"));
+        const customized = prefs.sliderDefaults.filter(id => id !== "awake");
+        verify(prefs.receive(JSON.stringify({
+            version: 2,
+            defaultsRevision: 1,
+            tiles: customized
+        })));
+        compare(prefs.tiles.join("|"), customized.join("|"));
+        prefs.reset();
+        prefs.toggle("airplane");
+        const saved = findChild(prefs, "controlPreferencesStore").saved;
+        verify(prefs.receive(saved));
+        verify(!prefs.tiles.includes("airplane"));
+    }
+    function test_default_grid_is_balanced_when_capabilities_disappear_and_vpn_navigates() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        wait(40);
+        const overview = findChild(panel, "controlPageLoader").item;
+        compare(overview.rows.reduce((items, row) => items.concat(row), []).join("|"), overview.tileIds.join("|"));
+        const shot = findChild(panel, "controlAction-screenshot"), picker = findChild(panel, "controlAction-picker");
+        verify(shot.compact && picker.compact);
+        compare(shot.height, picker.height);
+        fuzzyCompare(shot.width, picker.width, 1);
+        const vpn = findChild(panel, "controlVpn");
+        verify(vpn.available && vpn.navigation);
+        vpn.clicked();
+        wait(30);
+        compare(panel.section, "vpn");
+        scene.selectedSection = "home";
+        NacreControlTools.data = Object.assign({}, NacreControlTools.data, {
+            nightLightSupported: false,
+            screenshot: false
+        });
+        wait(30);
+        const filtered = findChild(panel, "controlPageLoader").item;
+        compare(filtered.rows.reduce((items, row) => items.concat(row), []).join("|"), filtered.tileIds.join("|"));
+        const clipboard = findChild(panel, "controlAction-clipboard"), updates = findChild(panel, "controlAction-updates"), displays = findChild(panel, "controlAction-displays");
+        fuzzyCompare(clipboard.width, updates.width, 1);
+        fuzzyCompare(updates.width, displays.width, 1);
+    }
+    function test_keyboard_reveals_tools_below_a_short_viewport() {
+        const scene = createTemporaryObject(center, test), panel = scene.panel;
+        scene.height = 480;
+        panel.keyboardActive = true;
+        wait(50);
+        const item = findChild(panel, "controlAction-displaysToggle"), page = findChild(panel, "controlPageScroll");
+        verify(item && page.interactive);
+        item.forceActiveFocus(Qt.TabFocusReason);
+        wait(30);
+        verify(item.activeFocus);
+        verify(page.contentY > 0);
+        const top = item.mapToItem(page, 0, 0).y;
+        verify(top >= 0 && top + item.height <= page.height);
     }
     function test_profiles_are_navigation_and_power_view_fits_its_actions() {
         const scene = createTemporaryObject(center, test), panel = scene.panel;
@@ -612,6 +676,8 @@ TestCase {
         verify(!NacreControlPreferences.tiles.includes("network"));
     }
     function test_editor_detected_and_available_rows_filter_support_and_inherit_disabled() {
+        NacreControlPreferences.toggle("screenshot");
+        NacreControlPreferences.toggle("picker");
         NacreControlPreferences.toggle("mic-volume");
         NacreControlPreferences.toggle("keyboard");
         const view = createTemporaryObject(editor, test, {
@@ -651,6 +717,7 @@ TestCase {
         verify(!findChild(view, "controlAdd-picker"));
     }
     function test_editor_removes_reorders_adds_and_resets_all_controls() {
+        NacreControlPreferences.toggle("screenshot");
         const scene = createTemporaryObject(center, test), panel = scene.panel;
         scene.selectedSection = "edit";
         wait(40);
@@ -694,8 +761,7 @@ TestCase {
             version: 1,
             optionalTiles: ["mic", "unknown", "mic"]
         })));
-        compare(prefs.tiles.length, prefs.defaults.length + 1);
-        compare(prefs.tiles[prefs.tiles.length - 1], "mic");
+        compare(prefs.tiles.join("|"), prefs.defaults.join("|"));
         verify(prefs.receive(JSON.stringify({
             version: 2,
             tiles: ["bluetooth", "network", "bluetooth", "unknown"]
@@ -1182,7 +1248,7 @@ TestCase {
         NacreControlPreferences.save(["notifications"]);
         wait(40);
         const tile = findChild(panel, "controlAction-notifications");
-        verify(tile && tile.navigation && !tile.hasDetails);
+        verify(tile && tile.compact && !tile.hasDetails);
         mouseClick(tile, 20, 20);
         compare(panel.section, "notifications");
         NacreNotifs.retained = [];

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import QtQuick.Controls.Basic
 import Quickshell.Services.UPower
@@ -9,6 +10,25 @@ Item {
     id: content
     readonly property real inset: 18
     readonly property real preferredHeight: page.y + (pageLoader.item?.preferredHeight ?? page.contentHeight) + 18
+    function revealKeyboardFocus() {
+        const item = content.Window.window?.activeFocusItem;
+        if (!item || item.focusByPointer === true || !page.interactive)
+            return;
+        let ancestor = item;
+        while (ancestor && ancestor !== pageLoader.item)
+            ancestor = ancestor.parent;
+        if (!ancestor)
+            return;
+        const top = item.mapToItem(page, 0, 0).y, bottom = top + Math.min(item.height, page.height - 16);
+        const adjustment = top < 8 ? top - 8 : bottom > page.height - 8 ? bottom - page.height + 8 : 0;
+        page.contentY = Math.max(0, Math.min(page.contentHeight - page.height, page.contentY + adjustment));
+    }
+    Connections {
+        target: content.Window.window
+        function onActiveFocusItemChanged() {
+            content.revealKeyboardFocus();
+        }
+    }
     RowLayout {
         id: status
         x: content.inset

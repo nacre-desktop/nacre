@@ -6,12 +6,13 @@ import qs.utils
 
 Singleton {
     id: root
-    readonly property var defaults: ["volume", "mic-volume", "brightness", "keyboard", "network", "bluetooth", "battery", "night", "dnd", "awake", "appearance"]
-    property int defaultsRevision: 1
+    readonly property var defaults: ["volume", "mic-volume", "brightness", "keyboard", "network", "bluetooth", "airplane", "vpn", "battery", "awake", "dnd", "mic", "night", "appearance", "screenshot", "record", "picker", "clipboard", "updates", "displays", "wallpaper", "next-wallpaper", "notifications"]
+    readonly property var sliderDefaults: ["volume", "mic-volume", "brightness", "keyboard", "network", "bluetooth", "battery", "night", "dnd", "awake", "appearance"]
+    property int defaultsRevision: 2
     property var tiles: defaults.slice()
     readonly property var optionalTiles: tiles.filter(id => !defaults.includes(id))
     property string error: ""
-    readonly property var allowed: defaults.concat(["airplane", "vpn", "record", "mic", "screenshot", "picker", "clipboard", "wallpaper", "next-wallpaper", "updates", "notifications", "displays"])
+    readonly property var allowed: defaults
     function normalize(values) {
         return [...new Set(values.filter(value => typeof value === "string" && allowed.includes(value)))];
     }
@@ -32,6 +33,10 @@ Singleton {
                 ordered.splice(index + 1, 0, id);
         }
         return ordered;
+    }
+    function previousDefault(values) {
+        const ordered = normalize(values).join("|");
+        return ordered === sliderDefaults.join("|") || ordered === sliderDefaults.filter(id => !["mic-volume", "keyboard"].includes(id)).join("|");
     }
     function toggle(id) {
         if (!allowed.includes(id))
@@ -67,12 +72,12 @@ Singleton {
             const revision = Number.isInteger(data.defaultsRevision) && data.defaultsRevision > 0 ? data.defaultsRevision : 0;
             if (data.version === 2 && Array.isArray(data.tiles))
                 // Keep frozen helper defaults compatible; apply the UI rollout here.
-                tiles = revision ? normalize(data.tiles) : withDefaultSliders(data.tiles);
+                tiles = revision < 2 && previousDefault(data.tiles) ? defaults.slice() : revision ? normalize(data.tiles) : withDefaultSliders(data.tiles);
             else if (data.version === 1 && Array.isArray(data.optionalTiles))
                 tiles = normalize(defaults.concat(data.optionalTiles));
             else
                 throw new Error();
-            defaultsRevision = Math.max(1, revision);
+            defaultsRevision = Math.max(2, revision);
             error = "";
             return true;
         } catch (failure) {

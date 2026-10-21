@@ -27,9 +27,13 @@ section. All instances share `NacreControlPreferences`; readonly `selectedIds`,
 defaulting to 350. It affects the top, left and right frame lips only; zero opens
 immediately. Status-icon and calendar hover delays remain independent.
 
-The QML preferences service applies the supported-slider defaults without changing
-the frozen helper registry. Older saved layouts gain microphone and keyboard
-sliders beside existing output/display sliders. Saves carry `defaultsRevision` so
-subsequent explicit removals remain removed; empty layouts and existing order are
-preserved. Unsupported devices stay selected in preferences but are hidden until
-available.
+The QML preferences service applies defaults without changing the frozen helper
+registry. The complete catalog is selected by default. Untouched previous defaults
+upgrade to the complete layout; custom layouts, empty layouts and explicit removals
+stay intact. Legacy custom layouts gain microphone and keyboard sliders beside
+existing output/display sliders. Saves carry `defaultsRevision` (currently 2).
+Unsupported devices stay selected in preferences but are hidden until available.
+The overview uses full-width sliders and appearance, paired settings, and rows of
+three compact tools. Every row shares its width evenly, including after capability
+filtering or custom reordering. VPN navigates to
+profile selection rather than guessing a connection.
