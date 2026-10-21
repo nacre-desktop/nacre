@@ -10,10 +10,13 @@ use std::{
 };
 
 fn available(name: &str) -> bool {
-    let Some(path) = std::env::var_os("PATH") else { return false };
+    let Some(path) = std::env::var_os("PATH") else {
+        return false;
+    };
     std::env::split_paths(&path).any(|directory| {
-        let candidate=directory.join(name);
-        fs::metadata(candidate).is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        let candidate = directory.join(name);
+        fs::metadata(candidate)
+            .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
     })
 }
 pub fn needs_host_runtime(mapping: &str) -> bool {
@@ -53,13 +56,30 @@ fn run_command(command: &[String], timeout: Duration, cause: &str) -> Result<std
     let (exe, args) = wrapped.split_first().ok_or("empty update command")?;
     process::run(exe, args, None, timeout)
 }
-fn bounded_output(program:&str,args:&[&str],timeout:Duration,cause:&str)->Option<std::process::Output>{
-    let owned=args.iter().map(|arg|(*arg).to_owned()).collect::<Vec<_>>();
-    let command=std::iter::once(program.to_owned()).chain(owned).collect::<Vec<_>>();
+fn bounded_output(
+    program: &str,
+    args: &[&str],
+    timeout: Duration,
+    cause: &str,
+) -> Option<std::process::Output> {
+    let owned = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
+    let command = std::iter::once(program.to_owned())
+        .chain(owned)
+        .collect::<Vec<_>>();
     eprintln!("nacre-helper updates: starting {program} for {cause}");
-    let wrapped=if program=="pacman" {package_command(&command)} else {command.clone()};
-    let (executable,arguments)=wrapped.split_first()?;
-    match process::run(executable,arguments,None,timeout){Ok(output)=>Some(output),Err(error)=>{eprintln!("nacre-helper updates: {program} for {cause} failed: {error}");None}}
+    let wrapped = if program == "pacman" {
+        package_command(&command)
+    } else {
+        command.clone()
+    };
+    let (executable, arguments) = wrapped.split_first()?;
+    match process::run(executable, arguments, None, timeout) {
+        Ok(output) => Some(output),
+        Err(error) => {
+            eprintln!("nacre-helper updates: {program} for {cause} failed: {error}");
+            None
+        }
+    }
 }
 fn count_result(command: &str, code: i32, stdout: &str, stderr: &str) -> Result<usize> {
     let allowed = if command == "checkupdates" {
@@ -127,7 +147,12 @@ pub fn pending_qt_release_change(pending: &str) -> Result<bool> {
     Ok(false)
 }
 fn status(pending: &str) -> Result<Value> {
-    let version = bounded_output("quickshell", &["--version", "-v"], Duration::from_secs(10), "checking the active Quickshell build");
+    let version = bounded_output(
+        "quickshell",
+        &["--version", "-v"],
+        Duration::from_secs(10),
+        "checking the active Quickshell build",
+    );
     let local = version
         .as_ref()
         .is_some_and(|x| String::from_utf8_lossy(&x.stdout).contains("Nacre local Qt rebuild"));
@@ -138,8 +163,18 @@ fn status(pending: &str) -> Result<Value> {
         ""
     }
     .to_owned();
-    let candidate = bounded_output("pacman", &["-Sp", "--print-format", "%f", "quickshell"], Duration::from_secs(10), "checking the Quickshell distribution candidate");
-    let installed = bounded_output("pacman", &["-Q", "qt6-base"], Duration::from_secs(10), "checking the installed Qt release");
+    let candidate = bounded_output(
+        "pacman",
+        &["-Sp", "--print-format", "%f", "quickshell"],
+        Duration::from_secs(10),
+        "checking the Quickshell distribution candidate",
+    );
+    let installed = bounded_output(
+        "pacman",
+        &["-Q", "qt6-base"],
+        Duration::from_secs(10),
+        "checking the installed Qt release",
+    );
     let qt = installed
         .filter(|o| o.status.success())
         .and_then(|o| String::from_utf8(o.stdout).ok())
@@ -155,13 +190,18 @@ fn status(pending: &str) -> Result<Value> {
         });
     let ready = if local {
         if let Some(a) = archive.filter(|p| p.is_file()) {
-            bounded_output("bsdtar", &["-xOf", a.to_str().unwrap_or(""), ".BUILDINFO"], Duration::from_secs(10), "reading cached Quickshell build metadata")
-                .filter(|x| x.status.success())
-                .is_some_and(|x| {
-                    String::from_utf8_lossy(&x.stdout)
-                        .lines()
-                        .any(|l| l.starts_with(&format!("installed = qt6-base-{qt}-")))
-                })
+            bounded_output(
+                "bsdtar",
+                &["-xOf", a.to_str().unwrap_or(""), ".BUILDINFO"],
+                Duration::from_secs(10),
+                "reading cached Quickshell build metadata",
+            )
+            .filter(|x| x.status.success())
+            .is_some_and(|x| {
+                String::from_utf8_lossy(&x.stdout)
+                    .lines()
+                    .any(|l| l.starts_with(&format!("installed = qt6-base-{qt}-")))
+            })
         } else {
             false
         }
