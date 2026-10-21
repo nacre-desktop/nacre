@@ -309,7 +309,12 @@ TestCase {
         NacreMenu.workflows.data = {
             entries: [],
             projects: [],
-            captures: [{ name: "Zephyr capture", path: "/tmp/zephyr.png" }],
+            captures: [
+                {
+                    name: "Zephyr capture",
+                    path: "/tmp/zephyr.png"
+                }
+            ],
             recording: false
         };
         field.text = "zephyr";
@@ -322,7 +327,12 @@ TestCase {
         NacreMenu.workflows.data = {
             entries: [],
             projects: [],
-            captures: [{ name: "Quasar capture", path: "/tmp/quasar.png" }],
+            captures: [
+                {
+                    name: "Quasar capture",
+                    path: "/tmp/quasar.png"
+                }
+            ],
             recording: false
         };
         field.text = "quasar";
