@@ -1024,8 +1024,23 @@ Scope {
     function installedAiRows() {
         return softwareRows("software.discover.ai").filter(row => row.category === "ai" && row.checked && !row.desktopId);
     }
+    // The query-independent part of the global search corpus (applications, static
+    // actions, windows, clipboard, wallpapers, fonts, offers and so on) costs tens
+    // of milliseconds to build, so it is kept between keystrokes while search is
+    // warm. The launcher turns searchCacheWanted on after it has finished opening
+    // and off again on close, so nothing is rebuilt while the launcher is hidden.
+    // The cached bindings track exactly the same dependencies as the inline calls.
+    property bool searchCacheWanted: false
+    function searchHeadRows() {
+        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"));
+    }
+    function searchTailRows() {
+        return provider("style.wallpapers").concat(provider("style.fonts"), provider("style.mono-fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup"), systemRows("hardware"), systemRows("speed")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
+    }
+    readonly property var searchHead: searchCacheWanted ? searchHeadRows() : null
+    readonly property var searchTail: searchCacheWanted ? searchTailRows() : null
     function globalRows(query) {
-        return apps.concat(allStatic().filter(row => sourceOptions.actions || row.kind === "group" || row.id.startsWith("software.")), provider("actions.windows"), provider("actions.clipboard"), sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), provider("style.wallpapers"), provider("style.fonts"), provider("style.mono-fonts"), installOffers(), themeRows(), extensionRows().filter(row => !row.extension.enabled), extensionActions(), environmentRows(), installedAiRows(), sourceOptions.actions ? systemRows("health").concat(systemRows("setup"), systemRows("hardware"), systemRows("speed")) : [], tuiRows().filter(row => !apps.some(app => app.id.replace(/\.desktop$/, "") === "nacre-tui-" + row.value)), captureRows());
+        return (searchHead || searchHeadRows()).concat(sourceOptions.files ? fileResults(query) : [], sourceOptions.brain ? brainRows(query) : [], workflowRows(query), provider("actions.emoji", query), searchTail || searchTailRows());
     }
     function itemActions(entry) {
         if (!entry)

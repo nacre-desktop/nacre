@@ -874,6 +874,26 @@ NacreSurface {
                 root.reset();
         }
     }
+    // Keep the query-independent search corpus warm while the launcher is open,
+    // starting only after the open animation so the first frames stay light.
+    function setSearchCache(wanted) {
+        if (root.menu.searchCacheWanted !== undefined)
+            root.menu.searchCacheWanted = wanted;
+    }
+    Timer {
+        id: searchWarm
+        interval: 150
+        running: root.visibilities.launcher
+        onTriggered: root.setSearchCache(true)
+    }
+    Connections {
+        target: root.visibilities
+        function onLauncherChanged() {
+            if (!root.visibilities.launcher)
+                root.setSearchCache(false);
+        }
+    }
+    Component.onDestruction: setSearchCache(false)
     Timer {
         id: queryDelay
         interval: 180
@@ -1107,7 +1127,8 @@ NacreSurface {
         height: root.bodyHeight
         cellWidth: width / Math.max(1, Math.floor(width / 116))
         cellHeight: Math.max(72, Math.min(100, height / 5))
-        model: root.entries
+        // A hidden view still instantiates delegates; only feed it while this layout is the one in use.
+        model: root.appLayout && !root.form ? root.entries : []
         currentIndex: root.selection
         keyNavigationEnabled: false
         clip: true
@@ -1238,7 +1259,7 @@ NacreSurface {
         y: root.picker ? 54 : root.softwareBrowse ? 126 : 84
         width: root.contentWidth
         height: Math.floor((root.bodyHeight - (root.softwareBrowse ? 42 : 0)) / 58) * 58 + (root.picker ? 30 : 0)
-        model: root.entries
+        model: !root.appLayout && !root.form && !root.calculation ? root.entries : []
         currentIndex: root.selection
         keyNavigationEnabled: false
         spacing: 3

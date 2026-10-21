@@ -303,6 +303,37 @@ TestCase {
         compare(value.entries.find(row => row.operation === "copy-clip").name, "Updated Discord clipboard");
     }
 
+    function test_warm_search_cache_matches_cold_results_and_tracks_changes() {
+        const value = view(), field = findChild(value, "launcherSearch");
+        NacreMenu.searchCacheWanted = false;
+        NacreMenu.workflows.data = {
+            entries: [],
+            projects: [],
+            captures: [{ name: "Zephyr capture", path: "/tmp/zephyr.png" }],
+            recording: false
+        };
+        field.text = "zephyr";
+        wait(20);
+        const cold = value.entries.map(row => row.id);
+        verify(cold.length > 0, "The capture row must be searchable");
+        NacreMenu.searchCacheWanted = true;
+        wait(20);
+        compare(value.entries.map(row => row.id), cold, "A warm corpus must rank exactly like a cold one");
+        NacreMenu.workflows.data = {
+            entries: [],
+            projects: [],
+            captures: [{ name: "Quasar capture", path: "/tmp/quasar.png" }],
+            recording: false
+        };
+        field.text = "quasar";
+        wait(20);
+        verify(value.entries.some(row => row.value === "/tmp/quasar.png"), "Changed source data must invalidate the warm corpus");
+        field.text = "zephyr";
+        wait(20);
+        verify(!value.entries.some(row => row.value === "/tmp/zephyr.png"));
+        NacreMenu.searchCacheWanted = false;
+    }
+
     function test_software_categories_are_optional_and_global_typing_stays_default() {
         const value = view(), field = findChild(value, "launcherSearch");
         value.navigate("software.discover");
