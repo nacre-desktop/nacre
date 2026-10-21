@@ -473,6 +473,15 @@ pub(crate) async fn watch_events_tagged(
     connection: &zbus::Connection,
     mut emit: impl FnMut(NetworkEvent) -> Result<bool>,
 ) -> Result<i32> {
+    watch_events_with_message(connection, |event, _| emit(event)).await
+}
+
+// The core reader may retain an authoritative transition reason even when the
+// following property read has already advanced past that transient state.
+pub(crate) async fn watch_events_with_message(
+    connection: &zbus::Connection,
+    mut emit: impl FnMut(NetworkEvent, Option<&zbus::Message>) -> Result<bool>,
+) -> Result<i32> {
     use futures_lite::StreamExt;
     let events = zbus::MatchRule::builder()
         .msg_type(zbus::message::Type::Signal)
@@ -488,14 +497,14 @@ pub(crate) async fn watch_events_tagged(
         .build();
     let mut changes = zbus::MessageStream::for_match_rule(events, connection, Some(256)).await?;
     let mut owners = zbus::MessageStream::for_match_rule(owner, connection, Some(16)).await?;
-    if !emit(NetworkEvent::Initial)? {
+    if !emit(NetworkEvent::Initial, None)? {
         return Ok(0);
     }
     loop {
         tokio::select! {
             event = changes.next() => {
-                event.ok_or("NetworkManager event stream closed")??;
-                if !emit(NetworkEvent::Changed)? {
+                let message = event.ok_or("NetworkManager event stream closed")??;
+                if !emit(NetworkEvent::Changed, Some(&message))? {
                     return Ok(0);
                 }
             }
@@ -505,7 +514,7 @@ pub(crate) async fn watch_events_tagged(
                     .body()
                     .deserialize()
                     .map_err(|_| "Malformed NetworkManager owner-change signal")?;
-                if old_owner != new_owner && !emit(NetworkEvent::OwnerChanged)? {
+                if old_owner != new_owner && !emit(NetworkEvent::OwnerChanged, Some(&message))? {
                     return Ok(0);
                 }
             }

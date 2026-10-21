@@ -149,6 +149,86 @@ pub async fn dispatch(
         .map_err(|_| unavailable())?
 }
 
+pub(super) fn observe_failure(
+    message: &zbus::Message,
+    devices: &HashMap<String, EntityId>,
+    failures: &mut BTreeMap<EntityId, Rc<()>>,
+) {
+    let header = message.header();
+    if header.interface().map(|name| name.as_str()) != Some("org.freedesktop.NetworkManager.Device")
+        || header.member().map(|name| name.as_str()) != Some("StateChanged")
+    {
+        return;
+    }
+    let Some(path) = header.path().map(|path| path.as_str()) else {
+        return;
+    };
+    let Ok((state, _, reason)) = message.body().deserialize::<(u32, u32, u32)>() else {
+        return;
+    };
+    let Some(id) = devices.get(path) else {
+        return;
+    };
+    if state == 120 && reason == 7 {
+        failures.insert(id.clone(), Rc::new(()));
+    } else if state == 100 {
+        failures.remove(id);
+    }
+}
+
+pub(super) fn apply_failures(state: &mut NetworkState, failures: &mut BTreeMap<EntityId, Rc<()>>) {
+    failures.retain(|id, _| {
+        state.wireless_enabled
+            && state
+                .devices
+                .items
+                .get(id)
+                .is_some_and(|device| !device.connected)
+    });
+    if !failures.is_empty() {
+        state.health.error = Some(Failure::new(
+            ErrorCode::Unavailable,
+            "Network authentication required or cancelled",
+            true,
+        ));
+    }
+}
+
+fn action_device(action: &Action) -> Option<&EntityId> {
+    match &action.call {
+        CoreCall::NetworkConnect(p) => Some(&p.device),
+        CoreCall::NetworkDisconnect(p) => Some(&p.device),
+        _ => None,
+    }
+}
+
+pub(super) fn prior_failure(
+    action: &Action,
+    failures: &BTreeMap<EntityId, Rc<()>>,
+) -> Option<Rc<()>> {
+    action_device(action)
+        .and_then(|device| failures.get(device))
+        .cloned()
+}
+
+pub(super) fn clear_admitted_failure(
+    action: &Action,
+    previous: Option<&Rc<()>>,
+    failures: &mut BTreeMap<EntityId, Rc<()>>,
+) {
+    let Some(device) = action_device(action) else {
+        return;
+    };
+    // Admission clears only an older observation. A failure received while the
+    // method reply was pending belongs to this attempt and must survive it.
+    if previous
+        .zip(failures.get(device))
+        .is_some_and(|(old, current)| Rc::ptr_eq(old, current))
+    {
+        failures.remove(device);
+    }
+}
+
 pub(super) fn unavailable() -> Failure {
     Failure::new(
         ErrorCode::Unavailable,

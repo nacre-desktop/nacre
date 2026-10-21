@@ -49,7 +49,7 @@ impl Backend {
             4 => Err(zbus::fdo::Error::UnknownObject(
                 "private vanished target".into(),
             )),
-            3 => {
+            3 | 6 => {
                 self.release.notified().await;
                 Ok(())
             }
@@ -75,7 +75,7 @@ impl Manager {
     async fn set_wireless_enabled(&self, enabled: bool) -> zbus::fdo::Result<()> {
         self.0.admission("wifi").await?;
         let mut state = self.0.state.lock().unwrap();
-        if state.mode != 5 {
+        if !matches!(state.mode, 5 | 6) {
             state.wifi = enabled;
         }
         Ok(())
@@ -107,7 +107,7 @@ impl Manager {
         assert_eq!(specific.as_str(), "/");
         self.0.admission("connect").await?;
         let mut state = self.0.state.lock().unwrap();
-        if state.mode != 5 {
+        if !matches!(state.mode, 5 | 6) {
             state.active = true;
         }
         Ok(path(ACTIVE))
@@ -129,7 +129,7 @@ impl Manager {
         assert_eq!(<&str>::try_from(&options["persist"]).unwrap(), "volatile");
         self.0.admission("access_point").await?;
         let mut state = self.0.state.lock().unwrap();
-        if state.mode != 5 {
+        if !matches!(state.mode, 5 | 6) {
             state.active = true;
         }
         Ok((path(PROFILE), path(ACTIVE), HashMap::new()))
@@ -188,7 +188,14 @@ impl DeviceFixture {
     }
     #[zbus(property)]
     fn state_reason(&self) -> (u32, u32) {
-        (120, 7)
+        let state = self.0.state.lock().unwrap();
+        if state.auth_failed {
+            (120, 7)
+        } else if state.active {
+            (100, 0)
+        } else {
+            (30, 0)
+        }
     }
     #[zbus(property)]
     fn active_connection(&self) -> OwnedObjectPath {
@@ -309,6 +316,7 @@ struct Fixture {
     server: zbus::Connection,
     hub: Shared,
     task: tokio::task::JoinHandle<crate::Result<()>>,
+    events: tokio::sync::mpsc::UnboundedReceiver<crate::network_state::NetworkEvent>,
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
@@ -372,12 +380,16 @@ impl Fixture {
         publish_core_starting(&hub)?;
         let mut notices = hub.borrow().observe();
         let projection = new_projection(&hub, &Cell::new(0))?;
+        let (events_tx, events) = tokio::sync::mpsc::unbounded_channel();
         let task = tokio::task::spawn_local(observe_on_connection(
             hub.clone(),
             Rc::new(Cell::new(0)),
             projection,
             client,
-            ObserveHooks::default(),
+            ObserveHooks {
+                watcher_events: Some(events_tx),
+                ..ObserveHooks::default()
+            },
         ));
         loop {
             if hub
@@ -397,6 +409,7 @@ impl Fixture {
             server,
             hub,
             task,
+            events,
         })
     }
     fn snapshot(&self) -> NetworkState {
@@ -814,5 +827,61 @@ async fn network_controls_preflight_retires_vanished_ids() -> crate::Result<()> 
         }),
     )
     .await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_controls_transient_auth_failure_survives_readback() -> crate::Result<()> {
+    tokio::time::timeout(Duration::from_secs(20), tokio::task::LocalSet::new().run_until(async {
+        let f = Fixture::new().await?;
+        f.call("network.set_wifi", json!({"enabled":true})).await?;
+        f.wait(|s| s.wireless_enabled).await;
+        let target = json!({"device":f.device(),"target":{"kind":"access_point","id":f.snapshot().access_points.order[0]}});
+        f.backend.state.lock().unwrap().mode = 5;
+        assert_eq!(f.call("network.connect", target.clone()).await?, json!({"changed":true}));
+        // Current properties already say disconnected with reason NONE. Only
+        // the real transition signals retain the failed authentication reason.
+        for transition in [(120u32, 60u32, 7u32), (30, 120, 0)] {
+            f.server.emit_signal(None::<&str>, DEVICE,
+                "org.freedesktop.NetworkManager.Device", "StateChanged", &transition).await?;
+        }
+        let state = f.wait(|s| s.health.error.is_some()).await;
+        assert!(state.health.available && !state.health.stale);
+        assert!(state.devices.items.values().all(|device| !device.connected));
+        assert_eq!(state.health.error.unwrap().message, "Network authentication required or cancelled");
+        f.backend.state.lock().unwrap().mode = 0;
+        f.call("network.connect", target).await?;
+        f.wait(|s| s.health.error.is_none() && s.devices.items.values().any(|device| device.connected)).await;
+        Ok::<(), crate::Error>(())
+    })).await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_controls_failure_before_admission_reply_is_retained() -> crate::Result<()> {
+    tokio::time::timeout(Duration::from_secs(20), tokio::task::LocalSet::new().run_until(async {
+        let mut f = Fixture::new().await?;
+        f.call("network.set_wifi", json!({"enabled":true})).await?;
+        f.wait(|s| s.wireless_enabled).await;
+        f.backend.started.notified().await; // Consume the earlier radio setter's witness.
+        while f.events.try_recv().is_ok() {}
+        let target = json!({"device":f.device(),"target":{"kind":"access_point","id":f.snapshot().access_points.order[0]}});
+        f.backend.state.lock().unwrap().mode = 6;
+        let call = tokio::task::spawn_local(dispatch(f.hub.clone(), "network.connect", target.clone(), None));
+        f.backend.started.notified().await;
+        for transition in [(120u32, 60u32, 7u32), (30, 120, 0)] {
+            f.server.emit_signal(None::<&str>, DEVICE,
+                "org.freedesktop.NetworkManager.Device", "StateChanged", &transition).await?;
+            assert_eq!(f.events.recv().await, Some(crate::network_state::NetworkEvent::Changed));
+        }
+        // The real watcher has consumed the failure before the server accepts.
+        f.backend.release.notify_one();
+        assert_eq!(call.await??, json!({"changed":true}));
+        f.wait(|s| s.health.error.as_ref().is_some_and(|error| error.message == "Network authentication required or cancelled")).await;
+        f.backend.state.lock().unwrap().mode = 0;
+        f.call("network.connect", target).await?;
+        f.wait(|s| s.health.error.is_none() && s.devices.items.values().any(|device| device.connected)).await;
+        Ok::<(), crate::Error>(())
+    })).await??;
     Ok(())
 }

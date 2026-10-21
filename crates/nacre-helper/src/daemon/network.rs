@@ -1091,6 +1091,11 @@ async fn observe_on_connection(
     let (refresh, mut refreshes) = tokio::sync::mpsc::channel(1);
     let (owner_changed_tx, mut owner_changed) = tokio::sync::oneshot::channel();
     let owner_boundary = Rc::new(Cell::new(false));
+    let authentication_failures =
+        Rc::new(std::cell::RefCell::new(std::collections::BTreeMap::new()));
+    let event_authentication_failures = authentication_failures.clone();
+    let published_devices = Rc::new(std::cell::RefCell::new(HashMap::new()));
+    let event_devices = published_devices.clone();
     let event_connection = connection.clone();
     let event_refresh = refresh.clone();
     let event_owner_boundary = owner_boundary.clone();
@@ -1102,7 +1107,14 @@ async fn observe_on_connection(
     let watcher = tokio::task::spawn_local(async move {
         #[cfg(test)]
         let _drop_signal = WatcherDropSignal(watcher_dropped);
-        crate::network_state::watch_events_tagged(&event_connection, |event| {
+        crate::network_state::watch_events_with_message(&event_connection, |event, message| {
+            if let Some(message) = message {
+                controls::observe_failure(
+                    message,
+                    &event_devices.borrow(),
+                    &mut event_authentication_failures.borrow_mut(),
+                );
+            }
             #[cfg(test)]
             if let Some(events) = &watcher_events {
                 let _ = events.send(event);
@@ -1139,6 +1151,7 @@ async fn observe_on_connection(
                 action = actions.recv() => {
                     let Some(action) = action else { return Err("Network control queue ended".into()); };
                     if action.reply.is_closed() { continue; }
+                    let previous_failure = controls::prior_failure(&action, &authentication_failures.borrow());
                     let result = tokio::select! {
                         biased;
                         _ = &mut owner_changed => {
@@ -1154,6 +1167,9 @@ async fn observe_on_connection(
                             result.unwrap_or_else(|_| Err(controls::unavailable().dispatch_state(true)))
                         }
                     };
+                    if result.is_ok() {
+                        controls::clear_admitted_failure(&action, previous_failure.as_ref(), &mut authentication_failures.borrow_mut());
+                    }
                     let _ = action.reply.send(result);
                     // Even an ambiguous failure is reconciled, never replayed.
                     Some(())
@@ -1194,7 +1210,7 @@ async fn observe_on_connection(
                 return Err("NetworkManager owner changed during snapshot".into());
             }
 
-            let (state, candidate_ids) = match snapshot {
+            let (mut state, candidate_ids) = match snapshot {
                 Ok(snapshot) => snapshot,
                 Err(error) => {
                     projection.publish_failure(&hub, error)?;
@@ -1231,6 +1247,8 @@ async fn observe_on_connection(
             if owner_boundary.get() {
                 return Err("NetworkManager owner changed before publish".into());
             }
+            controls::apply_failures(&mut state, &mut authentication_failures.borrow_mut());
+            let data = serde_json::to_value(&state)?;
             if let Err(error) = hub.borrow_mut().publish(CORE_TOPIC, data) {
                 if error.code == ErrorCode::TooLarge {
                     projection.publish_failure(&hub, CoreError::TooLarge)?;
@@ -1242,8 +1260,11 @@ async fn observe_on_connection(
             if let Some(witness) = &projection.publication_witness {
                 let _ = witness.send(state.clone());
             }
-            requests.enable(capabilities);
             projection.ids = candidate_ids;
+            *published_devices.borrow_mut() = projection.ids.live.iter().filter_map(|(key, id)| {
+                key.strip_prefix("device\0").map(|path| (path.to_owned(), id.clone()))
+            }).collect();
+            requests.enable(capabilities);
             projection.last_good = Some(state);
         }
     }
