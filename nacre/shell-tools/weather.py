@@ -211,7 +211,9 @@ def refresh():
 if __name__ == "__main__":
     import os
 
-    helper = Path(os.environ.get("NACRE_HELPER_BINARY", Path(__file__).with_name("nacre-helper")))
+    helper = Path(
+        os.environ.get("NACRE_HELPER_BINARY", Path(__file__).with_name("nacre-helper"))
+    )
     if not helper.is_file():
         raise SystemExit("nacre-helper is not installed beside weather.py")
     os.execv(helper, [str(helper), "weather", *sys.argv[1:]])
