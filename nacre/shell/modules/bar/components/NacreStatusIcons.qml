@@ -13,8 +13,8 @@ Item {
     property real revealProgress: 0
     property string screenName: "unknown"
     property bool horizontal: false
-    readonly property real cellSpacing: grouped && horizontal ? 4 : NacreAppearance.spacing.small
-    readonly property real cellPadding: grouped && horizontal ? 6 : 0
+    readonly property real cellSpacing: grouped && horizontal ? 2 : NacreAppearance.spacing.small
+    readonly property real cellPadding: grouped && horizontal ? 3 : 0
     property color colour: NacreColours.palette.m3secondary
     readonly property Item recordingItem: recording
     readonly property Item audioItem: speaker

@@ -56,7 +56,7 @@ TestCase {
             const a = item.mapToItem(view, 0, 0), b = item.mapToItem(view, item.width, item.height);
             const left = Math.min(a.x, b.x), right = Math.max(a.x, b.x);
             if (previous !== null)
-                fuzzyCompare(left - previous, 4, 1, name);
+                fuzzyCompare(left - previous, 2, 1, name);
             previous = right;
         }
     }

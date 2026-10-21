@@ -322,11 +322,11 @@ Item {
             anchors.fill: parent
             anchors.leftMargin: 6
             anchors.rightMargin: 6
-            spacing: 4
+            spacing: 2
             NacreSurface {
                 id: updatesHolder
                 objectName: "nacreStatusUpdates"
-                implicitWidth: updates.implicitWidth + 12
+                implicitWidth: updates.implicitWidth + 6
                 implicitHeight: 30
                 radius: 15
                 color: root.visibility?.osd && root.visibility.controlSection === "updates" ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
@@ -467,7 +467,7 @@ Item {
             NacreSurface {
                 id: clockHolder
                 objectName: "nacreHeaderClock"
-                implicitWidth: clock.implicitWidth + 12
+                implicitWidth: clock.implicitWidth + 6
                 implicitHeight: 30
                 radius: 15
                 color: root.visibility?.osd && root.visibility.controlSection === "calendar" ? NacreColours.palette.m3surfaceContainerHighest : "transparent"
@@ -522,7 +522,7 @@ Item {
             NacrePowerButton {
                 id: powerHolder
                 objectName: "nacreStatusPower"
-                implicitWidth: 36
+                implicitWidth: 30
                 routed: true
                 selected: !!root.visibility?.osd && root.visibility.controlSection === "session"
                 onActivated: pointerOwned => root.openStatus("session", powerHolder, pointerOwned)
