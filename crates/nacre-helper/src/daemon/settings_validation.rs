@@ -178,6 +178,7 @@ pub fn provider_field(store: &str, key: &str, value: &Value) -> bool {
             values.iter().all(|(key, value)| {
                 [
                     "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
+                    "chromium", "discord", "spotify",
                 ]
                 .contains(&key.as_str())
                     && value.is_boolean()
@@ -368,6 +369,7 @@ pub fn provider_change(store: &str, key: &str, value: &Value, previous: Option<&
             values.iter().all(|(key, value)| {
                 ([
                     "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
+                    "chromium", "discord", "spotify",
                 ]
                 .contains(&key.as_str())
                     && value.is_boolean())
@@ -405,6 +407,29 @@ mod tests {
             &json!({"language":"pseudo","dnd":"invalid"}),
             true
         ));
+    }
+
+    // Keep the frozen JavaScript corpus unchanged; new descriptors receive live coverage here.
+    #[test]
+    fn app_theming_targets_have_fresh_boolean_validation_coverage() {
+        for target in ["chromium", "discord", "spotify"] {
+            let setting = descriptor("colors", &["appThemes".into(), target.into()]).unwrap();
+            let expected_id = format!("colors/app-theming.targets.{target}");
+            assert_eq!(setting["id"].as_str(), Some(expected_id.as_str()));
+            assert!(valid_value(setting, &json!(true)));
+            assert!(valid_value(setting, &json!(false)));
+            assert!(!valid_value(setting, &json!("true")));
+            let mut values = serde_json::Map::new();
+            values.insert(target.into(), json!(true));
+            let value = Value::Object(values);
+            assert!(provider_field("colors", "appThemes", &value));
+            assert!(provider_change(
+                "colors",
+                "appThemes",
+                &value,
+                Some(&json!({}))
+            ));
+        }
     }
 
     #[test]

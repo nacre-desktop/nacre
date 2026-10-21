@@ -3440,6 +3440,81 @@
       "adapter": "app-theme"
     },
     {
+      "id": "colors/app-theming.targets.chromium",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "chromium",
+      "labelId": "settings.publisher.chromium",
+      "descriptionId": "settings.registry.colors.target.chromium.description",
+      "type": "boolean",
+      "store": {
+        "id": "colors",
+        "key": [
+          "appThemes",
+          "chromium"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "chromium"
+      ],
+      "advanced": false,
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
+    },
+    {
+      "id": "colors/app-theming.targets.discord",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "discord",
+      "labelId": "settings.publisher.discord",
+      "descriptionId": "settings.registry.colors.target.discord.description",
+      "type": "boolean",
+      "store": {
+        "id": "colors",
+        "key": [
+          "appThemes",
+          "discord"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "discord"
+      ],
+      "advanced": false,
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
+    },
+    {
+      "id": "colors/app-theming.targets.spotify",
+      "page": "colors/app-theming",
+      "section": "colors/app-theming.targets",
+      "key": "spotify",
+      "labelId": "settings.publisher.spotify",
+      "descriptionId": "settings.registry.colors.target.spotify.description",
+      "type": "boolean",
+      "store": {
+        "id": "colors",
+        "key": [
+          "appThemes",
+          "spotify"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "spotify"
+      ],
+      "advanced": false,
+      "unavailableId": "settings.registry.colors.target.unavailable",
+      "editorOwned": true,
+      "adapter": "app-theme"
+    },
+    {
       "id": "panels/dashboard/extras.editor.enabled",
       "page": "panels/dashboard/extras",
       "section": "panels/dashboard/extras.editor",

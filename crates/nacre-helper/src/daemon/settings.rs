@@ -378,6 +378,7 @@ impl Service {
                     for (key, value) in old {
                         if ![
                             "gtk3", "gtk4", "qt", "kde", "kitty", "rofi", "lock", "login",
+                            "chromium", "discord", "spotify",
                         ]
                         .contains(&key.as_str())
                         {
