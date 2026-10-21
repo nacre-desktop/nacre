@@ -5,8 +5,11 @@ use std::{
     fs,
     io::Write,
     os::unix::fs::{symlink, MetadataExt},
-    path::Path,
+    path::{Path, PathBuf},
+    process::{Command, Output, Stdio},
+    time::{Duration, Instant},
 };
+use sha2::Digest;
 
 /// Reload only terminals owned by this UID and exact HOME (never another session).
 pub fn reload_terminals(home: &Path) {
@@ -146,6 +149,322 @@ pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
             encoded(&json!({"presentation":serde_json::from_str::<Value>(text)?}))?
         );
         std::io::stdout().flush()?;
+    }
+    Ok(())
+}
+fn atomic_write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
+    let parent = path.parent().ok_or("Invalid publication path")?;
+    fs::create_dir_all(parent)?;
+    let mut temporary = tempfile::Builder::new()
+        .prefix(&format!(".{}", path.file_name().ok_or("Missing filename")?.to_string_lossy()))
+        .tempfile_in(parent)?;
+    temporary.write_all(bytes)?;
+    temporary.persist(path)?;
+    Ok(())
+}
+
+fn create_private_dirs(path: &Path, home: &Path) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let relative = path.strip_prefix(home)?;
+    let mut current = home.to_path_buf();
+    for component in relative.components() {
+        current.push(component);
+        match fs::create_dir(&current) {
+            Ok(()) => fs::set_permissions(&current, fs::Permissions::from_mode(0o700))?,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => {
+                if !current.is_dir() {
+                    return Err("App theme directory is not a directory".into());
+                }
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Ok(())
+}
+
+fn run_bounded(mut command: Command, limit: Duration) -> Option<Output> {
+    let mut child = command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()?;
+    let start = Instant::now();
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) => return child.wait_with_output().ok(),
+            Ok(None) if start.elapsed() < limit => std::thread::sleep(Duration::from_millis(20)),
+            Ok(None) => {
+                let _ = child.kill();
+                let _ = child.wait();
+                return None;
+            }
+            Err(_) => return None,
+        }
+    }
+}
+
+fn gsettings_theme(allowed: &[&str], selected: &str) {
+    let mut get = Command::new("gsettings");
+    get.args(["get", "org.gnome.desktop.interface", "gtk-theme"]);
+    let Some(output) = run_bounded(get, Duration::from_secs(2)) else {
+        return;
+    };
+    if !output.status.success() {
+        return;
+    }
+    let current = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .trim_matches('\'')
+        .to_owned();
+    if !current.is_empty() && !allowed.contains(&current.as_str()) {
+        return;
+    }
+    let mut set = Command::new("gsettings");
+    set.args([
+        "set",
+        "org.gnome.desktop.interface",
+        "gtk-theme",
+        selected,
+    ]);
+    let _ = run_bounded(set, Duration::from_secs(2));
+}
+
+fn gtk_theme_name(paths: &Paths, mode: &str) -> String {
+    let dark = mode == "dark";
+    let suffix = if dark { "-dark" } else { "" };
+    let candidates = [
+        paths.home.join(format!(".local/share/themes/adw-gtk3{suffix}")),
+        PathBuf::from(format!("/usr/share/themes/adw-gtk3{suffix}")),
+    ];
+    if candidates.iter().any(|path| path.is_dir()) {
+        format!("adw-gtk3{suffix}")
+    } else {
+        format!("Adwaita{suffix}")
+    }
+}
+
+fn executable_on_path(name: &str) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
+        .map(|root| root.join(name))
+        .any(|path| {
+            fs::metadata(path)
+                .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+        })
+}
+
+fn app_target_available(paths: &Paths, id: &str) -> bool {
+    match id {
+        "discord" => paths.home.join(".config/Vencord").is_dir(),
+        "chromium" => [
+            "google-chrome-stable",
+            "google-chrome",
+            "brave",
+            "brave-browser",
+            "brave-origin",
+            "chromium",
+        ]
+        .iter()
+        .any(|name| executable_on_path(name)),
+        "spotify" => executable_on_path("spicetify"),
+        _ => true,
+    }
+}
+
+fn role_rgb(colors: &Map<String, Value>, role: &str) -> Result<String> {
+    let value = colors
+        .get(role)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("Missing palette role: {role}"))?;
+    let value = value.trim_start_matches('#');
+    if value.len() != 6 || !value.is_ascii() {
+        return Err(format!("Invalid palette role: {role}").into());
+    }
+    let channels = (0..3)
+        .map(|index| u8::from_str_radix(&value[index * 2..index * 2 + 2], 16))
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(channels
+        .iter()
+        .map(u8::to_string)
+        .collect::<Vec<_>>()
+        .join(", "))
+}
+
+fn publish_extended_target(
+    paths: &Paths,
+    assets: &Path,
+    id: &str,
+    colors: &Map<String, Value>,
+    data: &Value,
+) -> Result<bool> {
+    if !app_target_available(paths, id) {
+        return Ok(false);
+    }
+    let root = paths.home.join(".local/share/nacre/themes/chromium");
+    match id {
+        "chromium" => {
+            create_private_dirs(&root, &paths.home)?;
+            let mut values = colors.clone();
+            for (token, role) in [
+                ("frame", "frame"),
+                ("frameInactive", "surfaceContainerHigh"),
+                ("toolbar", "surfaceContainer"),
+                ("tabText", "onSurface"),
+                ("tabBackgroundText", "onSurfaceVariant"),
+                ("bookmarkText", "onSurface"),
+                ("ntpBackground", "surface"),
+                ("ntpText", "onSurface"),
+                ("ntpLink", "tertiary"),
+                ("omniboxBackground", "surfaceContainerLow"),
+                ("omniboxText", "onSurface"),
+                ("buttonBackground", "primary"),
+                ("toolbarButtonIcon", "onSurface"),
+            ] {
+                values.insert(token.into(), json!(role_rgb(colors, role)?));
+            }
+            let digest = sha2::Sha256::digest(serde_json::to_vec(&(data["mode"].clone(), colors))?);
+            let major = u16::from_be_bytes([digest[0], digest[1]]);
+            let minor = u16::from_be_bytes([digest[2], digest[3]]);
+            values.insert("version".into(), json!(format!("1.{major}.{minor}")));
+            values.insert(
+                "ntpLogoAlternate".into(),
+                json!(if data["mode"] == "dark" { 1 } else { 0 }),
+            );
+            let text = crate::palette_engine::render_values(
+                &fs::read_to_string(assets.join("chromium-theme.json.in"))?,
+                &values,
+            )?;
+            atomic_write(&root.join("manifest.json"), &(text + "\n"))?;
+            match fs::remove_file(root.join("Cached Theme.pak")) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            }
+        }
+        "discord" => {
+            let output = paths.home.join(".config/Vencord/themes/nacre.theme.css");
+            create_private_dirs(output.parent().ok_or("Missing theme directory")?, &paths.home)?;
+            atomic_write(
+                &output,
+                &render_template(assets, "", "discord-theme.css.in", colors)?,
+            )?;
+        }
+        "spotify" => {
+            let directory = paths.home.join(".config/spicetify/Themes/Nacre");
+            create_private_dirs(&directory, &paths.home)?;
+            atomic_write(
+                &directory.join("color.ini"),
+                &render_template(assets, "", "spicetify-colors.ini.in", colors)?,
+            )?;
+            atomic_write(
+                &directory.join("user.css"),
+                &render_template(assets, "", "spicetify-user.css.in", colors)?,
+            )?;
+        }
+        _ => return Err("Unsupported application theme target".into()),
+    }
+    Ok(true)
+}
+
+fn spicetify_uses_nacre(paths: &Paths) -> bool {
+    ["config-xpui.ini", "config.ini"].iter().any(|name| {
+        fs::read_to_string(paths.home.join(".config/spicetify").join(name))
+            .ok()
+            .is_some_and(|text| {
+                text.lines().any(|line| {
+                    let Some((key, value)) = line.split_once('=') else {
+                        return false;
+                    };
+                    key.trim() == "current_theme" && value.trim() == "Nacre"
+                })
+            })
+    })
+}
+
+fn refresh_spicetify(paths: &Paths, live: bool) {
+    if !live
+        || !theme_target_enabled(paths, "spotify").unwrap_or(false)
+        || !paths.home.join(".config/spicetify/Themes/Nacre/color.ini").is_file()
+        || !spicetify_uses_nacre(paths)
+        || !executable_on_path("spicetify")
+    {
+        return;
+    }
+    let _ = crate::process::spawn_detached_quiet(
+        "timeout",
+        &[
+            "-k".into(),
+            "1s".into(),
+            "10s".into(),
+            "spicetify".into(),
+            "refresh".into(),
+        ],
+    );
+}
+pub(crate) fn post_publish_external_targets(paths: &Paths, live: bool) {
+    refresh_spicetify(paths, live);
+}
+
+enum TargetOutputState {
+    Missing,
+    File(Vec<u8>, u32),
+    Link(PathBuf),
+}
+
+fn target_output_path(paths: &Paths, relative: &str) -> Result<PathBuf> {
+    let path = Path::new(relative);
+    if path.is_absolute()
+        || path
+            .components()
+            .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err("Invalid application theme output path".into());
+    }
+    Ok(paths.home.join(path))
+}
+
+fn snapshot_target_outputs(paths: &Paths, target: &Value) -> Result<Vec<(PathBuf, TargetOutputState)>> {
+    use std::os::unix::fs::PermissionsExt;
+    target["outputs"]
+        .as_array()
+        .ok_or("Invalid target outputs")?
+        .iter()
+        .map(|output| {
+            let relative = output.as_str().ok_or("Invalid target output")?;
+            let path = target_output_path(paths, relative)?;
+            let state = if path.is_symlink() {
+                TargetOutputState::Link(fs::read_link(&path)?)
+            } else if path.is_file() {
+                TargetOutputState::File(
+                    fs::read(&path)?,
+                    fs::metadata(&path)?.permissions().mode() & 0o777,
+                )
+            } else if path.exists() {
+                return Err("Application theme output is not a file".into());
+            } else {
+                TargetOutputState::Missing
+            };
+            Ok((path, state))
+        })
+        .collect()
+}
+
+fn restore_target_outputs(snapshot: &[(PathBuf, TargetOutputState)]) -> Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    for (path, state) in snapshot {
+        match state {
+            TargetOutputState::Missing => match fs::remove_file(path) {
+                Ok(()) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(error) => return Err(error.into()),
+            },
+            TargetOutputState::File(bytes, mode) => {
+                atomic_write_bytes(path, bytes)?;
+                fs::set_permissions(path, fs::Permissions::from_mode(*mode))?;
+            }
+            TargetOutputState::Link(target) => atomic_symlink(path, target)?,
+        }
     }
     Ok(())
 }
@@ -476,15 +795,13 @@ fn publish_application_colors_selected(
         let settings = folder.join("settings.ini");
         if settings.exists() {
             let mut text = fs::read_to_string(&settings)?;
+            let desired_theme = gtk_theme_name(paths, mode);
             for (key, value) in [
                 (
                     "gtk-application-prefer-dark-theme",
                     if mode == "dark" { "1" } else { "0" }.to_owned(),
                 ),
-                (
-                    "gtk-theme-name",
-                    format!("Adwaita{}", if mode == "dark" { "-dark" } else { "" }),
-                ),
+                ("gtk-theme-name", desired_theme),
             ] {
                 text = patterns[key]
                     .replace_all(&text, |_: &regex::Captures| format!("{key}={value}"))
@@ -589,6 +906,11 @@ fn publish_application_colors_selected(
             )?;
         }
     }
+    for id in ["chromium", "discord", "spotify"] {
+        if enabled(id)? {
+            publish_extended_target(paths, assets, id, colors, data)?;
+        }
+    }
     Ok(icon_theme)
 }
 
@@ -622,10 +944,6 @@ pub fn publish_dconf(
             std::env::var("XCURSOR_THEME").unwrap_or_else(|_| "breeze_cursors".into()),
         ),
         ("color-scheme", format!("prefer-{mode}")),
-        (
-            "gtk-theme",
-            format!("Adwaita{}", if mode == "dark" { "-dark" } else { "" }),
-        ),
     ] {
         values.insert(
             format!("/org/gnome/desktop/interface/{key}"),
@@ -723,13 +1041,16 @@ impl Publisher {
     pub fn set_theme_target(&mut self, id: &str, enabled: bool) -> Result<()> {
         let manifest: Value =
             serde_json::from_slice(&fs::read(self.assets.join("theme-targets.json"))?)?;
-        if !manifest["targets"]
+        let target = manifest["targets"]
             .as_array()
-            .is_some_and(|rows| rows.iter().any(|row| row["id"] == id))
-        {
-            return Err("Unknown application theme target".into());
-        }
+            .and_then(|rows| rows.iter().find(|row| row["id"] == id))
+            .ok_or("Unknown application theme target")?;
         let _guard = publication_lock(&self.paths)?;
+        let snapshot = if enabled && matches!(id, "chromium" | "discord" | "spotify") {
+            Some(snapshot_target_outputs(&self.paths, target)?)
+        } else {
+            None
+        };
         let key = theme_target_key(id);
         let path = self.paths.config.join("colors.json");
         let schema = state::schema(&path).ok_or("Missing colors store schema")?;
@@ -792,12 +1113,18 @@ impl Publisher {
                         let selected = self.selected(None)?;
                         self.publish_lock_login(&colors, &selected)?;
                     }
+                    "chromium" | "discord" | "spotify" => {
+                        publish_extended_target(&self.paths, &self.assets, id, &colors, &data)?;
+                    }
                     _ => return Err("Unsupported application theme target".into()),
                 }
             }
             self.publish_target_manifest()
         })();
         if result.is_err() {
+            if let Some(snapshot) = &snapshot {
+                restore_target_outputs(snapshot)?;
+            }
             if document.is_hosted() {
                 document.save(&previous_document)?;
             } else {
@@ -814,11 +1141,25 @@ impl Publisher {
                 })?;
             }
         }
+        if result.is_ok() && key == "gtk3" && enabled {
+            let data = state::read(&self.paths.state.join("scheme.json"), Value::Null)?;
+            if data.is_object() {
+                gsettings_theme(
+                    &["Adwaita", "Adwaita-dark", "adw-gtk3", "adw-gtk3-dark"],
+                    &gtk_theme_name(&self.paths, data["mode"].as_str().unwrap_or("dark")),
+                );
+            }
+        }
+        if result.is_ok() && id == "spotify" {
+            refresh_spicetify(&self.paths, true);
+        }
         result
     }
     pub fn apply_palette(&mut self, wallpaper: Option<&Path>, live: bool) -> Result<()> {
         let _guard = publication_lock(&self.paths)?;
-        self.apply_locked(wallpaper, live)
+        self.apply_locked(wallpaper, live)?;
+        refresh_spicetify(&self.paths, live);
+        Ok(())
     }
     fn selected(&self, wallpaper: Option<&Path>) -> Result<String> {
         if let Some(wallpaper) = wallpaper.filter(|path| !path.as_os_str().is_empty()) {
@@ -960,6 +1301,12 @@ impl Publisher {
         if live {
             self.reload_desktop_consumers(&data, &icon_theme, &config, connection.as_ref())?;
         }
+        if live && theme_target_enabled(paths, "gtk3")? {
+            gsettings_theme(
+                &["Adwaita", "Adwaita-dark", "adw-gtk3", "adw-gtk3-dark"],
+                &gtk_theme_name(paths, data["mode"].as_str().ok_or("Missing mode")?),
+            );
+        }
         Ok(())
     }
     pub fn publish_lock_login(
@@ -1013,7 +1360,6 @@ impl Publisher {
         Ok(())
     }
     pub fn publish_target_manifest(&self) -> Result<()> {
-        use std::os::unix::fs::PermissionsExt;
         let manifest: Value =
             serde_json::from_slice(&fs::read(self.assets.join("theme-targets.json"))?)?;
         let mut targets = Vec::new();
@@ -1021,25 +1367,27 @@ impl Publisher {
             .as_array()
             .ok_or("Invalid theme targets")?
         {
-            let available = target
-                .get("tool")
-                .filter(|value| !value.is_null() && value.as_str() != Some(""))
-                .is_none_or(|value| {
-                    value.as_str().is_some_and(|name| {
-                        std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
-                            .map(|root| root.join(name))
-                            .any(|path| {
-                                fs::metadata(path).is_ok_and(|m| {
-                                    m.is_file() && m.permissions().mode() & 0o111 != 0
-                                })
-                            })
-                    })
-                });
+            let id = target["id"].as_str().ok_or("Missing target id")?;
+            let available = if matches!(id, "chromium" | "discord" | "spotify") {
+                app_target_available(&self.paths, id)
+            } else {
+                let tool = &target["tool"];
+                if tool.is_null() || tool.as_str() == Some("") {
+                    true
+                } else {
+                    let tools = tool
+                        .as_array()
+                        .map(|rows| rows.iter().filter_map(Value::as_str).collect::<Vec<_>>())
+                        .unwrap_or_else(|| tool.as_str().into_iter().collect());
+                    tools.into_iter().any(executable_on_path)
+                }
+            };
             let published = target["outputs"]
                 .as_array()
                 .ok_or("Invalid target outputs")?
                 .iter()
                 .filter_map(Value::as_str)
+                .filter(|path| !path.ends_with("/Cached Theme.pak"))
                 .any(|path| self.paths.home.join(path).is_file());
             let mut target = target.clone();
             target["status"] = json!(if !available {
@@ -1050,7 +1398,6 @@ impl Publisher {
                 "not-published"
             });
             target["available"] = json!(available);
-            let id = target["id"].as_str().ok_or("Missing target id")?;
             if !theme_target_enabled(&self.paths, id)? {
                 target["status"] = json!("paused");
             }
@@ -1224,6 +1571,7 @@ impl Publisher {
             &thumbnail,
         )?;
         self.apply_locked(Some(&image), live)?;
+        refresh_spicetify(&self.paths, live);
         Ok(true)
     }
     pub fn restore_demo(&mut self, snapshot: &Value, live: bool) -> Result<Value> {

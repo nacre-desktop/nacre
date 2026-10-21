@@ -1,0 +1,16 @@
+[Nacre]
+text             = {{onSurface}}
+subtext          = {{onSurfaceVariant}}
+main             = {{surface}}
+sidebar          = {{surfaceContainerLow}}
+player           = {{surfaceContainer}}
+card             = {{surfaceContainerLow}}
+shadow           = {{shadow}}
+selected-row     = {{surfaceContainerHigh}}
+button           = {{primary}}
+button-active    = {{primaryDim}}
+button-disabled  = {{outline}}
+tab-active       = {{primaryContainer}}
+notification     = {{primaryContainer}}
+notification-error = {{errorContainer}}
+misc             = {{surfaceContainerHigh}}

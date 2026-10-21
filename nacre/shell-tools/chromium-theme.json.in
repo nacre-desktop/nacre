@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Nacre",
+  "version": "{{version}}",
+  "theme": {
+    "colors": {
+      "frame": [{{frame}}],
+      "frame_inactive": [{{frameInactive}}],
+      "toolbar": [{{toolbar}}],
+      "tab_text": [{{tabText}}],
+      "tab_background_text": [{{tabBackgroundText}}],
+      "bookmark_text": [{{bookmarkText}}],
+      "ntp_background": [{{ntpBackground}}],
+      "ntp_text": [{{ntpText}}],
+      "ntp_link": [{{ntpLink}}],
+      "omnibox_background": [{{omniboxBackground}}],
+      "omnibox_text": [{{omniboxText}}],
+      "button_background": [{{buttonBackground}}],
+      "toolbar_button_icon": [{{toolbarButtonIcon}}]
+    },
+    "properties": { "ntp_logo_alternate": {{ntpLogoAlternate}} }
+  }
+}
