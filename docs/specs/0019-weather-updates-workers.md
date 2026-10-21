@@ -26,3 +26,20 @@ kept as Rust tests; security additions are explicit new cases with intended-diff
 desktop, installed Nacre, units, keybindings or publication; existing AI permissions and the paru command
 unchanged; standalone native command ships first, daemon hosting is a separate unit. Status for all: Proposed.
 Numbers are proposals; N0017 is the last used.
+
+## Evidence
+
+- Static trigger trace: `Updates.qml` reads cache on startup and runs its status worker every 1,800 s;
+  a stale cache starts the read-only refresh, which queries repository/AUR status and the Qt preflight.
+  The Rust worker and interactive `updates.sh` log package-manager starts with their causes.
+- Rust assertions cover forecast normalization and stale-cache preservation, 0600 weather cache
+  writes, HTTPS endpoint policy, update count/error rules, Qt-release parsing, namespace command
+  routing, and the existing `paru -Syu --skipreview`/Flatpak update flow.
+- Frozen references were not regenerated. Native parity: weather 2/2, updates 2/2, lock-info 11/11;
+  the 9 lock-info module-API cases use the native parity adapter, and the 2 CLI cases were also
+  replayed directly. Full helper corpus: 534 cases, 0 failures.
+- Full desktop CI on the dev-1 Arch container passed: Rust format/clippy, 313 Rust tests, 18 protocol
+  consumer tests, native release build, 28 sandbox integrity tests, `tools/check.py` suites (441
+  tools, 116 AI, 45 Brain, 478 shell-tools), translation coverage, and both native gallery audits.
+- Scope stayed standalone: QML and retained Python entrypoint paths invoke `nacre-helper`; daemon
+  hosting remains a separate unit.
