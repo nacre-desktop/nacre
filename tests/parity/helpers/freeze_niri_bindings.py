@@ -17,7 +17,7 @@ ROOT = state_reference.ROOT
 DESTINATION = ROOT / "crates/nacre-helper/tests/fixtures/niri-bindings-reference.json"
 
 
-BINDINGS_SHA = "03fb7ddd6582124fcc7d37a6411d6b0eb26d19853851d02591876b32c70cbde4"
+BINDINGS_SHA = "203a9bd26726607b5ac75472fd063006d8e7a497489dcd246cee6b5d742c2b01"
 
 
 def verify_source():
