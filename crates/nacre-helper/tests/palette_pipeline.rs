@@ -1092,12 +1092,13 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
         assert!(css.contains(variable), "{variable}");
     }
     for neutral in 1..=100 {
-        assert!(
-            css.contains(&format!("--neutral-{neutral}:")),
-            "neutral {neutral}"
-        );
+        let declaration = format!("--neutral-{neutral}:");
+        let line = css
+            .lines()
+            .find(|line| line.contains(&declaration))
+            .unwrap_or_else(|| panic!("missing neutral {neutral}"));
+        assert!(line.contains("!important;"), "neutral {neutral}: {line}");
     }
-    assert!(css.contains("!important"));
     for semantic in [
         "--chat-background:",
         "--background-surface-highest:",
