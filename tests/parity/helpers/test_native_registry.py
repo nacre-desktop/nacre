@@ -153,12 +153,12 @@ class NativeRegistryTests(unittest.TestCase):
         )
 
     def test_recording_mixed_selection_is_rejected_before_reference_execution(self):
-        registry.assert_recordable([{"helper": "weather"}])
+        registry.assert_recordable([{"helper": "nacre-app"}])
         for helper in registry.MIGRATED:
             with self.subTest(helper=helper):
                 with self.assertRaisesRegex(ValueError, "cannot be re-recorded"):
                     registry.assert_recordable(
-                        [{"helper": "weather"}, {"helper": helper}]
+                        [{"helper": "nacre-app"}, {"helper": helper}]
                     )
 
     def test_module_boundary_uses_only_the_developer_adapter(self):
