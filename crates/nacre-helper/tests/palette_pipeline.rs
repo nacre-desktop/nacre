@@ -1146,7 +1146,7 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     )?;
     fake_executable(
         &bin.join("timeout"),
-        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$TIMEOUT_LOG\"\nshift 3\nexec \"$@\"\n",
+        "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$TIMEOUT_LOG\"\ntest -f \"$SPICETIFY_THEME_DIR/color.ini\" && test -f \"$SPICETIFY_THEME_DIR/user.css\" && test -f \"$SPICETIFY_THEME_DIR/theme.js\" || exit 41\nshift 3\nexec \"$@\"\n",
     )?;
     fs::create_dir_all(home.path().join(".config/spicetify"))?;
     fs::write(
@@ -1163,6 +1163,10 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
         .env("NACRE_COMPOSITOR", "hyprland")
         .env("SPICETIFY_LOG", &log)
         .env("TIMEOUT_LOG", &timeout_log)
+        .env(
+            "SPICETIFY_THEME_DIR",
+            home.path().join(".config/spicetify/Themes/Nacre"),
+        )
         .output()?;
     assert!(
         output.status.success(),
@@ -1239,6 +1243,11 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     }
     let theme_js_path = home.path().join(".config/spicetify/Themes/Nacre/theme.js");
     let expected_theme_js = fs::read(assets().join("spicetify-theme.js"))?;
+    let theme_source = String::from_utf8_lossy(&expected_theme_js);
+    assert!(regex::Regex::new(r"\},\s*400\);")?.is_match(&theme_source));
+    assert!(!theme_source.contains("2000"));
+    assert!(theme_source.contains("fetch(\"colors.css?"));
+    assert!(theme_source.contains("document.querySelectorAll(\"link.userCSS\")"));
     assert_eq!(fs::read(&theme_js_path)?, expected_theme_js);
     assert_eq!(
         fs::metadata(&theme_js_path)?.permissions().mode() & 0o777,
@@ -1254,6 +1263,10 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
         .env("NACRE_COMPOSITOR", "hyprland")
         .env("SPICETIFY_LOG", &log)
         .env("TIMEOUT_LOG", &timeout_log)
+        .env(
+            "SPICETIFY_THEME_DIR",
+            home.path().join(".config/spicetify/Themes/Nacre"),
+        )
         .output()?;
     assert!(output.status.success());
     assert_eq!(fs::read(&ini_path)?, color_ini);
@@ -1451,6 +1464,101 @@ fn theme_bundle_snapshot_restores_spicetify_script_when_present_or_absent() -> R
             assert!(!theme_js.exists());
         }
     }
+    Ok(())
+}
+
+#[test]
+fn failed_live_bundle_does_not_start_spicetify_refresh() -> Result<()> {
+    const CHILD: &str = "NACRE_FAILED_BUNDLE_REFRESH_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+        let home = tempfile::tempdir()?;
+        let bin = home.path().join("bin");
+        fs::create_dir(&bin)?;
+        let refresh_log = home.path().join("refresh.log");
+        fake_executable(
+            &bin.join("spicetify"),
+            "#!/bin/sh\nexit 0\n",
+        )?;
+        fake_executable(
+            &bin.join("timeout"),
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$REFRESH_LOG\"\nexit 0\n",
+        )?;
+        let output = std::process::Command::new(std::env::current_exe()?)
+            .args(["--exact", "failed_live_bundle_does_not_start_spicetify_refresh"])
+            .env_clear()
+            .env(CHILD, "1")
+            .env("HOME", home.path())
+            .env("PATH", &bin)
+            .env("NACRE_COMPOSITOR", "hyprland")
+            .env("REFRESH_LOG", &refresh_log)
+            .output()?;
+        assert!(
+            output.status.success(),
+            "stdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(!refresh_log.exists());
+        return Ok(());
+    }
+
+    use serde_json::json;
+    let home = PathBuf::from(std::env::var_os("HOME").ok_or("Missing child HOME")?);
+    let paths = Paths::new(&home);
+    fs::create_dir_all(&paths.config)?;
+    fs::create_dir_all(&paths.state)?;
+    fs::copy(assets().join("reference-style.json"), paths.state.join("scheme.json"))?;
+    nacre_helper::state::write(
+        &paths.config.join("wallpaper-picker.json"),
+        &json!({
+            "palettePreset":"wallpaper",
+            "paletteMode":"dark",
+            "paletteAutoMode":true,
+            "rotationMinutes":47,
+            "collection":"preserved"
+        }),
+    )?;
+    let spicetify = home.join(".config/spicetify");
+    fs::create_dir_all(spicetify.join("Themes/Nacre"))?;
+    fs::write(spicetify.join("config-xpui.ini"), "current_theme=Nacre\n")?;
+    fs::write(spicetify.join("Themes/Nacre/color.ini"), "[Nacre]\n")?;
+    let theme_js = spicetify.join("Themes/Nacre/theme.js");
+    fs::write(&theme_js, b"before failed bundle\n")?;
+
+    let backend = nacre_helper::compositor::backend::Backend::new(
+        paths.clone(),
+        [("NACRE_COMPOSITOR".into(), "hyprland".into())]
+            .into_iter()
+            .collect(),
+    )?;
+    let mut publisher = nacre_helper::classic_state::Publisher {
+        paths,
+        assets: assets(),
+        backend,
+        system_icons: home.join("absent-icons"),
+        monitors: Some(Vec::new()),
+        now_ms: None,
+    };
+    let failed = nacre_helper::theme_bundles::apply_with(
+        &mut publisher,
+        "bundle:catppuccin",
+        "light",
+        "palette",
+        true,
+        |publisher, _, _, _| {
+            fs::write(
+                publisher
+                    .paths
+                    .home
+                    .join(".config/spicetify/Themes/Nacre/theme.js"),
+                b"partial failed bundle\n",
+            )?;
+            Err("injected live bundle failure".into())
+        },
+    );
+    assert!(failed.is_err());
+    assert_eq!(fs::read(&theme_js)?, b"before failed bundle\n");
+    assert!(!home.join("refresh.log").exists());
     Ok(())
 }
 
