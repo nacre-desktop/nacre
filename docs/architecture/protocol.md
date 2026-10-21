@@ -1,5 +1,7 @@
 # Nacre private protocol v1
 
+The protocol (schemas, generated types, golden transcripts, and protocol docs) is licensed under MIT OR Apache-2.0. The daemon and the rest of Nacre remain GPL-3.0-only. See the licenses in [`protocol/`](../../protocol/README.md).
+
 Contract for nacre-protocol and all Nacre clients. See
 [foundation.md](foundation.md). Committed schemas, Luau definitions and transcripts
 live under `protocol/`; the daemon and native client share the Rust wire types.

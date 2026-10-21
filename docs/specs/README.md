@@ -760,3 +760,4 @@ implementer live probe or push.
 
 Correction validation: 26 switch tests and 16 release tests pass on the dedicated
 SSH test host; configure and its test exactly match pre-extension 68d28945.
+| — | [Structure and licensing](../architecture/structure-and-licensing.md) | Accepted 2026-10-21 | Owner decision recorded; protocol relicensing and Bead roadmap tracked in Bead ADR 0004. |
