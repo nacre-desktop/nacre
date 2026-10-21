@@ -49,6 +49,7 @@ NATIVE_CLIENT_CALLERS = {
     "isolate-apps",
     "lock-config",
     "maintenance",
+    "menu-backend",
     "power-button-policy",
     "profile-policy",
     "session-watch",
