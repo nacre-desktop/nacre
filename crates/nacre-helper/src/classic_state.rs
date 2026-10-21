@@ -305,6 +305,8 @@ fn publish_extended_target(
                 &directory.join("user.css"),
                 &render_template(assets, "", "spicetify-user.css.in", colors)?,
             )?;
+            let theme = fs::read_to_string(assets.join("spicetify-theme.js"))?;
+            atomic_write(&directory.join("theme.js"), &theme)?;
         }
         _ => return Err("Unsupported application theme target".into()),
     }
@@ -343,7 +345,7 @@ fn refresh_spicetify(paths: &Paths, live: bool) {
         &[
             "-k".into(),
             "1s".into(),
-            "10s".into(),
+            "60s".into(),
             "spicetify".into(),
             "refresh".into(),
         ],
