@@ -30,6 +30,26 @@ TestCase {
             }
         }
     }
+    function test_panel_focuses_search_on_fresh_open_and_reopen() {
+        const view = createTemporaryObject(scene, this), panel = view.panel;
+        const page = findChild(panel, "launcherPage");
+        panel.state.launcher = true;
+        tryCompare(page, "active", true);
+        const search = findChild(page.item, "launcherSearch");
+        verify(search);
+        tryCompare(search, "activeFocus", true, 1200);
+        keyClick(search, Qt.Key_E);
+        compare(search.text, "e");
+
+        panel.state.launcher = false;
+        tryCompare(panel, "height", 0, 1200);
+        search.focus = false;
+        search.text = "";
+        panel.state.launcher = true;
+        tryCompare(search, "activeFocus", true, 1200);
+        keyClick(search, Qt.Key_D);
+        compare(search.text, "d");
+    }
     function test_lazy_open_reversal_and_unload() {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
