@@ -82,6 +82,6 @@ Column {
         objectName: "controlCalendarSettings"
         icon: "calendar_month"
         text: NacreI18n.tr("controlcenter.calendar.settings", "Calendar settings")
-        onClicked: NacrePanelState.openSettings("panels/dashboard#calendar")
+        onClicked: NacrePanelState.openSettings("panels/dashboard#calendarFile")
     }
 }

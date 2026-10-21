@@ -167,6 +167,7 @@ class QuickControlsTests(unittest.TestCase):
                 "Updates": 'property int count:2;property string message:"";function refresh(){}',
                 "NacreTime": "property date date:new Date(2026,9,9,12,34)",
                 "NacreDashboardState": "property var calendar:({events:[]})",
+                "NacreSettingsApp": 'property string lastPage:"";function open(page){lastPage=page}',
                 "NacreBar": "property var sizes:({batteryWidth:200})",
                 "UPower": "property bool onBattery:true;property var displayDevice:({ready:true,isLaptopBattery:true,percentage:.5,timeToEmpty:3600,timeToFull:0})",
                 "PowerProfiles": 'property int profile:1;property bool hasPerformanceProfile:true;property string degradationReason:""',

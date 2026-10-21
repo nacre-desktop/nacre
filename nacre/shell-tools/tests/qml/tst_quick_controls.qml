@@ -259,6 +259,8 @@ TestCase {
         compare(month.dateForDay(month.selectedDay).getDate(), 3);
         findChild(panel, "controlCalendarToday").clicked();
         compare(month.selectedDay, month.todayKey);
+        findChild(panel, "controlCalendarSettings").clicked();
+        compare(NacreSettingsApp.lastPage, "panels/dashboard#calendarFile");
         verify(!findChild(panel, "controlEdit").visible);
         NacreDashboardState.calendar = {
             events: []
