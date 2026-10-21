@@ -95,6 +95,24 @@ fn terminal_and_presentation_match_full_publisher_references() -> Result<()> {
 fn gtk_qt_kde_and_icon_overlays_match_full_publisher_references() -> Result<()> {
     use base64::{engine::general_purpose::STANDARD, Engine};
     use std::os::unix::fs::{symlink, PermissionsExt};
+    if std::env::var_os("NACRE_GTK_FIXTURE_CHILD").is_none() {
+        let data_dirs = tempfile::tempdir()?;
+        let output = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "gtk_qt_kde_and_icon_overlays_match_full_publisher_references",
+            ])
+            .env("NACRE_GTK_FIXTURE_CHILD", "1")
+            .env("XDG_DATA_DIRS", data_dirs.path())
+            .output()?;
+        assert!(
+            output.status.success(),
+            "stdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        return Ok(());
+    }
     let reference = fixture()?;
     for case in reference["cases"].as_array().ok_or("Missing cases")? {
         let home = tempfile::tempdir()?;
@@ -437,6 +455,8 @@ fn whole_publication_preserves_every_frozen_file_and_link() -> Result<()> {
     )?;
     let binary = root.path().join("bin");
     fs::create_dir(&binary)?;
+    let empty_data_dirs = root.path().join("empty-data");
+    fs::create_dir(&empty_data_dirs)?;
     let renderer = binary.join("rsvg-convert");
     fs::copy(
         assets().join("../../tests/parity/helpers/svg_fixture.py"),
@@ -532,6 +552,7 @@ fn whole_publication_preserves_every_frozen_file_and_link() -> Result<()> {
                 .env_clear()
                 .env("HOME", &home)
                 .env("PATH", &binary)
+                .env("XDG_DATA_DIRS", &empty_data_dirs)
                 .env("NACRE_SVG_REFERENCE", &responses)
                 .output()?;
             if case["request"].is_null() {
@@ -902,6 +923,32 @@ fn app_theme_command(
     id: &str,
     enabled: bool,
 ) -> Result<std::process::Output> {
+    app_theme_command_with_data_dirs(home, path, id, enabled, None)
+}
+
+fn app_theme_command_with_data_dirs(
+    home: &Path,
+    path: &Path,
+    id: &str,
+    enabled: bool,
+    data_dirs: Option<&Path>,
+) -> Result<std::process::Output> {
+    app_theme_command_with_data_dirs_value(
+        home,
+        path,
+        id,
+        enabled,
+        data_dirs.map(Path::as_os_str),
+    )
+}
+
+fn app_theme_command_with_data_dirs_value(
+    home: &Path,
+    path: &Path,
+    id: &str,
+    enabled: bool,
+    data_dirs: Option<&std::ffi::OsStr>,
+) -> Result<std::process::Output> {
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     command
         .args(["app-theme", id, if enabled { "true" } else { "false" }])
@@ -910,6 +957,9 @@ fn app_theme_command(
         .env("PATH", path)
         .env("NACRE_HELPER_TOOLS", assets())
         .env("NACRE_COMPOSITOR", "hyprland");
+    if let Some(data_dirs) = data_dirs {
+        command.env("XDG_DATA_DIRS", data_dirs);
+    }
     Ok(command.output()?)
 }
 
@@ -1251,56 +1301,82 @@ fn app_theme_target_failure_restores_each_target_output() -> Result<()> {
 }
 
 #[test]
-fn gtk_gsettings_respects_managed_empty_and_custom_values() -> Result<()> {
+fn gtk_theme_discovery_uses_home_xdg_roots_and_adwaita_fallback() -> Result<()> {
     let home = tempfile::tempdir()?;
     app_theme_home(home.path())?;
-    fs::create_dir_all(home.path().join(".config/gtk-3.0"))?;
-    fs::write(
-        home.path().join(".config/gtk-3.0/settings.ini"),
-        "[Settings]\ngtk-theme-name=Adwaita-dark\n",
-    )?;
-    fs::create_dir_all(home.path().join(".local/share/themes/adw-gtk3-dark"))?;
     let bin = home.path().join("bin");
     fs::create_dir(&bin)?;
-    let log = home.path().join("gsettings.log");
-    fake_executable(
-        &bin.join("gsettings"),
-        "#!/bin/sh\nif [ \"$1\" = get ]; then printf \"'%s'\\n\" \"$GSETTINGS_VALUE\"; else printf '%s\\n' \"$*\" >> \"$GSETTINGS_LOG\"; fi\n",
+    let empty_data = tempfile::tempdir()?;
+    let config = home.path().join(".config/gtk-3.0/settings.ini");
+    fs::create_dir_all(config.parent().unwrap())?;
+    fs::write(&config, "[Settings]\ngtk-theme-name=Before\n")?;
+    let scheme_path = home.path().join(".local/state/nacre/scheme.json");
+
+    let write_mode = |mode: &str| -> Result<()> {
+        let mut scheme: Value = serde_json::from_slice(&fs::read(&scheme_path)?)?;
+        scheme["mode"] = serde_json::json!(mode);
+        fs::write(&scheme_path, serde_json::to_vec(&scheme)?)?;
+        Ok(())
+    };
+    let publish = |dirs: &Path| -> Result<String> {
+        let output = app_theme_command_with_data_dirs(home.path(), &bin, "gtk3", true, Some(dirs))?;
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+        Ok(fs::read_to_string(&config)?)
+    };
+
+    let local_themes = home.path().join(".local/share/themes");
+    fs::create_dir_all(local_themes.join("adw-gtk3"))?;
+    fs::create_dir_all(local_themes.join("adw-gtk3-dark"))?;
+    write_mode("light")?;
+    assert!(publish(empty_data.path())?.contains("gtk-theme-name=adw-gtk3\n"));
+    write_mode("dark")?;
+    assert!(publish(empty_data.path())?.contains("gtk-theme-name=adw-gtk3-dark\n"));
+
+    fs::remove_dir_all(&local_themes)?;
+    let system_data = tempfile::tempdir()?;
+    let system_themes = system_data.path().join("themes");
+    fs::create_dir_all(system_themes.join("adw-gtk3-dark"))?;
+    assert!(publish(system_data.path())?.contains("gtk-theme-name=adw-gtk3-dark\n"));
+    write_mode("light")?;
+    assert!(publish(system_data.path())?.contains("gtk-theme-name=Adwaita\n"));
+    fs::create_dir_all(system_themes.join("adw-gtk3"))?;
+    assert!(publish(system_data.path())?.contains("gtk-theme-name=adw-gtk3\n"));
+
+    let roots = std::env::join_paths([empty_data.path(), system_data.path()])?;
+    write_mode("light")?;
+    let output = app_theme_command_with_data_dirs_value(
+        home.path(),
+        &bin,
+        "gtk3",
+        true,
+        Some(&roots),
     )?;
-    for (value, should_set, target) in [
-        ("Adwaita-dark", true, "gtk3"),
-        ("", true, "thunar"),
-        ("Custom Theme", false, "gtk3"),
-    ] {
-        fs::write(&log, "")?;
-        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
-        let output = command
-            .args(["app-theme", target, "true"])
-            .env_clear()
-            .env("HOME", home.path())
-            .env("PATH", &bin)
-            .env("NACRE_HELPER_TOOLS", assets())
-            .env("NACRE_COMPOSITOR", "hyprland")
-            .env("GSETTINGS_VALUE", value)
-            .env("GSETTINGS_LOG", &log)
-            .output()?;
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert!(
-            fs::read_to_string(home.path().join(".config/gtk-3.0/settings.ini"))?
-                .contains("gtk-theme-name=adw-gtk3-dark")
-        );
-        let calls = fs::read_to_string(&log)?;
-        assert_eq!(
-            calls.contains("set org.gnome.desktop.interface gtk-theme"),
-            should_set
-        );
-        if should_set {
-            assert!(calls.contains("adw-gtk3-dark"));
-        }
-    }
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(fs::read_to_string(&config)?.contains("gtk-theme-name=adw-gtk3\n"));
+
+    write_mode("dark")?;
+    assert!(publish(empty_data.path())?.contains("gtk-theme-name=Adwaita-dark\n"));
+
+    let unset = app_theme_command(home.path(), &bin, "gtk3", true)?;
+    assert!(unset.status.success());
+    let unset_name = fs::read_to_string(&config)?
+        .lines()
+        .find(|line| line.starts_with("gtk-theme-name="))
+        .unwrap()
+        .to_owned();
+    let empty = app_theme_command_with_data_dirs_value(
+        home.path(),
+        &bin,
+        "gtk3",
+        true,
+        Some(std::ffi::OsStr::new("")),
+    )?;
+    assert!(empty.status.success());
+    let empty_name = fs::read_to_string(&config)?
+        .lines()
+        .find(|line| line.starts_with("gtk-theme-name="))
+        .unwrap()
+        .to_owned();
+    assert_eq!(unset_name, empty_name);
     Ok(())
 }

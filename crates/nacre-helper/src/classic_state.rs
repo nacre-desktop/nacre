@@ -7,8 +7,6 @@ use std::{
     io::Write,
     os::unix::fs::{symlink, MetadataExt},
     path::{Path, PathBuf},
-    process::{Command, Output, Stdio},
-    time::{Duration, Instant},
 };
 
 /// Reload only terminals owned by this UID and exact HOME (never another session).
@@ -187,59 +185,20 @@ fn create_private_dirs(path: &Path, home: &Path) -> Result<()> {
     Ok(())
 }
 
-fn run_bounded(mut command: Command, limit: Duration) -> Option<Output> {
-    let mut child = command
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
-    let start = Instant::now();
-    loop {
-        match child.try_wait() {
-            Ok(Some(_)) => return child.wait_with_output().ok(),
-            Ok(None) if start.elapsed() < limit => std::thread::sleep(Duration::from_millis(20)),
-            Ok(None) => {
-                let _ = child.kill();
-                let _ = child.wait();
-                return None;
-            }
-            Err(_) => return None,
-        }
-    }
-}
-
-fn gsettings_theme(allowed: &[&str], selected: &str) {
-    let mut get = Command::new("gsettings");
-    get.args(["get", "org.gnome.desktop.interface", "gtk-theme"]);
-    let Some(output) = run_bounded(get, Duration::from_secs(2)) else {
-        return;
-    };
-    if !output.status.success() {
-        return;
-    }
-    let current = String::from_utf8_lossy(&output.stdout)
-        .trim()
-        .trim_matches('\'')
-        .to_owned();
-    if !current.is_empty() && !allowed.contains(&current.as_str()) {
-        return;
-    }
-    let mut set = Command::new("gsettings");
-    set.args(["set", "org.gnome.desktop.interface", "gtk-theme", selected]);
-    let _ = run_bounded(set, Duration::from_secs(2));
-}
-
 fn gtk_theme_name(paths: &Paths, mode: &str) -> String {
     let dark = mode == "dark";
     let suffix = if dark { "-dark" } else { "" };
-    let candidates = [
-        paths
-            .home
-            .join(format!(".local/share/themes/adw-gtk3{suffix}")),
-        PathBuf::from(format!("/usr/share/themes/adw-gtk3{suffix}")),
-    ];
-    if candidates.iter().any(|path| path.is_dir()) {
+    let theme = format!("adw-gtk3{suffix}");
+    let local = paths.home.join(".local/share/themes").join(&theme);
+    let data_dirs = std::env::var_os("XDG_DATA_DIRS")
+        .filter(|dirs| !dirs.is_empty())
+        .unwrap_or_else(|| "/usr/local/share:/usr/share".into());
+    if local.is_dir()
+        || std::env::split_paths(&data_dirs)
+            .filter(|root| root.is_absolute())
+            .map(|root| root.join("themes").join(&theme))
+            .any(|path| path.is_dir())
+    {
         format!("adw-gtk3{suffix}")
     } else {
         format!("Adwaita{suffix}")
@@ -923,6 +882,7 @@ pub fn dconf_blob(
     .to_vec())
 }
 pub fn publish_dconf(
+    paths: &Paths,
     connection: &zbus::blocking::Connection,
     mode: &str,
     icon_theme: &str,
@@ -935,6 +895,7 @@ pub fn publish_dconf(
             std::env::var("XCURSOR_THEME").unwrap_or_else(|_| "breeze_cursors".into()),
         ),
         ("color-scheme", format!("prefer-{mode}")),
+        ("gtk-theme", gtk_theme_name(paths, mode)),
     ] {
         values.insert(
             format!("/org/gnome/desktop/interface/{key}"),
@@ -1132,15 +1093,6 @@ impl Publisher {
                 })?;
             }
         }
-        if result.is_ok() && key == "gtk3" && enabled {
-            let data = state::read(&self.paths.state.join("scheme.json"), Value::Null)?;
-            if data.is_object() {
-                gsettings_theme(
-                    &["Adwaita", "Adwaita-dark", "adw-gtk3", "adw-gtk3-dark"],
-                    &gtk_theme_name(&self.paths, data["mode"].as_str().unwrap_or("dark")),
-                );
-            }
-        }
         if result.is_ok() && id == "spotify" {
             refresh_spicetify(&self.paths, true);
         }
@@ -1292,12 +1244,6 @@ impl Publisher {
         if live {
             self.reload_desktop_consumers(&data, &icon_theme, &config, connection.as_ref())?;
         }
-        if live && theme_target_enabled(&self.paths, "gtk3")? {
-            gsettings_theme(
-                &["Adwaita", "Adwaita-dark", "adw-gtk3", "adw-gtk3-dark"],
-                &gtk_theme_name(&self.paths, data["mode"].as_str().ok_or("Missing mode")?),
-            );
-        }
         Ok(())
     }
     pub fn publish_lock_login(
@@ -1413,6 +1359,7 @@ impl Publisher {
                 .any(|id| theme_target_enabled(&self.paths, id).unwrap_or(false))
         }) {
             if let Err(error) = publish_dconf(
+                &self.paths,
                 connection,
                 data["mode"].as_str().ok_or("Missing mode")?,
                 icon_theme,
