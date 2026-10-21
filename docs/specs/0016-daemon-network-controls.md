@@ -59,7 +59,7 @@ This implements `core-services.md:3-8,26-41,43-53`; the legacy
 ## Validation evidence — 2026-10-21
 
 Base: `92af444eb7b0244aeedba8be63fe5af9bc93621e`. Final product source:
-`0fd8cc5ad3c79ba35b7e5c9e983d542f6c96a824`. Approximately 725 added Rust
+`ca50d8b81897110064bd2ea480baeb81fdb907e5`. Fewer than 760 added Rust
 lines outside the new fixture file; no dependency or protocol artifact changes.
 No local builds/tests, real system bus/NetworkManager, live desktop, installation,
 push or publication were used. Source review includes the N0003/N0005 lifecycle
@@ -80,6 +80,10 @@ done
 # 20 runs x 9 tests = 180 passed, zero failures.
 ```
 
+Admission prerequisite reads preserve vanished-target, unavailable and permission
+failure codes; the fixtures exercise all three on both `AvailableConnections`
+and active `Devices` properties.
+
 The nine control fixtures cover success/admission and authoritative readback,
 stale/wrong-kind/cross-device IDs, denied/failing operations, shared-connection
 ambiguity, unavailable/read-only/safe-mode capabilities, boot scoping, actual
@@ -87,7 +91,8 @@ socket loss with queued cancellation, owner replacement and explicit reconnectio
 timeout/queue bounds, preflight retirement, and authentication failures before and
 after the admission reply, including transitions gone before the property read.
 
-The initial candidate `f20219a3` completed every desktop workflow shell check:
+The prior complete desktop run at `27ca77e0` exited zero with a clean checkout.
+It completed every desktop workflow shell check:
 workspace fmt/Clippy/examples/tests, minimal protocol consumer, locked release
 Orient/helper builds, 28 sandbox-integrity cases, translation checks, source/UI
 regressions, 534 helper parity cases (zero failures), and native English/pseudo,
