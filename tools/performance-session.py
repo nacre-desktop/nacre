@@ -34,6 +34,12 @@ PROBE = """
     property string perfAction: ""
     property var perfResult: ({})
     property var perfWait: ({})
+    property real perfFirstFrameMs: 0
+    property real perfFocusMs: -1
+    property int perfKeySequence: 0
+    property int perfHelperCalls: 0
+    property int perfEmojiCalls: 0
+    property var perfSearch: null
     property string perfWallpaper: ""
     property string perfPrimary: ""
     function perfChooseWallpaper(path, primary) {
@@ -49,6 +55,8 @@ PROBE = """
         perfSequence++;
         perfAction = action;
         perfResult = ({});
+        perfFirstFrameMs = 0;
+        perfFocusMs = -1;
         perfStarted = Date.now();
         if (action === "launcher") NacrePanelState.openMode("apps", "", false);
         else { NacrePanelState.openEdge("dashboard", root.screen.name); flags.dashboardTab = 0; flags.dashboardPinned = true; }
@@ -75,6 +83,11 @@ PROBE = """
         target: root.contentItem.Window.window
         function onFrameSwapped() {
             if (!root.perfStarted) return;
+            if (root.perfAction === "launcher-key") {
+                root.perfResult = {keySequence: root.perfKeySequence, keyFrameMs: Date.now() - root.perfStarted};
+                root.perfStarted = 0;
+                return;
+            }
             if (root.perfAction === "wallpaper-colors") {
                 const active = NacrePresentation.active;
                 if (active?.poster !== root.perfWallpaper || active?.colours?.primary?.toLowerCase().replace("#", "") !== root.perfPrimary) return;
@@ -84,6 +97,8 @@ PROBE = """
                 return;
             }
             const panel = root.perfAction === "launcher" ? panelHost.launcher : panelHost.dashboard;
+            if (root.perfAction === "launcher" && !root.perfFirstFrameMs && panel.visible)
+                root.perfFirstFrameMs = Date.now() - root.perfStarted;
             root.perfWait = {visible: panel.visible, opening: panel.opening, presented: panel.presentedHeight, content: panel.contentHeight, queue: NacreDashboardState.queue.length, message: NacreDashboardState.message, images: root.perfImages(panel)};
             if (root.perfFind(panel, root.perfAction === "launcher" ? "launcherPage" : "dashboardPage")?.status !== Loader.Ready) return;
             if (!panel.visible || panel.opening || Math.abs(panel.presentedHeight - panel.contentHeight) > 1) return;
@@ -93,6 +108,34 @@ PROBE = """
             root.perfResult = Object.assign({}, root.perfResult, {frameMs: Date.now() - root.perfStarted, readyImages: images.ready});
             root.perfStarted = 0;
         }
+    }
+    Connections {
+        target: root.perfSearch
+        ignoreUnknownSignals: true
+        function onActiveFocusChanged() {
+            if (root.perfAction === "launcher" && target.activeFocus && root.perfFocusMs < 0)
+                root.perfFocusMs = Date.now() - root.perfStarted;
+        }
+        function onTextEdited() {
+            root.perfKeySequence++;
+            root.perfAction = "launcher-key";
+            root.perfStarted = Date.now();
+        }
+    }
+    Connections {
+        target: NacreHelpers
+        function onSequenceChanged() { root.perfHelperCalls++; }
+    }
+    Connections {
+        target: root.perfFind(NacreMenu.previews, "launcherEmojiSearch")
+        ignoreUnknownSignals: true
+        function onRunningChanged() { if (target.running) root.perfEmojiCalls++; }
+    }
+    Timer {
+        interval: 20
+        repeat: true
+        running: !root.perfSearch
+        onTriggered: root.perfSearch = root.perfFind(panelHost.launcher, "launcherSearch")
     }
     Timer { interval: 16; repeat: true; running: root.perfStarted > 0; onTriggered: root.contentItem.Window.window.update(); }
     FloatingWindow {
@@ -115,7 +158,7 @@ PROBE = """
     }
     IpcHandler {
         target: "performanceFrame"
-        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
+        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
         function arm(): void { perfInput.visible = false; perfInput.visible = true; perfKeys.forceActiveFocus(); }
         function suspend(hidden: bool): void { WallpaperPlayback.locked = hidden; }
         function pinDashboard(): void { flags.dashboardPinned = true; }
@@ -323,6 +366,14 @@ def machine_metadata(proc=Path("/proc"), sysroot=Path("/sys"), etc=Path("/etc"))
         "cpu_governors": governors,
         "errors": errors,
     }
+
+
+def thread_cpu_ns(pid):
+    """Sum Quickshell thread execution time using per-thread scheduler counters."""
+    total = 0
+    for stat in Path(f"/proc/{pid}/task").glob("*/schedstat"):
+        total += int(stat.read_text().split()[0])
+    return total
 
 
 def desktop_palette_result(chosen_at_ns, expected_colors, frames):
@@ -1073,6 +1124,110 @@ def run(args, directory):
                         ) from failure
                     if action == "launcher" and result.get("readyImages", 0) < 12:
                         raise RuntimeError("Launcher fixture icons are not ready")
+                    if action == "launcher" and label == "cold":
+                        def send_launcher_key(key):
+                            before_state = state("performanceFrame", "state")
+                            previous_key = before_state.get("keySequence", 0)
+                            cpu_before = thread_cpu_ns(pid)
+                            subprocess.run(
+                                ["wtype", "-k", key],
+                                env=env,
+                                check=True,
+                                capture_output=True,
+                            )
+                            key_result = wait_for(
+                                lambda previous_key=previous_key: (
+                                    value
+                                    if (value := state("performanceFrame", "state"))
+                                    and value.get("keySequence", 0) > previous_key
+                                    and value.get("keyFrameMs") is not None
+                                    else None
+                                ),
+                                "launcher search key frame",
+                            )
+                            cpu_after = thread_cpu_ns(pid)
+                            return {
+                                "key": key,
+                                "frame_ms": key_result["keyFrameMs"],
+                                "ui_cpu_ms": (cpu_after - cpu_before) / 1e6,
+                                "helper_calls_at_frame": key_result.get("helperCalls", 0),
+                                "emoji_starts_at_frame": key_result.get("emojiCalls", 0),
+                            }, key_result
+
+                        def clear_launcher_query(length):
+                            for _ in range(length):
+                                send_launcher_key("BackSpace")
+                            time.sleep(0.5)
+
+                        def type_query(name, query, interval_s):
+                            before = state("performanceFrame", "state")
+                            samples = []
+                            helper_deltas = []
+                            emoji_deltas = []
+                            for character in query:
+                                key = "space" if character == " " else character.lower()
+                                sample, key_state = send_launcher_key(key)
+                                samples.append(sample)
+                                time.sleep(interval_s)
+                                after = state("performanceFrame", "state")
+                                helper_deltas.append(
+                                    max(0, after.get("helperCalls", 0) - key_state.get("helperCalls", 0))
+                                )
+                                emoji_deltas.append(
+                                    max(0, after.get("emojiCalls", 0) - key_state.get("emojiCalls", 0))
+                                )
+                            time.sleep(0.5)
+                            settled = state("performanceFrame", "state")
+                            return {
+                                "query": name,
+                                "inter_key_delay_ms": interval_s * 1000,
+                                "samples": samples,
+                                "helper_calls": max(0, settled.get("helperCalls", 0) - before.get("helperCalls", 0)),
+                                "emoji_starts": max(0, settled.get("emojiCalls", 0) - before.get("emojiCalls", 0)),
+                                "slow_per_key_helper_deltas": helper_deltas,
+                                "slow_per_key_emoji_deltas": emoji_deltas,
+                            }
+
+                        before_queries = state("performanceFrame", "state")
+                        cold_key, cold_state = send_launcher_key("f")
+                        firefox = [cold_key]
+                        for character in "irefox":
+                            sample, _ = send_launcher_key(character)
+                            firefox.append(sample)
+                            time.sleep(0.08)
+                        time.sleep(0.5)
+                        firefox_state = state("performanceFrame", "state")
+                        query_results = [
+                            {
+                                "query": "firefox",
+                                "inter_key_delay_ms": 80,
+                                "samples": firefox,
+                                "helper_calls": max(0, firefox_state.get("helperCalls", 0) - before_queries.get("helperCalls", 0)),
+                                "emoji_starts": max(0, firefox_state.get("emojiCalls", 0) - before_queries.get("emojiCalls", 0)),
+                            }
+                        ]
+                        clear_launcher_query(7)
+                        query_results.append(type_query("terminal", "terminal", 0.08))
+                        clear_launcher_query(8)
+                        query_results.append(type_query("settings", "settings", 0.08))
+                        clear_launcher_query(8)
+                        query_results.append(type_query("wifi-slow", "wifi", 0.42))
+                        all_keys = [
+                            sample
+                            for query_result in query_results
+                            for sample in query_result["samples"]
+                        ]
+                        report["latency"][label]["launcher_typing"] = {
+                            "cold_first_key": cold_key,
+                            "queries": query_results,
+                            "steady_frame_ms": performance.summarize(
+                                [sample["frame_ms"] for sample in all_keys[1:]]
+                            ),
+                            "steady_ui_cpu_ms": performance.summarize(
+                                [sample["ui_cpu_ms"] for sample in all_keys[1:]]
+                            ),
+                            "boundary": "TextField textEdited to Quickshell frameSwapped (client-side); UI CPU is summed Quickshell thread runtime bracketed by key injection and frame observation, including one performanceFrame IPC poll",
+                        }
                     timings.append(result)
                 report["latency"][label][action] = {
                     "samples": timings,
