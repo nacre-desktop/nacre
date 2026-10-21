@@ -17,7 +17,8 @@ fn count_updates()->Result<Value>{
     let mut count=0;for cmd in commands{if !available(&cmd[0]){continue;}let out=run_command(&cmd,Duration::from_secs(90),"dashboard update count")?;let code=out.status.code().unwrap_or(1);let allowed=if cmd[0]=="checkupdates"{[0,2].contains(&code)}else{[0,1].contains(&code)};if !allowed||(code==1&&!String::from_utf8_lossy(&out.stderr).trim().is_empty()){return Err("Update check failed".into());}count+=String::from_utf8_lossy(&out.stdout).lines().filter(|s|!s.trim().is_empty()).count();}
     Ok(json!({"text":count.to_string(),"count":count,"checked":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64()}))
 }
-pub fn pending_qt_release_change(pending:&str)->Result<bool>{for line in pending.lines(){let fields=line.split_whitespace().collect::<Vec<_>>();if fields.first().is_none_or(|s|! ["qt6-base","qt6-declarative","qt6-wayland"].contains(s)){continue;}if fields.len()!=4||fields[2]!="->"{return Err("Could not parse the pending Qt update".into());}let release=|s:&str|s.rsplit_once('-').map(|x|x.0).unwrap_or(s);if release(fields[1])!=release(fields[3]){return Ok(true);}}Ok(false)}
+fn pkg_release(s:&str)->String { s.rsplit_once('-').map(|x|x.0).unwrap_or(s).to_owned() }
+pub fn pending_qt_release_change(pending:&str)->Result<bool>{for line in pending.lines(){let fields=line.split_whitespace().collect::<Vec<_>>();if fields.first().is_none_or(|s|! ["qt6-base","qt6-declarative","qt6-wayland"].contains(s)){continue;}if fields.len()!=4||fields[2]!="->"{return Err("Could not parse the pending Qt update".into());}if pkg_release(fields[1])!=pkg_release(fields[3]){return Ok(true);}}Ok(false)}
 fn status(pending:&str)->Result<Value>{
     let version = Command::new("quickshell").args(["--version", "-v"]).output().ok();
     let local = version.as_ref().is_some_and(|x| String::from_utf8_lossy(&x.stdout).contains("Nacre local Qt rebuild"));

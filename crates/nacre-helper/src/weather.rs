@@ -2,6 +2,7 @@
 use crate::{paths::Paths, Result};
 use serde_json::{json, Value};
 use std::{fs, io::Write, os::unix::fs::{OpenOptionsExt, PermissionsExt}, path::PathBuf, time::{Duration, SystemTime, UNIX_EPOCH}};
+use ureq::ResponseExt;
 
 const LIMIT: u64 = 512_000;
 const WMO: &[(i64, &str, u32)] = &[
@@ -14,10 +15,12 @@ pub fn url(base: &str, query: &[(&str, &str)]) -> String {
 }
 fn fetch(url: &str) -> Result<Value> {
     if !url.starts_with("https://") { return Err("weather endpoint must use HTTPS".into()); }
-    let agent=ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(8))).build().new_agent();
+    let agent=ureq::Agent::config_builder().timeout_global(Some(Duration::from_secs(8))).https_only(true).build().new_agent();
     let mut response=agent.get(url).header("User-Agent","Nacre/1.0").call()?;
     if response.get_uri().scheme_str()!=Some("https") { return Err("HTTPS redirect required".into()); }
-    Ok(serde_json::from_slice(&response.body_mut().with_config().limit(LIMIT+1).read_to_vec()?)?)
+    let bytes=response.body_mut().with_config().limit(LIMIT+1).read_to_vec()?;
+    if bytes.len() as u64 > LIMIT { return Err("Weather response too large".into()); }
+    Ok(serde_json::from_slice(&bytes)?)
 }
 pub fn normalize(f: &Value, location: &str, latitude: f64, longitude: f64, checked: f64) -> Result<Value> {
     let current=&f["current"]; let daily=&f["daily"]; let hourly=&f["hourly"];
@@ -61,7 +64,7 @@ fn refresh(paths:&Paths)->Value {
         let aq=url("https://air-quality-api.open-meteo.com/v1/air-quality",&[("latitude",&lat_s),("longitude",&lon_s),("current","us_aqi"),("timezone","auto")]); data["aqi"]=fetch(&aq).ok().and_then(|v|v["current"]["us_aqi"].as_f64().map(|n|json!(n))).unwrap_or(Value::Null);
         save(&path,&data)?; Ok(data)
     })();
-    match result {Ok(v)=>v,Err(_)=>{let mut v=previous;if let Some(m)=v.as_object_mut(){m.insert("stale".into(),json!(true));m.insert("error".into(),json!(if v.get("checked").is_some(){"Weather unavailable; showing cached conditions"}else{"Weather unavailable. Set a city or try again."}));}else{v=json!({"stale":true,"error":"Weather unavailable. Set a city or try again."});}v}}
+    match result {Ok(v)=>v,Err(_)=>{let mut v=previous;let cached=v.get("checked").is_some();if let Some(m)=v.as_object_mut(){m.insert("stale".into(),json!(true));m.insert("error".into(),json!(if cached{"Weather unavailable; showing cached conditions"}else{"Weather unavailable. Set a city or try again."}));}else{v=json!({"stale":true,"error":"Weather unavailable. Set a city or try again."});}v}}
 }
 pub fn run(args:&[String])->Result<i32>{
     if args.first().is_some_and(|a|a=="url") { let v:Value=serde_json::from_str(args.get(1).ok_or("missing URL arguments")?)?; let base=v["args"][0].as_str().ok_or("missing URL base")?; let q=v["kwargs"].as_object().ok_or("missing URL query")?;let pairs=q.iter().map(|(k,v)|(k.as_str(),v.as_str().unwrap_or(""))).collect::<Vec<_>>();println!("{}",url(base,&pairs));return Ok(0); }
