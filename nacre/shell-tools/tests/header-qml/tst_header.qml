@@ -892,6 +892,7 @@ TestCase {
         fill.dashboardProgress = .6;
         const trace = findChild(cue, "hoverRevealTrace"), partial = trace.width;
         verify(partial > 0);
+        compare(trace.opacity, 1);
         NacrePanelState.screens = {
             test: {
                 dashboard: true,
@@ -906,6 +907,9 @@ TestCase {
         fill.dashboardProgress = 1;
         compare(cue.width, 510);
         compare(trace.width, cue.width - cue.traceLeft - cue.traceRight);
+        tryCompare(trace, "opacity", 0, 500);
+        fill.dashboardProgress = .4;
+        tryCompare(trace, "opacity", 1, 500);
         fill.dashboardProgress = 0;
         compare(cue.width, 660);
         NacrePanelState.panels = ({});

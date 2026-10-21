@@ -51,6 +51,12 @@ Item {
     }
     Rectangle {
         objectName: "hoverRevealTrace"
+        opacity: root.amount < 1 ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled ? 120 : 0
+            }
+        }
         x: root.traceLeft + Math.max(0, parent.width - root.traceLeft - root.traceRight) * (1 - root.amount) / 2
         y: parent.height - 3
         width: Math.max(0, parent.width - root.traceLeft - root.traceRight) * root.amount

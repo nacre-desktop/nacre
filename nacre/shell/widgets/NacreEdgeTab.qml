@@ -18,6 +18,12 @@ Item {
         width: 1
         height: 36
         anchors.verticalCenter: parent.verticalCenter
+        opacity: root.amount < 1 ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: NacreTokens.motionEnabled ? 120 : 0
+            }
+        }
         Rectangle {
             objectName: "edgeTabHoverFill"
             width: parent.width

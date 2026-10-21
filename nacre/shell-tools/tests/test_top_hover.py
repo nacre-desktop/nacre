@@ -157,9 +157,9 @@ TestCase {
   compare(findChild(tab,"edgeTabStroke").strokeColor,NacreTokens.accent);compare(line.height,0);
   verify(track.x>=0 && track.x+track.width<=tab.width);
   mouseMove(tab,tab.width/2,tab.height/2);wait(170);verify(!view.flags.osd);verify(cue.progress>0 && cue.progress<1);
-  verify(line.height>0 && line.height<track.height);
+  verify(line.height>0 && line.height<track.height);compare(track.opacity,1);
   mouseMove(view,500,180);wait(250);verify(!view.flags.osd);compare(cue.progress,0);compare(line.height,0);
-  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);compare(line.height,track.height);
+  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);compare(line.height,track.height);tryCompare(track,"opacity",0,500);
   compare(findChild(tab,"edgeTabStroke").strokeColor,NacreTokens.accent);
   view.flags.controlSection="audio";
   mouseClick(tab,tab.width/2,tab.height/2);verify(!view.flags.osd);
