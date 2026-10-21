@@ -92,7 +92,9 @@ class NiriSessionGateTests(unittest.TestCase):
 
     def test_prepared_niri_session_path_uses_deployed_uwsm_wrappers(self):
         with tempfile.TemporaryDirectory() as folder:
-            marker = Path(folder) / ".local/share/nacre/niri-on-pc/session/source-revision"
+            marker = (
+                Path(folder) / ".local/share/nacre/niri-on-pc/session/source-revision"
+            )
             marker.parent.mkdir(parents=True)
             marker.write_text("fixture\n")
             result = subprocess.check_output(
