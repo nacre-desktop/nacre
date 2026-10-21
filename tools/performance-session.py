@@ -290,7 +290,7 @@ def motion_summary(samples):
         if page_heights:
             page_changes.append(max(page_heights) - min(page_heights))
         visible.extend(p["searchVisiblePx"] for p in trace)
-        for before, after in zip(trace, trace[1:]):
+        for before, after in zip(trace, trace[1:], strict=False):
             field_delta = after["searchY"] - before["searchY"]
             errors.extend(
                 abs(field_delta - (after[key] - before[key]))
