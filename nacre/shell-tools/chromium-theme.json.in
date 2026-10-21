@@ -1,23 +1,23 @@
 {
   "manifest_version": 3,
   "name": "Nacre",
-  "version": "{{version}}",
+  "version": "1.0.0",
   "theme": {
     "colors": {
-      "frame": [{{frame}}],
-      "frame_inactive": [{{frameInactive}}],
-      "toolbar": [{{toolbar}}],
-      "tab_text": [{{tabText}}],
-      "tab_background_text": [{{tabBackgroundText}}],
-      "bookmark_text": [{{bookmarkText}}],
-      "ntp_background": [{{ntpBackground}}],
-      "ntp_text": [{{ntpText}}],
-      "ntp_link": [{{ntpLink}}],
-      "omnibox_background": [{{omniboxBackground}}],
-      "omnibox_text": [{{omniboxText}}],
-      "button_background": [{{buttonBackground}}],
-      "toolbar_button_icon": [{{toolbarButtonIcon}}]
+      "frame": "#{{frame}}",
+      "frame_inactive": "#{{surfaceContainerHigh}}",
+      "toolbar": "#{{surfaceContainer}}",
+      "tab_text": "#{{onSurface}}",
+      "tab_background_text": "#{{onSurfaceVariant}}",
+      "bookmark_text": "#{{onSurface}}",
+      "ntp_background": "#{{surface}}",
+      "ntp_text": "#{{onSurface}}",
+      "ntp_link": "#{{tertiary}}",
+      "omnibox_background": "#{{surfaceContainerLow}}",
+      "omnibox_text": "#{{onSurface}}",
+      "button_background": "#{{primary}}",
+      "toolbar_button_icon": "#{{onSurface}}"
     },
-    "properties": { "ntp_logo_alternate": {{ntpLogoAlternate}} }
+    "properties": { "ntp_logo_alternate": 0 }
   }
 }
