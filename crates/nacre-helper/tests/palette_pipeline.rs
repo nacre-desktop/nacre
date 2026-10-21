@@ -1475,16 +1475,16 @@ fn failed_live_bundle_does_not_start_spicetify_refresh() -> Result<()> {
         let bin = home.path().join("bin");
         fs::create_dir(&bin)?;
         let refresh_log = home.path().join("refresh.log");
-        fake_executable(
-            &bin.join("spicetify"),
-            "#!/bin/sh\nexit 0\n",
-        )?;
+        fake_executable(&bin.join("spicetify"), "#!/bin/sh\nexit 0\n")?;
         fake_executable(
             &bin.join("timeout"),
             "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$REFRESH_LOG\"\nexit 0\n",
         )?;
         let output = std::process::Command::new(std::env::current_exe()?)
-            .args(["--exact", "failed_live_bundle_does_not_start_spicetify_refresh"])
+            .args([
+                "--exact",
+                "failed_live_bundle_does_not_start_spicetify_refresh",
+            ])
             .env_clear()
             .env(CHILD, "1")
             .env("HOME", home.path())
@@ -1507,7 +1507,10 @@ fn failed_live_bundle_does_not_start_spicetify_refresh() -> Result<()> {
     let paths = Paths::new(&home);
     fs::create_dir_all(&paths.config)?;
     fs::create_dir_all(&paths.state)?;
-    fs::copy(assets().join("reference-style.json"), paths.state.join("scheme.json"))?;
+    fs::copy(
+        assets().join("reference-style.json"),
+        paths.state.join("scheme.json"),
+    )?;
     nacre_helper::state::write(
         &paths.config.join("wallpaper-picker.json"),
         &json!({
