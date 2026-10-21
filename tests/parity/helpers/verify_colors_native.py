@@ -114,6 +114,7 @@ def main():
                     HOME=str(home),
                     PATH=str(tools),
                     NACRE_HELPER_TOOLS=historical_assets(base),
+                    XDG_DATA_DIRS=str(base / "empty-system-data"),
                     NACRE_SVG_REFERENCE=str(responses),
                     NACRE_COMPOSITOR="hyprland",
                     XDG_RUNTIME_DIR=str(base / "runtime"),

@@ -56,6 +56,7 @@ def main():
                 "XDG_STATE_HOME": str(home / ".local/state"),
                 "XDG_CACHE_HOME": str(home / ".cache"),
                 "NACRE_HELPER_TOOLS": historical_assets(home.parent),
+                "XDG_DATA_DIRS": str(home.parent / "empty-system-data"),
                 "NACRE_LANGUAGE": "en",
                 "NACRE_COMPOSITOR": "hyprland",
             }

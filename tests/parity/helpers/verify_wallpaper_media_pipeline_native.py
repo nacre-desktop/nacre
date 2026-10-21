@@ -54,11 +54,6 @@ def main():
             (ROOT / "tests/parity/helpers/svg_fixture.py").read_bytes()
         )
         renderer.chmod(0o700)
-        # This capture predates gsettings publication and has no desktop bus.
-        # Keep that backend unavailable; fresh fake-tool tests cover GTK get/set.
-        gsettings = binary / "gsettings"
-        gsettings.write_text("#!/bin/sh\nexit 1\n")
-        gsettings.chmod(0o700)
         # Availability is a fixture input, not the CI host's package inventory.
         targets = json.loads(
             reference["outputs"][".local/state/nacre/theme-targets.json"]["text"]
@@ -83,6 +78,7 @@ def main():
             "DBUS_SYSTEM_BUS_ADDRESS": "unix:path=" + str(home / "absent-system-bus"),
             "NACRE_COMPOSITOR": "hyprland",
             "NACRE_HELPER_TOOLS": historical_assets(home.parent),
+            "XDG_DATA_DIRS": str(home.parent / "empty-system-data"),
             "NACRE_LANGUAGE": "en",
             "NACRE_SVG_REFERENCE": str(responses),
             "NACRE_FIXTURE_TOOL_LOG": str(base / "unexpected-tools.log"),
