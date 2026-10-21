@@ -139,7 +139,7 @@ pub fn transcripts() -> BTreeMap<String, String> {
                 json!({"t":"call","id":"missing","m":"example.missing","p":{}}),
                 json!({"t":"ret","id":"missing","err":{"code":"unknown_method","message":"Unknown method","retry":false}}),
                 json!({"t":"call","id":"deadline","m":"ui.dispatch","p":{},"timeout":1}),
-                json!({"t":"ret","id":"deadline","err":{"code":"timeout","message":"Call deadline reached","retry":true,"dispatched":true}}),
+                json!({"t":"ret","id":"deadline","err":{"code":"timeout","message":"UI call timed out; action may still complete","retry":false,"dispatched":true}}),
             ],
         ),
         (

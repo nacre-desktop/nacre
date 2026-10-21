@@ -3434,6 +3434,7 @@
   "ui.menu-query.error.invalid-response": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
   "ui.shell-ipc.error.launcher-view-busy": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
   "ui.shell-ipc.error.launcher-view-unavailable": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
+  "ui.shell-ipc.error.no-active-display": "Private daemon IPC error during startup or display recovery. A display view is required and the requested UI action was not executed.",
   "ui.shell-ipc.error.ui-method-unavailable": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
   "ui.shell-ipc.error.unsupported-launcher-action": "Private daemon client error shown by the shell; retry and dispatch policy are unchanged.",
   "controlcenter.overview.night-light": "OSD feedback label; keep device names and numeric substitutions unchanged.",

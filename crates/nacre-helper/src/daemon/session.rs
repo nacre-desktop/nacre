@@ -95,6 +95,7 @@ async fn call(
     timeout: Option<u32>,
     transfer: super::helpers::Transfer,
 ) -> (Id, Reply) {
+    let started = Instant::now();
     let ms = timeout.unwrap_or_else(|| {
         hub.borrow()
             .methods()
@@ -118,7 +119,8 @@ async fn call(
             | "settings.provider"
             | "settings.desktop"
     );
-    let future = AssertUnwindSafe(dispatch(hub, method, params, timeout, transfer)).catch_unwind();
+    let future =
+        AssertUnwindSafe(dispatch(hub, method.clone(), params, timeout, transfer)).catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {
         Ok(Ok(result)) => result,
         Ok(Err(_)) => {
@@ -129,20 +131,36 @@ async fn call(
                 failure(ErrorCode::Internal, "Call handler failed", false)
             })
         }
-        Err(_) => Err(if network {
-            failure(
-                ErrorCode::Unavailable,
-                "Network operation unavailable or outcome uncertain",
-                true,
-            )
-            .dispatch_state(true)
-        } else if helper {
-            failure(ErrorCode::Timeout, "Call deadline reached", false).dispatch_state(true)
-        } else if ui {
-            failure(ErrorCode::Timeout, "Call deadline reached", true).dispatch_state(true)
-        } else {
-            failure(ErrorCode::Timeout, "Call deadline reached", true)
-        }),
+        Err(_) => {
+            if ui {
+                tracing::info!(
+                    call = ?id,
+                    method,
+                    elapsed_ms = started.elapsed().as_millis(),
+                    deadline_ms = ms,
+                    "UI call timed out; action may still complete"
+                );
+            }
+            Err(if network {
+                failure(
+                    ErrorCode::Unavailable,
+                    "Network operation unavailable or outcome uncertain",
+                    true,
+                )
+                .dispatch_state(true)
+            } else if helper {
+                failure(ErrorCode::Timeout, "Call deadline reached", false).dispatch_state(true)
+            } else if ui {
+                failure(
+                    ErrorCode::Timeout,
+                    "UI call timed out; action may still complete",
+                    false,
+                )
+                .dispatch_state(true)
+            } else {
+                failure(ErrorCode::Timeout, "Call deadline reached", true)
+            })
+        }
     };
     (
         id,
@@ -555,11 +573,51 @@ mod tests {
                 )
                 .await
                 .unwrap();
-                assert!(matches!(
-                    receive(&mut provider_read).await,
-                    Message::Call { .. }
-                ));
+                let Message::Call { id: late_route, .. } = receive(&mut provider_read).await else {
+                    panic!("Timed out UI call was not forwarded exactly once");
+                };
                 assert_eq!(receive(&mut caller_read).await, transcript("calls")[5]);
+                framing::write(
+                    &mut provider,
+                    &Message::Ret {
+                        id: late_route,
+                        reply: Reply::Ok { ok: json!({}) },
+                    },
+                )
+                .await
+                .unwrap();
+                framing::write(
+                    &mut provider,
+                    &Message::Ping {
+                        id: Id::Text("after-late-reply".into()),
+                    },
+                )
+                .await
+                .unwrap();
+                assert_eq!(
+                    receive(&mut provider_read).await,
+                    Message::Pong {
+                        id: Id::Text("after-late-reply".into()),
+                    }
+                );
+                framing::write(
+                    &mut caller,
+                    &Message::Call {
+                        id: Id::Text("after-late-reply".into()),
+                        m: "daemon.ping".into(),
+                        p: json!({}),
+                        timeout: None,
+                    },
+                )
+                .await
+                .unwrap();
+                assert_eq!(
+                    receive(&mut caller_read).await,
+                    Message::Ret {
+                        id: Id::Text("after-late-reply".into()),
+                        reply: Reply::Ok { ok: Value::Null },
+                    }
+                );
                 framing::write(
                     &mut caller,
                     &Message::Call {

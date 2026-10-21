@@ -49,6 +49,8 @@ Scope {
             view.previewOnly = false;
             view.dashboard = opening;
             view.dashboardPinned = opening && view.dashboardTab === 4;
+            view.edgeMenu = opening ? "dashboard" : "";
+            NacrePanelState.hidden = false;
             return true;
         }
         if (name === "osd") {

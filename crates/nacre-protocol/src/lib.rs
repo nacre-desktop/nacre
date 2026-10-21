@@ -19,6 +19,9 @@ use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const VERSION: u16 = 1;
+/// Default deadline for calls dispatched to the shell UI provider.
+/// Covers short UI stalls while remaining below the ten-second transport limit.
+pub const UI_CALL_TIMEOUT_MS: u32 = 3_000;
 pub const MIN_VERSION: u16 = 1;
 pub const MAX_FRAME: usize = 1_048_576;
 pub const MAX_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
@@ -153,7 +156,11 @@ pub fn core_methods() -> BTreeMap<String, Method> {
             Method {
                 v: 1,
                 class,
-                timeout: 1000,
+                timeout: if class == Capability::Ui {
+                    UI_CALL_TIMEOUT_MS
+                } else {
+                    1000
+                },
                 params: serde_json::json!({"type":"object"}),
                 result: serde_json::json!({}),
             },
@@ -164,6 +171,17 @@ pub fn core_methods() -> BTreeMap<String, Method> {
 
 fn parameters() -> Value {
     serde_json::json!({})
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn core_ui_method_advertises_three_second_deadline() {
+        assert_eq!(core_methods()["ui.dispatch"].timeout, UI_CALL_TIMEOUT_MS);
+        assert_eq!(UI_CALL_TIMEOUT_MS, 3_000);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]

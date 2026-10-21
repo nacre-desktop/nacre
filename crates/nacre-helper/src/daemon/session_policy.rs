@@ -489,19 +489,13 @@ mod tests {
             return Err("Unexpected UI request".into());
         };
         drop(reading);
-        assert_eq!(
-            hub.borrow_mut()
-                .answer(
-                    provider,
-                    &id,
-                    Reply::Ok {
-                        ok: json!({"launcherMode":"apps"})
-                    }
-                )
-                .unwrap_err()
-                .code,
-            ErrorCode::InvalidRequest
-        );
+        hub.borrow_mut().answer(
+            provider,
+            &id,
+            Reply::Ok {
+                ok: json!({"launcherMode":"apps"}),
+            },
+        )?;
         Ok(())
     }
     #[test]

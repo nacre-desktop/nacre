@@ -7,8 +7,18 @@ Scope {
     id: root
     property var pendingDashboard: null
     function daemonCall(method, params) {
-        if (method === "ui.dispatch")
+        if (method === "ui.dispatch") {
+            const requiresActiveView = params?.target === "drawers" && params?.method === "toggle" || params?.target === "leftDrawer" && params?.method === "section" || params?.target === "nacre" && ["preview", "previewDashboard", "controls", "previewFeedback", "previewSliders", "previewLeft", "mode", "menu", "left", "launcher", "clipboard", "session", "popout", "close", "galleryStep", "tab"].includes(params?.method);
+            if (requiresActiveView && !NacrePanelState.getForActive())
+                return {
+                    err: {
+                        code: "unavailable",
+                        message: NacreI18n.tr("ui.shell-ipc.error.no-active-display", "No active display is available for this UI action"),
+                        retry: true
+                    }
+                };
             return NacreDaemon.dispatchIpc(params);
+        }
         if (method !== "ui.menu.activate")
             return {
                 err: {

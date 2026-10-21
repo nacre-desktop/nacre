@@ -60,6 +60,13 @@ struct Event {
     bytes: usize,
     after: Vec<(String, u64)>,
 }
+struct PendingRoute {
+    provider: u64,
+    reply: oneshot::Sender<Reply>,
+    method: String,
+    started: Instant,
+    deadline_ms: u32,
+}
 pub struct Packet {
     pub message: Message,
     commit: Option<(String, Rc<Topic>, u64)>,
@@ -74,7 +81,11 @@ pub struct Hub {
     event_seq: BTreeMap<String, u64>,
     pub services: BTreeMap<String, Value>,
     provider: Option<(u64, BTreeMap<String, u16>)>,
-    routes: BTreeMap<Id, (u64, oneshot::Sender<Reply>)>,
+    routes: BTreeMap<Id, PendingRoute>,
+    // One contiguous issued range per provider keeps retired-ID memory bounded.
+    // An issued ID without an active route has completed or been canceled;
+    // accepting its late/duplicate reply cannot affect another call.
+    issued_provider_routes: Option<(u64, u64, u64)>,
     next_route: u64,
     internal: broadcast::Sender<Notice>,
     pub network: Option<super::network::Requests>,
@@ -101,6 +112,7 @@ impl Hub {
             services: BTreeMap::new(),
             provider: None,
             routes: BTreeMap::new(),
+            issued_provider_routes: None,
             next_route: 0,
             internal,
             network: None,
@@ -233,7 +245,13 @@ impl Hub {
         if self.provider.as_ref().is_some_and(|p| p.0 == id) {
             self.provider = None;
         }
-        self.routes.retain(|_, (provider, _)| *provider != id);
+        self.routes.retain(|_, route| route.provider != id);
+        if self
+            .issued_provider_routes
+            .is_some_and(|(provider, _, _)| provider == id)
+        {
+            self.issued_provider_routes = None;
+        }
     }
     pub fn has_client(&self, id: u64) -> bool {
         self.clients.contains_key(&id)
@@ -280,7 +298,7 @@ impl Hub {
                     Method {
                         v: *version,
                         class: Capability::Ui,
-                        timeout: 1000,
+                        timeout: nacre_protocol::UI_CALL_TIMEOUT_MS,
                         params: json!({"type":"object"}),
                         result: json!({}),
                     },
@@ -679,7 +697,12 @@ impl Hub {
             .ok_or_else(|| failure(ErrorCode::Internal, "UI call sequence exhausted", false))?;
         let id = Id::Text(format!("provider-{}", self.next_route));
         let (sender, receiver) = oneshot::channel();
-        self.enqueue(
+        let deadline_ms = timeout.unwrap_or_else(|| {
+            self.methods()
+                .get(method)
+                .map_or(1000, |registered| registered.timeout)
+        });
+        if let Err(error) = self.enqueue(
             provider,
             Message::Call {
                 id: id.clone(),
@@ -687,27 +710,76 @@ impl Hub {
                 p: params,
                 timeout,
             },
-        )?;
-        self.routes.insert(id.clone(), (provider, sender));
+        ) {
+            self.next_route -= 1;
+            return Err(error);
+        }
+        let number = self.next_route;
+        self.issued_provider_routes = Some(match self.issued_provider_routes {
+            Some((issued_provider, first, last)) if issued_provider == provider => {
+                (provider, first, last.max(number))
+            }
+            _ => (provider, number, number),
+        });
+        self.routes.insert(
+            id.clone(),
+            PendingRoute {
+                provider,
+                reply: sender,
+                method: method.to_owned(),
+                started: Instant::now(),
+                deadline_ms,
+            },
+        );
         Ok((id, receiver))
     }
     pub fn answer(&mut self, provider: u64, id: &Id, reply: Reply) -> Result<(), Failure> {
-        if !self.routes.get(id).is_some_and(|route| route.0 == provider) {
+        if let Some(route) = self.routes.get(id) {
+            if route.provider != provider {
+                return Err(failure(
+                    ErrorCode::InvalidRequest,
+                    "Unknown provider reply",
+                    false,
+                ));
+            }
+        } else if self
+            .issued_provider_routes
+            .is_some_and(|(issued_provider, first, last)| {
+                issued_provider == provider
+                    && self
+                        .provider_route_number(id)
+                        .is_some_and(|number| (first..=last).contains(&number))
+            })
+        {
+            tracing::debug!(route = ?id, "Dropping late UI provider reply for retired route");
+            return Ok(());
+        } else {
             return Err(failure(
                 ErrorCode::InvalidRequest,
                 "Unknown provider reply",
                 false,
             ));
         }
-        if let Some((_, sender)) = self.routes.remove(id) {
-            if sender.send(reply).is_err() {
-                tracing::debug!("UI result arrived after caller deadline");
+        if let Some(route) = self.routes.remove(id) {
+            if route.reply.send(reply).is_err() {
+                tracing::debug!(route = ?id, "UI result arrived after caller deadline");
             }
         }
         Ok(())
     }
     pub fn cancel_route(&mut self, id: &Id) {
-        self.routes.remove(id);
+        if let Some(route) = self.routes.remove(id) {
+            tracing::info!(route = ?id, provider = route.provider, method = %route.method, elapsed_ms = route.started.elapsed().as_millis(), deadline_ms = route.deadline_ms, "UI call timed out or was canceled before reply; action may still complete");
+        }
+    }
+    fn provider_route_number(&self, id: &Id) -> Option<u64> {
+        match id {
+            Id::Text(value) => {
+                let number: u64 = value.strip_prefix("provider-")?.parse().ok()?;
+                (value == &format!("provider-{number}")).then_some(number)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -940,6 +1012,114 @@ mod tests {
         let (_, mut receiver) = hub.forward("ui.dispatch", json!({}), Some(100)).unwrap();
         hub.remove_client(id);
         assert!(receiver.try_recv().is_err());
+    }
+    #[test]
+    fn retired_ui_routes_drop_late_replies_only_from_their_provider_and_are_bounded() {
+        let (mut hub, provider, _) = fixture();
+        let (other, _) = hub.add_client().unwrap();
+        hub.register(provider, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+
+        let (route, _receiver) = hub.forward("ui.dispatch", json!({}), None).unwrap();
+        assert!(matches!(
+            hub.next(provider, Instant::now()).0.unwrap().message,
+            Message::Call { ref id, .. } if id == &route
+        ));
+        assert_eq!(
+            hub.answer(other, &route, Reply::Ok { ok: Value::Null })
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
+        );
+        hub.cancel_route(&route);
+        assert!(hub
+            .answer(provider, &route, Reply::Ok { ok: Value::Null })
+            .is_ok());
+        assert_eq!(
+            hub.answer(other, &route, Reply::Ok { ok: Value::Null })
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
+        );
+        assert_eq!(
+            hub.answer(
+                provider,
+                &Id::Text("unknown".into()),
+                Reply::Ok { ok: Value::Null }
+            )
+            .unwrap_err()
+            .code,
+            ErrorCode::InvalidRequest
+        );
+
+        let mut latest = None;
+        for _ in 0..1000 {
+            let (route, _) = hub.forward("ui.dispatch", json!({}), None).unwrap();
+            assert!(matches!(
+                hub.next(provider, Instant::now()).0.unwrap().message,
+                Message::Call { ref id, .. } if id == &route
+            ));
+            latest = Some(route.clone());
+            hub.cancel_route(&route);
+        }
+        assert!(hub.routes.is_empty());
+        assert!(hub
+            .answer(provider, &route, Reply::Ok { ok: Value::Null })
+            .is_ok());
+        assert!(hub
+            .answer(provider, &latest.unwrap(), Reply::Ok { ok: Value::Null })
+            .is_ok());
+        for malformed in ["provider-01", "provider-999999"] {
+            assert_eq!(
+                hub.answer(
+                    provider,
+                    &Id::Text(malformed.into()),
+                    Reply::Ok { ok: Value::Null }
+                )
+                .unwrap_err()
+                .code,
+                ErrorCode::InvalidRequest
+            );
+        }
+        hub.remove_client(provider);
+        assert!(hub.issued_provider_routes.is_none());
+        hub.register(other, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        let _ = hub.forward("ui.dispatch", json!({}), None).unwrap();
+        assert_eq!(
+            hub.answer(other, &route, Reply::Ok { ok: Value::Null })
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
+        );
+    }
+    #[test]
+    fn failed_provider_enqueue_does_not_issue_or_burn_a_route_id() {
+        let (mut hub, provider, _) = fixture();
+        hub.register(provider, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        for sequence in 0..MAX_CALLS {
+            hub.enqueue(
+                provider,
+                Message::Ping {
+                    id: Id::Text(format!("fill-{sequence}")),
+                },
+            )
+            .unwrap();
+        }
+        let error = match hub.forward("ui.dispatch", json!({}), None) {
+            Err(error) => error,
+            Ok(_) => panic!("Forward unexpectedly succeeded with a full provider queue"),
+        };
+        assert_eq!(error.code, ErrorCode::Busy);
+        assert!(hub.issued_provider_routes.is_none());
+        for _ in 0..MAX_CALLS {
+            hub.next(provider, Instant::now()).0.unwrap();
+        }
+        assert_eq!(
+            hub.forward("ui.dispatch", json!({}), None).unwrap().0,
+            Id::Text("provider-1".into())
+        );
     }
     #[test]
     fn registry_and_topic_caps_keep_welcome_encodable_and_large_calls_get_typed_errors() {

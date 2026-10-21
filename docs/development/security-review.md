@@ -274,3 +274,14 @@ fail once without replay. UI dispatch invokes only registered typed handlers,
 rejecting prototype/method-name injection and invalid numeric arguments. Launcher
 presentation metadata cannot replace opaque tickets or authorize raw-row calls;
 existing confirmation and privilege checks remain in the selected-row UI path.
+
+UI route retirement retains a constant-size issued-ID range scoped to the
+provider connection. Only canonical IDs actually enqueued for that provider can
+be recognized after a call completes or is canceled; unknown, future, malformed,
+and wrong-provider replies remain errors. A retired reply cannot execute or
+replay an action, and disconnect clears its range. Timeout and cancellation logs
+contain route IDs, method names, elapsed time and deadlines, without UI arguments
+or query content. The three-second UI deadline remains bounded; a timed-out action
+may still complete and must never be replayed automatically. View-bound daemon
+IPC actions fail explicitly while no display view exists; global reads and
+actions retain their existing typed-handler validation.

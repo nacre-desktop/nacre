@@ -3380,6 +3380,7 @@
   "ui.menu-query.error.invalid-response": "Invalid launcher response",
   "ui.shell-ipc.error.launcher-view-busy": "Launcher view is busy",
   "ui.shell-ipc.error.launcher-view-unavailable": "Launcher view is unavailable",
+  "ui.shell-ipc.error.no-active-display": "No active display is available for this UI action",
   "ui.shell-ipc.error.ui-method-unavailable": "UI method is unavailable",
   "ui.shell-ipc.error.unsupported-launcher-action": "Unsupported launcher action",
   "controlcenter.overview.night-light": "Night light",

@@ -127,6 +127,8 @@ class DaemonClientTests(unittest.TestCase):
         render_state=False,
         storage_client=False,
         native_ui=None,
+        shell_ui=False,
+        shell_ipc=False,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -178,7 +180,7 @@ QtObject {
             if render_state:
                 settings = True
                 for folder in ("widgets", "config", "frame"):
-                    (root / folder).mkdir()
+                    (root / folder).mkdir(exist_ok=True)
                 for name in ("NacreTokens.qml", "size-scale.json"):
                     shutil.copy2(
                         ROOT / "nacre/shell/widgets" / name, root / "widgets" / name
@@ -193,6 +195,67 @@ QtObject {
                 shutil.copy2(
                     ROOT / "nacre/shell-tools/tests/qml/fixtures/NacreColours.qml",
                     services,
+                )
+            if shell_ui or shell_ipc:
+                modules = root / "modules"
+                modules.mkdir(exist_ok=True)
+                (root / "widgets").mkdir(exist_ok=True)
+                (root / "config").mkdir(exist_ok=True)
+                shutil.copy2(
+                    ROOT / "nacre/shell/modules/NacreShellShortcuts.qml",
+                    modules,
+                )
+                if shell_ui:
+                    shutil.copy2(
+                        ROOT / "nacre/shell/modules/drawers/NacrePanelInput.qml",
+                        modules,
+                    )
+                if shell_ipc:
+                    shutil.copy2(
+                        ROOT / "nacre/shell/modules/NacreShellIpc.qml",
+                        modules,
+                    )
+                (root / "widgets/NacreShortcut.qml").write_text(
+                    'import QtQuick\nItem { property string name: ""; property string description: ""; signal pressed(); signal released() }\n'
+                )
+                (root / "config/NacreFrame.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property real rounding:8; property real headerHeight:32; property real left:32; property real right:32 }\n"
+                )
+                (services / "NacrePanelState.qml").write_text(
+                    """pragma Singleton
+import QtQuick
+import Quickshell
+Singleton {
+ property bool hidden:true
+ property var activeView:null
+ property var screens:({})
+ property var panels:({})
+ property int menuCalls:0
+ function getForActive(){return activeView}
+ function activeName(){return Object.keys(screens)[0] || ""}
+ function clearPopouts(){for(const panel of Object.values(panels)) if(panel.popouts){panel.popouts.hasCurrent=false;panel.popouts.pinned=false}}
+ function closeTransient(view){view.launcher=false;view.session=false;view.dashboard=false;view.dashboardPinned=false;view.osd=false;view.edgeMenu=""}
+ function openMode(){hidden=false;return !!activeView}
+ function openMenu(){menuCalls++;return !!activeView}
+ function toggleSession(){return !!activeView}
+ function toggleLeft(){return !!activeView}
+}
+"""
+                )
+                (services / "DesktopSettings.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property var data:({dashboardEnabled:true,aiSidebarEnabled:true,controlCenterEnabled:true,topBarEnabled:true,clickEdgeMenus:false}) }\n"
+                )
+                (services / "NacreHoverIntent.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property var headers:({}); function fullscreenFor(name){return false} function dismiss(screen,hovered){} function observe(screen,x,y){} }\n"
+                )
+                (services / "NacrePearls.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property var drag:null; property var pendingDocks:[]; }\n"
+                )
+                (services / "NacreDashboardState.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property bool extrasReady:true }\n"
+                )
+                (services / "NacreCompositor.qml").write_text(
+                    "pragma Singleton\nimport QtQuick\nQtObject { property int activeWsId:1; property var workspaces:({values:[]}) }\n"
                 )
             if settings:
                 for name in ("DesktopSettings.qml", "NacreSettingsStorage.qml"):
@@ -286,6 +349,11 @@ ShellRoot {
             if publisher or native_ui:
                 source = source.replace(
                     "import qs.services", "import qs.services\nimport qs.utils"
+                )
+            if shell_ui or shell_ipc:
+                source = source.replace(
+                    "import qs.services",
+                    "import qs.services\nimport qs.modules\nimport qs.widgets\nimport qs.config",
                 )
             if render_state:
                 source = source.replace(
@@ -1281,6 +1349,127 @@ ShellRoot {
                 self.assertEqual(
                     result, {"error": "", "calls": 2, "opened": False, "completed": 2}
                 )
+
+    def test_slow_ui_call_timeout_does_not_disconnect_or_replay_provider(self):
+        result = self.qml(
+            r"""
+            const handler=Qt.createQmlObject('import QtQuick;import Quickshell.Io;IpcHandler {target:"fixture";property int calls:0;property bool opened:false;function toggle():void {const duration=calls===0?1400:calls===1?350:0;const until=Date.now()+duration;while(Date.now()<until){};calls++;opened=!opened;}}',root);
+            link.registerIpc("fixture",handler,{toggle:[]});
+            link.registerUi(root,(method,params)=>link.dispatchIpc(params));
+            const process=Qt.createQmlObject('import Quickshell.Io;Process {stdout:StdioCollector {} stderr:StdioCollector {}}',root);
+            let phase=0,code=-999,drops=0,linkError="";
+            process.exited.connect(value=>{
+                code=value;
+                if(phase===0){
+                    check(code===0 && handler.calls===1 && handler.opened,"1.4-second action succeeds under the default 3-second UI deadline");
+                    phase=1;
+                    Qt.callLater(()=>{process.command=[NacrePaths.helperBinary,"ctl","call","--timeout","100","ui.dispatch",JSON.stringify({target:"fixture",method:"toggle",args:[]})];process.running=true;});
+                }else if(phase===1){
+                    check(code!==0,"The explicitly short caller deadline returns a timeout");
+                    phase=2;
+                }else if(phase===3){
+                    check(code===0 && handler.calls===3 && handler.opened,"A later toggle succeeds once after the late reply");
+                    check(drops===0 && link.connected,"Late reply never disconnects the provider");
+                    finish({calls:handler.calls,opened:handler.opened,drops:drops,connected:link.connected,code:code});
+                }
+            });
+            link.connectedChanged.connect(()=>{if(!link.connected){drops++;linkError=link.error;}});
+            const timer=Qt.createQmlObject('import QtQuick;Timer {interval:20;repeat:true;running:true}',root);
+            let first=false;
+            timer.triggered.connect(()=>{
+                if(!first && link.connected){
+                    first=true;process.command=[NacrePaths.helperBinary,"ctl","ui","fixture","toggle"];process.running=true;
+                }else if(phase===2 && handler.calls===2){
+                    check(drops===0 && link.connected,"Late timed-out route leaves the provider connected");
+                    phase=3;process.command=[NacrePaths.helperBinary,"ctl","ui","fixture","toggle"];process.running=true;
+                }
+                if(linkError){timer.stop();finish({error:"Provider disconnected: "+linkError});}
+            });
+            """,
+            asynchronous=True,
+            native_ui="daemon",
+        )
+        self.assertEqual(
+            result,
+            {"calls": 3, "opened": True, "drops": 0, "connected": True, "code": 0},
+        )
+
+    def test_keyboard_dashboard_owns_edge_until_local_close_and_reopen(self):
+        result = self.qml(
+            r"""
+            const view = Qt.createQmlObject('import QtQuick; QtObject {property bool dashboard:false;property bool dashboardPinned:false;property int dashboardTab:0;property bool launcher:false;property bool session:false;property bool osd:false;property bool left:false;property bool leftPinned:false;property bool previewOnly:true;property bool hoverDocked:false;property bool controlsPointerOwned:false;property string edgeMenu:""}', root);
+            const screen = Qt.createQmlObject('import QtQuick; QtObject {property string name:"test"}', root);
+            const dashboard = Qt.createQmlObject('import QtQuick; Item {x:100;y:100;width:300;height:200}', root);
+            const popouts = Qt.createQmlObject('import QtQuick; QtObject {property bool hasCurrent:false;property bool pinned:false;property bool headerHovered:false}', root);
+            const notifications = Qt.createQmlObject('import QtQuick; QtObject {property bool visible:false;property bool suppressed:false}', root);
+            const panels = Qt.createQmlObject('import QtQuick; QtObject {property real x:0;property real y:0;property var dashboard:null;property var popouts:null;property var notifications:null;property var launcher:null;property var leftDrawer:null;property var osd:null;property var session:null}', root);
+            panels.dashboard=dashboard; panels.popouts=popouts; panels.notifications=notifications;
+            NacrePanelState.activeView=view; NacrePanelState.screens={test:view}; NacrePanelState.panels={test:panels};
+            const shortcutsComponent=Qt.createComponent("modules/NacreShellShortcuts.qml");
+            check(shortcutsComponent.status===Component.Ready,"Production shortcut component loads: "+shortcutsComponent.errorString());
+            const shortcuts=shortcutsComponent.createObject(root);
+            check(shortcuts.toggle("dashboard"),"Keyboard dashboard opens");
+            check(view.dashboard && !NacrePanelState.hidden,"Keyboard open unhides the shell");
+            const inputComponent=Qt.createComponent("modules/NacrePanelInput.qml");
+            check(inputComponent.status===Component.Ready,"Production panel input loads: "+inputComponent.errorString());
+            const input=inputComponent.createObject(root,{screen:screen,panels:panels,visibilities:view});
+            check(!!input,"Production panel input is created");
+            let phase=0;
+            const timer=Qt.createQmlObject('import QtQuick; Timer {interval:220;repeat:true;running:true}',root);
+            timer.triggered.connect(()=>{
+                if(phase===0){
+                    check(view.dashboard,"Pointer-away timer preserves keyboard-opened dashboard");
+                    check(view.edgeMenu==="dashboard","Keyboard open owns the dashboard edge");
+                    view.edgeMenu="";
+                    phase=1;
+                }else if(phase===1){
+                    check(!view.dashboard,"Ordinary passive dashboard still closes after pointer-away");
+                    check(shortcuts.toggle("dashboard") && view.dashboard,"Keyboard reopens the passively closed dashboard");
+                    phase=2;
+                }else if(phase===2){
+                    check(view.dashboard && view.edgeMenu==="dashboard","Keyboard reopen owns the dashboard edge");
+                    check(shortcuts.toggle("dashboard") && !view.dashboard && view.edgeMenu==="","Local close clears dashboard ownership");
+                    check(shortcuts.toggle("dashboard") && view.dashboard && view.edgeMenu==="dashboard","Local reopen restores dashboard ownership");
+                    phase=3;
+                }else{
+                    check(view.dashboard,"Pointer-away timer preserves dashboard after close and reopen");
+                    timer.stop(); finish({dashboard:view.dashboard,edgeMenu:view.edgeMenu,hidden:NacrePanelState.hidden});
+                }
+            });
+            """,
+            asynchronous=True,
+            shell_ui=True,
+        )
+        self.assertEqual(
+            result, {"dashboard": True, "edgeMenu": "dashboard", "hidden": False}
+        )
+
+    def test_daemon_ui_view_action_reports_missing_display(self):
+        result = self.qml(
+            r"""
+            const component=Qt.createComponent("modules/NacreShellIpc.qml");
+            check(component.status===Component.Ready,"Production IPC component loads: "+component.errorString());
+            const ipc=component.createObject(root);
+            check(!!ipc,"Production IPC component is created");
+            const unavailable=ipc.daemonCall("ui.dispatch",{target:"nacre",method:"menu",args:["home",""]});
+            check(unavailable.err?.code==="unavailable" && unavailable.err.message.includes("No active display"),"Missing display returns a clear retryable failure");
+            check(NacrePanelState.menuCalls===0,"Missing view never executes the action");
+            NacrePanelState.hidden=false;
+            const globalHide=ipc.daemonCall("ui.dispatch",{target:"nacre",method:"hide",args:[]});
+            check(globalHide.ok===null && NacrePanelState.hidden,"Global hide remains available without a display");
+            const state=ipc.daemonCall("ui.dispatch",{target:"nacre",method:"state",args:[]});
+            check(JSON.parse(state.ok).hidden===true,"State reads remain available without a display");
+            NacrePanelState.activeView={};
+            const restored=ipc.daemonCall("ui.dispatch",{target:"nacre",method:"menu",args:["home",""]});
+            check(restored.ok===null && NacrePanelState.menuCalls===1,"Action works once after the display returns");
+            finish({error:unavailable.err,globalHide:globalHide.ok,hidden:NacrePanelState.hidden});
+            """,
+            asynchronous=True,
+            shell_ipc=True,
+        )
+        self.assertEqual(result["error"]["code"], "unavailable")
+        self.assertTrue(result["error"]["retry"])
+        self.assertTrue(result["hidden"])
 
     def test_ui_dispatch_uses_registered_handlers_and_rejects_method_injection(self):
         result = self.qml(
