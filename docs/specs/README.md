@@ -711,6 +711,23 @@ capacity restored; private audit retained). Bead B2 fresh Hyprland batch granted
 11:15–16:30UTC subject to unchanged gates; no desktop heavy overlap. Nacre
 N9 hosted CI may continue; N10 remains local source/private Python tests only.
 
+## Lead update — 2026-10-21
+
+- The owner's laptop is updated to main. The `niri-on-pc` experiment drop-ins
+  are retired (N0015 `--retire-niri-experiment`), and the control-center
+  branch, which had never been pushed, is restored on main (`90723ae1`, plus
+  `fea5d143` pill polish and `2f7c223e` launcher focus/favourites). Live Niri
+  binds were migrated to the native helper.
+- F4: enable worked once the health check polled for readiness (`3c1039d7`),
+  but `nacrectl ui` toggles were unreliable in daemon mode on the live laptop
+  (not reproduced in nested sessions). The laptop is back in LEGACY mode
+  through the documented manual rollback. Rollback scan fixed in `8ff6910c`.
+  Next: a clean relogin (the experiment Niri still owns the session
+  namespace), then a re-enable test against the exact visible shell PID.
+- Testing rule (owner): all tests, nested sessions and builds run on the
+  owner's desktop or dev-1, never the laptop. Codex is at its usage limit
+  until Oct 27, so workers are Claude subagents meanwhile.
+
 ## N0014 activation-only switch — 2026-10-20
 
 [N0014](0014-f4-switch-lite.md) separates a small F4 activation switch from the
