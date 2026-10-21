@@ -102,7 +102,16 @@ action.
 
 ## Final polish validation (2026-10-21)
 
-The 400 ms live CSS polling, post-commit refresh ordering, Chromium setup hint and user guide are
-under review. Focused tests and the complete remote Arch `check.yml` replica are being rerun for this
-revision. Frozen references remain unchanged; no live app, browser flag/profile, installer or permission
-change is performed by this worker.
+Validation ran in the isolated remote Arch CI container with `nice -n 10` and Cargo `-j2`:
+
+- Focused palette pipeline: 17/17; settings validation, including frozen values: 4/4.
+- The focused checks cover 400 ms polling, files existing before refresh, and no refresh from failed
+  live bundle transactions, alongside target rendering, presence, disabled state and rollback.
+- Full `check.yml` replica: native workspace tests, formatting/Clippy, Ruff, translations,
+  Python/QML regressions, browser JavaScript checks and all 534 helper parity cases pass.
+  Tooling retains one existing skip.
+- English/pseudo and wide-font galleries, the AUR pager gallery, and fresh default nested-niri
+  installation IPC/screenshot checks pass.
+- The user guide received a reader review and is linked from the README. Frozen references remain
+  unchanged; `git diff --check` is clean. No live app/config, browser flags/profile, installer or
+  permission change was performed by this worker.
