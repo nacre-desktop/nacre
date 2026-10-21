@@ -1,6 +1,6 @@
 # N0021 — App theming targets (GTK3 file chooser, Chromium browsers, Discord, Spotify)
 
-- Status: In progress (live-tested template follow-up; validation pending)
+- Status: Implemented (live-tested template follow-up validated; lead integration pending)
 - Date: 2026-10-21
 - Owner request 2026-10-21: make as many apps as possible follow the Nacre palette, with Settings toggles.
   Owner choices: Discord via Vencord on the official client, Spotify via Spicetify, GTK3 via adw-gtk3.
@@ -33,8 +33,8 @@ Settings → Colors → App theming toggle.
    interactive, brand/accent, scrollbars, input, modifier states; cover both the legacy `--background-primary`
    family and the newer `--background-base-*` / `--background-surface-*` / `--bg-*` family). Remap the
    `--neutral-1` through `--neutral-100` scale and semantic tokens with `!important` so derived surfaces
-   follow the palette. Only write when
-   `~/.config/Vencord` exists (status otherwise `tool-missing`). Enabling the theme in Vencord is a one-time
+   follow the palette. Only write when `~/.config/Vencord` exists (status otherwise `tool-missing`).
+   Enabling the theme in Vencord is a one-time
    step the user does.
 4. **`spotify`: Spicetify.** Write `~/.config/spicetify/Themes/Nacre/color.ini` (section `[Nacre]`, standard
    Spicetify keys: text, subtext, main, sidebar, player, card, shadow, selected-row, button, button-active,
@@ -88,9 +88,20 @@ action.
   disabled-target behavior and rollback as the Spotify color/CSS files. No application installer,
   browser profile, or Spotify patching operation is invoked.
 
-## Live-tested template follow-up (2026-10-21)
+## Validation (2026-10-21, live-tested template follow-up)
 
-Lead testing found that Discord surfaces derive from its neutral scale and Spotify surfaces use Encore
-semantic tokens. The lead supplied working replacement templates plus a static Spicetify reload script;
-these are now the source assets. Focused tests and the full Arch CI replica are being rerun for this
-revision, including script publication/rollback, all helper parity cases, galleries and fresh-install smoke.
+Lead testing supplied the Discord neutral-scale and Spotify Encore templates plus the static reload
+script. These are now the source assets; the browser JavaScript asset is checked with Node and
+Prettier, while Qt JavaScript retains its existing formatter checks.
+
+Validation ran in the isolated remote Arch CI container with `nice -n 10` and Cargo `-j2`:
+
+- Focused palette pipeline: 16/16; settings validation, including frozen values: 4/4.
+- Script publication, private mode, disabled preservation, existing/absent per-target and bundle
+  rollback, all 100 neutral priorities, Encore tokens, and the detached 60-second refresh command pass.
+- Full `check.yml` replica: native workspace tests, formatting/Clippy, Ruff, translations,
+  Python/QML regressions, browser JavaScript checks and all 534 helper parity cases pass.
+  Tooling retains one existing skip.
+- English/pseudo and wide-font galleries, the AUR pager gallery, and fresh default nested-niri
+  installation IPC/screenshot checks pass.
+- Frozen references remain unchanged; `git diff --check` is clean. No live action was performed.
