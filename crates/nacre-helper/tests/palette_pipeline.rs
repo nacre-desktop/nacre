@@ -889,11 +889,19 @@ fn app_theme_home(home: &Path) -> Result<()> {
         paths.config.join("colors.json"),
         br#"{"version":1,"favorites":[],"appThemes":{}}"#,
     )?;
-    fs::copy(assets().join("reference-style.json"), paths.state.join("scheme.json"))?;
+    fs::copy(
+        assets().join("reference-style.json"),
+        paths.state.join("scheme.json"),
+    )?;
     Ok(())
 }
 
-fn app_theme_command(home: &Path, path: &Path, id: &str, enabled: bool) -> Result<std::process::Output> {
+fn app_theme_command(
+    home: &Path,
+    path: &Path,
+    id: &str,
+    enabled: bool,
+) -> Result<std::process::Output> {
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     command
         .args(["app-theme", id, if enabled { "true" } else { "false" }])
@@ -922,17 +930,33 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     fs::create_dir(&bin)?;
     let absent = app_theme_command(home.path(), &bin, "chromium", true)?;
     assert!(absent.status.success());
-    assert!(!home.path().join(".local/share/nacre/themes/chromium/manifest.json").exists());
+    assert!(!home
+        .path()
+        .join(".local/share/nacre/themes/chromium/manifest.json")
+        .exists());
     let absent = app_theme_command(home.path(), &bin, "discord", true)?;
     assert!(absent.status.success());
-    assert!(!home.path().join(".config/Vencord/themes/nacre.theme.css").exists());
+    assert!(!home
+        .path()
+        .join(".config/Vencord/themes/nacre.theme.css")
+        .exists());
     let absent = app_theme_command(home.path(), &bin, "spotify", true)?;
     assert!(absent.status.success());
-    assert!(!home.path().join(".config/spicetify/Themes/Nacre/color.ini").exists());
-    let status: Value = serde_json::from_slice(&fs::read(home.path().join(".local/state/nacre/theme-targets.json"))?)?;
+    assert!(!home
+        .path()
+        .join(".config/spicetify/Themes/Nacre/color.ini")
+        .exists());
+    let status: Value = serde_json::from_slice(&fs::read(
+        home.path().join(".local/state/nacre/theme-targets.json"),
+    )?)?;
     for id in ["chromium", "discord", "spotify"] {
         assert_eq!(
-            status["targets"].as_array().unwrap().iter().find(|target| target["id"] == id).unwrap()["status"],
+            status["targets"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|target| target["id"] == id)
+                .unwrap()["status"],
             "tool-missing"
         );
     }
@@ -943,43 +967,94 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     fs::set_permissions(&chromium_root, fs::Permissions::from_mode(0o700))?;
     fs::write(chromium_root.join("Cached Theme.pak"), [1, 2, 0, 255])?;
     let output = app_theme_command(home.path(), &bin, "chromium", true)?;
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-    let manifest_path = home.path().join(".local/share/nacre/themes/chromium/manifest.json");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let manifest_path = home
+        .path()
+        .join(".local/share/nacre/themes/chromium/manifest.json");
     let manifest: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
     assert_eq!(manifest["manifest_version"], 3);
     assert_eq!(manifest["name"], "Nacre");
     assert!(manifest["version"].as_str().unwrap().starts_with("1."));
     for key in [
-        "frame", "frame_inactive", "toolbar", "tab_text", "tab_background_text",
-        "bookmark_text", "ntp_background", "ntp_text", "ntp_link", "omnibox_background",
-        "omnibox_text", "button_background", "toolbar_button_icon",
+        "frame",
+        "frame_inactive",
+        "toolbar",
+        "tab_text",
+        "tab_background_text",
+        "bookmark_text",
+        "ntp_background",
+        "ntp_text",
+        "ntp_link",
+        "omnibox_background",
+        "omnibox_text",
+        "button_background",
+        "toolbar_button_icon",
     ] {
         assert!(manifest["theme"]["colors"][key].is_array(), "{key}");
     }
     assert!(manifest["theme"]["properties"]["ntp_logo_alternate"].is_number());
     assert!(!chromium_root.join("Cached Theme.pak").exists());
-    assert_eq!(fs::metadata(&manifest_path)?.permissions().mode() & 0o777, 0o600);
-    assert_eq!(fs::metadata(manifest_path.parent().unwrap())?.permissions().mode() & 0o777, 0o700);
+    assert_eq!(
+        fs::metadata(&manifest_path)?.permissions().mode() & 0o777,
+        0o600
+    );
+    assert_eq!(
+        fs::metadata(manifest_path.parent().unwrap())?
+            .permissions()
+            .mode()
+            & 0o777,
+        0o700
+    );
 
     fs::create_dir_all(home.path().join(".config/Vencord"))?;
     let output = app_theme_command(home.path(), &bin, "discord", true)?;
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let css = fs::read_to_string(home.path().join(".config/Vencord/themes/nacre.theme.css"))?;
     assert!(!css.contains("{{"));
-    assert_eq!(fs::metadata(home.path().join(".config/Vencord/themes/nacre.theme.css"))?.permissions().mode() & 0o777, 0o600);
-    assert_eq!(fs::metadata(home.path().join(".config/Vencord/themes"))?.permissions().mode() & 0o777, 0o700);
+    assert_eq!(
+        fs::metadata(home.path().join(".config/Vencord/themes/nacre.theme.css"))?
+            .permissions()
+            .mode()
+            & 0o777,
+        0o600
+    );
+    assert_eq!(
+        fs::metadata(home.path().join(".config/Vencord/themes"))?
+            .permissions()
+            .mode()
+            & 0o777,
+        0o700
+    );
     for variable in [
-        "--background-primary", "--background-base-lowest", "--background-surface-highest",
-        "--bg-base-primary", "--text-primary", "--brand-500", "--scrollbar-thin-thumb",
+        "--background-primary",
+        "--background-base-lowest",
+        "--background-surface-highest",
+        "--bg-base-primary",
+        "--text-primary",
+        "--brand-500",
+        "--scrollbar-thin-thumb",
     ] {
         assert!(css.contains(variable), "{variable}");
     }
     assert!(css.contains("@name Nacre"));
 
     let dark_version = manifest["version"].clone();
-    let mut light = serde_json::from_slice::<Value>(&fs::read(home.path().join(".local/state/nacre/scheme.json"))?)?;
+    let mut light = serde_json::from_slice::<Value>(&fs::read(
+        home.path().join(".local/state/nacre/scheme.json"),
+    )?)?;
     light["mode"] = serde_json::json!("light");
-    fs::write(home.path().join(".local/state/nacre/scheme.json"), serde_json::to_vec(&light)?)?;
+    fs::write(
+        home.path().join(".local/state/nacre/scheme.json"),
+        serde_json::to_vec(&light)?,
+    )?;
     fs::write(chromium_root.join("Cached Theme.pak"), [4, 0, 5])?;
     let output = app_theme_command(home.path(), &bin, "chromium", true)?;
     assert!(output.status.success());
@@ -988,10 +1063,17 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     assert!(!chromium_root.join("Cached Theme.pak").exists());
     let saved_manifest = fs::read(&manifest_path)?;
     let saved_css = fs::read(home.path().join(".config/Vencord/themes/nacre.theme.css"))?;
-    assert!(app_theme_command(home.path(), &bin, "chromium", false)?.status.success());
-    assert!(app_theme_command(home.path(), &bin, "discord", false)?.status.success());
+    assert!(app_theme_command(home.path(), &bin, "chromium", false)?
+        .status
+        .success());
+    assert!(app_theme_command(home.path(), &bin, "discord", false)?
+        .status
+        .success());
     assert_eq!(fs::read(&manifest_path)?, saved_manifest);
-    assert_eq!(fs::read(home.path().join(".config/Vencord/themes/nacre.theme.css"))?, saved_css);
+    assert_eq!(
+        fs::read(home.path().join(".config/Vencord/themes/nacre.theme.css"))?,
+        saved_css
+    );
 
     let log = home.path().join("spicetify.log");
     fake_executable(
@@ -1000,7 +1082,10 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     )?;
     fake_executable(&bin.join("timeout"), "#!/bin/sh\nshift 3\nexec \"$@\"\n")?;
     fs::create_dir_all(home.path().join(".config/spicetify"))?;
-    fs::write(home.path().join(".config/spicetify/config-xpui.ini"), "current_theme = Nacre\n")?;
+    fs::write(
+        home.path().join(".config/spicetify/config-xpui.ini"),
+        "current_theme = Nacre\n",
+    )?;
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     let output = command
         .args(["app-theme", "spotify", "true"])
@@ -1011,19 +1096,44 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
         .env("NACRE_COMPOSITOR", "hyprland")
         .env("SPICETIFY_LOG", &log)
         .output()?;
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let ini_path = home.path().join(".config/spicetify/Themes/Nacre/color.ini");
     let ini = fs::read_to_string(&ini_path)?;
-    assert_eq!(fs::metadata(ini_path.parent().unwrap())?.permissions().mode() & 0o777, 0o700);
+    assert_eq!(
+        fs::metadata(ini_path.parent().unwrap())?
+            .permissions()
+            .mode()
+            & 0o777,
+        0o700
+    );
     assert!(ini.starts_with("[Nacre]\n"));
     assert!(!ini.contains("{{"));
     assert_eq!(fs::metadata(&ini_path)?.permissions().mode() & 0o777, 0o600);
     for key in [
-        "text", "subtext", "main", "sidebar", "player", "card", "shadow", "selected-row",
-        "button", "button-active", "button-disabled", "tab-active", "notification",
-        "notification-error", "misc",
+        "text",
+        "subtext",
+        "main",
+        "sidebar",
+        "player",
+        "card",
+        "shadow",
+        "selected-row",
+        "button",
+        "button-active",
+        "button-disabled",
+        "tab-active",
+        "notification",
+        "notification-error",
+        "misc",
     ] {
-        assert!(ini.lines().any(|line| line.starts_with(&format!("{key} "))), "{key}");
+        assert!(
+            ini.lines().any(|line| line.starts_with(&format!("{key} "))),
+            "{key}"
+        );
     }
     for _ in 0..100 {
         if log.exists() && fs::read_to_string(&log)?.contains("refresh") {
@@ -1035,7 +1145,10 @@ fn app_theme_outputs_are_gated_rendered_private_and_refresh_only() -> Result<()>
     let color_ini = fs::read(&ini_path)?;
     let user_css_path = home.path().join(".config/spicetify/Themes/Nacre/user.css");
     let user_css = fs::read(&user_css_path)?;
-    assert_eq!(fs::metadata(&user_css_path)?.permissions().mode() & 0o777, 0o600);
+    assert_eq!(
+        fs::metadata(&user_css_path)?.permissions().mode() & 0o777,
+        0o600
+    );
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     let output = command
         .args(["app-theme", "spotify", "false"])
@@ -1073,7 +1186,10 @@ fn app_theme_target_failure_restores_each_target_output() -> Result<()> {
             "spotify" => {
                 fake_executable(&bin.join("spicetify"), "#!/bin/sh\nexit 0\n")?;
                 fs::create_dir_all(home.path().join(".config/spicetify"))?;
-                fs::write(home.path().join(".config/spicetify/config-xpui.ini"), "current_theme=Nacre\n")?;
+                fs::write(
+                    home.path().join(".config/spicetify/config-xpui.ini"),
+                    "current_theme=Nacre\n",
+                )?;
                 home.path().join(".config/spicetify/Themes/Nacre")
             }
             _ => unreachable!(),
@@ -1095,7 +1211,10 @@ fn app_theme_target_failure_restores_each_target_output() -> Result<()> {
             fs::write(output_root.join(name), bytes)?;
         }
         if id == "chromium" {
-            fs::set_permissions(output_root.join("Cached Theme.pak"), fs::Permissions::from_mode(0o640))?;
+            fs::set_permissions(
+                output_root.join("Cached Theme.pak"),
+                fs::Permissions::from_mode(0o640),
+            )?;
         }
         let before = outputs
             .iter()
@@ -1104,14 +1223,25 @@ fn app_theme_target_failure_restores_each_target_output() -> Result<()> {
         let state_target = home.path().join(".local/state/nacre/theme-targets.json");
         fs::create_dir(state_target)?;
         let output = app_theme_command(home.path(), &bin, id, true)?;
-        assert!(!output.status.success(), "{id}: {}", String::from_utf8_lossy(&output.stderr));
+        assert!(
+            !output.status.success(),
+            "{id}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         for (name, bytes) in &before {
             assert_eq!(fs::read(output_root.join(name))?, *bytes, "{id}: {name}");
         }
         if id == "chromium" {
-            assert_eq!(fs::metadata(output_root.join("Cached Theme.pak"))?.permissions().mode() & 0o777, 0o640);
+            assert_eq!(
+                fs::metadata(output_root.join("Cached Theme.pak"))?
+                    .permissions()
+                    .mode()
+                    & 0o777,
+                0o640
+            );
         }
-        let preferences: Value = serde_json::from_slice(&fs::read(home.path().join(".config/nacre/colors.json"))?)?;
+        let preferences: Value =
+            serde_json::from_slice(&fs::read(home.path().join(".config/nacre/colors.json"))?)?;
         assert!(preferences["appThemes"].get(id).is_none(), "{id}");
     }
     Ok(())
@@ -1151,11 +1281,20 @@ fn gtk_gsettings_respects_managed_empty_and_custom_values() -> Result<()> {
             .env("GSETTINGS_VALUE", value)
             .env("GSETTINGS_LOG", &log)
             .output()?;
-        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
-        assert!(fs::read_to_string(home.path().join(".config/gtk-3.0/settings.ini"))?
-            .contains("gtk-theme-name=adw-gtk3-dark"));
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            fs::read_to_string(home.path().join(".config/gtk-3.0/settings.ini"))?
+                .contains("gtk-theme-name=adw-gtk3-dark")
+        );
         let calls = fs::read_to_string(&log)?;
-        assert_eq!(calls.contains("set org.gnome.desktop.interface gtk-theme"), should_set);
+        assert_eq!(
+            calls.contains("set org.gnome.desktop.interface gtk-theme"),
+            should_set
+        );
         if should_set {
             assert!(calls.contains("adw-gtk3-dark"));
         }

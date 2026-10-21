@@ -49,9 +49,7 @@ Column {
                         apps: shared.join(", ")
                     });
                 }
-                return root.registry.text(
-                    descriptor?.descriptionId || "settings.registry.colors.target.description"
-                );
+                return root.registry.text(descriptor?.descriptionId || "settings.registry.colors.target.description");
             }
         }
     }

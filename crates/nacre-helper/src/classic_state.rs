@@ -1,6 +1,7 @@
 //! The existing paired wallpaper/palette publication transaction.
 use crate::{i18n::tr, json, paths::Paths, state, Result};
 use serde_json::{json, Map, Value};
+use sha2::Digest;
 use std::{
     fs,
     io::Write,
@@ -9,7 +10,6 @@ use std::{
     process::{Command, Output, Stdio},
     time::{Duration, Instant},
 };
-use sha2::Digest;
 
 /// Reload only terminals owned by this UID and exact HOME (never another session).
 pub fn reload_terminals(home: &Path) {
@@ -156,7 +156,12 @@ fn atomic_write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
     let parent = path.parent().ok_or("Invalid publication path")?;
     fs::create_dir_all(parent)?;
     let mut temporary = tempfile::Builder::new()
-        .prefix(&format!(".{}", path.file_name().ok_or("Missing filename")?.to_string_lossy()))
+        .prefix(&format!(
+            ".{}",
+            path.file_name()
+                .ok_or("Missing filename")?
+                .to_string_lossy()
+        ))
         .tempfile_in(parent)?;
     temporary.write_all(bytes)?;
     temporary.persist(path)?;
@@ -221,12 +226,7 @@ fn gsettings_theme(allowed: &[&str], selected: &str) {
         return;
     }
     let mut set = Command::new("gsettings");
-    set.args([
-        "set",
-        "org.gnome.desktop.interface",
-        "gtk-theme",
-        selected,
-    ]);
+    set.args(["set", "org.gnome.desktop.interface", "gtk-theme", selected]);
     let _ = run_bounded(set, Duration::from_secs(2));
 }
 
@@ -234,7 +234,9 @@ fn gtk_theme_name(paths: &Paths, mode: &str) -> String {
     let dark = mode == "dark";
     let suffix = if dark { "-dark" } else { "" };
     let candidates = [
-        paths.home.join(format!(".local/share/themes/adw-gtk3{suffix}")),
+        paths
+            .home
+            .join(format!(".local/share/themes/adw-gtk3{suffix}")),
         PathBuf::from(format!("/usr/share/themes/adw-gtk3{suffix}")),
     ];
     if candidates.iter().any(|path| path.is_dir()) {
@@ -249,8 +251,9 @@ fn executable_on_path(name: &str) -> bool {
     std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())
         .map(|root| root.join(name))
         .any(|path| {
-            fs::metadata(path)
-                .is_ok_and(|metadata| metadata.is_file() && metadata.permissions().mode() & 0o111 != 0)
+            fs::metadata(path).is_ok_and(|metadata| {
+                metadata.is_file() && metadata.permissions().mode() & 0o111 != 0
+            })
         })
 }
 
@@ -344,7 +347,10 @@ fn publish_extended_target(
         }
         "discord" => {
             let output = paths.home.join(".config/Vencord/themes/nacre.theme.css");
-            create_private_dirs(output.parent().ok_or("Missing theme directory")?, &paths.home)?;
+            create_private_dirs(
+                output.parent().ok_or("Missing theme directory")?,
+                &paths.home,
+            )?;
             atomic_write(
                 &output,
                 &render_template(assets, "", "discord-theme.css.in", colors)?,
@@ -385,7 +391,10 @@ fn spicetify_uses_nacre(paths: &Paths) -> bool {
 fn refresh_spicetify(paths: &Paths, live: bool) {
     if !live
         || !theme_target_enabled(paths, "spotify").unwrap_or(false)
-        || !paths.home.join(".config/spicetify/Themes/Nacre/color.ini").is_file()
+        || !paths
+            .home
+            .join(".config/spicetify/Themes/Nacre/color.ini")
+            .is_file()
         || !spicetify_uses_nacre(paths)
         || !executable_on_path("spicetify")
     {
@@ -424,7 +433,10 @@ fn target_output_path(paths: &Paths, relative: &str) -> Result<PathBuf> {
     Ok(paths.home.join(path))
 }
 
-fn snapshot_target_outputs(paths: &Paths, target: &Value) -> Result<Vec<(PathBuf, TargetOutputState)>> {
+fn snapshot_target_outputs(
+    paths: &Paths,
+    target: &Value,
+) -> Result<Vec<(PathBuf, TargetOutputState)>> {
     use std::os::unix::fs::PermissionsExt;
     target["outputs"]
         .as_array()
@@ -1301,10 +1313,10 @@ impl Publisher {
         if live {
             self.reload_desktop_consumers(&data, &icon_theme, &config, connection.as_ref())?;
         }
-        if live && theme_target_enabled(paths, "gtk3")? {
+        if live && theme_target_enabled(&self.paths, "gtk3")? {
             gsettings_theme(
                 &["Adwaita", "Adwaita-dark", "adw-gtk3", "adw-gtk3-dark"],
-                &gtk_theme_name(paths, data["mode"].as_str().ok_or("Missing mode")?),
+                &gtk_theme_name(&self.paths, data["mode"].as_str().ok_or("Missing mode")?),
             );
         }
         Ok(())
