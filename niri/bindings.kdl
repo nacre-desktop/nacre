@@ -12,8 +12,8 @@ binds {
     XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn "nacrectl" "ui" "keyboardLight" "step" "down"; }
     Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
     Super+Ctrl+E repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
-    Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
-    Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "niri msg action screenshot"; }
+    Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
+    Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
     Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\""; }
     Super+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action close_window"; }
     Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action fullscreen_window --mode fullscreen"; }

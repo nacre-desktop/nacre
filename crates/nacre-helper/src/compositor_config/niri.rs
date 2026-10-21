@@ -159,7 +159,7 @@ pub(super) fn binding(row: &Value) -> Result<String> {
             .and_then(Value::as_str)
             .unwrap_or("");
         match description{
-            "Nacre:close"=>return Ok(action_command("close_window",&[])),"Nacre:overview"=>return Ok("niri msg action toggle-overview".into()),"Nacre:screenshot"=>return Ok("niri msg action screenshot".into()),
+            "Nacre:close"=>return Ok(action_command("close_window",&[])),"Nacre:overview"=>return Ok("niri msg action toggle-overview".into()),"Nacre:screenshot"=>return Ok("g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\"".into()),
             "Nacre:save-screenshot"=>return Ok("mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\"".into()),
             _=>{}
         }
