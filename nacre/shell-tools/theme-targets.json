@@ -117,7 +117,8 @@
       "labelId": "settings.publisher.spotify",
       "outputs": [
         ".config/spicetify/Themes/Nacre/color.ini",
-        ".config/spicetify/Themes/Nacre/user.css"
+        ".config/spicetify/Themes/Nacre/user.css",
+        ".config/spicetify/Themes/Nacre/theme.js"
       ],
       "template": "spicetify-colors.ini.in",
       "tool": "spicetify"
