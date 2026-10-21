@@ -1249,6 +1249,7 @@ NacreSurface {
             required property var modelData
             required property int index
             readonly property bool selected: root.hasSelection && root.selection === index
+            readonly property bool isFavorite: LauncherPreferences.favorites.includes(Menu.stable(row.modelData))
             objectName: "launcherRow_" + index
             width: results.width
             height: 55
@@ -1311,6 +1312,29 @@ NacreSurface {
                     root.keyboardSelection = true;
                     root.selection = row.index;
                     event.button === Qt.RightButton ? root.actionsFor(row.modelData, row) : root.run(row.modelData);
+                }
+            }
+            NacreSurface {
+                objectName: "launcherFavorite_" + row.index
+                x: parent.width - 35
+                y: (parent.height - height) / 2
+                width: 23
+                height: 23
+                radius: 7
+                color: "transparent"
+                visible: row.isFavorite || rowHover.hovered || row.selected
+                NacreIcon {
+                    objectName: "launcherFavoriteGlyph_" + row.index
+                    anchors.centerIn: parent
+                    text: "favorite"
+                    fill: row.isFavorite ? 1 : 0
+                    font.pointSize: 11
+                    color: NacreColours.palette.m3primary
+                }
+                NacreInteraction {
+                    function onClicked() {
+                        root.favorite(row.modelData);
+                    }
                 }
             }
         }

@@ -87,6 +87,22 @@ TestCase {
         compare(search.focus, true);
     }
 
+    function test_search_receives_focus_on_fresh_open_and_reopen() {
+        const value = view();
+        const search = findChild(value, "launcherSearch");
+        verify(search);
+        tryCompare(search, "activeFocus", true);
+        keyClick(search, Qt.Key_E);
+        compare(search.text, "e");
+
+        value.visibilities.launcher = false;
+        search.focus = false;
+        value.visibilities.launcher = true;
+        tryCompare(search, "activeFocus", true);
+        keyClick(search, Qt.Key_D);
+        compare(search.text, "d");
+    }
+
     function test_ordinary_typing_federates_providers_and_filters_are_optional() {
         const value = view(), field = findChild(value, "launcherSearch");
         value.navigate("power");
@@ -1685,6 +1701,22 @@ TestCase {
         compare(value.route, "power");
         compare(value.selectedEntry.id, "power.poweroff");
         compare(AppLaunch.commands.length, 0);
+    }
+
+    function test_favorite_indicator_is_visible_and_filled_in_search_results() {
+        LauncherPreferences.favorites = ["editor"];
+        const value = view();
+        const field = findChild(value, "launcherSearch");
+        field.text = "editor";
+        const favorite = findChild(value, "launcherFavorite_0");
+        verify(favorite);
+        const glyph = findChild(favorite, "launcherFavoriteGlyph_0");
+        verify(glyph);
+        compare(glyph.text, "favorite");
+        compare(glyph.fill, 1);
+
+        LauncherPreferences.favorites = [];
+        compare(glyph.fill, 0);
     }
 
     name: "NacreUniversalMenu"

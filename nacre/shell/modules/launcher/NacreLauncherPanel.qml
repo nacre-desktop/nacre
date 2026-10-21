@@ -62,6 +62,8 @@ Item {
     implicitWidth: detached ? viewportWidth : fullScreenGallery ? Math.max(0, viewportWidth) : page.item?.implicitWidth ?? 800
     visible: height > 0
     clip: true
+    onVisibleChanged: if (visible && visibilities.launcher)
+        Qt.callLater(root.focusExplicit)
 
     readonly property bool canDetach: !page.item?.picker && !page.item?.form && !page.item?.confirmation
     function focusExplicit() {
