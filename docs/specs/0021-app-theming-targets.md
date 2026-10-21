@@ -1,6 +1,6 @@
 # N0021 — App theming targets (GTK3 file chooser, Chromium browsers, Discord, Spotify)
 
-- Status: In progress (Codex worker, lead review)
+- Status: Blocked (implemented; strict frozen DConf equivalence needs lead review)
 - Date: 2026-10-21
 - Owner request 2026-10-21: make as many apps as possible follow the Nacre palette, with Settings toggles.
   Owner choices: Discord via Vencord on the official client, Spotify via Spicetify, GTK3 via adw-gtk3.
@@ -62,3 +62,33 @@ action.
   frozen parity references unchanged.
 - Settings prototype QML/Python tests pass with the new rows.
 - The repo CI `check.yml` job replicated in the Arch CI container on dev-1 passes.
+
+## Implementation notes
+
+- The settings-values reference remains the historical 2,258-case JavaScript corpus. The three new
+  boolean descriptors have separate Rust validation and QML toggle/setup-description coverage; no
+  frozen reference was regenerated or extended.
+- The historical media-pipeline harness explicitly supplies an unavailable gsettings backend, matching
+  its absent desktop bus. This prevents a new DConf runtime cache from contaminating its frozen file
+  set; its original byte/file assertions remain intact and fresh fake-tool tests cover GTK get/set.
+- Chromium templates render validated hex roles first. Manifest assembly converts those rendered
+  values to RGB arrays and adds the palette/mode-derived version and numeric logo property.
+- The custom-theme allowlist applies to gsettings. Existing `settings.ini` replacement behavior and
+  GTK color definitions retain their historical parity, with adw-gtk3 selected when installed.
+- Spicetify refresh runs only after successful publication, with a detached timeout and kill-after
+  deadline. No application installer, browser profile, or Spotify patching operation is invoked.
+
+## Validation blocker (2026-10-21)
+
+The Arch CI replication reaches the final helper corpus with 533/534 cases matching.
+`classic-state/reload-consumers` requires the exact original five-key DConf Change packet in
+`tests/parity/helpers/run.py`, checked against the immutable `dconf-writer-reference.json`.
+N0021 removes that packet's unconditional GTK-theme write so it cannot bypass the custom-theme guard.
+The strict equivalence therefore reports an unexpected four-key packet. No frozen reference or that
+strict equivalence was changed to make the test pass; work stops here under the owner's frozen-reference
+instruction. Lead review must resolve the intended guarded GTK/DConf equivalence before acceptance.
+
+Before that gate, native workspace tests, formatting/Clippy, translation coverage, Ruff, QML formatting,
+441 tooling tests (one existing skip), 116 AI tests, 45 Brain tests, 478 shell-tools tests, and the native
+palette/wallpaper/Niri/Hyprland workflow references pass. Galleries and fresh-install smoke remain
+unrun because the source-check command stops at this gate.
