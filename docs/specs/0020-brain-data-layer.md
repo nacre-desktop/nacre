@@ -7,7 +7,7 @@
 Goal: native `nacre-brain` CLI (init/path/search/note/secret refs/run; `open|capture` keeps delegating to the UI
 launcher), `nacre-brain-sync` (timer every 2 minutes) and `nacre-brain-maintain` (daily backup/check, restore,
 resolve), sharing one Rust vault module (note-path rules, atomic write, lock, digest).
-Scope: 233 + 373 + 162 LOC, and `nacre-ai-memory` vault writes stay Python until N0021 but call the new CLI.
+Scope: 233 + 373 + 162 LOC, and `nacre-ai-memory` vault writes stay Python until N0022 but call the new CLI.
 Preserve exit codes (75 for nothing to do), status-file schema read by Settings, diagnostics.rs and
 maintenance.py, three-way merge, conflict files, no delete propagation, backups. Non-goals: web server,
 semantic search, systemd unit placement (stay in HOME), new sync features.
@@ -31,7 +31,7 @@ Numbers are proposals; N0017 is the last used.
 
 - The three entrypoints dispatch to standalone Rust commands sharing `brain_data`;
   UI delegation and HOME unit placement stay intact. Python `.py.rollback` sources
-  are retained, including memory's raw-metadata validator until N0021.
+  are retained, including memory's raw-metadata validator until N0022.
 - The full `desktop` job from `.github/workflows/check.yml` passed in the Arch CI
   container, at nice 10 with Cargo `-j2`: formatting, Clippy, builds, Rust tests,
   protocol consumer, `tools/check.py`, translations and both galleries. Python

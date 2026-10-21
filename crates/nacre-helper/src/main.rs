@@ -26,6 +26,14 @@ fn run() -> Result<i32> {
                     .collect::<Vec<_>>(),
             );
         }
+        Some("nacre-ai-context" | "nacre-ai-memory" | "nacre-ai-usage") => {
+            let command = name.as_deref().unwrap().to_string_lossy().into_owned();
+            return nacre_helper::ai_core::run(
+                &std::iter::once(command)
+                    .chain(arguments)
+                    .collect::<Vec<_>>(),
+            );
+        }
         Some("nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
             invoked.unwrap().to_owned()
         }
@@ -56,6 +64,14 @@ fn run() -> Result<i32> {
     }
     if tool == "ctl" {
         return nacre_helper::daemon::client::run(&arguments);
+    }
+    if matches!(
+        tool.as_str(),
+        "nacre-ai-context" | "nacre-ai-memory" | "nacre-ai-usage" | "ai-core"
+    ) {
+        return nacre_helper::ai_core::run(
+            &std::iter::once(tool).chain(arguments).collect::<Vec<_>>(),
+        );
     }
     if tool == "daemon" {
         return nacre_helper::daemon::run(&arguments);

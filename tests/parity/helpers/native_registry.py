@@ -64,6 +64,9 @@ MIGRATED = frozenset(
         "nacre-brain",
         "nacre-brain-sync",
         "nacre-brain-maintain",
+        "nacre-ai-context",
+        "nacre-ai-memory",
+        "nacre-ai-usage",
     }
 )
 
@@ -119,7 +122,13 @@ def command(case, override=None, *, root=ROOT, environ=None):
         return None
     # These former module-level Python helpers are now standalone CLI workers;
     # their historical API adapter command maps directly to the native command.
-    if helper in {"weather", "updates"}:
+    if helper in {
+        "weather",
+        "updates",
+        "nacre-ai-context",
+        "nacre-ai-memory",
+        "nacre-ai-usage",
+    }:
         return shlex.join([str(native_binary(root, environ)), helper])
     if helper == "nacre_shell" and original:
         if original == ["python3", "-m", "nacre_shell"]:

@@ -53,6 +53,7 @@ html-escape = "=0.2.13"
 turbojpeg = { version = "=1.5.1", default-features = false, features = ["cmake"] }
 gif = "0.14"
 include_dir = "0.7"
+toml = "0.9"
 
 [dev-dependencies]
 flate2 = "1"

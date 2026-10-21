@@ -1,12 +1,18 @@
 import json
 import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 from test_workflow import module, ROOT
+
+
+def native_ai_command(name):
+    binary = os.environ.get(
+        "NACRE_HELPER_BINARY", str(ROOT / "target/release/nacre-helper")
+    )
+    return [binary, name]
 
 
 class Conversation(unittest.TestCase):
@@ -73,8 +79,7 @@ class Conversation(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             env = dict(os.environ, HOME=tmp, NACRE_BRAIN=tmp + "/brain")
             command = [
-                sys.executable,
-                str(ROOT / "bin/nacre-ai-memory"),
+                *native_ai_command("nacre-ai-memory"),
                 "--title",
                 "A useful result",
                 "--source",
@@ -140,8 +145,7 @@ class Conversation(unittest.TestCase):
             )
             subprocess.run(
                 [
-                    sys.executable,
-                    str(ROOT / "bin/nacre-ai-memory"),
+                    *native_ai_command("nacre-ai-memory"),
                     "--title",
                     "A useful observation",
                     "--source",
@@ -171,8 +175,7 @@ class Conversation(unittest.TestCase):
             page.write_text(original)
             subprocess.run(
                 [
-                    sys.executable,
-                    str(ROOT / "bin/nacre-ai-memory"),
+                    *native_ai_command("nacre-ai-memory"),
                     "--title",
                     "Training",
                     "--source",

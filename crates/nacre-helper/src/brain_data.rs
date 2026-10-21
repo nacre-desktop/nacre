@@ -114,6 +114,32 @@ fn initialize() -> Result<PathBuf> {
     }
     Ok(root)
 }
+
+/// Initialize and return the configured private vault root for shared callers.
+pub fn root_path() -> Result<PathBuf> {
+    initialize()
+}
+
+/// Create a missing wiki page through the vault's symlink checks, safety scan and backups.
+pub fn create_page(name: &str, body: &str) -> Result<bool> {
+    let root = initialize()?;
+    let _guard = VaultLock::acquire(&root)?;
+    if !name.starts_with("wiki/") {
+        return Err(error("Only wiki pages may be created"));
+    }
+    let path = note_path(&root, name)?;
+    if path.exists() {
+        return Ok(false);
+    }
+    safe_note(body)?;
+    if body.trim().is_empty() {
+        return Err(error("Empty page"));
+    }
+    backup(&root, None)?;
+    atomic(&path, body)?;
+    backup(&root, None)?;
+    Ok(true)
+}
 fn safe_note(s: &str) -> Result<()> {
     static PRIVATE: LazyLock<regex::Regex> = LazyLock::new(|| {
         regex::Regex::new(r"-----BEGIN (?:OPENSSH |RSA |EC )?PRIVATE KEY-----").unwrap()
@@ -131,6 +157,17 @@ fn safe_note(s: &str) -> Result<()> {
         return Err(error("Possible credential found. Store the secret in the OS keyring and save only its reference."));
     }
     Ok(())
+}
+
+/// Validate raw note metadata and body before any caller normalizes or stores it.
+pub fn validate_note(s: &str) -> Result<()> {
+    safe_note(s)
+}
+
+/// Resolve a vault-relative Markdown path using the vault's traversal and symlink checks.
+pub fn validate_note_path(name: &str) -> Result<PathBuf> {
+    let root = initialize()?;
+    note_path(&root, name)
 }
 fn note_path(root: &Path, name: &str) -> Result<PathBuf> {
     reject_links(root)?;
@@ -504,11 +541,30 @@ fn brain_note(args: &[String]) -> Result<i32> {
     let source = source.ok_or("the following arguments are required: --source")?;
     let mut body = String::new();
     std::io::stdin().read_to_string(&mut body)?;
+    let path = write_note(&kind, &title, &source, &confidence, &body)?;
+    println!("{}", path.display());
+    Ok(0)
+}
+
+/// Write a validated note through the same private vault path used by nacre-brain.
+pub fn write_note(
+    kind: &str,
+    title: &str,
+    source: &str,
+    confidence: &str,
+    body: &str,
+) -> Result<PathBuf> {
+    if !KINDS.contains(&kind) {
+        return Err(error("invalid kind"));
+    }
+    if !["verified", "reported", "unverified"].contains(&confidence) {
+        return Err(error("invalid confidence"));
+    }
     safe_note(&format!("{title}\n{source}\n{body}"))?;
     if body.trim().is_empty() {
         return Err(error("Note is empty"));
     }
-    let root = vault()?;
+    let root = initialize()?;
     let slug = title
         .to_lowercase()
         .chars()
@@ -535,7 +591,7 @@ fn brain_note(args: &[String]) -> Result<i32> {
         source.replace('\n', " "),
         body.trim_end()
     );
-    let p = root.join(&kind).join(format!(
+    let p = root.join(kind).join(format!(
         "{}-{}-{}.md",
         now.format("%Y%m%dT%H%M%SZ"),
         slug,
@@ -549,8 +605,7 @@ fn brain_note(args: &[String]) -> Result<i32> {
     fs::write(&name, &text)?;
     fs::hard_link(&name, &p)?;
     fs::remove_file(name)?;
-    println!("{}", p.display());
-    Ok(0)
+    Ok(p)
 }
 struct PromptTerminal {
     tty: File,
