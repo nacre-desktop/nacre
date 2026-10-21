@@ -217,9 +217,11 @@ TestCase {
         const fill = findChild(view, "feedbackFill"), track = findChild(view, "feedbackTrack");
         verify(findChild(view, "feedbackDetail").width > 0);
         verify(fill.width <= track.width && fill.width > 0);
+        view.value = .9;
         DesktopSettings.data = {
             animations: false
         };
+        compare(fill.width, track.width * .9);
         view.value = .8;
         compare(fill.width, track.width * .8);
         view.level = false;

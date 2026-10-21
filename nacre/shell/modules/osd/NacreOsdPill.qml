@@ -15,6 +15,14 @@ Item {
     implicitHeight: level ? 76 : 68
     Accessible.role: Accessible.StaticText
     Accessible.name: [title, valueLabel, detail].filter(part => part !== "").join(". ")
+    Connections {
+        target: NacreTokens
+        function onMotionEnabledChanged() {
+            if (!NacreTokens.motionEnabled) {
+                fill.width = Qt.binding(() => track.width * Math.max(0, Math.min(1, root.value)));
+            }
+        }
+    }
     NacreSurface {
         anchors.fill: parent
         radius: height / 2
@@ -72,6 +80,7 @@ Item {
         visible: root.level
         color: NacreTokens.raised
         Rectangle {
+            id: fill
             objectName: "feedbackFill"
             width: parent.width * Math.max(0, Math.min(1, root.value))
             height: parent.height
