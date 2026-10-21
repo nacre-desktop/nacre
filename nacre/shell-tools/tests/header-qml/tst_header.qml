@@ -746,9 +746,11 @@ TestCase {
             }
         ];
         view.openStatus("bluetooth", region);
-        compare(selected, "bluetooth");
-        compare(activated, 1);
-        compare(NacrePanelState.calls.length, 2);
+        compare(selected, "");
+        compare(activated, 0);
+        compare(NacrePanelState.calls.length, 3);
+        compare(NacrePanelState.calls[2], "bluetooth");
+        compare(NacrePanelState.controlsMode, "dropdown");
         NacrePanelState.panels = ({});
     }
     function test_reduced_motion_keeps_hover_delay_and_title_keyboard_opens_immediately() {

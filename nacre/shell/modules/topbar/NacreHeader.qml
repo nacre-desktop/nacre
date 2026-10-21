@@ -63,13 +63,7 @@ Item {
             NacreMenu.workflows.work("record-stop");
             return;
         }
-        const pearl = NacrePearls.entries.find(entry => entry.kind === "controls");
-        if (pearl?.window?.bodyItem?.item?.navigate) {
-            pearl.window.bodyItem.item.navigate(name);
-            pearl.window.activate();
-        } else {
-            NacrePanelState.openControls(name, screen.name, true, pointerOwned, "dropdown");
-        }
+        NacrePanelState.openControls(name, screen.name, true, pointerOwned, "dropdown");
     }
     onVisibleChanged: if (!visible)
         clearPeek()
