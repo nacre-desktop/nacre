@@ -14,7 +14,8 @@ fn run() -> Result<i32> {
             .file_name()
             .map(|name| name.to_owned())
     });
-    let tool = match name.as_deref().and_then(std::ffi::OsStr::to_str) {
+    let invoked = name.as_deref().and_then(std::ffi::OsStr::to_str);
+    let tool = match invoked {
         Some("nacrectl") => "ctl".to_owned(),
         Some("nacre-daemon") => "daemon".to_owned(),
         Some("nacre-brain" | "nacre-brain-sync" | "nacre-brain-maintain") => {
@@ -24,6 +25,9 @@ fn run() -> Result<i32> {
                     .chain(arguments)
                     .collect::<Vec<_>>(),
             );
+        }
+        Some("nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
+            invoked.unwrap().to_owned()
         }
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
@@ -64,6 +68,30 @@ fn run() -> Result<i32> {
     }
     if tool == "session-watch" {
         return nacre_helper::session_watch::run(&arguments);
+    }
+    if tool == "nacre-app" {
+        return nacre_helper::launchers::app(&arguments);
+    }
+    if tool == "nacre-settings" {
+        return match nacre_helper::launchers::settings(&arguments) {
+            Ok(code) => Ok(code),
+            Err(error) => {
+                eprintln!("nacre-settings: {error}");
+                Ok(1)
+            }
+        };
+    }
+    if tool == "nacre-welcome" {
+        return match nacre_helper::launchers::welcome(&arguments) {
+            Ok(code) => Ok(code),
+            Err(error) => {
+                eprintln!("nacre-welcome: {error}");
+                Ok(1)
+            }
+        };
+    }
+    if tool == "startup-apps" {
+        return nacre_helper::launchers::startup_apps(&arguments);
     }
     if tool == "shell-supervisor" {
         return nacre_helper::shell_supervisor::run(None);

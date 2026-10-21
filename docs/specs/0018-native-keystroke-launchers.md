@@ -1,6 +1,6 @@
 # N0018 — Native keystroke launchers
 
-- Status: In progress (Codex worker, lead review)
+- Status: Implementation and evidence complete (Codex worker; lead review/integration pending)
 - Date: 2026-10-21
 - Plan: AI/Brain/Wave-4 migration plan 2026-10-21
 
@@ -26,3 +26,10 @@ kept as Rust tests; security additions are explicit new cases with intended-diff
 desktop, installed Nacre, units, keybindings or publication; existing AI permissions and the paru command
 unchanged; standalone native command ships first, daemon hosting is a separate unit. Status for all: Proposed.
 Numbers are proposals; N0017 is the last used.
+
+## Evidence
+
+- Replayed the frozen N0018 fixtures with `tests/parity/helpers/run.py --case 'nacre-app/*' --case 'nacre-settings/*' --case 'nacre-welcome/*' --case 'startup-apps/*' --command 'nacre-helper {name}'`: 9 cases, 0 failures. Frozen expected files were unchanged.
+- The full frozen parity run passed: 534 cases, 0 failures. Rust launcher tests retain app argv and the Niri terminal bridge assertions, route validation, Welcome claim/ack/retry behavior, and startup readiness/deduplication/workspace assertions.
+- Replayed the complete `desktop` job in `ghcr.io/archlinux/archlinux:latest` on dev-1, in the task's named container and tmux session. `tools/check.py` passed: tools 441 tests (1 existing skip), AI 116, Brain 45, and shell-tools 478; Niri/Hyprland legacy assertions, native translation audits (244 and 185 states), gallery checks, QML formatting and all build checks passed. Overall CI command exited 0.
+- In a private HOME with a fake browser and a `python3` PATH trap, the first `~/.local/bin/nacre-app browser` process launch took 2.848 ms and recorded 0 Python child launches. The filesystem cache was warm; this measures first process startup, not cold-disk I/O.

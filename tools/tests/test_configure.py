@@ -150,7 +150,7 @@ class ConfigurationTests(unittest.TestCase):
             (home / ".config/hypr/hypridle.conf").write_text("personal idle choice")
             (root / "bin/nacre-app").write_text("new route")
             module.apply(home, root, app_routes_only=True)
-            self.assertEqual((home / ".local/bin/nacre-app").read_text(), "new route")
+            self.assertFalse((home / ".local/bin/nacre-app").exists())
             self.assertEqual(
                 (home / ".config/hypr/hypridle.conf").read_text(),
                 "personal idle choice",

@@ -294,7 +294,16 @@ dofile(arg[1]);dofile(arg[2])
 
     def test_deployment_and_login_owner_are_declared(self):
         mapping = configure.files(ROOT)
-        self.assertIn(Path(".local/bin/nacre-welcome"), mapping)
+        runtime = load("welcome_package_runtime", ROOT / "tools/package_runtime.py")
+        links = runtime.links(ROOT, {"components": []})
+        self.assertEqual(
+            links[Path(".local/bin/nacre-welcome")],
+            Path("../share/nacre/shell/bin/nacre-welcome"),
+        )
+        self.assertEqual(
+            links[Path(".local/share/nacre/shell/bin/nacre-welcome")],
+            Path("../tools/nacre-helper"),
+        )
         self.assertIn(Path(".local/share/applications/nacre-welcome.desktop"), mapping)
         entry = (ROOT / "nacre/desktop/nacre-welcome.desktop").read_text()
         self.assertIn("Icon=nacre\n", entry)

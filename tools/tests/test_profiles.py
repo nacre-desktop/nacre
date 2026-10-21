@@ -66,7 +66,11 @@ class ProfileTests(unittest.TestCase):
             self.assertNotIn(
                 "hl.window_rule", (home / ".config/nacre/profile.lua").read_text()
             )
-            self.assertTrue((home / ".local/bin/nacre-settings").exists())
+            self.assertTrue((home / ".local/bin/nacre-settings").is_symlink())
+            self.assertEqual(
+                (home / ".local/bin/nacre-settings").resolve(),
+                home / ".local/share/nacre/shell/tools/nacre-helper",
+            )
             self.assertTrue(
                 (home / ".config/systemd/user/nacre-niri-widths.service").is_file()
             )

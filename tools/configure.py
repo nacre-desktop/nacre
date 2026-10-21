@@ -54,11 +54,8 @@ def files(root=ROOT):
             ):
                 result[Path(".config") / source.relative_to(root)] = source
     for name in (
-        "nacre-app",
         "nacre-ai",
-        "nacre-settings",
         "nacre-colors",
-        "nacre-welcome",
         "orient",
         "nacre-terminal-logo",
         "nacre-terminal",
@@ -227,7 +224,7 @@ def configuration_scope(app_routes_only=False, only=()):
     if app_routes_only and only:
         raise ValueError("Choose app routes or explicit configuration files")
     return (
-        {Path(".local/bin/nacre-app"), Path(".local/bin/xdg-open")}
+        {Path(".local/bin/xdg-open")}
         if app_routes_only
         else {Path(path) for path in only}
     )

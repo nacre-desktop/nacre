@@ -40,6 +40,10 @@ MIGRATED = frozenset(
         "light-devices",
         "menu-backend",
         "menu-cli",
+        "nacre-app",
+        "nacre-settings",
+        "nacre-welcome",
+        "startup-apps",
         "network-state",
         "notification-history",
         "pearl-state",
@@ -258,6 +262,8 @@ def command(case, override=None, *, root=ROOT, environ=None):
         module_path,
     ]:
         raise ValueError("Unsupported native module contract command")
+    if module_api and helper == "startup-apps":
+        return shlex.join([str(native_binary(root, environ)), helper])
     binary = native_binary(root, environ, module_api=module_api)
     operation = "serve" if helper == "helper-service" else helper
     return shlex.join([str(binary), operation])

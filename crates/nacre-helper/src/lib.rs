@@ -25,6 +25,7 @@ pub mod image_paint;
 pub mod image_text;
 pub mod json;
 pub mod launcher_preferences;
+pub mod launchers;
 pub mod launcher_workflows;
 pub mod light_devices;
 pub mod lock_config;

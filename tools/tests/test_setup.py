@@ -470,7 +470,13 @@ class PackageSetupTests(unittest.TestCase):
             manifest = package_runtime._state.read_json_file(
                 home / ".local/state/nacre/package-links.json"
             )
-            for name in ("nacre-daemon", "nacrectl"):
+            for name in (
+                "nacre-daemon",
+                "nacrectl",
+                "nacre-app",
+                "nacre-settings",
+                "nacre-welcome",
+            ):
                 for prefix in (".local/bin", ".local/share/nacre/shell/bin"):
                     relative = Path(prefix) / name
                     self.assertIn(str(relative), manifest)

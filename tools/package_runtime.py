@@ -140,7 +140,13 @@ def links(root, profile, compositor="hyprland"):
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
         ".config/quickshell/nacre": root / "nacre/shell",
     }
-    for name in ("nacre-daemon", "nacrectl"):
+    for name in (
+        "nacre-daemon",
+        "nacrectl",
+        "nacre-app",
+        "nacre-settings",
+        "nacre-welcome",
+    ):
         # Symlink invocation preserves argv0 for the native multi-call binary.
         # Keep these in the runtime manifest: broken template symlinks would be
         # skipped by the deployment file collector before runtime links exist.
