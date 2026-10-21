@@ -117,6 +117,40 @@ def records(sessions, running, fallback):
     return output
 
 
+def background_session(binary, env, thread_id):
+    """Find the background session holding a chat, e.g. after an exit handoff on logout."""
+    try:
+        result = subprocess.run(
+            [binary, "agents", "--json"],
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=10,
+        )
+        agents = [
+            a
+            for a in json.loads(result.stdout)
+            if a.get("kind") == "background" and a.get("id")
+        ]
+    except (OSError, ValueError, TypeError, AttributeError, subprocess.SubprocessError):
+        return None
+    for agent in agents:
+        if agent.get("sessionId") == thread_id:
+            return agent["id"]
+    # A handoff continues the chat as a fork; the daemon roster names the original transcript.
+    try:
+        workers = json.loads(
+            (Path(env["CLAUDE_CONFIG_DIR"]) / "daemon/roster.json").read_text()
+        )["workers"]
+        for agent in agents:
+            launch = workers.get(agent["id"], {}).get("dispatch", {}).get("launch", {})
+            if Path(str(launch.get("sessionId", ""))).stem == thread_id:
+                return agent["id"]
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        pass
+    return None
+
+
 def list_chats(args):
     config = Path(os.environ.get("CLAUDE_CONFIG_DIR", str(Path.home() / ".claude")))
     if not (config / "projects").is_dir():
@@ -273,6 +307,9 @@ def run(args):
         if not args.thread_id:
             raise ValueError("A Claude session ID is required")
         uuid.UUID(args.thread_id)
+        attached = background_session(binary, env, args.thread_id)
+        if attached:
+            os.execvpe(binary, [binary, "attach", attached], env)
         argv += ["--resume", args.thread_id]
     os.execvpe(binary, argv, env)
 

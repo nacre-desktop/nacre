@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -356,3 +357,49 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
                 )
                 if command == "resume":
                     self.assertEqual(argv[argv.index("--resume") + 1], args.thread_id)
+
+    def test_resume_attaches_to_chat_handed_off_to_background(self):
+        c = module("nacre-ai-claude")
+        original = "9563ba8c-801e-494d-9446-ed9417ebd6e5"
+        fork = "e7c81fbd-082d-41a7-b6f0-6b1d2f795b24"
+        agents = json.dumps(
+            [
+                {"id": "e7c81fbd", "kind": "background", "sessionId": fork},
+                {"id": "", "kind": "interactive", "sessionId": original},
+            ]
+        )
+        roster = {
+            "workers": {
+                "e7c81fbd": {
+                    "dispatch": {
+                        "launch": {"sessionId": f"/projects/chat/{original}.jsonl"}
+                    }
+                }
+            }
+        }
+        for thread_id, expected in (
+            (original, "e7c81fbd"),
+            (fork, "e7c81fbd"),
+            ("7b7db928-7582-4a1e-91b2-e6b601ca8a2d", None),
+        ):
+            with (
+                self.subTest(thread_id=thread_id),
+                tempfile.TemporaryDirectory() as temp,
+            ):
+                (Path(temp) / "daemon").mkdir()
+                (Path(temp) / "daemon/roster.json").write_text(json.dumps(roster))
+                with patch.object(
+                    c.subprocess,
+                    "run",
+                    return_value=SimpleNamespace(stdout=agents),
+                ):
+                    self.assertEqual(
+                        c.background_session(
+                            "/fake/claude", {"CLAUDE_CONFIG_DIR": temp}, thread_id
+                        ),
+                        expected,
+                    )
+        with patch.object(c.subprocess, "run", side_effect=OSError("no daemon")):
+            self.assertIsNone(
+                c.background_session("/fake/claude", {"CLAUDE_CONFIG_DIR": "/x"}, fork)
+            )
