@@ -351,10 +351,6 @@ fn refresh_spicetify(paths: &Paths, live: bool) {
         ],
     );
 }
-pub(crate) fn post_publish_external_targets(paths: &Paths, live: bool) {
-    refresh_spicetify(paths, live);
-}
-
 enum TargetOutputState {
     Missing,
     File(Vec<u8>, u32),
@@ -1717,7 +1713,7 @@ impl Publisher {
         {
             return Err("Palette lock belongs to a different home".into());
         }
-        self.apply_locked(wallpaper, live, false)
+        self.apply_locked(wallpaper, live, true)
     }
 }
 
