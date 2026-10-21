@@ -399,7 +399,55 @@ def backup_retirements(dropins):
     return backup, entries
 
 
+def guard_retired_niri_bindings():
+    """Do not remove the facade while a known Niri config still executes it."""
+    roots = [
+        HOME / ".config/niri/config.kdl",
+        HOME / ".config/nacre/niri/config.kdl",
+        HOME / ".config/nacre/niri-on-pc/config.kdl",
+        HOME / ".local/share/nacre/niri-on-pc/session/config/config.kdl",
+    ]
+    selected = os.environ.get("NIRI_CONFIG")
+    if selected:
+        roots.append(Path(selected).expanduser())
+    pending, seen, blocked = list(roots), set(), []
+    total = 0
+    while pending:
+        path = pending.pop().resolve()
+        if path in seen or not path.is_file():
+            continue
+        seen.add(path)
+        if len(seen) > 256 or path.stat().st_size > 2 * 1024 * 1024:
+            raise RuntimeError("Niri configuration inventory exceeds bound")
+        text = path.read_text()
+        total += len(text)
+        if total > 8 * 1024 * 1024:
+            raise RuntimeError("Niri configuration inventory exceeds bound")
+        # Generated bindings use one spawn per line. Ignore full-line comments;
+        # retain shell command strings and both absolute and variable tool paths.
+        active = "\n".join(
+            line for line in text.splitlines() if not line.lstrip().startswith("//")
+        )
+        if re.search(r"(?<![\w.-])compositor\.py(?![\w.-])", active):
+            blocked.append(path)
+        for include in re.findall(
+            r'^\s*include(?:\s+optional=true)?\s+"([^"\n]+)"', active, re.MULTILINE
+        ):
+            child = Path(include).expanduser()
+            pending.append(child if child.is_absolute() else path.parent / child)
+    if blocked:
+        raise RuntimeError(
+            "Refusing install before any changes: Niri configs reference retired compositor.py:\n"
+            + "\n".join("  " + str(path) for path in sorted(blocked))
+            + "\nBack up these configs and migrate their bindings to the generated native Nacre "
+            "bindings from compositor-contract.json (niri/bindings.kdl) before installing. The running Niri keeps "
+            "its config path: update that file or its includes, then validate and verify reload. "
+            "--retire-niri-experiment does not bypass this guard."
+        )
+
+
 def deploy(code_only=False, retire_niri_experiment=False):
+    guard_retired_niri_bindings()
     dropins = retired_dropins(retire_niri_experiment)
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"

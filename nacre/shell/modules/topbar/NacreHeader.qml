@@ -300,7 +300,7 @@ Item {
         height: 30
         visible: width >= 100
         horizontal: true
-        monitor: NacreBrightness.getMonitorForScreen(root.screen)
+        monitor: root.screen
     }
     NacreStatusHint {
         output: root.screen

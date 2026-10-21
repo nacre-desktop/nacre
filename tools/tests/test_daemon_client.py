@@ -126,6 +126,7 @@ class DaemonClientTests(unittest.TestCase):
         launcher=False,
         render_state=False,
         storage_client=False,
+        native_ui=None,
     ):
         helpers = helpers or network
         with tempfile.TemporaryDirectory(prefix="nacre-daemon-client-") as folder:
@@ -282,7 +283,7 @@ ShellRoot {
             source = source.replace("FIXTURES", json.dumps(documents)).replace(
                 "BODY", body
             )
-            if publisher:
+            if publisher or native_ui:
                 source = source.replace(
                     "import qs.services", "import qs.services\nimport qs.utils"
                 )
@@ -326,9 +327,10 @@ ShellRoot {
                 DBUS_SYSTEM_BUS_ADDRESS=f"unix:path={runtime}/absent-system-bus",
             )
             server = None
+            daemon = None
             if compositor:
                 environment["NIRI_SOCKET"] = str(runtime / "niri.sock")
-            if wire:
+            if wire or native_ui:
                 helper = Path(
                     os.environ.get(
                         "NACRE_HELPER_BINARY", ROOT / "target/release/nacre-helper"
@@ -341,13 +343,38 @@ ShellRoot {
                 installed = root / "home/.local/share/nacre/shell/tools/nacre-helper"
                 installed.parent.mkdir(parents=True, exist_ok=True)
                 installed.symlink_to(helper.resolve())
-                server = PrivateDaemon(runtime / "daemon.sock", wire)
-                environment.update(
-                    NACRE_DAEMON_CLIENT="1", NACRE_DAEMON_SOCKET=str(server.path)
-                )
+                if wire:
+                    server = PrivateDaemon(runtime / "daemon.sock", wire)
+                    environment.update(
+                        NACRE_DAEMON_CLIENT="1", NACRE_DAEMON_SOCKET=str(server.path)
+                    )
+                if native_ui:
+                    config = root / "config/quickshell/nacre"
+                    config.parent.mkdir(parents=True)
+                    config.symlink_to(root)
+                    binary = installed.parent.parent / "bin/qs"
+                    binary.parent.mkdir()
+                    binary.symlink_to(shutil.which("quickshell"))
+                if native_ui == "daemon":
+                    environment.update(
+                        NACRE_DAEMON_CLIENT="1",
+                        NACRE_DAEMON_SOCKET=str(runtime / "daemon.sock"),
+                    )
+                    daemon = subprocess.Popen(
+                        [str(helper), "daemon"],
+                        env=environment,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
             try:
                 result = subprocess.run(
-                    ["dbus-run-session", "--", "quickshell", "-p", str(root), "-n"],
+                    [
+                        "dbus-run-session",
+                        "--",
+                        "quickshell",
+                        *(["-c", "nacre"] if native_ui else ["-p", str(root)]),
+                        "-n",
+                    ],
                     env=environment,
                     text=True,
                     capture_output=True,
@@ -357,6 +384,13 @@ ShellRoot {
             finally:
                 if server:
                     server.close()
+                if daemon:
+                    daemon.terminate()
+                    try:
+                        daemon.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        daemon.kill()
+                        daemon.wait(timeout=5)
             output = result.stdout + result.stderr
             lines = [
                 line.split("DAEMON_CLIENT_RESULT ", 1)[1]
@@ -1209,6 +1243,44 @@ ShellRoot {
         self.assertEqual(observed["mutations"], 1)
         self.assertEqual(observed["sessions"], 2)
         self.assertEqual(result, {"completions": 1, "pending": 0})
+
+    def test_nacrectl_ui_toggles_once_in_daemon_and_legacy_modes(self):
+        for mode in ("daemon", "legacy"):
+            with self.subTest(mode=mode):
+                result = self.qml(
+                    """
+                    const handler = Qt.createQmlObject('import QtQuick; import Quickshell.Io; IpcHandler {target:"fixture";property int calls:0;property bool opened:false;function toggle(query:string):void {calls++;opened=!opened;} }', root);
+                    link.registerIpc("fixture", handler, {toggle:["s"]});
+                    link.registerUi(root, (method, params) => link.dispatchIpc(params));
+                    const process = Qt.createQmlObject('import Quickshell.Io; Process {stdout:StdioCollector {} stderr:StdioCollector {}}', root);
+                    process.command = [NacrePaths.helperBinary, "ctl", "ui", "fixture", "toggle", ""];
+                    let completed = 0, error = "";
+                    process.exited.connect(code => {
+                        completed++;
+                        if (code !== 0 || handler.calls !== completed || handler.opened !== (completed === 1))
+                            error = "Toggle " + completed + ": code=" + code + " calls=" + handler.calls + " opened=" + handler.opened;
+                        if (completed === 1 && !error)
+                            Qt.callLater(() => process.running = true);
+                    });
+                    const timer = Qt.createQmlObject('import QtQuick; Timer {interval:50;repeat:true;running:true}', root);
+                    let started = false, settled = false;
+                    timer.triggered.connect(() => {
+                        if (!started && (!link.enabled || link.connected)) {
+                            started = true;
+                            process.running = true;
+                        } else if (error || completed === 2) {
+                            if (!settled) { settled = true; return; }
+                            timer.stop();
+                            finish({error:error,calls:handler.calls,opened:handler.opened,completed:completed});
+                        }
+                    });
+                    """,
+                    asynchronous=True,
+                    native_ui=mode,
+                )
+                self.assertEqual(
+                    result, {"error": "", "calls": 2, "opened": False, "completed": 2}
+                )
 
     def test_ui_dispatch_uses_registered_handlers_and_rejects_method_injection(self):
         result = self.qml(

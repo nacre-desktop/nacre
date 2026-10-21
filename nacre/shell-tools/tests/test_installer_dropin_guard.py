@@ -40,6 +40,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
             "SYSTEMD_UNIT_PATH": str(self.base / "extra-units"),
             "DBUS_SESSION_BUS_ADDRESS": "unix:path=" + str(self.base / "absent-bus"),
             "PYTHONDONTWRITEBYTECODE": "1",
+            "NIRI_CONFIG": "",
         }
         for context in (
             patch.dict(os.environ, environment),
@@ -86,6 +87,45 @@ class InstallerDropinGuardTests(unittest.TestCase):
             )
             for path in self.base.rglob("*")
         }
+
+    def test_retired_niri_bindings_refuse_includes_before_deployment(self):
+        config = self.put(
+            self.home / ".local/share/nacre/niri-on-pc/session/config/config.kdl",
+            'include "bindings.kdl"\n',
+        )
+        bindings = self.put(
+            config.parent / "bindings.kdl",
+            'binds { Mod+Space { spawn "sh" "-c" "python3 ${NACRE_COMPOSITOR_TOOLS}/compositor.py launcher"; } }\n',
+        )
+        before = self.snapshot()
+        for code_only in (False, True):
+            with self.subTest(code_only=code_only):
+                with self.assertRaisesRegex(
+                    RuntimeError, "Niri configs reference retired compositor.py"
+                ):
+                    installer.deploy(code_only=code_only, retire_niri_experiment=True)
+                self.assertEqual(self.snapshot(), before)
+                self.assertFalse(self.systemctl_log.exists())
+        bindings.write_text(
+            'binds { Mod+Space { spawn "nacrectl" "ui" "nacre" "launcher" ""; } }\n'
+        )
+        installer.guard_retired_niri_bindings()
+
+    def test_selected_niri_config_is_scanned_with_include_cycles(self):
+        config = self.put(self.base / "private/config.kdl", 'include "bindings.kdl"\n')
+        self.put(
+            config.parent / "bindings.kdl",
+            'include "config.kdl"\n// compositor.py was retired\n',
+        )
+        with patch.dict(os.environ, {"NIRI_CONFIG": str(config)}):
+            installer.guard_retired_niri_bindings()
+            config.write_text(
+                'binds { Mod+Space { spawn "python3" "/tools/compositor.py" "launcher"; } }\n'
+            )
+            with self.assertRaisesRegex(
+                RuntimeError, "Niri configs reference retired compositor.py"
+            ):
+                installer.guard_retired_niri_bindings()
 
     def test_cli_refuses_before_any_write_or_systemctl_for_both_install_modes(self):
         script = self.script()

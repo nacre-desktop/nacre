@@ -247,6 +247,46 @@ class SwitchTests(unittest.TestCase):
             self.switch.run("disable")
         self.assertEqual(self.manager.mutations(), [])
 
+    def test_transient_app_metadata_does_not_block_rollback(self):
+        root = self.home / "run/systemd/transient"
+        root.mkdir(parents=True)
+        self.manager.extra_roots.append(str(root))
+        app = root / "nacre-app-fixture.service"
+        app.write_text(
+            "[Unit]\nDescription=App mentioning nacre-daemon\nAfter=nacre-daemon.service\n[Service]\nEnvironment=NACRE_DAEMON_SOCKET=/run/user/1000/nacre-daemon.sock\nExecStart=/usr/bin/example\n"
+        )
+        self.switch.run("enable")
+        self.switch.run("rollback")
+        for command in (
+            "/usr/bin/nacre-helper app launch nacre-daemon.service",
+            "/usr/bin/systemctl --user is-active nacre-daemon.socket",
+        ):
+            app.write_text("[Service]\nExecStart=" + command + "\n")
+            self.switch.startup([root], allow_socket=False)
+        for directive in ("Wants=nacre-daemon.socket", "Requires=nacre-daemon.service"):
+            app.write_text(
+                "[Unit]\n" + directive + "\n[Service]\nExecStart=/usr/bin/example\n"
+            )
+            with self.subTest(directive=directive):
+                with self.assertRaisesRegex(RuntimeError, "Independent daemon startup"):
+                    self.switch.startup([root], allow_socket=False)
+        for command in (
+            "/usr/bin/nacre-daemon",
+            "/usr/bin/systemctl --user start nacre-daemon.socket",
+            "/usr/bin/systemctl --user start nacre-daemon",
+            "/usr/bin/nacre-helper daemon",
+            '/usr/bin/bash -lc "nacre-helper daemon"',
+            "/usr/bin/systemd-run --user --unit=nacre-daemon.service /usr/bin/example",
+            "/usr/bin/systemd-run --user --unit nacre-daemon.socket /usr/bin/example",
+            "/usr/bin/systemd-run --user /usr/bin/nacre-daemon",
+            '/usr/bin/sh -c "exec /usr/bin/nacre-helper daemon"',
+            "/usr/bin/env NOTE=nacre-daemon.service /usr/bin/nacre-daemon",
+        ):
+            app.write_text("[Service]\nExecStart=" + command + "\n")
+            with self.subTest(command=command):
+                with self.assertRaisesRegex(RuntimeError, "Independent daemon startup"):
+                    self.switch.startup([root], allow_socket=False)
+
     def test_dangling_startup_links_are_ignored_except_daemon(self):
         directory = self.home / ".local/share/dbus-1/services"
         directory.mkdir(parents=True)

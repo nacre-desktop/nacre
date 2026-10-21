@@ -28,6 +28,154 @@ PROPERTIES = (
 ).split()
 
 
+def command_starts_daemon(value, depth=0):
+    """Recognize executable/activation forms without treating app arguments as owners."""
+    if depth > 8:
+        raise RuntimeError("Startup command nesting exceeds bound")
+    value = re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m[1], 16)), value)
+    try:
+        args = shlex.split(value)
+    except ValueError as error:
+        raise RuntimeError("Cannot parse startup command") from error
+    if not args:
+        return False
+    program = Path(args.pop(0).lstrip("-@:+!")).name
+    if program == "nacre-daemon":
+        return True
+    if program == "nacre-helper":
+        return bool(args and args[0] == "daemon")
+    if program == "systemctl":
+        return bool(
+            set(args)
+            & {
+                "start",
+                "restart",
+                "try-restart",
+                "reload-or-restart",
+                "reload-or-try-restart",
+                "enable",
+                "reenable",
+            }
+        ) and bool(set(args) & {DAEMON, SOCKET, "nacre-daemon"})
+    shell_command = next(
+        (
+            i
+            for i, arg in enumerate(args)
+            if arg == "--command"
+            or arg.startswith("-")
+            and not arg.startswith("--")
+            and "c" in arg
+        ),
+        None,
+    )
+    if program in {"sh", "bash", "dash", "zsh", "fish"} and shell_command is not None:
+        index = shell_command + 1
+        if index >= len(args):
+            raise RuntimeError("Cannot parse startup shell command")
+        lexer = shlex.shlex(args[index], posix=True, punctuation_chars=";&|()")
+        lexer.whitespace_split = True
+        group = []
+        for token in [*lexer, ";"]:
+            if token and all(char in ";&|()" for char in token):
+                if command_starts_daemon(shlex.join(group), depth + 1):
+                    return True
+                group = []
+            else:
+                group.append(token)
+        return False
+    if program in {"env", "nice", "exec", "setsid", "systemd-run"}:
+        while args:
+            first = args[0]
+            if program == "systemd-run" and (
+                first.partition("=")[0] in {"-u", "--unit"}
+            ):
+                unit_name = (
+                    first.partition("=")[2]
+                    if "=" in first
+                    else args[1]
+                    if len(args) > 1
+                    else ""
+                )
+                if unit_name in {DAEMON, SOCKET, "nacre-daemon"}:
+                    return True
+                args = args[1:] if "=" in first else args[2:]
+            elif first in {
+                "-u",
+                "--unset",
+                "-C",
+                "--chdir",
+                "-n",
+                "--adjustment",
+                "-a",
+                "-p",
+                "--property",
+                "--setenv",
+            }:
+                args = args[2:]
+            elif first.startswith("-") or "=" in first:
+                args.pop(0)
+            else:
+                break
+        return command_starts_daemon(shlex.join(args), depth + 1)
+    return False
+
+
+def starts_daemon(raw, *, unit):
+    """Inspect activation directives, not app descriptions or inherited environment."""
+    section = ""
+    continuation = ""
+    for line in raw.decode("utf-8", errors="strict").splitlines():
+        line = line.strip()
+        if not line or line.startswith(("#", ";")):
+            continue
+        line = continuation + line
+        if line.endswith("\\"):
+            continuation = line[:-1] + " "
+            continue
+        continuation = ""
+        if line.startswith("[") and line.endswith("]"):
+            section = line[1:-1]
+            continue
+        key, separator, value = line.partition("=")
+        if not separator:
+            continue
+        key = key.strip()
+        dependencies = {
+            "Wants",
+            "Requires",
+            "Requisite",
+            "BindsTo",
+            "Upholds",
+            "OnFailure",
+            "OnSuccess",
+        }
+        dependency = (
+            unit
+            and section == "Unit"
+            and key in dependencies
+            or unit
+            and section == "Socket"
+            and key == "Service"
+            or unit
+            and section in {"Timer", "Path"}
+            and key == "Unit"
+            or not unit
+            and key == "SystemdService"
+        )
+        if dependency and set(value.split()) & {DAEMON, SOCKET}:
+            return True
+        command = (
+            unit
+            and section in {"Service", "Socket"}
+            and key.startswith("Exec")
+            or not unit
+            and key == "Exec"
+        )
+        if command and command_starts_daemon(value):
+            return True
+    return False
+
+
 def checked(path, *, directory=False, private=False):
     """Reject symlink ancestry and files writable by another identity."""
     path = Path(path)
@@ -264,10 +412,9 @@ class Switch:
                     total += len(raw)
                     if total > 32 * 1024 * 1024:
                         raise RuntimeError(f"Startup bytes exceed bound: {root}")
-                    if (
-                        not (unit_root and depth == 0 and path.name in UNITS)
-                        and b"nacre-daemon" in raw
-                    ):
+                    if not (
+                        unit_root and depth == 0 and path.name in UNITS
+                    ) and starts_daemon(raw, unit=unit_root):
                         raise RuntimeError(f"Independent daemon startup input: {path}")
 
     def layout(self, units):

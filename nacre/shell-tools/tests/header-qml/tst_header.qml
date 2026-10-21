@@ -583,6 +583,7 @@ TestCase {
         compare(AppLaunch.calls.length, 0);
         compare(view.width, 1920);
         compare(view.height, 50);
+        compare(findChild(view, "fixtureActiveTitle").monitor.name, "test");
         compare(NacreHoverIntent.owners.test, view);
     }
     function test_header_popup_contract_and_manual_device_routes() {
