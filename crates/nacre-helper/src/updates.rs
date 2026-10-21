@@ -152,7 +152,8 @@ fn status(pending: &str) -> Result<Value> {
         &["--version", "-v"],
         Duration::from_secs(10),
         "checking the active Quickshell build",
-    ).ok_or("Could not run the Quickshell version probe")?;
+    )
+    .ok_or("Could not run the Quickshell version probe")?;
     let local = String::from_utf8_lossy(&version.stdout).contains("Nacre local Qt rebuild");
     let blocked = local && pending_qt_release_change(pending)?;
     let mut message = if blocked {
