@@ -90,6 +90,24 @@ class NiriSessionGateTests(unittest.TestCase):
             self.assertEqual(session["Name"], "Nacre (" + desktop + ")")
             self.assertEqual(session["DesktopNames"], desktop)
 
+    def test_prepared_niri_session_path_uses_deployed_uwsm_wrappers(self):
+        with tempfile.TemporaryDirectory() as folder:
+            marker = Path(folder) / ".local/share/nacre/niri-on-pc/session/source-revision"
+            marker.parent.mkdir(parents=True)
+            marker.write_text("fixture\n")
+            result = subprocess.check_output(
+                ["sh", "-c", '. "$1"; env', "probe", str(ROOT / "uwsm/env-niri")],
+                env={"PATH": "/usr/bin", "HOME": folder},
+                text=True,
+            )
+        exported = dict(
+            line.split("=", 1) for line in result.splitlines() if "=" in line
+        )
+        self.assertTrue(
+            exported["PATH"].startswith(folder + "/.config/uwsm/niri-session-bin:")
+        )
+        self.assertNotIn("niri-on-pc/session-bin", exported["PATH"])
+
     def test_niri_environment_does_not_leak_hyprland_into_activation_context(self):
         result = subprocess.check_output(
             ["sh", "-c", '. "$1"; env', "probe", str(ROOT / "uwsm/env-niri")],
@@ -106,8 +124,9 @@ class NiriSessionGateTests(unittest.TestCase):
             line.split("=", 1) for line in result.splitlines() if "=" in line
         )
         self.assertEqual(
-            exported["NIRI_CONFIG"], "/fixture/.config/nacre/niri-on-pc/config.kdl"
+            exported["NIRI_CONFIG"], "/fixture/.config/nacre/niri/config.kdl"
         )
+        self.assertNotIn("niri-on-pc/session-bin", exported["PATH"])
         self.assertEqual(exported["NACRE_COMPOSITOR"], "niri")
         for variable in (
             "HYPRLAND_INSTANCE_SIGNATURE",

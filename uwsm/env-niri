@@ -1,11 +1,13 @@
 # Niri-specific activation context; the shared/Hyprland environment stays intact.
 # UWSM's niri_session plugin exports NIRI_SOCKET and manages clean shutdown.
 export NACRE_COMPOSITOR=niri
-export NIRI_CONFIG="$HOME/.config/nacre/niri-on-pc/config.kdl"
-# Full testing is an explicit prepared-source opt-in, independent of Hyprland.
+export NIRI_CONFIG="$HOME/.config/nacre/niri/config.kdl"
+# A source-prepared session (historical directory name; written by
+# `nacre-helper niri-session-runtime prepare`) is an explicit opt-in. Its wrappers
+# are deployed by tools/configure.py, never read from the retired experiment tree.
 if [ -r "$HOME/.local/share/nacre/niri-on-pc/session/source-revision" ]; then
     export NIRI_CONFIG="$HOME/.local/share/nacre/niri-on-pc/session/config/config.kdl"
-    export PATH="$HOME/.local/share/nacre/niri-on-pc/session-bin:$PATH"
+    export PATH="$HOME/.config/uwsm/niri-session-bin:$PATH"
 fi
 # The GNOME screencast portal chooses its own backend. Do not force a global GDK
 # backend in this session (see niri's Important Software documentation).
