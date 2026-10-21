@@ -37,6 +37,7 @@ enum CoreError {
     Invalid,
     OwnerChanged,
     StaleTarget,
+    PermissionDenied,
 }
 
 #[derive(Clone, Debug)]
@@ -136,6 +137,9 @@ fn unavailable_state(last_good: Option<NetworkState>, error: CoreError) -> Netwo
             "Network state exceeds the supported limit",
         ),
         CoreError::Unavailable => (ErrorCode::Unavailable, "NetworkManager is unavailable"),
+        CoreError::PermissionDenied => {
+            (ErrorCode::PermissionDenied, "Network state read was denied")
+        }
         CoreError::Invalid | CoreError::StaleTarget => {
             (ErrorCode::Unavailable, "Network state is unavailable")
         }
@@ -701,6 +705,14 @@ where
                 ) =>
             {
                 CoreError::StaleTarget
+            }
+            zbus::Error::MethodError(name, _, _)
+                if matches!(
+                    name.as_str().rsplit('.').next(),
+                    Some("PermissionDenied" | "NotAuthorized" | "AccessDenied" | "AuthFailed")
+                ) =>
+            {
+                CoreError::PermissionDenied
             }
             _ => CoreError::Unavailable,
         })?;

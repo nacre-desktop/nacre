@@ -22,6 +22,7 @@ struct State {
     gone: bool,
     point_gone: bool,
     incompatible: bool,
+    lookup_mode: u8,
     shared: bool,
     auth_failed: bool,
     mode: u8,
@@ -206,11 +207,21 @@ impl DeviceFixture {
         }
     }
     #[zbus(property)]
-    fn available_connections(&self) -> Vec<OwnedObjectPath> {
-        if self.0.state.lock().unwrap().incompatible {
-            vec![]
-        } else {
-            vec![path(PROFILE)]
+    fn available_connections(&self) -> zbus::fdo::Result<Vec<OwnedObjectPath>> {
+        let state = self.0.state.lock().unwrap();
+        match state.lookup_mode {
+            1 => Err(zbus::fdo::Error::UnknownObject(
+                "private vanished device".into(),
+            )),
+            2 => Err(zbus::fdo::Error::Failed("private service failure".into())),
+            3 => Err(zbus::fdo::Error::AccessDenied(
+                "private policy failure".into(),
+            )),
+            _ => Ok(if state.incompatible {
+                vec![]
+            } else {
+                vec![path(PROFILE)]
+            }),
         }
     }
 }
@@ -292,11 +303,21 @@ impl Active {
         path(PROFILE)
     }
     #[zbus(property)]
-    fn devices(&self) -> Vec<OwnedObjectPath> {
-        if self.0.state.lock().unwrap().shared {
-            vec![path(DEVICE), path("/other")]
-        } else {
-            vec![path(DEVICE)]
+    fn devices(&self) -> zbus::fdo::Result<Vec<OwnedObjectPath>> {
+        let state = self.0.state.lock().unwrap();
+        match state.lookup_mode {
+            1 => Err(zbus::fdo::Error::UnknownObject(
+                "private vanished active connection".into(),
+            )),
+            2 => Err(zbus::fdo::Error::Failed("private service failure".into())),
+            3 => Err(zbus::fdo::Error::AccessDenied(
+                "private policy failure".into(),
+            )),
+            _ => Ok(if state.shared {
+                vec![path(DEVICE), path("/other")]
+            } else {
+                vec![path(DEVICE)]
+            }),
         }
     }
 }
@@ -511,6 +532,16 @@ async fn network_controls_stale_wrong_kind_cross_device_and_denied() -> crate::R
             assert_eq!(f.call("network.set_wifi", params).await.unwrap_err().code, ErrorCode::Validation);
         }
         assert_eq!(f.call("network.disconnect", json!({"device":"/untrusted/path"})).await.unwrap_err().code, ErrorCode::Validation);
+        f.backend.state.lock().unwrap().mode = 0;
+        f.backend.state.lock().unwrap().incompatible = false;
+        for (mode, code) in [(1, ErrorCode::StaleRevision), (2, ErrorCode::Unavailable), (3, ErrorCode::PermissionDenied)] {
+            f.backend.state.lock().unwrap().lookup_mode = mode;
+            let profile = f.snapshot().connections.order[0].clone();
+            assert_eq!(f.call("network.connect", json!({"device":f.device(),"target":{"kind":"connection","id":profile}})).await.unwrap_err().code, code);
+            f.backend.state.lock().unwrap().active = true;
+            assert_eq!(f.call("network.disconnect", json!({"device":f.device()})).await.unwrap_err().code, code);
+        }
+        f.backend.state.lock().unwrap().lookup_mode = 0;
         f.backend.state.lock().unwrap().active = true;
         f.backend.state.lock().unwrap().shared = true;
         assert_eq!(f.call("network.disconnect", json!({"device":f.device()})).await.unwrap_err().code, ErrorCode::StaleRevision);

@@ -236,6 +236,18 @@ pub(super) fn unavailable() -> Failure {
         true,
     )
 }
+fn read_error(error: CoreError) -> Failure {
+    match error {
+        CoreError::StaleTarget => stale(),
+        CoreError::PermissionDenied => Failure::new(
+            ErrorCode::PermissionDenied,
+            "Network state read was denied",
+            false,
+        )
+        .dispatch_state(false),
+        _ => unavailable(),
+    }
+}
 fn invalid() -> Failure {
     Failure::new(ErrorCode::Validation, "Invalid network parameters", false).dispatch_state(false)
 }
@@ -386,10 +398,7 @@ pub(super) async fn execute(
     require_network_manager_owner(connection, owner)
         .await
         .map_err(|_| unavailable())?;
-    let raw = read_raw(connection).await.map_err(|error| match error {
-        CoreError::StaleTarget => stale(),
-        _ => unavailable(),
-    })?;
+    let raw = read_raw(connection).await.map_err(read_error)?;
     let mut fresh_ids = ids.clone();
     let state = project(raw.clone(), &mut fresh_ids).map_err(|_| unavailable())?;
     if !CoreSnapshot::Network(state.clone()).valid() {
@@ -459,7 +468,7 @@ pub(super) async fn execute(
                         "AvailableConnections",
                     )
                     .await
-                    .map_err(|_| unavailable())?;
+                    .map_err(read_error)?;
                     if available.len() > MAX_ENTITIES {
                         return Err(unavailable());
                     }
@@ -485,7 +494,7 @@ pub(super) async fn execute(
                     "Devices",
                 )
                 .await
-                .map_err(|_| stale())?;
+                .map_err(read_error)?;
                 if devices.len() != 1 || devices[0].as_str() != device.path {
                     return Err(stale());
                 }
