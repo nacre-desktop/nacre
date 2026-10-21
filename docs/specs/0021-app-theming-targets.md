@@ -1,6 +1,6 @@
 # N0021 — App theming targets (GTK3 file chooser, Chromium browsers, Discord, Spotify)
 
-- Status: Implemented (full validation passed; lead integration pending)
+- Status: In progress (live-tested template follow-up; validation pending)
 - Date: 2026-10-21
 - Owner request 2026-10-21: make as many apps as possible follow the Nacre palette, with Settings toggles.
   Owner choices: Discord via Vencord on the official client, Spotify via Spicetify, GTK3 via adw-gtk3.
@@ -31,15 +31,22 @@ Settings → Colors → App theming toggle.
 3. **`discord`: Vencord.** Write `~/.config/Vencord/themes/nacre.theme.css` (BetterDiscord-style meta
    header, `@name Nacre`) that maps the palette onto Discord's current CSS variables (backgrounds, text,
    interactive, brand/accent, scrollbars, input, modifier states; cover both the legacy `--background-primary`
-   family and the newer `--background-base-*` / `--background-surface-*` / `--bg-*` family). Only write when
+   family and the newer `--background-base-*` / `--background-surface-*` / `--bg-*` family). Remap the
+   `--neutral-1` through `--neutral-100` scale and semantic tokens with `!important` so derived surfaces
+   follow the palette. Only write when
    `~/.config/Vencord` exists (status otherwise `tool-missing`). Enabling the theme in Vencord is a one-time
    step the user does.
 4. **`spotify`: Spicetify.** Write `~/.config/spicetify/Themes/Nacre/color.ini` (section `[Nacre]`, standard
    Spicetify keys: text, subtext, main, sidebar, player, card, shadow, selected-row, button, button-active,
-   button-disabled, tab-active, notification, notification-error, misc) and a minimal `user.css`. Presence:
+   button-disabled, tab-active, notification, notification-error, misc), `user.css` mapping Encore tokens,
+   and the static `theme.js` live-reload asset in the same Nacre theme directory. The script checks
+   `colors.css` every two seconds and reloads `link.userCSS` stylesheets when it changes. Presence:
    `spicetify` on PATH. When the Spicetify config already selects `current_theme = Nacre`, run
-   `spicetify refresh` detached with a bounded timeout after writing. Never run `spicetify apply`,
-   `backup` or anything that patches Spotify; never chmod `/opt/spotify`.
+   `spicetify refresh` detached with a 60-second timeout and a one-second kill-after deadline after
+   writing. The Settings hint documents the owner's one-time setup command:
+   `spicetify config current_theme Nacre color_scheme Nacre inject_theme_js 1 && spicetify apply`.
+   Nacre itself never runs `spicetify apply`, `backup` or anything that patches Spotify; never chmod
+   `/opt/spotify`.
 
 Each new target: row in `theme-targets.json` with `tool`, a template `.in` file using the existing `{{role}}`
 syntax, dispatch in `set_theme_target` and the palette-apply path inside the existing transaction and
@@ -76,16 +83,14 @@ action.
   values to RGB arrays and adds the palette/mode-derived version and numeric logo property.
 - GTK publication uses the original five-key DConf packet, changing only its GTK theme value.
   With adw-gtk3 absent, the original packet remains byte-identical.
-- Spicetify refresh runs only after successful publication, with a detached timeout and kill-after
-  deadline. No application installer, browser profile, or Spotify patching operation is invoked.
+- Spicetify refresh runs only after successful publication, detached with a 60-second timeout and
+  one-second kill-after deadline. The static reload script participates in the same publication,
+  disabled-target behavior and rollback as the Spotify color/CSS files. No application installer,
+  browser profile, or Spotify patching operation is invoked.
 
-## Validation (2026-10-21)
+## Live-tested template follow-up (2026-10-21)
 
-Validation ran in the isolated remote Arch CI container, with `nice -n 10` and Cargo `-j2`:
-
-- Focused palette pipeline: 14/14; settings validation, including frozen values: 4/4.
-- Full `check.yml` replica: native workspace tests, formatting/Clippy, Ruff, translations,
-  Python/QML regressions, and all 534 helper parity cases pass. Tooling has one existing skip.
-- English/pseudo and wide-font translation galleries and the AUR pager gallery pass.
-- Fresh default installation in nested niri passes IPC and screenshot checks.
-- Frozen references remain unchanged; `git diff --check` is clean. No live action was performed.
+Lead testing found that Discord surfaces derive from its neutral scale and Spotify surfaces use Encore
+semantic tokens. The lead supplied working replacement templates plus a static Spicetify reload script;
+these are now the source assets. Focused tests and the full Arch CI replica are being rerun for this
+revision, including script publication/rollback, all helper parity cases, galleries and fresh-install smoke.

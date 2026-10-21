@@ -3135,7 +3135,7 @@
   "settings.registry.ui.confirm-rollback": "Restore the previous desktop release?",
   "settings.registry.colors.target.chromium.description": "Follow desktop colors. Load this theme once in your browser with Load unpacked.",
   "settings.registry.colors.target.discord.description": "Follow desktop colors. Enable the Nacre theme once in Vencord.",
-  "settings.registry.colors.target.spotify.description": "Follow desktop colors. Set current_theme = Nacre in Spicetify config once.",
+  "settings.registry.colors.target.spotify.description": "Follow desktop colors. Once, run: spicetify config current_theme Nacre color_scheme Nacre inject_theme_js 1 && spicetify apply",
   "settings.registry.colors.target.description": "Follow desktop colors. Turn off to keep the current colors.",
   "settings.registry.colors.target.unavailable": "This app theme target is not available on this system.",
   "settings.registry.lock-login.preview.label": "Lock-screen preview",
