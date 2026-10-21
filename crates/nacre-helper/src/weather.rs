@@ -47,6 +47,15 @@ fn save(path:&PathBuf,data:&Value)->Result<()> {
     let mut f=fs::OpenOptions::new().write(true).create(true).truncate(true).mode(0o600).open(&tmp)?;
     f.write_all(serde_json::to_string(data)?.as_bytes())?; f.sync_all()?; f.set_permissions(fs::Permissions::from_mode(0o600))?; fs::rename(tmp,path)?; Ok(())
 }
+fn stale(previous:Value)->Value {
+    let has_cache=previous.get("checked").is_some();
+    let mut value=previous;
+    if let Some(object)=value.as_object_mut(){
+        object.insert("stale".into(),json!(true));
+        object.insert("error".into(),json!(if has_cache{"Weather unavailable; showing cached conditions"}else{"Weather unavailable. Set a city or try again."}));
+    }else{return json!({"stale":true,"error":"Weather unavailable. Set a city or try again."});}
+    value
+}
 fn refresh(paths:&Paths)->Value {
     let path=cache(paths); let previous=fs::read_to_string(&path).ok().and_then(|s|serde_json::from_str::<Value>(&s).ok()).unwrap_or(json!({}));
     let result=(||->Result<Value>{
@@ -64,7 +73,7 @@ fn refresh(paths:&Paths)->Value {
         let aq=url("https://air-quality-api.open-meteo.com/v1/air-quality",&[("latitude",&lat_s),("longitude",&lon_s),("current","us_aqi"),("timezone","auto")]); data["aqi"]=fetch(&aq).ok().and_then(|v|v["current"]["us_aqi"].as_f64().map(|n|json!(n))).unwrap_or(Value::Null);
         save(&path,&data)?; Ok(data)
     })();
-    match result {Ok(v)=>v,Err(_)=>{let mut v=previous;let cached=v.get("checked").is_some();if let Some(m)=v.as_object_mut(){m.insert("stale".into(),json!(true));m.insert("error".into(),json!(if cached{"Weather unavailable; showing cached conditions"}else{"Weather unavailable. Set a city or try again."}));}else{v=json!({"stale":true,"error":"Weather unavailable. Set a city or try again."});}v}}
+    match result {Ok(v)=>v,Err(_)=>stale(previous)}
 }
 pub fn run(args:&[String])->Result<i32>{
     if args.first().is_some_and(|a|a=="url") { let v:Value=serde_json::from_str(args.get(1).ok_or("missing URL arguments")?)?; let base=v["args"][0].as_str().ok_or("missing URL base")?; let q=v["kwargs"].as_object().ok_or("missing URL query")?;let pairs=q.iter().map(|(k,v)|(k.as_str(),v.as_str().unwrap_or(""))).collect::<Vec<_>>();println!("{}",url(base,&pairs));return Ok(0); }
@@ -72,6 +81,8 @@ pub fn run(args:&[String])->Result<i32>{
 }
 #[cfg(test)] mod tests {
  use super::*;
- #[test] fn forecast_shape_retains_hour_filter_daily_range_and_checked_time(){let f=json!({"timezone":"Europe/Oslo","current":{"weather_code":61,"time":"2099-10-11T09:00","temperature_2m":14,"apparent_temperature":13,"relative_humidity_2m":75,"wind_speed_10m":8,"wind_direction_10m":90,"surface_pressure":1010,"is_day":1},"hourly":{"time":["2099-10-11T08:00","2099-10-11T09:00","2099-10-11T10:00"],"temperature_2m":[12,14,15],"precipitation_probability":[90,85,70],"weather_code":[61,61,63]},"daily":{"time":["2099-10-11"],"temperature_2m_min":[9],"temperature_2m_max":[18],"weather_code":[61],"precipitation_probability_max":[85],"sunrise":["07"],"sunset":["18"],"uv_index_max":[2]}}); let d=normalize(&f,"Oslo",59.,10.,100.).unwrap();assert_eq!(d["temperature"],14);assert_eq!(d["code"],"296");assert_eq!(d["hours"].as_array().unwrap().len(),2);assert_eq!(d["days"][0]["low"],9);assert_eq!(d["checked"],100.);assert_eq!(d["timezone"],"Europe/Oslo");}
+ #[test] fn forecast_shape_retains_hour_filter_daily_range_and_checked_time(){let f=json!({"timezone":"Europe/Oslo","current":{"weather_code":0,"time":"2099-10-11T09:00","temperature_2m":28,"apparent_temperature":32,"relative_humidity_2m":50,"wind_speed_10m":8,"wind_direction_10m":90,"surface_pressure":1010,"is_day":1},"hourly":{"time":["2099-10-11T08:00","2099-10-11T09:00","2099-10-11T10:00"],"temperature_2m":[12,14,15],"precipitation_probability":[90,85,70],"weather_code":[61,61,63]},"daily":{"time":["2099-10-11"],"temperature_2m_min":[27],"temperature_2m_max":[34],"weather_code":[0],"precipitation_probability_max":[85],"sunrise":["07"],"sunset":["18"],"uv_index_max":[2]}}); let d=normalize(&f,"Oslo",59.,10.,100.).unwrap();assert_eq!(d["temperature"],28);assert_eq!(d["feelsLike"],32);assert_eq!((d["high"].as_i64(),d["low"].as_i64()),(Some(34),Some(27)));assert_eq!(d["code"],"113");assert_eq!(d["description"],"Clear");assert_eq!(d["hours"].as_array().unwrap().len(),2);assert_eq!(d["days"][0]["low"],27);assert_eq!(d["checked"],100.);assert_eq!(d["stale"],false);assert_eq!(d["timezone"],"Europe/Oslo");}
+ #[test] fn failed_refresh_preserves_old_timestamp_and_weather_values(){let cached=json!({"checked":42,"temperature":10,"location":"Oslo"});let result=stale(cached);assert_eq!(result["checked"],42);assert_eq!(result["temperature"],10);assert_eq!(result["stale"],true);}
+ #[test] fn private_weather_cache_is_written_mode_0600(){let root=std::env::temp_dir().join(format!("nacre-weather-{}",std::process::id()));let path=root.join("weather.json");let _=fs::remove_dir_all(&root);save(&path,&json!({"temperature":2})).unwrap();use std::os::unix::fs::PermissionsExt;assert_eq!(fs::metadata(&path).unwrap().permissions().mode()&0o777,0o600);let _=fs::remove_dir_all(root);}
  #[test] fn weather_url_matches_python_query_encoding(){assert_eq!(url("https://example.invalid",&[("city","Public City"),("units","metric")]),"https://example.invalid?city=Public+City&units=metric");}
 }
