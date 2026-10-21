@@ -739,6 +739,12 @@ TestCase {
         id: savedProfiles
         NacreWifiSaved {}
     }
+    Component {
+        id: savedQueryStarts
+        SignalSpy {
+            signalName: "started"
+        }
+    }
     function test_saved_wifi_queries_ssids_without_helper_changes() {
         const saved = createTemporaryObject(savedProfiles, test);
         const worker = findChild(saved, "controlSavedWifiReader");
@@ -747,8 +753,7 @@ TestCase {
         worker.stdout.text = "11111111-1111-4111-8111-111111111111:802-11-wireless\n22222222-2222-4222-8222-222222222222:ethernet";
         worker.stdout.streamFinished();
         worker.exited(0, 0);
-        wait(0);
-        verify(worker.running);
+        tryVerify(() => worker.running, 500);
         compare(worker.command.slice(-3).join("|"), "show|uuid|11111111-1111-4111-8111-111111111111");
         worker.running = false;
         worker.stdout.text = "Saved: Studio\n";
@@ -756,6 +761,23 @@ TestCase {
         worker.exited(0, 0);
         compare(saved.ssids.join("|"), "Saved: Studio");
         compare(saved.ready, true);
+    }
+    function test_closing_wifi_cancels_its_queued_profile_query() {
+        const saved = createTemporaryObject(savedProfiles, test);
+        wait(0);
+        const worker = findChild(saved, "controlSavedWifiReader");
+        const starts = createTemporaryObject(savedQueryStarts, test, {
+            target: worker
+        });
+        worker.running = false;
+        worker.stdout.text = "11111111-1111-4111-8111-111111111111:802-11-wireless";
+        worker.stdout.streamFinished();
+        worker.exited(0, 0);
+        compare(worker.starts, 1);
+        saved.enabled = false;
+        saved.destroy();
+        wait(50);
+        compare(starts.count, 0);
     }
     function test_quick_list_wheel_speed_tail_clamp_and_reduce_motion() {
         const actionsBefore = JSON.stringify(NacreControlActions.lastRequest);
