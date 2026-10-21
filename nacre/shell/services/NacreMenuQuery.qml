@@ -14,9 +14,16 @@ QtObject {
     property string error: ""
     property string resultKey: ""
     property string resultBoot: ""
+    property string resultScopeKey: ""
     property bool pending: false
     property bool dirty: false
     property bool subscribed: false
+    // Everything except the typed text: a change here means a different list.
+    readonly property string scopeKey: JSON.stringify({
+        route: route,
+        filter: resultFilter,
+        category: category
+    })
     readonly property string key: JSON.stringify({
         query: query,
         route: route,
@@ -24,9 +31,13 @@ QtObject {
         category: category
     })
     readonly property bool matches: enabled && active && resultKey === key && resultBoot === NacreDaemon.boot
+    // While typing, the previous rows of the same list stay until the new answer
+    // arrives; a different route/filter/category never shows the old rows.
+    readonly property bool sameScope: enabled && active && resultScopeKey === scopeKey && resultBoot === NacreDaemon.boot
+    readonly property bool waiting: enabled && active && !matches
     readonly property bool current: matches && NacreDaemon.connected
     readonly property var menuState: NacreDaemon.topic("menu")
-    readonly property var entries: matches ? (result.order || []).map(id => {
+    readonly property var entries: matches || sameScope ? (result.order || []).map(id => {
         const item = result.items[id];
         const view = item.presentation || {};
         const entry = Object.assign({}, view, item, {
@@ -70,6 +81,7 @@ QtObject {
         if (Object.keys(result).length)
             result = ({});
         resultKey = "";
+        resultScopeKey = "";
         resultBoot = "";
         error = "";
     }
@@ -78,6 +90,7 @@ QtObject {
             return;
         dirty = false;
         const wanted = key;
+        const wantedScope = scopeKey;
         const boot = NacreDaemon.boot;
         const params = {
             query: query,
@@ -99,6 +112,7 @@ QtObject {
                 if (!failure) {
                     root.result = value;
                     root.resultKey = wanted;
+                    root.resultScopeKey = wantedScope;
                     root.resultBoot = boot;
                 }
             }

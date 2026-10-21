@@ -1372,7 +1372,8 @@ NacreSurface {
         x: root.contentX + 14
         y: root.picker ? 80 : 120
         width: root.contentWidth - 28
-        visible: !root.entries.length && !root.form && !root.calculation
+        // In daemon mode an unanswered query is not "no matches" yet.
+        visible: !root.entries.length && !root.form && !root.calculation && !(NacreDaemon.enabled && nativeQuery.waiting)
         text: root.calculation ? root.calculationResult.error || NacreI18n.tr("launcher.app-browser.text.type-an-expression-after", "Type an expression after =") : root.scope.kind === "files" ? root.menu.fileMessage || NacreI18n.tr("launcher.app-browser.text.type-and-a-filename-to-search-your-folders", "Type : and a filename to search your folders") : root.scope.kind === "brain" ? (root.scope.text ? NacreI18n.tr("launcher.app-browser.text.looking-in-your-private-notes", "Looking in your private notes…") : NacreI18n.tr("launcher.app-browser.text.type-and-a-few-words-to-search-nacre-brain", "Type # and a few words to search Nacre Brain")) : root.scope.kind === "ai" ? NacreI18n.tr("launcher.app-browser.text.type-and-your-question", "Type ? and your question") : root.route === "home" && !root.query ? NacreI18n.tr("launcher.app-browser.text.add-apps-and-menu-items-to-favorites-with-ctrl-d-or-the", "Add apps and menu items to Favorites with Ctrl+D or their item actions.") : root.route === "software.packages" ? root.menu.packageMessage || NacreI18n.tr("launcher.app-browser.text.type-two-or-more-characters-to-search-packages", "Type two or more characters to search packages") : NacreI18n.tr("launcher.app-browser.text.no-matches-try-a-different-word-for-actions-or-for-sear", "No matches. Try a different word, > for actions, or / for search scopes.")
         wrapMode: Text.Wrap
         textFormat: Text.PlainText
