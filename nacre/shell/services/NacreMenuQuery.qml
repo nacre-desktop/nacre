@@ -23,9 +23,10 @@ QtObject {
         filter: resultFilter,
         category: category
     })
-    readonly property bool current: enabled && active && NacreDaemon.connected && resultKey === key && resultBoot === NacreDaemon.boot
+    readonly property bool matches: enabled && active && resultKey === key && resultBoot === NacreDaemon.boot
+    readonly property bool current: matches && NacreDaemon.connected
     readonly property var menuState: NacreDaemon.topic("menu")
-    readonly property var entries: (result.order || []).map(id => {
+    readonly property var entries: matches ? (result.order || []).map(id => {
         const item = result.items[id];
         const view = item.presentation || {};
         const entry = Object.assign({}, view, item, {
@@ -41,7 +42,7 @@ QtObject {
         delete entry.presentation;
         delete entry.activation;
         return entry;
-    })
+    }) : []
     function schedule() {
         if (!enabled || !active)
             return;

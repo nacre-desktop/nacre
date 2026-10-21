@@ -359,6 +359,82 @@ TestCase {
         field.text = "obs";
         verify(value.entries.some(row => row.package === "obs-studio"));
     }
+
+    function test_daemon_category_change_never_exposes_previous_result_rows() {
+        NacreDaemon.enabled = true;
+        NacreDaemon.connected = true;
+        NacreDaemon.boot = "category-fixture";
+        const value = view();
+        try {
+            value.navigate("software.discover");
+            const query = findChild(value, "launcherMenuQuery");
+            const results = findChild(value, "launcherResults");
+            verify(query);
+            verify(results);
+
+            // Hold the helper request so the test observes the actual pending frame.
+            query.pending = true;
+            const creative = findChild(value, "softwareCategory_creative");
+            verify(creative);
+            mouseClick(creative);
+            compare(value.softwareCategory, "creative");
+            query.result = {
+                order: ["creative-fixture"],
+                items: {
+                    "creative-fixture": {
+                        presentation: {
+                            id: "creative-fixture",
+                            name: "Creative fixture",
+                            category: "creative",
+                            kind: "software"
+                        },
+                        icon: "palette"
+                    }
+                },
+                catalog_rev: 1
+            };
+            query.resultKey = query.key;
+            query.resultBoot = NacreDaemon.boot;
+            compare(results.model.map(row => row.name), ["Creative fixture"]);
+
+            const states = [results.model.map(row => row.name)];
+            const ai = findChild(value, "softwareCategory_ai");
+            verify(ai);
+            mouseClick(ai);
+            compare(value.softwareCategory, "ai");
+            for (let frame = 0; frame < 3; frame++) {
+                wait(16);
+                states.push(results.model.map(row => row.name));
+            }
+
+            query.result = {
+                order: ["ai-fixture"],
+                items: {
+                    "ai-fixture": {
+                        presentation: {
+                            id: "ai-fixture",
+                            name: "AI fixture",
+                            category: "ai",
+                            kind: "software"
+                        },
+                        icon: "smart_toy"
+                    }
+                },
+                catalog_rev: 2
+            };
+            query.resultKey = query.key;
+            query.resultBoot = NacreDaemon.boot;
+            states.push(results.model.map(row => row.name));
+            compare(states[0], ["Creative fixture"]);
+            for (let frame = 1; frame <= 3; frame++)
+                compare(states[frame], []);
+            compare(states[4], ["AI fixture"]);
+        } finally {
+            NacreDaemon.enabled = false;
+            NacreDaemon.connected = false;
+            NacreDaemon.boot = "";
+        }
+    }
     function test_software_metadata_and_installed_management() {
         const value = view();
         value.menu.snapshot = Object.assign({}, value.menu.snapshot, {

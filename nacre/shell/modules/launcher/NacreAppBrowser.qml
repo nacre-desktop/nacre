@@ -34,6 +34,7 @@ NacreSurface {
     property var activePrompt: null
     NacreMenuQuery {
         id: nativeQuery
+        objectName: "launcherMenuQuery"
         active: root.visibilities.launcher && !root.picker
         presented: root.visible && !root.picker
         query: root.query
@@ -1240,6 +1241,7 @@ NacreSurface {
                 model: root.menu.softwareCategories
                 NacreMenuButton {
                     required property var modelData
+                    objectName: "softwareCategory_" + modelData.value
                     compact: true
                     text: modelData.label
                     selected: root.softwareCategory === modelData.value
