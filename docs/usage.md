@@ -153,6 +153,15 @@ toggle. Sound details include microphone volume; brightness details include
 keyboard backlight. Power mode opens the three profile choices without changing
 the active profile, and session actions use a compact inline page.
 
+Volume, microphone, display and keyboard brightness changes share a compact
+feedback pill below the right side of the bar. Audio feedback names the current
+device; brightness feedback names the display when several are connected.
+Switching outputs, Caps Lock, power mode, night light and Do Not Disturb have
+distinct icons and labels. Repeated changes update the same pill and extend its
+auto-hide timer. Feedback respects reduced motion and stays hidden while locked
+or while its controls are open. Hardware feedback appears only when supported;
+Caps Lock requires a readable keyboard LED interface.
+
 Notifications can be reviewed in history; Do not disturb suppresses popups.
 Night light warms display colors, and Stay awake temporarily inhibits idle
 actions. On niri, night light needs wlsunset and output gamma control. Niri display

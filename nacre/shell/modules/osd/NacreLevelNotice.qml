@@ -10,6 +10,7 @@ NacreWindow {
     required property var output
     property bool shown: false
     property string channel: "volume"
+    readonly property var model: state
     screen: output
     name: "level-feedback"
     property real reveal: shown ? 1 : 0
@@ -22,7 +23,7 @@ NacreWindow {
             }
         }
     }
-    visible: reveal > 0 && !NacrePanelState.hidden
+    visible: reveal > 0 && !NacrePanelState.hidden && !WallpaperPlayback.locked
     Behavior on reveal {
         enabled: NacreTokens.motionEnabled
         NumberAnimation {
@@ -31,10 +32,12 @@ NacreWindow {
             easing.type: Easing.OutCubic
         }
     }
-    anchors.bottom: true
-    margins.bottom: NacreFrame.bottom + 24
-    implicitWidth: Math.min(340, Math.max(200, output?.width - 48))
-    implicitHeight: 80
+    anchors.top: true
+    anchors.right: true
+    margins.top: NacreFrame.headerHeight + 10
+    margins.right: NacreFrame.right + 12
+    implicitWidth: Math.min(336, Math.max(200, output?.width - 48))
+    implicitHeight: pill.implicitHeight
     WlrLayershell.exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
@@ -42,47 +45,28 @@ NacreWindow {
         width: 0
         height: 0
     }
-    readonly property var monitor: NacreBrightness.getMonitorForScreen(output)
-    readonly property real value: channel === "display" ? monitor?.brightness || 0 : channel === "keyboard" ? NacreKeyboardLight.brightness : channel === "microphone" ? NacreAudio.micVolume : NacreAudio.volume
-    readonly property bool muted: channel === "volume" ? NacreAudio.muted : channel === "microphone" ? NacreAudio.micMuted : false
-    NacreSurface {
+    NacreOsdModel {
+        id: state
+        output: root.output
+        channel: root.channel
+    }
+    NacreOsdPill {
+        id: pill
+        objectName: "levelFeedbackPill"
+        anchors.fill: parent
         opacity: root.reveal
         transform: Translate {
-            y: (1 - root.reveal) * 6
+            y: (1 - root.reveal) * -4
         }
-        anchors.fill: parent
-        radius: 22
-        color: NacreTokens.body
-        border.width: 1
-        border.color: Qt.alpha(NacreTokens.outline, .5)
-        NacreText {
-            x: 18
-            y: 12
-            text: root.channel === "display" ? NacreI18n.tr("osd.level-notice.text.display-brightness", "Display brightness") : root.channel === "keyboard" ? NacreI18n.tr("osd.level-notice.text.keyboard-brightness", "Keyboard brightness") : root.channel === "microphone" ? NacreI18n.tr("osd.level-notice.text.microphone", "Microphone") : NacreI18n.tr("osd.level-notice.text.volume", "Volume")
-            font.pointSize: 11
-        }
-        NacreText {
-            anchors.right: parent.right
-            anchors.rightMargin: 18
-            y: 12
-            text: root.muted ? NacreI18n.tr("osd.level-notice.text.muted", "Muted") : NacreI18n.number(Math.round(root.value * 100)) + "%"
-            font.pointSize: 11
-            color: NacreTokens.mutedInk
-        }
-        Rectangle {
-            x: 18
-            y: 48
-            width: parent.width - 36
-            height: 8
-            radius: 4
-            color: NacreTokens.raised
-            Rectangle {
-                width: parent.width * root.value
-                height: parent.height
-                radius: 4
-                color: NacreTokens.accent
-                opacity: root.muted ? .35 : 1
-            }
-        }
+        title: state.title
+        detail: state.detail
+        icon: state.glyph
+        value: state.value
+        level: state.level
+        animateLevel: root.shown && root.reveal >= .99
+        muted: state.muted || !state.level && ["capslock", "dnd", "night-light"].includes(root.channel) && !state.enabledState
+        valueLabel: !state.level ? "" : state.muted ? NacreI18n.tr("osd.level-notice.text.muted", "Muted") : NacreI18n.tr("osd.feedback.percent", "{value}%", {
+            value: NacreI18n.number(Math.round(state.value * 100))
+        })
     }
 }

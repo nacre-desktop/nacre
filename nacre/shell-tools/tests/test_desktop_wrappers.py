@@ -36,10 +36,14 @@ class DesktopWrappersTests(unittest.TestCase):
                     SHELL / "widgets" / (name + ".qml"), fixtures / (name + ".qml")
                 )
             definitions = {
-                "NacreAudio": 'property bool available:false;property bool micAvailable:true;property real volume:0;property real micVolume:.5;property bool muted:false;property bool micMuted:false;property var writes:[];function setVolume(v){writes=[...writes,v];volume=v}function setMicVolume(v){writes=[...writes,v];micVolume=v}function toggleMute(){writes=[...writes,"mute"];muted=!muted}function toggleMic(){writes=[...writes,"mic"];micMuted=!micMuted}',
+                "NacreAudio": 'property var sink:({description:"Fixture speakers"});property bool available:false;property bool micAvailable:true;property real volume:0;property real micVolume:.5;property bool muted:false;property bool micMuted:false;property var writes:[];function setVolume(v){writes=[...writes,v];volume=v}function setMicVolume(v){writes=[...writes,v];micVolume=v}function toggleMute(){writes=[...writes,"mute"];muted=!muted}function toggleMic(){writes=[...writes,"mic"];micMuted=!micMuted}',
                 "NacreKeyboardLight": 'property bool available:true;property real brightness:.5;property string error:"";signal adjusted();property var writes:[];function setBrightness(v){writes=[...writes,v];brightness=v}',
                 "NacreBrightness": 'property QtObject device:QtObject {property bool available:true;property real brightness:.8;property string error:"";property var writes:[];signal adjusted();function setBrightness(v){writes=[...writes,v];brightness=v}}function getMonitorForScreen(screen){return device}',
                 "NacreOsd": "property int hideDelay:80",
+                "NacreCapsLock": "property bool active:false;property bool ready:true;signal changed(bool enabled)",
+                "NacrePowerPolicy": "property bool available:true",
+                "NacreControlTools": "property var data:({nightLightSupported:true,nightLightEnabled:false})",
+                "NacreNotifs": "property bool dnd:false",
                 "WallpaperPlayback": "property bool locked:false;property bool sleeping:false;property bool paused:false;property bool batteryPaused:false;property bool pauseCovered:true",
                 "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var monitors:({values:[]});property var windows:[];property int activeWsId:1',
                 "NacrePanelState": "property var screens:({});readonly property var providerViews:Object.values(screens);property bool hidden:false",

@@ -101,8 +101,9 @@ TestCase {
         NacreAudio.volume = .4;
         wait(1);
         verify(!view.shown);
+        wait(410);
         NacreAudio.volume = .5;
-        verify(view.shown);
+        tryCompare(view, "shown", true);
         view.hovered = true;
         wait(120);
         verify(view.shown);
@@ -117,7 +118,7 @@ TestCase {
             name: "test"
         };
         NacreKeyboardLight.adjusted();
-        verify(view.shown);
+        tryCompare(view, "shown", true);
         compare(view.channel, "keyboard");
         view.visibilities.osd = true;
         compare(view.shown, false);

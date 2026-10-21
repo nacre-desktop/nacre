@@ -3375,5 +3375,15 @@
   "ui.shell-ipc.error.launcher-view-busy": "Launcher view is busy",
   "ui.shell-ipc.error.launcher-view-unavailable": "Launcher view is unavailable",
   "ui.shell-ipc.error.ui-method-unavailable": "UI method is unavailable",
-  "ui.shell-ipc.error.unsupported-launcher-action": "Unsupported launcher action"
+  "ui.shell-ipc.error.unsupported-launcher-action": "Unsupported launcher action",
+  "controlcenter.overview.night-light": "Night light",
+  "osd.feedback.caps-lock": "Caps Lock",
+  "osd.feedback.default-input": "Default input",
+  "osd.feedback.default-output": "Default output",
+  "osd.feedback.keyboard-backlight": "Keyboard backlight",
+  "osd.feedback.off": "Off",
+  "osd.feedback.on": "On",
+  "osd.feedback.output": "Audio output",
+  "osd.feedback.percent": "{value}%",
+  "osd.feedback.power-mode": "Power mode"
 }
