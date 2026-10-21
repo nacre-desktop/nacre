@@ -1392,7 +1392,10 @@ fn theme_bundle_snapshot_restores_spicetify_script_when_present_or_absent() -> R
         let paths = Paths::new(home.path());
         fs::create_dir_all(&paths.config)?;
         fs::create_dir_all(&paths.state)?;
-        fs::copy(assets().join("reference-style.json"), paths.state.join("scheme.json"))?;
+        fs::copy(
+            assets().join("reference-style.json"),
+            paths.state.join("scheme.json"),
+        )?;
         nacre_helper::state::write(
             &paths.config.join("wallpaper-picker.json"),
             &json!({
@@ -1432,7 +1435,10 @@ fn theme_bundle_snapshot_restores_spicetify_script_when_present_or_absent() -> R
             false,
             |publisher, _, _, _| {
                 fs::write(
-                    publisher.paths.home.join(".config/spicetify/Themes/Nacre/theme.js"),
+                    publisher
+                        .paths
+                        .home
+                        .join(".config/spicetify/Themes/Nacre/theme.js"),
                     b"partial theme script",
                 )?;
                 Err("injected bundle publication failure".into())
