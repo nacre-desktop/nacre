@@ -666,6 +666,7 @@ TestCase {
         view.requestPeek("bluetooth", icon, true);
         compare(view.peekName, "");
         compare(view.peekProgress, 0);
+        verify(!findChild(view, "nacreHeaderStatusCue").visible);
         compare(NacrePanelState.calls.length, 0);
         wait(450);
         verify(!popup.hasCurrent && flags.osd);
@@ -962,6 +963,7 @@ TestCase {
                 launcher: false
             }
         };
+        verify(!cue.visible);
         title.implicitWidth = 650;
         compare(band.width, 1000);
         compare(cue.width, 510);

@@ -159,7 +159,7 @@ TestCase {
   mouseMove(tab,tab.width/2,tab.height/2);wait(170);verify(!view.flags.osd);verify(cue.progress>0 && cue.progress<1);
   verify(line.height>0 && line.height<track.height);compare(track.opacity,1);
   mouseMove(view,500,180);wait(250);verify(!view.flags.osd);compare(cue.progress,0);compare(line.height,0);
-  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);compare(line.height,track.height);tryCompare(track,"opacity",0,500);
+  mouseMove(tab,tab.width/2,tab.height/2);wait(430);verify(view.flags.osd);verify(!track.visible);compare(line.height,track.height);tryCompare(track,"opacity",0,500);
   compare(findChild(tab,"edgeTabStroke").strokeColor,NacreTokens.accent);
   view.flags.controlSection="audio";
   mouseClick(tab,tab.width/2,tab.height/2);verify(!view.flags.osd);
@@ -174,7 +174,7 @@ TestCase {
   mouseMove(view,view.width-3,view.height/2-60);wait(430);verify(view.flags.osd);
   mouseClick(view,view.width-3,view.height/2-60);verify(!view.flags.osd);
   mouseMove(view,500,180);wait(30);
-  mouseMove(view,3,view.height/2+60);wait(430);verify(view.flags.left);
+  mouseMove(view,3,view.height/2+60);wait(430);verify(view.flags.left);verify(!findChild(findChild(view,"frameLeftArrow"),"edgeTabHoverCue").visible);
  }
  function test_flat_targets_never_run_decorative_sheen(){
   mouseMove(this,800,500);

@@ -286,6 +286,7 @@ Item {
     }
     NacreHoverCue {
         objectName: "nacreHeaderTitleCue"
+        visible: root.visibility?.dashboard !== true
         anchors.centerIn: parent
         // The dashboard widens its pointer corridor when it opens, not its fill.
         width: root.dashboardCueWidth > 0 ? root.dashboardCueWidth : root.titleCueExtent
@@ -410,6 +411,7 @@ Item {
                 }
                 NacreHoverCue {
                     objectName: "nacreHeaderStatusCue"
+                    visible: root.visibility?.osd !== true
                     x: statusHolder.cueBounds.x
                     y: 0
                     width: statusHolder.cueBounds.width

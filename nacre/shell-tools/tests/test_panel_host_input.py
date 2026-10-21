@@ -95,21 +95,18 @@ TestCase {
   QtObject {id:input;property bool hovered:false;property bool popoutHovered:false;property bool dashboardHovered:false}
   NacrePanelHost {id:host;anchors.fill:parent;screen:({name:"test"});visibilities:flags;input:input}
  }}
- function test_hover_dropdowns_share_the_control_panel_footprint(){
+ function test_status_peeks_follow_the_icon_center_and_clamp_at_the_edge(){
   const view=createTemporaryObject(scene,this),host=view.host,popup=host.popouts;
-  host.session.width=0;popup.width=host.osd.contentWidth;
-  for(const name of ["peek","calendar"]){
-   popup.currentName=name;
-   compare(popup.preferredWidth,host.osd.contentWidth);
-   for(const center of [100,160,220]){
-    popup.currentCenter=center;
-    compare(host.popupPosition.x,host.osdPosition.x);
-    compare(host.popupPosition.y,0);verify(host.popupPosition.joinsRight);
-   }
+  popup.currentName="peek";popup.width=100;popup.targetWidth=100;popup.hasCurrent=true;
+  for(const center of [100,160,220]){
+   popup.currentCenter=center;
+   compare(host.popupPosition.x+popup.width/2+host.x,center);
+   compare(host.popupPosition.y,0);verify(!host.popupPosition.joinsRight);
   }
-  view.width=300;
+  popup.currentCenter=390;
+  compare(host.popupPosition.x+popup.width,host.width);verify(host.popupPosition.joinsRight);
+  view.width=300;popup.currentCenter=290;
   compare(host.popupPosition.x+popup.width,host.width);
-  popup.currentName="audio";compare(popup.preferredWidth,0);
  }
  function test_top_dashboard_does_not_hide_corner_notifications(){
   const view=createTemporaryObject(scene,this);

@@ -14,6 +14,7 @@ Item {
     Item {
         id: cue
         objectName: "edgeTabHoverCue"
+        visible: !root.active
         x: root.edge === "left" ? 0 : root.width - width
         width: 1
         height: 36

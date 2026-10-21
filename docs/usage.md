@@ -135,22 +135,24 @@ Edit lists detected microphone and keyboard sliders first; adding one places it
 beside its related output or display slider. Layouts are saved separately from
 the main desktop settings and keep their order across sessions; existing optional
 tile preferences migrate automatically. The same controls work in a detached pearl.
-While a clicked control page is open, hovering other status icons leaves it on
-its current page. Click another icon to change pages. Moving the pointer away
+The top, left and right edge charge-up lines disappear immediately when their
+panels open. While a clicked control page is open, hovering other status icons
+leaves it on its current page. Click another icon to change pages. Moving the pointer away
 closes the panel; quick-info hover peeks then work again.
 
 Hover a bar status icon or the clock for a dropdown after 350 ms. Status
-summaries are read-only and share the control panel's width and left edge, so a
-click expands them in place. The calendar keeps its month controls. Clicking the
-clock opens Calendar in the shared control surface, with month navigation, day selection, Today and the configured agenda. Status hover
+summaries are small, read-only panels anchored beneath the triggering icon.
+Clicking an icon, including while its summary is showing, opens the corresponding
+control-panel-width page attached to the right edge. The calendar keeps its month
+controls. Clicking the clock opens Calendar in the shared control surface, with month navigation, day selection, Today and the configured agenda. Status hover
 highlights fill their segment of the shared pill, following its rounded ends.
 A palette-colored
 highlight and filling underline show the wait. The left and right frame edges have thin primary-colored arrows inside the existing border, with an Orient-gradient
-line that fills during the wait and fades after completion, a taller hover target and the same delayed
+line that fills during the wait and disappears immediately when the panel opens, a taller hover target and the same delayed
 fill; clicks open or close their panels immediately. The middle title and top lip wait
 350 ms before opening the dashboard; leaving cancels it, while a click opens
 immediately. The fill follows display frames and stays complete briefly before the panel
-unfolds; delayed frames cannot skip the remaining fill. The underline spans the displayed title and keeps that width when the dashboard opens. Reduced motion keeps the delay with a static highlight. Dropdowns
+unfolds; delayed frames cannot skip the remaining fill. The underline spans the displayed title and hides immediately when the dashboard opens. Reduced motion keeps the delay with a static highlight. Dropdowns
 unfold from the bar using the same frame and motion as other Nacre popups. Clicking
 a status icon opens a compact detail page downward from the bar; the bell opens notification history. The Full panel button expands the overview to the full right edge. The right-edge arrow opens that full sidebar directly, sliding in from the right, with controls above notification history. Battery status, Edit, Settings and Power appear only on the overview. The top system icons, clock and power button share one pill; their opening cues stay idle while the full sidebar is open. Notification history can also be added as a tile in Edit, or opened by
 right-clicking Do Not Disturb. Pointer-opened controls
