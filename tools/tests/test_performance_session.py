@@ -61,6 +61,139 @@ def report():
 
 
 class BudgetTests(unittest.TestCase):
+    def test_frame_interval_summary_keeps_raw_client_intervals_and_percentiles(self):
+        self.assertEqual(
+            session.frame_interval_summary([16.2, 18.1, 12.0, 30.0]),
+            {
+                "count": 4,
+                "p50_ms": 16.2,
+                "p95_ms": 30.0,
+                "max_ms": 30.0,
+                "raw_ms": [16.2, 18.1, 12.0, 30.0],
+            },
+        )
+        self.assertEqual(
+            session.frame_interval_summary([]),
+            {"count": 0, "p50_ms": None, "p95_ms": None, "max_ms": None, "raw_ms": []},
+        )
+
+    def test_motion_trace_rejects_growing_body_even_if_its_top_matches_search(self):
+        before = {
+            "bodyTopY": 100,
+            "bodyBottomY": 400,
+            "bodyHeight": 300,
+            "searchY": 350,
+            "searchVisiblePx": 49,
+        }
+        rigid = {
+            "bodyTopY": 90,
+            "bodyBottomY": 390,
+            "bodyHeight": 300,
+            "searchY": 340,
+            "searchVisiblePx": 49,
+        }
+        growing = {
+            "bodyTopY": 90,
+            "bodyBottomY": 400,
+            "bodyHeight": 310,
+            "searchY": 340,
+            "searchVisiblePx": 49,
+        }
+        good = session.motion_summary([{"openPositions": [before, rigid]}])
+        self.assertEqual(good["max_motion_error_px"], 0)
+        self.assertEqual(good["max_body_height_change_px"], 0)
+        bad = session.motion_summary([{"openPositions": [before, growing]}])
+        self.assertEqual(bad["max_motion_error_px"], 10)
+        self.assertEqual(bad["max_body_height_change_px"], 10)
+        self.assertEqual(session.motion_summary([{}])["missing_traces"], 1)
+        self.assertIsNone(session.motion_summary([{}])["max_motion_error_px"])
+
+    def test_private_session_options_are_opt_in_and_use_private_runtime_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            runtime = Path(folder)
+            original = {"HOME": "/private/home"}
+            default, default_socket = session.private_session_environment(
+                original, runtime
+            )
+            self.assertEqual(default, original)
+            self.assertIsNone(default_socket)
+            configured, daemon_socket = session.private_session_environment(
+                original, runtime, daemon_client=True, software_rendering=True
+            )
+            self.assertEqual(configured["NACRE_DAEMON_CLIENT"], "1")
+            self.assertEqual(
+                configured["NACRE_DAEMON_SOCKET"], str(runtime / "nacre.sock")
+            )
+            self.assertEqual(daemon_socket, runtime / "nacre.sock")
+            self.assertEqual(configured["LIBGL_ALWAYS_SOFTWARE"], "1")
+            self.assertEqual(configured["QT_QUICK_BACKEND"], "software")
+            self.assertEqual(original, {"HOME": "/private/home"})
+
+    def test_retained_fixture_root_is_private_for_daemon_writer_lease(self):
+        with tempfile.TemporaryDirectory() as directory:
+            retained = Path(directory) / "fixture"
+            with patch.object(
+                sys,
+                "argv",
+                [
+                    "performance-session.py",
+                    "--daemon-client",
+                    "--keep-fixtures",
+                    str(retained),
+                    "--output",
+                    str(Path(directory) / "report.json"),
+                ],
+            ):
+                with self.assertRaisesRegex(ValueError, "requires --helper-binary"):
+                    session.main()
+            self.assertEqual(retained.stat().st_mode & 0o777, 0o700)
+
+    def test_typing_probe_runs_before_text_edit_and_preserves_key_handler(self):
+        with tempfile.TemporaryDirectory() as folder:
+            shell = Path(folder)
+            browser = shell / "modules/launcher/NacreAppBrowser.qml"
+            browser.parent.mkdir(parents=True)
+            browser.write_text(
+                'Item { TextInput { id: search; objectName: "launcherSearch"\nKeys.onPressed: event => { originalHandler(event); } } }'
+            )
+            session.instrument_launcher_keys(shell)
+            source = browser.read_text()
+            self.assertIn("signal perfKeyReceived()", source)
+            self.assertLess(
+                source.index("search.perfKeyReceived();"),
+                source.index("originalHandler(event)"),
+            )
+            self.assertIn("function onPerfKeyReceived()", session.PROBE)
+            self.assertNotIn("function onTextEdited()", session.PROBE)
+
+    def test_probe_finds_query_resources_and_reports_query_current(self):
+        self.assertIn("item.resources || []", session.PROBE)
+        self.assertIn("queryCurrent: root.perfQueryCurrent()", session.PROBE)
+
+    def test_probe_waits_for_current_query_and_ready_images_after_first_frame(self):
+        probe = session.PROBE
+        self.assertIn("!NacreDaemon.enabled || root.perfQueryCurrent()", probe)
+        self.assertIn(
+            "root.perfRows?.visible ? root.perfRows : root.perfApps, true", probe
+        )
+        self.assertIn("perfKeyResultDeadline", probe)
+        self.assertIn("keyFrameMs: root.perfKeyFrameMs", probe)
+        self.assertIn("resultFrameMs: root.perfResultFrameMs", probe)
+        self.assertNotIn("onEntriesChanged()", probe)
+        self.assertNotIn("perfEntriesSignature", probe)
+        source = Path(session.__file__).read_text()
+        self.assertIn("launcher result frame or timeout", source)
+        self.assertIn("timeout=5", source)
+
+    def test_open_first_frame_latency_is_separate_from_animation_frame_gaps(self):
+        source = Path(session.__file__).read_text()
+        self.assertIn("open_to_first_frame_ms", source)
+        self.assertIn("open_animation_frame_intervals", source)
+        self.assertIn(
+            "else if (root.perfFirstFrameMs > 0) root.perfOpenFrameMs.push",
+            session.PROBE,
+        )
+
     def test_all_three_idle_phases_observe_full_sixty_seconds(self):
         self.assertEqual(
             [
@@ -239,6 +372,8 @@ class BudgetTests(unittest.TestCase):
             home.mkdir()
             args = SimpleNamespace(
                 backend="niri",
+                daemon_client=False,
+                software_rendering=False,
                 revision=None,
                 control=False,
                 helper_binary=None,

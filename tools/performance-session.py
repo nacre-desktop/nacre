@@ -36,10 +36,24 @@ PROBE = """
     property var perfWait: ({})
     property real perfFirstFrameMs: 0
     property real perfFocusMs: -1
+    property var perfOpenFrameMs: []
+    property var perfOpenPositions: []
+    property real perfLastFrameAt: 0
+    property bool perfOpenSampling: false
+    property real perfKeyStarted: 0
+    property real perfKeyFrameMs: -1
+    property real perfResultFrameMs: -1
+    property bool perfKeyResultComplete: false
+    property real perfKeyResultDeadline: 0
     property int perfKeySequence: 0
     property int perfHelperCalls: 0
     property int perfEmojiCalls: 0
     property var perfSearch: null
+    property var perfQuery: null
+    property var perfRows: null
+    property var perfApps: null
+    property var perfPage: null
+    property var perfMaterial: null
     property string perfWallpaper: ""
     property string perfPrimary: ""
     function perfChooseWallpaper(path, primary) {
@@ -57,25 +71,51 @@ PROBE = """
         perfResult = ({});
         perfFirstFrameMs = 0;
         perfFocusMs = -1;
+        perfOpenFrameMs = [];
+        perfOpenPositions = [];
+        perfLastFrameAt = 0;
         perfStarted = Date.now();
+        perfLastFrameAt = perfStarted;
+        perfOpenSampling = action === "launcher";
         if (action === "launcher") NacrePanelState.openMode("apps", "", false);
         else { NacrePanelState.openEdge("dashboard", root.screen.name); flags.dashboardTab = 0; flags.dashboardPinned = true; }
         console.log("PERF_KEY", action, perfSequence);
         perfResult = {sequence: perfSequence, synchronousMs: Date.now() - perfStarted};
     }
-    function perfFind(item, name) {
+    function perfFind(item, name, seen) {
+        if (!item) return null;
+        seen = seen || [];
+        if (seen.indexOf(item) >= 0) return null;
+        seen.push(item);
         if (item.objectName === name) return item;
-        for (const child of item.children || []) { const found = perfFind(child, name); if (found) return found; }
+        for (const child of item.children || []) { const found = perfFind(child, name, seen); if (found) return found; }
+        for (const resource of item.resources || []) { const found = perfFind(resource, name, seen); if (found) return found; }
         return null;
     }
-    function perfImages(item) {
+    function perfQueryCurrent() {
+        return root.perfQuery ? root.perfQuery.current : !NacreDaemon.enabled;
+    }
+    function perfPositionSample(panel) {
+        const search = root.perfSearch;
+        if (!search || !panel.visible) return;
+        const body = panel.ownsMaterial === true ? root.perfMaterial || panel : panel;
+        const top = body.mapToItem(root.contentItem, 0, 0).y;
+        const bottom = body.mapToItem(root.contentItem, 0, body.height).y;
+        const fieldTop = search.mapToItem(root.contentItem, 0, 0).y;
+        const fieldBottom = search.mapToItem(root.contentItem, 0, search.height).y;
+        const clipBottom = panel.parent.mapToItem(root.contentItem, 0, panel.parent.height).y;
+        const visibleBottom = panel.clip ? Math.min(bottom, clipBottom) : clipBottom;
+        root.perfOpenPositions.push({atMs: Date.now() - root.perfStarted, bodyTopY: top, bodyBottomY: bottom, bodyHeight: body.height, materialOwned: panel.ownsMaterial === true, searchY: fieldTop, searchBottomY: fieldBottom, searchVisiblePx: Math.max(0, Math.min(fieldBottom, visibleBottom) - Math.max(fieldTop, top)), pageHeight: root.perfPage?.height ?? null, focused: search.activeFocus, opacity: panel.opacity});
+    }
+    function perfImages(item, visibleOnly) {
         let ready = 0, pending = 0;
+        if (!item || (visibleOnly && item.visible === false)) return {ready: ready, pending: pending};
         if (item.source !== undefined && item.status !== undefined && String(item.source)) {
             if (item.status === 1) ready++;
             if (item.status === 2) pending++;
         }
         for (const child of item.children || []) {
-            const counts = perfImages(child); ready += counts.ready; pending += counts.pending;
+            const counts = perfImages(child, visibleOnly); ready += counts.ready; pending += counts.pending;
         }
         return {ready: ready, pending: pending};
     }
@@ -84,10 +124,24 @@ PROBE = """
         function onFrameSwapped() {
             if (!root.perfStarted) return;
             if (root.perfAction === "launcher-key") {
-                root.perfResult = {keySequence: root.perfKeySequence, keyFrameMs: Date.now() - root.perfStarted};
-                root.perfStarted = 0;
+                const now = Date.now();
+                if (root.perfKeyFrameMs < 0) root.perfKeyFrameMs = now - root.perfKeyStarted;
+                const queryReady = !NacreDaemon.enabled || root.perfQueryCurrent();
+                const imagesReady = !root.perfImages(root.perfRows?.visible ? root.perfRows : root.perfApps, true).pending;
+                if (!root.perfKeyResultComplete && queryReady && imagesReady) {
+                    root.perfResultFrameMs = now - root.perfKeyStarted;
+                    root.perfKeyResultComplete = true;
+                    root.perfAction = "launcher-key-done";
+                    root.perfStarted = 0;
+                } else if (!root.perfKeyResultComplete && now >= root.perfKeyResultDeadline) {
+                    root.perfKeyResultComplete = true;
+                    root.perfAction = "launcher-key-done";
+                    root.perfStarted = 0;
+                }
+                root.perfResult = {keySequence: root.perfKeySequence, keyFrameMs: root.perfKeyFrameMs, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete};
                 return;
             }
+            if (root.perfAction === "launcher-key-done") return;
             if (root.perfAction === "wallpaper-colors") {
                 const active = NacrePresentation.active;
                 if (active?.poster !== root.perfWallpaper || active?.colours?.primary?.toLowerCase().replace("#", "") !== root.perfPrimary) return;
@@ -97,15 +151,21 @@ PROBE = """
                 return;
             }
             const panel = root.perfAction === "launcher" ? panelHost.launcher : panelHost.dashboard;
-            if (root.perfAction === "launcher" && !root.perfFirstFrameMs && panel.visible)
-                root.perfFirstFrameMs = Date.now() - root.perfStarted;
+            if (root.perfAction === "launcher" && root.perfOpenSampling) {
+                const now = Date.now();
+                root.perfPositionSample(panel);
+                if (!root.perfFirstFrameMs && panel.visible) root.perfFirstFrameMs = now - root.perfStarted;
+                else if (root.perfFirstFrameMs > 0) root.perfOpenFrameMs.push(now - root.perfLastFrameAt);
+                root.perfLastFrameAt = now;
+                if (!panel.opening && Math.abs(panel.presentedHeight - panel.contentHeight) <= 1) root.perfOpenSampling = false;
+            }
             root.perfWait = {visible: panel.visible, opening: panel.opening, presented: panel.presentedHeight, content: panel.contentHeight, queue: NacreDashboardState.queue.length, message: NacreDashboardState.message, images: root.perfImages(panel)};
             if (root.perfFind(panel, root.perfAction === "launcher" ? "launcherPage" : "dashboardPage")?.status !== Loader.Ready) return;
             if (!panel.visible || panel.opening || Math.abs(panel.presentedHeight - panel.contentHeight) > 1) return;
             if (root.perfAction === "dashboard" && (NacreDashboardState.busy || NacreDashboardState.queue.length || NacreDashboardState.message)) return;
             const images = root.perfImages(panel);
             if (images.pending) return;
-            root.perfResult = Object.assign({}, root.perfResult, {frameMs: Date.now() - root.perfStarted, readyImages: images.ready});
+            root.perfResult = Object.assign({}, root.perfResult, {frameMs: Date.now() - root.perfStarted, readyImages: images.ready, openFrameIntervalsMs: root.perfAction === "launcher" ? root.perfOpenFrameMs.slice() : []});
             root.perfStarted = 0;
         }
     }
@@ -116,10 +176,15 @@ PROBE = """
             if (root.perfAction === "launcher" && target.activeFocus && root.perfFocusMs < 0)
                 root.perfFocusMs = Date.now() - root.perfStarted;
         }
-        function onTextEdited() {
+        function onPerfKeyReceived() {
             root.perfKeySequence++;
             root.perfAction = "launcher-key";
-            root.perfStarted = Date.now();
+            root.perfKeyStarted = Date.now();
+            root.perfKeyFrameMs = -1;
+            root.perfResultFrameMs = -1;
+            root.perfKeyResultComplete = false;
+            root.perfKeyResultDeadline = root.perfKeyStarted + 3000;
+            root.perfStarted = root.perfKeyStarted;
         }
     }
     Connections {
@@ -135,7 +200,14 @@ PROBE = """
         interval: 20
         repeat: true
         running: !root.perfSearch
-        onTriggered: root.perfSearch = root.perfFind(panelHost.launcher, "launcherSearch")
+        onTriggered: {
+            root.perfSearch = root.perfFind(panelHost.launcher, "launcherSearch");
+            root.perfQuery = root.perfFind(panelHost.launcher, "launcherMenuQuery");
+            root.perfRows = root.perfFind(panelHost.launcher, "launcherResults");
+            root.perfApps = root.perfFind(panelHost.launcher, "launcherApps");
+            root.perfPage = root.perfFind(panelHost.launcher, "launcherPage");
+            root.perfMaterial = panelHost.launcher.motionMaterial ?? null;
+        }
     }
     Timer { interval: 16; repeat: true; running: root.perfStarted > 0; onTriggered: root.contentItem.Window.window.update(); }
     FloatingWindow {
@@ -158,7 +230,7 @@ PROBE = """
     }
     IpcHandler {
         target: "performanceFrame"
-        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
+        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, openFrameIntervalsMs: root.perfOpenFrameMs, openPositions: root.perfOpenPositions, keyFrameMs: root.perfKeyFrameMs >= 0 ? root.perfKeyFrameMs : null, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, queryCurrent: root.perfQueryCurrent(), screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
         function arm(): void { perfInput.visible = false; perfInput.visible = true; perfKeys.forceActiveFocus(); }
         function suspend(hidden: bool): void { WallpaperPlayback.locked = hidden; }
         function pinDashboard(): void { flags.dashboardPinned = true; }
@@ -173,6 +245,67 @@ PROBE = """
         }
     }
 """
+
+
+def frame_interval_summary(values):
+    """Summarize client-side frameSwapped intervals; retain raw values for comparison."""
+    ordered = sorted(values)
+    if not ordered:
+        return {
+            "count": 0,
+            "p50_ms": None,
+            "p95_ms": None,
+            "max_ms": None,
+            "raw_ms": [],
+        }
+
+    def percentile(fraction):
+        return ordered[min(len(ordered) - 1, math.ceil(len(ordered) * fraction) - 1)]
+
+    return {
+        "count": len(ordered),
+        "p50_ms": percentile(0.50),
+        "p95_ms": percentile(0.95),
+        "max_ms": ordered[-1],
+        "raw_ms": list(values),
+    }
+
+
+def motion_summary(samples):
+    """Compare material top/bottom and field movement on the same rendered frames."""
+    traces = [sample.get("openPositions", []) for sample in samples]
+    errors = []
+    height_changes = []
+    page_changes = []
+    visible = []
+    for trace in traces:
+        if not trace:
+            continue
+        height_changes.append(
+            max(p["bodyHeight"] for p in trace) - min(p["bodyHeight"] for p in trace)
+        )
+        page_heights = [
+            p["pageHeight"] for p in trace if p.get("pageHeight") is not None
+        ]
+        if page_heights:
+            page_changes.append(max(page_heights) - min(page_heights))
+        visible.extend(p["searchVisiblePx"] for p in trace)
+        for before, after in zip(trace, trace[1:]):
+            field_delta = after["searchY"] - before["searchY"]
+            errors.extend(
+                abs(field_delta - (after[key] - before[key]))
+                for key in ("bodyTopY", "bodyBottomY")
+            )
+    return {
+        "frames": sum(map(len, traces)),
+        "missing_traces": sum(len(trace) < 2 for trace in traces) if traces else 1,
+        "max_motion_error_px": max(errors) if errors else None,
+        "max_body_height_change_px": max(height_changes) if height_changes else None,
+        "max_page_height_change_px": max(page_changes) if page_changes else None,
+        "minimum_search_visible_px": min(visible) if visible else None,
+        "focus_seen_in_each_open": bool(traces)
+        and all(any(p.get("focused") for p in trace) for trace in traces),
+    }
 
 
 def wait_for(predicate, description, timeout=20):
@@ -570,7 +703,26 @@ def disable_speed_pass(shell):
         path.write_text(source.replace(before, after))
 
 
-def prepare(directory, revision=None, control=False, helper_binary=None):
+def instrument_launcher_keys(shell):
+    """Start typing time before TextField edits/bindings, in the disposable copy."""
+    browser = shell / "modules/launcher/NacreAppBrowser.qml"
+    source = browser.read_text()
+    marker = 'objectName: "launcherSearch"'
+    if source.count(marker) != 1:
+        raise RuntimeError("Launcher search key probe no longer matches the source")
+    before, field = source.split(marker, 1)
+    handler = "Keys.onPressed: event => {"
+    if handler not in field:
+        raise RuntimeError("Launcher search key handler is missing")
+    field = field.replace(
+        handler, handler + "\n            search.perfKeyReceived();", 1
+    )
+    browser.write_text(before + marker + "\n        signal perfKeyReceived()" + field)
+
+
+def prepare(
+    directory, revision=None, control=False, helper_binary=None, force_helper=False
+):
     from PIL import Image
 
     home = directory / "home"
@@ -613,7 +765,7 @@ def prepare(directory, revision=None, control=False, helper_binary=None):
         "NacrePaths.helperBinary" in path.read_text()
         for path in (shell / "services").glob("*.qml")
     )
-    if native_commands:
+    if native_commands or force_helper:
         if helper_binary is None or not Path(helper_binary).is_file():
             raise ValueError(
                 "This revision needs --helper-binary built from the exact revision under test"
@@ -727,6 +879,7 @@ def prepare(directory, revision=None, control=False, helper_binary=None):
                 1,
             )
         )
+    instrument_launcher_keys(shell)
     screen = shell / "modules/drawers/NacreScreen.qml"
     text = screen.read_text().replace(
         "import QtQuick\n",
@@ -772,9 +925,35 @@ def shell_environment(tools, environment):
         sys.path.remove(str(tools))
 
 
+def private_session_environment(
+    environment, runtime, daemon_client=False, software_rendering=False
+):
+    """Add opt-in test-only daemon and software renderer settings."""
+    configured = dict(environment)
+    daemon_socket = None
+    if daemon_client:
+        daemon_socket = runtime / "nacre.sock"
+        configured["NACRE_DAEMON_CLIENT"] = "1"
+        configured["NACRE_DAEMON_SOCKET"] = str(daemon_socket)
+    if software_rendering:
+        configured["LIBGL_ALWAYS_SOFTWARE"] = "1"
+        configured["QT_QUICK_BACKEND"] = "software"
+    return configured, daemon_socket
+
+
 def run(args, directory):
+    if args.daemon_client and (
+        not args.helper_binary or not args.helper_binary.is_file()
+    ):
+        raise ValueError(
+            "--daemon-client requires --helper-binary built from the exact revision under test"
+        )
     home, shell, movie = prepare(
-        directory, args.revision, args.control, args.helper_binary
+        directory,
+        args.revision,
+        args.control,
+        args.helper_binary,
+        args.daemon_client,
     )
     # Unix-domain socket paths (including Hyprland signatures) must fit 108 bytes.
     runtime = Path(tempfile.mkdtemp(prefix="npr-", dir="/tmp"))
@@ -806,6 +985,9 @@ def run(args, directory):
         DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "absent-system-bus"),
         HYPRLAND_NO_SYSTEMD="1",
         GVFS_DISABLE_FUSE="1",
+    )
+    env, daemon_socket = private_session_environment(
+        env, runtime, args.daemon_client, args.software_rendering
     )
     if args.orient_binary:
         env["NACRE_ORIENT_BINARY"] = str(args.orient_binary.resolve(strict=True))
@@ -908,6 +1090,11 @@ def run(args, directory):
             wait_for(lambda: (runtime / "wayland-1").exists(), "nested Wayland socket")
             env["WAYLAND_DISPLAY"] = "wayland-1"
         shell_env = shell_environment(home / ".local/share/nacre/shell/tools", env)
+        if args.daemon_client:
+            shell_env["NACRE_DAEMON_CLIENT"] = "1"
+            shell_env["NACRE_DAEMON_SOCKET"] = str(daemon_socket)
+        if args.software_rendering:
+            shell_env["QT_QUICK_BACKEND"] = "software"
         if args.adaptive_allocator or args.control:
             shell_env.pop("MALLOC_MMAP_THRESHOLD_", None)
         if args.allocator_mmap_threshold:
@@ -953,6 +1140,10 @@ def run(args, directory):
         shell_env["DBUS_SESSION_BUS_ADDRESS"] = private_environment[
             b"DBUS_SESSION_BUS_ADDRESS"
         ].decode()
+        if args.daemon_client:
+            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
+            start([str(helper), "daemon"], "daemon", shell_env)
+            wait_for(lambda: daemon_socket.exists(), "private daemon socket")
         wait_for(lambda: state("nacre", "state"), "shell IPC")
         time.sleep(10)
         ipc("nacre", "close")
@@ -989,6 +1180,9 @@ def run(args, directory):
             "machine": machine_metadata(),
             "versions": versions,
             "control": args.control,
+            "daemon_client": args.daemon_client,
+            "daemon_socket": str(daemon_socket) if daemon_socket else None,
+            "renderer_mode": "software" if args.software_rendering else "default",
             "budget_tier": args.budget_tier,
             "parent_renderer": args.parent_renderer,
             "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -1136,7 +1330,7 @@ def run(args, directory):
                                 check=True,
                                 capture_output=True,
                             )
-                            key_result = wait_for(
+                            first_frame = wait_for(
                                 lambda previous_key=previous_key: (
                                     value
                                     if (value := state("performanceFrame", "state"))
@@ -1144,13 +1338,32 @@ def run(args, directory):
                                     and value.get("keyFrameMs") is not None
                                     else None
                                 ),
-                                "launcher search key frame",
+                                "launcher search first frame",
                             )
-                            cpu_after = thread_cpu_ns(pid)
+                            cpu_after_first = thread_cpu_ns(pid)
+                            key_result = wait_for(
+                                lambda previous_key=previous_key: (
+                                    value
+                                    if (value := state("performanceFrame", "state"))
+                                    and value.get("keySequence", 0) > previous_key
+                                    and value.get("resultComplete")
+                                    else None
+                                ),
+                                "launcher result frame or timeout",
+                                timeout=5,
+                            )
+                            cpu_after_result = thread_cpu_ns(pid)
                             return {
                                 "key": key,
-                                "frame_ms": key_result["keyFrameMs"],
-                                "ui_cpu_ms": (cpu_after - cpu_before) / 1e6,
+                                "frame_ms": first_frame["keyFrameMs"],
+                                "result_frame_ms": key_result.get("resultFrameMs"),
+                                "result_missing": key_result.get("resultFrameMs")
+                                is None,
+                                "query_current": key_result.get("queryCurrent"),
+                                "daemon_enabled": key_result.get("daemonEnabled"),
+                                "ui_cpu_ms": (cpu_after_first - cpu_before) / 1e6,
+                                "result_ui_cpu_ms": (cpu_after_result - cpu_before)
+                                / 1e6,
                                 "helper_calls_at_frame": key_result.get(
                                     "helperCalls", 0
                                 ),
@@ -1255,7 +1468,24 @@ def run(args, directory):
                             "steady_ui_cpu_ms": performance.summarize(
                                 [sample["ui_cpu_ms"] for sample in all_keys[1:]]
                             ),
-                            "boundary": "TextField textEdited to Quickshell frameSwapped (client-side); UI CPU is summed Quickshell thread runtime bracketed by key injection and frame observation, including one performanceFrame IPC poll",
+                            "result_frame_ms": frame_interval_summary(
+                                [
+                                    sample["result_frame_ms"]
+                                    for sample in all_keys
+                                    if sample.get("result_frame_ms") is not None
+                                ]
+                            ),
+                            "result_missing_count": sum(
+                                sample.get("result_missing", False)
+                                for sample in all_keys
+                            ),
+                            "daemon_enabled_samples": [
+                                sample.get("daemon_enabled") for sample in all_keys
+                            ],
+                            "daemon_query_current_samples": [
+                                sample.get("query_current") for sample in all_keys
+                            ],
+                            "boundary": "TextField key handler receipt to first Quickshell frameSwapped (client-side); ui_cpu_ms covers that first-frame bracket and its IPC poll, while result_frame_ms waits for a current daemon query and ready visible result icons (or records a bounded timeout); result_ui_cpu_ms includes all result-wait IPC polls",
                         }
                     timings.append(result)
                 report["latency"][label][action] = {
@@ -1265,6 +1495,25 @@ def run(args, directory):
                     ),
                     "synchronous_ms": performance.summarize(
                         [value["synchronousMs"] for value in timings]
+                    ),
+                    **(
+                        {
+                            "motion": motion_summary(timings),
+                            "open_to_first_frame_ms": performance.summarize(
+                                [value["firstFrameMs"] for value in timings]
+                            ),
+                            "open_animation_frame_intervals": frame_interval_summary(
+                                [
+                                    interval
+                                    for value in timings
+                                    for interval in value.get(
+                                        "openFrameIntervalsMs", []
+                                    )
+                                ]
+                            ),
+                        }
+                        if action == "launcher"
+                        else {}
                     ),
                 }
                 ipc("nacre", "close")
@@ -1816,6 +2065,12 @@ def run(args, directory):
         measure_actions("reopen", args.repeats)
         time.sleep(6)
         sample("static_after_latency")
+        if args.latency_only:
+            # This mode measures launcher/dashboard latency, without unrelated
+            # video playback/pausing phases after the capture is already complete.
+            report["paging_end"] = paging()
+            args.output.write_text(json.dumps(report, indent=2) + "\n")
+            return report
         ipc("performanceFrame", "wallpaper", json.dumps(fixture(home, movie, True)))
         screen_name = state("performanceFrame", "state")["screen"]
         wait_for(
@@ -1967,6 +2222,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", choices=("hyprland", "niri"), default="hyprland")
     parser.add_argument(
+        "--daemon-client",
+        action="store_true",
+        help="Run a private Nacre daemon for this disposable client",
+    )
+    parser.add_argument(
+        "--software-rendering",
+        action="store_true",
+        help="Force software OpenGL and Qt Quick rendering in the disposable session",
+    )
+    parser.add_argument(
         "--helper-binary",
         type=Path,
         help="Prebuilt native helper matching the selected immutable revision",
@@ -2047,7 +2312,7 @@ def main():
     if args.lock_frame_smoke and not args.palette_probes:
         parser.error("--lock-frame-smoke requires --palette-probes")
     if args.keep_fixtures:
-        args.keep_fixtures.mkdir()
+        args.keep_fixtures.mkdir(mode=0o700)
         report = run(args, args.keep_fixtures.resolve())
     else:
         with tempfile.TemporaryDirectory(prefix="np-") as directory:
