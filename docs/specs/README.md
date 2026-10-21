@@ -6,6 +6,8 @@ lead finish the current Bead B2 arm, release the desktop, checkpoint both queues
 and stop. The transfer receipt below supersedes older grants and results.
 [Standing rules](../architecture/standing-rules.md) apply.
 
+- Structure/licensing decision accepted 2026-10-21: [architecture note](../architecture/structure-and-licensing.md); Bead roadmap and ADR 0004 are in Bead.
+
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
 | 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Done | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Runtime integrated dfcedea7; checker/test-fixture fixes through 9b37c663, CI39402420054 SUCCESS (desktop + fresh-install). |
@@ -760,4 +762,3 @@ implementer live probe or push.
 
 Correction validation: 26 switch tests and 16 release tests pass on the dedicated
 SSH test host; configure and its test exactly match pre-extension 68d28945.
-| — | [Structure and licensing](../architecture/structure-and-licensing.md) | Accepted 2026-10-21 | Owner decision recorded; protocol relicensing and Bead roadmap tracked in Bead ADR 0004. |
