@@ -1,6 +1,6 @@
 # N0021 — App theming targets (GTK3 file chooser, Chromium browsers, Discord, Spotify)
 
-- Status: In progress (lead review fixes; validation pending)
+- Status: Implemented (full validation passed; lead integration pending)
 - Date: 2026-10-21
 - Owner request 2026-10-21: make as many apps as possible follow the Nacre palette, with Settings toggles.
   Owner choices: Discord via Vencord on the official client, Spotify via Spicetify, GTK3 via adw-gtk3.
@@ -74,15 +74,18 @@ action.
   Theme availability therefore cannot depend on packages installed on the test host.
 - Chromium templates render validated hex roles first. Manifest assembly converts those rendered
   values to RGB arrays and adds the palette/mode-derived version and numeric logo property.
-- Lead review replaces the separate gsettings path with the original five-key DConf packet, changing
-  only its GTK theme value. With adw-gtk3 absent, the original packet remains byte-identical.
+- GTK publication uses the original five-key DConf packet, changing only its GTK theme value.
+  With adw-gtk3 absent, the original packet remains byte-identical.
 - Spicetify refresh runs only after successful publication, with a detached timeout and kill-after
   deadline. No application installer, browser profile, or Spotify patching operation is invoked.
 
-## Lead review follow-up (2026-10-21)
+## Validation (2026-10-21)
 
-The initial separate gsettings path changed the strict DConf equivalence and blocked one historical
-helper case. Lead review directs restoring the original packet, selecting its GTK theme value through
-XDG theme discovery, and removing the gsettings path and fake-backend tests. Frozen references and
-strict equivalence assertions remain unchanged. Focused checks and the complete CI replica, including
-all helper cases, galleries and fresh-install smoke, are being rerun for this revision.
+Validation ran in the isolated remote Arch CI container, with `nice -n 10` and Cargo `-j2`:
+
+- Focused palette pipeline: 14/14; settings validation, including frozen values: 4/4.
+- Full `check.yml` replica: native workspace tests, formatting/Clippy, Ruff, translations,
+  Python/QML regressions, and all 534 helper parity cases pass. Tooling has one existing skip.
+- English/pseudo and wide-font translation galleries and the AUR pager gallery pass.
+- Fresh default installation in nested niri passes IPC and screenshot checks.
+- Frozen references remain unchanged; `git diff --check` is clean. No live action was performed.
