@@ -85,6 +85,14 @@ class NativeRegistryTests(unittest.TestCase):
                             environ={"NACRE_HELPER_BINARY": str(binary)},
                         )
                     )
+                    self.assertEqual(argv[0], str(binary.resolve()))
+                    self.assertEqual(
+                        argv[1],
+                        {
+                            "helper-service": "serve",
+                            "compositor-backends-niri-widths": "niri_widths",
+                        }.get(helper, helper),
+                    )
 
     def test_weather_and_updates_module_cases_use_standalone_native_commands(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -102,14 +110,6 @@ class NativeRegistryTests(unittest.TestCase):
                     ),
                     [str(binary.resolve()), helper],
                 )
-                    self.assertEqual(argv[0], str(binary.resolve()))
-                    self.assertEqual(
-                        argv[1],
-                        {
-                            "helper-service": "serve",
-                            "compositor-backends-niri-widths": "niri_widths",
-                        }.get(helper, helper),
-                    )
 
     def test_missing_or_nonexecutable_native_build_never_falls_back(self):
         with tempfile.TemporaryDirectory() as directory:
