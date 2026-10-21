@@ -938,6 +938,11 @@ fn palette_scheme_set_refreshes_spicetify_once_after_publishing_files() -> Resul
         home.path().join(".config/spicetify/config-xpui.ini"),
         "current_theme = Nacre\n",
     )?;
+    let path = std::env::join_paths([
+        bin.as_os_str(),
+        std::ffi::OsStr::new("/usr/bin"),
+        std::ffi::OsStr::new("/bin"),
+    ])?;
     let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     let output = command
         .args([
@@ -950,7 +955,7 @@ fn palette_scheme_set_refreshes_spicetify_once_after_publishing_files() -> Resul
         ])
         .env_clear()
         .env("HOME", home.path())
-        .env("PATH", &bin)
+        .env("PATH", path)
         .env("NACRE_HELPER_TOOLS", assets())
         .env("NACRE_COMPOSITOR", "hyprland")
         .env("SPICETIFY_LOG", &refresh_log)
