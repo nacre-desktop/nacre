@@ -12,7 +12,7 @@ Item {
     property bool muted: false
     property bool animateLevel: true
     implicitWidth: 336
-    implicitHeight: level ? 76 : 68
+    implicitHeight: level ? (detail ? 76 : 60) : 68
     Accessible.role: Accessible.StaticText
     Accessible.name: [title, valueLabel, detail].filter(part => part !== "").join(". ")
     Connections {
