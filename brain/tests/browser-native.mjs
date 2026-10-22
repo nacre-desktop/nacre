@@ -274,7 +274,15 @@ try {
   await waitHealth();
   const refreshedHtml = fs.readFileSync(path.join(home, '.local/state/nacre/brain/auth/open.html'), 'utf8');
   if (refreshedHtml === bootstrapHtml) throw new Error('server restart did not rotate bootstrap page');
-  await cdp('Page.navigate', { url: openPage() });
+  // Restore an existing tab through the separate auto-closing handoff origin.
+  await evaluate('localStorage.removeItem("nacre-brain-authorization")');
+  const withoutBearer = await evaluate('fetch("/api/note?path=inbox/qa.md").then(r=>r.status)');
+  if (withoutBearer !== 403) throw new Error('cookie alone authorized the browser after restart');
+  const handoffUrl = pathToFileURL(path.join(home, '.local/state/nacre/brain/auth/handoff.html')).href;
+  const handoffTarget = await (await fetch(`http://127.0.0.1:${cdpPort}/json/new?${handoffUrl}`, { method: 'PUT' })).json();
+  await until(() => evaluate('!!localStorage.getItem("nacre-brain-authorization")'), 'handoff credential restoration');
+  await fetch(`http://127.0.0.1:${cdpPort}/json/close/${handoffTarget.id}`).catch(() => {});
+  await cdp('Page.navigate', { url: nativeUrl + '/' });
   await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 3'), 'Brain graph after restart');
   const cookiesAfter = await cdp('Network.getAllCookies');
   const persistentCookie = cookiesAfter.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
@@ -296,6 +304,7 @@ try {
     crossPortLeakedFixtureContent: bodyText.includes(fixtureSecret),
     stolenCookieReplayStatus: 403,
     persistentCookieAfterRestart: true,
+    handoffCredentialRestored: true,
     browserExceptions: exceptions.length,
   }));
 } finally {
