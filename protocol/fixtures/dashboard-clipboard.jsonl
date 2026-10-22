@@ -1,0 +1,9 @@
+{"t":"snap","topic":"clipboard","seq":0,"data":{"health":{"available":true,"stale":false},"entries":{"items":{"c42":{"kind":"text","preview":"Public fixture text","created_ms":1800000000000},"c41":{"kind":"image","preview":"[[ binary data 12 KiB png 100x100 ]]","created_ms":1799999990000}},"order":["c42","c41"]}}}
+{"t":"call","id":1,"m":"clipboard.copy","p":{"id":"c41"}}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"call","id":2,"m":"clipboard.clear","p":{}}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"patch","topic":"clipboard","base":0,"seq":1,"data":{"entries":{"items":{"c42":null,"c41":null},"order":[]}}}
+{"t":"call","id":3,"m":"clipboard.copy","p":{"id":"c41"}}
+{"t":"ret","id":3,"err":{"code":"stale_revision","message":"Clipboard entry no longer exists","retry":true}}
+{"t":"patch","topic":"clipboard","base":1,"seq":2,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Clipboard history is unavailable","retry":true}}}}

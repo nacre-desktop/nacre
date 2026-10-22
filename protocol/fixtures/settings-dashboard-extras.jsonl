@@ -1,0 +1,7 @@
+{"t":"snap","topic":"settings.store.dashboard-extras","seq":0,"data":{"store":"dashboard-extras","rev":0,"exists":true,"data":{"version":1,"enabled":[],"order":["focus","notifications"]},"dirty":false}}
+{"t":"call","id":1,"m":"settings.set","p":{"store":"dashboard-extras","key":["enabled"],"value":["focus"],"rev":0}}
+{"t":"ret","id":1,"ok":{"store":"dashboard-extras","rev":1,"exists":true,"data":{"version":1,"enabled":["focus"],"order":["focus","notifications"]},"dirty":true}}
+{"t":"call","id":2,"m":"settings.set","p":{"store":"dashboard-extras","key":["order"],"value":["notifications","focus"],"rev":0}}
+{"t":"ret","id":2,"err":{"code":"stale_revision","message":"Settings changed; refresh before writing","retry":true}}
+{"t":"call","id":3,"m":"settings.set","p":{"store":"dashboard-extras","key":["enabled"],"value":["focus",{"x":1}],"rev":1}}
+{"t":"ret","id":3,"err":{"code":"invalid_request","message":"Invalid settings value","retry":false}}

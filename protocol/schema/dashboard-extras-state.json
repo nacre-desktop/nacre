@@ -1,0 +1,551 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DashboardExtrasSnapshot",
+  "description": "Payload alternatives embedded in the existing snap message, not a new frame.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.focus"
+        },
+        "data": {
+          "$ref": "#/$defs/DashboardFocus"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "clipboard"
+        },
+        "data": {
+          "$ref": "#/$defs/ClipboardState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "screenshots"
+        },
+        "data": {
+          "$ref": "#/$defs/ScreenshotsState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "ai.usage"
+        },
+        "data": {
+          "$ref": "#/$defs/AiUsageState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "brain.recent"
+        },
+        "data": {
+          "$ref": "#/$defs/BrainRecentState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    }
+  ],
+  "$defs": {
+    "DashboardFocus": {
+      "description": "`running` carries `deadline_ms` (Unix milliseconds); consumers count down\nlocally, the daemon never publishes per-second ticks. `paused` carries the\nfrozen `remaining_s`. `idle` and `done` carry neither.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "status": {
+          "$ref": "#/$defs/FocusStatus"
+        },
+        "total_s": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 10800
+        },
+        "deadline_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "remaining_s": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 10800
+        },
+        "owns_dnd": {
+          "description": "The session turned Do Not Disturb on and restores it when it ends.",
+          "type": "boolean"
+        },
+        "previous_dnd": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "health",
+        "status",
+        "total_s",
+        "owns_dnd",
+        "previous_dnd"
+      ]
+    },
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "FocusStatus": {
+      "type": "string",
+      "enum": [
+        "idle",
+        "running",
+        "paused",
+        "done"
+      ]
+    },
+    "ClipboardState": {
+      "description": "Newest first. Entries are daemon-issued opaque IDs accepted by `clipboard.copy`.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "entries": {
+          "$ref": "#/$defs/Entities_ClipEntry"
+        }
+      },
+      "required": [
+        "health",
+        "entries"
+      ]
+    },
+    "Entities_ClipEntry": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/ClipEntry"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "ClipEntry": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ClipKind"
+        },
+        "preview": {
+          "description": "The single-line preview the dashboard shows; at most 200 characters.",
+          "type": "string",
+          "maxLength": 200
+        },
+        "created_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "kind",
+        "preview",
+        "created_ms"
+      ]
+    },
+    "ClipKind": {
+      "type": "string",
+      "enum": [
+        "text",
+        "image"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    },
+    "ScreenshotsState": {
+      "description": "Newest first, at most six.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "items": {
+          "$ref": "#/$defs/Entities_Screenshot"
+        }
+      },
+      "required": [
+        "health",
+        "items"
+      ]
+    },
+    "Entities_Screenshot": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Screenshot"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Screenshot": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "Absolute local file below the user's Pictures/Screenshots; open it with\n`screenshots.open` or read it with symlink-safe descriptor walks.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "created_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "path",
+        "created_ms"
+      ]
+    },
+    "AiUsageState": {
+      "description": "Empty and unavailable until the first `ai.usage.refresh`; Codex quota needs a\nprovider connection, so it is read only on request.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "providers": {
+          "$ref": "#/$defs/Entities_AiProvider"
+        }
+      },
+      "required": [
+        "health",
+        "providers"
+      ]
+    },
+    "Entities_AiProvider": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/AiProvider"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "AiProvider": {
+      "description": "Provider-reported display lines after the header, as the dashboard shows them.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "maxItems": 5
+        },
+        "observed_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "name",
+        "lines",
+        "observed_ms"
+      ]
+    },
+    "BrainRecentState": {
+      "description": "Most recently changed notes (newest first) and open `- [ ]` tasks from them.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "notes": {
+          "$ref": "#/$defs/Entities_BrainNote"
+        },
+        "tasks": {
+          "$ref": "#/$defs/Entities_BrainTask"
+        }
+      },
+      "required": [
+        "health",
+        "notes",
+        "tasks"
+      ]
+    },
+    "Entities_BrainNote": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/BrainNote"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "BrainNote": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "title",
+        "path"
+      ]
+    },
+    "Entities_BrainTask": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/BrainTask"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "BrainTask": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "text",
+        "path"
+      ]
+    }
+  }
+}

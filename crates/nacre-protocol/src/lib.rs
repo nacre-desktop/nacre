@@ -6,6 +6,7 @@ pub mod bar_services;
 pub mod compositor;
 mod core_artifacts;
 pub mod core_services;
+pub mod dashboard_extras;
 pub mod framing;
 pub mod helpers;
 pub mod menu;

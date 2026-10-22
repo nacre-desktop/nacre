@@ -1,0 +1,5 @@
+{"t":"snap","topic":"ai.usage","seq":0,"data":{"health":{"available":false,"stale":false},"providers":{"items":{},"order":[]}}}
+{"t":"call","id":1,"m":"ai.usage.refresh","p":{}}
+{"t":"ret","id":1,"ok":{"changed":false}}
+{"t":"patch","topic":"ai.usage","base":0,"seq":1,"data":{"health":{"available":true,"stale":false},"providers":{"items":{"codex":{"name":"Codex","lines":["codex · 5h: 12% used · resets Mon 12:00"],"observed_ms":1800000000000},"claude":{"name":"Claude Code","lines":["5 hour: 3% used · resets Mon 11:00"],"observed_ms":1800000000000}},"order":["codex","claude"]}}}
+{"t":"patch","topic":"ai.usage","base":1,"seq":2,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"AI usage is unavailable","retry":true}}}}

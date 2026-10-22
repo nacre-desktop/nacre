@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EntityTarget",
+  "type": "object",
+  "properties": {
+    "id": {
+      "$ref": "#/$defs/EntityId"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id"
+  ],
+  "$defs": {
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    }
+  }
+}

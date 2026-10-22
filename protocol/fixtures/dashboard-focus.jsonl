@@ -1,0 +1,18 @@
+{"t":"snap","topic":"dashboard.focus","seq":0,"data":{"health":{"available":true,"stale":false},"status":"idle","total_s":0,"owns_dnd":false,"previous_dnd":false}}
+{"t":"call","id":1,"m":"focus.start","p":{"minutes":25}}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"patch","topic":"dashboard.focus","base":0,"seq":1,"data":{"status":"running","total_s":1500,"deadline_ms":1800001500000,"owns_dnd":true}}
+{"t":"call","id":6,"m":"focus.start","p":{"minutes":25}}
+{"t":"ret","id":6,"err":{"code":"invalid_request","message":"A focus session is already active","retry":false}}
+{"t":"call","id":2,"m":"focus.pause","p":{}}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"patch","topic":"dashboard.focus","base":1,"seq":2,"data":{"status":"paused","deadline_ms":null,"remaining_s":900}}
+{"t":"call","id":3,"m":"focus.resume","p":{}}
+{"t":"ret","id":3,"ok":{"changed":true}}
+{"t":"patch","topic":"dashboard.focus","base":2,"seq":3,"data":{"status":"running","deadline_ms":1800000900000,"remaining_s":null}}
+{"t":"call","id":4,"m":"focus.stop","p":{}}
+{"t":"ret","id":4,"ok":{"changed":true}}
+{"t":"patch","topic":"dashboard.focus","base":3,"seq":4,"data":{"status":"idle","deadline_ms":null,"owns_dnd":false}}
+{"t":"call","id":5,"m":"focus.start","p":{"minutes":0}}
+{"t":"ret","id":5,"err":{"code":"validation","message":"Invalid dashboard request","retry":false}}
+{"t":"patch","topic":"dashboard.focus","base":4,"seq":5,"data":{"status":"done"}}

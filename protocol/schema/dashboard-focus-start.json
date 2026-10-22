@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "FocusStart",
+  "type": "object",
+  "properties": {
+    "minutes": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 1,
+      "maximum": 180
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "minutes"
+  ]
+}
