@@ -65,7 +65,7 @@ Phase one: the full desktop job passed in the Arch CI container, exit 0
 consumer, release helper, sandbox integrity, translations, `tools/check.py` and
 both gallery audits passed. Suites: tools 452 (one existing opt-in soak skipped),
 AI 117, Brain 45, shell-tools 479. All 534 frozen cases passed, including the
-nine explicit context/memory/usage replays. Galleries covered 244 states per
+9/9 explicit context/memory/usage replays. Galleries covered 244 states per
 language and 185 states per language for the wide-font selection. All 20 changed
 source files matched the CI candidate by SHA-256; rollback sources match the
 original Git blobs. No frozen reference changed.
@@ -112,3 +112,27 @@ exposed all ten skills to both providers, repeated from cache and preserved a
 synthetic 0600 auth file (`.lead/skills-verify.log`). All real authentication files
 and keyring values were outside the development and test scope. No live install,
 push, tag or release occurred.
+
+## Lead replay review
+
+The initial report's “explicit AI replays 9/17 passed” was a reporting error:
+phase one passed **9/9** and phase two passed **17/17**. It did not mean that
+eight cases failed. The additional phase-two cases below each matched their
+immutable frozen reference (`.lead/desktop6.log`, helper groups at lines 313–320;
+also independently replayed in `.lead/phase2-focused4.log`, lines 94–100).
+
+| Frozen case | Classification | Reason |
+| --- | --- | --- |
+| `nacre-ai-skills/help` | Passed; no difference | Frozen help output matched. |
+| `nacre-ai-skills/empty` | Passed; no difference | Empty-library output matched. |
+| `nacre-ai-tools/usage` | Passed; no difference | Frozen usage output matched. |
+| `nacre-ai-tools/delegate` | Passed; no difference | Fixture delegation behavior matched. |
+| `nacre-ai-account/missing` | Passed; no difference | Missing-action behavior matched. |
+| `nacre-ai-account/invalid-account` | Passed; no difference | Invalid-account rejection matched. |
+| `nacre-ai-remote/invalid-project` | Passed; no difference | Invalid-project rejection matched. |
+| `nacre-ai-remote/relative-path` | Passed; no difference | Relative-path rejection matched. |
+
+None of these eight requires an intended-difference exception, an environment or
+harness waiver, or a behavior fix. The security changes listed above are separate
+new cases, not explanations for failed frozen replays. Frozen references remain
+unchanged.
