@@ -918,7 +918,12 @@ fn run_inner(args: &[String]) -> Result<i32> {
                 .ok_or_else(|| err(format!("{label} requires a value")))
         };
         match args[i].as_str() {
-            "new" | "resume" | "list" | "login" => command = args[i].clone(),
+            "new" | "resume" | "list" | "login" => {
+                if !command.is_empty() {
+                    return Err(err("Exactly one Claude command is required"));
+                }
+                command = args[i].clone();
+            }
             "--project" => {
                 i += 1;
                 project = value(i, "--project")?.clone();
@@ -949,7 +954,10 @@ fn run_inner(args: &[String]) -> Result<i32> {
         return Err(err("A Claude command is required"));
     }
     if !path.is_absolute()
-        || project.is_empty()
+        || !project
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_alphanumeric)
         || !project
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')

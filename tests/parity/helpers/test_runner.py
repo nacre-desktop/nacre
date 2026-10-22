@@ -154,9 +154,12 @@ class RunnerTests(unittest.TestCase):
                 timeout=5,
             )
             self.assertEqual(result.returncode, 2)
-            self.assertIn(
-                "Frozen account-help cases cannot be re-recorded", result.stderr
+            message = (
+                "Migrated helper references cannot be re-recorded: " + helper
+                if helper in runner.native_registry.MIGRATED
+                else "Frozen account-help cases cannot be re-recorded"
             )
+            self.assertIn(message, result.stderr)
             self.assertEqual(reference.read_bytes(), before)
 
     def test_account_help_rule_rejects_wrong_scope_and_changed_reference(self):

@@ -312,11 +312,24 @@ fn missing_claude_command_does_not_launch_a_provider() {
     let temp = tempdir().unwrap();
     setup(temp.path());
     script(
+        &temp.path().join(".local/bin/nacre-ai-skills"),
+        "#!/bin/sh\ntouch \"$HOME/skills-ran\"\n",
+    );
+    script(
         &temp.path().join(".local/bin/claude"),
         "#!/bin/sh\ntouch \"$HOME/provider-ran\"\n",
     );
-    assert!(!run(temp.path(), &["nacre-ai-claude"]).status.success());
-    assert!(!temp.path().join("provider-ran").exists());
+    let cases: &[&[&str]] = &[
+        &["nacre-ai-claude"],
+        &["nacre-ai-claude", "new", "resume"],
+        &["nacre-ai-claude", "new", "--project", "_invalid"],
+    ];
+    for args in cases {
+        assert!(!run(temp.path(), args).status.success());
+        assert!(!temp.path().join("provider-ran").exists());
+        assert!(!temp.path().join("skills-ran").exists());
+        assert!(!temp.path().join(".local/share/nacre/ai/worktrees").exists());
+    }
 }
 
 #[test]
