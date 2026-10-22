@@ -7,6 +7,7 @@ import re
 import json
 import nacre_state as _state
 import nacre_ai_core as _core
+from nacre_native_config import _binary as helper_binary
 import os
 import queue
 import signal
@@ -912,7 +913,7 @@ class Manager:
             self.update()
             subprocess.Popen(
                 [
-                    str(Path(__file__).with_name("nacre-helper")),
+                    str(helper_binary()),
                     "desktop-extras",
                     "resume",
                     key,
