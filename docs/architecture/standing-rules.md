@@ -162,6 +162,26 @@ dependency chain. Each approval is scoped by exact ID with reason, primary link
 and revisit date. Vulnerability AND unsound advisories always go to the owner;
 other unapproved advisories fail CI. No wildcard or blanket suppression.
 
+## Temporary duplicates expire — owner decision 2026-10-22
+
+Every temporary duplicate gets an expiry recorded in its spec: "delete N days
+after the replacement is trusted". This covers a Python original next to its
+Rust port, `.rollback` copies, legacy/daemon dual paths, the JS launcher
+fallback, and old measurement-tool or harness versions. A unit is not Done
+until its spec names each duplicate it leaves behind, the trust condition and
+N. Prefer the simplest design that meets the acceptance checks. N10 (about
+22.5k lines, shelved) is the example to avoid: no speculative frameworks, and
+no parallel implementations without an expiry.
+
+Planned clean-up passes:
+- **(a)** One week after daemon mode has run stably on the owner's laptop:
+  delete the replaced Python, the `.rollback` copies and the legacy settings
+  path.
+- **(b)** After Bead's core switch: retire the always-on QML shell.
+
+Both passes are driven by the bloat audit (docs/research/bloat-audit-20261022.md).
+The owner decides what is removed.
+
 ## Owner-only decisions
 
 Escalate physical/live session tests; enabling daemon units; notification

@@ -33,6 +33,18 @@ and stop. The transfer receipt below supersedes older grants and results.
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
 | — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
 
+## Clean-up passes — planned (owner 2026-10-22)
+
+- **Pass (a), one week after daemon mode is stable on the laptop.** Daemon
+  mode has been on since 2026-10-21. Delete the replaced Python originals of
+  native ports (N0018–N0025 and later), all `*.py.rollback` / `*.sh.rollback`
+  copies, and the legacy (non-daemon) settings path. The input is the bloat
+  audit, and the owner approves the list.
+- **Pass (b), after Bead's core switch:** retire the always-on QML shell
+  (nacre/shell modules that Bead replaces) and its test harnesses.
+- Rule: every new unit records an expiry for each temporary duplicate it
+  leaves (standing rules, "Temporary duplicates expire").
+
 ## New lead — 2026-10-20 evening
 
 Claude Code (Opus) is now lead, with Codex workers. N10 phase 1 is assigned to
