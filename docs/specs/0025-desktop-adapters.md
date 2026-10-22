@@ -25,6 +25,14 @@ with private permissions before writing image bytes.
 claim of eight cases per helper. Preserve all fixtures exactly and add explicit
 security regression cases with intended-difference notes.
 
+**Known location difference.** The native GeoClue client maps its offline fix
+against `zone.tab` representative coordinates because nacre-helper has no safe
+GWeather binding and the CI/runtime contract does not add a GWeather link
+dependency. This preserves the result fields and uncertainty-boundary checks,
+but the reported city and, near boundaries, timezone may differ from GWeather's
+nearest-city database. Rust tests cover the representative-point and boundary
+rules. `timezone.py` remains on the existing Python adapter until N0031.
+
 **Dependencies.** No hard dependencies. N0016 daemon network controls are
 published. Standalone native commands ship first; daemon hosting remains a
 separate unit.
