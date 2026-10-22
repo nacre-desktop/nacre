@@ -5,7 +5,7 @@
 use crate::{compositor, paths::Paths, process, Result};
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     env, fs,
     fs::OpenOptions,
     os::unix::fs::PermissionsExt,
@@ -626,28 +626,9 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
                 .join(".local/share/nacre/brain/control.py")
                 .is_file()
                 && which("nacre-brain");
-            let shortcut_error = if env::var_os("HYPRLAND_INSTANCE_SIGNATURE")
-                .is_some_and(|value| !value.is_empty())
-            {
-                match crate::process::run(
-                        "hyprctl",
-                    &["binds".into(), "-j".into()],
-                    None,
-                    std::time::Duration::from_secs(2),
-                ) {
-                        Ok(output)
-                            if output.status.success()
-                                && serde_json::from_slice::<Value>(&output.stdout).is_ok() =>
-                        {
-                            "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration."
-                        }
-                    _ => "Shortcuts are available when running inside your Hyprland session.",
-                }
-            } else {
-                "Shortcuts are available when running inside your Hyprland session."
-            };
+            let (shortcuts, shortcut_error) = live_welcome_shortcuts(&paths);
             Ok(
-                json!({"shortcuts":[],"shortcutError":shortcut_error,"preferences":preferences,"available":{"ai":available_ai,"brain":brain}}),
+                json!({"shortcuts":shortcuts,"shortcutError":shortcut_error,"preferences":preferences,"available":{"ai":available_ai,"brain":brain}}),
             )
         }
         "claim-login" => Ok(claim_login(&paths, &welcome_instance(&paths)?)?.map_or(
@@ -682,6 +663,456 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
 fn welcome_instance(paths: &Paths) -> Result<String> {
     let backend = crate::compositor::backend::Backend::new(paths.clone(), env::vars().collect())?;
     Ok(backend.session_id().to_owned())
+}
+
+const WELCOME_SHORTCUTS: &[(&str, &str, &str)] = &[
+    (
+        "launcher",
+        "Find an application",
+        "Search, use favorites or browse all apps.",
+    ),
+    (
+        "wallpaper",
+        "Choose a wallpaper",
+        "Search your collection and choose static or dynamic scenes.",
+    ),
+    (
+        "settings",
+        "Open Settings",
+        "Appearance, displays, sound, connections and maintenance.",
+    ),
+    (
+        "files",
+        "Open Files",
+        "Browse folders and ZIP archives in your file manager.",
+    ),
+    (
+        "terminal",
+        "Open a terminal",
+        "Your terminal follows the current desktop colors.",
+    ),
+    (
+        "put-away",
+        "Close with undo",
+        "Restore within 30 seconds before closing.",
+    ),
+    (
+        "workspace",
+        "Change workspace",
+        "Switch to a configured workspace.",
+    ),
+    ("focus", "Move focus", "Focus a window in a direction."),
+    (
+        "screenshot",
+        "Capture an area",
+        "Pick a region to copy to the clipboard.",
+    ),
+    (
+        "clipboard",
+        "Clipboard history",
+        "Find something copied earlier and paste it again.",
+    ),
+    (
+        "ai-sidebar",
+        "Open the AI sidebar",
+        "Keep a conversation beside your work.",
+    ),
+    (
+        "lock",
+        "Lock the desktop",
+        "The existing lock screen handles authentication.",
+    ),
+    (
+        "browser",
+        "Open a browser",
+        "Use your selected default browser.",
+    ),
+    (
+        "shortcuts",
+        "Keyboard shortcuts",
+        "Browse the current session bindings.",
+    ),
+    ("palette", "Command palette", "Search desktop commands."),
+    (
+        "overview",
+        "Window overview",
+        "Browse windows and workspaces.",
+    ),
+    (
+        "next-workspace",
+        "Next workspace",
+        "Switch on the current monitor.",
+    ),
+    (
+        "previous-workspace",
+        "Previous workspace",
+        "Switch on the current monitor.",
+    ),
+    (
+        "scratchpad",
+        "Toggle scratchpad",
+        "Show or hide the scratchpad workspace.",
+    ),
+    (
+        "move-scratchpad",
+        "Move to scratchpad",
+        "Send the focused window there.",
+    ),
+    ("power", "Power menu", "Open session and power controls."),
+    (
+        "restore",
+        "Restore the last window",
+        "Bring back a window you put away.",
+    ),
+    (
+        "restore-all",
+        "Restore all windows",
+        "Bring back all windows put away.",
+    ),
+    (
+        "close",
+        "Close a window",
+        "Ask the application to close normally.",
+    ),
+    (
+        "force-close",
+        "Force close a window",
+        "Use only if an application is unresponsive.",
+    ),
+    (
+        "hide",
+        "Minimize a window",
+        "Hide it without closing the application.",
+    ),
+    (
+        "unhide",
+        "Restore a minimized window",
+        "Bring the last minimized window back.",
+    ),
+    (
+        "move-workspace",
+        "Move a window to a workspace",
+        "Move the focused window.",
+    ),
+    (
+        "maximize",
+        "Maximize",
+        "Use the workspace area; press again to restore.",
+    ),
+    (
+        "fullscreen",
+        "Full screen",
+        "Fill the display; press again to restore.",
+    ),
+    (
+        "float",
+        "Toggle floating",
+        "Switch between a tiled and floating window.",
+    ),
+    (
+        "pin",
+        "Pin a window",
+        "Keep a floating window on every workspace.",
+    ),
+    (
+        "cycle-window",
+        "Cycle windows",
+        "Focus the next or previous window.",
+    ),
+    ("group", "Group windows", "Toggle a group of windows."),
+    (
+        "group-cycle",
+        "Cycle grouped windows",
+        "Choose the previous or next window in a group.",
+    ),
+    (
+        "split",
+        "Switch split direction",
+        "Change the tiling split.",
+    ),
+    (
+        "save-screenshot",
+        "Save a screenshot",
+        "Save the whole screen in Pictures/Screenshots.",
+    ),
+    ("emoji", "Choose an emoji", "Search and insert an emoji."),
+    ("volume-up", "Volume up", "Raise speaker volume."),
+    ("volume-down", "Volume down", "Lower speaker volume."),
+    ("mute", "Mute speakers", "Toggle speaker sound."),
+    ("mic-mute", "Mute microphone", "Toggle microphone capture."),
+    (
+        "brightness-up",
+        "Brightness up",
+        "Raise display brightness.",
+    ),
+    (
+        "brightness-down",
+        "Brightness down",
+        "Lower display brightness.",
+    ),
+    (
+        "keyboard-up",
+        "Keyboard light up",
+        "Raise keyboard backlight brightness.",
+    ),
+    (
+        "keyboard-down",
+        "Keyboard light down",
+        "Lower keyboard backlight brightness.",
+    ),
+];
+
+fn shortcut_group(action: &str) -> &'static str {
+    if ["workspace", "move-workspace", "focus"].contains(&action) {
+        "Workspaces and focus"
+    } else if ["screenshot", "save-screenshot", "clipboard", "emoji"].contains(&action) {
+        "Capture and clipboard"
+    } else if [
+        "lock",
+        "volume-up",
+        "volume-down",
+        "mute",
+        "mic-mute",
+        "brightness-up",
+        "brightness-down",
+        "keyboard-up",
+        "keyboard-down",
+    ]
+    .contains(&action)
+    {
+        "Sound, display and locking"
+    } else if [
+        "launcher",
+        "wallpaper",
+        "settings",
+        "files",
+        "terminal",
+        "ai-sidebar",
+    ]
+    .contains(&action)
+    {
+        "Apps and panels"
+    } else {
+        "Windows"
+    }
+}
+
+fn friendly_shortcut_key(key: &str) -> String {
+    let value = match key {
+        "XF86PowerOff" => "Power button",
+        "XF86AudioMute" => "Mute key",
+        "XF86AudioMicMute" => "Microphone mute",
+        "XF86AudioRaiseVolume" => "Volume up",
+        "XF86AudioLowerVolume" => "Volume down",
+        "XF86MonBrightnessUp" => "Brightness up",
+        "XF86MonBrightnessDown" => "Brightness down",
+        "XF86KbdBrightnessUp" => "Keyboard light up",
+        "XF86KbdBrightnessDown" => "Keyboard light down",
+        "Print" => "Print Screen",
+        "period" => ".",
+        "grave" => "`",
+        "bracketleft" => "[",
+        "bracketright" => "]",
+        _ if ["return", "escape", "space", "left", "right", "up", "down"]
+            .contains(&key.to_lowercase().as_str()) =>
+        {
+            return key
+                .to_lowercase()
+                .chars()
+                .next()
+                .unwrap()
+                .to_uppercase()
+                .to_string()
+                + &key.to_lowercase()[1..];
+        }
+        _ => return key.to_owned(),
+    };
+    value.to_owned()
+}
+
+fn shortcut_labels(bindings: &[Value]) -> BTreeMap<String, String> {
+    let mut groups = BTreeMap::<String, BTreeMap<u64, BTreeSet<String>>>::new();
+    for binding in bindings {
+        if binding
+            .get("submap")
+            .is_some_and(|value| !value.is_null() && value != "")
+        {
+            continue;
+        }
+        let Some(description) = binding["description"]
+            .as_str()
+            .and_then(|v| v.strip_prefix("Nacre:"))
+        else {
+            continue;
+        };
+        let Some(mask) = binding["modmask"].as_u64() else {
+            continue;
+        };
+        let key = binding["key"]
+            .as_str()
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned)
+            .or_else(|| binding["keycode"].as_u64().map(|v| format!("code:{v}")));
+        let Some(key) = key.filter(|v| v.len() <= 80) else {
+            continue;
+        };
+        groups
+            .entry(description.to_owned())
+            .or_default()
+            .entry(mask)
+            .or_default()
+            .insert(key);
+    }
+    let mut result = BTreeMap::new();
+    for (action, masks) in groups {
+        let mut labels = Vec::new();
+        for (mask, keys) in masks {
+            let mut modifiers = Vec::new();
+            for (bit, label) in [
+                (64, "Super"),
+                (4, "Ctrl"),
+                (8, "Alt"),
+                (1, "Shift"),
+                (2, "CapsLock"),
+                (16, "Mod2"),
+                (32, "Mod3"),
+                (128, "Mod5"),
+            ] {
+                if mask & bit != 0 {
+                    modifiers.push(label);
+                }
+            }
+            let prefix = if modifiers.is_empty() {
+                String::new()
+            } else {
+                format!("{} + ", modifiers.join(" + "))
+            };
+            let numeric = keys
+                .iter()
+                .map(|key| key.parse::<u8>().ok())
+                .collect::<Option<Vec<_>>>();
+            if let Some(mut numbers) = numeric.filter(|values| values.len() >= 3) {
+                numbers.sort_unstable();
+                if numbers == (0..=9).collect::<Vec<_>>() {
+                    labels.push(format!("{prefix}1–9, 0 (workspace 10)"));
+                    continue;
+                }
+                if numbers.windows(2).all(|pair| pair[1] == pair[0] + 1) {
+                    labels.push(format!(
+                        "{prefix}{}–{}",
+                        numbers[0],
+                        numbers[numbers.len() - 1]
+                    ));
+                    continue;
+                }
+            }
+            if keys
+                .iter()
+                .map(|key| key.to_lowercase())
+                .collect::<BTreeSet<_>>()
+                == ["down", "left", "right", "up"]
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect()
+            {
+                labels.push(format!("{prefix}arrows"));
+                continue;
+            }
+            labels.extend(
+                keys.iter()
+                    .map(|key| format!("{prefix}{}", friendly_shortcut_key(key))),
+            );
+        }
+        result.insert(action, labels.join("\n"));
+    }
+    result
+}
+
+fn welcome_shortcut_rows(bindings: &Value) -> Result<Vec<Value>> {
+    let rows = bindings
+        .as_array()
+        .ok_or("Invalid compositor binding list")?;
+    if rows.len() > 10000 {
+        return Err("Invalid compositor binding list".into());
+    }
+    let labels = shortcut_labels(rows);
+    let mut shortcuts = Vec::new();
+    for (action, default_title, default_detail) in WELCOME_SHORTCUTS {
+        let Some(key) = labels.get(*action) else {
+            continue;
+        };
+        let key = key.clone();
+        let mut detail = (*default_detail).to_owned();
+        if *action == "put-away" {
+            let mut parts =
+                vec!["Restore within 30 seconds before the application closes.".to_owned()];
+            for (other, verb) in [("restore", "Restore"), ("close", "Close")] {
+                if let Some(label) = labels.get(other) {
+                    parts.push(format!("{verb} with {}.", label.replace('\n', " or ")));
+                }
+            }
+            detail = parts.join(" ");
+        } else if *action == "workspace" {
+            if let Some(label) = labels.get("move-workspace") {
+                detail = format!(
+                    "{detail} Move the current window with {}.",
+                    label.replace('\n', " or ")
+                );
+            }
+        } else if *action == "screenshot" {
+            if let Some(label) = labels.get("save-screenshot") {
+                detail = format!(
+                    "{detail} Save the whole screen with {}.",
+                    label.replace('\n', " or ")
+                );
+            }
+        }
+        let title_id = format!("welcome.shortcut.{action}.title");
+        shortcuts.push(json!({"titleId":title_id,"id":action,"key":key,"title":crate::i18n::tr(&title_id,default_title),"detail":detail,"group":shortcut_group(action)}));
+    }
+    Ok(shortcuts)
+}
+
+fn welcome_bindings(paths: &Paths) -> Result<Value> {
+    let environment = env::vars().collect::<BTreeMap<_, _>>();
+    if compositor::backend::select(&environment)? == "niri" {
+        let mut backend = compositor::backend::Backend::new(paths.clone(), environment)?;
+        return Ok(backend.module_call("query", &[json!("bindings")], &json!({"timeout":2}))?);
+    }
+    let output = crate::process::run(
+        "hyprctl",
+        &["binds".into(), "-j".into()],
+        None,
+        Duration::from_secs(2),
+    )?;
+    if !output.status.success() {
+        return Err("Hyprland bindings unavailable".into());
+    }
+    Ok(serde_json::from_slice(&output.stdout)?)
+}
+
+fn live_welcome_shortcuts(paths: &Paths) -> (Vec<Value>, String) {
+    let available = env::var_os("HYPRLAND_INSTANCE_SIGNATURE")
+        .is_some_and(|value| !value.is_empty())
+        || env::var_os("NIRI_SOCKET").is_some_and(|value| !value.is_empty());
+    if !available {
+        return (
+            Vec::new(),
+            "Shortcuts are available when running inside your Hyprland session.".into(),
+        );
+    }
+    let rows = welcome_bindings(paths).and_then(|bindings| welcome_shortcut_rows(&bindings));
+    match rows {
+        Ok(rows) if !rows.is_empty() => (rows, String::new()),
+        Ok(_) => (
+            Vec::new(),
+            "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration.".into(),
+        ),
+        Err(_) => (
+            Vec::new(),
+            "Shortcuts are available when running inside your Hyprland session.".into(),
+        ),
+    }
 }
 
 pub fn startup_apps(_arguments: &[String]) -> Result<i32> {
@@ -1227,6 +1658,28 @@ mod tests {
             "1000 1000 1\n",
             "NoNewPrivs:\t1\n"
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn welcome_shortcut_rows_keep_labels_groups_and_related_actions() -> Result<()> {
+        let bindings = json!([
+            {"description":"Nacre:launcher","modmask":64,"key":"SPACE"},
+            {"description":"Nacre:workspace","modmask":64,"key":"1"},
+            {"description":"Nacre:workspace","modmask":64,"key":"2"},
+            {"description":"Nacre:workspace","modmask":64,"key":"3"},
+            {"description":"Nacre:move-workspace","modmask":65,"key":"1"},
+        ]);
+        let rows = welcome_shortcut_rows(&bindings)?;
+        let launcher = rows.iter().find(|row| row["id"] == "launcher").unwrap();
+        assert_eq!(launcher["key"], "Super + Space");
+        assert_eq!(launcher["group"], "Apps and panels");
+        let workspace = rows.iter().find(|row| row["id"] == "workspace").unwrap();
+        assert_eq!(workspace["key"], "Super + 1–3");
+        assert!(workspace["detail"]
+            .as_str()
+            .unwrap()
+            .contains("Move the current window with"));
         Ok(())
     }
     #[test]
