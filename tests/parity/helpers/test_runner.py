@@ -538,18 +538,6 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("FAIL", result.stderr)
         self.assertIn("files", result.stderr)
 
-    def test_effect_argv_and_binary_stdin_are_preserved(self):
-        case = json.loads((HERE / "screenshot/case-region.json").read_text())
-        result = runner.execute(case, None)
-        copied = next(
-            effect for effect in result["effects"] if effect["command"] == "wl-copy"
-        )
-        self.assertEqual(copied["argv"], ["--type", "image/png"])
-        self.assertEqual(copied["stdin_base64"], "iVBORw0KGgo=")
-        changed = json.loads(json.dumps(result))
-        changed["effects"][0]["argv"].append("unexpected")
-        self.assertNotEqual(changed, result)
-
     def test_partial_packet_timeout_and_buffered_packets(self):
         with subprocess.Popen(
             [
@@ -639,36 +627,6 @@ class RunnerTests(unittest.TestCase):
             self.assertEqual(
                 runner.orient_direct_equivalence(value, case)["effects"], [event]
             )
-
-    def test_dbus_equivalent_action_and_wrong_argument(self):
-        case = json.loads(
-            (HERE / "device-actions/case-wifi-radio-dbus-equivalent.json").read_text()
-        )
-        baseline = runner.execute(case, None)
-
-        def candidate(enabled):
-            script = f"""import asyncio,json,os
-from dbus_next import Message, MessageType, Variant
-from dbus_next.aio import MessageBus
-async def main():
-    bus=await MessageBus(bus_address=os.environ['DBUS_SYSTEM_BUS_ADDRESS']).connect()
-    reply=await bus.call(Message(destination='org.freedesktop.NetworkManager',path='/org/freedesktop/NetworkManager',interface='org.freedesktop.DBus.Properties',member='Set',signature='ssv',body=['org.freedesktop.NetworkManager','WirelessEnabled',Variant('b',{enabled!r})]))
-    bus.disconnect()
-    await bus.wait_for_disconnect()
-    print(json.dumps({{'message':'Device updated'}}))
-asyncio.run(main())
-"""
-            return shlex.join(["python3", "-c", script])
-
-        with tempfile.TemporaryDirectory() as directory:
-            trace = Path(directory) / "trace.json"
-            equivalent = runner.execute(case, candidate(False), trace)
-            self.assertEqual(equivalent, baseline)
-            calls = json.loads(trace.read_text())["dbus_calls"]
-            self.assertEqual(calls[0], case["dbus"][0]["match"])
-        wrong = runner.execute(case, candidate(True))
-        self.assertNotEqual(wrong, baseline)
-        self.assertIn("unexpected_dbus", wrong["effects"][0])
 
 
 if __name__ == "__main__":

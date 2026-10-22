@@ -5,51 +5,16 @@ from qml_fixtures import install_foundation_interaction
 
 """Real popup controls and navigation, with fake devices to preserve live connections."""
 
-import importlib.util
 import os
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location("actions", ROOT / "device-actions.py")
-actions = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(actions)
 
 
 class QuickControlsTests(unittest.TestCase):
-    def test_disconnect_is_bounded_to_a_valid_interface(self):
-        self.assertEqual(
-            actions.command("wifi-disconnect", "wlan0"),
-            ["nmcli", "device", "disconnect", "wlan0"],
-        )
-        for interface in ["", "-all", "wlan0;reboot", "wlan0\n", "x" * 65]:
-            with self.assertRaises(ValueError):
-                actions.command("wifi-disconnect", interface)
-
-    def test_network_status_ignores_ethernet_and_disconnected_wifi(self):
-        with patch.object(
-            actions.subprocess,
-            "check_output",
-            side_effect=[
-                "enabled\n",
-                "eth0:ethernet:connected\nwlan1:wifi:disconnected\nwlan0:wifi:connected\n",
-            ],
-        ):
-            self.assertEqual(
-                actions.network_status(), {"enabled": True, "interface": "wlan0"}
-            )
-        with patch.object(
-            actions.subprocess,
-            "check_output",
-            side_effect=["disabled\n", "wlan0:wifi:disconnected\n"],
-        ):
-            self.assertEqual(
-                actions.network_status(), {"enabled": False, "interface": ""}
-            )
-
     def test_popups_and_settings_navigation_in_native_qt(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():

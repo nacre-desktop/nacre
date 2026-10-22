@@ -32,6 +32,11 @@ STATE = HOME / ".local/state/nacre/shell"
 RETIRED_HELPERS = (
     "weather",
     "updates",
+    "desktop-actions",
+    "control-tools",
+    "display-recover",
+    "device-actions",
+    "screenshot",
     "kde-palette",
     "terminal-branding",
     "login-appearance",

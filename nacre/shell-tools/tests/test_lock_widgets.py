@@ -21,8 +21,6 @@ def module(name, file):
 import native_lock_info as info
 import native_lock_config as config
 
-devices = module("devices", "device-actions.py")
-
 
 class LockAndDeviceTests(unittest.TestCase):
     def test_future_snapshot_timestamp_does_not_reuse_private_messages(self):
@@ -184,14 +182,3 @@ class LockAndDeviceTests(unittest.TestCase):
                 self.assertIn(pattern, output)
             self.assertEqual(output.count("input-field {"), 1)
             self.assertNotIn("unlock-session", output)
-
-    def test_device_names_are_arguments_and_actions_are_bounded(self):
-        self.assertEqual(
-            devices.command("wifi-connect", "$(anything); space")[-1],
-            "$(anything); space",
-        )
-        self.assertIn("--ask", devices.command("wifi-connect", "WiFi"))
-        with self.assertRaises(ValueError):
-            devices.command("bluetooth-connect", "AA:BB:CC;anything")
-        with self.assertRaises(ValueError):
-            devices.command("shell", "anything")

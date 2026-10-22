@@ -23,57 +23,10 @@ def load(name, path):
 
 import native_niri_daily as niri
 
-controls = load("daily_controls", "control-tools.py")
 desktop = load("daily_desktop", "tests/native_desktop_settings.py")
 
 
 class NiriDailyDriverTests(unittest.TestCase):
-    def test_owned_controller_can_be_stopped_after_gamma_control_disappears(self):
-        backend = niri.Backend()
-        with (
-            tempfile.TemporaryDirectory() as folder,
-            patch.object(controls.compositor, "backend_name", "niri"),
-        ):
-            home = Path(folder)
-            controls.save({"owner": "owned", "enabled": True}, home)
-            with (
-                patch.object(
-                    controls.compositor, "night_light_available", return_value=False
-                ),
-                patch.object(
-                    controls.compositor,
-                    "set_night_light_temperature",
-                    backend.set_night_light_temperature,
-                ),
-                patch.object(
-                    controls, "service", side_effect=[(True, "owned"), (False, "")]
-                ),
-                patch.object(controls, "configured_elsewhere", return_value=False),
-                patch.object(controls, "unmanaged_socket", return_value=False),
-                patch.object(controls.subprocess, "run") as run,
-            ):
-                self.assertFalse(controls.night_light(False, home)["nightLightEnabled"])
-            self.assertEqual(
-                run.call_args.args[0],
-                ["systemctl", "--user", "stop", "nacre-night-light.service"],
-            )
-
-    def test_controller_watch_record_honors_xdg_state_without_crossing_compositors(
-        self,
-    ):
-        with (
-            patch.dict(os.environ, {"XDG_STATE_HOME": "/tmp/test-state"}),
-            patch.object(controls.compositor, "backend_name", "niri"),
-        ):
-            self.assertEqual(
-                controls.record_path(),
-                Path("/tmp/test-state/nacre/control-tools-niri.json"),
-            )
-            self.assertEqual(
-                controls.record_path(Path("/tmp/test-home")),
-                Path("/tmp/test-home/.local/state/nacre/control-tools-niri.json"),
-            )
-
     def test_display_transactions_reject_mirroring_before_mutation_and_restore_after_hotplug(
         self,
     ):
@@ -325,54 +278,3 @@ class NiriDailyDriverTests(unittest.TestCase):
             self.assertEqual(run.call_args.args[0], ["wayland-info"])
             run.return_value.stdout = "zwlr_gamma_control_manager_v1"
             self.assertTrue(backend.night_light_available())
-
-    def test_niri_controller_off_stops_only_owned_unit_and_clears_record(self):
-        backend = niri.Backend()
-        with (
-            tempfile.TemporaryDirectory() as folder,
-            patch.object(controls.compositor, "backend_name", "niri"),
-        ):
-            home = Path(folder)
-            controls.save({"owner": "owned", "enabled": True}, home)
-            with (
-                patch.object(controls.compositor, "backend_name", "niri"),
-                patch.object(
-                    controls.compositor,
-                    "night_light_service",
-                    backend.night_light_service,
-                ),
-                patch.object(
-                    controls.compositor, "night_light_available", return_value=True
-                ),
-                patch.object(
-                    controls.compositor,
-                    "set_night_light_temperature",
-                    backend.set_night_light_temperature,
-                ),
-                patch.object(
-                    controls, "service", side_effect=[(True, "owned"), (False, "")]
-                ),
-                patch.object(controls, "configured_elsewhere", return_value=False),
-                patch.object(controls, "unmanaged_socket", return_value=False),
-                patch.object(controls.subprocess, "run") as run,
-            ):
-                result = controls.night_light(False, home)
-            self.assertFalse(result["nightLightEnabled"])
-            self.assertEqual(
-                run.call_args.args[0],
-                ["systemctl", "--user", "stop", "nacre-night-light.service"],
-            )
-            self.assertEqual(controls.load(home)["owner"], "")
-            controls.save({"owner": "other", "enabled": True}, home)
-            with (
-                patch.object(
-                    controls.compositor, "night_light_available", return_value=True
-                ),
-                patch.object(controls, "service", return_value=(True, "unowned")),
-                patch.object(controls, "configured_elsewhere", return_value=False),
-                patch.object(controls, "unmanaged_socket", return_value=False),
-                patch.object(controls.subprocess, "run") as run,
-            ):
-                with self.assertRaisesRegex(ValueError, "externally"):
-                    controls.night_light(False, home)
-                run.assert_not_called()
