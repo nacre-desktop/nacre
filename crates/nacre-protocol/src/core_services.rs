@@ -211,6 +211,7 @@ pub struct Notification {
     pub summary: String,
     /// Display content, never evaluated as code; existing markup policy applies.
     pub body: String,
+    #[schemars(schema_with = "notification_urgency_schema")]
     pub urgency: String,
     pub resident: bool,
     pub transient: bool,
@@ -232,6 +233,23 @@ pub struct Notification {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub remaining_ms: Option<u64>,
+    /// Producer revision; absent in legacy snapshots.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub revision: Option<u64>,
+    /// Untrusted display identity hint.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub desktop_entry: Option<String>,
+    /// Effective closed-history retention policy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retained: Option<bool>,
+    /// Projected Unix-ms deadline; producer owns monotonic expiry.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub expires_ms: Option<u64>,
+    /// Hover pause state.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paused: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -260,6 +278,78 @@ pub struct NotificationsState {
     pub history_count: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub history_storage: Option<HistoryStorage>,
+    /// Whether older closed records exist beyond this bounded history window.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub history_more: Option<bool>,
+}
+
+impl NotificationsState {
+    /// Validate a complete producer snapshot; legacy snapshots use `valid`.
+    /// Native admission and actual patch budgets must also be checked by the host.
+    pub fn producer_valid(&self) -> bool {
+        if !CoreSnapshot::Notifications(self.clone()).valid()
+            || self
+                .active
+                .items
+                .keys()
+                .any(|id| self.history.items.contains_key(id))
+            || self.active.items.len() > 128
+            || self.history.items.len() > 64
+            || self.popup_order.is_none()
+            || self.inhibited.is_none()
+            || (self.do_not_disturb && self.inhibited != Some(true))
+            || self.history_storage.as_ref().is_none_or(|storage| {
+                (storage.writable && !storage.ready)
+                    || (storage.ready
+                        && (self.history_count.is_none() || self.history_more.is_none()))
+                    || (!storage.ready
+                        && (self.history_count.is_some() || self.history_more.is_some()))
+            })
+            || ((self.do_not_disturb || self.inhibited == Some(true))
+                && self
+                    .popup_order
+                    .as_ref()
+                    .is_some_and(|order| !order.is_empty()))
+        {
+            return false;
+        }
+        let bounded = self
+            .active
+            .items
+            .values()
+            .chain(self.history.items.values())
+            .all(|n| {
+                let text_ok = |value: &str, max: usize| value.len() <= max && !value.contains('\0');
+                text_ok(&n.app_name, 8192)
+                    && text_ok(&n.summary, 8192)
+                    && text_ok(&n.body, 8192)
+                    && text_ok(n.icon.as_deref().unwrap_or_default(), 8192)
+                    && n.desktop_entry.as_deref().is_none_or(|v| text_ok(v, 1024))
+                    && n.image_path.as_deref().is_none_or(|v| text_ok(v, 4096))
+                    && n.actions.items.len() <= 16
+                    && n.actions.items.values().all(|a| text_ok(&a.label, 1024))
+                    && matches!(n.urgency.as_str(), "low" | "normal" | "critical")
+                    && n.revision
+                        .is_some_and(|revision| revision > 0 && timestamp_valid(revision))
+                    && n.retained.is_some()
+                    && n.paused.is_some()
+                    && !(n.transient && n.retained == Some(true))
+                    && !(n.paused == Some(true) && n.expires_ms.is_some())
+                    && serde_json::to_vec(n).is_ok_and(|encoded| encoded.len() <= 128 * 1024)
+            });
+        if !bounded
+            || serde_json::to_vec(&self.active).map_or(true, |encoded| encoded.len() > 512 * 1024)
+            || serde_json::to_vec(&self.history).map_or(true, |encoded| encoded.len() > 256 * 1024)
+        {
+            return false;
+        }
+        serde_json::to_vec(&serde_json::json!({"t":"snap","topic":"notifications","seq":MAX_SAFE_INTEGER,"data":self}))
+            .is_ok_and(|encoded| encoded.len() < 1_048_576)
+    }
+}
+
+fn notification_urgency_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({"type":"string","enum":["low","normal","critical"]})
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -674,6 +764,10 @@ impl CoreSnapshot {
                             timestamp_valid(n.created_ms)
                                 && n.timeout_ms.is_none_or(timestamp_valid)
                                 && n.remaining_ms.is_none_or(timestamp_valid)
+                                && n.revision.is_none_or(|revision| {
+                                    revision > 0 && timestamp_valid(revision)
+                                })
+                                && n.expires_ms.is_none_or(timestamp_valid)
                                 && n.actions.valid()
                                 && n.image_path
                                     .as_ref()
@@ -807,10 +901,70 @@ pub struct AudioRoute {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Refresh {}
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationDnd {
+    pub enabled: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationDismiss {
+    pub id: EntityId,
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub revision: u64,
+    #[serde(default)]
+    pub forget: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum NotificationClearScope {
+    History,
+    Retained,
+    Popups,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationClear {
+    pub scope: NotificationClearScope,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationActionCall {
+    pub id: EntityId,
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub revision: u64,
+    pub action: EntityId,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationHover {
+    pub id: EntityId,
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub revision: u64,
+    pub hovered: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationInhibited {
+    pub inhibited: bool,
+}
+
 /// Reserved method payloads embedded in call.m / call.p. No backend is registered.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "m", content = "p")]
 pub enum CoreCall {
+    #[serde(rename = "notifications.set_dnd")]
+    NotificationDnd(NotificationDnd),
+    #[serde(rename = "notifications.dismiss")]
+    NotificationDismiss(NotificationDismiss),
+    #[serde(rename = "notifications.clear")]
+    NotificationClear(NotificationClear),
+    #[serde(rename = "notifications.invoke_action")]
+    NotificationAction(NotificationActionCall),
+    #[serde(rename = "notifications.set_hover")]
+    NotificationHover(NotificationHover),
+    #[serde(rename = "notifications.set_inhibited")]
+    NotificationInhibited(NotificationInhibited),
     #[serde(rename = "network.set_wifi")]
     WifiPower(WifiPower),
     #[serde(rename = "network.connect")]
@@ -847,6 +1001,9 @@ impl CoreCall {
     pub fn valid(&self) -> bool {
         match self {
             Self::WifiPower(_)
+            | Self::NotificationDnd(_)
+            | Self::NotificationClear(_)
+            | Self::NotificationInhibited(_)
             | Self::WeatherRefresh(_)
             | Self::UpdatesRefresh(_)
             | Self::CalendarRefresh(_) => true,
@@ -870,6 +1027,15 @@ impl CoreCall {
             }
             Self::AudioMute(p) => p.node.valid(),
             Self::AudioRoute(p) => p.stream.valid() && p.target.valid(),
+            Self::NotificationDismiss(p) => {
+                p.id.valid() && timestamp_valid(p.revision) && p.revision > 0
+            }
+            Self::NotificationAction(p) => {
+                p.id.valid() && p.action.valid() && timestamp_valid(p.revision) && p.revision > 0
+            }
+            Self::NotificationHover(p) => {
+                p.id.valid() && timestamp_valid(p.revision) && p.revision > 0
+            }
         }
     }
 }

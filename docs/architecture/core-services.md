@@ -49,7 +49,7 @@ A failed or ambiguous operation must not update the UI optimistically.
 | `power.profiles` | Available profiles, active ID, optional degraded/unavailable reason | `power.set_profile {profile}` |
 | `battery` | Independent optional battery percentage and charging readback | Topic contract only; no profile selection |
 | `audio` | Input/output/playback/capture nodes, default input/output, stream target IDs | `audio.set_default {node}`; `audio.set_volume {node,volume}`; `audio.set_mute {node,muted}`; `audio.route {stream,target}` |
-| `notifications` | Do-not-disturb state, active notifications, bounded history window | Topic contract only in this step |
+| `notifications` | Do-not-disturb state, active notifications, bounded history window | Phase-A producer contract; runtime advertisement requires daemon bus ownership and usable handlers |
 | `osd` | Service-selected transient volume, microphone, brightness or Caps Lock display | Topic contract only; no control or permission grant |
 | `tray` | Items, local icons, flattened menu maps and child ID lists | Topic contract only in this step |
 | `dashboard.weather` | Provider, checked time, optional current reading with hourly/daily entities | `dashboard.weather.refresh {}` |

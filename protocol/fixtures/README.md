@@ -15,6 +15,12 @@ All messages are exact JSONL wire objects; names and content are synthetic.
 | events | Daemon event, lost range, surviving event; client ping and daemon pong |
 | restart | Welcome/snap, new-boot welcome, client resubscribe, fresh sequence-zero snap |
 | ui | Provider registration, caller call, forwarded provider call, provider ret, caller ret |
+| notifications-lifecycle | Producer state transitions, action replacement, hover timing, suppression, dismissal, forget and expiry |
+| notifications-controls | Typed notifications method requests, acknowledgements and state changes |
+| notifications-errors | Sanitized method failures and retry classifications |
+| notifications-loss-restart | Lost range, explicit resync, fresh boot and snapshot |
+| notifications-ownership | Capability refusal when the daemon does not own the bus |
+| notifications-storage | Unknown history before load, storage failure and later readback |
 
 For state replay, a wrong base must not mutate the last snapshot. `base` matches
 the last delivered sequence even when coalescing skips source revisions. A new
@@ -26,3 +32,7 @@ transcripts: menu-apps (320 keyed items), menu-empty, menu-results (display/pref
 shape examples), and menu-activation (opaque activation/navigation/errors).
 Their query strings illustrate shapes; the Nacre engine defines interpretation.
 No daemon method is advertised/implemented by generating these fixtures.
+The six notifications transcripts are contract examples generated from the
+producer types. They do not claim that a runtime adapter is implemented or that
+the daemon advertises the methods; advertisement remains conditional on usable
+handlers and bus ownership.

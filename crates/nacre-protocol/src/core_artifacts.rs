@@ -53,6 +53,15 @@ pub(crate) fn generate() -> BTreeMap<String, String> {
     }
     luau.push_str("return {}\n");
     out.insert("protocol/luau/core-services.d.luau".into(), luau);
+    out.insert(
+        "protocol/schema/notification-event.json".into(),
+        serde_json::to_string_pretty(&schemars::schema_for!(
+            crate::notifications::NotificationEvent
+        ))
+        .expect("notification event schema")
+            + "\n",
+    );
+    out.extend(crate::notifications::transcripts());
     out.extend(transcripts());
     out
 }

@@ -944,6 +944,13 @@
               "type": "null"
             }
           ]
+        },
+        "history_more": {
+          "description": "Whether older closed records exist beyond this bounded history window.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [
@@ -995,7 +1002,12 @@
           "type": "string"
         },
         "urgency": {
-          "type": "string"
+          "type": "string",
+          "enum": [
+            "low",
+            "normal",
+            "critical"
+          ]
         },
         "resident": {
           "type": "boolean"
@@ -1045,6 +1057,47 @@
           "format": "uint64",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "revision": {
+          "description": "Producer revision; absent in legacy snapshots.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "desktop_entry": {
+          "description": "Untrusted display identity hint.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "retained": {
+          "description": "Effective closed-history retention policy.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "expires_ms": {
+          "description": "Projected Unix-ms deadline; producer owns monotonic expiry.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "paused": {
+          "description": "Hover pause state.",
+          "type": [
+            "boolean",
+            "null"
+          ]
         }
       },
       "required": [

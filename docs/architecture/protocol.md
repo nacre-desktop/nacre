@@ -7,6 +7,9 @@ Contract for nacre-protocol and all Nacre clients. See
 live under `protocol/`; the daemon and native client share the Rust wire types.
 Reserved, schema-only device and hosted-service contracts are documented in
 [core-services.md](core-services.md). They are not runtime capability claims.
+The notifications producer types and six generated transcripts are an accepted
+phase-A contract; runtime advertisement still requires the daemon adapter to
+own the session bus and have usable handlers.
 
 ## Transport and bounds
 

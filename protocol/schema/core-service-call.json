@@ -8,6 +8,102 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "notifications.set_dnd"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationDnd"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "notifications.dismiss"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationDismiss"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "notifications.clear"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationClear"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "notifications.invoke_action"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationActionCall"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "notifications.set_hover"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationHover"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "notifications.set_inhibited"
+        },
+        "p": {
+          "$ref": "#/$defs/NotificationInhibited"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "network.set_wifi"
         },
         "p": {
@@ -245,6 +341,126 @@
     }
   ],
   "$defs": {
+    "NotificationDnd": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ]
+    },
+    "NotificationDismiss": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "forget": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    },
+    "NotificationClear": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "#/$defs/NotificationClearScope"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "scope"
+      ]
+    },
+    "NotificationClearScope": {
+      "type": "string",
+      "enum": [
+        "history",
+        "retained",
+        "popups"
+      ]
+    },
+    "NotificationActionCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "action": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "action"
+      ]
+    },
+    "NotificationHover": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "hovered": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "hovered"
+      ]
+    },
+    "NotificationInhibited": {
+      "type": "object",
+      "properties": {
+        "inhibited": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "inhibited"
+      ]
+    },
     "WifiPower": {
       "type": "object",
       "properties": {
@@ -270,13 +486,6 @@
         "device",
         "target"
       ]
-    },
-    "EntityId": {
-      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 128,
-      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
     },
     "NetworkTarget": {
       "oneOf": [

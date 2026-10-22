@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NotificationEvent",
+  "description": "Event payloads contain identifiers and state revisions only, never notice text.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "shown"
+        },
+        "data": {
+          "$ref": "#/$defs/NoticeRevision"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "updated"
+        },
+        "data": {
+          "$ref": "#/$defs/NoticeRevision"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "closed"
+        },
+        "data": {
+          "$ref": "#/$defs/NoticeClosed"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "action"
+        },
+        "data": {
+          "$ref": "#/$defs/NoticeAction"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "dnd_changed"
+        },
+        "data": {
+          "$ref": "#/$defs/DndChanged"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "history_changed"
+        },
+        "data": {
+          "$ref": "#/$defs/StateChanged"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "const": "presentation_changed"
+        },
+        "data": {
+          "$ref": "#/$defs/StateChanged"
+        }
+      },
+      "required": [
+        "name",
+        "data"
+      ]
+    }
+  ],
+  "$defs": {
+    "NoticeRevision": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "state_seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "state_seq"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    },
+    "NoticeClosed": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "reason": {
+          "$ref": "#/$defs/CloseReason"
+        },
+        "state_seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "reason",
+        "state_seq"
+      ]
+    },
+    "CloseReason": {
+      "type": "string",
+      "enum": [
+        "expired",
+        "dismissed",
+        "application",
+        "other"
+      ]
+    },
+    "NoticeAction": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "revision": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "action": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "state_seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "revision",
+        "action",
+        "state_seq"
+      ]
+    },
+    "DndChanged": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "state_seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "state_seq"
+      ]
+    },
+    "StateChanged": {
+      "type": "object",
+      "properties": {
+        "state_seq": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "state_seq"
+      ]
+    }
+  }
+}

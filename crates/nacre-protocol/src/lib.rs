@@ -8,6 +8,7 @@ pub mod framing;
 pub mod helpers;
 pub mod menu;
 pub mod network;
+pub mod notifications;
 pub mod patch;
 pub mod settings;
 pub mod wallpaper;
