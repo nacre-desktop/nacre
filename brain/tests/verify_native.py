@@ -220,6 +220,39 @@ def cases():
         ),
     )
 
+    add(
+        "extra-curated-identity-collision",
+        [
+            dict(
+                note(
+                    61,
+                    "Alpha",
+                    "A curated entity",
+                    {"entity": "world", "name": "Alpha"},
+                ),
+                path="wiki/alpha/Index.md",
+            ),
+            dict(
+                note(
+                    62,
+                    "Beta",
+                    "Another entity",
+                    {"entity": "world", "name": "Beta", "project": ""},
+                ),
+                path="wiki/beta/Index.md",
+            ),
+            dict(
+                note(
+                    63,
+                    "Gamma",
+                    "An explicit entity",
+                    {"entity": "world", "name": "Gamma", "project": "public.fixture"},
+                ),
+                path="wiki/gamma.md",
+            ),
+        ],
+    )
+
     # Additional public-only cases exercise curated links, explicit entity pages,
     # ordered annotations, merged topics, profile evidence and Unicode identity.
     curated = [

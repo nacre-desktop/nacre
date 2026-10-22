@@ -558,10 +558,18 @@ pub fn organize_mut(
                 .strip_suffix(".md")
                 .unwrap_or(path);
             let sid = aliases.get(&key(label)).cloned().unwrap_or_else(|| {
-                meta["project"]
+                let mut id = meta["project"]
                     .as_str()
-                    .map(slug)
-                    .unwrap_or_else(|| slug(stem))
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_owned)
+                    .unwrap_or_else(|| slug(stem));
+                if subjects
+                    .get(&id)
+                    .is_some_and(|subject| key(&subject.label) != key(label))
+                {
+                    id.push_str(&format!("-{}", digest(label, 6)));
+                }
+                id
             });
             let mut names = vec![label.to_owned(), sid.clone()];
             names.extend(items(&meta["aliases"]));
@@ -1572,6 +1580,41 @@ mod tests {
     fn run(notes: &mut Value, dense: &Value, prior: &Value, overrides: &Value) -> Value {
         organize_mut(notes, dense, prior, overrides).unwrap()
     }
+    #[test]
+    fn curated_identity_collisions_remain_distinct_and_explicit_ids_are_preserved() {
+        let mut notes = json!([
+            note(
+                1,
+                "Alpha",
+                "A curated entity",
+                json!({"entity":"world","name":"Alpha"}),
+                "2026-10-01"
+            ),
+            note(
+                2,
+                "Beta",
+                "Another entity",
+                json!({"entity":"world","name":"Beta","project":""}),
+                "2026-10-01"
+            ),
+            note(
+                3,
+                "Gamma",
+                "An explicit entity",
+                json!({"entity":"world","name":"Gamma","project":"public.fixture"}),
+                "2026-10-01"
+            )
+        ]);
+        notes[0]["path"] = json!("wiki/alpha/Index.md");
+        notes[1]["path"] = json!("wiki/beta/Index.md");
+        notes[2]["path"] = json!("wiki/gamma.md");
+        let result = run(&mut notes, &json!({}), &json!({}), &json!({}));
+        assert_eq!(result[0].as_array().unwrap().len(), 3);
+        assert_eq!(result[0][0]["id"], "index");
+        assert_eq!(result[0][1]["id"], format!("index-{}", digest("Beta", 6)));
+        assert_eq!(result[0][2]["id"], "public.fixture");
+    }
+
     #[test]
     fn unresolved_notes_keep_the_review_membership_and_override_guard() {
         let mut notes = json!([note(
