@@ -661,64 +661,30 @@ fn python_title_initial(ch: char) -> String {
 fn python_title(value: &str) -> String {
     use unicode_general_category::{get_general_category, GeneralCategory};
     let mut result = String::new();
-    let mut lowercase_run = String::new();
-    let mut lowercase_prefix_len = 0;
+    // String lowercase preserves contextual sigma; per-scalar lowercase does not.
+    let lowercase = value.to_lowercase();
+    let mut lower_chars = lowercase.chars();
     let mut previous_cased = false;
     for ch in value.chars() {
         let category = get_general_category(ch);
-        let cased = ch.is_lowercase()
-            || ch.is_uppercase()
-            || category == GeneralCategory::TitlecaseLetter;
+        let cased =
+            ch.is_lowercase() || ch.is_uppercase() || category == GeneralCategory::TitlecaseLetter;
+        let lower: String = lower_chars
+            .by_ref()
+            .take(ch.to_lowercase().count())
+            .collect();
         if cased {
             if previous_cased {
-                lowercase_run.push(ch);
+                result.push_str(&lower);
             } else {
-                append_titlecase_lower_tail(
-                    &mut result,
-                    &mut lowercase_run,
-                    &mut lowercase_prefix_len,
-                );
                 result.push_str(&python_title_initial(ch));
-                lowercase_run.push(ch);
-                lowercase_prefix_len = ch.to_lowercase().count();
             }
-            previous_cased = true;
         } else {
-            let case_ignorable = matches!(
-                category,
-                GeneralCategory::NonspacingMark
-                    | GeneralCategory::EnclosingMark
-                    | GeneralCategory::Format
-                    | GeneralCategory::ModifierLetter
-                    | GeneralCategory::ModifierSymbol
-            );
-            if previous_cased && case_ignorable {
-                lowercase_run.push(ch);
-            } else {
-                append_titlecase_lower_tail(
-                    &mut result,
-                    &mut lowercase_run,
-                    &mut lowercase_prefix_len,
-                );
-                result.push(ch);
-                previous_cased = false;
-            }
+            result.push(ch);
         }
+        previous_cased = cased;
     }
-    append_titlecase_lower_tail(
-        &mut result,
-        &mut lowercase_run,
-        &mut lowercase_prefix_len,
-    );
     result
-}
-
-fn append_titlecase_lower_tail(result: &mut String, run: &mut String, skip: &mut usize) {
-    if !run.is_empty() {
-        result.extend(run.to_lowercase().chars().skip(*skip));
-        run.clear();
-        *skip = 0;
-    }
 }
 
 pub fn organize(notes: &Value, _dense: &Value, _prior: &Value, overrides: &Value) -> Result<Value> {
@@ -1140,10 +1106,21 @@ pub fn organize_mut(
             continue;
         }
         let discovered_id = format!("discovered-{}", slug(&label));
-        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
-            label: &label, ident: Some(&discovered_id), aliases: vec![], origin: "discovered",
-            category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
+        let sid = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            prior,
+            SubjectSeed {
+                label: &label,
+                ident: Some(&discovered_id),
+                aliases: vec![],
+                origin: "discovered",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
         let mut members = Vec::new();
         for nid in ids {
             if assigned.get(&nid).is_some_and(|v| !v.is_empty()) {
@@ -1337,10 +1314,21 @@ pub fn organize_mut(
             }
         }
         let discovered_id = format!("discovered-{}", slug(&label));
-        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
-            label: &label, ident: Some(&discovered_id), aliases: vec![], origin: "discovered",
-            category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
+        let sid = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            prior,
+            SubjectSeed {
+                label: &label,
+                ident: Some(&discovered_id),
+                aliases: vec![],
+                origin: "discovered",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
         for id in &group {
             subjects.get_mut(&sid).unwrap().members.insert(
                 id.clone(),
@@ -1482,10 +1470,21 @@ pub fn organize_mut(
         let (sid, label) = old
             .map(|(id, label, _)| (id, label))
             .unwrap_or_else(|| (format!("discovered-{}", slug(&label)), label));
-        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
-            label: &label, ident: Some(&sid), aliases: vec![], origin: "discovered",
-            category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
+        let sid = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            prior,
+            SubjectSeed {
+                label: &label,
+                ident: Some(&sid),
+                aliases: vec![],
+                origin: "discovered",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
         for nid in &group {
             subjects.get_mut(&sid).unwrap().members.insert(
                 nid.clone(),
@@ -1672,10 +1671,21 @@ pub fn organize_mut(
         {
             continue;
         }
-        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
-            label: &label, ident: Some(&sid), aliases: vec![], origin: "promoted",
-            category: Value::Null, path: Value::Null, parent: json!(parent),
-        });
+        let sid = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            prior,
+            SubjectSeed {
+                label: &label,
+                ident: Some(&sid),
+                aliases: vec![],
+                origin: "promoted",
+                category: Value::Null,
+                path: Value::Null,
+                parent: json!(parent),
+            },
+        );
         for row in rows {
             let nid = row["id"].as_str().unwrap_or("");
             subjects
@@ -1700,7 +1710,15 @@ pub fn organize_mut(
             &mut aliases,
             &mut order,
             prior,
-            SubjectSeed { label: "Needs grouping", ident: Some("review"), aliases: vec![], origin: "review", category: Value::Null, path: Value::Null, parent: Value::Null },
+            SubjectSeed {
+                label: "Needs grouping",
+                ident: Some("review"),
+                aliases: vec![],
+                origin: "review",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
         );
         for n in notes.iter() {
             let nid = n["id"].as_str().unwrap_or("");
@@ -1747,6 +1765,8 @@ mod tests {
         assert_eq!(python_title("ab\u{02B0}CD"), "Ab\u{02B0}cd");
         assert_eq!(python_title("ﬃLE"), "Ffile");
         assert_eq!(python_title("ΟΣ"), "Ος");
+        assert_eq!(python_title("ab\u{0301}CD"), "Ab\u{0301}Cd");
+        assert_eq!(python_title("ΟΣ\u{0301}Α"), "Οσ\u{0301}Α");
     }
     #[test]
     fn canonical_subject_builder_preserves_add_and_resolve_semantics() {
@@ -1754,40 +1774,99 @@ mod tests {
         let mut aliases = BTreeMap::new();
         let mut order = Vec::new();
         let prior = json!({"discovered":[{"id":"prior-id","label":"Explicit Name"}]});
-        let first = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
-            label: "First", ident: Some("shared-id"), aliases: vec!["first-alias".into()],
-            origin: "discovered", category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
-        let second = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
-            label: "Second", ident: Some("shared-id"), aliases: vec!["first-alias".into()],
-            origin: "promoted", category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
-        let reuse = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
-            label: "Second", ident: Some("different-id"), aliases: vec!["new-alias".into()],
-            origin: "manual", category: Value::Null, path: Value::Null, parent: Value::Null,
-        });
+        let first = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            &prior,
+            SubjectSeed {
+                label: "First",
+                ident: Some("shared-id"),
+                aliases: vec!["first-alias".into()],
+                origin: "discovered",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
+        let second = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            &prior,
+            SubjectSeed {
+                label: "Second",
+                ident: Some("shared-id"),
+                aliases: vec!["first-alias".into()],
+                origin: "promoted",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
+        let reuse = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            &prior,
+            SubjectSeed {
+                label: "Second",
+                ident: Some("different-id"),
+                aliases: vec!["new-alias".into()],
+                origin: "manual",
+                category: Value::Null,
+                path: Value::Null,
+                parent: Value::Null,
+            },
+        );
         assert_eq!(first, "shared-id");
         assert_eq!(second, format!("shared-id-{}", digest("Second", 6)));
         assert_eq!(reuse, second);
-        assert!(!subjects.contains_key("prior-id"), "explicit IDs skip prior-label lookup");
-        assert_eq!(subjects[&second].aliases, vec!["Second"]);
+        assert!(
+            !subjects.contains_key("prior-id"),
+            "explicit IDs skip prior-label lookup"
+        );
+        assert_eq!(
+            subjects[&second].aliases,
+            vec!["Second".to_owned(), second.clone()]
+        );
         assert_eq!(resolve_subject(&aliases, "SHARED_ID"), Some(first));
-        assert_eq!(python_title("ACME_ROBOTICS.gardenSense"), "Acme_Robotics.Gardensense");
+        assert_eq!(
+            python_title("ACME_ROBOTICS.gardenSense"),
+            "Acme_Robotics.Gardensense"
+        );
     }
     #[test]
     fn project_resolution_uses_slug_alias_and_python_title_case() {
         let mut notes = json!([
-            note(1, "Bridge page", "Curated bridge", json!({"entity":"project","name":"Bridge","project":"api-bridge"}), "2026-10-01"),
-            note(2, "Bridge work", "API bridge evidence", json!({"project":"API_BRIDGE"}), "2026-10-01"),
-            note(3, "Upper project", "Project evidence", json!({"project":"ACME_ROBOTICS.GardenSense"}), "2026-10-01")
+            note(
+                1,
+                "Bridge page",
+                "Curated bridge",
+                json!({"entity":"project","name":"Bridge","project":"api-bridge"}),
+                "2026-10-01"
+            ),
+            note(
+                2,
+                "Bridge work",
+                "API bridge evidence",
+                json!({"project":"API_BRIDGE"}),
+                "2026-10-01"
+            ),
+            note(
+                3,
+                "Upper project",
+                "Project evidence",
+                json!({"project":"ACME_ROBOTICS.GardenSense"}),
+                "2026-10-01"
+            )
         ]);
         notes[0]["path"] = json!("wiki/bridge.md");
         let out = run(&mut notes, &json!({}), &json!({}), &json!({}));
         assert_eq!(notes[0]["memberships"][0]["subject"], "api-bridge");
         assert_eq!(notes[1]["memberships"][0]["subject"], "api-bridge");
         assert!(out[0].as_array().unwrap().iter().any(|s| {
-            s["id"] == "acme-robotics-gardensense"
-                && s["label"] == "Acme_Robotics.Gardensense"
+            s["id"] == "acme-robotics-gardensense" && s["label"] == "Acme_Robotics.Gardensense"
         }));
     }
     #[test]
