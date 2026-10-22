@@ -18,7 +18,7 @@ jobs:
     container:
       image: ghcr.io/archlinux/archlinux:latest
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
-      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cpus=10 --memory=28g
+      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
     steps:
       - name: Rolling package cache key
         id: cache_epoch
@@ -158,7 +158,7 @@ jobs:
     runs-on: ${{ fromJSON(vars.NACRE_CI_RUNNER || '["self-hosted","linux","nacre-ci"]') }}
     container:
       image: ghcr.io/archlinux/archlinux:latest
-      options: --cpus=10 --memory=28g
+      options: ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
     timeout-minutes: 10
     steps:
       - name: Rolling package cache key

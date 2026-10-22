@@ -30,7 +30,7 @@ Three ephemeral runners use the official Actions runner, pinned to a verified
 release digest, in the dedicated `nacre-ci-runners` Compose project. Each
 registration accepts one job, then the supervisor resets the runner state and
 registers again. Labels are `self-hosted,linux,x64,nacre-ci`. Both runner and
-job containers have 10 CPU / 28 GiB limits. Container jobs require the host
+self-hosted job containers have 10 CPU / 28 GiB limits. Container jobs require the host
 Docker socket: this grants host-level Docker access, so ephemeral registration
 is not a security boundary against malicious workflow code. Only trusted
 maintainer main-branch code belongs here. Registration credentials stay outside
@@ -44,7 +44,8 @@ Hosted fallback (one command):
 `gh variable set NACRE_CI_RUNNER --repo nacre-desktop/nacre --body '["ubuntu-22.04"]'`.
 Delete that variable to restore the self-hosted default. The expression uses
 `fromJSON`, so the variable must contain a JSON array. The Arch job images and
-sandbox options remain in effect with either runner. Bead documents its Ubuntu
+sandbox options remain in effect with either runner. Ubuntu fallback jobs use
+the hosted VM resource limits, avoiding a Docker CPU quota above its CPU count. Bead documents its Ubuntu
 24.04 fallback in its own CI guide.
 
 ## Parity sandbox
