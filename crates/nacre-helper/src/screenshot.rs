@@ -158,10 +158,8 @@ pub fn run(args: &[String]) -> Result<i32> {
         }
         Ok(None) => Ok(0),
         Err(error) => {
-            notify(&tr(
-                "capture.notification.failed",
-                &format!("Capture failed: {error}"),
-            ));
+            let message = tr("capture.notification.failed", "Capture failed: {error}");
+            notify(&message.replace("{error}", &error.to_string()));
             let _ = error;
             Ok(1)
         }
