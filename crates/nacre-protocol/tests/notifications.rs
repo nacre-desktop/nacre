@@ -223,6 +223,18 @@ fn producer_bounds_are_strict_without_rejecting_legacy_state() {
     let mut state = baseline_state();
     assert!(state.producer_valid());
 
+    let mut pre_default_action_wire = serde_json::to_value(&state).unwrap();
+    let notice = pre_default_action_wire["active"]["items"]
+        .as_object_mut()
+        .unwrap()
+        .values_mut()
+        .next()
+        .unwrap();
+    notice.as_object_mut().unwrap().remove("default_action");
+    let decoded: nacre_protocol::core_services::NotificationsState =
+        serde_json::from_value(pre_default_action_wire).unwrap();
+    assert_eq!(decoded.active.items.values().next().unwrap().default_action, None);
+
     let mut legacy = state.clone();
     legacy.active.items.values_mut().next().unwrap().revision = None;
     legacy.active.items.values_mut().next().unwrap().retained = None;
