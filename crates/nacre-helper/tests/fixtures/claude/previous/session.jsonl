@@ -1,2 +1,2 @@
-{"type":"user","uuid":"33333333-3333-4333-8333-333333333333","cwd":"/fixture","message":{"content":"Fixture previous prompt"},"timestamp":"2023-11-14T22:13:20Z"}
+{"type":"user","uuid":"33333333-3333-4333-8333-333333333333","message":{"content":"Fixture previous prompt"},"timestamp":"2023-11-14T22:13:20Z","version":"1.0.67"}
 {"type":"assistant","uuid":"44444444-4444-4444-8444-444444444444","message":{"content":"Fixture previous answer"}}
