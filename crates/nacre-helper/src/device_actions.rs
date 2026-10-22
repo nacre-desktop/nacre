@@ -362,7 +362,7 @@ mod tests {
                 .map(str::to_owned)
                 .collect::<Vec<_>>()
         );
-        assert_eq!(valid_mac("AA:BB:CC:DD:EE:FF"), true);
+        assert!(valid_mac("AA:BB:CC:DD:EE:FF"));
         assert!(!valid_interface("bad/name"));
         assert_eq!(
             failure_json("Failed to connect"),

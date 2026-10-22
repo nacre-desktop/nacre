@@ -140,11 +140,7 @@ fn recover(view: Value, saved: Option<PathBuf>) -> Result<i32> {
     }
     let qs = format!("{}/bin/qs", paths.share.display());
     let call = |args: &[&str], timeout: Duration| {
-        let all = [
-            vec!["-c", "nacre", "ipc", "call", "nacre"],
-            args.iter().copied().collect(),
-        ]
-        .concat();
+        let all = [vec!["-c", "nacre", "ipc", "call", "nacre"], args.to_vec()].concat();
         run_command(&qs, &all, timeout)
     };
     let deadline = Instant::now() + Duration::from_secs(15);

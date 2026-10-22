@@ -199,8 +199,11 @@ impl AiRuntime for NativeAiRuntime {
         compositor_windows(&mut self.backend)
     }
     fn focus(&mut self, address: &Value) -> Result<()> {
-        self.backend
-            .action("focus_window", &[address.clone()], &json!({"timeout":10}))?;
+        self.backend.action(
+            "focus_window",
+            std::slice::from_ref(address),
+            &json!({"timeout":10}),
+        )?;
         Ok(())
     }
     fn switch_workspace(&mut self, workspace: u64) -> Result<()> {
@@ -274,7 +277,11 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
         let address = json!(value);
         let valid = backend.valid_window_id(&address);
         focus_address(&address, valid, |address| {
-            backend.action("focus_window", &[address.clone()], &json!({"timeout":10}))?;
+            backend.action(
+                "focus_window",
+                std::slice::from_ref(address),
+                &json!({"timeout":10}),
+            )?;
             Ok(())
         })?;
         return Ok(());
@@ -289,7 +296,11 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
             let address = windows[0]["address"].clone();
             let valid = backend.valid_window_id(&address);
             focus_address(&address, valid, |id| {
-                backend.action("focus_window", &[id.clone()], &json!({"timeout":10}))?;
+                backend.action(
+                    "focus_window",
+                    std::slice::from_ref(id),
+                    &json!({"timeout":10}),
+                )?;
                 Ok(())
             })?;
             return Ok(());
