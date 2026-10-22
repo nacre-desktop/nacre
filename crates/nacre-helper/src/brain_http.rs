@@ -143,7 +143,7 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
             let handoff = query_value(&request.query, "handoff").as_deref() == Some("1");
             let mut response = Response::new(303, "text/plain", Vec::new());
             response.headers.push(("Set-Cookie".into(), format!("{}={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}", auth.cookie_name(), auth.cookie_value(), auth.cookie_max_age())));
-            response.headers.push(("Location".into(), if handoff { "/auth-complete" } else { "/" }.into()));
+            response.headers.push(("Location".into(), format!("{}#nacre-auth={}", if handoff { "/auth-complete" } else { "/" }, auth.bearer_value())));
             response.headers.push(("Referrer-Policy".into(), "no-referrer".into()));
             response.headers.push(("Cache-Control".into(), "no-store".into()));
             return Err(response);
@@ -151,15 +151,17 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
     }
     if request.method == "POST" {
         let cookie_ok = request.headers.get("cookie").is_some_and(|value| cookie_from(value, &auth.cookie_name()).is_some_and(|cookie| auth.cookie_valid(cookie)));
-        if !cookie_ok || origin.map(String::as_str) != Some(canonical.as_str()) || request.headers.get("content-type").map(String::as_str) != Some("application/json") || request.headers.get("sec-fetch-site").is_some_and(|value| value != "same-origin") {
+        let bearer_ok = request.headers.get("x-nacre-brain-authorization").is_some_and(|value| auth.bearer_valid(value));
+        if !cookie_ok || !bearer_ok || origin.map(String::as_str) != Some(canonical.as_str()) || request.headers.get("content-type").map(String::as_str) != Some("application/json") || request.headers.get("sec-fetch-site").is_some_and(|value| value != "same-origin") {
             return Err(Response::error(403));
         }
     } else if request.path.starts_with("/api/") && request.path != "/api/health" {
         let cookie_ok = request.headers.get("cookie").is_some_and(|value| cookie_from(value, &auth.cookie_name()).is_some_and(|cookie| auth.cookie_valid(cookie)));
+        let bearer_ok = request.headers.get("x-nacre-brain-authorization").is_some_and(|value| auth.bearer_valid(value));
         let fetch_ok = request.headers.get("sec-fetch-site").map(String::as_str) == Some("same-origin");
         let origin_ok = origin.is_none_or(|value| value == &canonical);
         let referer_ok = referer.is_none_or(|value| value.starts_with(&(canonical.clone() + "/")) || value == &canonical);
-        if !cookie_ok || !fetch_ok || !origin_ok || !referer_ok { return Err(Response::error(403)); }
+        if !cookie_ok || !bearer_ok || !fetch_ok || !origin_ok || !referer_ok { return Err(Response::error(403)); }
     }
     if request.headers.get("content-type").is_some_and(|value| value.starts_with("application/json")) {
         if !matches!(serde_json::from_slice::<Value>(&request.body), Ok(Value::Object(_))) { return Err(Response::error(400)); }
@@ -232,7 +234,7 @@ fn read_request(stream: &mut TcpStream) -> io::Result<Option<Request>> {
         if start.elapsed() >= IO_DEADLINE { return Ok(Some(bad_request())); }
     };
     if header_end > HEADER_LIMIT { return Ok(Some(bad_request())); }
-    let header_text = match std::str::from_utf8(&bytes[..header_end - 4]) { Ok(value) => value, Err(_) => return Ok(Some(bad_request())) };
+    let header_text = match std::str::from_utf8(&bytes[..header_end - 4]) { Ok(value) => value.to_owned(), Err(_) => return Ok(Some(bad_request())) };
     let mut lines = header_text.split("\r\n");
     let Some(first) = lines.next() else { return Ok(Some(bad_request())) };
     let mut parts = first.split(' ');
@@ -318,17 +320,20 @@ mod tests {
         let attacker_port = attacker.local_addr().unwrap().port();
         let mut auth = BrowserAuth::open(dir.path(), port).unwrap();
         let cookie = format!("{}={}", auth.cookie_name(), auth.cookie_value());
+        let bearer = auth.bearer_value().to_owned();
         let token = auth.bootstrap_token().unwrap().to_owned();
         assert!(auth.consume_bootstrap(&token));
         let mut headers = BTreeMap::new();
         headers.insert("host".into(), format!("127.0.0.1:{port}"));
         headers.insert("cookie".into(), cookie);
+        headers.insert("x-nacre-brain-authorization".into(), bearer.clone());
         headers.insert("sec-fetch-site".into(), "same-site".into());
         let response = authorize(Request { method: "GET".into(), path: "/api/brain".into(), query: String::new(), headers, body: Vec::new() }, port, &mut auth);
         assert_eq!(response.unwrap_err().status, 403);
         let mut headers = BTreeMap::new();
         headers.insert("host".into(), format!("127.0.0.1:{port}"));
         headers.insert("cookie".into(), format!("{}={}", auth.cookie_name(), auth.cookie_value()));
+        headers.insert("x-nacre-brain-authorization".into(), bearer);
         headers.insert("sec-fetch-site".into(), "same-site".into());
         headers.insert("origin".into(), format!("http://127.0.0.1:{attacker_port}"));
         headers.insert("referer".into(), format!("http://127.0.0.1:{attacker_port}/"));
@@ -344,11 +349,13 @@ mod tests {
         let port = 17843;
         let mut auth = BrowserAuth::open(dir.path(), port).unwrap();
         let cookie = format!("{}={}", auth.cookie_name(), auth.cookie_value());
+        let bearer = auth.bearer_value().to_owned();
         let canonical = format!("http://127.0.0.1:{port}");
         let make = |method: &str, path: &str, body: &[u8]| {
             let mut headers = BTreeMap::new();
             headers.insert("host".into(), format!("127.0.0.1:{port}"));
             headers.insert("cookie".into(), cookie.clone());
+            headers.insert("x-nacre-brain-authorization".into(), bearer.clone());
             headers.insert("origin".into(), canonical.clone());
             headers.insert("sec-fetch-site".into(), "same-origin".into());
             headers.insert("content-type".into(), "application/json".into());
@@ -358,6 +365,12 @@ mod tests {
         missing_cookie.headers.remove("cookie");
         assert_eq!(authorize(missing_cookie, port, &mut auth).unwrap_err().status, 403);
         assert_eq!(authorize(make("GET", "/api/brain", &[]), port, &mut auth).unwrap().path, "/api/brain");
+        let mut stolen_cookie = make("GET", "/api/brain", &[]);
+        stolen_cookie.headers.remove("x-nacre-brain-authorization");
+        assert_eq!(authorize(stolen_cookie, port, &mut auth).unwrap_err().status, 403);
+        let mut wrong_bearer = make("GET", "/api/brain", &[]);
+        wrong_bearer.headers.insert("x-nacre-brain-authorization".into(), "stolen".into());
+        assert_eq!(authorize(wrong_bearer, port, &mut auth).unwrap_err().status, 403);
 
         let invalid_json = [b"[]".as_slice(), b"null", b"42", b"\"text\""];
         for body in invalid_json {
@@ -367,6 +380,7 @@ mod tests {
 
         for (name, value) in [
             ("cookie", "nacre_brain_bad=wrong"),
+            ("x-nacre-brain-authorization", "stolen"),
             ("origin", "http://evil.invalid"),
             ("host", "evil.invalid"),
             ("content-type", "application/x-www-form-urlencoded"),
@@ -375,6 +389,28 @@ mod tests {
             request.headers.insert(name.into(), value.into());
             assert_eq!(authorize(request, port, &mut auth).unwrap_err().status, 403, "{name}");
         }
+    }
+
+    #[test]
+    fn bootstrap_redirect_delivers_bearer_only_in_origin_fragment() {
+        let dir = tempfile::tempdir().unwrap();
+        let port = 17843;
+        let mut auth = BrowserAuth::open(dir.path(), port).unwrap();
+        let token = auth.bootstrap_token().unwrap().to_owned();
+        let bearer = auth.bearer_value().to_owned();
+        let mut headers = BTreeMap::new();
+        headers.insert("host".into(), format!("127.0.0.1:{port}"));
+        let result = authorize(Request {
+            method: "GET".into(),
+            path: "/".into(),
+            query: format!("token={token}&handoff=1"),
+            headers,
+            body: Vec::new(),
+        }, port, &mut auth);
+        let response = result.unwrap_err();
+        assert_eq!(response.status, 303);
+        assert!(response.headers.iter().any(|(name, value)| name == "Location" && value == &format!("/auth-complete#nacre-auth={bearer}")));
+        assert!(response.headers.iter().any(|(name, value)| name == "Set-Cookie" && value.contains("HttpOnly")));
     }
 
     #[test]

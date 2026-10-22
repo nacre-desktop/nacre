@@ -14,6 +14,7 @@ const SESSION_TTL: u64 = 30 * 24 * 60 * 60;
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionFile {
     cookie: String,
+    bearer: String,
     expires: u64,
 }
 
@@ -31,6 +32,7 @@ pub struct BrowserAuth {
     directory: PathBuf,
     port: u16,
     cookie: String,
+    bearer: String,
     cookie_expires: u64,
     bootstrap: Option<BootstrapFile>,
 }
@@ -38,16 +40,17 @@ pub struct BrowserAuth {
 impl BrowserAuth {
     pub fn open(state: &Path, port: u16) -> io::Result<Self> {
         let directory = state.join("auth").join("ports");
-        create_private_dirs(&directory)?;
-        fs::set_permissions(state.join("auth"), fs::Permissions::from_mode(0o700))?;
-        fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
+        secure_state_dirs(state, &directory)?;
+        let _lock = auth_lock(&directory, port)?;
         let session_path = directory.join(format!("{port}.json"));
         refuse_symlink(&session_path)?;
         let existing = if session_path.exists() {
             let contents = read_private(&session_path, 4096)?;
             serde_json::from_slice::<SessionFile>(&contents)
                 .ok()
-                .filter(|value| value.expires > now().unwrap_or(0) && value.cookie.len() == 64 && value.cookie.bytes().all(|b| b.is_ascii_hexdigit()))
+                .filter(|value| value.expires > now().unwrap_or(0)
+                    && valid_secret(&value.cookie)
+                    && valid_secret(&value.bearer))
         } else {
             None
         };
@@ -55,11 +58,15 @@ impl BrowserAuth {
             Some(value) => value.cookie.clone(),
             None => random_hex()?,
         };
+        let bearer = match &existing {
+            Some(value) => value.bearer.clone(),
+            None => random_hex()?,
+        };
         let cookie_expires = match existing {
             Some(value) => value.expires,
             None => now()?.saturating_add(SESSION_TTL),
         };
-        write_private(&session_path, &to_json(&SessionFile { cookie: cookie.clone(), expires: cookie_expires })?)?;
+        write_private(&session_path, &to_json(&SessionFile { cookie: cookie.clone(), bearer: bearer.clone(), expires: cookie_expires })?)?;
         let bootstrap = BootstrapFile {
             token: random_hex()?,
             expires: now()?.saturating_add(BOOTSTRAP_TTL),
@@ -70,12 +77,13 @@ impl BrowserAuth {
         )?;
         write_handoff(state, port, &bootstrap.token, false)?;
         write_handoff(state, port, &bootstrap.token, true)?;
-        Ok(Self { directory, port, cookie, cookie_expires, bootstrap: Some(bootstrap) })
+        Ok(Self { directory, port, cookie, bearer, cookie_expires, bootstrap: Some(bootstrap) })
     }
 
     /// A distinct session lookup key; browser cookie transport itself is host-scoped.
     pub fn cookie_name(&self) -> String { format!("nacre_brain_{}", self.port) }
     pub fn cookie_value(&self) -> &str { &self.cookie }
+    pub fn bearer_value(&self) -> &str { &self.bearer }
     pub fn cookie_max_age(&self) -> u64 { self.cookie_expires.saturating_sub(now().unwrap_or(0)) }
     pub fn bootstrap_token(&self) -> Option<&str> { self.bootstrap.as_ref().map(|value| value.token.as_str()) }
 
@@ -83,8 +91,13 @@ impl BrowserAuth {
         self.cookie_expires >= now().unwrap_or(0) && constant_time_eq(self.cookie.as_bytes(), candidate.as_bytes())
     }
 
+    pub fn bearer_valid(&self, candidate: &str) -> bool {
+        self.cookie_expires >= now().unwrap_or(0) && constant_time_eq(self.bearer.as_bytes(), candidate.as_bytes())
+    }
+
     /// Consume and persistently revoke the startup token on its first successful use.
     pub fn consume_bootstrap(&mut self, candidate: &str) -> bool {
+        let Ok(_lock) = auth_lock(&self.directory, self.port) else { return false };
         self.bootstrap = read_bootstrap(&self.directory.join(format!("{}.bootstrap.json", self.port))).ok();
         let Some(value) = self.bootstrap.as_ref() else { return false };
         if value.expires <= now().unwrap_or(0) || !constant_time_eq(value.token.as_bytes(), candidate.as_bytes()) {
@@ -94,7 +107,7 @@ impl BrowserAuth {
         let path = self.directory.join(format!("{}.bootstrap.json", self.port));
         if fs::remove_file(path).is_err() { return false; }
         let marker = self.directory.join(format!("{}.browser.json", self.port));
-        let digest = format!("{:x}", Sha256::digest(self.cookie.as_bytes()));
+        let digest = format!("{:x}", Sha256::digest(format!("{}\0{}", self.cookie, self.bearer).as_bytes()));
         to_json(&serde_json::json!({"session": digest})).and_then(|bytes| write_private(&marker, &bytes)).is_ok()
     }
 }
@@ -102,9 +115,8 @@ impl BrowserAuth {
 /// Rotate bootstrap and materialize a handoff page for an explicit browser launch.
 pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<PathBuf> {
     let directory = state.join("auth").join("ports");
-    create_private_dirs(&directory)?;
-    fs::set_permissions(state.join("auth"), fs::Permissions::from_mode(0o700))?;
-    fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
+    secure_state_dirs(state, &directory)?;
+    let _lock = auth_lock(&directory, port)?;
     let bootstrap = BootstrapFile { token: random_hex()?, expires: now()?.saturating_add(BOOTSTRAP_TTL) };
     write_private(&directory.join(format!("{port}.bootstrap.json")), &to_json(&bootstrap)?)?;
     write_handoff(state, port, &bootstrap.token, handoff)?;
@@ -122,6 +134,8 @@ fn write_handoff(state: &Path, port: u16, token: &str, handoff: bool) -> io::Res
 /// True when a browser has completed bootstrap for the persistent session on port.
 pub fn browser_ready(state: &Path, port: u16) -> io::Result<bool> {
     let directory = state.join("auth").join("ports");
+    secure_state_dirs(state, &directory)?;
+    let _lock = auth_lock(&directory, port)?;
     let session = directory.join(format!("{port}.json"));
     let marker = directory.join(format!("{port}.browser.json"));
     refuse_symlink(&session)?;
@@ -137,7 +151,7 @@ pub fn browser_ready(state: &Path, port: u16) -> io::Result<bool> {
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
         Err(error) => return Err(error),
     };
-    let expected = format!("{:x}", Sha256::digest(session.cookie.as_bytes()));
+    let expected = format!("{:x}", Sha256::digest(format!("{}\0{}", session.cookie, session.bearer).as_bytes()));
     Ok(stored.get("session").and_then(serde_json::Value::as_str).is_some_and(|value| constant_time_eq(value.as_bytes(), expected.as_bytes())))
 }
 
@@ -149,9 +163,10 @@ fn read_private(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
     refuse_symlink(path)?;
     let mut file = OpenOptions::new().read(true).custom_flags(nix::libc::O_NOFOLLOW).open(path)?;
     let metadata = file.metadata()?;
-    if !metadata.is_file() || metadata.nlink() != 1 || metadata.len() > limit || metadata.mode() & 0o077 != 0 {
+    if !metadata.is_file() || metadata.nlink() != 1 || metadata.uid() != nix::unistd::getuid().as_raw() || metadata.len() > limit {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "unsafe authentication state file"));
     }
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
     file.take(limit.saturating_add(1)).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limit {
@@ -160,8 +175,38 @@ fn read_private(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
     Ok(bytes)
 }
 
+fn secure_state_dirs(state: &Path, ports: &Path) -> io::Result<()> {
+    create_private_dirs(ports)?;
+    fs::set_permissions(state, fs::Permissions::from_mode(0o700))?;
+    fs::set_permissions(state.join("auth"), fs::Permissions::from_mode(0o700))?;
+    fs::set_permissions(ports, fs::Permissions::from_mode(0o700))
+}
+
+fn auth_lock(directory: &Path, port: u16) -> io::Result<std::fs::File> {
+    let path = directory.join(format!("{port}.lock"));
+    refuse_symlink(&path)?;
+    let file = OpenOptions::new()
+        .create(true)
+        .read(true)
+        .write(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(&path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.nlink() != 1 || metadata.uid() != nix::unistd::getuid().as_raw() {
+        return Err(io::Error::new(io::ErrorKind::PermissionDenied, "unsafe authentication lock"));
+    }
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    nix::fcntl::flock(&file, nix::fcntl::FlockArg::LockExclusive).map_err(io::Error::from)?;
+    Ok(file)
+}
+
 fn to_json<T: Serialize>(value: &T) -> io::Result<Vec<u8>> {
     serde_json::to_vec(value).map_err(io::Error::other)
+}
+
+fn valid_secret(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
 }
 
 fn now() -> io::Result<u64> {
@@ -256,7 +301,7 @@ mod tests {
         let mut restarted = BrowserAuth::open(dir.path(), 17843).unwrap();
         assert!(!restarted.consume_bootstrap(&refreshed));
         assert!(restarted.cookie_valid(&cookie));
-        let expired = SessionFile { cookie: restarted.cookie_value().to_owned(), expires: now().unwrap() - 1 };
+        let expired = SessionFile { cookie: restarted.cookie_value().to_owned(), bearer: restarted.bearer_value().to_owned(), expires: now().unwrap() - 1 };
         write_private(&dir.path().join("auth/ports/17843.json"), &to_json(&expired).unwrap()).unwrap();
         let rotated = BrowserAuth::open(dir.path(), 17843).unwrap();
         assert_ne!(rotated.cookie_value(), cookie);
@@ -267,6 +312,8 @@ mod tests {
         assert_eq!(fs::metadata(dir.path().join("auth/ports/17843.json")).unwrap().permissions().mode() & 0o777, 0o600);
         assert_eq!(fs::metadata(dir.path().join("auth")).unwrap().permissions().mode() & 0o777, 0o700);
         assert_eq!(fs::metadata(dir.path().join("auth/ports")).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(fs::metadata(dir.path()).unwrap().permissions().mode() & 0o777, 0o700);
+        assert_eq!(fs::metadata(dir.path().join("auth/ports/17843.lock")).unwrap().permissions().mode() & 0o777, 0o600);
         for filename in ["open.html", "handoff.html"] {
             assert_eq!(fs::metadata(dir.path().join("auth").join(filename)).unwrap().permissions().mode() & 0o777, 0o600);
         }
@@ -289,7 +336,7 @@ mod tests {
         fs::create_dir_all(&ports).unwrap();
         let session = ports.join("17843.json");
         let linked_source = dir.path().join("source.json");
-        fs::write(&linked_source, br#"{"cookie":"0123456789012345678901234567890123456789012345678901234567890123","expires":4102444800}"#).unwrap();
+        fs::write(&linked_source, br#"{"cookie":"0123456789012345678901234567890123456789012345678901234567890123","bearer":"abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789","expires":4102444800}"#).unwrap();
         fs::set_permissions(&linked_source, fs::Permissions::from_mode(0o600)).unwrap();
         fs::hard_link(&linked_source, &session).unwrap();
         assert!(BrowserAuth::open(dir.path(), 17843).is_err());
@@ -299,5 +346,40 @@ mod tests {
         fs::write(&session, vec![b'x'; 4097]).unwrap();
         fs::set_permissions(&session, fs::Permissions::from_mode(0o600)).unwrap();
         assert!(BrowserAuth::open(dir.path(), 17843).is_err());
+    }
+
+    #[test]
+    fn repairs_permissions_on_existing_state_directories() {
+        let dir = tempfile::tempdir().unwrap();
+        let auth = dir.path().join("auth");
+        let ports = auth.join("ports");
+        fs::create_dir(&auth).unwrap();
+        fs::create_dir(&ports).unwrap();
+        fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o755)).unwrap();
+        fs::set_permissions(&auth, fs::Permissions::from_mode(0o755)).unwrap();
+        fs::set_permissions(&ports, fs::Permissions::from_mode(0o755)).unwrap();
+        let _server_auth = BrowserAuth::open(dir.path(), 17843).unwrap();
+        for path in [dir.path(), auth.as_path(), ports.as_path()] {
+            assert_eq!(fs::metadata(path).unwrap().permissions().mode() & 0o777, 0o700);
+        }
+    }
+
+    #[test]
+    fn concurrent_bootstrap_refresh_leaves_page_and_token_in_sync() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut auth = BrowserAuth::open(dir.path(), 17843).unwrap();
+        let mut workers = Vec::new();
+        for _ in 0..8 {
+            let state = dir.path().to_path_buf();
+            workers.push(std::thread::spawn(move || {
+                for _ in 0..8 {
+                    refresh_bootstrap(&state, 17843, false).unwrap();
+                }
+            }));
+        }
+        for worker in workers { worker.join().unwrap(); }
+        let page = fs::read_to_string(dir.path().join("auth/open.html")).unwrap();
+        let token = page.split("token=").nth(1).unwrap().split('&').next().unwrap().to_owned();
+        assert!(auth.consume_bootstrap(&token));
     }
 }
