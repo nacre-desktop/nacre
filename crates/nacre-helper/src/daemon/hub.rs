@@ -281,9 +281,14 @@ impl Hub {
     }
     fn fixed_methods(&self) -> BTreeMap<String, Method> {
         let mut methods = nacre_protocol::core_methods();
+        methods.extend(super::bar_services::available_methods(self));
+        if !self.safe {
+            methods.extend(super::pill_controls::methods());
+        }
         if self.settings.is_some() {
             methods.extend(super::settings::methods());
         }
+        methods.extend(super::shell_actions::available_methods(self));
         if self.compositor.is_some() && self.topics.contains_key(super::niri_events::TOPIC) {
             methods.extend(super::niri_actions::methods());
         }

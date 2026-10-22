@@ -481,6 +481,36 @@ fn normalize_window(value: Value) -> Result<Value> {
     Ok(Value::Object(row))
 }
 impl<T: Transport> Backend<T> {
+    fn activate_workspace_index_on_output(
+        &mut self,
+        output: &str,
+        index: u16,
+        timeout: f64,
+    ) -> Result<Value> {
+        if !(1..=255).contains(&index)
+            || output.is_empty()
+            || output.len() > 128
+            || !output
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"._:-".contains(&byte))
+        {
+            return Err(invalid("Invalid output workspace target"));
+        }
+        let monitor = table(&json!({"monitor":output}))?;
+        let workspace = table(&json!({"workspace":index,"on_current_monitor":true}))?;
+        let output_name = lua(&json!(output))?;
+        self.transport.run(
+            vec![
+                "eval".into(),
+                format!(
+                    "if hl.get_monitor({output_name})==nil or hl.get_workspace({index})~=nil then error(\"Workspace target changed\") end;hl.dispatch(hl.dsp.focus({monitor}));hl.dispatch(hl.dsp.focus({workspace}))"
+                ),
+            ],
+            timeout,
+            true,
+        )
+    }
+
     pub fn environment_updates(&mut self, environment: &Value) -> Result<Value> {
         let result = self
             .transport
@@ -638,7 +668,12 @@ impl<T: Transport> Backend<T> {
             "set_animations"=>self.transport.run(vec!["eval".into(),render_options(&json!({"animations":{"enabled":argument(0,"enabled")}}))?],timeout,true),
             "set_performance"=>if !truthy(&argument(0,"enabled")){self.execute("reload",&[],kwargs)}else{self.execute("set_options",&[performance_options()],kwargs)},
             "parse_event"=>Ok(parse_event(argument(0,"line").as_str().ok_or_else(||invalid("Invalid compositor event"))?)),
-            "switch_workspace"=>self.action("focus",json!({"workspace":workspace_reference(&argument(0,"workspace"))?,"on_current_monitor":kwargs.get("current_monitor").cloned().unwrap_or(json!(true))}),timeout),
+            "switch_workspace"=>self.action("focus",json!({"workspace":workspace_reference(&argument(0,"workspace"))?,"on_current_monitor":if kwargs.get("output").is_some() {json!(false)}else{kwargs.get("current_monitor").cloned().unwrap_or(json!(true))}}),timeout),
+            "activate_workspace_index_on_output"=>{
+                let index=argument(0,"index").as_u64().filter(|index|(1..=255).contains(index)).ok_or_else(||invalid("Invalid workspace index"))? as u16;
+                let output=kwargs.get("output").and_then(Value::as_str).ok_or_else(||invalid("Invalid output name"))?;
+                self.activate_workspace_index_on_output(output,index,timeout)
+            },
             "focus_direction"|"move_direction"=>{
                 let direction=argument(0,"direction");
                 if !["left","right","up","down"].iter().any(|value|direction==*value){return Err(invalid(if method=="focus_direction"{"Invalid focus direction"}else{"Invalid move direction"}));}
@@ -902,6 +937,41 @@ mod tests {
                 .push(json!({"args":args,"kwargs":{"timeout":timeout as i64}}));
             Ok(json!({"code":0,"stdout":"ok\n","stderr":""}))
         }
+    }
+    #[test]
+    fn output_scoped_workspace_focus_preserves_its_own_monitor() -> crate::Result<()> {
+        let mut backend = Backend {
+            transport: Fixture { calls: vec![] },
+        };
+        backend.execute(
+            "switch_workspace",
+            &[],
+            &json!({"workspace":5,"output":"DP-2"}),
+        )?;
+        let call = backend.transport.calls[0]["args"][1].as_str().unwrap();
+        assert!(call.contains("on_current_monitor=false"));
+        assert!(call.contains("workspace=5"));
+        assert!(!call.contains("monitor=\""));
+        Ok(())
+    }
+    #[test]
+    fn missing_numeric_workspace_is_created_on_requested_output_in_one_eval() -> crate::Result<()> {
+        let mut backend = Backend {
+            transport: Fixture { calls: vec![] },
+        };
+        backend.execute(
+            "activate_workspace_index_on_output",
+            &[json!(6)],
+            &json!({"output":"DP-2"}),
+        )?;
+        assert_eq!(backend.transport.calls.len(), 1);
+        let call = backend.transport.calls[0]["args"][1].as_str().unwrap();
+        assert!(call.contains("hl.get_monitor(\"DP-2\")==nil or hl.get_workspace(6)~=nil"));
+        assert!(call.contains("hl.dsp.focus({monitor=\"DP-2\"})"));
+        assert_eq!(call.matches("hl.dispatch(hl.dsp.focus(").count(), 2);
+        assert!(call.contains("on_current_monitor=true"));
+        assert!(call.contains("workspace=6,") || call.contains("workspace=6}"));
+        Ok(())
     }
     #[test]
     fn frozen_current_python_semantic_actions_and_lua_calls() -> crate::Result<()> {

@@ -1,0 +1,10 @@
+{"t":"call","id":301,"m":"workspace.activate","p":{"output":"DP-1","workspace":"niri-workspace:42"}}
+{"t":"ret","id":301,"ok":{"changed":true}}
+{"t":"call","id":305,"m":"workspace.activate","p":{"output":"DP-2","workspace":6}}
+{"t":"ret","id":305,"ok":{"changed":true}}
+{"t":"call","id":302,"m":"workspace.scroll","p":{"output":"DP-2","direction":"prev"}}
+{"t":"ret","id":302,"ok":{"changed":true}}
+{"t":"call","id":303,"m":"window.focus","p":{"output":"DP-1","window":"address:0x1234"}}
+{"t":"ret","id":303,"ok":{"changed":true}}
+{"t":"call","id":304,"m":"session.request","p":{"action":"shutdown","confirmed":true}}
+{"t":"ret","id":304,"ok":{"changed":true}}

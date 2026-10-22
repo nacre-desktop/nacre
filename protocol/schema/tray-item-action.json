@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TrayItemAction",
+  "type": "object",
+  "properties": {
+    "item": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "x": {
+      "type": "integer",
+      "format": "int16",
+      "minimum": -32768,
+      "maximum": 32767,
+      "default": 0
+    },
+    "y": {
+      "type": "integer",
+      "format": "int16",
+      "minimum": -32768,
+      "maximum": 32767,
+      "default": 0
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "item"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WindowFocus",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "window": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "output",
+    "window"
+  ]
+}

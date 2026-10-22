@@ -50,9 +50,22 @@ async fn dispatch(
             super::notifications::dispatch(hub, client, method, params, timeout).await
         }
         "daemon.ping" => Ok(Value::Null),
+        method @ ("tray.activate"
+        | "tray.secondary_activate"
+        | "tray.context_menu"
+        | "tray.scroll"
+        | "brightness.set"
+        | "brightness.adjust") => super::bar_services::dispatch(hub, method, params).await,
+        method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
+            super::pill_controls::dispatch(hub, method, params).await
+        }
         "wallpaper.activate" if !hub.borrow().safe => {
             super::active_wallpaper::activate(hub, params)
         }
+        method @ ("workspace.activate" | "workspace.scroll" | "window.focus") => {
+            super::shell_actions::compositor(hub, method, params).await
+        }
+        "session.request" => super::shell_actions::session(hub, params).await,
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect") => {
             super::network::dispatch(hub, method, params, timeout).await
         }
@@ -126,6 +139,19 @@ async fn call(
             | "settings.publish"
             | "settings.provider"
             | "settings.desktop"
+            | "workspace.activate"
+            | "workspace.scroll"
+            | "window.focus"
+            | "session.request"
+            | "tray.activate"
+            | "tray.secondary_activate"
+            | "tray.context_menu"
+            | "tray.scroll"
+            | "brightness.set"
+            | "brightness.adjust"
+            | "audio.adjust_volume"
+            | "audio.toggle_mute"
+            | "bluetooth.set_enabled"
     );
     let future = AssertUnwindSafe(dispatch(
         hub,
@@ -333,6 +359,65 @@ mod tests {
             .lines()
             .map(|line| framing::decode(line.as_bytes()).unwrap())
             .collect()
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn semantic_mutations_refuse_safe_mode_and_unconfirmed_session_actions() {
+        let hub = fixture();
+        for action in ["logout", "suspend", "reboot", "shutdown"] {
+            let error = dispatch(
+                hub.clone(),
+                0,
+                "session.request".into(),
+                json!({"action":action}),
+                None,
+                super::super::helpers::Transfer::default(),
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.code, ErrorCode::PermissionDenied);
+            assert_eq!(error.dispatched, Some(false));
+        }
+        hub.borrow_mut().safe = true;
+        for (method, params) in [
+            (
+                "workspace.activate",
+                json!({"output":"DP-1","workspace":"1"}),
+            ),
+            (
+                "workspace.scroll",
+                json!({"output":"DP-1","direction":"next"}),
+            ),
+            ("window.focus", json!({"output":"DP-1","window":"1"})),
+            (
+                "session.request",
+                json!({"action":"shutdown","confirmed":true}),
+            ),
+            ("tray.activate", json!({"item":"sni:old"})),
+            ("brightness.adjust", json!({"output":"DP-1","delta":5})),
+            ("audio.toggle_mute", json!({})),
+            ("bluetooth.set_enabled", json!({"enabled":true})),
+        ] {
+            let error = dispatch(
+                hub.clone(),
+                0,
+                method.into(),
+                params,
+                None,
+                super::super::helpers::Transfer::default(),
+            )
+            .await
+            .unwrap_err();
+            assert!(
+                matches!(
+                    error.code,
+                    ErrorCode::PermissionDenied | ErrorCode::Unavailable
+                ),
+                "{method}"
+            );
+            assert_ne!(error.dispatched, Some(true), "{method}");
+            assert!(!hub.borrow().methods().contains_key(method), "{method}");
+        }
     }
     async fn receive(reader: &mut BufReader<OwnedReadHalf>) -> Message {
         tokio::time::timeout(Duration::from_secs(10), framing::read(reader))

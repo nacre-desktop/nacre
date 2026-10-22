@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SessionRequest",
+  "type": "object",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/SessionAction"
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "action"
+  ],
+  "$defs": {
+    "SessionAction": {
+      "type": "string",
+      "enum": [
+        "lock",
+        "logout",
+        "suspend",
+        "reboot",
+        "shutdown"
+      ]
+    }
+  }
+}

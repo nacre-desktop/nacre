@@ -21,6 +21,9 @@ All messages are exact JSONL wire objects; names and content are synthetic.
 | notifications-loss-restart | Lost range, explicit resync, fresh boot and snapshot |
 | notifications-ownership | Capability refusal when the daemon does not own the bus |
 | notifications-storage | Unknown history before load, storage failure and later readback |
+| shell-actions | Output-scoped workspace activation/scroll/window focus and confirmed session execution |
+| bar-services | Current-owner tray actions and output-scoped brightness updates |
+| pill-controls | Default-sink volume/mute and default-controller Bluetooth power |
 
 For state replay, a wrong base must not mutate the last snapshot. `base` matches
 the last delivered sequence even when coalescing skips source revisions. A new
@@ -36,3 +39,8 @@ The six notifications transcripts are contract examples generated from the
 producer types. They do not claim that a runtime adapter is implemented or that
 the daemon advertises the methods; advertisement remains conditional on usable
 handlers and bus ownership.
+
+The bar-action methods are implemented by N0031; availability still depends on
+the daemon's safe mode and backend readiness. Use IDs from the current topic
+and inspect the connection's method registry. Views and anchors remain local
+to each shell; see [N0031](../../docs/specs/0031-shell-action-routes.md).

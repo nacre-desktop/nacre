@@ -1,0 +1,12 @@
+{"t":"call","id":401,"m":"tray.activate","p":{"item":"sni:abc","x":15,"y":9}}
+{"t":"ret","id":401,"ok":{"changed":true}}
+{"t":"call","id":404,"m":"tray.secondary_activate","p":{"item":"sni:abc","x":15,"y":9}}
+{"t":"ret","id":404,"ok":{"changed":true}}
+{"t":"call","id":405,"m":"tray.context_menu","p":{"item":"sni:abc","x":15,"y":9}}
+{"t":"ret","id":405,"ok":{"changed":true}}
+{"t":"call","id":402,"m":"tray.scroll","p":{"item":"sni:abc","axis":"vertical","delta":-2}}
+{"t":"ret","id":402,"ok":{"changed":true}}
+{"t":"call","id":403,"m":"brightness.set","p":{"output":"output-1","percent":65}}
+{"t":"ret","id":403,"ok":{"changed":true}}
+{"t":"call","id":406,"m":"brightness.adjust","p":{"output":"output-1","delta":-5}}
+{"t":"ret","id":406,"ok":{"changed":true}}

@@ -1,6 +1,7 @@
 //! Private, versioned desktop link. No UI toolkit or global runtime ownership.
 #![deny(unsafe_code)]
 pub mod artifacts;
+pub mod bar_services;
 pub mod compositor;
 mod core_artifacts;
 pub mod core_services;
@@ -10,7 +11,9 @@ pub mod menu;
 pub mod network;
 pub mod notifications;
 pub mod patch;
+pub mod pill_controls;
 pub mod settings;
+pub mod shell_actions;
 pub mod wallpaper;
 pub mod widths;
 

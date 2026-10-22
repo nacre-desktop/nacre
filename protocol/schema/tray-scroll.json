@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TrayScroll",
+  "type": "object",
+  "properties": {
+    "item": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "axis": {
+      "$ref": "#/$defs/TrayScrollAxis"
+    },
+    "delta": {
+      "description": "Raw SNI scroll delta; a conventional wheel notch is 120 units.",
+      "type": "integer",
+      "format": "int16",
+      "minimum": -1200,
+      "maximum": 1200
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "item",
+    "axis",
+    "delta"
+  ],
+  "$defs": {
+    "TrayScrollAxis": {
+      "type": "string",
+      "enum": [
+        "horizontal",
+        "vertical"
+      ]
+    }
+  }
+}

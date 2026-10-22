@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BrightnessSet",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "percent": {
+      "type": "integer",
+      "format": "uint8",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "output",
+    "percent"
+  ]
+}

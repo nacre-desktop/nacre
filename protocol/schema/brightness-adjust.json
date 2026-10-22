@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BrightnessAdjust",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "delta": {
+      "type": "integer",
+      "format": "int8",
+      "minimum": -100,
+      "maximum": 100
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "output",
+    "delta"
+  ]
+}

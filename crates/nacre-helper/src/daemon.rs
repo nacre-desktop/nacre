@@ -1,6 +1,8 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod active_wallpaper;
 pub mod attach;
+pub mod bar_services;
+pub mod bar_tray_watcher;
 pub mod client;
 pub mod compositor;
 pub mod compositor_control;
@@ -14,12 +16,14 @@ pub mod niri_actions;
 pub mod niri_events;
 pub mod notifications;
 pub mod notify;
+pub mod pill_controls;
 pub mod serve_bridge;
 pub mod session;
 pub mod session_policy;
 pub mod settings;
 pub mod settings_controller;
 pub mod settings_validation;
+pub mod shell_actions;
 pub mod socket;
 pub mod supervisor;
 pub mod wallpaper;
@@ -48,6 +52,26 @@ async fn serve(
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
     hub.borrow_mut().compositor = Some(control.clone());
+    let tray_watcher_service = if !counter.safe {
+        Some(tokio::task::spawn_local(supervisor::run(
+            "tray-watcher",
+            hub.clone(),
+            bar_tray_watcher::run,
+        )))
+    } else {
+        None
+    };
+    let tray_service = if !counter.safe {
+        hub.borrow_mut().service("tray", "starting", 0)?;
+        let tray_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "tray",
+            hub.clone(),
+            move || bar_services::run_tray(tray_hub.clone()),
+        )))
+    } else {
+        None
+    };
     let settings_hub = hub.clone();
     let settings = settings::Service::load(hub.clone(), paths.clone(), Some(writer_lease)).await?;
     hub.borrow_mut().settings = Some(settings.clone());
@@ -294,6 +318,22 @@ async fn serve(
         }
     }
     compositor_service.abort();
+    if let Some(service) = tray_watcher_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Tray watcher supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = tray_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Tray supervisor failed during shutdown");
+            }
+        }
+    }
     settings_service.abort();
     if let Err(error) = settings_service.await {
         if !error.is_cancelled() {
