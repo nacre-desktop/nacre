@@ -82,6 +82,7 @@ references are in Bead's code) but still requires valid IDs and context. Bead's
 `tr(id, fallback)` carries the English fallback, so an ID missing from the catalog
 degrades to English. Seeding the actual `bead.*` entries is part of the Bead unit
 that adds `tr()` (it owns the string inventory); no placeholder entries are added here.
+Bead B0032 seeded 279 `bead.*` ids (the whole `bead` namespace is two catalog pages).
 
 ## Verification
 
