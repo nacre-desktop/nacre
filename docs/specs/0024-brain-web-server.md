@@ -90,6 +90,17 @@ therefore preserved until daemon activation is implemented separately in N0030.
 Window rules themselves do not require a resident supervisor. No unit template,
 activation policy or live service is changed here.
 
+## Temporary duplicates and expiry
+
+The Python originals stay only as a fallback, under the standing rule
+"Temporary duplicates expire". They are `brain/control.py`, `brain/auth.py`
+and `brain/discovery.py`, plus their launcher scripts and any
+`*.py.rollback` copies. Trust condition: the native Brain web worker serves
+the owner's daily Brain UI on the laptop for 7 days with no regression.
+Expiry: delete them in clean-up pass (a), 7 days after trust, with the owner
+approving the list from the bloat audit. Frozen parity references under
+tests/parity/helpers are kept; they are evidence, not runtime code.
+
 ## Verification (2026-10-22)
 
 Code checkpoint: `36aae6d2`. The complete desktop job from
