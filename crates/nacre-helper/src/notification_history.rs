@@ -79,11 +79,41 @@ fn truthy(value: &Value) -> bool {
         Value::Object(v) => !v.is_empty(),
     }
 }
-fn policy(paths: &Paths) -> Result<Value> {
+pub(crate) fn policy(paths: &Paths) -> Result<Value> {
     Ok(serde_json::from_slice(&fs::read(
         paths.assets().join("notification-policy.json"),
     )?)?)
 }
+
+/// Apply the existing retention/feedback policy and the established display
+/// whitelist without changing disk state. Daemon storage uses this after its
+/// strict pinned read; legacy helper paths share the same projection on save.
+pub(crate) fn display_rows(rows: &Value, policy: &Value, now: i64) -> Result<Vec<Value>> {
+    let rows = rows.as_array().ok_or("Invalid notification history")?;
+    let mut selected = Vec::new();
+    for row in rows {
+        if !retained(row, policy)? || !within_retention(row, now) {
+            continue;
+        }
+        let source = row.as_object().ok_or("Invalid notification history")?;
+        let mut display = serde_json::Map::new();
+        for key in FIELDS {
+            if let Some(value) = source.get(key) {
+                if key == "image"
+                    && !value
+                        .as_str()
+                        .is_some_and(|path| path.starts_with('/') && !path.contains('\0'))
+                {
+                    continue;
+                }
+                display.insert(key.into(), value.clone());
+            }
+        }
+        selected.push(Value::Object(display));
+    }
+    Ok(selected)
+}
+
 pub fn load(path: &Path, policy: &Value) -> Result<Value> {
     let rows = crate::state::read_as(
         path,
@@ -121,18 +151,11 @@ pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
                 "Invalid notification history",
             )
         })?;
-    let mut selected = Vec::new();
-    for row in rows {
-        if retained(row, policy)? && within_retention(row, chrono::Utc::now().timestamp()) {
-            let mut display = serde_json::Map::new();
-            for key in FIELDS {
-                if let Some(value) = row.get(key) {
-                    display.insert(key.into(), value.clone());
-                }
-            }
-            selected.push(Value::Object(display));
-        }
-    }
+    let selected = display_rows(
+        &Value::Array(rows.to_vec()),
+        policy,
+        chrono::Utc::now().timestamp(),
+    )?;
     let parent = path.parent().ok_or("Invalid notification history path")?;
     fs::create_dir_all(parent)?;
     fs::set_permissions(parent, fs::Permissions::from_mode(0o700))?;
@@ -146,6 +169,11 @@ pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {
     let paths = Paths::environment()?;
     let path = paths.state.join("shell/notifications/history.json");
+    let parent = path.parent().ok_or("Invalid notification history path")?;
+    // The daemon's Store holds this same lease for its lifetime. Legacy helper
+    // reads/writes therefore refuse while the daemon is the history authority.
+    let lease = crate::daemon::writer_lease::WriterLease::acquire(parent)?;
+    lease.ensure_valid()?;
     let policy = policy(&paths)?;
     match arguments {
         [action] if action == "load" && input.is_none() => Ok(Some(load(&path, &policy)?)),

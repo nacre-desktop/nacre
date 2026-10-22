@@ -91,6 +91,13 @@ def compatible_files(result, case):
     ):
         result["stdout"]["data"] = canonical_desktop(result["stdout"]["data"])
     for name, record in list(result.get("files", {}).items()):
+        if helper == "notification-history" and name.endswith(
+            "/shell/notifications/.writer.lock"
+        ):
+            if record.get("mode") != "0o600":
+                raise ValueError("Notification writer fencing must remain private")
+            del result["files"][name]
+            continue
         base = (
             name.removesuffix(".schema.lock")
             if name.endswith(".schema.lock")

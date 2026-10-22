@@ -1,7 +1,7 @@
 # N0017 — Daemon notifications producer contract
 
-Status: **Accepted — owner decisions recorded 2026-10-22; phase A implemented, phase B blocked** (see "Owner decisions" and "Phase B upstream API gate" below). The topic and methods remain reserved and are not runtime capabilities. The live ownership switch on the desktop remains a separate owner gate.
-Inputs: lead drafts `nacre-protocol-request-notifications.md` and `bead-B0016-draft.md` (2026-10-21). Evidence is Nacre base `961de0a3`; `Bead:` paths in the design history refer to Bead `origin/main` at `b5bdbc9d`. The phase B API audit below is against Bead `origin/main` `a8b4b6e3578428cff1f4b1330f71e2f3698acc22`, not a dependency pin or permission to edit Bead.
+Status: **Accepted — owner decisions recorded 2026-10-22; phases A and B implemented** (see "Owner decisions" and "Phase B hosting boundary" below). The topic and methods are advertised only by a ready managed producer. The live ownership switch on the desktop remains a separate owner gate.
+Inputs: lead drafts `nacre-protocol-request-notifications.md` and `bead-B0016-draft.md` (2026-10-21). Evidence is Nacre base `961de0a3`; `Bead:` paths in the design history refer to Bead `origin/main` at `b5bdbc9d`. The hosting boundary below records the audited Bead dependency pin; no Bead source is changed.
 
 ## Owner decisions — 2026-10-22
 
@@ -95,7 +95,7 @@ Each revision gets fresh opaque action IDs; validate parent/revision and action.
 Restored history gets fresh boot-scoped IDs with empty `actions`, `paused:false`, no `expires_ms/remaining_ms`
 or live images. This respects boot scoping (`docs/architecture/core-services.md:26-33`).
 
-Proposed new producer admission/window bounds (owner review required):
+Accepted producer admission/window bounds:
 
 - Native strings: `app_name,icon,summary,body` each at most 8,192 UTF-8 bytes,
   `desktop_entry` 1,024, `image_path` 4,096, action label 1,024, private action key 256; no NUL.
@@ -121,8 +121,10 @@ Proposed new producer admission/window bounds (owner review required):
   No remote URLs/base64/inline pixmaps (`docs/architecture/core-services.md:140-148`).
 
 Expiry belongs to the producer: monotonic timers, no per-frame updates; zero means
-no auto-close. For -1, propose preserving current host policy: Bead normal 5 s,
-critical persistent; QML configured default (owner must resolve before implementation).
+no auto-close. For -1, use the frozen QML configured default for all urgency
+levels (currently 5 s). Zero uses that default for popup hiding only; positive
+timeouts above 10 s use a separate 10 s popup clock. The QML `expire` policy
+disables both clocks when false.
 Hover pauses lifetime: publish `paused:true`, remove `expires_ms`, keep transition `remaining_ms`; resume computes a new deadline.
 Running deadlines are projected Unix-ms hints, never client expiry commands; clock jumps cannot change monotonic lifetime. Clear removed fields with RFC 7396
 nulls. DND/inhibition suppress popups without suspending native expiry; leaving
@@ -217,45 +219,23 @@ image URLs never persist (`nacre/shell/services/NacreNotificationEntry.qml:90-96
 
 ## 5. Implementation inventory, phases and decisions
 
-### Phase B upstream API gate — Bead `origin/main` `a8b4b6e3578428cff1f4b1330f71e2f3698acc22`
+### Phase B hosting boundary
 
-Phase A producer artifacts are implemented in this worktree. Phase B cannot
-start against the frozen `bead-services` notification backend as-is. Its host
-API is useful for injected connections and refusal-safe name acquisition, but
-does not expose the state and policy hooks this contract requires:
+Nacre pins permissively licensed `bead-services` at
+`a6d423382b0fb322419646d1fbb70b543e2780cd` (MIT OR Apache-2.0).
+The adapter uses public `notifications::Center` and `Notice` directly; Nacre
+owns admission, policy, opaque IDs, settings readback and its existing history
+format. It does not start Bead's standalone notification bus host, timer,
+persistence writer, renderer or desktop service graph. An earlier audit
+mistakenly treated that standalone host's limitations as an upstream blocker;
+the public state engine supplies the required integration seam without a Bead
+source change.
 
-- `crates/bead-services/src/notifications.rs:8-31` `Notice` exposes native
-  `u32` IDs and `Vec<(String,String)>` actions, with no revision, desktop-entry,
-  retained, paused, expiry projection, or source-generation fields. The snapshot
-  is JSON (`crates/bead-services/src/notification_bus.rs:288-301`), not typed
-  lifecycle events suitable for the required state/event sequence contract.
-- `crates/bead-services/src/notification_bus.rs:31-45` `Control` has Action,
-  Dismiss, Hover, Dnd, HidePopups, Details, ClearHistory, Osd and Stop, but no
-  revision-checked actions, explicit forget, scoped clear, or registered-UI
-  inhibition. `Center::close` always archives nontransient notices and
-  `ClearHistory` removes all nontransient active notices as well as history
-  (`crates/bead-services/src/notifications.rs:109-130`,
-  `crates/bead-services/src/notification_bus.rs:833-855`). These semantics
-  cannot represent dismiss-retain and `history|retained|popups` independently.
-- The backend fixes `expire_timeout=-1` to 5 seconds except critical notices,
-  which persist (`crates/bead-services/src/notifications.rs:92-104`). N0017
-  adopts the frozen QML default policy; an outer adapter cannot safely override
-  the backend's timer and close lifecycle.
-- `Config` supplies a history path (`crates/bead-services/src/notification_bus.rs:272-275`),
-  but the library itself restores and periodically/finally writes its version-1
-  `{dnd,entries}` data (`crates/bead-services/src/notification_bus.rs:597-619,703-715,746-770`). `Center::persisted` caps
-  storage at 256 rows / 3 MiB (`crates/bead-services/src/notifications.rs:225-243`).
-  This conflicts with Nacre's existing compatibility format, 10,000-row/16 MiB
-  store, retention and sole `WriterLease`; a path alone cannot fence those writes.
-
-Therefore phase B is blocked on a reviewed upstream Bead API extension or an
-explicitly scoped alternative producer implementation. The needed seam must
-let Nacre supply persistence and popup policy and observe lifecycle transitions,
-with revision-safe controls and the contract's clear/inhibition semantics. Do
-not advertise `notifications` or its methods until a usable implementation is
-integrated; reserved schemas alone confer no capability. The host API's
-injected-connection/DoNotQueue ownership support remains reusable
-(`crates/bead-services/README.md:7-30`), subject to private-bus ownership tests.
+Managed authority is startup-only `nacre-helper daemon --notifications=daemon`;
+the default and `--notifications=legacy` do not request the name.
+`NACRE_DAEMON_CLIENT=1` grants no ownership authority. Name acquisition uses
+DoNotQueue without replacement; refusal leaves the existing owner untouched.
+No installed unit, autostart, activation file or QML consumer is switched here.
 
 For Bead B0020, adoption remains gated on Nacre's published usable producer and
 exact-head green CI. Consumer behavior must use the bounded history window and
@@ -269,10 +249,18 @@ Keyboard-layout OSD is an explicit follow-up:
 the current published channel set does not include keyboard layout (keyboard
 backlight is a separate QML behavior).
 
-No temporary implementation duplicate is introduced by phase A. If a future
-implementation retains the legacy/daemon dual path during cutover, list it as a
-temporary duplicate and delete it 7 days after the daemon replacement is trusted
-and the owner approves removal.
+Temporary duplicate: the legacy QML notification owner/history route remains
+beside the opt-in daemon adapter until phase C and owner-approved cutover.
+Delete 7 days after the daemon replacement is trusted and the owner approves
+removal. The shared history lease prevents concurrent writers.
+
+Simplicity review: the daemon adapter adds ownership, bounded native ingress,
+revision-safe controls, independent popup/native clocks, private image validation
+and fenced persistence that the former QML path did not implement. The native
+change exceeds the 2.5x review threshold. Review retained these security and
+contract boundaries, consolidated repeated cache-file validation, and introduced
+no generic adapter framework. The Bead pin requires helper Rust 1.99 and the
+same pinned system-tray task-lifetime fix; protocol consumers retain Rust 1.87.
 
 Phase A contract/artifact change set:
 
@@ -295,8 +283,8 @@ Phase A contract/artifact change set:
 
 | Phase | Deliverable/gate | Estimate (engineering days; not measured) |
 | --- | --- | --- |
-| A | Implemented: producer Rust types, schemas, goldens and contract CI checks. Capability remains reserved until phase B. | 1–2, medium |
-| B | Blocked: daemon host integration requires upstream/API resolution above, then private bus ownership/refusal fixtures, writer fencing, settings DND, limits, persistence, errors/restart and usable capability advertisement. Full desktop CI; no live enablement. | 4–7, large |
+| A | Implemented: producer Rust types, schemas, goldens and contract CI checks. Conditional advertisement is supplied by phase B. | 1–2, medium |
+| B | Implemented: daemon host integration with private bus ownership/refusal fixtures, writer fencing, settings DND, limits, persistence, errors/restart and usable capability advertisement. Full desktop CI; no live enablement. | 4–7, large |
 | C | Private-HOME/QML consumer-only path and journaled opt-in/rollback fixtures, preserving frozen behavior; full desktop CI in isolated container. Owner separately approves live switch plan. | 2–4, medium/large |
 | D | Lead publishes producer source + exact-head green CI; then Bead pins/adopts, tests absent capability/legacy fallback, lifecycle/loss/readback parity and exact-head Bead CI. | 2–4, Bead-owned |
 
@@ -309,7 +297,7 @@ backends/references (`docs/architecture/standing-rules.md:56-61`), especially
 `nacre/shell-tools/tests/notification-qml/tst_notifications.qml:63-108` and
 `Bead:crates/bead-services/tests/notification_api.rs:32-104` (private-bus lifecycle).
 
-Remaining gate: resolve the phase B upstream API boundary and review the Bead pin/license boundary. Owner decisions above already accept separate managed ownership opt-in, bounds/no paging, frozen QML popup policy, dismiss-retain/explicit forget, and immediate Notify reply with a short flush window.
+Remaining gate: phase C and owner-approved live cutover. Owner decisions above already accept separate managed ownership opt-in, bounds/no paging, frozen QML popup policy, dismiss-retain/explicit forget, and immediate Notify reply with a short flush window.
 
 Original design acceptance was source review and `git diff --check` only.
 Phase A implementation validation runs protocol goldens, Rust tests, external

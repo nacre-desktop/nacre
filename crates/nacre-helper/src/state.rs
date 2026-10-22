@@ -1140,6 +1140,11 @@ pub fn legacy_snapshot(mut files: Value) -> Result<Value> {
     // regenerating evidence; dedicated tests below assert the new storage bytes.
     if let Some(entries) = files.as_object_mut() {
         entries.retain(|name, row| {
+            // Operational fencing metadata was absent from the frozen payload.
+            if name.ends_with("/shell/notifications/.writer.lock") {
+                assert_eq!(row["mode"], "0o600");
+                return false;
+            }
             let base = name
                 .strip_suffix(".schema.lock")
                 .or_else(|| name.split_once(".pre-v").map(|(base, _)| base))

@@ -19,3 +19,7 @@ tokio = { version = "1", features = ["rt", "net", "io-util", "time", "sync", "si
 lto = "thin"
 codegen-units = 1
 strip = true
+
+# Match the Bead services pin: its task accounting requires this upstream fix.
+[patch.crates-io]
+system-tray = { git = "https://github.com/nacre-desktop/bead.git", rev = "a6d423382b0fb322419646d1fbb70b543e2780cd" }

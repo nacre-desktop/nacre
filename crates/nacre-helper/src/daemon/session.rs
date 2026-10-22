@@ -39,12 +39,16 @@ impl Drop for Route {
 
 async fn dispatch(
     hub: Shared,
+    client: u64,
     method: String,
     params: Value,
     timeout: Option<u32>,
     transfer: super::helpers::Transfer,
 ) -> Result<Value, Failure> {
     match method.as_str() {
+        method if method.starts_with("notifications.") && !hub.borrow().safe => {
+            super::notifications::dispatch(hub, client, method, params, timeout).await
+        }
         "daemon.ping" => Ok(Value::Null),
         "wallpaper.activate" if !hub.borrow().safe => {
             super::active_wallpaper::activate(hub, params)
@@ -92,6 +96,7 @@ async fn dispatch(
 }
 async fn call(
     hub: Shared,
+    client: u64,
     id: Id,
     method: String,
     params: Value,
@@ -122,8 +127,15 @@ async fn call(
             | "settings.provider"
             | "settings.desktop"
     );
-    let future =
-        AssertUnwindSafe(dispatch(hub, method.clone(), params, timeout, transfer)).catch_unwind();
+    let future = AssertUnwindSafe(dispatch(
+        hub,
+        client,
+        method.clone(),
+        params,
+        timeout,
+        transfer,
+    ))
+    .catch_unwind();
     let result = match tokio::time::timeout(Duration::from_millis(u64::from(ms)), future).await {
         Ok(Ok(result)) => result,
         Ok(Err(_)) => {
@@ -196,7 +208,7 @@ async fn reader(stream: BufReader<OwnedReadHalf>, hub: Shared, id: u64) -> Resul
                     Message::Call {id:call_id,m,p,timeout}=>{
                         let result=hub.borrow_mut().begin_call(id,&call_id);
                         match result {
-                            Ok(())=>{calls.spawn_local(call(hub.clone(),call_id,m,p,timeout,transfer.clone()));Ok(())},
+                            Ok(())=>{calls.spawn_local(call(hub.clone(),id,call_id,m,p,timeout,transfer.clone()));Ok(())},
                             Err(err) if err.code==ErrorCode::Busy=>hub.borrow_mut().enqueue(id,Message::Ret {id:call_id,reply:Reply::Err {err}}),
                             Err(err)=>Err(err),
                         }

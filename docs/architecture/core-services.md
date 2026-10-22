@@ -49,7 +49,7 @@ A failed or ambiguous operation must not update the UI optimistically.
 | `power.profiles` | Available profiles, active ID, optional degraded/unavailable reason | `power.set_profile {profile}` |
 | `battery` | Independent optional battery percentage and charging readback | Topic contract only; no profile selection |
 | `audio` | Input/output/playback/capture nodes, default input/output, stream target IDs | `audio.set_default {node}`; `audio.set_volume {node,volume}`; `audio.set_mute {node,muted}`; `audio.route {stream,target}` |
-| `notifications` | Do-not-disturb state, active notifications, bounded history window | Phase-A producer contract; runtime advertisement requires daemon bus ownership and usable handlers |
+| `notifications` | Do-not-disturb state, active notifications, bounded history window | N0017 A/B producer; advertised only by the ready opt-in daemon owner |
 | `osd` | Service-selected transient volume, microphone, brightness or Caps Lock display | Topic contract only; no control or permission grant |
 | `tray` | Items, local icons, flattened menu maps and child ID lists | Topic contract only in this step |
 | `dashboard.weather` | Provider, checked time, optional current reading with hourly/daily entities | `dashboard.weather.refresh {}` |
@@ -199,5 +199,7 @@ only: it does not install or upgrade packages, change package-manager authority,
 or alter the deliberate `paru -Syu --skipreview` update flow. Coalesce concurrent
 refreshes; fetch/check work runs in bounded daemon-managed workers and follows
 the charter's timeout/idle-exit rules. Freeze existing helper outputs before that
-port. A future `deps/bead` pin hosts the headless notification/tray/audio services;
-this schema-only step adds neither that dependency nor another service process.
+port. N0017 now pins permissively licensed `bead-services` for its headless
+notification state engine. Nacre owns notification bus admission, policy and
+its existing fenced history store; the standalone Bead host is not started.
+Tray/audio hosting remains separate work.

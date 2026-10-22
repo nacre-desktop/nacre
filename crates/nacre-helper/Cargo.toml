@@ -2,7 +2,7 @@
 name = "nacre-helper"
 version.workspace = true
 edition.workspace = true
-rust-version.workspace = true
+rust-version = "1.99"
 license.workspace = true
 publish.workspace = true
 
@@ -10,6 +10,7 @@ publish.workspace = true
 nacre-protocol = { path = "../nacre-protocol" }
 nacre-menu = { path = "../nacre-menu" }
 nacre-i18n = { path = "../nacre-i18n" }
+bead-services = { git = "https://github.com/nacre-desktop/bead.git", rev = "a6d423382b0fb322419646d1fbb70b543e2780cd" }
 tokio.workspace = true
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

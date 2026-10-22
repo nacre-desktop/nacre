@@ -214,7 +214,7 @@ fn polygon_spans(size: (u32, u32), points: &[(i32, i32)]) -> Vec<(i32, i32, i32)
             xs.push(value);
         }
         xs.sort_by(f32::total_cmp);
-        for pair in xs.chunks_exact(2) {
+        for pair in xs.as_chunks::<2>().0 {
             let left = pair[0].round() as i32;
             let v = pair[1];
             let right = if v >= 0.0 {
@@ -508,7 +508,9 @@ pub fn draft_source(
     let pixels = if cmyk {
         image
             .pixels
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .flat_map(|pixel| {
                 let black = u32::from(pixel[3]);
                 [0, 1, 2].map(|i| {

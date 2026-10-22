@@ -12,6 +12,7 @@ pub mod menu_worker;
 pub mod network;
 pub mod niri_actions;
 pub mod niri_events;
+pub mod notifications;
 pub mod notify;
 pub mod serve_bridge;
 pub mod session;
@@ -36,6 +37,7 @@ async fn serve(
     frame: Duration,
     paths: Paths,
     writer_lease: std::sync::Arc<writer_lease::WriterLease>,
+    managed_notifications: bool,
 ) -> Result<()> {
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     helpers::cleanup()?;
@@ -201,6 +203,24 @@ async fn serve(
         None
     };
     let mut notice_worker = None;
+    let notifications_service = if managed_notifications && !counter.safe {
+        let notifications_hub = hub.clone();
+        let notifications_paths = paths.clone();
+        Some(tokio::task::spawn_local(async move {
+            let result = notifications::run(notifications_hub.clone(), notifications_paths).await;
+            if result.is_err() {
+                let _ = notifications_hub
+                    .borrow_mut()
+                    .service("notifications", "unavailable", 0);
+                tracing::warn!(
+                    "Managed notifications stopped; other daemon services remain available"
+                );
+            }
+            result
+        }))
+    } else {
+        None
+    };
     if counter.safe {
         let notice = json!({"id":"daemon-safe-mode","summary":"Nacre safe mode","body":"Some desktop services are paused after repeated crashes."});
         hub.borrow_mut().publish(
@@ -247,6 +267,21 @@ async fn serve(
     }
     clients.abort_all();
     while clients.join_next().await.is_some() {}
+    let mut notification_flush_failed = false;
+    if let Some(mut service) = notifications_service {
+        if let Some(requests) = &hub.borrow().notifications {
+            requests.stop();
+        }
+        match tokio::time::timeout(Duration::from_secs(10), &mut service).await {
+            Ok(Ok(Ok(()))) => {}
+            _ => {
+                notification_flush_failed = true;
+                service.abort();
+                let _ = service.await;
+                tracing::warn!("Notification shutdown did not confirm its history flush");
+            }
+        }
+    }
     if let Some(service) = width_service {
         if width_shutdown.finish().await.is_err() {
             tracing::warn!("Width observer did not confirm hint restoration before shutdown");
@@ -310,16 +345,22 @@ async fn serve(
             }
         }
     }
+    if notification_flush_failed {
+        return Err("Notification history flush was not confirmed".into());
+    }
     counter.clean()?;
     tracing::info!("Daemon stopped");
     Ok(())
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
-    if !arguments.is_empty() {
-        return Err(
-            "Expected nacre-helper daemon (NACRE_DAEMON_SOCKET selects a private endpoint)".into(),
-        );
-    }
+    let managed_notifications = match arguments {
+        [] => false,
+        [mode] if mode == "--notifications=legacy" => false,
+        [mode] if mode == "--notifications=daemon" => true,
+        _ => {
+            return Err("Expected nacre-helper daemon [--notifications=legacy|daemon]".into());
+        }
+    };
     let filter = match std::env::var("RUST_LOG") {
         Ok(value) => tracing_subscriber::EnvFilter::try_new(value)
             .map_err(|_| "Invalid daemon logging filter")?,
@@ -367,6 +408,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
             Duration::from_millis(frame),
             paths,
             writer_lease,
+            managed_notifications,
         ),
     );
     runtime.shutdown_timeout(Duration::from_secs(2));

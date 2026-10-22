@@ -89,6 +89,7 @@ pub struct Hub {
     next_route: u64,
     internal: broadcast::Sender<Notice>,
     pub network: Option<super::network::Requests>,
+    pub notifications: Option<super::notifications::Requests>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
     pub widths: Option<super::widths::Requests>,
@@ -116,6 +117,7 @@ impl Hub {
             next_route: 0,
             internal,
             network: None,
+            notifications: None,
             session: None,
             menu: None,
             widths: None,
@@ -145,6 +147,22 @@ impl Hub {
         self.topics.get(name).map(|topic| &topic.data)
     }
     pub fn publish(&mut self, topic: &str, data: Value) -> Result<(), Failure> {
+        self.publish_state(topic, data, false)
+    }
+    /// Some processed transitions (resident actions/inhibitors) change private
+    /// state only. Allocate their state revision before publishing the event.
+    pub fn publish_transition(&mut self, topic: &str, data: Value) -> Result<(), Failure> {
+        self.publish_state(topic, data, true)
+    }
+    pub fn topic_seq(&self, topic: &str) -> Option<u64> {
+        self.topics.get(topic).map(|value| value.seq)
+    }
+    pub fn is_ui_provider(&self, id: u64) -> bool {
+        self.provider
+            .as_ref()
+            .is_some_and(|provider| provider.0 == id)
+    }
+    fn publish_state(&mut self, topic: &str, data: Value, force: bool) -> Result<(), Failure> {
         if !self.topics.contains_key(topic) && self.topics.len() >= MAX_SUBSCRIPTIONS {
             return Err(failure(ErrorCode::Busy, "Topic limit reached", true));
         }
@@ -152,7 +170,7 @@ impl Hub {
             .map_err(|_| failure(ErrorCode::Internal, "Topic encoding failed", false))?
             .len();
         let old = self.topics.get(topic);
-        if old.is_some_and(|old| old.data == data) {
+        if !force && old.is_some_and(|old| old.data == data) {
             return Ok(());
         }
         let seq = old.map_or(Ok(0), |old| {
@@ -239,6 +257,11 @@ impl Hub {
         Ok((self.next_client, wake))
     }
     pub fn remove_client(&mut self, id: u64) {
+        if self.is_ui_provider(id) {
+            if let Some(notifications) = &self.notifications {
+                notifications.disconnected(id);
+            }
+        }
         if let Some(client) = self.clients.remove(&id) {
             client.wake.notify_one();
         }
@@ -283,6 +306,9 @@ impl Hub {
             if let Some(network) = &self.network {
                 methods.extend(network.methods());
             }
+            if let Some(notifications) = &self.notifications {
+                methods.extend(notifications.methods());
+            }
         }
         methods
     }
@@ -315,7 +341,18 @@ impl Hub {
             proto: nacre_protocol::VERSION,
             min: nacre_protocol::MIN_VERSION,
             boot: self.boot.clone(),
-            topics: self.topics.keys().map(|key| (key.clone(), 1)).collect(),
+            topics: self
+                .topics
+                .keys()
+                .filter(|key| {
+                    key.as_str() != super::notifications::TOPIC
+                        || self
+                            .notifications
+                            .as_ref()
+                            .is_some_and(|service| service.available())
+                })
+                .map(|key| (key.clone(), 1))
+                .collect(),
             methods: self.methods(),
             frame_ms: Some(self.frame.as_millis() as u32),
         }
