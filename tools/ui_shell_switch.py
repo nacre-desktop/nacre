@@ -448,7 +448,7 @@ def dispatch(args, home, release_state, **kw):
     parser.add_argument(
         "--recover",
         action="store_true",
-        help="service use: do nothing if a switch is running",
+        help="service use: do nothing if a switch is running or the start limit is not exhausted",
     )
     parsed = parser.parse_args(args)
     f4.require_ordinary_user()
@@ -466,6 +466,16 @@ def dispatch(args, home, release_state, **kw):
             os.environ.get("XDG_STATE_HOME") or Path(home) / ".local/state"
         )
         switch = UiShell(home, state_home / "nacre", **kw)
+        if (
+            parsed.recover
+            and switch.props(SHELL, "Result")["Result"] != "start-limit-hit"
+        ):
+            # systemd runs OnFailure= on EVERY crash, also when it schedules a restart (measured, B0033).
+            # Only an exhausted start limit (3 in 60 s) means Bead cannot stay up.
+            return {
+                "status": "ignored",
+                "detail": "the shell is restarting; the start limit is not exhausted",
+            }
         if parsed.operation == "status":
             return switch.status(parsed.launcher)
         if parsed.operation == "bead":

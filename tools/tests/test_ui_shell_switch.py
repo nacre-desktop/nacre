@@ -46,6 +46,7 @@ class Manager:
         self.shell_active = True
         self.client_on = True
         self.daemon_down = False
+        self.result = "success"  # the shell unit's Result property
 
     def dropin_text(self):
         path = self.root / (m.SHELL + ".d") / m.DROPIN_NAME
@@ -167,6 +168,7 @@ class Manager:
                 "SubState": "running" if state == "active" else "failed",
                 "MainPID": str(pid),
                 "NRestarts": "0",
+                "Result": self.result,
                 "UnitFileState": "enabled",
                 "Environment": "NACRE_DAEMON_CLIENT=1" if self.client_on else "",
                 "ExecStart": QML_EXEC,
@@ -532,6 +534,18 @@ class SwitchTests(Base):
                 )
                 self.assertEqual(busy["status"], "busy")
             self.bead()
+            # systemd also runs OnFailure= on a crash that it restarts: not exhausted, nothing happens
+            self.manager.result = "signal"
+            ignored = m.dispatch(
+                ["qml", "--recover"],
+                self.home,
+                releases,
+                runner=self.manager,
+                environ={},
+            )
+            self.assertEqual(ignored["status"], "ignored")
+            self.assertBead()
+            self.manager.result = "start-limit-hit"
             result = m.dispatch(
                 ["qml", "--recover"],
                 self.home,
