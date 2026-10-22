@@ -618,7 +618,7 @@ mod tests {
             ] {
                 let (mut stream, _) = listener.accept().unwrap();
                 let mut data = [0; 512];
-                stream.read(&mut data).unwrap();
+                assert!(stream.read(&mut data).unwrap() > 0);
                 write!(stream,"HTTP/1.1 200 OK\r\n{proof}Content-Length: 30\r\nConnection: close\r\n\r\n{{\"ready\":true,\"authVersion\":1}}").unwrap();
             }
         });

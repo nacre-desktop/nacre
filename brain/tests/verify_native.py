@@ -265,6 +265,30 @@ def cases():
         ],
     )
 
+    add(
+        "extra-project-titlecase-and-slug-resolution",
+        [
+            note(
+                80,
+                "Unicode title",
+                "Public project evidence",
+                {"project": "ßeta-ǆuro-ᾀ"},
+            ),
+            note(
+                81,
+                "Explicit parent",
+                "Public parent evidence",
+                {"worlds": "Public Fixture"},
+            ),
+            note(
+                82,
+                "Slug alias",
+                "Public related evidence",
+                {"project": "public.fixture"},
+            ),
+        ],
+    )
+
     # Additional public-only cases exercise curated links, explicit entity pages,
     # ordered annotations, merged topics, profile evidence and Unicode identity.
     curated = [

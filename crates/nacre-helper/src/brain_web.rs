@@ -1272,6 +1272,8 @@ mod tests {
             outside.path().join("outside.md").to_str().unwrap()
         )
         .is_err());
+        assert!(note_path_at(t.path(), t.path().join("allowed.md").to_str().unwrap()).is_err());
+        assert!(note_path_at(t.path(), "./allowed.md").is_err());
         assert_eq!(
             read(&note_path_at(t.path(), "allowed.md").unwrap(), NOTE_LIMIT).unwrap(),
             "# Public fixture"

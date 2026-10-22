@@ -100,7 +100,15 @@ impl BrowserAuth {
         if !valid_secret(nonce) {
             return None;
         }
-        Some(readiness_mac(&self.bearer, self.port, nonce))
+        // A trusted launcher may already have renewed the on-disk session while
+        // the browser is still completing bootstrap. Prove ownership of that
+        // current state, without authorizing it for API access before redemption.
+        let bytes = read_private(&self.directory.join(format!("{}.json", self.port)), 4096).ok()?;
+        let session: SessionFile = serde_json::from_slice(&bytes).ok()?;
+        if !valid_secret(&session.bearer) {
+            return None;
+        }
+        Some(readiness_mac(&session.bearer, self.port, nonce))
     }
 
     /// Consume and persistently revoke the startup token on its first successful use.
@@ -307,7 +315,9 @@ fn read_private(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
             "unsafe authentication state file",
         ));
     }
-    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    if file.metadata()?.permissions().mode() & 0o7777 != 0o600 {
+        file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    }
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
     file.take(limit.saturating_add(1)).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > limit {
@@ -720,6 +730,14 @@ mod tests {
         .unwrap();
         assert!(!auth.cookie_valid(&old_cookie));
         let page = refresh_bootstrap(dir.path(), 17843, false).unwrap();
+        let nonce = readiness_challenge().unwrap();
+        assert!(verify_readiness(
+            dir.path(),
+            17843,
+            &nonce,
+            &auth.readiness_proof(&nonce).unwrap()
+        )
+        .unwrap());
         let page = fs::read_to_string(page).unwrap();
         let token = page
             .split("token=")
