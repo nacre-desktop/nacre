@@ -793,7 +793,10 @@ pub fn organize_mut(
         let id = n["id"].as_str().unwrap_or("").to_owned();
         let path = n["path"].as_str().unwrap_or("");
         let meta = &n["meta"];
-        if !path.starts_with("raw/") {
+        if path.starts_with("raw/") {
+            continue;
+        }
+        {
             for label in items(&meta["worlds"]) {
                 let sid = add_subject(
                     &mut subjects,
@@ -818,12 +821,8 @@ pub fn organize_mut(
                 assign(&mut assigned, &id, &sid);
             }
         }
-    }
-    // Projects are explicit declarations, except on topic and device pages.
-    for n in notes.iter() {
-        if n["path"].as_str().unwrap_or("").starts_with("raw/") {
-            continue;
-        }
+        // Preserve per-note annotation order: worlds, then project, before
+        // moving to the next note (Python seed_annotations).
         let project = n["meta"]["project"].as_str().unwrap_or("");
         if project.is_empty()
             || ["topic", "device"].contains(&n["meta"]["entity"].as_str().unwrap_or(""))
