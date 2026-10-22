@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 concurrency:
   group: nacre-source-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 defaults:
   run:
     shell: nice -n 10 bash --noprofile --norc -e -o pipefail {0}
