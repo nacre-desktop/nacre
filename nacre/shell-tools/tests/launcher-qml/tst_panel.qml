@@ -30,6 +30,12 @@ TestCase {
                 }
                 visibilities: state
             }
+            Item {
+                objectName: "launcherMaterial"
+                parent: panel.motionItem
+                width: panel.width
+                height: panel.height
+            }
         }
     }
     function test_panel_focuses_search_on_fresh_open_and_reopen() {
@@ -69,27 +75,34 @@ TestCase {
     function test_render_thread_animators_keep_the_shared_motion_proxy() {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const motion = findChild(panel, "launcherMotion");
+        const riseDistance = panel.slideOffset;
+        compare(riseDistance, panel.contentHeight);
+        compare(panel.contentHeight, 300);
         panel.state.launcher = true;
         tryCompare(panel, "renderAnimationRunning", true);
         wait(80);
         verify(panel.opening);
         verify(panel.reveal > 0 && panel.reveal < 1);
-        fuzzyCompare(panel.slideOffset, (1 - panel.reveal) * 16, .001);
-        compare(motion.y, 16);
-        compare(motion.opacity, 0);
+        fuzzyCompare(panel.slideOffset, (1 - panel.reveal) * panel.contentHeight, .001);
+        compare(motion.y, panel.contentHeight);
+        compare(motion.opacity, 1);
         wait(350);
         verify(!panel.renderAnimationRunning);
         compare(motion.y, 0);
         compare(motion.opacity, 1);
+        fuzzyCompare(panel.slideOffset, 0, .001);
+        fuzzyCompare(riseDistance - panel.slideOffset, panel.contentHeight, .001);
         compare(panel.reveal, 1);
         panel.state.launcher = false;
+        const closeStart = panel.slideOffset;
         tryCompare(panel, "renderAnimationRunning", true);
         compare(motion.y, 0);
         compare(motion.opacity, 1);
         wait(350);
         verify(!panel.renderAnimationRunning);
-        compare(motion.y, 16);
-        compare(motion.opacity, 0);
+        compare(motion.y, panel.contentHeight);
+        compare(motion.opacity, 1);
+        fuzzyCompare(panel.slideOffset - closeStart, panel.contentHeight, .001);
         compare(panel.reveal, 0);
     }
 
@@ -113,32 +126,57 @@ TestCase {
     function test_body_and_search_share_one_translation_through_focus_and_close() {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
+        const material = findChild(view, "launcherMaterial");
         panel.state.launcher = true;
         tryCompare(page, "status", Loader.Ready);
         const search = findChild(page.item, "launcherSearch");
-        let previousBody = null, previousSearch = null;
-        for (let frame = 0; frame < 24; frame++) {
-            const bodyY = panel.mapToItem(view, 0, 0).y + panel.slideOffset;
+        verify(panel.opening);
+        let previousMaterial = null, previousSearch = null;
+        let openingMoved = false;
+        for (let frame = 0; frame < 18; frame++) {
+            const materialY = material.mapToItem(view, 0, 0).y - panel.motionItem.y + panel.slideOffset;
             const searchY = search.mapToItem(view, 0, 0).y - panel.motionItem.y + panel.slideOffset;
             compare(panel.height, 300);
             compare(page.height, 300);
-            fuzzyCompare(searchY - bodyY, 240, .001);
-            if (previousBody !== null)
-                fuzzyCompare(searchY - previousSearch, bodyY - previousBody, .001);
-            previousBody = bodyY;
+            fuzzyCompare(searchY - materialY, 240, .001);
+            if (previousMaterial !== null) {
+                fuzzyCompare(searchY - previousSearch, materialY - previousMaterial, .001);
+                verify(materialY <= previousMaterial);
+                openingMoved = openingMoved || materialY < previousMaterial;
+            }
+            previousMaterial = materialY;
             previousSearch = searchY;
             if (frame === 4)
                 panel.focusExplicit();
             wait(16);
         }
+        verify(openingMoved);
         verify(search.activeFocus);
+        tryCompare(panel, "reveal", 1, 100);
         fuzzyCompare(panel.slideOffset, 0, .001);
         compare(panel.reveal, 1);
         panel.state.launcher = false;
-        wait(80);
-        compare(panel.height, 300);
-        verify(panel.reveal > 0 && panel.reveal < 1);
+        const closeStart = panel.slideOffset;
+        previousMaterial = null;
+        previousSearch = null;
+        let closingMoved = false;
+        for (let frame = 0; frame < 18; frame++) {
+            const materialY = material.mapToItem(view, 0, 0).y - panel.motionItem.y + panel.slideOffset;
+            const searchY = search.mapToItem(view, 0, 0).y - panel.motionItem.y + panel.slideOffset;
+            compare(panel.height, 300);
+            fuzzyCompare(searchY - materialY, 240, .001);
+            if (previousMaterial !== null) {
+                fuzzyCompare(searchY - previousSearch, materialY - previousMaterial, .001);
+                verify(materialY >= previousMaterial);
+                closingMoved = closingMoved || materialY > previousMaterial;
+            }
+            previousMaterial = materialY;
+            previousSearch = searchY;
+            wait(16);
+        }
+        verify(closingMoved);
         tryCompare(panel, "height", 0);
+        fuzzyCompare(panel.slideOffset - closeStart, panel.contentHeight - closeStart, .001);
     }
 
     function test_lazy_open_reversal_and_unload() {

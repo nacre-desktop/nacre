@@ -223,12 +223,11 @@ Item {
         screenName: root.screen.name
         enabled: root.visibilities.launcher
         visibilities: root.visibilities
-        // During motion the page and material move/fade together; at rest the
-        // shared contour preserves seamless unions with other pinned panels.
+        // During motion the page and material rise together; at rest the shared
+        // contour preserves seamless unions with other pinned panels.
         readonly property bool ownsMaterial: root.visibilities.launcher ? launcher.reveal < 1 : launcher.reveal > 0
         readonly property alias motionMaterial: launcherMaterial
-        // The material shares the launcher's one transform and opacity with its
-        // page. The fixed frame no longer stretches behind a separately moving page.
+        // The material shares the launcher's one transform with its page.
         Launcher.NacreLauncherMaterial {
             id: launcherMaterial
             parent: launcher.motionItem
@@ -273,7 +272,7 @@ Item {
             host: launcher
             screen: root.screen
         }
-        clip: false
+        clip: true
         z: 10
     }
     Osd.NacreOsdEvents {

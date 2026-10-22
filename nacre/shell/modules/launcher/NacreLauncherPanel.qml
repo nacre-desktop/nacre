@@ -37,11 +37,10 @@ Item {
         edgeOpening.complete();
         motionReady = false;
         slideAnimator.complete();
-        fadeAnimator.complete();
-        motion.y = detached || revealTarget ? 0 : 16;
-        motion.opacity = handoffHidden ? 0 : revealTarget ? 1 : 0;
-        motion.y = Qt.binding(() => root.detached || root.revealTarget ? 0 : 16);
-        motion.opacity = Qt.binding(() => root.handoffHidden ? 0 : root.revealTarget ? 1 : 0);
+        motion.y = detached || revealTarget ? 0 : contentHeight;
+        motion.opacity = handoffHidden ? 0 : 1;
+        motion.y = Qt.binding(() => root.detached || root.revealTarget ? 0 : root.contentHeight);
+        motion.opacity = Qt.binding(() => root.handoffHidden ? 0 : 1);
         motionReady = true;
     }
     Connections {
@@ -57,16 +56,16 @@ Item {
         Qt.callLater(() => root.completeRenderAnimations());
     }
     property bool handoffHidden: false
-    // One progress value moves and fades the entire fixed-size launcher,
-    // including the host-supplied material and the search field.
+    // One progress value moves the entire fixed-size launcher, including the
+    // host-supplied material and search field, from the bottom edge.
     property real reveal: visibilities.launcher && page.status === Loader.Ready ? 1 : 0
     // Keep a GUI-side progress value for lifecycle and trace hooks, while the
     // rendered container itself uses scene-graph Animators for its motion.
     readonly property bool revealTarget: visibilities.launcher && page.status === Loader.Ready
     onRevealTargetChanged: if (restoreImmediately && visibilities.launcher)
         completeImmediateRestore()
-    readonly property real slideOffset: detached ? 0 : (1 - reveal) * 16
-    readonly property bool renderAnimationRunning: slideAnimator.running || fadeAnimator.running
+    readonly property real slideOffset: detached ? 0 : (1 - reveal) * contentHeight
+    readonly property bool renderAnimationRunning: slideAnimator.running
     onEnabledChanged: if (enabled) {
         handoffHidden = false;
         completeImmediateRestore();
@@ -138,22 +137,14 @@ Item {
         id: motion
         objectName: "launcherMotion"
         x: 0
-        y: root.detached || root.revealTarget ? 0 : 16
+        y: root.detached || root.revealTarget ? 0 : root.contentHeight
         width: root.width
         height: root.height
-        opacity: root.handoffHidden ? 0 : root.revealTarget ? 1 : 0
+        opacity: root.handoffHidden ? 0 : 1
         Behavior on y {
             enabled: root.motionReady && !root.detached && (!root.restoreImmediately || !root.visibilities.launcher)
             YAnimator {
                 id: slideAnimator
-                duration: NacreTokens.motionEnabled ? 300 : 0
-                easing.type: Easing.OutCubic
-            }
-        }
-        Behavior on opacity {
-            enabled: root.motionReady && !root.handoffHidden && !root.detached && (!root.restoreImmediately || !root.visibilities.launcher)
-            OpacityAnimator {
-                id: fadeAnimator
                 duration: NacreTokens.motionEnabled ? 300 : 0
                 easing.type: Easing.OutCubic
             }
