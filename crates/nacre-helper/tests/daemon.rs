@@ -2820,7 +2820,7 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
 
 #[test]
 fn ai_chat_is_hosted_by_a_worker_and_published_as_a_bounded_snapshot() -> Result<()> {
-    use nacre_protocol::{ai_chat::AiChat, Message, Mirror, Reply, Update};
+    use nacre_protocol::{ai_chat::AiChat, Message, Mirror, Reply};
 
     let home = tempfile::Builder::new().prefix("ac-").tempdir()?;
     fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;

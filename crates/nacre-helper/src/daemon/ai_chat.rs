@@ -365,14 +365,12 @@ impl Host {
             }
             // Stdout closed or oversized: stop the worker through its pipe.
             channel.input.lock().await.take();
-            let mut hosted_channels = hosted.channels.borrow_mut();
-            if hosted_channels
-                .get(&name)
-                .is_some_and(|c| Rc::ptr_eq(c, &channel))
             {
-                hosted_channels.remove(&name);
+                let mut channels = hosted.channels.borrow_mut();
+                if channels.get(&name).is_some_and(|c| Rc::ptr_eq(c, &channel)) {
+                    channels.remove(&name);
+                }
             }
-            drop(hosted_channels);
             channel.phase.send_replace(Phase::Gone);
             hosted.dirty.notify_one();
             if tokio::time::timeout(Duration::from_secs(12), child.wait())
