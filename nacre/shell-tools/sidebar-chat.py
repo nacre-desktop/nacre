@@ -911,7 +911,12 @@ class Manager:
             )
             self.update()
             subprocess.Popen(
-                [str(Path(__file__).with_name("nacre-helper")), "desktop-extras", "resume", key],
+                [
+                    str(Path(__file__).with_name("nacre-helper")),
+                    "desktop-extras",
+                    "resume",
+                    key,
+                ],
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

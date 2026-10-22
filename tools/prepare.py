@@ -67,7 +67,14 @@ def _prepare_locked(repo, destination, profile, lease):
         )
     shutil.copy2(helper, shell / "tools/nacre-helper")
     # Preserve the historical command paths as argv[0]-selected native aliases.
-    for name in ("nacre-app", "nacre-settings", "nacre-welcome", "nacre-desktop-extras", "nacre-maintenance", "nacre-welcome-state"):
+    for name in (
+        "nacre-app",
+        "nacre-settings",
+        "nacre-welcome",
+        "nacre-desktop-extras",
+        "nacre-maintenance",
+        "nacre-welcome-state",
+    ):
         alias = destination / ".local/bin" / name
         alias.parent.mkdir(parents=True, exist_ok=True)
         alias.symlink_to("../share/nacre/shell/tools/nacre-helper")
