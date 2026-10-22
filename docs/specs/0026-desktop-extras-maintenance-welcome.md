@@ -1,6 +1,6 @@
 # N0026 — Desktop extras, maintenance, and welcome
 
-- Status: In progress
+- Status: Done
 - Date: 2026-10-22
 - Size: M-L (draft estimate: about 1,538 LOC across the three source helpers)
 - Parallel: no
@@ -13,6 +13,11 @@ and `bin/` shims, following N0018–N0025.
 
 **Dependencies.** N0020 (Brain search) and N0021 (chat list and memory). Reuse
 their native APIs; do not add competing storage or chat discovery paths.
+
+**Provider boundary.** Rust owns desktop-extras routing, history assembly, cache
+keys, privacy filtering and resume dispatch. It reads Codex/Claude histories
+through the existing `nacre-ai-chat` and `nacre-ai-claude` provider commands;
+those provider-specific readers remain separate runtime components.
 
 **Frozen parity.** Replay `desktop-extras`, `maintenance`, and `welcome` under
 `tests/parity/helpers/` with
