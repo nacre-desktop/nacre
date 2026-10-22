@@ -40,6 +40,9 @@ PROBE = """
     property var perfOpenPositions: []
     property real perfLastFrameAt: 0
     property bool perfOpenSampling: false
+    property int perfStallOpenMs: 0
+    property bool perfStallInjected: false
+    property int perfFrameSwapCount: 0
     property real perfKeyStarted: 0
     property real perfKeyFrameMs: -1
     property real perfResultFrameMs: -1
@@ -77,6 +80,8 @@ PROBE = """
         perfStarted = Date.now();
         perfLastFrameAt = perfStarted;
         perfOpenSampling = action === "launcher";
+        perfStallInjected = false;
+        console.log("PERF_WINDOW", root.contentItem.Window.window);
         if (action === "launcher") NacrePanelState.openMode("apps", "", false);
         else { NacrePanelState.openEdge("dashboard", root.screen.name); flags.dashboardTab = 0; flags.dashboardPinned = true; }
         console.log("PERF_KEY", action, perfSequence);
@@ -98,14 +103,20 @@ PROBE = """
     function perfPositionSample(panel) {
         const search = root.perfSearch;
         if (!search || !panel.visible) return;
-        const body = panel.ownsMaterial === true ? root.perfMaterial || panel : panel;
-        const top = body.mapToItem(root.contentItem, 0, 0).y;
-        const bottom = body.mapToItem(root.contentItem, 0, body.height).y;
-        const fieldTop = search.mapToItem(root.contentItem, 0, 0).y;
-        const fieldBottom = search.mapToItem(root.contentItem, 0, search.height).y;
+        // Animator properties expose their final QML value during motion.
+        // Reconstruct the same rendered trajectory from the retained reveal
+        // progress value, which remains the lifecycle/trace clock.
+        const offset = panel.slideOffset;
+        const animatorMotion = panel.motionItem !== undefined;
+        const topBaseY = panel.mapToItem(root.contentItem, 0, 0).y - (animatorMotion ? 0 : offset);
+        const top = topBaseY + offset;
+        const bottom = top + panel.height;
+        const fieldBaseY = search.mapToItem(root.contentItem, 0, 0).y - (animatorMotion ? panel.motionItem.y : offset);
+        const fieldTop = fieldBaseY + offset;
+        const fieldBottom = fieldTop + search.height;
         const clipBottom = panel.parent.mapToItem(root.contentItem, 0, panel.parent.height).y;
         const visibleBottom = panel.clip ? Math.min(bottom, clipBottom) : clipBottom;
-        root.perfOpenPositions.push({atMs: Date.now() - root.perfStarted, bodyTopY: top, bodyBottomY: bottom, bodyHeight: body.height, materialOwned: panel.ownsMaterial === true, searchY: fieldTop, searchBottomY: fieldBottom, searchVisiblePx: Math.max(0, Math.min(fieldBottom, visibleBottom) - Math.max(fieldTop, top)), pageHeight: root.perfPage?.height ?? null, focused: search.activeFocus, opacity: panel.opacity});
+        root.perfOpenPositions.push({atMs: Date.now() - root.perfStarted, bodyTopY: top, bodyBottomY: bottom, bodyHeight: panel.height, materialOwned: panel.ownsMaterial === true, searchY: fieldTop, searchBottomY: fieldBottom, searchVisiblePx: Math.max(0, Math.min(fieldBottom, visibleBottom) - Math.max(fieldTop, top)), pageHeight: root.perfPage?.height ?? null, focused: search.activeFocus, opacity: panel.reveal, renderAnimatorRunning: panel.renderAnimationRunning});
     }
     function perfImages(item, visibleOnly) {
         let ready = 0, pending = 0;
@@ -120,8 +131,10 @@ PROBE = """
         return {ready: ready, pending: pending};
     }
     Connections {
-        target: root.contentItem.Window.window
+        target: root.contentItem.Window.window || root
+        ignoreUnknownSignals: true
         function onFrameSwapped() {
+            root.perfFrameSwapCount++;
             if (!root.perfStarted) return;
             if (root.perfAction === "launcher-key") {
                 const now = Date.now();
@@ -159,13 +172,13 @@ PROBE = """
                 root.perfLastFrameAt = now;
                 if (!panel.opening && Math.abs(panel.presentedHeight - panel.contentHeight) <= 1) root.perfOpenSampling = false;
             }
-            root.perfWait = {visible: panel.visible, opening: panel.opening, presented: panel.presentedHeight, content: panel.contentHeight, queue: NacreDashboardState.queue.length, message: NacreDashboardState.message, images: root.perfImages(panel)};
+            root.perfWait = {visible: panel.visible, opening: panel.opening, presented: panel.presentedHeight, content: panel.contentHeight, queue: NacreDashboardState.queue.length, message: NacreDashboardState.message, images: root.perfImages(panel), stallInjected: root.perfStallInjected};
             if (root.perfFind(panel, root.perfAction === "launcher" ? "launcherPage" : "dashboardPage")?.status !== Loader.Ready) return;
             if (!panel.visible || panel.opening || Math.abs(panel.presentedHeight - panel.contentHeight) > 1) return;
             if (root.perfAction === "dashboard" && (NacreDashboardState.busy || NacreDashboardState.queue.length || NacreDashboardState.message)) return;
             const images = root.perfImages(panel);
             if (images.pending) return;
-            root.perfResult = Object.assign({}, root.perfResult, {frameMs: Date.now() - root.perfStarted, readyImages: images.ready, openFrameIntervalsMs: root.perfAction === "launcher" ? root.perfOpenFrameMs.slice() : []});
+            root.perfResult = Object.assign({}, root.perfResult, {frameMs: Date.now() - root.perfStarted, readyImages: images.ready, openFrameIntervalsMs: root.perfAction === "launcher" ? root.perfOpenFrameMs.slice() : [], stallInjected: root.perfStallInjected});
             root.perfStarted = 0;
         }
     }
@@ -210,6 +223,18 @@ PROBE = """
         }
     }
     Timer { interval: 16; repeat: true; running: root.perfStarted > 0; onTriggered: root.contentItem.Window.window.update(); }
+    Timer {
+        interval: 16
+        repeat: true
+        running: root.perfOpenSampling && root.perfStallOpenMs > 0 && !root.perfStallInjected
+        onTriggered: {
+            if (Date.now() - root.perfStarted < 100) return;
+            root.perfStallInjected = true;
+            const until = Date.now() + root.perfStallOpenMs;
+            while (Date.now() < until) {}
+            console.log("PERF_STALL", root.perfStallOpenMs);
+        }
+    }
     FloatingWindow {
         id: perfInput
         title: "Nacre Performance Input"
@@ -230,12 +255,13 @@ PROBE = """
     }
     IpcHandler {
         target: "performanceFrame"
-        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, openFrameIntervalsMs: root.perfOpenFrameMs, openPositions: root.perfOpenPositions, keyFrameMs: root.perfKeyFrameMs >= 0 ? root.perfKeyFrameMs : null, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, queryCurrent: root.perfQueryCurrent(), screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
+        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, openFrameIntervalsMs: root.perfOpenFrameMs, openPositions: root.perfOpenPositions, keyFrameMs: root.perfKeyFrameMs >= 0 ? root.perfKeyFrameMs : null, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, frameSwapCount: root.perfFrameSwapCount, windowAttached: root.contentItem.Window.window !== null, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, queryCurrent: root.perfQueryCurrent(), screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
         function arm(): void { perfInput.visible = false; perfInput.visible = true; perfKeys.forceActiveFocus(); }
         function suspend(hidden: bool): void { WallpaperPlayback.locked = hidden; }
         function pinDashboard(): void { flags.dashboardPinned = true; }
         function pause(paused: bool): void { NacreWallpapers.preferences = Object.assign({}, NacreWallpapers.preferences, {paused: paused}); }
         function open(action: string): void { root.perfOpen(action); }
+        function stallOpen(milliseconds: int): void { root.perfStallOpenMs = Math.max(0, milliseconds); }
         function chooseWallpaper(path: string, primary: string): void { root.perfChooseWallpaper(path, primary); }
         function wallpaper(data: string): void {
             const fixture = JSON.parse(data);
@@ -983,6 +1009,9 @@ def run(args, directory):
         PYTHONPATH=str(home / ".local/share/nacre/shell-cli/src"),
         DBUS_SESSION_BUS_ADDRESS="unix:path=" + str(runtime / "absent-session-bus"),
         DBUS_SYSTEM_BUS_ADDRESS="unix:path=" + str(runtime / "absent-system-bus"),
+        QSG_INFO="1",
+        QSG_RENDER_TIMING="1",
+        QT_LOGGING_RULES="qt.scenegraph.general=true;qt.scenegraph.time.renderloop=true;qt.scenegraph.time.renderer=true",
         HYPRLAND_NO_SYSTEMD="1",
         GVFS_DISABLE_FUSE="1",
     )
@@ -1186,6 +1215,21 @@ def run(args, directory):
             "budget_tier": args.budget_tier,
             "parent_renderer": args.parent_renderer,
             "harness_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "scenegraph_startup_log": [
+                line
+                for line in (directory / "shell.log")
+                .read_text(errors="replace")
+                .splitlines()
+                if any(
+                    marker in line.lower()
+                    for marker in (
+                        "threaded render loop",
+                        "basic render loop",
+                        "creating qrhi",
+                        "opengl vendor",
+                    )
+                )
+            ][:32],
             "sampler_sha256": hashlib.sha256(
                 Path(performance.__file__).read_bytes()
             ).hexdigest(),
@@ -1271,14 +1315,19 @@ def run(args, directory):
 
         def measure_actions(label, count):
             report["latency"][label] = {}
-            for action, key in (
-                [] if args.no_latency else (("launcher", "F8"), ("dashboard", "F9"))
-            ):
+            actions = (
+                [] if args.no_latency else [("launcher", "F8"), ("dashboard", "F9")]
+            )
+            if args.launcher_only:
+                actions = [entry for entry in actions if entry[0] == "launcher"]
+            for action, key in actions:
                 timings = []
                 for _ in range(count):
                     ipc("nacre", "close")
                     time.sleep(0.4)
                     ipc("performanceFrame", "arm")
+                    if action == "launcher" and args.stall_open_ms:
+                        ipc("performanceFrame", "stallOpen", str(args.stall_open_ms))
                     time.sleep(0.2)
                     if args.backend == "hyprland":
                         subprocess.run(
@@ -2254,8 +2303,19 @@ def main():
         help="Require and record per-phase 60-second paging windows for N0002",
     )
     parser.add_argument("--repeats", type=int, default=10)
+    parser.add_argument(
+        "--stall-open-ms",
+        type=int,
+        default=0,
+        help="Inject one test-only GUI-thread busy-loop during each launcher open",
+    )
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--latency-only", action="store_true")
+    parser.add_argument(
+        "--launcher-only",
+        action="store_true",
+        help="Measure only launcher opens in the latency probe",
+    )
     parser.add_argument(
         "--wallpaper-frame-smoke",
         action="store_true",
@@ -2311,6 +2371,8 @@ def main():
         parser.error("--palette-probes requires --wallpaper-frame-smoke")
     if args.lock_frame_smoke and not args.palette_probes:
         parser.error("--lock-frame-smoke requires --palette-probes")
+    if args.stall_open_ms < 0:
+        parser.error("--stall-open-ms cannot be negative")
     if args.keep_fixtures:
         args.keep_fixtures.mkdir(mode=0o700)
         report = run(args, args.keep_fixtures.resolve())

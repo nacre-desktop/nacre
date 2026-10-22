@@ -231,6 +231,7 @@ Item {
         // page. The fixed frame no longer stretches behind a separately moving page.
         Launcher.NacreLauncherMaterial {
             id: launcherMaterial
+            parent: launcher.motionItem
             objectName: "launcherMaterial"
             x: -radius
             width: launcher.width + 2 * cornerRadius

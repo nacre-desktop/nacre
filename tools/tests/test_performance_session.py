@@ -180,7 +180,19 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("keyFrameMs: root.perfKeyFrameMs", probe)
         self.assertIn("resultFrameMs: root.perfResultFrameMs", probe)
         self.assertNotIn("onEntriesChanged()", probe)
-        self.assertNotIn("perfEntriesSignature", probe)
+
+    def test_launcher_stall_hook_is_test_only_and_reported(self):
+        self.assertIn("function stallOpen(milliseconds: int)", session.PROBE)
+        self.assertIn("while (Date.now() < until) {}", session.PROBE)
+        self.assertIn("stallInjected: root.perfStallInjected", session.PROBE)
+        self.assertIn("panel.motionItem !== undefined", session.PROBE)
+        self.assertIn(
+            'console.log("PERF_WINDOW", root.contentItem.Window.window)', session.PROBE
+        )
+        self.assertIn('"--stall-open-ms"', Path(session.__file__).read_text())
+        self.assertIn('"--launcher-only"', Path(session.__file__).read_text())
+        self.assertIn('QSG_INFO="1"', Path(session.__file__).read_text())
+        self.assertNotIn("perfEntriesSignature", session.PROBE)
         source = Path(session.__file__).read_text()
         self.assertIn("launcher result frame or timeout", source)
         self.assertIn("timeout=5", source)

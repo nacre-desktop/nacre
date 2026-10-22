@@ -16,10 +16,12 @@ TestCase {
             width: 1100
             height: 1000
             property alias panel: panel
+            property alias restoreImmediately: panel.restoreImmediately
             NacreLauncherPanel {
                 id: panel
                 width: implicitWidth
                 height: implicitHeight
+                enabled: state.launcher
                 property PersistentProperties state: PersistentProperties {
                     property bool launcher: false
                     property string launcherMode: "apps"
@@ -64,6 +66,50 @@ TestCase {
         compare(page.height, 300);
     }
 
+    function test_render_thread_animators_keep_the_shared_motion_proxy() {
+        const view = createTemporaryObject(scene, this), panel = view.panel;
+        const motion = findChild(panel, "launcherMotion");
+        panel.state.launcher = true;
+        tryCompare(panel, "renderAnimationRunning", true);
+        wait(80);
+        verify(panel.opening);
+        verify(panel.reveal > 0 && panel.reveal < 1);
+        fuzzyCompare(panel.slideOffset, (1 - panel.reveal) * 16, .001);
+        compare(motion.y, 16);
+        compare(motion.opacity, 0);
+        wait(350);
+        verify(!panel.renderAnimationRunning);
+        compare(motion.y, 0);
+        compare(motion.opacity, 1);
+        compare(panel.reveal, 1);
+        panel.state.launcher = false;
+        tryCompare(panel, "renderAnimationRunning", true);
+        compare(motion.y, 0);
+        compare(motion.opacity, 1);
+        wait(350);
+        verify(!panel.renderAnimationRunning);
+        compare(motion.y, 16);
+        compare(motion.opacity, 0);
+        compare(panel.reveal, 0);
+    }
+
+    function test_detached_and_restore_immediately_keep_their_motion_rules() {
+        const view = createTemporaryObject(scene, this, {
+            restoreImmediately: true
+        }), panel = view.panel;
+        verify(!panel.renderAnimationRunning);
+        panel.state.launcher = true;
+        tryCompare(findChild(panel, "launcherPage"), "status", Loader.Ready);
+        panel.restoreAttached();
+        tryCompare(panel, "reveal", 1);
+        tryCompare(panel, "renderAnimationRunning", false, 100);
+        verify(!panel.opening);
+        compare(panel.motionItem.y, 0);
+        panel.detached = true;
+        compare(panel.slideOffset, 0);
+        compare(panel.motionItem.y, 0);
+    }
+
     function test_body_and_search_share_one_translation_through_focus_and_close() {
         const view = createTemporaryObject(scene, this), panel = view.panel;
         const page = findChild(panel, "launcherPage");
@@ -72,8 +118,8 @@ TestCase {
         const search = findChild(page.item, "launcherSearch");
         let previousBody = null, previousSearch = null;
         for (let frame = 0; frame < 24; frame++) {
-            const bodyY = panel.mapToItem(view, 0, 0).y;
-            const searchY = search.mapToItem(view, 0, 0).y;
+            const bodyY = panel.mapToItem(view, 0, 0).y + panel.slideOffset;
+            const searchY = search.mapToItem(view, 0, 0).y - panel.motionItem.y + panel.slideOffset;
             compare(panel.height, 300);
             compare(page.height, 300);
             fuzzyCompare(searchY - bodyY, 240, .001);
@@ -137,6 +183,7 @@ TestCase {
         panel.state.launcherMode = "wallpaper";
         verify(!page.keepWarm);
         panel.state.launcher = false;
+        wait(350);
         tryCompare(page, "active", false, 1000);
         verify(!page.item);
     }

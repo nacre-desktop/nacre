@@ -8,27 +8,69 @@ import qs.modules.extras as Extras
 Item {
     id: root
     required property PersistentProperties visibilities
+    property alias motionItem: motion
     property string screenName: ""
     function prepareLift() {
-        edgeOpening.complete();
+        completeRenderAnimations();
     }
     readonly property bool opening: visibilities.launcher && edgeOpening.running
     property bool restoreImmediately: false
+    property bool motionReady: false
+    Component.onCompleted: motionReady = true
+    onRestoreImmediatelyChanged: if (restoreImmediately && visibilities.launcher)
+        completeImmediateRestore()
+    onDetachedChanged: if (detached)
+        Qt.callLater(() => {
+            if (root.detached)
+                root.completeRenderAnimations();
+        })
+    function completeImmediateRestore() {
+        if (!restoreImmediately || !visibilities.launcher)
+            return;
+        Qt.callLater(() => {
+            if (!root.restoreImmediately || !root.visibilities.launcher)
+                return;
+            root.completeRenderAnimations();
+        });
+    }
+    function completeRenderAnimations() {
+        edgeOpening.complete();
+        motionReady = false;
+        slideAnimator.complete();
+        fadeAnimator.complete();
+        motion.y = detached || revealTarget ? 0 : 16;
+        motion.opacity = handoffHidden ? 0 : revealTarget ? 1 : 0;
+        motion.y = Qt.binding(() => root.detached || root.revealTarget ? 0 : 16);
+        motion.opacity = Qt.binding(() => root.handoffHidden ? 0 : root.revealTarget ? 1 : 0);
+        motionReady = true;
+    }
+    Connections {
+        target: root.visibilities
+        function onLauncherChanged() {
+            if (root.restoreImmediately && root.visibilities.launcher)
+                root.completeImmediateRestore();
+        }
+    }
     function restoreAttached() {
         edgeOpening.complete();
         reveal = Qt.binding(() => visibilities.launcher && page.status === Loader.Ready ? 1 : 0);
+        Qt.callLater(() => root.completeRenderAnimations());
     }
     property bool handoffHidden: false
     // One progress value moves and fades the entire fixed-size launcher,
     // including the host-supplied material and the search field.
     property real reveal: visibilities.launcher && page.status === Loader.Ready ? 1 : 0
+    // Keep a GUI-side progress value for lifecycle and trace hooks, while the
+    // rendered container itself uses scene-graph Animators for its motion.
+    readonly property bool revealTarget: visibilities.launcher && page.status === Loader.Ready
+    onRevealTargetChanged: if (restoreImmediately && visibilities.launcher)
+        completeImmediateRestore()
     readonly property real slideOffset: detached ? 0 : (1 - reveal) * 16
-    opacity: handoffHidden ? 0 : reveal
-    transform: Translate {
-        y: root.slideOffset
+    readonly property bool renderAnimationRunning: slideAnimator.running || fadeAnimator.running
+    onEnabledChanged: if (enabled) {
+        handoffHidden = false;
+        completeImmediateRestore();
     }
-    onEnabledChanged: if (enabled)
-        handoffHidden = false
     property bool detached: false
     property bool closeAfterLaunch: false
     property var menuContext: NacreMenu
@@ -92,8 +134,34 @@ Item {
         if (mode === "wallpaper" && page.item)
             page.item.move(delta);
     }
+    Item {
+        id: motion
+        objectName: "launcherMotion"
+        x: 0
+        y: root.detached || root.revealTarget ? 0 : 16
+        width: root.width
+        height: root.height
+        opacity: root.handoffHidden ? 0 : root.revealTarget ? 1 : 0
+        Behavior on y {
+            enabled: root.motionReady && !root.detached && (!root.restoreImmediately || !root.visibilities.launcher)
+            YAnimator {
+                id: slideAnimator
+                duration: NacreTokens.motionEnabled ? 300 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+        Behavior on opacity {
+            enabled: root.motionReady && !root.handoffHidden && !root.detached && (!root.restoreImmediately || !root.visibilities.launcher)
+            OpacityAnimator {
+                id: fadeAnimator
+                duration: NacreTokens.motionEnabled ? 300 : 0
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
     NacreIdleLoader {
         id: page
+        parent: motion
         y: 0
         // Cache the fixed-size page while it slides behind the edge clip. Text
         // and icons then paint once rather than on every software-rendered frame.

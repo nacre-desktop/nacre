@@ -64,7 +64,9 @@ class PanelHostInputTests(unittest.TestCase):
             for name in names:
                 (fixtures / (name + ".qml")).write_text("""import QtQuick
 Rectangle {
+ id:root
  width:200;height:100;color:"#334455"
+ property Item motionItem:root
  property var screen
  property string screenName
  property var visibilities
