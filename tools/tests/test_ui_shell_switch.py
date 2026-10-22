@@ -21,8 +21,8 @@ class Crash(BaseException):
     pass
 
 
-def done(command, out="", code=0):
-    return subprocess.CompletedProcess(command, code, out, "")
+def done(command, out="", code=0, err=""):
+    return subprocess.CompletedProcess(command, code, out, err)
 
 
 class Manager:
@@ -45,6 +45,7 @@ class Manager:
         self.socket_active = True
         self.shell_active = True
         self.client_on = True
+        self.daemon_down = False
 
     def dropin_text(self):
         path = self.root / (m.SHELL + ".d") / m.DROPIN_NAME
@@ -109,12 +110,12 @@ class Manager:
                         }
                     ),
                 )
-            err = (
-                {"code": "unknown_method", "dispatched": True}
-                if self.provider()
-                else {"code": "unavailable", "dispatched": False}
-            )
-            return done(command, json.dumps({"err": err}))
+            # The real CLI prints only the message, on stderr, exit 1 (measured under systemd, B0033).
+            if self.daemon_down:
+                return done(command, "", 1, "Nacre daemon is unavailable\n")
+            if self.provider():
+                return done(command, "", 1, "UI method is unavailable\n")
+            return done(command, "", 1, "UI provider is unavailable\n")
         assert command[:2] == ["systemctl", "--user"]
         action, *args = command[2:]
         if action == "show-environment":
@@ -386,6 +387,18 @@ class SwitchTests(Base):
                 self.assertQml()
                 self.assertNotIn("applying", self.statuses())
                 self.assertTrue(all(s == "rolled-back" for s in self.statuses()))
+
+    def test_probe_tells_a_live_provider_from_none_or_a_down_daemon(self):
+        # The three outputs of the real `nacrectl call ui.dispatch` probe, measured under systemd (B0033).
+        switch = self.switch()
+        switch.layout(switch.snapshot()[0])
+        binding = switch.binding_env()
+        self.assertTrue(switch.provider_ready(binding))
+        self.manager.shell = ("qml", 1, "inactive")  # nothing registered
+        self.assertFalse(switch.provider_ready(binding))
+        self.manager.shell = ("qml", 1, "active")
+        self.manager.daemon_down = True
+        self.assertFalse(switch.provider_ready(binding))
 
     def test_provider_may_register_late(self):
         self.manager.provider_after = 3

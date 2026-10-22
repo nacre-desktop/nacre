@@ -32,6 +32,15 @@ MARK = "# managed by nacre ui-shell; remove with: nacre ui-shell qml\n"
 SAFE = re.compile(r"/[A-Za-z0-9_./+=:@-]+")
 DEFAULT_LAUNCHER = "/usr/bin/bead-shell"
 DONE = {"complete", "rolled-back"}
+# What `nacrectl call ui.dispatch` really prints when nothing can answer (whitespace removed, lower case):
+# the daemon's hub says "UI provider is unavailable"; a down daemon says "Nacre daemon is unavailable".
+# A live provider answering the unknown probe target instead says "UI method is unavailable" (B0033).
+NO_PROVIDER = (
+    "uiproviderisunavailable",
+    "nacredaemonisunavailable",
+    '"dispatched":false',
+    '"code":"unavailable"',
+)
 
 
 def dropin_text(launcher):
@@ -106,11 +115,7 @@ class UiShell(f4.Switch):
         except (OSError, subprocess.SubprocessError):
             return False
         text = "".join((result.stdout + result.stderr).split()).lower()
-        return (
-            bool(text)
-            and '"dispatched":false' not in text
-            and '"code":"unavailable"' not in text
-        )
+        return bool(text) and not any(mark in text for mark in NO_PROVIDER)
 
     def wait(self, condition, what, seconds=20):
         end = self.now() + seconds
