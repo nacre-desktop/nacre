@@ -793,6 +793,10 @@ class PackageSetupTests(unittest.TestCase):
                     'spawn-at-startup "systemctl" "--user" "start" "nacre-niri-startup.service"',
                     config.read_text(),
                 )
+                self.assertIn(
+                    'spawn-at-startup "wl-paste" "--watch" "nacre-desktop-extras" "store"',
+                    config.read_text(),
+                )
                 startup = home / ".config/systemd/user/nacre-niri-startup.service"
                 self.assertIn("PartOf=graphical-session.target", startup.read_text())
                 self.assertIn("After=graphical-session.target", startup.read_text())

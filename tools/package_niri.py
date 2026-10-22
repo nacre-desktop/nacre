@@ -179,6 +179,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         + "}\n"
         'spawn-at-startup "systemctl" "--user" "start" "nacre-niri-startup.service"\n'
         'spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"\n'
+        'spawn-at-startup "wl-paste" "--watch" "nacre-desktop-extras" "store"\n'
     )
     entry += "".join("workspace " + json.dumps(name) + "\n" for name in names.values())
     entry += '\ninclude "custom.kdl"\n'

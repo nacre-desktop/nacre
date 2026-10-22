@@ -482,6 +482,7 @@ pub fn prepare_configuration(
         fs::read(backend.join("niri/workspace-visitors.kdl"))?,
     )?;
     text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\n");
+    text.push_str("spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\n");
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
     fs::write(config.join("config.kdl"), text)?;
     for file in fs::read_dir(&config)? {
@@ -873,6 +874,9 @@ mod tests {
         )?;
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
         assert!(root.contains("include \"workspaces.kdl\""));
+        assert!(root.contains(
+            "spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\""
+        ));
         assert!(root.contains("include \"monitor-workspace-actions.kdl\""));
         assert!(!root.contains("\nworkspace "));
         assert_eq!(

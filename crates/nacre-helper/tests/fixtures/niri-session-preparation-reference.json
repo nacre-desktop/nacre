@@ -1,5 +1,5 @@
 {
-  "source_sha256": "dabfb81335a2d41c5ea05347a578752e2069918161507c3f52d451dc5789b0d2",
+  "source_sha256": "25689b48f666258342145a44651865f18fdd6e1e7c40a49ea51d40c77a5104f7",
   "cases": [
     {
       "name": "prepare-0-False",
@@ -10,7 +10,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -50,7 +50,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -63,6 +63,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -81,21 +85,17 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
-          "source-revision": {
-            "text": "fixture-revision\n",
-            "mode": 420
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
           "config/workspace-visitors.kdl": {
             "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
+          "source-revision": {
+            "text": "fixture-revision\n",
+            "mode": 420
           }
         },
         "directories": {
@@ -112,7 +112,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -149,7 +149,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -189,7 +189,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -202,6 +202,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -220,24 +224,20 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
           },
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
-            "mode": 384
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
-          "config/workspace-visitors.kdl": {
-            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
           }
         },
@@ -255,7 +255,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -292,7 +292,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -340,7 +340,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -353,6 +353,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -371,21 +375,17 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
-          "source-revision": {
-            "text": "fixture-revision\n",
-            "mode": 420
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
           "config/workspace-visitors.kdl": {
             "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
+          "source-revision": {
+            "text": "fixture-revision\n",
+            "mode": 420
           }
         },
         "directories": {
@@ -402,7 +402,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -439,7 +439,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -487,7 +487,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -500,6 +500,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -518,24 +522,20 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
           },
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
-            "mode": 384
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
-          "config/workspace-visitors.kdl": {
-            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
           }
         },
@@ -553,7 +553,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -590,7 +590,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -636,7 +636,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -649,6 +649,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -667,21 +671,17 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
-          "source-revision": {
-            "text": "fixture-revision\n",
-            "mode": 420
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
           "config/workspace-visitors.kdl": {
             "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
+          "source-revision": {
+            "text": "fixture-revision\n",
+            "mode": 420
           }
         },
         "directories": {
@@ -698,7 +698,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -735,7 +735,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -781,7 +781,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -794,6 +794,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -812,24 +816,20 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
           },
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
-            "mode": 384
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
-          "config/workspace-visitors.kdl": {
-            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
           }
         },
@@ -847,7 +847,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -884,7 +884,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -932,7 +932,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/stage/config/colors.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -945,6 +945,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -963,21 +967,17 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
-          "source-revision": {
-            "text": "fixture-revision\n",
-            "mode": 420
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
           "config/workspace-visitors.kdl": {
             "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
+          "source-revision": {
+            "text": "fixture-revision\n",
+            "mode": 420
           }
         },
         "directories": {
@@ -994,7 +994,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -1031,7 +1031,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -1079,7 +1079,7 @@
             "mode": 384
           },
           "config/config.kdl": {
-            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
+            "text": "include \"$HOME/stage/config/wallpaper.kdl\"\ninclude \"$HOME/stage/config/bindings.kdl\"\ninclude \"$HOME/stage/config/window-rules.kdl\"\ninclude \"$HOME/stage/config/keyboard.kdl\"\ninclude \"$HOME/stage/config/profile.kdl\"\ninclude \"$HOME/.config/nacre/niri/palette.kdl\"\ninclude \"$HOME/stage/config/host.kdl\"\ninclude \"desktop.kdl\"\ninclude \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\nspawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\nhotkey-overlay {\n    skip-at-startup\n}\n",
             "mode": 384
           },
           "config/desktop.kdl": {
@@ -1092,6 +1092,10 @@
           },
           "config/keyboard.kdl": {
             "text": "input {\n    keyboard {\n        xkb {\n            layout \"us,de\"\n            model \"pc105\"\n            variant \",nodeadkeys\"\n            options \"caps:escape\"\n        }\n    }\n}\n",
+            "mode": 384
+          },
+          "config/monitor-workspace-actions.kdl": {
+            "text": "",
             "mode": 384
           },
           "config/profile.kdl": {
@@ -1110,24 +1114,20 @@
             "text": "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nwindow-rule {\n    match app-id=\"^([Tt]hunar)$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.75; }\n}\n\nwindow-rule {\n    match app-id=\"^(org[.]kde[.]dolphin|[Dd]olphin)$\"\n    open-floating true\n    default-column-width { proportion 0.6; }\n    default-window-height { proportion 0.75; }\n}\n\nlayer-rule {\n    match namespace=\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\"\n    background-effect { blur true; }\n}\n\nwindow-rule {\n    match app-id=\"^org.quickshell$\" title=\"^Nacre lock screen preview$\"\n    open-floating true\n    default-column-width { proportion 0.7; }\n    default-window-height { proportion 0.7; }\n}\n\nwindow-rule {\n    match app-id=\"^org\\\\.pulseaudio\\\\.pavucontrol$\"\n    open-floating true\n    default-column-width { fixed 700; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^blueman-manager$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 600; }\n}\n\nwindow-rule {\n    match app-id=\"^nm-connection-editor$\"\n    open-floating true\n    default-column-width { fixed 800; }\n    default-window-height { fixed 700; }\n}\n\nwindow-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-floating true\n    default-column-width { fixed 600; }\n    default-window-height { fixed 400; }\n}\n\nwindow-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^nacre-control$\"\n    open-floating true\n    default-column-width { fixed 720; }\n    default-window-height { fixed 500; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Settings$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Colors$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Welcome$\"\n    open-floating true\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$\"\n}\n\nwindow-rule {\n    match app-id=\"^chrome-127[.]0[.]0[.]1__-Default$\"\n}\n\nwindow-rule {\n    match app-id=\"^([Oo]bsidian)$\"\n}\n\nwindow-rule {\n    match app-id=\"^(nacre-brain-auth|nacre-brain-auth|chrome-.*(nacre_brain|nacre-observatory)_auth_handoff[.]html-.*)$\"\n    open-floating true\n    default-column-width { fixed 80; }\n    default-window-height { fixed 80; }\n}\n\nwindow-rule {\n    match app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$\"\n    open-floating true\n    geometry-corner-radius 18\n    clip-to-geometry true\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
             "mode": 384
           },
+          "config/workspace-visitors.kdl": {
+            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
+            "mode": 384
+          },
+          "config/workspaces.kdl": {
+            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\nworkspace \"nacre-6\"\n",
+            "mode": 384
+          },
           "source-revision": {
             "text": "fixture-revision\n",
             "mode": 420
           },
           "stock-niri": {
             "text": "Prepared with --stock-niri\n",
-            "mode": 384
-          },
-          "config/workspaces.kdl": {
-            "text": "workspace \"One\"\nworkspace \"nacre-2\"\nworkspace \"Quoted \\\"\\u00f8\"\nworkspace \"nacre-4\"\nworkspace \"nacre-5\"\n",
-            "mode": 384
-          },
-          "config/monitor-workspace-actions.kdl": {
-            "text": "",
-            "mode": 384
-          },
-          "config/workspace-visitors.kdl": {
-            "text": "// Available with either Nacre workspace policy.\nbinds {\n    Super+Alt+V repeat=false hotkey-overlay-title=\"Bring visitors here\" { spawn-sh \"exec \\\"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\\\" monitor-workspaces bring\"; }\n}\n",
             "mode": 384
           }
         },
@@ -1145,7 +1145,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -1182,7 +1182,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -1267,7 +1267,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -1298,7 +1298,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -1383,7 +1383,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -1414,7 +1414,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -1490,7 +1490,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",
@@ -1521,7 +1521,7 @@
           "configs",
           "shell"
         ],
-        "workspaceCount": 5,
+        "workspaceCount": 6,
         "workspaceNames": [
           "One",
           "",
@@ -1597,7 +1597,7 @@
                 "configs",
                 "shell"
               ],
-              "workspaceCount": 5,
+              "workspaceCount": 6,
               "workspaceNames": [
                 "One",
                 "",

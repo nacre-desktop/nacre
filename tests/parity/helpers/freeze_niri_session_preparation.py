@@ -165,11 +165,8 @@ def capture():
                             "error": error,
                         },
                     }
-                    normalized = (
-                        json.dumps(record)
-                        .replace(str(home), "$HOME")
-                        .replace(str(ROOT), "$REPO")
-                    )
+                    normalized = json.dumps(record).replace(str(home), "$HOME")
+                    normalized = normalized.replace(str(ROOT) + os.sep, "$REPO/")
                     cases.append(json.loads(normalized))
     with DESTINATION.open("x") as stream:
         json.dump({"source_sha256": SOURCE_SHA, "cases": cases}, stream, indent=2)
