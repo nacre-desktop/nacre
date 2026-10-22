@@ -11,9 +11,9 @@ fixtures were left unchanged; follow-ups are in [Fix during port](#fix-during-po
 | Medium | Notification privacy | `nacre/shell/modules/notifications/NacreNotice.qml` | **fixed**: image/icon URLs could initiate network fetches; accept local files/resources/providers and named icons only. |
 | Medium | Credentials | `bin/codex`, `ai/remote-codex-wrapper.sh` | **fixed**: wrappers inherited permissive umasks; new provider files/directories now inherit 0600/0700 restrictions. Existing files are not repaired. |
 | Low | Packaging | `packaging/packages.json`, `packaging/arch/PKGBUILD` | **fixed**: declare `jq`, required by window helpers and their data validation. CI initially skipped four shell tests without it; all four ran locally, and the CI repair task added the check-environment dependency. |
-| Medium | Brain availability | `brain/control.py` | **fix during port**: no connection timeout or concurrent-client cap; malformed non-object action JSON raises an uncaught error. Existing 4 KiB action limit does not bound slow connections or note responses. |
-| Low | Brain auth lifetime | `brain/auth.py` | **fix during port**: bootstrap remains reusable until restart; cookie persists across restarts without server-side expiry/revocation UI. Auth files are 0600 and directory 0700; no HTTP request logging. |
-| Medium | Brain auth scope | `brain/control.py`, `brain/web/app.js` | **fix during port**: cookies are host-scoped rather than port-scoped. Visiting an untrusted service on another loopback port in the Brain browser profile can disclose the cookie; note links permit explicit HTTP(S) navigation. |
+| Medium | Brain availability | `brain/control.py` | **fixed in N0024 native path**: client cap, absolute connection/request/write deadlines, bounded note/index/response sizes, strict HTTP framing and object-only action JSON. Imported Python remains a parity reference. |
+| Low | Brain auth lifetime | `brain/auth.py` | **fixed in N0024 native path**: five-minute one-use bootstrap, restart revocation and 30-day server/cookie expiry; private state ancestors and files are checked. No revocation UI added. |
+| Medium | Brain auth scope | `brain/control.py`, `brain/web/app.js` | **fixed in N0024 native path**: host-wide cookie alone grants no API access; independent origin-scoped bearer, validated fragment handoff and nonce-based launcher readiness proof. Cross-port navigation and stolen-cookie replay have fixture/browser regressions. |
 | Medium | Screenshots / location | `nacre/shell-tools/screenshot.py`, `timezone.py` | **fix during port**: full screenshots inherit umask; system timezone status exposes city/accuracy at 0644. Precise device coordinates are ephemeral. |
 | Medium | History retention | `notification-history.py`, `desktop-extras.py`, `composer.py`, `sidebar-chat.py` under `nacre/shell-tools/` | **fix during port**: notifications, chat/drafts/screenshots lack age expiry; clipboard thumbnail cleanup occurs only on refresh. Private-file protections exist but old directory modes are not consistently repaired. |
 | Medium | Optional downloads | `brain/provision-semantic.py`, `brain/semantic.py`, `bin/nacre-ai-skills`, `tools/fetch-wallpapers.py` | **fix during port**: model revision/content and archive/image digests not locked; some downloads/extractions are unbounded. Skills/images pin source commits; Python top-level packages pin versions but transitive installs lack a hash lock. |
@@ -25,6 +25,12 @@ fixtures were left unchanged; follow-ups are in [Fix during port](#fix-during-po
 | Low | Provider secrets | `bin/nacre-ai-account`, `bin/nacre-ai-claude`, `ai/install.py` | **accepted risk**: provider CLI owns token/keyring storage; Nacre does not force a storage backend. Named Codex homes are 0700; upstream default/Claude homes and pre-existing credential modes require a separate local audit. API-key environment variables are inherited; same-user processes can inspect them. |
 
 ## Existing boundaries checked
+
+N0024 update (2026-10-22): the native dispatcher now replaces the Python server
+at execution time. Its additional boundaries and intended compatibility changes
+are recorded in [the unit spec](../specs/0024-brain-web-server.md). The following
+paragraphs describe the original Python review; the Brain findings above record
+the native corrections. No installed service or live browser profile was used.
 
 Brain serves on `127.0.0.1`; Host validation rejects other origins/DNS-rebinding
 names. Private API reads require a constant-time checked cookie. Actions require
