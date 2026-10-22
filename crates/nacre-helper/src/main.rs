@@ -40,12 +40,16 @@ fn run() -> Result<i32> {
                 &arguments.collect::<Vec<_>>(),
             );
         }
-        Some("composer" | "nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
-            invoked.unwrap().to_owned()
-        }
+        Some(
+            "composer" | "sidebar-chat" | "nacre-app" | "nacre-settings" | "nacre-welcome"
+            | "startup-apps",
+        ) => invoked.unwrap().to_owned(),
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "sidebar-chat" {
+        return nacre_helper::sidebar_chat::run(&arguments);
+    }
     if tool == "composer" {
         use std::io::Read;
         let action = arguments.first().ok_or("Expected a composer action")?;

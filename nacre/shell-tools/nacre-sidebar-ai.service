@@ -4,7 +4,7 @@ PartOf=graphical-session.target
 After=graphical-session.target
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 %h/.local/share/nacre/shell/tools/sidebar-chat.py server
+ExecStart=%h/.local/share/nacre/shell/tools/nacre-helper sidebar-chat server
 Restart=on-failure
 RestartSec=2
 KillMode=control-group

@@ -1,6 +1,6 @@
 # N0023 — Sidebar chat server and composer
 
-- Status: In progress
+- Status: Implemented; pending lead review
 - Date: 2026-10-22
 - Dependencies: N0021 theming; N0022 AI core (`9331b3d1`)
 
@@ -88,3 +88,40 @@ The helper suite passed 366 tests. Application suites passed tools 452 (one
 existing opt-in skip), AI 117, brain 45 and shell-tools 479. Galleries passed
 244 states per language and 185 with the wide font; the AUR pager was captured.
 All seven shipping source files matched the CI snapshot by SHA-256.
+
+## Protocol evidence
+
+`crates/nacre-helper/tests/sidebar_chat.rs` runs the compiled helper against fake
+Codex/Claude executables with cleared environments and private fixture HOMEs.
+The socket assertions cover the QML `history`, `state`, `message`, `delta`,
+`sendFailed`, question and answer contracts rather than only internal functions.
+
+| Boundary | Synthetic coverage |
+| --- | --- |
+| Codex | Streaming, user echo suppression, busy/idle transitions, steering and its completed-turn race, allow once/decline, stale answers, interruption, restart/resume, channel isolation and exact permission parameters. |
+| Claude | Multiple streamed messages, session allocation/resume, exact permission flag, usage-limit errors and cancellation with prompt retention. |
+| Questions | Restored/async cards, reset, answer suppression and blocking questions; a reconnect reusing an RPC ID cannot lose the new question to an old waiter. |
+| Lifecycle | Workspace ownership/peer exit, busy handoff refusal, late-resume fencing, provider default changes and named-account setup before launch. |
+| Transport/composer | Partial client-frame reconnect, client admission/reclamation, bounded provider frames, private captures and newline-terminated QML requests whose stdin remains open. |
+
+## Phase two verification and remaining boundaries
+
+The complete Arch desktop job replica passed (`.lead/desktop-phase2-final4.log`,
+exit 0), including all commands listed for phase one. The helper suite passed
+373 tests; seven server unit tests and 13 socket/provider integration tests
+passed. Explicit frozen replays passed composer 4/4 and sidebar-chat 3/3;
+the complete sweep passed 534/534 with no reference changes or exceptions.
+Application suites passed tools 452 (one existing opt-in skip), AI 117, brain 45
+and shell-tools 479. Translation coverage passed 3354 messages; galleries passed
+244 states per language and 185 with the wide font, plus the AUR pager capture.
+All 12 shipping source files matched the final CI snapshot by SHA-256.
+
+The source QML client and service template now invoke native `nacre-helper`.
+Named-account setup still delegates to `nacre-ai-chat configure`; selected
+Claude history restoration uses a one-shot Python SDK boundary; workspace
+handoff delegates to `desktop-extras.py resume`. Other AI controllers, views and
+workflows remain Python. The original composer/sidebar Python sources remain
+for historical tests and rollback evidence. Claude history listing (N0026) and
+daemon hosting (N0028) are separate units. No installed files, live units,
+desktop session, provider credentials, permissions policy or publication were
+changed. The two phases are local unpublished commits; no push occurred.

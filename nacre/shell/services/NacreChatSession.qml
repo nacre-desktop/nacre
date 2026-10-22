@@ -338,7 +338,7 @@ Scope {
     Process {
         id: wire
         stdinEnabled: true
-        command: ["python3", NacrePaths.pearlTools + "/sidebar-chat.py", "client"].concat(root.channel ? ["--channel", root.channel] : [])
+        command: [NacrePaths.pearlTools + "/nacre-helper", "sidebar-chat", "client"].concat(root.channel ? ["--channel", root.channel] : [])
         stdout: SplitParser {
             onRead: line => {
                 try {

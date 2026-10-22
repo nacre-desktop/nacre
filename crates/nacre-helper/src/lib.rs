@@ -103,3 +103,5 @@ pub mod lock_prepare;
 pub mod desktop_settings;
 
 pub mod owned_settings;
+
+pub mod sidebar_chat;
