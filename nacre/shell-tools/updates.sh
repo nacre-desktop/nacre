@@ -10,9 +10,10 @@ failed() {
 }
 trap failed ERR
 script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+helper=${NACRE_HELPER_BINARY:-$script_dir/nacre-helper}
 # A preview/session code overlay can run in a single-user namespace. Pacman's
 # DownloadUser and sudo must run with the host's real IDs and privileges.
-if python3 "$script_dir/updates.py" --needs-host; then
+if "$helper" updates --needs-host; then
     step="starting the host update service"
     printf 'Opening the package updater in your normal user session.\n'
     terminal_mode=--pipe
@@ -32,7 +33,7 @@ else
     [[ "$answer" == [yY] ]] || exit 0
 fi
 step="Quickshell update preflight"
-python3 "$script_dir/updates.py" --preflight
+"$helper" updates --preflight
 step="system package update"
 if command -v paru >/dev/null; then
     printf '\nUpdating packages without opening the AUR file-review screen.\n'
@@ -53,5 +54,5 @@ if command -v flatpak >/dev/null; then
     flatpak update
 fi
 step="update status refresh"
-python3 "$HOME/.local/share/nacre/shell/tools/updates.py" --refresh
+"$helper" updates --refresh
 read -r -p 'Update complete. Press Enter to close.'

@@ -22,7 +22,6 @@ import native_lock_info as info
 import native_lock_config as config
 
 devices = module("devices", "device-actions.py")
-weather = module("weather", "weather.py")
 
 
 class LockAndDeviceTests(unittest.TestCase):
@@ -196,76 +195,3 @@ class LockAndDeviceTests(unittest.TestCase):
             devices.command("bluetooth-connect", "AA:BB:CC;anything")
         with self.assertRaises(ValueError):
             devices.command("shell", "anything")
-
-    def test_weather_prepares_feels_like_and_daily_range(self):
-        with tempfile.TemporaryDirectory() as folder:
-            home = Path(folder)
-            settings = home / ".config/nacre/desktop.json"
-            settings.parent.mkdir(parents=True)
-            settings.write_text(json.dumps(dict(weatherLocation="Test city")))
-            forecast = {
-                "current": dict(
-                    weather_code=0,
-                    time="2099-10-11T09:00",
-                    temperature_2m=28,
-                    apparent_temperature=32,
-                    relative_humidity_2m=50,
-                    wind_speed_10m=8,
-                    wind_direction_10m=90,
-                    surface_pressure=1010,
-                    is_day=1,
-                ),
-                "daily": dict(
-                    time=["2099-10-11"],
-                    temperature_2m_min=[27],
-                    temperature_2m_max=[34],
-                    weather_code=[0],
-                    precipitation_probability_max=[0],
-                    sunrise=["2099-10-11T07:00"],
-                    sunset=["2099-10-11T18:00"],
-                    uv_index_max=[2],
-                ),
-                "hourly": dict(
-                    time=["2099-10-11T09:00"],
-                    temperature_2m=[28],
-                    precipitation_probability=[0],
-                    weather_code=[0],
-                ),
-            }
-            with (
-                patch.object(weather, "HOME", home),
-                patch.object(weather, "CACHE", home / "weather.json"),
-                patch.object(
-                    weather,
-                    "fetch_json",
-                    side_effect=[
-                        {"results": [{"latitude": 59, "longitude": 10}]},
-                        forecast,
-                        {"current": {"us_aqi": 20}},
-                    ],
-                ),
-            ):
-                data = weather.refresh()
-            self.assertEqual(data["feelsLike"], 32)
-            self.assertEqual((data["high"], data["low"]), (34, 27))
-            self.assertFalse(data["stale"])
-            self.assertEqual(data["description"], "Clear")
-
-    def test_weather_failure_preserves_cache_timestamp(self):
-        with tempfile.TemporaryDirectory() as folder:
-            home = Path(folder)
-            cache = home / "weather.json"
-            cache.write_text(
-                json.dumps(
-                    {"checked": 123, "description": "Overcast", "temperature": 10}
-                )
-            )
-            with (
-                patch.object(weather, "HOME", home),
-                patch.object(weather, "CACHE", cache),
-                patch.object(weather, "fetch_json", side_effect=TimeoutError),
-            ):
-                data = weather.refresh()
-            self.assertEqual(data["checked"], 123)
-            self.assertTrue(data["stale"])
-            self.assertEqual(data["temperature"], 10)

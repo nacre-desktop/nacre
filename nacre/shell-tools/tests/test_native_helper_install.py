@@ -70,7 +70,8 @@ class NativeHelperInstallTests(unittest.TestCase):
                 "compositor_backends/niri_widths.py",
             ):
                 self.assertFalse((tools / name).exists())
-            for name in ("weather.py", "nacre-helper", "private.json"):
+            self.assertFalse((tools / "weather.py").exists())
+            for name in ("nacre-helper", "private.json"):
                 self.assertEqual((tools / name).read_text(), "existing")
             installer.retire_native_helpers(tools)
 

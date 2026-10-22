@@ -513,7 +513,7 @@ mod script_contract_tests {
         let root = tempfile::tempdir()?;
         executable(
             root.path(),
-            "python3",
+            "nacre-helper",
             "case \"$*\" in *--needs-host) exit 1;; *--preflight) exit 0;; esac",
         )?;
         executable(root.path(), "gum", "exit 0")?;
@@ -525,6 +525,7 @@ mod script_contract_tests {
             )
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
+            .env("NACRE_HELPER_BINARY", root.path().join("nacre-helper"))
             .stdin(std::process::Stdio::null())
             .output()?;
         assert_eq!(output.status.code(), Some(7));
@@ -538,7 +539,7 @@ mod script_contract_tests {
         let root = tempfile::tempdir()?;
         executable(
             root.path(),
-            "python3",
+            "nacre-helper",
             "case \"$*\" in *--needs-host) exit 0;; esac",
         )?;
         executable(root.path(), "gum", "echo unexpected-confirmation; exit 99")?;
@@ -550,6 +551,7 @@ mod script_contract_tests {
             )
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
+            .env("NACRE_HELPER_BINARY", root.path().join("nacre-helper"))
             .stdin(std::process::Stdio::null())
             .output()?;
         assert_eq!(output.status.code(), Some(7));
