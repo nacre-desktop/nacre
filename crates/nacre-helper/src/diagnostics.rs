@@ -733,6 +733,7 @@ fn label(key: &str) -> String {
         "logicalCpus" => "Logical CPUs".into(),
         "refreshRate" => "Refresh rate (Hz)".into(),
         "releaseDiskBytes" => "Release disk usage (bytes)".into(),
+        "aiCredentials" => "AI credentials".into(),
         _ => {
             let mut spaced = String::new();
             let mut previous = None;
@@ -840,8 +841,12 @@ pub fn markdown(report: &Value) -> Result<String> {
         "dependencies",
         "services",
         "maintenance",
+        "aiCredentials",
         "recentErrors",
     ] {
+        if key == "aiCredentials" && report.get(key).is_none() {
+            continue;
+        }
         lines.extend([format!("## {}", label(key)), String::new()]);
         render(&report[key], "", &mut lines);
         lines.push(String::new());

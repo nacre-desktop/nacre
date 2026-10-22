@@ -1,31 +1,3 @@
-#!/usr/bin/env bash
-# Run on the development host; an existing Codex install remains untouched.
-set -euo pipefail
-project_id="${1:?project id required}"
-project_path="${2:?absolute repository path required}"
-account="${3:-}"
-[[ "$project_id" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || exit 2
-[[ "$project_path" = /* ]] || exit 2
-[[ -z "$account" || "$account" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}$ ]] || exit 2
-command -v tmux >/dev/null
-command -v codex >/dev/null
-repo=$(git -C "$project_path" rev-parse --show-toplevel)
-task_id="$(date -u +%Y%m%dT%H%M%S)-$$"
-account_tag="default"
-[[ -z "$account" ]] || account_tag="profile-$account"
-session="ai-$project_id-$account_tag-$task_id"
-worktree="$HOME/.local/share/nacre/ai/worktrees/$project_id/$task_id"
-mkdir -p "$(dirname "$worktree")"
-git -C "$repo" worktree add -b "codex/ai-$project_id-$task_id" "$worktree" HEAD
-vault="${NACRE_BRAIN:-$HOME/Documents/Nacre-Brain}"
-mkdir -p "$vault"
-chmod 700 "$vault"
-if [[ -n "$account" ]]; then
-    printf -v command '%q ' "$HOME/.local/bin/nacre-ai-account" "$account" --sandbox danger-full-access --ask-for-approval never -C "$worktree" --add-dir "$vault"
-else
-    printf -v command '%q ' codex --sandbox danger-full-access --ask-for-approval never -C "$worktree" --add-dir "$vault"
-fi
-# Preserve failures and explain the remaining terminal instead of silently closing.
-printf -v directory '%q' "$worktree"
-command="cd $directory && $command; result=\$?; printf '\nCodex ended (exit %s). Your files and saved conversation remain.\n' \"\$result\"; printf 'Type codex resume to reopen saved work, or exit to close this task.\n'; exec bash -l"
-exec tmux new-session -s "$session" bash -lc "$command"
+#!/bin/sh
+if [ -n "${NACRE_HELPER_BINARY:-}" ]; then exec "$NACRE_HELPER_BINARY" nacre-ai-remote "$@"; fi
+exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" nacre-ai-remote "$@"

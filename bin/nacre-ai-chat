@@ -5,6 +5,7 @@ import argparse
 import json
 import fcntl
 import nacre_state as _state
+import nacre_ai_core as _core
 import os
 from pathlib import Path
 import re
@@ -26,23 +27,11 @@ def label(value):
 
 
 def account_env(account):
-    env = dict(os.environ)
-    if account:
-        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{0,47}", account):
-            raise ValueError("Invalid account name")
-        env["CODEX_HOME"] = str(
-            Path.home() / ".local/share/nacre/ai/accounts" / account
-        )
-    return env
+    return _core.environment("codex", account)
 
 
 def shared_history_home():
-    import tomllib
-
-    home = Path.home() / ".codex"
-    config = home / "config.toml"
-    data = tomllib.loads(config.read_text()) if config.exists() else {}
-    return Path(data.get("sqlite_home", str(home))).expanduser().resolve()
+    return _core.shared_history_home()
 
 
 def account_homes():
@@ -79,6 +68,7 @@ def history_sources():
 
 class Codex:
     def __init__(self, env, history_home=None):
+        os.umask(0o077)
         argv = [str(Path.home() / ".local/bin/codex")]
         history_home = history_home or env.get("NACRE_AI_HISTORY_HOME")
         if history_home:

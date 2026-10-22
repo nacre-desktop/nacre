@@ -50,8 +50,12 @@ def install_launcher(repo, home, apply=False, name="nacre-ai"):
     # Older conversation runtimes predate the shared state reader. Install the
     # exact controller dependencies beside the private copy, without replacing
     # the desktop's modules or touching account data.
-    if b"import nacre_state" in source.read_bytes():
-        for dependency in ("nacre_state.py", "nacre-state-files.json"):
+    source_bytes = source.read_bytes()
+    if b"import nacre_state" in source_bytes or b"import nacre_ai_core" in source_bytes:
+        dependencies = ["nacre_state.py", "nacre-state-files.json"]
+        if b"import nacre_ai_core" in source_bytes:
+            dependencies.append("nacre_ai_core.py")
+        for dependency in dependencies:
             destination = target.parent / dependency
             payload = (repo / "nacre/shell-tools" / dependency).read_bytes()
             if destination.exists() and destination.read_bytes() == payload:

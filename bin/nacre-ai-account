@@ -1,29 +1,3 @@
-#!/usr/bin/env python3
-"""Run Codex with separate authentication and shared personal guidance."""
-
-import os
-from pathlib import Path
-import re
-import sys
-import subprocess
-
-if len(sys.argv) < 2 or not re.fullmatch(
-    r"[A-Za-z0-9][A-Za-z0-9_-]{0,47}", sys.argv[1]
-):
-    raise SystemExit("Usage: nacre-ai-account ACCOUNT [Codex arguments...]")
-profile = Path.home() / ".local/share/nacre/ai/accounts" / sys.argv[1]
-profile.mkdir(parents=True, exist_ok=True, mode=0o700)
-profile.chmod(0o700)
-guidance = profile / "AGENTS.md"
-canonical = Path.home() / ".codex/AGENTS.md"
-if not guidance.exists() and canonical.exists():
-    guidance.symlink_to(canonical)
-subprocess.run(
-    [str(Path.home() / ".local/bin/nacre-ai-skills"), "--codex-home", str(profile)],
-    check=True,
-)
-env = dict(os.environ, CODEX_HOME=str(profile))
-subprocess.run(
-    [str(Path.home() / ".local/bin/nacre-ai-chat"), "configure"], env=env, check=True
-)
-os.execvpe("codex", ["codex", *sys.argv[2:]], env)
+#!/bin/sh
+if [ -n "${NACRE_HELPER_BINARY:-}" ]; then exec "$NACRE_HELPER_BINARY" nacre-ai-account "$@"; fi
+exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" nacre-ai-account "$@"

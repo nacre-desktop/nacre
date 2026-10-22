@@ -119,7 +119,24 @@ fn whole_word_match(haystack: &str, needle: &str) -> bool {
     }
     haystack.match_indices(needle).any(|(start, text)| {
         let end = start + text.len();
-        let boundary = |c: Option<char>| c.is_none_or(|v| !v.is_alphanumeric() && v != '_');
+        let boundary = |c: Option<char>| {
+            c.is_none_or(|v| {
+                use unicode_general_category::{get_general_category, GeneralCategory::*};
+                // Python's \w is letters, numbers and underscore, excluding marks.
+                v != '_'
+                    && !matches!(
+                        get_general_category(v),
+                        UppercaseLetter
+                            | LowercaseLetter
+                            | TitlecaseLetter
+                            | ModifierLetter
+                            | OtherLetter
+                            | DecimalNumber
+                            | LetterNumber
+                            | OtherNumber
+                    )
+            })
+        };
         boundary(haystack[..start].chars().next_back()) && boundary(haystack[end..].chars().next())
     })
 }
@@ -137,6 +154,54 @@ fn valid_account(account: &str) -> bool {
     chars.next().is_some_and(|c| c.is_ascii_alphanumeric())
         && account.len() <= 48
         && chars.all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+fn preferences() -> Result<Value> {
+    let path = env::var_os("NACRE_AI_SETTINGS")
+        .map(PathBuf::from)
+        .unwrap_or(home()?.join(".config/nacre/ai/settings.json"));
+    crate::state::read_as(&path, Some(crate::state::by_id("ai-settings")?), json!({}))
+}
+
+pub fn default_assistant() -> Result<String> {
+    let data = preferences()?;
+    Ok(
+        match data.get("default_assistant").and_then(Value::as_str) {
+            Some("claude") => "claude",
+            _ => "codex",
+        }
+        .into(),
+    )
+}
+
+pub fn effective_account(agent: &str, override_account: Option<&str>) -> Result<String> {
+    if !["codex", "claude"].contains(&agent) {
+        return Err(error("Invalid agent"));
+    }
+    let data = if override_account.is_none() {
+        preferences()?
+    } else {
+        json!({})
+    };
+    if data
+        .get("accounts")
+        .is_some_and(|accounts| !accounts.is_object())
+    {
+        return Err(error("Invalid account settings"));
+    }
+    let account = match override_account {
+        Some(value) => value,
+        None => data
+            .get("accounts")
+            .and_then(|accounts| accounts.get(agent))
+            .map(|value| value.as_str().ok_or("Invalid account"))
+            .transpose()?
+            .unwrap_or(""),
+    };
+    if !account.is_empty() && !valid_account(account) {
+        return Err(error("Invalid account"));
+    }
+    Ok(account.into())
 }
 
 /// Return the selected provider home, repairing its directory mode without inspecting its contents.
@@ -157,8 +222,45 @@ pub fn account_home(agent: &str, account: Option<&str>) -> Result<PathBuf> {
     };
     if !account.is_empty() {
         reject_symlink_chain(&path)?;
+        // Claude creates its own missing profile when launched, under umask 077.
+        if agent == "claude" && !path.exists() {
+            return Ok(path);
+        }
+        let parent = path.parent().ok_or("Missing account directory")?;
+        fs::create_dir_all(parent)?;
+        reject_symlink_chain(parent)?;
+        let lock = fs::OpenOptions::new()
+            .read(true)
+            .append(true)
+            .create(true)
+            .mode(0o600)
+            .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+            .open(parent.join(format!(".nacre-account-{account}.lock")))?;
+        let metadata = lock.metadata()?;
+        if !metadata.is_file() || metadata.nlink() != 1 {
+            return Err(error("Linked or non-regular account lock"));
+        }
+        lock.set_permissions(fs::Permissions::from_mode(0o600))?;
+        rustix::fs::flock(&lock, rustix::fs::FlockOperation::LockExclusive)?;
+        let existed = path.exists();
         fs::create_dir_all(&path)?;
         reject_symlink_chain(&path)?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
+        if agent == "codex" {
+            if !existed {
+                crate::ai_wrappers::initialize_new_account(&path)?;
+            }
+            let guidance = path.join("AGENTS.md");
+            let canonical = home.join(".codex/AGENTS.md");
+            if fs::symlink_metadata(&guidance).is_err() && canonical.exists() {
+                std::os::unix::fs::symlink(canonical, guidance)?;
+            }
+        }
+    } else if path.exists() || fs::symlink_metadata(&path).is_ok() {
+        reject_symlink_chain(&path)?;
+        if !fs::metadata(&path)?.is_dir() {
+            return Err(error("Provider home is not a directory"));
+        }
         fs::set_permissions(&path, fs::Permissions::from_mode(0o700))?;
     }
     Ok(path)
@@ -181,8 +283,9 @@ pub fn prepare_provider_launch() {
 /// Resolve Codex's configured shared SQLite history directory without reading databases.
 pub fn shared_history_home() -> Result<PathBuf> {
     let home = home()?;
-    let config = fs::read_to_string(home.join(".codex/config.toml")).unwrap_or_default();
-    let parsed: toml::Value = toml::from_str(&config)?;
+    let config = read_codex_config(&home.join(".codex"))?.unwrap_or_default();
+    let parsed: toml::Value =
+        toml::from_str(&config).map_err(|_| error("Invalid Codex configuration"))?;
     let found = parsed
         .get("sqlite_home")
         .and_then(toml::Value::as_str)
@@ -200,7 +303,49 @@ pub fn shared_history_home() -> Result<PathBuf> {
     } else {
         env::current_dir()?.join(path)
     };
-    Ok(fs::canonicalize(&path).unwrap_or(path))
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                normalized.pop();
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    for ancestor in normalized.ancestors() {
+        if let Ok(real) = fs::canonicalize(ancestor) {
+            return Ok(real.join(normalized.strip_prefix(ancestor)?));
+        }
+    }
+    Ok(normalized)
+}
+
+/// Read only the provider configuration, with no link traversal or payload-bearing errors.
+pub fn read_codex_config(profile: &std::path::Path) -> Result<Option<String>> {
+    let file = match fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+        .open(profile.join("config.toml"))
+    {
+        Ok(file) => file,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(error("Could not read Codex configuration")),
+    };
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.nlink() != 1 || metadata.len() > 1_048_576 {
+        return Err(error(
+            "Linked, non-regular or oversized Codex configuration",
+        ));
+    }
+    let mut text = String::new();
+    file.take(1_048_577)
+        .read_to_string(&mut text)
+        .map_err(|_| error("Could not read Codex configuration"))?;
+    if text.len() > 1_048_576 {
+        return Err(error("Oversized Codex configuration"));
+    }
+    Ok(Some(text))
 }
 
 /// Return only environment deltas; inherited values (which may contain secrets) are never serialized.
@@ -221,20 +366,39 @@ pub fn environment_delta(agent: &str, account: Option<&str>) -> Result<Value> {
     Ok(json!({"set":set,"unset":[]}))
 }
 
+pub fn local_environment_delta(account: Option<&str>) -> Result<Value> {
+    let selected = effective_account("codex", account)?;
+    let account = Some(selected.as_str());
+    let mut delta = environment_delta("codex", account)?;
+    delta["set"]["CODEX_HOME"] = json!(account_home("codex", account)?.display().to_string());
+    delta["unset"] = json!(["NACRE_AI_HISTORY_HOME"]);
+    delta["account"] = json!(selected);
+    Ok(delta)
+}
+
 fn projects_path() -> Result<PathBuf> {
     Ok(env::var_os("NACRE_AI_PROJECTS")
         .map(PathBuf::from)
         .unwrap_or(home()?.join(".config/nacre/ai/projects.json")))
 }
 fn context(args: &[String]) -> Result<i32> {
-    if args.iter().any(|arg| arg == "-h" || arg == "--help") {
+    let end = args
+        .iter()
+        .position(|arg| arg == "--")
+        .unwrap_or(args.len());
+    if args[..end].iter().any(|arg| arg == "-h" || arg == "--help") {
         print!("usage: nacre-ai-context [-h] [query ...]\n\nResolve conversation context without selecting or executing a project.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n");
         return Ok(0);
     }
-    if args.iter().any(|arg| arg.starts_with('-')) {
+    if args[..end].iter().any(|arg| arg.starts_with('-')) {
         return Ok(2);
     }
-    let query = args.join(" ");
+    let query = args[..end]
+        .iter()
+        .chain(args.get(end + 1..).unwrap_or(&[]))
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ");
     let path = projects_path()?;
     let registry = if path.exists() {
         crate::state::read_as(&path, Some(crate::state::by_id("ai-projects")?), json!({}))?
@@ -248,6 +412,17 @@ fn context(args: &[String]) -> Result<i32> {
     Ok(0)
 }
 fn memory(args: &[String]) -> Result<i32> {
+    let args: Vec<String> = args
+        .iter()
+        .flat_map(|argument| {
+            if argument.starts_with("--") {
+                if let Some((option, value)) = argument.split_once('=') {
+                    return vec![option.to_owned(), value.to_owned()];
+                }
+            }
+            vec![argument.clone()]
+        })
+        .collect();
     let (mut kind, mut title, mut source, mut confidence) =
         ("inbox".to_owned(), None, None, "reported".to_owned());
     let (mut worlds, mut topics) = (Vec::new(), Vec::new());
@@ -380,7 +555,7 @@ fn memory(args: &[String]) -> Result<i32> {
         return Err(error("Linked or non-regular memory record"));
     }
     let note = if record.exists() {
-        let data: Value = serde_json::from_slice(&fs::read(&record)?)?;
+        let data = crate::state::read_strict(&record, json!({}))?;
         let stored = PathBuf::from(
             data.get("path")
                 .and_then(Value::as_str)
@@ -408,7 +583,7 @@ fn memory(args: &[String]) -> Result<i32> {
             &confidence,
             &(metadata + body.trim()),
         )?;
-        crate::files::atomic(&record, &serde_json::to_vec(&json!({"path":note}))?)?;
+        crate::state::write(&record, &json!({"path":note}))?;
         fs::set_permissions(&record, fs::Permissions::from_mode(0o600))?;
         note
     };
@@ -533,6 +708,15 @@ fn read_private_json(path: &std::path::Path) -> Option<Value> {
 
 fn codex_usage(account: &str) -> Result<(Value, Value)> {
     let mut command = std::process::Command::new(home()?.join(".local/bin/codex"));
+    if let Some(history) = env::var_os("NACRE_AI_HISTORY_HOME").filter(|value| !value.is_empty()) {
+        command.args([
+            "-c",
+            &format!(
+                "sqlite_home={}",
+                serde_json::to_string(&history.to_string_lossy())?
+            ),
+        ]);
+    }
     command.args(["app-server", "--stdio"]);
     command.env(
         "CODEX_HOME",
@@ -783,6 +967,14 @@ fn usage(args: &[String]) -> Result<i32> {
     Ok(0)
 }
 
+fn optional_text<'a>(request: &'a Value, key: &str) -> Result<Option<&'a str>> {
+    match request.get(key) {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(value)) => Ok(Some(value)),
+        _ => Err(error("Invalid AI core request")),
+    }
+}
+
 pub fn run(args: &[String]) -> Result<i32> {
     let Some(command) = args.first().map(String::as_str) else {
         return Err(error("Expected an AI command"));
@@ -797,12 +989,14 @@ pub fn run(args: &[String]) -> Result<i32> {
             .ok_or("missing operation")?;
         let result = match operation {
             "full-access" => json!({"full_access":full_access()}),
+            "default-assistant" => json!({"agent":default_assistant()?}),
+            "effective-account" => {
+                json!({"account":effective_account(optional_text(&request, "agent")?.unwrap_or("codex"), optional_text(&request, "override")?)?})
+            }
+            "local-environment" => local_environment_delta(optional_text(&request, "account")?)?,
             "environment" => environment_delta(
-                request
-                    .get("agent")
-                    .and_then(Value::as_str)
-                    .unwrap_or("codex"),
-                request.get("account").and_then(Value::as_str),
+                optional_text(&request, "agent")?.unwrap_or("codex"),
+                optional_text(&request, "account")?,
             )?,
             "shared-history-home" => json!({"path":shared_history_home()?.display().to_string()}),
             _ => return Err(error("Unknown AI core operation")),

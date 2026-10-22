@@ -1,6 +1,6 @@
 # N0022 — AI core library and small wrappers
 
-- Status: In progress
+- Status: Implemented (pending lead review)
 - Date: 2026-10-22
 - Dependency: N0020 shared vault module
 
@@ -68,4 +68,47 @@ AI 117, Brain 45, shell-tools 479. All 534 frozen cases passed, including the
 nine explicit context/memory/usage replays. Galleries covered 244 states per
 language and 185 states per language for the wide-font selection. All 20 changed
 source files matched the CI candidate by SHA-256; rollback sources match the
-original Git blobs. No frozen reference changed. Phase two evidence pending.
+original Git blobs. No frozen reference changed.
+
+Phase-two implementation and intended security differences:
+
+- The remaining small commands and local Codex wrapper dispatch to Rust. Python
+  views/controllers use a thin native client for permissions, selected accounts,
+  environment deltas and shared history. Inherited environment values are never
+  serialized. The client performs the parent's umask operation before launches.
+- New named Codex homes receive the provider's supported `auto` credential policy
+  before first sign-in, with a 0600 config and serialized initialization. Existing
+  homes retain their storage policy; no authentication migration occurs. Existing
+  provider directories are repaired to 0700. Missing Claude profiles remain
+  provider-created at launch, under umask 077.
+- Doctor's live report adds configured credential policy and a bounded D-Bus
+  service-name ownership probe. It does not assert an active credential store or
+  retrieve secret payloads. The frozen diagnostics collector is unchanged.
+- Skill archives require the checked-in SHA-256, validated source metadata and a
+  60-second transfer deadline. Limits are 16 MiB compressed, 4 MiB per extracted
+  entry, 32 MiB total extracted and 4096 archive entries. Unsafe paths, archive
+  symlinks and linked library/destination directories are refused; managed skill
+  aliases still follow shared-library relocation. ZIP 9.0.5 is used, above the
+  [patched extraction boundary](https://rustsec.org/advisories/RUSTSEC-2026-0367).
+- Provider config reads reject links/non-regular files and exceedances of 1 MiB;
+  malformed TOML never appears in errors. Capture records use the shared versioned
+  state writer and refuse newer versions, while retaining Python's fingerprint.
+- Chat peers, dashboards, MCP/history configuration, installers and their remaining
+  controller-loader callers stay Python. Installer changes only ship the new
+  declared client dependency with private controller copies. Original small-command
+  sources remain executable rollback files. The independently deployed
+  `ai/remote-codex-wrapper.sh` stays standalone Bash with its legacy-home guard.
+
+Phase two: the entire desktop job passed in the same Arch CI environment, exit 0
+(`.lead/desktop6.log`), including all Rust checks, the protocol consumer,
+`tools/check.py`, all suites and both galleries. Suite counts remain tools 452
+(one existing opt-in soak skipped), AI 117, Brain 45 and shell-tools 479. All 534
+frozen cases and all 17 explicit AI replays passed; no reference was changed.
+The sidebar's optional-component availability check retains its frozen missing
+launcher error. Quota RPC retains the per-session history-home override, verified
+by a fake provider's exact arguments. All 44 changed source files matched the CI
+candidate by SHA-256. The public pinned-archive fixture installed both archives,
+exposed all ten skills to both providers, repeated from cache and preserved a
+synthetic 0600 auth file (`.lead/skills-verify.log`). All real authentication files
+and keyring values were outside the development and test scope. No live install,
+push, tag or release occurred.

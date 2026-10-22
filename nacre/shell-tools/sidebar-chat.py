@@ -6,6 +6,7 @@ from nacre_i18n import tr
 import re
 import json
 import nacre_state as _state
+import nacre_ai_core as _core
 import os
 import queue
 import signal
@@ -90,15 +91,7 @@ INSTRUCTIONS = """You are Nacre AI in an ongoing desktop sidebar conversation. I
 
 
 def agent_full_access():
-    try:
-        return (
-            _state.read_json_file(Path.home() / ".config/nacre/profile.json").get(
-                "aiFullAccess"
-            )
-            is True
-        )
-    except (OSError, ValueError, AttributeError):
-        return False
+    return _core.full_access()
 
 
 def emit(value):
@@ -112,19 +105,22 @@ def atomic(path, value):
 
 
 def preferences():
-    from nacre_ai_controller import load
-
-    w = load(home=HOME)
-    agent = w["default_assistant"]()
-    return agent, w["effective_account"](agent)
+    require_controller("nacre-ai")
+    agent = _core.default_assistant()
+    return agent, _core.effective_account(agent)
 
 
 def env_for(agent, account):
-    from nacre_ai_controller import load
-
     if agent == "codex":
-        return load(home=HOME)["local_environment"](account)
-    return load("nacre-ai-claude", home=HOME)["environment"](account)
+        require_controller("nacre-ai")
+        return _core.environment("codex", account, local=True, configure=True)
+    require_controller("nacre-ai-claude")
+    return _core.environment("claude", account)
+
+
+def require_controller(name):
+    # A checkout/native helper alone must not enable the optional AI component.
+    (HOME / ".local/bin" / name).resolve().stat()
 
 
 def friendly_error(error):

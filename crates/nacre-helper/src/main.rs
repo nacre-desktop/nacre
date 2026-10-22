@@ -34,12 +34,31 @@ fn run() -> Result<i32> {
                     .collect::<Vec<_>>(),
             );
         }
+        Some("nacre-ai-skills" | "nacre-ai-tools" | "nacre-ai-account" | "nacre-ai-remote") => {
+            return nacre_helper::ai_wrappers::dispatch(
+                invoked.unwrap(),
+                &arguments.collect::<Vec<_>>(),
+            );
+        }
         Some("nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
             invoked.unwrap().to_owned()
         }
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if matches!(
+        tool.as_str(),
+        "nacre-ai-skills"
+            | "nacre-ai-tools"
+            | "nacre-ai-account"
+            | "nacre-ai-remote"
+            | "ai-credentials-status"
+    ) {
+        return nacre_helper::ai_wrappers::dispatch(&tool, &arguments);
+    }
+    if tool == "nacre-codex" {
+        return nacre_helper::ai_wrappers::codex(&arguments);
+    }
     // These commands use files and child executables, with no zbus runtime.
     // In particular, credential launches must inherit the caller's environment.
     if matches!(
@@ -48,6 +67,14 @@ fn run() -> Result<i32> {
     ) {
         let call = std::iter::once(tool).chain(arguments).collect::<Vec<_>>();
         return nacre_helper::brain_data::run(&call);
+    }
+    if matches!(
+        tool.as_str(),
+        "nacre-ai-context" | "nacre-ai-memory" | "nacre-ai-usage" | "ai-core"
+    ) {
+        return nacre_helper::ai_core::run(
+            &std::iter::once(tool).chain(arguments).collect::<Vec<_>>(),
+        );
     }
     let inherited_tokio_threads = std::env::var_os("TOKIO_WORKER_THREADS").is_some();
     if !matches!(
@@ -64,14 +91,6 @@ fn run() -> Result<i32> {
     }
     if tool == "ctl" {
         return nacre_helper::daemon::client::run(&arguments);
-    }
-    if matches!(
-        tool.as_str(),
-        "nacre-ai-context" | "nacre-ai-memory" | "nacre-ai-usage" | "ai-core"
-    ) {
-        return nacre_helper::ai_core::run(
-            &std::iter::once(tool).chain(arguments).collect::<Vec<_>>(),
-        );
     }
     if tool == "daemon" {
         return nacre_helper::daemon::run(&arguments);

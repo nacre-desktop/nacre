@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import nacre_ai_core as _core
 import os
 from pathlib import Path
 import re
@@ -14,26 +15,11 @@ import uuid
 
 
 def agent_full_access():
-    try:
-        return (
-            json.loads((Path.home() / ".config/nacre/profile.json").read_text()).get(
-                "aiFullAccess"
-            )
-            is True
-        )
-    except (OSError, ValueError, AttributeError):
-        return False
+    return _core.full_access()
 
 
 def environment(account):
-    env = dict(os.environ, CLAUDE_CONFIG_DIR=str(Path.home() / ".claude"))
-    if account:
-        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,47}", account):
-            raise ValueError("Invalid account profile name")
-        env["CLAUDE_CONFIG_DIR"] = str(
-            Path.home() / ".local/share/nacre/ai/claude-accounts" / account
-        )
-    return env
+    return _core.environment("claude", account)
 
 
 def executable():

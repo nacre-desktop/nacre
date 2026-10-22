@@ -23,3 +23,4 @@ line-length = 120
 [tool.hatch.build.targets.wheel.force-include]
 "../shell-tools/nacre_state.py" = "nacre_state.py"
 "../shell-tools/nacre-state-files.json" = "nacre-state-files.json"
+"../shell-tools/nacre_ai_core.py" = "nacre_ai_core.py"

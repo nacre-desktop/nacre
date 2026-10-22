@@ -279,7 +279,7 @@ pub fn report(as_json: bool) -> Result<String> {
         ))
         .collect(),
     };
-    let report = diagnostics::collect(
+    let mut report = diagnostics::collect(
         &context,
         &platform,
         &mut Queries {
@@ -287,6 +287,7 @@ pub fn report(as_json: bool) -> Result<String> {
             niri,
         },
     )?;
+    report["aiCredentials"] = crate::ai_wrappers::credential_backend_status();
     if as_json {
         Ok(crate::json::pretty(&report)? + "\n")
     } else {

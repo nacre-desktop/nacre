@@ -475,13 +475,17 @@ class WorkflowTests(IsolatedWorkflowTest):
             (fake / "codex").chmod(0o755)
             result = subprocess.run(
                 [
-                    sys.executable,
                     str(ROOT / "bin/nacre-ai-account"),
                     "second",
                     "login",
                 ],
                 env=dict(
-                    os.environ, HOME=tmp, PATH=str(fake) + ":" + os.environ["PATH"]
+                    os.environ,
+                    HOME=tmp,
+                    PATH=str(fake) + ":" + os.environ["PATH"],
+                    NACRE_HELPER_BINARY=os.environ.get(
+                        "NACRE_HELPER_BINARY", str(ROOT / "target/release/nacre-helper")
+                    ),
                 ),
                 text=True,
                 capture_output=True,

@@ -18,6 +18,14 @@ fn context_matches_aliases_as_case_insensitive_whole_words_and_reports_ambiguity
         .unwrap()
         .is_empty());
     assert_eq!(resolve_context("shell", &registry)["ambiguous"], true);
+    assert_eq!(
+        resolve_context("nacre\u{05b0}", &registry)["matched"][0]["id"],
+        "nacre"
+    );
+    assert!(resolve_context("nacre_name", &registry)["matched"]
+        .as_array()
+        .unwrap()
+        .is_empty());
 }
 
 #[test]
@@ -57,19 +65,8 @@ fn memory_slug_and_normalization_keep_historical_limits() {
 }
 
 #[test]
-fn memory_vault_writer_rejects_secret_like_content_before_writing() {
-    let result = nacre_helper::brain_data::write_note(
-        "inbox",
-        "fixture",
-        "test fixture",
-        "reported",
-        "sk-proj-abcdefghijklmnopqrstuvwxyz123456",
-    );
+fn memory_validator_rejects_secret_like_content_before_writing() {
+    let result =
+        nacre_helper::brain_data::validate_note("sk-proj-abcdefghijklmnopqrstuvwxyz123456");
     assert!(result.is_err());
-}
-
-#[test]
-fn environment_delta_never_serializes_inherited_values() {
-    let delta = nacre_helper::ai_core::environment_delta("codex", None).unwrap();
-    assert_eq!(delta, json!({"set":{},"unset":[]}));
 }

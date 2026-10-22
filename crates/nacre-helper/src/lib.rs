@@ -2,6 +2,7 @@
 #![deny(unsafe_code)]
 pub mod ai_core;
 pub mod ai_rpc;
+pub mod ai_wrappers;
 pub mod arguments;
 pub mod aur_review;
 mod brain_arguments;

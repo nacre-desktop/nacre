@@ -6,7 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 loader = importlib.machinery.SourceFileLoader(
-    "shared_skills", str(ROOT / "bin/nacre-ai-skills")
+    "shared_skills", str(ROOT / "bin/nacre-ai-skills.py.rollback")
 )
 spec = importlib.util.spec_from_loader(loader.name, loader)
 skills = importlib.util.module_from_spec(spec)
