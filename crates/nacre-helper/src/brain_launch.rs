@@ -1,14 +1,12 @@
 //! Browser and window lifecycle for the Brain web interface.
-use crate::{brain_auth, brain_data, brain_web, paths::Paths, Result};
+use crate::{brain_auth, brain_web, paths::Paths, Result};
 use serde_json::{json, Value};
 use std::{
     env, fs,
-    os::unix::fs::PermissionsExt,
-    os::unix::fs::MetadataExt,
+    os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
-    process::{Command, Stdio},
     thread,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 fn home() -> Result<PathBuf> {
@@ -23,12 +21,7 @@ fn state() -> Result<PathBuf> {
 
 fn launch(argv: &[String]) -> Result<()> {
     let (program, args) = argv.split_first().ok_or("Empty Brain launch command")?;
-    Command::new(program)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
+    drop(crate::process::spawn_detached_quiet(program, args)?);
     Ok(())
 }
 
@@ -38,19 +31,42 @@ fn launch_app(argv: &[String]) -> Result<()> {
     launch(&command)
 }
 
-fn run_output(argv: &[String], timeout: Duration) -> Result<String> {
+fn run_output(argv: &[String], input: Option<&str>, timeout: Duration) -> Result<std::process::Output> {
     let (program, args) = argv.split_first().ok_or("Empty Brain command")?;
-    let mut child = Command::new(program).args(args).stdout(Stdio::piped()).stderr(Stdio::null()).spawn()?;
-    let start = Instant::now();
-    while start.elapsed() < timeout {
-        if child.try_wait()?.is_some() {
-            return Ok(String::from_utf8_lossy(&child.wait_with_output()?.stdout).trim().to_owned());
+    crate::process::run(program, args, input, timeout)
+}
+
+fn reject_linked_ancestors(path: &Path) -> Result<()> {
+    if !path.is_absolute() { return Err("Brain state path must be absolute".into()) }
+    for ancestor in path.ancestors() {
+        if fs::symlink_metadata(ancestor).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
+            return Err("Refusing symlinked Brain state path".into());
         }
-        thread::sleep(Duration::from_millis(20));
     }
-    let _ = child.kill();
-    let _ = child.wait();
-    Err("Brain command timed out".into())
+    Ok(())
+}
+
+fn private_state_dir(path: &Path) -> Result<()> {
+    reject_linked_ancestors(path)?;
+    fs::create_dir_all(path)?;
+    reject_linked_ancestors(path)?;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o700))?;
+    Ok(())
+}
+
+fn open_lock(path: &Path) -> Result<fs::File> {
+    reject_linked_ancestors(path)?;
+    let file = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_CLOEXEC)
+        .open(path)?;
+    if file.metadata()?.nlink() != 1 {
+        return Err("Refusing linked Brain lock file".into());
+    }
+    Ok(file)
 }
 
 fn compositor() -> Result<crate::compositor::backend::Backend> {
@@ -79,7 +95,7 @@ fn profile_path() -> Result<PathBuf> {
 
 fn profile_pids() -> std::collections::BTreeSet<u32> {
     let Ok(profile) = profile_path() else { return Default::default() };
-    let marker = format!("--user-data-dir={}", profile).into_bytes();
+    let marker = format!("--user-data-dir={}", profile.display()).into_bytes();
     let mut found = std::collections::BTreeSet::new();
     let Ok(entries) = fs::read_dir("/proc") else { return found };
     for entry in entries.flatten() {
@@ -105,6 +121,23 @@ fn percent_encode(value: &str) -> String {
     result
 }
 
+fn file_uri(path: &Path) -> Result<String> {
+    if !path.is_absolute() { return Err("Browser handoff path must be absolute".into()) }
+    Ok(format!("file://{}", percent_encode_path(&path.to_string_lossy())))
+}
+
+fn percent_encode_path(value: &str) -> String {
+    let mut result = String::new();
+    for byte in value.bytes() {
+        if byte == b'/' || byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
+            result.push(byte as char);
+        } else {
+            result.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    result
+}
+
 fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bool {
     let class = window.get("class").and_then(Value::as_str).unwrap_or_default();
     class == "nacre-brain" || (window.get("pid").and_then(Value::as_u64).is_some_and(|pid| pids.contains(&(pid as u32))) && (class == "chrome-127.0.0.1__-Default" || class.contains("nacre_brain_auth_open.html")))
@@ -121,6 +154,30 @@ fn should_launch_browser(focus: bool, window_present: bool, profile_running: boo
     !window_present && (focus || !profile_running)
 }
 
+fn window_launch_decision(
+    query_window: impl FnOnce() -> Result<Option<Value>>,
+    focus: bool,
+    profile_running: impl FnOnce() -> bool,
+) -> Result<(Option<Value>, bool)> {
+    let window = query_window()?;
+    let launch = should_launch_browser(focus, window.is_some(), profile_running());
+    Ok((window, launch))
+}
+
+fn restore_background_workspace(focus: bool, previous: Option<i64>, mut switch: impl FnMut(i64)) {
+    if !focus {
+        if let Some(workspace) = previous.filter(|workspace| *workspace > 0) {
+            switch(workspace);
+        }
+    }
+}
+
+fn clear_fullscreen_if_supported(capabilities: &Value, clear: impl FnOnce()) {
+    if capabilities.pointer("/fullscreenState").and_then(Value::as_bool).unwrap_or(true) {
+        clear();
+    }
+}
+
 fn brain_window() -> Result<Option<Value>> {
     let windows = query("windows")?;
     let windows = windows.as_array().ok_or("Invalid compositor window list")?;
@@ -129,10 +186,22 @@ fn brain_window() -> Result<Option<Value>> {
     Ok(preferred_window(&candidates, profile_workspace()))
 }
 
+fn browser_arguments(browser: &Path, profile: &Path, app_uri: &str, handoff: bool) -> Vec<String> {
+    vec![
+        browser.to_string_lossy().into_owned(),
+        "--no-first-run".into(),
+        "--no-default-browser-check".into(),
+        "--ozone-platform=wayland".into(),
+        format!("--class={}", if handoff { "nacre-brain-auth" } else { "nacre-brain" }),
+        format!("--user-data-dir={}", profile.display()),
+        format!("--app={app_uri}"),
+    ]
+}
+
 fn browser_command(path: &Path, handoff: bool) -> Result<Vec<String>> {
     let candidates = [Some(PathBuf::from("/opt/google/chrome/chrome")), which("chromium")];
     let browser = candidates.into_iter().flatten().find(|path| path.exists()).ok_or("Chrome or Chromium is required for the knowledge browser")?;
-    Ok(vec![browser.to_string_lossy().into_owned(), "--no-first-run".into(), "--no-default-browser-check".into(), "--ozone-platform=wayland".into(), format!("--class={}", if handoff { "nacre-brain-auth" } else { "nacre-brain" }), format!("--user-data-dir={}", profile_path()?.display()), format!("--app={}", path.to_string_lossy())])
+    Ok(browser_arguments(&browser, &profile_path()?, &file_uri(path)?, handoff))
 }
 
 fn which(program: &str) -> Option<PathBuf> {
@@ -153,7 +222,10 @@ pub fn ensure_server() -> Result<()> {
     let url = format!("http://127.0.0.1:{}/api/health", port);
     if health(&url) { return Ok(()) }
     let executable = env::current_exe()?;
-    Command::new(executable).args(["brain-control", "serve"]).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).spawn()?;
+    drop(crate::process::spawn_detached_quiet(
+        executable.to_str().ok_or("Brain helper path is not UTF-8")?,
+        &["brain-control".into(), "serve".into()],
+    )?);
     for _ in 0..30 {
         thread::sleep(Duration::from_millis(100));
         if health(&url) { return Ok(()) }
@@ -177,15 +249,12 @@ fn health(url: &str) -> bool {
 
 fn ensure_brain(focus: bool) -> Result<()> {
     let state = state()?;
-    fs::create_dir_all(&state)?;
-    fs::set_permissions(&state, fs::Permissions::from_mode(0o700))?;
-    let lock_path = state.join("brain-launch.lock");
-    let lock = fs::OpenOptions::new().create(true).truncate(false).write(true).open(lock_path)?;
+    private_state_dir(&state)?;
+    let lock = open_lock(&state.join("brain-launch.lock"))?;
     rustix::fs::flock(&lock, rustix::fs::FlockOperation::LockExclusive)?;
     ensure_server()?;
-    let mut window = brain_window()?;
-    if window.is_none() {
-        if !should_launch_browser(focus, false, browser_running()) { return Ok(()) }
+    let (mut window, should_launch) = window_launch_decision(|| brain_window(), focus, browser_running)?;
+    if should_launch {
         let previous = query("active_workspace").ok().and_then(|v| v.get("id").and_then(Value::as_i64));
         let open = brain_auth::refresh_bootstrap(&state, brain_web::port()?, false)?;
         launch(&browser_command(&open, false)?)?;
@@ -195,13 +264,16 @@ fn ensure_brain(focus: bool) -> Result<()> {
             thread::sleep(Duration::from_millis(100));
         }
         if let Some(win) = &window { route_window(win)? }
-        if !focus { if let Some(workspace) = previous.filter(|v| *v > 0) { let _ = act("switch_workspace", &[json!(workspace)], json!({"current_monitor":true})); } }
+        restore_background_workspace(focus, previous, |workspace| {
+            let _ = act("switch_workspace", &[json!(workspace)], json!({"current_monitor":true}));
+        });
     }
+    if window.is_none() { return Ok(()) }
     if window.is_some() { bootstrap_existing_browser()? }
     if focus {
-        if let Some(workspace) = profile_workspace() { let _ = run_output(&[home()?.join(".local/bin/nacre-shell").to_string_lossy().into_owned(), "workspace".into(), workspace.to_string()], Duration::from_secs(3)); }
+        if let Some(workspace) = profile_workspace() { let _ = run_output(&[home()?.join(".local/bin/nacre-shell").to_string_lossy().into_owned(), "workspace".into(), workspace.to_string()], None, Duration::from_secs(3)); }
         if let Some(address) = window.as_ref().and_then(|w| w.get("address")).and_then(Value::as_str) {
-            let _ = run_output(&[home()?.join(".local/bin/nacre-shell").to_string_lossy().into_owned(), "focus".into(), address.into()], Duration::from_secs(3));
+            let _ = run_output(&[home()?.join(".local/bin/nacre-shell").to_string_lossy().into_owned(), "focus".into(), address.into()], None, Duration::from_secs(3));
         }
     }
     Ok(())
@@ -212,9 +284,9 @@ fn route_window(window: &Value) -> Result<()> {
     let mut compositor = compositor()?;
     if !compositor.valid_window_id(&json!(address)) { return Ok(()) }
     let caps = compositor.capabilities();
-    if caps.pointer("/fullscreenState").and_then(Value::as_bool).unwrap_or(true) {
+    clear_fullscreen_if_supported(&caps, || {
         let _ = compositor.action("fullscreen_state", &[json!(address)], &json!({"internal":0,"client":0}));
-    }
+    });
     if let Some(workspace) = profile_workspace() {
         let _ = compositor.action("move_window", &[json!(address)], &json!({"workspace":workspace.to_string(),"follow":false}));
     }
@@ -225,13 +297,16 @@ pub fn action(name: &str, value: &str) -> Result<()> {
     match name {
         "brain" | "open" => ensure_brain(true),
         "capture" => {
-            let text = run_output(&["zenity".into(), "--text-info".into(), "--editable".into(), "--title=Capture a thought".into(), "--width=580".into(), "--height=340".into()], Duration::from_secs(3600))?;
+            let output = match run_output(&["zenity".into(), "--text-info".into(), "--editable".into(), "--title=Capture a thought".into(), "--width=580".into(), "--height=340".into()], None, Duration::from_secs(3600)) {
+                Ok(output) if output.status.success() && output.stdout.len() <= 65_536 => output,
+                _ => return Ok(()),
+            };
+            let text = String::from_utf8_lossy(&output.stdout);
             if !text.trim().is_empty() {
                 let title = text.lines().next().unwrap_or_default().chars().take(90).collect::<String>();
-                let mut child = Command::new("nacre-brain").args(["note", "--kind", "personal", "--title", &title, "--source", "User quick capture in Nacre Brain", "--confidence", "reported"]).stdin(Stdio::piped()).stdout(Stdio::null()).spawn()?;
-                use std::io::Write;
-                child.stdin.take().ok_or("Could not open Brain note input")?.write_all(text.as_bytes())?;
-                if !child.wait()?.success() { return Err("Brain capture could not be saved".into()) }
+                let args = ["note", "--kind", "personal", "--title", &title, "--source", "User quick capture in Nacre Brain", "--confidence", "reported"].into_iter().map(str::to_owned).collect::<Vec<_>>();
+                let saved = crate::process::run("nacre-brain", &args, Some(&text), Duration::from_secs(30))?;
+                if !saved.status.success() { return Err("Brain capture could not be saved".into()) }
             }
             Ok(())
         }
@@ -239,7 +314,7 @@ pub fn action(name: &str, value: &str) -> Result<()> {
         "tasks" | "new" | "resume" => launch_app(&[home()?.join(".local/bin/nacre-shell").to_string_lossy().into_owned(), name.into()]),
         "assign-note" => brain_web::assign_note(value),
         "open-note" => {
-            let path = brain_data::validate_note_path(value)?;
+            let path = brain_web::note_path(value)?;
             let uri = format!("obsidian://open?path={}", percent_encode(&path.to_string_lossy()));
             launch_app(&["obsidian".into(), uri])
         }
@@ -249,9 +324,8 @@ pub fn action(name: &str, value: &str) -> Result<()> {
 
 pub fn watch_brain() -> Result<()> {
     let state = state()?;
-    fs::create_dir_all(&state)?;
-    let lock_path = state.join("brain-watch.lock");
-    let lock = fs::OpenOptions::new().create(true).truncate(false).write(true).open(lock_path)?;
+    private_state_dir(&state)?;
+    let lock = open_lock(&state.join("brain-watch.lock"))?;
     if rustix::fs::flock(&lock, rustix::fs::FlockOperation::NonBlockingLockExclusive).is_err() { return Ok(()) }
     loop {
         let _ = ensure_server();
@@ -280,6 +354,27 @@ mod tests {
     }
 
     #[test]
+    fn compositor_query_failure_propagates_without_authorizing_a_launch() {
+        let called = std::cell::Cell::new(false);
+        let decision = window_launch_decision(
+            || Err("compositor unavailable".into()),
+            true,
+            || { called.set(true); false },
+        );
+        assert!(decision.is_err());
+        assert!(!called.get());
+    }
+
+    #[test]
+    fn background_launch_restores_previous_workspace_but_foreground_does_not() {
+        let mut restored = Vec::new();
+        restore_background_workspace(false, Some(4), |workspace| restored.push(workspace));
+        restore_background_workspace(true, Some(6), |workspace| restored.push(workspace));
+        restore_background_workspace(false, None, |workspace| restored.push(workspace));
+        assert_eq!(restored, [4]);
+    }
+
+    #[test]
     fn existing_brain_profile_window_prefers_configured_workspace() {
         let pids = [123].into_iter().collect();
         let old = json!({"address":"0x111","pid":123,"class":"chrome-127.0.0.1__-Default","workspace":{"id":3}});
@@ -291,13 +386,15 @@ mod tests {
 
     #[test]
     fn browser_open_url_uses_dedicated_profile_and_private_handoff_class() {
-        let open = browser_command(Path::new("/tmp/open.html"), false);
-        let handoff = browser_command(Path::new("/tmp/handoff.html"), true);
-        if let (Ok(open), Ok(handoff)) = (open, handoff) {
-            assert!(open.iter().any(|arg| arg == "--class=nacre-brain"));
-            assert!(handoff.iter().any(|arg| arg == "--class=nacre-brain-auth"));
-            assert!(open.iter().any(|arg| arg.contains("nacre/brain-browser")));
-        }
+        let open_uri = file_uri(Path::new("/tmp/Brain Home/open page.html")).expect("absolute app file URI");
+        let handoff_uri = file_uri(Path::new("/tmp/handoff.html")).expect("absolute handoff URI");
+        let open = browser_arguments(Path::new("/browser/chrome"), Path::new("/home/test/nacre/brain-browser"), &open_uri, false);
+        let handoff = browser_arguments(Path::new("/browser/chrome"), Path::new("/home/test/nacre/brain-browser"), &handoff_uri, true);
+        assert!(open.iter().any(|arg| arg == "--class=nacre-brain"));
+        assert!(handoff.iter().any(|arg| arg == "--class=nacre-brain-auth"));
+        assert!(open.iter().any(|arg| arg == "--user-data-dir=/home/test/nacre/brain-browser"));
+        assert!(open.iter().any(|arg| arg == "--app=file:///tmp/Brain%20Home/open%20page.html"));
+        assert!(handoff.iter().any(|arg| arg == "--app=file:///tmp/handoff.html"));
     }
 
     #[test]
@@ -309,6 +406,21 @@ mod tests {
     #[test]
     fn unavailable_fullscreen_capability_is_skipped_for_niri() {
         let capabilities = json!({"fullscreenState":false});
-        assert!(!capabilities.pointer("/fullscreenState").and_then(Value::as_bool).unwrap_or(true));
+        let calls = std::cell::Cell::new(0);
+        clear_fullscreen_if_supported(&capabilities, || calls.set(calls.get() + 1));
+        assert_eq!(calls.get(), 0);
+        clear_fullscreen_if_supported(&json!({"fullscreenState":true}), || calls.set(calls.get() + 1));
+        assert_eq!(calls.get(), 1);
+    }
+
+    #[test]
+    fn linked_state_ancestors_are_rejected() {
+        let root = std::env::temp_dir().join(format!("brain-launch-{}", uuid::Uuid::new_v4()));
+        let target = root.join("target");
+        let linked = root.join("linked");
+        fs::create_dir_all(&target).expect("fixture target");
+        std::os::unix::fs::symlink(&target, &linked).expect("fixture symlink");
+        assert!(reject_linked_ancestors(&linked.join("state")).is_err());
+        fs::remove_dir_all(root).expect("cleanup fixture");
     }
 }
