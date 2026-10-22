@@ -277,6 +277,9 @@ impl Hub {
             methods.extend(super::widths::methods());
         }
         if !self.safe {
+            if self.snapshot_ref(super::active_wallpaper::TOPIC).is_some() {
+                methods.extend(super::active_wallpaper::methods());
+            }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());
             }

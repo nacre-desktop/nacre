@@ -1,0 +1,141 @@
+use nacre_protocol::{
+    artifacts, framing,
+    wallpaper::{WallpaperActivate, WallpaperActive, WallpaperFileIdentity},
+    Message, Mirror, Update, MAX_SAFE_INTEGER,
+};
+use serde_json::json;
+
+#[test]
+fn active_wallpaper_transcript_replays_and_validates_last_good_state() {
+    let mut mirror = Mirror::default();
+    let fixture = artifacts::generate()
+        .remove("protocol/fixtures/wallpaper-active.jsonl")
+        .unwrap();
+    for line in fixture.lines() {
+        let message = framing::decode(line.as_bytes()).unwrap();
+        let update = mirror.receive(&message);
+        assert!(!matches!(update, Update::Resync(_)), "{line}");
+        if let Message::Snap { topic, .. } | Message::Patch { topic, .. } = &message {
+            if topic == "wallpaper.active" {
+                let state: WallpaperActive =
+                    serde_json::from_value(mirror.topics[topic].1.clone()).unwrap();
+                state.validate().unwrap();
+            }
+        }
+    }
+    let (seq, _) = &mirror.topics["wallpaper.active"];
+    assert_eq!(*seq, 5);
+}
+
+#[test]
+fn active_wallpaper_bounds_and_pairing_are_enforced() {
+    let mut state: WallpaperActive = serde_json::from_value(json!({
+        "available":true,"stale":false,"revision":1,
+        "current":{"revision":1,"palette_revision":1,"path":"/home/user/wall.png","file_identity":{"device":"2049","inode":"123456","size":4096,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}},
+        "outputs":{"DP-1":{"revision":1,"palette_revision":1,"path":"/home/user/wall.png","file_identity":{"device":"2049","inode":"123456","size":4096,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}}}
+    })).unwrap();
+    state.validate().unwrap();
+    let mut unavailable = state.clone();
+    unavailable.available = false;
+    unavailable.stale = true;
+    unavailable.validate().unwrap();
+    unavailable.stale = false;
+    assert!(unavailable.validate().is_err());
+    let mut empty = state.clone();
+    empty.available = false;
+    empty.current = None;
+    empty.outputs.clear();
+    empty.revision = 0;
+    empty.validate().unwrap();
+    empty.revision = 1;
+    assert!(empty.validate().is_err());
+    state.current.as_mut().unwrap().palette_revision = 2;
+    assert!(state.validate().is_err());
+    state.current.as_mut().unwrap().palette_revision = 1;
+    state.current.as_mut().unwrap().path = "/home/user/../secret.png".into();
+    assert!(state.validate().is_err());
+    state.current.as_mut().unwrap().path = "https://example.test/wall.png".into();
+    assert!(state.validate().is_err());
+    state.current.as_mut().unwrap().path = "/home/user/wall.png".into();
+    state.revision = MAX_SAFE_INTEGER + 1;
+    assert!(state.validate().is_err());
+    state.revision = 1;
+    let mut mismatched = state.current.clone().unwrap();
+    mismatched.path = "/home/user/other.png".into();
+    state.outputs.insert("bad".into(), mismatched);
+    assert!(state.validate().is_err());
+    state.outputs.remove("bad");
+    state
+        .current
+        .as_mut()
+        .unwrap()
+        .palette
+        .colours
+        .remove("primary");
+    assert!(state.validate().is_err());
+    state
+        .current
+        .as_mut()
+        .unwrap()
+        .palette
+        .colours
+        .insert("primary".into(), "22aa88".into());
+    assert!(state.validate().is_err());
+}
+
+#[test]
+fn activation_revision_is_positive_and_safe() {
+    assert!(WallpaperActivate { revision: 1 }.validate().is_ok());
+    assert!(WallpaperActivate { revision: 0 }.validate().is_err());
+    assert!(WallpaperActivate {
+        revision: MAX_SAFE_INTEGER + 1
+    }
+    .validate()
+    .is_err());
+    let generated = artifacts::generate();
+    for path in [
+        "protocol/schema/wallpaper-active.json",
+        "protocol/schema/wallpaper-active-image.json",
+        "protocol/schema/wallpaper-activate.json",
+        "protocol/luau/wallpaper-active.d.luau",
+        "protocol/fixtures/wallpaper-active.jsonl",
+    ] {
+        assert!(
+            generated.contains_key(path),
+            "missing generated contract artifact {path}"
+        );
+    }
+    let luau = &generated["protocol/luau/wallpaper-active.d.luau"];
+    for declaration in [
+        "export type WallpaperFileIdentity =",
+        "export type Presentation =",
+        "export type PaletteMode =",
+    ] {
+        assert!(
+            luau.contains(declaration),
+            "missing Luau declaration {declaration}"
+        );
+    }
+}
+
+#[test]
+fn file_identity_is_decimal_and_bounded() {
+    let mut identity = WallpaperFileIdentity {
+        device: "0".into(),
+        inode: "18446744073709551615".into(),
+        size: 134_217_728,
+        mtime_sec: -1,
+        mtime_nsec: 999_999_999,
+        ctime_sec: 1,
+        ctime_nsec: 0,
+    };
+    identity.validate().unwrap();
+    identity.device = "01".into();
+    assert!(identity.validate().is_err());
+    identity.device = "1".into();
+    identity.inode = "18446744073709551616".into();
+    assert!(identity.validate().is_err());
+    identity.inode = "1".into();
+    identity.size += 1;
+    assert!(identity.validate().is_err());
+}

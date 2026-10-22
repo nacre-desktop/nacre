@@ -69,6 +69,8 @@ fn parent(path: &Path) -> PathBuf {
         .to_owned()
 }
 struct Watcher {
+    presentation: bool,
+    selected: Option<PathBuf>,
     root: PathBuf,
     scheme: PathBuf,
     engines: Vec<PathBuf>,
@@ -85,6 +87,10 @@ impl Watcher {
             self.config.clone(),
         ]);
         wanted.extend(self.engines.iter().map(|engine| parent(engine)));
+        let required = wanted.clone();
+        if let Some(selected) = &self.selected {
+            wanted.extend(selected.ancestors().skip(1).map(Path::to_path_buf));
+        }
         if self.root.is_dir() {
             for entry in walkdir::WalkDir::new(&self.root).follow_links(false) {
                 let entry = entry?;
@@ -108,11 +114,20 @@ impl Watcher {
         }
         let known = self.paths.values().cloned().collect::<BTreeSet<_>>();
         for path in wanted.difference(&known) {
-            match inotify::add_watch(&self.fd, path, inotify::WatchFlags::from_bits_retain(MASK)) {
+            // Optional image ancestors must never turn an invalid selection into
+            // a failure of the existing legacy generation service.
+            let flags = MASK
+                | if required.contains(path) {
+                    0
+                } else {
+                    0x03000000
+                }; // ONLYDIR | DONT_FOLLOW
+            match inotify::add_watch(&self.fd, path, inotify::WatchFlags::from_bits_retain(flags)) {
                 Ok(wd) => {
                     self.paths.insert(wd, path.clone());
                 }
                 Err(Errno::NOENT) => (), // Optional preferences/runtime directories may not exist yet.
+                Err(Errno::ACCESS | Errno::NOTDIR | Errno::LOOP) if !required.contains(path) => (),
                 Err(error) => {
                     return Err(format!("Cannot watch {}: {error}", path.display()).into())
                 }
@@ -163,6 +178,13 @@ impl Watcher {
             let Some(path) = self.paths.get(&wd).cloned() else {
                 continue;
             };
+            if self
+                .selected
+                .as_ref()
+                .is_some_and(|selected| selected.starts_with(path.join(&name)))
+            {
+                dirty |= 0x80;
+            }
             if self.engines.iter().any(|engine| path == parent(engine)) {
                 for (index, engine) in self.engines.iter().enumerate() {
                     if path == parent(engine) && Some(name.as_os_str()) == engine.file_name() {
@@ -170,6 +192,9 @@ impl Watcher {
                     }
                 }
             } else if path == parent(&self.scheme) {
+                if self.presentation && name == "presentation.json" {
+                    dirty |= 0x80;
+                }
                 if Some(name.as_os_str()) == self.scheme.file_name()
                     && mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0
                 {
@@ -191,7 +216,7 @@ impl Watcher {
                     dirty |= all;
                     self.rescan()?;
                 }
-            } else {
+            } else if path.starts_with(&self.root) {
                 let suffix = Path::new(&name)
                     .extension()
                     .unwrap_or_default()
@@ -258,7 +283,7 @@ impl Watcher {
 pub(crate) async fn observe(
     paths: &Paths,
     engines: Vec<PathBuf>,
-    mut publish: impl FnMut(Option<u8>) -> Result<()>,
+    mut publish: impl FnMut(Option<u8>) -> Result<Option<PathBuf>>,
 ) -> Result<()> {
     if engines.is_empty() || engines.len() > 3 {
         return Err("Invalid wallpaper source count".into());
@@ -268,6 +293,8 @@ pub(crate) async fn observe(
     fs::create_dir_all(&root)?;
     fs::create_dir_all(parent(&scheme))?;
     let mut watcher = Watcher {
+        presentation: true,
+        selected: None,
         root,
         scheme,
         engines,
@@ -284,9 +311,16 @@ pub(crate) async fn observe(
     let descriptor = unsafe { tokio::io::unix::AsyncFd::register(descriptor) }?;
     let mut buffer = vec![MaybeUninit::uninit(); 262144];
     let mut deadlines = vec![None; watcher.engines.len()];
-    publish(None)?;
+    let mut presentation_deadline = None;
+    watcher.selected = publish(None)?;
+    watcher.rescan()?;
     loop {
-        let next = deadlines.iter().flatten().copied().min();
+        let next = deadlines
+            .iter()
+            .flatten()
+            .copied()
+            .chain(presentation_deadline)
+            .min();
         let timeout = async {
             match next {
                 Some(next) => tokio::time::sleep_until(next).await,
@@ -302,6 +336,9 @@ pub(crate) async fn observe(
                 };
                 drop(ready);
                 let dirty = watcher.apply(events, &mut previous)?;
+                if dirty & 0x80 != 0 {
+                    presentation_deadline = Some(tokio::time::Instant::now() + Duration::from_millis(500));
+                }
                 for (index, deadline) in deadlines.iter_mut().enumerate() {
                     if dirty & (1 << index) != 0 {
                         *deadline = Some(tokio::time::Instant::now() + Duration::from_millis(500));
@@ -311,6 +348,10 @@ pub(crate) async fn observe(
             _ = timeout => {
                 let now = tokio::time::Instant::now();
                 let mut changed = 0;
+                if presentation_deadline.is_some_and(|deadline| deadline <= now) {
+                    presentation_deadline = None;
+                    changed |= 0x80;
+                }
                 for (index, deadline) in deadlines.iter_mut().enumerate() {
                     if deadline.is_some_and(|deadline| deadline <= now) {
                         *deadline = None;
@@ -318,7 +359,11 @@ pub(crate) async fn observe(
                     }
                 }
                 watcher.rescan()?;
-                publish(Some(changed))?;
+                let selected = publish(Some(changed))?;
+                if watcher.selected != selected {
+                    watcher.selected = selected;
+                    watcher.rescan()?;
+                }
             },
         }
     }
@@ -409,6 +454,8 @@ pub fn run(args: &[String]) -> Result<i32> {
     fs::create_dir_all(&root)?;
     fs::create_dir_all(parent(&scheme))?;
     Watcher {
+        presentation: false,
+        selected: None,
         root,
         scheme,
         engines: vec![engine],
@@ -418,4 +465,38 @@ pub fn run(args: &[String]) -> Result<i32> {
     }
     .run()?;
     Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn presentation_updates_have_a_daemon_only_bit_without_legacy_generations() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let scheme = home.path().join("state/scheme.json");
+        fs::create_dir_all(parent(&scheme))?;
+        let mut watcher = Watcher {
+            presentation: true,
+            root: home.path().join("images"),
+            scheme: scheme.clone(),
+            selected: None,
+            engines: vec![home.path().join("bin/helper")],
+            config: home.path().join("config"),
+            fd: inotify::init(inotify::CreateFlags::NONBLOCK | inotify::CreateFlags::CLOEXEC)?,
+            paths: BTreeMap::from([(1, parent(&scheme))]),
+        };
+        let event = || vec![(1, 0x80, OsString::from("presentation.json"))];
+        let mut previous = flavour(&scheme)?;
+        assert_eq!(watcher.apply(event(), &mut previous)?, 0x80);
+        watcher.presentation = false;
+        assert_eq!(watcher.apply(event(), &mut previous)?, 0);
+        let external = home.path().join("mounted");
+        watcher.selected = Some(external.join("wall.png"));
+        watcher.paths.insert(2, external);
+        assert_eq!(
+            watcher.apply(vec![(2, 0x80, OsString::from("wall.png"))], &mut previous)?,
+            0x80
+        );
+        Ok(())
+    }
 }

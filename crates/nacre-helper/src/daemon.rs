@@ -1,4 +1,5 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
+pub mod active_wallpaper;
 pub mod attach;
 pub mod client;
 pub mod compositor;
@@ -131,6 +132,7 @@ async fn serve(
     let wallpaper_service = if !counter.safe {
         let generations = Rc::new(RefCell::new(std::collections::BTreeMap::new()));
         wallpaper::publish(&hub, &generations, false, None)?;
+        active_wallpaper::initial(&hub)?;
         hub.borrow_mut().service("wallpaper-watch", "starting", 0)?;
         let service_hub = hub.clone();
         let factory_hub = hub.clone();

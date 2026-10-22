@@ -2647,3 +2647,173 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
     assert!(!fs::read_to_string(log)?.contains("DO_NOT_LOG_WINDOW_TITLE"));
     Ok(())
 }
+
+#[test]
+fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result<()> {
+    use nacre_protocol::{wallpaper::WallpaperActive, Message, Mirror, Reply, Update};
+
+    let home = tempfile::Builder::new().prefix("wa-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let private = home.path().join("private");
+    fs::create_dir(&private)?;
+    fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+    let endpoint = private.join("daemon.sock");
+    let notify_path = home.path().join("notify.sock");
+    let notify = UnixDatagram::bind(&notify_path)?;
+    notify.set_read_timeout(Some(Duration::from_secs(10)))?;
+
+    let state_dir = home.path().join("state/nacre");
+    let config = home.path().join("config/nacre");
+    let pictures = home.path().join("Pictures");
+    let installed = home
+        .path()
+        .join(".local/share/nacre/shell/tools/nacre-helper");
+    let bridge = home.path().join(".local/share/nacre/shell/bin/nacre_shell");
+    for dir in [
+        state_dir.as_path(),
+        config.as_path(),
+        installed.parent().unwrap(),
+        bridge.parent().unwrap(),
+        pictures.as_path(),
+    ] {
+        fs::create_dir_all(dir)?;
+    }
+    fs::set_permissions(&state_dir, fs::Permissions::from_mode(0o700))?;
+    fs::write(&installed, "fixture helper")?;
+    fs::write(&bridge, "fixture bridge")?;
+    let image_a = pictures.join("a.png");
+    let image_b = pictures.join("b.png");
+    image::DynamicImage::new_rgb8(2, 2).save(&image_a)?;
+    image::DynamicImage::new_rgb8(2, 2).save(&image_b)?;
+    let mut record: Value = serde_json::from_str(include_str!(
+        "../../../nacre/shell-tools/reference-style.json"
+    ))?;
+    record["mode"] = json!("dark");
+    record["poster"] = json!(image_a);
+    let presentation = state_dir.join("presentation.json");
+    fs::write(&presentation, serde_json::to_vec(&record)?)?;
+    let scheme = state_dir.join("scheme.json");
+    fs::write(&scheme, r#"{"mode":"dark"}"#)?;
+
+    let log = home.path().join("daemon.log");
+    let mut daemon = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &notify_path)
+            .stderr(
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log)?,
+            )
+            .spawn()?,
+    );
+    notify.recv(&mut [0; 256])?;
+    let deadline = Instant::now() + Duration::from_secs(10);
+    while status(home.path(), &source_path, &endpoint)?["services"]["wallpaper-watch"]["status"]
+        != "running"
+    {
+        if Instant::now() >= deadline {
+            return Err("Wallpaper source did not become ready".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+
+    let stream = UnixStream::connect(&endpoint)?;
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    let mut reader = BufReader::new(stream);
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"hello","proto":1,"client":"active-wallpaper-fixture"})
+    )?;
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    let welcome: Message = serde_json::from_str(&line)?;
+    assert!(
+        matches!(welcome, Message::Welcome { ref topics, ref methods, .. } if topics.contains_key("wallpaper.active") && methods.contains_key("wallpaper.activate"))
+    );
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"sub","topics":["wallpaper.active"]})
+    )?;
+    let mut mirror = Mirror::default();
+    mirror.receive(&welcome);
+    let read_active =
+        |reader: &mut BufReader<UnixStream>, mirror: &mut Mirror| -> Result<WallpaperActive> {
+            loop {
+                let mut line = String::new();
+                reader.read_line(&mut line)?;
+                let message: Message = serde_json::from_str(&line)?;
+                let update = mirror.receive(&message);
+                if matches!(update, Update::Changed(ref topic) if topic == "wallpaper.active") {
+                    let state: WallpaperActive =
+                        serde_json::from_value(mirror.topics["wallpaper.active"].1.clone())?;
+                    state.validate()?;
+                    return Ok(state);
+                }
+            }
+        };
+    let call = |reader: &mut BufReader<UnixStream>, id: u64, revision: u64| -> Result<Reply> {
+        writeln!(
+            reader.get_mut(),
+            "{}",
+            json!({"t":"call","id":id,"m":"wallpaper.activate","p":{"revision":revision}})
+        )?;
+        loop {
+            let mut line = String::new();
+            reader.read_line(&mut line)?;
+            if let Message::Ret { reply, .. } = serde_json::from_str::<Message>(&line)? {
+                return Ok(reply);
+            }
+        }
+    };
+    let active = read_active(&mut reader, &mut mirror)?;
+    assert!(active.available && !active.stale);
+    assert_eq!(
+        active.current.as_ref().unwrap().presentation,
+        nacre_protocol::wallpaper::Presentation::Crop
+    );
+    assert_eq!(active.outputs.len(), 1);
+    assert!(matches!(
+        call(&mut reader, 1, active.revision)?,
+        Reply::Ok { .. }
+    ));
+
+    record["mode"] = json!("light");
+    record["poster"] = json!(image_b);
+    fs::write(&presentation, serde_json::to_vec(&record)?)?;
+    let changed = read_active(&mut reader, &mut mirror)?;
+    assert!(changed.available && changed.revision > active.revision);
+    assert_eq!(
+        changed.current.as_ref().unwrap().palette.mode,
+        nacre_protocol::wallpaper::PaletteMode::Light
+    );
+    assert!(matches!(
+        call(&mut reader, 2, changed.revision)?,
+        Reply::Ok { .. }
+    ));
+
+    fs::write(&presentation, b"invalid")?;
+    let stale = read_active(&mut reader, &mut mirror)?;
+    assert!(!stale.available && stale.stale);
+    assert_eq!(stale.current, changed.current);
+    assert!(matches!(
+        call(&mut reader, 3, stale.revision)?,
+        Reply::Err { .. }
+    ));
+    fs::write(&presentation, serde_json::to_vec(&record)?)?;
+    let recovered = read_active(&mut reader, &mut mirror)?;
+    assert!(recovered.available && !recovered.stale);
+    assert_eq!(recovered.revision, changed.revision);
+    fs::remove_file(&image_b)?;
+    let removed = read_active(&mut reader, &mut mirror)?;
+    assert!(!removed.available && removed.stale);
+    assert_eq!(removed.current, recovered.current);
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    Ok(())
+}

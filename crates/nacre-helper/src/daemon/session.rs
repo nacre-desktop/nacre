@@ -46,6 +46,9 @@ async fn dispatch(
 ) -> Result<Value, Failure> {
     match method.as_str() {
         "daemon.ping" => Ok(Value::Null),
+        "wallpaper.activate" if !hub.borrow().safe => {
+            super::active_wallpaper::activate(hub, params)
+        }
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect") => {
             super::network::dispatch(hub, method, params, timeout).await
         }

@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ActiveWallpaper",
+  "type": "object",
+  "properties": {
+    "revision": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "palette_revision": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*://)[^\\u0000]*$"
+    },
+    "file_identity": {
+      "$ref": "#/$defs/WallpaperFileIdentity"
+    },
+    "presentation": {
+      "$ref": "#/$defs/Presentation"
+    },
+    "palette": {
+      "$ref": "#/$defs/WallpaperPalette"
+    }
+  },
+  "required": [
+    "revision",
+    "palette_revision",
+    "path",
+    "file_identity",
+    "presentation",
+    "palette"
+  ],
+  "$defs": {
+    "WallpaperFileIdentity": {
+      "description": "Stable metadata tuple for a bounded local file read. Consumers compare it\nbefore and after decoding through the same open file descriptor.",
+      "type": "object",
+      "properties": {
+        "device": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "inode": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 20,
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "size": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 134217728
+        },
+        "mtime_sec": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "mtime_nsec": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 999999999
+        },
+        "ctime_sec": {
+          "type": "integer",
+          "format": "int64",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "ctime_nsec": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 999999999
+        }
+      },
+      "required": [
+        "device",
+        "inode",
+        "size",
+        "mtime_sec",
+        "mtime_nsec",
+        "ctime_sec",
+        "ctime_nsec"
+      ]
+    },
+    "Presentation": {
+      "type": "string",
+      "enum": [
+        "crop",
+        "fit",
+        "fill",
+        "centre"
+      ]
+    },
+    "WallpaperPalette": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/PaletteMode"
+        },
+        "colours": {
+          "type": "object",
+          "minProperties": 3,
+          "maxProperties": 128,
+          "required": [
+            "background",
+            "onSurface",
+            "primary"
+          ],
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "colours"
+      ]
+    },
+    "PaletteMode": {
+      "type": "string",
+      "enum": [
+        "dark",
+        "light"
+      ]
+    }
+  }
+}

@@ -51,7 +51,14 @@ pub fn publish(
 }
 
 pub async fn run(hub: Shared, paths: Paths, generations: Generations) -> Result<()> {
-    let result = observe(hub.clone(), paths, generations.clone()).await;
+    let producer = Rc::new(RefCell::new(super::active_wallpaper::Producer::default()));
+    let result = tokio::select! {
+        result = observe(hub.clone(), paths.clone(), generations.clone(), producer.clone()) => result,
+        result = super::active_wallpaper::outputs(hub.clone(), paths, producer) => result,
+    };
+    if result.is_err() {
+        super::active_wallpaper::unavailable(&hub)?;
+    }
     if result.is_err()
         && publish(
             &hub,
@@ -66,7 +73,12 @@ pub async fn run(hub: Shared, paths: Paths, generations: Generations) -> Result<
     result
 }
 
-async fn observe(hub: Shared, paths: Paths, generations: Generations) -> Result<()> {
+async fn observe(
+    hub: Shared,
+    paths: Paths,
+    generations: Generations,
+    producer: Rc<RefCell<super::active_wallpaper::Producer>>,
+) -> Result<()> {
     // Native callers may name the installed helper or the running binary. The
     // legacy default names its bridge. Share directory subscriptions but retain
     // independent counters/deadlines, including when a path is a symlink.
@@ -113,7 +125,9 @@ async fn observe(hub: Shared, paths: Paths, generations: Generations) -> Result<
             hub.borrow_mut()
                 .service("wallpaper-watch", "running", failures)?;
         }
-        publish(&hub, &generations, true, None)
+        publish(&hub, &generations, true, None)?;
+        producer.borrow_mut().refresh(&hub, &paths)?;
+        Ok(producer.borrow().watched.clone())
     })
     .await
 }
