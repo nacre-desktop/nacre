@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
-use std::os::unix::fs::{MetadataExt, PermissionsExt};
+use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -25,6 +25,8 @@ struct BootstrapFile {
 
 /// Authentication state for one listener port. Session credentials survive restarts;
 /// bootstrap credentials are rotated at startup and expire after five minutes.
+/// Browser cookies are still host-scoped across ports; HTTP enforces same-origin
+/// Fetch Metadata on protected APIs rather than treating the name as port isolation.
 pub struct BrowserAuth {
     directory: PathBuf,
     port: u16,
@@ -71,6 +73,7 @@ impl BrowserAuth {
         Ok(Self { directory, port, cookie, cookie_expires, bootstrap: Some(bootstrap) })
     }
 
+    /// A distinct session lookup key; browser cookie transport itself is host-scoped.
     pub fn cookie_name(&self) -> String { format!("nacre_brain_{}", self.port) }
     pub fn cookie_value(&self) -> &str { &self.cookie }
     pub fn cookie_max_age(&self) -> u64 { self.cookie_expires.saturating_sub(now().unwrap_or(0)) }
@@ -144,11 +147,17 @@ fn read_bootstrap(path: &Path) -> io::Result<BootstrapFile> {
 
 fn read_private(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
     refuse_symlink(path)?;
-    let metadata = fs::metadata(path)?;
-    if !metadata.is_file() || metadata.nlink() != 1 || metadata.len() > limit {
+    let mut file = OpenOptions::new().read(true).custom_flags(nix::libc::O_NOFOLLOW).open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.nlink() != 1 || metadata.len() > limit || metadata.mode() & 0o077 != 0 {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, "unsafe authentication state file"));
     }
-    fs::read(path)
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(limit.saturating_add(1)).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "authentication state file exceeds limit"));
+    }
+    Ok(bytes)
 }
 
 fn to_json<T: Serialize>(value: &T) -> io::Result<Vec<u8>> {
@@ -244,7 +253,7 @@ mod tests {
         let expired_bootstrap = BootstrapFile { token: "stale".into(), expires: now().unwrap() - 1 };
         write_private(&dir.path().join("auth/ports/17843.bootstrap.json"), &to_json(&expired_bootstrap).unwrap()).unwrap();
         assert!(!first.consume_bootstrap("stale"));
-        let restarted = BrowserAuth::open(dir.path(), 17843).unwrap();
+        let mut restarted = BrowserAuth::open(dir.path(), 17843).unwrap();
         assert!(!restarted.consume_bootstrap(&refreshed));
         assert!(restarted.cookie_valid(&cookie));
         let expired = SessionFile { cookie: restarted.cookie_value().to_owned(), expires: now().unwrap() - 1 };
@@ -271,5 +280,24 @@ mod tests {
         let linked = dir.path().join("linked");
         symlink(&target, &linked).unwrap();
         assert!(BrowserAuth::open(&linked, 17843).is_err());
+    }
+
+    #[test]
+    fn authentication_state_rejects_hardlinks_and_oversized_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let ports = dir.path().join("auth/ports");
+        fs::create_dir_all(&ports).unwrap();
+        let session = ports.join("17843.json");
+        let linked_source = dir.path().join("source.json");
+        fs::write(&linked_source, br#"{"cookie":"0123456789012345678901234567890123456789012345678901234567890123","expires":4102444800}"#).unwrap();
+        fs::set_permissions(&linked_source, fs::Permissions::from_mode(0o600)).unwrap();
+        fs::hard_link(&linked_source, &session).unwrap();
+        assert!(BrowserAuth::open(dir.path(), 17843).is_err());
+
+        fs::remove_file(&session).unwrap();
+        fs::remove_file(&linked_source).unwrap();
+        fs::write(&session, vec![b'x'; 4097]).unwrap();
+        fs::set_permissions(&session, fs::Permissions::from_mode(0o600)).unwrap();
+        assert!(BrowserAuth::open(dir.path(), 17843).is_err());
     }
 }

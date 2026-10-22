@@ -87,6 +87,7 @@ where F: Fn(Request) -> Response + Send + Sync + 'static {
                 let callback = Arc::clone(&callback);
                 let active = Arc::clone(&active);
                 std::thread::spawn(move || {
+                    let _guard = ClientGuard { active, done: done_tx };
                     let mut stream = stream;
                     if let Ok(Some(request)) = read_request(&mut stream) {
                         let authorized = match auth.lock() {
@@ -99,8 +100,6 @@ where F: Fn(Request) -> Response + Send + Sync + 'static {
                         };
                         let _ = write_response(&mut stream, response);
                     }
-                    active.fetch_sub(1, Ordering::AcqRel);
-                    let _ = done_tx.send(());
                 });
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
@@ -110,6 +109,18 @@ where F: Fn(Request) -> Response + Send + Sync + 'static {
             Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
             Err(error) => return Err(error),
         }
+    }
+}
+
+struct ClientGuard {
+    active: Arc<AtomicUsize>,
+    done: mpsc::Sender<()>,
+}
+
+impl Drop for ClientGuard {
+    fn drop(&mut self) {
+        self.active.fetch_sub(1, Ordering::AcqRel);
+        let _ = self.done.send(());
     }
 }
 
@@ -286,6 +297,7 @@ fn write_response(stream: &mut TcpStream, mut response: Response) -> io::Result<
                 Ok(0) => return Err(io::Error::new(io::ErrorKind::WriteZero, "client stopped reading")),
                 Ok(count) => remaining = &remaining[count..],
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+                Err(error) if error.kind() == io::ErrorKind::WouldBlock || error.kind() == io::ErrorKind::TimedOut => continue,
                 Err(error) => return Err(error),
             }
         }
@@ -327,6 +339,60 @@ mod tests {
     }
 
     #[test]
+    fn browser_auth_gates_preserve_get_post_and_json_boundaries() {
+        let dir = tempfile::tempdir().unwrap();
+        let port = 17843;
+        let mut auth = BrowserAuth::open(dir.path(), port).unwrap();
+        let cookie = format!("{}={}", auth.cookie_name(), auth.cookie_value());
+        let canonical = format!("http://127.0.0.1:{port}");
+        let make = |method: &str, path: &str, body: &[u8]| {
+            let mut headers = BTreeMap::new();
+            headers.insert("host".into(), format!("127.0.0.1:{port}"));
+            headers.insert("cookie".into(), cookie.clone());
+            headers.insert("origin".into(), canonical.clone());
+            headers.insert("sec-fetch-site".into(), "same-origin".into());
+            headers.insert("content-type".into(), "application/json".into());
+            Request { method: method.into(), path: path.into(), query: String::new(), headers, body: body.to_vec() }
+        };
+        let mut missing_cookie = make("GET", "/api/brain", &[]);
+        missing_cookie.headers.remove("cookie");
+        assert_eq!(authorize(missing_cookie, port, &mut auth).unwrap_err().status, 403);
+        assert_eq!(authorize(make("GET", "/api/brain", &[]), port, &mut auth).unwrap().path, "/api/brain");
+
+        let invalid_json = [b"[]".as_slice(), b"null", b"42", b"\"text\""];
+        for body in invalid_json {
+            assert_eq!(authorize(make("POST", "/api/action", body), port, &mut auth).unwrap_err().status, 400);
+        }
+        assert!(authorize(make("POST", "/api/action", br#"{"name":"capture"}"#), port, &mut auth).is_ok());
+
+        for (name, value) in [
+            ("cookie", "nacre_brain_bad=wrong"),
+            ("origin", "http://evil.invalid"),
+            ("host", "evil.invalid"),
+            ("content-type", "application/x-www-form-urlencoded"),
+        ] {
+            let mut request = make("POST", "/api/action", br#"{"name":"capture"}"#);
+            request.headers.insert(name.into(), value.into());
+            assert_eq!(authorize(request, port, &mut auth).unwrap_err().status, 403, "{name}");
+        }
+    }
+
+    #[test]
+    fn refuses_non_loopback_listener_and_caps_responses() {
+        let dir = tempfile::tempdir().unwrap();
+        let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
+        assert!(serve(listener, dir.path(), Duration::ZERO, |_request| Response::new(200, "text/plain", Vec::new())).is_err());
+
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
+        let (mut server, _) = listener.accept().unwrap();
+        write_response(&mut server, Response::new(200, "text/plain", vec![b'x'; RESPONSE_LIMIT + 1])).unwrap();
+        let mut response = Vec::new();
+        client.read_to_end(&mut response).unwrap();
+        assert!(response.starts_with(b"HTTP/1.1 500 Internal Server Error"));
+    }
+
+    #[test]
     fn real_loopback_ports_reject_same_site_navigation_with_host_wide_cookie() {
         let dir = tempfile::tempdir().unwrap();
         let state = dir.path().to_path_buf();
@@ -364,7 +430,11 @@ mod tests {
         let mut excess = TcpStream::connect(("127.0.0.1", port)).unwrap();
         excess.set_read_timeout(Some(Duration::from_secs(1))).unwrap();
         let mut byte = [0_u8; 1];
-        assert_eq!(excess.read(&mut byte).unwrap(), 0);
+        match excess.read(&mut byte) {
+            Ok(0) => {}
+            Err(error) if matches!(error.kind(), io::ErrorKind::ConnectionReset | io::ErrorKind::ConnectionAborted) => {}
+            result => panic!("excess client was not dropped: {result:?}"),
+        }
         drop(excess);
         drop(clients);
         server.join().unwrap();
@@ -404,6 +474,10 @@ mod tests {
             b"GET / HTTP/1.1\r\nHost: 127.0.0.1:1\r\nHost: localhost:1\r\n\r\n",
             b"GET / HTTP/1.1\r\nHost: 127.0.0.1:1\r\nCookie: a=b\r\nCookie: c=d\r\n\r\n",
             b"POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:1\r\nContent-Length: 1\r\nContent-Length: 2\r\n\r\n{}",
+            b"POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:1\r\nContent-Length: -1\r\n\r\n",
+            b"POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:1\r\nContent-Length: 0\r\n\r\n",
+            b"POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:1\r\nContent-Length: 4097\r\n\r\n",
+            b"POST /api/action HTTP/1.1\r\nHost: 127.0.0.1:1\r\nContent-Length: invalid\r\n\r\n",
         ] {
             let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0)).unwrap();
             let mut client = TcpStream::connect(listener.local_addr().unwrap()).unwrap();
