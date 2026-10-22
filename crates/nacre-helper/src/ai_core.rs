@@ -266,7 +266,7 @@ pub fn account_home(agent: &str, account: Option<&str>) -> Result<PathBuf> {
     Ok(path)
 }
 
-fn reject_symlink_chain(path: &std::path::Path) -> Result<()> {
+pub(crate) fn reject_symlink_chain(path: &std::path::Path) -> Result<()> {
     for component in path.ancestors() {
         if fs::symlink_metadata(component).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
             return Err(error("Symlinked AI account paths are not supported"));
