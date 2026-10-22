@@ -348,8 +348,7 @@ def prepare(directory):
     watcher.write_text(source)
     notices = shell / "services/NacreNotifs.qml"
     notices.write_text(
-        notices.read_text()
-        .replace(
+        notices.read_text().replace(
             "                historyReady: root.historyReady,",
             "                tracked: serverLoader.item.trackedNotifications.values.length,\n                liveReferences: root.list.filter(entry => entry.notification).length,\n                images: root.list.filter(entry => entry.image).length,\n                dismissedKeys: Object.keys(root.dismissedKeys).length,\n                historyReady: root.historyReady,",
             1,
