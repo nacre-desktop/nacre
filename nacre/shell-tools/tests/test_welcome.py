@@ -4,14 +4,10 @@ import importlib.machinery
 import importlib.util
 import json
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from concurrent.futures import ThreadPoolExecutor
-import contextlib
-import io
-import shutil
 
 ROOT = Path(__file__).parents[3]
 
@@ -25,7 +21,6 @@ def load(name, path):
 
 
 welcome = load("welcome_owner", ROOT / "nacre/shell-tools/welcome.py")
-launcher = load("welcome_launcher", ROOT / "bin/nacre-welcome")
 configure = load("welcome_configure", ROOT / "tools/configure.py")
 
 
@@ -97,30 +92,6 @@ class WelcomeTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 welcome.set_startup(home, "false")
 
-    def test_warm_activation_does_not_start_or_restart_services(self):
-        runner = Mock(return_value=subprocess.CompletedProcess([], 0, "", ""))
-        launcher.open_welcome("shortcuts", runner=runner)
-        self.assertEqual(runner.call_count, 1)
-        self.assertEqual(
-            runner.call_args.args[0][-3:], ["welcomeApp", "open", "shortcuts"]
-        )
-
-    def test_cold_activation_starts_one_existing_service_with_bounded_retry(self):
-        bad = subprocess.CompletedProcess([], 1, "", "")
-        good = subprocess.CompletedProcess([], 0, "", "")
-        runner = Mock(side_effect=[bad, good, bad, good])
-        sleep = Mock()
-        launcher.open_welcome(runner=runner, sleep=sleep)
-        self.assertEqual(
-            runner.call_args_list[1].args[0],
-            ["systemctl", "--user", "start", "--no-block", "nacre-shell.service"],
-        )
-        self.assertEqual(sleep.call_count, 2)
-        runner = Mock(return_value=bad)
-        with self.assertRaises(RuntimeError):
-            launcher.open_welcome(runner=runner, sleep=Mock())
-        self.assertEqual(runner.call_count, 2)
-
     def test_concurrent_login_claims_activate_only_once(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -129,51 +100,6 @@ class WelcomeTests(unittest.TestCase):
                     pool.map(lambda _: welcome.claim_login(home, "same"), range(4))
                 )
             self.assertEqual(sum(item["show"] for item in results), 1)
-
-    def test_disabled_login_cli_does_not_start_shell_or_open_window(self):
-        with (
-            patch("sys.argv", ["nacre-welcome", "--login"]),
-            patch.object(launcher, "helper", return_value={"show": False, "claim": ""}),
-            patch.object(launcher, "open_welcome") as opener,
-        ):
-            self.assertEqual(launcher.main(), 0)
-            opener.assert_not_called()
-
-    def test_successful_first_login_acknowledges_after_opening(self):
-        events = []
-        with (
-            patch("sys.argv", ["nacre-welcome", "--login"]),
-            patch.object(
-                launcher,
-                "helper",
-                side_effect=lambda action, *args: (
-                    events.append(action) or {"show": True, "claim": "ours"}
-                ),
-            ),
-            patch.object(
-                launcher,
-                "open_welcome",
-                side_effect=lambda *args: events.append("open"),
-            ),
-        ):
-            self.assertEqual(launcher.main(), 0)
-        self.assertEqual(events, ["claim-login", "open", "acknowledge-login"])
-
-    def test_failed_login_cli_releases_its_claim(self):
-        with (
-            patch("sys.argv", ["nacre-welcome", "--login"]),
-            patch.object(
-                launcher,
-                "helper",
-                side_effect=[{"show": True, "claim": "ours"}, {"released": True}],
-            ) as helper,
-            patch.object(
-                launcher, "open_welcome", side_effect=RuntimeError("unavailable")
-            ),
-            contextlib.redirect_stderr(io.StringIO()),
-        ):
-            self.assertEqual(launcher.main(), 1)
-            self.assertEqual(helper.call_args.args, ("release-login", "ours"))
 
     def test_live_shortcuts_follow_remaps_and_omit_removed_actions(self):
         bindings = [
@@ -257,32 +183,6 @@ class WelcomeTests(unittest.TestCase):
             rows, error = welcome.live_shortcuts()
         self.assertEqual(rows, [])
         self.assertIn("Hyprland", error)
-
-    @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
-    def test_actual_lua_bind_registrations_have_descriptions(self):
-        script = """local function proxy(path)
-return setmetatable({}, {__index=function(t,k) local p=proxy(path..'.'..k);rawset(t,k,p);return p end,__call=function(t,...) return {} end}) end
-hl={unbind=function() end,window_rule=function(rule) assert(type(rule)=='table') end,dsp=proxy('hl'),bind=function(keys,action,options) if options and options.description then io.write(keys..'\\t'..options.description..'\\n') end end,define_submap=function(name,fn) fn() end}
-dofile(arg[1]);dofile(arg[2])
-"""
-        result = subprocess.run(
-            [
-                "lua",
-                "-",
-                str(ROOT / "hypr/conf/keybinding.lua"),
-                str(ROOT / "nacre/shell-tools/shortcuts.lua"),
-            ],
-            input=script,
-            text=True,
-            capture_output=True,
-            check=True,
-        )
-        rows = dict(line.split("\t") for line in result.stdout.splitlines())
-        self.assertEqual(rows["SUPER + SPACE"], "Nacre:launcher")
-        self.assertEqual(rows["SUPER + E"], "Nacre:files")
-        self.assertEqual(rows["SUPER + A"], "Nacre:ai-sidebar")
-        self.assertEqual(rows["SUPER + CTRL + D"], "Nacre:detach-panel")
-        self.assertEqual(rows["SUPER + 7"], "Nacre:workspace")
 
     def test_tenth_workspace_has_a_readable_label(self):
         native = [

@@ -90,15 +90,18 @@ def stage(root, destination, component, build):
         copy(build / "native/nacre-helper", destination / "usr/lib/nacre/nacre-helper")
         helper_reference = shared / "nacre/shell-tools/nacre-helper"
         helper_reference.symlink_to("../../../../lib/nacre/nacre-helper")
-        for name in ("nacre-daemon", "nacrectl"):
+        for name in (
+            "nacre-daemon",
+            "nacrectl",
+            "nacre-app",
+            "nacre-settings",
+            "nacre-welcome",
+        ):
             public = destination / "usr/bin" / name
             public.parent.mkdir(parents=True, exist_ok=True)
             public.symlink_to("../lib/nacre/nacre-helper")
         for name in (
-            "nacre-app",
-            "nacre-settings",
             "nacre-colors",
-            "nacre-welcome",
             "nacre-terminal-logo",
             "nacre-terminal",
             "xdg-open",
