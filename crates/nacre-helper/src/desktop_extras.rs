@@ -173,7 +173,11 @@ fn record_clip_timestamp(paths: &Paths, row: &str) -> Result<()> {
         id.to_owned(),
         SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
     );
-    fs::create_dir_all(timestamps.parent().ok_or("Missing clipboard state folder")?)?;
+    fs::create_dir_all(
+        timestamps
+            .parent()
+            .ok_or("Missing clipboard state folder")?,
+    )?;
     save(&timestamps, &json!(values))?;
     Ok(())
 }
@@ -238,7 +242,11 @@ fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
         }
     }
     known.retain(|id, _| live.contains(id) && !remove.contains(id));
-    fs::create_dir_all(timestamps.parent().ok_or("Missing clipboard state folder")?)?;
+    fs::create_dir_all(
+        timestamps
+            .parent()
+            .ok_or("Missing clipboard state folder")?,
+    )?;
     save(&timestamps, &json!(known))?;
     Ok(())
 }
