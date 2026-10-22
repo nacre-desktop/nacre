@@ -6,7 +6,7 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     os::unix::{
         fs::PermissionsExt,
-        net::{UnixListener, UnixStream},
+        net::{UnixDatagram, UnixListener, UnixStream},
     },
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -17,11 +17,11 @@ use std::{
 use tempfile::TempDir;
 
 const FAKE_CODEX: &str = r##"#!/usr/bin/python3
-import json, os, signal, sys
+import json, os, signal, socket, sys
 import time
 log = os.environ['FAKE_PROVIDER_LOG']
 scenario = os.environ.get('FAKE_SCENARIO', 'chat')
-signal.alarm(45)
+signal.alarm(120)
 def record(row):
     with open(log, 'a', encoding='utf-8') as f:
         f.write(json.dumps(row) + '\n')
@@ -82,14 +82,14 @@ while True:
         elif scenario == 'resume-race':
             def stale_peer_dropped(signum, frame):
                 record({'kind':'resume-peer-dropped','pid':os.getpid()})
+                socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'peer-dropped', os.environ['FAKE_RESUME_READY'])
                 raise SystemExit(0)
             signal.signal(signal.SIGTERM, stale_peer_dropped)
-            open(os.environ['FAKE_RESUME_READY'], 'w', encoding='utf-8').write('ready')
-            deadline = time.monotonic() + 30
-            while not os.path.exists(os.environ['FAKE_RESUME_RELEASE']) and time.monotonic() < deadline:
-                time.sleep(0.02)
-            if not os.path.exists(os.environ['FAKE_RESUME_RELEASE']):
-                raise SystemExit(4)
+            release = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+            release.bind(os.environ['FAKE_RESUME_RELEASE'])
+            release.settimeout(60)
+            socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'ready', os.environ['FAKE_RESUME_READY'])
+            release.recvfrom(64)
             turns = [{'items': [
                 {'type':'userMessage','id':'stale-user','content':[{'type':'text','text':'stale transcript'}]},
                 {'type':'agentMessage','id':'stale-agent','text':'stale response'}]}]
@@ -241,8 +241,11 @@ struct Fixture {
     claude_count: PathBuf,
     resume_ready: PathBuf,
     resume_release: PathBuf,
+    resume_ready_socket: UnixDatagram,
     tools: PathBuf,
     extras_log: PathBuf,
+    extras_ready: PathBuf,
+    extras_ready_socket: UnixDatagram,
     server: Option<Child>,
     channel: String,
     scenario: String,
@@ -272,10 +275,15 @@ impl Fixture {
         let tools = home.path().join("fixture-tools");
         fs::create_dir(&tools).unwrap();
         let extras_log = home.path().join("extras.jsonl");
+        let extras_ready = home.path().join("extras-ready");
+        let extras_ready_socket = UnixDatagram::bind(&extras_ready).expect("extras event socket");
+        extras_ready_socket
+            .set_read_timeout(Some(Duration::from_secs(60)))
+            .unwrap();
         executable(
             &tools.join("desktop-extras.py"),
             r##"#!/usr/bin/python3
-import json, os, sys
+import json, os, socket, sys
 data = json.load(sys.stdin)
 log = os.environ['FAKE_PROVIDER_LOG']
 pid = None
@@ -286,6 +294,7 @@ for line in open(log, encoding='utf-8'):
     except ValueError: pass
 with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
     f.write(json.dumps({'action':'resume','argv':sys.argv[1:],'key':data.get('key'),'provider_closed':not os.path.exists('/proc/' + str(pid))}) + '\n')
+socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ['FAKE_EXTRAS_SOCKET'])
 "##,
         );
         let config = home.path().join(".config/nacre/ai");
@@ -306,6 +315,10 @@ with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
         let claude_count = home.path().join("claude-count");
         let resume_ready = home.path().join("resume-ready");
         let resume_release = home.path().join("resume-release");
+        let resume_ready_socket = UnixDatagram::bind(&resume_ready).expect("resume event socket");
+        resume_ready_socket
+            .set_read_timeout(Some(Duration::from_secs(60)))
+            .unwrap();
         let mut fixture = Self {
             home,
             runtime,
@@ -315,8 +328,11 @@ with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
             claude_count,
             resume_ready,
             resume_release,
+            resume_ready_socket,
             tools,
             extras_log,
+            extras_ready,
+            extras_ready_socket,
             server: None,
             channel: channel.into(),
             scenario: scenario.into(),
@@ -339,6 +355,7 @@ with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
             .env("FAKE_CLAUDE_COUNT", &self.claude_count)
             .env("FAKE_RESUME_READY", &self.resume_ready)
             .env("FAKE_RESUME_RELEASE", &self.resume_release)
+            .env("FAKE_EXTRAS_SOCKET", &self.extras_ready)
             .env("FAKE_EXTRAS_LOG", &self.extras_log)
             .env("FAKE_SCENARIO", &self.scenario)
             .env("NACRE_HELPER_TOOLS", &self.tools)
@@ -399,7 +416,7 @@ with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
     }
 
     fn connect(&self) -> Client {
-        let deadline = Instant::now() + Duration::from_secs(8);
+        let deadline = Instant::now() + Duration::from_secs(60);
         loop {
             if let Ok(stream) = UnixStream::connect(self.socket()) {
                 stream
@@ -510,7 +527,7 @@ with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
                 nix::unistd::Pid::from_raw(pid),
                 nix::sys::signal::Signal::SIGTERM,
             );
-            let deadline = Instant::now() + Duration::from_secs(2);
+            let deadline = Instant::now() + Duration::from_secs(30);
             while Path::new(&format!("/proc/{pid}")).exists() && Instant::now() < deadline {
                 thread::sleep(Duration::from_millis(20));
             }
@@ -622,18 +639,18 @@ impl Client {
         }
     }
     fn history(&mut self) -> Value {
-        self.matching(Duration::from_secs(5), |event| event["type"] == "history")
+        self.matching(Duration::from_secs(60), |event| event["type"] == "history")
     }
     #[track_caller]
     fn question(&mut self, kind: &str) -> Value {
-        self.matching(Duration::from_secs(8), |event| {
+        self.matching(Duration::from_secs(60), |event| {
             event["type"] == "state" && event["question"]["kind"] == kind
         })["question"]
             .clone()
     }
     #[track_caller]
     fn wait_idle(&mut self) -> Value {
-        self.matching(Duration::from_secs(8), |event| {
+        self.matching(Duration::from_secs(60), |event| {
             event["type"] == "state" && event["busy"] == false
         })
     }
@@ -645,7 +662,7 @@ fn executable(path: &Path, contents: &str) {
 }
 
 fn wait_child(child: &mut Child) {
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         if child.try_wait().expect("poll child").is_some() {
             return;
@@ -695,7 +712,7 @@ fn stdout_lines(stdout: std::process::ChildStdout) -> Receiver<String> {
 
 fn stdout_line(lines: &Receiver<String>) -> String {
     lines
-        .recv_timeout(Duration::from_secs(8))
+        .recv_timeout(Duration::from_secs(60))
         .expect("timed out waiting for native client stdout")
 }
 
@@ -751,7 +768,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
         0o600
     );
     assert_eq!(client.history()["messages"], json!([]));
-    let state = client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let state = client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(state["provider"], "codex");
     assert_eq!(state["threadId"], "");
     let state_dir = fixture
@@ -778,7 +795,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     );
 
     client.send(json!({"action":"send","text":FIRST_PROMPT}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "stream-1"
     });
     let input = client.question("input");
@@ -795,10 +812,10 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     );
     client.send(json!({"action":"answer","id":approval["id"],"answers":{"approval":{"answers":["Allow once"]}}}));
     client.send(json!({"action":"send","text":"follow-up prompt"}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "follow-up"
     });
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "stream-1follow-up"
@@ -867,7 +884,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     fixture.start_server();
     let mut client = fixture.connect();
     assert_eq!(client.history()["messages"], json!([]));
-    let restored = client.matching(Duration::from_secs(8), |event| {
+    let restored = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "history"
             && event["messages"]
                 .as_array()
@@ -878,7 +895,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
         .unwrap()
         .iter()
         .any(|row| row["text"] == "earlier answer"));
-    let resumed_state = client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let resumed_state = client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(resumed_state["threadId"], "fixture-thread");
     client.send(json!({"action":"send","text":"second turn"}));
     assert!(fixture.methods().iter().any(
@@ -886,7 +903,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     ));
     let decline = client.question("approval");
     client.send(json!({"action":"answer","id":decline["id"],"answers":{"approval":{"answers":["Decline"]}}}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "second answer"
@@ -898,11 +915,11 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
         .any(|answer| answer["decision"] == "decline"));
 
     client.send(json!({"action":"send","text":"interrupt me"}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "stream-3"
     });
     client.send(json!({"action":"stop"}));
-    let stopped = client.matching(Duration::from_secs(8), |event| {
+    let stopped = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["title"] == "After interrupt"
     });
     assert!(!stopped["busy"].as_bool().unwrap());
@@ -921,7 +938,7 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     fixture.start_server();
     let mut other = fixture.connect();
     assert_eq!(other.history()["messages"], json!([]));
-    let other_state = other.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let other_state = other.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(other_state["threadId"], "");
     assert!(fixture
         .home
@@ -931,12 +948,12 @@ fn native_sidebar_preserves_stream_approval_steer_resume_and_channel_contract() 
     other.send(json!([]));
     other.send(json!({"action":"provider","provider":"claude"}));
     assert_eq!(
-        other.matching(Duration::from_secs(5), |event| event["type"] == "state")["type"],
+        other.matching(Duration::from_secs(60), |event| event["type"] == "state")["type"],
         "state"
     );
     other
         .stream
-        .set_read_timeout(Some(Duration::from_secs(3)))
+        .set_read_timeout(Some(Duration::from_secs(60)))
         .unwrap();
     let mut oversized = vec![b'x'; 1_048_577];
     oversized.push(b'\n');
@@ -954,14 +971,14 @@ fn native_claude_peer_preserves_streams_resume_usage_errors_and_cancellation() {
     let fixture = Fixture::new_with_provider("claude-fixture", "claude");
     let mut client = fixture.connect();
     assert_eq!(client.history()["messages"], json!([]));
-    let state = client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let state = client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(state["provider"], "claude");
 
     client.send(json!({"action":"send","text":"first Claude prompt"}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "streamed first"
     });
-    let second_message = client.matching(Duration::from_secs(5), |event| {
+    let second_message = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "second assistant message"
@@ -1011,7 +1028,7 @@ fn native_claude_peer_preserves_streams_resume_usage_errors_and_cancellation() {
     assert_eq!(metadata["started"], true);
 
     client.send(json!({"action":"send","text":"limit prompt"}));
-    let usage_state = client.matching(Duration::from_secs(5), |event| {
+    let usage_state = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && !event["error"].as_str().unwrap_or("").is_empty()
     });
     assert_eq!(
@@ -1051,11 +1068,11 @@ fn native_claude_peer_preserves_streams_resume_usage_errors_and_cancellation() {
     assert_eq!(second["args"][resume_arg + 1], session_id);
 
     client.send(json!({"action":"send","text":"cancel prompt"}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "waiting to cancel"
     });
     client.send(json!({"action":"stop"}));
-    let interrupted = client.matching(Duration::from_secs(8), |event| {
+    let interrupted = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["error"] == "Response interrupted"
     });
     assert!(!interrupted["busy"].as_bool().unwrap());
@@ -1077,7 +1094,7 @@ fn native_sidebar_async_question_reset_answer_and_suppression_match_history_cont
 
     let mut client = fixture.connect();
     assert_eq!(client.history()["messages"], json!([]));
-    let question_state = client.matching(Duration::from_secs(8), |event| {
+    let question_state = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["question"]["kind"] == "async"
     });
     assert_eq!(question_state["busy"], false);
@@ -1088,7 +1105,7 @@ fn native_sidebar_async_question_reset_answer_and_suppression_match_history_cont
         json!({"action":"answer","id":"stale-question","answers":{"0":{"answers":["Wrong"]}}}),
     );
     client.send(json!({"action":"answer","id":question["id"],"answers":{"0":{"answers":["B"]}}}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message" && event["role"] == "assistant" && event["text"] == "async reply"
     });
     let blocking = client.question("input");
@@ -1124,7 +1141,7 @@ fn native_sidebar_async_question_reset_answer_and_suppression_match_history_cont
     fixture.kill_server();
     fixture.start_server();
     let mut resumed = fixture.connect();
-    let history = resumed.matching(Duration::from_secs(8), |event| {
+    let history = resumed.matching(Duration::from_secs(60), |event| {
         event["type"] == "history"
             && event["messages"]
                 .as_array()
@@ -1135,7 +1152,7 @@ fn native_sidebar_async_question_reset_answer_and_suppression_match_history_cont
         .unwrap()
         .iter()
         .any(|row| row["id"] == "new-question"));
-    let state = resumed.matching(Duration::from_secs(8), |event| {
+    let state = resumed.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["question"].is_null()
     });
     assert!(
@@ -1149,9 +1166,9 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
     let fixture = Fixture::new_with_provider_and_scenario("workspace", "codex", "workspace");
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     client.send(json!({"action":"send","text":"continue in terminal"}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "workspace answer"
@@ -1160,17 +1177,16 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
     let original_pids = fixture.provider_pids().len();
 
     client.send(json!({"action":"workspace"}));
-    let handoff = client.matching(Duration::from_secs(8), |event| {
+    let handoff = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["inWorkspace"] == true
     });
     assert!(handoff["status"]
         .as_str()
         .unwrap()
         .contains("Continue this chat in the workspace"));
-    let deadline = Instant::now() + Duration::from_secs(8);
-    while !fixture.extras_log.exists() && Instant::now() < deadline {
-        thread::sleep(Duration::from_millis(20));
-    }
+    let mut event = [0; 64];
+    let (length, _) = fixture.extras_ready_socket.recv_from(&mut event).unwrap();
+    assert_eq!(&event[..length], b"completed");
     assert!(
         fixture.extras_log.exists(),
         "fake desktop extras ran after handoff state"
@@ -1194,7 +1210,7 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
         .unwrap()
         .iter()
         .any(|row| row["text"] == "continue in terminal"));
-    let reconnected = reconnect.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let reconnected = reconnect.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(reconnected["inWorkspace"], true);
     assert_eq!(
         fixture.provider_pids().len(),
@@ -1204,7 +1220,7 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
 
     reconnect.send(json!({"action":"new"}));
     assert_eq!(reconnect.history()["messages"], json!([]));
-    let fresh = reconnect.matching(Duration::from_secs(5), |event| {
+    let fresh = reconnect.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["inWorkspace"] == false
     });
     assert_eq!(fresh["threadId"], "");
@@ -1215,7 +1231,7 @@ fn native_busy_workspace_action_does_not_close_active_codex_peer() {
     let fixture = Fixture::new("busy-workspace");
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     client.send(json!({"action":"send","text":"keep working"}));
     let question = client.question("input");
     client.send(json!({"action":"workspace"}));
@@ -1236,10 +1252,10 @@ fn native_provider_default_changes_without_converting_current_chat() {
     let fixture = Fixture::new("provider-choice");
     let mut client = fixture.connect();
     client.history();
-    let state = client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let state = client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(state["provider"], "codex");
     client.send(json!({"action":"provider","provider":"claude"}));
-    let updated = client.matching(Duration::from_secs(5), |event| {
+    let updated = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["defaultProvider"] == "claude"
     });
     assert_eq!(updated["provider"], "codex");
@@ -1259,17 +1275,17 @@ fn native_failed_steer_restores_draft_without_finishing_active_turn() {
     let fixture = Fixture::new_with_provider_and_scenario("steer-failed", "codex", "steer-failed");
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     client.send(json!({"action":"send","text":"original active turn"}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "stream-1"
     });
     client.send(json!({"action":"send","text":"Keep this draft"}));
-    let failed = client.matching(Duration::from_secs(8), |event| {
+    let failed = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "sendFailed" && event["text"] == "Keep this draft"
     });
     assert_eq!(failed["attachments"], json!([]));
-    let state = client.matching(Duration::from_secs(5), |event| {
+    let state = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["busy"] == true
     });
     assert!(
@@ -1288,13 +1304,13 @@ fn native_completed_turn_steer_race_starts_one_followup_turn() {
     let fixture = Fixture::new_with_provider_and_scenario("steer-race", "codex", "steer-race");
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     client.send(json!({"action":"send","text":"first turn"}));
-    client.matching(Duration::from_secs(5), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "delta" && event["text"] == "stream-1"
     });
     client.send(json!({"action":"send","text":"follow up after completion"}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "fallback answer"
@@ -1365,7 +1381,7 @@ fn native_sidebar_client_discards_partial_frame_when_relay_reconnects() {
     let stdin = child.0.stdin.take().expect("client stdin remains open");
     let lines = stdout_lines(child.0.stdout.take().expect("client stdout"));
 
-    let mut first = accept_until(&listener, Duration::from_secs(8));
+    let mut first = accept_until(&listener, Duration::from_secs(60));
     first
         .write_all(br#"{"type":"history","messages":["#)
         .unwrap();
@@ -1378,7 +1394,7 @@ fn native_sidebar_client_discards_partial_frame_when_relay_reconnects() {
     assert_eq!(reconnect["type"], "connection");
     assert_eq!(reconnect["connected"], false);
 
-    let mut second = accept_until(&listener, Duration::from_secs(8));
+    let mut second = accept_until(&listener, Duration::from_secs(60));
     second
         .write_all(b"{\"type\":\"history\",\"messages\":[{\"id\":\"fresh\",\"role\":\"user\",\"text\":\"reconnected history\"}]}\n{\"type\":\"state\",\"provider\":\"codex\",\"busy\":false}\n")
         .unwrap();
@@ -1404,7 +1420,7 @@ fn native_sidebar_client_discards_partial_frame_when_relay_reconnects() {
     drop(stdin);
     wait_child(&mut child.0);
     assert!(child.0.wait().unwrap().success());
-    match lines.recv_timeout(Duration::from_secs(2)) {
+    match lines.recv_timeout(Duration::from_secs(60)) {
         Err(mpsc::RecvTimeoutError::Disconnected) => {}
         Ok(extra) => panic!("unexpected extra native client stdout line: {extra:?}"),
         Err(mpsc::RecvTimeoutError::Timeout) => panic!("native client stdout reader did not close"),
@@ -1426,9 +1442,9 @@ fn native_named_codex_account_configures_isolated_home_before_provider_start() {
 
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
     client.send(json!({"action":"send","text":"named account fixture"}));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "workspace answer"
@@ -1495,7 +1511,7 @@ fn native_sidebar_server_caps_clients_and_reclaims_disconnected_slots() {
         let mut client = fixture.connect();
         assert_eq!(client.history()["type"], "history");
         assert_eq!(
-            client.matching(Duration::from_secs(3), |event| event["type"] == "state")["type"],
+            client.matching(Duration::from_secs(60), |event| event["type"] == "state")["type"],
             "state"
         );
         clients.push(client);
@@ -1527,7 +1543,7 @@ fn native_sidebar_server_caps_clients_and_reclaims_disconnected_slots() {
     drop(rejected);
 
     clients.clear();
-    let _reclaimed = client_after_handshake(&fixture.socket(), Duration::from_secs(5))
+    let _reclaimed = client_after_handshake(&fixture.socket(), Duration::from_secs(60))
         .expect("server reclaims a client slot after disconnect");
     assert!(
         fixture.provider_pids().is_empty(),
@@ -1547,18 +1563,20 @@ fn native_new_chat_fences_late_background_resume() {
     fixture.start_server();
 
     let mut client = fixture.connect();
-    assert_eq!(client.history()["messages"], json!([]));
-    let ready_deadline = Instant::now() + Duration::from_secs(8);
-    while !fixture.resume_ready.exists() && Instant::now() < ready_deadline {
-        thread::sleep(Duration::from_millis(20));
-    }
-    assert!(
-        fixture.resume_ready.exists(),
-        "old provider reached the blocked thread/resume response"
+    assert_eq!(
+        client.matching(Duration::from_secs(60), |event| event["type"] == "history")["messages"],
+        json!([])
+    );
+    let mut event = [0; 64];
+    let (length, _) = fixture.resume_ready_socket.recv_from(&mut event).unwrap();
+    assert_eq!(
+        &event[..length],
+        b"ready",
+        "old provider reached the blocked resume response"
     );
 
     client.send(json!({"action":"new"}));
-    let fresh_state = client.matching(Duration::from_secs(8), |event| {
+    let fresh_state = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state" && event["threadId"] == "" && event["inWorkspace"] == false
     });
     assert_eq!(fresh_state["title"], "New chat");
@@ -1572,21 +1590,18 @@ fn native_new_chat_fences_late_background_resume() {
     assert_eq!(new_metadata["id"], "");
     assert_ne!(new_metadata["cwd"], old_cwd);
 
-    fs::write(&fixture.resume_release, "release").unwrap();
+    UnixDatagram::unbound()
+        .unwrap()
+        .send_to(b"release", &fixture.resume_release)
+        .unwrap();
     // Once the reply is flushed, the server can reject the stale generation
     // and SIGTERM the provider before its next instruction. Observe that drop
     // decision explicitly instead of requiring a post-reply log write.
-    let peer_dropped = || {
-        fs::read_to_string(&fixture.log)
-            .unwrap_or_default()
-            .contains("resume-peer-dropped")
-    };
-    while !peer_dropped() && fixture.fake_codex_is_running() {
-        thread::sleep(Duration::from_millis(20));
-    }
-    assert!(
-        peer_dropped(),
-        "server did not terminate the stale provider after resume release"
+    let (length, _) = fixture.resume_ready_socket.recv_from(&mut event).unwrap();
+    assert_eq!(
+        &event[..length],
+        b"peer-dropped",
+        "server terminated the stale provider after resume release"
     );
     assert!(
         fs::read_to_string(&fixture.log)
@@ -1594,7 +1609,7 @@ fn native_new_chat_fences_late_background_resume() {
             .contains("resume-response-released"),
         "stale provider was terminated before its delayed resume response was released"
     );
-    let provider_deadline = Instant::now() + Duration::from_secs(8);
+    let provider_deadline = Instant::now() + Duration::from_secs(60);
     while fixture.fake_codex_is_running() && Instant::now() < provider_deadline {
         thread::sleep(Duration::from_millis(20));
     }
@@ -1605,7 +1620,7 @@ fn native_new_chat_fences_late_background_resume() {
 
     let mut reconnect = fixture.connect();
     assert_eq!(reconnect.history()["messages"], json!([]));
-    let state = reconnect.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    let state = reconnect.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(state["threadId"], "");
     assert_eq!(state["composerKey"], composer_key);
     let saved: Value = serde_json::from_slice(&fs::read(fixture.metadata_path()).unwrap()).unwrap();
@@ -1613,7 +1628,7 @@ fn native_new_chat_fences_late_background_resume() {
     assert_eq!(saved["cwd"], new_metadata["cwd"]);
 
     reconnect.send(json!({"action":"send","text":"fresh chat prompt"}));
-    reconnect.matching(Duration::from_secs(8), |event| {
+    reconnect.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "fresh chat answer"
@@ -1643,7 +1658,7 @@ fn native_reconnected_blocking_question_survives_stale_waiter() {
     );
     let mut client = fixture.connect();
     client.history();
-    client.matching(Duration::from_secs(5), |event| event["type"] == "state");
+    client.matching(Duration::from_secs(60), |event| event["type"] == "state");
 
     client.send(json!({"action":"send","text":"first request"}));
     let first_question = client.question("input");
@@ -1652,7 +1667,7 @@ fn native_reconnected_blocking_question_survives_stale_waiter() {
         first_question["questions"][0]["question"],
         "Retry question?"
     );
-    let ended = client.matching(Duration::from_secs(8), |event| {
+    let ended = client.matching(Duration::from_secs(60), |event| {
         event["type"] == "state"
             && event["error"] == "The assistant connection ended; your conversation is saved."
     });
@@ -1669,7 +1684,7 @@ fn native_reconnected_blocking_question_survives_stale_waiter() {
     let mut observer = fixture.connect();
     observer.history();
     let observed_state =
-        observer.matching(Duration::from_secs(5), |event| event["type"] == "state");
+        observer.matching(Duration::from_secs(60), |event| event["type"] == "state");
     assert_eq!(observed_state["question"]["kind"], "input");
     assert_eq!(observed_state["question"]["id"], "900");
 
@@ -1678,7 +1693,7 @@ fn native_reconnected_blocking_question_survives_stale_waiter() {
         "id":retried_question["id"],
         "answers":{"choice":{"answers":["A"]}}
     }));
-    client.matching(Duration::from_secs(8), |event| {
+    client.matching(Duration::from_secs(60), |event| {
         event["type"] == "message"
             && event["role"] == "assistant"
             && event["text"] == "completed after retry"

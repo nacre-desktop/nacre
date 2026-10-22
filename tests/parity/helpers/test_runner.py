@@ -10,7 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 HERE = Path(__file__).resolve().parent
 spec = importlib.util.spec_from_file_location("parity_runner", HERE / "run.py")
@@ -66,14 +66,19 @@ class RunnerTests(unittest.TestCase):
                 expected,
             )
 
-    def test_supervisor_timeout_identifies_the_case_and_pipe_or_parent_state(self):
+    def test_supervisor_timeout_identifies_the_case_and_parent_state(self):
         from supervisor_reference import capture
 
         for status in (None, 23):
             with self.subTest(parent_exit=status):
                 child = Mock()
                 child.poll.return_value = status
-                child.communicate.side_effect = subprocess.TimeoutExpired("fixture", 8)
+                child.returncode = status
+                if status is None:
+                    child.wait.side_effect = [
+                        subprocess.TimeoutExpired("fixture", 60),
+                        None,
+                    ]
 
                 def spawn(*args, child=child, **kwargs):
                     root = Path(kwargs["env"]["HOME"]) / ".local/share/nacre/shell"
@@ -83,23 +88,29 @@ class RunnerTests(unittest.TestCase):
                 with (
                     patch("supervisor_reference.subprocess.Popen", side_effect=spawn),
                     patch.dict(os.environ, NACRE_HELPER_BINARY="/fixture/nacre-helper"),
-                    self.assertRaisesRegex(
-                        AssertionError,
-                        f"Supervisor case clean timed out after 8 seconds; parent_exit={status}",
-                    ) as caught,
                 ):
-                    capture(["fixture"], names=("clean",))
-                self.assertIsInstance(
-                    caught.exception.__cause__, subprocess.TimeoutExpired
-                )
-                self.assertIn("child-running", str(caught.exception))
-                child.communicate.assert_called_once_with(timeout=8)
+                    if status is None:
+                        with self.assertRaisesRegex(
+                            AssertionError,
+                            "Supervisor case clean timed out after 60 seconds; parent_exit=None",
+                        ) as caught:
+                            capture(["fixture"], names=("clean",))
+                        self.assertIsInstance(
+                            caught.exception.__cause__, subprocess.TimeoutExpired
+                        )
+                        self.assertIn("child-running", str(caught.exception))
+                    else:
+                        result = capture(["fixture"], names=("clean",))[0]
+                        self.assertEqual(result["exit"], status)
+                child.wait.assert_any_call(timeout=60)
                 if status is None:
                     child.kill.assert_called_once_with()
-                    child.wait.assert_called_once_with()
+                    self.assertEqual(
+                        child.wait.call_args_list, [call(timeout=60), call()]
+                    )
                 else:
                     child.kill.assert_not_called()
-                    child.wait.assert_not_called()
+                    child.wait.assert_called_once_with(timeout=60)
 
     def test_account_help_extensions_are_exact_and_preserve_other_observations(self):
         for helper in ("nacre-ai", "nacre-ai-chat"):

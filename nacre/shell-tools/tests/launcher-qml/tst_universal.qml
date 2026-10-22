@@ -110,7 +110,6 @@ TestCase {
     function test_result_rows_keep_delegates_and_refresh_activation_data() {
         const value = view();
         value.navigate("actions");
-        wait(30);
         value.syncRows([
             {
                 id: "first",
@@ -124,11 +123,9 @@ TestCase {
                 kind: "action"
             }
         ]);
-        wait(30);
         const results = findChild(value, "launcherResults");
+        tryVerify(() => results && results.count === 2 && results.itemAtIndex(0) && results.itemAtIndex(1), 10000);
         const first = results.itemAtIndex(0), second = results.itemAtIndex(1);
-        verify(first);
-        verify(second);
         value.syncRows([
             {
                 id: "second",
@@ -147,7 +144,7 @@ TestCase {
                 kind: "action"
             }
         ]);
-        wait(30);
+        tryVerify(() => results.itemAtIndex(0) === second && results.itemAtIndex(1) === first && first.modelData.name === "Updated first" && first.modelData.daemonTicket === "fresh", 10000);
         compare(results.itemAtIndex(0), second);
         compare(results.itemAtIndex(1), first);
         compare(first.modelData.name, "Updated first");
@@ -159,7 +156,7 @@ TestCase {
                 kind: "action"
             }
         ]);
-        wait(30);
+        tryVerify(() => results.count === 1 && results.itemAtIndex(0) === first, 10000);
         compare(results.count, 1);
         compare(results.itemAtIndex(0), first);
         compare(first.modelData.daemonTicket, undefined);

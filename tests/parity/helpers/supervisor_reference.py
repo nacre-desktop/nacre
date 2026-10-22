@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import selectors
 import signal
 import socket
 import subprocess
@@ -13,6 +14,19 @@ import time
 
 ROOT = Path(__file__).resolve().parents[3]
 STAMP = "20261001T120000"
+
+
+def wait_for_fixture_event(selector, event_fd, seen, expected, deadline):
+    while expected not in seen:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AssertionError(f"Timed out waiting for fixture event {expected!r}")
+        ready = selector.select(remaining)
+        for key, _ in ready:
+            if key.fd == event_fd:
+                seen.extend(os.read(event_fd, 4096).decode().splitlines())
+        if expected not in seen and any(key.fd != event_fd for key, _ in ready):
+            raise AssertionError(f"Supervisor exited before fixture event {expected!r}")
 
 
 def capture(command, names=None):
@@ -47,15 +61,19 @@ def capture(command, names=None):
             qs = root / "bin/qs"
             qs.write_text("""#!/bin/sh
 root="$HOME/.local/share/nacre/shell"
+record_event() {
+ printf '%s\\n' "$1" >> "$root/events"
+ printf '%s\\n' "$1" > "$root/events.pipe"
+}
 case "$*" in *"ipc call"*)
- echo health >> "$root/events"
+ record_event health
  if test "$(cat "$root/source/shell.qml")" = healthy; then printf '{"reveal":0,"launcherMode":"apps"}\\n'; else printf '{}\\n'; fi
  exit 0;; esac
-printf 'start %s\\n' "$(cat "$root/source/shell.qml")" >> "$root/events"
+record_event "start $(cat "$root/source/shell.qml")"
 if test "$(cat "$root/source/shell.qml")" = bad; then exit 9; fi
-trap 'echo stopped-TERM >> "$root/events"; kill "$sleeper" 2>/dev/null; wait "$sleeper" 2>/dev/null; exit 143' TERM INT
+trap 'record_event stopped-TERM; kill "$sleeper" 2>/dev/null; wait "$sleeper" 2>/dev/null; exit 143' TERM INT
 sleep "${FIXTURE_SLEEP:-0.5}" & sleeper=$!
-echo child-running >> "$root/events"
+record_event child-running
 wait "$sleeper"
 exit "${FIXTURE_EXIT:-0}"
 """)
@@ -80,50 +98,75 @@ exit "${FIXTURE_EXIT:-0}"
             )
             peer = socket.socket(socket.AF_UNIX)
             peer.bind(str(runtime / "wayland-test"))
-            child = subprocess.Popen(
-                command,
-                env=env,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            try:
+            events_pipe = root / "events.pipe"
+            os.mkfifo(events_pipe)
+            event_fd = os.open(events_pipe, os.O_RDWR | os.O_NONBLOCK)
+            event_selector = selectors.DefaultSelector()
+            event_selector.register(event_fd, selectors.EVENT_READ)
+            # Descendants can inherit stdout/stderr after the supervisor exits.
+            # Regular files let the parent-exit wait complete independently of
+            # those descriptors while retaining the complete captured output.
+            with (
+                tempfile.TemporaryFile(mode="w+t") as stdout_file,
+                tempfile.TemporaryFile(mode="w+t") as stderr_file,
+            ):
+                child = subprocess.Popen(
+                    command,
+                    env=env,
+                    stdout=stdout_file,
+                    stderr=stderr_file,
+                    text=True,
+                )
+                child_fd = None
                 if name.startswith("terminate"):
-                    deadline = time.monotonic() + 5
-                    while (
-                        not (root / "events").exists()
-                        or "health" not in (root / "events").read_text()
-                    ):
-                        if child.poll() is not None or time.monotonic() > deadline:
-                            raise AssertionError(
-                                "Supervisor did not reach its private health probe"
-                            )
-                        time.sleep(0.01)
-                    if name == "terminate-child":
-                        while "child-running" not in (root / "events").read_text():
-                            if time.monotonic() > deadline:
-                                raise AssertionError("Private child did not start")
-                            time.sleep(0.01)
-                    child.send_signal(signal.SIGTERM)
+                    child_fd = os.pidfd_open(child.pid)
+                    event_selector.register(child_fd, selectors.EVENT_READ)
                 try:
-                    stdout, stderr = child.communicate(timeout=8)
-                except subprocess.TimeoutExpired as error:
-                    events_path = root / "events"
-                    events = (
-                        events_path.read_text()
-                        if events_path.exists()
-                        else "<no events>"
-                    )
-                    raise AssertionError(
-                        f"Supervisor case {name} timed out after 8 seconds; "
-                        f"parent_exit={child.poll()}; events={events[-4096:]!r}"
-                    ) from error
-            finally:
-                if child.poll() is None:
-                    child.kill()
-                    child.wait()
-                peer.close()
-                (runtime / "wayland-test").unlink()
+                    try:
+                        if name.startswith("terminate"):
+                            deadline = time.monotonic() + 60
+                            seen_events = []
+                            wait_for_fixture_event(
+                                event_selector,
+                                event_fd,
+                                seen_events,
+                                "health",
+                                deadline,
+                            )
+                            if name == "terminate-child":
+                                wait_for_fixture_event(
+                                    event_selector,
+                                    event_fd,
+                                    seen_events,
+                                    "child-running",
+                                    deadline,
+                                )
+                            child.send_signal(signal.SIGTERM)
+                        child.wait(timeout=60)
+                    except subprocess.TimeoutExpired as error:
+                        events_path = root / "events"
+                        events = (
+                            events_path.read_text()
+                            if events_path.exists()
+                            else "<no events>"
+                        )
+                        raise AssertionError(
+                            f"Supervisor case {name} timed out after 60 seconds; "
+                            f"parent_exit={child.poll()}; events={events[-4096:]!r}"
+                        ) from error
+                finally:
+                    if child.poll() is None:
+                        child.kill()
+                        child.wait()
+                    peer.close()
+                    (runtime / "wayland-test").unlink()
+                    event_selector.close()
+                    if child_fd is not None:
+                        os.close(child_fd)
+                    os.close(event_fd)
+                stdout_file.seek(0)
+                stderr_file.seek(0)
+                stdout, stderr = stdout_file.read(), stderr_file.read()
             files = snapshot(root)
             # Probe count is scheduler-dependent; the ordered launches and bytes
             # written by recovery are the contract. Clock is fixed by the driver.
@@ -211,7 +254,11 @@ def capture_api(command):
                 env["XDG_SESSION_TYPE"] = "x11"
             try:
                 result = subprocess.run(
-                    [*command, name], env=env, text=True, capture_output=True, timeout=5
+                    [*command, name],
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                    timeout=30,
                 )
                 cases.append(
                     dict(

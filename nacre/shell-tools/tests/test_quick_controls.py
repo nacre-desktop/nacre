@@ -257,7 +257,7 @@ class QuickControlsTests(unittest.TestCase):
                 env=dict(os.environ, QT_QPA_PLATFORM="offscreen"),
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=120,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)

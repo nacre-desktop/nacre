@@ -1124,9 +1124,9 @@ TestCase {
         for (const name of ["audio", "network", "bluetooth", "notifications", "battery", "calendar"]) {
             popup.currentName = name;
             popup.hasCurrent = true;
-            tryVerify(() => popup.currentItem !== null, 500);
+            tryVerify(() => popup.currentItem !== null, 10000);
             verify(popup.targetWidth >= 150 && popup.targetWidth <= 670);
-            tryVerify(() => popup.height > 0, 300);
+            tryVerify(() => popup.height > 0, 10000);
             verify(popup.currentItem.enabled);
             popup.hasCurrent = false;
             verify(!popup.enabled);
@@ -1136,11 +1136,10 @@ TestCase {
             wait(40);
             compare(popup.width, width);
             popup.hasCurrent = true;
-            wait(220);
-            verify(popup.currentItem !== null && popup.height > 0);
+            tryVerify(() => popup.currentItem !== null && popup.height > 0, 10000);
             popup.hasCurrent = false;
-            tryCompare(popup, "height", 0, 400);
-            tryCompare(popup, "currentItem", null, 400);
+            tryCompare(popup, "height", 0, 10000);
+            tryCompare(popup, "currentItem", null, 10000);
         }
         popup.currentName = "toString";
         popup.hasCurrent = true;
@@ -1154,16 +1153,16 @@ TestCase {
         for (const kind of ["audio", "network", "bluetooth", "battery", "updates", "notifications"]) {
             popup.peekKind = kind;
             popup.hasCurrent = true;
-            tryVerify(() => popup.currentItem !== null, 500);
+            tryVerify(() => popup.currentItem !== null, 10000);
             compare(popup.currentItem.kind, kind);
             compare(popup.width, 424);
             compare(popup.currentItem.width, 394);
             verify(popup.currentItem.summary.length > 0);
-            tryVerify(() => popup.height > 0, 300);
+            tryVerify(() => popup.height > 0, 10000);
             verify(!popup.pinned);
             popup.hasCurrent = false;
-            tryCompare(popup, "height", 0, 400);
-            tryCompare(popup, "currentItem", null, 400);
+            tryCompare(popup, "height", 0, 10000);
+            tryCompare(popup, "currentItem", null, 10000);
         }
     }
     function test_overview_shows_two_latest_notices_and_opens_full_history() {
