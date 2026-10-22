@@ -1,6 +1,8 @@
 //! Retain the historical repeated real-helper CLI/service equivalence test.
 use serde_json::{json, Value};
 use std::{
+    fs,
+    os::unix::fs::PermissionsExt,
     io::{BufRead, BufReader, Write},
     path::Path,
     process::{Child, Command, Stdio},
@@ -32,6 +34,7 @@ fn command(home: &Path) -> Command {
 #[test]
 fn cli_and_service_results_match_across_repeated_native_operations() {
     let home = tempfile::tempdir().unwrap();
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700)).unwrap();
     let mut worker = Worker(
         command(home.path())
             .arg("serve")
