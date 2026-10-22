@@ -6,7 +6,7 @@ use std::{
     fs,
     os::unix::fs::OpenOptionsExt,
     path::Path,
-    process::{Command, Output, Stdio},
+    process::{Command, ExitStatus, Output, Stdio},
 };
 
 fn create_private_output(folder: &Path) -> Result<std::path::PathBuf> {
@@ -41,6 +41,18 @@ fn notify(message: &str) {
 
 trait CaptureRunner {
     fn run(&mut self, args: &[String], input: Option<&[u8]>) -> Result<Output>;
+}
+fn called_process_error(args: &[String], status: &ExitStatus) -> crate::Error {
+    let command = args
+        .iter()
+        .map(|arg| format!("'{}'", arg.replace('\'', "\\'")))
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(
+        "Command '[{command}]' returned non-zero exit status {}.",
+        status.code().unwrap_or(1)
+    )
+    .into()
 }
 struct NativeRunner;
 impl CaptureRunner for NativeRunner {
@@ -83,19 +95,15 @@ fn capture_with(
             if geometry.is_empty() {
                 return Ok(None);
             }
-            let image = runner.run(&["grim".into(), "-g".into(), geometry, "-".into()], None)?;
+            let args = vec!["grim".into(), "-g".into(), geometry, "-".into()];
+            let image = runner.run(&args, None)?;
             if !image.status.success() {
-                return Err("Screenshot capture failed".into());
+                return Err(called_process_error(&args, &image.status));
             }
-            if !runner
-                .run(
-                    &["wl-copy".into(), "--type".into(), "image/png".into()],
-                    Some(&image.stdout),
-                )?
-                .status
-                .success()
-            {
-                return Err("Clipboard copy failed".into());
+            let copy_args = vec!["wl-copy".into(), "--type".into(), "image/png".into()];
+            let copied = runner.run(&copy_args, Some(&image.stdout))?;
+            if !copied.status.success() {
+                return Err(called_process_error(&copy_args, &copied.status));
             }
             Ok(Some(tr(
                 "helper.screenshot.copied-selection-to-clipboard",
@@ -104,33 +112,17 @@ fn capture_with(
         }
         "full" => {
             let path = create_private_output(&paths.screenshots())?;
-            if !runner
-                .run(&["grim".into(), path.to_string_lossy().into_owned()], None)?
-                .status
-                .success()
-            {
-                let _ = fs::remove_file(&path);
-                return Err("Screenshot capture failed".into());
+            let args = vec!["grim".into(), path.to_string_lossy().into_owned()];
+            let image = runner.run(&args, None)?;
+            if !image.status.success() {
+                return Err(called_process_error(&args, &image.status));
             }
-            let result = fs::read(&path).and_then(|bytes| {
-                runner
-                    .run(
-                        &["wl-copy".into(), "--type".into(), "image/png".into()],
-                        Some(&bytes),
-                    )
-                    .and_then(|output| {
-                        if output.status.success() {
-                            Ok(())
-                        } else {
-                            Err(crate::Error::from("Clipboard copy failed"))
-                        }
-                    })
-                    .map_err(std::io::Error::other)
-            });
-            if result.is_err() {
-                let _ = fs::remove_file(&path);
+            let bytes = fs::read(&path)?;
+            let copy_args = vec!["wl-copy".into(), "--type".into(), "image/png".into()];
+            let copied = runner.run(&copy_args, Some(&bytes))?;
+            if !copied.status.success() {
+                return Err(called_process_error(&copy_args, &copied.status));
             }
-            result?;
             Ok(Some(tr(
                 "helper.screenshot.saved-to-pictures-screenshots-and-copied-to-clipboard",
                 "Saved to Pictures/Screenshots and copied to clipboard",
@@ -218,6 +210,15 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Unknown screenshot mode"
+        );
+    }
+    #[test]
+    fn command_failure_matches_python_called_process_error() {
+        let args = vec!["grim".into(), "-g".into(), "0,0 800x600".into(), "-".into()];
+        let status = std::process::ExitStatus::from_raw(1 << 8);
+        assert_eq!(
+            called_process_error(&args, &status).to_string(),
+            "Command '['grim', '-g', '0,0 800x600', '-']' returned non-zero exit status 1."
         );
     }
     #[test]

@@ -216,10 +216,9 @@ pub fn run(args: &[String]) -> Result<i32> {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
-    match runtime.block_on(tokio::time::timeout(
-        Duration::from_secs(13),
-        detect_async(),
-    )) {
+    match runtime
+        .block_on(async { tokio::time::timeout(Duration::from_secs(13), detect_async()).await })
+    {
         Ok(Ok(value)) => {
             println!("{}", crate::json::encode(&value)?);
             Ok(0)
