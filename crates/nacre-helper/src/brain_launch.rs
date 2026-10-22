@@ -344,6 +344,10 @@ pub fn ensure_server() -> Result<()> {
 }
 
 fn health(url: &str) -> bool {
+    state().is_ok_and(|state| health_at(url, &state))
+}
+
+fn health_at(url: &str, state: &Path) -> bool {
     use std::io::{Read, Write};
     use std::net::{TcpStream, ToSocketAddrs};
     let Some(authority) = url
@@ -365,20 +369,41 @@ fn health(url: &str) -> bool {
         return false;
     };
     let _ = stream.set_read_timeout(Some(Duration::from_secs(1)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(1)));
+    let Ok(nonce) = brain_auth::readiness_challenge() else {
+        return false;
+    };
     if write!(
         stream,
-        "GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{}\r\nConnection: close\r\n\r\n",
-        port
+        "GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nX-Nacre-Brain-Nonce: {nonce}\r\nConnection: close\r\n\r\n"
     )
     .is_err()
     {
         return false;
     }
     let mut response = String::new();
-    stream.take(4096).read_to_string(&mut response).is_ok()
-        && response.starts_with("HTTP/1.1 200")
-        && response.contains("\"ready\":true")
-        && response.contains("\"authVersion\":1")
+    if stream.take(4096).read_to_string(&mut response).is_err()
+        || !response.starts_with("HTTP/1.1 200 ")
+    {
+        return false;
+    }
+    let Some((head, body)) = response.split_once("\r\n\r\n") else {
+        return false;
+    };
+    let Ok(value) = serde_json::from_str::<Value>(body) else {
+        return false;
+    };
+    if value["ready"] != true || value["authVersion"] != 1 {
+        return false;
+    }
+    let proofs = head
+        .lines()
+        .filter_map(|line| line.split_once(':'))
+        .filter(|(key, _)| key.eq_ignore_ascii_case("X-Nacre-Brain-Proof"))
+        .map(|(_, value)| value.trim())
+        .collect::<Vec<_>>();
+    proofs.len() == 1
+        && brain_auth::verify_readiness(state, port, &nonce, proofs[0]).unwrap_or(false)
 }
 
 fn ensure_brain(focus: bool) -> Result<()> {
@@ -577,6 +602,59 @@ pub fn watch_brain() -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fake_ready_json_and_replayed_proofs_do_not_authorize_a_browser_handoff() {
+        use std::io::{Read, Write};
+        use std::net::TcpListener;
+        let fixture = tempfile::tempdir().unwrap();
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let auth = brain_auth::BrowserAuth::open(fixture.path(), port).unwrap();
+        let stale_proof = auth.readiness_proof(&"0".repeat(64)).unwrap();
+        let server = std::thread::spawn(move || {
+            for proof in [
+                String::new(),
+                format!("X-Nacre-Brain-Proof: {stale_proof}\r\n"),
+            ] {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut data = [0; 512];
+                stream.read(&mut data).unwrap();
+                write!(stream,"HTTP/1.1 200 OK\r\n{proof}Content-Length: 30\r\nConnection: close\r\n\r\n{{\"ready\":true,\"authVersion\":1}}").unwrap();
+            }
+        });
+        let url = format!("http://127.0.0.1:{port}/api/health");
+        assert!(!health_at(&url, fixture.path()));
+        assert!(!health_at(&url, fixture.path()));
+        server.join().unwrap();
+    }
+    #[test]
+    fn authenticated_native_readiness_is_accepted() {
+        let fixture = tempfile::tempdir().unwrap();
+        let state = fixture.path().to_path_buf();
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let url = format!("http://127.0.0.1:{port}/api/health");
+        let server = std::thread::spawn(move || {
+            crate::brain_http::serve(listener, &state, Duration::from_millis(300), |_| {
+                crate::brain_http::Response::new(
+                    200,
+                    "application/json",
+                    br#"{"ready":true,"authVersion":1}"#.to_vec(),
+                )
+            })
+            .unwrap()
+        });
+        let deadline = std::time::Instant::now() + Duration::from_secs(15);
+        loop {
+            if health_at(&url, fixture.path()) {
+                break;
+            }
+            assert!(std::time::Instant::now() < deadline);
+            thread::sleep(Duration::from_millis(100));
+        }
+        server.join().unwrap();
+    }
+
     #[test]
     fn browser_window_identification_reuses_profile_window_and_ignores_other_windows() {
         let pids = [123].into_iter().collect();

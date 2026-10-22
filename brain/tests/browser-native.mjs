@@ -260,6 +260,11 @@ try {
     if (new Headers(forwarded.at(-1).init.headers).has('X-Nacre-Brain-Authorization')) throw new Error('cross-origin Fetch input received the API credential');
   }
 
+  const storedCredential = await evaluate('localStorage.getItem("nacre-brain-authorization")');
+  await cdp('Page.navigate',{url:nativeUrl+'/#nacre-auth='+'0'.repeat(64)});
+  await until(()=>evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 3'),'invalid credential fragment rejected');
+  if (await evaluate('localStorage.getItem("nacre-brain-authorization")') !== storedCredential) throw new Error('unverified fragment poisoned the origin credential');
+
   const cookiesBefore = await cdp('Network.getAllCookies');
   const cookie = cookiesBefore.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
   if (!cookie || !cookie.httpOnly) throw new Error('port-specific HttpOnly cookie was not stored');
@@ -327,6 +332,7 @@ try {
     persistentCookieAfterRestart: true,
     handoffCredentialRestored: true,
     fetchInputOriginIsolation: 'passed',
+    unverifiedFragmentRejected: true,
     browserExceptions: exceptions.length,
   }));
 } finally {

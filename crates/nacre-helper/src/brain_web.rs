@@ -25,7 +25,7 @@ const VAULT_LIMIT: usize = 64 * 1024 * 1024;
 const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
-const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const token=new URLSearchParams(location.hash.slice(1)).get('nacre-auth');if(token&&/^[0-9a-f]{64}$/.test(token)){localStorage.setItem(key,token);history.replaceState(null,'',location.pathname+location.search);}const original=window.fetch.bind(window);window.fetch=(input,init={})=>{const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
+const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const token=new URLSearchParams(location.hash.slice(1)).get('nacre-auth');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/navigation',{headers:{'X-Nacre-Brain-Authorization':token}}).then(response=>{if(response.ok)localStorage.setItem(key,token);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
 "#;
 const ACTIVITY_MODEL: &str = "Meaningful saved evidence, 21-day half-life, deduplicated captures and diminishing daily returns. Raw message counting is not enabled.";
 const THEMES: &[(&str, &str, &str, &[&str])] = &[
@@ -972,7 +972,9 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
             return Ok(response(
                 200,
                 "text/javascript",
-                (BROWSER_AUTH_SCRIPT.to_owned() + "window.close();").into_bytes(),
+                (BROWSER_AUTH_SCRIPT.to_owned()
+                    + "window.__nacreBrainAuthReady.then(()=>window.close());")
+                    .into_bytes(),
             ))
         }
         _ => {}
