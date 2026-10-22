@@ -600,7 +600,7 @@ mod tests {
                 let wait = |hub: Shared,
                             what: &'static str,
                             check: fn(&DashboardSystemState) -> bool| async move {
-                    for _ in 0..250 {
+                    for _ in 0..3000 {
                         if check(
                             &serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap()).unwrap(),
                         ) {

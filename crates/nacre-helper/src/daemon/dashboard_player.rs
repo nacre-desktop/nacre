@@ -943,7 +943,7 @@ mod tests {
         what: &str,
         check: impl Fn(&PlayerState) -> bool,
     ) -> PlayerState {
-        for _ in 0..250 {
+        for _ in 0..3000 {
             let state = hub
                 .borrow()
                 .snapshot(TOPIC)

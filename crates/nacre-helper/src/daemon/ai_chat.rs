@@ -751,6 +751,16 @@ done
                 call(&hub, "ai.chat.cancel", json!({"channel":"p1"}))
                     .await
                     .unwrap();
+                // The worker exits on stop, after logging every earlier command, so the
+                // log is complete only once the channel has left the snapshot. Wait on
+                // that event-driven; the cap only turns a hang into a failure.
+                tokio::time::timeout(Duration::from_secs(60), async {
+                    while !host.snapshot().is_empty() {
+                        tokio::time::sleep(Duration::from_millis(5)).await;
+                    }
+                })
+                .await
+                .expect("channel left the snapshot");
                 let log = std::fs::read_to_string(dir.path().join("log")).unwrap();
                 let actions: Vec<_> = log
                     .lines()
@@ -773,13 +783,6 @@ done
                         "stop"
                     ]
                 );
-                // The worker exits on stop; the channel leaves the snapshot.
-                for _ in 0..200 {
-                    if host.snapshot().is_empty() {
-                        break;
-                    }
-                    tokio::time::sleep(Duration::from_millis(10)).await;
-                }
                 assert!(host.snapshot().is_empty());
                 let late = call(&hub, "ai.chat.send", json!({"channel":"p1","text":"x"}))
                     .await
