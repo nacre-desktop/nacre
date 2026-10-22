@@ -119,15 +119,18 @@ class LauncherDeploymentTests(unittest.TestCase):
             self.assertEqual(len(backups), 1)
             self.assertEqual(backups[0].read_text(), "prior launcher")
             self.assertEqual(auth.read_text(), "existing private data")
-            self.assertEqual(
-                (target.parent / "nacre_ai_core.py").read_bytes(),
-                (ROOT / "nacre/shell-tools/nacre_ai_core.py").read_bytes(),
-            )
+            self.assertFalse((target.parent / "nacre_ai_core.py").exists())
             # Exercise the deployed file in a clean interpreter, so an older
             # private runtime cannot accidentally rely on the test's imports.
             result = subprocess.run(
-                [__import__("sys").executable, str(link), "--help"],
-                env={"HOME": str(home), "PATH": __import__("os").environ["PATH"]},
+                [str(link), "--help"],
+                env={
+                    "HOME": str(home),
+                    "PATH": __import__("os").environ["PATH"],
+                    "NACRE_HELPER_BINARY": __import__("os").environ[
+                        "NACRE_HELPER_BINARY"
+                    ],
+                },
                 capture_output=True,
                 text=True,
                 check=True,

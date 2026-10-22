@@ -155,7 +155,9 @@ class RunnerTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 2)
             message = (
-                "Migrated helper references cannot be re-recorded: " + helper
+                "Frozen account-help cases cannot be re-recorded"
+                if helper == "nacre-ai"
+                else "Migrated helper references cannot be re-recorded: " + helper
                 if helper in runner.native_registry.MIGRATED
                 else "Frozen account-help cases cannot be re-recorded"
             )

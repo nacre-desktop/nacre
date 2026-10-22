@@ -1,0 +1,1592 @@
+#!/usr/bin/env python3
+"""Launch independent local or SSH Codex tasks, sessions, and the personal vault."""
+
+import argparse
+import fcntl
+import tempfile
+import uuid
+import curses
+from concurrent.futures import ThreadPoolExecutor
+import unicodedata
+import datetime as dt
+import json
+import nacre_state as _state
+import nacre_ai_core as _core
+import os
+from pathlib import Path
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+
+def agent_full_access():
+    return _core.full_access()
+
+
+def _translation_runtime():
+    import importlib.util
+
+    candidates = (
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools/nacre_i18n.py",
+        Path.home() / ".local/share/nacre/shell/tools/nacre_i18n.py",
+    )
+    for path in candidates:
+        if path.is_file():
+            spec = importlib.util.spec_from_file_location("nacre_ai_messages", path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module.tr
+    # The controller remains usable before optional desktop assets are installed.
+    return lambda identifier, fallback, args=None: re.sub(
+        r"\{([A-Za-z_][A-Za-z0-9_]*)\}",
+        lambda match: str((args or {}).get(match[1], match[0])),
+        fallback,
+    )
+
+
+tr = _translation_runtime()
+
+
+class UiLabel(str):
+    """Keep canonical dispatch values separate from localized terminal captions."""
+
+    def __new__(cls, identifier, fallback, args=None):
+        raw = re.sub(
+            r"\{([A-Za-z_][A-Za-z0-9_]*)\}",
+            lambda match: str((args or {}).get(match[1], match[0])),
+            fallback,
+        )
+        value = super().__new__(cls, raw)
+        value.identifier, value.fallback, value.arguments = identifier, fallback, args
+        return value
+
+
+def ui_label(identifier, fallback, args=None):
+    return UiLabel(identifier, fallback, args)
+
+
+def display_label(value):
+    return (
+        tr(value.identifier, value.fallback, value.arguments)
+        if isinstance(value, UiLabel)
+        else value
+    )
+
+
+def settings_path():
+    return Path(
+        os.environ.get(
+            "NACRE_AI_PROJECTS",
+            str(Path.home() / ".config/nacre/ai/projects.json"),
+        )
+    )
+
+
+def preferences_path():
+    return Path(
+        os.environ.get(
+            "NACRE_AI_SETTINGS",
+            str(Path.home() / ".config/nacre/ai/settings.json"),
+        )
+    )
+
+
+def effective_account(agent, override=None):
+    return _core.effective_account(agent, override)
+
+
+def default_assistant():
+    return _core.default_assistant()
+
+
+def set_default_assistant(agent):
+    if agent not in ("codex", "claude"):
+        raise ValueError("Unknown assistant")
+    path = preferences_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
+        data["default_assistant"] = agent
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as output:
+            json.dump(data, output, indent=2)
+            output.write("\n")
+            temporary = Path(output.name)
+        try:
+            _state.write(path, data, schema_id="ai-settings")
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def setup_status():
+    rows = []
+    for agent, label in (("codex", "Codex"), ("claude", "Claude Code")):
+        binary = shutil.which(agent)
+        if not binary:
+            rows.append(label + ": not installed")
+            continue
+        account = effective_account(agent)
+        env = _core.environment(agent, account, local=agent == "codex")
+        if agent == "codex":
+            argv = [binary, "login", "status"]
+        else:
+            argv = [binary, "auth", "status"]
+        try:
+            result = subprocess.run(argv, env=env, capture_output=True, timeout=8)
+            state = "signed in" if result.returncode == 0 else "not signed in"
+        except (OSError, subprocess.TimeoutExpired):
+            state = "could not check login"
+        rows.append(label + " · " + (account or "Default") + ": " + state)
+    vault = Path(
+        os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain"))
+    )
+    rows.append("Shared brain: " + ("available" if vault.is_dir() else "missing"))
+    return rows
+
+
+def settings_menu():
+    names = {"codex": "Codex", "claude": "Claude Code"}
+    while True:
+        choice = select(
+            [
+                "Assistant · " + names[default_assistant()],
+                ui_label("ai.ui.usage", "Usage"),
+                ui_label("ai.ui.accounts", "Accounts"),
+                ui_label("ai.ui.projects", "Projects"),
+                ui_label("ai.ui.check-setup", "Check setup"),
+            ],
+            ui_label("ai.ui.settings", "Settings"),
+        )
+        if choice is None:
+            return
+        if choice == "Accounts":
+            account_settings()
+        elif choice == "Check setup":
+            select(setup_status(), ui_label("ai.ui.setup-status", "Setup status"))
+        elif choice == "Usage":
+            usage_menu()
+        elif choice == "Projects":
+            project_settings()
+        else:
+            chosen = select(
+                list(names.values()),
+                ui_label("ai.ui.default-assistant", "Default assistant"),
+            )
+            if chosen is not None:
+                set_default_assistant(next(k for k, v in names.items() if v == chosen))
+
+
+def usage_menu():
+    helper = str(Path.home() / ".local/bin/nacre-ai-usage")
+    while True:
+        rows = []
+        for agent in ("codex", "claude"):
+            try:
+                result = subprocess.run(
+                    [
+                        helper,
+                        "read",
+                        "--agent",
+                        agent,
+                        "--account",
+                        effective_account(agent),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=28,
+                )
+                data = (
+                    json.loads(result.stdout)
+                    if result.returncode == 0
+                    else {"rows": ["Usage unavailable"]}
+                )
+                rows.extend(data["rows"])
+            except (OSError, ValueError, subprocess.TimeoutExpired):
+                rows.append(agent.title() + ": usage unavailable")
+        choice = select(
+            [ui_label("ai.ui.refresh", "Refresh")],
+            ui_label("ai.ui.usage", "Usage"),
+            header="\n".join(rows),
+        )
+        if choice is None:
+            return
+
+
+def project_settings():
+    while True:
+        choice = select(
+            [
+                ui_label("ai.ui.registered-projects", "Registered projects"),
+                ui_label("ai.ui.add-project", "Add project"),
+            ],
+            ui_label("ai.ui.projects", "Projects"),
+        )
+        if choice is None:
+            return
+        if choice == "Add project":
+            project_wizard()
+        else:
+            select(
+                [p.get("label", p["id"]) for p in projects()],
+                ui_label("ai.ui.registered-projects", "Registered projects"),
+            )
+
+
+def select_account(agent, account):
+    if agent not in ("codex", "claude"):
+        raise ValueError("Unknown assistant")
+    validate_account(account)
+    path = preferences_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        data = _state.read_json_file(path, "ai-settings") if path.exists() else {}
+        data.setdefault("accounts", {})[agent] = account
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, delete=False) as output:
+            json.dump(data, output, indent=2)
+            output.write("\n")
+            temporary = Path(output.name)
+        try:
+            _state.write(path, data, schema_id="ai-settings")
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def account_choices(agent):
+    directory = (
+        Path.home()
+        / ".local/share/nacre/ai"
+        / ("accounts" if agent == "codex" else "claude-accounts")
+    )
+    return [
+        "",
+        *sorted(
+            p.name
+            for p in directory.glob("*")
+            if p.is_dir() and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,47}", p.name)
+        ),
+    ]
+
+
+def open_account_login(agent, account):
+    child = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "account-login",
+        "--agent",
+        agent,
+        "--account",
+        account,
+    ]
+    launch_background(
+        [
+            "kitty",
+            "--class",
+            "nacre-ai-login",
+            "--title",
+            ("Codex" if agent == "codex" else "Claude Code") + " sign in",
+            "--",
+            *child,
+        ]
+    )
+
+
+def account_settings():
+    while True:
+        labels = {
+            ("Codex" if agent == "codex" else "Claude Code")
+            + " · "
+            + (effective_account(agent) or "Default"): agent
+            for agent in ("codex", "claude")
+        }
+        selected = select(
+            list(labels), ui_label("ai.ui.settings-accounts", "Settings · Accounts")
+        )
+        if selected is None:
+            return
+        agent = labels[selected]
+        while True:
+            active = effective_account(agent)
+            options = {
+                (name or "Default") + ("  ✓" if name == active else ""): name
+                for name in account_choices(agent)
+            }
+            chosen = select(
+                [
+                    *options,
+                    ui_label("ai.ui.add-account", "Add account"),
+                    ui_label(
+                        "ai.ui.sign-in-to-selected-account",
+                        "Sign in to selected account",
+                    ),
+                ],
+                (
+                    ui_label("ai.ui.codex", "Codex")
+                    if agent == "codex"
+                    else ui_label("ai.ui.claude-code", "Claude Code")
+                )
+                + ui_label("ai.ui.accounts", " accounts"),
+            )
+            if chosen is None:
+                break
+            if chosen == "Add account":
+                name = project_name("Account name", folder=False)
+                if name is None:
+                    continue
+                name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+                try:
+                    if not name:
+                        raise ValueError("Enter an account name")
+                    validate_account(name)
+                    if name in account_choices(agent):
+                        raise ValueError(
+                            "That account already exists; select it to sign in"
+                        )
+                    open_account_login(agent, name)
+                except ValueError as error:
+                    select(
+                        [ui_label("ai.ui.back", "Back")],
+                        ui_label("ai.ui.account-name", "Account name"),
+                        str(error),
+                    )
+            elif chosen == "Sign in to selected account":
+                open_account_login(agent, active)
+            else:
+                select_account(agent, options[chosen])
+
+
+def account_login(args):
+    account = args.account or ""
+    child = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        "login",
+        "--agent",
+        args.agent,
+        "--account",
+        account,
+    ]
+    result = subprocess.run(child)
+    if result.returncode == 0:
+        # Native sign-in succeeded; activate only this assistant's account.
+        select_account(args.agent, account)
+        print(
+            tr("ai.ui.signed-in-active", "Signed in. Active ")
+            + (
+                tr("ai.ui.codex", "Codex")
+                if args.agent == "codex"
+                else tr("ai.ui.claude-code", "Claude Code")
+            )
+            + tr("ai.ui.account", " account: ")
+            + (account or tr("ai.ui.default", "Default"))
+        )
+    else:
+        print(
+            tr(
+                "ai.ui.sign-in-did-not-finish-your-selected-account-is-unchanged",
+                "Sign-in did not finish. Your selected account is unchanged.",
+            )
+        )
+    try:
+        input(
+            tr(
+                "ai.ui.press-enter-to-close-this-sign-in-window",
+                "Press Enter to close this sign-in window. ",
+            )
+        )
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
+def projects():
+    p = settings_path()
+    if not p.is_file():
+        raise ValueError(
+            f"Create {p} using the example in the OS repository's ai/ directory"
+        )
+    values = _state.read_json_file(p, "ai-projects")["projects"]
+    for item in values:
+        if item["id"] == "general-chat":
+            raise ValueError(
+                "general-chat is reserved for conversations without a project"
+            )
+        for source in item.get("task_sources", []):
+            if not str(source.get("path", "")).startswith("/") or (
+                source.get("host")
+                and not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9._@-]*", source["host"])
+            ):
+                raise ValueError(
+                    "Task sources need an absolute path and concrete SSH alias"
+                )
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*", item["id"]):
+            raise ValueError(
+                "Project id must contain only letters, digits, hyphens, or underscores"
+            )
+        if not str(item["path"]).startswith("/"):
+            raise ValueError("Project paths must be absolute")
+        if item.get("host") and not re.fullmatch(
+            r"[a-zA-Z0-9][a-zA-Z0-9._@-]*", item["host"]
+        ):
+            raise ValueError("Use a concrete SSH alias without shell syntax")
+    return values
+
+
+def general_chat():
+    return {
+        "id": "general-chat",
+        "label": "General chat",
+        "chat_directory": True,
+        "path": str(Path.home() / ".local/share/nacre/ai/chats"),
+    }
+
+
+def chat_projects():
+    return [general_chat(), *projects()]
+
+
+def clean_label(value):
+    return " ".join(
+        "".join(
+            c for c in str(value) if not unicodedata.category(c).startswith("C")
+        ).split()
+    )
+
+
+def select(lines, prompt, header="", back=True, details=None):
+    """One alternate-screen canvas; resizing never appends menus to scrollback."""
+    if not lines:
+        return None
+    lines = list(lines)
+    if back and "Back" not in lines and "← Back" not in lines:
+        lines.append("← Back")
+
+    def menu(screen):
+        curses.curs_set(0)
+        curses.use_default_colors()
+        curses.init_pair(1, curses.COLOR_BLUE, -1)
+        curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_BLUE)
+        curses.init_pair(3, curses.COLOR_WHITE, -1)
+        image_path = Path.home() / ".local/share/nacre/branding/nacre-ai.png"
+        graphic = (
+            os.environ.get("TERM") == "xterm-kitty"
+            and sys.stdout.isatty()
+            and image_path.exists()
+            and not os.environ.get("TMUX")
+        )
+        index = 0
+        query = ""
+        title = clean_label(display_label(prompt).replace(">", "")).upper()
+        while True:
+            screen.erase()
+            height, width = screen.getmaxyx()
+
+            def put(y, x, text, style=0, height=height, width=width):
+                if 0 <= y < height and 0 <= x < width - 1:
+                    try:
+                        screen.addnstr(y, x, text, max(0, width - x - 1), style)
+                    except curses.error:
+                        pass
+
+            labels = [clean_label(line) for line in lines]
+            display_labels = [clean_label(display_label(line)) for line in lines]
+            matches = [
+                i
+                for i, label in enumerate(labels)
+                if label in ("Back", "← Back")
+                or query.casefold()
+                in (label + " " + (details or {}).get(lines[i], "")).casefold()
+            ]
+            index = min(index, max(0, len(matches) - 1))
+            box_width = min(62, max(16, width - 6))
+            x = max(1, (width - box_width) // 2)
+            y = max(1, min(5, height // 7))
+            accent = curses.color_pair(1)
+            text_logo = Path.home() / ".local/share/nacre/branding/nacre-ai-text.txt"
+            logo = (
+                text_logo.read_text().splitlines()[:3]
+                if text_logo.is_file()
+                else ["", "Nacre", ""]
+            )
+            if len(logo) > 1:
+                logo[1] += "   Nacre AI"
+            if graphic:
+                put(
+                    y + 1,
+                    x + 12,
+                    tr("ai.ui.nacre-ai", "Nacre AI"),
+                    accent | curses.A_BOLD,
+                )
+            else:
+                for offset, line in enumerate(logo):
+                    put(y + offset, x, line, accent | curses.A_BOLD)
+            put(y + 4, x, "─" * box_width, accent | curses.A_DIM)
+            put(y + 6, x + 2, title, curses.A_DIM)
+            headers = (
+                str(display_label(header)).splitlines()[: max(1, height - y - 14)]
+                if header
+                else []
+            )
+            for offset, line in enumerate(headers):
+                put(y + 7 + offset, x + 2, clean_label(line), curses.A_DIM)
+            top = y + 8 + len(headers)
+            row_height = 2 if details else 1
+            room = max(1, (height - top - 5) // row_height)
+            start = max(0, index - room + 1)
+            for row, original in enumerate(matches[start : start + room]):
+                selected = start + row == index
+                if labels[original] in ("Back", "← Back"):
+                    continue
+                text = ("  ›  " if selected else "     ") + display_labels[original]
+                style = (
+                    curses.color_pair(2) | curses.A_BOLD
+                    if selected
+                    else curses.color_pair(3)
+                )
+                put(top + row * row_height, x, text.ljust(box_width), style)
+                if details:
+                    put(
+                        top + row * row_height + 1,
+                        x + 5,
+                        clean_label(display_label(details.get(lines[original], ""))),
+                        curses.A_DIM,
+                    )
+            if back:
+                back_selected = bool(matches) and labels[matches[index]] in (
+                    "Back",
+                    "← Back",
+                )
+                put(
+                    height - 4,
+                    x,
+                    ("  ›  " if back_selected else "     ")
+                    + tr("ai.ui.back", "← Back"),
+                    curses.color_pair(2) if back_selected else curses.A_DIM,
+                )
+            if not matches:
+                put(
+                    top,
+                    x + 2,
+                    tr("ai.ui.no-matching-tasks", "No matching tasks"),
+                    curses.A_DIM,
+                )
+            if len(lines) > 10 or query:
+                put(height - 2, x + 2, "⌕ " + query, accent)
+            screen.refresh()
+            if graphic:
+                # Quiet Kitty PNG transfer: no response bytes interfere with menu input.
+                import base64
+
+                data = base64.b64encode(image_path.read_bytes()).decode()
+                pieces = []
+                for offset in range(0, len(data), 4096):
+                    chunk = data[offset : offset + 4096]
+                    more = int(offset + 4096 < len(data))
+                    fields = (
+                        f"a=T,f=100,r=3,C=1,q=2,i={os.getpid()},p=1,m={more}"
+                        if offset == 0
+                        else f"m={more},q=2"
+                    )
+                    pieces.append("\x1b_G" + fields + ";" + chunk + "\x1b\\")
+                sys.stdout.write(
+                    f"\x1b7\x1b[{y + 1};{x + 1}H" + "".join(pieces) + "\x1b8"
+                )
+                sys.stdout.flush()
+            key = screen.get_wch()
+            if key == curses.KEY_UP or (key == "k" and not query):
+                index = (index - 1) % max(1, len(matches))
+            elif key == curses.KEY_DOWN or (key == "j" and not query):
+                index = (index + 1) % max(1, len(matches))
+            elif key in ("\n", "\r", curses.KEY_ENTER) and matches:
+                selected = lines[matches[index]]
+                return None if selected in ("Back", "← Back") else selected
+            elif key == "\x1b":
+                if query:
+                    query = ""
+                else:
+                    return None
+            elif key in (curses.KEY_BACKSPACE, "\x7f", "\b"):
+                query = query[:-1]
+            elif isinstance(key, str) and key.isprintable() and len(lines) > 10:
+                query += key
+                index = 0
+
+    return curses.wrapper(menu)
+
+
+def ssh_environment():
+    # Kitty understands xterm sequences; remote hosts may not ship xterm-kitty.
+    # This affects only this SSH child, never the desktop's terminal setting.
+    return dict(os.environ, TERM="xterm-256color")
+
+
+def ssh_exec(host, command):
+    os.execvpe("ssh", ["ssh", "-t", host, command], ssh_environment())
+
+
+def history_worker_command(child):
+    """Keep chat, history and resumed workers out of Niri's code-overlay user namespace.
+
+    Bubblewrap's single-user mapping hides host root ownership from OpenSSH,
+    which then rejects system configuration files. The normal user manager
+    launches the existing worker with a terminal and the selected environment.
+    """
+    if os.environ.get("NACRE_COMPOSITOR") != "niri":
+        return child
+    try:
+        mappings = Path("/proc/self/uid_map").read_text().splitlines()
+        if not mappings or any(int(row.split()[1]) == 0 for row in mappings):
+            return child
+    except (OSError, ValueError, IndexError):
+        return child
+    runner = shutil.which("systemd-run")
+    if not runner:
+        return child
+    command = [
+        runner,
+        "--user",
+        "--quiet",
+        "--wait",
+        "--collect",
+        "--pty" if sys.stdout.isatty() else "--pipe",
+        "--working-directory=" + str(Path.cwd()),
+    ]
+    for name in (
+        "PATH",
+        "TERM",
+        "LANG",
+        "LC_ALL",
+        "SSH_AUTH_SOCK",
+        "CODEX_HOME",
+        "NACRE_AI_PROJECTS",
+        "NACRE_BRAIN",
+        "NACRE_BRAIN_DIR",
+        "NACRE_COMPOSITOR",
+    ):
+        if name in os.environ:
+            command.append("--setenv=" + name + "=" + os.environ[name])
+    return [*command, "--", *child]
+
+
+def worker_window(args):
+    """Keep startup failures visible instead of losing the new terminal."""
+    if sys.stdout.isatty():
+        initial_title = "New chat" if args.worker_command == "new" else "Load chat"
+        print("\033]2;" + initial_title + "\007", end="", flush=True)
+    if args.worker_command in ("latest", "sessions"):
+        child = [sys.executable, str(Path(__file__).resolve()), args.worker_command]
+        if args.project:
+            child += ["--project", args.project]
+        if args.account is not None:
+            child += ["--account", args.account]
+        result = subprocess.run(history_worker_command(child))
+        if result.returncode:
+            input(
+                tr(
+                    "ai.ui.could-not-open-the-task-press-enter-to-return",
+                    "Could not open the task. Press Enter to return. ",
+                )
+            )
+        return
+    project = (
+        general_chat()
+        if args.worker_command == "new" and not args.project
+        else project_for(args.project)
+    )
+    if project is None:
+        return
+    label = project.get("label", project["id"])
+    location = project.get("host", "this computer")
+    if args.worker_command == "shell":
+        print(f"Project terminal · {label} · {location}", flush=True)
+        print(
+            tr(
+                "ai.ui.this-is-a-command-prompt-not-an-ai-chat-type-exit-or-press-ctrl-d-to-close-it",
+                "This is a command prompt, not an AI chat. Type exit or press Ctrl+D to close it.",
+            ),
+            flush=True,
+        )
+    else:
+        print(
+            tr("ai.ui.nacre-ai-new-chat", "Nacre AI · New chat")
+            if project.get("chat_directory")
+            else f"AI workspace · {label} · {location}",
+            flush=True,
+        )
+        print(
+            tr(
+                "ai.ui.type-your-request-when-the-selected-assistant-opens-the-dashboard-stays-in-its-own-wi",
+                "Type your request when the selected assistant opens. The dashboard stays in its own window.",
+            ),
+            flush=True,
+        )
+        if project.get("host"):
+            print(
+                tr(
+                    "ai.ui.to-leave-a-running-task-ctrl-b-then-d-return-with-resume-latest-chat-or-load-chat",
+                    "To leave a running task: Ctrl+B, then D. Return with Resume latest chat or Load chat.",
+                ),
+                flush=True,
+            )
+    child = [
+        sys.executable,
+        str(Path(__file__).resolve()),
+        args.worker_command,
+        "--project",
+        project["id"],
+        "--agent",
+        getattr(args, "agent", None) or default_assistant(),
+    ]
+    if args.account is not None:
+        child += ["--account", args.account]
+    result = subprocess.run(history_worker_command(child))
+    if result.returncode:
+        print(
+            f"\nCould not finish opening this workspace (exit {result.returncode}).",
+            flush=True,
+        )
+        print(
+            tr(
+                "ai.ui.the-error-is-above-your-dashboard-and-other-tasks-are-still-open",
+                "The error is above. Your dashboard and other tasks are still open.",
+            ),
+            flush=True,
+        )
+        try:
+            input(
+                tr(
+                    "ai.ui.press-enter-to-close-this-window",
+                    "Press Enter to close this window. ",
+                )
+            )
+        except (EOFError, KeyboardInterrupt):
+            pass
+
+
+def launch_background(argv):
+    # GUI diagnostics must never write into the active menu's terminal.
+    directory = Path.home() / ".local/state/nacre/ai"
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    logfile = directory / "launcher.log"
+    descriptor = os.open(logfile, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(descriptor, "a") as output:
+        try:
+            return subprocess.Popen(
+                argv,
+                stdin=subprocess.DEVNULL,
+                stdout=output,
+                stderr=output,
+                start_new_session=True,
+            )
+        except OSError as error:
+            select(
+                [ui_label("ai.ui.back-to-dashboard", "Back to dashboard")],
+                ui_label("ai.ui.launch-failed", "Launch failed > "),
+                str(error),
+            )
+            return None
+
+
+def dashboard(args):
+    actions = [
+        ui_label("ai.ui.new-chat", "New chat"),
+        ui_label("ai.ui.resume-latest-chat", "Resume latest chat"),
+        ui_label("ai.ui.load-chat", "Load chat"),
+        ui_label("ai.ui.open-brain", "Open brain"),
+        ui_label("ai.ui.settings", "Settings"),
+        ui_label("ai.ui.close", "Close"),
+    ]
+    while True:
+        choice = select(actions, ui_label("ai.ui.workspace", "Workspace"), back=False)
+        if choice is None:
+            continue
+        if choice == "Close":
+            return
+        if choice == "Settings":
+            settings_menu()
+            continue
+        if choice == "Open brain":
+            launch_background([sys.executable, str(Path(__file__).resolve()), "brain"])
+            continue
+        if choice in ("Resume latest chat", "Load chat"):
+            child = [
+                sys.executable,
+                str(Path(__file__).resolve()),
+                "window",
+                "--worker-command",
+                "latest" if choice == "Resume latest chat" else "sessions",
+            ]
+            if args.account is not None:
+                child += ["--account", args.account]
+            launch_background(
+                [
+                    "kitty",
+                    "--class",
+                    "nacre-ai-task",
+                    "--",
+                    *child,
+                ]
+            )
+            continue
+        p = general_chat()
+        child = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "window",
+            "--worker-command",
+            "new",
+            "--project",
+            p["id"],
+            "--agent",
+            default_assistant(),
+            "--account",
+            effective_account(default_assistant(), args.account),
+        ]
+        launch_background(
+            [
+                "kitty",
+                "--class",
+                "nacre-ai-task",
+                "--",
+                *child,
+            ]
+        )
+
+
+def project_name(title="New project", folder=True):
+    def form(screen):
+        value = ""
+        back = False
+        curses.curs_set(0)
+        while True:
+            screen.erase()
+            height, width = screen.getmaxyx()
+
+            def put(row, text, height=height, width=width):
+                if row < height - 1:
+                    try:
+                        screen.addnstr(row, 2, text, max(1, width - 4))
+                    except curses.error:
+                        pass
+
+            put(2, title.upper())
+            put(4, tr("ai.ui.name", "Name: ") + value + ("" if back else " ▏"))
+            put(
+                6,
+                (
+                    tr("ai.ui.folder-projects", "Folder: ~/Projects/")
+                    if folder
+                    else tr("ai.ui.account", "Account: ")
+                )
+                + re.sub("[^a-z0-9]+", "-", value.lower()).strip("-"),
+            )
+            put(8, ("› " if back else "  ") + tr("ai.ui.back", "← Back"))
+            put(
+                10,
+                tr(
+                    "ai.ui.enter-continue-tab-switch-esc-back",
+                    "Enter continue · Tab switch · Esc back",
+                ),
+            )
+            screen.refresh()
+            key = screen.get_wch()
+            if key == "\x1b":
+                return None
+            if key == "\t":
+                back = not back
+            elif key in ("\n", "\r", curses.KEY_ENTER):
+                if back:
+                    return None
+                if value.strip():
+                    return value.strip()
+            elif not back and key in (curses.KEY_BACKSPACE, "\x7f", "\b"):
+                value = value[:-1]
+            elif (
+                not back
+                and isinstance(key, str)
+                and key.isprintable()
+                and len(value) < 64
+            ):
+                value += key
+
+    return curses.wrapper(form)
+
+
+def create_project(name):
+    name = clean_label(name)
+    identifier = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if identifier == "general-chat":
+        raise ValueError(
+            "General chat already exists in New chat; choose a project name"
+        )
+    if not identifier or len(identifier) > 64:
+        raise ValueError("Use a project name containing letters or numbers")
+    config = settings_path()
+    config.parent.mkdir(parents=True, exist_ok=True)
+    with config.with_suffix(".lock").open("w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        data = (
+            _state.read_json_file(config, "ai-projects")
+            if config.exists()
+            else {"projects": []}
+        )
+        if any(p["id"] == identifier for p in data["projects"]):
+            raise ValueError("That project already exists")
+        folder = Path.home() / "Projects" / identifier
+        folder.parent.mkdir(parents=True, exist_ok=True)
+        folder.mkdir(mode=0o700)  # Never replace an existing folder.
+        subprocess.run(["git", "init", "-q", "-b", "main", str(folder)], check=True)
+        project = {"id": identifier, "label": name, "path": str(folder)}
+        data["projects"].append(project)
+        with tempfile.NamedTemporaryFile(
+            "w", dir=config.parent, delete=False
+        ) as output:
+            json.dump(data, output, indent=2)
+            output.write("\n")
+            temp = Path(output.name)
+        try:
+            _state.write(config, data, schema_id="ai-projects")
+        finally:
+            temp.unlink(missing_ok=True)
+        return project
+
+
+def project_wizard():
+    while True:
+        name = project_name()
+        if name is None:
+            return None
+        if (
+            select(
+                [ui_label("ai.ui.create-project", "Create project")],
+                ui_label("ai.ui.new-local-project", "New local project"),
+                name + ui_label("ai.ui.projects", " · ~/Projects"),
+            )
+            is None
+        ):
+            continue
+        try:
+            return create_project(name)
+        except (ValueError, OSError, subprocess.SubprocessError) as error:
+            select(
+                [ui_label("ai.ui.back", "Back")],
+                ui_label("ai.ui.could-not-create-project", "Could not create project"),
+                str(error),
+            )
+
+
+def project_for(identifier, include_general=False):
+    if identifier == "general-chat":
+        return general_chat()
+    values = chat_projects() if include_general else projects()
+    if not identifier:
+        options = {
+            f"{i + 1}. {p.get('label', p['id'])}": p["id"] for i, p in enumerate(values)
+        }
+        selected = select(
+            list(options),
+            ui_label("ai.ui.new-task", "New task")
+            if include_general
+            else ui_label("ai.ui.projects", "Projects"),
+        )
+        if selected is None:
+            return None
+        identifier = options[selected]
+    for item in values:
+        if item["id"] == identifier:
+            return item
+    raise ValueError(f"Unknown project: {identifier}")
+
+
+def local_environment(account):
+    account = effective_account("codex", account)
+    return _core.environment("codex", account, local=True, configure=True)
+
+
+def validate_account(account):
+    if account:
+        _core.effective_account("codex", account)
+
+
+def project_chats(project, account, errors=None):
+    sources = [
+        project,
+        *[dict(project, **source) for source in project.get("task_sources", [])],
+    ]
+    records = []
+    for source in sources:
+        for fetch in (source_chats, claude_chats):
+            try:
+                records.extend(fetch(source, account))
+            except (ValueError, OSError, subprocess.TimeoutExpired) as error:
+                if errors is None:
+                    raise
+                errors.append(str(error))
+    return records
+
+
+def source_chats(project, account):
+    account = effective_account("codex", account)
+    helper = str(Path.home() / ".local/bin/nacre-ai-chat")
+    argv = [
+        "list",
+        "--project",
+        project["id"],
+        "--path",
+        project["path"],
+        "--account",
+        account or "",
+        "--all-accounts",
+    ]
+    if project.get("chat_directory"):
+        argv.append("--chat-directory")
+    if project.get("host"):
+        command = [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            project["host"],
+            '"$HOME/.local/bin/nacre-ai-chat" ' + shlex.join(argv),
+        ]
+        env = ssh_environment()
+    else:
+        command = [helper, *argv]
+        env = local_environment(account)
+    listing = subprocess.run(
+        command, env=env, text=True, capture_output=True, timeout=30
+    )
+    if (
+        project.get("host")
+        and listing.returncode
+        and "unrecognized arguments: --all-accounts" in listing.stderr
+    ):
+        # Remote helpers can be upgraded independently; keep their existing
+        # account-scoped history working until that host has shared history.
+        argv.remove("--all-accounts")
+        command[-1] = '"$HOME/.local/bin/nacre-ai-chat" ' + shlex.join(argv)
+        listing = subprocess.run(
+            command, env=env, text=True, capture_output=True, timeout=30
+        )
+    if listing.returncode:
+        raise ValueError(
+            project.get("label", project["id"])
+            + ": "
+            + (listing.stderr.strip() or "Cannot read tasks")
+        )
+    return [
+        dict(item, project=project, agent="codex", account=item.get("account", account))
+        for item in json.loads(listing.stdout)
+    ]
+
+
+def claude_command(project, command, account, thread_id=None):
+    account = effective_account("claude", account)
+    argv = [
+        command,
+        "--project",
+        project["id"],
+        "--path",
+        project["path"],
+        "--account",
+        account or "",
+    ]
+    if thread_id:
+        argv += ["--thread-id", thread_id]
+    if project.get("chat_directory"):
+        argv.append("--chat-directory")
+    if project.get("host"):
+        if command in ("new", "resume"):
+            argv.append("--tmux")
+        return [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            *(["-t"] if command != "list" else []),
+            project["host"],
+            '"$HOME/.local/bin/nacre-ai-claude" ' + shlex.join(argv),
+        ]
+    return [str(Path.home() / ".local/bin/nacre-ai-claude"), *argv]
+
+
+def claude_chats(project, account):
+    account = effective_account("claude", account)
+    result = subprocess.run(
+        claude_command(project, "list", account),
+        env=ssh_environment(),
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+    if result.returncode:
+        raise ValueError(
+            project.get("label", project["id"])
+            + " Claude history: "
+            + (result.stderr.strip() or "Cannot read sessions")
+        )
+    return [
+        dict(item, project=project, agent="claude", account=account)
+        for item in json.loads(result.stdout)
+    ]
+
+
+def launch_claude(project, command, account, thread_id=None):
+    argv = claude_command(project, command, account, thread_id)
+    os.execvpe(argv[0], argv, ssh_environment())
+
+
+def load_task(args):
+    selected_projects = [project_for(args.project)] if args.project else chat_projects()
+    errors = []
+    with ThreadPoolExecutor(max_workers=min(4, len(selected_projects))) as pool:
+        futures = [
+            pool.submit(project_chats, p, args.account, errors)
+            for p in selected_projects
+        ]
+        records = [item for future in futures for item in future.result()]
+    if errors and args.command == "latest":
+        raise ValueError(
+            "Cannot establish the latest task while a history source is unavailable; use Load chat. "
+            + "; ".join(errors)
+        )
+    records.sort(key=lambda item: item.get("updated_at", 0), reverse=True)
+    if not records:
+        select(
+            [ui_label("ai.ui.back", "Back")],
+            ui_label("ai.ui.history-unavailable", "History unavailable")
+            if errors
+            else ui_label("ai.ui.no-saved-tasks-yet", "No saved tasks yet"),
+            header="; ".join(errors) if errors else None,
+        )
+        return
+    if args.command == "latest":
+        item = records[0]
+    else:
+        choices = {
+            f"{i + 1:02d}  {clean_label(item['title'])}": item
+            for i, item in enumerate(records)
+        }
+        details = {
+            label: item["project"].get("label", item["project"]["id"])
+            + " · "
+            + item["project"].get("host", "local")
+            + " · "
+            + ("Claude Code" if item.get("agent") == "claude" else "Codex")
+            + " · "
+            + (item.get("account") or "Default")
+            + " · "
+            + item["state"]
+            for label, item in choices.items()
+        }
+        chosen = select(
+            list(choices),
+            ui_label("ai.ui.load-chat", "Load chat"),
+            details=details,
+            header=ui_label(
+                "ai.ui.some-history-sources-unavailable",
+                "Some history sources unavailable",
+            )
+            if errors
+            else None,
+        )
+        if chosen is None:
+            return
+        item = choices[chosen]
+    if sys.stdout.isatty():
+        print("\033]2;" + clean_label(item["title"]) + "\007", end="", flush=True)
+    project = item["project"]
+    account = item.get("account", args.account)
+    if item.get("agent") == "claude":
+        if project.get("host") and item.get("session"):
+            return ssh_exec(
+                project["host"],
+                shlex.join(["tmux", "attach-session", "-t", "=" + item["session"]]),
+            )
+        return launch_claude(
+            dict(project, path=item.get("cwd") or project["path"]),
+            "resume",
+            account,
+            item["id"],
+        )
+    # Authentication follows the selected Codex account; chat identity and
+    # storage follow the saved record. Running remote workers retain their login.
+    if "shared_history" in item:
+        account = effective_account("codex", args.account)
+    history_home = (
+        item.get("history_home") if item.get("shared_history") is False else None
+    )
+    if project.get("host"):
+        if item.get("session"):
+            command = shlex.join(
+                ["tmux", "attach-session", "-t", "=" + item["session"]]
+            )
+        else:
+            command = '"$HOME/.local/bin/nacre-ai-chat" ' + shlex.join(
+                [
+                    "resume",
+                    "--thread-id",
+                    item["id"],
+                    "--project",
+                    project["id"],
+                    "--account",
+                    account or "",
+                    *(["--history-home", history_home] if history_home else []),
+                ]
+            )
+        return ssh_exec(project["host"], command)
+    env = local_environment(account)
+    argv = [
+        str(Path.home() / ".local/bin/codex"),
+        "resume",
+        item["id"],
+        "--sandbox",
+        ("danger-full-access" if agent_full_access() else "workspace-write"),
+        "--ask-for-approval",
+        "never",
+        "-C",
+        item.get("cwd") or project["path"],
+        "--add-dir",
+        os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain")),
+    ]
+    if history_home:
+        # An older account may still own an independent store. Use Codex's
+        # supported path override without restarting a peer's shared daemon.
+        argv += ["--no-daemon", "-c", "sqlite_home=" + json.dumps(history_home)]
+        env["NACRE_AI_HISTORY_HOME"] = history_home
+    exec_local_codex(argv, env)
+
+
+def prepare_local_codex(executable, env):
+    """Let Codex prepare its shared server before replacing the launcher TUI.
+
+    The supported start operation is idempotent: it doesn't restart a live
+    server. Keep retries bounded and scoped to this account's CODEX_HOME.
+    """
+    import time
+
+    for attempt in range(3):
+        try:
+            result = subprocess.run(
+                [executable, "app-server", "daemon", "start"],
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode == 0:
+                return
+            detail = (result.stderr or "").lower()
+            transient = any(
+                word in detail
+                for word in (
+                    "draining",
+                    "reconnect",
+                    "connection refused",
+                    "no such file",
+                    "startup lock",
+                    "timed out",
+                )
+            )
+        except subprocess.TimeoutExpired:
+            transient = True
+        if not transient:
+            raise ValueError(
+                "Codex could not prepare its shared server. Run codex doctor for diagnostics; existing tasks were left running."
+            )
+        if attempt < 2:
+            print(
+                tr(
+                    "ai.ui.codex-server-is-reconnecting-retrying-startup",
+                    "Codex server is reconnecting; retrying startup…",
+                ),
+                flush=True,
+            )
+            time.sleep(1)
+    raise ValueError(
+        "Codex's shared server is still transitioning. Existing tasks were left running; retry shortly or inspect codex doctor."
+    )
+
+
+def exec_local_codex(argv, env):
+    if "--no-daemon" not in argv:
+        prepare_local_codex(argv[0], env)
+    os.execvpe(argv[0], argv, env)
+
+
+def trust_created_chat(directory, env):
+    """Register only a freshly generated, private scratch folder, preserving config."""
+    import tomllib
+
+    root = Path.home() / ".local/share/nacre/ai/chats"
+    if (
+        directory.parent != root
+        or not re.fullmatch(r"[0-9a-f]{32}", directory.name)
+        or directory.is_symlink()
+    ):
+        raise ValueError("Not an owned chat folder")
+    if set(p.name for p in directory.iterdir()) != {"AGENTS.md"}:
+        raise ValueError("Chat folder contains unexpected files")
+    home = Path(env["CODEX_HOME"])
+    home.mkdir(parents=True, exist_ok=True)
+    config = home / "config.toml"
+    with (home / "nacre-config.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        text = config.read_text() if config.exists() else ""
+        data = tomllib.loads(text)
+        if str(directory) in data.get("projects", {}):
+            return
+        updated = (
+            text
+            + "\n[projects."
+            + json.dumps(str(directory))
+            + ']\ntrust_level = "trusted"\n'
+        )
+        tomllib.loads(updated)
+        with tempfile.NamedTemporaryFile("w", dir=home, delete=False) as out:
+            out.write(updated)
+            pending = Path(out.name)
+        pending.chmod(0o600)
+        if (config.read_text() if config.exists() else "") != text:
+            pending.unlink()
+            raise ValueError("Codex settings changed concurrently; retry New chat")
+        pending.replace(config)
+
+
+def run_project(args):
+    validate_account(args.account)
+    if args.command in ("latest", "sessions"):
+        return load_task(args)
+    p = (
+        general_chat()
+        if args.command == "new" and not args.project
+        else project_for(args.project, include_general=args.command == "new")
+    )
+    if p is None:
+        return
+    if args.command == "new" and getattr(args, "agent", None) == "claude":
+        return launch_claude(p, "new", args.account)
+    account = effective_account("codex", args.account)
+    if p.get("host"):
+        if args.command == "shell":
+            command = "cd " + shlex.quote(p["path"]) + ' && exec "${SHELL:-/bin/sh}" -l'
+        else:
+            helper = p.get("remote_helper", "~/.local/bin/nacre-ai-remote")
+            # Only the default tilde expression is shell-expanded. Configured paths are literal.
+            executable = (
+                '"$HOME/.local/bin/nacre-ai-remote"'
+                if helper == "~/.local/bin/nacre-ai-remote"
+                else shlex.quote(helper)
+            )
+            command = executable + " " + shlex.join([p["id"], p["path"], account])
+        return ssh_exec(p["host"], command)
+    env = local_environment(args.account)
+    vault = Path(
+        os.environ.get("NACRE_BRAIN", str(Path.home() / "Documents/Nacre-Brain"))
+    )
+    executable = str(Path.home() / ".local/bin/codex")
+    if args.command == "shell":
+        os.chdir(p["path"])
+        os.execvpe(
+            env.get("SHELL", "/bin/bash"), [env.get("SHELL", "/bin/bash"), "-l"], env
+        )
+    elif p.get("chat_directory"):
+        directory = Path(p["path"]) / uuid.uuid4().hex
+        directory.mkdir(parents=True, mode=0o700)
+        (directory / "AGENTS.md").write_text(
+            "# General chat\n\n"
+            "This is a general conversation, not an assigned coding project. Answer questions normally. "
+            "Do not create a project or change project files merely because they are mentioned.\n\n"
+            "When the user asks to work on a project later in this conversation, read "
+            "~/.config/nacre/ai/projects.json and resolve the requested project there. "
+            "Read that project's AGENTS.md and relevant specifications before acting. "
+            "Use explicit command working directories and an isolated task worktree for edits. "
+            "Retain this conversation; do not launch a second AI just to change projects. "
+            "The user has configured access according to the selected profile; keep changes scoped to their request. "
+            "Respect build_host/build_path for heavy builds.\n\n"
+            "Use nacre-ai-context QUERY to find project candidates and routing; do not silently guess an ambiguous target. "
+            "Use nacre-ai-memory with --world and --topic to capture meaningful durable knowledge from any subject, "
+            "including personal interests and research, not just code. Read ~/.agents/skills/nacre-brain/SKILL.md.\n"
+        )
+        trust_created_chat(directory, env)
+        argv = [
+            executable,
+            "--sandbox",
+            ("danger-full-access" if agent_full_access() else "workspace-write"),
+            "--ask-for-approval",
+            "never",
+            "-C",
+            str(directory),
+            "--add-dir",
+            str(vault),
+        ]
+    else:
+        head = subprocess.run(
+            ["git", "-C", p["path"], "rev-parse", "--verify", "HEAD"],
+            capture_output=True,
+        )
+        if head.returncode == 0:
+            argv = [
+                executable,
+                "--sandbox",
+                ("danger-full-access" if agent_full_access() else "workspace-write"),
+                "--ask-for-approval",
+                "never",
+                "--worktree",
+                "-C",
+                p["path"],
+                "--add-dir",
+                str(vault),
+            ]
+        else:
+            task_id = (
+                dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S")
+                + "-"
+                + uuid.uuid4().hex[:8]
+            )
+            worktree = (
+                Path.home() / ".local/share/nacre/ai/worktrees" / p["id"] / task_id
+            )
+            worktree.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    p["path"],
+                    "worktree",
+                    "add",
+                    "--orphan",
+                    "-b",
+                    "codex/" + task_id,
+                    str(worktree),
+                ],
+                check=True,
+            )
+            argv = [
+                executable,
+                "--sandbox",
+                ("danger-full-access" if agent_full_access() else "workspace-write"),
+                "--ask-for-approval",
+                "never",
+                "-C",
+                str(worktree),
+                "--add-dir",
+                str(vault),
+            ]
+    exec_local_codex(argv, env)
+
+
+def main():
+    parser = argparse.ArgumentParser(prog="nacre-ai", description=__doc__)
+    parser.add_argument(
+        "command",
+        choices=[
+            "dashboard",
+            "new",
+            "latest",
+            "sessions",
+            "shell",
+            "brain",
+            "login",
+            "projects",
+            "window",
+            "account-login",
+            "settings",
+        ],
+        nargs="?",
+        default="dashboard",
+    )
+    parser.add_argument("--project")
+    parser.add_argument("--agent", choices=["codex", "claude"])
+    parser.add_argument(
+        "--worker-command",
+        choices=["new", "latest", "sessions", "shell"],
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--account",
+        help="Account profile override; Codex accounts share chats and keep separate logins",
+    )
+    args = parser.parse_args()
+    args.agent = args.agent or default_assistant()
+    validate_account(args.account)
+    if args.command == "settings":
+        settings_menu()
+    elif args.command == "account-login":
+        account_login(args)
+    elif args.command == "window":
+        if not args.worker_command:
+            raise ValueError("Window requires a worker command")
+        worker_window(args)
+    elif args.command == "projects":
+        for p in projects():
+            print(f"{p['id']}: {p.get('label', p['id'])} ({p.get('host', 'local')})")
+    elif args.command == "login":
+        if args.agent == "claude":
+            return launch_claude(
+                project_for(args.project) if args.project else general_chat(),
+                "login",
+                args.account,
+            )
+        if args.project:
+            project = project_for(args.project)
+            if project and project.get("host"):
+                if not args.account:
+                    command = "codex login --device-auth"
+                else:
+                    command = '"$HOME/.local/bin/nacre-ai-account" ' + shlex.join(
+                        [args.account, "login", "--device-auth"]
+                    )
+                ssh_exec(project["host"], command)
+        env = local_environment(args.account)
+        binary = str(Path.home() / ".local/bin/codex")
+        os.execvpe(binary, [binary, "login"], env)
+    elif args.command == "brain":
+        explorer = Path.home() / ".local/bin/nacre-brain-ui"
+        if explorer.exists() and os.environ.get("NACRE_BRAIN_VIEW") != "notes":
+            subprocess.Popen([str(explorer), "brain"], start_new_session=True)
+            return
+        vault = subprocess.check_output(
+            [str(Path.home() / ".local/bin/nacre-brain"), "init"], text=True
+        ).strip()
+        sync = shutil.which("nacre-brain-sync")
+        if sync:
+            try:
+                subprocess.run([sync], timeout=50, check=False)
+            except subprocess.TimeoutExpired:
+                print(
+                    tr(
+                        "ai.ui.brain-sync-timed-out-opening-the-available-local-notes",
+                        "Brain sync timed out; opening the available local notes",
+                    ),
+                    file=sys.stderr,
+                )
+        obsidian = shutil.which("obsidian")
+        if obsidian:
+            from urllib.parse import quote
+
+            subprocess.Popen(
+                [obsidian, "obsidian://open?path=" + quote(vault, safe="")],
+                start_new_session=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            os.execvp("less", ["less", str(Path(vault) / "README.md")])
+    elif args.command == "dashboard":
+        dashboard(args)
+    else:
+        run_project(args)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        raise SystemExit(0) from None
+    except (ValueError, OSError, KeyError, subprocess.CalledProcessError) as error:
+        print(f"nacre-ai: {error}", file=sys.stderr)
+        raise SystemExit(1) from None

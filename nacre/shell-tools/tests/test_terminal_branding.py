@@ -318,7 +318,13 @@ menu.select(['First','Second'],'Workspace')
                 struct.pack("HHHH", 30, 90, 0, 0),
             )
             process = subprocess.Popen(
-                [sys.executable, "-c", code, str(ROOT / "bin/nacre-ai"), str(home)],
+                [
+                    sys.executable,
+                    "-c",
+                    code,
+                    str(ROOT / "bin/nacre-ai.py.rollback"),
+                    str(home),
+                ],
                 stdin=slave,
                 stdout=slave,
                 stderr=slave,

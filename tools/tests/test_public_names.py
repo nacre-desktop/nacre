@@ -69,7 +69,7 @@ class PublicNamesTests(unittest.TestCase):
 
     def test_fresh_home_controller_roots_and_provider_profiles_are_canonical(self):
         loader = importlib.machinery.SourceFileLoader(
-            "public_controller", str(ROOT / "bin/nacre-ai")
+            "public_controller", str(ROOT / "bin/nacre-ai.py.rollback")
         )
         spec = importlib.util.spec_from_loader(loader.name, loader)
         controller = importlib.util.module_from_spec(spec)

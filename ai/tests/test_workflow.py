@@ -23,6 +23,7 @@ def module(name):
         if name.startswith("nacre-brain")
         or name
         in {
+            "nacre-ai",
             "nacre-ai-context",
             "nacre-ai-memory",
             "nacre-ai-usage",

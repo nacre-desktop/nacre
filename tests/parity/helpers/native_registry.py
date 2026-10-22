@@ -68,6 +68,7 @@ MIGRATED = frozenset(
         "nacre-brain-sync",
         "nacre-brain-maintain",
         "nacre-ai-context",
+        "nacre-ai",
         "nacre-ai-memory",
         "nacre-ai-usage",
         "nacre-ai-skills",
@@ -134,6 +135,7 @@ def command(case, override=None, *, root=ROOT, environ=None):
     # These former module-level Python helpers are now standalone CLI workers;
     # their historical API adapter command maps directly to the native command.
     if helper in {
+        "nacre-ai",
         "weather",
         "updates",
         "nacre-ai-context",
@@ -299,11 +301,17 @@ def command(case, override=None, *, root=ROOT, environ=None):
 
 def assert_recordable(cases):
     """Check the entire selection before any reference file can be modified."""
+    if any(
+        case.get("account_help") and case.get("helper") == "nacre-ai" for case in cases
+    ):
+        raise ValueError("Frozen account-help cases cannot be re-recorded")
     migrated = sorted({case["helper"] for case in cases} & (MIGRATED | {"provision"}))
     if migrated:
         raise ValueError(
             "Migrated helper references cannot be re-recorded: " + ", ".join(migrated)
         )
+    if any(case.get("account_help") for case in cases):
+        raise ValueError("Frozen account-help cases cannot be re-recorded")
 
 
 def service_fixture_binary(root=ROOT, environ=None):

@@ -1127,7 +1127,7 @@
     },
     {
       "helper": "nacre-ai",
-      "source": "bin/nacre-ai",
+      "source": "bin/nacre-ai.py.rollback",
       "cases": 4,
       "operations": [
         "[\"--help\"]",

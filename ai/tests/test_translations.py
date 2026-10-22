@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 loader = importlib.machinery.SourceFileLoader(
-    "translated_ai", str(ROOT / "bin/nacre-ai")
+    "translated_ai", str(ROOT / "bin/nacre-ai.py.rollback")
 )
 spec = importlib.util.spec_from_loader(loader.name, loader)
 ai = importlib.util.module_from_spec(spec)

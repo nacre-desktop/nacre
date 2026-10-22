@@ -3,6 +3,7 @@
 pub mod ai_chat;
 pub mod ai_claude;
 pub mod ai_core;
+pub mod ai_dashboard;
 pub mod ai_rpc;
 pub mod ai_wrappers;
 pub mod arguments;
