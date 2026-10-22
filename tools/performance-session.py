@@ -1341,18 +1341,24 @@ def run(args, directory):
                             capture_output=True,
                         )
                     elif args.backend == "niri":
-                        windows = json.loads(
-                            subprocess.check_output(
-                                ["niri", "msg", "-j", "windows"],
-                                env=env,
-                                text=True,
-                                timeout=5,
-                            )
-                        )
-                        input_window = next(
-                            window
-                            for window in windows
-                            if window["title"] == "Nacre Performance Input"
+                        input_window = wait_for(
+                            lambda: next(
+                                (
+                                    window
+                                    for window in json.loads(
+                                        subprocess.check_output(
+                                            ["niri", "msg", "-j", "windows"],
+                                            env=env,
+                                            text=True,
+                                            timeout=5,
+                                        )
+                                    )
+                                    if window["title"] == "Nacre Performance Input"
+                                ),
+                                None,
+                            ),
+                            "niri performance input window",
+                            timeout=5,
                         )
                         subprocess.run(
                             [

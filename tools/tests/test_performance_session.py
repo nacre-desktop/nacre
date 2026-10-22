@@ -209,6 +209,7 @@ class BudgetTests(unittest.TestCase):
         )
         self.assertIn('window.get("is_focused")', source)
         self.assertIn('"niri performance input focus"', source)
+        self.assertIn('"niri performance input window"', source)
 
     def test_open_first_frame_latency_is_separate_from_animation_frame_gaps(self):
         source = Path(session.__file__).read_text()
