@@ -228,13 +228,18 @@ Singleton {
                 saveDelay.restart();
         }
     }
-    NotificationServer {
-        keepOnReload: false
-        actionsSupported: true
-        imageSupported: true
-        persistenceSupported: true
-        bodyMarkupSupported: false
-        onNotification: notification => root.receive(notification)
+    // The QML windows companion (nacre ui-shell bead) must never own the notification bus.
+    LazyLoader {
+        id: serverLoader
+        active: Quickshell.env("NACRE_QML_WINDOWS_ONLY") !== "1"
+        component: NotificationServer {
+            keepOnReload: false
+            actionsSupported: true
+            imageSupported: true
+            persistenceSupported: true
+            bodyMarkupSupported: false
+            onNotification: notification => root.receive(notification)
+        }
     }
     NacreShortcut {
         appid: "nacre_shell"

@@ -350,13 +350,8 @@ def prepare(directory):
     notices.write_text(
         notices.read_text()
         .replace(
-            "    NotificationServer {",
-            "    NotificationServer {\n        id: soakNotificationServer",
-            1,
-        )
-        .replace(
             "                historyReady: root.historyReady,",
-            "                tracked: soakNotificationServer.trackedNotifications.values.length,\n                liveReferences: root.list.filter(entry => entry.notification).length,\n                images: root.list.filter(entry => entry.image).length,\n                dismissedKeys: Object.keys(root.dismissedKeys).length,\n                historyReady: root.historyReady,",
+            "                tracked: serverLoader.item.trackedNotifications.values.length,\n                liveReferences: root.list.filter(entry => entry.notification).length,\n                images: root.list.filter(entry => entry.image).length,\n                dismissedKeys: Object.keys(root.dismissedKeys).length,\n                historyReady: root.historyReady,",
             1,
         )
     )

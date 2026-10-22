@@ -380,7 +380,13 @@ def restore(release, record=None, force=False, *, lease=None):
 
 def install_controller(repo):
     CONTROL.mkdir(parents=True, exist_ok=True)
-    for name in ("releases.py", "f4_switch.py", "check-overlays.py", "configure.py"):
+    for name in (
+        "releases.py",
+        "f4_switch.py",
+        "ui_shell_switch.py",
+        "check-overlays.py",
+        "configure.py",
+    ):
         shutil.copy2(repo / "tools" / name, CONTROL / name)
     wrapper = HOME / ".local/bin/nacre"
     wrapper.parent.mkdir(parents=True, exist_ok=True)
@@ -783,6 +789,14 @@ def main():
 
         try:
             print(json.dumps(f4_switch.dispatch(sys.argv[2:], HOME, STATE)))
+        except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
+            raise SystemExit(str(error)) from error
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "ui-shell":
+        import ui_shell_switch
+
+        try:
+            print(json.dumps(ui_shell_switch.dispatch(sys.argv[2:], HOME, STATE)))
         except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
             raise SystemExit(str(error)) from error
         return
