@@ -104,6 +104,16 @@ pub fn api(operation: &str, request: &Value) -> Result<Value> {
 #[derive(Default)]
 struct Subject { id:String, label:String, aliases:Vec<String>, origin:String, category:Value, path:Value, members:Map<String,Value>, topics:Vec<Value>, parent:Value }
 
+fn add_subject(subjects:&mut BTreeMap<String,Subject>,aliases:&mut BTreeMap<String,String>,order:&mut Vec<String>,prior:&Value,label:&str,origin:&str,category:Value,path:Value)->String{
+    if let Some(id)=aliases.get(&key(label)){return id.clone();}
+    let mut id=prior["discovered"].as_array().into_iter().flatten().find(|v|key(v["label"].as_str().unwrap_or(""))==key(label)).and_then(|v|v["id"].as_str()).map(str::to_owned).unwrap_or_else(||slug(label));
+    if subjects.get(&id).is_some_and(|s|key(&s.label)!=key(label)){id.push_str(&format!("-{}",digest(label,6)));}
+    if !subjects.contains_key(&id){order.push(id.clone());}
+    let subject=subjects.entry(id.clone()).or_insert_with(||Subject{id:id.clone(),label:label.to_owned(),aliases:Vec::new(),origin:origin.to_owned(),category,path,members:Map::new(),topics:Vec::new(),parent:Value::Null});
+    for name in [label.to_owned(),id.clone()]{if !aliases.contains_key(&key(&name)){aliases.insert(key(&name),id.clone());subject.aliases.push(name);}}
+    id
+}
+
 pub fn organize(notes: &Value, _dense: &Value, _prior: &Value, overrides: &Value) -> Result<Value> {
     let mut copied = notes.clone();
     organize_mut(&mut copied, _dense, _prior, overrides)
@@ -120,15 +130,6 @@ pub fn organize_mut(notes_value: &mut Value, dense_value: &Value, prior: &Value,
     let mut aliases: BTreeMap<String,String> = BTreeMap::new();
     let mut topic_members: BTreeMap<(String,String),BTreeSet<String>> = BTreeMap::new();
     let mut topic_labels: BTreeMap<(String,String),String> = BTreeMap::new();
-    let mut add = |label: &str, origin: &str, category: Value, path: Value| -> String {
-        if let Some(id) = aliases.get(&key(label)) { return id.clone(); }
-        let mut id = prior["discovered"].as_array().into_iter().flatten().find(|v|key(v["label"].as_str().unwrap_or(""))==key(label)).and_then(|v|v["id"].as_str()).map(str::to_owned).unwrap_or_else(||slug(label));
-        if subjects.get(&id).is_some_and(|s|key(&s.label)!=key(label)){id.push_str(&format!("-{}",digest(label,6)));}
-        if !subjects.contains_key(&id){order.push(id.clone());}
-        let s = subjects.entry(id.clone()).or_insert_with(|| Subject { id:id.clone(), label:label.to_owned(), aliases:vec![], origin:origin.to_owned(), category, path, members:Map::new(), topics:vec![], parent:Value::Null });
-        for name in [label.to_owned(), id.clone()] { if !aliases.contains_key(&key(&name)) { aliases.insert(key(&name), id.clone()); s.aliases.push(name); } }
-        id
-    };
     // Curated wiki declarations have priority and stable path-derived IDs.
     for n in notes.iter() {
         let path=n["path"].as_str().unwrap_or(""); let meta=&n["meta"];
@@ -153,13 +154,12 @@ pub fn organize_mut(notes_value: &mut Value, dense_value: &Value, prior: &Value,
         let path=n["path"].as_str().unwrap_or(""); let meta=&n["meta"];
         if !path.starts_with("raw/") {
             for label in items(&meta["worlds"]) {
-                let sid=add(&label,"annotated",Value::Null,Value::Null);
+                let sid=add_subject(&mut subjects,&mut aliases,&mut order,prior,&label,"annotated",Value::Null,Value::Null);
                 subjects.get_mut(&sid).unwrap().members.insert(id.clone(),json!({"reason":"annotation","score":1}));
                 assign(&mut assigned,&id,&sid);
             }
         }
     }
-    drop(add);
     // Projects are explicit declarations, except on topic and device pages.
     for n in notes.iter() {
         if n["path"].as_str().unwrap_or("").starts_with("raw/") { continue; }
@@ -216,7 +216,7 @@ pub fn organize_mut(notes_value: &mut Value, dense_value: &Value, prior: &Value,
         if hashes.len()<3 {continue;}
         let mut sims=Vec::new();for i in 0..rows.len(){for j in i+1..rows.len(){sims.push(vector_similarity(rows[i]["id"].as_str().unwrap_or(""),rows[j]["id"].as_str().unwrap_or(""),&lex,dense_value));}}
         let minimum=if dense_value.as_object().is_some_and(|m|!m.is_empty()){0.35}else{0.18};
-        if sims.iter().sum::<f64>()/sims.len().max(1) as f64 < minimum {continue;}
+        if (sims.iter().sum::<f64>()/(sims.len().max(1) as f64)) < minimum {continue;}
         let prior_id=prior["discovered"].as_array().into_iter().flatten().find(|v|key(v["label"].as_str().unwrap_or(""))==key(&label)).and_then(|v|v["id"].as_str()).map(str::to_owned);
         let sid=prior_id.unwrap_or_else(||format!("discovered-{}",slug(&label)));
         if !subjects.contains_key(&sid){order.push(sid.clone());subjects.insert(sid.clone(),Subject{id:sid.clone(),label:label.clone(),aliases:vec![label.clone(),sid.clone()],origin:"discovered".into(),category:Value::Null,path:Value::Null,members:Map::new(),topics:vec![],parent:Value::Null});aliases.insert(key(&label),sid.clone());}
@@ -286,9 +286,10 @@ pub fn organize_mut(notes_value: &mut Value, dense_value: &Value, prior: &Value,
     let subject_ids=order.clone();
     for sid in &subject_ids {
         let Some(subject)=subjects.get(sid) else{continue;};
+        let label_parent=subject.label.clone();
         let covered:BTreeSet<String>=subject.topics.iter().flat_map(|t|t["members"].as_array().into_iter().flatten().filter_map(Value::as_str).map(str::to_owned)).collect();
         let ids:Vec<String>=subject.members.keys().filter(|id|!covered.contains(*id)).cloned().collect();
-        for group in community_groups(ids,&lex,dense_value,3){let label=label_cluster(&group,&by_id,&lex);if key(&label)==key(&subject.label){continue;}subjects.get_mut(sid).unwrap().topics.push(json!({"id":format!("{sid}:learned-{}",slug(&label)),"label":label,"parent":sid,"members":group,"origin":"suggested","category":null}));}
+        for group in community_groups(ids,&lex,dense_value,3){let label=label_cluster(&group,&by_id,&lex);if key(&label)==key(&label_parent){continue;}subjects.get_mut(sid).unwrap().topics.push(json!({"id":format!("{sid}:learned-{}",slug(&label)),"label":label,"parent":sid,"members":group,"origin":"suggested","category":null}));}
     }
     // Merge duplicate topic representations, preferring annotated names and unioning members.
     let mut topic_order:Vec<(String,String)>=Vec::new();let mut merged:BTreeMap<(String,String),Value>=BTreeMap::new();
