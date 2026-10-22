@@ -964,6 +964,26 @@ fn run_inner(args: &[String]) -> Result<i32> {
     }
 }
 pub fn run(args: &[String]) -> Result<i32> {
+    // Retain the historical module-operation boundary used by frozen replays.
+    // This operation publishes derived metadata and never launches a provider.
+    if args.first().is_some_and(|action| action == "cache_title") {
+        let request: Value = serde_json::from_str(args.get(1).ok_or("Missing cache request")?)?;
+        let argument = |index: usize, key: &str| {
+            request["args"]
+                .get(index)
+                .or_else(|| request["kwargs"].get(key))
+        };
+        let id = argument(0, "thread_id")
+            .and_then(Value::as_str)
+            .ok_or("Missing chat ID")?;
+        let title = argument(1, "title")
+            .and_then(Value::as_str)
+            .ok_or("Missing chat title")?;
+        let cwd = argument(2, "cwd").and_then(Value::as_str);
+        cache_title(id, title, cwd)?;
+        println!("null");
+        return Ok(0);
+    }
     ai_core::prepare_provider_launch();
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         print!("{HELP}");
