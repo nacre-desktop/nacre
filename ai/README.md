@@ -4,6 +4,20 @@
 ./install.sh --with ai --with brain --apply
 ```
 
+The full AI workflow installer (`python3 ai/install.py`) prints a plan and makes
+no changes by default. Review every link, guidance update and setup command, then
+rerun it with `--apply` to install. It refuses private AI worktrees and linked Git
+worktrees unless `--allow-worktree` is supplied after review.
+
+To update the owner's pinned private conversation runtime at
+`~/.local/share/nacre/ai/conversation-runtime/<stamp>`, use the controller-only
+path. First run `python3 ai/install.py --launcher-only` and review the reported
+source and target. Apply that reviewed update with
+`python3 ai/install.py --launcher-only --apply`. For one controller, use
+`--helper-only nacre-ai-chat` or `--helper-only nacre-ai-claude` in both steps.
+These code-only plans preserve a backup of replaced private files and do not
+reinstall AI accounts or credentials.
+
 AI connects your existing Codex/Claude installation and accounts to conversations
 and project tasks. Provider installation/sign-in is a separate user choice. The
 code-only component installer preserves existing accounts and running workers;

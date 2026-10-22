@@ -138,6 +138,28 @@ class LauncherDeploymentTests(unittest.TestCase):
 
 
 class ControllerDeploymentTests(unittest.TestCase):
+    def test_linked_python_controllers_find_shared_core(self):
+        import os
+        from pathlib import Path
+        import subprocess
+        import sys
+        import tempfile
+        from test_workflow import ROOT
+
+        with tempfile.TemporaryDirectory() as folder:
+            bin_dir = Path(folder) / "bin"
+            bin_dir.mkdir()
+            for name in ("nacre-ai-chat", "nacre-ai-claude"):
+                link = bin_dir / name
+                link.symlink_to(ROOT / "bin" / name)
+                result = subprocess.run(
+                    [sys.executable, str(link), "--help"],
+                    env={"HOME": folder, "PATH": os.environ["PATH"]},
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_claude_only_update_preserves_other_controller_and_private_state(self):
         import importlib.util
         from pathlib import Path

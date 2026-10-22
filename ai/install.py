@@ -111,18 +111,56 @@ def main():
         help="Plan a code-only update of one recognized private controller",
     )
     parser.add_argument(
-        "--apply", action="store_true", help="Apply the selected code-only update"
+        "--apply", action="store_true", help="Apply the planned install or code update"
+    )
+    parser.add_argument(
+        "--allow-worktree",
+        action="store_true",
+        help="Allow an install from a non-main Git worktree",
     )
     args = parser.parse_args()
-    repo = args.repo.resolve()
+    repo = args.repo.expanduser().resolve()
     home = Path.home()
+    private_worktrees = (home / ".local/share/nacre/ai/worktrees").resolve()
+    if repo.is_relative_to(private_worktrees) and not args.allow_worktree:
+        parser.error(
+            f"Refusing install from private AI worktree {repo}; pass --allow-worktree after review"
+        )
+    try:
+        git_dir = Path(
+            subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "--absolute-git-dir"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        ).resolve()
+        common_dir = Path(
+            subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "--git-common-dir"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        )
+        if not common_dir.is_absolute():
+            common_dir = (repo / common_dir).resolve()
+        else:
+            common_dir = common_dir.resolve()
+    except subprocess.CalledProcessError:
+        git_dir = common_dir = None
+    if git_dir and common_dir and git_dir != common_dir and not args.allow_worktree:
+        parser.error(
+            f"Refusing install from Git worktree {repo}; pass --allow-worktree after review"
+        )
     if args.launcher_only and args.helper_only:
         parser.error("Choose either --launcher-only or --helper-only")
     if args.launcher_only or args.helper_only:
         install_launcher(repo, home, args.apply, args.helper_only or "nacre-ai")
         return
-    if args.apply:
-        parser.error("--apply requires --launcher-only or --helper-only")
+    if args.apply is False:
+        print("Full install plan only; pass --apply to make these changes.")
+    apply = args.apply
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup = home / ".local/state/nacre/ai/backups" / stamp
 
@@ -138,9 +176,20 @@ def main():
             shutil.copy2(path, dest)
 
     def link(source, target):
-        target.parent.mkdir(parents=True, exist_ok=True)
         if target.is_symlink() and target.resolve() == source.resolve():
+            print(f"KEEP link {target} → {source} (already linked)")
             return
+        old = (
+            os.readlink(target)
+            if target.is_symlink()
+            else "existing file"
+            if target.exists()
+            else "absent"
+        )
+        print(f"LINK {target}: {old} → {source}")
+        if not apply:
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists() or target.is_symlink():
             save(target)
             if target.is_dir() and not target.is_symlink():
@@ -218,9 +267,12 @@ def main():
                     alias = profile / "skills" / skill.name
                     if alias.is_symlink() and alias.resolve() == previous:
                         link(shared, alias)
-    subprocess.run([str(home / ".local/bin/nacre-ai-skills")], check=True)
+    print(f"RUN {home / '.local/bin/nacre-ai-skills'}")
+    if apply:
+        subprocess.run([str(home / ".local/bin/nacre-ai-skills")], check=True)
     guidance = home / ".codex/AGENTS.md"
-    guidance.parent.mkdir(parents=True, exist_ok=True)
+    if apply:
+        guidance.parent.mkdir(parents=True, exist_ok=True)
     if not guidance.exists():
         link(repo / "ai/AGENTS.md", guidance)
     elif (
@@ -252,14 +304,26 @@ def main():
         else:
             updated = current.rstrip() + "\n\n" + block + "\n"
         if updated != current:
-            save(guidance)
-            # A foreign symlink may point into another repository; never edit its target.
-            if guidance.is_symlink():
-                guidance.unlink()
-            guidance.write_text(updated)
+            previous_block = re.search(
+                re.escape(marker)
+                + r"\nFor personal knowledge and cross-project context, read `[^\n]+`\.\n(?:<!-- /nacre-ai-guidance -->)?",
+                current,
+            )
+            operation = "REPLACE" if previous_block else "APPEND"
+            old_block = (
+                previous_block.group(0) if previous_block else "(no marked block)"
+            )
+            print(f"{operation} guidance block in {guidance}: {old_block} → {block}")
+            if apply:
+                save(guidance)
+                # A foreign symlink may point into another repository; never edit its target.
+                if guidance.is_symlink():
+                    guidance.unlink()
+                guidance.write_text(updated)
     if args.codex_home:
         isolated = args.codex_home.expanduser().resolve()
-        isolated.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if apply:
+            isolated.mkdir(parents=True, exist_ok=True, mode=0o700)
         target = isolated / "AGENTS.md"
         if target.exists() and target.resolve() != (repo / "ai/AGENTS.md").resolve():
             raise RuntimeError(
@@ -269,23 +333,38 @@ def main():
     title_env = dict(os.environ, CODEX_HOME=str(home / ".codex"))
     if args.codex_home:
         title_env["CODEX_HOME"] = str(args.codex_home.expanduser().resolve())
-    subprocess.run(
-        [str(home / ".local/bin/nacre-ai-chat"), "configure"],
-        env=title_env,
-        check=True,
-    )
+    print(f"RUN {home / '.local/bin/nacre-ai-chat'} configure")
+    if apply:
+        subprocess.run(
+            [str(home / ".local/bin/nacre-ai-chat"), "configure"],
+            env=title_env,
+            check=True,
+        )
     config = home / ".config/nacre/ai/projects.json"
     if not config.exists():
-        config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        _state.write(
-            config, {"projects": [{"id": "os", "label": "Nacre", "path": str(repo)}]}
+        print(f"CREATE project registry {config} for {repo}")
+        if apply:
+            config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            _state.write(
+                config,
+                {"projects": [{"id": "os", "label": "Nacre", "path": str(repo)}]},
+            )
+            config.chmod(0o600)
+    print(f"RUN {home / '.local/bin/nacre-brain'} init")
+    print(f"RUN {home / '.local/bin/nacre-brain-maintain'} setup")
+    if apply:
+        subprocess.run([str(home / ".local/bin/nacre-brain"), "init"], check=True)
+        subprocess.run(
+            [str(home / ".local/bin/nacre-brain-maintain"), "setup"], check=True
         )
-        config.chmod(0o600)
-    subprocess.run([str(home / ".local/bin/nacre-brain"), "init"], check=True)
-    subprocess.run([str(home / ".local/bin/nacre-brain-maintain"), "setup"], check=True)
-    print("Personal workflow installed. Existing account credentials were not changed.")
+    if apply:
+        print(
+            "Personal workflow installed. Existing account credentials were not changed."
+        )
+    else:
+        print("Plan complete; no files were changed.")
     print("Project registry:", config)
-    if backup.exists():
+    if apply and backup.exists():
         print("Replaced-file backup:", backup)
 
 

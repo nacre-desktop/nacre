@@ -557,7 +557,12 @@ class WorkflowTests(IsolatedWorkflowTest):
             env = dict(os.environ, HOME=tmp)
             for _ in range(2):
                 subprocess.run(
-                    [sys.executable, str(ROOT / "ai/install.py")],
+                    [
+                        sys.executable,
+                        str(ROOT / "ai/install.py"),
+                        "--apply",
+                        "--allow-worktree",
+                    ],
                     env=env,
                     check=True,
                     capture_output=True,
@@ -571,6 +576,107 @@ class WorkflowTests(IsolatedWorkflowTest):
             self.assertEqual(registry.read_text(), '{"projects": []}')
             self.assertTrue((home / ".agents/skills/nacre-brain").is_symlink())
 
+    def test_full_install_defaults_to_plan_and_apply_mutates_temp_home(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            home.mkdir()
+            (home / ".codex").mkdir()
+            guidance = home / ".codex/AGENTS.md"
+            guidance.write_text("User guidance\n")
+            (home / ".codex/auth.json").write_text("credentials fixture")
+
+            def snapshot():
+                return {
+                    str(path.relative_to(home)): (
+                        "link:" + os.readlink(path)
+                        if path.is_symlink()
+                        else "dir"
+                        if path.is_dir()
+                        else "file:" + path.read_bytes().hex()
+                    )
+                    for path in home.rglob("*")
+                }
+
+            before = snapshot()
+            env = dict(os.environ, HOME=str(home))
+            planned = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "ai/install.py"),
+                    "--repo",
+                    str(ROOT),
+                    "--allow-worktree",
+                ],
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Full install plan only", planned.stdout)
+            self.assertIn("LINK", planned.stdout)
+            self.assertEqual(snapshot(), before)
+            applied = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "ai/install.py"),
+                    "--repo",
+                    str(ROOT),
+                    "--apply",
+                    "--allow-worktree",
+                ],
+                env=env,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("Personal workflow installed", applied.stdout)
+            self.assertNotEqual(snapshot(), before)
+            self.assertEqual(
+                (home / ".codex/auth.json").read_text(), "credentials fixture"
+            )
+
+    def test_full_install_refuses_non_main_worktree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            main = base / "main"
+            worktree = base / "worktree"
+            home = base / "home"
+            main.mkdir()
+            home.mkdir()
+            subprocess.run(["git", "init", str(main)], check=True, capture_output=True)
+            subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(main),
+                    "-c",
+                    "user.name=Fixture",
+                    "-c",
+                    "user.email=fixture@example.invalid",
+                    "commit",
+                    "--allow-empty",
+                    "-m",
+                    "fixture",
+                ],
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(main), "worktree", "add", str(worktree)],
+                check=True,
+                capture_output=True,
+            )
+            env = dict(os.environ, HOME=str(home))
+            refused = subprocess.run(
+                [sys.executable, str(ROOT / "ai/install.py"), "--repo", str(worktree)],
+                env=env,
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(refused.returncode, 0)
+            self.assertIn("Refusing install from Git worktree", refused.stderr)
+            self.assertEqual(list(home.iterdir()), [])
+
     def test_installer_preserves_foreign_guidance_symlink_target(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
@@ -581,7 +687,12 @@ class WorkflowTests(IsolatedWorkflowTest):
             guidance = home / ".codex/AGENTS.md"
             guidance.symlink_to(foreign)
             subprocess.run(
-                [sys.executable, str(ROOT / "ai/install.py")],
+                [
+                    sys.executable,
+                    str(ROOT / "ai/install.py"),
+                    "--apply",
+                    "--allow-worktree",
+                ],
                 env=dict(os.environ, HOME=tmp),
                 check=True,
                 capture_output=True,
@@ -602,7 +713,12 @@ class WorkflowTests(IsolatedWorkflowTest):
             (home / ".codex/AGENTS.md").write_text("Existing user rule\n")
             env = dict(os.environ, HOME=tmp)
             subprocess.run(
-                [sys.executable, str(ROOT / "ai/install.py")],
+                [
+                    sys.executable,
+                    str(ROOT / "ai/install.py"),
+                    "--apply",
+                    "--allow-worktree",
+                ],
                 env=env,
                 check=True,
                 capture_output=True,
@@ -610,7 +726,12 @@ class WorkflowTests(IsolatedWorkflowTest):
             moved = home / "moved-checkout"
             shutil.copytree(ROOT, moved, ignore=shutil.ignore_patterns("target"))
             subprocess.run(
-                [sys.executable, str(moved / "ai/install.py")],
+                [
+                    sys.executable,
+                    str(moved / "ai/install.py"),
+                    "--apply",
+                    "--allow-worktree",
+                ],
                 env=env,
                 check=True,
                 capture_output=True,

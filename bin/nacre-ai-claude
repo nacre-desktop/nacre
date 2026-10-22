@@ -2,16 +2,25 @@
 """Launch Claude tasks and read native session metadata using Anthropic's SDK."""
 
 import argparse
-import json
-import nacre_ai_core as _core
-import os
+import importlib
 from pathlib import Path
+import sys
+import json
+import os
 import re
 import shlex
 import shutil
 import subprocess
-import sys
 import uuid
+
+for _core_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_core_directory / "nacre_ai_core.py").is_file():
+        sys.path.insert(0, str(_core_directory))
+        break
+_core = importlib.import_module("nacre_ai_core")
 
 
 def agent_full_access():

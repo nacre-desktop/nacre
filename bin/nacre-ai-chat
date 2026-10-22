@@ -2,20 +2,29 @@
 """Read chat titles and name the current chat through Codex's local protocol."""
 
 import argparse
+import importlib
+from pathlib import Path
+import sys
 import json
 import fcntl
-import nacre_state as _state
-import nacre_ai_core as _core
 import os
-from pathlib import Path
 import re
 import select
 import shlex
 import signal
 import subprocess
-import sys
 import time
 import unicodedata
+
+for _core_directory in (
+    Path(__file__).resolve().parents[1] / "nacre/shell-tools",
+    Path.home() / ".local/share/nacre/shell/tools",
+):
+    if (_core_directory / "nacre_ai_core.py").is_file():
+        sys.path.insert(0, str(_core_directory))
+        break
+_state = importlib.import_module("nacre_state")
+_core = importlib.import_module("nacre_ai_core")
 
 
 def label(value):
