@@ -1,8 +1,23 @@
 # N0017 — Daemon notifications producer contract
 
-Status: **design proposal for lead and owner review**, 2026-10-21; no runtime, schema publication, consumer adoption or desktop switch authorized.
+Status: **Accepted — owner decisions recorded 2026-10-22** (see "Owner decisions" below). Implementation phases A–C may proceed; the live ownership switch on the desktop remains a separate owner gate.
 Inputs: lead drafts `nacre-protocol-request-notifications.md` and `bead-B0016-draft.md` (2026-10-21). Evidence is Nacre base `961de0a3`; `Bead:` paths refer to
 Bead `origin/main` at `b5bdbc9d`, not a dependency pin or permission to edit Bead.
+
+## Owner decisions — 2026-10-22
+
+The owner accepted the lead's recommendations:
+
+1. **Ownership:** a separate, explicit managed-ownership opt-in, not tied to
+   `NACRE_DAEMON_CLIENT=1`. The short no-owner gap during handoff is accepted.
+2. **Bounds:** the proposed admission and window bounds are accepted, and v1
+   has no full-history paging.
+3. **Popup timing:** the frozen QML behaviour (the current configured
+   default) is the policy, not Bead's 5 s default, so nothing visibly changes.
+4. **Dismiss vs. forget:** dismiss retains the notice in history for every
+   consumer; only an explicit clear/`forget:true` deletes it.
+5. **Durability:** Notify replies immediately and history is flushed shortly
+   after. The small crash-loss window is accepted for low latency.
 
 ## 1. Ownership and cutover decision
 
