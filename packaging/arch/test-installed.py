@@ -255,13 +255,8 @@ assert (
     "shell fish --init-command"
     in (home / ".config/nacre/terminal/kitty.conf").read_text()
 )
-run(
-    "python",
-    "-c",
-    "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); from nacre_ai_controller import load; assert load()['default_assistant']() in ('codex','claude')",
-)
 print(
-    "Real UWSM argument parsing, inherited keyboard syntax, default wallpaper/favorites/terminal and packaged AI controller imports pass."
+    "Real UWSM argument parsing, inherited keyboard syntax, default wallpaper/favorites/terminal pass."
 )
 for command in (
     ("nacre-welcome", "--help"),

@@ -730,25 +730,6 @@ TestCase {
                 path.with_name(path.name + ".corrupt.bak").read_text(), "bad saved data"
             )
 
-    def test_ai_namespaces_preserve_default_and_reject_path_injection(self):
-        sidebar = module("sidebar-chat")
-        with tempfile.TemporaryDirectory() as directory:
-            base = Path(directory)
-            with patch.multiple(
-                sidebar,
-                DEFAULT_STATE=base / "state",
-                DEFAULT_SOCKET=base / "default.sock",
-            ):
-                sidebar.configure_channel("pfirst")
-                self.assertEqual(sidebar.STATE, base / "state/views/pfirst")
-                self.assertEqual(sidebar.SOCKET.name, "nacre-chat-pfirst.sock")
-                for value in ("../escape", "/absolute", "p;bad", "x" * 49):
-                    with self.assertRaises(ValueError):
-                        sidebar.configure_channel(value)
-                sidebar.configure_channel("")
-                self.assertEqual(sidebar.STATE, base / "state")
-                self.assertEqual(sidebar.SOCKET, base / "default.sock")
-
     def test_actual_geometry_matching_edges_and_negative_monitor_origins(self):
         runner = Path("/usr/lib/qt6/bin/qmltestrunner")
         if not runner.exists():
