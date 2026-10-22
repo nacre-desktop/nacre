@@ -504,8 +504,11 @@ class SwitchTests(Base):
         releases.mkdir(mode=0o700)
         (releases / "release.lock").write_text("")
         (releases / "release.lock").chmod(0o600)
-        with patch.dict(
-            os.environ, {"XDG_STATE_HOME": str(self.home / ".local/state")}
+        with (
+            patch.object(f4, "require_ordinary_user"),  # CI runs as root
+            patch.dict(
+                os.environ, {"XDG_STATE_HOME": str(self.home / ".local/state")}
+            ),
         ):
             with open(releases / "release.lock") as held:
                 fcntl.flock(held, fcntl.LOCK_EX)
