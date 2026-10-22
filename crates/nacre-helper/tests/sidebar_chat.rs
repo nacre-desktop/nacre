@@ -1567,17 +1567,20 @@ fn native_new_chat_fences_late_background_resume() {
     assert_ne!(new_metadata["cwd"], old_cwd);
 
     fs::write(&fixture.resume_release, "release").unwrap();
-    let response_deadline = Instant::now() + Duration::from_secs(8);
-    while !fs::read_to_string(&fixture.log)
-        .unwrap_or_default()
-        .contains("resume-response-sent")
-        && Instant::now() < response_deadline
-    {
+    // Wait for the fixture event while its provider is alive. The provider's
+    // 45-second alarm is the existing hard bound for a wedged child; a second
+    // shorter wall-clock deadline can expire while a loaded runner has not yet
+    // scheduled the released provider.
+    let response_sent = || {
+        fs::read_to_string(&fixture.log)
+            .unwrap_or_default()
+            .contains("resume-response-sent")
+    };
+    while !response_sent() && fixture.fake_codex_is_running() {
         thread::sleep(Duration::from_millis(20));
     }
-    assert!(fs::read_to_string(&fixture.log)
-        .unwrap()
-        .contains("resume-response-sent"));
+    assert!(response_sent(),
+        "released fake provider did not send its delayed resume response before its 45-second alarm");
     let provider_deadline = Instant::now() + Duration::from_secs(8);
     while fixture.fake_codex_is_running() && Instant::now() < provider_deadline {
         thread::sleep(Duration::from_millis(20));
