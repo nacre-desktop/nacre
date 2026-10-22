@@ -8,7 +8,7 @@ hl.on("hyprland.start", function()
     local tasks = {
         { scope = true, args = { "/usr/lib/pam_kwallet_init" } },
         { args = { "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1" } },
-        { args = { "wl-paste", "--watch", "cliphist", "store" } },
+        { args = { "wl-paste", "--watch", "nacre-desktop-extras", "store" } },
         { args = { scripts .. "startup-apps.sh" } },
         { args = { os.getenv("HOME") .. "/.local/bin/nacre-welcome", "--login" } },
     }

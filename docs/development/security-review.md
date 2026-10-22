@@ -46,7 +46,12 @@ The dedicated browser profile limits incidental sharing but is not an isolation
 boundary if it navigates to another service on the same loopback host. This
 protocol-based finding was not tested against a live browser or service.
 
-Clipboard storage uses `wl-paste --watch cliphist store`. Upstream
+Clipboard storage uses `wl-paste --watch nacre-desktop-extras store`, which
+passes clipboard bytes through to cliphist and records only the cliphist ID and
+capture time in private Nacre state. The installed cliphist 0.7 interface does
+not expose per-entry timestamps; the Nacre sidecar expires unpinned entries
+after seven days and retains pins. Existing cliphist entries without recorded
+times receive a seven-day grace period on first native observation. Upstream
 [wl-clipboard](https://github.com/bugaevc/wl-clipboard/blob/master/src/wl-paste.c)
 passes sensitivity hints and [cliphist](https://github.com/sentriz/cliphist/blob/master/cliphist.go)
 skips `CLIPBOARD_STATE=sensitive`; this depends on password managers/compositor

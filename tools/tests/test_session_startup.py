@@ -50,7 +50,15 @@ callback()
                     "--",
                     "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1",
                 ],
-                ["uwsm", "app", "--", "wl-paste", "--watch", "cliphist", "store"],
+                [
+                    "uwsm",
+                    "app",
+                    "--",
+                    "wl-paste",
+                    "--watch",
+                    "nacre-desktop-extras",
+                    "store",
+                ],
                 [
                     "uwsm",
                     "app",

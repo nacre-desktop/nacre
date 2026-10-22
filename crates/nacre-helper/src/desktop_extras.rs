@@ -64,6 +64,25 @@ fn pins(path: &Path) -> Result<Vec<Value>> {
     };
     Ok(value.as_array().cloned().unwrap_or_default())
 }
+fn pins_for(paths: &Paths, rows: &[String]) -> Result<Vec<Value>> {
+    let path = state(paths).join("pins.json");
+    let original = pins(&path)?;
+    let mut normalized = Vec::new();
+    for pin in &original {
+        if pin.is_object() {
+            normalized.push(pin.clone());
+        } else if let Some(id) = pin.as_str() {
+            if let Some(row) = rows.iter().find(|row| row.starts_with(&format!("{id}\t"))) {
+                let data = run_command(&["cliphist", "decode"], Some(row.as_bytes()))?;
+                normalized.push(fingerprint(row, &data));
+            }
+        }
+    }
+    if normalized != original {
+        save(&path, &json!(normalized))?;
+    }
+    Ok(normalized)
+}
 fn mime(data: &[u8]) -> &'static str {
     if data.starts_with(b"\x89PNG") {
         "image/png"
@@ -115,8 +134,117 @@ fn clip_rows() -> Result<Vec<String>> {
             .collect(),
     )
 }
+const CLIP_HISTORY_AGE: u64 = 7 * 24 * 60 * 60;
+fn clip_timestamp_path(paths: &Paths) -> PathBuf {
+    state(paths).join("clipboard-times.json")
+}
+fn cliphist_database(paths: &Paths) -> PathBuf {
+    if let Some(value) = env::var_os("CLIPHIST_DB_PATH") {
+        return PathBuf::from(value);
+    }
+    let cache = env::var_os("XDG_CACHE_HOME")
+        .map(PathBuf::from)
+        .filter(|path| path.is_absolute())
+        .unwrap_or_else(|| paths.home.join(".cache"));
+    cache.join("cliphist/db")
+}
+fn read_clip_timestamps(path: &Path) -> Result<BTreeMap<String, u64>> {
+    if path.is_file() {
+        Ok(serde_json::from_value(crate::state::read_strict(
+            path,
+            json!({}),
+        )?)?)
+    } else {
+        Ok(BTreeMap::new())
+    }
+}
+fn should_expire_clip(created: u64, now: u64, pinned: bool) -> bool {
+    !pinned && now.saturating_sub(created) >= CLIP_HISTORY_AGE
+}
+fn record_clip_timestamp(paths: &Paths, row: &str) -> Result<()> {
+    let (id, _) = row.split_once('\t').ok_or("Malformed clipboard row")?;
+    if id.is_empty() || !id.bytes().all(|v| v.is_ascii_digit()) {
+        return Err("Malformed clipboard ID".into());
+    }
+    let timestamps = clip_timestamp_path(paths);
+    let _guard = crate::files::lock(&timestamps.with_extension("json.lock"))?;
+    let mut values = read_clip_timestamps(&timestamps)?;
+    values.insert(
+        id.to_owned(),
+        SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+    );
+    fs::create_dir_all(timestamps.parent().ok_or("Missing clipboard state folder")?)?;
+    save(&timestamps, &json!(values))?;
+    Ok(())
+}
+fn store_clip(paths: &Paths, content: &[u8]) -> Result<()> {
+    let output = crate::process::run_bytes(
+        "cliphist",
+        &["store".into()],
+        Some(content),
+        Duration::from_secs(15),
+    )?;
+    if !output.status.success() {
+        return Err("cliphist store failed".into());
+    }
+    if env::var("CLIPBOARD_STATE").is_ok_and(|value| value == "sensitive") {
+        return Ok(());
+    }
+    let rows = clip_rows()?;
+    if let Some(row) = rows.first() {
+        let decoded = run_command(&["cliphist", "decode"], Some(row.as_bytes()))?;
+        if decoded == content {
+            record_clip_timestamp(paths, row)?;
+        }
+    }
+    // Expire old non-pinned entries as clipboard activity continues, even if
+    // the panel is never reopened. A later `clips` request also prunes.
+    prune_clip_history(paths, &rows)
+}
+fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
+    if !cliphist_database(paths).is_file() {
+        return Ok(());
+    }
+    let pin_values = pins_for(paths, rows)?;
+    let timestamps = clip_timestamp_path(paths);
+    let _guard = crate::files::lock(&timestamps.with_extension("json.lock"))?;
+    let mut known = read_clip_timestamps(&timestamps)?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let mut live = HashSet::new();
+    let mut remove = Vec::new();
+    for row in rows {
+        let Some((id, _)) = row.split_once('\t') else {
+            continue;
+        };
+        if id.is_empty() || !id.bytes().all(|v| v.is_ascii_digit()) {
+            continue;
+        }
+        live.insert(id.to_owned());
+        let created = *known.entry(id.to_owned()).or_insert(now);
+        if !should_expire_clip(created, now, false) {
+            continue;
+        }
+        let decoded = match run_command(&["cliphist", "decode"], Some(row.as_bytes())) {
+            Ok(value) => value,
+            Err(_) => continue,
+        };
+        let pin = fingerprint(row, &decoded);
+        if pin_values.contains(&pin) {
+            continue;
+        }
+        if run_command(&["cliphist", "delete"], Some(row.as_bytes())).is_ok() {
+            remove_thumbnail(&state(paths).join("images"), &decoded)?;
+            remove.push(id.to_owned());
+        }
+    }
+    known.retain(|id, _| live.contains(id) && !remove.contains(id));
+    fs::create_dir_all(timestamps.parent().ok_or("Missing clipboard state folder")?)?;
+    save(&timestamps, &json!(known))?;
+    Ok(())
+}
 fn clips(paths: &Paths) -> Result<Value> {
     let rows = clip_rows()?;
+    prune_clip_history(paths, &rows)?;
     let directory = state(paths);
     let pin_path = directory.join("pins.json");
     let mut stored = pins(&pin_path)?;
@@ -750,17 +878,26 @@ pub fn run(args: &[String]) -> Result<i32> {
     let directory = state(&paths);
     fs::create_dir_all(&directory)?;
     fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
-    let mut input = String::new();
+    let input_limit = if action == "store" {
+        16 * 1024 * 1024
+    } else {
+        1024 * 1024
+    };
+    let mut input = Vec::new();
     std::io::stdin()
-        .take(1_048_577)
-        .read_to_string(&mut input)?;
-    if input.len() > 1_048_576 {
+        .take((input_limit + 1) as u64)
+        .read_to_end(&mut input)?;
+    if input.len() > input_limit {
         return Err("Desktop extras request too large".into());
     }
-    let payload: Value = if input.trim().is_empty() {
+    if action == "store" {
+        store_clip(&paths, &input)?;
+        return Ok(0);
+    }
+    let payload: Value = if input.iter().all(u8::is_ascii_whitespace) {
         json!({})
     } else {
-        serde_json::from_str(&input)?
+        serde_json::from_slice(&input)?
     };
     let result = match action {
         "clips" => clips(&paths),
@@ -893,6 +1030,14 @@ mod tests {
         let value = fingerprint("12\tprivate clipboard label", b"private clipboard body");
         assert_eq!(value.as_object().unwrap().len(), 2);
         assert!(!value.to_string().contains("private clipboard"));
+    }
+
+    #[test]
+    fn clipboard_retention_is_seven_days_and_keeps_pins() {
+        let now = 1_800_000_000;
+        assert!(!should_expire_clip(now - CLIP_HISTORY_AGE + 1, now, false));
+        assert!(should_expire_clip(now - CLIP_HISTORY_AGE, now, false));
+        assert!(!should_expire_clip(now - CLIP_HISTORY_AGE * 4, now, true));
     }
 
     #[test]

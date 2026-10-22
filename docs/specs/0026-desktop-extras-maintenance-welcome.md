@@ -22,9 +22,14 @@ intended-difference notes. Preserve the locked Welcome state-file behavior.
 
 **Behavior and bounds.** Removing a clipboard clip also removes its thumbnail
 without requiring the view to reopen. Retain clipboard history for seven days
-while preserving pins. Leave the existing 30-day notification retention
-unchanged. Keep maintenance recovery explicitly user-requested and route its
-existing diagnostics actions through `diagnostics.rs`.
+while preserving pins. The native clipboard watcher stores only cliphist IDs
+and capture times in private state because the installed cliphist interface
+does not expose per-entry timestamps. Existing rows without timestamps receive
+a seven-day grace period from first native observation. This timestamp index
+contains no copied text or image bytes and ages out entries when their clips are
+deleted. Leave the existing 30-day notification retention unchanged. Keep
+maintenance recovery explicitly user-requested and route its existing
+diagnostics actions through `diagnostics.rs`.
 
 **Intended security difference.** Native thumbnail files are created exclusively
 with mode `0600` before bytes are written, and deletion removes the matching
