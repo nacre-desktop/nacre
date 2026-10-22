@@ -439,40 +439,25 @@ impl Drop for ReadinessGuard {
     }
 }
 
-type ImageGate = Arc<Mutex<()>>;
+type ImageGate = Arc<Semaphore>;
 
-async fn retain_cache(cache: Arc<ImageCache>, gate: ImageGate, references: Vec<String>) -> bool {
-    tokio::task::spawn_blocking(move || {
-        let Ok(_guard) = gate.lock() else {
-            return false;
-        };
-        cache.retain(&references).is_ok()
-    })
-    .await
-    .unwrap_or(false)
-}
-
-async fn resolve_before(
-    request: bus::Notify,
-    cache: Arc<ImageCache>,
+/// A timed-out blocking job retains its slot until it actually exits. Neither
+/// decoding nor cache cleanup can accumulate detached workers after a deadline.
+async fn image_work<T: Send + 'static>(
     gate: ImageGate,
     deadline: Instant,
-) -> std::result::Result<Input, Failure> {
+    work: impl FnOnce() -> std::result::Result<T, Failure> + Send + 'static,
+) -> std::result::Result<T, Failure> {
     let remaining = deadline.saturating_duration_since(Instant::now());
     if remaining.is_zero() {
         return Err(timeout_error());
     }
-    let resolved = tokio::time::timeout(
+    let permit = gate.try_acquire_owned().map_err(|_| busy())?;
+    tokio::time::timeout(
         remaining,
         tokio::task::spawn_blocking(move || {
-            let _guard = gate.lock().map_err(|_| {
-                failure(
-                    ErrorCode::Internal,
-                    "Notification image worker failed",
-                    false,
-                )
-            })?;
-            resolve(request, &cache)
+            let _permit = permit;
+            work()
         }),
     )
     .await
@@ -483,7 +468,24 @@ async fn resolve_before(
             "Notification image worker failed",
             false,
         )
-    })??;
+    })?
+}
+
+async fn retain_cache(cache: Arc<ImageCache>, gate: ImageGate, references: Vec<String>) -> bool {
+    image_work(gate, Instant::now() + DEADLINE, move || {
+        cache.retain(&references)
+    })
+    .await
+    .is_ok()
+}
+
+async fn resolve_before(
+    request: bus::Notify,
+    cache: Arc<ImageCache>,
+    gate: ImageGate,
+    deadline: Instant,
+) -> std::result::Result<Input, Failure> {
+    let resolved = image_work(gate, deadline, move || resolve(request, &cache)).await?;
     if Instant::now() >= deadline {
         return Err(timeout_error());
     }
@@ -641,7 +643,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     let cache = Arc::new(ImageCache::open(
         paths.state.join("shell/notifications/images"),
     )?);
-    let image_gate = Arc::new(Mutex::new(()));
+    let image_gate = Arc::new(Semaphore::new(1));
     let (requests, mut receive) = channel();
     hub.borrow_mut().notifications = Some(requests.clone());
     let ingress = requests.0;
@@ -825,6 +827,9 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                             if !hub.borrow().has_client(client) {Err(bus::unavailable())}
                             else if matches!(&call,CoreCall::NotificationHover(_) | CoreCall::NotificationInhibited(_)) && !hub.borrow().is_ui_provider(client) {
                                 Err(failure(ErrorCode::PermissionDenied,"Notification UI provider required",false))
+                            } else if matches!(&call,CoreCall::NotificationHover(_) | CoreCall::NotificationInhibited(_))
+                                && !ui_clients.contains(&client) && ui_clients.len()>=128 {
+                                Err(busy())
                             } else if destructive(&call) && (!storage.ready || !storage.writable) {
                                 Err(failure(ErrorCode::PermissionDenied,"Notification history is not writable",false))
                             } else {match call {
@@ -832,7 +837,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                                 call=>{
                                     let ui_policy=matches!(&call,CoreCall::NotificationHover(_) | CoreCall::NotificationInhibited(_));
                                     model.control(call,client,Instant::now(),wall_ms()).map(|outcome|{
-                                        if ui_policy && outcome.changed && ui_clients.len()<128 {ui_clients.insert(client);}
+                                        if ui_policy && outcome.changed {ui_clients.insert(client);}
                                         let changed=outcome.changed;(outcome,Response::Core(json!({"changed":changed})))
                                     })
                                 }
@@ -936,5 +941,37 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         hub.borrow_mut()
             .service("notifications", "unavailable", 0)?;
         tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn timed_out_image_work_keeps_its_capacity_until_the_worker_exits() {
+        let gate = Arc::new(Semaphore::new(1));
+        let (started, ready) = oneshot::channel();
+        let (release, wait) = std::sync::mpsc::channel();
+        let task = tokio::spawn(image_work(
+            gate.clone(),
+            Instant::now() + Duration::from_millis(100),
+            move || {
+                let _ = started.send(());
+                let _ = wait.recv_timeout(Duration::from_secs(2));
+                Ok(())
+            },
+        ));
+        ready.await.unwrap();
+        assert_eq!(task.await.unwrap().unwrap_err().code, ErrorCode::Timeout);
+        assert_eq!(gate.available_permits(), 0);
+        let rejected = image_work(gate.clone(), Instant::now() + DEADLINE, || Ok(())).await;
+        assert_eq!(rejected.unwrap_err().code, ErrorCode::Busy);
+        release.send(()).unwrap();
+        let permit = tokio::time::timeout(Duration::from_secs(1), gate.acquire_owned())
+            .await
+            .unwrap()
+            .unwrap();
+        drop(permit);
     }
 }
