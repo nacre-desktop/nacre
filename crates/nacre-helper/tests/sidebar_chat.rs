@@ -80,6 +80,10 @@ while True:
             reply(ident, {'thread': {'id': params['threadId'], 'turns': []}})
             continue
         elif scenario == 'resume-race':
+            def stale_peer_dropped(signum, frame):
+                record({'kind':'resume-peer-dropped','pid':os.getpid()})
+                raise SystemExit(0)
+            signal.signal(signal.SIGTERM, stale_peer_dropped)
             open(os.environ['FAKE_RESUME_READY'], 'w', encoding='utf-8').write('ready')
             deadline = time.monotonic() + 30
             while not os.path.exists(os.environ['FAKE_RESUME_RELEASE']) and time.monotonic() < deadline:
@@ -89,8 +93,10 @@ while True:
             turns = [{'items': [
                 {'type':'userMessage','id':'stale-user','content':[{'type':'text','text':'stale transcript'}]},
                 {'type':'agentMessage','id':'stale-agent','text':'stale response'}]}]
+            # The server may terminate this stale peer as soon as it reads the
+            # reply. Flush the marker first; observe termination separately.
+            record({'kind':'resume-response-released','pid':os.getpid()})
             reply(ident, {'thread': {'id': 'stale-thread-id', 'turns': turns}})
-            record({'kind':'resume-response-sent','pid':os.getpid()})
             continue
         elif scenario == 'async':
             turns = [
@@ -1567,20 +1573,27 @@ fn native_new_chat_fences_late_background_resume() {
     assert_ne!(new_metadata["cwd"], old_cwd);
 
     fs::write(&fixture.resume_release, "release").unwrap();
-    // Wait for the fixture event while its provider is alive. The provider's
-    // 45-second alarm is the existing hard bound for a wedged child; a second
-    // shorter wall-clock deadline can expire while a loaded runner has not yet
-    // scheduled the released provider.
-    let response_sent = || {
+    // Once the reply is flushed, the server can reject the stale generation
+    // and SIGTERM the provider before its next instruction. Observe that drop
+    // decision explicitly instead of requiring a post-reply log write.
+    let peer_dropped = || {
         fs::read_to_string(&fixture.log)
             .unwrap_or_default()
-            .contains("resume-response-sent")
+            .contains("resume-peer-dropped")
     };
-    while !response_sent() && fixture.fake_codex_is_running() {
+    while !peer_dropped() && fixture.fake_codex_is_running() {
         thread::sleep(Duration::from_millis(20));
     }
-    assert!(response_sent(),
-        "released fake provider did not send its delayed resume response before its 45-second alarm");
+    assert!(
+        peer_dropped(),
+        "server did not terminate the stale provider after resume release"
+    );
+    assert!(
+        fs::read_to_string(&fixture.log)
+            .unwrap()
+            .contains("resume-response-released"),
+        "stale provider was terminated before its delayed resume response was released"
+    );
     let provider_deadline = Instant::now() + Duration::from_secs(8);
     while fixture.fake_codex_is_running() && Instant::now() < provider_deadline {
         thread::sleep(Duration::from_millis(20));
