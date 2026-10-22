@@ -506,7 +506,40 @@ fn route_window(window: &Value) -> Result<()> {
     Ok(())
 }
 
+/// Ask the daemon to run the action. Only an absent daemon or one without the Brain
+/// methods falls back to the direct launcher; the daemon's own worker sets
+/// NACRE_BRAIN_DIRECT so it never calls back.
+/// Temporary duplicate: the direct path expires with the legacy non-daemon mode.
+fn via_daemon(name: &str) -> Result<bool> {
+    use crate::daemon::client::{connect, ConnectError};
+    let method = match name {
+        "brain" => "brain.open",
+        _ => "brain.capture",
+    };
+    if env::var_os("NACRE_BRAIN_DIRECT").is_some() {
+        return Ok(false);
+    }
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async {
+        let mut client = match connect().await {
+            Ok(client) => client,
+            Err(ConnectError::Absent) => return Ok(false),
+            Err(error) => return Err(error.into()),
+        };
+        if !client.methods.contains_key(method) {
+            return Ok(false);
+        }
+        client.call(method, json!({}), None).await?;
+        Ok(true)
+    })
+}
+
 pub fn action(name: &str, value: &str) -> Result<()> {
+    if matches!(name, "brain" | "capture") && via_daemon(name)? {
+        return Ok(());
+    }
     match name {
         "brain" => ensure_brain(true),
         "capture" => {

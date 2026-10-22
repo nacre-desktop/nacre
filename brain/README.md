@@ -8,13 +8,13 @@ does not create a new populated memory store or copy accounts. See
 for updates. The local semantic model is optional and separately installed.
 
 Brain opens when you choose it from the launcher or use its shortcut. Closing the
-window keeps it closed; the background service maintains only the local server.
+window keeps it closed; nothing stays resident.
 The loading view uses your current desktop colors immediately, before the
 knowledge index finishes loading.
 
 The loopback HTTP worker now runs in `nacre-helper`. A standalone
-`nacre-helper brain-control serve` exits after five idle minutes. The current
-service keeps its readiness watcher until daemon activation is introduced
-separately. When updating from the Python server, reload an already-open Brain
+`nacre-helper brain-control serve` exits after five idle minutes. The Nacre
+daemon starts it on demand (`nacrectl brain open|capture`, the `brain` topic);
+without a daemon the launcher starts it directly. When updating from the Python server, reload an already-open Brain
 page once after its authentication
 handoff so it loads the origin-bound API credential hook.

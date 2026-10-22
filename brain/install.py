@@ -4,15 +4,12 @@
 import argparse
 import ast
 import datetime as dt
-import json
 import os
 import shlex
 from pathlib import Path
 import shutil
 import signal
 import subprocess
-import time
-import urllib.request
 
 
 ROOT = Path(__file__).resolve().parent
@@ -141,21 +138,20 @@ def _write_restore_script(backup, home, targets):
     return script
 
 
-def deploy(
-    root=ROOT, home=None, systemctl=None, readiness=None, helper_probe=None, wait=True
-):
+def deploy(root=ROOT, home=None, systemctl=None, helper_probe=None):
     root = Path(root)
     home = Path.home() if home is None else Path(home)
     systemctl = systemctl or (
         lambda *args, **kwargs: subprocess.run(["systemctl", "--user", *args], **kwargs)
     )
-    readiness = readiness or _ready
     helper_probe = helper_probe or _helper_supports_web
     supported, detail = helper_probe(home)
     if not supported:
         raise RuntimeError(detail)
     dest = home / ".local/share/nacre/brain"
     wrapper = home / ".local/bin/nacre-brain-ui"
+    # The daemon starts the web worker on demand (N0030); the resident unit of
+    # earlier releases is stopped, disabled and removed (backed up first).
     service = home / ".config/systemd/user/nacre-brain.service"
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     backup = home / ".local/state/nacre/brain/backups" / ("brain-" + stamp)
@@ -166,6 +162,7 @@ def deploy(
     restore_script = _write_restore_script(backup, home, (dest, wrapper, service))
     try:
         systemctl("stop", *STOP_UNITS, capture_output=True)
+        systemctl("disable", service.name, capture_output=True)
         for process in Path("/proc").iterdir():
             if not process.name.isdigit():
                 continue
@@ -195,10 +192,8 @@ def deploy(
             wrapper.unlink()
         wrapper.write_text((root / "launch.sh").read_text())
         wrapper.chmod(0o755)
-        service.parent.mkdir(parents=True, exist_ok=True)
-        if service.is_symlink():
+        if service.is_symlink() or service.exists():
             service.unlink()
-        service.write_text((root / "brain.service").read_text())
         systemctl("daemon-reload", check=True)
         systemctl(
             "enable",
@@ -207,35 +202,13 @@ def deploy(
             "nacre-brain-check.timer",
             check=True,
         )
-        systemctl("enable", "--now", service.name, check=True)
-        if wait:
-            for _ in range(50):
-                if readiness():
-                    print(
-                        f"Brain ready. Restore: bash {shlex.quote(str(restore_script))}"
-                    )
-                    return backup
-                time.sleep(0.2)
-            raise RuntimeError("Brain did not become ready")
+        print(f"Brain deployed. Restore: bash {shlex.quote(str(restore_script))}")
         return backup
     except Exception:
         _restore(backup, home, dest, wrapper, service)
         systemctl("daemon-reload", check=False)
-        systemctl("restart", service.name, check=False)
-        print(
-            f"Readiness/deployment failed; restored backup {backup} and restarted {service.name}."
-        )
+        print(f"Deployment failed; restored backup {backup}.")
         raise
-
-
-def _ready():
-    try:
-        with urllib.request.urlopen(
-            "http://127.0.0.1:17843/api/health", timeout=1
-        ) as response:
-            return json.load(response).get("ready", False)
-    except OSError:
-        return False
 
 
 def main(argv=None):
@@ -259,11 +232,11 @@ def main(argv=None):
         service = home / ".config/systemd/user/nacre-brain.service"
         print(f"COPY/REPLACE {dest}: existing tree → source Brain tree")
         print(f"COPY/REPLACE {wrapper}: existing wrapper → {ROOT / 'launch.sh'}")
-        print(f"COPY/REPLACE {service}: existing unit → {ROOT / 'brain.service'}")
+        print(f"REMOVE {service}: resident unit replaced by daemon on-demand start")
         print("STOP current state → stopped: " + ", ".join(STOP_UNITS))
         print("KILL matching per-user legacy Brain serve PIDs → none (if any)")
         print(
-            "ENABLE/START current timer and service states → enabled and active: nacre-brain-sync.timer nacre-brain-check.timer nacre-brain.service"
+            "ENABLE/START current timer states → enabled and active: nacre-brain-sync.timer nacre-brain-check.timer"
         )
         print(
             "Plan only; pass --apply to deploy. Every replaced path is backed up first."

@@ -291,7 +291,7 @@ fn legacy_ui(arguments: &[String]) -> Result<i32> {
         .into())
 }
 fn usage() -> i32 {
-    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
+    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
     0
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
@@ -317,6 +317,11 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     }
     let (method, params, timeout, list) = match arguments {
         [command] if command == "status" => ("daemon.status".to_owned(), json!({}), None, false),
+        [command, action]
+            if command == "brain" && ["open", "capture"].contains(&action.as_str()) =>
+        {
+            (format!("brain.{action}"), json!({}), None, false)
+        }
         [command, flag] if command == "call" && flag == "--list" => {
             (String::new(), json!({}), None, true)
         }
@@ -342,7 +347,11 @@ pub fn run(arguments: &[String]) -> Result<i32> {
                 _ => return Err("Expected call METHOD [JSON]".into()),
             }
         }
-        _ => return Err("Expected status, call, watch, attach or ui; use nacrectl --help".into()),
+        _ => {
+            return Err(
+                "Expected status, call, brain, watch, attach or ui; use nacrectl --help".into(),
+            )
+        }
     };
     if !list {
         Message::Call {

@@ -4,6 +4,7 @@ pub mod ai_chat;
 pub mod attach;
 pub mod bar_services;
 pub mod bar_tray_watcher;
+pub mod brain;
 pub mod client;
 pub mod compositor;
 pub mod compositor_control;
@@ -244,6 +245,9 @@ async fn serve(
     } else {
         None
     };
+    if !counter.safe {
+        brain::initial(&hub)?;
+    }
     let workers = workers::Workers::default();
     let width_shutdown = widths::Shutdown::default();
     let width_service = if !counter.safe

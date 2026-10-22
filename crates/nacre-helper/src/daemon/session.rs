@@ -53,6 +53,9 @@ async fn dispatch(
             super::dashboard_player::dispatch(hub, method, params).await
         }
         "daemon.ping" => Ok(Value::Null),
+        method @ ("brain.open" | "brain.capture") if !hub.borrow().safe => {
+            super::brain::dispatch(hub, method, params)
+        }
         method @ ("tray.activate"
         | "tray.secondary_activate"
         | "tray.context_menu"

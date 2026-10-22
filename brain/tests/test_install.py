@@ -26,7 +26,6 @@ class InstallTests(unittest.TestCase):
         (self.root / "web").mkdir()
         (self.root / "web/index.html").write_text("new web")
         (self.root / "launch.sh").write_text("new wrapper")
-        (self.root / "brain.service").write_text("new service")
         self.templates = self.root.parent / "ai/brain"
         self.templates.mkdir(parents=True)
         (self.templates / "template.md").write_text("new template")
@@ -69,12 +68,11 @@ class InstallTests(unittest.TestCase):
             self.root,
             self.home,
             systemctl=lambda *a, **k: commands.append(a),
-            readiness=lambda: True,
             helper_probe=lambda _: (True, ""),
         )
         self.assertEqual("new control.py", (self.dest / "control.py").read_text())
         self.assertEqual("new wrapper", self.wrapper.read_text())
-        self.assertEqual("new service", self.service.read_text())
+        self.assertFalse(self.service.exists())
         self.assertEqual(
             "old control",
             (backup / self.dest.relative_to(self.home) / "control.py").read_text(),
@@ -89,7 +87,8 @@ class InstallTests(unittest.TestCase):
             saved = backup / path.relative_to(self.home)
             self.assertTrue(saved.exists())
         self.assertIn(("stop", *install.STOP_UNITS), commands)
-        self.assertIn(("enable", "--now", "nacre-brain.service"), commands)
+        self.assertIn(("disable", "nacre-brain.service"), commands)
+        self.assertNotIn(("enable", "--now", "nacre-brain.service"), commands)
 
     def test_capability_probe_requires_expected_usage_response(self):
         helper = self.home / ".local/share/nacre/shell/tools/nacre-helper"
@@ -117,21 +116,21 @@ class InstallTests(unittest.TestCase):
             )
         self.assertEqual(before, self.snapshot())
 
-    def test_failed_readiness_restores_backup_and_restarts(self):
-        commands = []
-        with patch.object(install.time, "sleep"):
-            with self.assertRaisesRegex(RuntimeError, "did not become ready"):
-                install.deploy(
-                    self.root,
-                    self.home,
-                    systemctl=lambda *a, **k: commands.append(a),
-                    readiness=lambda: False,
-                    helper_probe=lambda _: (True, ""),
-                )
+    def test_failed_deployment_restores_backup(self):
+        def systemctl(*args, **kwargs):
+            if args[0] == "enable":
+                raise RuntimeError("enable failed")
+
+        with self.assertRaisesRegex(RuntimeError, "enable failed"):
+            install.deploy(
+                self.root,
+                self.home,
+                systemctl=systemctl,
+                helper_probe=lambda _: (True, ""),
+            )
         self.assertEqual("old control", (self.dest / "control.py").read_text())
         self.assertEqual("old wrapper", self.wrapper.read_text())
         self.assertEqual("old service", self.service.read_text())
-        self.assertIn(("restart", "nacre-brain.service"), commands)
 
     def test_worktree_refusal(self):
         root = self.home / ".local/share/nacre/ai/worktrees/task"

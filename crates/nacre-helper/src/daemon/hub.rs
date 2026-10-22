@@ -345,6 +345,9 @@ impl Hub {
             {
                 methods.extend(super::dashboard_player::methods());
             }
+            if self.snapshot_ref(super::brain::TOPIC).is_some() {
+                methods.extend(super::brain::methods());
+            }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());
             }
