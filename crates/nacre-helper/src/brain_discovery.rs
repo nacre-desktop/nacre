@@ -19,8 +19,8 @@ fn digest(s: &str, n: usize) -> String {
     let bytes = Sha256::digest(s.as_bytes());
     bytes.iter().map(|b| format!("{b:02x}")).collect::<String>()[..n].to_owned()
 }
-fn prefix(s:&str,n:usize)->&str{let mut end=0;for (i,c) in s.char_indices(){if i+c.len_utf8()>n{break;}end=i+c.len_utf8();} &s[..end]}
-fn suffix(s:&str,n:usize)->&str{let mut start=s.len();for (i,_) in s.char_indices().rev(){if s.len()-i>n{break;}start=i;} &s[start..]}
+fn prefix(s:&str,n:usize)->&str{let end=s.char_indices().nth(n).map_or(s.len(),|(i,_)|i);&s[..end]}
+fn suffix(s:&str,n:usize)->&str{let start=if s.chars().count()<=n{0}else{s.char_indices().rev().nth(n).map_or(0,|(i,_)|i)};&s[start..]}
 
 fn slug(s: &str) -> String {
     let normalized: String = s.nfkd().filter(|c| c.is_ascii()).collect::<String>().to_lowercase();
@@ -37,7 +37,7 @@ fn items(v: &Value) -> Vec<String> {
 fn tokens(s:&str)->Vec<String>{
     const STOP:&str="a an the and or but of to in on for with from by at as is are was were be been being this that these those it its my your our their we you they i me he she them have has had do does did can could should would will may into about after before through more most some any all each only other no not new now then than also just how what when where which who why use used using make made first last one two current latest source recorded reviewed confidence entity name parent project worlds topics tags category aliases status evidence note notes knowledge verified reported unverified sourcepage test tests passed check checks result results update updated updating completed complete ready fixed fix added add deployed deploy deployment implement implementation source code files file path paths branch worktree commit git user assistant workflow context saved private local scope preserve existing unchanged previous version changes changed change correct documented requested default actual explicit native shell runtime process processes window windows gui ui cli service services script scripts command commands configuration config settings clean done shows show setup verified validation milestone historical observations observation captured capture memory suggestions suggested subject subjects";
     let stop:BTreeSet<&str>=STOP.split_whitespace().collect();
-    Regex::new(r"[^\W\d_]{3,}").unwrap().find_iter(s).map(|m|m.as_str().to_lowercase()).filter(|w|!stop.contains(w.as_str())).collect()
+    Regex::new(r"[^\W\d_]{3,}").unwrap().find_iter(s).map(|m|m.as_str().case_fold().collect::<String>()).filter(|w|!stop.contains(w.as_str())).collect()
 }
 fn note_similarity(a:&Value,b:&Value)->f64{
     let x=tokens(&format!("{} {}",a["label"].as_str().unwrap_or(""),clean(a["text"].as_str().unwrap_or(""))));
@@ -122,6 +122,8 @@ pub fn organize(notes: &Value, _dense: &Value, _prior: &Value, overrides: &Value
 /// Organize notes in place, preserving the Python helper's `memberships` side effect.
 pub fn organize_mut(notes_value: &mut Value, dense_value: &Value, prior: &Value, overrides: &Value) -> Result<Value> {
     let notes = notes_value.as_array_mut().ok_or_else(|| err("notes must be an array"))?;
+    let dense_rows:Vec<usize>=notes.iter().filter_map(|n|dense_value.get(n["id"].as_str()?).and_then(Value::as_array).filter(|v|!v.is_empty()).map(Vec::len)).collect();
+    for i in 0..dense_rows.len(){for j in i+1..dense_rows.len(){if dense_rows[i]!=dense_rows[j]{return Err(err(if dense_rows[i]>dense_rows[j]{"zip() argument 2 is shorter than argument 1"}else{"zip() argument 2 is longer than argument 1"}));}}}
     let lex=vectors(notes);
     let by_id:BTreeMap<String,Value>=notes.iter().map(|n|(n["id"].as_str().unwrap_or("").to_owned(),n.clone())).collect();
     let mut subjects: BTreeMap<String, Subject> = BTreeMap::new();
