@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "I18nCatalogParams",
+  "description": "`namespace` is the first dotted segment of a message id (`bead`, `launcher`).\n`revision`, when set, must equal the published revision or the call fails with\n`stale_revision`. `after` continues a page: the last id of the previous page.",
+  "type": "object",
+  "properties": {
+    "namespace": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[a-z][a-z0-9]{0,31}$"
+    },
+    "revision": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "after": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "namespace"
+  ]
+}

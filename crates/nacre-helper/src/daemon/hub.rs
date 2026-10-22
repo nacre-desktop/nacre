@@ -335,6 +335,9 @@ impl Hub {
             if self.services.contains_key("ai-chat") {
                 methods.extend(super::ai_chat::methods());
             }
+            if self.settings.is_some() && self.topics.contains_key(nacre_protocol::i18n::TOPIC) {
+                methods.extend(super::i18n::methods());
+            }
             if self.dashboard.is_some() {
                 methods.extend(super::dashboard_extras::methods());
             }

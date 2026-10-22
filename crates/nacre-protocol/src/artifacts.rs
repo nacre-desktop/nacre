@@ -217,6 +217,7 @@ pub fn generate() -> BTreeMap<String, String> {
     out.extend(crate::pill_controls::exports());
     out.extend(crate::ai_chat::exports());
     out.extend(crate::dashboard_extras::exports());
+    out.extend(crate::i18n::exports());
     out
 }
 

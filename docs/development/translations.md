@@ -75,6 +75,13 @@ preview accepts `configuration.language: "pseudo"`; installable theme assets
 include the engine and generated messages. Never test authentication or change
 someone's live login configuration to check translations.
 
+## Other shells (Bead)
+
+The daemon publishes the language and catalog pages (`i18n` topic and
+`i18n.catalog`, spec N0035). Bead-only strings use `bead.<surface>.<name>` IDs in the
+same `en.json` and `context.json`; `tools/i18n/check.py` does not require a Nacre
+caller for `bead.` IDs but still requires context.
+
 ## Check English and pseudo
 
 Language offers **System default** and **English**. Pseudo appears in the Language

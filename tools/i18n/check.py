@@ -207,13 +207,16 @@ def check(root=ROOT):
                 errors.append(
                     f"{path.relative_to(root)}:{line}: Rust fallback/ID mismatch: {key}"
                 )
+    # Bead's `bead.*` strings are referenced by Bead's code, not by this repo; the
+    # shared catalog still requires valid IDs and translator context for them.
+    external = {key for key in english if key.startswith("bead.")}
     for key in sorted(used - english.keys()):
         errors.append("Missing English ID: " + key)
-    for key in sorted(english.keys() - used - compatibility):
+    for key in sorted(english.keys() - used - compatibility - external):
         errors.append("Unused English ID: " + key)
     for key in sorted(context.keys() - english.keys()):
         errors.append("Unused translator context: " + key)
-    for key in sorted((used | compatibility) - context.keys()):
+    for key in sorted((used | compatibility | external) - context.keys()):
         errors.append("Missing translator context: " + key)
     for key, value in english.items():
         if not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+", key):

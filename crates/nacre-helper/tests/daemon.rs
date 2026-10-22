@@ -3030,3 +3030,103 @@ emit({'type':'assistant','message':{'content':[{'type':'text','text':'daemon hos
     daemon.0.wait()?;
     Ok(())
 }
+
+#[test]
+fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("i18n-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let private = home.path().join("private");
+    fs::create_dir(&private)?;
+    fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+    let endpoint = private.join("daemon.sock");
+    let config = home.path().join("config/nacre");
+    let tools = home.path().join("tree/tools");
+    let catalog = home.path().join("tree/shell/i18n");
+    for directory in [&config, &tools, &catalog] {
+        fs::create_dir_all(directory)?;
+    }
+    let desktop = config.join("desktop.json");
+    fs::write(&desktop, br#"{"version":3,"language":"en"}"#)?;
+    fs::write(
+        catalog.join("en.json"),
+        br#"{"bead.bar.clock":"Clock {zone}","bead.panel.windows":{"one":"{count} window","other":"{count} windows"},"launcher.search":"Search"}"#,
+    )?;
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let _daemon = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NACRE_DEVELOPER_MODE", "1")
+            .env("NACRE_HELPER_TOOLS", &tools)
+            .env("NOTIFY_SOCKET", &notify)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    notifications.recv(&mut [0; 256])?;
+    let call = |method: &str, params: Value| -> Result<Option<Value>> {
+        let output = command(home.path(), &source_path, &endpoint)
+            .args(["ctl", "call", method, &params.to_string()])
+            .output()?;
+        Ok(output
+            .status
+            .success()
+            .then(|| serde_json::from_slice(&output.stdout))
+            .transpose()?)
+    };
+    let until = |what: &str, mut check: Box<dyn FnMut() -> Result<bool> + '_>| -> Result<()> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while !check()? {
+            if Instant::now() > deadline {
+                return Err(format!("Timed out waiting for {what}").into());
+            }
+            thread::sleep(Duration::from_millis(20));
+        }
+        Ok(())
+    };
+    let mut english = None;
+    until(
+        "the English catalog",
+        Box::new(|| {
+            english = call("i18n.catalog", json!({"namespace":"bead","revision":1}))?;
+            Ok(english.is_some())
+        }),
+    )?;
+    let english = english.unwrap();
+    assert_eq!(english["revision"], 1);
+    assert_eq!(english["entries"]["bead.bar.clock"], "Clock {zone}");
+    assert_eq!(
+        english["entries"]["bead.panel.windows"]["other"],
+        "{count} windows"
+    );
+    assert!(english["entries"].get("launcher.search").is_none() && english.get("next").is_none());
+
+    fs::write(&desktop, br#"{"version":3,"language":"pseudo"}"#)?;
+    until(
+        "the revision bump",
+        Box::new(|| {
+            Ok(
+                call("i18n.catalog", json!({"namespace":"bead","revision":1}))?.is_none()
+                    && call("i18n.catalog", json!({"namespace":"bead","revision":2}))?.is_some(),
+            )
+        }),
+    )?;
+    let pseudo = call("i18n.catalog", json!({"namespace":"bead"}))?.unwrap();
+    assert_eq!(pseudo["revision"], 2);
+    let clock = pseudo["entries"]["bead.bar.clock"].as_str().unwrap();
+    assert!(
+        clock.starts_with('[') && clock.contains("{zone}"),
+        "{clock}"
+    );
+    for bad in [
+        json!({"namespace":"../x"}),
+        json!({"namespace":"bead","extra":1}),
+        json!({"namespace":"bead","revision":0}),
+    ] {
+        assert!(call("i18n.catalog", bad)?.is_none());
+    }
+    Ok(())
+}

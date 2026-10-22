@@ -243,6 +243,25 @@ class CoverageTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     guard.check(root)
 
+    def test_bead_namespace_is_exempt_from_unused_but_needs_context(self):
+        for english, context, error in (
+            ({"bead.bar.clock": "Clock"}, None, ""),
+            ({"bead.bar.clock": "Clock"}, {}, "Missing translator context"),
+            ({"other.unused": "y"}, None, "Unused English ID: other.unused"),
+        ):
+            with self.subTest(english=english), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                self.fixture(root, english, "Item {}")
+                if context is not None:
+                    (root / "nacre/shell/i18n/context.json").write_text(
+                        json.dumps(context)
+                    )
+                if error:
+                    with self.assertRaisesRegex(ValueError, error):
+                        guard.check(root)
+                else:
+                    guard.check(root)
+
     def test_conditional_plural_ids_are_tracked(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

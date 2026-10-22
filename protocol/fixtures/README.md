@@ -44,3 +44,7 @@ The bar-action methods are implemented by N0031; availability still depends on
 the daemon's safe mode and backend readiness. Use IDs from the current topic
 and inspect the connection's method registry. Views and anchors remain local
 to each shell; see [N0031](../../docs/specs/0031-shell-action-routes.md).
+
+The `i18n` transcript (N0035) shows the language topic, a paged `i18n.catalog`
+and the `stale_revision` failure after a language change; see
+[N0035](../../docs/specs/0035-i18n-publication-contract.md).

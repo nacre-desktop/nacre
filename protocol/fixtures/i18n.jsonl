@@ -1,0 +1,8 @@
+{"t":"snap","topic":"i18n","seq":0,"data":{"language":"en","fallback":"en","revision":1}}
+{"t":"call","id":601,"m":"i18n.catalog","p":{"namespace":"bead","revision":1}}
+{"t":"ret","id":601,"ok":{"revision":1,"entries":{"bead.bar.clock":"Clock","bead.panel.windows":{"one":"{count} window","other":"{count} windows"}},"next":"bead.panel.windows"}}
+{"t":"call","id":602,"m":"i18n.catalog","p":{"namespace":"bead","revision":1,"after":"bead.panel.windows"}}
+{"t":"ret","id":602,"ok":{"revision":1,"entries":{"bead.panel.workspaces":"Workspaces"}}}
+{"t":"patch","topic":"i18n","base":0,"seq":1,"data":{"language":"nb","revision":2}}
+{"t":"call","id":603,"m":"i18n.catalog","p":{"namespace":"bead","revision":1}}
+{"t":"ret","id":603,"err":{"code":"stale_revision","message":"Language changed; refresh the catalog","retry":true}}

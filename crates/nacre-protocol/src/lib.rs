@@ -9,6 +9,7 @@ pub mod core_services;
 pub mod dashboard_extras;
 pub mod framing;
 pub mod helpers;
+pub mod i18n;
 pub mod menu;
 pub mod network;
 pub mod notifications;

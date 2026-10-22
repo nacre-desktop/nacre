@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "I18nCatalog",
+  "description": "`entries` holds ids under the requested namespace, sorted. `next` is present\nwhen more remain: pass it as `after`.",
+  "type": "object",
+  "properties": {
+    "revision": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "entries": {
+      "type": "object",
+      "maxProperties": 200,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 128
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/Message"
+      }
+    },
+    "next": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "revision",
+    "entries"
+  ],
+  "$defs": {
+    "Message": {
+      "description": "Plain text, or `{one, other}` forms selected by a `count` argument. Texts use\n`{name}` placeholders the shell substitutes; pseudo text arrives already\ntransformed.",
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 1024
+        },
+        {
+          "$ref": "#/$defs/Plural"
+        }
+      ]
+    },
+    "Plural": {
+      "type": "object",
+      "properties": {
+        "one": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "other": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "one",
+        "other"
+      ]
+    }
+  }
+}

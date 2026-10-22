@@ -576,6 +576,13 @@ Dashboard extras (N0034) publish `dashboard.focus`, `clipboard`, `screenshots`,
 `clipboard.copy|clear`, `screenshots.open` and `ai.usage.refresh`; see the spec for
 the exact shapes, privacy bounds and Do Not Disturb ownership.
 
+UI language (N0035): topic `i18n {language, fallback, revision}` and method
+`i18n.catalog {namespace, revision?, after?}`, which returns one bounded page
+(<= 200 entries, 32 KiB) of a namespace's messages in the active language with the
+English fallback applied. The revision increases when the language changes; a stale
+revision fails with `stale_revision`. Bead strings use the `bead.*` namespace; see
+the spec.
+
 `settings.provider {store,value,rev}` admits only the existing colors, wallpaper
 picker, dashboard preferences, CLI accent, default-app initialization, and launcher
 workflow providers. Their exact store IDs are `colors`, `wallpaper-picker`,

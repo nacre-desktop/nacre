@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Plural",
+  "type": "object",
+  "properties": {
+    "one": {
+      "type": "string",
+      "maxLength": 1024
+    },
+    "other": {
+      "type": "string",
+      "maxLength": 1024
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "one",
+    "other"
+  ]
+}

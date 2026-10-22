@@ -69,6 +69,7 @@ async fn dispatch(
         method if method.starts_with("ai.chat.") && !hub.borrow().safe => {
             super::ai_chat::dispatch(hub, method, params).await
         }
+        "i18n.catalog" if !hub.borrow().safe => super::i18n::catalog(&hub, params),
         method if super::dashboard_extras::handles(method) && !hub.borrow().safe => {
             super::dashboard_extras::dispatch(hub, method, params).await
         }

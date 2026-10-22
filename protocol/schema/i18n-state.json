@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "I18nState",
+  "description": "`language` is the language the catalog serves (`en`, `pseudo` or a tag such as\n`nb`); `fallback` is the language used for ids a translation lacks. `revision`\nstarts at 1 per daemon run and increases whenever `language` changes.",
+  "type": "object",
+  "properties": {
+    "language": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 35,
+      "pattern": "^(pseudo|[a-z]{2,3}([-_][A-Za-z0-9]{1,8}){0,3})$"
+    },
+    "fallback": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 35,
+      "pattern": "^(pseudo|[a-z]{2,3}([-_][A-Za-z0-9]{1,8}){0,3})$"
+    },
+    "revision": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "language",
+    "fallback",
+    "revision"
+  ]
+}

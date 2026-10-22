@@ -258,7 +258,30 @@ fn language_tag(value: &str) -> bool {
     }) && parts
         .all(|part| !part.is_empty() && part.bytes().all(|byte| byte.is_ascii_alphanumeric()))
 }
-fn translations(paths: &Paths, language: &str) -> Result<Value> {
+/// The language whose catalog the UI uses: `NACRE_LANGUAGE`, else the desktop
+/// setting; `system` follows the locale. Anything that is not a language tag is English.
+pub(super) fn message_language(settings: &Value) -> String {
+    let requested = std::env::var("NACRE_LANGUAGE")
+        .ok()
+        .filter(|value| !value.is_empty())
+        .or_else(|| settings["language"].as_str().map(str::to_owned))
+        .unwrap_or_else(|| "system".into());
+    let chosen = if requested == "system" {
+        locale()
+            .split(['.', '@', '_'])
+            .next()
+            .unwrap_or("en")
+            .to_owned()
+    } else {
+        requested
+    };
+    if chosen == "pseudo" || language_tag(&chosen) {
+        chosen
+    } else {
+        "en".into()
+    }
+}
+pub(super) fn translations(paths: &Paths, language: &str) -> Result<Value> {
     if let Some(parent) = paths.assets().parent() {
         for name in ["source/i18n", "shell/i18n"] {
             let directory = parent.join(name);
@@ -299,15 +322,8 @@ fn load(paths: &Paths, roots: &[PathBuf], preferences: Value) -> Result<Loaded> 
     } else {
         "en".into()
     };
-    let message_language = if requested == "pseudo" {
-        "pseudo"
-    } else if requested == "system" {
-        language.split('_').next().unwrap_or("en")
-    } else if language_tag(&requested) {
-        &requested
-    } else {
-        "en"
-    };
+    let message_language = message_language(&settings);
+    let message_language = message_language.as_str();
     let translations = translations(paths, message_language)?;
     let entries = desktop::scan(roots, &language)?;
     let mut warnings: usize = entries

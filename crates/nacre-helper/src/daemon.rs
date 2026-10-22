@@ -14,6 +14,7 @@ pub mod dashboard_metrics;
 pub mod dashboard_player;
 pub mod helpers;
 pub mod hub;
+pub mod i18n;
 pub mod menu;
 pub mod menu_worker;
 pub mod network;

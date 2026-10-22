@@ -41,7 +41,7 @@ pub struct Service {
     changed: Notify,
     durable_changed: Notify,
     hub: Weak<RefCell<super::hub::Hub>>,
-    paths: Paths,
+    pub(super) paths: Paths,
     writer_lease: Option<Arc<WriterLease>>,
     mutations: Cell<usize>,
     #[cfg(test)]
@@ -161,14 +161,14 @@ impl Service {
     }
 
     fn publish(&self, store: &Store) -> Result<()> {
-        self.hub
-            .upgrade()
-            .ok_or("Settings hub ended")?
-            .borrow_mut()
-            .publish(
-                &topic(&store.schema.id),
-                serde_json::to_value(&store.snapshot)?,
-            )?;
+        let hub = self.hub.upgrade().ok_or("Settings hub ended")?;
+        hub.borrow_mut().publish(
+            &topic(&store.schema.id),
+            serde_json::to_value(&store.snapshot)?,
+        )?;
+        if store.schema.id == "desktop" {
+            super::i18n::update(&hub, &store.snapshot.data);
+        }
         Ok(())
     }
 
