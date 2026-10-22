@@ -167,7 +167,10 @@ pub(crate) fn verify_readiness(
     if !valid_secret(nonce) || !valid_secret(candidate) {
         return Ok(false);
     }
-    let path = state.join("auth").join("ports").join(format!("{port}.json"));
+    let path = state
+        .join("auth")
+        .join("ports")
+        .join(format!("{port}.json"));
     let bytes = read_private(&path, 4096)?;
     let session: SessionFile = serde_json::from_slice(&bytes).map_err(io::Error::other)?;
     if !valid_secret(&session.cookie) || !valid_secret(&session.bearer) {
@@ -180,8 +183,8 @@ pub(crate) fn verify_readiness(
 }
 
 fn readiness_mac(bearer: &str, port: u16, nonce: &str) -> String {
-    let mut mac = Hmac::<Sha256>::new_from_slice(bearer.as_bytes())
-        .expect("HMAC accepts keys of any length");
+    let mut mac =
+        Hmac::<Sha256>::new_from_slice(bearer.as_bytes()).expect("HMAC accepts keys of any length");
     mac.update(READINESS_DOMAIN);
     mac.update(&port.to_be_bytes());
     mac.update(nonce.as_bytes());
@@ -571,10 +574,9 @@ mod tests {
         assert!(!verify_readiness(dir.path(), port, &nonce, &other_port_proof).unwrap());
 
         let session_path = dir.path().join(format!("auth/ports/{port}.json"));
-        let mut changed = serde_json::from_slice::<SessionFile>(
-            &read_private(&session_path, 4096).unwrap(),
-        )
-        .unwrap();
+        let mut changed =
+            serde_json::from_slice::<SessionFile>(&read_private(&session_path, 4096).unwrap())
+                .unwrap();
         changed.bearer = random_hex().unwrap();
         changed.expires = 1;
         write_private(
@@ -607,13 +609,7 @@ mod tests {
         fs::create_dir_all(target.join("auth/ports")).unwrap();
         let state_link = dir.path().join("linked");
         symlink(&target, &state_link).unwrap();
-        assert!(verify_readiness(
-            &state_link,
-            17843,
-            &"a".repeat(64),
-            &"b".repeat(64)
-        )
-        .is_err());
+        assert!(verify_readiness(&state_link, 17843, &"a".repeat(64), &"b".repeat(64)).is_err());
 
         let private_state = dir.path().join("private");
         let auth = BrowserAuth::open(&private_state, 17844).unwrap();

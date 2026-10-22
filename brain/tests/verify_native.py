@@ -439,6 +439,8 @@ def compare_discovery(binary: Path):
 
 
 GRAPH_FILES = {
+    "ordinary.md": "# Ordinary page\nWorlds: Audio\nPublic root Markdown fixture.\n",
+    "custom/reference.md": "# Custom reference\nWorlds: Audio\nPublic custom-folder fixture.\n",
     "inbox/anchor-a.md": "# A\nWorlds: First world\nprism grating spectroscopy\n",
     "inbox/anchor-b.md": "# B\nWorlds: Second world\nprism grating spectroscopy\n",
     "inbox/uncertain.md": "# Uncertain\nprism grating spectroscopy\n",
@@ -524,6 +526,20 @@ def compare_graph(binary: Path):
             }
         )
         native_graph = native_call(binary, "brain-control", "graph", {}, env)
+        configured_env = env.copy()
+        configured_env.pop("NACRE_BRAIN_DIR", None)
+        configured_env["NACRE_BRAIN"] = str(native_vault)
+        for relative in ["ordinary.md", "custom/reference.md"]:
+            resolved = native_call(
+                binary,
+                "brain-control",
+                "note_path",
+                {"args": [relative]},
+                configured_env,
+            )
+            assert resolved == str(native_vault / relative), (
+                "web lookup inherited the CLI kind restriction"
+            )
         expected = graph_projection(python_graph)
         actual = graph_projection(native_graph)
         if canonical(expected) != canonical(actual):

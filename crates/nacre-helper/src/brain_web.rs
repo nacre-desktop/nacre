@@ -206,13 +206,12 @@ fn write_json(p: &Path, v: &Value) -> Result<()> {
     Ok(())
 }
 pub fn note_path(relative: &str) -> Result<PathBuf> {
-    let p = note_path_at(&vault()?, relative)?;
-    if env::var_os("NACRE_BRAIN_DIR").is_none() {
-        brain_data::validate_note_path(relative)
-            .map_err(|_| -> crate::Error { "Note is outside the managed Markdown vault".into() })?;
-    }
-    Ok(p)
+    // Web browsing covers every non-hidden Markdown page, including root and
+    // user-defined folders; the CLI/sync data layer intentionally has a narrower
+    // managed-kind allowlist. Both share the read-only configured vault root.
+    note_path_at(&vault()?, relative)
 }
+
 fn note_path_at(root: &Path, relative: &str) -> Result<PathBuf> {
     let failure = || -> crate::Error { "Note is outside the managed Markdown vault".into() };
     let path = Path::new(relative);

@@ -44,6 +44,7 @@ fs.cpSync(webSource, installedWeb, { recursive: true });
 const today = new Date().toISOString().slice(0, 10);
 const fixtureSecret = 'PRIVATE_FIXTURE_NOTE_ONLY_7b93';
 const files = {
+  'allowed.md': '# Root fixture\nWorlds: QA World\nPublic root fixture.\n',
   'wiki/qa-world.md': '# QA World\nEntity: world\nName: QA World\nProject: qa-world\nAliases: Quality fixture\n\nPublic test entity.\n',
   'inbox/qa.md': `# QA public note\nRecorded: ${today}T12:00:00+00:00\nConfidence: verified\nWorlds: QA World\nSource: browser fixture\n\nwaveform search fixture ${fixtureSecret}\n`,
   'projects/release.md': `# QA release note\nRecorded: ${today}T12:00:00+00:00\nConfidence: reported\nWorlds: QA World\nSource: browser fixture\n\nA public release fixture links to [[qa]].\n`,
@@ -74,12 +75,13 @@ const nativeUrl = `http://127.0.0.1:${brainPort}`;
 const env = {
   ...process.env,
   HOME: home,
-  NACRE_BRAIN_DIR: vault,
+  NACRE_BRAIN: vault,
   NACRE_BRAIN_SEMANTICS: '0',
   NACRE_BRAIN_PORT: String(brainPort),
   NACRE_BRAIN_IDLE_SECONDS: '900',
 };
 for (const key of [
+  'NACRE_BRAIN_DIR',
   'NIRI_SOCKET',
   'HYPRLAND_INSTANCE_SIGNATURE',
   'WAYLAND_DISPLAY',
@@ -222,9 +224,9 @@ try {
   await cdp('Network.enable');
   await cdp('Page.enable');
   await cdp('Page.navigate', { url: openPage() });
-  await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 3'), 'Brain graph');
+  await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'), 'Brain graph');
   const graph = await evaluate('({count:graph.noteCount,nodes:graph.nodes.length,subjects:subjects().length})');
-  if (graph.count !== 3 || graph.subjects < 1) throw new Error(`unexpected fixture graph ${JSON.stringify(graph)}`);
+  if (graph.count !== 4 || graph.subjects < 1) throw new Error(`unexpected fixture graph ${JSON.stringify(graph)}`);
 
   await evaluate('$("search").value="waveform";$("search").dispatchEvent(new Event("input"))');
   await until(() => evaluate('searchIds !== null && searchIds.size > 0'), 'full-text search');
@@ -236,6 +238,9 @@ try {
   await until(() => evaluate('document.querySelector(".reader")?.textContent.includes("waveform search fixture")'), 'note reader');
   const sameOrigin = await evaluate(`fetch("/api/note?path=inbox/qa.md").then(async r=>({status:r.status,text:(await r.json()).text}))`);
   if (sameOrigin.status !== 200 || !sameOrigin.text.includes(fixtureSecret)) throw new Error('same-origin note API did not return fixture content');
+
+  const rootNote = await evaluate('fetch("/api/note?path=allowed.md").then(async response=>({status:response.status,text:(await response.json()).text}))');
+  if (rootNote.status !== 200 || !rootNote.text.includes('Public root fixture')) throw new Error('configured-vault root Markdown page was rejected');
 
   const assignment = await evaluate(`fetch("/api/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"assign-note",value:JSON.stringify({path:"inbox/qa.md",subjects:["Browser Fixture"]})})}).then(async r=>({status:r.status,body:await r.text()}))`);
   if (assignment.status !== 200 || !JSON.parse(assignment.body).ok) throw new Error(`allowed same-origin assignment failed: ${JSON.stringify(assignment)}`);
@@ -262,7 +267,7 @@ try {
 
   const storedCredential = await evaluate('localStorage.getItem("nacre-brain-authorization")');
   await cdp('Page.navigate',{url:nativeUrl+'/#nacre-auth='+'0'.repeat(64)});
-  await until(()=>evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 3'),'invalid credential fragment rejected');
+  await until(()=>evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'),'invalid credential fragment rejected');
   if (await evaluate('localStorage.getItem("nacre-brain-authorization")') !== storedCredential) throw new Error('unverified fragment poisoned the origin credential');
 
   const cookiesBefore = await cdp('Network.getAllCookies');
@@ -309,7 +314,7 @@ try {
   await until(() => evaluate('!!localStorage.getItem("nacre-brain-authorization")'), 'handoff credential restoration');
   await fetch(`http://127.0.0.1:${cdpPort}/json/close/${handoffTarget.id}`).catch(() => {});
   await cdp('Page.navigate', { url: nativeUrl + '/' });
-  await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 3'), 'Brain graph after restart');
+  await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'), 'Brain graph after restart');
   const cookiesAfter = await cdp('Network.getAllCookies');
   const persistentCookie = cookiesAfter.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
   if (!persistentCookie || persistentCookie.value !== firstCookie) throw new Error('browser session cookie did not survive server restart');
@@ -322,6 +327,7 @@ try {
     graph,
     searchCount,
     noteReader: 'passed',
+    rootMarkdownStatus: rootNote.status,
     sameOriginNoteStatus: sameOrigin.status,
     allowedAssignmentStatus: assignment.status,
     bootstrapReplayStatus: replay.status,

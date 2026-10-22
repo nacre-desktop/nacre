@@ -129,9 +129,7 @@ where
                                 let proof = request.headers.remove("x-nacre-internal-proof");
                                 let mut response = callback(request);
                                 if let Some(proof) = proof {
-                                    response
-                                        .headers
-                                        .push(("X-Nacre-Brain-Proof".into(), proof));
+                                    response.headers.push(("X-Nacre-Brain-Proof".into(), proof));
                                 }
                                 response
                             }
@@ -735,7 +733,7 @@ mod tests {
         .unwrap();
         let mut response = Vec::new();
         client.read_to_end(&mut response).unwrap();
-        assert!(response.starts_with("HTTP/1.1 400 Bad Request"));
+        assert!(response.starts_with(b"HTTP/1.1 400 Bad Request"));
         server.join().unwrap();
     }
 
