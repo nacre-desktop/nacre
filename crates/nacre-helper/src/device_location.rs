@@ -56,16 +56,16 @@ pub fn validate_fix(fix: &Value, now: f64) -> Result<Value> {
 }
 
 fn coordinate(text: &str) -> Option<f64> {
-    let (body, hemisphere) = text.split_at(text.len().checked_sub(1)?);
-    let (degree, rest) = body.split_at(body.len().checked_sub(4)?);
+    let (sign, body) = text.split_at(1);
+    if !matches!(sign, "+" | "-") || body.len() < 5 {
+        return None;
+    }
+    let degree_width = body.len().checked_sub(4)?;
+    let (degree, rest) = body.split_at(degree_width);
     let minutes = rest.get(..2)?.parse::<f64>().ok()?;
     let seconds = rest.get(2..)?.parse::<f64>().ok()?;
     let value = degree.parse::<f64>().ok()? + minutes / 60.0 + seconds / 3600.0;
-    Some(if hemisphere == "S" || hemisphere == "W" {
-        -value
-    } else {
-        value
-    })
+    Some(if sign == "-" { -value } else { value })
 }
 fn nearest_zone(latitude: f64, longitude: f64) -> Result<String> {
     let content = std::fs::read_to_string("/usr/share/zoneinfo/zone.tab")?;
@@ -263,6 +263,7 @@ mod tests {
     fn offline_zone_table_resolves_its_representative_point() {
         assert_eq!(coordinate("+415100"), Some(41.85));
         assert_eq!(coordinate("-0873900"), Some(-87.65));
+        assert!((coordinate("-335200").unwrap() + 33.8666666667).abs() < 1e-9);
         assert_eq!(nearest_zone(41.85, -87.65).unwrap(), "America/Chicago");
     }
 }
