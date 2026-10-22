@@ -366,3 +366,43 @@ else:
     );
     assert!(!home.join(".claude/daemon/roster.json").exists());
 }
+
+#[test]
+fn codex_resume_passes_inherited_history_to_an_existing_tmux_server() {
+    let temp = tempdir().unwrap();
+    let home = temp.path();
+    setup(home);
+    script(
+        &home.join(".local/bin/tmux"),
+        "#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n",
+    );
+    let history = home.join("inherited history");
+    let output = Command::new(env!("CARGO_BIN_EXE_nacre-helper"))
+        .args([
+            "nacre-ai-chat",
+            "resume",
+            "--project",
+            "fixture",
+            "--thread-id",
+            "thread-one",
+        ])
+        .env_clear()
+        .env("HOME", home)
+        .env(
+            "PATH",
+            format!("{}:/usr/bin:/bin", home.join(".local/bin").display()),
+        )
+        .env("NACRE_AI_HISTORY_HOME", &history)
+        .output()
+        .unwrap();
+    ok(&output);
+    let argv: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert!(argv
+        .as_array()
+        .unwrap()
+        .last()
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .contains(&format!("NACRE_AI_HISTORY_HOME={}", history.display())));
+}

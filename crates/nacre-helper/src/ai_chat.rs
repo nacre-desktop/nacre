@@ -555,7 +555,12 @@ fn knowledge(name: &str, args: &Value, helper: &Path) -> Result<String> {
     let stdout = out.stdout;
     let stderr = out.stderr;
     if !status.success() && !(name == "find_knowledge" && status.code() == Some(1)) {
-        return Err(String::from_utf8_lossy(&stderr).trim().to_owned().into());
+        let message = String::from_utf8_lossy(&stderr);
+        return Err(if message.trim().is_empty() {
+            "Knowledge request failed".into()
+        } else {
+            message.trim().to_owned().into()
+        });
     }
     let text = String::from_utf8_lossy(&stdout);
     Ok(if text.is_empty() {
@@ -936,6 +941,10 @@ fn run_inner(args: &[String]) -> Result<i32> {
             }
             if let Some(history) = history {
                 assignments.push(format!("NACRE_AI_HISTORY_HOME={}", history.display()));
+            } else if let Ok(history) = env::var("NACRE_AI_HISTORY_HOME") {
+                if !history.is_empty() {
+                    assignments.push(format!("NACRE_AI_HISTORY_HOME={history}"));
+                }
             }
             let shell = argv
                 .iter()

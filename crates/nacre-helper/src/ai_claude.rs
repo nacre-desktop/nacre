@@ -642,9 +642,10 @@ fn title_from(records: &[Value]) -> Option<String> {
         }
     }
     custom
-        .or(ai_title)
-        .or(last_prompt)
-        .or(summary)
+        .filter(|value| !value.is_empty())
+        .or(ai_title.filter(|value| !value.is_empty()))
+        .or(last_prompt.filter(|value| !value.is_empty()))
+        .or(summary.filter(|value| !value.is_empty()))
         .or_else(|| first_prompt(records))
 }
 fn history(
@@ -1317,6 +1318,7 @@ mod tests {
             title_from(&[prompt.clone(), recent]).as_deref(),
             Some("Recent prompt")
         );
+        assert_eq!(title_from(&[prompt.clone(), json!({"type":"custom-title","customTitle":"Older title"}), json!({"type":"custom-title","customTitle":"","aiTitle":"","summary":"","lastPrompt":""})]).as_deref(), Some("first prompt"));
         assert_eq!(title_from(&[prompt]).as_deref(), Some("first prompt"));
         assert_eq!(
             parse_worktree_list(
@@ -1498,5 +1500,48 @@ mod upstream_contracts {
             title_from(&[json!({"summary":"Older","lastPrompt":"Newest"})]).as_deref(),
             Some("Newest")
         );
+    }
+}
+
+#[cfg(test)]
+mod file_limits {
+    use super::*;
+    #[test]
+    fn oversized_linked_and_non_regular_session_files_are_refused() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("synthetic.jsonl");
+        fs::File::create(&path)
+            .unwrap()
+            .set_len(MAX_FILE + 1)
+            .unwrap();
+        assert!(read_file(&path).is_err());
+        fs::write(&path, "synthetic marker").unwrap();
+        assert!(read_file_limited(&path, 1).is_err());
+        let hardlink = temp.path().join("hardlink");
+        fs::hard_link(&path, &hardlink).unwrap();
+        assert!(read_file(&path).is_err());
+        fs::remove_file(hardlink).unwrap();
+        let link = temp.path().join("link");
+        std::os::unix::fs::symlink(&path, &link).unwrap();
+        assert!(read_file(&link).is_err());
+        assert!(read_file(temp.path()).is_err());
+        assert_eq!(fs::read_to_string(path).unwrap(), "synthetic marker");
+    }
+    #[test]
+    fn oversized_records_are_skipped_without_hiding_later_valid_rows() {
+        use std::io::Write;
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("synthetic.jsonl");
+        fs::File::create(&path)
+            .unwrap()
+            .set_len(MAX_LINE as u64 + 1)
+            .unwrap();
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .unwrap()
+            .write_all(b"\n{\"publicFixture\":true}\n")
+            .unwrap();
+        assert_eq!(jsonl(&path), vec![json!({"publicFixture":true})]);
     }
 }
