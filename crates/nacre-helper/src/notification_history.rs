@@ -141,7 +141,7 @@ pub fn load(path: &Path, policy: &Value) -> Result<Value> {
     }
     Ok(Value::Array(result))
 }
-pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
+fn prepare_rows(rows: &Value, policy: &Value) -> Result<Value> {
     let rows = rows
         .as_array()
         .filter(|rows| rows.iter().all(Value::is_object))
@@ -156,30 +156,39 @@ pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
         policy,
         chrono::Utc::now().timestamp(),
     )?;
+    Ok(Value::Array(selected))
+}
+
+fn write_rows(path: &Path, selected: &Value) -> Result<()> {
     let parent = path.parent().ok_or("Invalid notification history path")?;
     fs::create_dir_all(parent)?;
     fs::set_permissions(parent, fs::Permissions::from_mode(0o700))?;
-    crate::state::write_as(
-        path,
-        Some(crate::state::by_id("notifications")?),
-        &Value::Array(selected),
-    )?;
+    crate::state::write_as(path, Some(crate::state::by_id("notifications")?), selected)?;
     Ok(())
 }
+pub fn save(path: &Path, rows: &Value, policy: &Value) -> Result<()> {
+    write_rows(path, &prepare_rows(rows, policy)?)
+}
+
 pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Value>> {
     let paths = Paths::environment()?;
     let path = paths.state.join("shell/notifications/history.json");
     let parent = path.parent().ok_or("Invalid notification history path")?;
-    // The daemon's Store holds this same lease for its lifetime. Legacy helper
-    // reads/writes therefore refuse while the daemon is the history authority.
-    let lease = crate::daemon::writer_lease::WriterLease::acquire(parent)?;
-    lease.ensure_valid()?;
     let policy = policy(&paths)?;
     match arguments {
-        [action] if action == "load" && input.is_none() => Ok(Some(load(&path, &policy)?)),
+        [action] if action == "load" && input.is_none() => {
+            // A missing history read is pure. No writer can hold a lease on a
+            // directory that has not been created, and this branch never saves.
+            if !parent.try_exists()? {
+                return Ok(Some(Value::Array(Vec::new())));
+            }
+            let lease = crate::daemon::writer_lease::WriterLease::acquire_legacy(parent)?;
+            lease.ensure_valid()?;
+            Ok(Some(load(&path, &policy)?))
+        }
         [action] if action == "save" => {
-            save(
-                &path,
+            // Validate before lease creation so rejected input creates no state.
+            let selected = prepare_rows(
                 &input.ok_or_else(|| {
                     tr(
                         "helper.notification-history.invalid-notification-history",
@@ -188,6 +197,9 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
                 })?,
                 &policy,
             )?;
+            let lease = crate::daemon::writer_lease::WriterLease::acquire_legacy(parent)?;
+            lease.ensure_valid()?;
+            write_rows(&path, &selected)?;
             Ok(None)
         }
         _ => Err(tr(

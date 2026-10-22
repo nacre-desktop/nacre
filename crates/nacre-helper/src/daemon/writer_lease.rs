@@ -86,7 +86,7 @@ fn validate_chain(
     Ok(())
 }
 
-fn pin_path(path: &Path, uid: u32) -> Result<PinnedPath> {
+fn pin_path(path: &Path, uid: u32, intermediate_mode: Mode) -> Result<PinnedPath> {
     if !path.is_absolute()
         || path
             .components()
@@ -120,7 +120,12 @@ fn pin_path(path: &Path, uid: u32) -> Result<PinnedPath> {
             Ok(fd) => fd,
             Err(nix::errno::Errno::ENOENT) if !anchor_next => {
                 validate_chain(&dirs, &names[..index], uid, root_uid, false)?;
-                mkdirat(parent, name.as_str(), Mode::from_bits_truncate(0o700))?;
+                let create_mode = if index + 1 == names.len() {
+                    Mode::from_bits_truncate(0o700)
+                } else {
+                    intermediate_mode
+                };
+                mkdirat(parent, name.as_str(), create_mode)?;
                 openat(
                     parent,
                     name.as_str(),
@@ -163,10 +168,25 @@ impl WriterLease {
         Self::acquire_for_paths(config_dir, config_dir)
     }
 
+    /// Legacy single-file helpers historically create ordinary XDG ancestors
+    /// with 0755 permissions. Keep that filesystem convention while retaining
+    /// the same descriptor pinning and writer lock as daemon-owned roots.
+    pub(crate) fn acquire_legacy(path: &Path) -> Result<Self> {
+        Self::acquire_for_paths_with_mode(path, path, Mode::from_bits_truncate(0o755))
+    }
+
     /// Acquire the known config and state roots in stable path order. Roots
     /// resolving to the same directory inode share one lock; all aliases stay
     /// pinned and validated. A later failure drops every earlier lock.
     pub fn acquire_for_paths(config_dir: &Path, state_dir: &Path) -> Result<Self> {
+        Self::acquire_for_paths_with_mode(config_dir, state_dir, Mode::from_bits_truncate(0o700))
+    }
+
+    fn acquire_for_paths_with_mode(
+        config_dir: &Path,
+        state_dir: &Path,
+        intermediate_mode: Mode,
+    ) -> Result<Self> {
         let uid = Uid::current().as_raw();
         let config_path = config_dir.to_path_buf();
         let state_path = state_dir.to_path_buf();
@@ -185,7 +205,7 @@ impl WriterLease {
             {
                 continue;
             }
-            let pinned = pin_path(&path, uid)?;
+            let pinned = pin_path(&path, uid, intermediate_mode)?;
             let meta = fstat(pinned.dirs.last().ok_or(BUSY)?)?;
             if let Some(existing) = roots.iter_mut().find(|root| {
                 let candidate = root.paths.first().and_then(|p| p.dirs.last());
@@ -301,6 +321,37 @@ mod tests {
         let other = WriterLease::acquire(&second).unwrap();
         other.ensure_valid().unwrap();
         lease.ensure_valid().unwrap();
+    }
+
+    #[test]
+    fn legacy_creation_keeps_xdg_ancestor_modes_and_writer_exclusion() {
+        let home = private_home();
+        let destination = home.path().join(".config/nacre");
+        let lease = WriterLease::acquire_legacy(&destination).unwrap();
+        assert_eq!(
+            std::fs::metadata(home.path().join(".config"))
+                .unwrap()
+                .mode()
+                & 0o777,
+            0o755
+        );
+        assert_eq!(
+            std::fs::metadata(&destination).unwrap().mode() & 0o777,
+            0o700
+        );
+        assert!(WriterLease::acquire_legacy(&destination).is_err());
+        lease.ensure_valid().unwrap();
+    }
+
+    #[test]
+    fn legacy_creation_rejects_symlink_ancestry_before_creating_children() {
+        let home = private_home();
+        let outside = private_home();
+        let link = home.path().join("redirect");
+        std::os::unix::fs::symlink(outside.path(), &link).unwrap();
+        let destination = link.join("must-not-exist").join("nacre");
+        assert!(WriterLease::acquire_legacy(&destination).is_err());
+        assert!(!outside.path().join("must-not-exist").exists());
     }
 
     #[test]

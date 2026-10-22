@@ -252,7 +252,10 @@ backlight is a separate QML behavior).
 Temporary duplicate: the legacy QML notification owner/history route remains
 beside the opt-in daemon adapter until phase C and owner-approved cutover.
 Delete 7 days after the daemon replacement is trusted and the owner approves
-removal. The shared history lease prevents concurrent writers.
+removal. The shared history lease prevents concurrent writers. Legacy helpers
+preserve their frozen 0755 intermediate-directory creation and pure missing
+reads; the managed producer creates private 0700 directories. Both paths use
+the same pinned lock and final private history directory.
 
 Simplicity review: the daemon adapter adds ownership, bounded native ingress,
 revision-safe controls, independent popup/native clocks, private image validation
