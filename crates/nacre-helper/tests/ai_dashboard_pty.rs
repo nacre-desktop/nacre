@@ -4,8 +4,12 @@ use std::{
     fs::File,
     io::{Read, Write},
     process::{Command, Stdio},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use wait_timeout::ChildExt;
 
@@ -34,6 +38,8 @@ fn run_dashboard(
         .stderr(Stdio::from(slave))
         .spawn()?;
     let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+    let frames = Arc::new(AtomicUsize::new(0));
+    let seen = frames.clone();
     let output = thread::spawn(move || {
         let mut output = Vec::new();
         let mut reader = reader;
@@ -44,6 +50,10 @@ fn run_dashboard(
                 Ok(0) => break,
                 Ok(count) => {
                     output.extend_from_slice(&chunk[..count]);
+                    seen.store(
+                        output.windows(9).filter(|w| *w == b"WORKSPACE").count(),
+                        Ordering::SeqCst,
+                    );
                     if !sent_ready && output.windows(6).any(|window| window == b"?1049h") {
                         let _ = ready_tx.send(());
                         sent_ready = true;
@@ -55,16 +65,32 @@ fn run_dashboard(
         }
         Ok::<_, std::io::Error>(output)
     });
-    ready_rx.recv_timeout(Duration::from_secs(3))?;
+    // Waits are event-driven; the caps only turn a hang into a failure.
+    let wait_for = |count: usize| {
+        let until = Instant::now() + Duration::from_secs(60);
+        while frames.load(Ordering::SeqCst) < count {
+            if Instant::now() > until {
+                return Err(std::io::Error::other("dashboard did not render"));
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
+        Ok(())
+    };
+    ready_rx.recv_timeout(Duration::from_secs(60))?;
+    wait_for(1)?;
     for key in keys {
+        let before = frames.load(Ordering::SeqCst);
         writer.write_all(std::slice::from_ref(key))?;
         writer.flush()?;
         if *key == 27 {
-            thread::sleep(Duration::from_millis(100));
+            // The dashboard reads a lone Esc only after its escape timeout, and
+            // takes a following byte as part of a sequence. Wait for the redraw
+            // that answers the Esc instead of guessing with a sleep.
+            wait_for(before + 1)?;
         }
     }
     let status = child
-        .wait_timeout(Duration::from_secs(5))?
+        .wait_timeout(Duration::from_secs(60))?
         .ok_or_else(|| std::io::Error::other("dashboard did not close after selecting Close"))?;
     let output = output
         .join()
