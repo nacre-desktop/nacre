@@ -15,7 +15,7 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "uwsm/tools/niri-session-runtime.py"
-SOURCE_SHA = "25689b48f666258342145a44651865f18fdd6e1e7c40a49ea51d40c77a5104f7"
+SOURCE_SHA = "647009ab1426a0d97650eb4bf523d0a2d372a5535ebacade67e6bb33a9acb207"
 DESTINATION = (
     ROOT / "crates/nacre-helper/tests/fixtures/niri-session-runtime-reference.json"
 )

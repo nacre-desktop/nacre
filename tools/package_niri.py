@@ -181,6 +181,23 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         'spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"\n'
         'spawn-at-startup "wl-paste" "--watch" "nacre-desktop-extras" "store"\n'
     )
+    # Same session helpers as hypr/conf/autostart.lua (tools/tests/test_session_startup.py
+    # keeps the two sets equal). startup-apps skips apps that already have a window
+    # and nacre-welcome --login honours its own show-once state.
+    entry += "".join(
+        "spawn-at-startup " + " ".join(json.dumps(word) for word in words) + "\n"
+        for words in (
+            ("uwsm", "app", "-t", "scope", "--", "/usr/lib/pam_kwallet_init"),
+            (
+                "uwsm",
+                "app",
+                "--",
+                str(home / ".local/share/nacre/shell/tools/nacre-helper"),
+                "startup-apps",
+            ),
+            ("uwsm", "app", "--", str(home / ".local/bin/nacre-welcome"), "--login"),
+        )
+    )
     entry += "".join("workspace " + json.dumps(name) + "\n" for name in names.values())
     entry += '\ninclude "custom.kdl"\n'
     source = add(config / "config.kdl", entry)

@@ -4,6 +4,7 @@ import hashlib
 import contextlib
 import io
 import os
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -14,12 +15,25 @@ from unittest.mock import patch
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS))
+sys.path.insert(0, str(Path(__file__).parent))
 import package_runtime
 import releases
 import setup
 import package_niri
 import package_managers
 import package_hyprland
+from test_session_startup import SessionStartupTests
+
+
+def autostart_key(argv):
+    """Drop the uwsm wrapper (scope kept) and per-compositor launcher paths."""
+    scope = argv[:5] == ["uwsm", "app", "-t", "scope", "--"]
+    rest = (
+        argv[5:] if scope else argv[3:] if argv[:3] == ["uwsm", "app", "--"] else argv
+    )
+    if Path(rest[0]).name == "startup-apps.sh":  # Hyprland wrapper of the helper
+        rest = ["nacre-helper", "startup-apps"]
+    return scope, tuple([Path(rest[0]).name, *rest[1:]])
 
 
 def load(path, name):
@@ -796,6 +810,27 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn(
                     'spawn-at-startup "wl-paste" "--watch" "nacre-desktop-extras" "store"',
                     config.read_text(),
+                )
+                niri = [
+                    shlex.split(line)[1:]
+                    for line in config.read_text().splitlines()
+                    if line.startswith("spawn-at-startup ")
+                ]
+                if shutil.which("lua"):
+                    # Same session helpers as Hyprland; the only documented
+                    # exception is Niri's own service starter.
+                    hyprland = SessionStartupTests().commands(str(home))
+                    self.assertEqual(
+                        sorted(
+                            autostart_key(argv)
+                            for argv in niri
+                            if argv[0] != "systemctl"
+                        ),
+                        sorted(autostart_key(argv) for argv in hyprland),
+                    )
+                self.assertEqual(
+                    [argv for argv in niri if argv[0] == "systemctl"],
+                    [["systemctl", "--user", "start", "nacre-niri-startup.service"]],
                 )
                 startup = home / ".config/systemd/user/nacre-niri-startup.service"
                 self.assertIn("PartOf=graphical-session.target", startup.read_text())

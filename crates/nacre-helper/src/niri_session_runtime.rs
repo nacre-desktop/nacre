@@ -483,6 +483,31 @@ pub fn prepare_configuration(
     )?;
     text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\n");
     text.push_str("spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\n");
+    // Mirror hypr/conf/autostart.lua; startup-apps and nacre-welcome --login
+    // already deduplicate (window check, show-once claim).
+    let helper = paths
+        .tools()
+        .join("nacre-helper")
+        .to_string_lossy()
+        .into_owned();
+    let welcome = paths
+        .home
+        .join(".local/bin/nacre-welcome")
+        .to_string_lossy()
+        .into_owned();
+    let apps = [
+        vec!["-t", "scope", "--", "/usr/lib/pam_kwallet_init"],
+        vec!["--", helper.as_str(), "startup-apps"],
+        vec!["--", welcome.as_str(), "--login"],
+    ];
+    for words in apps {
+        text.push_str("spawn-at-startup \"uwsm\" \"app\"");
+        for word in words {
+            text.push(' ');
+            text.push_str(&json::encode(&word)?);
+        }
+        text.push('\n');
+    }
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
     fs::write(config.join("config.kdl"), text)?;
     for file in fs::read_dir(&config)? {
@@ -877,6 +902,13 @@ mod tests {
         assert!(root.contains(
             "spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\""
         ));
+        for line in [
+            "spawn-at-startup \"uwsm\" \"app\" \"-t\" \"scope\" \"--\" \"/usr/lib/pam_kwallet_init\"",
+            "\"startup-apps\"\n",
+            "\"--login\"\n",
+        ] {
+            assert!(root.contains(line), "{line}");
+        }
         assert!(root.contains("include \"monitor-workspace-actions.kdl\""));
         assert!(!root.contains("\nworkspace "));
         assert_eq!(
