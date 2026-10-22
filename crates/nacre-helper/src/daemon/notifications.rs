@@ -652,8 +652,8 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     let boot = hub.borrow().boot.clone();
     let mut generation = 0u64;
     let mut rows = store.as_ref().expect("opened store").rows();
-    let mut dirty: Option<Instant> = None;
-    let mut history_dirty = false;
+    let mut history_dirty = store.as_ref().is_some_and(Store::needs_save);
+    let mut dirty = history_dirty.then(|| Instant::now() + FLUSH);
     let mut save_task: Option<SaveTask> = None;
     loop {
         // Re-read the authoritative setting on every ownership reacquisition.

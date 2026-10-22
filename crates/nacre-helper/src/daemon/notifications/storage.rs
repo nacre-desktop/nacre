@@ -25,6 +25,7 @@ pub struct Store {
     rows: Vec<Value>,
     fingerprint: Option<[u8; 32]>,
     health: HistoryStorage,
+    needs_save: bool,
 }
 
 impl Store {
@@ -36,6 +37,7 @@ impl Store {
         }
         let lease = WriterLease::acquire(parent)?;
         let parent_ready = private_dir(&lease, parent);
+        let mut needs_save = false;
         let (rows, fingerprint, health) = if !parent_ready {
             (
                 Vec::new(),
@@ -52,6 +54,7 @@ impl Store {
                     );
                     match filtered {
                         Ok(rows) => {
+                            needs_save = document != Value::Array(rows.clone());
                             let writable = history_writable(&lease, &path);
                             let health = HistoryStorage {
                                 ready: true,
@@ -92,7 +95,12 @@ impl Store {
             rows,
             fingerprint,
             health,
+            needs_save,
         })
+    }
+
+    pub fn needs_save(&self) -> bool {
+        self.needs_save
     }
 
     pub fn rows(&self) -> Vec<Value> {
@@ -151,7 +159,7 @@ impl Store {
             self.health.error = Some(error.clone());
             return Err(error);
         }
-        if selected == self.rows && self.health.error.is_none() {
+        if selected == self.rows && !self.needs_save && self.health.error.is_none() {
             return Ok(());
         }
         if crate::state::write_checked_pinned(
@@ -196,6 +204,7 @@ impl Store {
             )
         })?;
         self.rows = saved;
+        self.needs_save = false;
         self.fingerprint = fingerprint;
         self.health = HistoryStorage {
             ready: true,
@@ -929,6 +938,28 @@ mod tests {
             "open must not prune on disk"
         );
         assert!(WriterLease::acquire(path.parent().unwrap()).is_err());
+    }
+
+    #[test]
+    fn startup_retention_pruning_is_flushed_even_without_new_notifications() {
+        let root = tempfile::tempdir().unwrap();
+        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700)).unwrap();
+        let path = history(root.path());
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::set_permissions(path.parent().unwrap(), fs::Permissions::from_mode(0o700)).unwrap();
+        fs::write(
+            &path,
+            br#"[{"key":"expired","time":"2000-01-01T00:00:00Z","summary":"expired"}]"#,
+        )
+        .unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        let mut store = Store::open(path.clone(), policy()).unwrap();
+        assert!(store.rows().is_empty());
+        assert!(store.needs_save());
+        store.save(&json!([])).unwrap();
+        assert!(!store.needs_save());
+        let disk: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        assert_eq!(disk["items"], json!([]));
     }
 
     #[test]

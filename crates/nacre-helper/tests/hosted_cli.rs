@@ -2,8 +2,8 @@
 use serde_json::{json, Value};
 use std::{
     fs,
-    os::unix::fs::PermissionsExt,
     io::{BufRead, BufReader, Write},
+    os::unix::fs::PermissionsExt,
     path::Path,
     process::{Child, Command, Stdio},
     sync::mpsc,
