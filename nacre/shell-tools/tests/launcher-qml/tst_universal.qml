@@ -1788,7 +1788,7 @@ TestCase {
         const editorIndex = value.entries.findIndex(entry => {
             return entry.id === "editor";
         });
-        tryVerify(function() {
+        tryVerify(function () {
             const aiTile = findChild(grid, "launcherTile_" + aiIndex);
             return aiTile && findChild(aiTile, "nacreAiAppLogo");
         });
