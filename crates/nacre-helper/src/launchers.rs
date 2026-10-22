@@ -26,6 +26,19 @@ fn welcome_helper_lock(paths: &Paths) -> Result<nix::fcntl::Flock<std::fs::File>
         .map_err(|(_, error)| error.into())
 }
 
+fn welcome_json_value(input: &str) -> Result<Value> {
+    serde_json::from_str(input).map_err(|error| {
+        if error.line() == 1
+            && error.column() == 1
+            && error.to_string().starts_with("expected value")
+        {
+            "Expecting value: line 1 column 1 (char 0)".into()
+        } else {
+            error.into()
+        }
+    })
+}
+
 const APP_ROUTES: &[(&str, &[&str])] = &[
     ("terminal", &["kitty"]),
     ("browser", &["google-chrome-stable"]),
@@ -556,6 +569,10 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
     let value_arg = arguments.get(1).map(String::as_str).unwrap_or("");
     let result: Result<Value> = (|| match action {
         "state" | "set-startup" | "set-demo-wallpapers" | "finish-tour" => {
+            let requested = match action {
+                "set-startup" | "set-demo-wallpapers" => Some(welcome_json_value(value_arg)?),
+                _ => None,
+            };
             if action == "set-startup" || action == "set-demo-wallpapers" || action == "finish-tour"
             {
                 let _guard = welcome_helper_lock(&paths)?;
@@ -563,14 +580,14 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
                 let mut prefs = welcome_preferences(&path)?;
                 match action {
                     "set-startup" => {
-                        let value: Value = serde_json::from_str(value_arg)?;
+                        let value = requested.clone().ok_or("Missing Welcome value")?;
                         if !value.is_boolean() {
                             return Err("Welcome startup choice must be a boolean".into());
                         }
                         prefs["showAtLogin"] = value;
                     }
                     "set-demo-wallpapers" => {
-                        let values: Value = serde_json::from_str(value_arg)?;
+                        let values = requested.clone().ok_or("Missing Welcome value")?;
                         let rows = values
                             .as_array()
                             .ok_or("Choose four different local wallpapers")?;
