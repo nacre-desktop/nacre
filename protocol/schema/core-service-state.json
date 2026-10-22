@@ -1038,6 +1038,18 @@
         "actions": {
           "$ref": "#/$defs/Entities_NotificationAction"
         },
+        "default_action": {
+          "description": "Opaque ID of the freedesktop default action, when present. Null means\ncard activation has no default action; the native key stays private.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "timeout_ms": {
           "description": "Resolved policy timeout; zero means no automatic expiry.",
           "type": [
