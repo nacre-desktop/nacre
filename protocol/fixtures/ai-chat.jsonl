@@ -1,0 +1,17 @@
+{"t":"snap","topic":"ai.chat","seq":0,"data":{"available":true,"channels":{}}}
+{"t":"call","id":1,"m":"ai.chat.open","p":{"channel":"p1"}}
+{"t":"patch","topic":"ai.chat","base":0,"seq":1,"data":{"channels":{"p1":{"state":{"defaultProvider":"codex","inWorkspace":false,"provider":"codex","account":"Default","title":"New chat","threadId":"","model":"","features":["attachments"],"composerKey":"fixture-key","busy":false,"status":"","error":""},"messages":{}}}}}
+{"t":"ret","id":1,"ok":{"channel":"p1"}}
+{"t":"call","id":2,"m":"ai.chat.send","p":{"channel":"p1","text":"hello"}}
+{"t":"patch","topic":"ai.chat","base":1,"seq":2,"data":{"channels":{"p1":{"state":{"defaultProvider":"codex","inWorkspace":false,"provider":"codex","account":"Default","title":"New chat","threadId":"","model":"","features":["attachments"],"composerKey":"fixture-key","busy":true,"status":"Connecting","error":""},"messages":{"0000000001":{"id":"user-1","role":"user","text":"hello"}}}}}}
+{"t":"ret","id":2,"ok":{"channel":"p1"}}
+{"t":"patch","topic":"ai.chat","base":2,"seq":3,"data":{"channels":{"p1":{"messages":{"0000000002":{"id":"assistant-1","role":"assistant","text":"stream"}}}}}}
+{"t":"patch","topic":"ai.chat","base":3,"seq":4,"data":{"channels":{"p1":{"state":{"defaultProvider":"codex","inWorkspace":false,"provider":"codex","account":"Default","title":"New chat","threadId":"","model":"","features":["attachments"],"composerKey":"fixture-key","busy":true,"status":"Working","error":"","question":{"id":"approval-1","kind":"approval","questions":[{"id":"approval","question":"Run fixture command?","options":[{"label":"Allow once"},{"label":"Decline"}]}]}}}}}}
+{"t":"call","id":3,"m":"ai.chat.approve","p":{"channel":"p1","id":"approval-1","answers":{"approval":{"answers":["Allow once"]}}}}
+{"t":"ret","id":3,"ok":{"channel":"p1"}}
+{"t":"patch","topic":"ai.chat","base":4,"seq":5,"data":{"channels":{"p1":{"state":{"question":null},"messages":{"0000000002":{"text":"streamed answer"}}}}}}
+{"t":"call","id":4,"m":"ai.chat.cancel","p":{"channel":"p1"}}
+{"t":"ret","id":4,"ok":{"channel":"p1"}}
+{"t":"patch","topic":"ai.chat","base":5,"seq":6,"data":{"channels":{"p1":{"state":{"busy":false,"status":""}}}}}
+{"t":"ev","topic":"ai.chat","name":"send_failed","seq":1,"data":{"channel":"p1","text":"unsent","attachments":[]}}
+{"t":"patch","topic":"ai.chat","base":6,"seq":7,"data":{"channels":{"p1":null}}}

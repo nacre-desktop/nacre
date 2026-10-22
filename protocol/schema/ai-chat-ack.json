@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiAck",
+  "type": "object",
+  "properties": {
+    "channel": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "channel"
+  ]
+}

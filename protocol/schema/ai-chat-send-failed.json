@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiSendFailed",
+  "description": "Event published when the worker refused a submission, so the composer can\nrestore the unsent text.",
+  "type": "object",
+  "properties": {
+    "channel": {
+      "type": "string",
+      "maxLength": 48,
+      "pattern": "^[a-z0-9-]*$"
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 64000
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "required": [
+    "channel",
+    "text",
+    "attachments"
+  ]
+}

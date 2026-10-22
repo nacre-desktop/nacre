@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiApprove",
+  "type": "object",
+  "properties": {
+    "channel": {
+      "type": "string",
+      "maxLength": 48,
+      "pattern": "^[a-z0-9-]*$"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "answers": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "channel",
+    "id",
+    "answers"
+  ]
+}

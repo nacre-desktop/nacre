@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiChat",
+  "type": "object",
+  "properties": {
+    "available": {
+      "type": "boolean"
+    },
+    "channels": {
+      "type": "object",
+      "maxProperties": 4,
+      "propertyNames": {
+        "maxLength": 48,
+        "pattern": "^[a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/AiChannel"
+      }
+    }
+  },
+  "required": [
+    "available",
+    "channels"
+  ],
+  "$defs": {
+    "AiChannel": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/$defs/AiState"
+        },
+        "messages": {
+          "description": "Oldest first; keys are ten-digit creation ordinals.",
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": {
+            "pattern": "^[0-9]{10}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/AiMessage"
+          }
+        },
+        "trimmed": {
+          "description": "Older messages exist beyond the published window.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "state",
+        "messages"
+      ]
+    },
+    "AiState": {
+      "description": "The fields of the N0023 socket `state` event, without its `type`.",
+      "type": "object",
+      "properties": {
+        "defaultProvider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "inWorkspace": {
+          "type": "boolean"
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "account": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "threadId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "model": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        },
+        "composerKey": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "busy": {
+          "type": "boolean"
+        },
+        "status": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "question": {
+          "description": "Approval or question card exactly as the sidebar contract defines it.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "defaultProvider",
+        "inWorkspace",
+        "provider",
+        "account",
+        "title",
+        "threadId",
+        "model",
+        "features",
+        "composerKey",
+        "busy",
+        "status",
+        "error"
+      ]
+    },
+    "Provider": {
+      "type": "string",
+      "enum": [
+        "codex",
+        "claude"
+      ]
+    },
+    "AiMessage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "role": {
+          "$ref": "#/$defs/Role"
+        },
+        "text": {
+          "type": "string"
+        },
+        "truncated": {
+          "description": "The text was cut at the published bound; the provider keeps it whole.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "text"
+      ]
+    },
+    "Role": {
+      "type": "string",
+      "enum": [
+        "user",
+        "assistant"
+      ]
+    }
+  }
+}
