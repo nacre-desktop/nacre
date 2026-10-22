@@ -16,6 +16,9 @@ fn run() -> Result<i32> {
     });
     let invoked = name.as_deref().and_then(std::ffi::OsStr::to_str);
     let tool = match invoked {
+        Some("nacre-brain-ui") => {
+            return nacre_helper::brain_web::run("brain-launch", &arguments.collect::<Vec<_>>())
+        }
         Some("nacrectl") => "ctl".to_owned(),
         Some("nacre-daemon") => "daemon".to_owned(),
         Some("nacre-brain" | "nacre-brain-sync" | "nacre-brain-maintain") => {
@@ -41,12 +44,18 @@ fn run() -> Result<i32> {
             );
         }
         Some(
-            "composer" | "sidebar-chat" | "nacre-app" | "nacre-settings" | "nacre-welcome"
-            | "startup-apps",
+            "brain-control" | "brain-auth" | "brain-discovery" | "brain-launch" | "composer"
+            | "sidebar-chat" | "nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps",
         ) => invoked.unwrap().to_owned(),
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if matches!(
+        tool.as_str(),
+        "brain-control" | "brain-auth" | "brain-discovery" | "brain-launch"
+    ) {
+        return nacre_helper::brain_web::run(&tool, &arguments);
+    }
     if tool == "sidebar-chat" {
         return nacre_helper::sidebar_chat::run(&arguments);
     }

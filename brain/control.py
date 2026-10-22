@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 """Private knowledge index and browser actions."""
 
+# Keep this imported Python implementation as a parity/rollback reference. The
+# installed unit and historical command line enter the native worker directly.
+if __name__ == "__main__":
+    import os
+    from pathlib import Path
+    import sys
+
+    helper = os.environ.get("NACRE_HELPER_BINARY") or str(
+        Path.home() / ".local/share/nacre/shell/tools/nacre-helper"
+    )
+    os.execv(helper, [helper, "brain-control", *sys.argv[1:]])
+
 import argparse
 import fcntl
 import datetime as dt

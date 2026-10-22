@@ -33,6 +33,6 @@ case "${1:-start}" in
  toggle) exec "$HOME/.local/bin/nacrectl" ui drawers toggle dashboard ;;
  apps) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" desktop-actions app-windows "${2:-}" ;;
  updates|wifi|bluetooth|tasks|new|resume|lock|files|terminal|network|audio|volume|focus|workspace|play|next|previous|mute) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" desktop-actions "$1" "${2:-}" ;;
- brain|capture) exec python3 "$HOME/.local/share/nacre/brain/control.py" action "$1" "${2:-}" ;;
+ brain|capture) exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" brain-control action "$1" "${2:-}" ;;
  *) exec "$HOME/.local/share/nacre/shell/bin/nacre_shell" "$@" ;;
 esac
