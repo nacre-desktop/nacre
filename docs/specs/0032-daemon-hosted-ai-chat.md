@@ -1,6 +1,6 @@
 # N0032 — Daemon-hosted AI chat
 
-Status: **In progress**. The draft called this N0028; N0028 is the AI chat
+Status: **Implemented; pending lead review**. Unpublished, no push. The draft called this N0028; N0028 is the AI chat
 Claude layer, so the number is N0032 (N0031 is the daemon-hosted Brain).
 Depends on N0023 (native `sidebar-chat server|client`, landed). Owner switch-on
 for live use is separate; every test is nested or synthetic.
@@ -100,4 +100,26 @@ reached a worker report `dispatched: true`.
 
 ## Verification
 
-Filled in at completion.
+The `desktop` job of `.github/workflows/check.yml` was replicated in
+`ghcr.io/archlinux/archlinux:latest` on dev-1 (nice 10, Cargo `-j4`) at the final
+code head. The first pass ran `cargo fmt --check`, `cargo clippy --all-targets -D
+warnings`, examples, the whole `cargo test` workspace (helper lib 561, daemon
+integration 20, sidebar-chat 15, protocol suites), the minimal protocol consumer,
+the release helper, the helper sandbox suite and translation coverage; the
+`ai.chat` unit, protocol, worker and daemon tests were green there. Its
+`tools/check.py` step stopped only because the synced copy had no `.git`; a
+temporary snapshot repository of the tracked files fixed that, and the remaining
+steps then passed on the same tree: `tools/check.py` (ruff, qmlformat, tools 457,
+AI 120, brain 52, shell-tools 479, all OK) and both native galleries with the AUR
+pager capture. No frozen reference or parity case changed.
+
+Evidence for the new behavior: `ai_chat` unit tests (reducer against a QML
+`accept` model, bounds, fake-worker host: open, every command, event, removal,
+refusals before dispatch, channel cap, silent worker release), protocol tests
+(transcript replay, request bounds, snapshot bounds, generated artifacts),
+`daemon_worker_*` (socket-equivalent handshake, nice >= 10, second owner refused,
+pipe close stops it, 30 s idle stop), the real-daemon `ai_chat_is_hosted_*` test
+(fake Claude through `ai.chat`), and two QML tests (snapshot to model with
+incremental and replace paths, fallback only before dispatch). Not done in this
+unit: live provider use, nested-session capture, memory measurement, owner
+switch-on, removal of the socket fallback.
