@@ -394,6 +394,7 @@ def compare_discovery(binary: Path):
 
 
 GRAPH_FILES = {
+    "inbox/unassigned.md": "# A telescope thought\nTry astronomy\n",
     "wiki/nacre.md": "# Nacre\nEntity: world\nName: Nacre\nProject: nacre\nAliases: Nacre OS\n\nA platform entity.\n",
     "wiki/research.md": "# Research\nEntity: topic\nName: Research\nParent: Nacre\n\nCurated topic page.\n",
     "projects/release.md": "# Nacre release notes\nRecorded: {today}T12:00:00+00:00\nConfidence: verified\nWorlds: Nacre, Research\nSource: public fixture\n\nSee [[nacre]] and [topic](../wiki/research.md).\n",

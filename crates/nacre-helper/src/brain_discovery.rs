@@ -442,18 +442,21 @@ fn add_subject(
     prior: &Value,
     label: &str,
     origin: &str,
+    ident: Option<&str>,
 ) -> String {
     if let Some(id) = aliases.get(&key(label)) {
         return id.clone();
     }
-    let mut id = prior["discovered"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .find(|v| key(v["label"].as_str().unwrap_or("")) == key(label))
-        .and_then(|v| v["id"].as_str())
-        .map(str::to_owned)
-        .unwrap_or_else(|| slug(label));
+    let mut id = ident.map(str::to_owned).unwrap_or_else(|| {
+        prior["discovered"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .find(|v| key(v["label"].as_str().unwrap_or("")) == key(label))
+            .and_then(|v| v["id"].as_str())
+            .map(str::to_owned)
+            .unwrap_or_else(|| slug(label))
+    });
     if subjects
         .get(&id)
         .is_some_and(|s| key(&s.label) != key(label))
@@ -605,6 +608,7 @@ pub fn organize_mut(
                     prior,
                     &label,
                     "annotated",
+                    None,
                 );
                 subjects
                     .get_mut(&sid)
@@ -693,6 +697,7 @@ pub fn organize_mut(
                     prior,
                     label,
                     "manual",
+                    None,
                 );
                 subjects
                     .get_mut(&sid)
@@ -1519,25 +1524,24 @@ pub fn organize_mut(
         }
     }
     if review > 0 {
-        if !subjects.contains_key("review") {
-            order.push("review".into());
-        }
-        let s = subjects.entry("review".into()).or_insert_with(|| Subject {
-            id: "review".into(),
-            label: "Needs grouping".into(),
-            aliases: vec!["Needs grouping".into(), "review".into()],
-            origin: "review".into(),
-            category: Value::Null,
-            path: Value::Null,
-            members: Map::new(),
-            topics: vec![],
-            parent: Value::Null,
-        });
+        let sid = add_subject(
+            &mut subjects,
+            &mut aliases,
+            &mut order,
+            prior,
+            "Needs grouping",
+            "review",
+            Some("review"),
+        );
         for n in notes.iter() {
             let nid = n["id"].as_str().unwrap_or("");
-            if assigned.get(nid).is_none_or(Vec::is_empty) {
-                s.members
+            if assigned.get(nid).is_none_or(Vec::is_empty) && overrides.get(nid).is_none() {
+                subjects
+                    .get_mut(&sid)
+                    .unwrap()
+                    .members
                     .insert(nid.into(), json!({"reason":"unresolved","score":0}));
+                assign(&mut assigned, nid, &sid);
             }
         }
     }
@@ -1568,6 +1572,33 @@ mod tests {
     fn run(notes: &mut Value, dense: &Value, prior: &Value, overrides: &Value) -> Value {
         organize_mut(notes, dense, prior, overrides).unwrap()
     }
+    #[test]
+    fn unresolved_notes_keep_the_review_membership_and_override_guard() {
+        let mut notes = json!([note(
+            1,
+            "A telescope thought",
+            "Try astronomy",
+            json!({}),
+            "2026-10-01"
+        )]);
+        let result = run(&mut notes, &json!({}), &json!({}), &json!({}));
+        assert_eq!(result[1]["review"], 1);
+        assert_eq!(
+            notes[0]["memberships"],
+            json!([{"subject":"review","reason":"unresolved","score":0}])
+        );
+        let mut overridden = notes.clone();
+        let result = run(
+            &mut overridden,
+            &json!({}),
+            &json!({}),
+            &json!({"note:1":[]}),
+        );
+        assert_eq!(result[1]["review"], 1);
+        assert_eq!(result[0], json!([]));
+        assert_eq!(overridden[0]["memberships"], json!([]));
+    }
+
     #[test]
     fn unknown_worlds_and_topics() {
         let mut ns = json!([
