@@ -274,7 +274,8 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
         let address = json!(value);
         let valid = backend.valid_window_id(&address);
         focus_address(&address, valid, |address| {
-            Ok(backend.action("focus_window", &[address.clone()], &json!({"timeout":10}))?)
+            backend.action("focus_window", &[address.clone()], &json!({"timeout":10}))?;
+            Ok(())
         })?;
         return Ok(());
     }
@@ -288,7 +289,8 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
             let address = windows[0]["address"].clone();
             let valid = backend.valid_window_id(&address);
             focus_address(&address, valid, |id| {
-                Ok(backend.action("focus_window", &[id.clone()], &json!({"timeout":10}))?)
+                backend.action("focus_window", &[id.clone()], &json!({"timeout":10}))?;
+                Ok(())
             })?;
             return Ok(());
         }
