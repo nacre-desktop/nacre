@@ -224,6 +224,10 @@ pub struct Notification {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub image_path: Option<String>,
     pub actions: Entities<NotificationAction>,
+    /// Opaque ID of the freedesktop default action, when present. Null means
+    /// card activation has no default action; the native key stays private.
+    #[serde(default)]
+    pub default_action: Option<EntityId>,
     /// Resolved policy timeout; zero means no automatic expiry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
@@ -328,6 +332,9 @@ impl NotificationsState {
                     && n.image_path.as_deref().is_none_or(|v| text_ok(v, 4096))
                     && n.actions.items.len() <= 16
                     && n.actions.items.values().all(|a| text_ok(&a.label, 1024))
+                    && n.default_action
+                        .as_ref()
+                        .is_none_or(|id| n.actions.items.contains_key(id))
                     && matches!(n.urgency.as_str(), "low" | "normal" | "critical")
                     && n.revision
                         .is_some_and(|revision| revision > 0 && timestamp_valid(revision))

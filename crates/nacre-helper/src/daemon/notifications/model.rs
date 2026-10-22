@@ -1074,6 +1074,7 @@ impl Model {
                     items: BTreeMap::new(),
                     order: Vec::new(),
                 };
+                notification.default_action = None;
                 notification.remaining_ms = None;
                 notification.expires_ms = None;
                 notification.paused = Some(false);
@@ -1437,6 +1438,7 @@ fn restored_notification(row: &Value) -> Option<Notification> {
             items: BTreeMap::new(),
             order: Vec::new(),
         },
+        default_action: None,
         timeout_ms: None,
         remaining_ms: None,
         revision: Some(1),
@@ -1496,6 +1498,10 @@ fn active_notification(
                 .collect(),
             order: actions.iter().map(|(id, _)| id.clone()).collect(),
         },
+        default_action: actions
+            .iter()
+            .find(|(_, key)| key == "default")
+            .map(|(id, _)| id.clone()),
         timeout_ms: Some(notice.timeout_ms),
         remaining_ms: notice.remaining.map(duration_ms),
         revision: Some(revision),
@@ -1746,6 +1752,54 @@ mod tests {
             .any(|signal| matches!(signal, NativeSignal::NotificationClosed { reason: 2, .. })));
         assert!(model.snapshot(storage()).active.items.is_empty());
         assert_eq!(model.snapshot(storage()).history_count, Some(1));
+    }
+
+    #[test]
+    fn default_action_is_published_as_opaque_id_and_invokable() {
+        let now = Instant::now();
+        let wall = system_now_ms();
+        let mut model = Model::new("boot-a", 3, Vec::new(), false, Policy::default());
+        let mut with_default = notice("has default");
+        with_default.actions = vec![
+            ("default".into(), "Open".into()),
+            ("snooze".into(), "Snooze".into()),
+        ];
+        model
+            .notify(input(":1.5", 0, with_default, -1), now, wall)
+            .unwrap();
+        let state = model.snapshot(storage());
+        let id = state.active.order[0].clone();
+        let notification = &state.active.items[&id];
+        let default_action = notification.default_action.clone().unwrap();
+        assert_eq!(notification.actions.items[&default_action].label, "Open");
+        assert_eq!(notification.actions.items.len(), 2);
+        assert!(!serde_json::to_string(notification)
+            .unwrap()
+            .contains("\"default\""));
+
+        let invoked = model
+            .control(
+                call(
+                    "notifications.invoke_action",
+                    json!({"id":id,"revision":1,"action":default_action}),
+                ),
+                5,
+                now,
+                wall,
+            )
+            .unwrap();
+        assert!(invoked.signals.iter().any(|signal| matches!(signal,
+            NativeSignal::ActionInvoked { destination, key, .. }
+                if destination == ":1.5" && key == "default")));
+
+        let mut without_default = Model::new("boot-a", 4, Vec::new(), false, Policy::default());
+        without_default
+            .notify(input(":1.6", 0, notice("no default"), -1), now, wall)
+            .unwrap();
+        let state = without_default.snapshot(storage());
+        let notification = &state.active.items[&state.active.order[0]];
+        assert_eq!(notification.default_action, None);
+        assert_eq!(notification.actions.items.len(), 1);
     }
 
     #[test]

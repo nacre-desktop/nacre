@@ -134,7 +134,7 @@ fn schema<T: JsonSchema>() -> Value {
 
 pub(crate) fn transcripts() -> BTreeMap<String, String> {
     use serde_json::json;
-    let notice = json!({"app_name":"Fixture","summary":"Original","body":"Safe fixture text","urgency":"normal","resident":false,"transient":false,"created_ms":1800000000000_u64,"actions":{"items":{"a1":{"label":"Open"}},"order":["a1"]},"timeout_ms":5000,"remaining_ms":5000,"expires_ms":1800000005000_u64,"revision":1,"retained":true,"paused":false});
+    let notice = json!({"app_name":"Fixture","summary":"Original","body":"Safe fixture text","urgency":"normal","resident":false,"transient":false,"created_ms":1800000000000_u64,"actions":{"items":{"a1":{"label":"Open"},"a2":{"label":"Snooze"}},"order":["a1","a2"]},"default_action":"a1","timeout_ms":5000,"remaining_ms":5000,"expires_ms":1800000005000_u64,"revision":1,"retained":true,"paused":false});
     let active = |id: &str, item: Value| {
         let mut items = serde_json::Map::new();
         items.insert(id.to_owned(), item);
@@ -155,6 +155,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
     closed_notice["created_ms"] = json!(1800000001000_u64);
     closed_notice["revision"] = json!(2);
     closed_notice["actions"] = empty.clone();
+    closed_notice["default_action"] = Value::Null;
     closed_notice["paused"] = json!(false);
     closed_notice
         .as_object_mut()
@@ -164,7 +165,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
     let mut frames = vec![
         json!({"t":"register","provider":"ui","methods":{"ui.dispatch":1}}),
         json!({"t":"snap","topic":"notifications","seq":0,"data":snapshot(active("notice-b1-g1-n1",notice.clone()),empty.clone(),json!({"popup_order":["notice-b1-g1-n1"]}))}),
-        json!({"t":"patch","topic":"notifications","base":0,"seq":1,"data":{"active":{"items":{"notice-b1-g1-n1":{"summary":"Replacement","created_ms":1800000001000_u64,"revision":2,"actions":{"items":{"a1":null,"a2":{"label":"Open updated"}},"order":["a2"]}}},"order":["notice-b1-g1-n1"]}}}),
+        json!({"t":"patch","topic":"notifications","base":0,"seq":1,"data":{"active":{"items":{"notice-b1-g1-n1":{"summary":"Replacement","created_ms":1800000001000_u64,"revision":2,"actions":{"items":{"a1":null,"a2":{"label":"Open updated"}},"order":["a2"]},"default_action":"a2"}},"order":["notice-b1-g1-n1"]}}}),
         json!({"t":"ev","topic":"notifications","name":"updated","seq":1,"data":{"id":"notice-b1-g1-n1","revision":2,"state_seq":1}}),
         call(
             19,
@@ -245,6 +246,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
     );
     let mut controls_closed_notice = notice.clone();
     controls_closed_notice["actions"] = empty.clone();
+    controls_closed_notice["default_action"] = Value::Null;
     controls_closed_notice
         .as_object_mut()
         .unwrap()
@@ -319,6 +321,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
     let unknown_history = json!({"health":{"available":true,"stale":false},"do_not_disturb":false,"active":empty,"history":empty,"popup_order":[],"inhibited":false,"history_storage":{"ready":false,"writable":false}});
     let mut restored_notice = notice.clone();
     restored_notice["actions"] = empty.clone();
+    restored_notice["default_action"] = Value::Null;
     restored_notice["paused"] = json!(false);
     restored_notice
         .as_object_mut()
@@ -348,7 +351,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         json!({"t":"welcome","proto":1,"min":1,"boot":"b1","topics":{"notifications":1},"methods":methods}),
         json!({"t":"sub","topics":["notifications"]}),
         json!({"t":"snap","topic":"notifications","seq":0,"data":old_state}),
-        json!({"t":"patch","topic":"notifications","base":0,"seq":3,"data":{"active":{"items":{"notice-b1-g1-n1":{"summary":"Coalesced update","revision":2,"created_ms":1800000001000_u64,"actions":{"items":{"a1":null,"a2":{"label":"Open updated"}},"order":["a2"]}}}}}}),
+        json!({"t":"patch","topic":"notifications","base":0,"seq":3,"data":{"active":{"items":{"notice-b1-g1-n1":{"summary":"Coalesced update","revision":2,"created_ms":1800000001000_u64,"actions":{"items":{"a1":null,"a2":{"label":"Open updated"}},"order":["a2"]},"default_action":"a2"}}}}}}),
         json!({"t":"patch","topic":"notifications","base":1,"seq":4,"data":{"obsolete":true}}),
         json!({"t":"lost","topic":"notifications","from":3,"to":7}),
         json!({"t":"resync","topics":["notifications"]}),

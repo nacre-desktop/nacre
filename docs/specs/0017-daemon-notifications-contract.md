@@ -82,6 +82,11 @@ This producer guarantees fields below when healthy. Older reserved snapshots rem
 
 Every Notification keeps required `app_name,summary,body,urgency,resident,transient,
 created_ms,actions` and existing optional `icon,image_path,timeout_ms,remaining_ms`.
+The additive v1 `default_action` field is the opaque action ID corresponding to
+freedesktop's native `default` action key, or null when absent. Consumers hide
+that ID from the button row and may invoke it on card activation. The native key
+is never published. Older snapshots without this optional field mean no known
+default action; no topic version bump is required.
 `urgency` is `low|normal|critical` (native 0/1/2); `created_ms` is the latest
 Notify/replacement Unix-ms time. `actions` is an ordered ID map of `{label}`.
 New optional members: `revision` (safe integer, starts 1, increments on replacement),
