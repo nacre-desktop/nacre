@@ -567,6 +567,15 @@ The native `state-file` client uses the same revisions and waits for a durable
 snapshot before reporting success. An absent default socket permits standalone
 compatibility; connection, validation, and dispatched errors do not.
 
+`settings.set` also writes the `dashboard-extras` keys `enabled`, `order` and
+`weatherPhotos` (N0034); `enabled`/`order` accept at most 32 lowercase page
+identifiers in both `settings.set` and `settings.publish`.
+
+Dashboard extras (N0034) publish `dashboard.focus`, `clipboard`, `screenshots`,
+`ai.usage` and `brain.recent` with methods `focus.start|pause|resume|stop`,
+`clipboard.copy|clear`, `screenshots.open` and `ai.usage.refresh`; see the spec for
+the exact shapes, privacy bounds and Do Not Disturb ownership.
+
 `settings.provider {store,value,rev}` admits only the existing colors, wallpaper
 picker, dashboard preferences, CLI accent, default-app initialization, and launcher
 workflow providers. Their exact store IDs are `colors`, `wallpaper-picker`,

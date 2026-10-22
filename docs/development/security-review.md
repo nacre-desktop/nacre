@@ -296,3 +296,11 @@ or query content. The three-second UI deadline remains bounded; a timed-out acti
 may still complete and must never be replayed automatically. View-bound daemon
 IPC actions fail explicitly while no display view exists; global reads and
 actions retain their existing typed-handler validation.
+
+Dashboard extras (N0034) publish clipboard previews, screenshot paths and Brain note
+paths only on the private same-UID socket, bounded and without control characters;
+no topic, event or log carries clip content. Screenshot and Brain readers list only
+regular unlinked files and never follow symlinks out of their folder; the daemon
+never deletes screenshots. The focus timer changes Do Not Disturb only through the
+settings writer and restores it only while it still owns it. `xdg-open` receives
+only a path from the daemon's own listing, after a fresh regular-file check.
