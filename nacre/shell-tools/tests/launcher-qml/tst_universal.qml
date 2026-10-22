@@ -1781,13 +1781,16 @@ TestCase {
         const value = view();
         compare(value.entries[0].name, "Open terminal");
         value.navigate("apps");
-        wait(30);
         const grid = findChild(value, "launcherApps");
         const aiIndex = value.entries.findIndex(entry => {
             return entry.id === "nacre-ai";
         });
         const editorIndex = value.entries.findIndex(entry => {
             return entry.id === "editor";
+        });
+        tryVerify(function() {
+            const aiTile = findChild(grid, "launcherTile_" + aiIndex);
+            return aiTile && findChild(aiTile, "nacreAiAppLogo");
         });
         const ai = findChild(grid, "launcherTile_" + aiIndex), editor = findChild(grid, "launcherTile_" + editorIndex);
         verify(findChild(ai, "nacreAiAppLogo").visible);
