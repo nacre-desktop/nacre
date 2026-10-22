@@ -1783,7 +1783,8 @@ fn daemon_worker_speaks_the_socket_contract_on_stdio_at_low_priority_and_stops_w
         .unwrap()
         .parse()
         .unwrap();
-    assert_eq!(nice, 10);
+    // At least 10: a test runner that is already niced passes its own value on.
+    assert!(nice >= 10, "worker nice value {nice}");
     // A second owner of the channel is refused while the worker runs.
     let refused = fixture
         .helper("worker")

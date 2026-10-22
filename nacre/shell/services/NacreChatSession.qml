@@ -198,7 +198,8 @@ Scope {
             wire.running = true;
     }
     Timer {
-        interval: 1000
+        // A lost daemon worker is restarted by the next open; retry slowly.
+        interval: root.daemonMode ? 5000 : 1000
         repeat: true
         running: root.wantedConnection && !root.inWorkspace && (root.daemonMode ? NacreDaemon.connected && !root.connected && !root.daemonOpening : root.daemonRoute ? !root.daemonOpening : !wire.running)
         onTriggered: root.start()
