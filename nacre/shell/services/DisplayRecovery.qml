@@ -134,7 +134,7 @@ Singleton {
     Process {
         id: fallback
         stdinEnabled: true
-        command: ["python3", NacrePaths.tools + "/display-recover.py", "-"]
+        command: [NacrePaths.helperBinary, "display-recover", "--queue"]
         onStarted: write(JSON.stringify({
             version: 2,
             screens: root.saved,

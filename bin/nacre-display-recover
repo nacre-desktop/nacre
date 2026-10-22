@@ -1,0 +1,3 @@
+#!/bin/sh
+if [ -n "${NACRE_HELPER_BINARY:-}" ]; then exec "$NACRE_HELPER_BINARY" display-recover "$@"; fi
+exec "$HOME/.local/share/nacre/shell/tools/nacre-helper" display-recover "$@"

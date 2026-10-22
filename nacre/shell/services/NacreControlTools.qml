@@ -11,7 +11,7 @@ Singleton {
     property bool refreshQueued: false
     property string action: "state"
     property string value: ""
-    readonly property string tool: NacrePaths.tools + "/control-tools.py"
+    readonly property string tool: NacrePaths.helperBinary
     readonly property bool busy: worker.running
     readonly property bool visibleControls: NacrePanelState.providerViews.some(view => view.osd)
     function refresh() {
@@ -53,7 +53,7 @@ Singleton {
     Process {
         id: worker
         objectName: "controlToolsWorker"
-        command: ["python3", root.tool, root.action, ...(root.value ? [root.value] : [])]
+        command: [root.tool, "control-tools", root.action, ...(root.value ? [root.value] : [])]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -85,6 +85,6 @@ Singleton {
         id: captureDelay
         property string kind: ""
         interval: 320
-        onTriggered: AppLaunch.run(["python3", root.tool, kind])
+        onTriggered: AppLaunch.run([root.tool, "control-tools", kind])
     }
 }

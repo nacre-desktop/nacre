@@ -85,6 +85,15 @@ fn run() -> Result<i32> {
     if tool == "nacre-codex" {
         return nacre_helper::ai_wrappers::codex(&arguments);
     }
+    match tool.as_str() {
+        "desktop-actions" => return nacre_helper::desktop_actions::run_cli(&arguments),
+        "control-tools" => return nacre_helper::control_tools::run(&arguments),
+        "display-recover" => return nacre_helper::display_recover::run(&arguments),
+        "device-actions" => return nacre_helper::device_actions::run(&arguments),
+        "device-location" => return nacre_helper::device_location::run(&arguments),
+        "screenshot" => return nacre_helper::screenshot::run(&arguments),
+        _ => {}
+    }
     // These commands use files and child executables, with no zbus runtime.
     // In particular, credential launches must inherit the caller's environment.
     if matches!(
