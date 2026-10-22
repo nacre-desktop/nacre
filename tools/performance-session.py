@@ -1340,6 +1340,34 @@ def run(args, directory):
                             check=True,
                             capture_output=True,
                         )
+                    elif args.backend == "niri":
+                        windows = json.loads(
+                            subprocess.check_output(
+                                ["niri", "msg", "-j", "windows"],
+                                env=env,
+                                text=True,
+                                timeout=5,
+                            )
+                        )
+                        input_window = next(
+                            window
+                            for window in windows
+                            if window["title"] == "Nacre Performance Input"
+                        )
+                        subprocess.run(
+                            [
+                                "niri",
+                                "msg",
+                                "action",
+                                "focus-window",
+                                "--id",
+                                str(input_window["id"]),
+                            ],
+                            env=env,
+                            check=True,
+                            capture_output=True,
+                            timeout=5,
+                        )
                     previous = state("performanceFrame", "state").get("sequence", 0)
                     subprocess.run(
                         ["wtype", "-s", "100", "-k", key, "-s", "300"],

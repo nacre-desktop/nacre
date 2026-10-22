@@ -197,6 +197,17 @@ class BudgetTests(unittest.TestCase):
         self.assertIn("launcher result frame or timeout", source)
         self.assertIn("timeout=5", source)
 
+    def test_niri_launcher_latency_refocuses_the_private_input_window(self):
+        source = Path(session.__file__).read_text()
+        self.assertIn('window["title"] == "Nacre Performance Input"', source)
+        self.assertIn(
+            '"focus-window",\n                                "--id",', source
+        )
+        self.assertIn(
+            '"niri",\n                                "msg",\n                                "action",',
+            source,
+        )
+
     def test_open_first_frame_latency_is_separate_from_animation_frame_gaps(self):
         source = Path(session.__file__).read_text()
         self.assertIn("open_to_first_frame_ms", source)
