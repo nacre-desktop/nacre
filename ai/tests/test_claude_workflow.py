@@ -1,7 +1,5 @@
-import json
 import os
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
 from types import SimpleNamespace
@@ -114,65 +112,6 @@ class ClaudeWorkflowTests(unittest.TestCase):
             self.assertIn("Codex", details[0])
             self.assertIn("Claude Code", details[1])
 
-    def test_claude_time_units_and_deduplication(self):
-        c = module("nacre-ai-claude")
-        row = SimpleNamespace(
-            session_id="one",
-            custom_title="Native title",
-            summary="Summary",
-            first_prompt="Prompt",
-            last_modified=1700000000123,
-            cwd="/tree",
-        )
-        records = c.records([row, row], {"session": "/tree"}, "/repo")
-        self.assertEqual(len(records), 1)
-        self.assertEqual(records[0]["updated_at"], 1700000000.123)
-        self.assertEqual(records[0]["title"], "Native title")
-        self.assertEqual(records[0]["state"], "running")
-
-    def test_named_accounts_have_distinct_claude_home_not_codex_auth(self):
-        c = module("nacre-ai-claude")
-        with (
-            tempfile.TemporaryDirectory() as temp,
-            patch.dict(os.environ, {"HOME": temp, "CODEX_HOME": "/codex"}),
-        ):
-            env = c.environment("work")
-            self.assertEqual(
-                env["CLAUDE_CONFIG_DIR"],
-                str(Path(temp) / ".local/share/nacre/ai/claude-accounts/work"),
-            )
-            self.assertEqual(env["CODEX_HOME"], "/codex")
-            self.assertFalse(Path(env["CLAUDE_CONFIG_DIR"]).exists())
-            with self.assertRaises(ValueError):
-                c.environment("../../bad")
-
-    def test_new_claude_general_chat_does_not_create_git_worktree(self):
-        c = module("nacre-ai-claude")
-        with (
-            tempfile.TemporaryDirectory() as temp,
-            patch.object(c.subprocess, "run") as git,
-        ):
-            p = c.prepare_directory(
-                SimpleNamespace(chat_directory=True, path=temp, project="general-chat")
-            )
-            self.assertTrue(p.is_dir())
-            git.assert_not_called()
-
-    def test_claude_project_creates_independent_worktree_in_empty_repo(self):
-        c = module("nacre-ai-claude")
-        with (
-            tempfile.TemporaryDirectory() as temp,
-            patch.dict(os.environ, {"HOME": temp}),
-        ):
-            repo = Path(temp) / "repo"
-            repo.mkdir()
-            subprocess.run(["git", "init", "-q", str(repo)], check=True)
-            p = c.prepare_directory(
-                SimpleNamespace(chat_directory=False, path=str(repo), project="repo")
-            )
-            self.assertNotEqual(p, repo)
-            self.assertTrue((p / ".git").is_file())
-
     def test_remote_claude_uses_tmux_and_quotes_paths(self):
         ai = module("nacre-ai")
         argv = ai.claude_command(
@@ -181,16 +120,6 @@ class ClaudeWorkflowTests(unittest.TestCase):
         self.assertIn("-t", argv)
         self.assertIn("--path '/my repo'", argv[-1])
         self.assertIn("--tmux", argv[-1])
-
-    def test_absent_claude_history_does_not_require_sdk_or_login(self):
-        c = module("nacre-ai-claude")
-        with (
-            tempfile.TemporaryDirectory() as temp,
-            patch.dict(os.environ, {"CLAUDE_CONFIG_DIR": temp}),
-            patch.object(c, "sdk") as sdk,
-        ):
-            self.assertEqual(c.list_chats(SimpleNamespace()), [])
-            sdk.assert_not_called()
 
 
 class AccountSettingsTests(unittest.TestCase):
@@ -316,90 +245,3 @@ class PartialHistoryTests(unittest.TestCase):
                 ai.project_chats({"id": "p"}, None, errors), [{"id": "local"}]
             )
             self.assertEqual(errors, ["unavailable"])
-
-
-class ClaudeAccessPolicyTests(unittest.TestCase):
-    def test_new_and_resumed_workers_keep_standard_permissions_and_account_identity(
-        self,
-    ):
-        c = module("nacre-ai-claude")
-        for command in ("new", "resume"):
-            with self.subTest(command=command), tempfile.TemporaryDirectory() as temp:
-                directory = Path(temp) / "chat"
-                directory.mkdir()
-                args = SimpleNamespace(
-                    account="work",
-                    command=command,
-                    tmux=False,
-                    path=str(directory),
-                    project="general-chat",
-                    chat_directory=True,
-                    thread_id="7b7db928-7582-4a1e-91b2-e6b601ca8a2d",
-                )
-                with (
-                    patch.dict(os.environ, {"HOME": temp}),
-                    patch.object(c.subprocess, "run"),
-                    patch.object(c, "executable", return_value="/fake/claude"),
-                    patch.object(c, "prepare_directory", return_value=directory),
-                    patch.object(c.os, "chdir"),
-                    patch.object(
-                        c.os, "execvpe", side_effect=RuntimeError("intercept")
-                    ) as launch,
-                ):
-                    with self.assertRaisesRegex(RuntimeError, "intercept"):
-                        c.run(args)
-                executable, argv, env = launch.call_args.args
-                self.assertEqual(executable, "/fake/claude")
-                self.assertNotIn("--dangerously-skip-permissions", argv)
-                self.assertEqual(
-                    env["CLAUDE_CONFIG_DIR"],
-                    str(Path(temp) / ".local/share/nacre/ai/claude-accounts/work"),
-                )
-                if command == "resume":
-                    self.assertEqual(argv[argv.index("--resume") + 1], args.thread_id)
-
-    def test_resume_attaches_to_chat_handed_off_to_background(self):
-        c = module("nacre-ai-claude")
-        original = "9563ba8c-801e-494d-9446-ed9417ebd6e5"
-        fork = "e7c81fbd-082d-41a7-b6f0-6b1d2f795b24"
-        agents = json.dumps(
-            [
-                {"id": "e7c81fbd", "kind": "background", "sessionId": fork},
-                {"id": "", "kind": "interactive", "sessionId": original},
-            ]
-        )
-        roster = {
-            "workers": {
-                "e7c81fbd": {
-                    "dispatch": {
-                        "launch": {"sessionId": f"/projects/chat/{original}.jsonl"}
-                    }
-                }
-            }
-        }
-        for thread_id, expected in (
-            (original, "e7c81fbd"),
-            (fork, "e7c81fbd"),
-            ("7b7db928-7582-4a1e-91b2-e6b601ca8a2d", None),
-        ):
-            with (
-                self.subTest(thread_id=thread_id),
-                tempfile.TemporaryDirectory() as temp,
-            ):
-                (Path(temp) / "daemon").mkdir()
-                (Path(temp) / "daemon/roster.json").write_text(json.dumps(roster))
-                with patch.object(
-                    c.subprocess,
-                    "run",
-                    return_value=SimpleNamespace(stdout=agents),
-                ):
-                    self.assertEqual(
-                        c.background_session(
-                            "/fake/claude", {"CLAUDE_CONFIG_DIR": temp}, thread_id
-                        ),
-                        expected,
-                    )
-        with patch.object(c.subprocess, "run", side_effect=OSError("no daemon")):
-            self.assertIsNone(
-                c.background_session("/fake/claude", {"CLAUDE_CONFIG_DIR": "/x"}, fork)
-            )

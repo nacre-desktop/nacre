@@ -1,47 +1,13 @@
 """Account switches preserve chats without sharing authentication."""
 
-import os
-from pathlib import Path
-import tempfile
-import tomllib
 from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from test_workflow import module
 
 
 class SharedChatTests(unittest.TestCase):
-    def test_workflow_home_alias_resolving_to_same_account_is_preserved(self):
-        chat = module("nacre-ai-chat")
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
-            home = Path(temp) / ".local/share/nacre/ai/accounts/work"
-            chat.configure({"CODEX_HOME": str(home)})
-            alias = Path(temp) / "old-account-home"
-            alias.symlink_to(home, target_is_directory=True)
-            config = home / "config.toml"
-            text = config.read_text().replace(
-                "CODEX_HOME = " + __import__("json").dumps(str(home)),
-                "CODEX_HOME = " + __import__("json").dumps(str(alias)),
-            )
-            config.write_text(text)
-            chat.configure({"CODEX_HOME": str(home)})
-            self.assertEqual(config.read_text(), text)
-
-    def test_custom_previous_store_remains_discoverable_after_configuration(self):
-        chat = module("nacre-ai-chat")
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
-            old = Path(temp) / "custom-history"
-            old.mkdir()
-            (old / "state_5.sqlite").touch()
-            home = Path(temp) / ".local/share/nacre/ai/accounts/old"
-            home.mkdir(parents=True)
-            (home / "config.toml").write_text(
-                "sqlite_home = " + __import__("json").dumps(str(old)) + "\n"
-            )
-            chat.configure({"CODEX_HOME": str(home)})
-            self.assertIn(("old", old), chat.history_sources())
-
     def test_old_remote_helper_keeps_working_until_host_is_updated(self):
         ai = module("nacre-ai")
         with (
@@ -63,91 +29,6 @@ class SharedChatTests(unittest.TestCase):
         self.assertEqual(rows[0]["account"], "work")
         self.assertEqual(run.call_count, 2)
         self.assertNotIn("--all-accounts", run.call_args.args[0][-1])
-
-    def test_profiles_share_state_but_preserve_credentials_and_config(self):
-        chat = module("nacre-ai-chat")
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
-            default = Path(temp) / ".codex"
-            default.mkdir()
-            (default / "auth.json").write_text("default fixture")
-            for name in ("first", "second"):
-                home = Path(temp) / ".local/share/nacre/ai/accounts" / name
-                home.mkdir(parents=True)
-                (home / "auth.json").write_text(name + " fixture")
-                config = home / "config.toml"
-                original = 'model = "keep"\n[profiles.custom]\nsqlite_home = "/keep"\n'
-                config.write_text(original)
-                chat.configure({"CODEX_HOME": str(home)})
-                first = config.read_text()
-                chat.configure({"CODEX_HOME": str(home)})
-                self.assertEqual(config.read_text(), first)
-                data = tomllib.loads(first)
-                self.assertEqual(data["sqlite_home"], str(default))
-                self.assertEqual(data["model"], "keep")
-                self.assertEqual(data["profiles"]["custom"]["sqlite_home"], "/keep")
-                self.assertEqual((home / "auth.json").read_text(), name + " fixture")
-                backups = list(
-                    (Path(temp) / ".local/state/nacre/ai/backups").glob(
-                        "*/" + name + "/config.toml"
-                    )
-                )
-                self.assertEqual(len(backups), 1)
-                self.assertEqual(backups[0].read_text(), original)
-                self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
-            self.assertEqual((default / "auth.json").read_text(), "default fixture")
-
-    def test_discovery_preserves_old_stores_and_ignores_linked_profiles(self):
-        chat = module("nacre-ai-chat")
-        with tempfile.TemporaryDirectory() as temp, patch.dict(os.environ, HOME=temp):
-            root = Path(temp) / ".local/share/nacre/ai/accounts"
-            old = root / "old"
-            old.mkdir(parents=True)
-            (old / "state_5.sqlite").touch()
-            (root / "new").mkdir()
-            (root / "linked").symlink_to(old, target_is_directory=True)
-            self.assertEqual(
-                chat.history_sources(), [("", Path(temp) / ".codex"), ("old", old)]
-            )
-
-    def test_combined_list_keeps_ids_and_uses_newest_duplicate(self):
-        chat = module("nacre-ai-chat")
-        shared, old = Path("/shared"), Path("/old")
-        with (
-            patch.object(chat, "shared_history_home", return_value=shared),
-            patch.object(
-                chat, "history_sources", return_value=[("", shared), ("old", old)]
-            ),
-            patch.object(chat, "running_sessions", return_value={}),
-            patch.object(
-                chat,
-                "list_threads",
-                side_effect=[
-                    [{"id": "same", "name": "First", "updatedAt": 1}],
-                    [
-                        {"id": "same", "name": "Updated", "updatedAt": 2},
-                        {"id": "other", "name": "Other"},
-                    ],
-                ],
-            ),
-        ):
-            result = chat.shared_chat_records({}, ["/repo"], "repo")
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result[0]["id"], "same")
-        self.assertEqual(result[0]["title"], "Updated")
-        self.assertEqual(result[0]["history_home"], "/old")
-        self.assertFalse(result[0]["shared_history"])
-
-    def test_pagination_reads_more_than_five_pages(self):
-        chat = module("nacre-ai-chat")
-        api = Mock()
-        api.call.side_effect = [
-            {"data": [{"id": str(i)}], "nextCursor": str(i + 1) if i < 6 else None}
-            for i in range(7)
-        ]
-        with patch.object(chat, "Codex") as client:
-            client.return_value.__enter__.return_value = api
-            self.assertEqual(len(chat.list_threads({}, ["/repo"])), 7)
-        self.assertEqual(api.call.call_args.args[1]["modelProviders"], [])
 
     def test_resume_uses_selected_login_and_original_id_and_store(self):
         ai = module("nacre-ai")

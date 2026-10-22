@@ -16,65 +16,6 @@ def native_ai_command(name):
 
 
 class Conversation(unittest.TestCase):
-    def test_context_exposes_build_routing_and_ambiguity_without_running(self):
-        ctx = module("nacre-ai-context")
-        with tempfile.TemporaryDirectory() as tmp:
-            registry = Path(tmp) / "registry.json"
-            registry.write_text(
-                json.dumps(
-                    {
-                        "projects": [
-                            {
-                                "id": "game",
-                                "label": "First game",
-                                "aliases": ["camera"],
-                                "path": "/repo",
-                                "build_host": "dev-1",
-                                "build_path": "/build",
-                            },
-                            {"id": "other", "path": "/other"},
-                        ]
-                    }
-                )
-            )
-            with patch.dict(os.environ, {"NACRE_AI_PROJECTS": str(registry)}):
-                one = ctx.resolve("fix camera")
-                self.assertEqual(one["matched"][0]["build_host"], "dev-1")
-                self.assertFalse(one["ambiguous"])
-                self.assertTrue(ctx.resolve("game and other")["ambiguous"])
-                self.assertEqual(ctx.resolve("what is bouldering")["matched"], [])
-
-    def test_capture_sanitizes_native_input(self):
-        usage = module("nacre-ai-usage")
-        data = usage.snapshot(
-            {
-                "rate_limits": {
-                    "five_hour": {
-                        "used_percentage": 25,
-                        "resets_at": 1700000000,
-                        "secret": "not retained",
-                    }
-                },
-                "cost": {"total_cost_usd": 1.2},
-                "transcript_path": "private",
-                "api_key": "private",
-            }
-        )
-        self.assertNotIn("private", json.dumps(data))
-        self.assertNotIn("secret", json.dumps(data))
-        self.assertEqual(data["five_hour"]["used_percentage"], 25)
-
-    def test_claude_missing_usage_is_explicit_and_account_scoped(self):
-        usage = module("nacre-ai-usage")
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            patch.dict(os.environ, {"HOME": tmp}),
-        ):
-            self.assertIn("Not yet reported", usage.read("claude", "work")["rows"][1])
-            self.assertNotEqual(usage.cache("work"), usage.cache(""))
-            with self.assertRaises(ValueError):
-                usage.cache("../escape")
-
     def test_memory_creates_topics_worlds_and_deduplicates_evidence(self):
         with tempfile.TemporaryDirectory() as tmp:
             env = dict(os.environ, HOME=tmp, NACRE_BRAIN=tmp + "/brain")

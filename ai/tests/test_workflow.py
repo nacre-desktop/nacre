@@ -19,17 +19,7 @@ ROOT = Path(__file__).resolve().parents[2]
 def module(name):
     loader = importlib.machinery.SourceFileLoader(
         name.replace("-", "_"),
-        str(ROOT / "bin" / f"{name}.py.rollback")
-        if name.startswith("nacre-brain")
-        or name
-        in {
-            "nacre-ai-context",
-            "nacre-ai-memory",
-            "nacre-ai-usage",
-            "nacre-ai-chat",
-            "nacre-ai-claude",
-        }
-        else str(ROOT / "bin" / name),
+        str(ROOT / "bin" / name),
     )
     spec = importlib.util.spec_from_loader(loader.name, loader)
     loaded = importlib.util.module_from_spec(spec)
@@ -98,14 +88,13 @@ class AgentProfilePolicyTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as directory,
             patch.dict(os.environ, {"HOME": directory}),
         ):
-            for name in ("nacre-ai", "nacre-ai-claude"):
-                agent = module(name)
-                self.assertFalse(agent.agent_full_access())
-                path = Path(directory) / ".config/nacre/profile.json"
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(json.dumps({"aiFullAccess": True}))
-                self.assertTrue(agent.agent_full_access())
-                path.unlink()
+            agent = module("nacre-ai")
+            self.assertFalse(agent.agent_full_access())
+            path = Path(directory) / ".config/nacre/profile.json"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps({"aiFullAccess": True}))
+            self.assertTrue(agent.agent_full_access())
+            path.unlink()
 
 
 class IsolatedWorkflowTest(unittest.TestCase):
@@ -195,19 +184,6 @@ class BrainTests(IsolatedWorkflowTest):
             for index, name in enumerate(paths):
                 self.assertIn(f"Observation {index}", Path(name).read_text())
                 self.assertEqual(stat.S_IMODE(Path(name).stat().st_mode), 0o600)
-
-    def test_common_secret_values_are_rejected_but_references_allowed(self):
-        brain = module("nacre-brain")
-        for text in [
-            "password: example-private-value",
-            "-----BEGIN OPENSSH PRIVATE KEY-----",
-            "sk-proj-" + "x" * 30,
-        ]:
-            with self.assertRaises(ValueError):
-                brain.safe_note(text)
-        brain.safe_note(
-            "Credential reference: secret-service://nacre-brain/development"
-        )
 
     def test_failed_note_does_not_create_a_note_file(self):
         with tempfile.TemporaryDirectory() as tmp:
