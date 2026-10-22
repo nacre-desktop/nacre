@@ -7,6 +7,7 @@ use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
     env, fs,
+    fs::OpenOptions,
     os::unix::fs::PermissionsExt,
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
@@ -14,6 +15,16 @@ use std::{
     thread,
     time::Duration,
 };
+
+fn welcome_helper_lock(paths: &Paths) -> Result<nix::fcntl::Flock<std::fs::File>> {
+    let path = paths.state.join("welcome/owner.lock");
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let file = OpenOptions::new().append(true).create(true).open(path)?;
+    nix::fcntl::Flock::lock(file, nix::fcntl::FlockArg::LockExclusive)
+        .map_err(|(_, error)| error.into())
+}
 
 const APP_ROUTES: &[(&str, &[&str])] = &[
     ("terminal", &["kitty"]),
@@ -547,7 +558,7 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
         "state" | "set-startup" | "set-demo-wallpapers" | "finish-tour" => {
             if action == "set-startup" || action == "set-demo-wallpapers" || action == "finish-tour"
             {
-                let _guard = crate::files::lock(&paths.state.join("welcome/owner.lock"))?;
+                let _guard = welcome_helper_lock(&paths)?;
                 let path = paths.config.join("welcome.json");
                 let mut prefs = welcome_preferences(&path)?;
                 match action {
@@ -602,14 +613,17 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
                 .is_some_and(|value| !value.is_empty())
             {
                 match crate::process::run(
-                    "hyprctl",
+                        "hyprctl",
                     &["binds".into(), "-j".into()],
                     None,
                     std::time::Duration::from_secs(2),
                 ) {
-                    Ok(output) if output.status.success() => {
-                        "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration."
-                    }
+                        Ok(output)
+                            if output.status.success()
+                                && serde_json::from_slice::<Value>(&output.stdout).is_ok() =>
+                        {
+                            "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration."
+                        }
                     _ => "Shortcuts are available when running inside your Hyprland session.",
                 }
             } else {
