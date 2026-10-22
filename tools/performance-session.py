@@ -1368,6 +1368,26 @@ def run(args, directory):
                             capture_output=True,
                             timeout=5,
                         )
+                        wait_for(
+                            lambda: next(
+                                (
+                                    window
+                                    for window in json.loads(
+                                        subprocess.check_output(
+                                            ["niri", "msg", "-j", "windows"],
+                                            env=env,
+                                            text=True,
+                                            timeout=5,
+                                        )
+                                    )
+                                    if window["id"] == input_window["id"]
+                                    and window.get("is_focused")
+                                ),
+                                None,
+                            ),
+                            "niri performance input focus",
+                            timeout=5,
+                        )
                     previous = state("performanceFrame", "state").get("sequence", 0)
                     subprocess.run(
                         ["wtype", "-s", "100", "-k", key, "-s", "300"],
