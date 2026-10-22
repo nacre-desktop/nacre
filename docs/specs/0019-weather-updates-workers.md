@@ -17,6 +17,13 @@ HTTPS-only redirects), fake `checkupdates`/`paru`/`flatpak`.
 Security: outbound inventory (IP lookup consent, caps), private cache files.
 Risk: medium (network, pacman). Size: M. Parallel: yes.
 
+Preflight UX and safety: the Quickshell/Qt preflight reports elapsed time to stderr
+(TTY updates in place; other callers get periodic lines), preserving frozen stdout
+parity. `NACRE_UPDATES_PREFLIGHT_TIMEOUT_SECS` sets its timeout (default 120 s;
+invalid/zero values use the default). Timeout aborts the update flow: pending Qt
+state is required by the local Quickshell rebuild guard, so continuing would be
+unsafe when mirrors have not provided a result.
+
 ## Common rules
 
 Common to every unit (not repeated): base is latest main; `[no-publish]` on every commit; private/nested

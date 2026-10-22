@@ -3,11 +3,14 @@ use crate::{paths::Paths, process, Result};
 use serde_json::{json, Value};
 use std::{
     fs,
+    io::{IsTerminal, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::PathBuf,
-    process::Command,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    process::{Command, Stdio},
+    thread,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
+use wait_timeout::ChildExt;
 
 fn available(name: &str) -> bool {
     let Some(path) = std::env::var_os("PATH") else {
@@ -55,6 +58,110 @@ fn run_command(command: &[String], timeout: Duration, cause: &str) -> Result<std
     let wrapped = package_command(command);
     let (exe, args) = wrapped.split_first().ok_or("empty update command")?;
     process::run(exe, args, None, timeout)
+}
+fn preflight_timeout() -> Duration {
+    let seconds = std::env::var("NACRE_UPDATES_PREFLIGHT_TIMEOUT_SECS")
+        .ok()
+        .and_then(|s| s.parse::<u64>().ok())
+        .filter(|s| *s > 0)
+        .unwrap_or(120);
+    Duration::from_secs(seconds)
+}
+fn run_preflight_command(
+    command: &[String],
+    timeout: Duration,
+    tty: bool,
+    progress: &mut impl Write,
+) -> Result<std::process::Output> {
+    let wrapped = package_command(command);
+    run_preflight_process(&wrapped, timeout, tty, progress)
+}
+fn run_preflight_process(
+    wrapped: &[String],
+    timeout: Duration,
+    tty: bool,
+    progress: &mut impl Write,
+) -> Result<std::process::Output> {
+    let (exe, args) = wrapped.split_first().ok_or("empty update command")?;
+    let mut child_command = Command::new(exe);
+    child_command
+        .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    process::restore_child_signals(&mut child_command);
+    let mut child = child_command.spawn()?;
+    let mut stdout = child.stdout.take().ok_or("Missing child output")?;
+    let mut stderr = child.stderr.take().ok_or("Missing child error output")?;
+    let output = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        std::io::Read::read_to_end(&mut stdout, &mut bytes).map(|_| bytes)
+    });
+    let error = thread::spawn(move || {
+        let mut bytes = Vec::new();
+        std::io::Read::read_to_end(&mut stderr, &mut bytes).map(|_| bytes)
+    });
+    let started = Instant::now();
+    let interval = if tty {
+        Duration::from_secs(1)
+    } else {
+        Duration::from_secs(5)
+    };
+    let mut next_progress = Duration::ZERO;
+    loop {
+        let elapsed = started.elapsed();
+        if elapsed >= timeout {
+            child.kill()?;
+            child.wait()?;
+            output.join().map_err(|_| "Child output reader failed")??;
+            error.join().map_err(|_| "Child error reader failed")??;
+            if tty {
+                writeln!(
+                    progress,
+                    "\r\x1b[2Knacre-helper updates: checking for updates timed out after {} s",
+                    timeout.as_secs()
+                )?;
+            } else {
+                writeln!(
+                    progress,
+                    "nacre-helper updates: checking for updates timed out after {} s",
+                    timeout.as_secs()
+                )?;
+            }
+            return Err(format!(
+                "Quickshell/Qt update preflight timed out after {} seconds; mirror not responding — aborting update because pending Qt state is unknown",
+                timeout.as_secs()
+            )
+            .into());
+        }
+        let elapsed_secs = elapsed.as_secs();
+        let due = elapsed >= next_progress;
+        if due {
+            if tty {
+                write!(
+                    progress,
+                    "\rnacre-helper updates: checking for updates… {elapsed_secs} s"
+                )?;
+            } else {
+                writeln!(
+                    progress,
+                    "nacre-helper updates: checking for updates… {elapsed_secs} s"
+                )?;
+            }
+            progress.flush()?;
+            next_progress = elapsed + interval;
+        }
+        if let Some(status) = child.wait_timeout(Duration::from_millis(250))? {
+            if tty {
+                writeln!(progress)?;
+            }
+            return Ok(std::process::Output {
+                status,
+                stdout: output.join().map_err(|_| "Child output reader failed")??,
+                stderr: error.join().map_err(|_| "Child error reader failed")??,
+            });
+        }
+    }
 }
 fn bounded_output(
     program: &str,
@@ -222,10 +329,15 @@ fn preflight() -> Result<Value> {
     } else {
         vec!["pacman".into(), "-Qu".into()]
     };
-    let out = run_command(
+    eprintln!(
+        "nacre-helper updates: starting {} for Quickshell/Qt update preflight",
+        cmd[0]
+    );
+    let out = run_preflight_command(
         &cmd,
-        Duration::from_secs(90),
-        "Quickshell/Qt update preflight",
+        preflight_timeout(),
+        std::io::stderr().is_terminal(),
+        &mut std::io::stderr().lock(),
     )?;
     let code = out.status.code().unwrap_or(1);
     if ![0, 2].contains(&code) && !(cmd[0] == "pacman" && code == 1 && out.stderr.is_empty()) {
@@ -447,5 +559,57 @@ mod script_contract_tests {
         assert!(String::from_utf8_lossy(&output.stderr)
             .contains("starting the host update service (exit 7)"));
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod preflight_progress_tests {
+    use super::*;
+    use std::{fs, os::unix::fs::PermissionsExt};
+
+    fn fake_checkupdates(dir: &std::path::Path, body: &str) -> Vec<String> {
+        let path = dir.join("checkupdates");
+        fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).unwrap();
+        vec![path.to_string_lossy().into_owned()]
+    }
+
+    #[test]
+    fn preflight_emits_progress_to_the_supplied_stderr_writer() {
+        let root = tempfile::tempdir().unwrap();
+        let cmd = fake_checkupdates(root.path(), "sleep 2.5; exit 0");
+        let mut progress = Vec::new();
+        let result = run_preflight_process(&cmd, Duration::from_secs(4), true, &mut progress);
+        result.unwrap();
+        let text = String::from_utf8(progress).unwrap();
+        assert!(text.contains("checking for updates… 0 s"));
+        assert!(text.contains("checking for updates… 1 s"));
+        assert!(text.contains('\r'));
+    }
+
+    #[test]
+    fn preflight_emits_periodic_plain_lines_without_a_tty() {
+        let root = tempfile::tempdir().unwrap();
+        let cmd = fake_checkupdates(root.path(), "sleep 7.5; exit 0");
+        let mut progress = Vec::new();
+        run_preflight_process(&cmd, Duration::from_secs(10), false, &mut progress).unwrap();
+        let text = String::from_utf8(progress).unwrap();
+        assert!(text.contains("checking for updates… 0 s\n"));
+        assert!(text.contains("checking for updates… 5 s\n"));
+        assert!(!text.contains('\r'));
+    }
+
+    #[test]
+    fn preflight_timeout_reports_unknown_qt_state_and_stops_command() {
+        let root = tempfile::tempdir().unwrap();
+        let cmd = fake_checkupdates(root.path(), "exec sleep 5");
+        let mut progress = Vec::new();
+        let result = run_preflight_process(&cmd, Duration::from_secs(1), false, &mut progress);
+        let error = result.unwrap_err().to_string();
+        assert!(error.contains("mirror not responding"));
+        assert!(error.contains("pending Qt state is unknown"));
+        assert!(String::from_utf8(progress)
+            .unwrap()
+            .contains("timed out after 1 s"));
     }
 }
