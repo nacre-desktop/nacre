@@ -86,11 +86,13 @@ class SidebarTests(unittest.TestCase):
                 peer = Mock()
                 manager.peer = peer
                 events = []
+                launches = []
                 peer.close.side_effect = lambda: events.append("closed")
                 real_popen = module.subprocess.Popen
 
                 def launch(argv, *args, **kwargs):
                     if argv[1:3] == ["desktop-extras", "resume"]:
+                        launches.append(argv)
                         events.append("launched")
                         return Mock()
                     return real_popen(argv, *args, **kwargs)
@@ -98,9 +100,7 @@ class SidebarTests(unittest.TestCase):
                 with patch.object(module.subprocess, "Popen", launch):
                     manager.handle(dict(action="workspace"))
                 self.assertEqual(events, ["closed", "launched"])
-                self.assertEqual(
-                    launch.call_args.args[0][1:3], ["desktop-extras", "resume"]
-                )
+                self.assertEqual(launches[0][1:3], ["desktop-extras", "resume"])
                 self.assertIsNone(manager.peer)
                 self.assertTrue(manager.state()["inWorkspace"])
                 with self.assertRaises(RuntimeError):
