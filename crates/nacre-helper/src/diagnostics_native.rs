@@ -77,11 +77,16 @@ impl Probe for Queries {
                     }
                     at += 1;
                 }
-                let (code, text) = systemd::report_units(&units, &properties, timeout)?;
-                return Ok(output(code, text));
+                return match systemd::report_units(&units, &properties, timeout) {
+                    Ok((code, text)) => Ok(output(code, text)),
+                    Err(_) => process::run("systemctl", &call.args[1..], None, timeout),
+                };
             }
             ["systemctl", "--user", "--failed", "--no-legend", "--plain"] => {
-                return Ok(output(0, systemd::failed_units(timeout)?))
+                return match systemd::failed_units(timeout) {
+                    Ok(text) => Ok(output(0, text)),
+                    Err(_) => process::run("systemctl", &call.args[1..], None, timeout),
+                }
             }
             ["nmcli", "--terse", "--escape", "no", "--fields", "SSID", "device", "wifi", "list", "--rescan", "no"] => {
                 return Ok(output(

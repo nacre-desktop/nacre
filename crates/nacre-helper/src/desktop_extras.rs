@@ -907,7 +907,7 @@ pub fn run(args: &[String]) -> Result<i32> {
     } else {
         serde_json::from_slice(&input)?
     };
-    let result = match action {
+    let result: Result<Value> = (|| match action {
         "clips" => clips(&paths),
         "copy" | "pin" | "delete" => {
             clip_action(&paths, action, payload["id"].as_str().unwrap_or("")).map(|_| json!(true))
@@ -999,7 +999,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         )
         .map(|_| json!(true)),
         _ => Err("Unknown desktop operation".into()),
-    };
+    })();
     let (value, code) = match result {
         Ok(result) => (
             json!({"action":action,"result":result,"query":payload["query"].as_str().unwrap_or("")}),
