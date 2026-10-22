@@ -77,6 +77,27 @@ Target window for a public announcement: about early December, with Bead.
 - Rule: every new unit records an expiry for each temporary duplicate it
   leaves (standing rules, "Temporary duplicates expire").
 
+### Pass (a) execution branch (`task/cleanup-pass-a-20261022`)
+
+Prepared ahead of the 2026-10-28 gate, one commit per unit so any can be
+dropped: all `*.rollback` copies and their tests; N0018 `bin/nacre-app`,
+`nacre-settings`, `nacre-welcome` Python (now 3-line helper shims);
+N0019 `weather.py`/`updates.py` (`updates.sh` calls `nacre-helper updates`);
+N0025 `desktop-actions`, `control-tools`, `display-recover`, `device-actions`,
+`screenshot`; N0026 `desktop-extras`, `maintenance`, `welcome` (sidebar handoff
+and `nacre doctor|profile|check|session|restart` exec the helper);
+N0023/N0028 `sidebar-chat.py`, `composer.py`, `nacre_ai_controller.py`,
+`ai/install-claude.py`; N0024 Brain `auth.py`, `discovery.py` and the Python
+`control.py` body (a 10-line exec entry remains for the unit). The installer
+retires the stale installed `.py` copies. Kept on purpose: `startup-apps.py`
+(still imported by `workflow-profiles.py`, whose Rust bridge is live),
+`workflow-profiles.py`, `device-location.py` (launched by `timezone.py`),
+`timezone.py`, `nacre_ai_core.py`, the QML non-daemon `DesktopSettings.qml`
+path (every QML fixture and the F4 switch default run daemon-off; removing it
+needs a fixture rework and an owner decision), the JS launcher fallback (pass
+b) and frozen parity references (replayed natively; their `command` fields
+only name retired Python as history).
+
 ## New lead — 2026-10-20 evening
 
 Claude Code (Opus) is now lead, with Codex workers. N10 phase 1 is assigned to

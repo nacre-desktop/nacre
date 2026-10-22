@@ -260,7 +260,7 @@ installation bookkeeping are distinguished from user preferences.
 | `ai/projects.json` / `projects[].build_host` | Nacre AI workspace registry / CLI | Nacre AI / Projects (link to existing owner) | `bin/nacre-ai` |
 | `ai/projects.json` / `projects[].build_path` | Nacre AI workspace registry / CLI | Nacre AI / Projects (link to existing owner) | `bin/nacre-ai` |
 | `brain-sync.json` / `host` | CLI / private sync configuration | Brain / Sync (existing owner; no credentials) | `bin/nacre-brain-sync`, `nacre/shell/services/NacrePanelDragRouting.qml`, `nacre/shell/services/NacrePearls.qml`, `crates/nacre-helper/src/diagnostics.rs`, `crates/nacre-helper/src/menu_registry.rs` |
-| `welcome.json` / `showAtLogin` | Welcome / Show at login | System / Welcome link (bookkeeping, not a toggle) | `nacre/shell-tools/welcome.py`, `nacre/shell/services/NacreWelcomeApp.qml` |
+| `welcome.json` / `showAtLogin` | Welcome / Show at login | System / Welcome link (bookkeeping, not a toggle) | `crates/nacre-helper/src/launchers.rs`, `nacre/shell/services/NacreWelcomeApp.qml` |
 
 ### System-owned and operational values
 
@@ -291,13 +291,13 @@ installation bookkeeping are distinguished from user preferences.
 | `system:BlueZ` / `devices.{address}.connected` | Settings / Bluetooth; Control center; bar | Bluetooth / Adapter and Device entity | `nacre/shell/services/NacreBluetooth.qml`, `nacre/shell/services/DeviceActions.qml` |
 | `system:BlueZ` / `devices.{address}.paired` | Settings / Bluetooth; Control center; bar | Bluetooth / Adapter and Device entity | `nacre/shell/services/NacreBluetooth.qml`, `nacre/shell/services/DeviceActions.qml` |
 | `system:BlueZ` / `devices.{address}.trusted` | Settings / Bluetooth; Control center; bar | Bluetooth / Adapter and Device entity | `nacre/shell/services/NacreBluetooth.qml`, `nacre/shell/services/DeviceActions.qml` |
-| `system:power-profiles-daemon` / `activeProfile` | Control center / Power profile; launcher actions | Power & battery / Power profile (current value; separate AC/battery policies future) | `nacre/shell/services/NacreControlTools.qml`, `nacre/shell-tools/control-tools.py` |
-| `state/control-tools.json (or -niri)` / `nightLightEnabled` | Control center / Night light | Displays / Night light (supported provider only) | `nacre/shell/services/NacreControlTools.qml`, `nacre/shell-tools/control-tools.py`, `nacre/shell/services/NacreMenuContext.qml` |
+| `system:power-profiles-daemon` / `activeProfile` | Control center / Power profile; launcher actions | Power & battery / Power profile (current value; separate AC/battery policies future) | `nacre/shell/services/NacreControlTools.qml`, `crates/nacre-helper/src/control_tools.rs` |
+| `state/control-tools.json (or -niri)` / `nightLightEnabled` | Control center / Night light | Displays / Night light (supported provider only) | `nacre/shell/services/NacreControlTools.qml`, `crates/nacre-helper/src/control_tools.rs`, `nacre/shell/services/NacreMenuContext.qml` |
 | `system:backlight` / `brightness` | Control center; brightness keys | Displays / Brightness; Keyboard & mouse / Keyboard backlight | `nacre/shell/services/NacreBrightness.qml`, `nacre/shell/services/NacreKeyboardLight.qml`, `nacre/shell/services/NacreColorsApp.qml`, `nacre/shell/services/NacreControlPreferences.qml`, `nacre/shell/services/NacreLightChannel.qml` |
 | `system:backlight` / `keyboardBrightness` | Control center; brightness keys | Displays / Brightness; Keyboard & mouse / Keyboard backlight | `nacre/shell/services/NacreBrightness.qml`, `nacre/shell/services/NacreKeyboardLight.qml` |
 | `state/shell/notifications/history.json` / `items` | Notifications history; Dashboard optional page | Notifications / History; Privacy / Clear history (history is content, not schema settings) | `nacre/shell/services/NacreNotifs.qml`, `crates/nacre-helper/src/notification_history.rs`, `nacre/shell/services/NacreDashboardState.qml`, `nacre/shell/services/NacreMenuContext.qml`, `crates/nacre-helper/src/dashboard_data.rs` |
 | `state/menu/stay-awake.json` / `enabled` | Control center awake; launcher actions | Power & battery / Sleep inhibition (session state) | `crates/nacre-helper/src/menu_actions.rs`, `nacre/shell/services/LauncherPreferences.qml`, `nacre/shell/services/NacreBluetooth.qml`, `nacre/shell/services/NacreColours.qml`, `nacre/shell/services/NacreCompositor.qml` |
-| `state/shell/extras/pins.json` / `items` | Clipboard pins; launcher | Privacy / Clipboard clear (content; retention future) | `nacre/shell/services/DesktopExtras.qml`, `nacre/shell-tools/desktop-extras.py`, `nacre/shell/services/NacreDashboardState.qml`, `nacre/shell/services/NacreMenuContext.qml`, `crates/nacre-helper/src/dashboard_data.rs` |
+| `state/shell/extras/pins.json` / `items` | Clipboard pins; launcher | Privacy / Clipboard clear (content; retention future) | `nacre/shell/services/DesktopExtras.qml`, `crates/nacre-helper/src/desktop_extras.rs`, `nacre/shell/services/NacreDashboardState.qml`, `nacre/shell/services/NacreMenuContext.qml`, `crates/nacre-helper/src/dashboard_data.rs` |
 
 ### Action-only surfaces and fixed policy
 
