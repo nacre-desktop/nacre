@@ -252,13 +252,12 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
             .headers
             .get("content-type")
             .is_some_and(|value| value.starts_with("application/json"))
-    {
-        if !matches!(
+        && !matches!(
             serde_json::from_slice::<Value>(&request.body),
             Ok(Value::Object(_))
-        ) {
-            return Err(Response::error(400));
-        }
+        )
+    {
+        return Err(Response::error(400));
     }
     Ok(request)
 }

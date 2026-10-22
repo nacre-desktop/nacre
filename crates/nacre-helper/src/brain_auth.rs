@@ -42,40 +42,10 @@ impl BrowserAuth {
         let directory = state.join("auth").join("ports");
         secure_state_dirs(state, &directory)?;
         let _lock = auth_lock(&directory, port)?;
-        let session_path = directory.join(format!("{port}.json"));
-        refuse_symlink(&session_path)?;
-        let existing = if session_path.exists() {
-            let contents = read_private(&session_path, 4096)?;
-            serde_json::from_slice::<SessionFile>(&contents)
-                .ok()
-                .filter(|value| {
-                    value.expires > now().unwrap_or(0)
-                        && valid_secret(&value.cookie)
-                        && valid_secret(&value.bearer)
-                })
-        } else {
-            None
-        };
-        let cookie = match &existing {
-            Some(value) => value.cookie.clone(),
-            None => random_hex()?,
-        };
-        let bearer = match &existing {
-            Some(value) => value.bearer.clone(),
-            None => random_hex()?,
-        };
-        let cookie_expires = match existing {
-            Some(value) => value.expires,
-            None => now()?.saturating_add(SESSION_TTL),
-        };
-        write_private(
-            &session_path,
-            &to_json(&SessionFile {
-                cookie: cookie.clone(),
-                bearer: bearer.clone(),
-                expires: cookie_expires,
-            })?,
-        )?;
+        let session = active_session(&directory, port)?;
+        let cookie = session.cookie;
+        let bearer = session.bearer;
+        let cookie_expires = session.expires;
         let bootstrap = BootstrapFile {
             token: random_hex()?,
             expires: now()?.saturating_add(BOOTSTRAP_TTL),
@@ -114,12 +84,12 @@ impl BrowserAuth {
     }
 
     pub fn cookie_valid(&self, candidate: &str) -> bool {
-        self.cookie_expires >= now().unwrap_or(0)
+        self.cookie_expires > now().unwrap_or(0)
             && constant_time_eq(self.cookie.as_bytes(), candidate.as_bytes())
     }
 
     pub fn bearer_valid(&self, candidate: &str) -> bool {
-        self.cookie_expires >= now().unwrap_or(0)
+        self.cookie_expires > now().unwrap_or(0)
             && constant_time_eq(self.bearer.as_bytes(), candidate.as_bytes())
     }
 
@@ -138,6 +108,24 @@ impl BrowserAuth {
         {
             return false;
         }
+        // A trusted launch can renew an expired session without restarting the
+        // compatibility watcher. Only redeeming its fresh bootstrap adopts it.
+        let session_path = self.directory.join(format!("{}.json", self.port));
+        let Ok(bytes) = read_private(&session_path, 4096) else {
+            return false;
+        };
+        let Ok(session) = serde_json::from_slice::<SessionFile>(&bytes) else {
+            return false;
+        };
+        if session.expires <= now().unwrap_or(0)
+            || !valid_secret(&session.cookie)
+            || !valid_secret(&session.bearer)
+        {
+            return false;
+        }
+        self.cookie = session.cookie;
+        self.bearer = session.bearer;
+        self.cookie_expires = session.expires;
         self.bootstrap = None;
         let path = self.directory.join(format!("{}.bootstrap.json", self.port));
         if fs::remove_file(path).is_err() {
@@ -159,6 +147,7 @@ pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<P
     let directory = state.join("auth").join("ports");
     secure_state_dirs(state, &directory)?;
     let _lock = auth_lock(&directory, port)?;
+    active_session(&directory, port)?;
     let bootstrap = BootstrapFile {
         token: random_hex()?,
         expires: now()?.saturating_add(BOOTSTRAP_TTL),
@@ -172,6 +161,27 @@ pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<P
         .join("auth")
         .join(if handoff { "handoff.html" } else { "open.html" });
     Ok(path)
+}
+
+fn active_session(directory: &Path, port: u16) -> io::Result<SessionFile> {
+    let path = directory.join(format!("{port}.json"));
+    let existing = match read_private(&path, 4096) {
+        Ok(bytes) => serde_json::from_slice::<SessionFile>(&bytes).ok(),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => None,
+        Err(error) => return Err(error),
+    };
+    if let Some(session) = existing.filter(|v| {
+        v.expires > now().unwrap_or(0) && valid_secret(&v.cookie) && valid_secret(&v.bearer)
+    }) {
+        return Ok(session);
+    }
+    let session = SessionFile {
+        cookie: random_hex()?,
+        bearer: random_hex()?,
+        expires: now()?.saturating_add(SESSION_TTL),
+    };
+    write_private(&path, &to_json(&session)?)?;
+    Ok(session)
 }
 
 fn write_handoff(state: &Path, port: u16, token: &str, handoff: bool) -> io::Result<()> {
@@ -566,5 +576,40 @@ mod tests {
         )
         .unwrap();
         assert!(read_private(&path, 4096).is_err());
+    }
+
+    #[test]
+    fn explicit_launch_renews_expired_session_without_restarting_server() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut auth = BrowserAuth::open(dir.path(), 17843).unwrap();
+        let old_cookie = auth.cookie.clone();
+        let old_bearer = auth.bearer.clone();
+        auth.cookie_expires = now().unwrap() - 1;
+        write_private(
+            &dir.path().join("auth/ports/17843.json"),
+            &to_json(&SessionFile {
+                cookie: old_cookie.clone(),
+                bearer: old_bearer.clone(),
+                expires: auth.cookie_expires,
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(!auth.cookie_valid(&old_cookie));
+        let page = refresh_bootstrap(dir.path(), 17843, false).unwrap();
+        let page = fs::read_to_string(page).unwrap();
+        let token = page
+            .split("token=")
+            .nth(1)
+            .unwrap()
+            .split('&')
+            .next()
+            .unwrap();
+        assert!(auth.consume_bootstrap(token));
+        assert!(!auth.cookie_valid(&old_cookie));
+        assert!(!auth.bearer_valid(&old_bearer));
+        assert!(auth.cookie_valid(auth.cookie_value()));
+        assert!(auth.bearer_valid(auth.bearer_value()));
+        assert!(auth.cookie_max_age() > 0);
     }
 }

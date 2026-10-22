@@ -414,9 +414,6 @@ fn ensure_brain(focus: bool) -> Result<()> {
             );
         });
     }
-    if window.is_none() {
-        return Ok(());
-    }
     if window.is_some() && !launched {
         bootstrap_existing_browser()?
     }
@@ -486,7 +483,7 @@ fn route_window(window: &Value) -> Result<()> {
 
 pub fn action(name: &str, value: &str) -> Result<()> {
     match name {
-        "brain" | "open" => ensure_brain(true),
+        "brain" => ensure_brain(true),
         "capture" => {
             let output = match run_output(
                 &[

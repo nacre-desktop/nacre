@@ -442,8 +442,6 @@ fn add_subject(
     prior: &Value,
     label: &str,
     origin: &str,
-    category: Value,
-    path: Value,
 ) -> String {
     if let Some(id) = aliases.get(&key(label)) {
         return id.clone();
@@ -470,15 +468,15 @@ fn add_subject(
         label: label.to_owned(),
         aliases: Vec::new(),
         origin: origin.to_owned(),
-        category,
-        path,
+        category: Value::Null,
+        path: Value::Null,
         members: Map::new(),
         topics: Vec::new(),
         parent: Value::Null,
     });
     for name in [label.to_owned(), id.clone()] {
-        if !aliases.contains_key(&key(&name)) {
-            aliases.insert(key(&name), id.clone());
+        if let std::collections::btree_map::Entry::Vacant(entry) = aliases.entry(key(&name)) {
+            entry.insert(id.clone());
             subject.aliases.push(name);
         }
     }
@@ -581,8 +579,9 @@ pub fn organize_mut(
                 parent: Value::Null,
             });
             for name in names {
-                if !aliases.contains_key(&key(&name)) {
-                    aliases.insert(key(&name), sid.clone());
+                if let std::collections::btree_map::Entry::Vacant(entry) = aliases.entry(key(&name))
+                {
+                    entry.insert(sid.clone());
                     sub.aliases.push(name);
                 }
             }
@@ -606,8 +605,6 @@ pub fn organize_mut(
                     prior,
                     &label,
                     "annotated",
-                    Value::Null,
-                    Value::Null,
                 );
                 subjects
                     .get_mut(&sid)
@@ -696,8 +693,6 @@ pub fn organize_mut(
                     prior,
                     label,
                     "manual",
-                    Value::Null,
-                    Value::Null,
                 );
                 subjects
                     .get_mut(&sid)
@@ -790,7 +785,7 @@ pub fn organize_mut(
                 .map(|name| (name.clone(), s.id.clone()))
         })
         .collect();
-    names.sort_by(|a, b| b.0.chars().count().cmp(&a.0.chars().count()));
+    names.sort_by_key(|a| std::cmp::Reverse(a.0.chars().count()));
     for n in notes.iter() {
         let nid = n["id"].as_str().unwrap_or("");
         if assigned.get(nid).is_some_and(|v| !v.is_empty()) {
@@ -827,7 +822,7 @@ pub fn organize_mut(
         if assigned.get(nid).is_some_and(|v| !v.is_empty()) {
             continue;
         }
-        let intro = key(&prefix(&clean(n["text"].as_str().unwrap_or("")), 900));
+        let intro = key(prefix(&clean(n["text"].as_str().unwrap_or("")), 900));
         for (name, sid) in &names {
             let k = key(name);
             if subjects
