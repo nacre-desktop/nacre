@@ -506,9 +506,7 @@ class SwitchTests(Base):
         (releases / "release.lock").chmod(0o600)
         with (
             patch.object(f4, "require_ordinary_user"),  # CI runs as root
-            patch.dict(
-                os.environ, {"XDG_STATE_HOME": str(self.home / ".local/state")}
-            ),
+            patch.dict(os.environ, {"XDG_STATE_HOME": str(self.home / ".local/state")}),
         ):
             with open(releases / "release.lock") as held:
                 fcntl.flock(held, fcntl.LOCK_EX)
