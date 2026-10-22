@@ -2,7 +2,10 @@ name: Source checks
 on:
   push:
     branches: [main]
-  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: nacre-source-${{ github.ref }}
+  cancel-in-progress: true
 defaults:
   run:
     shell: nice -n 10 bash --noprofile --norc -e -o pipefail {0}
@@ -10,11 +13,12 @@ permissions:
   contents: read
 jobs:
   desktop:
-    runs-on: ubuntu-22.04
+    if: github.ref == 'refs/heads/main'
+    runs-on: ${{ fromJSON(vars.NACRE_CI_RUNNER || '["self-hosted","linux","nacre-ci"]') }}
     container:
       image: ghcr.io/archlinux/archlinux:latest
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
-      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined
+      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cpus=10 --memory=28g
     steps:
       - name: Rolling package cache key
         id: cache_epoch
@@ -149,10 +153,12 @@ jobs:
             ~/.npm
           key: arch-npm-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
   fresh-install:
-    if: ${{ always() }}
+    if: ${{ always() && github.ref == 'refs/heads/main' }}
     needs: desktop
-    runs-on: ubuntu-24.04
-    container: ghcr.io/archlinux/archlinux:latest
+    runs-on: ${{ fromJSON(vars.NACRE_CI_RUNNER || '["self-hosted","linux","nacre-ci"]') }}
+    container:
+      image: ghcr.io/archlinux/archlinux:latest
+      options: --cpus=10 --memory=28g
     timeout-minutes: 10
     steps:
       - name: Rolling package cache key
