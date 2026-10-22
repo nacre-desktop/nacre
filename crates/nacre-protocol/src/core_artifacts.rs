@@ -191,6 +191,24 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             "disks":entities(json!({"disk-1":{"path":"/","total":1000000,"used":250000}}))}),
             vec![],
         ),
+        (
+            "dashboard.player",
+            json!({"health":health,"active":"player-1","players":entities(json!({
+                "player-1":{"identity":"Fixture Player","status":"playing","title":"Fixture track","artist":"Fixture artist","album":"Fixture album",
+                    "art_path":"/tmp/nacre-fixtures/art/track-1.img","position_ms":42000,"position_updated_ms":1800000000000_u64,"length_ms":180000,
+                    "can_control":true,"can_play_pause":true,"can_next":true,"can_previous":true,"can_seek":true},
+                "player-2":{"identity":"Fixture Stream","status":"stopped","title":"","artist":"","album":"",
+                    "can_control":true,"can_play_pause":true,"can_next":false,"can_previous":false,"can_seek":false}}))}),
+            vec![
+                ("player.play_pause", json!({"player":"player-1"})),
+                ("player.next", json!({"player":"player-1"})),
+                ("player.previous", json!({"player":"player-1"})),
+                (
+                    "player.seek",
+                    json!({"player":"player-1","position_ms":90000}),
+                ),
+            ],
+        ),
     ];
     let mut out = BTreeMap::new();
     for (topic, state, calls) in cases.drain(..) {
@@ -317,6 +335,53 @@ fn compatibility_transcripts() -> BTreeMap<String, String> {
             vec![
                 json!({"primary_connection":"connection-wireless","connections":{"items":{"connection-wired":{"active":false}}}}),
                 json!({"primary_connection":null,"connections":{"items":{"connection-wireless":{"active":false}}}}),
+            ],
+        ),
+        (
+            "network-frequency",
+            "network",
+            json!({"health":health,"wireless_enabled":true,
+                "devices":entities(json!({"device-1":{"name":"wlan-fixture","kind":"wifi","connected":true}})),
+                "access_points":entities(json!({"ap-1":{"device":"device-1","name":"Fixture Wi-Fi","strength":70,"secured":true,"active":true,"frequency_mhz":5180}})),
+                "connections":empty}),
+            vec![
+                // Roaming to another band changes the reading; unknown removes it.
+                json!({"access_points":{"items":{"ap-1":{"frequency_mhz":2437}}}}),
+                json!({"access_points":{"items":{"ap-1":{"frequency_mhz":null}}}}),
+            ],
+        ),
+        (
+            "system-metrics",
+            "dashboard.system",
+            json!({"health":health,"processes":empty,"disks":empty}),
+            vec![
+                // First sample: CPU needs two readings, so only memory and a warm-up rate exist.
+                json!({"memory":{"used":4294967296_u64,"total":17179869184_u64},"network":[{"down_bps":1200,"up_bps":300}]}),
+                json!({"cpu_percent":12.5,"gpu":{"percent":3.0,"memory_used":536870912_u64,"memory_total":8589934592_u64},
+                    "network":[{"down_bps":1200,"up_bps":300},{"down_bps":0,"up_bps":0}]}),
+                // Unknown members are removed, never zeroed; GPU members are independent.
+                json!({"cpu_percent":null,"gpu":{"percent":null,"memory_used":null,"memory_total":null}}),
+                // Idle producer: last-good data stays, visibly stale.
+                json!({"health":{"stale":true}}),
+            ],
+        ),
+        (
+            "player-lifecycle",
+            "dashboard.player",
+            json!({"health":health,"active":"player-1","players":entities(json!({
+                "player-1":{"identity":"Fixture Player","status":"playing","title":"First","artist":"Artist","album":"",
+                    "art_path":"/tmp/nacre-fixtures/art/one.img","position_ms":0,"position_updated_ms":1800000000000_u64,"length_ms":200000,
+                    "can_control":true,"can_play_pause":true,"can_next":true,"can_previous":false,"can_seek":true}}))}),
+            vec![
+                // Seek: same status, new reading time. Clients extrapolate between patches.
+                json!({"players":{"items":{"player-1":{"position_ms":120000,"position_updated_ms":1800000005000_u64}}}}),
+                json!({"players":{"items":{"player-1":{"status":"paused","position_ms":123000,"position_updated_ms":1800000008000_u64}}}}),
+                // Track change without art or length: unknown members are removed.
+                json!({"players":{"items":{"player-1":{"title":"Second","art_path":null,"length_ms":null,"position_ms":0,"position_updated_ms":1800000009000_u64,"can_seek":false}}}}),
+                json!({"players":{"items":{"player-2":{"identity":"Second Player","status":"playing","title":"Live","artist":"","album":"",
+                    "can_control":true,"can_play_pause":true,"can_next":false,"can_previous":false,"can_seek":false}},"order":["player-1","player-2"]},"active":"player-2"}),
+                json!({"players":{"items":{"player-1":null},"order":["player-2"]}}),
+                json!({"players":{"items":{"player-2":null},"order":[]},"active":null}),
             ],
         ),
         (

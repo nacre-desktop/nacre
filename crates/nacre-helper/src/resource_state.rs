@@ -172,7 +172,8 @@ fn nvml_sample(nvml: &Nvml, ids: &[String], deadline: Instant) -> Result<BTreeMa
             .map(f64::from)
             .filter(|value| (0.0..=100000.0).contains(value));
         let name = optional(device.name()).unwrap_or_else(|| "N/A".into());
-        samples.insert(id.clone(),json!({"name":name,"temperature":temperature,"usage":usage,"frequencyMHz":frequency,"driverVersion":driver}));
+        let memory = optional(device.memory_info());
+        samples.insert(id.clone(),json!({"name":name,"temperature":temperature,"usage":usage,"frequencyMHz":frequency,"driverVersion":driver,"memoryUsed":memory.as_ref().map(|m|m.used),"memoryTotal":memory.as_ref().map(|m|m.total)}));
     }
     Ok(samples)
 }
@@ -522,11 +523,11 @@ mod tests {
             BTreeMap::from([
                 (
                     ids[0].clone(),
-                    json!({"name":"NVIDIA Fixture","temperature":60.0,"usage":0.0,"frequencyMHz":210.0,"driverVersion":"580.0"}),
+                    json!({"name":"NVIDIA Fixture","temperature":60.0,"usage":0.0,"frequencyMHz":210.0,"driverVersion":"580.0","memoryUsed":null,"memoryTotal":null}),
                 ),
                 (
                     ids[1].clone(),
-                    json!({"name":"NVIDIA Other","temperature":null,"usage":0.5,"frequencyMHz":null,"driverVersion":"580.0"}),
+                    json!({"name":"NVIDIA Other","temperature":null,"usage":0.5,"frequencyMHz":null,"driverVersion":"580.0","memoryUsed":null,"memoryTotal":null}),
                 ),
             ])
         });
@@ -607,11 +608,11 @@ mod tests {
         }
         assert_eq!(
             samples["0000:01:00.0"],
-            json!({"name":"NVIDIA Fixture","temperature":60.0,"usage":0.0,"frequencyMHz":210.0,"driverVersion":"580.0"})
+            json!({"name":"NVIDIA Fixture","temperature":60.0,"usage":0.0,"frequencyMHz":210.0,"driverVersion":"580.0","memoryUsed":null,"memoryTotal":null})
         );
         assert_eq!(
             samples["0000:02:00.0"],
-            json!({"name":"NVIDIA Other","temperature":null,"usage":0.5,"frequencyMHz":null,"driverVersion":"580.0"})
+            json!({"name":"NVIDIA Other","temperature":null,"usage":0.5,"frequencyMHz":null,"driverVersion":"580.0","memoryUsed":null,"memoryTotal":null})
         );
     }
 

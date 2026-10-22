@@ -83,8 +83,8 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             }
         }
     }
-    assert_eq!(topics, 11);
-    assert_eq!(calls.len(), 15);
+    assert_eq!(topics, 12);
+    assert_eq!(calls.len(), 19);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),
@@ -233,8 +233,86 @@ fn battery_is_independent_and_osd_repeats_without_replaying_expired_events() {
             .keys()
             .filter(|file| file.starts_with("protocol/fixtures/core-compat-"))
             .count(),
-        7
+        10
     );
+}
+
+#[test]
+fn dashboard_metrics_player_and_frequency_extensions_keep_unknown_values_omitted() {
+    let frequency = compatibility_states("network-frequency");
+    let point = |index: usize| frequency[index]["access_points"]["items"]["ap-1"].clone();
+    assert_eq!(point(0)["frequency_mhz"], 5180);
+    assert_eq!(point(1)["frequency_mhz"], 2437);
+    assert!(point(2).get("frequency_mhz").is_none());
+    let system = compatibility_states("system-metrics");
+    assert_eq!(system.len(), 5);
+    assert!(system[0].get("cpu_percent").is_none() && system[0].get("memory").is_none());
+    assert_eq!(system[1]["network"].as_array().unwrap().len(), 1);
+    assert_eq!(system[2]["cpu_percent"], 12.5);
+    assert_eq!(system[2]["gpu"]["memory_total"], 8589934592_u64);
+    assert!(system[3].get("cpu_percent").is_none());
+    assert_eq!(system[3]["gpu"], json!({}));
+    assert_eq!(system[4]["health"]["stale"], true);
+    let player = compatibility_states("player-lifecycle");
+    assert_eq!(player.len(), 7);
+    let first = |index: usize| player[index]["players"]["items"]["player-1"].clone();
+    assert_eq!(first(1)["position_ms"], 120000);
+    assert_eq!(first(2)["status"], "paused");
+    assert!(first(3).get("art_path").is_none() && first(3).get("length_ms").is_none());
+    assert_eq!(player[4]["active"], "player-2");
+    assert_eq!(player[5]["players"]["order"], json!(["player-2"]));
+    assert!(player[6].get("active").is_none());
+}
+
+#[test]
+fn dashboard_metrics_and_player_reject_impossible_values() {
+    let valid = |topic: &str, state: Value| {
+        serde_json::from_value::<CoreSnapshot>(json!({"topic":topic,"data":state}))
+            .is_ok_and(|state| state.valid())
+    };
+    let system = compatibility_states("system-metrics")[2].clone();
+    assert!(valid("dashboard.system", system.clone()));
+    for (key, value) in [
+        ("cpu_percent", json!(100.5)),
+        ("cpu_percent", json!(-1.0)),
+        ("memory", json!({"used":2,"total":1})),
+        ("memory", json!({"used":0,"total":0})),
+        ("gpu", json!({"percent":101.0})),
+        ("gpu", json!({"memory_used":9,"memory_total":8})),
+        ("network", json!(vec![json!({"down_bps":1,"up_bps":1}); 33])),
+        ("network", json!([{"down_bps":-1,"up_bps":1}])),
+    ] {
+        let mut state = system.clone();
+        state[key] = value;
+        assert!(!valid("dashboard.system", state), "{key}");
+    }
+    let mut old = system;
+    for key in ["cpu_percent", "memory", "gpu", "network"] {
+        old.as_object_mut().unwrap().remove(key);
+    }
+    assert!(valid("dashboard.system", old), "Older producers stay valid");
+    let player = compatibility_states("player-lifecycle")[0].clone();
+    assert!(valid("dashboard.player", player.clone()));
+    for (key, value) in [
+        ("art_path", json!("https://example.invalid/art.png")),
+        ("art_path", json!("relative.png")),
+        ("art_path", json!("/tmp/a\nb")),
+        ("position_ms", json!(200001)),
+        ("position_updated_ms", Value::Null),
+        ("length_ms", json!(0)),
+        ("identity", json!("x".repeat(257))),
+        ("title", json!("x".repeat(513))),
+    ] {
+        let mut state = player.clone();
+        state["players"]["items"]["player-1"][key] = value;
+        assert!(!valid("dashboard.player", state), "{key}");
+    }
+    let mut uncontrollable = player.clone();
+    uncontrollable["players"]["items"]["player-1"]["can_control"] = json!(false);
+    assert!(!valid("dashboard.player", uncontrollable));
+    let mut foreign = player;
+    foreign["active"] = json!("missing");
+    assert!(!valid("dashboard.player", foreign));
 }
 
 #[test]

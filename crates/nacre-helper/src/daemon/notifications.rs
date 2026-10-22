@@ -22,7 +22,8 @@ use std::{
     },
     time::{Duration, Instant},
 };
-use storage::{ImageCache, Store};
+pub(super) use storage::ImageCache;
+use storage::Store;
 use tokio::{
     sync::{mpsc, oneshot, Notify, OwnedSemaphorePermit, Semaphore},
     task::JoinHandle,

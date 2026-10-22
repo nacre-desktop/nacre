@@ -88,8 +88,11 @@ pub struct Hub {
     issued_provider_routes: Option<(u64, u64, u64)>,
     next_route: u64,
     internal: broadcast::Sender<Notice>,
+    /// Lazy producers wait on "has any client subscribed to this topic".
+    interest: BTreeMap<String, tokio::sync::watch::Sender<bool>>,
     pub network: Option<super::network::Requests>,
     pub notifications: Option<super::notifications::Requests>,
+    pub player: Option<super::dashboard_player::Requests>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
     pub dashboard: Option<super::dashboard_extras::Requests>,
@@ -118,8 +121,10 @@ impl Hub {
             issued_provider_routes: None,
             next_route: 0,
             internal,
+            interest: BTreeMap::new(),
             network: None,
             notifications: None,
+            player: None,
             session: None,
             menu: None,
             dashboard: None,
@@ -134,6 +139,20 @@ impl Hub {
     }
     pub fn shared(self) -> Shared {
         Rc::new(std::cell::RefCell::new(self))
+    }
+    /// True while at least one connected client subscribes to `topic`.
+    pub fn watch_interest(&mut self, topic: &str) -> tokio::sync::watch::Receiver<bool> {
+        let wanted = self.clients.values().any(|c| c.topics.contains_key(topic));
+        self.interest
+            .entry(topic.to_owned())
+            .or_insert_with(|| tokio::sync::watch::channel(wanted).0)
+            .subscribe()
+    }
+    fn refresh_interest(&self) {
+        for (topic, sender) in &self.interest {
+            let wanted = self.clients.values().any(|c| c.topics.contains_key(topic));
+            sender.send_if_modified(|current| std::mem::replace(current, wanted) != wanted);
+        }
     }
     pub fn observe(&self) -> broadcast::Receiver<Notice> {
         self.internal.subscribe()
@@ -269,6 +288,7 @@ impl Hub {
         if let Some(client) = self.clients.remove(&id) {
             client.wake.notify_one();
         }
+        self.refresh_interest();
         if self.provider.as_ref().is_some_and(|p| p.0 == id) {
             self.provider = None;
         }
@@ -317,6 +337,13 @@ impl Hub {
             }
             if self.dashboard.is_some() {
                 methods.extend(super::dashboard_extras::methods());
+            }
+            if self
+                .services
+                .get("dashboard-player")
+                .is_some_and(|s| s["status"] == "running")
+            {
+                methods.extend(super::dashboard_player::methods());
             }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());
@@ -442,6 +469,7 @@ impl Hub {
             );
         }
         client.wake.notify_one();
+        self.refresh_interest();
         Ok(())
     }
     pub fn unsubscribe(&mut self, id: u64, topics: &[String]) {
@@ -455,6 +483,7 @@ impl Hub {
             );
             client.event_bytes = client.events.iter().map(|event| event.bytes).sum();
         }
+        self.refresh_interest();
     }
     pub fn enqueue(&mut self, id: u64, message: Message) -> Result<(), Failure> {
         let bytes = nacre_protocol::framing::encode(&message)?.len();

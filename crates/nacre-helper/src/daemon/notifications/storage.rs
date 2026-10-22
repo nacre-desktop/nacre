@@ -361,6 +361,18 @@ impl ImageCache {
                 false,
             ));
         }
+        self.resolve_bytes(input)
+    }
+
+    /// Re-encode an in-memory image (already size-bounded by the caller) as a cached PNG.
+    pub fn resolve_bytes(&self, input: Vec<u8>) -> Result<String, Failure> {
+        if input.len() > IMAGE_BYTES {
+            return Err(failure(
+                ErrorCode::TooLarge,
+                "Notification image exceeds its size limit",
+                false,
+            ));
+        }
         let mut reader = image::ImageReader::new(std::io::Cursor::new(input))
             .with_guessed_format()
             .map_err(|_| {

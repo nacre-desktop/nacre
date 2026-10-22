@@ -202,6 +202,7 @@ struct RawAccessPoint {
     flags: u32,
     wpa_flags: u32,
     rsn_flags: u32,
+    frequency: Option<u32>,
 }
 
 #[derive(Clone, Debug)]
@@ -378,6 +379,16 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
                     "RsnFlags",
                 )
                 .await?,
+                // Optional detail: a missing or odd reading never fails the state.
+                frequency: property::<u32>(
+                    connection,
+                    &point_path,
+                    "org.freedesktop.NetworkManager.AccessPoint",
+                    "Frequency",
+                )
+                .await
+                .ok()
+                .filter(|mhz| (1..=100_000).contains(mhz)),
                 path: point_path,
             });
         }
@@ -572,6 +583,7 @@ fn project(
                     secured: point.flags & 1 != 0 || point.wpa_flags != 0 || point.rsn_flags != 0,
                     active,
                     connection: if active { profile_id.clone() } else { None },
+                    frequency_mhz: point.frequency,
                 },
             );
         }
@@ -2067,6 +2079,7 @@ mod core_tests {
                     flags: 1,
                     wpa_flags: 0,
                     rsn_flags: 0,
+                    frequency: Some(5180),
                 }],
             }],
             profiles: vec![
@@ -2158,6 +2171,7 @@ mod core_tests {
         let point = &state.access_points.items[&state.access_points.order[0]];
         assert!(state.devices.items.contains_key(&point.device));
         assert_eq!(point.connection.as_ref(), state.primary_connection.as_ref());
+        assert_eq!(point.frequency_mhz, Some(5180));
     }
 
     #[test]
@@ -2243,6 +2257,7 @@ mod core_tests {
                 flags: 0,
                 wpa_flags: 0,
                 rsn_flags: 0,
+                frequency: None,
             })
             .collect();
         let mut raw_points = raw_fixture();
@@ -2373,6 +2388,10 @@ mod core_tests {
             fn rsn_flags(&self) -> u32 {
                 0
             }
+            #[zbus(property)]
+            fn frequency(&self) -> u32 {
+                5180
+            }
         }
         struct Settings;
         #[zbus::interface(name = "org.freedesktop.NetworkManager.Settings")]
@@ -2452,6 +2471,10 @@ mod core_tests {
         assert!(CoreSnapshot::Network(state.clone()).valid());
         assert_eq!(state.devices.items.len(), 1);
         assert_eq!(state.access_points.items.len(), 1);
+        assert_eq!(
+            state.access_points.items[&state.access_points.order[0]].frequency_mhz,
+            Some(5180)
+        );
         assert_eq!(state.connections.items.len(), 1);
         assert_eq!(scans.load(Ordering::SeqCst), 0);
         assert_eq!(secrets.load(Ordering::SeqCst), 0);

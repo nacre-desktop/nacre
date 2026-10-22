@@ -9,6 +9,8 @@ pub mod compositor;
 pub mod compositor_control;
 pub mod crashes;
 pub mod dashboard_extras;
+pub mod dashboard_metrics;
+pub mod dashboard_player;
 pub mod helpers;
 pub mod hub;
 pub mod menu;
@@ -194,6 +196,27 @@ async fn serve(
         )))
     } else {
         None
+    };
+    let (player_service, metrics_service) = if !counter.safe {
+        dashboard_player::initial(&hub)?;
+        dashboard_metrics::initial(&hub)?;
+        let (player_hub, player_paths) = (hub.clone(), paths.clone());
+        let player = tokio::task::spawn_local(supervisor::run(
+            "dashboard-player",
+            hub.clone(),
+            move || dashboard_player::run(player_hub.clone(), player_paths.clone()),
+        ));
+        let metrics_hub = hub.clone();
+        let metrics = tokio::task::spawn_local(supervisor::run(
+            "dashboard-system",
+            hub.clone(),
+            move || {
+                dashboard_metrics::run(metrics_hub.clone(), dashboard_metrics::Sources::system())
+            },
+        ));
+        (Some(player), Some(metrics))
+    } else {
+        (None, None)
     };
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
@@ -396,7 +419,7 @@ async fn serve(
             }
         }
     }
-    if let Some(service) = dashboard_service {
+    for service in [dashboard_service, player_service, metrics_service].into_iter().flatten() {
         service.abort();
         if let Err(error) = service.await {
             if !error.is_cancelled() {

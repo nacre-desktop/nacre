@@ -338,6 +338,70 @@
         "m",
         "p"
       ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "player.play_pause"
+        },
+        "p": {
+          "$ref": "#/$defs/PlayerTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "player.next"
+        },
+        "p": {
+          "$ref": "#/$defs/PlayerTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "player.previous"
+        },
+        "p": {
+          "$ref": "#/$defs/PlayerTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "player.seek"
+        },
+        "p": {
+          "$ref": "#/$defs/PlayerSeek"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
     }
   ],
   "$defs": {
@@ -621,6 +685,36 @@
     },
     "Refresh": {
       "type": "object"
+    },
+    "PlayerTarget": {
+      "type": "object",
+      "properties": {
+        "player": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "player"
+      ]
+    },
+    "PlayerSeek": {
+      "description": "Absolute seek on the player's current track; the daemon refuses it unless the\ntopic reports `can_seek` and a known length, and clamps nothing silently.",
+      "type": "object",
+      "properties": {
+        "player": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "position_ms": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "player",
+        "position_ms"
+      ]
     }
   }
 }

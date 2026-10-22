@@ -77,6 +77,10 @@ pub struct AccessPoint {
     pub active: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub connection: Option<EntityId>,
+    /// Radio frequency in MHz; omitted when the backend does not report it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1, max = 100000))]
+    pub frequency_mhz: Option<u32>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Connection {
@@ -629,11 +633,103 @@ pub struct SystemDisk {
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub used: u64,
 }
+/// Physical memory in bytes; `used` excludes reclaimable cache (MemAvailable).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SystemMemory {
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub used: u64,
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub total: u64,
+}
+/// Busiest GPU. Each member is independently optional; omitted means unknown.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SystemGpu {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub percent: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub memory_used: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub memory_total: Option<u64>,
+}
+/// One interval rate in **bytes per second** (the `_bps` names are fixed by Bead B0024).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct NetworkSample {
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub down_bps: u64,
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub up_bps: u64,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardSystemState {
     pub health: Health,
     pub processes: Entities<SystemProcess>,
     pub disks: Entities<SystemDisk>,
+    /// Whole-machine busy share in [0,100] over the last sample interval.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0.0, max = 100.0))]
+    pub cpu_percent: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<SystemMemory>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gpu: Option<SystemGpu>,
+    /// Oldest first, at most 32 samples; absent or empty means no sample yet.
+    /// A time series, not entities: order is time, items have no identity.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(extend("maxItems" = 32))]
+    pub network: Vec<NetworkSample>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PlayerStatus {
+    Playing,
+    Paused,
+    Stopped,
+}
+/// One MPRIS player. Text is display-only and bounded; unknown values are omitted.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct Player {
+    #[schemars(length(max = 256))]
+    pub identity: String,
+    pub status: PlayerStatus,
+    #[schemars(length(max = 512))]
+    pub title: String,
+    #[schemars(length(max = 512))]
+    pub artist: String,
+    #[schemars(length(max = 512))]
+    pub album: String,
+    /// Absolute path of a private cached copy; remote URLs never cross the protocol.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 4096))]
+    pub art_path: Option<String>,
+    /// Position at `position_updated_ms`. While `playing`, clients extrapolate
+    /// locally; the daemon republishes on seek, status and track changes only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub position_ms: Option<u64>,
+    /// Unix milliseconds of the position reading; present exactly with `position_ms`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub position_updated_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub length_ms: Option<u64>,
+    pub can_control: bool,
+    pub can_play_pause: bool,
+    pub can_next: bool,
+    pub can_previous: bool,
+    pub can_seek: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PlayerState {
+    pub health: Health,
+    /// The player the daemon considers current; clients may let the user override.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<EntityId>,
+    pub players: Entities<Player>,
 }
 
 /// Payload alternatives embedded in the existing snap message, not a new frame.
@@ -666,6 +762,8 @@ pub enum CoreSnapshot {
     Media(DashboardMediaState),
     #[serde(rename = "dashboard.system")]
     System(DashboardSystemState),
+    #[serde(rename = "dashboard.player")]
+    Player(PlayerState),
 }
 
 impl CoreSnapshot {
@@ -852,11 +950,69 @@ impl CoreSnapshot {
                         .items
                         .values()
                         .all(|d| timestamp_valid(d.total) && d.used <= d.total)
+                    && s.cpu_percent.is_none_or(percent_valid)
+                    && s.memory.as_ref().is_none_or(|m| {
+                        m.total > 0 && timestamp_valid(m.total) && m.used <= m.total
+                    })
+                    && s.gpu.as_ref().is_none_or(|g| {
+                        g.percent.is_none_or(percent_valid)
+                            && g.memory_total.is_none_or(|t| t > 0 && timestamp_valid(t))
+                            && g.memory_used.is_none_or(|u| {
+                                timestamp_valid(u) && g.memory_total.is_none_or(|t| u <= t)
+                            })
+                    })
+                    && s.network.len() <= 32
+                    && s.network
+                        .iter()
+                        .all(|n| timestamp_valid(n.down_bps) && timestamp_valid(n.up_bps))
+            }
+            Self::Player(s) => {
+                s.players.valid()
+                    && s.active
+                        .as_ref()
+                        .is_none_or(|id| s.players.items.contains_key(id))
+                    && s.players.items.values().all(|p| {
+                        let text = |value: &str, limit| value.chars().count() <= limit;
+                        text(&p.identity, 256)
+                            && text(&p.title, 512)
+                            && text(&p.artist, 512)
+                            && text(&p.album, 512)
+                            && p.art_path.as_ref().is_none_or(|path| {
+                                path.starts_with('/')
+                                    && path.len() <= 4096
+                                    && !path.contains(['\0', '\n'])
+                                    && !path.contains("://")
+                            })
+                            && p.position_ms.is_some() == p.position_updated_ms.is_some()
+                            && p.position_ms.is_none_or(timestamp_valid)
+                            && p.position_updated_ms.is_none_or(timestamp_valid)
+                            && p.length_ms.is_none_or(|l| l > 0 && timestamp_valid(l))
+                            && p.position_ms
+                                .zip(p.length_ms)
+                                .is_none_or(|(position, length)| position <= length)
+                            && (p.can_control
+                                || !(p.can_play_pause
+                                    || p.can_next
+                                    || p.can_previous
+                                    || p.can_seek))
+                    })
             }
         }
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PlayerTarget {
+    pub player: EntityId,
+}
+/// Absolute seek on the player's current track; the daemon refuses it unless the
+/// topic reports `can_seek` and a known length, and clamps nothing silently.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PlayerSeek {
+    pub player: EntityId,
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub position_ms: u64,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WifiPower {
     pub enabled: bool,
@@ -1002,6 +1158,14 @@ pub enum CoreCall {
     UpdatesRefresh(Refresh),
     #[serde(rename = "dashboard.calendar.refresh")]
     CalendarRefresh(Refresh),
+    #[serde(rename = "player.play_pause")]
+    PlayerPlayPause(PlayerTarget),
+    #[serde(rename = "player.next")]
+    PlayerNext(PlayerTarget),
+    #[serde(rename = "player.previous")]
+    PlayerPrevious(PlayerTarget),
+    #[serde(rename = "player.seek")]
+    PlayerSeek(PlayerSeek),
 }
 
 impl CoreCall {
@@ -1034,6 +1198,10 @@ impl CoreCall {
             }
             Self::AudioMute(p) => p.node.valid(),
             Self::AudioRoute(p) => p.stream.valid() && p.target.valid(),
+            Self::PlayerPlayPause(p) | Self::PlayerNext(p) | Self::PlayerPrevious(p) => {
+                p.player.valid()
+            }
+            Self::PlayerSeek(p) => p.player.valid() && timestamp_valid(p.position_ms),
             Self::NotificationDismiss(p) => {
                 p.id.valid() && timestamp_valid(p.revision) && p.revision > 0
             }

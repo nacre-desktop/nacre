@@ -49,6 +49,9 @@ async fn dispatch(
         method if method.starts_with("notifications.") && !hub.borrow().safe => {
             super::notifications::dispatch(hub, client, method, params, timeout).await
         }
+        method if method.starts_with("player.") && !hub.borrow().safe => {
+            super::dashboard_player::dispatch(hub, method, params).await
+        }
         "daemon.ping" => Ok(Value::Null),
         method @ ("tray.activate"
         | "tray.secondary_activate"

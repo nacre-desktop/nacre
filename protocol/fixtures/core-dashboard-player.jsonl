@@ -1,0 +1,10 @@
+{"t":"snap","topic":"dashboard.player","seq":0,"data":{"health":{"available":true,"stale":false},"active":"player-1","players":{"items":{"player-1":{"identity":"Fixture Player","status":"playing","title":"Fixture track","artist":"Fixture artist","album":"Fixture album","art_path":"/tmp/nacre-fixtures/art/track-1.img","position_ms":42000,"position_updated_ms":1800000000000,"length_ms":180000,"can_control":true,"can_play_pause":true,"can_next":true,"can_previous":true,"can_seek":true},"player-2":{"identity":"Fixture Stream","status":"stopped","title":"","artist":"","album":"","can_control":true,"can_play_pause":true,"can_next":false,"can_previous":false,"can_seek":false}},"order":["player-1","player-2"]}}}
+{"t":"call","id":0,"m":"player.play_pause","p":{"player":"player-1"},"timeout":10000}
+{"t":"ret","id":0,"ok":{"changed":true}}
+{"t":"call","id":1,"m":"player.next","p":{"player":"player-1"},"timeout":10000}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"call","id":2,"m":"player.previous","p":{"player":"player-1"},"timeout":10000}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"call","id":3,"m":"player.seek","p":{"player":"player-1","position_ms":90000},"timeout":10000}
+{"t":"ret","id":3,"ok":{"changed":true}}
+{"t":"patch","topic":"dashboard.player","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}

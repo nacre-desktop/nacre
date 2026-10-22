@@ -1,0 +1,5 @@
+{"t":"snap","topic":"dashboard.system","seq":0,"data":{"health":{"available":true,"stale":false},"processes":{"items":{},"order":[]},"disks":{"items":{},"order":[]}}}
+{"t":"patch","topic":"dashboard.system","base":0,"seq":1,"data":{"memory":{"used":4294967296,"total":17179869184},"network":[{"down_bps":1200,"up_bps":300}]}}
+{"t":"patch","topic":"dashboard.system","base":1,"seq":2,"data":{"cpu_percent":12.5,"gpu":{"percent":3.0,"memory_used":536870912,"memory_total":8589934592},"network":[{"down_bps":1200,"up_bps":300},{"down_bps":0,"up_bps":0}]}}
+{"t":"patch","topic":"dashboard.system","base":2,"seq":3,"data":{"cpu_percent":null,"gpu":{"percent":null,"memory_used":null,"memory_total":null}}}
+{"t":"patch","topic":"dashboard.system","base":3,"seq":4,"data":{"health":{"stale":true}}}

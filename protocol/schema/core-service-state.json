@@ -210,6 +210,22 @@
         "topic",
         "data"
       ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "const": "dashboard.player"
+        },
+        "data": {
+          "$ref": "#/$defs/PlayerState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
     }
   ],
   "$defs": {
@@ -434,6 +450,16 @@
               "type": "null"
             }
           ]
+        },
+        "frequency_mhz": {
+          "description": "Radio frequency in MHz; omitted when the backend does not report it.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 1,
+          "maximum": 100000
         }
       },
       "required": [
@@ -1921,6 +1947,44 @@
         },
         "disks": {
           "$ref": "#/$defs/Entities_SystemDisk"
+        },
+        "cpu_percent": {
+          "description": "Whole-machine busy share in [0,100] over the last sample interval.",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "memory": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemMemory"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gpu": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SystemGpu"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "network": {
+          "description": "Oldest first, at most 32 samples; absent or empty means no sample yet.\nA time series, not entities: order is time, items have no identity.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NetworkSample"
+          },
+          "maxItems": 32
         }
       },
       "required": [
@@ -2053,6 +2117,235 @@
         "path",
         "total",
         "used"
+      ]
+    },
+    "SystemMemory": {
+      "description": "Physical memory in bytes; `used` excludes reclaimable cache (MemAvailable).",
+      "type": "object",
+      "properties": {
+        "used": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "total": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "used",
+        "total"
+      ]
+    },
+    "SystemGpu": {
+      "description": "Busiest GPU. Each member is independently optional; omitted means unknown.",
+      "type": "object",
+      "properties": {
+        "percent": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "memory_used": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "memory_total": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "NetworkSample": {
+      "description": "One interval rate in **bytes per second** (the `_bps` names are fixed by Bead B0024).",
+      "type": "object",
+      "properties": {
+        "down_bps": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "up_bps": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "down_bps",
+        "up_bps"
+      ]
+    },
+    "PlayerState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "active": {
+          "description": "The player the daemon considers current; clients may let the user override.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EntityId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "players": {
+          "$ref": "#/$defs/Entities_Player"
+        }
+      },
+      "required": [
+        "health",
+        "players"
+      ]
+    },
+    "Entities_Player": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Player"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Player": {
+      "description": "One MPRIS player. Text is display-only and bounded; unknown values are omitted.",
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "status": {
+          "$ref": "#/$defs/PlayerStatus"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "artist": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "album": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "art_path": {
+          "description": "Absolute path of a private cached copy; remote URLs never cross the protocol.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "position_ms": {
+          "description": "Position at `position_updated_ms`. While `playing`, clients extrapolate\nlocally; the daemon republishes on seek, status and track changes only.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "position_updated_ms": {
+          "description": "Unix milliseconds of the position reading; present exactly with `position_ms`.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "length_ms": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "can_control": {
+          "type": "boolean"
+        },
+        "can_play_pause": {
+          "type": "boolean"
+        },
+        "can_next": {
+          "type": "boolean"
+        },
+        "can_previous": {
+          "type": "boolean"
+        },
+        "can_seek": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "identity",
+        "status",
+        "title",
+        "artist",
+        "album",
+        "can_control",
+        "can_play_pause",
+        "can_next",
+        "can_previous",
+        "can_seek"
+      ]
+    },
+    "PlayerStatus": {
+      "type": "string",
+      "enum": [
+        "playing",
+        "paused",
+        "stopped"
       ]
     }
   }
