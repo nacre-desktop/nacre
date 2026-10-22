@@ -10,7 +10,7 @@ use std::{
 
 const MAX_RESPONSE: usize = 4 * 1024 * 1024;
 
-struct Peer {
+pub struct Peer {
     child: Child,
     input: ChildStdin,
     output: ChildStdout,
@@ -28,7 +28,7 @@ impl Drop for Peer {
 }
 
 impl Peer {
-    fn start(mut command: Command, timeout: Duration) -> Result<Self> {
+    pub fn start(mut command: Command, timeout: Duration) -> Result<Self> {
         command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -91,14 +91,26 @@ impl Peer {
         Ok(())
     }
 
+    pub fn notify(&mut self, method: &str, params: Value) -> Result<()> {
+        if params.as_object().is_some_and(|value| value.is_empty()) {
+            self.send(json!({"method":method}))
+        } else {
+            self.send(json!({"method":method,"params":params}))
+        }
+    }
+
     fn call(&mut self, method: &str) -> Result<Value> {
-        self.sequence += 1;
-        let identity = self.sequence;
         let params = if method == "initialize" {
             json!({"clientInfo":{"name":"nacre_workflow","version":"1.0","title":"Nacre AI"}})
         } else {
             json!({})
         };
+        self.call_with_params(method, params)
+    }
+
+    pub fn call_with_params(&mut self, method: &str, params: Value) -> Result<Value> {
+        self.sequence += 1;
+        let identity = self.sequence;
         self.send(json!({"id":identity,"method":method,"params":params}))?;
         loop {
             self.check_deadline()?;
@@ -140,7 +152,7 @@ impl Peer {
 pub fn usage(command: Command, timeout: Duration) -> Result<(Value, Value)> {
     let mut peer = Peer::start(command, timeout)?;
     peer.call("initialize")?;
-    peer.send(json!({"method":"initialized"}))?;
+    peer.notify("initialized", json!({}))?;
     let rates = peer.call("account/rateLimits/read")?;
     let activity = peer.call("account/usage/read").unwrap_or(Value::Null);
     Ok((rates, activity))
