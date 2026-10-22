@@ -182,23 +182,21 @@ Planned clean-up passes:
 Both passes are driven by the bloat audit (docs/research/bloat-audit-20261022.md).
 The owner decides what is removed.
 
-## Size budget — owner direction 2026-10-22
+## Size awareness — owner direction 2026-10-22 (revised)
 
-Goal: finish Nacre on Bead without growing it into a heavyweight. Reference
-point: Noctalia's C++ shell is about 337k product lines (35k tests, 160k
-vendored), counted 2026-10-22.
+No hard line cap. The owner is fine with Nacre + Bead ending at or above
+Noctalia's size (about 337k C++ product lines, counted 2026-10-22), as long
+as the size is real product, not leftover scaffolding.
 
-- Budget: Nacre + Bead **product code at most 200k lines** at the core switch.
-  Tests, generated fixtures and docs are counted separately. Baseline on
-  2026-10-22: Nacre 173k (Rust 97k, QML 43k, Python 30k, JS 4k) and Bead 55k.
-  About 73k of that (the Python and the always-on QML) is planned to go away.
-- Frozen parity fixtures (about 310k lines of generated JSON) are deleted
-  together with the Python they pin, in clean-up pass (a) or later.
+- Frozen parity fixtures (about 310k lines of generated JSON) are disposable.
+  They are deleted together with the Python they pin, in clean-up pass (a) or
+  later.
 - Any native port larger than 2.5× its Python original gets a simplicity
   review before it is Done: remove speculative abstraction and duplicated
   validation, and keep security checks.
 - The lead reports a weekly line count (product / tests / fixtures, per repo)
-  in the queue.
+  in the queue. Baseline 2026-10-22: Nacre product 173k (Rust 97k, QML 43k,
+  Python 30k, JS 4k), Bead product 55k.
 
 ## Owner-only decisions
 
