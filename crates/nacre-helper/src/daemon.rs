@@ -419,7 +419,10 @@ async fn serve(
             }
         }
     }
-    for service in [dashboard_service, player_service, metrics_service].into_iter().flatten() {
+    for service in [dashboard_service, player_service, metrics_service]
+        .into_iter()
+        .flatten()
+    {
         service.abort();
         if let Err(error) = service.await {
             if !error.is_cancelled() {
