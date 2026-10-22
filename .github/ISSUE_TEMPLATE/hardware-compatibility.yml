@@ -49,7 +49,7 @@ body:
       label: nacre doctor --report output
       description:
         Paste reviewed, sanitized output. If unavailable on your version, paste the command error,
-        Nacre version/commit, and python3 nacre/shell-tools/maintenance.py state output from the source
+        Nacre version/commit, and nacre-maintenance state output from the source
         checkout.
       render: text
     validations:

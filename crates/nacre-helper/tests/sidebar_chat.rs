@@ -281,7 +281,7 @@ impl Fixture {
             .set_read_timeout(Some(Duration::from_secs(60)))
             .unwrap();
         executable(
-            &tools.join("desktop-extras.py"),
+            &tools.join("nacre-helper"),
             r##"#!/usr/bin/python3
 import json, os, socket, sys
 data = json.load(sys.stdin)
@@ -359,6 +359,7 @@ socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ
             .env("FAKE_EXTRAS_LOG", &self.extras_log)
             .env("FAKE_SCENARIO", &self.scenario)
             .env("NACRE_HELPER_TOOLS", &self.tools)
+            .env("NACRE_HELPER_BINARY", self.tools.join("nacre-helper"))
             .stdin(Stdio::null())
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
@@ -1197,7 +1198,7 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
     assert_eq!(extras.len(), 1);
-    assert_eq!(extras[0]["argv"], json!(["resume"]));
+    assert_eq!(extras[0]["argv"], json!(["desktop-extras", "resume"]));
     assert_eq!(extras[0]["key"].as_str().unwrap().len(), 24);
     assert_eq!(extras[0]["provider_closed"], true);
     assert_eq!(fixture.provider_pids().len(), original_pids);

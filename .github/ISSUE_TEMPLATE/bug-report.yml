@@ -44,7 +44,7 @@ body:
       description:
         Run nacre doctor --report and paste the output after reviewing it for private information.
         If your version lacks this command, paste its error, your Nacre version/commit, and the output of
-        python3 nacre/shell-tools/maintenance.py state from your source checkout. Do not run recovery actions
+        nacre-maintenance state from your source checkout. Do not run recovery actions
         for this report.
       render: text
     validations:

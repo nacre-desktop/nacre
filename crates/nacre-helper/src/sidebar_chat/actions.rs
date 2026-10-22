@@ -168,13 +168,12 @@ fn workspace(shared: &Arc<Mutex<Shared>>) -> Result<()> {
         state.status = "Continue this chat in the workspace, or start a new chat here.".into();
         state.update();
     }
-    // N0025 owns desktop adapters. Keep the established resume boundary here.
-    let script = crate::paths::Paths::environment()?
-        .assets()
-        .join("desktop-extras.py");
-    let mut child = Command::new("python3")
-        .arg(script)
-        .arg("resume")
+    let helper = match std::env::var_os("NACRE_HELPER_BINARY") {
+        Some(path) => std::path::PathBuf::from(path),
+        None => std::env::current_exe()?,
+    };
+    let mut child = Command::new(helper)
+        .args(["desktop-extras", "resume"])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

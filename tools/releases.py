@@ -842,8 +842,8 @@ def main():
     if a.action in ("doctor", "profile", "check", "session", "restart"):
         subprocess.run(
             [
-                sys.executable,
-                str(HOME / ".local/share/nacre/shell/tools/maintenance.py"),
+                str(HOME / ".local/share/nacre/shell/tools/nacre-helper"),
+                "maintenance",
                 a.action,
                 *(["--report"] if a.report else ["--json"] if a.json else []),
             ],
