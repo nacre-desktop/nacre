@@ -46,6 +46,11 @@ lookup uses only the local mapping. Screenshot output is created private before
 writing. Security hardening that changes historical behavior must be documented
 as an intended difference and have its own test.
 
+**Intended security difference.** Full screenshots are created with mode `0600`
+using exclusive creation before `grim` writes image bytes. This removes the
+Python implementation's umask-dependent window; Rust tests assert the private
+mode before capture writes.
+
 **Acceptance.** Preserve exact frozen parity; retain Python assertions as Rust
 tests; pass existing shell-tools tests and the complete `desktop` job from
 `.github/workflows/check.yml` in the Arch CI container. Report actual parity
