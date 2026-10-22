@@ -1028,6 +1028,87 @@ fn shortcut_labels(bindings: &[Value]) -> BTreeMap<String, String> {
     result
 }
 
+fn welcome_shortcut_title(action: &str, fallback: &str) -> String {
+    match action {
+        "launcher" => crate::i18n::tr("welcome.shortcut.launcher.title", "Find an application"),
+        "wallpaper" => crate::i18n::tr("welcome.shortcut.wallpaper.title", "Choose a wallpaper"),
+        "settings" => crate::i18n::tr("welcome.shortcut.settings.title", "Open Settings"),
+        "files" => crate::i18n::tr("welcome.shortcut.files.title", "Open Files"),
+        "terminal" => crate::i18n::tr("welcome.shortcut.terminal.title", "Open a terminal"),
+        "put-away" => crate::i18n::tr("welcome.shortcut.put-away.title", "Close with undo"),
+        "workspace" => crate::i18n::tr("welcome.shortcut.workspace.title", "Change workspace"),
+        "focus" => crate::i18n::tr("welcome.shortcut.focus.title", "Move focus"),
+        "screenshot" => crate::i18n::tr("welcome.shortcut.screenshot.title", "Capture an area"),
+        "clipboard" => crate::i18n::tr("welcome.shortcut.clipboard.title", "Clipboard history"),
+        "ai-sidebar" => crate::i18n::tr("welcome.shortcut.ai-sidebar.title", "Open the AI sidebar"),
+        "lock" => crate::i18n::tr("welcome.shortcut.lock.title", "Lock the desktop"),
+        "browser" => crate::i18n::tr("welcome.shortcut.browser.title", "Open a browser"),
+        "shortcuts" => crate::i18n::tr("welcome.shortcut.shortcuts.title", "Keyboard shortcuts"),
+        "palette" => crate::i18n::tr("welcome.shortcut.palette.title", "Command palette"),
+        "overview" => crate::i18n::tr("welcome.shortcut.overview.title", "Window overview"),
+        "next-workspace" => {
+            crate::i18n::tr("welcome.shortcut.next-workspace.title", "Next workspace")
+        }
+        "previous-workspace" => crate::i18n::tr(
+            "welcome.shortcut.previous-workspace.title",
+            "Previous workspace",
+        ),
+        "scratchpad" => crate::i18n::tr("welcome.shortcut.scratchpad.title", "Toggle scratchpad"),
+        "move-scratchpad" => crate::i18n::tr(
+            "welcome.shortcut.move-scratchpad.title",
+            "Move to scratchpad",
+        ),
+        "power" => crate::i18n::tr("welcome.shortcut.power.title", "Power menu"),
+        "restore" => crate::i18n::tr("welcome.shortcut.restore.title", "Restore the last window"),
+        "restore-all" => {
+            crate::i18n::tr("welcome.shortcut.restore-all.title", "Restore all windows")
+        }
+        "close" => crate::i18n::tr("welcome.shortcut.close.title", "Close a window"),
+        "force-close" => {
+            crate::i18n::tr("welcome.shortcut.force-close.title", "Force close a window")
+        }
+        "hide" => crate::i18n::tr("welcome.shortcut.hide.title", "Minimize a window"),
+        "unhide" => crate::i18n::tr(
+            "welcome.shortcut.unhide.title",
+            "Restore a minimized window",
+        ),
+        "move-workspace" => crate::i18n::tr(
+            "welcome.shortcut.move-workspace.title",
+            "Move a window to a workspace",
+        ),
+        "maximize" => crate::i18n::tr("welcome.shortcut.maximize.title", "Maximize a window"),
+        "fullscreen" => crate::i18n::tr("welcome.shortcut.fullscreen.title", "Full screen"),
+        "float" => crate::i18n::tr("welcome.shortcut.float.title", "Toggle floating"),
+        "pin" => crate::i18n::tr("welcome.shortcut.pin.title", "Pin a window"),
+        "cycle-window" => crate::i18n::tr("welcome.shortcut.cycle-window.title", "Cycle windows"),
+        "group" => crate::i18n::tr("welcome.shortcut.group.title", "Group windows"),
+        "group-cycle" => crate::i18n::tr(
+            "welcome.shortcut.group-cycle.title",
+            "Cycle grouped windows",
+        ),
+        "split" => crate::i18n::tr("welcome.shortcut.split.title", "Switch split direction"),
+        "save-screenshot" => crate::i18n::tr(
+            "welcome.shortcut.save-screenshot.title",
+            "Save a screenshot",
+        ),
+        "emoji" => crate::i18n::tr("welcome.shortcut.emoji.title", "Choose an emoji"),
+        "volume-up" => crate::i18n::tr("welcome.shortcut.volume-up.title", "Volume up"),
+        "volume-down" => crate::i18n::tr("welcome.shortcut.volume-down.title", "Volume down"),
+        "mute" => crate::i18n::tr("welcome.shortcut.mute.title", "Mute speakers"),
+        "mic-mute" => crate::i18n::tr("welcome.shortcut.mic-mute.title", "Mute microphone"),
+        "brightness-up" => crate::i18n::tr("welcome.shortcut.brightness-up.title", "Brightness up"),
+        "brightness-down" => {
+            crate::i18n::tr("welcome.shortcut.brightness-down.title", "Brightness down")
+        }
+        "keyboard-up" => crate::i18n::tr("welcome.shortcut.keyboard-up.title", "Keyboard light up"),
+        "keyboard-down" => crate::i18n::tr(
+            "welcome.shortcut.keyboard-down.title",
+            "Keyboard light down",
+        ),
+        _ => fallback.to_owned(),
+    }
+}
+
 fn welcome_shortcut_rows(bindings: &Value) -> Result<Vec<Value>> {
     let rows = bindings
         .as_array()
@@ -1068,7 +1149,7 @@ fn welcome_shortcut_rows(bindings: &Value) -> Result<Vec<Value>> {
             }
         }
         let title_id = format!("welcome.shortcut.{action}.title");
-        shortcuts.push(json!({"titleId":title_id,"id":action,"key":key,"title":crate::i18n::tr(&title_id,default_title),"detail":detail,"group":shortcut_group(action)}));
+        shortcuts.push(json!({"titleId":title_id,"id":action,"key":key,"title":welcome_shortcut_title(action,default_title),"detail":detail,"group":shortcut_group(action)}));
     }
     Ok(shortcuts)
 }
