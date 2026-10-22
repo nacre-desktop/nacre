@@ -87,6 +87,213 @@ MANAGED_UNITS = (
 )
 
 
+def niri_session():
+    return HOME / ".local/share/nacre/niri-on-pc/session"
+
+
+DAEMON_UNIT = "nacre-daemon.service"
+DAEMON_WAIT_SECONDS = 20
+
+
+def daemon_active():
+    return (
+        subprocess.run(
+            ["systemctl", "--user", "is-active", "--quiet", DAEMON_UNIT]
+        ).returncode
+        == 0
+    )
+
+
+def daemon_status_healthy(text):
+    """Services present and none failed, topics advertised, not in safe mode."""
+    try:
+        status = json.loads(text)
+        services = status["services"]
+        return (
+            status.get("safe") is not True
+            and bool(services)
+            and all(s.get("status") not in ("error", "refused") for s in services.values())
+            and bool(status["topics"])
+        )
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return False
+
+
+def wait_daemon_healthy(timeout=None):
+    deadline = time.monotonic() + (DAEMON_WAIT_SECONDS if timeout is None else timeout)
+    while True:
+        try:
+            result = subprocess.run(
+                [str(DEST / "bin/nacrectl"), "status"],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            if result.returncode == 0 and daemon_status_healthy(result.stdout):
+                return True
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.5)
+
+
+def restart_daemon_checked(target, previous):
+    """Restart the running daemon on the new helper; restore the old one on failure."""
+    print("Restarting " + DAEMON_UNIT + " so it runs the new helper binary.")
+    restarted = (
+        subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT]).returncode == 0
+    )
+    if restarted and wait_daemon_healthy():
+        print(DAEMON_UNIT + " restarted and healthy (services running, topics advertised).")
+        return
+    print(
+        "The restarted daemon did not become healthy; restoring the previous helper.",
+        file=sys.stderr,
+    )
+    if previous is None or not previous.is_file():
+        raise RuntimeError(
+            "Daemon unhealthy after restart and no previous helper backup exists; "
+            "check: systemctl --user status " + DAEMON_UNIT
+        )
+    install_native_helper(previous, target)
+    subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT])
+    if wait_daemon_healthy():
+        raise RuntimeError(
+            "The new helper left the daemon unhealthy. The previous helper was "
+            "restored and the daemon is healthy again; the new helper is not installed."
+        )
+    raise RuntimeError(
+        "The daemon is unhealthy with both the new and the previous helper. "
+        "Previous helper restored at " + str(target) + " ; check: "
+        "systemctl --user status " + DAEMON_UNIT
+    )
+
+
+def save_previous_helper(candidate, target):
+    """Own backup of the installed helper, only when the candidate differs."""
+    if not target.is_file() or digest(candidate) == digest(target):
+        return None
+    saved = STATE / "helper-previous/nacre-helper"
+    saved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    shutil.copy2(target, saved)
+    return saved
+
+
+def repo_revision():
+    try:
+        return subprocess.run(
+            ["git", "-C", str(ROOT.parent.parent), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        ).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def niri_session_refresh_plan():
+    """Return None when not applicable, else (reason_or_empty, command, stock)."""
+    marker = niri_session() / "source-revision"
+    if not marker.is_file():
+        return None
+    revision = repo_revision()
+    if not revision:
+        return None
+    try:
+        current = marker.read_text().strip()
+    except OSError:
+        return None
+    if current == revision:
+        return None
+    stock = (niri_session() / "stock-niri").is_file()
+    command = [
+        str(DEST / "tools/nacre-helper"),
+        "niri-session-runtime",
+        "--backend",
+        str(ROOT.parent.parent),
+    ]
+    if stock:
+        command.append("--stock-niri")
+    command.append("prepare")
+    return current[:12] + " -> " + revision[:12], command, stock
+
+
+def print_niri_plan(plan):
+    reason, command, _ = plan
+    backup = niri_session().with_name("session.previous")
+    print(
+        "Plan: refresh the generated niri session config ("
+        + reason
+        + ").\n  1. move "
+        + str(niri_session())
+        + " to "
+        + str(backup)
+        + " (previous backup replaced)\n  2. run: "
+        + " ".join(command)
+        + "\n  3. on failure, move the backup back.\n"
+        "  Your custom.kdl and other user files are not touched. Running niri "
+        "reloads config.kdl live; startup items (spawn-at-startup) apply at the "
+        "next login."
+    )
+
+
+def refresh_niri_session(plan):
+    _, command, _ = plan
+    backup = niri_session().with_name("session.previous")
+    if backup.exists():
+        shutil.rmtree(backup)
+    niri_session().rename(backup)
+    try:
+        subprocess.run(command, check=True)
+    except BaseException:
+        if niri_session().exists():
+            shutil.rmtree(niri_session())
+        backup.rename(niri_session())
+        print(
+            "Niri session preparation failed; the previous session config was restored.",
+            file=sys.stderr,
+        )
+        raise
+    print(
+        "Niri session config refreshed (previous kept at "
+        + str(backup)
+        + "). Running niri reloads config.kdl live; startup items apply at next login."
+    )
+
+
+def dry_run():
+    """Print the daemon/niri steps a code-only install would take; change nothing."""
+    helper = ROOT / "nacre-helper"
+    target = DEST / "tools/nacre-helper"
+    if not helper.is_file():
+        changed = "unknown (the helper would be built first); assumed changed"
+    elif target.is_file() and digest(helper) == digest(target):
+        changed = "no"
+    else:
+        changed = "yes"
+    print("Dry run (code-only): nothing is changed.")
+    print("Helper binary changed: " + changed)
+    if changed == "no":
+        print("Plan: leave " + DAEMON_UNIT + " as is.")
+    elif daemon_active():
+        print(
+            "Plan: restart "
+            + DAEMON_UNIT
+            + " after the new helper is in place, wait up to "
+            + str(DAEMON_WAIT_SECONDS)
+            + "s for nacrectl status to report healthy, and restore the previous "
+            "helper and restart again if it does not."
+        )
+    else:
+        print("Plan: " + DAEMON_UNIT + " is not active; nothing to restart.")
+    plan = niri_session_refresh_plan()
+    if plan:
+        print_niri_plan(plan)
+    else:
+        print("Plan: niri session config unchanged or not a prepared niri session.")
+
+
 def refresh_orient(helper):
     state = HOME / ".local/state/nacre"
     scheme = _state.read_json_file(state / "scheme.json")
@@ -516,6 +723,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
         ignore=shutil.ignore_patterns("__pycache__", "tests", "nacre-helper"),
     )
     target = DEST / "tools/nacre-helper"
+    previous_helper = save_previous_helper(helper, target) if code_only else None
     install_native_helper(helper, target)
     install_daemon_links(target)
     # The release transaction already backed up this owned runtime tree.
@@ -640,8 +848,14 @@ def deploy(code_only=False, retire_niri_experiment=False):
                 [str(DEST / "tools/nacre-helper"), "classic-state"], check=True
             )
         subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
+        if previous_helper is not None and daemon_active():
+            restart_daemon_checked(target, previous_helper)
         subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
         validate_live(source_digest(SHELL))
+        plan = niri_session_refresh_plan()
+        if plan:
+            print_niri_plan(plan)
+            refresh_niri_session(plan)
         return
     if backup is None:
         STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -898,9 +1112,19 @@ if __name__ == "__main__":
     p.add_argument("--code-only", action="store_true")
     p.add_argument("--restore", action="store_true")
     p.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --code-only: print the daemon-restart and niri-session steps; change nothing",
+    )
+    p.add_argument(
         "--retire-niri-experiment",
         action="store_true",
         help="Back up and remove drop-ins referencing retired niri-on-pc scripts",
     )
     a = p.parse_args()
-    restore() if a.restore else deploy(a.code_only, a.retire_niri_experiment)
+    if a.dry_run and not a.code_only:
+        p.error("--dry-run requires --code-only")
+    if a.dry_run:
+        dry_run()
+    else:
+        restore() if a.restore else deploy(a.code_only, a.retire_niri_experiment)

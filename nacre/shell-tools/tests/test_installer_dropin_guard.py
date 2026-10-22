@@ -1,7 +1,9 @@
 """Installer retirement is refused before mutation and reversible when opted in."""
 
+import contextlib
 import hashlib
 import importlib.util
+import io
 import os
 from pathlib import Path
 import subprocess
@@ -506,3 +508,163 @@ class InstallerDropinGuardTests(unittest.TestCase):
             installer.restore()
         self.assertEqual(os.readlink(link), str(target))
         self.assertEqual(link.read_bytes(), before)
+
+    # N0037: code-only install restarts the daemon safely and refreshes the niri session.
+    HEALTHY = '{"safe":false,"services":{"tray":{"status":"running"}},"topics":["daemon"]}'
+    UNHEALTHY = '{"safe":false,"services":{},"topics":[]}'
+
+    def fake_helper(self, status):
+        # Invoked as nacrectl (symlink alias) it prints a canned daemon status.
+        return (
+            '#!/bin/sh\nif [ "$(basename "$0")" = nacrectl ]; then\n'
+            "cat <<'EOF2'\n" + status + "\nEOF2\nfi\nexit 0\n"
+        )
+
+    def daemon_deploy(self, new_status, old_status=None, active=True):
+        root, shell = self.fixture_deployment()
+        self.put(root / "nacre-helper", self.fake_helper(new_status)).chmod(0o755)
+        if old_status is not None:
+            old = self.put(
+                self.dest / "tools/nacre-helper", self.fake_helper(old_status)
+            )
+            old.chmod(0o755)
+        self.put(
+            self.fakebin / "systemctl",
+            '#!/bin/sh\nprintf "%s\\n" "$*" >> "$SYSTEMCTL_LOG"\n'
+            '[ "$ACTIVE" = 0 ] && case "$*" in *is-active*) exit 3;; esac\nexit 0\n',
+        ).chmod(0o755)
+        passthrough = (self.dest / "bin/nacrectl", "systemctl")
+
+        def run(command, **kwargs):
+            if command[0] in map(str, passthrough):
+                return RUN(command, **kwargs)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.dict(os.environ, {"ACTIVE": "1" if active else "0"}),
+            patch.multiple(
+                installer, ROOT=root, SHELL=shell, DAEMON_WAIT_SECONDS=0.5
+            ),
+            patch.object(installer.subprocess, "run", side_effect=run),
+            patch.object(installer, "validate_live"),
+            patch.object(installer, "stop_other_shells"),
+            patch.object(installer.compositor, "reload"),
+        ):
+            installer.deploy(code_only=True)
+        return root
+
+    def calls(self):
+        return self.systemctl_log.read_text().splitlines()
+
+    def test_code_only_restarts_active_daemon_before_shell(self):
+        root = self.daemon_deploy(self.HEALTHY, self.UNHEALTHY)
+        calls = self.calls()
+        daemon = calls.index("--user restart nacre-daemon.service")
+        self.assertLess(daemon, calls.index("--user restart nacre-shell"))
+        self.assertEqual(
+            (self.dest / "tools/nacre-helper").read_bytes(),
+            (root / "nacre-helper").read_bytes(),
+        )
+
+    def test_code_only_unhealthy_daemon_restores_previous_helper(self):
+        old = self.fake_helper(self.HEALTHY)
+        with self.assertRaisesRegex(RuntimeError, "previous helper was restored"):
+            self.daemon_deploy(self.UNHEALTHY, self.HEALTHY)
+        self.assertEqual((self.dest / "tools/nacre-helper").read_text(), old)
+        self.assertEqual(
+            self.calls().count("--user restart nacre-daemon.service"), 2
+        )
+        self.assertNotIn("--user restart nacre-shell", self.calls())
+
+    def test_code_only_same_helper_or_stopped_daemon_is_not_restarted(self):
+        self.daemon_deploy(self.HEALTHY, self.UNHEALTHY)  # differs: restarts once
+        self.systemctl_log.unlink()
+        self.daemon_deploy(self.HEALTHY, self.HEALTHY)  # now identical
+        self.assertNotIn("--user restart nacre-daemon.service", self.calls())
+        self.systemctl_log.unlink()
+        self.daemon_deploy(self.UNHEALTHY, self.HEALTHY, active=False)
+        self.assertNotIn("--user restart nacre-daemon.service", self.calls())
+
+    def test_daemon_health_requires_services_topics_and_no_failure(self):
+        healthy = installer.daemon_status_healthy
+        self.assertTrue(healthy(self.HEALTHY))
+        self.assertFalse(healthy(self.UNHEALTHY))
+        self.assertFalse(healthy("not json"))
+        self.assertFalse(healthy('{"safe":true,"services":{"a":{}},"topics":["t"]}'))
+        self.assertFalse(
+            healthy('{"services":{"a":{"status":"error"}},"topics":["t"]}')
+        )
+
+    def niri_fixture(self, revision="old", stock=False):
+        session = self.home / ".local/share/nacre/niri-on-pc/session"
+        self.put(session / "source-revision", revision + "\n")
+        self.put(session / "config/config.kdl", "old config\n")
+        if stock:
+            self.put(session / "stock-niri", "stock\n")
+        custom = self.put(self.home / ".config/nacre/niri/custom.kdl", "mine\n")
+        return session, custom
+
+    def test_niri_refresh_plan_needs_prepared_session_and_changed_revision(self):
+        with patch.object(installer, "repo_revision", return_value="new"):
+            self.assertIsNone(installer.niri_session_refresh_plan())  # no session
+            session, _ = self.niri_fixture("new")
+            self.assertIsNone(installer.niri_session_refresh_plan())  # same revision
+            self.put(session / "source-revision", "old\n")
+            reason, command, stock = installer.niri_session_refresh_plan()
+            self.assertEqual(command[-1], "prepare")
+            self.assertNotIn("--stock-niri", command)
+            self.put(session / "stock-niri", "x\n")
+            self.assertIn("--stock-niri", installer.niri_session_refresh_plan()[1])
+        with patch.object(installer, "repo_revision", return_value=""):
+            self.assertIsNone(installer.niri_session_refresh_plan())
+
+    def test_niri_refresh_backs_up_replaces_and_spares_custom_kdl(self):
+        session, custom = self.niri_fixture()
+        plan = ("old -> new", ["prep"], False)
+
+        def prepare(command, **kwargs):
+            self.put(session / "source-revision", "new\n")
+            self.put(session / "config/config.kdl", "new config\n")
+            return subprocess.CompletedProcess(command, 0)
+
+        with patch.object(installer.subprocess, "run", side_effect=prepare):
+            installer.refresh_niri_session(plan)
+        self.assertEqual((session / "config/config.kdl").read_text(), "new config\n")
+        previous = session.with_name("session.previous")
+        self.assertEqual((previous / "config/config.kdl").read_text(), "old config\n")
+        self.assertEqual(custom.read_text(), "mine\n")
+
+    def test_niri_refresh_failure_restores_previous_session(self):
+        session, custom = self.niri_fixture()
+
+        def prepare(command, **kwargs):
+            self.put(session / "partial", "half\n")
+            raise subprocess.CalledProcessError(1, command)
+
+        with patch.object(installer.subprocess, "run", side_effect=prepare):
+            with self.assertRaises(subprocess.CalledProcessError):
+                installer.refresh_niri_session(("old -> new", ["prep"], False))
+        self.assertEqual((session / "config/config.kdl").read_text(), "old config\n")
+        self.assertEqual((session / "source-revision").read_text(), "old\n")
+        self.assertFalse((session / "partial").exists())
+        self.assertFalse(session.with_name("session.previous").exists())
+        self.assertEqual(custom.read_text(), "mine\n")
+
+    def test_dry_run_prints_both_steps_and_changes_nothing(self):
+        root, _ = self.fixture_deployment()
+        self.put(self.dest / "tools/nacre-helper", "old helper")
+        self.niri_fixture()
+        before = self.snapshot()
+        out = io.StringIO()
+        with (
+            patch.multiple(installer, ROOT=root),
+            patch.object(installer, "repo_revision", return_value="new"),
+            patch.object(installer, "daemon_active", return_value=True),
+            contextlib.redirect_stdout(out),
+        ):
+            installer.dry_run()
+        self.assertEqual(self.snapshot(), before)
+        text = out.getvalue()
+        self.assertIn("restart nacre-daemon.service", text)
+        self.assertIn("refresh the generated niri session config", text)
+        self.assertIn("next login", text)
