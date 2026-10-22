@@ -35,6 +35,33 @@ and stop. The transfer receipt below supersedes older grants and results.
 | — | [N0005 network lifecycle](0005-network-owner-lifecycle.md) | Review | Unpublished; integration after F4. |
 | — | [N0003 network adapter](0003-core-network-state-adapter.md) | Blocked | Broader acceptance unclaimed; old scope evidence withdrawn. |
 
+## Release readiness — planned milestone (owner direction 2026-10-22)
+
+The owner wants Bead running, both repos cleaned and the legacy test code
+removed before any public release or announcement. Phases (estimates, refreshed
+weekly):
+
+1. **Runtime Python migration** (to about Nov 5): the remaining units are
+   desktop-extras, AI chat/Claude layer, AI dashboard, daemon-hosted AI chat and
+   Brain, embedder (optional), installers/runtime CLI, and the
+   no-Python-at-runtime guard. Baseline 2026-10-22: about 33k non-test Python
+   lines (about 15k desktop runtime, much of it originals beside live native
+   ports; about 5k install/packaging; about 8k developer/measurement tools,
+   which may stay Python).
+2. **Clean-up** (about Oct 28 – Nov 10): pass (a) deletes the replaced Python,
+   `.rollback` copies, the legacy settings path and the parity fixtures of
+   removed Python (about 310k generated JSON lines in total); Bead removes old
+   harness versions.
+3. **Bead daily-usable and switched on the owner's machines** (about 3–5
+   weeks, overlapping): daemon contracts first, then the Bead units
+   (gap list), then the owner-approved live switch.
+4. **Release hardening** (1–2 weeks after the switch): fresh-install tests on
+   other hardware and VMs, an install path for strangers, README and
+   screenshots, a generic default theme, DCO/CONTRIBUTING, crate naming.
+   Publishing and announcing stay owner decisions.
+
+Target window for a public announcement: about early December, with Bead.
+
 ## Clean-up passes — planned (owner 2026-10-22)
 
 - **Pass (a), one week after daemon mode is stable on the laptop.** Daemon
