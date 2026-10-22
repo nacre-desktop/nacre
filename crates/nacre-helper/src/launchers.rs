@@ -598,10 +598,23 @@ pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
                 .join(".local/share/nacre/brain/control.py")
                 .is_file()
                 && which("nacre-brain");
-            let shortcut_error = match crate::process::run("hyprctl", &["binds".into(),"-j".into()],None,std::time::Duration::from_secs(2)) {
-                    Ok(output) if output.status.success() => "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration.",
+            let shortcut_error = if env::var_os("HYPRLAND_INSTANCE_SIGNATURE")
+                .is_some_and(|value| !value.is_empty())
+            {
+                match crate::process::run(
+                    "hyprctl",
+                    &["binds".into(), "-j".into()],
+                    None,
+                    std::time::Duration::from_secs(2),
+                ) {
+                    Ok(output) if output.status.success() => {
+                        "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration."
+                    }
                     _ => "Shortcuts are available when running inside your Hyprland session.",
-                };
+                }
+            } else {
+                "Shortcuts are available when running inside your Hyprland session."
+            };
             Ok(
                 json!({"shortcuts":[],"shortcutError":shortcut_error,"preferences":preferences,"available":{"ai":available_ai,"brain":brain}}),
             )
