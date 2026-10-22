@@ -87,14 +87,15 @@ class SidebarTests(unittest.TestCase):
                 manager.peer = peer
                 events = []
                 peer.close.side_effect = lambda: events.append("closed")
-                extras = Mock()
-                extras.resume.side_effect = lambda key: events.append("launched")
-                with (
-                    patch("importlib.util.module_from_spec", return_value=extras),
-                    patch("importlib.util.spec_from_file_location"),
-                ):
+                launch = Mock(
+                    side_effect=lambda *args, **kwargs: events.append("launched")
+                )
+                with patch.object(module.subprocess, "Popen", launch):
                     manager.handle(dict(action="workspace"))
                 self.assertEqual(events, ["closed", "launched"])
+                self.assertEqual(
+                    launch.call_args.args[0][1:3], ["desktop-extras", "resume"]
+                )
                 self.assertIsNone(manager.peer)
                 self.assertTrue(manager.state()["inWorkspace"])
                 with self.assertRaises(RuntimeError):
