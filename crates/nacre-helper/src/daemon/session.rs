@@ -61,7 +61,8 @@ async fn dispatch(
         | "tray.context_menu"
         | "tray.scroll"
         | "brightness.set"
-        | "brightness.adjust") => super::bar_services::dispatch(hub, method, params).await,
+        | "brightness.adjust"
+        | "keyboard_light.adjust") => super::bar_services::dispatch(hub, method, params).await,
         method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
             super::pill_controls::dispatch(hub, method, params).await
         }
@@ -161,6 +162,7 @@ async fn call(
             | "tray.scroll"
             | "brightness.set"
             | "brightness.adjust"
+            | "keyboard_light.adjust"
             | "audio.adjust_volume"
             | "audio.toggle_mute"
             | "bluetooth.set_enabled"
@@ -407,6 +409,7 @@ mod tests {
             ),
             ("tray.activate", json!({"item":"sni:old"})),
             ("brightness.adjust", json!({"output":"DP-1","delta":5})),
+            ("keyboard_light.adjust", json!({"step":"up"})),
             ("audio.toggle_mute", json!({})),
             ("bluetooth.set_enabled", json!({"enabled":true})),
         ] {

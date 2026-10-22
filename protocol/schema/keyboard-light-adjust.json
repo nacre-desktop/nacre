@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KeyboardLightAdjust",
+  "description": "One keyboard-backlight step; `up` wraps from the maximum back to off, like the QML shell.",
+  "type": "object",
+  "properties": {
+    "step": {
+      "$ref": "#/$defs/KeyboardLightStep"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "step"
+  ],
+  "$defs": {
+    "KeyboardLightStep": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down"
+      ]
+    }
+  }
+}

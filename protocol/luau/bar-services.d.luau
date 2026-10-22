@@ -4,4 +4,6 @@ export type TrayScrollAxis = "horizontal" | "vertical"
 export type TrayScroll = { ["item"]: string, ["axis"]: TrayScrollAxis, ["delta"]: number }
 export type BrightnessSet = { ["output"]: string, ["percent"]: number }
 export type BrightnessAdjust = { ["output"]: string, ["delta"]: number }
+export type KeyboardLightStep = "up" | "down"
+export type KeyboardLightAdjust = { ["step"]: KeyboardLightStep }
 return {}

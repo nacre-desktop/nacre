@@ -50,6 +50,19 @@ pub struct BrightnessAdjust {
     pub delta: i8,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum KeyboardLightStep {
+    Up,
+    Down,
+}
+/// One keyboard-backlight step; `up` wraps from the maximum back to off, like the QML shell.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct KeyboardLightAdjust {
+    pub step: KeyboardLightStep,
+}
+
 impl TrayItemAction {
     pub fn validate(&self) -> Result<(), Failure> {
         if valid_id(&self.item) {
@@ -93,21 +106,61 @@ fn invalid() -> Failure {
     Failure::new(ErrorCode::Validation, "Invalid bar service action", false).dispatch_state(false)
 }
 
+/// Replies carry the resulting level so a shell can render OSD feedback without a state readback.
+fn result_schema(method: &str) -> serde_json::Value {
+    let level = json!({"type":"integer","minimum":0});
+    let (properties, required) = match method {
+        "brightness.set" | "brightness.adjust" => (
+            json!({"changed":{"type":"boolean"},"output":{"type":"string"},"level_percent":{"type":"integer","minimum":0,"maximum":100}}),
+            json!(["changed", "output", "level_percent"]),
+        ),
+        "keyboard_light.adjust" => (
+            json!({"changed":{"type":"boolean"},"level":level,"max":{"type":"integer","minimum":1}}),
+            json!(["changed", "level", "max"]),
+        ),
+        _ => (json!({"changed":{"type":"boolean"}}), json!(["changed"])),
+    };
+    json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
+}
+
 pub fn methods() -> BTreeMap<String, Method> {
     [
         ("tray.activate", schemars::schema_for!(TrayItemAction)),
-        ("tray.secondary_activate", schemars::schema_for!(TrayItemAction)),
+        (
+            "tray.secondary_activate",
+            schemars::schema_for!(TrayItemAction),
+        ),
         ("tray.context_menu", schemars::schema_for!(TrayItemAction)),
         ("tray.scroll", schemars::schema_for!(TrayScroll)),
         ("brightness.set", schemars::schema_for!(BrightnessSet)),
         ("brightness.adjust", schemars::schema_for!(BrightnessAdjust)),
-    ].into_iter().map(|(name, schema)| (name.into(), Method {
-        v: 1,
-        class: if name.starts_with("brightness.") { Capability::System } else { Capability::Desktop },
-        timeout: if name.starts_with("brightness.") { 30_000 } else { 10_000 },
-        params: serde_json::to_value(schema).expect("bar service schema"),
-        result: json!({"type":"object","properties":{"changed":{"type":"boolean"}},"required":["changed"],"additionalProperties":false}),
-    })).collect()
+        (
+            "keyboard_light.adjust",
+            schemars::schema_for!(KeyboardLightAdjust),
+        ),
+    ]
+    .into_iter()
+    .map(|(name, schema)| {
+        (
+            name.into(),
+            Method {
+                v: 1,
+                class: if name.starts_with("brightness.") || name.starts_with("keyboard_light.") {
+                    Capability::System
+                } else {
+                    Capability::Desktop
+                },
+                timeout: if name.starts_with("brightness.") {
+                    30_000
+                } else {
+                    10_000
+                },
+                params: serde_json::to_value(schema).expect("bar service schema"),
+                result: result_schema(name),
+            },
+        )
+    })
+    .collect()
 }
 
 pub(crate) fn exports() -> BTreeMap<String, String> {
@@ -140,6 +193,16 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
             "brightness-adjust",
             schemars::schema_for!(BrightnessAdjust),
         ),
+        (
+            "KeyboardLightStep",
+            "keyboard-light-step",
+            schemars::schema_for!(KeyboardLightStep),
+        ),
+        (
+            "KeyboardLightAdjust",
+            "keyboard-light-adjust",
+            schemars::schema_for!(KeyboardLightAdjust),
+        ),
     ] {
         let schema = serde_json::to_value(schema).expect("bar service schema");
         types.push_str(&format!(
@@ -163,9 +226,11 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         json!({"t":"call","id":402,"m":"tray.scroll","p":{"item":"sni:abc","axis":"vertical","delta":-2}}),
         json!({"t":"ret","id":402,"ok":{"changed":true}}),
         json!({"t":"call","id":403,"m":"brightness.set","p":{"output":"output-1","percent":65}}),
-        json!({"t":"ret","id":403,"ok":{"changed":true}}),
+        json!({"t":"ret","id":403,"ok":{"changed":true,"output":"output-1","level_percent":65}}),
         json!({"t":"call","id":406,"m":"brightness.adjust","p":{"output":"output-1","delta":-5}}),
-        json!({"t":"ret","id":406,"ok":{"changed":true}}),
+        json!({"t":"ret","id":406,"ok":{"changed":true,"output":"output-1","level_percent":60}}),
+        json!({"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up"}}),
+        json!({"t":"ret","id":407,"ok":{"changed":true,"level":2,"max":3}}),
     ];
     files.insert(
         "protocol/fixtures/bar-services.jsonl".into(),
@@ -226,6 +291,10 @@ mod tests {
         }
         .validate()
         .is_err());
-        assert_eq!(methods().len(), 6);
+        assert!(KeyboardLightAdjust::deserialize(json!({"step":"sideways"})).is_err());
+        assert!(KeyboardLightAdjust::deserialize(json!({"step":"up","x":1})).is_err());
+        assert_eq!(methods().len(), 7);
+        let reply = &methods()["keyboard_light.adjust"].result;
+        assert_eq!(reply["required"], json!(["changed", "level", "max"]));
     }
 }

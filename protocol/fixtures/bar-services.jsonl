@@ -7,6 +7,8 @@
 {"t":"call","id":402,"m":"tray.scroll","p":{"item":"sni:abc","axis":"vertical","delta":-2}}
 {"t":"ret","id":402,"ok":{"changed":true}}
 {"t":"call","id":403,"m":"brightness.set","p":{"output":"output-1","percent":65}}
-{"t":"ret","id":403,"ok":{"changed":true}}
+{"t":"ret","id":403,"ok":{"changed":true,"output":"output-1","level_percent":65}}
 {"t":"call","id":406,"m":"brightness.adjust","p":{"output":"output-1","delta":-5}}
-{"t":"ret","id":406,"ok":{"changed":true}}
+{"t":"ret","id":406,"ok":{"changed":true,"output":"output-1","level_percent":60}}
+{"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up"}}
+{"t":"ret","id":407,"ok":{"changed":true,"level":2,"max":3}}

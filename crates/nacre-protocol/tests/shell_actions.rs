@@ -28,6 +28,10 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
                     "brightness.adjust" => serde_json::from_value::<BrightnessAdjust>(p)
                         .unwrap()
                         .validate(),
+                    "keyboard_light.adjust" => {
+                        let _: KeyboardLightAdjust = serde_json::from_value(p).unwrap();
+                        Ok(())
+                    }
                     "tray.activate" | "tray.secondary_activate" | "tray.context_menu" => {
                         serde_json::from_value::<TrayItemAction>(p)
                             .unwrap()
@@ -54,7 +58,7 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
     }
     assert_eq!(
         calls.len(),
-        13,
+        14,
         "Every new method needs a typed golden call"
     );
 }
@@ -64,7 +68,7 @@ fn published_action_schemas_refuse_additional_fields() {
     let mut methods = nacre_protocol::shell_actions::methods();
     methods.extend(nacre_protocol::bar_services::methods());
     methods.extend(nacre_protocol::pill_controls::methods());
-    assert_eq!(methods.len(), 13);
+    assert_eq!(methods.len(), 14);
     for (name, method) in methods {
         assert_eq!(
             method.params["additionalProperties"],

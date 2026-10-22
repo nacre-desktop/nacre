@@ -33,9 +33,12 @@ pub fn available_methods(hub: &super::hub::Hub) -> BTreeMap<String, Method> {
             .as_object()
             .is_some_and(|outputs| !outputs.is_empty());
     let brightness_tool = program_available("ddcutil") || program_available("brightnessctl");
+    let keyboard_light = program_available("brightnessctl") && keyboard_light_present();
     methods.retain(|name, _| {
         if name.starts_with("tray.") {
             tray_ready
+        } else if name.starts_with("keyboard_light.") {
+            keyboard_light
         } else {
             has_outputs && brightness_tool
         }
@@ -160,6 +163,11 @@ pub async fn dispatch(
             request.validate()?;
             set_brightness(&hub, &request.output, i32::from(request.delta), true).await
         }
+        "keyboard_light.adjust" => {
+            let request: KeyboardLightAdjust =
+                serde_json::from_value(params).map_err(|_| invalid())?;
+            adjust_keyboard_light(request.step).await
+        }
         "tray.activate" | "tray.secondary_activate" | "tray.context_menu" => {
             let request: TrayItemAction = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
@@ -256,9 +264,17 @@ async fn set_brightness(
     let guard = lane
         .try_lock_owned()
         .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
-    tokio::task::spawn_blocking(move || {
+    let name = screen.clone();
+    let level = tokio::task::spawn_blocking(move || {
         let _guard = guard;
-        set_brightness_native(&screen, screens, amount, relative)
+        set_brightness_native(
+            &screen,
+            screens,
+            amount,
+            relative,
+            Path::new("/sys"),
+            &mut native_run,
+        )
     })
     .await
     .map_err(|_| {
@@ -267,7 +283,76 @@ async fn set_brightness(
     .map_err(|_| {
         failure(ErrorCode::Io, "Output brightness update failed", false).dispatch_state(true)
     })?;
-    Ok(json!({"changed":true}))
+    Ok(json!({"changed":true,"output":name,"level_percent":level}))
+}
+
+/// The OSD shows a 0..1 level (plus the output name when several exist); report it as a percent.
+fn percent(current: i64, maximum: i64) -> i64 {
+    (current * 100 + maximum / 2) / maximum
+}
+
+fn keyboard_light_present() -> bool {
+    light_devices::discover(&[], Path::new("/sys"), &mut |_, _, _| Err("unused".into()))
+        .is_ok_and(|found| !found["keyboard"].is_null())
+}
+
+async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<Value, Failure> {
+    let guard = BRIGHTNESS_LOCK
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
+        .try_lock_owned()
+        .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
+    let up = step == KeyboardLightStep::Up;
+    let result = tokio::task::spawn_blocking(move || {
+        let _guard = guard;
+        adjust_keyboard_light_native(up, Path::new("/sys"), &mut native_run)
+    })
+    .await
+    .map_err(|_| {
+        failure(ErrorCode::Internal, "Keyboard light worker failed", false).dispatch_state(true)
+    })?
+    .map_err(|_| {
+        failure(ErrorCode::Io, "Keyboard light update failed", false).dispatch_state(true)
+    })?;
+    let (level, max, changed) = result.ok_or_else(|| {
+        failure(
+            ErrorCode::Unavailable,
+            "Keyboard backlight is unavailable",
+            true,
+        )
+    })?;
+    Ok(json!({"changed":changed,"level":level,"max":max}))
+}
+
+/// Mirrors the QML step: up wraps past the maximum to off, down stops at off.
+/// `None` means there is no keyboard backlight; no write is issued when the level would not change.
+fn adjust_keyboard_light_native(
+    up: bool,
+    root: &Path,
+    run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
+) -> Result<Option<(i64, i64, bool)>> {
+    let discovered = light_devices::discover(&[], root, run)?;
+    let Some(device) = discovered.get("keyboard").filter(|row| !row.is_null()) else {
+        return Ok(None);
+    };
+    let maximum = device["maximum"].as_i64().filter(|value| *value > 0);
+    let current = device["current"].as_i64();
+    let (Some(maximum), Some(current)) = (maximum, current) else {
+        return Err("Keyboard backlight is unreadable".into());
+    };
+    let next = if up {
+        (current + 1) % (maximum + 1)
+    } else {
+        (current - 1).max(0)
+    };
+    if next == current {
+        return Ok(Some((current, maximum, false)));
+    }
+    let written = light_devices::write(device, next, root, run)?;
+    let level = written["current"]
+        .as_i64()
+        .ok_or("Keyboard backlight is unreadable")?;
+    Ok(Some((level, maximum, true)))
 }
 
 fn set_brightness_native(
@@ -275,8 +360,10 @@ fn set_brightness_native(
     screens: Vec<Value>,
     amount: i32,
     relative: bool,
-) -> Result<()> {
-    let discovered = light_devices::discover(&[json!(screen)], Path::new("/sys"), &mut native_run)?;
+    root: &Path,
+    run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
+) -> Result<i64> {
+    let discovered = light_devices::discover(&[json!(screen)], root, run)?;
     let internal = screen.to_ascii_lowercase().starts_with("edp")
         || screen.to_ascii_lowercase().starts_with("lvds");
     let device = if internal {
@@ -311,8 +398,11 @@ fn set_brightness_native(
     } else {
         maximum * i64::from(amount) / 100
     };
-    light_devices::write(device, value, Path::new("/sys"), &mut native_run)?;
-    Ok(())
+    let written = light_devices::write(device, value, root, run)?;
+    let level = written["current"]
+        .as_i64()
+        .ok_or("Output brightness is unreadable")?;
+    Ok(percent(level, maximum))
 }
 
 fn native_run(program: &str, args: &[String], timeout: Duration) -> Result<String> {
@@ -856,5 +946,90 @@ mod tests {
             ]
         );
         Ok(())
+    }
+
+    /// Fake sysfs plus a fake `brightnessctl` that only writes the fixture's brightness file.
+    fn fake_sys(class: &str, device: &str, maximum: i64, current: i64) -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("class").join(class).join(device);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("max_brightness"), format!("{maximum}\n")).unwrap();
+        std::fs::write(dir.join("brightness"), format!("{current}\n")).unwrap();
+        root
+    }
+    fn fake_run(root: &Path, calls: &mut Vec<Vec<String>>, args: &[String]) -> Result<String> {
+        let (class, device) = (&args[1], &args[3]);
+        let file = root
+            .join("class")
+            .join(class)
+            .join(device)
+            .join("brightness");
+        std::fs::write(file, format!("{}\n", args[5]))?;
+        calls.push(args.to_vec());
+        Ok(String::new())
+    }
+
+    #[test]
+    fn brightness_reply_reports_the_resulting_percent() {
+        let root = fake_sys("backlight", "intel_backlight", 200, 100);
+        let mut calls = Vec::new();
+        let mut run =
+            |_: &str, args: &[String], _: Duration| fake_run(root.path(), &mut calls, args);
+        let screens = vec![json!("eDP-1")];
+        let level =
+            set_brightness_native("eDP-1", screens.clone(), -10, true, root.path(), &mut run)
+                .unwrap();
+        assert_eq!(level, 40);
+        let level =
+            set_brightness_native("eDP-1", screens, 75, false, root.path(), &mut run).unwrap();
+        assert_eq!(level, 75);
+        assert_eq!(percent(1, 3), 33);
+        assert_eq!(calls.len(), 2);
+        // Absent internal device fails closed without a write.
+        let empty = tempfile::tempdir().unwrap();
+        let mut never = |_: &str, _: &[String], _: Duration| -> Result<String> { panic!("write") };
+        assert!(set_brightness_native(
+            "eDP-1",
+            vec![json!("eDP-1")],
+            5,
+            true,
+            empty.path(),
+            &mut never
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn keyboard_light_steps_wrap_up_and_stop_at_off() {
+        let root = fake_sys("leds", "tpacpi::kbd_backlight", 2, 1);
+        let mut calls = Vec::new();
+        let mut run =
+            |_: &str, args: &[String], _: Duration| fake_run(root.path(), &mut calls, args);
+        assert_eq!(
+            adjust_keyboard_light_native(true, root.path(), &mut run).unwrap(),
+            Some((2, 2, true))
+        );
+        assert_eq!(
+            adjust_keyboard_light_native(true, root.path(), &mut run).unwrap(),
+            Some((0, 2, true))
+        );
+        assert_eq!(
+            adjust_keyboard_light_native(false, root.path(), &mut run).unwrap(),
+            Some((0, 2, false))
+        );
+        assert_eq!(calls.len(), 2, "no write when the level is unchanged");
+        assert!(calls[0].contains(&"tpacpi::kbd_backlight".to_string()));
+        // No keyboard backlight: unavailable, no tool call.
+        let empty = tempfile::tempdir().unwrap();
+        let mut never = |_: &str, _: &[String], _: Duration| -> Result<String> { panic!("write") };
+        assert_eq!(
+            adjust_keyboard_light_native(true, empty.path(), &mut never).unwrap(),
+            None
+        );
+        let backlight_only = fake_sys("backlight", "intel_backlight", 10, 5);
+        assert_eq!(
+            adjust_keyboard_light_native(true, backlight_only.path(), &mut never).unwrap(),
+            None
+        );
     }
 }
