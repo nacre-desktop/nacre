@@ -100,6 +100,7 @@ PROBE = """
     function perfQueryCurrent() {
         return root.perfQuery ? root.perfQuery.current : !NacreDaemon.enabled;
     }
+    function perfInputFocused() { return perfKeys.activeFocus; }
     function perfPositionSample(panel) {
         const search = root.perfSearch;
         if (!search || !panel.visible) return;
@@ -255,8 +256,9 @@ PROBE = """
     }
     IpcHandler {
         target: "performanceFrame"
-        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, openFrameIntervalsMs: root.perfOpenFrameMs, openPositions: root.perfOpenPositions, keyFrameMs: root.perfKeyFrameMs >= 0 ? root.perfKeyFrameMs : null, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, frameSwapCount: root.perfFrameSwapCount, windowAttached: root.contentItem.Window.window !== null, helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, queryCurrent: root.perfQueryCurrent(), screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
+        function state(): string { return JSON.stringify(Object.assign({}, root.perfResult, {action: root.perfAction, started: root.perfStarted, firstFrameMs: root.perfFirstFrameMs, openFrameIntervalsMs: root.perfOpenFrameMs, openPositions: root.perfOpenPositions, keyFrameMs: root.perfKeyFrameMs >= 0 ? root.perfKeyFrameMs : null, resultFrameMs: root.perfResultFrameMs >= 0 ? root.perfResultFrameMs : null, resultComplete: root.perfKeyResultComplete, focusMs: root.perfFocusMs, keySequence: root.perfKeySequence, frameSwapCount: root.perfFrameSwapCount, windowAttached: root.contentItem.Window.window !== null, inputFocused: root.perfInputFocused(), helperCalls: root.perfHelperCalls, helperPending: NacreHelpers.count, emojiCalls: root.perfEmojiCalls, daemonEnabled: NacreDaemon.enabled, queryCurrent: root.perfQueryCurrent(), screen: root.screen.name, width: root.screen.width, height: root.screen.height, favorites: LauncherPreferences.favorites.length, visibleFavorites: NacreMenu.favorites().length, waiting: root.perfWait})); }
         function arm(): void { perfInput.visible = false; perfInput.visible = true; perfKeys.forceActiveFocus(); }
+        function focusInput(): void { perfKeys.forceActiveFocus(); }
         function suspend(hidden: bool): void { WallpaperPlayback.locked = hidden; }
         function pinDashboard(): void { flags.dashboardPinned = true; }
         function pause(paused: bool): void { NacreWallpapers.preferences = Object.assign({}, NacreWallpapers.preferences, {paused: paused}); }
@@ -1375,7 +1377,7 @@ def run(args, directory):
                             timeout=5,
                         )
                         wait_for(
-                            lambda: next(
+                            lambda input_window=input_window: next(
                                 (
                                     window
                                     for window in json.loads(
@@ -1394,6 +1396,17 @@ def run(args, directory):
                             "niri performance input focus",
                             timeout=5,
                         )
+                    ipc("performanceFrame", "focusInput")
+                    wait_for(
+                        lambda: (
+                            value
+                            if (value := state("performanceFrame", "state"))
+                            and value.get("inputFocused")
+                            else None
+                        ),
+                        "performance input item focus",
+                        timeout=5,
+                    )
                     previous = state("performanceFrame", "state").get("sequence", 0)
                     subprocess.run(
                         ["wtype", "-s", "100", "-k", key, "-s", "300"],
