@@ -236,7 +236,7 @@ impl Inhibition {
         Ok(())
     }
 
-    #[zbus(property)]
+    #[zbus(property(emits_changed_signal = "false"))]
     fn inhibited(&self) -> bool {
         self.0.inhibited()
     }
