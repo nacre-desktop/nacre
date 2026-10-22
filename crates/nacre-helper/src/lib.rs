@@ -113,6 +113,8 @@ pub mod device_actions;
 pub mod device_location;
 pub mod display_recover;
 pub mod screenshot;
+pub mod desktop_extras;
+pub mod maintenance;
 
 pub mod owned_settings;
 

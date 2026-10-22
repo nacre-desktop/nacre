@@ -61,7 +61,7 @@ Singleton {
             required property string action
             required property var payload
             stdinEnabled: true
-            command: ["python3", NacrePaths.tools + "/desktop-extras.py", action]
+            command: [NacrePaths.tools + "/nacre-helper", "desktop-extras", action]
             Component.onCompleted: running = true
             onStarted: {
                 write(JSON.stringify(payload));

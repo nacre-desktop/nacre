@@ -146,6 +146,9 @@ def links(root, profile, compositor="hyprland"):
         "nacre-app",
         "nacre-settings",
         "nacre-welcome",
+        "nacre-desktop-extras",
+        "nacre-maintenance",
+        "nacre-welcome-state",
     ):
         # Symlink invocation preserves argv0 for the native multi-call binary.
         # Keep these in the runtime manifest: broken template symlinks would be

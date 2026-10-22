@@ -126,7 +126,7 @@ Singleton {
             const args = queue[0];
             queue = queue.slice(1);
             worker.job = args;
-            worker.command = args[0] === "demo-start" ? ["python3", NacreWallpapers.tool, "demo-start"] : ["python3", NacrePaths.tools + "/welcome.py", ...args];
+            worker.command = args[0] === "demo-start" ? ["python3", NacreWallpapers.tool, "demo-start"] : [NacrePaths.tools + "/nacre-helper", "welcome", ...args];
             worker.running = true;
         }
     }

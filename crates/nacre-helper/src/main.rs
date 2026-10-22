@@ -21,6 +21,9 @@ fn run() -> Result<i32> {
         }
         Some("nacrectl") => "ctl".to_owned(),
         Some("nacre-daemon") => "daemon".to_owned(),
+        Some("nacre-desktop-extras") => "desktop-extras".to_owned(),
+        Some("nacre-maintenance") => "maintenance".to_owned(),
+        Some("nacre-welcome-state") => "welcome".to_owned(),
         Some("nacre-brain" | "nacre-brain-sync" | "nacre-brain-maintain") => {
             let command = name.as_deref().unwrap().to_string_lossy().into_owned();
             return nacre_helper::brain_data::run(
@@ -45,7 +48,8 @@ fn run() -> Result<i32> {
         }
         Some(
             "brain-control" | "brain-auth" | "brain-discovery" | "brain-launch" | "composer"
-            | "sidebar-chat" | "nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps",
+            | "sidebar-chat" | "nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps"
+            | "desktop-extras" | "maintenance" | "welcome",
         ) => invoked.unwrap().to_owned(),
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
@@ -101,6 +105,9 @@ fn run() -> Result<i32> {
         "device-actions" => return nacre_helper::device_actions::run(&arguments),
         "device-location" => return nacre_helper::device_location::run(&arguments),
         "screenshot" => return nacre_helper::screenshot::run(&arguments),
+        "desktop-extras" => return nacre_helper::desktop_extras::run(&arguments),
+        "maintenance" => return nacre_helper::maintenance::run(&arguments),
+        "welcome" => return nacre_helper::launchers::welcome_helper(&arguments),
         _ => {}
     }
     // These commands use files and child executables, with no zbus runtime.

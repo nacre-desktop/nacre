@@ -898,13 +898,6 @@ class Manager:
                 ),
             )
             atomic(path, records)
-            from importlib.util import spec_from_file_location, module_from_spec
-
-            spec = spec_from_file_location(
-                "extras", Path(__file__).with_name("desktop-extras.py")
-            )
-            m = module_from_spec(spec)
-            spec.loader.exec_module(m)
             # Wait for our native app-server to exit before the terminal resumes this ID.
             # Keep the transcript here, but never reconnect to a handed-off conversation.
             self.generation += 1
@@ -917,7 +910,13 @@ class Manager:
                 "Continue this chat in the workspace, or start a new chat here."
             )
             self.update()
-            m.resume(key)
+            subprocess.Popen(
+                [str(Path(__file__).with_name("nacre-helper")), "desktop-extras", "resume", key],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
 
     def connect_background(self):
         try:

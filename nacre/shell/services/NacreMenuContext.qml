@@ -1534,7 +1534,7 @@ Scope {
             return true;
         }
         if (operation === "maintenance" && ["check", "restart"].includes(value)) {
-            AppLaunch.run(["kitty", "--class", "nacre-control", "--title", "Nacre maintenance", "--", "python3", tools + "/maintenance.py", value]);
+            AppLaunch.run(["kitty", "--class", "nacre-control", "--title", "Nacre maintenance", "--", tools + "/nacre-helper", "maintenance", value]);
             return true;
         }
         if (operation === "ask" && canAsk && snapshot.capabilities.ai) {
@@ -1806,7 +1806,7 @@ Scope {
         id: brainWorker
         property string query: ""
         stdinEnabled: true
-        command: ["python3", root.tools + "/desktop-extras.py", "brain"]
+        command: [root.tools + "/nacre-helper", "desktop-extras", "brain"]
         onStarted: {
             write(JSON.stringify({
                 query: query

@@ -20,12 +20,12 @@ Singleton {
         if (busy)
             return;
 
-        worker.command = ["python3", NacrePaths.tools + "/maintenance.py", action];
+        worker.command = [NacrePaths.tools + "/nacre-helper", "maintenance", action];
         worker.running = true;
     }
 
     function recover(action) {
-        AppLaunch.run(["python3", NacrePaths.tools + "/maintenance.py", action]);
+        AppLaunch.run([NacrePaths.tools + "/nacre-helper", "maintenance", action]);
     }
 
     Component.onCompleted: refresh()
