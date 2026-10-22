@@ -155,7 +155,7 @@ pub fn vault() -> Result<PathBuf> {
     if let Some(value) = env::var_os("NACRE_BRAIN_DIR").filter(|v| !v.is_empty()) {
         return Ok(PathBuf::from(value));
     }
-    brain_data::root_path()
+    brain_data::configured_root_path()
 }
 fn reject_links(p: &Path) -> Result<()> {
     for a in p.ancestors() {

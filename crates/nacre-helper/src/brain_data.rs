@@ -115,6 +115,11 @@ fn initialize() -> Result<PathBuf> {
     Ok(root)
 }
 
+/// Resolve the configured vault without initializing it (read-only consumers).
+pub fn configured_root_path() -> Result<PathBuf> {
+    vault()
+}
+
 /// Initialize and return the configured private vault root for shared callers.
 pub fn root_path() -> Result<PathBuf> {
     initialize()
