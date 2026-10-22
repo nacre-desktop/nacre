@@ -466,6 +466,21 @@ closed. Closing the output pipe releases the idle adapter without polling.
 These are added transport/lifecycle protections; frozen normal change lines stay
 exact. Full network device snapshots/actions and other bar services remain deferred.
 
+## Daemon-hosted AI chat v1
+
+`ai.chat` carries one bounded snapshot per hosted sidebar channel, and
+`ai.chat.open|send|cancel|approve|new|resume|provider|workspace` drive it (see
+`ai-chat*.json`, `ai-chat.d.luau` and `ai-chat.jsonl`; spec N0032). Neither is
+advertised in safe mode. At most four channels are hosted, each holding the newest
+64 messages within 128 KiB of escaped text, so the whole topic fits one frame;
+provider transcripts stay in the providers' stores. Each channel is a nice-10
+worker process that stops its providers and exits when the daemon's pipe closes
+or after 30 idle seconds; `open` is both the start and the keep-alive. A refused
+`ai.chat.send` that reached a worker is published as the `send_failed` event so
+the composer can restore its text. Failures before any worker saw a command carry
+`dispatched:false`; a client may then fall back to the legacy socket server but
+must never replay a command that may have been dispatched.
+
 ## Wallpaper filesystem monitoring
 
 `wallpaper.watch` v1 is `{available,generations,error?}`. It reports debounced
