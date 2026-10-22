@@ -915,6 +915,9 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         {
             return Err("Invalid action".into());
         }
+        if name == "assign-note" && data.get("value").is_some_and(|value| !value.is_string()) {
+            return Err("Invalid action value".into());
+        }
         let value = data
             .get("value")
             .map(|v| {
@@ -1429,6 +1432,25 @@ mod tests {
             2
         );
     }
+    #[test]
+    fn assignment_requires_the_existing_string_value_contract() {
+        for value in [
+            json!({"path":"fixture.md","subjects":["Unsafe coercion"]}),
+            json!([]),
+            json!(true),
+            json!(42),
+        ] {
+            let r = route(brain_http::Request {
+                method: "POST".into(),
+                path: "/api/action".into(),
+                query: String::new(),
+                headers: Default::default(),
+                body: serde_json::to_vec(&json!({"name":"assign-note","value":value})).unwrap(),
+            });
+            assert_eq!(r.status, 400);
+        }
+    }
+
     #[test]
     fn percent_decoder_accepts_unicode_and_malformed_escapes_without_panics() {
         assert_eq!(decode("%E2%82%AC"), "€");
