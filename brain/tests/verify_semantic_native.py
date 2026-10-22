@@ -22,15 +22,9 @@ def main():
         )
         python = home / ".local/share/nacre/brain-model/bin/python"
         python.parent.mkdir(parents=True)
-        python.write_text("""#!/usr/bin/python3
-    import json,os,sys
-    from pathlib import Path
-    with open(os.environ["FIXTURE_MODEL_LOG"],"a") as f:f.write("started\\n")
-    for line in sys.stdin:
-     request=json.loads(line)
-     assert set(request)=={"texts"} and len(request["texts"])<=12
-     print(json.dumps({"vectors":[] if os.environ.get("FIXTURE_MODEL_BAD") else [[1.0,0.0] for text in request["texts"]]}),flush=True)
-    """)
+        python.write_text(
+            '#!/usr/bin/python3\nimport json,os,sys\nwith open(os.environ["FIXTURE_MODEL_LOG"],"a") as stream:\n    stream.write("started\\n")\nfor line in sys.stdin:\n    request=json.loads(line)\n    assert set(request)=={"texts"} and len(request["texts"])<=12\n    print(json.dumps({"vectors":[] if os.environ.get("FIXTURE_MODEL_BAD") else [[1.0,0.0] for text in request["texts"]]}),flush=True)\n'
+        )
         python.chmod(0o700)
         log = home / "worker.log"
         env = {
