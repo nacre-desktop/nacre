@@ -17,6 +17,19 @@ fn bounded(program: &str, args: &[&str], timeout: u64) -> Result<Output> {
         .collect::<Vec<_>>();
     crate::process::run(program, &arguments, None, Duration::from_secs(timeout))
 }
+fn color_picker_result(output: Result<Output>) -> std::result::Result<i32, String> {
+    let output = output.map_err(|error| error.to_string())?;
+    let Some(code) = output.status.code() else {
+        return Err("hyprpicker terminated without an exit code".into());
+    };
+    if code == 0 {
+        Ok(code)
+    } else {
+        Err(format!(
+            "Command '['hyprpicker', '-a']' returned non-zero exit status {code}."
+        ))
+    }
+}
 fn backend(paths: &crate::paths::Paths) -> Result<Backend> {
     Backend::new(paths.clone(), std::env::vars().collect())
 }
@@ -330,8 +343,13 @@ pub fn run(args: &[String]) -> Result<i32> {
             }
         }
         "color-picker" if args.len() == 1 => {
-            let output = bounded("hyprpicker", &["-a"], 180)?;
-            Ok(output.status.code().unwrap_or(1))
+            match color_picker_result(bounded("hyprpicker", &["-a"], 180)) {
+                Ok(code) => Ok(code),
+                Err(error) => {
+                    println!("{}", crate::json::encode(&json!({"error":error}))?);
+                    Ok(1)
+                }
+            }
         }
         _ => {
             let error = tr(
@@ -551,6 +569,30 @@ mod tests {
             screenshot_error(&paths, Err("grim failed".into())),
             "grim failed"
         );
+    }
+    #[test]
+    fn color_picker_failure_uses_the_control_tools_json_error_envelope() {
+        use std::os::unix::process::ExitStatusExt;
+        let output = Output {
+            status: std::process::ExitStatus::from_raw(1 << 8),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+        let error = color_picker_result(Ok(output)).unwrap_err();
+        assert_eq!(
+            error,
+            "Command '['hyprpicker', '-a']' returned non-zero exit status 1."
+        );
+        assert_eq!(
+            json!({"error":error}),
+            json!({"error":"Command '['hyprpicker', '-a']' returned non-zero exit status 1."})
+        );
+        let success = Output {
+            status: std::process::ExitStatus::from_raw(0),
+            stdout: Vec::new(),
+            stderr: Vec::new(),
+        };
+        assert_eq!(color_picker_result(Ok(success)), Ok(0));
     }
     #[test]
     fn owned_service_can_be_disabled_after_claim() {
