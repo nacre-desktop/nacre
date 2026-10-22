@@ -679,7 +679,12 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
             .checked_add(1)
             .filter(|n| *n <= MAX_SAFE_INTEGER)
             .ok_or("Notification generations exhausted")?;
+        let loaded_count = rows.len();
         let mut model = Model::new(&boot, generation, rows, current_dnd, timing.clone());
+        if model.closed_count() != loaded_count {
+            history_dirty = true;
+            dirty.get_or_insert_with(|| Instant::now() + FLUSH);
+        }
         let initial_refs = model.image_references();
         let mut cache_dirty =
             !retain_cache(Arc::clone(&cache), Arc::clone(&image_gate), initial_refs).await;

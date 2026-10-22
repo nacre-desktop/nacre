@@ -211,7 +211,9 @@ Evict oldest closed rows first; if active retained content cannot fit, report st
 text is saved too, and restored only as inert history; no popup/action/deadline revival.
 Use atomic fsync writes, existing private backups, 0700 directories, 0600 files/
 locks/backups/cache. Reject symlink/foreign/unsafe destinations; unreadable/future
-files stay untouched. Clear/dismiss before asynchronous load uses tombstones to
+files stay untouched. Legacy rows that cannot be represented within the producer
+contract (including unknown timestamps) report a protected history-storage error;
+never silently discard them on a later save. Clear/dismiss before asynchronous load uses tombstones to
 prevent resurrection (`nacre/shell/services/NacreNotifs.qml:62-91,99-160`).
 Persist only approved display fields, not raw hints, credentials or action routing; text cannot be guaranteed secret-free. No content in diagnostics or
 telemetry. Cache cleanup follows retained references and bounds; expired native

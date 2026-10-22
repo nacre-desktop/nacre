@@ -312,6 +312,7 @@ impl Model {
             ids.remove(&native_id);
             !ids.is_empty()
         });
+        let history_pruned = self.prune_history(wall_ms);
         let (name, payload) = if was_replacement {
             ("updated", event_revision(id, revision))
         } else {
@@ -320,9 +321,16 @@ impl Model {
         Ok(Outcome {
             native_id: Some(native_id),
             changed: true,
-            persist: should_persist,
+            persist: should_persist || history_pruned,
             signals: Vec::new(),
-            events: vec![(name.into(), payload)],
+            events: if history_pruned {
+                vec![
+                    (name.into(), payload),
+                    ("history_changed".into(), json!({})),
+                ]
+            } else {
+                vec![(name.into(), payload)]
+            },
         })
     }
 
@@ -728,7 +736,7 @@ impl Model {
     }
 
     pub fn persisted_rows(&self) -> Result<Value, Failure> {
-        let mut rows = Vec::new();
+        let mut active_rows = Vec::new();
         // Reserve room for the existing store envelope and trailing newline.
         let mut bytes = 1024usize;
         for (native, entry) in &self.active {
@@ -747,11 +755,8 @@ impl Model {
                 continue;
             }
             let value = persisted_row(&entry.id, &notification);
-            let size = serde_json::to_vec(&value)
-                .map_err(|_| failure(ErrorCode::Internal, "History unavailable", false))?
-                .len()
-                + 1;
-            if rows.len() >= HISTORY_ROWS || bytes.saturating_add(size) > HISTORY_BYTES {
+            let size = persisted_size(&value)?;
+            if active_rows.len() >= HISTORY_ROWS || bytes.saturating_add(size) > HISTORY_BYTES {
                 return Err(failure(
                     ErrorCode::Io,
                     "History storage limit reached",
@@ -759,19 +764,17 @@ impl Model {
                 ));
             }
             bytes += size;
-            rows.push(value);
+            active_rows.push((entry.arrival, value));
         }
+        active_rows.sort_by_key(|(arrival, _)| *arrival);
         let mut closed = Vec::new();
         for row in self.history.iter().rev() {
             if !self.retained_history(&row.notification) {
                 continue;
             }
             let value = persisted_row(&row.id, &row.notification);
-            let size = serde_json::to_vec(&value)
-                .map_err(|_| failure(ErrorCode::Internal, "History unavailable", false))?
-                .len()
-                + 1;
-            if rows.len() + closed.len() >= HISTORY_ROWS
+            let size = persisted_size(&value)?;
+            if active_rows.len() + closed.len() >= HISTORY_ROWS
                 || bytes.saturating_add(size) > HISTORY_BYTES
             {
                 break;
@@ -779,9 +782,14 @@ impl Model {
             bytes += size;
             closed.push(value);
         }
-        rows.extend(closed);
-        rows.reverse();
+        closed.reverse();
+        let mut rows = closed;
+        rows.extend(active_rows.into_iter().map(|(_, row)| row));
         Ok(Value::Array(rows))
+    }
+
+    pub fn closed_count(&self) -> usize {
+        self.history.len()
     }
 
     pub fn image_references(&self) -> Vec<String> {
@@ -1235,46 +1243,15 @@ impl Model {
     }
 
     fn restore_row(&mut self, row: &Value) -> Option<Closed> {
-        let text = |name: &str| -> Option<String> {
-            match row.get(name) {
-                None | Some(Value::Null) => Some(String::new()),
-                Some(Value::String(value)) => Some(value.clone()),
-                _ => None,
-            }
-        };
-        let app = text("appName")?;
-        let summary = text("summary")?;
-        let body = text("body")?;
-        let icon = text("appIcon")?;
-        if app.len() > 8192
-            || summary.len() > 8192
-            || body.len() > 8192
-            || icon.len() > 8192
-            || [app.as_str(), summary.as_str(), body.as_str(), icon.as_str()]
-                .iter()
-                .any(|value| value.contains('\0'))
-        {
-            return None;
-        }
-        if row
-            .get("transient")
-            .is_some_and(|value| !value.is_boolean())
-            || row.get("transient").and_then(Value::as_bool) == Some(true)
-        {
-            return None;
-        }
-        let urgency = row.get("urgency").and_then(Value::as_u64).unwrap_or(1);
-        if urgency > 2 {
-            return None;
-        }
+        let notification = restored_notification(row)?;
         let candidate = Notice {
             id: 0,
-            app: app.clone(),
+            app: notification.app_name.clone(),
             icon: String::new(),
-            summary: summary.clone(),
-            body: body.clone(),
+            summary: notification.summary.clone(),
+            body: notification.body.clone(),
             actions: Vec::new(),
-            urgency: urgency as u8,
+            urgency: urgency_code(&notification.urgency),
             transient: false,
             resident: false,
             popup: false,
@@ -1288,50 +1265,14 @@ impl Model {
         if !self.should_retain(&candidate) {
             return None;
         }
-        let created_ms = row
-            .get("time")
-            .and_then(Value::as_str)
-            .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok())?
-            .timestamp_millis()
-            .max(0) as u64;
-        if created_ms > MAX_SAFE_INTEGER {
-            return None;
-        }
-        if self.last_wall_ms.saturating_sub(created_ms) >= HISTORY_TTL.as_millis() as u64 {
+        if self.last_wall_ms.saturating_sub(notification.created_ms)
+            >= HISTORY_TTL.as_millis() as u64
+        {
             return None;
         }
         let id = self.peek_id(1).ok()?;
         self.next_id = self.next_id.saturating_add(1);
         self.arrival = self.arrival.saturating_add(1);
-        let urgency = match urgency {
-            0 => "low",
-            2 => "critical",
-            _ => "normal",
-        }
-        .to_owned();
-        let notification = Notification {
-            app_name: app,
-            summary,
-            body,
-            urgency,
-            resident: false,
-            transient: false,
-            created_ms,
-            icon: (!icon.is_empty() && safe_named_icon(&icon)).then_some(icon),
-            // A cache entry or native image URL never survives a daemon restart.
-            image_path: None,
-            actions: Entities {
-                items: BTreeMap::new(),
-                order: Vec::new(),
-            },
-            timeout_ms: None,
-            remaining_ms: None,
-            revision: Some(1),
-            desktop_entry: None,
-            retained: Some(true),
-            expires_ms: None,
-            paused: Some(false),
-        };
         Some(Closed {
             id,
             notification,
@@ -1344,37 +1285,59 @@ impl Model {
         let cutoff = wall_ms.saturating_sub(HISTORY_TTL.as_millis() as u64);
         self.history
             .retain(|row| row.notification.created_ms > cutoff);
-        loop {
-            let mut rows: Vec<Value> = self
-                .history
-                .iter()
-                .filter(|row| self.retained_history(&row.notification))
-                .map(|row| persisted_row(&row.id, &row.notification))
-                .collect();
-            rows.extend(self.active.iter().filter_map(|(native, entry)| {
-                (entry.retained
+        // Only rows written to storage consume its count and byte quota. The
+        // public history_count intentionally also includes unretained feedback.
+        let active_count = self
+            .active
+            .iter()
+            .filter(|(native, entry)| {
+                entry.retained
+                    && entry.created_ms >= wall_ms.saturating_sub(HISTORY_TTL.as_millis() as u64)
                     && self
                         .center
                         .active
-                        .get(native)
-                        .is_some_and(|notice| !notice.transient))
-                .then(|| {
-                    self.active_notification(*native)
-                        .map(|notification| persisted_row(&entry.id, &notification))
-                })
-                .flatten()
-            }));
-            let over_rows = rows.len() > HISTORY_ROWS;
-            let over_bytes =
-                serde_json::to_vec(&rows).map_or(true, |bytes| bytes.len() + 1024 > HISTORY_BYTES);
-            if !over_rows && !over_bytes {
-                break;
+                        .get(*native)
+                        .is_some_and(|notice| !notice.transient)
+            })
+            .count();
+        let mut used_bytes = 1024usize;
+        for (native, entry) in &self.active {
+            if !entry.retained
+                || entry.created_ms < wall_ms.saturating_sub(HISTORY_TTL.as_millis() as u64)
+                || !self
+                    .center
+                    .active
+                    .get(native)
+                    .is_some_and(|notice| !notice.transient)
+            {
+                continue;
             }
-            if self.history.is_empty() {
-                break;
+            if let Some(notification) = self.active_notification(*native) {
+                let row = persisted_row(&entry.id, &notification);
+                used_bytes = used_bytes.saturating_add(persisted_size(&row).unwrap_or(usize::MAX));
             }
-            self.history.remove(0);
         }
+        let mut closed_count = 0usize;
+        let mut keep_from = self.history.len();
+        for (index, row) in self.history.iter().enumerate().rev() {
+            if !self.retained_history(&row.notification) {
+                keep_from = index;
+                continue;
+            }
+            let value = persisted_row(&row.id, &row.notification);
+            let size = persisted_size(&value).unwrap_or(usize::MAX);
+            if active_count.saturating_add(closed_count + 1) > HISTORY_ROWS
+                || used_bytes.saturating_add(size) > HISTORY_BYTES
+            {
+                break;
+            }
+            used_bytes += size;
+            closed_count += 1;
+            keep_from = index;
+        }
+        // Retain the contiguous newest closed prefix that fits the envelope,
+        // row-count and byte limits. Never evict a live notification.
+        self.history.drain(..keep_from);
         self.history.len() < before
     }
 
@@ -1403,6 +1366,86 @@ impl Model {
                 hovered: false,
             })
     }
+}
+
+pub(super) fn history_supported(rows: &[Value]) -> bool {
+    rows.iter().all(|row| restored_notification(row).is_some())
+}
+
+fn restored_notification(row: &Value) -> Option<Notification> {
+    let text = |name: &str| -> Option<String> {
+        match row.get(name) {
+            None | Some(Value::Null) => Some(String::new()),
+            Some(Value::String(value)) => Some(value.clone()),
+            _ => None,
+        }
+    };
+    let app = text("appName")?;
+    let summary = text("summary")?;
+    let body = text("body")?;
+    let icon = text("appIcon")?;
+    if app.len() > 8192
+        || summary.len() > 8192
+        || body.len() > 8192
+        || icon.len() > 8192
+        || [app.as_str(), summary.as_str(), body.as_str(), icon.as_str()]
+            .iter()
+            .any(|value| value.contains('\0'))
+    {
+        return None;
+    }
+    if row
+        .get("transient")
+        .is_some_and(|value| !value.is_boolean())
+        || row.get("transient").and_then(Value::as_bool) == Some(true)
+    {
+        return None;
+    }
+    let urgency = match row.get("urgency") {
+        None => 1,
+        Some(value) => value.as_u64()?,
+    };
+    if urgency > 2 {
+        return None;
+    }
+    let created_ms = row
+        .get("time")
+        .and_then(Value::as_str)
+        .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok())?
+        .timestamp_millis()
+        .max(0) as u64;
+    if created_ms > MAX_SAFE_INTEGER {
+        return None;
+    }
+    let notification = Notification {
+        app_name: app,
+        summary,
+        body,
+        urgency: match urgency {
+            0 => "low",
+            2 => "critical",
+            _ => "normal",
+        }
+        .to_owned(),
+        resident: false,
+        transient: false,
+        created_ms,
+        icon: (!icon.is_empty() && safe_named_icon(&icon)).then_some(icon),
+        // A cache entry or native image URL never survives a daemon restart.
+        image_path: None,
+        actions: Entities {
+            items: BTreeMap::new(),
+            order: Vec::new(),
+        },
+        timeout_ms: None,
+        remaining_ms: None,
+        revision: Some(1),
+        desktop_entry: None,
+        retained: Some(true),
+        expires_ms: None,
+        paused: Some(false),
+    };
+    (serde_json::to_vec(&notification).ok()?.len() <= 128 * 1024).then_some(notification)
 }
 
 impl Outcome {
@@ -1498,6 +1541,12 @@ fn persisted_row(id: &EntityId, notification: &Notification) -> Value {
         "urgency":urgency_code(&notification.urgency),
         "transient":false
     })
+}
+
+fn persisted_size(row: &Value) -> Result<usize, Failure> {
+    crate::json::encode(row)
+        .map(|encoded| encoded.len().saturating_add(2))
+        .map_err(|_| failure(ErrorCode::Internal, "History unavailable", false))
 }
 
 fn popup_duration(timeout: i32, resolved: u32) -> Option<Duration> {
@@ -1604,6 +1653,40 @@ mod tests {
 
     fn call(method: &str, params: Value) -> CoreCall {
         serde_json::from_value(json!({"m":method,"p":params})).unwrap()
+    }
+
+    fn history_rows(count: usize, wall_ms: u64) -> Vec<Value> {
+        let time = chrono::DateTime::from_timestamp_millis(wall_ms as i64)
+            .unwrap()
+            .to_rfc3339();
+        (0..count)
+            .map(|index| {
+                json!({
+                    "key":format!("old-{index}"),
+                    "time":time,
+                    "summary":format!("row {index}"),
+                    "body":"Fixture body",
+                    "appName":"fixture.app",
+                    "appIcon":"",
+                    "urgency":1
+                })
+            })
+            .collect()
+    }
+
+    #[test]
+    fn legacy_history_support_check_requires_encodable_timestamped_rows() {
+        let wall = system_now_ms();
+        let valid = history_rows(1, wall);
+        assert!(history_supported(&valid));
+
+        let mut undated = valid[0].clone();
+        undated.as_object_mut().unwrap().remove("time");
+        assert!(!history_supported(&[undated]));
+
+        let mut overlong = valid[0].clone();
+        overlong["summary"] = Value::String("x".repeat(8193));
+        assert!(!history_supported(&[overlong]));
     }
 
     #[test]
@@ -1830,6 +1913,40 @@ mod tests {
         assert_eq!(notice.expires_ms, None);
         assert_eq!(notice.remaining_ms, None);
         assert_eq!(notice.image_path, None);
+    }
+
+    #[test]
+    fn multiple_active_rows_restore_as_inert_history_in_arrival_order() {
+        let now = Instant::now();
+        let wall = system_now_ms();
+        let mut model = Model::new("boot-a", 1, Vec::new(), false, Policy::default());
+        model
+            .notify(input(":1.81", 0, notice("first"), 0), now, wall)
+            .unwrap();
+        model
+            .notify(input(":1.82", 0, notice("second"), 0), now, wall)
+            .unwrap();
+
+        let rows = model.persisted_rows().unwrap();
+        assert_eq!(rows[0]["summary"], "first");
+        assert_eq!(rows[1]["summary"], "second");
+        let restored = Model::new(
+            "boot-b",
+            2,
+            rows.as_array().unwrap().clone(),
+            false,
+            Policy::default(),
+        );
+        let state = restored.snapshot(storage());
+        let summaries: Vec<_> = state
+            .history
+            .order
+            .iter()
+            .map(|id| state.history.items[id].summary.as_str())
+            .collect();
+        assert_eq!(summaries, vec!["second", "first"]);
+        assert!(state.active.items.is_empty());
+        assert!(state.popup_order.unwrap().is_empty());
     }
 
     #[test]
@@ -2175,6 +2292,107 @@ mod tests {
         let oldest = &state.history.items[state.history.order.last().unwrap()].summary;
         assert_eq!(newest, "row 64");
         assert_eq!(oldest, "row 1");
+    }
+
+    #[test]
+    fn new_retained_active_notice_prunes_oldest_closed_row_and_persists() {
+        let now = Instant::now();
+        let wall = system_now_ms();
+        let mut model = Model::new(
+            "boot-a",
+            1,
+            history_rows(HISTORY_ROWS, wall),
+            false,
+            Policy::default(),
+        );
+        let outcome = model
+            .notify(input(":1.200", 0, notice("new active"), 0), now, wall)
+            .unwrap();
+
+        assert!(outcome.persist);
+        assert!(outcome
+            .events
+            .iter()
+            .any(|(name, _)| name == "history_changed"));
+        let state = model.snapshot(storage());
+        assert_eq!(state.history_count, Some(HISTORY_ROWS as u64));
+        assert_eq!(state.history.order.len(), HISTORY_WINDOW_ROWS);
+        assert_eq!(model.history.len(), HISTORY_ROWS - 1);
+        assert_eq!(model.history.first().unwrap().notification.summary, "row 1");
+        let rows = model.persisted_rows().unwrap();
+        assert_eq!(rows.as_array().unwrap().len(), HISTORY_ROWS);
+        assert_eq!(rows[0]["summary"], "row 1");
+    }
+
+    #[test]
+    fn unretained_feedback_active_notice_does_not_consume_storage_quota() {
+        let now = Instant::now();
+        let wall = system_now_ms();
+        let mut policy = Policy::default();
+        policy.feedback_apps.insert("fixture.app".into());
+        policy.feedback_summaries.insert("feedback".into());
+        let mut model = Model::new("boot-a", 1, history_rows(HISTORY_ROWS, wall), false, policy);
+        let outcome = model
+            .notify(input(":1.201", 0, notice("feedback"), 0), now, wall)
+            .unwrap();
+
+        assert!(!outcome.persist);
+        assert_eq!(
+            model.snapshot(storage()).history_count,
+            Some(HISTORY_ROWS as u64 + 1)
+        );
+        assert_eq!(model.history.len(), HISTORY_ROWS);
+        let rows = model.persisted_rows().unwrap();
+        assert_eq!(rows.as_array().unwrap().len(), HISTORY_ROWS);
+        assert_eq!(rows[0]["summary"], "row 0");
+    }
+
+    #[test]
+    fn history_byte_quota_evicts_oldest_closed_rows_before_live_rows() {
+        let now = Instant::now();
+        let wall = system_now_ms();
+        let version = crate::state::by_id("notifications").unwrap().version;
+        for (boot, row_count, large_field) in [
+            ("ascii", 2_000, "x".repeat(8192)),
+            ("unicode", 680, "😀".repeat(2048)),
+        ] {
+            let mut rows = history_rows(row_count, wall);
+            for row in &mut rows {
+                row["body"] = Value::String(large_field.clone());
+            }
+            let mut model = Model::new(boot, 1, rows, false, Policy::default());
+            let initial_closed = model.closed_count();
+            let mut history_changed = false;
+
+            for index in 0..8 {
+                let mut incoming = notice(&large_field);
+                incoming.app = large_field.clone();
+                incoming.body = large_field.clone();
+                let outcome = model
+                    .notify(
+                        input(&format!(":1.{}", index + 300), 0, incoming, 0),
+                        now,
+                        wall,
+                    )
+                    .unwrap();
+                history_changed |= outcome
+                    .events
+                    .iter()
+                    .any(|(name, _)| name == "history_changed");
+                let persisted_rows = model.persisted_rows().unwrap();
+                assert_eq!(
+                    model.snapshot(storage()).history_count,
+                    Some(persisted_rows.as_array().unwrap().len() as u64)
+                );
+                let envelope = json!({"version":version,"items":persisted_rows});
+                let encoded = crate::json::encode(&envelope).unwrap();
+                assert!(encoded.len() <= HISTORY_BYTES);
+            }
+
+            assert!(history_changed);
+            assert!(model.closed_count() + 8 < initial_closed + 8);
+            assert_eq!(model.snapshot(storage()).active.items.len(), 8);
+        }
     }
     #[test]
     fn native_replacement_is_sender_scoped_and_resident_action_stays_live() {

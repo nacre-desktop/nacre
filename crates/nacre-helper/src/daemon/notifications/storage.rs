@@ -53,6 +53,11 @@ impl Store {
                         chrono::Utc::now().timestamp(),
                     );
                     match filtered {
+                        Ok(rows) if !super::model::history_supported(&rows) => (
+                            Vec::new(),
+                            fingerprint,
+                            unavailable("Notification history contains unsupported rows"),
+                        ),
                         Ok(rows) => {
                             needs_save = document != Value::Array(rows.clone());
                             let writable = history_writable(&lease, &path);
@@ -938,6 +943,28 @@ mod tests {
             "open must not prune on disk"
         );
         assert!(WriterLease::acquire(path.parent().unwrap()).is_err());
+    }
+
+    #[test]
+    fn unsupported_legacy_rows_are_protected_instead_of_dropped_on_the_next_save() {
+        for row in [
+            json!({"summary":"undated retained text"}),
+            json!({"time":"2099-01-01T00:00:00Z","body":"x".repeat(8193)}),
+        ] {
+            let root = tempfile::tempdir().unwrap();
+            fs::set_permissions(root.path(), fs::Permissions::from_mode(0o700)).unwrap();
+            let path = history(root.path());
+            fs::create_dir_all(path.parent().unwrap()).unwrap();
+            fs::set_permissions(path.parent().unwrap(), fs::Permissions::from_mode(0o700)).unwrap();
+            let original = serde_json::to_vec(&json!([row])).unwrap();
+            fs::write(&path, &original).unwrap();
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+            let mut store = Store::open(path.clone(), policy()).unwrap();
+            assert!(!store.health().ready);
+            assert!(!store.health().writable);
+            assert!(store.save(&json!([])).is_err());
+            assert_eq!(fs::read(path).unwrap(), original);
+        }
     }
 
     #[test]
