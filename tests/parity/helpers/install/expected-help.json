@@ -1,5 +1,5 @@
 {
-  "stdout": "usage: install.py [-h] [--code-only] [--restore] [--retire-niri-experiment]\n\noptions:\n  -h, --help            show this help message and exit\n  --code-only\n  --restore\n  --retire-niri-experiment\n                        Back up and remove drop-ins referencing retired niri-\n                        on-pc scripts\n",
+  "stdout": "usage: install.py [-h] [--code-only] [--restore] [--dry-run]\n                  [--retire-niri-experiment]\n\noptions:\n  -h, --help            show this help message and exit\n  --code-only\n  --restore\n  --dry-run             With --code-only: print the daemon-restart and niri-\n                        session steps; change nothing\n  --retire-niri-experiment\n                        Back up and remove drop-ins referencing retired niri-\n                        on-pc scripts\n",
   "exit": 0,
   "files": {},
   "deleted": [],

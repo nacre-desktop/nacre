@@ -112,7 +112,9 @@ def daemon_status_healthy(text):
         return (
             status.get("safe") is not True
             and bool(services)
-            and all(s.get("status") not in ("error", "refused") for s in services.values())
+            and all(
+                s.get("status") not in ("error", "refused") for s in services.values()
+            )
             and bool(status["topics"])
         )
     except (ValueError, KeyError, TypeError, AttributeError):
@@ -145,7 +147,10 @@ def restart_daemon_checked(target, previous):
         subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT]).returncode == 0
     )
     if restarted and wait_daemon_healthy():
-        print(DAEMON_UNIT + " restarted and healthy (services running, topics advertised).")
+        print(
+            DAEMON_UNIT
+            + " restarted and healthy (services running, topics advertised)."
+        )
         return
     print(
         "The restarted daemon did not become healthy; restoring the previous helper.",

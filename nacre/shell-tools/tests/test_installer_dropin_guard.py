@@ -510,7 +510,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
         self.assertEqual(link.read_bytes(), before)
 
     # N0037: code-only install restarts the daemon safely and refreshes the niri session.
-    HEALTHY = '{"safe":false,"services":{"tray":{"status":"running"}},"topics":["daemon"]}'
+    HEALTHY = (
+        '{"safe":false,"services":{"tray":{"status":"running"}},"topics":["daemon"]}'
+    )
     UNHEALTHY = '{"safe":false,"services":{},"topics":[]}'
 
     def fake_helper(self, status):
@@ -542,9 +544,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
         with (
             patch.dict(os.environ, {"ACTIVE": "1" if active else "0"}),
-            patch.multiple(
-                installer, ROOT=root, SHELL=shell, DAEMON_WAIT_SECONDS=0.5
-            ),
+            patch.multiple(installer, ROOT=root, SHELL=shell, DAEMON_WAIT_SECONDS=0.5),
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
             patch.object(installer, "stop_other_shells"),
@@ -571,9 +571,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "previous helper was restored"):
             self.daemon_deploy(self.UNHEALTHY, self.HEALTHY)
         self.assertEqual((self.dest / "tools/nacre-helper").read_text(), old)
-        self.assertEqual(
-            self.calls().count("--user restart nacre-daemon.service"), 2
-        )
+        self.assertEqual(self.calls().count("--user restart nacre-daemon.service"), 2)
         self.assertNotIn("--user restart nacre-shell", self.calls())
 
     def test_code_only_same_helper_or_stopped_daemon_is_not_restarted(self):
