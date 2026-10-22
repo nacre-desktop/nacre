@@ -83,7 +83,7 @@ Scope {
         composerWorker.contextKey = request.contextKey;
         composerWorker.action = request.action;
         composerWorker.payload = request.payload;
-        composerWorker.command = ["python3", NacrePaths.tools + "/composer.py", request.action];
+        composerWorker.command = [NacrePaths.tools + "/nacre-helper", "composer", request.action];
         composerWorker.running = true;
     }
     function saveDraft() {

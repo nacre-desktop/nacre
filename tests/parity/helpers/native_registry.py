@@ -71,6 +71,7 @@ MIGRATED = frozenset(
         "nacre-ai-tools",
         "nacre-ai-account",
         "nacre-ai-remote",
+        "composer",
     }
 )
 
@@ -136,6 +137,7 @@ def command(case, override=None, *, root=ROOT, environ=None):
         "nacre-ai-tools",
         "nacre-ai-account",
         "nacre-ai-remote",
+        "composer",
     }:
         return shlex.join([str(native_binary(root, environ)), helper])
     if helper == "nacre_shell" and original:

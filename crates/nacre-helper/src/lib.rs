@@ -11,6 +11,7 @@ pub mod branding;
 pub mod classic_state;
 pub mod colors;
 pub mod colors_launch;
+pub mod composer;
 pub mod compositor;
 pub mod compositor_compat;
 pub mod compositor_config;

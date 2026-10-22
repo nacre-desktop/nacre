@@ -40,12 +40,34 @@ fn run() -> Result<i32> {
                 &arguments.collect::<Vec<_>>(),
             );
         }
-        Some("nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
+        Some("composer" | "nacre-app" | "nacre-settings" | "nacre-welcome" | "startup-apps") => {
             invoked.unwrap().to_owned()
         }
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "composer" {
+        use std::io::Read;
+        let action = arguments.first().ok_or("Expected a composer action")?;
+        let request = if matches!(action.as_str(), "pick" | "screenshot") {
+            serde_json::json!({})
+        } else {
+            let mut input = String::new();
+            std::io::stdin()
+                .lock()
+                .take(1024 * 1024 + 1)
+                .read_line(&mut input)?;
+            if input.len() > 1024 * 1024 {
+                return Err("Composer request exceeds limit".into());
+            }
+            serde_json::from_str(&input)?
+        };
+        println!(
+            "{}",
+            json::encode(&nacre_helper::composer::run(action, &request))?
+        );
+        return Ok(0);
+    }
     if matches!(
         tool.as_str(),
         "nacre-ai-skills"
