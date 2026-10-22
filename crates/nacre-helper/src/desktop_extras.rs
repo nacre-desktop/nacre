@@ -340,16 +340,15 @@ fn brain_search(query: &str) -> Result<Value> {
 fn brain_search_at(words: &[String], root: &Path) -> Result<Value> {
     let start = Instant::now();
     let mut results = Vec::new();
-    let mut count = 0;
-    for entry in walkdir::WalkDir::new(&root)
+    for (count, entry) in walkdir::WalkDir::new(root)
         .follow_links(false)
         .into_iter()
         .filter_map(std::result::Result::ok)
+        .enumerate()
     {
         if count >= 10000 || start.elapsed() > Duration::from_millis(1500) {
             break;
         }
-        count += 1;
         let path = entry.path();
         if entry.file_type().is_symlink()
             || !path.is_file()
@@ -357,7 +356,7 @@ fn brain_search_at(words: &[String], root: &Path) -> Result<Value> {
         {
             continue;
         }
-        let relative = path.strip_prefix(&root)?;
+        let relative = path.strip_prefix(root)?;
         if relative
             .components()
             .any(|p| p.as_os_str().to_string_lossy().starts_with('.'))
@@ -611,7 +610,7 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
                 }
             }
         }
-        return Err(command.exec().into());
+        Err(command.exec().into())
     } else {
         let account = item["account"].as_str().unwrap_or("");
         let home = crate::ai_core::account_home("codex", Some(account))?;
@@ -636,7 +635,7 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
         if !account.is_empty() {
             command.env("CODEX_HOME", home);
         }
-        return Err(command.exec().into());
+        Err(command.exec().into())
     }
 }
 fn bindings(paths: &Paths) -> Result<Value> {
@@ -665,8 +664,7 @@ fn bindings(paths: &Paths) -> Result<Value> {
                             let action = row["action"]["method"]
                                 .as_str()
                                 .unwrap_or("")
-                                .replace('.', " ")
-                                .replace('_', " ");
+                                .replace(['.', '_'], " ");
                             let args = row["action"]["args"]
                                 .as_array()
                                 .and_then(|a| a.first())

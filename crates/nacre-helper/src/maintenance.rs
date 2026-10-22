@@ -119,7 +119,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         match action {
             "check" => {
                 let home = env::var_os("HOME").ok_or("Missing home directory")?;
-                let argv = vec![
+                let argv = [
                     "python3".to_owned(),
                     PathBuf::from(home)
                         .join(".local/share/nacre/control/check-overlays.py")
