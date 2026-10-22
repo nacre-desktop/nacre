@@ -78,6 +78,14 @@ MIGRATED = frozenset(
         "sidebar-chat",
         "nacre-ai-chat",
         "nacre-ai-claude",
+        "brain-auth",
+        "brain-control",
+        "brain-discovery",
+        "control-tools",
+        "desktop-actions",
+        "device-actions",
+        "display-recover",
+        "screenshot",
     }
 )
 
@@ -147,6 +155,14 @@ def command(case, override=None, *, root=ROOT, environ=None):
         "sidebar-chat",
         "nacre-ai-chat",
         "nacre-ai-claude",
+        "brain-auth",
+        "brain-control",
+        "brain-discovery",
+        "control-tools",
+        "desktop-actions",
+        "device-actions",
+        "display-recover",
+        "screenshot",
     }:
         return shlex.join([str(native_binary(root, environ)), helper])
     if helper == "nacre_shell" and original:
