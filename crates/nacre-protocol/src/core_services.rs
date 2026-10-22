@@ -662,6 +662,31 @@ pub struct NetworkSample {
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub up_bps: u64,
 }
+/// What the host card shows. Every member is independently optional; omitted means
+/// unknown. Static for a subscription: clients count uptime from `boot_ms`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SystemHost {
+    /// Login name of the daemon's user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 64))]
+    pub user: Option<String>,
+    /// `PRETTY_NAME` (else `NAME`) from os-release.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 128))]
+    pub os: Option<String>,
+    /// Kernel release, for example `6.12.1-arch1-1`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 128))]
+    pub kernel: Option<String>,
+    /// Seconds since boot when the subscription started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub uptime_s: Option<u64>,
+    /// Boot time in Unix milliseconds; uptime now is `now - boot_ms`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub boot_ms: Option<u64>,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DashboardSystemState {
     pub health: Health,
@@ -675,6 +700,8 @@ pub struct DashboardSystemState {
     pub memory: Option<SystemMemory>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gpu: Option<SystemGpu>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub host: Option<SystemHost>,
     /// Oldest first, at most 32 samples; absent or empty means no sample yet.
     /// A time series, not entities: order is time, items have no identity.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -960,6 +987,19 @@ impl CoreSnapshot {
                             && g.memory_used.is_none_or(|u| {
                                 timestamp_valid(u) && g.memory_total.is_none_or(|t| u <= t)
                             })
+                    })
+                    && s.host.as_ref().is_none_or(|h| {
+                        let text = |v: &Option<String>, max: usize| {
+                            v.as_deref().is_none_or(|t| {
+                                (1..=max).contains(&t.chars().count())
+                                    && !t.chars().any(char::is_control)
+                            })
+                        };
+                        text(&h.user, 64)
+                            && text(&h.os, 128)
+                            && text(&h.kernel, 128)
+                            && h.uptime_s.is_none_or(timestamp_valid)
+                            && h.boot_ms.is_none_or(timestamp_valid)
                     })
                     && s.network.len() <= 32
                     && s.network

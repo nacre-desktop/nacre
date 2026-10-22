@@ -129,6 +129,11 @@ pub struct Screenshot {
     pub path: String,
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub created_ms: u64,
+    /// Absolute PNG in the daemon's private cache, longest side at most 256 px.
+    /// Present only while a client subscribes; omitted when it cannot be made.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 4096))]
+    pub thumb_path: Option<String>,
 }
 /// Newest first, at most six.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -140,11 +145,11 @@ impl ScreenshotsState {
     pub fn validate(&self) -> Result<(), Failure> {
         if !self.items.valid()
             || self.items.items.len() > MAX_SCREENSHOTS
-            || self
-                .items
-                .items
-                .values()
-                .any(|s| !path_valid(&s.path) || !time_valid(s.created_ms))
+            || self.items.items.values().any(|s| {
+                !path_valid(&s.path)
+                    || !time_valid(s.created_ms)
+                    || s.thumb_path.as_deref().is_some_and(|p| !path_valid(p))
+            })
         {
             return Err(invalid("Invalid screenshots state"));
         }
@@ -441,7 +446,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         lines(&frames),
     );
 
-    let shots = json!({"health":health,"items":entities(json!({"s0a1b2c3d4e5f6071":{"path":"/home/user/Pictures/Screenshots/screenshot_20270115_080000_000000.png","created_ms":1800000000000_u64}}))});
+    let shots = json!({"health":health,"items":entities(json!({"s0a1b2c3d4e5f6071":{"path":"/home/user/Pictures/Screenshots/screenshot_20270115_080000_000000.png","created_ms":1800000000000_u64,"thumb_path":"/home/user/.local/state/nacre/shell/screenshot-thumbs/0000000000000000000000000000000000000000000000000000000000000000.png"}}))});
     typed("screenshots", &shots);
     let mut frames = vec![json!({"t":"snap","topic":"screenshots","seq":0,"data":shots})];
     frames.extend(call(

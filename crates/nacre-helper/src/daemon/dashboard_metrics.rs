@@ -5,7 +5,7 @@ use crate::{dashboard_system, resource_state, Result};
 use nacre_protocol::{
     core_services::{
         CoreSnapshot, DashboardSystemState, Entities, EntityId, Health, NetworkSample, SystemDisk,
-        SystemGpu, SystemMemory, SystemProcess,
+        SystemGpu, SystemHost, SystemMemory, SystemProcess,
     },
     ErrorCode,
 };
@@ -29,12 +29,20 @@ const NETWORK_SAMPLES: usize = 32;
 pub struct Sources {
     pub proc: PathBuf,
     pub sys: PathBuf,
+    /// Holds `os-release`.
+    pub etc: PathBuf,
+    pub user: Option<String>,
 }
 impl Sources {
     pub fn system() -> Self {
         Self {
             proc: "/proc".into(),
             sys: "/sys".into(),
+            etc: "/etc".into(),
+            user: nix::unistd::User::from_uid(nix::unistd::getuid())
+                .ok()
+                .flatten()
+                .map(|user| user.name),
         }
     }
 }
@@ -165,6 +173,48 @@ impl Metrics {
     }
 }
 
+/// The host card's static facts, read once per subscription.
+fn host_state(sources: &Sources, now_ms: u64) -> Option<SystemHost> {
+    let read = |path: PathBuf| fs::read_to_string(path).ok();
+    let field = |text: &str, name: &str| {
+        text.lines().find_map(|line| {
+            let value = line.strip_prefix(name)?.strip_prefix('=')?.trim();
+            let value = value
+                .strip_prefix('"')
+                .and_then(|v| v.strip_suffix('"'))
+                .or_else(|| value.strip_prefix('\'').and_then(|v| v.strip_suffix('\'')))
+                .unwrap_or(value);
+            (!value.is_empty()).then(|| value.to_owned())
+        })
+    };
+    let clean = |text: String, max: usize| {
+        let text = text.trim().to_owned();
+        (!text.is_empty() && text.chars().count() <= max && !text.chars().any(char::is_control))
+            .then_some(text)
+    };
+    let os = read(sources.etc.join("os-release"))
+        .and_then(|t| field(&t, "PRETTY_NAME").or_else(|| field(&t, "NAME")));
+    let uptime = read(sources.proc.join("uptime"))
+        .and_then(|t| t.split_whitespace().next()?.parse::<f64>().ok())
+        .filter(|u| u.is_finite() && *u >= 0.0 && *u < 1e12);
+    let host = SystemHost {
+        user: sources.user.clone().and_then(|u| clean(u, 64)),
+        os: os.and_then(|o| clean(o, 128)),
+        kernel: read(sources.proc.join("sys/kernel/osrelease")).and_then(|k| clean(k, 128)),
+        uptime_s: uptime.map(|u| u as u64),
+        boot_ms: uptime.and_then(|u| now_ms.checked_sub((u * 1000.0) as u64)),
+    };
+    (host
+        != SystemHost {
+            user: None,
+            os: None,
+            kernel: None,
+            uptime_s: None,
+            boot_ms: None,
+        })
+    .then_some(host)
+}
+
 fn gpu_state(sys: &std::path::Path) -> Option<SystemGpu> {
     let report = resource_state::sensors(sys, &mut resource_state::nvidia_samples);
     let busiest = report["gpus"].as_array()?.iter().max_by(|a, b| {
@@ -262,6 +312,7 @@ struct Latest {
     listing: Option<(Entities<SystemProcess>, Entities<SystemDisk>)>,
     listing_failed: bool,
     gpu: Option<SystemGpu>,
+    host: Option<SystemHost>,
 }
 fn state(latest: &Latest, metrics: &Metrics) -> DashboardSystemState {
     let (processes, disks) = latest
@@ -285,6 +336,7 @@ fn state(latest: &Latest, metrics: &Metrics) -> DashboardSystemState {
         cpu_percent: metrics.cpu_percent,
         memory: metrics.memory.clone(),
         gpu: latest.gpu.clone(),
+        host: latest.host.clone(),
         network: metrics.samples.iter().cloned().collect(),
     }
 }
@@ -326,7 +378,13 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
             interest.changed().await?;
         }
         let mut metrics = Metrics::default();
-        let mut latest = Latest::default();
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_millis() as u64);
+        let mut latest = Latest {
+            host: host_state(&sources, now_ms),
+            ..Latest::default()
+        };
         let mut listing: Option<JoinHandle<Result<Value>>> = None;
         let mut gpu: Option<JoinHandle<Option<SystemGpu>>> = None;
         let mut ticks = 0u32;
@@ -387,6 +445,13 @@ mod tests {
             "Iface\tDestination\tGateway\nwlan0\t00000000\t0100A8C0\neth9\t0000A8C0\t00000000\n",
         )?;
         fs::write(dir.path().join("net/dev"), dev)?;
+        fs::write(
+            dir.path().join("os-release"),
+            "NAME=\"Fixture\"\nPRETTY_NAME='Fixture Linux 1'\n",
+        )?;
+        fs::write(dir.path().join("uptime"), "90061.25 1000.00\n")?;
+        fs::create_dir_all(dir.path().join("sys/kernel"))?;
+        fs::write(dir.path().join("sys/kernel/osrelease"), "6.12.1-fixture\n")?;
         Ok(dir)
     }
     fn dev(received: u64, sent: u64, other: u64) -> String {
@@ -407,6 +472,8 @@ mod tests {
         let sources = Sources {
             proc: first.path().into(),
             sys: first.path().into(),
+            etc: first.path().into(),
+            user: None,
         };
         let mut metrics = Metrics::default();
         let start = Instant::now();
@@ -440,6 +507,8 @@ mod tests {
         let sources = Sources {
             proc: dir.path().into(),
             sys: dir.path().into(),
+            etc: dir.path().into(),
+            user: Some("fixture".into()),
         };
         let mut metrics = Metrics::default();
         let start = Instant::now();
@@ -465,6 +534,8 @@ mod tests {
         let sources = Sources {
             proc: dir.path().into(),
             sys: dir.path().into(),
+            etc: dir.path().into(),
+            user: Some("fixture".into()),
         };
         let mut metrics = Metrics::default();
         metrics.sample(&sources, Instant::now());
@@ -514,6 +585,8 @@ mod tests {
         let sources = Sources {
             proc: dir.path().into(),
             sys: dir.path().into(),
+            etc: dir.path().into(),
+            user: Some("fixture".into()),
         };
         let local = tokio::task::LocalSet::new();
         local
@@ -557,6 +630,9 @@ mod tests {
                     read(&hub).cpu_percent.is_none(),
                     "one CPU reading is not a rate"
                 );
+                let host = read(&hub).host.expect("host block");
+                assert_eq!(host.os.as_deref(), Some("Fixture Linux 1"));
+                assert_eq!(host.uptime_s, Some(90061));
                 fs::write(dir.path().join("stat"), "cpu  200 0 200 1400 200 0 0 0\n")?;
                 fs::write(dir.path().join("net/dev"), dev(1_000_000, 500_000, 0))?;
                 wait(hub.clone(), "warm second sample", |s| {
@@ -566,7 +642,7 @@ mod tests {
                 assert!(CoreSnapshot::System(read(&hub)).valid());
                 hub.borrow_mut().unsubscribe(client, &[TOPIC.into()]);
                 wait(hub.clone(), "idle reset", |s| {
-                    !s.health.available && s.memory.is_none()
+                    !s.health.available && s.memory.is_none() && s.host.is_none()
                 })
                 .await;
                 let seq = hub.borrow().topic_seq(TOPIC);
@@ -581,6 +657,47 @@ mod tests {
                 Ok(())
             })
             .await
+    }
+
+    #[test]
+    fn host_block_reads_fake_files_and_omits_what_is_unknown() -> Result<()> {
+        let dir = proc_fixture("cpu  1 0 1 1 0 0 0 0\n", &dev(1, 1, 1))?;
+        let sources = Sources {
+            proc: dir.path().into(),
+            sys: dir.path().into(),
+            etc: dir.path().into(),
+            user: Some("fixture".into()),
+        };
+        let host = host_state(&sources, 1_800_000_000_000).expect("host");
+        assert_eq!(host.user.as_deref(), Some("fixture"));
+        assert_eq!(host.os.as_deref(), Some("Fixture Linux 1"));
+        assert_eq!(host.kernel.as_deref(), Some("6.12.1-fixture"));
+        assert_eq!(host.uptime_s, Some(90061));
+        assert_eq!(host.boot_ms, Some(1_800_000_000_000 - 90_061_250));
+        fs::write(dir.path().join("os-release"), "NAME=Plain\n")?;
+        fs::write(dir.path().join("uptime"), "bad\n")?;
+        fs::write(dir.path().join("sys/kernel/osrelease"), "\n")?;
+        let host = host_state(
+            &Sources {
+                user: None,
+                ..sources.clone()
+            },
+            5,
+        )
+        .expect("os only");
+        assert_eq!(host.os.as_deref(), Some("Plain"));
+        assert!(host.user.is_none() && host.kernel.is_none());
+        assert!(host.uptime_s.is_none() && host.boot_ms.is_none());
+        fs::remove_file(dir.path().join("os-release"))?;
+        assert!(host_state(
+            &Sources {
+                user: None,
+                ..sources
+            },
+            5
+        )
+        .is_none());
+        Ok(())
     }
 
     #[test]

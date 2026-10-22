@@ -56,7 +56,7 @@ A failed or ambiguous operation must not update the UI optimistically.
 | `dashboard.updates` | Checked time, optional count, existing status text | `dashboard.updates.refresh {}` |
 | `dashboard.calendar` | Configured flag and existing local ICS event summary | `dashboard.calendar.refresh {}` |
 | `dashboard.media` | Existing enrichment key, lyrics/line times, palette, cache lifetime | Topic adapter only; not playback controls |
-| `dashboard.system` | Existing process identity/CPU/memory and filesystem capacity snapshot, plus optional `cpu_percent`, `memory`, `gpu` and a bounded `network` rate series (N0033) | Read-only; no process termination method |
+| `dashboard.system` | Existing process identity/CPU/memory and filesystem capacity snapshot, plus optional `cpu_percent`, `memory`, `gpu`, a bounded `network` rate series (N0033) and a static `host` block (user, os, kernel, uptime; N0038) | Read-only; no process termination method |
 | `dashboard.player` | MPRIS players with status, track text, cached local `art_path`, position/length and ability flags (N0033) | `player.play_pause`, `player.next`, `player.previous` `{player}`; `player.seek {player,position_ms}` |
 
 Network controls return `{changed}` at admission: NetworkManager accepted the

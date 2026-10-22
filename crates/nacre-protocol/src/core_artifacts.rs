@@ -356,11 +356,12 @@ fn compatibility_transcripts() -> BTreeMap<String, String> {
             json!({"health":health,"processes":empty,"disks":empty}),
             vec![
                 // First sample: CPU needs two readings, so only memory and a warm-up rate exist.
-                json!({"memory":{"used":4294967296_u64,"total":17179869184_u64},"network":[{"down_bps":1200,"up_bps":300}]}),
+                json!({"memory":{"used":4294967296_u64,"total":17179869184_u64},"network":[{"down_bps":1200,"up_bps":300}],
+                    "host":{"user":"fixture","os":"Fixture Linux","kernel":"6.12.1-fixture","uptime_s":90061,"boot_ms":1799999909939_u64}}),
                 json!({"cpu_percent":12.5,"gpu":{"percent":3.0,"memory_used":536870912_u64,"memory_total":8589934592_u64},
                     "network":[{"down_bps":1200,"up_bps":300},{"down_bps":0,"up_bps":0}]}),
                 // Unknown members are removed, never zeroed; GPU members are independent.
-                json!({"cpu_percent":null,"gpu":{"percent":null,"memory_used":null,"memory_total":null}}),
+                json!({"cpu_percent":null,"gpu":{"percent":null,"memory_used":null,"memory_total":null},"host":{"os":null,"kernel":null}}),
                 // Idle producer: last-good data stays, visibly stale.
                 json!({"health":{"stale":true}}),
             ],

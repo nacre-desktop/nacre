@@ -721,6 +721,63 @@ fn screenshots_list_only_safe_recent_images_and_open_through_the_viewer() -> Res
 }
 
 #[test]
+fn screenshot_thumbnails_are_private_bounded_and_exist_only_while_subscribed() -> Result {
+    use std::collections::BTreeMap;
+    let daemon = Daemon::start(home(), |root| {
+        let folder = root.join("Pictures/Screenshots");
+        fs::create_dir_all(&folder).unwrap();
+        image::DynamicImage::new_rgba8(1024, 512)
+            .save(folder.join("big.png"))
+            .unwrap();
+        image::DynamicImage::new_rgba8(40, 20)
+            .save(folder.join("small.png"))
+            .unwrap();
+        fs::write(folder.join("broken.png"), b"not a png").unwrap();
+    })?;
+    let cache = daemon.root().join("state/nacre/shell/screenshot-thumbs");
+    let thumbs = || -> Vec<PathBuf> {
+        fs::read_dir(&cache)
+            .map(|d| d.flatten().map(|e| e.path()).collect::<Vec<_>>())
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|p| p.extension().is_some_and(|e| e == "png"))
+            .collect()
+    };
+    let mut client = daemon.client(&["screenshots"])?;
+    let state = client.until("screenshots", "thumbnails", |s| {
+        s["items"]["items"]
+            .as_object()
+            .is_some_and(|i| i.values().filter(|v| v.get("thumb_path").is_some()).count() == 2)
+    })?;
+    let mut sizes = BTreeMap::new();
+    for item in state["items"]["items"].as_object().unwrap().values() {
+        let name = item["path"].as_str().unwrap().rsplit('/').next().unwrap();
+        let Some(thumb) = item["thumb_path"].as_str() else {
+            assert_eq!(name, "broken.png", "only undecodable captures lack one");
+            continue;
+        };
+        let thumb = Path::new(thumb);
+        assert_eq!(thumb.parent(), Some(cache.as_path()));
+        assert_eq!(fs::metadata(thumb)?.permissions().mode() & 0o777, 0o600);
+        let size = image::image_dimensions(thumb)?;
+        sizes.insert(name.to_owned(), size);
+    }
+    assert_eq!(sizes["big.png"], (256, 128));
+    assert_eq!(
+        sizes["small.png"],
+        (40, 20),
+        "small captures are not scaled up"
+    );
+    assert_eq!(fs::metadata(&cache)?.permissions().mode() & 0o777, 0o700);
+    assert_eq!(thumbs().len(), 2);
+    drop(client);
+    wait_for("thumbnails removed after the last unsubscribe", || {
+        thumbs().is_empty()
+    })?;
+    Ok(())
+}
+
+#[test]
 fn ai_usage_reads_on_request_and_keeps_last_good_rows_when_a_provider_fails() -> Result {
     let daemon = Daemon::start(home(), |_| {})?;
     let mut client = daemon.client(&["ai.usage"])?;

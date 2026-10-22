@@ -354,6 +354,15 @@
           "format": "uint64",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "thumb_path": {
+          "description": "Absolute PNG in the daemon's private cache, longest side at most 256 px.\nPresent only while a client subscribes; omitted when it cannot be made.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 4096
         }
       },
       "required": [

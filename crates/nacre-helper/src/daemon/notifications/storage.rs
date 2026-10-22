@@ -325,43 +325,34 @@ impl ImageCache {
             ));
         }
         let path = local_image_path(source)?;
-        let file = open_local_image(&path)?;
-        let metadata = file
-            .metadata()
-            .map_err(|_| failure(ErrorCode::Io, "Notification image is unavailable", false))?;
-        if !metadata.is_file() {
-            return Err(failure(
-                ErrorCode::Validation,
-                "Notification image source is unsafe",
-                false,
-            ));
+        self.resolve_bytes(read_local_image(&path, IMAGE_BYTES)?)
+    }
+
+    /// A downscaled PNG (longest side at most `side`) of a local image of up to
+    /// `max_bytes`; smaller images keep their size.
+    pub fn resolve_thumbnail(
+        &self,
+        path: &Path,
+        max_bytes: usize,
+        side: u32,
+    ) -> Result<String, Failure> {
+        let unsupported = || failure(ErrorCode::Validation, "Unsupported image", false);
+        let mut reader =
+            image::ImageReader::new(std::io::Cursor::new(read_local_image(path, max_bytes)?))
+                .with_guessed_format()
+                .map_err(|_| unsupported())?;
+        reader.limits(image_limits());
+        let decoded = reader.decode().map_err(|_| unsupported())?;
+        if !within_image_bounds(decoded.width(), decoded.height()) {
+            return Err(failure(ErrorCode::TooLarge, "Image is too large", false));
         }
-        if metadata.uid() != nix::unistd::getuid().as_raw() && metadata.uid() != 0 {
-            return Err(failure(
-                ErrorCode::PermissionDenied,
-                "Notification image source is not accessible",
-                false,
-            ));
-        }
-        if metadata.len() > IMAGE_BYTES as u64 {
-            return Err(failure(
-                ErrorCode::TooLarge,
-                "Notification image exceeds its size limit",
-                false,
-            ));
-        }
-        let mut input = Vec::new();
-        file.take(IMAGE_BYTES as u64 + 1)
-            .read_to_end(&mut input)
-            .map_err(|_| failure(ErrorCode::Io, "Notification image could not be read", false))?;
-        if input.len() > IMAGE_BYTES {
-            return Err(failure(
-                ErrorCode::TooLarge,
-                "Notification image exceeds its size limit",
-                false,
-            ));
-        }
-        self.resolve_bytes(input)
+        let small = decoded.width() <= side && decoded.height() <= side;
+        let decoded = if small {
+            decoded
+        } else {
+            decoded.thumbnail(side, side)
+        };
+        self.publish_png(decoded.to_rgba8())
     }
 
     /// Re-encode an in-memory image (already size-bounded by the caller) as a cached PNG.
@@ -799,6 +790,40 @@ fn is_cache_temporary(name: &str) -> bool {
         .is_some_and(|value| {
             value.len() == 32 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
         })
+}
+
+/// Read a regular, own-or-root file below symlink-free directories, bounded by `limit`.
+fn read_local_image(path: &Path, limit: usize) -> Result<Vec<u8>, Failure> {
+    let file = open_local_image(path)?;
+    let metadata = file
+        .metadata()
+        .map_err(|_| failure(ErrorCode::Io, "Notification image is unavailable", false))?;
+    if !metadata.is_file() {
+        return Err(failure(
+            ErrorCode::Validation,
+            "Notification image source is unsafe",
+            false,
+        ));
+    }
+    if metadata.uid() != nix::unistd::getuid().as_raw() && metadata.uid() != 0 {
+        return Err(failure(
+            ErrorCode::PermissionDenied,
+            "Notification image source is not accessible",
+            false,
+        ));
+    }
+    let mut input = Vec::new();
+    file.take(limit as u64 + 1)
+        .read_to_end(&mut input)
+        .map_err(|_| failure(ErrorCode::Io, "Notification image could not be read", false))?;
+    if input.len() > limit {
+        return Err(failure(
+            ErrorCode::TooLarge,
+            "Notification image exceeds its size limit",
+            false,
+        ));
+    }
+    Ok(input)
 }
 
 fn local_image_path(source: &str) -> Result<PathBuf, Failure> {

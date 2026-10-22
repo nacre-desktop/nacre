@@ -252,6 +252,12 @@ fn dashboard_metrics_player_and_frequency_extensions_keep_unknown_values_omitted
     assert_eq!(system[2]["gpu"]["memory_total"], 8589934592_u64);
     assert!(system[3].get("cpu_percent").is_none());
     assert_eq!(system[3]["gpu"], json!({}));
+    assert_eq!(system[1]["host"]["os"], "Fixture Linux");
+    assert_eq!(
+        system[3]["host"],
+        json!({"user":"fixture","uptime_s":90061,"boot_ms":1799999909939_u64}),
+        "Unknown host members are removed, never emptied"
+    );
     assert_eq!(system[4]["health"]["stale"], true);
     let player = compatibility_states("player-lifecycle");
     assert_eq!(player.len(), 7);
@@ -281,13 +287,17 @@ fn dashboard_metrics_and_player_reject_impossible_values() {
         ("gpu", json!({"memory_used":9,"memory_total":8})),
         ("network", json!(vec![json!({"down_bps":1,"up_bps":1}); 33])),
         ("network", json!([{"down_bps":-1,"up_bps":1}])),
+        ("host", json!({"os":""})),
+        ("host", json!({"kernel":"6.1\n2"})),
+        ("host", json!({"user":"x".repeat(65)})),
+        ("host", json!({"boot_ms":-1})),
     ] {
         let mut state = system.clone();
         state[key] = value;
         assert!(!valid("dashboard.system", state), "{key}");
     }
     let mut old = system;
-    for key in ["cpu_percent", "memory", "gpu", "network"] {
+    for key in ["cpu_percent", "memory", "gpu", "host", "network"] {
         old.as_object_mut().unwrap().remove(key);
     }
     assert!(valid("dashboard.system", old), "Older producers stay valid");
