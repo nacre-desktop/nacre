@@ -329,7 +329,7 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
             .captures(&body)
             .map(|c| c[1].to_owned())
             .unwrap_or_else(|| "source page".into());
-        notes.push(json!({"id":format!("note:{}",&digest(&rel)[..16]),"label":title,"kind":"note","path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&body),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!((activity*10000.0).round()/10000.0)}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"category":cat,"color":theme(cat).1}));
+        notes.push(json!({"id":format!("note:{}",&digest(&rel)[..16]),"label":title,"kind":"note","path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&body),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!(brain_discovery::rounded(activity,4))}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"category":cat,"color":theme(cat).1}));
     }
     Ok(notes)
 }
@@ -477,7 +477,7 @@ fn groups(subjects: &[Value], notes: &[Value], links: &mut Vec<Value>) -> Vec<Va
             }
         }
         let activity = days.values().map(|x| x.ln_1p()).sum::<f64>();
-        nodes.push(json!({"id":s["id"],"label":s["label"],"kind":"hub","count":members.len(),"activity":if days.is_empty(){json!(0)}else{json!((activity*1000.0).round()/1000.0)},"radius":20.0+8.0*activity.ln_1p(),"category":cat,"color":theme(cat).1,"themeLabel":theme(cat).0,"themeReason":if declared.is_empty(){"inferred"}else{"declared"},"origin":s["origin"],"parent":s["parent"],"summary":"Grouped from saved knowledge; automatic suggestions are not verified facts."}));
+        nodes.push(json!({"id":s["id"],"label":s["label"],"kind":"hub","count":members.len(),"activity":if days.is_empty(){json!(0)}else{json!(brain_discovery::rounded(activity,3))},"radius":20.0+8.0*activity.ln_1p(),"category":cat,"color":theme(cat).1,"themeLabel":theme(cat).0,"themeReason":if declared.is_empty(){"inferred"}else{"declared"},"origin":s["origin"],"parent":s["parent"],"summary":"Grouped from saved knowledge; automatic suggestions are not verified facts."}));
         let mut covered = BTreeSet::new();
         if let Some(topics) = s["topics"].as_array() {
             for t in topics {

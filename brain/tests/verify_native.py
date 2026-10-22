@@ -253,6 +253,18 @@ def cases():
         ],
     )
 
+    add(
+        "extra-non-latin-subject-identities",
+        [
+            note(
+                70,
+                "A public item",
+                "prism grating spectroscopy",
+                {"worlds": "知识,研究"},
+            )
+        ],
+    )
+
     # Additional public-only cases exercise curated links, explicit entity pages,
     # ordered annotations, merged topics, profile evidence and Unicode identity.
     curated = [
@@ -427,6 +439,10 @@ def compare_discovery(binary: Path):
 
 
 GRAPH_FILES = {
+    "inbox/anchor-a.md": "# A\nWorlds: First world\nprism grating spectroscopy\n",
+    "inbox/anchor-b.md": "# B\nWorlds: Second world\nprism grating spectroscopy\n",
+    "inbox/uncertain.md": "# Uncertain\nprism grating spectroscopy\n",
+    "inbox/aged.md": "# A dated observation\nRecorded: {old_date}\nWorlds: History\nEvidence older than five half lives.\n",
     "inbox/unassigned.md": "# A telescope thought\nTry astronomy\n",
     "wiki/nacre.md": "# Nacre\nEntity: world\nName: Nacre\nProject: nacre\nAliases: Nacre OS\n\nA platform entity.\n",
     "wiki/research.md": "# Research\nEntity: topic\nName: Research\nParent: Nacre\n\nCurated topic page.\n",
@@ -439,7 +455,15 @@ def populate_vault(vault: Path, today: str):
     for relative, body in GRAPH_FILES.items():
         path = vault / relative
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(body.format(today=today), encoding="utf-8")
+        path.write_text(
+            body.format(
+                today=today,
+                old_date=(
+                    dt.date.fromisoformat(today) - dt.timedelta(days=105)
+                ).isoformat(),
+            ),
+            encoding="utf-8",
+        )
 
 
 def graph_projection(value):

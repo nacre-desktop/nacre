@@ -32,6 +32,13 @@ fn err(s: impl Into<String>) -> Error {
     s.into().into()
 }
 
+/// Match Python's decimal rounding of binary floats, including ties to even.
+pub(crate) fn rounded(value: f64, digits: usize) -> f64 {
+    format!("{value:.digits$}")
+        .parse()
+        .expect("formatted Brain number")
+}
+
 fn key(s: &str) -> String {
     s.nfkc().case_fold().collect::<String>().trim().to_owned()
 }
@@ -48,7 +55,7 @@ fn suffix(s: &str, n: usize) -> &str {
     let start = if s.chars().count() <= n {
         0
     } else {
-        s.char_indices().rev().nth(n).map_or(0, |(i, _)| i)
+        s.char_indices().rev().nth(n - 1).map_or(0, |(i, _)| i)
     };
     &s[start..]
 }
@@ -67,7 +74,7 @@ fn slug(s: &str) -> String {
         .take(80)
         .collect::<String>();
     if value.is_empty() {
-        format!("subject-{}", digest(&key(s), 12))
+        format!("subject-{}", digest(&key(&value), 12))
     } else {
         value
     }
@@ -980,7 +987,7 @@ pub fn organize_mut(
             )
         })
         .collect();
-    for n in notes.iter() {
+    for n in notes.iter_mut() {
         let nid = n["id"].as_str().unwrap_or("");
         if assigned.get(nid).is_some_and(|v| !v.is_empty()) {
             continue;
@@ -1010,12 +1017,18 @@ pub fn organize_mut(
             } else {
                 0.24
             };
-            if *score >= minimum
-                && !(scores.len() > 1 && scores[1].0 >= score * 0.91 && score - scores[1].0 < 0.055)
-            {
+            if *score >= minimum {
+                if scores.len() > 1 && scores[1].0 >= score * 0.91 && score - scores[1].0 < 0.055 {
+                    n["suggestions"] = json!(scores
+                        .iter()
+                        .take(2)
+                        .map(|(value, id)| json!({"subject":id,"score":rounded(*value,3)}))
+                        .collect::<Vec<_>>());
+                    continue;
+                }
                 subjects.get_mut(sid).unwrap().members.insert(
                     nid.into(),
-                    json!({"reason":"learned similarity","score":(score*1000.0).round()/1000.0}),
+                    json!({"reason":"learned similarity","score":rounded(*score,3)}),
                 );
                 assign(&mut assigned, nid, sid);
             }
@@ -1127,7 +1140,10 @@ pub fn organize_mut(
                 }
             {
                 for id in &group {
-                    subjects.get_mut(parent).unwrap().members.insert(id.clone(),json!({"reason":"suggested named topic","score":(score*1000.0).round()/1000.0}));
+                    subjects.get_mut(parent).unwrap().members.insert(
+                        id.clone(),
+                        json!({"reason":"suggested named topic","score":rounded(*score,3)}),
+                    );
                     assign(&mut assigned, id, parent);
                 }
                 subjects.get_mut(parent).unwrap().topics.push(json!({"id":format!("{parent}:learned-{}",slug(&label)),"label":label,"parent":parent,"members":group,"origin":"suggested","category":null}));
@@ -1260,7 +1276,10 @@ pub fn organize_mut(
                 {
                     let members: Vec<_> = group.iter().cloned().collect();
                     for nid in &members {
-                        subjects.get_mut(parent).unwrap().members.insert(nid.clone(),json!({"reason":"suggested community","score":(score*1000.0).round()/1000.0}));
+                        subjects.get_mut(parent).unwrap().members.insert(
+                            nid.clone(),
+                            json!({"reason":"suggested community","score":rounded(*score,3)}),
+                        );
                         assign(&mut assigned, nid, parent);
                     }
                     subjects.get_mut(parent).unwrap().topics.push(json!({"id":format!("{parent}:learned-{}",slug(&label)),"label":label,"parent":parent,"members":members,"origin":"suggested","category":null}));
@@ -1580,6 +1599,48 @@ mod tests {
     fn run(notes: &mut Value, dense: &Value, prior: &Value, overrides: &Value) -> Value {
         organize_mut(notes, dense, prior, overrides).unwrap()
     }
+    #[test]
+    fn long_feature_suffix_and_non_latin_slug_match_python() {
+        let body = "α".repeat(1200);
+        let (_, text) = features(&json!({"label":"Long","text":body}));
+        assert_eq!(
+            text,
+            format!("Long\n{}\n{}", "α".repeat(1100), "α".repeat(350))
+        );
+        assert_eq!(slug("知识"), "subject-e3b0c44298fc");
+        assert_eq!(rounded(0.03125, 4), 0.0312);
+        assert_eq!(rounded(2.675, 2), 2.67);
+    }
+    #[test]
+    fn ambiguous_profiles_keep_rounded_suggestions() {
+        let mut notes = json!([
+            note(
+                1,
+                "A",
+                "prism grating spectroscopy",
+                json!({"worlds":"First world"}),
+                "2026-10-01"
+            ),
+            note(
+                2,
+                "B",
+                "prism grating spectroscopy",
+                json!({"worlds":"Second world"}),
+                "2026-10-01"
+            ),
+            note(
+                3,
+                "Uncertain",
+                "prism grating spectroscopy",
+                json!({}),
+                "2026-10-01"
+            )
+        ]);
+        run(&mut notes, &json!({}), &json!({}), &json!({}));
+        assert_eq!(notes[2]["suggestions"].as_array().unwrap().len(), 2);
+        assert_eq!(notes[2]["suggestions"][0]["subject"], "second-world");
+    }
+
     #[test]
     fn curated_identity_collisions_remain_distinct_and_explicit_ids_are_preserved() {
         let mut notes = json!([
