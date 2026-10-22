@@ -125,7 +125,16 @@ where
                             Err(_) => Err(Response::error(500)),
                         };
                         let response = match authorized {
-                            Ok(request) => callback(request),
+                            Ok(mut request) => {
+                                let proof = request.headers.remove("x-nacre-internal-proof");
+                                let mut response = callback(request);
+                                if let Some(proof) = proof {
+                                    response
+                                        .headers
+                                        .push(("X-Nacre-Brain-Proof".into(), proof));
+                                }
+                                response
+                            }
                             Err(response) => response,
                         };
                         let _ = write_response(&mut stream, response);
@@ -173,6 +182,18 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
         .unwrap_or("");
     if host != format!("127.0.0.1:{port}") && host != format!("localhost:{port}") {
         return Err(Response::error(403));
+    }
+    let mut request = request;
+    request.headers.remove("x-nacre-internal-proof");
+    if request.method == "GET" && request.path == "/api/health" {
+        if let Some(nonce) = request.headers.get("x-nacre-brain-nonce") {
+            let Some(proof) = auth.readiness_proof(nonce) else {
+                return Err(Response::error(400));
+            };
+            request
+                .headers
+                .insert("x-nacre-internal-proof".into(), proof);
+        }
     }
     let origin = request.headers.get("origin");
     let referer = request.headers.get("referer");
@@ -660,6 +681,62 @@ mod tests {
                 "{name}"
             );
         }
+    }
+
+    #[test]
+    fn health_readiness_proof_is_optional_and_preserves_public_body() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path().to_path_buf();
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let auth = BrowserAuth::open(&state, port).unwrap();
+        let nonce = crate::brain_auth::readiness_challenge().unwrap();
+        let expected_proof = auth.readiness_proof(&nonce).unwrap();
+        let server = std::thread::spawn(move || {
+            serve(listener, &state, Duration::from_millis(400), |_request| {
+                Response::new(
+                    200,
+                    "application/json",
+                    br#"{"ready":true,"authVersion":1}"#.to_vec(),
+                )
+            })
+            .unwrap()
+        });
+
+        let mut client = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        write!(
+            client,
+            "GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nX-Nacre-Brain-Nonce: {nonce}\r\nConnection: close\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = Vec::new();
+        client.read_to_end(&mut response).unwrap();
+        let response = String::from_utf8(response).unwrap();
+        assert!(response.contains(&format!("X-Nacre-Brain-Proof: {expected_proof}\r\n")));
+        assert!(response.ends_with("{\"ready\":true,\"authVersion\":1}"));
+
+        let mut client = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        write!(
+            client,
+            "GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nConnection: close\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = Vec::new();
+        client.read_to_end(&mut response).unwrap();
+        let response = String::from_utf8(response).unwrap();
+        assert!(!response.contains("X-Nacre-Brain-Proof:"));
+        assert!(response.ends_with("{\"ready\":true,\"authVersion\":1}"));
+
+        let mut client = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        write!(
+            client,
+            "GET /api/health HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nX-Nacre-Brain-Nonce: invalid\r\nConnection: close\r\n\r\n"
+        )
+        .unwrap();
+        let mut response = Vec::new();
+        client.read_to_end(&mut response).unwrap();
+        assert!(response.starts_with("HTTP/1.1 400 Bad Request"));
+        server.join().unwrap();
     }
 
     #[test]

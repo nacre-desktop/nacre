@@ -1,5 +1,6 @@
 //! Restart-safe sessions and one-time bootstrap for the Brain loopback server.
 
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs::{self, OpenOptions};
@@ -10,6 +11,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const BOOTSTRAP_TTL: u64 = 300;
 const SESSION_TTL: u64 = 30 * 24 * 60 * 60;
+const READINESS_DOMAIN: &[u8] = b"nacre-brain-readiness-v1\0";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SessionFile {
@@ -93,6 +95,14 @@ impl BrowserAuth {
             && constant_time_eq(self.bearer.as_bytes(), candidate.as_bytes())
     }
 
+    /// Prove possession of this listener's bearer key for one fresh challenge.
+    pub fn readiness_proof(&self, nonce: &str) -> Option<String> {
+        if !valid_secret(nonce) {
+            return None;
+        }
+        Some(readiness_mac(&self.bearer, self.port, nonce))
+    }
+
     /// Consume and persistently revoke the startup token on its first successful use.
     pub fn consume_bootstrap(&mut self, candidate: &str) -> bool {
         let Ok(_lock) = auth_lock(&self.directory, self.port) else {
@@ -140,6 +150,48 @@ impl BrowserAuth {
             .and_then(|bytes| write_private(&marker, &bytes))
             .is_ok()
     }
+}
+
+/// Create an unpredictable 256-bit challenge for a readiness exchange.
+pub(crate) fn readiness_challenge() -> io::Result<String> {
+    random_hex()
+}
+
+/// Check a readiness proof against the existing private session without creating state.
+pub(crate) fn verify_readiness(
+    state: &Path,
+    port: u16,
+    nonce: &str,
+    candidate: &str,
+) -> io::Result<bool> {
+    if !valid_secret(nonce) || !valid_secret(candidate) {
+        return Ok(false);
+    }
+    let path = state.join("auth").join("ports").join(format!("{port}.json"));
+    let bytes = read_private(&path, 4096)?;
+    let session: SessionFile = serde_json::from_slice(&bytes).map_err(io::Error::other)?;
+    if !valid_secret(&session.cookie) || !valid_secret(&session.bearer) {
+        return Ok(false);
+    }
+    Ok(constant_time_eq(
+        readiness_mac(&session.bearer, port, nonce).as_bytes(),
+        candidate.as_bytes(),
+    ))
+}
+
+fn readiness_mac(bearer: &str, port: u16, nonce: &str) -> String {
+    let mut mac = Hmac::<Sha256>::new_from_slice(bearer.as_bytes())
+        .expect("HMAC accepts keys of any length");
+    mac.update(READINESS_DOMAIN);
+    mac.update(&port.to_be_bytes());
+    mac.update(nonce.as_bytes());
+    let digest = mac.finalize().into_bytes();
+    let mut output = String::with_capacity(64);
+    for byte in digest {
+        output.push(char::from(b"0123456789abcdef"[(byte >> 4) as usize]));
+        output.push(char::from(b"0123456789abcdef"[(byte & 0x0f) as usize]));
+    }
+    output
 }
 
 /// Rotate bootstrap and materialize a handoff page for an explicit browser launch.
@@ -498,6 +550,81 @@ mod tests {
         let linked = dir.path().join("linked");
         symlink(&target, &linked).unwrap();
         assert!(BrowserAuth::open(&linked, 17843).is_err());
+    }
+
+    #[test]
+    fn readiness_proof_binds_bearer_port_and_nonce_and_accepts_expired_session() {
+        let dir = tempfile::tempdir().unwrap();
+        let port = 17843;
+        let auth = BrowserAuth::open(dir.path(), port).unwrap();
+        let nonce = readiness_challenge().unwrap();
+        let proof = auth.readiness_proof(&nonce).unwrap();
+        assert_eq!(nonce.len(), 64);
+        assert!(verify_readiness(dir.path(), port, &nonce, &proof).unwrap());
+        let other_nonce = format!(
+            "{}{}",
+            if &nonce[..1] == "a" { "b" } else { "a" },
+            &nonce[1..]
+        );
+        assert!(!verify_readiness(dir.path(), port, &other_nonce, &proof).unwrap());
+        let other_port_proof = readiness_mac(&auth.bearer, port + 1, &nonce);
+        assert!(!verify_readiness(dir.path(), port, &nonce, &other_port_proof).unwrap());
+
+        let session_path = dir.path().join(format!("auth/ports/{port}.json"));
+        let mut changed = serde_json::from_slice::<SessionFile>(
+            &read_private(&session_path, 4096).unwrap(),
+        )
+        .unwrap();
+        changed.bearer = random_hex().unwrap();
+        changed.expires = 1;
+        write_private(
+            &dir.path().join(format!("auth/ports/{port}.json")),
+            &to_json(&changed).unwrap(),
+        )
+        .unwrap();
+        assert!(!verify_readiness(dir.path(), port, &nonce, &proof).unwrap());
+        let updated_auth = BrowserAuth {
+            bearer: changed.bearer.clone(),
+            ..auth
+        };
+        assert!(verify_readiness(
+            dir.path(),
+            port,
+            &nonce,
+            &updated_auth.readiness_proof(&nonce).unwrap()
+        )
+        .unwrap());
+    }
+
+    #[test]
+    fn readiness_verification_does_not_create_missing_state_and_refuses_symlinks() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("missing");
+        assert!(verify_readiness(&missing, 17843, &"a".repeat(64), &"b".repeat(64)).is_err());
+        assert!(!missing.exists());
+
+        let target = dir.path().join("target");
+        fs::create_dir_all(target.join("auth/ports")).unwrap();
+        let state_link = dir.path().join("linked");
+        symlink(&target, &state_link).unwrap();
+        assert!(verify_readiness(
+            &state_link,
+            17843,
+            &"a".repeat(64),
+            &"b".repeat(64)
+        )
+        .is_err());
+
+        let private_state = dir.path().join("private");
+        let auth = BrowserAuth::open(&private_state, 17844).unwrap();
+        let nonce = readiness_challenge().unwrap();
+        let proof = auth.readiness_proof(&nonce).unwrap();
+        let session = private_state.join("auth/ports/17844.json");
+        let external = dir.path().join("external.json");
+        fs::write(&external, fs::read(&session).unwrap()).unwrap();
+        fs::remove_file(&session).unwrap();
+        symlink(&external, &session).unwrap();
+        assert!(verify_readiness(&private_state, 17844, &nonce, &proof).is_err());
     }
 
     #[test]

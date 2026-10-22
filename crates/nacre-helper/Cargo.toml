@@ -21,6 +21,7 @@ serde_json.workspace = true
 base64 = "=0.23.1"
 image = { version = "=0.25.9", default-features = false, features = ["jpeg", "png", "webp"] }
 sha2 = "0.10"
+hmac = "=0.12.1"
 tempfile = "3"
 regex = "1"
 nix = { version = "0.30", features = ["fs", "user", "signal", "feature", "socket"] }
