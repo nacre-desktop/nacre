@@ -250,6 +250,58 @@ fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
     save(&timestamps, &json!(known))?;
     Ok(())
 }
+fn is_image_label(label: &str) -> bool {
+    label.contains("binary data")
+        && ["png", "jpg", "jpeg", "gif", "webp"]
+            .iter()
+            .any(|x| label.to_lowercase().contains(x))
+}
+/// One clipboard row for the daemon topic: no content, only the shown label.
+pub(crate) struct ClipRow {
+    pub id: String,
+    pub label: String,
+    pub image: bool,
+    pub created: u64,
+}
+/// Newest-first rows after the usual seven-day pruning (pins preserved).
+pub(crate) fn clip_index(paths: &Paths, limit: usize) -> Result<Vec<ClipRow>> {
+    prune_clip_history(paths, &clip_rows()?)?;
+    let known = read_clip_timestamps(&clip_timestamp_path(paths))?;
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    Ok(clip_rows()?
+        .iter()
+        .filter_map(|row| {
+            let (id, label) = row.split_once('\t')?;
+            (!id.is_empty() && id.bytes().all(|c| c.is_ascii_digit())).then(|| ClipRow {
+                id: id.to_owned(),
+                label: clean(label).chars().take(200).collect(),
+                image: is_image_label(label),
+                created: known.get(id).copied().unwrap_or(now),
+            })
+        })
+        .take(limit)
+        .collect())
+}
+pub(crate) fn clip_copy(paths: &Paths, id: &str) -> Result<()> {
+    clip_action(paths, "copy", id)
+}
+/// Delete every clip that is not pinned; returns whether anything was removed.
+pub(crate) fn clip_clear(paths: &Paths) -> Result<bool> {
+    let rows = clip_rows()?;
+    let pinned = pins_for(paths, &rows)?;
+    let mut removed = false;
+    for row in &rows {
+        let decoded = run_command(&["cliphist", "decode"], Some(row.as_bytes()))?;
+        if pinned.contains(&fingerprint(row, &decoded)) {
+            continue;
+        }
+        run_command(&["cliphist", "delete"], Some(row.as_bytes()))?;
+        remove_thumbnail(&state(paths).join("images"), &decoded)?;
+        removed = true;
+    }
+    prune_clip_history(paths, &clip_rows()?)?;
+    Ok(removed)
+}
 fn clips(paths: &Paths) -> Result<Value> {
     let rows = clip_rows()?;
     prune_clip_history(paths, &rows)?;
@@ -320,10 +372,7 @@ fn clips(paths: &Paths) -> Result<Value> {
         if id.is_empty() || !id.bytes().all(|c| c.is_ascii_digit()) {
             continue;
         }
-        let image = label.contains("binary data")
-            && ["png", "jpg", "jpeg", "gif", "webp"]
-                .iter()
-                .any(|x| label.to_lowercase().contains(x));
+        let image = is_image_label(label);
         let mut thumbnail = String::new();
         let mut data = None;
         let label_hash = digest(label.as_bytes());

@@ -92,6 +92,7 @@ pub struct Hub {
     pub notifications: Option<super::notifications::Requests>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
+    pub dashboard: Option<super::dashboard_extras::Requests>,
     pub widths: Option<super::widths::Requests>,
     pub providers: super::menu_worker::Pool,
     pub helper_lanes: [Rc<tokio::sync::Mutex<()>>; 6],
@@ -121,6 +122,7 @@ impl Hub {
             notifications: None,
             session: None,
             menu: None,
+            dashboard: None,
             widths: None,
             providers: super::menu_worker::Pool::default(),
             helper_lanes: std::array::from_fn(|_| Rc::new(tokio::sync::Mutex::new(()))),
@@ -312,6 +314,9 @@ impl Hub {
             }
             if self.services.contains_key("ai-chat") {
                 methods.extend(super::ai_chat::methods());
+            }
+            if self.dashboard.is_some() {
+                methods.extend(super::dashboard_extras::methods());
             }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());

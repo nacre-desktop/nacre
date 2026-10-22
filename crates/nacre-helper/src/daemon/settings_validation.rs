@@ -112,6 +112,25 @@ pub fn configured_value(setting: &Value, value: &Value) -> bool {
     value_with_developer(setting, value, developer_mode())
 }
 
+/// Dashboard page lists beyond the frozen registry check (which accepts any
+/// array): at most 32 lowercase page identifiers. Other stores always pass.
+pub fn extras_list(store: &str, key: &str, value: &Value) -> bool {
+    store != "dashboard-extras"
+        || !["enabled", "order"].contains(&key)
+        || value.as_array().is_some_and(|items| {
+            items.len() <= 32
+                && items.iter().all(|item| {
+                    item.as_str().is_some_and(|id| {
+                        !id.is_empty()
+                            && id.len() <= 64
+                            && id
+                                .bytes()
+                                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'-')
+                    })
+                })
+        })
+}
+
 pub fn descriptor(store: &str, key: &[String]) -> Option<&'static Value> {
     descriptors().iter().find(|setting| {
         setting["backend"] != "planned"

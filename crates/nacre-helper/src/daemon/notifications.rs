@@ -303,7 +303,7 @@ fn read_dnd(state: &Value) -> std::result::Result<bool, Failure> {
     }
 }
 
-async fn dnd(hub: &Shared) -> std::result::Result<bool, Failure> {
+pub(super) async fn dnd(hub: &Shared) -> std::result::Result<bool, Failure> {
     read_dnd(&desktop_state(hub).await?)
 }
 
@@ -327,7 +327,10 @@ async fn set_dnd(
         .map_err(|_| timeout_error())?
 }
 
-async fn set_dnd_inner(hub: &Shared, enabled: bool) -> std::result::Result<bool, Failure> {
+pub(super) async fn set_dnd_inner(
+    hub: &Shared,
+    enabled: bool,
+) -> std::result::Result<bool, Failure> {
     let state = desktop_state(hub).await?;
     let before = read_dnd(&state)?;
     if before == enabled {

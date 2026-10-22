@@ -62,6 +62,9 @@ async fn dispatch(
         method if method.starts_with("ai.chat.") && !hub.borrow().safe => {
             super::ai_chat::dispatch(hub, method, params).await
         }
+        method if super::dashboard_extras::handles(method) && !hub.borrow().safe => {
+            super::dashboard_extras::dispatch(hub, method, params).await
+        }
         "wallpaper.activate" if !hub.borrow().safe => {
             super::active_wallpaper::activate(hub, params)
         }

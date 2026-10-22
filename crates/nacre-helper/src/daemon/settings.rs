@@ -245,6 +245,8 @@ impl Service {
             return Err(denied());
         }
         if descriptor.is_some_and(|descriptor| !validation::valid_value(descriptor, &request.value))
+            || (request.key.len() == 1
+                && !validation::extras_list(&request.store, &request.key[0], &request.value))
         {
             return Err(failure(
                 ErrorCode::InvalidRequest,
@@ -365,6 +367,7 @@ impl Service {
             } else {
                 validation::descriptor(&request.store, std::slice::from_ref(key))
                     .is_some_and(|d| validation::valid_value(d, value))
+                    && validation::extras_list(&request.store, key, value)
             };
             if !valid {
                 return Err(denied());

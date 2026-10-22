@@ -8,6 +8,7 @@ pub mod client;
 pub mod compositor;
 pub mod compositor_control;
 pub mod crashes;
+pub mod dashboard_extras;
 pub mod helpers;
 pub mod hub;
 pub mod menu;
@@ -174,6 +175,22 @@ async fn serve(
                     generations.clone(),
                 )
             },
+        )))
+    } else {
+        None
+    };
+    let dashboard_service = if !counter.safe {
+        let requests = dashboard_extras::Requests::new(paths.clone());
+        hub.borrow_mut().dashboard = Some(requests.clone());
+        dashboard_extras::initial(&hub, &requests)?;
+        hub.borrow_mut()
+            .service("dashboard-extras", "starting", 0)?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "dashboard-extras",
+            service_hub,
+            move || dashboard_extras::run(factory_hub.clone(), requests.clone()),
         )))
     } else {
         None
@@ -376,6 +393,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Assistant chat supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = dashboard_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Dashboard supervisor failed during shutdown");
             }
         }
     }

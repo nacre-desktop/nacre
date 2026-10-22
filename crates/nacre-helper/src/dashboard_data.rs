@@ -277,54 +277,62 @@ pub fn brain_context() -> Value {
             None,
             Duration::from_secs(3),
         )?;
-        let root = PathBuf::from(String::from_utf8(output.stdout)?.trim());
-        let mut notes: Vec<_> = walkdir::WalkDir::new(&root)
-            .into_iter()
-            .filter_map(std::result::Result::ok)
-            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "md"))
-            .take(2000)
-            .filter(|entry| {
-                !entry
-                    .path()
-                    .strip_prefix(&root)
-                    .unwrap_or(entry.path())
-                    .components()
-                    .any(|part| part.as_os_str().to_string_lossy().starts_with('.'))
-            })
-            .map(|entry| entry.into_path())
-            .collect();
-        notes.sort_by_key(|path| {
-            std::cmp::Reverse(
-                fs::metadata(path)
-                    .and_then(|m| m.modified())
-                    .unwrap_or(UNIX_EPOCH),
-            )
-        });
-        notes.truncate(10);
-        let mut recent = Vec::new();
-        let mut tasks = Vec::new();
-        for note in notes {
-            if fs::metadata(&note)?.len() > 128_000 {
-                continue;
-            }
-            let text = fs::read_to_string(&note)?;
-            let title = text
-                .lines()
-                .find(|line| line.starts_with("# "))
-                .map(|line| line.trim_start_matches(['#', ' ']).trim())
-                .unwrap_or_else(|| note.file_stem().and_then(|v| v.to_str()).unwrap_or(""));
-            recent.push(json!({"title":title.chars().take(100).collect::<String>(),"path":note}));
-            for line in text.lines() {
-                if let Some(text) = line.strip_prefix("- [ ] ") {
-                    tasks.push(json!({"text":text.trim().chars().take(160).collect::<String>(),"path":note}));
-                }
-            }
-        }
-        recent.truncate(5);
-        tasks.truncate(6);
-        Ok(json!({"available":true,"recent":recent,"tasks":tasks,"root":root}))
+        brain_context_at(Path::new(String::from_utf8(output.stdout)?.trim()))
     };
     context().unwrap_or_else(|_| json!({"available":false,"recent":[],"tasks":[]}))
+}
+/// Recent notes and open tasks below one vault root. Only regular files are read:
+/// a symlinked note is never followed out of the vault.
+pub fn brain_context_at(root: &Path) -> Result<Value> {
+    let mut notes: Vec<_> = walkdir::WalkDir::new(root)
+        .into_iter()
+        .filter_map(std::result::Result::ok)
+        .filter(|entry| {
+            entry.file_type().is_file() && entry.path().extension().is_some_and(|ext| ext == "md")
+        })
+        .take(2000)
+        .filter(|entry| {
+            !entry
+                .path()
+                .strip_prefix(root)
+                .unwrap_or(entry.path())
+                .components()
+                .any(|part| part.as_os_str().to_string_lossy().starts_with('.'))
+        })
+        .map(|entry| entry.into_path())
+        .collect();
+    notes.sort_by_key(|path| {
+        std::cmp::Reverse(
+            fs::metadata(path)
+                .and_then(|m| m.modified())
+                .unwrap_or(UNIX_EPOCH),
+        )
+    });
+    notes.truncate(10);
+    let mut recent = Vec::new();
+    let mut tasks = Vec::new();
+    for note in notes {
+        if fs::metadata(&note)?.len() > 128_000 {
+            continue;
+        }
+        let text = fs::read_to_string(&note)?;
+        let title = text
+            .lines()
+            .find(|line| line.starts_with("# "))
+            .map(|line| line.trim_start_matches(['#', ' ']).trim())
+            .unwrap_or_else(|| note.file_stem().and_then(|v| v.to_str()).unwrap_or(""));
+        recent.push(json!({"title":title.chars().take(100).collect::<String>(),"path":note}));
+        for line in text.lines() {
+            if let Some(text) = line.strip_prefix("- [ ] ") {
+                tasks.push(
+                    json!({"text":text.trim().chars().take(160).collect::<String>(),"path":note}),
+                );
+            }
+        }
+    }
+    recent.truncate(5);
+    tasks.truncate(6);
+    Ok(json!({"available":true,"recent":recent,"tasks":tasks,"root":root}))
 }
 pub fn snapshot(include_brain: bool) -> Result<Value> {
     let paths = Paths::environment()?;
