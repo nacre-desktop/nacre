@@ -176,15 +176,28 @@ pub fn environment(
     Ok(environment)
 }
 pub fn health(root: &Path, environment: &Environment) -> Result<bool> {
+    // The windows-only host (beside Bead, `nacre ui-shell`) has no `nacre` IPC target by design; it is
+    // ready once a window host answers. Without this it was killed and restarted every ~22 s (B0033).
+    let windows_only = environment
+        .get("NACRE_QML_WINDOWS_ONLY")
+        .is_some_and(|value| value == "1");
     let mut command = Command::new(root.join("bin/qs"));
     command
-        .args(["-c", "nacre", "ipc", "call", "nacre", "state"])
+        .args(["-c", "nacre", "ipc", "call"])
+        .args(if windows_only {
+            ["settingsApp", "state"]
+        } else {
+            ["nacre", "state"]
+        })
         .env_clear()
         .envs(environment);
     let output = match process::capture(command, None, Duration::from_secs(2)) {
         Ok(value) if value.status.success() => value,
         _ => return Ok(false),
     };
+    if windows_only {
+        return Ok(true);
+    }
     let value: Value = match serde_json::from_slice(&output.stdout) {
         Ok(value) => value,
         Err(_) => return Ok(false),
@@ -361,4 +374,44 @@ pub fn run(stamp: Option<&str>) -> Result<i32> {
             .unwrap_or_else(|| -status.signal().unwrap_or(1)));
     }
     Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    /// A fake `bin/qs`: only the named IPC target answers, like a quickshell instance hosting it.
+    fn root_answering(target: &str, reply: &str) -> tempfile::TempDir {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("bin")).unwrap();
+        let script = root.path().join("bin/qs");
+        fs::write(
+            &script,
+            format!(
+                "#!/bin/sh\n[ \"$5\" = {target} ] || {{ echo 'Target not found.' >&2; exit 1; }}\necho '{reply}'\n"
+            ),
+        )
+        .unwrap();
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o755)).unwrap();
+        root
+    }
+
+    #[test]
+    fn full_shell_needs_the_nacre_target_with_its_keys() {
+        let environment = Environment::new();
+        let ready = root_answering("nacre", r#"{"reveal":false,"launcherMode":""}"#);
+        assert!(health(ready.path(), &environment).unwrap());
+        let windows_host = root_answering("settingsApp", r#"{"visible":false}"#);
+        assert!(!health(windows_host.path(), &environment).unwrap());
+    }
+
+    #[test]
+    fn windows_only_host_is_ready_when_a_window_host_answers() {
+        let environment = Environment::from([("NACRE_QML_WINDOWS_ONLY".into(), "1".into())]);
+        let windows_host = root_answering("settingsApp", r#"{"visible":false}"#);
+        assert!(health(windows_host.path(), &environment).unwrap());
+        let full_shell_only = root_answering("nacre", r#"{"reveal":false,"launcherMode":""}"#);
+        assert!(!health(full_shell_only.path(), &environment).unwrap());
+    }
 }
