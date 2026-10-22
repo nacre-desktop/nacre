@@ -26,6 +26,13 @@ while preserving pins. Leave the existing 30-day notification retention
 unchanged. Keep maintenance recovery explicitly user-requested and route its
 existing diagnostics actions through `diagnostics.rs`.
 
+**Intended security difference.** Native thumbnail files are created exclusively
+with mode `0600` before bytes are written, and deletion removes the matching
+thumbnail immediately. This removes the Python implementation's umask-dependent
+write window and stale-thumbnail window. Rust regressions assert the private
+mode, byte contents, and immediate removal. Brain search continues to reject
+hidden files and symlinks; path traversal remains refused.
+
 **Non-goals.** Dashboard redesign, Welcome UI changes, notification retention
 changes, and daemon hosting (a separate unit).
 

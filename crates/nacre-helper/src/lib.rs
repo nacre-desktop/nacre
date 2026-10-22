@@ -109,12 +109,12 @@ pub mod desktop_settings;
 
 pub mod control_tools;
 pub mod desktop_actions;
+pub mod desktop_extras;
 pub mod device_actions;
 pub mod device_location;
 pub mod display_recover;
-pub mod screenshot;
-pub mod desktop_extras;
 pub mod maintenance;
+pub mod screenshot;
 
 pub mod owned_settings;
 

@@ -538,59 +538,105 @@ pub fn welcome(arguments: &[String]) -> Result<i32> {
 
 /// State and login-claim API used by the Welcome window's data worker.
 pub fn welcome_helper(arguments: &[String]) -> Result<i32> {
-    let Some(action) = arguments.first().map(String::as_str) else { return Err("Expected a Welcome operation".into()) };
+    let Some(action) = arguments.first().map(String::as_str) else {
+        return Err("Expected a Welcome operation".into());
+    };
     let paths = Paths::environment()?;
     let value_arg = arguments.get(1).map(String::as_str).unwrap_or("");
-    let result: Result<Value> = (|| {
-        match action {
-            "state" | "set-startup" | "set-demo-wallpapers" | "finish-tour" => {
-                if action == "set-startup" || action == "set-demo-wallpapers" || action == "finish-tour" {
-                    let _guard = crate::files::lock(&paths.state.join("welcome/owner.lock"))?;
-                    let path = paths.config.join("welcome.json");
-                    let mut prefs = welcome_preferences(&path)?;
-                    match action {
-                        "set-startup" => {
-                            let value: Value = serde_json::from_str(value_arg)?;
-                            if !value.is_boolean() { return Err("Welcome startup choice must be a boolean".into()); }
-                            prefs["showAtLogin"] = value;
+    let result: Result<Value> = (|| match action {
+        "state" | "set-startup" | "set-demo-wallpapers" | "finish-tour" => {
+            if action == "set-startup" || action == "set-demo-wallpapers" || action == "finish-tour"
+            {
+                let _guard = crate::files::lock(&paths.state.join("welcome/owner.lock"))?;
+                let path = paths.config.join("welcome.json");
+                let mut prefs = welcome_preferences(&path)?;
+                match action {
+                    "set-startup" => {
+                        let value: Value = serde_json::from_str(value_arg)?;
+                        if !value.is_boolean() {
+                            return Err("Welcome startup choice must be a boolean".into());
                         }
-                        "set-demo-wallpapers" => {
-                            let values: Value = serde_json::from_str(value_arg)?;
-                            let rows = values.as_array().ok_or("Choose four different local wallpapers")?;
-                            if rows.len()!=4 || rows.iter().any(|v|!v.is_string()) || rows.iter().filter_map(Value::as_str).collect::<std::collections::HashSet<_>>().len()!=4 { return Err("Choose four different local wallpapers".into()); }
-                            for row in rows { let wallpaper=Path::new(row.as_str().unwrap()); if !wallpaper.is_absolute() || !wallpaper.is_file() { return Err("Demo wallpapers must be existing absolute local paths".into()); } }
-                            prefs["demoWallpapers"] = values;
-                            atomic_json(&paths.config.join("welcome.json"),&prefs)?;
-                            return Ok(json!({"configured":true}));
-                        }
-                        "finish-tour" => prefs["tourCompleted"] = json!(true),
-                        _ => {}
+                        prefs["showAtLogin"] = value;
                     }
-                    atomic_json(&path,&prefs)?;
+                    "set-demo-wallpapers" => {
+                        let values: Value = serde_json::from_str(value_arg)?;
+                        let rows = values
+                            .as_array()
+                            .ok_or("Choose four different local wallpapers")?;
+                        if rows.len() != 4
+                            || rows.iter().any(|v| !v.is_string())
+                            || rows
+                                .iter()
+                                .filter_map(Value::as_str)
+                                .collect::<std::collections::HashSet<_>>()
+                                .len()
+                                != 4
+                        {
+                            return Err("Choose four different local wallpapers".into());
+                        }
+                        for row in rows {
+                            let wallpaper = Path::new(row.as_str().unwrap());
+                            if !wallpaper.is_absolute() || !wallpaper.is_file() {
+                                return Err(
+                                    "Demo wallpapers must be existing absolute local paths".into(),
+                                );
+                            }
+                        }
+                        prefs["demoWallpapers"] = values;
+                        atomic_json(&paths.config.join("welcome.json"), &prefs)?;
+                        return Ok(json!({"configured":true}));
+                    }
+                    "finish-tour" => prefs["tourCompleted"] = json!(true),
+                    _ => {}
                 }
-                let preferences = welcome_preferences(&paths.config.join("welcome.json"))?;
-                let available_ai = which("nacre-ai");
-                let brain = paths.home.join(".local/share/nacre/brain/control.py").is_file() && which("nacre-brain");
-                let shortcut_error = match crate::process::run("hyprctl", &["binds".into(),"-j".into()],None,std::time::Duration::from_secs(2)) {
+                atomic_json(&path, &prefs)?;
+            }
+            let preferences = welcome_preferences(&paths.config.join("welcome.json"))?;
+            let available_ai = which("nacre-ai");
+            let brain = paths
+                .home
+                .join(".local/share/nacre/brain/control.py")
+                .is_file()
+                && which("nacre-brain");
+            let shortcut_error = match crate::process::run("hyprctl", &["binds".into(),"-j".into()],None,std::time::Duration::from_secs(2)) {
                     Ok(output) if output.status.success() => "No described Nacre shortcuts are registered. Reload your managed Hyprland configuration.",
                     _ => "Shortcuts are available when running inside your Hyprland session.",
                 };
-                Ok(json!({"shortcuts":[],"shortcutError":shortcut_error,"preferences":preferences,"available":{"ai":available_ai,"brain":brain}}))
-            }
-            "claim-login" => Ok(claim_login(&paths, &welcome_instance(&paths)?)?.map_or(json!({"show":false,"claim":""}),|claim|json!({"show":true,"claim":claim}))),
-            "acknowledge-login" => { acknowledge_login(&paths,&welcome_instance(&paths)?,value_arg)?; Ok(json!({"acknowledged":true})) },
-            "release-login" => { release_login(&paths,&welcome_instance(&paths)?,value_arg)?; Ok(json!({"released":true})) },
-            _ => Err("Unknown Welcome operation".into()),
+            Ok(
+                json!({"shortcuts":[],"shortcutError":shortcut_error,"preferences":preferences,"available":{"ai":available_ai,"brain":brain}}),
+            )
         }
+        "claim-login" => Ok(claim_login(&paths, &welcome_instance(&paths)?)?.map_or(
+            json!({"show":false,"claim":""}),
+            |claim| json!({"show":true,"claim":claim}),
+        )),
+        "acknowledge-login" => {
+            acknowledge_login(&paths, &welcome_instance(&paths)?, value_arg)?;
+            Ok(json!({"acknowledged":true}))
+        }
+        "release-login" => {
+            release_login(&paths, &welcome_instance(&paths)?, value_arg)?;
+            Ok(json!({"released":true}))
+        }
+        _ => Err("Unknown Welcome operation".into()),
     })();
     match result {
-        Ok(value) => { println!("{}",crate::json::encode(&value)?); Ok(0) }
-        Err(error) => { println!("{}",crate::json::encode(&json!({"error":error.to_string()}))?); Ok(1) }
+        Ok(value) => {
+            println!("{}", crate::json::encode(&value)?);
+            Ok(0)
+        }
+        Err(error) => {
+            println!(
+                "{}",
+                crate::json::encode(&json!({"error":error.to_string()}))?
+            );
+            Ok(1)
+        }
     }
 }
 
 fn welcome_instance(paths: &Paths) -> Result<String> {
-    let backend = crate::compositor::backend::Backend::new(paths.clone(),env::vars().collect())?;
+    let backend = crate::compositor::backend::Backend::new(paths.clone(), env::vars().collect())?;
     Ok(backend.session_id().to_owned())
 }
 

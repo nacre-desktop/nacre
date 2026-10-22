@@ -304,14 +304,35 @@ pub fn maintenance_state() -> Result<Value> {
         checked: now.format("%Y-%m-%dT%H:%M:%S%.6f+00:00").to_string(),
         epoch: now.timestamp() as f64 + now.timestamp_subsec_nanos() as f64 / 1e9,
         backend: if niri { "niri" } else { "Hyprland" }.into(),
-        version_command: if niri { vec!["niri".into(), "--version".into()] } else { vec!["Hyprland".into(), "--version".into()] },
+        version_command: if niri {
+            vec!["niri".into(), "--version".into()]
+        } else {
+            vec!["Hyprland".into(), "--version".into()]
+        },
         runtime_command: vec!["python3".into(), "--version".into()],
-        portal: if niri { "xdg-desktop-portal-gnome.service" } else { "xdg-desktop-portal-hyprland.service" }.into(),
+        portal: if niri {
+            "xdg-desktop-portal-gnome.service"
+        } else {
+            "xdg-desktop-portal-hyprland.service"
+        }
+        .into(),
     };
-    let mut state = diagnostics::maintenance_state(&context, &mut Queries { compositor: None, niri })?;
-    if let Ok(output) = process::run("python3", &["--version".into()], None, Duration::from_secs(2)) {
+    let mut state = diagnostics::maintenance_state(
+        &context,
+        &mut Queries {
+            compositor: None,
+            niri,
+        },
+    )?;
+    if let Ok(output) = process::run(
+        "python3",
+        &["--version".into()],
+        None,
+        Duration::from_secs(2),
+    ) {
         if output.status.success() {
-            state["versions"]["Python"] = Value::String(String::from_utf8_lossy(&output.stdout).trim().to_owned());
+            state["versions"]["Python"] =
+                Value::String(String::from_utf8_lossy(&output.stdout).trim().to_owned());
         }
     }
     Ok(state)
