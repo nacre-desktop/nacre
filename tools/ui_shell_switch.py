@@ -285,6 +285,11 @@ class UiShell(f4.Switch):
             },
         }
 
+    def restart(self):
+        # A unit that hit its start limit stays failed until reset; a fallback must not be blocked by it.
+        self.ctl("reset-failed", SHELL)
+        self.ctl("restart", SHELL)
+
     def converge_qml(self, record):
         """Idempotent: every step is safe to repeat from any interrupted point."""
 
@@ -304,7 +309,7 @@ class UiShell(f4.Switch):
         self.phase(record, "remove-dropin", remove)
         self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
         self.phase(record, "stop-windows", stop_windows)
-        self.phase(record, "restart-shell", lambda: self.ctl("restart", SHELL))
+        self.phase(record, "restart-shell", self.restart)
         self.phase(record, "health", self.verify_qml)
 
     def qml(self, recover=False):
@@ -411,7 +416,7 @@ class UiShell(f4.Switch):
                 record, "write-dropin", lambda: f4.atomic(self.dropin, want, 0o644)
             )
             self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
-            self.phase(record, "restart-shell", lambda: self.ctl("restart", SHELL))
+            self.phase(record, "restart-shell", self.restart)
             self.phase(record, "health", self.verify_bead)
             record["status"] = "complete"
             self.save(record)

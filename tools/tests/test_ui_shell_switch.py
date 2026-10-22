@@ -141,6 +141,8 @@ class Manager:
         elif action == "restart" and args[0] == m.SHELL:
             self.windows = None
             self.start_shell()
+        elif action == "reset-failed":
+            pass
         elif action == "stop" and args[0] == m.WINDOWS:
             self.windows = None
         else:
