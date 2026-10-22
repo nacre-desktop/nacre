@@ -16,7 +16,7 @@ import urllib.request
 
 
 ROOT = Path(__file__).resolve().parent
-FILES = ("control.py", "auth.py", "discovery.py", "semantic.py", "semantic-client.py")
+FILES = ("control.py", "semantic.py", "semantic-client.py")
 STOP_UNITS = (
     "nacre-brain.service",
     "nacre-brain-sync.timer",
