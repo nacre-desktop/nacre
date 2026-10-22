@@ -160,7 +160,7 @@ fn compositor_windows_with(query: impl FnOnce() -> Result<Value>) -> Result<Valu
 }
 fn compositor_windows(backend: &mut Backend) -> Result<Value> {
     compositor_windows_with(|| {
-        backend.query("windows", Duration::from_secs(10), Some(4 * 1024 * 1024))
+        Ok(backend.query("windows", Duration::from_secs(10), Some(4 * 1024 * 1024))?)
     })
 }
 fn focus_address(
@@ -274,9 +274,7 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
         let address = json!(value);
         let valid = backend.valid_window_id(&address);
         focus_address(&address, valid, |address| {
-            backend
-                .action("focus_window", &[address.clone()], &json!({"timeout":10}))
-                .map(|_| ())
+            Ok(backend.action("focus_window", &[address.clone()], &json!({"timeout":10}))?)
         })?;
         return Ok(());
     }
@@ -290,9 +288,7 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
             let address = windows[0]["address"].clone();
             let valid = backend.valid_window_id(&address);
             focus_address(&address, valid, |id| {
-                backend
-                    .action("focus_window", &[id.clone()], &json!({"timeout":10}))
-                    .map(|_| ())
+                Ok(backend.action("focus_window", &[id.clone()], &json!({"timeout":10}))?)
             })?;
             return Ok(());
         }

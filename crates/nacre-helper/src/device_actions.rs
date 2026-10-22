@@ -242,9 +242,12 @@ pub fn execute(action: &str, value: &str) -> Result<Option<Value>> {
             .into())
         }
     }?;
-    Ok(Some(
-        json!({"message": if result.is_empty() { "Device updated" } else { result.chars().take(400).collect::<String>() }}),
-    ))
+    let message = if result.is_empty() {
+        "Device updated".to_owned()
+    } else {
+        result.chars().take(400).collect::<String>()
+    };
+    Ok(Some(json!({"message":message})))
 }
 fn valid_mac(value: &str) -> bool {
     value.len() == 17

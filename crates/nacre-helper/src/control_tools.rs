@@ -31,7 +31,7 @@ fn color_picker_result(output: Result<Output>) -> std::result::Result<i32, Strin
     }
 }
 fn backend(paths: &crate::paths::Paths) -> Result<Backend> {
-    Backend::new(paths.clone(), std::env::vars().collect())
+    Ok(Backend::new(paths.clone(), std::env::vars().collect())?)
 }
 fn state_value(
     screenshot: bool,
@@ -274,11 +274,11 @@ fn night_light(paths: &crate::paths::Paths, backend: &mut Backend, enabled: bool
                     .unwrap_or_default()
             },
             || {
-                backend.module_call(
+                Ok(backend.module_call(
                     "set_night_light_temperature",
                     &[json!(enabled)],
                     &json!({"timeout":1}),
-                )
+                )?)
             },
             || {
                 let _ = bounded("systemctl", &["--user", "stop", unit], 10);

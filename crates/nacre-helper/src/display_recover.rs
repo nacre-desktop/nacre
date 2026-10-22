@@ -3,7 +3,7 @@ use crate::{i18n::tr, paths::Paths, Result};
 use serde_json::Value;
 use std::{
     fs,
-    os::unix::fs::{DirBuilderExt, OpenOptionsExt, PermissionsExt},
+    os::unix::fs::{DirBuilderExt, MetadataExt, OpenOptionsExt, PermissionsExt},
     path::PathBuf,
     process::Command,
     thread,
@@ -16,7 +16,6 @@ fn runtime() -> Result<PathBuf> {
         .unwrap_or_else(|| PathBuf::from(format!("/run/user/{}", nix::unistd::getuid()))))
 }
 fn private_dir(path: &std::path::Path) -> Result<()> {
-    use std::os::unix::fs::MetadataExt;
     fs::DirBuilder::new()
         .recursive(true)
         .mode(0o700)
@@ -46,7 +45,6 @@ fn write_snapshot(folder: &std::path::Path, view: &Value) -> Result<PathBuf> {
     Ok(path)
 }
 fn lock_recovery(runtime: &std::path::Path) -> Result<Option<nix::fcntl::Flock<fs::File>>> {
-    use std::os::unix::fs::MetadataExt;
     let path = runtime.join("nacre-display-recovery.lock");
     if fs::symlink_metadata(&path).is_ok_and(|metadata| {
         metadata.file_type().is_symlink() || metadata.uid() != nix::unistd::getuid().as_raw()
@@ -200,7 +198,10 @@ fn recover(view: Value, saved: Option<PathBuf>) -> Result<i32> {
 }
 pub fn run(args: &[String]) -> Result<i32> {
     let queue_mode = args.iter().any(|arg| arg == "--queue");
-    let value = args.iter().find(|arg| arg != "--queue").map(String::as_str);
+    let value = args
+        .iter()
+        .find(|arg| *arg != "--queue")
+        .map(String::as_str);
     if queue_mode {
         use std::io::Read;
         let mut input = String::new();
