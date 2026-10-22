@@ -177,7 +177,7 @@ fn night_light(paths: &crate::paths::Paths, backend: &mut Backend, enabled: bool
     if !supported || (enabled && !available) {
         return Err(tr(
             "helper.control-tools.install-the-system-hyprsunset-package-for-night-light",
-            "Night light requires a compatible controller and output gamma control",
+            "Install the system hyprsunset package for Night light",
         )
         .into());
     }
@@ -353,7 +353,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         }
         _ => {
             let error = tr(
-                "helper.control-tools.choose-on-or-off",
+                "helper.control-tools.unsupported-control-action",
                 "Unsupported control action",
             );
             println!("{}", crate::json::encode(&json!({"error":error}))?);

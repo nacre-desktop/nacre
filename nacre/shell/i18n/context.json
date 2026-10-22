@@ -665,6 +665,7 @@
   "helper.control-tools.install-the-system-hyprsunset-package-for-night-light": "nacre/shell-tools/control-tools.py: helper UI message; not a command identifier.",
   "helper.control-tools.night-light-is-managed-externally-use-its-existing-controller": "nacre/shell-tools/control-tools.py: helper UI message; not a command identifier.",
   "helper.control-tools.night-light-service-did-not-become-ready": "nacre/shell-tools/control-tools.py: helper UI message; not a command identifier.",
+  "helper.control-tools.unsupported-control-action": "nacre-helper control-tools CLI: error for an unknown action.",
   "helper.dashboard-data.calendar-exceeds2mb": "nacre/shell-tools/dashboard-data.py: helper UI message; not a command identifier.",
   "helper.dashboard-data.choose1-180minutes": "nacre/shell-tools/dashboard-data.py: helper UI message; not a command identifier.",
   "helper.dashboard-data.focus-action-unavailable": "nacre/shell-tools/dashboard-data.py: helper UI message; not a command identifier.",

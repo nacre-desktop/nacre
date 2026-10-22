@@ -677,6 +677,7 @@
   "helper.control-tools.install-the-system-hyprsunset-package-for-night-light": "Install the system hyprsunset package for Night light",
   "helper.control-tools.night-light-is-managed-externally-use-its-existing-controller": "Night light is managed externally; use its existing controller",
   "helper.control-tools.night-light-service-did-not-become-ready": "Night-light service did not become ready",
+  "helper.control-tools.unsupported-control-action": "Unsupported control action",
   "helper.dashboard-data.calendar-exceeds2mb": "Calendar exceeds2MB",
   "helper.dashboard-data.choose1-180minutes": "Choose1–180minutes",
   "helper.dashboard-data.focus-action-unavailable": "Focus action unavailable",
