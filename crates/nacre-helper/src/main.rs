@@ -19,6 +19,7 @@ fn run() -> Result<i32> {
         Some("nacre-brain-ui") => {
             return nacre_helper::brain_web::run("brain-launch", &arguments.collect::<Vec<_>>())
         }
+        Some("nacre-ai-chat" | "nacre-ai-claude") => invoked.unwrap().to_owned(),
         Some("nacrectl") => "ctl".to_owned(),
         Some("nacre-daemon") => "daemon".to_owned(),
         Some("nacre-desktop-extras") => "desktop-extras".to_owned(),
@@ -94,6 +95,12 @@ fn run() -> Result<i32> {
             | "ai-credentials-status"
     ) {
         return nacre_helper::ai_wrappers::dispatch(&tool, &arguments);
+    }
+    if tool == "nacre-ai-chat" {
+        return nacre_helper::ai_chat::run(&arguments);
+    }
+    if tool == "nacre-ai-claude" {
+        return nacre_helper::ai_claude::run(&arguments);
     }
     if tool == "nacre-codex" {
         return nacre_helper::ai_wrappers::codex(&arguments);

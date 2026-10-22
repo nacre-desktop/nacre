@@ -21,7 +21,14 @@ def module(name):
         name.replace("-", "_"),
         str(ROOT / "bin" / f"{name}.py.rollback")
         if name.startswith("nacre-brain")
-        or name in {"nacre-ai-context", "nacre-ai-memory", "nacre-ai-usage"}
+        or name
+        in {
+            "nacre-ai-context",
+            "nacre-ai-memory",
+            "nacre-ai-usage",
+            "nacre-ai-chat",
+            "nacre-ai-claude",
+        }
         else str(ROOT / "bin" / name),
     )
     spec = importlib.util.spec_from_loader(loader.name, loader)

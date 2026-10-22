@@ -1775,28 +1775,12 @@ fn restore_claude_history(shared: &Arc<Mutex<Shared>>) -> Result<()> {
     if meta["agent"] != "claude" || meta["started"] != true {
         return Ok(());
     }
-    let sdk = home()?.join(".local/share/nacre/ai/claude-sdk/bin/python");
-    if !sdk.exists() {
-        return Ok(());
-    }
-    let script="import json,sys\nfrom claude_agent_sdk import get_session_messages\nrows=[]\nfor item in get_session_messages(sys.argv[1],directory=sys.argv[2]):\n if item.type not in ('user','assistant'): continue\n content=item.message.get('content',[])\n text=content if isinstance(content,str) else chr(10).join(block.get('text','') for block in content if block.get('type')=='text')\n if text: rows.append(dict(id=item.uuid,role=item.type,text=text))\nprint(json.dumps(rows[-300:]))\n";
-    let mut cmd = Command::new(sdk);
-    cmd.args([
-        "-c",
-        script,
+    let config = ai_core::account_home("claude", Some(meta["account"].as_str().unwrap_or("")))?;
+    let rows = crate::ai_claude::messages(
+        &config,
         meta["id"].as_str().unwrap_or(""),
-        meta["cwd"].as_str().unwrap_or(""),
-    ])
-    .stderr(Stdio::null());
-    command_env(&mut cmd, "claude", meta["account"].as_str().unwrap_or(""))?;
-    let output = crate::process::capture(cmd, None, Duration::from_secs(20))?;
-    if !output.status.success() {
-        return Ok(());
-    }
-    let rows: Value = serde_json::from_slice(&output.stdout)?;
-    let Some(rows) = rows.as_array() else {
-        return Ok(());
-    };
+        std::path::Path::new(meta["cwd"].as_str().unwrap_or("")),
+    )?;
     let mut s = shared.lock().map_err(|_| "Chat lock poisoned")?;
     if s.generation != generation || !s.messages.is_empty() {
         return Ok(());

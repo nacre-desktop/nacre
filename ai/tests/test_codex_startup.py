@@ -138,11 +138,10 @@ class LauncherDeploymentTests(unittest.TestCase):
 
 
 class ControllerDeploymentTests(unittest.TestCase):
-    def test_linked_python_controllers_find_shared_core(self):
+    def test_linked_native_controllers_dispatch_to_helper(self):
         import os
         from pathlib import Path
         import subprocess
-        import sys
         import tempfile
         from test_workflow import ROOT
 
@@ -153,8 +152,15 @@ class ControllerDeploymentTests(unittest.TestCase):
                 link = bin_dir / name
                 link.symlink_to(ROOT / "bin" / name)
                 result = subprocess.run(
-                    [sys.executable, str(link), "--help"],
-                    env={"HOME": folder, "PATH": os.environ["PATH"]},
+                    [str(link), "--help"],
+                    env={
+                        "HOME": folder,
+                        "PATH": os.environ["PATH"],
+                        "NACRE_HELPER_BINARY": os.environ.get(
+                            "NACRE_HELPER_BINARY",
+                            str(ROOT / "target/release/nacre-helper"),
+                        ),
+                    },
                     capture_output=True,
                     text=True,
                 )

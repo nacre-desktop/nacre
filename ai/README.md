@@ -42,3 +42,10 @@ profile histories remain discoverable in place, without copying databases or
 credentials. A chat in an older private store resumes with that store and the
 selected login in a separate Codex process. Running remote workers retain their
 original account until they exit. Claude Code histories remain account-specific.
+
+The standalone native `nacre-ai-chat` and `nacre-ai-claude` helpers provide title,
+thread and session metadata operations. Claude history and sidebar text restore
+read local session files directly; this path does not require
+`claude_agent_sdk` or the venv from `ai/install-claude.py`. The retained Python
+rollback sidebar still uses that optional dependency. Upstream history formats
+are fixture-tested; unsupported or malformed history is left untouched.

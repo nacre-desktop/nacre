@@ -273,3 +273,23 @@ sys.stdin.read()
         assert!(start.elapsed() < Duration::from_secs(2));
     }
 }
+
+#[cfg(test)]
+mod owned_cleanup {
+    use super::*;
+
+    #[test]
+    fn failed_handshake_reaps_the_exact_owned_child() {
+        let temporary = tempfile::tempdir().unwrap();
+        let marker = temporary.path().join("child-pid");
+        let mut command = Command::new("python3");
+        command.args(["-c", "import os,sys,time\nopen(sys.argv[1],'w').write(str(os.getpid()))\nsys.stdin.readline()\nprint('invalid-json',flush=True)\ntime.sleep(60)"]).arg(&marker)
+            .env_clear().env("PATH", "/usr/bin:/bin");
+        {
+            let mut peer = Peer::start(command, Duration::from_secs(2)).unwrap();
+            assert!(peer.call_with_params("initialize", json!({})).is_err());
+        }
+        let pid = std::fs::read_to_string(marker).unwrap();
+        assert!(!std::path::Path::new("/proc").join(pid).exists());
+    }
+}
