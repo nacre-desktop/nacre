@@ -2817,3 +2817,216 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
     daemon.0.wait()?;
     Ok(())
 }
+
+#[test]
+fn ai_chat_is_hosted_by_a_worker_and_published_as_a_bounded_snapshot() -> Result<()> {
+    use nacre_protocol::{ai_chat::AiChat, Message, Mirror, Reply, Update};
+
+    let home = tempfile::Builder::new().prefix("ac-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let private = home.path().join("private");
+    fs::create_dir(&private)?;
+    fs::set_permissions(&private, fs::Permissions::from_mode(0o700))?;
+    let endpoint = private.join("daemon.sock");
+    let runtime = home.path().join("runtime");
+    fs::create_dir(&runtime)?;
+    fs::set_permissions(&runtime, fs::Permissions::from_mode(0o700))?;
+    let notify_path = home.path().join("notify.sock");
+    let notify = UnixDatagram::bind(&notify_path)?;
+    notify.set_read_timeout(Some(Duration::from_secs(10)))?;
+    let state_dir = home.path().join("state/nacre");
+    let config = home.path().join("config/nacre");
+    let installed = home
+        .path()
+        .join(".local/share/nacre/shell/tools/nacre-helper");
+    let bridge = home.path().join(".local/share/nacre/shell/bin/nacre_shell");
+    let bin = home.path().join(".local/bin");
+    let ai = home.path().join(".config/nacre/ai");
+    for dir in [
+        state_dir.as_path(),
+        config.as_path(),
+        installed.parent().unwrap(),
+        bridge.parent().unwrap(),
+        bin.as_path(),
+        ai.as_path(),
+    ] {
+        fs::create_dir_all(dir)?;
+    }
+    fs::set_permissions(&state_dir, fs::Permissions::from_mode(0o700))?;
+    fs::write(&installed, "fixture helper")?;
+    fs::write(&bridge, "fixture bridge")?;
+    // Synthetic Claude: one streamed answer per invocation, no real credentials.
+    let provider = r#"#!/usr/bin/python3
+import json, sys
+args = sys.argv[1:]
+sys.stdin.read()
+flag = '--resume' if '--resume' in args else '--session-id'
+session = args[args.index(flag) + 1]
+def emit(row):
+    sys.stdout.write(json.dumps(row) + '\n')
+    sys.stdout.flush()
+emit({'type':'stream_event','event':{'type':'message_start','message':{'id':'fixture-answer'}}})
+emit({'type':'stream_event','event':{'type':'content_block_delta','delta':{'type':'text_delta','text':'daemon hosted answer'}}})
+emit({'type':'assistant','message':{'content':[{'type':'text','text':'daemon hosted answer'}]},'session_id':session})
+"#;
+    for (name, body) in [
+        ("claude", provider),
+        ("nacre-ai", "#!/bin/sh\nexit 0\n"),
+        ("nacre-ai-claude", "#!/bin/sh\nexit 0\n"),
+    ] {
+        fs::write(bin.join(name), body)?;
+        fs::set_permissions(bin.join(name), fs::Permissions::from_mode(0o700))?;
+    }
+    fs::write(
+        ai.join("settings.json"),
+        r#"{"default_assistant":"claude","version":1}"#,
+    )?;
+    fs::write(
+        home.path().join(".config/nacre/profile.json"),
+        r#"{"aiFullAccess":true}"#,
+    )?;
+
+    let log = home.path().join("daemon.log");
+    // Cargo shows captured stderr only when the test fails.
+    struct Dump(PathBuf);
+    impl Drop for Dump {
+        fn drop(&mut self) {
+            eprintln!(
+                "daemon log:\n{}",
+                fs::read_to_string(&self.0).unwrap_or_default()
+            );
+        }
+    }
+    let _dump = Dump(log.clone());
+    let mut daemon = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &notify_path)
+            .env("PATH", "/usr/bin:/bin")
+            .stderr(
+                fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&log)?,
+            )
+            .spawn()?,
+    );
+    notify.recv(&mut [0; 256])?;
+
+    let stream = UnixStream::connect(&endpoint)?;
+    stream.set_read_timeout(Some(Duration::from_secs(20)))?;
+    let mut reader = BufReader::new(stream);
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"hello","proto":1,"client":"ai-chat-fixture"})
+    )?;
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    let welcome: Message = serde_json::from_str(&line)?;
+    assert!(
+        matches!(welcome, Message::Welcome { ref topics, ref methods, .. } if topics.contains_key("ai.chat") && methods.contains_key("ai.chat.send") && methods.contains_key("ai.chat.open"))
+    );
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"sub","topics":["ai.chat"]})
+    )?;
+    let mut mirror = Mirror::default();
+    mirror.receive(&welcome);
+    // Every frame goes through the mirror, so a state change that arrives
+    // while a call is waiting for its reply is never missed.
+    let pump = |reader: &mut BufReader<UnixStream>, mirror: &mut Mirror| -> Result<Message> {
+        let mut line = String::new();
+        reader.read_line(&mut line)?;
+        let message: Message = serde_json::from_str(&line)?;
+        mirror.receive(&message);
+        Ok(message)
+    };
+    let next_state = |reader: &mut BufReader<UnixStream>,
+                      mirror: &mut Mirror,
+                      done: &dyn Fn(&AiChat) -> bool|
+     -> Result<AiChat> {
+        loop {
+            if let Some((_, value)) = mirror.topics.get("ai.chat") {
+                let chat: AiChat = serde_json::from_value(value.clone())?;
+                chat.validate()?;
+                if done(&chat) {
+                    return Ok(chat);
+                }
+            }
+            pump(reader, mirror)?;
+        }
+    };
+    let call = |reader: &mut BufReader<UnixStream>,
+                mirror: &mut Mirror,
+                id: u64,
+                method: &str,
+                params: Value|
+     -> Result<Reply> {
+        writeln!(
+            reader.get_mut(),
+            "{}",
+            json!({"t":"call","id":id,"m":method,"p":params})
+        )?;
+        loop {
+            if let Message::Ret { reply, .. } = pump(reader, mirror)? {
+                return Ok(reply);
+            }
+        }
+    };
+    let empty = next_state(&mut reader, &mut mirror, &|chat| chat.available)?;
+    assert!(empty.channels.is_empty());
+    assert!(matches!(
+        call(&mut reader, &mut mirror, 1, "ai.chat.send", json!({"channel":"p1","text":"early"}))?,
+        Reply::Err { ref err } if err.dispatched == Some(false)
+    ));
+    assert!(matches!(
+        call(
+            &mut reader,
+            &mut mirror,
+            2,
+            "ai.chat.open",
+            json!({"channel":"p1"})
+        )?,
+        Reply::Ok { .. }
+    ));
+    let opened = next_state(&mut reader, &mut mirror, &|chat| {
+        chat.channels.contains_key("p1")
+    })?;
+    assert_eq!(
+        opened.channels["p1"].state.provider,
+        nacre_protocol::ai_chat::Provider::Claude
+    );
+    assert!(matches!(
+        call(
+            &mut reader,
+            &mut mirror,
+            3,
+            "ai.chat.send",
+            json!({"channel":"p1","text":"hello daemon"})
+        )?,
+        Reply::Ok { .. }
+    ));
+    let answered = next_state(&mut reader, &mut mirror, &|chat| {
+        chat.channels.get("p1").is_some_and(|c| {
+            !c.state.busy
+                && c.messages
+                    .values()
+                    .any(|m| m.text == "daemon hosted answer")
+                && c.messages.values().any(|m| m.text == "hello daemon")
+        })
+    })?;
+    let mut order: Vec<_> = answered.channels["p1"]
+        .messages
+        .values()
+        .map(|m| m.text.as_str())
+        .collect();
+    order.truncate(2);
+    assert_eq!(order, ["hello daemon", "daemon hosted answer"]);
+    daemon.0.kill()?;
+    daemon.0.wait()?;
+    Ok(())
+}

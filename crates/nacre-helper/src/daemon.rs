@@ -1,5 +1,6 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod active_wallpaper;
+pub mod ai_chat;
 pub mod attach;
 pub mod bar_services;
 pub mod bar_tray_watcher;
@@ -190,6 +191,19 @@ async fn serve(
     } else {
         None
     };
+    let ai_chat_service = if !counter.safe {
+        ai_chat::initial(&hub)?;
+        hub.borrow_mut().service("ai-chat", "starting", 0)?;
+        let service_hub = hub.clone();
+        let factory_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "ai-chat",
+            service_hub,
+            move || ai_chat::run(factory_hub.clone()),
+        )))
+    } else {
+        None
+    };
     let workers = workers::Workers::default();
     let width_shutdown = widths::Shutdown::default();
     let width_service = if !counter.safe
@@ -353,6 +367,15 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Wallpaper supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = ai_chat_service {
+        // Dropping the host closes every worker pipe; workers stop their providers.
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Assistant chat supervisor failed during shutdown");
             }
         }
     }

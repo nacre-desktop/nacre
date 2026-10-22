@@ -481,14 +481,14 @@ pub fn run(args: &[String]) -> Result<i32> {
             return Err("Invalid sidebar-chat arguments".into());
         }
     }
-    if !["server", "client"].contains(&action) {
-        return Err("Expected server or client".into());
+    if !["server", "client", "worker"].contains(&action) {
+        return Err("Expected server, client or worker".into());
     }
     channel_paths(channel)?;
-    if action == "server" {
-        server(channel)?;
-    } else {
-        client(channel)?;
+    match action {
+        "server" => server(channel)?,
+        "worker" => worker(channel)?,
+        _ => client(channel)?,
     }
     Ok(0)
 }
@@ -592,16 +592,17 @@ fn start_server(channel: &str) -> Result<()> {
     }
     Ok(())
 }
-fn server(channel: &str) -> Result<()> {
-    let (root, path) = channel_paths(channel)?;
-    private_runtime(&path)?;
+/// Private directories plus the per-channel lock that keeps one owner (the
+/// socket server or the daemon worker) for a channel's provider state.
+fn lock_channel(channel: &str, root: &Path, path: &Path) -> Result<fs::File> {
+    private_runtime(path)?;
     ai_core::prepare_provider_launch();
     if !channel.is_empty() {
         let views = home()?.join(".local/state/nacre/shell/sidebar/views");
         private_dir(views.parent().ok_or("Missing sidebar state directory")?)?;
         private_dir(&views)?;
     }
-    private_dir(&root)?;
+    private_dir(root)?;
     let lock_path = path.with_extension("lock");
     let lock = fs::OpenOptions::new()
         .write(true)
@@ -616,6 +617,35 @@ fn server(channel: &str) -> Result<()> {
     lock.set_permissions(fs::Permissions::from_mode(0o600))?;
     rustix::fs::flock(&lock, rustix::fs::FlockOperation::NonBlockingLockExclusive)
         .map_err(|_| "Sidebar chat server is already running")?;
+    Ok(lock)
+}
+fn new_shared(root: &Path) -> Result<Arc<Mutex<Shared>>> {
+    let meta = new_meta(root, false)?;
+    let state = state_path_for(root, &meta);
+    Ok(Arc::new(Mutex::new(Shared {
+        state,
+        meta,
+        messages: vec![],
+        clients: vec![],
+        next_client: 0,
+        busy: false,
+        status: String::new(),
+        error: String::new(),
+        question: None,
+        async_questions: vec![],
+        pending_rpc: None,
+        provider_pid: None,
+        peer: None,
+        connect_lock: Arc::new(Mutex::new(())),
+        send_lock: Arc::new(Mutex::new(())),
+        submissions: 0,
+        generation: 0,
+        pending: vec![],
+    })))
+}
+fn server(channel: &str) -> Result<()> {
+    let (root, path) = channel_paths(channel)?;
+    let _lock = lock_channel(channel, &root, &path)?;
     if let Ok(m) = fs::symlink_metadata(&path) {
         if m.file_type().is_symlink()
             || !m.file_type().is_socket()
@@ -639,76 +669,17 @@ fn server(channel: &str) -> Result<()> {
     let listener = UnixListener::bind(&path)?;
     fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
     listener.set_nonblocking(true)?;
-    let meta = new_meta(&root, false)?;
-    let state = state_path_for(&root, &meta);
-    let shared = Arc::new(Mutex::new(Shared {
-        state,
-        meta,
-        messages: vec![],
-        clients: vec![],
-        next_client: 0,
-        busy: false,
-        status: String::new(),
-        error: String::new(),
-        question: None,
-        async_questions: vec![],
-        pending_rpc: None,
-        provider_pid: None,
-        peer: None,
-        connect_lock: Arc::new(Mutex::new(())),
-        send_lock: Arc::new(Mutex::new(())),
-        submissions: 0,
-        generation: 0,
-        pending: vec![],
-    }));
+    let shared = new_shared(&root)?;
     let mut idle = Instant::now();
     loop {
         match listener.accept() {
             Ok((stream, _)) => {
                 idle = Instant::now();
-                let mut s = shared.lock().map_err(|_| "Chat lock poisoned")?;
-                if s.clients.len() >= MAX_CLIENTS {
-                    drop(stream);
-                    continue;
-                }
-                let mut w = stream.try_clone()?;
+                let w = stream.try_clone()?;
                 w.set_write_timeout(Some(Duration::from_secs(3)))?;
-                w.write_all(
-                    &(serde_json::to_vec(&json!({"type":"history","messages":s.messages}))?),
-                )
-                .and_then(|_| w.write_all(b"\n"))?;
-                let id = s.next_client;
-                s.next_client = s.next_client.wrapping_add(1);
-                s.clients.push((id, w));
-                s.update();
-                let connect = s.meta["agent"] == "codex"
-                    && !s.meta["id"].as_str().unwrap_or("").is_empty()
-                    && s.meta["in_workspace"] != true
-                    && s.peer.is_none();
-                let restore_claude = s.meta["agent"] == "claude"
-                    && s.meta["started"] == true
-                    && s.messages.is_empty();
-                let connection_generation = s.generation;
-                drop(s);
-                let state = Arc::clone(&shared);
-                thread::spawn(move || serve_client(stream, state, id));
-                if connect {
+                if let Some(id) = admit(&shared, w)? {
                     let state = Arc::clone(&shared);
-                    thread::spawn(move || {
-                        if let Err(error) = ensure_peer(&state) {
-                            if let Ok(mut s) = state.lock() {
-                                if s.generation == connection_generation {
-                                    let message = friendly_error(&error);
-                                    s.finish(&message);
-                                }
-                            }
-                        }
-                    });
-                } else if restore_claude {
-                    let state = Arc::clone(&shared);
-                    thread::spawn(move || {
-                        let _ = restore_claude_history(&state);
-                    });
+                    thread::spawn(move || serve_client(stream, state, id));
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -732,6 +703,127 @@ fn server(channel: &str) -> Result<()> {
     }
     drop(listener);
     fs::remove_file(path)?;
+    Ok(())
+}
+/// Register an output stream: send the history/state handshake and start the
+/// provider connection or Claude restore the first client needs.
+fn admit(shared: &Arc<Mutex<Shared>>, mut w: UnixStream) -> Result<Option<u64>> {
+    let mut s = shared.lock().map_err(|_| "Chat lock poisoned")?;
+    if s.clients.len() >= MAX_CLIENTS {
+        return Ok(None);
+    }
+    w.write_all(&(serde_json::to_vec(&json!({"type":"history","messages":s.messages}))?))
+        .and_then(|_| w.write_all(b"\n"))?;
+    let id = s.next_client;
+    s.next_client = s.next_client.wrapping_add(1);
+    s.clients.push((id, w));
+    s.update();
+    let connect = s.meta["agent"] == "codex"
+        && !s.meta["id"].as_str().unwrap_or("").is_empty()
+        && s.meta["in_workspace"] != true
+        && s.peer.is_none();
+    let restore_claude =
+        s.meta["agent"] == "claude" && s.meta["started"] == true && s.messages.is_empty();
+    let connection_generation = s.generation;
+    drop(s);
+    if connect {
+        let state = Arc::clone(shared);
+        thread::spawn(move || {
+            if let Err(error) = ensure_peer(&state) {
+                if let Ok(mut s) = state.lock() {
+                    if s.generation == connection_generation {
+                        let message = friendly_error(&error);
+                        s.finish(&message);
+                    }
+                }
+            }
+        });
+    } else if restore_claude {
+        let state = Arc::clone(shared);
+        thread::spawn(move || {
+            let _ = restore_claude_history(&state);
+        });
+    }
+    Ok(Some(id))
+}
+/// A worker with no command or busy turn for this long exits; the daemon
+/// starts a fresh one on the next open and the saved metadata resumes it.
+const WORKER_IDLE: Duration = Duration::from_secs(30);
+/// Daemon-hosted session: the socket server's state machine with one in-process
+/// client on stdio. Commands arrive as the QML contract's newline-delimited
+/// JSON; events leave the same way. A closed stdin or the idle limit stops the
+/// provider children and exits, so the daemon never leaves orphans.
+fn worker(channel: &str) -> Result<()> {
+    if rustix::process::getpriority_process(None)? < 10 {
+        rustix::process::setpriority_process(None, 10)?;
+    }
+    let (root, path) = channel_paths(channel)?;
+    let _lock = lock_channel(channel, &root, &path)?;
+    let shared = new_shared(&root)?;
+    let (output, events) = UnixStream::pair()?;
+    output.set_write_timeout(Some(Duration::from_secs(3)))?;
+    let (tx, rx) = mpsc::sync_channel::<Option<Vec<u8>>>(32);
+    let closed = tx.clone();
+    thread::spawn(move || {
+        let mut out = std::io::stdout().lock();
+        let mut source = events;
+        let mut buffer = vec![0; 65536];
+        while let Ok(n @ 1..) = source.read(&mut buffer) {
+            if out
+                .write_all(&buffer[..n])
+                .and_then(|_| out.flush())
+                .is_err()
+            {
+                break;
+            }
+        }
+        let _ = closed.send(None);
+    });
+    thread::spawn(move || {
+        let mut source = BufReader::new(std::io::stdin().lock());
+        let mut line = Vec::new();
+        while let Ok(1..) = read_frame(&mut source, &mut line) {
+            if tx.send(Some(line.clone())).is_err() {
+                return;
+            }
+        }
+        let _ = tx.send(None);
+    });
+    admit(&shared, output)?;
+    let mut last = Instant::now();
+    loop {
+        match rx.recv_timeout(Duration::from_secs(1)) {
+            Ok(Some(line)) => {
+                last = Instant::now();
+                if let Ok(cmd @ Value::Object(_)) = serde_json::from_slice(&line) {
+                    handle(cmd, &shared);
+                }
+            }
+            Ok(None) | Err(mpsc::RecvTimeoutError::Disconnected) => break,
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                let s = shared.lock().map_err(|_| "Chat lock poisoned")?;
+                if s.busy || s.pending_rpc.is_some() {
+                    last = Instant::now();
+                } else if last.elapsed() >= WORKER_IDLE {
+                    break;
+                }
+            }
+        }
+    }
+    let (peer, provider) = {
+        let mut s = shared.lock().map_err(|_| "Chat lock poisoned")?;
+        let _ = s.save();
+        (s.peer.take(), s.provider_pid.take())
+    };
+    if let Some(pid) = provider {
+        let _ = nix::sys::signal::killpg(
+            nix::unistd::Pid::from_raw(pid),
+            nix::sys::signal::Signal::SIGTERM,
+        );
+    }
+    if let Some(peer) = peer {
+        peer.close();
+    }
     Ok(())
 }
 fn serve_client(stream: UnixStream, shared: Arc<Mutex<Shared>>, client_id: u64) {

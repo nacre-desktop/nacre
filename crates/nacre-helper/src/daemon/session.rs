@@ -59,6 +59,9 @@ async fn dispatch(
         method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
             super::pill_controls::dispatch(hub, method, params).await
         }
+        method if method.starts_with("ai.chat.") && !hub.borrow().safe => {
+            super::ai_chat::dispatch(hub, method, params).await
+        }
         "wallpaper.activate" if !hub.borrow().safe => {
             super::active_wallpaper::activate(hub, params)
         }

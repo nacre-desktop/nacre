@@ -98,6 +98,7 @@ pub struct Hub {
     pub niri_width_source: super::widths::Source,
     pub compositor: Option<super::compositor_control::Control>,
     pub settings: Option<Rc<super::settings::Service>>,
+    pub ai_chat: Option<Rc<super::ai_chat::Host>>,
 }
 impl Hub {
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
@@ -126,6 +127,7 @@ impl Hub {
             niri_width_source: super::widths::Source::default(),
             compositor: None,
             settings: None,
+            ai_chat: None,
         }
     }
     pub fn shared(self) -> Shared {
@@ -307,6 +309,9 @@ impl Hub {
         if !self.safe {
             if self.snapshot_ref(super::active_wallpaper::TOPIC).is_some() {
                 methods.extend(super::active_wallpaper::methods());
+            }
+            if self.services.contains_key("ai-chat") {
+                methods.extend(super::ai_chat::methods());
             }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());

@@ -341,10 +341,10 @@ socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ
         fixture
     }
 
-    fn start_server(&mut self) {
-        let channel = self.channel.clone();
-        let child = Command::new(env!("CARGO_BIN_EXE_nacre-helper"))
-            .args(["sidebar-chat", "server", "--channel", &channel])
+    fn helper(&self, mode: &str) -> Command {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+        command
+            .args(["sidebar-chat", mode, "--channel", &self.channel])
             .env_clear()
             .env("HOME", self.home.path())
             .env("XDG_RUNTIME_DIR", &self.runtime)
@@ -359,9 +359,15 @@ socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ
             .env("FAKE_EXTRAS_LOG", &self.extras_log)
             .env("FAKE_SCENARIO", &self.scenario)
             .env("NACRE_HELPER_TOOLS", &self.tools)
+            .stderr(Stdio::inherit());
+        command
+    }
+
+    fn start_server(&mut self) {
+        let child = self
+            .helper("server")
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::inherit())
             .spawn()
             .expect("start native fixture server");
         self.server = Some(child);
@@ -1710,4 +1716,129 @@ fn native_reconnected_blocking_question_survives_stale_waiter() {
         .collect::<Vec<_>>();
     assert_eq!(question_sends.len(), 2);
     assert!(question_sends.iter().all(|row| row["rpc_id"] == 900));
+}
+
+struct Worker {
+    child: Child,
+    input: Option<std::process::ChildStdin>,
+    lines: Receiver<String>,
+}
+impl Worker {
+    fn start(fixture: &mut Fixture) -> Self {
+        // The fixture's socket server would own the channel lock.
+        fixture.kill_server();
+        let mut child = fixture
+            .helper("worker")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("start daemon worker");
+        let input = child.stdin.take();
+        let lines = stdout_lines(child.stdout.take().unwrap());
+        Self {
+            child,
+            input,
+            lines,
+        }
+    }
+    fn send(&mut self, action: Value) {
+        let input = self.input.as_mut().unwrap();
+        serde_json::to_writer(&mut *input, &action).unwrap();
+        input.write_all(b"\n").unwrap();
+        input.flush().unwrap();
+    }
+    #[track_caller]
+    fn matching(&self, predicate: impl Fn(&Value) -> bool) -> Value {
+        loop {
+            let event: Value = serde_json::from_str(&stdout_line(&self.lines)).unwrap();
+            if predicate(&event) {
+                return event;
+            }
+        }
+    }
+}
+impl Drop for Worker {
+    fn drop(&mut self) {
+        self.input.take();
+        wait_child(&mut self.child);
+    }
+}
+
+#[test]
+fn daemon_worker_speaks_the_socket_contract_on_stdio_at_low_priority_and_stops_with_its_pipe() {
+    let mut fixture = Fixture::new_with_provider("worker-fixture", "claude");
+    let mut worker = Worker::start(&mut fixture);
+    // The same handshake a socket client gets: history, then state.
+    let first: Value = serde_json::from_str(&stdout_line(&worker.lines)).unwrap();
+    assert_eq!(first, json!({"type":"history","messages":[]}));
+    let state = worker.matching(|event| event["type"] == "state");
+    assert_eq!(state["provider"], "claude");
+    let stat = fs::read_to_string(format!("/proc/{}/stat", worker.child.id())).unwrap();
+    let nice: i32 = stat
+        .rsplit_once(") ")
+        .unwrap()
+        .1
+        .split_whitespace()
+        .nth(16)
+        .unwrap()
+        .parse()
+        .unwrap();
+    assert_eq!(nice, 10);
+    // A second owner of the channel is refused while the worker runs.
+    let refused = fixture
+        .helper("worker")
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .status()
+        .unwrap();
+    assert!(!refused.success());
+    worker.send(json!({"action":"send","text":"first Claude prompt"}));
+    worker.matching(|event| event["type"] == "delta" && event["text"] == "streamed first");
+    worker.matching(|event| event["type"] == "state" && event["busy"] == false);
+    worker.send(json!({"action":"ping"}));
+    worker.send(json!({"action":"send","text":"limit prompt"}));
+    let limited = worker.matching(|event| {
+        event["type"] == "state" && !event["error"].as_str().unwrap_or("").is_empty()
+    });
+    assert_eq!(
+        limited["error"],
+        "The selected assistant account has reached its current usage limit."
+    );
+    // Closing the pipe is the daemon's stop signal; no provider outlives it.
+    worker.input.take();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let status = loop {
+        if let Some(status) = worker.child.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            Instant::now() < deadline,
+            "worker did not stop with its pipe"
+        );
+        thread::sleep(Duration::from_millis(20));
+    };
+    assert!(status.success());
+}
+
+#[test]
+fn daemon_worker_stops_by_itself_after_thirty_idle_seconds() {
+    let mut fixture = Fixture::new_with_provider("worker-idle", "claude");
+    let mut worker = Worker::start(&mut fixture);
+    worker.matching(|event| event["type"] == "state");
+    let started = Instant::now();
+    let status = loop {
+        if let Some(status) = worker.child.try_wait().unwrap() {
+            break status;
+        }
+        assert!(
+            started.elapsed() < Duration::from_secs(45),
+            "idle worker did not stop"
+        );
+        thread::sleep(Duration::from_millis(100));
+    };
+    assert!(status.success());
+    assert!(
+        started.elapsed() >= Duration::from_secs(29),
+        "stopped before the idle limit"
+    );
 }
