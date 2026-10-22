@@ -516,22 +516,209 @@ fn resolve_subject(aliases: &BTreeMap<String, String>, value: &str) -> Option<St
         .cloned()
 }
 
+// Generated with Python 3.14 / Unicode 16.0: scalar title mappings that differ from uppercase.
+fn python_title_initial(ch: char) -> String {
+    match ch {
+        '\u{DF}' => "\u{53}\u{73}".to_owned(),
+        '\u{1C4}' => "\u{1C5}".to_owned(),
+        '\u{1C5}' => "\u{1C5}".to_owned(),
+        '\u{1C6}' => "\u{1C5}".to_owned(),
+        '\u{1C7}' => "\u{1C8}".to_owned(),
+        '\u{1C8}' => "\u{1C8}".to_owned(),
+        '\u{1C9}' => "\u{1C8}".to_owned(),
+        '\u{1CA}' => "\u{1CB}".to_owned(),
+        '\u{1CB}' => "\u{1CB}".to_owned(),
+        '\u{1CC}' => "\u{1CB}".to_owned(),
+        '\u{1F1}' => "\u{1F2}".to_owned(),
+        '\u{1F2}' => "\u{1F2}".to_owned(),
+        '\u{1F3}' => "\u{1F2}".to_owned(),
+        '\u{587}' => "\u{535}\u{582}".to_owned(),
+        '\u{10D0}' => "\u{10D0}".to_owned(),
+        '\u{10D1}' => "\u{10D1}".to_owned(),
+        '\u{10D2}' => "\u{10D2}".to_owned(),
+        '\u{10D3}' => "\u{10D3}".to_owned(),
+        '\u{10D4}' => "\u{10D4}".to_owned(),
+        '\u{10D5}' => "\u{10D5}".to_owned(),
+        '\u{10D6}' => "\u{10D6}".to_owned(),
+        '\u{10D7}' => "\u{10D7}".to_owned(),
+        '\u{10D8}' => "\u{10D8}".to_owned(),
+        '\u{10D9}' => "\u{10D9}".to_owned(),
+        '\u{10DA}' => "\u{10DA}".to_owned(),
+        '\u{10DB}' => "\u{10DB}".to_owned(),
+        '\u{10DC}' => "\u{10DC}".to_owned(),
+        '\u{10DD}' => "\u{10DD}".to_owned(),
+        '\u{10DE}' => "\u{10DE}".to_owned(),
+        '\u{10DF}' => "\u{10DF}".to_owned(),
+        '\u{10E0}' => "\u{10E0}".to_owned(),
+        '\u{10E1}' => "\u{10E1}".to_owned(),
+        '\u{10E2}' => "\u{10E2}".to_owned(),
+        '\u{10E3}' => "\u{10E3}".to_owned(),
+        '\u{10E4}' => "\u{10E4}".to_owned(),
+        '\u{10E5}' => "\u{10E5}".to_owned(),
+        '\u{10E6}' => "\u{10E6}".to_owned(),
+        '\u{10E7}' => "\u{10E7}".to_owned(),
+        '\u{10E8}' => "\u{10E8}".to_owned(),
+        '\u{10E9}' => "\u{10E9}".to_owned(),
+        '\u{10EA}' => "\u{10EA}".to_owned(),
+        '\u{10EB}' => "\u{10EB}".to_owned(),
+        '\u{10EC}' => "\u{10EC}".to_owned(),
+        '\u{10ED}' => "\u{10ED}".to_owned(),
+        '\u{10EE}' => "\u{10EE}".to_owned(),
+        '\u{10EF}' => "\u{10EF}".to_owned(),
+        '\u{10F0}' => "\u{10F0}".to_owned(),
+        '\u{10F1}' => "\u{10F1}".to_owned(),
+        '\u{10F2}' => "\u{10F2}".to_owned(),
+        '\u{10F3}' => "\u{10F3}".to_owned(),
+        '\u{10F4}' => "\u{10F4}".to_owned(),
+        '\u{10F5}' => "\u{10F5}".to_owned(),
+        '\u{10F6}' => "\u{10F6}".to_owned(),
+        '\u{10F7}' => "\u{10F7}".to_owned(),
+        '\u{10F8}' => "\u{10F8}".to_owned(),
+        '\u{10F9}' => "\u{10F9}".to_owned(),
+        '\u{10FA}' => "\u{10FA}".to_owned(),
+        '\u{10FD}' => "\u{10FD}".to_owned(),
+        '\u{10FE}' => "\u{10FE}".to_owned(),
+        '\u{10FF}' => "\u{10FF}".to_owned(),
+        '\u{1F80}' => "\u{1F88}".to_owned(),
+        '\u{1F81}' => "\u{1F89}".to_owned(),
+        '\u{1F82}' => "\u{1F8A}".to_owned(),
+        '\u{1F83}' => "\u{1F8B}".to_owned(),
+        '\u{1F84}' => "\u{1F8C}".to_owned(),
+        '\u{1F85}' => "\u{1F8D}".to_owned(),
+        '\u{1F86}' => "\u{1F8E}".to_owned(),
+        '\u{1F87}' => "\u{1F8F}".to_owned(),
+        '\u{1F88}' => "\u{1F88}".to_owned(),
+        '\u{1F89}' => "\u{1F89}".to_owned(),
+        '\u{1F8A}' => "\u{1F8A}".to_owned(),
+        '\u{1F8B}' => "\u{1F8B}".to_owned(),
+        '\u{1F8C}' => "\u{1F8C}".to_owned(),
+        '\u{1F8D}' => "\u{1F8D}".to_owned(),
+        '\u{1F8E}' => "\u{1F8E}".to_owned(),
+        '\u{1F8F}' => "\u{1F8F}".to_owned(),
+        '\u{1F90}' => "\u{1F98}".to_owned(),
+        '\u{1F91}' => "\u{1F99}".to_owned(),
+        '\u{1F92}' => "\u{1F9A}".to_owned(),
+        '\u{1F93}' => "\u{1F9B}".to_owned(),
+        '\u{1F94}' => "\u{1F9C}".to_owned(),
+        '\u{1F95}' => "\u{1F9D}".to_owned(),
+        '\u{1F96}' => "\u{1F9E}".to_owned(),
+        '\u{1F97}' => "\u{1F9F}".to_owned(),
+        '\u{1F98}' => "\u{1F98}".to_owned(),
+        '\u{1F99}' => "\u{1F99}".to_owned(),
+        '\u{1F9A}' => "\u{1F9A}".to_owned(),
+        '\u{1F9B}' => "\u{1F9B}".to_owned(),
+        '\u{1F9C}' => "\u{1F9C}".to_owned(),
+        '\u{1F9D}' => "\u{1F9D}".to_owned(),
+        '\u{1F9E}' => "\u{1F9E}".to_owned(),
+        '\u{1F9F}' => "\u{1F9F}".to_owned(),
+        '\u{1FA0}' => "\u{1FA8}".to_owned(),
+        '\u{1FA1}' => "\u{1FA9}".to_owned(),
+        '\u{1FA2}' => "\u{1FAA}".to_owned(),
+        '\u{1FA3}' => "\u{1FAB}".to_owned(),
+        '\u{1FA4}' => "\u{1FAC}".to_owned(),
+        '\u{1FA5}' => "\u{1FAD}".to_owned(),
+        '\u{1FA6}' => "\u{1FAE}".to_owned(),
+        '\u{1FA7}' => "\u{1FAF}".to_owned(),
+        '\u{1FA8}' => "\u{1FA8}".to_owned(),
+        '\u{1FA9}' => "\u{1FA9}".to_owned(),
+        '\u{1FAA}' => "\u{1FAA}".to_owned(),
+        '\u{1FAB}' => "\u{1FAB}".to_owned(),
+        '\u{1FAC}' => "\u{1FAC}".to_owned(),
+        '\u{1FAD}' => "\u{1FAD}".to_owned(),
+        '\u{1FAE}' => "\u{1FAE}".to_owned(),
+        '\u{1FAF}' => "\u{1FAF}".to_owned(),
+        '\u{1FB2}' => "\u{1FBA}\u{345}".to_owned(),
+        '\u{1FB3}' => "\u{1FBC}".to_owned(),
+        '\u{1FB4}' => "\u{386}\u{345}".to_owned(),
+        '\u{1FB7}' => "\u{391}\u{342}\u{345}".to_owned(),
+        '\u{1FBC}' => "\u{1FBC}".to_owned(),
+        '\u{1FC2}' => "\u{1FCA}\u{345}".to_owned(),
+        '\u{1FC3}' => "\u{1FCC}".to_owned(),
+        '\u{1FC4}' => "\u{389}\u{345}".to_owned(),
+        '\u{1FC7}' => "\u{397}\u{342}\u{345}".to_owned(),
+        '\u{1FCC}' => "\u{1FCC}".to_owned(),
+        '\u{1FF2}' => "\u{1FFA}\u{345}".to_owned(),
+        '\u{1FF3}' => "\u{1FFC}".to_owned(),
+        '\u{1FF4}' => "\u{38F}\u{345}".to_owned(),
+        '\u{1FF7}' => "\u{3A9}\u{342}\u{345}".to_owned(),
+        '\u{1FFC}' => "\u{1FFC}".to_owned(),
+        '\u{FB00}' => "\u{46}\u{66}".to_owned(),
+        '\u{FB01}' => "\u{46}\u{69}".to_owned(),
+        '\u{FB02}' => "\u{46}\u{6C}".to_owned(),
+        '\u{FB03}' => "\u{46}\u{66}\u{69}".to_owned(),
+        '\u{FB04}' => "\u{46}\u{66}\u{6C}".to_owned(),
+        '\u{FB05}' => "\u{53}\u{74}".to_owned(),
+        '\u{FB06}' => "\u{53}\u{74}".to_owned(),
+        '\u{FB13}' => "\u{544}\u{576}".to_owned(),
+        '\u{FB14}' => "\u{544}\u{565}".to_owned(),
+        '\u{FB15}' => "\u{544}\u{56B}".to_owned(),
+        '\u{FB16}' => "\u{54E}\u{576}".to_owned(),
+        '\u{FB17}' => "\u{544}\u{56D}".to_owned(),
+        _ => ch.to_uppercase().collect(),
+    }
+}
+
 fn python_title(value: &str) -> String {
+    use unicode_general_category::{get_general_category, GeneralCategory};
     let mut result = String::new();
+    let mut lowercase_run = String::new();
+    let mut lowercase_prefix_len = 0;
     let mut previous_cased = false;
     for ch in value.chars() {
-        let lower = ch.to_lowercase().collect::<String>();
-        let upper = ch.to_uppercase().collect::<String>();
-        let cased = lower != upper;
+        let category = get_general_category(ch);
+        let cased = ch.is_lowercase()
+            || ch.is_uppercase()
+            || category == GeneralCategory::TitlecaseLetter;
         if cased {
-            result.push_str(if previous_cased { &lower } else { &upper });
+            if previous_cased {
+                lowercase_run.push(ch);
+            } else {
+                append_titlecase_lower_tail(
+                    &mut result,
+                    &mut lowercase_run,
+                    &mut lowercase_prefix_len,
+                );
+                result.push_str(&python_title_initial(ch));
+                lowercase_run.push(ch);
+                lowercase_prefix_len = ch.to_lowercase().count();
+            }
             previous_cased = true;
         } else {
-            result.push(ch);
-            previous_cased = false;
+            let case_ignorable = matches!(
+                category,
+                GeneralCategory::NonspacingMark
+                    | GeneralCategory::EnclosingMark
+                    | GeneralCategory::Format
+                    | GeneralCategory::ModifierLetter
+                    | GeneralCategory::ModifierSymbol
+            );
+            if previous_cased && case_ignorable {
+                lowercase_run.push(ch);
+            } else {
+                append_titlecase_lower_tail(
+                    &mut result,
+                    &mut lowercase_run,
+                    &mut lowercase_prefix_len,
+                );
+                result.push(ch);
+                previous_cased = false;
+            }
         }
     }
+    append_titlecase_lower_tail(
+        &mut result,
+        &mut lowercase_run,
+        &mut lowercase_prefix_len,
+    );
     result
+}
+
+fn append_titlecase_lower_tail(result: &mut String, run: &mut String, skip: &mut usize) {
+    if !run.is_empty() {
+        result.extend(run.to_lowercase().chars().skip(*skip));
+        run.clear();
+        *skip = 0;
+    }
 }
 
 pub fn organize(notes: &Value, _dense: &Value, _prior: &Value, overrides: &Value) -> Result<Value> {
@@ -1553,6 +1740,13 @@ mod tests {
     }
     fn run(notes: &mut Value, dense: &Value, prior: &Value, overrides: &Value) -> Value {
         organize_mut(notes, dense, prior, overrides).unwrap()
+    }
+    #[test]
+    fn project_title_uses_unicode_titlecase_mappings() {
+        assert_eq!(python_title("ßETA-ǆURO-ᾀBC"), "Sseta-ǅuro-ᾈbc");
+        assert_eq!(python_title("ab\u{02B0}CD"), "Ab\u{02B0}cd");
+        assert_eq!(python_title("ﬃLE"), "Ffile");
+        assert_eq!(python_title("ΟΣ"), "Ος");
     }
     #[test]
     fn canonical_subject_builder_preserves_add_and_resolve_semantics() {
