@@ -11,6 +11,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
+import vm from 'node:vm';
 
 const binary = path.resolve(process.env.BRAIN_TEST_NATIVE || 'target/debug/nacre-helper');
 const webSource = path.resolve(process.env.BRAIN_TEST_WEB || 'brain/web');
@@ -239,6 +240,26 @@ try {
   const assignment = await evaluate(`fetch("/api/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:"assign-note",value:JSON.stringify({path:"inbox/qa.md",subjects:["Browser Fixture"]})})}).then(async r=>({status:r.status,body:await r.text()}))`);
   if (assignment.status !== 200 || !JSON.parse(assignment.body).ok) throw new Error(`allowed same-origin assignment failed: ${JSON.stringify(assignment)}`);
 
+  // Exercise the served hook itself without relaxing the real page's CSP.
+  const prefix = (await (await fetch(`${nativeUrl}/app.js`)).text()).split('\n')[0];
+  const forwarded = [];
+  const realm = {
+    URL, URLSearchParams, Request, Headers,
+    location: {href:nativeUrl+'/',origin:nativeUrl,hash:'',pathname:'/',search:''},
+    localStorage: {getItem:()=> 'a'.repeat(64)},
+    history: {replaceState:()=>{}},
+    window: {fetch:async (input,init={})=>{forwarded.push({input,init});return {status:200};}},
+  };
+  vm.runInNewContext(prefix,realm);
+  for (const input of [nativeUrl+'/api/brain',new URL(nativeUrl+'/api/brain'),new Request(nativeUrl+'/api/brain')]) {
+    await realm.window.fetch(input);
+    if (new Headers(forwarded.at(-1).init.headers).get('X-Nacre-Brain-Authorization') !== 'a'.repeat(64)) throw new Error('same-origin Fetch input lost the API credential');
+  }
+  for (const input of [`http://127.0.0.1:${attackerPort}/`,new URL(`http://127.0.0.1:${attackerPort}/`),new Request(`http://127.0.0.1:${attackerPort}/`)]) {
+    await realm.window.fetch(input);
+    if (new Headers(forwarded.at(-1).init.headers).has('X-Nacre-Brain-Authorization')) throw new Error('cross-origin Fetch input received the API credential');
+  }
+
   const cookiesBefore = await cdp('Network.getAllCookies');
   const cookie = cookiesBefore.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
   if (!cookie || !cookie.httpOnly) throw new Error('port-specific HttpOnly cookie was not stored');
@@ -305,6 +326,7 @@ try {
     stolenCookieReplayStatus: 403,
     persistentCookieAfterRestart: true,
     handoffCredentialRestored: true,
+    fetchInputOriginIsolation: 'passed',
     browserExceptions: exceptions.length,
   }));
 } finally {
