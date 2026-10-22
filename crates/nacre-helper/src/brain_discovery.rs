@@ -442,55 +442,96 @@ struct Subject {
     parent: Value,
 }
 
+struct SubjectSeed<'a> {
+    label: &'a str,
+    ident: Option<&'a str>,
+    aliases: Vec<String>,
+    origin: &'a str,
+    category: Value,
+    path: Value,
+    parent: Value,
+}
+
 fn add_subject(
     subjects: &mut BTreeMap<String, Subject>,
     aliases: &mut BTreeMap<String, String>,
     order: &mut Vec<String>,
     prior: &Value,
-    label: &str,
-    origin: &str,
-    ident: Option<&str>,
+    seed: SubjectSeed<'_>,
 ) -> String {
-    if let Some(id) = aliases.get(&key(label)) {
+    if let Some(id) = aliases.get(&key(seed.label)) {
         return id.clone();
     }
-    let mut id = ident.map(str::to_owned).unwrap_or_else(|| {
-        prior["discovered"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|v| key(v["label"].as_str().unwrap_or("")) == key(label))
-            .and_then(|v| v["id"].as_str())
-            .map(str::to_owned)
-            .unwrap_or_else(|| slug(label))
-    });
+    let mut id = seed
+        .ident
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| {
+            prior["discovered"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|v| key(v["label"].as_str().unwrap_or("")) == key(seed.label))
+                .and_then(|v| v["id"].as_str())
+                .map(str::to_owned)
+                .unwrap_or_else(|| slug(seed.label))
+        });
     if subjects
         .get(&id)
-        .is_some_and(|s| key(&s.label) != key(label))
+        .is_some_and(|s| key(&s.label) != key(seed.label))
     {
-        id.push_str(&format!("-{}", digest(label, 6)));
+        id.push_str(&format!("-{}", digest(seed.label, 6)));
     }
     if !subjects.contains_key(&id) {
         order.push(id.clone());
     }
     let subject = subjects.entry(id.clone()).or_insert_with(|| Subject {
         id: id.clone(),
-        label: label.to_owned(),
+        label: seed.label.to_owned(),
         aliases: Vec::new(),
-        origin: origin.to_owned(),
-        category: Value::Null,
-        path: Value::Null,
+        origin: seed.origin.to_owned(),
+        category: seed.category.clone(),
+        path: seed.path.clone(),
         members: Map::new(),
         topics: Vec::new(),
-        parent: Value::Null,
+        parent: seed.parent.clone(),
     });
-    for name in [label.to_owned(), id.clone()] {
+    for name in [seed.label.to_owned(), id.clone()]
+        .into_iter()
+        .chain(seed.aliases)
+        .filter(|name| !name.is_empty())
+    {
         if let std::collections::btree_map::Entry::Vacant(entry) = aliases.entry(key(&name)) {
             entry.insert(id.clone());
             subject.aliases.push(name);
         }
     }
     id
+}
+
+fn resolve_subject(aliases: &BTreeMap<String, String>, value: &str) -> Option<String> {
+    aliases
+        .get(&key(value))
+        .or_else(|| aliases.get(&key(&slug(value))))
+        .cloned()
+}
+
+fn python_title(value: &str) -> String {
+    let mut result = String::new();
+    let mut previous_cased = false;
+    for ch in value.chars() {
+        let lower = ch.to_lowercase().collect::<String>();
+        let upper = ch.to_uppercase().collect::<String>();
+        let cased = lower != upper;
+        if cased {
+            result.push_str(if previous_cased { &lower } else { &upper });
+            previous_cased = true;
+        } else {
+            result.push(ch);
+            previous_cased = false;
+        }
+    }
+    result
 }
 
 pub fn organize(notes: &Value, _dense: &Value, _prior: &Value, overrides: &Value) -> Result<Value> {
@@ -564,48 +605,33 @@ pub fn organize_mut(
                 .unwrap_or(path)
                 .strip_suffix(".md")
                 .unwrap_or(path);
-            let sid = aliases.get(&key(label)).cloned().unwrap_or_else(|| {
-                let mut id = meta["project"]
-                    .as_str()
-                    .filter(|s| !s.is_empty())
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| slug(stem));
-                if subjects
-                    .get(&id)
-                    .is_some_and(|subject| key(&subject.label) != key(label))
-                {
-                    id.push_str(&format!("-{}", digest(label, 6)));
-                }
-                id
-            });
-            let mut names = vec![label.to_owned(), sid.clone()];
-            names.extend(items(&meta["aliases"]));
-            names.push(stem.to_owned());
-            let was_existing = subjects.contains_key(&sid);
-            if !was_existing {
-                order.push(sid.clone());
-            }
-            let sub = subjects.entry(sid.clone()).or_insert_with(|| Subject {
-                id: sid.clone(),
-                label: label.to_owned(),
-                aliases: vec![],
-                origin: "annotated".into(),
-                category: meta.get("category").cloned().unwrap_or(Value::Null),
-                path: json!(path),
-                members: Map::new(),
-                topics: vec![],
-                parent: Value::Null,
-            });
-            for name in names {
-                if let std::collections::btree_map::Entry::Vacant(entry) = aliases.entry(key(&name))
-                {
-                    entry.insert(sid.clone());
-                    sub.aliases.push(name);
-                }
-            }
-            aliases.insert(key(label), sid.clone());
+            let mut curated_aliases = items(&meta["aliases"]);
+            curated_aliases.push(stem.to_owned());
+            let curated_ident = meta["project"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+                .unwrap_or_else(|| slug(stem));
+            let sid = add_subject(
+                &mut subjects,
+                &mut aliases,
+                &mut order,
+                prior,
+                SubjectSeed {
+                    label,
+                    ident: Some(&curated_ident),
+                    aliases: curated_aliases,
+                    origin: "annotated",
+                    category: meta.get("category").cloned().unwrap_or(Value::Null),
+                    path: json!(path),
+                    parent: Value::Null,
+                },
+            );
             let nid = n["id"].as_str().unwrap_or("");
-            sub.members
+            subjects
+                .get_mut(&sid)
+                .unwrap()
+                .members
                 .insert(nid.into(), json!({"reason":"curated","score":1}));
             assign(&mut assigned, nid, &sid);
         }
@@ -621,9 +647,15 @@ pub fn organize_mut(
                     &mut aliases,
                     &mut order,
                     prior,
-                    &label,
-                    "annotated",
-                    None,
+                    SubjectSeed {
+                        label: &label,
+                        ident: None,
+                        aliases: vec![],
+                        origin: "annotated",
+                        category: Value::Null,
+                        path: Value::Null,
+                        parent: Value::Null,
+                    },
                 );
                 subjects
                     .get_mut(&sid)
@@ -646,45 +678,27 @@ pub fn organize_mut(
             continue;
         }
         let nid = n["id"].as_str().unwrap_or("");
-        let resolved = aliases.get(&key(project)).cloned();
+        let resolved = resolve_subject(&aliases, project);
         let sid = if let Some(id) = resolved {
             id
         } else {
-            let label = project
-                .replace('-', " ")
-                .split_whitespace()
-                .map(|x| {
-                    let mut c = x.chars();
-                    c.next()
-                        .map(|f| f.to_uppercase().collect::<String>() + c.as_str())
-                        .unwrap_or_default()
-                })
-                .collect::<Vec<_>>()
-                .join(" ");
+            let label = python_title(&project.replace('-', " "));
             let id = slug(project);
-            if !subjects.contains_key(&id) {
-                let mut subject_aliases = vec![label.clone()];
-                if key(&label) != key(&id) {
-                    subject_aliases.push(id.clone());
-                }
-                order.push(id.clone());
-                subjects.insert(
-                    id.clone(),
-                    Subject {
-                        id: id.clone(),
-                        aliases: subject_aliases,
-                        label,
-                        origin: "annotated".into(),
-                        category: Value::Null,
-                        path: Value::Null,
-                        members: Map::new(),
-                        topics: vec![],
-                        parent: Value::Null,
-                    },
-                );
-                aliases.insert(key(project), id.clone());
-            }
-            id
+            add_subject(
+                &mut subjects,
+                &mut aliases,
+                &mut order,
+                prior,
+                SubjectSeed {
+                    label: &label,
+                    ident: Some(&id),
+                    aliases: vec![],
+                    origin: "annotated",
+                    category: Value::Null,
+                    path: Value::Null,
+                    parent: Value::Null,
+                },
+            )
         };
         subjects
             .get_mut(&sid)
@@ -710,9 +724,15 @@ pub fn organize_mut(
                     &mut aliases,
                     &mut order,
                     prior,
-                    label,
-                    "manual",
-                    None,
+                    SubjectSeed {
+                        label,
+                        ident: None,
+                        aliases: vec![],
+                        origin: "manual",
+                        category: Value::Null,
+                        path: Value::Null,
+                        parent: Value::Null,
+                    },
                 );
                 subjects
                     .get_mut(&sid)
@@ -770,7 +790,7 @@ pub fn organize_mut(
                 .filter(|s| !s.is_empty())
                 .or(n["meta"]["project"].as_str())
                 .unwrap_or("");
-            if let Some(sid) = aliases.get(&key(parent)).cloned() {
+            if let Some(sid) = resolve_subject(&aliases, parent) {
                 let stem = path
                     .rsplit('/')
                     .next()
@@ -883,7 +903,7 @@ pub fn organize_mut(
         }
         for m in camel.find_iter(n["label"].as_str().unwrap_or("")) {
             let name = m.as_str().to_owned();
-            if !aliases.contains_key(&key(&name)) {
+            if resolve_subject(&aliases, &name).is_none() {
                 named.entry(name).or_default().insert(nid.into());
             }
         }
@@ -932,32 +952,11 @@ pub fn organize_mut(
         if (sims.iter().sum::<f64>() / (sims.len().max(1) as f64)) < minimum {
             continue;
         }
-        let prior_id = prior["discovered"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .find(|v| key(v["label"].as_str().unwrap_or("")) == key(&label))
-            .and_then(|v| v["id"].as_str())
-            .map(str::to_owned);
-        let sid = prior_id.unwrap_or_else(|| format!("discovered-{}", slug(&label)));
-        if !subjects.contains_key(&sid) {
-            order.push(sid.clone());
-            subjects.insert(
-                sid.clone(),
-                Subject {
-                    id: sid.clone(),
-                    label: label.clone(),
-                    aliases: vec![label.clone(), sid.clone()],
-                    origin: "discovered".into(),
-                    category: Value::Null,
-                    path: Value::Null,
-                    members: Map::new(),
-                    topics: vec![],
-                    parent: Value::Null,
-                },
-            );
-            aliases.insert(key(&label), sid.clone());
-        }
+        let discovered_id = format!("discovered-{}", slug(&label));
+        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
+            label: &label, ident: Some(&discovered_id), aliases: vec![], origin: "discovered",
+            category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
         let mut members = Vec::new();
         for nid in ids {
             if assigned.get(&nid).is_some_and(|v| !v.is_empty()) {
@@ -1150,25 +1149,11 @@ pub fn organize_mut(
                 continue;
             }
         }
-        let sid = format!("discovered-{}", slug(&label));
-        if !subjects.contains_key(&sid) {
-            order.push(sid.clone());
-            subjects.insert(
-                sid.clone(),
-                Subject {
-                    id: sid.clone(),
-                    label: label.clone(),
-                    aliases: vec![label.clone(), sid.clone()],
-                    origin: "discovered".into(),
-                    category: Value::Null,
-                    path: Value::Null,
-                    members: Map::new(),
-                    topics: vec![],
-                    parent: Value::Null,
-                },
-            );
-            aliases.insert(key(&label), sid.clone());
-        }
+        let discovered_id = format!("discovered-{}", slug(&label));
+        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
+            label: &label, ident: Some(&discovered_id), aliases: vec![], origin: "discovered",
+            category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
         for id in &group {
             subjects.get_mut(&sid).unwrap().members.insert(
                 id.clone(),
@@ -1310,24 +1295,10 @@ pub fn organize_mut(
         let (sid, label) = old
             .map(|(id, label, _)| (id, label))
             .unwrap_or_else(|| (format!("discovered-{}", slug(&label)), label));
-        if !subjects.contains_key(&sid) {
-            order.push(sid.clone());
-            subjects.insert(
-                sid.clone(),
-                Subject {
-                    id: sid.clone(),
-                    label: label.clone(),
-                    aliases: vec![label.clone(), sid.clone()],
-                    origin: "discovered".into(),
-                    category: Value::Null,
-                    path: Value::Null,
-                    members: Map::new(),
-                    topics: vec![],
-                    parent: Value::Null,
-                },
-            );
-            aliases.insert(key(&label), sid.clone());
-        }
+        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
+            label: &label, ident: Some(&sid), aliases: vec![], origin: "discovered",
+            category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
         for nid in &group {
             subjects.get_mut(&sid).unwrap().members.insert(
                 nid.clone(),
@@ -1481,7 +1452,7 @@ pub fn organize_mut(
         .collect();
     for (parent, topic) in topic_pairs {
         let label = topic["label"].as_str().unwrap_or("").to_owned();
-        if aliases.contains_key(&key(&label)) {
+        if resolve_subject(&aliases, &label).is_some() {
             continue;
         }
         let members = topic["members"].as_array().cloned().unwrap_or_default();
@@ -1514,24 +1485,10 @@ pub fn organize_mut(
         {
             continue;
         }
-        if !subjects.contains_key(&sid) {
-            order.push(sid.clone());
-            subjects.insert(
-                sid.clone(),
-                Subject {
-                    id: sid.clone(),
-                    label: label.clone(),
-                    aliases: vec![label.clone(), sid.clone()],
-                    origin: "promoted".into(),
-                    category: Value::Null,
-                    path: Value::Null,
-                    members: Map::new(),
-                    topics: vec![],
-                    parent: json!(parent),
-                },
-            );
-            aliases.insert(key(&label), sid.clone());
-        }
+        let sid = add_subject(&mut subjects, &mut aliases, &mut order, prior, SubjectSeed {
+            label: &label, ident: Some(&sid), aliases: vec![], origin: "promoted",
+            category: Value::Null, path: Value::Null, parent: json!(parent),
+        });
         for row in rows {
             let nid = row["id"].as_str().unwrap_or("");
             subjects
@@ -1556,9 +1513,7 @@ pub fn organize_mut(
             &mut aliases,
             &mut order,
             prior,
-            "Needs grouping",
-            "review",
-            Some("review"),
+            SubjectSeed { label: "Needs grouping", ident: Some("review"), aliases: vec![], origin: "review", category: Value::Null, path: Value::Null, parent: Value::Null },
         );
         for n in notes.iter() {
             let nid = n["id"].as_str().unwrap_or("");
@@ -1598,6 +1553,48 @@ mod tests {
     }
     fn run(notes: &mut Value, dense: &Value, prior: &Value, overrides: &Value) -> Value {
         organize_mut(notes, dense, prior, overrides).unwrap()
+    }
+    #[test]
+    fn canonical_subject_builder_preserves_add_and_resolve_semantics() {
+        let mut subjects = BTreeMap::new();
+        let mut aliases = BTreeMap::new();
+        let mut order = Vec::new();
+        let prior = json!({"discovered":[{"id":"prior-id","label":"Explicit Name"}]});
+        let first = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
+            label: "First", ident: Some("shared-id"), aliases: vec!["first-alias".into()],
+            origin: "discovered", category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
+        let second = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
+            label: "Second", ident: Some("shared-id"), aliases: vec!["first-alias".into()],
+            origin: "promoted", category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
+        let reuse = add_subject(&mut subjects, &mut aliases, &mut order, &prior, SubjectSeed {
+            label: "Second", ident: Some("different-id"), aliases: vec!["new-alias".into()],
+            origin: "manual", category: Value::Null, path: Value::Null, parent: Value::Null,
+        });
+        assert_eq!(first, "shared-id");
+        assert_eq!(second, format!("shared-id-{}", digest("Second", 6)));
+        assert_eq!(reuse, second);
+        assert!(!subjects.contains_key("prior-id"), "explicit IDs skip prior-label lookup");
+        assert_eq!(subjects[&second].aliases, vec!["Second"]);
+        assert_eq!(resolve_subject(&aliases, "SHARED_ID"), Some(first));
+        assert_eq!(python_title("ACME_ROBOTICS.gardenSense"), "Acme_Robotics.Gardensense");
+    }
+    #[test]
+    fn project_resolution_uses_slug_alias_and_python_title_case() {
+        let mut notes = json!([
+            note(1, "Bridge page", "Curated bridge", json!({"entity":"project","name":"Bridge","project":"api-bridge"}), "2026-10-01"),
+            note(2, "Bridge work", "API bridge evidence", json!({"project":"API_BRIDGE"}), "2026-10-01"),
+            note(3, "Upper project", "Project evidence", json!({"project":"ACME_ROBOTICS.GardenSense"}), "2026-10-01")
+        ]);
+        notes[0]["path"] = json!("wiki/bridge.md");
+        let out = run(&mut notes, &json!({}), &json!({}), &json!({}));
+        assert_eq!(notes[0]["memberships"][0]["subject"], "api-bridge");
+        assert_eq!(notes[1]["memberships"][0]["subject"], "api-bridge");
+        assert!(out[0].as_array().unwrap().iter().any(|s| {
+            s["id"] == "acme-robotics-gardensense"
+                && s["label"] == "Acme_Robotics.Gardensense"
+        }));
     }
     #[test]
     fn long_feature_suffix_and_non_latin_slug_match_python() {
