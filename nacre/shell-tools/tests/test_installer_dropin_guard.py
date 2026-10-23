@@ -530,6 +530,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
                 self.dest / "tools/nacre-helper", self.fake_helper(old_status)
             )
             old.chmod(0o755)
+            self.put(self.dest / "source/marker.txt", "old source\n")
+            self.put(self.dest / "tools/old-only.txt", "old tools\n")
+        self.put(shell / "new-only.txt", "new source\n")
         self.put(
             self.fakebin / "systemctl",
             '#!/bin/sh\nprintf "%s\\n" "$*" >> "$SYSTEMCTL_LOG"\n'
@@ -572,7 +575,22 @@ class InstallerDropinGuardTests(unittest.TestCase):
             self.daemon_deploy(self.UNHEALTHY, self.HEALTHY)
         self.assertEqual((self.dest / "tools/nacre-helper").read_text(), old)
         self.assertEqual(self.calls().count("--user restart nacre-daemon.service"), 2)
-        self.assertNotIn("--user restart nacre-shell", self.calls())
+        # N0053: source/ and tools/ roll back with the helper (never a mixed install), and
+        # nacre-shell restarts once, after the second daemon restart, on the restored tree.
+        self.assertEqual(
+            (self.dest / "source/marker.txt").read_text(), "old source\n"
+        )
+        self.assertFalse((self.dest / "source/new-only.txt").exists())
+        self.assertEqual((self.dest / "tools/old-only.txt").read_text(), "old tools\n")
+        self.assertFalse((self.dest / "tools/fish_title.fish").exists())
+        self.assertFalse((self.dest / "source.previous").exists())
+        self.assertFalse((self.dest / "tools.previous").exists())
+        calls = self.calls()
+        self.assertEqual(calls.count("--user restart nacre-shell"), 1)
+        self.assertGreater(
+            calls.index("--user restart nacre-shell"),
+            len(calls) - 1 - calls[::-1].index("--user restart nacre-daemon.service"),
+        )
 
     def test_code_only_same_helper_or_stopped_daemon_is_not_restarted(self):
         self.daemon_deploy(self.HEALTHY, self.UNHEALTHY)  # differs: restarts once

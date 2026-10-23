@@ -140,8 +140,33 @@ def wait_daemon_healthy(timeout=None):
         time.sleep(0.5)
 
 
-def restart_daemon_checked(target, previous):
-    """Restart the running daemon on the new helper; restore the old one on failure."""
+def save_previous_tools():
+    """Snapshot the owned tools/ tree (source/ has its own source.previous) for rollback."""
+    saved = DEST / "tools.previous"
+    if saved.exists():
+        shutil.rmtree(saved)
+    if (DEST / "tools").is_dir():
+        shutil.copytree(DEST / "tools", saved, symlinks=True)
+        return True
+    return False
+
+
+def restore_previous_trees():
+    """Put back source/ and tools/ as they were before this code-only deploy (N0053)."""
+    for name in ("source", "tools"):
+        current, saved = DEST / name, DEST / (name + ".previous")
+        if not saved.is_dir():
+            continue
+        if current.exists() or current.is_symlink():
+            shutil.rmtree(current)
+        saved.rename(current)
+
+
+def restart_daemon_checked(target, previous, trees=False):
+    """Restart the running daemon on the new helper; restore the old install on failure.
+
+    With `trees` the previous source/ and tools/ come back too, so a failed deploy never
+    leaves a mixed install, and nacre-shell is restarted on the restored tree."""
     print("Restarting " + DAEMON_UNIT + " so it runs the new helper binary.")
     restarted = (
         subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT]).returncode == 0
@@ -161,12 +186,19 @@ def restart_daemon_checked(target, previous):
             "Daemon unhealthy after restart and no previous helper backup exists; "
             "check: systemctl --user status " + DAEMON_UNIT
         )
+    if trees:
+        restore_previous_trees()
+        install_daemon_links(target)
     install_native_helper(previous, target)
     subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT])
-    if wait_daemon_healthy():
+    healthy = wait_daemon_healthy()
+    if trees:
+        subprocess.run(["systemctl", "--user", "restart", "nacre-shell"])
+    if healthy:
         raise RuntimeError(
-            "The new helper left the daemon unhealthy. The previous helper was "
-            "restored and the daemon is healthy again; the new helper is not installed."
+            "The new helper left the daemon unhealthy. The previous helper "
+            + ("and the previous source and tools were" if trees else "was")
+            + " restored and the daemon is healthy again; the new install is not active."
         )
     raise RuntimeError(
         "The daemon is unhealthy with both the new and the previous helper. "
@@ -287,8 +319,9 @@ def dry_run():
             + DAEMON_UNIT
             + " after the new helper is in place, wait up to "
             + str(DAEMON_WAIT_SECONDS)
-            + "s for nacrectl status to report healthy, and restore the previous "
-            "helper and restart again if it does not."
+            + "s for nacrectl status to report healthy; if it does not, restore the "
+            "previous helper, source/ and tools/ together, restart the daemon again "
+            "and restart nacre-shell on the restored tree."
         )
     else:
         print("Plan: " + DAEMON_UNIT + " is not active; nothing to restart.")
@@ -715,12 +748,14 @@ def deploy(code_only=False, retire_niri_experiment=False):
     shutil.copytree(
         SHELL, pending, ignore=shutil.ignore_patterns("build", "__pycache__")
     )
-    if (DEST / "source").exists():
+    source_saved = (DEST / "source").exists()
+    if source_saved:
         stale = DEST / "source.previous"
         if stale.exists():
             shutil.rmtree(stale)
         (DEST / "source").rename(stale)
     pending.rename(DEST / "source")
+    tools_saved = save_previous_tools() if code_only else False
     shutil.copytree(
         ROOT,
         DEST / "tools",
@@ -854,7 +889,9 @@ def deploy(code_only=False, retire_niri_experiment=False):
             )
         subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
         if previous_helper is not None and daemon_active():
-            restart_daemon_checked(target, previous_helper)
+            restart_daemon_checked(
+                target, previous_helper, trees=source_saved and tools_saved
+            )
         subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
         validate_live(source_digest(SHELL))
         plan = niri_session_refresh_plan()
