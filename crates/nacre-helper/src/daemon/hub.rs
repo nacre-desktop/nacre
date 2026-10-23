@@ -353,6 +353,7 @@ impl Hub {
             methods.extend(super::control_center::available_methods(self));
             methods.extend(super::time_settings::available_methods(self));
             methods.extend(super::login_theme::available_methods(self));
+            methods.extend(super::colors_app::available_methods(self));
             if self.snapshot_ref(super::brain::TOPIC).is_some() {
                 methods.extend(super::brain::methods());
             }

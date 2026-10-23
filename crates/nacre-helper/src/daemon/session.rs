@@ -72,6 +72,9 @@ async fn dispatch(
         method if super::login_theme::handles(method) => {
             super::login_theme::dispatch(hub, params).await
         }
+        method if super::colors_app::handles(method) => {
+            super::colors_app::dispatch(hub, method, params).await
+        }
         method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
             super::pill_controls::dispatch(hub, method, params).await
         }
@@ -200,7 +203,11 @@ async fn call(
     let helper = helper
         || super::control_center::handles(&method)
         || super::time_settings::handles(&method)
-        || super::login_theme::handles(&method);
+        || super::login_theme::handles(&method)
+        || matches!(
+            method.as_str(),
+            "colors.apply" | "colors.export" | "colors.set_target"
+        );
     let future = AssertUnwindSafe(dispatch(
         hub,
         client,

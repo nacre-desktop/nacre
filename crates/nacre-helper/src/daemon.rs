@@ -9,6 +9,7 @@ pub mod bluetooth;
 pub mod brain;
 pub mod capabilities;
 pub mod client;
+pub mod colors_app;
 pub mod compositor;
 pub mod compositor_control;
 pub mod control_center;

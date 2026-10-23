@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsTargets",
+  "type": "object",
+  "properties": {
+    "targets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ColorsTarget"
+      }
+    }
+  },
+  "required": [
+    "targets"
+  ],
+  "$defs": {
+    "ColorsTarget": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/TargetStatus"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "status"
+      ]
+    },
+    "TargetStatus": {
+      "oneOf": [
+        {
+          "description": "An output of the target exists.",
+          "type": "string",
+          "const": "current"
+        },
+        {
+          "description": "Enabled but nothing has been written yet.",
+          "type": "string",
+          "const": "not-published"
+        },
+        {
+          "description": "The application's tool is not installed.",
+          "type": "string",
+          "const": "tool-missing"
+        },
+        {
+          "description": "The user switched the target off.",
+          "type": "string",
+          "const": "paused"
+        }
+      ]
+    }
+  }
+}

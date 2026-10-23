@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsId",
+  "description": "`colors.apply` and `colors.export` parameters: the `id` of a preview reply.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id"
+  ]
+}

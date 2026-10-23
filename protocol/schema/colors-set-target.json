@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsSetTarget",
+  "description": "`colors.set_target`: the same switch as the QML Settings toggle. It writes\n`colors appThemes.<id>` and re-publishes that target; `settings.set` alone does neither.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16,
+      "pattern": "^[a-z0-9]{1,16}$"
+    },
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "enabled"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsPreview",
+  "description": "`colors.preview` parameters. `request` is the QML request object: `image` (absolute path),\n`mode` dark|light, `personality` natural|pigment|harmony|pop|mist|vivid|pearl|tide,\n`backgroundFromWallpaper`, `overrides` {primary?, secondary?, tertiary?: \"rrggbb\"},\n`brightness` -0.15..0.15, `saturation` 0..1.6, `hour` 0..23, `autoMode`, `tideAutomatic`,\n`timeTint`, `workspaceColors`, `favoriteId?`, `accent?`, `pick?` {x, y} (0..1) and `compare`\n(true computes `comparisons`). The engine validates every field; a refusal is `validation`.",
+  "type": "object",
+  "properties": {
+    "request": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "request"
+  ]
+}

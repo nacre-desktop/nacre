@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsCatalog",
+  "description": "`colors.catalog` reply. At most 512 entries. `favorites`, `history` and `choices` (only for the\nlisted wallpapers) are the stored values of the `colors` store, unchanged.",
+  "type": "object",
+  "properties": {
+    "current": {
+      "type": "string"
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CatalogEntry"
+      }
+    },
+    "favorites": {
+      "type": "array",
+      "items": true
+    },
+    "history": {
+      "type": "array",
+      "items": true
+    },
+    "choices": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": [
+    "current",
+    "entries",
+    "favorites",
+    "history",
+    "choices"
+  ],
+  "$defs": {
+    "CatalogEntry": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "dynamic": {
+          "type": "boolean"
+        },
+        "thumbnail": {
+          "description": "Absolute PNG in `$XDG_CACHE_HOME/nacre/shell/colors-thumbs/` (at most 256 px and 256 KiB),\nor empty.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "name",
+        "dynamic",
+        "thumbnail"
+      ]
+    }
+  }
+}

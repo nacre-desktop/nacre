@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColorsPreviewResult",
+  "description": "`colors.preview` reply. `thumbnail` is the preview poster, a PNG in\n`$XDG_CACHE_HOME/nacre/shell/colors-preview/` (at most 1280 px and 2 MiB, the image's aspect\nratio), or empty. `comparisons` is empty unless the request set `compare`.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "name": {
+      "type": "string"
+    },
+    "image": {
+      "type": "string"
+    },
+    "thumbnail": {
+      "type": "string"
+    },
+    "frames": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    },
+    "favorite": {
+      "type": "boolean"
+    },
+    "otherCoverage": {
+      "type": "number",
+      "format": "double"
+    },
+    "imageColors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ImageColor"
+      }
+    },
+    "colours": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "audit": {
+      "$ref": "#/$defs/Audit"
+    },
+    "comparisons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Comparison"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "request",
+    "name",
+    "image",
+    "thumbnail",
+    "frames",
+    "favorite",
+    "otherCoverage",
+    "imageColors",
+    "colours",
+    "audit",
+    "comparisons"
+  ],
+  "$defs": {
+    "ImageColor": {
+      "type": "object",
+      "properties": {
+        "hex": {
+          "type": "string"
+        },
+        "coverage": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "hex",
+        "coverage"
+      ]
+    },
+    "Audit": {
+      "type": "object",
+      "properties": {
+        "textPasses": {
+          "type": "boolean"
+        },
+        "minimumTextContrast": {
+          "type": "number",
+          "format": "double"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "text": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AuditText"
+          }
+        },
+        "simulated": {
+          "description": "`protan`, `deutan`, `tritan`: role to colour.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": [
+        "textPasses",
+        "minimumTextContrast",
+        "warnings",
+        "text",
+        "simulated"
+      ]
+    },
+    "AuditText": {
+      "type": "object",
+      "properties": {
+        "foreground": {
+          "type": "string"
+        },
+        "background": {
+          "type": "string"
+        },
+        "ratio": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "foreground",
+        "background",
+        "ratio"
+      ]
+    },
+    "Comparison": {
+      "type": "object",
+      "properties": {
+        "personality": {
+          "type": "string"
+        },
+        "colours": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "minimumContrast": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "required": [
+        "personality",
+        "colours",
+        "minimumContrast"
+      ]
+    }
+  }
+}

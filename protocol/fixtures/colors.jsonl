@@ -1,0 +1,12 @@
+{"t":"call","id":600,"m":"colors.catalog","p":{}}
+{"t":"ret","id":600,"ok":{"current":"/home/user/Pictures/lake.png","entries":[{"path":"/home/user/Pictures/lake.png","name":"lake","dynamic":false,"thumbnail":"/home/user/.cache/nacre/shell/colors-thumbs/0a1b.png"}],"favorites":[],"history":[],"choices":{}}}
+{"t":"call","id":601,"m":"colors.preview","p":{"request":{"image":"/home/user/Pictures/lake.png","mode":"dark","personality":"natural","compare":false}}}
+{"t":"ret","id":601,"ok":{"id":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","request":{"image":"/home/user/Pictures/lake.png","mode":"dark","personality":"natural","compare":false},"name":"lake","image":"/home/user/Pictures/lake.png","thumbnail":"/home/user/.cache/nacre/shell/colors-preview/9f8e.png","frames":1,"favorite":false,"otherCoverage":0.12,"imageColors":[{"hex":"3a6ea5","coverage":0.42}],"colours":{"primary":"3a6ea5","secondary":"7a8fa8","tertiary":"a58a6e","surface":"10141a","onSurface":"e4e8ee"},"audit":{"textPasses":true,"minimumTextContrast":7.12,"warnings":[],"text":[{"foreground":"e4e8ee","background":"10141a","ratio":14.2}],"simulated":{"protan":{"primary":"3a6ea5","secondary":"7a8fa8","tertiary":"a58a6e","surface":"10141a","onSurface":"e4e8ee"},"deutan":{"primary":"3a6ea5","secondary":"7a8fa8","tertiary":"a58a6e","surface":"10141a","onSurface":"e4e8ee"},"tritan":{"primary":"3a6ea5","secondary":"7a8fa8","tertiary":"a58a6e","surface":"10141a","onSurface":"e4e8ee"}}},"comparisons":[]}}
+{"t":"call","id":602,"m":"colors.apply","p":{"id":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}}
+{"t":"ret","id":602,"ok":{"applied":true,"name":"lake"}}
+{"t":"call","id":603,"m":"colors.export","p":{"id":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"}}
+{"t":"ret","id":603,"ok":{"directory":"/home/user/Documents/Nacre Colors/20271001-120000-01234567","files":["/home/user/Documents/Nacre Colors/20271001-120000-01234567/palette.json"]}}
+{"t":"call","id":604,"m":"colors.targets","p":{}}
+{"t":"ret","id":604,"ok":{"targets":[{"id":"gtk3","label":"GTK 3","status":"current"},{"id":"kitty","label":"Kitty","status":"tool-missing"}]}}
+{"t":"call","id":605,"m":"colors.set_target","p":{"id":"kitty","enabled":false}}
+{"t":"ret","id":605,"ok":{"changed":true}}
