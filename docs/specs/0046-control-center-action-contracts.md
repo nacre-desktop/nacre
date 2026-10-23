@@ -1,6 +1,8 @@
 # N0046 — Control-centre action contracts and Bead i18n sync
 
-Status: **Implemented; pending lead review** (CI result below). Consumer: Bead B0049
+Status: **Implemented; pending lead review**. CI: the whole `desktop` job (fmt, clippy -D warnings, all
+cargo suites, minimal consumer, release helper, parity sandbox, i18n check/generate, `tools/check.py`,
+galleries) passed in an Arch container on dev-2 before the final i18n sync; i18n check re-run after it. Consumer: Bead B0049
 (`docs/specs/0049-control-center-tiles.md`, "Sources and Nacre asks"). Additive: no existing method,
 topic or field changes, v1 only. QML unchanged. The owner decided on no QML after the Bead switch, so
 every tile the QML control centre has needs a daemon contract; each method below runs the tool the QML
@@ -96,10 +98,11 @@ whether night light exists); `night_light.set` appears after that read.
 
 ## i18n
 
-`tools/i18n-sync.py` (Bead repo, origin/main `4dfa5ee`) `--write` copied 83 new `bead.*` entries into
-`nacre/shell/i18n/en.json` and `context.json`: the `bead.panel.control-*` (42 at that revision) and
-`bead.panel.network-*` (41) ids plus every other unsynced `bead.*` id. `tools/i18n/check.py` accepts
-`bead.*` as external. (The counts differ from the 45/24 in B0049/B0050 because Bead's tables moved.)
+`tools/i18n-sync.py` (Bead repo, origin/main `7c6576f`) `--write` copied every unsynced `bead.*`
+entry into `nacre/shell/i18n/en.json` and `context.json` (170 new in total): `bead.panel.control-*` (42),
+`bead.panel.network-*` (41), `bead.panel.bluetooth-*` (47, includes B0055), `bead.osd.*` (17, includes
+the "Caps Lock" text) and the rest. `tools/i18n/check.py` accepts `bead.*` as external. (Counts differ
+from the 45/24 named in B0049/B0050 because Bead's tables moved.)
 
 ## Acceptance
 
