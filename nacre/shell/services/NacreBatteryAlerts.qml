@@ -56,7 +56,8 @@ Singleton {
             }));
     }
     function evaluate() {
-        if (!cacheReady)
+        // The daemon raises the notices when it owns the always-on behaviours (N0039).
+        if (!cacheReady || NacreDaemon.behavioursHeld)
             return;
         const request = policy.request(sample);
         if (!request) {
@@ -97,6 +98,12 @@ Singleton {
         }
     }
     onSampleChanged: settle.restart()
+    Connections {
+        target: NacreDaemon
+        function onBehavioursHeldChanged() {
+            settle.restart();
+        }
+    }
     NacreBatteryAlertPolicy {
         id: policy
         objectName: "batteryAlertPolicy"

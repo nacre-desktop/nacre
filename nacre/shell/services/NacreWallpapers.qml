@@ -81,7 +81,8 @@ Singleton {
     readonly property bool rotationReady: rotationPool.length > 1 && !WallpaperPlayback.sleeping && !WallpaperPlayback.locked && !commit.running && !themeBusy && !catalog.running && !selectedPath && !queuedPath
     readonly property bool welcomeDemoOpen: NacreWelcomeApp.active
     readonly property bool canRotate: rotationReady && !pickerOpen && !appearanceOpen && !welcomeDemoOpen
-    readonly property bool rotationAllowed: preferences.rotationEnabled === true && canRotate
+    // The daemon rotates when it owns the always-on behaviours (N0039).
+    readonly property bool rotationAllowed: preferences.rotationEnabled === true && canRotate && !NacreDaemon.behavioursHeld
     readonly property real rotationIntervalMs: Math.max(5, Math.min(1440, Number(preferences.rotationMinutes) || 30)) * 60000
     property real rotationStartupMs: Date.now()
     property real rotationRetryMs: 0

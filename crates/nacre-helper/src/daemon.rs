@@ -4,6 +4,7 @@ pub mod ai_chat;
 pub mod attach;
 pub mod bar_services;
 pub mod bar_tray_watcher;
+pub mod behaviours;
 pub mod brain;
 pub mod client;
 pub mod compositor;
@@ -48,6 +49,7 @@ async fn serve(
     paths: Paths,
     writer_lease: std::sync::Arc<writer_lease::WriterLease>,
     managed_notifications: bool,
+    managed_behaviours: bool,
 ) -> Result<()> {
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     helpers::cleanup()?;
@@ -304,6 +306,29 @@ async fn serve(
     } else {
         None
     };
+    // N0039 startup authority. The `behaviours` service entry tells UIs to stand down,
+    // so it appears only when the behaviours really run (never in safe mode).
+    let behaviour_services = if managed_behaviours && !counter.safe {
+        let (rotation_hub, rotation_paths) = (hub.clone(), paths.clone());
+        let (power_hub, alerts_hub, alerts_paths) = (hub.clone(), hub.clone(), paths.clone());
+        let services = vec![
+            tokio::task::spawn_local(supervisor::run(
+                "wallpaper-rotation",
+                hub.clone(),
+                move || behaviours::run_rotation(rotation_hub.clone(), rotation_paths.clone()),
+            )),
+            tokio::task::spawn_local(supervisor::run("power-profile", hub.clone(), move || {
+                behaviours::run_power_profile(power_hub.clone())
+            })),
+            tokio::task::spawn_local(supervisor::run("battery-alerts", hub.clone(), move || {
+                behaviours::run_battery_alerts(alerts_hub.clone(), alerts_paths.clone())
+            })),
+        ];
+        hub.borrow_mut().service("behaviours", "running", 0)?;
+        services
+    } else {
+        Vec::new()
+    };
     if counter.safe {
         let notice = json!({"id":"daemon-safe-mode","summary":"Nacre safe mode","body":"Some desktop services are paused after repeated crashes."});
         hub.borrow_mut().publish(
@@ -415,6 +440,14 @@ async fn serve(
             }
         }
     }
+    for service in behaviour_services {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Behaviour supervisor failed during shutdown");
+            }
+        }
+    }
     if let Some(service) = ai_chat_service {
         // Dropping the host closes every worker pipe; workers stop their providers.
         service.abort();
@@ -471,15 +504,27 @@ async fn serve(
     tracing::info!("Daemon stopped");
     Ok(())
 }
-pub fn run(arguments: &[String]) -> Result<i32> {
-    let managed_notifications = match arguments {
-        [] => false,
-        [mode] if mode == "--notifications=legacy" => false,
-        [mode] if mode == "--notifications=daemon" => true,
-        _ => {
-            return Err("Expected nacre-helper daemon [--notifications=legacy|daemon]".into());
+/// Startup authorities: `--notifications=legacy|daemon`, `--behaviours=legacy|daemon`.
+fn authorities(arguments: &[String]) -> Result<(bool, bool)> {
+    let (mut notifications, mut behaviours) = (None, None);
+    for argument in arguments {
+        let (slot, value) = match argument.as_str() {
+            "--notifications=legacy" => (&mut notifications, false),
+            "--notifications=daemon" => (&mut notifications, true),
+            "--behaviours=legacy" => (&mut behaviours, false),
+            "--behaviours=daemon" => (&mut behaviours, true),
+            _ => {
+                return Err("Expected nacre-helper daemon [--notifications=legacy|daemon] [--behaviours=legacy|daemon]".into());
+            }
+        };
+        if slot.replace(value).is_some() {
+            return Err("Daemon authority options may be given once".into());
         }
-    };
+    }
+    Ok((notifications.unwrap_or(false), behaviours.unwrap_or(false)))
+}
+pub fn run(arguments: &[String]) -> Result<i32> {
+    let (managed_notifications, managed_behaviours) = authorities(arguments)?;
     let filter = match std::env::var("RUST_LOG") {
         Ok(value) => tracing_subscriber::EnvFilter::try_new(value)
             .map_err(|_| "Invalid daemon logging filter")?,
@@ -528,6 +573,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
             paths,
             writer_lease,
             managed_notifications,
+            managed_behaviours,
         ),
     );
     runtime.shutdown_timeout(Duration::from_secs(2));

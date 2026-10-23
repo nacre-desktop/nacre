@@ -20,6 +20,11 @@ TestCase {
         d.percentage = 1;
         UPower.onBattery = true;
     }
+    function cleanup() {
+        NacreDaemon.enabled = false;
+        NacreDaemon.behavioursSeen = false;
+        NacreDaemon.behavioursOwned = false;
+    }
     function setup(level = 0) {
         const view = NacreBatteryAlerts;
         verify(view.restore(JSON.stringify({
@@ -193,5 +198,16 @@ TestCase {
         finish(view, 1);
         compare(view.deliveryError, "");
         compare(part(view, "Retry").running, false);
+    }
+    function test_daemon_owned_notices_are_not_raised_here() {
+        NacreDaemon.behavioursSeen = true;
+        NacreDaemon.behavioursOwned = true;
+        NacreDaemon.enabled = true;
+        const view = setup(0);
+        UPower.displayDevice.percentage = 0.1;
+        wait(300);
+        compare(part(view, "Sender").running, false);
+        NacreDaemon.behavioursOwned = false;
+        tryCompare(part(view, "Sender"), "running", true, 500);
     }
 }

@@ -33,6 +33,9 @@ TestCase {
         ];
     }
     function cleanup() {
+        NacreDaemon.enabled = false;
+        NacreDaemon.behavioursSeen = false;
+        NacreDaemon.behavioursOwned = false;
         NacreWelcomeApp.active = false;
         NacreWelcomeApp.page = "home";
         WallpaperPlayback.sleeping = false;
@@ -126,6 +129,21 @@ TestCase {
         compare(w.rotationDueMs, due);
     }
 
+    function test_daemon_owned_rotation_stops_the_local_timer() {
+        const view = RotatingWalls;
+        const clock = findChild(view, "wallpaperRotationTimer");
+        view.preferences = Object.assign({}, view.preferences, {
+            "rotationEnabled": true
+        });
+        verify(clock.running);
+        NacreDaemon.behavioursSeen = true;
+        NacreDaemon.behavioursOwned = true;
+        NacreDaemon.enabled = true;
+        verify(!view.rotationAllowed);
+        verify(!clock.running);
+        NacreDaemon.behavioursOwned = false;
+        verify(clock.running);
+    }
     function test_disabled_timer_and_lifecycle_pause() {
         const view = RotatingWalls;
         const clock = findChild(view, "wallpaperRotationTimer");

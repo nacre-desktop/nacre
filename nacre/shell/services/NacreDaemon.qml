@@ -24,6 +24,27 @@ Singleton {
     property var uiHandler: null
     property int pendingCount: 0
     property var ipcTargets: Object.create(null)
+    // N0039: `nacre-helper daemon --behaviours=daemon` performs wallpaper rotation, the
+    // automatic power profile and low-battery notices, and says so by listing a running
+    // `behaviours` service in the `daemon` topic. Until that snapshot has arrived the
+    // shell performs none of them, so the two sides never act together.
+    property bool behavioursSeen: false
+    property bool behavioursOwned: false
+    readonly property bool behavioursHeld: enabled && (!behavioursSeen || behavioursOwned)
+    property var statusTopic: null
+    function noteStatus() {
+        const services = statusTopic?.data?.services;
+        if (!services)
+            return;
+        behavioursOwned = services.behaviours?.status === "running";
+        behavioursSeen = true;
+    }
+    Connections {
+        target: root.statusTopic
+        function onDataChanged() {
+            root.noteStatus();
+        }
+    }
     signal event(string topic, string name, var data, double sequence)
     signal lost(string topic)
     signal newBoot(string id)
@@ -392,6 +413,7 @@ Singleton {
         }
     }
     Component.onCompleted: if (enabled) {
+        statusTopic = subscribe("daemon");
         staleDelay.start();
         bridge.running = true;
     }

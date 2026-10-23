@@ -46,7 +46,8 @@ Singleton {
     function apply() {
         if (!desired)
             applied = "";
-        if (!available || profileWriter.running || desired === applied || !["power-saver", "balanced", "performance"].includes(desired) || desired === "performance" && !PowerProfiles.hasPerformanceProfile)
+        // The daemon applies profiles when it owns the always-on behaviours (N0039).
+        if (!available || NacreDaemon.behavioursHeld || profileWriter.running || desired === applied || !["power-saver", "balanced", "performance"].includes(desired) || desired === "performance" && !PowerProfiles.hasPerformanceProfile)
             return;
         // powerprofilesctl reports D-Bus failures; the QML property setter has no acknowledgement.
         error = "";
@@ -55,6 +56,12 @@ Singleton {
     }
     onDesiredChanged: apply()
     onAvailableChanged: apply()
+    Connections {
+        target: NacreDaemon
+        function onBehavioursHeldChanged() {
+            root.apply();
+        }
+    }
     Connections {
         target: PowerProfiles
         function onHasPerformanceProfileChanged() {

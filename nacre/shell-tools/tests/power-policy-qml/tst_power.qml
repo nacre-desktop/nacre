@@ -27,6 +27,11 @@ TestCase {
         PowerProfiles.profile = PowerProfile.Balanced;
         UPower.onBattery = false;
     }
+    function cleanup() {
+        NacreDaemon.enabled = false;
+        NacreDaemon.behavioursSeen = false;
+        NacreDaemon.behavioursOwned = false;
+    }
     function acknowledge(expected) {
         verify(policy.profileWriter.running);
         compare(policy.profileWriter.command.join("|"), "/usr/bin/python3|/usr/bin/powerprofilesctl|set|" + expected);
@@ -90,5 +95,16 @@ TestCase {
         policy.profileWriter.finish(1);
         verify(policy.error.length > 0);
         compare(policy.applied, "");
+    }
+    function test_daemon_owned_profiles_are_not_applied_here() {
+        NacreDaemon.behavioursSeen = true;
+        NacreDaemon.behavioursOwned = true;
+        NacreDaemon.enabled = true;
+        NacreSettingsStorage.present = {
+            power: true
+        };
+        verify(!policy.profileWriter.running);
+        NacreDaemon.behavioursOwned = false;
+        acknowledge("balanced");
     }
 }

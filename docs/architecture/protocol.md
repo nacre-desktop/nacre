@@ -11,6 +11,8 @@ The notifications producer and six generated transcripts implement N0017 A/B.
 Runtime advertisement requires explicit startup authority
 (`nacre-helper daemon --notifications=daemon`), bus ownership and usable handlers.
 The default daemon and `NACRE_DAEMON_CLIENT=1` do not acquire notification ownership.
+Wallpaper rotation, the automatic power profile and low-battery notices (N0039) likewise run only
+with `nacre-helper daemon --behaviours=daemon`; the `daemon` topic's `services.behaviours` entry tells UIs to stand down.
 
 ## Transport and bounds
 
