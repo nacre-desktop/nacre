@@ -571,7 +571,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
     def test_code_only_unhealthy_daemon_restores_previous_helper(self):
         old = self.fake_helper(self.HEALTHY)
-        with self.assertRaisesRegex(RuntimeError, "previous source and tools were restored"):
+        with self.assertRaisesRegex(
+            RuntimeError, "previous source and tools were restored"
+        ):
             self.daemon_deploy(self.UNHEALTHY, self.HEALTHY)
         self.assertEqual((self.dest / "tools/nacre-helper").read_text(), old)
         self.assertEqual(self.calls().count("--user restart nacre-daemon.service"), 2)
