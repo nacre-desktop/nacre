@@ -35,7 +35,7 @@ const UPOWER_PATH: &str = "/org/freedesktop/UPower";
 const DISPLAY_DEVICE: &str = "/org/freedesktop/UPower/devices/DisplayDevice";
 const NOTIFICATIONS: &str = "org.freedesktop.Notifications";
 // Current and legacy power-profiles-daemon names, as powerprofilesctl tries them.
-const PROFILE_SERVICES: [(&str, &str); 2] = [
+pub(super) const PROFILE_SERVICES: [(&str, &str); 2] = [
     (
         "org.freedesktop.UPower.PowerProfiles",
         "/org/freedesktop/UPower/PowerProfiles",
@@ -47,10 +47,10 @@ const RETRY_AFTER_FAILURE_MS: i64 = 60_000;
 
 // ---------------------------------------------------------------- shared
 
-type Streams = SelectAll<LocalBoxStream<'static, ()>>;
+pub(super) type Streams = SelectAll<LocalBoxStream<'static, ()>>;
 
 /// Wake-ups for property changes of the named services plus bus name changes.
-async fn signals(
+pub(super) async fn signals(
     connection: &zbus::Connection,
     senders: &[&str],
     path: Option<&str>,
@@ -87,7 +87,7 @@ async fn signals(
     Ok(streams)
 }
 
-async fn proxy<'a>(
+pub(super) async fn proxy<'a>(
     connection: &zbus::Connection,
     destination: &'a str,
     path: &'a str,

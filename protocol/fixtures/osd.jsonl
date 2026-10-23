@@ -1,0 +1,10 @@
+{"t":"snap","topic":"osd","seq":0,"data":{"health":{"available":true,"stale":false}}}
+{"t":"ev","topic":"osd","name":"changed","seq":1,"data":{"kind":"volume","value":0.5,"muted":false,"label":"Speakers","device":"alsa_output.pci-0000_00_1f.3.analog-stereo","ts":1800000000100}}
+{"t":"ev","topic":"osd","name":"changed","seq":2,"data":{"kind":"output","value":0.3,"muted":false,"label":"Headphones","device":"bluez_output.00_11_22","ts":1800000001000}}
+{"t":"ev","topic":"osd","name":"changed","seq":3,"data":{"kind":"microphone","value":0.0,"muted":true,"label":"Built-in microphone","device":"alsa_input.pci-0000_00_1f.3.analog-stereo","ts":1800000002000}}
+{"t":"ev","topic":"osd","name":"changed","seq":4,"data":{"kind":"brightness","value":0.75,"device":"eDP-1","ts":1800000003000}}
+{"t":"ev","topic":"osd","name":"changed","seq":5,"data":{"kind":"keyboard","value":0.5,"max":2,"ts":1800000004000}}
+{"t":"ev","topic":"osd","name":"changed","seq":6,"data":{"kind":"night_light","value":1.0,"ts":1800000005000}}
+{"t":"ev","topic":"osd","name":"changed","seq":7,"data":{"kind":"power_profile","label":"performance","ts":1800000006000}}
+{"t":"ev","topic":"osd","name":"changed","seq":8,"data":{"kind":"capslock","value":1.0,"ts":1800000007000}}
+{"t":"lost","topic":"osd","from":9,"to":12}

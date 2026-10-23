@@ -26,14 +26,13 @@ Additive to N0031 (`brightness.*` stays v1; `keyboard_light.adjust` is new v1).
   concurrent brightness or keyboard action fails `busy` (no queued relative
   actions). Capability class `system`, default deadline 30 s.
 
-## Proposal (not implemented): single `osd` topic
+## Single `osd` topic (superseded by N0043)
 
-The QML OSD is fed from per-source signals (`NacreAudio`, monitor `adjusted`,
-`NacreKeyboardLight.adjusted`, caps lock, power profile, night light, DND), not
-from one place, and it mixes daemon-owned and shell-local state. A published
-`osd` topic would have to re-publish those sources and invent ordering/dedup,
-so reply values are cheaper and sufficient for key-driven feedback. Revisit
-only if a shell needs OSD for changes it did not request (other clients).
+[N0043](0043-osd-topic-producers.md) implements the `osd` event topic. The reply values above stay:
+they answer the caller and are the only brightness feedback when no client subscribes to `osd`.
+They duplicate the `brightness`/`keyboard` events for daemon-initiated changes; delete
+`level_percent` from the `brightness.*` replies 30 days after Bead renders OSD from the events
+(`keyboard_light.adjust` keeps `level`/`max`, which its caller needs).
 
 ## Acceptance
 

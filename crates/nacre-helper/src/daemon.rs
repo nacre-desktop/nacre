@@ -23,6 +23,7 @@ pub mod niri_actions;
 pub mod niri_events;
 pub mod notifications;
 pub mod notify;
+pub mod osd;
 pub mod pill_controls;
 pub mod serve_bridge;
 pub mod session;
@@ -221,6 +222,18 @@ async fn serve(
         (Some(player), Some(metrics))
     } else {
         (None, None)
+    };
+    // N0043: producers start only while a client subscribes to `osd`.
+    let osd_service = if !counter.safe {
+        osd::initial(&hub)?;
+        let (osd_hub, osd_paths) = (hub.clone(), paths.clone());
+        Some(tokio::task::spawn_local(supervisor::run(
+            "osd",
+            hub.clone(),
+            move || osd::run(osd_hub.clone(), osd_paths.clone()),
+        )))
+    } else {
+        None
     };
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
@@ -437,6 +450,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Wallpaper supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = osd_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("OSD supervisor failed during shutdown");
             }
         }
     }

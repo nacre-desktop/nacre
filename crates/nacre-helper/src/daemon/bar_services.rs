@@ -155,18 +155,28 @@ pub async fn dispatch(
         "brightness.set" => {
             let request: BrightnessSet = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            set_brightness(&hub, &request.output, i32::from(request.percent), false).await
+            let reply =
+                set_brightness(&hub, &request.output, i32::from(request.percent), false).await?;
+            super::osd::brightness(&hub, &reply);
+            Ok(reply)
         }
         "brightness.adjust" => {
             let request: BrightnessAdjust =
                 serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            set_brightness(&hub, &request.output, i32::from(request.delta), true).await
+            let reply =
+                set_brightness(&hub, &request.output, i32::from(request.delta), true).await?;
+            super::osd::brightness(&hub, &reply);
+            Ok(reply)
         }
         "keyboard_light.adjust" => {
             let request: KeyboardLightAdjust =
                 serde_json::from_value(params).map_err(|_| invalid())?;
-            adjust_keyboard_light(request.step).await
+            let reply = adjust_keyboard_light(request.step).await?;
+            if let (Some(level), Some(max)) = (reply["level"].as_i64(), reply["max"].as_i64()) {
+                super::osd::keyboard(&hub, level, max);
+            }
+            Ok(reply)
         }
         "tray.activate" | "tray.secondary_activate" | "tray.context_menu" => {
             let request: TrayItemAction = serde_json::from_value(params).map_err(|_| invalid())?;

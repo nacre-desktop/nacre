@@ -13,6 +13,7 @@ Runtime advertisement requires explicit startup authority
 The default daemon and `NACRE_DAEMON_CLIENT=1` do not acquire notification ownership.
 Wallpaper rotation, the automatic power profile and low-battery notices (N0039) likewise run only
 with `nacre-helper daemon --behaviours=daemon`; the `daemon` topic's `services.behaviours` entry tells UIs to stand down.
+The `osd` event topic (N0043, [spec](../specs/0043-osd-topic-producers.md)) carries one `changed` event per user-visible change of volume, output device, microphone, brightness, keyboard backlight, night light, power profile and Caps Lock; its producers run only while a client subscribes.
 
 ## Transport and bounds
 

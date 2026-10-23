@@ -133,6 +133,11 @@ This reserves no arbitrary client-driven OSD method. The schema examples test
 expiry removal and identical serials; they do not claim an implemented UI has
 already passed expired-snapshot or pulse tests.
 
+N0043 supersedes `osd.current` in practice: the daemon publishes the topic with `health` only and
+never sets `current`; changes arrive as `osd` `changed` events (see
+[the N0043 spec](../specs/0043-osd-topic-producers.md)). `current` is deleted 30 days after Bead
+consumes the events.
+
 Seven new `core-compat-*.jsonl` transcripts exercise these optional additions,
 including custom-theme tray `icon_path` materialized as a local cache file.
 The original core transcripts stay byte-for-byte unchanged. All examples are
