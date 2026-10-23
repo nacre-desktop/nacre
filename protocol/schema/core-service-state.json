@@ -694,6 +694,16 @@
             "string",
             "null"
           ]
+        },
+        "rssi": {
+          "description": "N0047: signal strength in dBm while the adapter sees the device (discovery), else absent.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int16",
+          "minimum": -127,
+          "maximum": 20
         }
       },
       "required": [

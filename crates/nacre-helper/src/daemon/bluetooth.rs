@@ -1,3 +1,5 @@
+//! N0047 adds the `bluetooth` state topic (adapters, devices) read from BlueZ's ObjectManager,
+//! `bluetooth.set_power`, `.set_discovery` (auto-stops), `.connect` and `.disconnect`.
 //! N0045: Bluetooth pairing agent. `bluetooth.pair` registers a BlueZ `Agent1` on the daemon's own
 //! system-bus connection for the duration of one pairing, publishes what the agent is waiting for
 //! on the `bluetooth.pairing` topic and relays `bluetooth.pair.respond` / `.cancel` back to BlueZ.
@@ -7,14 +9,15 @@ use super::hub::Shared;
 use crate::Result;
 use nacre_protocol::{
     core_services::{
-        pairing_text_valid, BluetoothPairRespond, BluetoothPairingState, CoreCall, CoreSnapshot,
-        EntityId, Health, PairingKind, PairingPrompt,
+        pairing_text_valid, BluetoothAdapter, BluetoothDevice, BluetoothPairRespond,
+        BluetoothPairingState, BluetoothState, CoreCall, CoreSnapshot, Entities, EntityId, Health,
+        PairingKind, PairingPrompt,
     },
     Capability, ErrorCode, Failure, Method,
 };
 use serde_json::{json, Value};
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
     collections::HashMap,
     rc::Rc,
     sync::{Arc, Mutex, MutexGuard, PoisonError},
@@ -27,10 +30,15 @@ use zbus::{
 };
 
 pub const TOPIC: &str = "bluetooth.pairing";
-const METHODS: [&str; 3] = [
+pub const STATE_TOPIC: &str = "bluetooth";
+const METHODS: [&str; 7] = [
     "bluetooth.pair",
     "bluetooth.pair.respond",
     "bluetooth.pair.cancel",
+    "bluetooth.set_power",
+    "bluetooth.set_discovery",
+    "bluetooth.connect",
+    "bluetooth.disconnect",
 ];
 const BLUEZ: &str = "org.bluez";
 const AGENT_PATH: &str = "/org/nacre/bluetooth/agent";
@@ -39,8 +47,13 @@ const CAPABILITY: &str = "KeyboardDisplay";
 const PROMPT_TIMEOUT: Duration = Duration::from_secs(60);
 /// Advertised as PAIR_TIMEOUT + 5 s, which must stay within the protocol's 120 s method limit.
 const PAIR_TIMEOUT: Duration = Duration::from_secs(110);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 const QUICK: Duration = Duration::from_secs(5);
 const CONTROL_TIMEOUT: u32 = 10_000;
+/// A discovery started by `bluetooth.set_discovery` stops by itself after this time.
+const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(60);
+/// BlueZ signals are coalesced into one state read.
+const REFRESH_DELAY: Duration = Duration::from_millis(100);
 
 /// The user's answer. Never printed: it may hold a PIN or passkey.
 enum Answer {
@@ -272,6 +285,11 @@ pub struct Service {
     changed: mpsc::UnboundedSender<()>,
     ready: Cell<bool>,
     prompt_timeout: Duration,
+    discovery_timeout: Duration,
+    /// Adapter path -> the task that stops its discovery.
+    discovery: RefCell<HashMap<String, tokio::task::JoinHandle<()>>>,
+    /// Last good state, shown stale when BlueZ stops answering.
+    last: RefCell<BluetoothState>,
 }
 
 fn invalid() -> Failure {
@@ -301,6 +319,115 @@ fn failed(outcome: Outcome) -> Failure {
 
 type Managed = HashMap<OwnedObjectPath, HashMap<String, HashMap<String, OwnedValue>>>;
 
+fn flag(properties: &HashMap<String, OwnedValue>, key: &str) -> bool {
+    properties
+        .get(key)
+        .and_then(|v| bool::try_from(v).ok())
+        .unwrap_or(false)
+}
+/// A BlueZ string without control characters, as the UI may show it.
+fn text(properties: &HashMap<String, OwnedValue>, key: &str) -> Option<String> {
+    let value = properties.get(key)?.try_clone().ok()?;
+    let text: String = String::try_from(value)
+        .ok()?
+        .chars()
+        .filter(|c| !c.is_control())
+        .take(64)
+        .collect();
+    Some(text)
+}
+fn unavailable_state() -> BluetoothState {
+    fn empty<T>() -> Entities<T> {
+        Entities {
+            items: Default::default(),
+            order: Vec::new(),
+        }
+    }
+    BluetoothState {
+        health: Health {
+            available: false,
+            stale: false,
+            error: Some(unavailable()),
+        },
+        adapters: empty(),
+        devices: empty(),
+    }
+}
+/// Adapters and devices BlueZ publishes under `/org/bluez/<adapter>[/<device>]`, ordered like the
+/// QML page: connected first, then by name.
+fn build_state(objects: &Managed, pairing: Option<&EntityId>) -> BluetoothState {
+    let id_of = |path: &str| EntityId(path.rsplit('/').next().unwrap_or_default().into());
+    let mut state = unavailable_state();
+    state.health = Health {
+        available: true,
+        stale: false,
+        error: None,
+    };
+    let mut adapters = Vec::new();
+    let mut devices = Vec::new();
+    for (path, interfaces) in objects {
+        let path = path.as_str();
+        let Some(rest) = path.strip_prefix("/org/bluez/") else {
+            continue;
+        };
+        let id = id_of(path);
+        if !id.valid() {
+            continue;
+        }
+        if let (Some(adapter), false) = (interfaces.get("org.bluez.Adapter1"), rest.contains('/')) {
+            adapters.push((
+                id,
+                BluetoothAdapter {
+                    name: text(adapter, "Alias").unwrap_or_default(),
+                    powered: flag(adapter, "Powered"),
+                    discovering: flag(adapter, "Discovering"),
+                },
+            ));
+        } else if let (Some(device), Some((parent, _))) =
+            (interfaces.get("org.bluez.Device1"), rest.split_once('/'))
+        {
+            let battery = interfaces
+                .get("org.bluez.Battery1")
+                .and_then(|b| b.get("Percentage"))
+                .and_then(|v| u8::try_from(v).ok())
+                .filter(|b| *b <= 100);
+            devices.push((
+                id.clone(),
+                BluetoothDevice {
+                    adapter: EntityId(parent.into()),
+                    name: text(device, "Alias")
+                        .or_else(|| text(device, "Name"))
+                        .unwrap_or_default(),
+                    connected: flag(device, "Connected"),
+                    paired: flag(device, "Paired"),
+                    trusted: flag(device, "Trusted"),
+                    pairing: pairing == Some(&id),
+                    battery,
+                    icon: text(device, "Icon"),
+                    rssi: device
+                        .get("RSSI")
+                        .and_then(|v| i16::try_from(v).ok())
+                        .filter(|r| (-127..=20).contains(r)),
+                },
+            ));
+        }
+    }
+    adapters.sort_by(|a, b| a.0 .0.cmp(&b.0 .0));
+    devices.retain(|(_, d)| adapters.iter().any(|(id, _)| *id == d.adapter));
+    devices.sort_by(|a, b| {
+        b.1.connected
+            .cmp(&a.1.connected)
+            .then_with(|| a.1.name.to_lowercase().cmp(&b.1.name.to_lowercase()))
+            .then_with(|| a.0 .0.cmp(&b.0 .0))
+    });
+    devices.truncate(2048);
+    state.adapters.order = adapters.iter().map(|(id, _)| id.clone()).collect();
+    state.adapters.items = adapters.into_iter().collect();
+    state.devices.order = devices.iter().map(|(id, _)| id.clone()).collect();
+    state.devices.items = devices.into_iter().collect();
+    state
+}
+
 impl Service {
     pub fn methods(&self) -> std::collections::BTreeMap<String, Method> {
         if !self.ready.get() {
@@ -324,10 +451,10 @@ impl Service {
                     Method {
                         v: 1,
                         class: Capability::System,
-                        timeout: if method == "bluetooth.pair" {
-                            PAIR_TIMEOUT.as_millis() as u32 + 5_000
-                        } else {
-                            CONTROL_TIMEOUT
+                        timeout: match method {
+                            "bluetooth.pair" => PAIR_TIMEOUT.as_millis() as u32 + 5_000,
+                            "bluetooth.connect" => CONNECT_TIMEOUT.as_millis() as u32 + 5_000,
+                            _ => CONTROL_TIMEOUT,
                         },
                         params: json!({
                             "$schema": schema["$schema"],
@@ -395,8 +522,7 @@ impl Service {
         .map_err(|_| zbus::Error::InputOutput(Arc::new(std::io::ErrorKind::TimedOut.into())))?
     }
 
-    /// Resolve a client-supplied ID against what BlueZ publishes; it is never used as a path.
-    async fn lookup(&self, id: &EntityId) -> std::result::Result<(String, String, bool), Failure> {
+    async fn managed(&self) -> std::result::Result<Managed, Failure> {
         let reply = self
             .call(
                 "/",
@@ -407,13 +533,24 @@ impl Service {
             )
             .await
             .map_err(|_| unavailable())?;
-        let objects: Managed = reply.body().deserialize().map_err(|_| unavailable())?;
-        let (path, interfaces) = objects
-            .iter()
-            .find(|(path, interfaces)| {
-                path.as_str().starts_with("/org/bluez/")
-                    && path.as_str().rsplit('/').next() == Some(id.0.as_str())
-                    && interfaces.contains_key("org.bluez.Device1")
+        reply.body().deserialize().map_err(|_| unavailable())
+    }
+
+    /// Resolve a client-supplied ID against what BlueZ publishes; it is never used as a path.
+    async fn find(
+        &self,
+        id: &EntityId,
+        interface: &str,
+    ) -> std::result::Result<(String, HashMap<String, OwnedValue>), Failure> {
+        let objects = self.managed().await?;
+        objects
+            .into_iter()
+            .find_map(|(path, mut interfaces)| {
+                (path.as_str().starts_with("/org/bluez/")
+                    && path.as_str().rsplit('/').next() == Some(id.0.as_str()))
+                .then(|| interfaces.remove(interface))
+                .flatten()
+                .map(|properties| (path.to_string(), properties))
             })
             .ok_or_else(|| {
                 Failure::new(
@@ -422,22 +559,166 @@ impl Service {
                     true,
                 )
                 .dispatch_state(false)
-            })?;
-        let device = &interfaces["org.bluez.Device1"];
-        let paired = device
-            .get("Paired")
-            .and_then(|v| bool::try_from(v).ok())
-            .unwrap_or(false);
-        let name = device
-            .get("Alias")
-            .and_then(|v| v.try_clone().ok())
-            .and_then(|v| String::try_from(v).ok())
-            .unwrap_or_default()
-            .chars()
-            .filter(|c| !c.is_control())
-            .take(64)
-            .collect();
-        Ok((path.to_string(), name, paired))
+            })
+    }
+
+    async fn lookup(&self, id: &EntityId) -> std::result::Result<(String, String, bool), Failure> {
+        let (path, device) = self.find(id, "org.bluez.Device1").await?;
+        Ok((
+            path,
+            text(&device, "Alias").unwrap_or_default(),
+            flag(&device, "Paired"),
+        ))
+    }
+
+    /// Read BlueZ and publish the `bluetooth` topic.
+    async fn refresh(&self, hub: &Shared) {
+        let ready = self.ready.get();
+        let state = match (ready, self.managed().await) {
+            (true, Ok(objects)) => {
+                let paired_with = lock(&self.inner).session.as_ref().map(|s| s.id.clone());
+                let state = build_state(&objects, paired_with.as_ref());
+                *self.last.borrow_mut() = state.clone();
+                state
+            }
+            (true, Err(error)) => {
+                let mut last = self.last.borrow().clone();
+                last.health = Health {
+                    available: true,
+                    stale: true,
+                    error: Some(error),
+                };
+                last
+            }
+            (false, _) => unavailable_state(),
+        };
+        debug_assert!(CoreSnapshot::Bluetooth(state.clone()).valid());
+        match serde_json::to_value(state) {
+            Ok(data) => {
+                if hub.borrow_mut().publish(STATE_TOPIC, data).is_err() {
+                    tracing::warn!("Bluetooth state could not be published");
+                }
+            }
+            Err(_) => tracing::warn!("Bluetooth state could not be encoded"),
+        }
+    }
+
+    async fn set_power(
+        &self,
+        adapter: EntityId,
+        powered: bool,
+    ) -> std::result::Result<Value, Failure> {
+        let (path, properties) = self.find(&adapter, "org.bluez.Adapter1").await?;
+        if flag(&properties, "Powered") == powered {
+            return Ok(json!({"changed":false}));
+        }
+        self.call(
+            &path,
+            "org.freedesktop.DBus.Properties",
+            "Set",
+            &(
+                "org.bluez.Adapter1",
+                "Powered",
+                zbus::zvariant::Value::from(powered),
+            ),
+            QUICK,
+        )
+        .await
+        .map_err(|_| unavailable().dispatch_state(true))?;
+        if !powered {
+            self.stop_timer(&path);
+        }
+        Ok(json!({"changed":true}))
+    }
+
+    fn stop_timer(&self, path: &str) {
+        if let Some(task) = self.discovery.borrow_mut().remove(path) {
+            task.abort();
+        }
+    }
+
+    async fn set_discovery(
+        self: &Rc<Self>,
+        adapter: EntityId,
+        discovering: bool,
+    ) -> std::result::Result<Value, Failure> {
+        let (path, properties) = self.find(&adapter, "org.bluez.Adapter1").await?;
+        let method = if discovering {
+            "StartDiscovery"
+        } else {
+            "StopDiscovery"
+        };
+        let timer_running = self.discovery.borrow().contains_key(&path);
+        if !discovering && !timer_running && !flag(&properties, "Discovering") {
+            return Ok(json!({"changed":false}));
+        }
+        let result = self
+            .call(&path, "org.bluez.Adapter1", method, &(), QUICK)
+            .await;
+        if let Err(error) = result {
+            // Already scanning (start) or not scanning through this client (stop): as wanted.
+            let benign = matches!(&error, zbus::Error::MethodError(name, _, _)
+            if matches!(
+                (discovering, name.as_str()),
+                (true, "org.bluez.Error.InProgress")
+                    | (false, "org.bluez.Error.Failed" | "org.bluez.Error.NotReady")
+            ));
+            if !benign {
+                return Err(unavailable().dispatch_state(true));
+            }
+            if !discovering {
+                self.stop_timer(&path);
+                return Ok(json!({"changed":false}));
+            }
+        }
+        self.stop_timer(&path);
+        if discovering {
+            let service = self.clone();
+            let stop = path.clone();
+            let task = tokio::task::spawn_local(async move {
+                tokio::time::sleep(service.discovery_timeout).await;
+                service.discovery.borrow_mut().remove(&stop);
+                let _ = service
+                    .call(&stop, "org.bluez.Adapter1", "StopDiscovery", &(), QUICK)
+                    .await;
+                let _ = service.changed.send(());
+            });
+            self.discovery.borrow_mut().insert(path, task);
+        }
+        Ok(json!({"changed":true}))
+    }
+
+    async fn link(&self, device: EntityId, connect: bool) -> std::result::Result<Value, Failure> {
+        let (path, properties) = self.find(&device, "org.bluez.Device1").await?;
+        if flag(&properties, "Connected") == connect {
+            return Ok(json!({"changed":false}));
+        }
+        let (method, limit) = if connect {
+            ("Connect", CONNECT_TIMEOUT)
+        } else {
+            ("Disconnect", QUICK)
+        };
+        match self
+            .call(&path, "org.bluez.Device1", method, &(), limit)
+            .await
+        {
+            Ok(_) => Ok(json!({"changed":true})),
+            Err(zbus::Error::MethodError(name, _, _)) => Err(match name.as_str() {
+                "org.bluez.Error.AlreadyConnected" | "org.bluez.Error.NotConnected" => {
+                    return Ok(json!({"changed":false}))
+                }
+                "org.bluez.Error.InProgress" => {
+                    Failure::new(ErrorCode::Busy, "Bluetooth device is busy", true)
+                        .dispatch_state(true)
+                }
+                _ => Failure::new(ErrorCode::Unavailable, "Bluetooth connection failed", true)
+                    .dispatch_state(true),
+            }),
+            Err(_) => Err(
+                Failure::new(ErrorCode::Timeout, "Bluetooth connection timed out", true)
+                    .dispatch_state(true),
+            ),
+        }
     }
 
     async fn pair(
@@ -650,6 +931,8 @@ pub fn initial(hub: &Shared) -> Result<()> {
     };
     hub.borrow_mut()
         .publish(TOPIC, serde_json::to_value(state)?)?;
+    hub.borrow_mut()
+        .publish(STATE_TOPIC, serde_json::to_value(unavailable_state())?)?;
     Ok(())
 }
 
@@ -678,20 +961,32 @@ pub async fn dispatch(
         CoreCall::BluetoothPair(target) => service.pair(&hub, target.device).await,
         CoreCall::BluetoothPairRespond(request) => service.respond(request),
         CoreCall::BluetoothPairCancel(target) => service.cancel(target.device).await,
+        CoreCall::BluetoothPower(p) => service.set_power(p.adapter, p.powered).await,
+        CoreCall::BluetoothDiscovery(p) => service.set_discovery(p.adapter, p.discovering).await,
+        CoreCall::BluetoothConnect(target) => service.link(target.device, true).await,
+        CoreCall::BluetoothDisconnect(target) => service.link(target.device, false).await,
         _ => Err(invalid()),
     };
     service.publish(&hub);
+    service.refresh(&hub).await;
     result
 }
 
 pub async fn run(hub: Shared) -> Result<()> {
-    run_on(hub, zbus::connection::Builder::system()?, PROMPT_TIMEOUT).await
+    run_on(
+        hub,
+        zbus::connection::Builder::system()?,
+        PROMPT_TIMEOUT,
+        DISCOVERY_TIMEOUT,
+    )
+    .await
 }
 
 async fn run_on(
     hub: Shared,
     builder: zbus::connection::Builder<'static>,
     prompt_timeout: Duration,
+    discovery_timeout: Duration,
 ) -> Result<()> {
     let (changed, mut updates) = mpsc::unbounded_channel();
     let inner = Arc::new(Mutex::new(Inner::default()));
@@ -713,17 +1008,45 @@ async fn run_on(
         changed,
         ready: Cell::new(false),
         prompt_timeout,
+        discovery_timeout,
+        discovery: RefCell::default(),
+        last: RefCell::new(unavailable_state()),
     });
     hub.borrow_mut().bluetooth = Some(service.clone());
     let bus = zbus::fdo::DBusProxy::new(&connection).await?;
     let mut owners = bus.receive_name_owner_changed().await?;
     let bluez: zbus::names::BusName<'_> = BLUEZ.try_into()?;
+    let rule = zbus::MatchRule::builder()
+        .msg_type(zbus::message::Type::Signal)
+        .sender(BLUEZ)?
+        .build();
+    let mut signals = zbus::MessageStream::for_match_rule(rule, &connection, Some(256)).await?;
     service.set_ready(bus.name_has_owner(bluez.clone()).await?, &hub);
+    service.refresh(&hub).await;
+    let mut dirty: Option<tokio::time::Instant> = None;
     loop {
         tokio::select! {
-            Some(()) = updates.recv() => service.publish(&hub),
+            Some(()) = updates.recv() => {
+                service.publish(&hub);
+                service.refresh(&hub).await;
+            }
             Some(_) = futures_util::StreamExt::next(&mut owners) => {
                 service.set_ready(bus.name_has_owner(bluez.clone()).await?, &hub);
+                service.refresh(&hub).await;
+            }
+            Some(_) = futures_util::StreamExt::next(&mut signals) => {
+                dirty.get_or_insert(tokio::time::Instant::now() + REFRESH_DELAY);
+            }
+            () = async {
+                match dirty {
+                    Some(at) => tokio::time::sleep_until(at).await,
+                    None => std::future::pending().await,
+                }
+            } => {
+                dirty = None;
+                if service.ready.get() {
+                    service.refresh(&hub).await;
+                }
             }
             else => return Ok(()),
         }

@@ -133,6 +133,8 @@ pub struct Env {
     /// The night-light ownership records of the two compositor backends.
     pub night: Vec<PathBuf>,
     pub tick: Duration,
+    /// First wait before restarting a failed `pactl subscribe`; doubles up to 32 times this.
+    pub retry: Duration,
 }
 impl Env {
     pub fn production(paths: &Paths) -> Self {
@@ -144,6 +146,7 @@ impl Env {
                 .map(|name| paths.state.join(name))
                 .into(),
             tick: Duration::from_millis(250),
+            retry: Duration::from_secs(2),
         }
     }
 }
@@ -315,10 +318,13 @@ async fn due(at: Option<Instant>) {
     }
 }
 
-/// One subscribed period. Returns only on a lost audio subscription (the supervisor
-/// restarts it, which takes a fresh baseline) or when dropped.
-pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) -> Result<()> {
-    let mut audio_child = Command::new(&env.pactl)
+fn spawn_audio(
+    pactl: &OsString,
+) -> (
+    Option<tokio::process::Child>,
+    LocalBoxStream<'static, String>,
+) {
+    let mut child = Command::new(pactl)
         .arg("subscribe")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -326,18 +332,25 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
         .kill_on_drop(true)
         .spawn()
         .ok();
-    let mut lines: LocalBoxStream<'static, String> =
-        match audio_child.as_mut().and_then(|child| child.stdout.take()) {
-            Some(stdout) => {
-                futures_util::stream::unfold(BufReader::new(stdout).lines(), |mut l| async move {
-                    let line = l.next_line().await.ok().flatten()?;
-                    Some((line, l))
-                })
-                .boxed_local()
-            }
-            None => futures_util::stream::pending().boxed_local(),
-        };
-    let audio_live = audio_child.is_some();
+    let lines = match child.as_mut().and_then(|child| child.stdout.take()) {
+        Some(stdout) => {
+            futures_util::stream::unfold(BufReader::new(stdout).lines(), |mut l| async move {
+                let line = l.next_line().await.ok().flatten()?;
+                Some((line, l))
+            })
+            .boxed_local()
+        }
+        None => futures_util::stream::pending().boxed_local(),
+    };
+    (child, lines)
+}
+
+/// One subscribed period. Runs until dropped; a lost audio subscription is retried in place.
+pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) -> Result<()> {
+    let (mut _audio_child, mut lines) = spawn_audio(&env.pactl);
+    // An audio failure only degrades the audio kinds: retry with backoff, never end the session.
+    let mut backoff = env.retry;
+    let mut retry_at = _audio_child.is_none().then(|| Instant::now() + backoff);
 
     let mut power: Streams = Streams::new();
     let mut backlight: LocalBoxStream<'static, i32> = futures_util::stream::pending().boxed_local();
@@ -387,9 +400,13 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
         tokio::select! {
             line = lines.next() => {
                 let Some(line) = line else {
-                    if audio_live { return Err("Audio event stream ended".into()); }
+                    _audio_child = None;
+                    lines = futures_util::stream::pending().boxed_local();
+                    retry_at = Some(Instant::now() + backoff);
+                    backoff = (backoff * 2).min(env.retry * 32);
                     continue;
                 };
+                backoff = env.retry;
                 let server = line.ends_with(" on server");
                 let relevant = |what: &str| line.contains(&format!(" on {what} #"));
                 let (s, m) = (server || relevant("sink"), server || relevant("source"));
@@ -398,6 +415,17 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                     dirty_source |= m;
                     audio_at.get_or_insert(Instant::now() + AUDIO_DEBOUNCE);
                 }
+            }
+            () = due(retry_at) => {
+                retry_at = None;
+                (_audio_child, lines) = spawn_audio(&env.pactl);
+                if _audio_child.is_none() {
+                    retry_at = Some(Instant::now() + backoff);
+                    backoff = (backoff * 2).min(env.retry * 32);
+                }
+                // A silent fresh baseline: changes while audio was down are not replayed.
+                sink = read_node(&env.wpctl, SINK).await;
+                source = read_node(&env.wpctl, SOURCE).await;
             }
             () = due(audio_at) => {
                 audio_at = None;

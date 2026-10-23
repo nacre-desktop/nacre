@@ -85,7 +85,13 @@ async fn dispatch(
         "session.request" => super::shell_actions::session(hub, params).await,
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect"
         | "network.forget") => super::network::dispatch(hub, method, params, timeout).await,
-        method @ ("bluetooth.pair" | "bluetooth.pair.respond" | "bluetooth.pair.cancel")
+        method @ ("bluetooth.pair"
+        | "bluetooth.pair.respond"
+        | "bluetooth.pair.cancel"
+        | "bluetooth.set_power"
+        | "bluetooth.set_discovery"
+        | "bluetooth.connect"
+        | "bluetooth.disconnect")
             if !hub.borrow().safe =>
         {
             super::bluetooth::dispatch(hub, method, params).await
@@ -161,6 +167,10 @@ async fn call(
             | "bluetooth.pair"
             | "bluetooth.pair.respond"
             | "bluetooth.pair.cancel"
+            | "bluetooth.set_power"
+            | "bluetooth.set_discovery"
+            | "bluetooth.connect"
+            | "bluetooth.disconnect"
             | "niri.action"
             | "settings.set"
             | "settings.publish"

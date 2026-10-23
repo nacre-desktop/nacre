@@ -115,11 +115,19 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             "bluetooth",
             json!({"health":health,
             "adapters":entities(json!({"adapter-1":{"name":"Bluetooth","powered":false,"discovering":false}})),
-            "devices":entities(json!({"device-1":{"adapter":"adapter-1","name":"Fixture headphones","connected":false,"paired":false,"trusted":false,"pairing":false,"battery":80}}))}),
+            "devices":entities(json!({"device-1":{"adapter":"adapter-1","name":"Fixture headphones","connected":false,"paired":false,"trusted":false,"pairing":false,"battery":80,"icon":"audio-headset","rssi":-58}}))}),
             vec![
                 (
                     "bluetooth.set_power",
                     json!({"adapter":"adapter-1","powered":true}),
+                ),
+                (
+                    "bluetooth.set_discovery",
+                    json!({"adapter":"adapter-1","discovering":true}),
+                ),
+                (
+                    "bluetooth.set_discovery",
+                    json!({"adapter":"adapter-1","discovering":false}),
                 ),
                 ("bluetooth.pair", json!({"device":"device-1"})),
                 ("bluetooth.connect", json!({"device":"device-1"})),

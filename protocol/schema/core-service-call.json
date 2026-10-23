@@ -184,6 +184,22 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "bluetooth.set_discovery"
+        },
+        "p": {
+          "$ref": "#/$defs/BluetoothDiscovery"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "bluetooth.connect"
         },
         "p": {
@@ -718,6 +734,22 @@
       "required": [
         "adapter",
         "powered"
+      ]
+    },
+    "BluetoothDiscovery": {
+      "description": "N0047: start or stop discovery on one adapter. A started discovery stops by itself after a\nfixed time, so a UI that goes away never leaves the radio scanning.",
+      "type": "object",
+      "properties": {
+        "adapter": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "discovering": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "adapter",
+        "discovering"
       ]
     },
     "BluetoothPairRespond": {

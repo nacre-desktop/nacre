@@ -438,6 +438,10 @@ fn actions_reject_raw_paths_empty_ids_and_volume_escalation() {
             ),
             ("bluetooth.pair", json!({"device":id})),
             ("bluetooth.set_power", json!({"adapter":id,"powered":true})),
+            (
+                "bluetooth.set_discovery",
+                json!({"adapter":id,"discovering":true}),
+            ),
             ("power.set_profile", json!({"profile":id})),
             ("audio.route", json!({"stream":"stream-1","target":id})),
         ] {

@@ -133,6 +133,10 @@ pub struct BluetoothDevice {
     pub battery: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub icon: Option<String>,
+    /// N0047: signal strength in dBm while the adapter sees the device (discovery), else absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = -127, max = 20))]
+    pub rssi: Option<i16>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BluetoothState {
@@ -876,6 +880,7 @@ impl CoreSnapshot {
                     && s.devices.items.values().all(|d| {
                         s.adapters.items.contains_key(&d.adapter)
                             && d.battery.is_none_or(|b| b <= 100)
+                            && d.rssi.is_none_or(|r| (-127..=20).contains(&r))
                     })
             }
             Self::BluetoothPairing(s) => s.prompt.as_ref().is_none_or(|p| {
@@ -1176,6 +1181,13 @@ pub struct BluetoothPower {
     pub adapter: EntityId,
     pub powered: bool,
 }
+/// N0047: start or stop discovery on one adapter. A started discovery stops by itself after a
+/// fixed time, so a UI that goes away never leaves the radio scanning.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothDiscovery {
+    pub adapter: EntityId,
+    pub discovering: bool,
+}
 /// N0045: the answer to the current pairing prompt. `pin` (kind `pin`, 1..16 printable ASCII
 /// characters) and `passkey` (kind `passkey`, 0..999999) are secrets: used once, never
 /// stored, echoed or logged. `accept:false` rejects and carries neither.
@@ -1305,6 +1317,8 @@ pub enum CoreCall {
     NetworkForget(ConnectionTarget),
     #[serde(rename = "bluetooth.set_power")]
     BluetoothPower(BluetoothPower),
+    #[serde(rename = "bluetooth.set_discovery")]
+    BluetoothDiscovery(BluetoothDiscovery),
     #[serde(rename = "bluetooth.connect")]
     BluetoothConnect(DeviceTarget),
     #[serde(rename = "bluetooth.disconnect")]
@@ -1386,6 +1400,7 @@ impl CoreCall {
                     && (p.pin.is_none() || p.passkey.is_none())
             }
             Self::BluetoothPower(p) => p.adapter.valid(),
+            Self::BluetoothDiscovery(p) => p.adapter.valid(),
             Self::PowerProfile(p) => p.profile.valid(),
             Self::AudioDefault(p) => p.node.valid(),
             Self::AudioVolume(p) => {

@@ -32,7 +32,7 @@ output for PIN, passkey and confirmation prompts. The daemon had the reserved `b
   "Pairing authentication failed" (`retry:true`); prompt or BlueZ timeout `timeout` "Pairing timed out" (`retry:true`);
   another pairing running `busy`; unknown device or an ID BlueZ does not publish `stale_revision`; no BlueZ `unavailable`.
 - Methods are advertised only while `org.bluez` is on the bus and not in safe mode. `bluetooth.connect`, `.disconnect`,
-  `.set_power` and the `bluetooth` state topic stay reserved and unserved (Bead keeps `bluetooth.set_enabled`).
+  `.set_power` and the `bluetooth` state topic were reserved here and are served since N0047.
 - Device IDs are BlueZ's own object names (`dev_00_11_22_33_44_55`). The ID is only compared with what
   `GetManagedObjects` returns under `/org/bluez/`; it is never used to build a path. A future `bluetooth` state producer
   must use the same IDs.

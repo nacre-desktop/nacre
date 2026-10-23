@@ -56,6 +56,7 @@ impl Fixture {
             leds: self.path("leds"),
             night: vec![self.path("night.json")],
             tick: Duration::from_millis(20),
+            retry: Duration::from_millis(30),
         }
     }
     fn set(&self, name: &str, value: &str) {
@@ -437,4 +438,42 @@ async fn power_profile_and_keyboard_backlight_follow_the_system_bus() {
         })
         .await;
     drop(profiles);
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn a_failing_pactl_degrades_only_audio_and_is_retried() {
+    let mut f = Fixture::new();
+    // pactl is present but no audio server answers: it exits at once, every time.
+    let d = f.dir.path().display().to_string();
+    script(
+        &f.path("pactl"),
+        &format!("echo x >> '{d}/pactl-runs'\nexit 1\n"),
+    );
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(serve(f.hub.clone(), f.env(), false));
+            baseline().await;
+            let (client, _) = f.hub.borrow_mut().add_client().unwrap();
+            f.hub
+                .borrow_mut()
+                .subscribe(client, &[TOPIC.into()], false)
+                .unwrap();
+            // Well past the five failures that used to disable the service.
+            for _ in 0..200 {
+                let runs = std::fs::read_to_string(f.path("pactl-runs")).unwrap_or_default();
+                if runs.lines().count() >= 7 {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            let runs = std::fs::read_to_string(f.path("pactl-runs")).unwrap_or_default();
+            assert!(runs.lines().count() >= 7, "audio is retried: {runs:?}");
+            assert!(!task.is_finished(), "the osd service keeps running");
+            // Other producers are unaffected.
+            f.set("leds/input3::capslock/brightness", "1\n");
+            let e = f.next().await;
+            assert_eq!((e.kind, e.value), (OsdKind::Capslock, Some(1.0)));
+            task.abort();
+        })
+        .await;
 }

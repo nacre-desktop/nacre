@@ -37,6 +37,13 @@ struct State {
     pin: Option<String>,
     passkey: Option<u32>,
     sender: Option<String>,
+    powered: bool,
+    discovering: bool,
+    discovery_starts: usize,
+    discovery_stops: usize,
+    connected: bool,
+    connects: usize,
+    fail_connect: bool,
 }
 #[derive(Clone, Default)]
 struct Backend {
@@ -57,6 +64,8 @@ enum BluezError {
     AuthenticationRejected(String),
     AuthenticationCanceled(String),
     AuthenticationFailed(String),
+    InProgress(String),
+    Failed(String),
 }
 
 struct AgentManager(Backend);
@@ -77,6 +86,53 @@ impl AgentManager {
     }
 }
 
+struct Adapter(Backend);
+#[zbus::interface(name = "org.bluez.Adapter1")]
+impl Adapter {
+    #[zbus(property)]
+    fn alias(&self) -> String {
+        "Fixture adapter".into()
+    }
+    #[zbus(property)]
+    fn powered(&self) -> bool {
+        self.0.state().powered
+    }
+    #[zbus(property)]
+    fn set_powered(&mut self, powered: bool) {
+        self.0.state().powered = powered;
+    }
+    #[zbus(property)]
+    fn discovering(&self) -> bool {
+        self.0.state().discovering
+    }
+    fn start_discovery(&self) -> std::result::Result<(), BluezError> {
+        let mut state = self.0.state();
+        if state.discovering {
+            return Err(BluezError::InProgress("In Progress".into()));
+        }
+        state.discovering = true;
+        state.discovery_starts += 1;
+        Ok(())
+    }
+    fn stop_discovery(&self) -> std::result::Result<(), BluezError> {
+        let mut state = self.0.state();
+        if !state.discovering {
+            return Err(BluezError::Failed("No discovery started".into()));
+        }
+        state.discovering = false;
+        state.discovery_stops += 1;
+        Ok(())
+    }
+}
+struct Battery;
+#[zbus::interface(name = "org.bluez.Battery1")]
+impl Battery {
+    #[zbus(property)]
+    fn percentage(&self) -> u8 {
+        80
+    }
+}
+
 struct Device(Backend, bool);
 #[zbus::interface(name = "org.bluez.Device1")]
 impl Device {
@@ -87,6 +143,34 @@ impl Device {
     #[zbus(property)]
     fn alias(&self) -> String {
         "Fixture headphones".into()
+    }
+    #[zbus(property)]
+    fn icon(&self) -> String {
+        "audio-headset".into()
+    }
+    #[zbus(property)]
+    fn trusted(&self) -> bool {
+        self.1
+    }
+    #[zbus(property, name = "RSSI")]
+    fn rssi(&self) -> i16 {
+        -58
+    }
+    #[zbus(property)]
+    fn connected(&self) -> bool {
+        self.1 && self.0.state().connected
+    }
+    async fn connect(&self) -> std::result::Result<(), BluezError> {
+        let mut state = self.0.state();
+        state.connects += 1;
+        if state.fail_connect {
+            return Err(BluezError::Failed("page timeout".into()));
+        }
+        state.connected = true;
+        Ok(())
+    }
+    fn disconnect(&self) {
+        self.0.state().connected = false;
     }
     fn cancel_pairing(&self) {
         self.0.state().cancelled += 1;
@@ -225,8 +309,10 @@ async fn bluez(address: &str, backend: &Backend) -> Result<zbus::Connection> {
         .name(BLUEZ)?
         .serve_at("/", zbus::fdo::ObjectManager)?
         .serve_at("/org/bluez", AgentManager(backend.clone()))?
+        .serve_at("/org/bluez/hci0", Adapter(backend.clone()))?
         .serve_at(DEVICE, Device(backend.clone(), false))?
         .serve_at(PAIRED, Device(backend.clone(), true))?
+        .serve_at(PAIRED, Battery)?
         .build()
         .await?)
 }
@@ -242,6 +328,14 @@ async fn eventually(what: &str, mut done: impl FnMut() -> bool) {
 }
 impl Fixture {
     async fn new(mode: Mode, with_bluez: bool, prompt_timeout: Duration) -> Result<Self> {
+        Self::build(mode, with_bluez, prompt_timeout, Duration::from_secs(30)).await
+    }
+    async fn build(
+        mode: Mode,
+        with_bluez: bool,
+        prompt_timeout: Duration,
+        discovery_timeout: Duration,
+    ) -> Result<Self> {
         let home = tempfile::tempdir()?;
         let mut bus = Bus(Command::new("dbus-daemon")
             .args([
@@ -270,6 +364,7 @@ impl Fixture {
             hub.clone(),
             zbus::connection::Builder::address(address.as_str())?,
             prompt_timeout,
+            discovery_timeout,
         ));
         let fixture = Self {
             _home: home,
@@ -294,6 +389,9 @@ impl Fixture {
     }
     fn state(&self) -> Option<BluetoothPairingState> {
         serde_json::from_value(self.hub.borrow().snapshot(TOPIC)?).ok()
+    }
+    fn bluetooth(&self) -> Option<BluetoothState> {
+        serde_json::from_value(self.hub.borrow().snapshot(STATE_TOPIC)?).ok()
     }
     fn prompt(&self) -> Option<PairingPrompt> {
         self.state()?.prompt
@@ -666,9 +764,13 @@ fn methods_are_advertised_only_while_bluez_is_present() -> Result<()> {
         assert_eq!(
             names(&f),
             [
+                "bluetooth.connect",
+                "bluetooth.disconnect",
                 "bluetooth.pair",
                 "bluetooth.pair.cancel",
-                "bluetooth.pair.respond"
+                "bluetooth.pair.respond",
+                "bluetooth.set_discovery",
+                "bluetooth.set_power",
             ]
         );
         let methods = f.hub.borrow().methods();
@@ -753,4 +855,156 @@ fn pins_and_passkeys_never_reach_logs_errors_state_or_debug() -> Result<()> {
         assert!(!logs.contains(&secret), "secret leaked into daemon logs");
     }
     Ok(())
+}
+
+#[test]
+fn the_bluetooth_topic_lists_adapters_and_devices_like_the_qml_page() -> Result<()> {
+    local(async {
+        let f = Fixture::ready(Mode::Confirm).await?;
+        eventually("state", || {
+            f.bluetooth().is_some_and(|s| s.health.available)
+        })
+        .await;
+        let state = f.bluetooth().unwrap();
+        assert!(CoreSnapshot::Bluetooth(state.clone()).valid());
+        let adapter = &state.adapters.items[&EntityId("hci0".into())];
+        assert_eq!(
+            (adapter.name.as_str(), adapter.powered, adapter.discovering),
+            ("Fixture adapter", false, false)
+        );
+        assert_eq!(state.devices.order.len(), 2);
+        let paired = &state.devices.items[&EntityId(PAIRED_ID.into())];
+        assert_eq!(paired.adapter.0, "hci0");
+        assert_eq!(paired.name, "Fixture headphones");
+        assert!(paired.paired && paired.trusted && !paired.connected && !paired.pairing);
+        assert_eq!(paired.battery, Some(80));
+        assert_eq!(paired.icon.as_deref(), Some("audio-headset"));
+        assert_eq!(paired.rssi, Some(-58));
+        let unpaired = &state.devices.items[&EntityId(ID.into())];
+        assert!(!unpaired.paired && unpaired.battery.is_none());
+        // A device that appears later reaches the topic through BlueZ's own signals.
+        let bluez = f.bluez.as_ref().unwrap();
+        bluez
+            .object_server()
+            .at(
+                "/org/bluez/hci0/dev_11_22_33_44_55_66",
+                Device(f.backend.clone(), false),
+            )
+            .await?;
+        eventually("new device", || {
+            f.bluetooth().is_some_and(|s| {
+                s.devices
+                    .items
+                    .contains_key(&EntityId("dev_11_22_33_44_55_66".into()))
+            })
+        })
+        .await;
+        Ok(())
+    })
+}
+
+#[test]
+fn power_discovery_connect_and_disconnect_reach_bluez_and_the_topic() -> Result<()> {
+    local(async {
+        let f = Fixture::build(
+            Mode::Confirm,
+            true,
+            Duration::from_secs(30),
+            Duration::from_millis(300),
+        )
+        .await?;
+        eventually("state", || {
+            f.bluetooth().is_some_and(|s| s.health.available)
+        })
+        .await;
+        let adapter =
+            |f: &Fixture| f.bluetooth().unwrap().adapters.items[&EntityId("hci0".into())].clone();
+        let device =
+            |f: &Fixture| f.bluetooth().unwrap().devices.items[&EntityId(PAIRED_ID.into())].clone();
+        let power = |on: bool| json!({"adapter":"hci0","powered":on});
+        assert_eq!(
+            f.call("bluetooth.set_power", power(true)).await.unwrap(),
+            json!({"changed":true})
+        );
+        assert!(f.backend.state().powered && adapter(&f).powered);
+        assert_eq!(
+            f.call("bluetooth.set_power", power(true)).await.unwrap(),
+            json!({"changed":false})
+        );
+        let unknown = f
+            .call(
+                "bluetooth.set_power",
+                json!({"adapter":"hci9","powered":true}),
+            )
+            .await;
+        assert_eq!(unknown.unwrap_err().code, ErrorCode::StaleRevision);
+
+        // Discovery starts, stops on request, and stops by itself.
+        let scan = |on: bool| json!({"adapter":"hci0","discovering":on});
+        f.call("bluetooth.set_discovery", scan(true)).await.unwrap();
+        assert!(adapter(&f).discovering);
+        assert_eq!(
+            f.call("bluetooth.set_discovery", scan(false))
+                .await
+                .unwrap(),
+            json!({"changed":true})
+        );
+        assert!(!adapter(&f).discovering);
+        assert_eq!(
+            f.call("bluetooth.set_discovery", scan(false))
+                .await
+                .unwrap(),
+            json!({"changed":false})
+        );
+        f.call("bluetooth.set_discovery", scan(true)).await.unwrap();
+        eventually("auto stop", || f.backend.state().discovery_stops == 2).await;
+        eventually("topic follows", || !adapter(&f).discovering).await;
+
+        // Connect and disconnect.
+        let target = |id: &str| json!({"device":id});
+        assert_eq!(
+            f.call("bluetooth.connect", target(PAIRED_ID))
+                .await
+                .unwrap(),
+            json!({"changed":true})
+        );
+        assert!(device(&f).connected);
+        assert_eq!(
+            f.bluetooth().unwrap().devices.order[0].0,
+            PAIRED_ID,
+            "connected devices first"
+        );
+        assert_eq!(
+            f.call("bluetooth.connect", target(PAIRED_ID))
+                .await
+                .unwrap(),
+            json!({"changed":false})
+        );
+        assert_eq!(f.backend.state().connects, 1);
+        assert_eq!(
+            f.call("bluetooth.disconnect", target(PAIRED_ID))
+                .await
+                .unwrap(),
+            json!({"changed":true})
+        );
+        assert!(!device(&f).connected);
+        f.backend.state().fail_connect = true;
+        let failed = f
+            .call("bluetooth.connect", target(PAIRED_ID))
+            .await
+            .unwrap_err();
+        assert_eq!(failed.code, ErrorCode::Unavailable);
+        assert_eq!(failed.message, "Bluetooth connection failed");
+        let stale = f
+            .call("bluetooth.connect", target("dev_FF"))
+            .await
+            .unwrap_err();
+        assert_eq!(stale.code, ErrorCode::StaleRevision);
+        let bad = f
+            .call("bluetooth.connect", target("../x"))
+            .await
+            .unwrap_err();
+        assert_eq!(bad.code, ErrorCode::Validation);
+        Ok(())
+    })
 }
