@@ -14,6 +14,7 @@ The default daemon and `NACRE_DAEMON_CLIENT=1` do not acquire notification owner
 Wallpaper rotation, the automatic power profile and low-battery notices (N0039) likewise run only
 with `nacre-helper daemon --behaviours=daemon`; the `daemon` topic's `services.behaviours` entry tells UIs to stand down.
 The `osd` event topic (N0043, [spec](../specs/0043-osd-topic-producers.md)) carries one `changed` event per user-visible change of volume, output device, microphone, brightness, keyboard backlight, night light, power profile and Caps Lock; its producers run only while a client subscribes.
+The control-centre actions and the `controls` state topic (N0046, [spec](../specs/0046-control-center-action-contracts.md)) cover volume and mute set, keyboard backlight, power profile, airplane, night light, stay awake, recorder, screenshot, colour picker, next wallpaper and appearance mode; each method is advertised only while its backend is present, and the topic is produced only while a client subscribes.
 
 ## Transport and bounds
 
