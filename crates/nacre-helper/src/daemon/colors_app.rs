@@ -405,7 +405,8 @@ pub fn targets_reply(paths: &Paths) -> Option<ColorsTargets> {
                 serde_json::from_value(row["status"].clone()).unwrap_or(TargetStatus::NotPublished);
             let label = row["labelId"]
                 .as_str()
-                .map_or_else(|| id.clone(), |label| crate::i18n::tr(label, &id));
+                .and_then(crate::i18n::catalog_text)
+                .unwrap_or_else(|| id.clone());
             Some(ColorsTarget { id, label, status })
         })
         .collect();

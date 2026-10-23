@@ -40,3 +40,8 @@ pub use nacre_i18n::pseudo;
 pub fn tr(identifier: &str, fallback: &str) -> String {
     nacre_i18n::translate(english(), &language(), identifier, fallback, &Value::Null)
 }
+/// The catalog text of an identifier from data (a manifest), or `None` when it has none.
+pub fn catalog_text(identifier: &str) -> Option<String> {
+    let text = nacre_i18n::translate(english(), &language(), identifier, "", &Value::Null);
+    (!text.is_empty()).then_some(text)
+}

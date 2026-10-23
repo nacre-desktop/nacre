@@ -1,6 +1,10 @@
 # N0050 — Colors app contracts and Bead i18n sync
 
-Status: **Implemented; pending lead review**. Consumer: Bead B0060 (`docs/specs/0060-colors-app.md`, commit
+Status: **Implemented; pending lead review**. CI: the whole `desktop` job (fmt, clippy -D warnings, all cargo
+suites incl. 675 helper lib tests, minimal consumer, release helper, parity sandbox, i18n check/generate,
+`tools/check.py`, galleries) passed in an Arch container on dev-2 at the final head (one earlier run hit the
+unrelated timing-sensitive `behaviours::rotation_follows_interval_failure_retry_lock_and_library` under host load; it
+passed on rerun). Consumer: Bead B0060 (`docs/specs/0060-colors-app.md`, commit
 `88d39ed`, asks A1-A7). Additive, v1, Desktop class; no existing method, topic or field changes. QML unchanged.
 Every method runs what the QML Colors app ran, so the colour pipeline (palette engine, helper `colors`
 commands, theme publisher) is reused, not reimplemented.
