@@ -123,6 +123,33 @@ pub struct MenuQueryResult {
     pub message: Option<String>,
 }
 
+/// `menu.groups` takes no parameters.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MenuGroups {}
+
+/// One top-level launcher group (category rail entry), localized like menu rows.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct MenuGroup {
+    /// Route ID accepted by `menu.query` `route` (for example `style`).
+    #[schemars(length(min = 1, max = 128))]
+    pub id: String,
+    #[schemars(length(max = 4096))]
+    pub label: String,
+    /// Material symbol name; empty when the group has none.
+    #[schemars(length(max = 128))]
+    pub icon: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct MenuGroupsResult {
+    #[schemars(range(max = 9007199254740991_u64))]
+    pub catalog_rev: u64,
+    /// Catalog order is the default rail order; ordering and hiding stay with the caller.
+    #[schemars(length(max = 64))]
+    pub groups: Vec<MenuGroup>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct MenuActivate {
     #[schemars(length(min = 1, max = 256))]
@@ -326,6 +353,19 @@ impl MenuQueryResult {
             {
                 return Err(invalid());
             }
+        }
+        Ok(())
+    }
+}
+impl MenuGroupsResult {
+    pub fn validate(&self) -> Result<(), Failure> {
+        if self.catalog_rev > MAX_SAFE_INTEGER
+            || self.groups.len() > 64
+            || self.groups.iter().any(|g| {
+                !text(&g.id, 128, false) || !text(&g.label, 4096, true) || !text(&g.icon, 128, true)
+            })
+        {
+            return Err(invalid());
         }
         Ok(())
     }

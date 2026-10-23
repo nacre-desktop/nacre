@@ -32,7 +32,8 @@ Requests are never automatically replayed after a deadline or disconnect.
 
 Launcher method-v1 goldens are separate from the seven unchanged wire
 transcripts: menu-apps (320 keyed items), menu-empty, menu-results (display/prefix
-shape examples), and menu-activation (opaque activation/navigation/errors).
+shape examples), menu-activation (opaque activation/navigation/errors), and
+menu-groups (top-level group rail).
 Their query strings illustrate shapes; the Nacre engine defines interpretation.
 No daemon method is advertised/implemented by generating these fixtures.
 The six notifications transcripts are contract examples generated from the

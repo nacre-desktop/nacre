@@ -8,8 +8,8 @@ use nacre_menu::{
 };
 use nacre_protocol::{
     menu::{
-        MenuActivate, MenuActivated, MenuConversion, MenuItem, MenuQuery, MenuQueryResult,
-        MenuUiActivate, MenuView, UI_ACTIVATE,
+        MenuActivate, MenuActivated, MenuConversion, MenuGroup, MenuGroups, MenuGroupsResult,
+        MenuItem, MenuQuery, MenuQueryResult, MenuUiActivate, MenuView, UI_ACTIVATE,
     },
     Capability, ErrorCode, Failure, Method,
 };
@@ -86,6 +86,11 @@ pub fn methods() -> BTreeMap<String, Method> {
             "menu.activate",
             include_str!("../../../../protocol/schema/menu-activate.json"),
             include_str!("../../../../protocol/schema/menu-activated.json"),
+        ),
+        (
+            "menu.groups",
+            include_str!("../../../../protocol/schema/menu-groups.json"),
+            include_str!("../../../../protocol/schema/menu-groups-result.json"),
         ),
         (
             "menu.preferences",
@@ -646,6 +651,28 @@ impl Engine {
         .await??;
         Ok(())
     }
+    /// Top-level groups in catalog order; labels are already localized with the rows.
+    fn groups(&self) -> Response {
+        let result = MenuGroupsResult {
+            catalog_rev: self.rev,
+            groups: model::rail(self.loaded.context.rows(), &json!({}))
+                .into_iter()
+                .map(|row| MenuGroup {
+                    id: text::field(row, "id"),
+                    label: text::field(row, "label"),
+                    icon: text::field(row, "icon"),
+                })
+                .collect(),
+        };
+        result.validate()?;
+        serde_json::to_value(result).map_err(|_| {
+            failure(
+                ErrorCode::Internal,
+                "Launcher groups encoding failed",
+                false,
+            )
+        })
+    }
     fn query(&mut self, request: MenuQuery) -> Response {
         request.validate()?;
         let route = request.route.clone().unwrap_or_else(|| {
@@ -1191,6 +1218,7 @@ async fn run_inner(
                 }
                 let result=match request.method.as_str() {
                     "menu.query"=>match serde_json::from_value::<MenuQuery>(request.params){Ok(q)=>engine.query(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher query",false))},
+                    "menu.groups"=>match serde_json::from_value::<MenuGroups>(request.params){Ok(_)=>engine.groups(),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher groups request",false))},
                     "menu.activate"=>match serde_json::from_value::<MenuActivate>(request.params){Ok(q)=>engine.activate(q),Err(_)=>Err(failure(ErrorCode::InvalidRequest,"Invalid launcher activation",false))},
                     "menu.preferences"=>preference(hub.clone(),&mut engine,request.params,false).await,
                     "helper.preferences"=>preference(hub.clone(),&mut engine,request.params,true).await,
@@ -2408,6 +2436,21 @@ mod tests {
             json!({"row":answer["uiRow"],"catalog_rev":engine.rev}),
         )?
         .validate()?;
+        Ok(())
+    }
+    #[test]
+    fn groups_publish_top_level_catalog_rows_with_labels_and_icons() -> Result<()> {
+        let engine = engine()?;
+        let result = engine.groups()?;
+        let groups = array(&result["groups"]);
+        assert!(!groups.is_empty());
+        assert_eq!(result["catalog_rev"], engine.rev);
+        for group in groups {
+            assert!(!group["id"].as_str().unwrap().contains('.'));
+            assert!(!group["label"].as_str().unwrap().is_empty());
+            assert!(group["icon"].is_string());
+        }
+        assert_eq!(groups[0]["id"], "home");
         Ok(())
     }
     #[test]

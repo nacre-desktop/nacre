@@ -94,7 +94,9 @@ async fn dispatch(
             super::helpers::dispatch(hub, transfer, method, params).await
         }
         "daemon.status" => Ok(hub.borrow().status()),
-        method @ ("menu.query" | "menu.activate" | "menu.preferences") if !hub.borrow().safe => {
+        method @ ("menu.query" | "menu.groups" | "menu.activate" | "menu.preferences")
+            if !hub.borrow().safe =>
+        {
             super::menu::dispatch(hub, method, params, timeout).await
         }
         method @ ("session.check" | "session.ready" | "session.watch") if !hub.borrow().safe => {

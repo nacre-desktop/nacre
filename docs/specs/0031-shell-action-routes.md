@@ -46,7 +46,7 @@ construct IDs from a native compositor address or a D-Bus service name.
 | --- | --- | --- |
 | Workspace click | `workspace.activate {output, workspace}` | Exact output; published ID string or numeric slot 1..255 |
 | Workspace/title scroll | `workspace.scroll {output, direction:"next"\|"prev"}` | Adjacent workspace on that output |
-| Window focus | `window.focus {output, window}` | Exact output and window ID |
+| Window focus | `window.focus {output?, window}` (`output` optional since N0040) | Window ID; optional exact-output guard |
 | Execute session choice | `session.request {action, confirmed}` | `lock`, `logout`, `suspend`, `reboot`, `shutdown`; global session |
 | Tray primary/secondary/context | `tray.activate`, `tray.secondary_activate`, `tray.context_menu` with `{item,x,y}` | Current tray item; global logical anchor coordinates |
 | Tray scroll | `tray.scroll {item,axis,delta}` | Current item; `horizontal` or `vertical`, signed bounded delta |

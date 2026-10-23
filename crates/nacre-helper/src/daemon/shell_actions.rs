@@ -75,6 +75,31 @@ fn workspace<'a>(
         .map(|_| &snapshot["workspaces"][workspace_id])
         .ok_or_else(invalid)
 }
+/// The window's own output and native target; an optional `output` must match it.
+fn window(snapshot: &Value, request: &WindowFocus) -> Result<(String, Value), Failure> {
+    let row = snapshot["windows"][&request.window]
+        .as_object()
+        .map(|_| &snapshot["windows"][&request.window])
+        .ok_or_else(invalid)?;
+    let owner = row["outputId"].as_str().ok_or_else(invalid)?;
+    if request
+        .output
+        .as_deref()
+        .is_some_and(|guard| guard != owner)
+    {
+        return Err(invalid());
+    }
+    let _ = output(snapshot, owner)?;
+    let target = row
+        .get("nativeId")
+        .filter(|id| !id.is_null())
+        .or_else(|| row.get("windowId"))
+        .or_else(|| row.get("address"))
+        .or_else(|| row.get("id"))
+        .cloned()
+        .unwrap_or_else(|| json!(request.window));
+    Ok((owner.to_owned(), target))
+}
 fn native(value: &Value) -> Value {
     value
         .get("nativeId")
@@ -137,22 +162,9 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
         "window.focus" => {
             let request: WindowFocus = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            let _ = output(&snapshot, &request.output)?;
-            let row = snapshot["windows"][&request.window]
-                .as_object()
-                .map(|_| &snapshot["windows"][&request.window])
-                .filter(|row| row["outputId"] == request.output)
-                .ok_or_else(invalid)?;
-            let target = row
-                .get("nativeId")
-                .filter(|id| !id.is_null())
-                .or_else(|| row.get("windowId"))
-                .or_else(|| row.get("address"))
-                .or_else(|| row.get("id"))
-                .cloned()
-                .unwrap_or_else(|| json!(request.window));
+            let (window_output, target) = window(&snapshot, &request)?;
             control
-                .scoped_action("window", request.output, target)
+                .scoped_action("window", window_output, target)
                 .await
                 .map_err(|_| action_error())?
         }
@@ -223,6 +235,20 @@ async fn run_command(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn window_focus_is_output_agnostic_with_an_optional_guard() {
+        let state = json!({"outputs":{"A":{},"B":{}},"windows":{"w1":{"id":"w1","windowId":"niri-window:1","outputId":"A"},"w2":{"id":"w2","outputId":null}}});
+        let request = |output: Option<&str>, window: &str| WindowFocus {
+            output: output.map(Into::into),
+            window: window.into(),
+        };
+        let (owner, target) = window(&state, &request(None, "w1")).unwrap();
+        assert_eq!((owner.as_str(), target), ("A", json!("niri-window:1")));
+        assert!(window(&state, &request(Some("A"), "w1")).is_ok());
+        assert!(window(&state, &request(Some("B"), "w1")).is_err());
+        assert!(window(&state, &request(None, "w2")).is_err());
+        assert!(window(&state, &request(None, "missing")).is_err());
+    }
     #[test]
     fn output_scope_rejects_missing_and_cross_output_entities() {
         let state = json!({"outputs":{"A":{"activeWorkspace":{"id":"w1"}}},"workspaces":{"w1":{"id":"w1","outputId":"A"},"w2":{"id":"w2","outputId":"B"}}});

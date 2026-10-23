@@ -6,5 +6,7 @@
 {"t":"ret","id":302,"ok":{"changed":true}}
 {"t":"call","id":303,"m":"window.focus","p":{"output":"DP-1","window":"address:0x1234"}}
 {"t":"ret","id":303,"ok":{"changed":true}}
+{"t":"call","id":306,"m":"window.focus","p":{"window":"address:0x1234"}}
+{"t":"ret","id":306,"ok":{"changed":true}}
 {"t":"call","id":304,"m":"session.request","p":{"action":"shutdown","confirmed":true}}
 {"t":"ret","id":304,"ok":{"changed":true}}

@@ -608,16 +608,43 @@ pub fn menu_action_transcripts() -> BTreeMap<String, String> {
 }
 
 fn menu_exports() -> BTreeMap<String, String> {
-    use crate::menu::{MenuActivate, MenuActivated, MenuQuery, MenuQueryResult, MenuUiActivate};
+    use crate::menu::{
+        MenuActivate, MenuActivated, MenuGroups, MenuGroupsResult, MenuQuery, MenuQueryResult,
+        MenuUiActivate,
+    };
     let schemas = [
         ("MenuQuery", schemars::schema_for!(MenuQuery)),
         ("MenuQueryResult", schemars::schema_for!(MenuQueryResult)),
         ("MenuActivate", schemars::schema_for!(MenuActivate)),
         ("MenuActivated", schemars::schema_for!(MenuActivated)),
         ("MenuUiActivate", schemars::schema_for!(MenuUiActivate)),
+        ("MenuGroups", schemars::schema_for!(MenuGroups)),
+        ("MenuGroupsResult", schemars::schema_for!(MenuGroupsResult)),
     ];
     let mut out = menu_transcripts();
     out.extend(menu_action_transcripts());
+    let groups = crate::menu::MenuGroupsResult {
+        catalog_rev: 1,
+        groups: ["home", "style"]
+            .into_iter()
+            .map(|id| crate::menu::MenuGroup {
+                id: id.into(),
+                label: id[..1].to_uppercase() + &id[1..],
+                icon: if id == "home" { "home" } else { "palette" }.into(),
+            })
+            .collect(),
+    };
+    groups.validate().expect("bounded menu groups golden");
+    out.insert(
+        "protocol/fixtures/menu-groups.jsonl".into(),
+        [
+            json!({"t":"call","id":50,"m":"menu.groups","p":{}}),
+            json!({"t":"ret","id":50,"ok":groups}),
+        ]
+        .iter()
+        .map(|frame| serde_json::to_string(frame).expect("menu groups golden") + "\n")
+        .collect(),
+    );
     let mut definitions = BTreeMap::new();
     let mut roots = vec![];
     for (name, schema) in schemas {
@@ -632,6 +659,8 @@ fn menu_exports() -> BTreeMap<String, String> {
             "MenuQueryResult" => "menu-query-result",
             "MenuActivate" => "menu-activate",
             "MenuUiActivate" => "menu-ui-activate",
+            "MenuGroups" => "menu-groups",
+            "MenuGroupsResult" => "menu-groups-result",
             _ => "menu-activated",
         };
         out.insert(

@@ -292,15 +292,47 @@ fn queue_event(events: &mut Vec<Value>, event: Value) -> Result<bool> {
     events.push(event);
     Ok(true)
 }
+/// Add the policy ledger's `originOutput`/`originIndex`/`visiting` to niri workspace rows.
+/// Additive and optional: absent without a ledger for this socket or an entry for the row.
+fn annotate_origins(snapshot: &mut Value, ledger: &Value, socket: &str) {
+    if ledger["socket"].as_str() != Some(socket) {
+        return;
+    }
+    let Some(rows) = snapshot["workspaces"].as_array_mut() else {
+        return;
+    };
+    for row in rows {
+        let origin = id(&row["id"]).and_then(|id| ledger["origins"].get(&id));
+        if let (Some(output), Some(index)) = (
+            origin.and_then(|o| o[0].as_str()),
+            origin.and_then(|o| o[1].as_u64()),
+        ) {
+            row["visiting"] = json!(row["outputId"]
+                .as_str()
+                .is_some_and(|owner| owner != output));
+            row["originOutput"] = json!(output);
+            row["originIndex"] = json!(index);
+        }
+    }
+}
 fn flush_niri(
     hub: &Shared,
     state: &niri_state::State,
     keyboard: &Value,
     ready: &Ready,
     connection: &str,
+    socket: &str,
     events: &mut Vec<Value>,
 ) -> Result<()> {
-    publish(hub, &state.snapshot()?, "niri", keyboard, ready)?;
+    let mut snapshot = state.snapshot()?;
+    if let Some(ledger) = crate::paths::Paths::environment()
+        .ok()
+        .and_then(|paths| std::fs::read(paths.state.join("workspace-session.json")).ok())
+        .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+    {
+        annotate_origins(&mut snapshot, &ledger, socket);
+    }
+    publish(hub, &snapshot, "niri", keyboard, ready)?;
     let mut hub = hub.borrow_mut();
     hub.publish(
         super::niri_events::TOPIC,
@@ -324,6 +356,7 @@ async fn niri(
             .ok_or("Missing compositor socket")?,
     );
     let connection_id = super::niri_events::identity(&path)?;
+    let socket = path.to_string_lossy().into_owned();
     let hover = environment
         .get("NACRE_NIRI_HOVER_STREAM")
         .is_none_or(|value| value != "0");
@@ -367,7 +400,7 @@ async fn niri(
                         if outputs_changed {next.push(json!({"type":"outputs-changed"}));}
                         for event in next {
                             if !queue_event(&mut events,event.clone())? {
-                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&mut events)?;
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events)?;
                                 last=tokio::time::Instant::now();
                                 if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                             }
@@ -378,7 +411,7 @@ async fn niri(
                 }
             },
             _=wait_due(due)=>{
-                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&mut events)?;
+                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events)?;
                 last=tokio::time::Instant::now();due=None;
             },
         }
@@ -495,6 +528,45 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn niri_origins_come_from_the_ledger_for_this_socket_only() {
+        let ledger = json!({"socket":"/run/niri.sock","origins":{"niri-workspace:1":["A",2],"niri-workspace:2":["B",1]}});
+        let rows = || json!({"workspaces":[{"id":"niri-workspace:1","outputId":"A"},{"id":"niri-workspace:2","outputId":"A"},{"id":"niri-workspace:3","outputId":"A"}]});
+        let mut snapshot = rows();
+        annotate_origins(&mut snapshot, &ledger, "/run/niri.sock");
+        let w = &snapshot["workspaces"];
+        assert_eq!(
+            (
+                &w[0]["visiting"],
+                &w[0]["originOutput"],
+                &w[0]["originIndex"]
+            ),
+            (&json!(false), &json!("A"), &json!(2))
+        );
+        assert_eq!(
+            (&w[1]["visiting"], &w[1]["originOutput"]),
+            (&json!(true), &json!("B"))
+        );
+        assert!(w[2].get("visiting").is_none());
+        let mut other = rows();
+        annotate_origins(&mut other, &ledger, "/run/other.sock");
+        assert_eq!(other, rows());
+        let projected = project(
+            &{
+                let mut s = snapshot.clone();
+                s["monitors"] = json!([{"name":"A"}]);
+                s["windows"] = json!([]);
+                s
+            },
+            "niri",
+            &json!({}),
+        )
+        .unwrap();
+        assert_eq!(
+            projected["workspaces"]["niri-workspace:2"]["originOutput"],
+            "B"
+        );
+    }
     #[test]
     fn semantic_batches_bound_bytes_and_count_and_coalesce_only_titles() -> Result<()> {
         let mut events = Vec::new();

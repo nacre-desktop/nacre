@@ -34,8 +34,11 @@ pub struct WorkspaceScroll {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WindowFocus {
+    /// Optional guard: when present the window must be on this output. Absent
+    /// means output-agnostic (the window's own output is used).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 128))]
-    pub output: String,
+    pub output: Option<String>,
     #[schemars(length(min = 1, max = 128))]
     pub window: String,
 }
@@ -79,7 +82,12 @@ impl WorkspaceScroll {
 }
 impl WindowFocus {
     pub fn validate(&self) -> Result<(), Failure> {
-        if !valid_id(&self.output) || !valid_id(&self.window) {
+        if self
+            .output
+            .as_deref()
+            .is_some_and(|output| !valid_id(output))
+            || !valid_id(&self.window)
+        {
             return Err(invalid());
         }
         Ok(())
@@ -178,6 +186,8 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         json!({"t":"ret","id":302,"ok":{"changed":true}}),
         json!({"t":"call","id":303,"m":"window.focus","p":{"output":"DP-1","window":"address:0x1234"}}),
         json!({"t":"ret","id":303,"ok":{"changed":true}}),
+        json!({"t":"call","id":306,"m":"window.focus","p":{"window":"address:0x1234"}}),
+        json!({"t":"ret","id":306,"ok":{"changed":true}}),
         json!({"t":"call","id":304,"m":"session.request","p":{"action":"shutdown","confirmed":true}}),
         json!({"t":"ret","id":304,"ok":{"changed":true}}),
     ];
@@ -216,11 +226,14 @@ mod tests {
             assert!(request.validate().is_err());
         }
         assert!(WindowFocus {
-            output: "DP-1".into(),
+            output: Some("DP-1".into()),
             window: "x".repeat(129)
         }
         .validate()
         .is_err());
+        let agnostic =
+            serde_json::from_value::<WindowFocus>(json!({"window":"niri-window:7"})).unwrap();
+        assert!(agnostic.output.is_none() && agnostic.validate().is_ok());
         assert_eq!(methods().len(), 4);
         assert!(serde_json::from_value::<WorkspaceActivate>(
             json!({"output":"DP-1","workspace":"1","command":"exec"})

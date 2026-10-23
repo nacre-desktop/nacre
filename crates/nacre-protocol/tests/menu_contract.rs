@@ -131,3 +131,26 @@ fn method_bounds_and_future_optional_fields_keep_v1_compatible() {
     )
     .is_err());
 }
+
+#[test]
+fn menu_groups_golden_decodes_into_the_published_types() {
+    let files = artifacts::generate();
+    for line in files["protocol/fixtures/menu-groups.jsonl"].lines() {
+        match framing::decode(line.as_bytes()).unwrap() {
+            Message::Call { m, p, .. } => {
+                assert_eq!(m, "menu.groups");
+                serde_json::from_value::<nacre_protocol::menu::MenuGroups>(p).unwrap();
+            }
+            Message::Ret {
+                reply: Reply::Ok { ok },
+                ..
+            } => {
+                let result: nacre_protocol::menu::MenuGroupsResult =
+                    serde_json::from_value(ok).unwrap();
+                result.validate().unwrap();
+                assert_eq!(result.groups.len(), 2);
+            }
+            _ => panic!("unexpected menu groups golden message"),
+        }
+    }
+}
