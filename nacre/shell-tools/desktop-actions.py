@@ -140,11 +140,8 @@ def action(name, value=""):
     if name == "brightness":
         run(
             [
-                str(HOME / ".local/share/nacre/shell/bin/qs"),
-                "-c",
-                "nacre",
-                "ipc",
-                "call",
+                "nacrectl",
+                "ui",
                 "brightness",
                 "set",
                 str(max(0.01, min(1, int(value) / 100))),

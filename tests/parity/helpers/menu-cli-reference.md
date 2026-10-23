@@ -39,3 +39,8 @@ plus update cancellation before preflight. Native dispatch inherits terminal
 streams and status; the owner-selected update command remains unchanged.
 Installed helper assets take priority over a checkout in the working directory;
 an explicit developer asset override remains available.
+
+Declared exception (N0048): the `route` case now records `nacrectl ui nacre menu home ""`
+instead of `qs -c nacre ipc call nacre menu home ""`. The route and arguments are the same;
+only the transport changed, from a Quickshell call to the daemon `ui.dispatch` that forwards
+to the registered UI provider. `menuPrompt open|cancel` moved the same way.

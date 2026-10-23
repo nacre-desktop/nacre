@@ -53,7 +53,8 @@ def compositor():
 
 
 def open_settings(page="", runner=subprocess.run, sleep=time.sleep):
-    command = ["quickshell", "ipc", "-c", "nacre", "call", "settingsApp", "open", page]
+    # N0048: provider-neutral route; the daemon forwards it to the registered UI provider.
+    command = ["nacrectl", "ui", "nacre", "settings", *([page] if page else [])]
     result = runner(command, capture_output=True, text=True, timeout=3)
     if result.returncode == 0:
         return

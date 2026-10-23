@@ -5,12 +5,9 @@
   "deleted": [],
   "effects": [
     {
-      "command": "quickshell",
+      "command": "nacrectl",
       "argv": [
-        "ipc",
-        "-c",
-        "nacre",
-        "call",
+        "ui",
         "welcomeApp",
         "open",
         "home"

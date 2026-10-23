@@ -283,6 +283,14 @@ Singleton {
         }
     }
     IpcHandler {
+        id: welcomeAppIpc
+        // N0048: reachable as `nacrectl ui welcomeApp ...`; the provider-neutral route.
+        Component.onCompleted: NacreDaemon.registerIpc("welcomeApp", welcomeAppIpc, {
+            "open": ["s"],
+            "close": [],
+            "refresh": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("welcomeApp", welcomeAppIpc)
         target: "welcomeApp"
         function open(page: string): void {
             root.open(page);

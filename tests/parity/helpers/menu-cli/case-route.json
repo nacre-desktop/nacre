@@ -5,14 +5,9 @@
   ],
   "stdout": "text",
   "commands": {
-    "qs": [
+    "nacrectl": [
       {}
     ]
-  },
-  "fixtures": {
-    "home/.local/share/nacre/shell/bin/qs": {
-      "link": "/case/bin/qs"
-    }
   },
   "compare_stderr": true
 }

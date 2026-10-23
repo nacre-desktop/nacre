@@ -280,10 +280,21 @@ async fn watch_messages(topic: &str) -> Result<i32> {
         retry = (retry * 2).min(2000);
     }
 }
+/// The only remaining `quickshell ipc` caller for shell routes (N0048). It runs when the
+/// daemon is absent or no UI provider is registered, which today means the QML shell
+/// is the only provider that can exist. Expiry: delete this function and the
+/// `fallback` flag in `run` in the Group F QML deletion pass.
 fn legacy_ui(arguments: &[String]) -> Result<i32> {
     use std::os::unix::process::CommandExt;
     let paths = crate::paths::Paths::environment()?;
     let binary = paths.share.join("shell/bin/qs");
+    // `nacre settings PAGE` is provider-neutral; the legacy QML handler is `settingsApp open`.
+    let arguments = match arguments {
+        [target, method, page] if target == "nacre" && method == "settings" => {
+            vec!["settingsApp".to_owned(), "open".to_owned(), page.clone()]
+        }
+        _ => arguments.to_vec(),
+    };
     Err(std::process::Command::new(binary)
         .args(["-c", "nacre", "ipc", "call"])
         .args(arguments)

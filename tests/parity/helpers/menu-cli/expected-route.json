@@ -5,12 +5,9 @@
   "deleted": [],
   "effects": [
     {
-      "command": "qs",
+      "command": "nacrectl",
       "argv": [
-        "-c",
-        "nacre",
-        "ipc",
-        "call",
+        "ui",
         "nacre",
         "menu",
         "home",

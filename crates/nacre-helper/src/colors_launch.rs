@@ -1,4 +1,4 @@
-//! Public Colors launcher; opening preserves the existing IPC target and arguments.
+//! Public Colors launcher; opens the app through the provider-neutral `nacrectl ui colorsApp open` route (N0048).
 use crate::{paths, process, Result};
 use serde_json::json;
 use std::{path::Path, time::Duration};
@@ -31,20 +31,20 @@ pub fn run(args: &[String]) -> Result<i32> {
         } else {
             String::new()
         };
-        let command = ["ipc", "-c", "nacre", "call", "colorsApp", "open"]
+        let command = ["ui", "colorsApp", "open"]
             .map(str::to_owned)
             .into_iter()
             .chain([path])
             .collect::<Vec<_>>();
         let call = |timeout| -> Result<bool> {
-            match process::run("quickshell", &command, None, timeout) {
+            match process::run("nacrectl", &command, None, timeout) {
                 Ok(output) => Ok(output.status.success()),
                 Err(error)
                     if error
                         .downcast_ref::<std::io::Error>()
                         .is_some_and(|e| e.kind() == std::io::ErrorKind::NotFound) =>
                 {
-                    Err("[Errno 2] No such file or directory: 'quickshell'".into())
+                    Err("[Errno 2] No such file or directory: 'nacrectl'".into())
                 }
                 Err(error) => Err(error),
             }

@@ -22,7 +22,7 @@ case "${1:-start}" in
  detach) exec "$HOME/.local/bin/nacrectl" ui pearls detach ;;
  pearl) exec "$HOME/.local/bin/nacrectl" ui pearls open "${2:-launcher}" ;;
  controls) exec "$HOME/.local/bin/nacrectl" ui nacre controls "${2:-home}" ;;
- settings) exec "$HOME/.local/bin/nacrectl" ui nacre settings ;;
+ settings) exec "$HOME/.local/bin/nacrectl" ui nacre settings ${2:+"$2"} ;;
  left) exec "$HOME/.local/bin/nacrectl" ui nacre left ;;
  keys) exec "$HOME/.local/bin/nacre-menu" learn.shortcuts ;;
  palette|overview) exec "$HOME/.local/bin/nacrectl" ui nacre mode "$1" ;;

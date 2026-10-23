@@ -215,21 +215,12 @@ pub fn respond(paths: &Paths, ident: &str, value: &Value) -> Result<()> {
     )
 }
 
-fn ipc(paths: &Paths, target: &str, args: &[&str]) -> Result<()> {
-    let mut arguments = ["-c", "nacre", "ipc", "call", target]
-        .map(str::to_owned)
-        .to_vec();
+/// One provider-neutral shell route (N0048): the daemon forwards `ui.dispatch` to the
+/// registered UI provider (QML today, Bead after the switch).
+fn ipc(target: &str, args: &[&str]) -> Result<()> {
+    let mut arguments = ["ui", target].map(str::to_owned).to_vec();
     arguments.extend(args.iter().map(|arg| (*arg).to_owned()));
-    process::checked(
-        paths
-            .share
-            .join("shell/bin/qs")
-            .to_str()
-            .ok_or("Invalid Quickshell path")?,
-        &arguments,
-        None,
-        Duration::from_secs(5),
-    )?;
+    process::checked("nacrectl", &arguments, None, Duration::from_secs(5))?;
     Ok(())
 }
 
@@ -278,7 +269,7 @@ fn request(
                 | inotify::WatchFlags::CLOSE_WRITE
                 | inotify::WatchFlags::CREATE,
         )?;
-        ipc(paths, "menuPrompt", &["open", &ident])?;
+        ipc("menuPrompt", &["open", &ident])?;
         let deadline = Instant::now() + Duration::from_secs(timeout);
         loop {
             let response = path.join("response.json");
@@ -329,7 +320,7 @@ fn request(
             }
         }
     })();
-    if let Err(error) = ipc(paths, "menuPrompt", &["cancel", &ident]) {
+    if let Err(error) = ipc("menuPrompt", &["cancel", &ident]) {
         eprintln!("Selector cancel: {error}");
     }
     for name in [
@@ -420,7 +411,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
                 };
                 return request(&paths, route, &title, rows, &initial, timeout as u64);
             }
-            _ => ipc(&paths, "nacre", &["menu", route, value])?,
+            _ => ipc("nacre", &["menu", route, value])?,
         }
         Ok(0)
     })();

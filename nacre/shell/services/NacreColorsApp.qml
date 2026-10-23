@@ -385,6 +385,13 @@ Singleton {
         }
     }
     IpcHandler {
+        id: colorsAppIpc
+        // N0048: reachable as `nacrectl ui colorsApp ...`; the provider-neutral route.
+        Component.onCompleted: NacreDaemon.registerIpc("colorsApp", colorsAppIpc, {
+            "open": ["s"],
+            "close": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("colorsApp", colorsAppIpc)
         target: "colorsApp"
         function open(image: string): void {
             root.open(image);

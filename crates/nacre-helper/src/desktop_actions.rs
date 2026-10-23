@@ -240,8 +240,6 @@ fn ai_launch(name: &str, paths: &Paths) -> Result<()> {
     ai_launch_with(name, paths, &mut NativeAiRuntime { backend })
 }
 fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
-    let home = paths.home.to_string_lossy();
-    let shell = format!("{home}/.local/share/nacre/shell");
     if ["power", "files", "terminal", "notifications", "updates"].contains(&name) {
         return launch(&launch_args(name, paths).ok_or("Unknown desktop action")?);
     }
@@ -256,11 +254,7 @@ fn action(name: &str, value: &str, paths: &Paths) -> Result<()> {
         let amount = (value.parse::<i32>()?.clamp(0, 100) as f64 / 100.0)
             .max(0.01)
             .to_string();
-        return run(
-            &format!("{shell}/bin/qs"),
-            &["-c", "nacre", "ipc", "call", "brightness", "set", &amount],
-        )
-        .map(|_| ());
+        return run("nacrectl", &["ui", "brightness", "set", &amount]).map(|_| ());
     }
     if name == "workspace" {
         let number = workspace_number(value)?;

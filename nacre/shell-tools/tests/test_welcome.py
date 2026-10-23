@@ -102,7 +102,8 @@ class WelcomeTests(unittest.TestCase):
         launcher.open_welcome("shortcuts", runner=runner)
         self.assertEqual(runner.call_count, 1)
         self.assertEqual(
-            runner.call_args.args[0][-3:], ["welcomeApp", "open", "shortcuts"]
+            runner.call_args.args[0],
+            ["nacrectl", "ui", "welcomeApp", "open", "shortcuts"],
         )
 
     def test_cold_activation_starts_one_existing_service_with_bounded_retry(self):

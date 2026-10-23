@@ -117,6 +117,13 @@ Singleton {
         }
     }
     IpcHandler {
+        id: menuPromptIpc
+        // N0048: reachable as `nacrectl ui menuPrompt ...`; the provider-neutral route.
+        Component.onCompleted: NacreDaemon.registerIpc("menuPrompt", menuPromptIpc, {
+            "open": ["s"],
+            "cancel": ["s"]
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("menuPrompt", menuPromptIpc)
         target: "menuPrompt"
         function open(ident: string): void {
             root.open(ident);

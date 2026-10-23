@@ -22,7 +22,8 @@ class SettingsLauncherTests(unittest.TestCase):
         settings.open_settings("sound", runner=runner)
         self.assertEqual(runner.call_count, 1)
         self.assertEqual(
-            runner.call_args.args[0][-3:], ["settingsApp", "open", "sound"]
+            runner.call_args.args[0],
+            ["nacrectl", "ui", "nacre", "settings", "sound"],
         )
 
     def test_cold_open_starts_service_once_and_retries(self):

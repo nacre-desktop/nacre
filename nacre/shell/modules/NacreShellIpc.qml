@@ -17,6 +17,14 @@ Scope {
                         retry: true
                     }
                 };
+            // N0048: `nacre settings [page]` is the provider-neutral Settings route
+            // (Bead B0045 uses the same name). The legacy IPC handler takes no page.
+            if (params?.target === "nacre" && params?.method === "settings" && Array.isArray(params.args) && params.args.length === 1 && typeof params.args[0] === "string") {
+                NacrePanelState.openSettings(params.args[0]);
+                return {
+                    ok: null
+                };
+            }
             return NacreDaemon.dispatchIpc(params);
         }
         if (method !== "ui.menu.activate")

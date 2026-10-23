@@ -1832,7 +1832,18 @@ profile.install(home)
 
 #[test]
 fn legacy_ui_fallback_requires_a_proven_undispatched_call() -> Result<()> {
-    for dispatched in [false, true] {
+    // `nacre settings PAGE` is the provider-neutral route; QML's legacy handler is `settingsApp open`.
+    let cases: [(&[&str], &str); 2] = [
+        (&["nacre", "launcher", ""], "-c nacre ipc call nacre launcher  "),
+        (
+            &["nacre", "settings", "sound"],
+            "-c nacre ipc call settingsApp open sound ",
+        ),
+    ];
+    for (dispatched, (route, recorded)) in cases
+        .iter()
+        .flat_map(|case| [false, true].map(|dispatched| (dispatched, *case)))
+    {
         let home = tempfile::Builder::new().prefix("nf-").tempdir()?;
         fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
         let folder = home.path().join("runtime/nacre");
@@ -1859,15 +1870,21 @@ fn legacy_ui_fallback_requires_a_proven_undispatched_call() -> Result<()> {
         });
         let binary = home.path().join(".local/share/nacre/shell/bin/qs");
         fs::create_dir_all(binary.parent().ok_or("Missing fixture parent")?)?;
-        fs::write(&binary, "#!/bin/sh\n: > \"$FALLBACK_MARKER\"\n")?;
+        fs::write(
+            &binary,
+            "#!/bin/sh\nprintf '%s ' \"$@\" > \"$FALLBACK_MARKER\"\n",
+        )?;
         fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))?;
         let marker = home.path().join("fallback-ran");
         let mut call = command(home.path(), &home.path().join("niri.sock"), &endpoint);
         call.env_remove("NACRE_DAEMON_SOCKET")
             .env("FALLBACK_MARKER", &marker);
-        let result = call.args(["ctl", "ui", "nacre", "launcher", ""]).output()?;
+        let result = call.args(["ctl", "ui"]).args(route).output()?;
         assert_eq!(result.status.success(), !dispatched);
         assert_eq!(marker.exists(), !dispatched);
+        if !dispatched {
+            assert_eq!(fs::read_to_string(&marker)?, recorded);
+        }
         server.join().map_err(|_| "Private UI fixture failed")?;
     }
     Ok(())

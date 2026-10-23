@@ -209,6 +209,9 @@ pub(super) fn binding(row: &Value) -> Result<String> {
         ));
     }
     if action == "shell.shortcut" {
+        // N0048: the shipped contract has no niri `shell.shortcut` (Hyprland uses a
+        // global shortcut); this QML-only `qs ipc` form is a documented fallback.
+        // Expiry: delete in the Group F QML deletion pass.
         let name = member(params, "name")?
             .as_str()
             .ok_or_else(|| invalid("Invalid shortcut name"))?;

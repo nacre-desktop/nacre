@@ -297,6 +297,21 @@ fn run_bounded(program: &str, args: &[&str], seconds: u64) -> Result<bool> {
     Ok(result.status.success())
 }
 
+/// `nacrectl ui` arguments for an app window: the daemon forwards them to whichever UI
+/// provider is registered (QML today, Bead after the switch). Settings uses the
+/// provider-neutral `nacre settings [page]` route (Bead B0045).
+fn shell_route(app: &str, page: &str) -> Vec<String> {
+    let mut route = if app == "settingsApp" {
+        vec!["ui", "nacre", "settings"]
+    } else {
+        vec!["ui", app, "open"]
+    };
+    if app != "settingsApp" || !page.is_empty() {
+        route.push(page);
+    }
+    route.into_iter().map(str::to_owned).collect()
+}
+
 fn open_shell_page(app: &str, page: &str, attempts: usize) -> Result<()> {
     open_shell_page_with(app, page, attempts, run_bounded, || {
         thread::sleep(Duration::from_millis(250))
@@ -310,13 +325,9 @@ fn open_shell_page_with(
     mut run: impl FnMut(&str, &[&str], u64) -> Result<bool>,
     mut pause: impl FnMut(),
 ) -> Result<()> {
-    if run(
-        "quickshell",
-        &["ipc", "-c", "nacre", "call", app, "open", page],
-        3,
-    )
-    .unwrap_or(false)
-    {
+    let route = shell_route(app, page);
+    let route = route.iter().map(String::as_str).collect::<Vec<_>>();
+    if run("nacrectl", &route, 3).unwrap_or(false) {
         return Ok(());
     }
     if !run(
@@ -336,13 +347,7 @@ fn open_shell_page_with(
     }
     for _ in 0..attempts {
         pause();
-        if run(
-            "quickshell",
-            &["ipc", "-c", "nacre", "call", app, "open", page],
-            2,
-        )
-        .unwrap_or(false)
-        {
+        if run("nacrectl", &route, 2).unwrap_or(false) {
             return Ok(());
         }
     }
@@ -518,11 +523,7 @@ pub fn welcome(arguments: &[String]) -> Result<i32> {
         let mut value = welcome_preferences(&path)?;
         value["showAtLogin"] = json!(enabled);
         atomic_json(&path, &value)?;
-        let _ = run_bounded(
-            "quickshell",
-            &["ipc", "-c", "nacre", "call", "welcomeApp", "refresh"],
-            2,
-        );
+        let _ = run_bounded("nacrectl", &["ui", "welcomeApp", "refresh"], 2);
         return Ok(0);
     }
     let page = arguments
@@ -1688,8 +1689,8 @@ mod tests {
             || panic!("warm activation must not sleep"),
         )?;
         assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].0, "quickshell");
-        assert_eq!(calls[0].1, "ipc -c nacre call settingsApp open sound");
+        assert_eq!(calls[0].0, "nacrectl");
+        assert_eq!(calls[0].1, "ui nacre settings sound");
         assert_eq!(calls[0].2, 3);
 
         let mut calls: Vec<(String, String, u64)> = Vec::new();
@@ -1710,6 +1711,11 @@ mod tests {
         assert_eq!(calls[1].1, "--user start --no-block nacre-shell.service");
         assert_eq!(pauses, 2);
         assert_eq!(calls[3].1.split_whitespace().last(), Some("displays"));
+        assert_eq!(shell_route("settingsApp", ""), ["ui", "nacre", "settings"]);
+        assert_eq!(
+            shell_route("welcomeApp", "home"),
+            ["ui", "welcomeApp", "open", "home"]
+        );
         Ok(())
     }
     #[test]

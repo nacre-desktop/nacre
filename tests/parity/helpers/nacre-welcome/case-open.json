@@ -4,7 +4,7 @@
   "command": "python3 bin/nacre-welcome",
   "stdout": "text",
   "commands": {
-    "quickshell": [
+    "nacrectl": [
       {}
     ]
   }
