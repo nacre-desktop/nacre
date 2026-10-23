@@ -7,6 +7,7 @@ pub mod bar_tray_watcher;
 pub mod behaviours;
 pub mod bluetooth;
 pub mod brain;
+pub mod capabilities;
 pub mod client;
 pub mod compositor;
 pub mod compositor_control;
@@ -18,6 +19,7 @@ pub mod dashboard_player;
 pub mod helpers;
 pub mod hub;
 pub mod i18n;
+pub mod login_theme;
 pub mod menu;
 pub mod menu_worker;
 pub mod network;
@@ -38,6 +40,7 @@ pub mod socket;
 pub mod supervisor;
 #[cfg(test)]
 pub(crate) mod test_logs;
+pub mod time_settings;
 pub mod wallpaper;
 pub mod widths;
 pub mod workers;
@@ -267,6 +270,22 @@ async fn serve(
         )))
     } else {
         None
+    };
+    // N0049: the `time` and `capabilities` topics for the Settings pages.
+    let settings_page_services = if !counter.safe {
+        time_settings::initial(&hub)?;
+        capabilities::initial(&hub)?;
+        let (time_hub, capabilities_hub) = (hub.clone(), hub.clone());
+        vec![
+            tokio::task::spawn_local(supervisor::run("time", hub.clone(), move || {
+                time_settings::run(time_hub.clone())
+            })),
+            tokio::task::spawn_local(supervisor::run("capabilities", hub.clone(), move || {
+                capabilities::run(capabilities_hub.clone())
+            })),
+        ]
+    } else {
+        Vec::new()
     };
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
@@ -507,6 +526,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Controls supervisor failed during shutdown");
+            }
+        }
+    }
+    for service in settings_page_services {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Settings page supervisor failed during shutdown");
             }
         }
     }

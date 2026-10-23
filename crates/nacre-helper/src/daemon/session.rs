@@ -66,6 +66,12 @@ async fn dispatch(
         method if super::control_center::handles(method) => {
             super::control_center::dispatch(hub, method, params).await
         }
+        method if super::time_settings::handles(method) => {
+            super::time_settings::dispatch(hub, method, params).await
+        }
+        method if super::login_theme::handles(method) => {
+            super::login_theme::dispatch(hub, params).await
+        }
         method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
             super::pill_controls::dispatch(hub, method, params).await
         }
@@ -191,7 +197,10 @@ async fn call(
             | "audio.toggle_mute"
             | "bluetooth.set_enabled"
     );
-    let helper = helper || super::control_center::handles(&method);
+    let helper = helper
+        || super::control_center::handles(&method)
+        || super::time_settings::handles(&method)
+        || super::login_theme::handles(&method);
     let future = AssertUnwindSafe(dispatch(
         hub,
         client,
@@ -450,6 +459,10 @@ mod tests {
             ("color_picker.pick", json!({})),
             ("wallpaper.next", json!({})),
             ("appearance.set_mode", json!({"mode":"dark"})),
+            ("time.zones", json!({})),
+            ("time.set_timezone", json!({"zone":"UTC"})),
+            ("time.set_ntp", json!({"enabled":true})),
+            ("login.install_theme", json!({})),
         ] {
             let error = dispatch(
                 hub.clone(),

@@ -114,7 +114,7 @@ pub(super) async fn settings_data(hub: &Shared, store: &str) -> Option<Value> {
 }
 
 /// Wait for a notice naming one of `topics`; a lagged receiver means "re-read".
-async fn changed(
+pub(super) async fn changed(
     notices: &mut tokio::sync::broadcast::Receiver<Notice>,
     topics: &[&str],
 ) -> Result<()> {

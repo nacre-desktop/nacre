@@ -16,6 +16,8 @@ with `nacre-helper daemon --behaviours=daemon`; the `daemon` topic's `services.b
 The `osd` event topic (N0043, [spec](../specs/0043-osd-topic-producers.md)) carries one `changed` event per user-visible change of volume, output device, microphone, brightness, keyboard backlight, night light, power profile and Caps Lock; its producers run only while a client subscribes.
 The control-centre actions and the `controls` state topic (N0046, [spec](../specs/0046-control-center-action-contracts.md)) cover volume and mute set, keyboard backlight, power profile, airplane, night light, stay awake, recorder, screenshot, colour picker, next wallpaper and appearance mode; each method is advertised only while its backend is present, and the topic is produced only while a client subscribes.
 
+The Settings page contracts (N0049, [spec](../specs/0049-settings-page-contracts.md)) add the `time` topic with `time.zones`, `time.set_timezone` and `time.set_ntp` (timedated over the system bus; writes ask polkit interactively), `login.install_theme` (the documented `pkexec` login-theme install) and the `capabilities` topic carrying the flags the Settings registry's `visibleWhen`/`enabledWhen` conditions name.
+
 ## Transport and bounds
 
 Connect to `$XDG_RUNTIME_DIR/nacre/daemon.sock`. The directory is 0700, the socket

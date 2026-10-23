@@ -1,0 +1,11 @@
+{"t":"snap","topic":"time","seq":0,"data":{"health":{"available":true,"stale":false},"timezone":"Europe/Oslo","ntp":{"supported":true,"enabled":true}}}
+{"t":"patch","topic":"time","base":0,"seq":1,"data":{"timezone":"UTC","ntp":{"enabled":false}}}
+{"t":"snap","topic":"capabilities","seq":0,"data":{"health":{"available":true,"stale":false},"flags":{"desktop.blur":true,"input.controls":true,"niriWorkspaces":true,"powerProfiles":true,"touchpad":true}}}
+{"t":"call","id":600,"m":"time.zones","p":{}}
+{"t":"ret","id":600,"ok":{"zones":["Europe/Oslo","UTC"]}}
+{"t":"call","id":601,"m":"time.set_timezone","p":{"zone":"Europe/Oslo"}}
+{"t":"ret","id":601,"ok":{"changed":true}}
+{"t":"call","id":602,"m":"time.set_ntp","p":{"enabled":false}}
+{"t":"ret","id":602,"ok":{"changed":true}}
+{"t":"call","id":603,"m":"login.install_theme","p":{}}
+{"t":"ret","id":603,"ok":{"installed":true,"manifest":"/var/lib/nacre/login/backups/20261023T100000000000Z/manifest.json","appearance_published":true}}

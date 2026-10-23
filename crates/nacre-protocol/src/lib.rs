@@ -19,6 +19,7 @@ pub mod patch;
 pub mod pill_controls;
 pub mod settings;
 pub mod shell_actions;
+pub mod system_settings;
 pub mod wallpaper;
 pub mod widths;
 

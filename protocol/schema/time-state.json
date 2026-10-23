@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TimeState",
+  "description": "The `time` topic, read from `org.freedesktop.timedate1` and refreshed on its\n`PropertiesChanged`. `ntp` is absent while `health.available` is false.",
+  "type": "object",
+  "properties": {
+    "health": {
+      "$ref": "#/$defs/Health"
+    },
+    "timezone": {
+      "type": "string",
+      "maxLength": 100
+    },
+    "ntp": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TimeNtp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "health",
+    "timezone"
+  ],
+  "$defs": {
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "TimeNtp": {
+      "type": "object",
+      "properties": {
+        "supported": {
+          "description": "`CanNTP`: a time-synchronisation service is installed.",
+          "type": "boolean"
+        },
+        "enabled": {
+          "description": "`NTP`: the service is switched on.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "supported",
+        "enabled"
+      ]
+    }
+  }
+}

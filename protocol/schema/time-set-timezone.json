@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TimeSetTimezone",
+  "description": "An IANA zone name as `timedatectl list-timezones` prints it.",
+  "type": "object",
+  "properties": {
+    "zone": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "zone"
+  ]
+}
