@@ -131,6 +131,32 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             ],
         ),
         (
+            "bluetooth.pairing",
+            json!({"health":health,"prompt":{"device":"dev_00_11_22_33_44_55","kind":"confirm","name":"Fixture headphones","code":"123456","timeout_ms":60000}}),
+            vec![
+                (
+                    "bluetooth.pair.respond",
+                    json!({"device":"dev_00_11_22_33_44_55","accept":true}),
+                ),
+                (
+                    "bluetooth.pair.respond",
+                    json!({"device":"dev_00_11_22_33_44_55","accept":true,"pin":"0000"}),
+                ),
+                (
+                    "bluetooth.pair.respond",
+                    json!({"device":"dev_00_11_22_33_44_55","accept":true,"passkey":123456}),
+                ),
+                (
+                    "bluetooth.pair.respond",
+                    json!({"device":"dev_00_11_22_33_44_55","accept":false}),
+                ),
+                (
+                    "bluetooth.pair.cancel",
+                    json!({"device":"dev_00_11_22_33_44_55"}),
+                ),
+            ],
+        ),
+        (
             "power.profiles",
             json!({"health":health,"active":"balanced","profiles":entities(json!({
             "balanced":{"name":"Balanced","available":true},
@@ -256,6 +282,10 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         json!({"t":"ret","id":"secret","err":{"code":"validation","message":"Network secret required","retry":true,"dispatched":false}}),
         json!({"t":"call","id":"cancelled","m":"bluetooth.pair","p":{"device":"device-1"}}),
         json!({"t":"ret","id":"cancelled","err":{"code":"permission_denied","message":"Authentication was cancelled","retry":false}}),
+        json!({"t":"call","id":"rejected","m":"bluetooth.pair","p":{"device":"device-1"}}),
+        json!({"t":"ret","id":"rejected","err":{"code":"permission_denied","message":"Pairing was rejected","retry":false}}),
+        json!({"t":"call","id":"timed-out","m":"bluetooth.pair","p":{"device":"device-1"}}),
+        json!({"t":"ret","id":"timed-out","err":{"code":"timeout","message":"Pairing timed out","retry":true}}),
         json!({"t":"call","id":"stale","m":"audio.set_volume","p":{"node":"old-node","volume":0.5}}),
         json!({"t":"ret","id":"stale","err":{"code":"stale_revision","message":"Device changed; refresh state","retry":true}}),
         json!({"t":"call","id":"invalid","m":"audio.set_volume","p":{"node":"output-1","volume":1.5}}),

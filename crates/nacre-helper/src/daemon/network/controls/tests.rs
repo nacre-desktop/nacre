@@ -1302,34 +1302,7 @@ async fn network_secrets_wrong_password_deletes_new_profile_and_allows_retry() -
     Ok(())
 }
 
-#[derive(Clone, Default)]
-struct LogSink(Arc<Mutex<Vec<u8>>>);
-impl std::io::Write for LogSink {
-    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
-        self.0.lock().unwrap().extend_from_slice(data);
-        Ok(data.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-/// Process-wide capture at TRACE, so zbus background threads are included too.
-fn captured_logs() -> LogSink {
-    static SINK: std::sync::OnceLock<LogSink> = std::sync::OnceLock::new();
-    SINK.get_or_init(|| {
-        let sink = LogSink::default();
-        let writer = sink.clone();
-        let _ = tracing::subscriber::set_global_default(
-            tracing_subscriber::fmt()
-                .with_max_level(tracing::Level::TRACE)
-                .with_ansi(false)
-                .with_writer(move || writer.clone())
-                .finish(),
-        );
-        sink
-    })
-    .clone()
-}
+use crate::daemon::test_logs::captured_logs;
 
 #[tokio::test(flavor = "current_thread")]
 async fn network_secrets_never_reach_logs_errors_state_or_debug() -> crate::Result<()> {

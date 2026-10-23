@@ -141,6 +141,45 @@ pub struct BluetoothState {
     pub devices: Entities<BluetoothDevice>,
 }
 
+/// N0045: what the pairing agent is waiting for. `display` and `confirm` carry the code shown
+/// on both screens (not a secret); a typed PIN or passkey travels only in
+/// `bluetooth.pair.respond` and is never published.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PairingKind {
+    /// Ask the user for the device's PIN code (up to 16 characters).
+    Pin,
+    /// Ask the user for the six-digit passkey the device shows.
+    Passkey,
+    /// Ask whether `code` matches the code on the device.
+    Confirm,
+    /// Ask whether the device (or one of its services) may connect.
+    Authorize,
+    /// Show `code`; the user types it on the device. No response is expected.
+    Display,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct PairingPrompt {
+    pub device: EntityId,
+    pub kind: PairingKind,
+    /// Device name for the prompt text.
+    #[schemars(length(max = 128))]
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 16))]
+    pub code: Option<String>,
+    /// The prompt is withdrawn and the pairing fails with `timeout` after this long.
+    #[schemars(range(min = 1, max = 300000))]
+    pub timeout_ms: u32,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothPairingState {
+    pub health: Health,
+    /// Present only while a pairing started by `bluetooth.pair` waits for the user.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<PairingPrompt>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PowerProfile {
     pub name: String,
@@ -781,6 +820,8 @@ pub enum CoreSnapshot {
     Network(NetworkState),
     #[serde(rename = "bluetooth")]
     Bluetooth(BluetoothState),
+    #[serde(rename = "bluetooth.pairing")]
+    BluetoothPairing(BluetoothPairingState),
     #[serde(rename = "power.profiles")]
     PowerProfiles(PowerProfilesState),
     #[serde(rename = "battery")]
@@ -837,6 +878,18 @@ impl CoreSnapshot {
                             && d.battery.is_none_or(|b| b <= 100)
                     })
             }
+            Self::BluetoothPairing(s) => s.prompt.as_ref().is_none_or(|p| {
+                p.device.valid()
+                    && p.name.len() <= 128
+                    && (1..=300_000).contains(&p.timeout_ms)
+                    && match (p.kind, &p.code) {
+                        (PairingKind::Confirm | PairingKind::Display, Some(code)) => {
+                            pairing_text_valid(code)
+                        }
+                        (PairingKind::Confirm | PairingKind::Display, None) => false,
+                        (_, code) => code.is_none(),
+                    }
+            }),
             Self::PowerProfiles(s) => {
                 s.profiles.valid()
                     && s.active
@@ -1123,6 +1176,34 @@ pub struct BluetoothPower {
     pub adapter: EntityId,
     pub powered: bool,
 }
+/// N0045: the answer to the current pairing prompt. `pin` (kind `pin`, 1..16 printable ASCII
+/// characters) and `passkey` (kind `passkey`, 0..999999) are secrets: used once, never
+/// stored, echoed or logged. `accept:false` rejects and carries neither.
+#[derive(Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct BluetoothPairRespond {
+    pub device: EntityId,
+    pub accept: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 16))]
+    pub pin: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 999999))]
+    pub passkey: Option<u32>,
+}
+impl std::fmt::Debug for BluetoothPairRespond {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BluetoothPairRespond")
+            .field("device", &self.device)
+            .field("accept", &self.accept)
+            .field("pin", &self.pin.as_ref().map(|_| "<redacted>"))
+            .field("passkey", &self.passkey.map(|_| "<redacted>"))
+            .finish()
+    }
+}
+/// Printable ASCII, 1..16 bytes: PIN codes and displayed codes.
+pub fn pairing_text_valid(text: &str) -> bool {
+    (1..=16).contains(&text.len()) && text.bytes().all(|c| (0x20..=0x7e).contains(&c))
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ProfileTarget {
     pub profile: EntityId,
@@ -1230,6 +1311,10 @@ pub enum CoreCall {
     BluetoothDisconnect(DeviceTarget),
     #[serde(rename = "bluetooth.pair")]
     BluetoothPair(DeviceTarget),
+    #[serde(rename = "bluetooth.pair.respond")]
+    BluetoothPairRespond(BluetoothPairRespond),
+    #[serde(rename = "bluetooth.pair.cancel")]
+    BluetoothPairCancel(DeviceTarget),
     #[serde(rename = "power.set_profile")]
     PowerProfile(ProfileTarget),
     #[serde(rename = "audio.set_default")]
@@ -1291,7 +1376,15 @@ impl CoreCall {
             Self::NetworkDisconnect(p)
             | Self::BluetoothConnect(p)
             | Self::BluetoothDisconnect(p)
-            | Self::BluetoothPair(p) => p.device.valid(),
+            | Self::BluetoothPair(p)
+            | Self::BluetoothPairCancel(p) => p.device.valid(),
+            Self::BluetoothPairRespond(p) => {
+                p.device.valid()
+                    && p.pin.as_deref().is_none_or(pairing_text_valid)
+                    && p.passkey.is_none_or(|k| k <= 999_999)
+                    && (p.accept || (p.pin.is_none() && p.passkey.is_none()))
+                    && (p.pin.is_none() || p.passkey.is_none())
+            }
             Self::BluetoothPower(p) => p.adapter.valid(),
             Self::PowerProfile(p) => p.profile.valid(),
             Self::AudioDefault(p) => p.node.valid(),

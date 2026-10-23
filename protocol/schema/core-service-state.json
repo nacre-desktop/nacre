@@ -40,6 +40,22 @@
       "properties": {
         "topic": {
           "type": "string",
+          "const": "bluetooth.pairing"
+        },
+        "data": {
+          "$ref": "#/$defs/BluetoothPairingState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
           "const": "power.profiles"
         },
         "data": {
@@ -687,6 +703,95 @@
         "paired",
         "trusted",
         "pairing"
+      ]
+    },
+    "BluetoothPairingState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "prompt": {
+          "description": "Present only while a pairing started by `bluetooth.pair` waits for the user.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PairingPrompt"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "health"
+      ]
+    },
+    "PairingPrompt": {
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "kind": {
+          "$ref": "#/$defs/PairingKind"
+        },
+        "name": {
+          "description": "Device name for the prompt text.",
+          "type": "string",
+          "maxLength": 128
+        },
+        "code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "timeout_ms": {
+          "description": "The prompt is withdrawn and the pairing fails with `timeout` after this long.",
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "maximum": 300000
+        }
+      },
+      "required": [
+        "device",
+        "kind",
+        "name",
+        "timeout_ms"
+      ]
+    },
+    "PairingKind": {
+      "description": "N0045: what the pairing agent is waiting for. `display` and `confirm` carry the code shown\non both screens (not a secret); a typed PIN or passkey travels only in\n`bluetooth.pair.respond` and is never published.",
+      "oneOf": [
+        {
+          "description": "Ask the user for the device's PIN code (up to 16 characters).",
+          "type": "string",
+          "const": "pin"
+        },
+        {
+          "description": "Ask the user for the six-digit passkey the device shows.",
+          "type": "string",
+          "const": "passkey"
+        },
+        {
+          "description": "Ask whether `code` matches the code on the device.",
+          "type": "string",
+          "const": "confirm"
+        },
+        {
+          "description": "Ask whether the device (or one of its services) may connect.",
+          "type": "string",
+          "const": "authorize"
+        },
+        {
+          "description": "Show `code`; the user types it on the device. No response is expected.",
+          "type": "string",
+          "const": "display"
+        }
       ]
     },
     "PowerProfilesState": {

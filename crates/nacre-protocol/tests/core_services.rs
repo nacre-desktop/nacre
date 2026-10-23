@@ -83,8 +83,8 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             }
         }
     }
-    assert_eq!(topics, 12);
-    assert_eq!(calls.len(), 20);
+    assert_eq!(topics, 13);
+    assert_eq!(calls.len(), 22);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),
@@ -579,4 +579,62 @@ fn network_secret_hidden_ssid_and_forget_contracts() {
     let bad: CoreCall =
         serde_json::from_value(json!({"m":"network.forget","p":{"connection":"../x"}})).unwrap();
     assert!(!bad.valid());
+}
+
+#[test]
+fn pairing_responses_are_bounded_exclusive_and_redacted() {
+    let ok = |params: serde_json::Value| {
+        serde_json::from_value::<CoreCall>(json!({"m":"bluetooth.pair.respond","p":params}))
+            .unwrap()
+            .valid()
+    };
+    let device = "dev_00_11_22_33_44_55";
+    assert!(ok(json!({"device":device,"accept":true})));
+    assert!(ok(json!({"device":device,"accept":true,"pin":"0000"})));
+    assert!(ok(json!({"device":device,"accept":true,"passkey":999999})));
+    assert!(ok(json!({"device":device,"accept":false})));
+    for bad in [
+        json!({"device":device,"accept":true,"passkey":1000000}),
+        json!({"device":device,"accept":true,"pin":""}),
+        json!({"device":device,"accept":true,"pin":"x".repeat(17)}),
+        json!({"device":device,"accept":true,"pin":"bad\npin"}),
+        json!({"device":device,"accept":true,"pin":"1234","passkey":1}),
+        json!({"device":device,"accept":false,"pin":"1234"}),
+        json!({"device":device,"accept":false,"passkey":1}),
+        json!({"device":"../dev","accept":true}),
+    ] {
+        assert!(!ok(bad.clone()), "{bad}");
+    }
+    let call: CoreCall = serde_json::from_value(json!({"m":"bluetooth.pair.respond","p":{"device":device,"accept":true,"pin":"PINSECRET1","passkey":null}})).unwrap();
+    assert!(!format!("{call:?}").contains("PINSECRET1"));
+    let call: CoreCall = serde_json::from_value(
+        json!({"m":"bluetooth.pair.respond","p":{"device":device,"accept":true,"passkey":424242}}),
+    )
+    .unwrap();
+    assert!(!format!("{call:?}").contains("424242"));
+    let cancel: CoreCall =
+        serde_json::from_value(json!({"m":"bluetooth.pair.cancel","p":{"device":device}})).unwrap();
+    assert!(cancel.valid());
+}
+
+#[test]
+fn pairing_prompts_carry_a_code_only_when_one_is_shown() {
+    let state = |kind: &str, code: Option<&str>| {
+        let mut prompt = json!({"device":"dev_00_11_22_33_44_55","kind":kind,"name":"Fixture","timeout_ms":60000});
+        if let Some(code) = code {
+            prompt["code"] = json!(code);
+        }
+        serde_json::from_value::<CoreSnapshot>(json!({"topic":"bluetooth.pairing","data":{
+            "health":{"available":true,"stale":false},"prompt":prompt}}))
+        .unwrap()
+        .valid()
+    };
+    assert!(state("confirm", Some("123456")));
+    assert!(state("display", Some("0000")));
+    assert!(state("pin", None));
+    assert!(state("passkey", None));
+    assert!(state("authorize", None));
+    assert!(!state("confirm", None));
+    assert!(!state("pin", Some("1234")));
+    assert!(!state("display", Some("")));
 }

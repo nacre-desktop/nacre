@@ -4,6 +4,10 @@
 {"t":"ret","id":"secret","err":{"code":"validation","message":"Network secret required","retry":true,"dispatched":false}}
 {"t":"call","id":"cancelled","m":"bluetooth.pair","p":{"device":"device-1"}}
 {"t":"ret","id":"cancelled","err":{"code":"permission_denied","message":"Authentication was cancelled","retry":false}}
+{"t":"call","id":"rejected","m":"bluetooth.pair","p":{"device":"device-1"}}
+{"t":"ret","id":"rejected","err":{"code":"permission_denied","message":"Pairing was rejected","retry":false}}
+{"t":"call","id":"timed-out","m":"bluetooth.pair","p":{"device":"device-1"}}
+{"t":"ret","id":"timed-out","err":{"code":"timeout","message":"Pairing timed out","retry":true}}
 {"t":"call","id":"stale","m":"audio.set_volume","p":{"node":"old-node","volume":0.5}}
 {"t":"ret","id":"stale","err":{"code":"stale_revision","message":"Device changed; refresh state","retry":true}}
 {"t":"call","id":"invalid","m":"audio.set_volume","p":{"node":"output-1","volume":1.5}}

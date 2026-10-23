@@ -91,6 +91,7 @@ pub struct Hub {
     /// Lazy producers wait on "has any client subscribed to this topic".
     interest: BTreeMap<String, tokio::sync::watch::Sender<bool>>,
     pub network: Option<super::network::Requests>,
+    pub bluetooth: Option<Rc<super::bluetooth::Service>>,
     pub notifications: Option<super::notifications::Requests>,
     pub player: Option<super::dashboard_player::Requests>,
     pub session: Option<super::session_policy::Requests>,
@@ -123,6 +124,7 @@ impl Hub {
             internal,
             interest: BTreeMap::new(),
             network: None,
+            bluetooth: None,
             notifications: None,
             player: None,
             session: None,
@@ -353,6 +355,9 @@ impl Hub {
             }
             if let Some(network) = &self.network {
                 methods.extend(network.methods());
+            }
+            if let Some(bluetooth) = &self.bluetooth {
+                methods.extend(bluetooth.methods());
             }
             if let Some(notifications) = &self.notifications {
                 methods.extend(notifications.methods());

@@ -5,6 +5,7 @@ pub mod attach;
 pub mod bar_services;
 pub mod bar_tray_watcher;
 pub mod behaviours;
+pub mod bluetooth;
 pub mod brain;
 pub mod client;
 pub mod compositor;
@@ -34,6 +35,8 @@ pub mod settings_validation;
 pub mod shell_actions;
 pub mod socket;
 pub mod supervisor;
+#[cfg(test)]
+pub(crate) mod test_logs;
 pub mod wallpaper;
 pub mod widths;
 pub mod workers;
@@ -231,6 +234,18 @@ async fn serve(
             "osd",
             hub.clone(),
             move || osd::run(osd_hub.clone(), osd_paths.clone()),
+        )))
+    } else {
+        None
+    };
+    // N0045: connects to the system bus; the agent is registered only while a pairing runs.
+    let bluetooth_service = if !counter.safe {
+        bluetooth::initial(&hub)?;
+        let bluetooth_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "bluetooth-pairing",
+            hub.clone(),
+            move || bluetooth::run(bluetooth_hub.clone()),
         )))
     } else {
         None
@@ -450,6 +465,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("Wallpaper supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = bluetooth_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Bluetooth supervisor failed during shutdown");
             }
         }
     }

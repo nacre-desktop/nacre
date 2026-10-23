@@ -232,6 +232,38 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "bluetooth.pair.respond"
+        },
+        "p": {
+          "$ref": "#/$defs/BluetoothPairRespond"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "bluetooth.pair.cancel"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "power.set_profile"
         },
         "p": {
@@ -686,6 +718,39 @@
       "required": [
         "adapter",
         "powered"
+      ]
+    },
+    "BluetoothPairRespond": {
+      "description": "N0045: the answer to the current pairing prompt. `pin` (kind `pin`, 1..16 printable ASCII\ncharacters) and `passkey` (kind `passkey`, 0..999999) are secrets: used once, never\nstored, echoed or logged. `accept:false` rejects and carries neither.",
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "accept": {
+          "type": "boolean"
+        },
+        "pin": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "passkey": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 999999
+        }
+      },
+      "required": [
+        "device",
+        "accept"
       ]
     },
     "ProfileTarget": {

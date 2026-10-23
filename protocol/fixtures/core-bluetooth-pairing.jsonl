@@ -1,0 +1,12 @@
+{"t":"snap","topic":"bluetooth.pairing","seq":0,"data":{"health":{"available":true,"stale":false},"prompt":{"device":"dev_00_11_22_33_44_55","kind":"confirm","name":"Fixture headphones","code":"123456","timeout_ms":60000}}}
+{"t":"call","id":0,"m":"bluetooth.pair.respond","p":{"device":"dev_00_11_22_33_44_55","accept":true},"timeout":10000}
+{"t":"ret","id":0,"ok":{"changed":true}}
+{"t":"call","id":1,"m":"bluetooth.pair.respond","p":{"device":"dev_00_11_22_33_44_55","accept":true,"pin":"0000"},"timeout":10000}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"call","id":2,"m":"bluetooth.pair.respond","p":{"device":"dev_00_11_22_33_44_55","accept":true,"passkey":123456},"timeout":10000}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"call","id":3,"m":"bluetooth.pair.respond","p":{"device":"dev_00_11_22_33_44_55","accept":false},"timeout":10000}
+{"t":"ret","id":3,"ok":{"changed":true}}
+{"t":"call","id":4,"m":"bluetooth.pair.cancel","p":{"device":"dev_00_11_22_33_44_55"},"timeout":10000}
+{"t":"ret","id":4,"ok":{"changed":true}}
+{"t":"patch","topic":"bluetooth.pairing","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}
