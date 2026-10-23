@@ -613,7 +613,7 @@
  "non_route_binds": [
   {
    "bind": "Escape (Hyprland only)",
-   "target": "hl.dsp.global nacre_shell:dismissHoverEdges",
+   "target": "global shortcut nacre_shell:dismissHoverEdges",
    "bead": "N/A until the frame lips exist (B0047)",
    "note": "Hyprland global-shortcut protocol answered by the QML Shortcut, not a quickshell ipc call."
   }
