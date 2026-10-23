@@ -1834,7 +1834,10 @@ profile.install(home)
 fn legacy_ui_fallback_requires_a_proven_undispatched_call() -> Result<()> {
     // `nacre settings PAGE` is the provider-neutral route; QML's legacy handler is `settingsApp open`.
     let cases: [(&[&str], &str); 2] = [
-        (&["nacre", "launcher", ""], "-c nacre ipc call nacre launcher  "),
+        (
+            &["nacre", "launcher", ""],
+            "-c nacre ipc call nacre launcher  ",
+        ),
         (
             &["nacre", "settings", "sound"],
             "-c nacre ipc call settingsApp open sound ",

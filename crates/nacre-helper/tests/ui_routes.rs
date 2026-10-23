@@ -48,7 +48,8 @@ fn fake_provider_receives_every_registered_route_exactly() -> Result<()> {
             let mut reader = BufReader::new(stream);
             let mut line = String::new();
             reader.read_line(&mut line).unwrap();
-            let descriptor = json!({"v":1,"class":"ui","timeout":3000,"params":{"type":"object"},"result":{}});
+            let descriptor =
+                json!({"v":1,"class":"ui","timeout":3000,"params":{"type":"object"},"result":{}});
             writeln!(
                 reader.get_mut(),
                 "{}",
