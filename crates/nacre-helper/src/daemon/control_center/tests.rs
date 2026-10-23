@@ -9,7 +9,7 @@ struct Fixture {
     dir: tempfile::TempDir,
     hub: Shared,
     missing: std::rc::Rc<RefCell<Vec<String>>>,
-    _pipewire: UnixListener,
+    _sockets: Vec<UnixListener>,
 }
 fn script(path: &Path, body: &str) {
     std::fs::write(path, format!("#!/bin/sh\n{body}")).unwrap();
@@ -28,7 +28,9 @@ impl Fixture {
         std::fs::create_dir_all(root.join("run")).unwrap();
         let pipewire = UnixListener::bind(root.join("run/pipewire-0")).unwrap();
         std::fs::create_dir_all(root.join("sys")).unwrap();
-        UnixListener::bind(root.join("system_bus")).unwrap();
+        let system_bus = UnixListener::bind(root.join("system_bus")).unwrap();
+        let user_bus = UnixListener::bind(root.join("run/bus")).unwrap();
+        write(&root.join("rfkill_dev"), "");
         // Light devices: a panel backlight (0..100) and a keyboard backlight (0..3).
         for (class, name, max, now) in [
             ("backlight", "intel_backlight", 100, 40),
@@ -107,7 +109,7 @@ esac
             dir,
             hub,
             missing,
-            _pipewire: pipewire,
+            _sockets: vec![pipewire, system_bus, user_bus],
         };
         fixture.install();
         fixture
@@ -130,6 +132,7 @@ esac
             sys: self.path("sys"),
             runtime: Some(self.path("run")),
             system_bus: self.path("system_bus"),
+            rfkill_dev: self.path("rfkill_dev"),
             paths: Paths::new(self.path("home")),
             which: Arc::new(move |name| !missing.iter().any(|m| m == name) && name != "none"),
             tick: Duration::from_millis(30),
@@ -563,6 +566,14 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
         // No keyboard backlight: the method disappears.
         std::fs::remove_dir_all(f.path("sys/class/leds")).unwrap();
         assert!(!all(&f).iter().any(|m| m == "keyboard_light.set"));
+        // Tools without a session or a control device do not count as a backend.
+        std::fs::remove_file(f.path("rfkill_dev")).unwrap();
+        std::fs::remove_file(f.path("run/bus")).unwrap();
+        f.install();
+        let bare = all(&f);
+        for name in ["airplane.set", "stay_awake.set", "recorder.start"] {
+            assert!(!bare.iter().any(|m| m == name), "{name}");
+        }
         // PipeWire socket gone: audio disappears.
         std::fs::remove_file(f.path("run/pipewire-0")).unwrap();
         assert!(!all(&f).iter().any(|m| m == "audio.set_mute"));

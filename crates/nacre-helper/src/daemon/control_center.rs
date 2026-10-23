@@ -55,6 +55,8 @@ pub struct Env {
     /// `$XDG_RUNTIME_DIR` (the PipeWire socket).
     pub runtime: Option<PathBuf>,
     pub system_bus: PathBuf,
+    /// `/dev/rfkill`
+    pub rfkill_dev: PathBuf,
     pub paths: Paths,
     /// Presence of a plain tool (`grim`, `slurp`, `wf-recorder`, ...).
     pub which: Arc<dyn Fn(&str) -> bool + Send + Sync>,
@@ -74,6 +76,7 @@ impl Env {
             sys: "/sys".into(),
             runtime: std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from),
             system_bus: "/run/dbus/system_bus_socket".into(),
+            rfkill_dev: "/dev/rfkill".into(),
             paths: Paths::environment()?,
             which: Arc::new(executable),
             tick: Duration::from_secs(2),
@@ -149,6 +152,19 @@ fn pipewire(env: &Env) -> bool {
             .as_ref()
             .is_some_and(|runtime| socket_present(&runtime.join("pipewire-0")))
 }
+/// Radios that can be switched: the tool, the control device and a managed radio.
+fn rfkill_present(env: &Env) -> bool {
+    env.has(&env.rfkill) && env.rfkill_dev.exists() && !radios(&env.sys).is_empty()
+}
+/// A reachable user manager: the tools alone say nothing about a session.
+fn systemd_present(env: &Env) -> bool {
+    env.has(&env.systemctl)
+        && env.has("systemd-inhibit")
+        && env
+            .runtime
+            .as_ref()
+            .is_some_and(|runtime| socket_present(&runtime.join("bus")))
+}
 fn keyboard_present(env: &Env) -> bool {
     env.has(&env.brightnessctl)
         && light_devices::discover(&[], &env.sys, &mut |_, _, _| Err("unused".into()))
@@ -163,10 +179,12 @@ fn backend_present(hub: &Hub, env: &Env, method: &str) -> bool {
         "audio.set_volume" | "audio.set_mute" => pipewire(env),
         "keyboard_light.set" => keyboard_present(env),
         "power.set_profile" => env.has(&env.powerprofilesctl) && socket_present(&env.system_bus),
-        "airplane.set" => env.has(&env.rfkill) && !radios(&env.sys).is_empty(),
+        "airplane.set" => rfkill_present(env),
         "night_light.set" => controls("night_light"),
-        "stay_awake.set" => env.has(&env.systemctl) && env.has("systemd-inhibit"),
-        "recorder.start" | "recorder.stop" => env.has("wf-recorder") && env.has("slurp"),
+        "stay_awake.set" => systemd_present(env),
+        "recorder.start" | "recorder.stop" => {
+            systemd_present(env) && env.has("wf-recorder") && env.has("slurp")
+        }
         "screenshot.capture" => env.has("grim") && env.has("slurp"),
         "color_picker.pick" => env.has("hyprpicker"),
         "wallpaper.next" => {
@@ -868,16 +886,16 @@ fn collect(env: &Env, probe: &Probe, prior: &ControlsState) -> ControlsState {
         }
     }
     let present = radios(&env.sys);
-    if env.has(&env.rfkill) && !present.is_empty() {
+    if rfkill_present(env) {
         state.airplane = Some(Toggle {
             enabled: present.iter().all(|radio| radio.soft),
         });
     }
     let (stay, recording) = units(env);
-    if env.has("systemd-inhibit") {
+    if systemd_present(env) {
         state.stay_awake = stay.map(|enabled| Toggle { enabled });
     }
-    if env.has("wf-recorder") && env.has("slurp") {
+    if systemd_present(env) && env.has("wf-recorder") && env.has("slurp") {
         state.recorder = recording.map(|recording| Recorder { recording });
     }
     if probe.slow {
