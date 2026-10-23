@@ -217,11 +217,15 @@ struct RawDevice {
     access_points: Vec<RawAccessPoint>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 struct RawProfile {
     path: String,
     name: String,
     kind: String,
+    ssid: Option<Vec<u8>>,
+    security: Option<String>,
+    autoconnect: Option<bool>,
+    last_used: Option<u64>,
 }
 
 #[derive(Clone, Debug)]
@@ -439,9 +443,38 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
         let connection_settings = settings.get("connection").ok_or(CoreError::Unavailable)?;
         let name = display_text(&variant_string(connection_settings.get("id"))?, 128);
         let kind = display_text(&variant_string(connection_settings.get("type"))?, 64);
+        // Saved Wi-Fi details (N0042). GetSettings never returns secret values.
+        let get = |section: &str, key: &str| settings.get(section)?.get(key)?.try_clone().ok();
+        let wifi = kind == "802-11-wireless";
+        let security = wifi.then(|| match settings.get("802-11-wireless-security") {
+            None => "open",
+            Some(section) => match section
+                .get("key-mgmt")
+                .and_then(|v| v.downcast_ref::<&str>().ok())
+            {
+                Some("none") => "wep",
+                Some("wpa-psk") => "wpa_psk",
+                Some("sae") => "sae",
+                Some("wpa-eap" | "ieee8021x" | "wpa-eap-suite-b-192") => "eap",
+                _ => "other",
+            },
+        });
         profiles.push(RawProfile {
             path: path.as_str().to_owned(),
             name,
+            ssid: wifi
+                .then(|| get("802-11-wireless", "ssid").and_then(|v| Vec::<u8>::try_from(v).ok()))
+                .flatten()
+                .filter(|ssid| ssid.len() <= 32),
+            security: security.map(Into::into),
+            autoconnect: wifi.then(|| {
+                get("connection", "autoconnect")
+                    .and_then(|v| bool::try_from(v).ok())
+                    .unwrap_or(true)
+            }),
+            last_used: get("connection", "timestamp")
+                .and_then(|v| u64::try_from(v).ok())
+                .filter(|seconds| (1..=MAX_SAFE_INTEGER).contains(seconds)),
             kind,
         });
     }
@@ -532,6 +565,12 @@ fn project(
                 name: display_text(&profile.name, 128),
                 kind: connection_kind(&profile.kind),
                 active: false,
+                ssid: profile
+                    .ssid
+                    .map(|ssid| display_text(&String::from_utf8_lossy(&ssid), 32)),
+                security: profile.security,
+                autoconnect: profile.autoconnect,
+                last_used: profile.last_used,
             },
         );
     }
@@ -1271,6 +1310,8 @@ async fn observe_on_connection(
             if owner_boundary.get() {
                 return Err("NetworkManager owner changed before publish".into());
             }
+            let failures = authentication_failures.borrow().clone();
+            controls::settle_created(&connection, &expected_owner, &requests, &candidate_ids, &state, &failures).await;
             controls::apply_failures(&mut state, &mut authentication_failures.borrow_mut());
             let data = serde_json::to_value(&state)?;
             if let Err(error) = hub.borrow_mut().publish(CORE_TOPIC, data) {
@@ -2087,11 +2128,13 @@ mod core_tests {
                     path: PROFILE_ETHERNET.into(),
                     name: "Wired fixture".into(),
                     kind: "802-3-ethernet".into(),
+                    ..Default::default()
                 },
                 RawProfile {
                     path: PROFILE_WIFI.into(),
                     name: "Wireless fixture".into(),
                     kind: "802-11-wireless".into(),
+                    ..Default::default()
                 },
             ],
             active_connections: vec![
@@ -2267,6 +2310,7 @@ mod core_tests {
                 path: format!("/org/freedesktop/NetworkManager/Settings/{index}"),
                 name: format!("Profile {index}"),
                 kind: "802-3-ethernet".into(),
+                ..Default::default()
             })
             .collect();
 

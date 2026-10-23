@@ -11,6 +11,8 @@ const SECOND: &str = "/org/freedesktop/NetworkManager/Devices/2";
 const AP: &str = "/org/freedesktop/NetworkManager/AccessPoint/1";
 const PROFILE: &str = "/org/freedesktop/NetworkManager/Settings/1";
 const ACTIVE: &str = "/org/freedesktop/NetworkManager/ActiveConnection/1";
+const CREATED: &str = "/org/freedesktop/NetworkManager/Settings/2";
+const SECRET: &str = "correct horse battery staple 7731";
 fn path(value: &str) -> OwnedObjectPath {
     OwnedObjectPath::try_from(value).unwrap()
 }
@@ -27,6 +29,16 @@ struct State {
     auth_failed: bool,
     mode: u8,
     calls: Vec<String>,
+    // What the last AddAndActivateConnection2 received (N0042).
+    added_sections: Vec<String>,
+    added_persist: String,
+    added_ssid: Option<Vec<u8>>,
+    added_hidden: bool,
+    added_key_mgmt: Option<String>,
+    added_psk: Option<String>,
+    created: bool,
+    created_active: bool,
+    deleted: Vec<String>,
 }
 #[derive(Clone, Default)]
 struct Backend {
@@ -124,16 +136,46 @@ impl Manager {
         OwnedObjectPath,
         HashMap<String, OwnedValue>,
     )> {
-        assert!(settings.is_empty(), "no credential settings supplied");
         assert_eq!(device.as_str(), DEVICE);
-        assert_eq!(specific.as_str(), AP);
-        assert_eq!(<&str>::try_from(&options["persist"]).unwrap(), "volatile");
+        let hidden = specific.as_str() == "/";
+        assert!(hidden || specific.as_str() == AP);
+        let text = |section: &str, key: &str| -> Option<String> {
+            let value = settings.get(section)?.get(key)?;
+            <&str>::try_from(value).ok().map(str::to_owned)
+        };
+        {
+            let mut state = self.0.state.lock().unwrap();
+            let mut sections: Vec<String> = settings.keys().cloned().collect();
+            sections.sort();
+            state.added_sections = sections;
+            state.added_persist = <&str>::try_from(&options["persist"]).unwrap().to_owned();
+            state.added_ssid = settings
+                .get("802-11-wireless")
+                .and_then(|section| section.get("ssid"))
+                .and_then(|value| Vec::<u8>::try_from(value.try_clone().unwrap()).ok());
+            state.added_hidden = settings
+                .get("802-11-wireless")
+                .and_then(|section| section.get("hidden"))
+                .is_some_and(|value| bool::try_from(value.try_clone().unwrap()).unwrap());
+            state.added_key_mgmt = text("802-11-wireless-security", "key-mgmt");
+            state.added_psk = text("802-11-wireless-security", "psk");
+        }
         self.0.admission("access_point").await?;
         let mut state = self.0.state.lock().unwrap();
+        let new = state.added_persist == "to-disk";
         if !matches!(state.mode, 5 | 6) {
             state.active = true;
+            state.created_active = new;
         }
-        Ok((path(PROFILE), path(ACTIVE), HashMap::new()))
+        state.created |= new;
+        if new {
+            state.deleted.retain(|object| object != CREATED);
+        }
+        Ok((
+            path(if new { CREATED } else { PROFILE }),
+            path(ACTIVE),
+            HashMap::new(),
+        ))
     }
     async fn deactivate_connection(&self, active: OwnedObjectPath) -> zbus::fdo::Result<()> {
         assert_eq!(active.as_str(), ACTIVE);
@@ -266,33 +308,60 @@ impl Point {
     }
     #[zbus(property)]
     fn rsn_flags(&self) -> u32 {
-        1
+        // PSK key management, as a WPA2-Personal access point reports it.
+        0x100
     }
 }
-struct Settings;
+struct Settings(Backend);
 #[zbus::interface(name = "org.freedesktop.NetworkManager.Settings")]
 impl Settings {
     fn list_connections(&self) -> Vec<OwnedObjectPath> {
-        vec![path(PROFILE)]
+        let state = self.0.state.lock().unwrap();
+        [(PROFILE, true), (CREATED, state.created)]
+            .into_iter()
+            .filter(|(object, exists)| *exists && !state.deleted.iter().any(|d| d == object))
+            .map(|(object, _)| path(object))
+            .collect()
     }
 }
-struct Profile;
+struct Profile(Backend, &'static str);
 #[zbus::interface(name = "org.freedesktop.NetworkManager.Settings.Connection")]
 impl Profile {
+    fn delete(&self) {
+        let mut state = self.0.state.lock().unwrap();
+        state.calls.push("forget".into());
+        state.deleted.push(self.1.into());
+    }
     fn get_settings(&self) -> HashMap<String, HashMap<String, OwnedValue>> {
-        HashMap::from([(
-            "connection".into(),
-            HashMap::from([
-                (
-                    "id".into(),
-                    OwnedValue::from(zbus::zvariant::Str::from("Fixture")),
-                ),
-                (
-                    "type".into(),
-                    OwnedValue::from(zbus::zvariant::Str::from("802-11-wireless")),
-                ),
-            ]),
-        )])
+        let text = |value: &str| OwnedValue::from(zbus::zvariant::Str::from(value.to_owned()));
+        let saved = self.1 == PROFILE;
+        let mut settings = HashMap::from([
+            (
+                "connection".into(),
+                HashMap::from([
+                    ("id".into(), text(if saved { "Fixture" } else { "Hidden" })),
+                    ("type".into(), text("802-11-wireless")),
+                    ("autoconnect".into(), OwnedValue::from(!saved)),
+                    ("timestamp".into(), OwnedValue::from(1_700_000_000u64)),
+                ]),
+            ),
+            (
+                "802-11-wireless".into(),
+                HashMap::from([(
+                    "ssid".into(),
+                    zbus::zvariant::Value::from(b"Fixture".to_vec())
+                        .try_into()
+                        .unwrap(),
+                )]),
+            ),
+        ]);
+        if saved {
+            settings.insert(
+                "802-11-wireless-security".into(),
+                HashMap::from([("key-mgmt".into(), text("wpa-psk"))]),
+            );
+        }
+        settings
     }
 }
 struct Active(Backend);
@@ -300,7 +369,11 @@ struct Active(Backend);
 impl Active {
     #[zbus(property)]
     fn connection(&self) -> OwnedObjectPath {
-        path(PROFILE)
+        path(if self.0.state.lock().unwrap().created_active {
+            CREATED
+        } else {
+            PROFILE
+        })
     }
     #[zbus(property)]
     fn devices(&self) -> zbus::fdo::Result<Vec<OwnedObjectPath>> {
@@ -364,8 +437,12 @@ impl Fixture {
             .serve_at(SECOND, DeviceFixture(backend.clone(), true))?
             .serve_at(DEVICE, Wireless(backend.clone()))?
             .serve_at(AP, Point)?
-            .serve_at("/org/freedesktop/NetworkManager/Settings", Settings)?
-            .serve_at(PROFILE, Profile)?
+            .serve_at(
+                "/org/freedesktop/NetworkManager/Settings",
+                Settings(backend.clone()),
+            )?
+            .serve_at(PROFILE, Profile(backend.clone(), PROFILE))?
+            .serve_at(CREATED, Profile(backend.clone(), CREATED))?
             .serve_at(ACTIVE, Active(backend))?
             .build()
             .await?)
@@ -621,7 +698,7 @@ async fn network_controls_welcome_and_boot_scoping() -> crate::Result<()> {
             let f = Fixture::new().await?;
             let (mut writer, mut reader, task, welcome) = socket_client(f.hub.clone()).await?;
             let methods = advertised(welcome);
-            assert_eq!(methods.len(), 3);
+            assert_eq!(methods.len(), 4);
             assert!(methods.values().all(|m| m.v == 1 && m.timeout == TIMEOUT));
             framing::write(
                 &mut writer,
@@ -696,7 +773,7 @@ async fn network_controls_owner_replacement_never_replays() -> crate::Result<()>
         f.task = tokio::task::spawn_local(observe_on_connection(f.hub.clone(), Rc::new(Cell::new(0)), projection, connection, ObserveHooks::default()));
         f.wait(|s| s.health.available).await;
         assert_ne!(old_device, f.device());
-        assert_eq!(advertised(f.hub.borrow().welcome()).len(), 3);
+        assert_eq!(advertised(f.hub.borrow().welcome()).len(), 4);
         assert!(replacement.state.lock().unwrap().calls.is_empty());
         assert_eq!(f.call("network.disconnect", json!({"device":old_device})).await.unwrap_err().code, ErrorCode::StaleRevision);
         assert!(replacement.state.lock().unwrap().calls.is_empty());
@@ -736,7 +813,7 @@ async fn network_controls_link_loss_skips_queued_actions() -> crate::Result<()> 
             f.backend.release.notify_one();
             f.wait(|s| s.wireless_enabled).await;
             let (writer, reader, task, welcome) = socket_client(f.hub.clone()).await?;
-            assert_eq!(advertised(welcome).len(), 3);
+            assert_eq!(advertised(welcome).len(), 4);
             // Reader and actor share one queue; a roundtrip fences the skipped call.
             assert_eq!(
                 f.call("network.disconnect", json!({"device":f.device()}))
@@ -914,5 +991,406 @@ async fn network_controls_failure_before_admission_reply_is_retained() -> crate:
         f.wait(|s| s.health.error.is_none() && s.devices.items.values().any(|device| device.connected)).await;
         Ok::<(), crate::Error>(())
     })).await??;
+    Ok(())
+}
+
+fn id_named(state: &NetworkState, name: &str) -> EntityId {
+    state
+        .connections
+        .items
+        .iter()
+        .find(|(_, saved)| saved.name == name)
+        .map(|(id, _)| id.clone())
+        .unwrap()
+}
+fn connect_params(f: &Fixture, target: Value, extra: Value) -> Value {
+    let mut params = json!({"device":f.device(),"target":target});
+    for (key, value) in extra.as_object().unwrap() {
+        params[key] = value.clone();
+    }
+    params
+}
+fn created_profiles(f: &Fixture) -> usize {
+    f.hub
+        .borrow()
+        .network
+        .as_ref()
+        .unwrap()
+        .created
+        .borrow()
+        .len()
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_secrets_join_saved_list_forget_and_needs_secret() -> crate::Result<()> {
+    tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            f.call("network.set_wifi", json!({"enabled":true})).await?;
+            f.wait(|s| s.wireless_enabled).await;
+            let state = f.snapshot();
+            let saved = &state.connections.items[&state.connections.order[0]];
+            assert_eq!(saved.ssid.as_deref(), Some("Fixture"));
+            assert_eq!(saved.security.as_deref(), Some("wpa_psk"));
+            assert_eq!(saved.autoconnect, Some(false));
+            assert_eq!(saved.last_used, Some(1_700_000_000));
+            let point = json!({"kind":"access_point","id":state.access_points.order[0]});
+            // Validation fails before the backend sees anything.
+            for params in [
+                connect_params(&f, point.clone(), json!({"secret":"short"})),
+                connect_params(&f, point.clone(), json!({"secret":""})),
+                connect_params(&f, point.clone(), json!({"security":"sae"})),
+                connect_params(
+                    &f,
+                    json!({"kind":"connection","id":state.connections.order[0]}),
+                    json!({"secret":SECRET}),
+                ),
+                connect_params(
+                    &f,
+                    json!({"kind":"hidden_ssid","id":"x".repeat(33)}),
+                    json!({}),
+                ),
+                connect_params(&f, json!({"kind":"hidden_ssid","id":""}), json!({})),
+            ] {
+                assert_eq!(
+                    f.call("network.connect", params).await.unwrap_err().code,
+                    ErrorCode::Validation
+                );
+            }
+            assert!(f.backend.state.lock().unwrap().calls == ["wifi"]);
+            // Join the secured access point with a secret: saved by NetworkManager, tracked until active.
+            assert_eq!(
+                f.call(
+                    "network.connect",
+                    connect_params(&f, point.clone(), json!({"secret":SECRET}))
+                )
+                .await?,
+                json!({"changed":true})
+            );
+            {
+                let backend = f.backend.state.lock().unwrap();
+                assert_eq!(backend.added_sections, ["802-11-wireless-security"]);
+                assert_eq!(backend.added_persist, "to-disk");
+                assert_eq!(backend.added_key_mgmt.as_deref(), Some("wpa-psk"));
+                assert_eq!(backend.added_psk.as_deref(), Some(SECRET));
+            }
+            let joined = f
+                .wait(|s| {
+                    s.connections.items.len() == 2
+                        && s.devices.items.values().any(|d| d.connected)
+                        && s.connections
+                            .items
+                            .values()
+                            .any(|c| c.name == "Hidden" && c.active)
+                })
+                .await;
+            assert_eq!(created_profiles(&f), 0, "a working profile is kept");
+            assert!(f.backend.state.lock().unwrap().deleted.is_empty());
+            f.call("network.disconnect", json!({"device":f.device()}))
+                .await?;
+            // Forget both saved profiles.
+            let created = id_named(&joined, "Hidden");
+            assert_eq!(
+                f.call("network.forget", json!({"connection":created}))
+                    .await?,
+                json!({"changed":true})
+            );
+            f.wait(|s| s.connections.items.len() == 1).await;
+            assert_eq!(f.backend.state.lock().unwrap().deleted, [CREATED]);
+            // Stale, wrong-kind and malformed targets.
+            for (params, code) in [
+                (json!({"connection":created}), ErrorCode::StaleRevision),
+                (json!({"connection":f.device()}), ErrorCode::StaleRevision),
+                (
+                    json!({"connection":"/org/freedesktop/x"}),
+                    ErrorCode::Validation,
+                ),
+            ] {
+                assert_eq!(
+                    f.call("network.forget", params).await.unwrap_err().code,
+                    code
+                );
+            }
+            assert_eq!(f.backend.state.lock().unwrap().deleted, [CREATED]);
+            // Secured access point without saved profile or secret: the UI must prompt.
+            f.call(
+                "network.forget",
+                json!({"connection":id_named(&f.snapshot(), "Fixture")}),
+            )
+            .await?;
+            f.wait(|s| s.connections.items.is_empty()).await;
+            let calls = f.backend.state.lock().unwrap().calls.len();
+            let error = f
+                .call("network.connect", connect_params(&f, point, json!({})))
+                .await
+                .unwrap_err();
+            assert_eq!(
+                (
+                    error.code,
+                    error.message.as_str(),
+                    error.retry,
+                    error.dispatched
+                ),
+                (ErrorCode::Validation, SECRET_REQUIRED, true, Some(false))
+            );
+            assert_eq!(f.backend.state.lock().unwrap().calls.len(), calls);
+            Ok::<(), crate::Error>(())
+        }),
+    )
+    .await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_secrets_hidden_ssid_variants() -> crate::Result<()> {
+    tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            f.call("network.set_wifi", json!({"enabled":true})).await?;
+            f.wait(|s| s.wireless_enabled).await;
+            let hidden = json!({"kind":"hidden_ssid","id":"Hidden Net"});
+            f.call(
+                "network.connect",
+                connect_params(&f, hidden.clone(), json!({"secret":SECRET})),
+            )
+            .await?;
+            {
+                let backend = f.backend.state.lock().unwrap();
+                assert_eq!(
+                    backend.added_sections,
+                    ["802-11-wireless", "802-11-wireless-security", "connection"]
+                );
+                assert_eq!(
+                    backend.added_ssid.as_deref(),
+                    Some(b"Hidden Net".as_slice())
+                );
+                assert!(backend.added_hidden);
+                assert_eq!(
+                    (
+                        backend.added_key_mgmt.as_deref(),
+                        backend.added_psk.as_deref()
+                    ),
+                    (Some("wpa-psk"), Some(SECRET))
+                );
+                assert_eq!(backend.added_persist, "to-disk");
+            }
+            f.call(
+                "network.connect",
+                connect_params(
+                    &f,
+                    hidden.clone(),
+                    json!({"secret":SECRET,"security":"sae"}),
+                ),
+            )
+            .await?;
+            assert_eq!(
+                f.backend.state.lock().unwrap().added_key_mgmt.as_deref(),
+                Some("sae")
+            );
+            f.call(
+                "network.connect",
+                connect_params(&f, hidden.clone(), json!({})),
+            )
+            .await?;
+            {
+                let backend = f.backend.state.lock().unwrap();
+                assert_eq!(backend.added_sections, ["802-11-wireless", "connection"]);
+                assert!(backend.added_hidden && backend.added_psk.is_none());
+            }
+            // A secure choice needs a secret; an open choice cannot carry one.
+            let error = f
+                .call(
+                    "network.connect",
+                    connect_params(&f, hidden.clone(), json!({"security":"wpa_psk"})),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(
+                (error.code, error.message.as_str()),
+                (ErrorCode::Validation, SECRET_REQUIRED)
+            );
+            let error = f
+                .call(
+                    "network.connect",
+                    connect_params(
+                        &f,
+                        hidden.clone(),
+                        json!({"secret":SECRET,"security":"open"}),
+                    ),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::Validation);
+            // Hidden joins need a Wi-Fi device.
+            let wired = f.snapshot().devices.order[1].clone();
+            let error = f
+                .call(
+                    "network.connect",
+                    json!({"device":wired,"target":hidden,"secret":SECRET}),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::StaleRevision);
+            Ok::<(), crate::Error>(())
+        }),
+    )
+    .await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_secrets_wrong_password_deletes_new_profile_and_allows_retry() -> crate::Result<()>
+{
+    tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            f.call("network.set_wifi", json!({"enabled":true})).await?;
+            f.wait(|s| s.wireless_enabled).await;
+            let point = json!({"kind":"access_point","id":f.snapshot().access_points.order[0]});
+            f.backend.state.lock().unwrap().mode = 5;
+            f.call(
+                "network.connect",
+                connect_params(&f, point.clone(), json!({"secret":"definitely wrong"})),
+            )
+            .await?;
+            f.wait(|s| s.connections.items.len() == 2).await;
+            assert_eq!(created_profiles(&f), 1);
+            for transition in [(120u32, 60u32, 7u32), (30, 120, 0)] {
+                f.server
+                    .emit_signal(
+                        None::<&str>,
+                        DEVICE,
+                        "org.freedesktop.NetworkManager.Device",
+                        "StateChanged",
+                        &transition,
+                    )
+                    .await?;
+            }
+            // The retryable topic error is the re-prompt signal; the bad profile is gone.
+            let failed = f.wait(|s| s.health.error.is_some()).await;
+            let error = failed.health.error.unwrap();
+            assert!(error.retry && error.message == "Network authentication required or cancelled");
+            // Deletion happened before that publication; NetworkManager then signals the removal.
+            assert_eq!(f.backend.state.lock().unwrap().deleted, [CREATED]);
+            f.signal().await?;
+            f.wait(|s| s.connections.items.len() == 1).await;
+            assert_eq!(created_profiles(&f), 0);
+            f.backend.state.lock().unwrap().mode = 0;
+            f.call(
+                "network.connect",
+                connect_params(&f, point, json!({"secret":SECRET})),
+            )
+            .await?;
+            f.wait(|s| {
+                s.health.error.is_none()
+                    && s.connections.items.len() == 2
+                    && s.devices.items.values().any(|d| d.connected)
+            })
+            .await;
+            assert_eq!(
+                created_profiles(&f),
+                0,
+                "the working profile is kept and untracked"
+            );
+            Ok::<(), crate::Error>(())
+        }),
+    )
+    .await??;
+    Ok(())
+}
+
+#[derive(Clone, Default)]
+struct LogSink(Arc<Mutex<Vec<u8>>>);
+impl std::io::Write for LogSink {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().extend_from_slice(data);
+        Ok(data.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+/// Process-wide capture at TRACE, so zbus background threads are included too.
+fn captured_logs() -> LogSink {
+    static SINK: std::sync::OnceLock<LogSink> = std::sync::OnceLock::new();
+    SINK.get_or_init(|| {
+        let sink = LogSink::default();
+        let writer = sink.clone();
+        let _ = tracing::subscriber::set_global_default(
+            tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::TRACE)
+                .with_ansi(false)
+                .with_writer(move || writer.clone())
+                .finish(),
+        );
+        sink
+    })
+    .clone()
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn network_secrets_never_reach_logs_errors_state_or_debug() -> crate::Result<()> {
+    let sink = captured_logs();
+    tracing::info!("secret log capture active");
+    let observed = tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            f.call("network.set_wifi", json!({"enabled":true})).await?;
+            f.wait(|s| s.wireless_enabled).await;
+            let point = json!({"kind":"access_point","id":f.snapshot().access_points.order[0]});
+            let mut observed = String::new();
+            let bad = [
+                connect_params(&f, point.clone(), json!({"secret":SECRET})),
+                connect_params(
+                    &f,
+                    json!({"kind":"connection","id":f.snapshot().connections.order[0]}),
+                    json!({"secret":SECRET}),
+                ),
+                connect_params(
+                    &f,
+                    json!({"kind":"hidden_ssid","id":"Net"}),
+                    json!({"secret":SECRET,"security":"open"}),
+                ),
+            ];
+            let call: CoreCall =
+                serde_json::from_value(json!({"m":"network.connect","p":bad[0]})).unwrap();
+            observed += &format!("{call:?}");
+            // Admission failures (denied, broken backend) and a wrong-password failure.
+            for mode in [1, 2, 4, 5] {
+                f.backend.state.lock().unwrap().mode = mode;
+                for params in bad.iter().cloned() {
+                    if let Err(error) = f.call("network.connect", params).await {
+                        observed += &serde_json::to_string(&error)?;
+                    }
+                }
+            }
+            f.server
+                .emit_signal(
+                    None::<&str>,
+                    DEVICE,
+                    "org.freedesktop.NetworkManager.Device",
+                    "StateChanged",
+                    &(120u32, 60u32, 7u32),
+                )
+                .await?;
+            let failed = f.wait(|s| s.health.error.is_some()).await;
+            observed += &serde_json::to_string(&failed)?;
+            observed += &serde_json::to_string(&f.hub.borrow().snapshot(CORE_TOPIC))?;
+            observed += &format!("{:?}", f.hub.borrow().welcome());
+            Ok::<String, crate::Error>(observed)
+        }),
+    )
+    .await??;
+    assert!(!observed.contains(SECRET) && !observed.contains("definitely"));
+    let logs = String::from_utf8(sink.0.lock().unwrap().clone())?;
+    assert!(
+        logs.contains("secret log capture active"),
+        "the capture must be live to be meaningful"
+    );
+    assert!(!logs.contains(SECRET), "secret leaked into daemon logs");
     Ok(())
 }

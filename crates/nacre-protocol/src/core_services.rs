@@ -87,6 +87,20 @@ pub struct Connection {
     pub name: String,
     pub kind: String,
     pub active: bool,
+    /// Saved Wi-Fi profiles only (N0042). Display text; secrets are never published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 128))]
+    pub ssid: Option<String>,
+    /// `open`, `wep`, `wpa_psk`, `sae`, `eap` or `other`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 16))]
+    pub security: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub autoconnect: Option<bool>,
+    /// Seconds since the Unix epoch of the last successful activation; omitted if never.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    pub last_used: Option<u64>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NetworkState {
@@ -1062,11 +1076,43 @@ pub struct WifiPower {
 pub enum NetworkTarget {
     AccessPoint(EntityId),
     Connection(EntityId),
+    /// N0042: join a hidden network; `id` is the SSID text (1..32 bytes), not an entity ID.
+    HiddenSsid(#[schemars(length(min = 1, max = 128))] String),
 }
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+/// Security for a hidden SSID with a secret; access points derive it from their flags.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WifiSecurity {
+    Open,
+    WpaPsk,
+    Sae,
+}
+#[derive(Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NetworkConnect {
     pub device: EntityId,
     pub target: NetworkTarget,
+    /// N0042: sent once, handed to NetworkManager and never stored, echoed or logged.
+    /// Valid for `access_point` and `hidden_ssid` targets only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 128))]
+    pub secret: Option<String>,
+    /// Only for `hidden_ssid`; defaults to `wpa_psk` with a secret, otherwise `open`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security: Option<WifiSecurity>,
+}
+impl std::fmt::Debug for NetworkConnect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("NetworkConnect")
+            .field("device", &self.device)
+            .field("target", &self.target)
+            .field("secret", &self.secret.as_ref().map(|_| "<redacted>"))
+            .field("security", &self.security)
+            .finish()
+    }
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ConnectionTarget {
+    pub connection: EntityId,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct DeviceTarget {
@@ -1174,6 +1220,8 @@ pub enum CoreCall {
     NetworkConnect(NetworkConnect),
     #[serde(rename = "network.disconnect")]
     NetworkDisconnect(DeviceTarget),
+    #[serde(rename = "network.forget")]
+    NetworkForget(ConnectionTarget),
     #[serde(rename = "bluetooth.set_power")]
     BluetoothPower(BluetoothPower),
     #[serde(rename = "bluetooth.connect")]
@@ -1219,13 +1267,27 @@ impl CoreCall {
             | Self::UpdatesRefresh(_)
             | Self::CalendarRefresh(_) => true,
             Self::NetworkConnect(p) => {
+                let secret_ok = p.secret.as_ref().is_none_or(|secret| {
+                    (1..=128).contains(&secret.len())
+                        && !secret.contains('\0')
+                        && matches!(
+                            p.target,
+                            NetworkTarget::AccessPoint(_) | NetworkTarget::HiddenSsid(_)
+                        )
+                });
                 p.device.valid()
+                    && secret_ok
+                    && (p.security.is_none() || matches!(p.target, NetworkTarget::HiddenSsid(_)))
                     && match &p.target {
                         NetworkTarget::AccessPoint(id) | NetworkTarget::Connection(id) => {
                             id.valid()
                         }
+                        NetworkTarget::HiddenSsid(ssid) => {
+                            (1..=32).contains(&ssid.len()) && !ssid.contains('\0')
+                        }
                     }
             }
+            Self::NetworkForget(p) => p.connection.valid(),
             Self::NetworkDisconnect(p)
             | Self::BluetoothConnect(p)
             | Self::BluetoothDisconnect(p)

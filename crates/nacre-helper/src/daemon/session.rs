@@ -80,9 +80,8 @@ async fn dispatch(
             super::shell_actions::compositor(hub, method, params).await
         }
         "session.request" => super::shell_actions::session(hub, params).await,
-        method @ ("network.set_wifi" | "network.connect" | "network.disconnect") => {
-            super::network::dispatch(hub, method, params, timeout).await
-        }
+        method @ ("network.set_wifi" | "network.connect" | "network.disconnect"
+        | "network.forget") => super::network::dispatch(hub, method, params, timeout).await,
         method @ ("settings.get" | "settings.set" | "settings.publish" | "settings.provider"
         | "settings.desktop") => super::settings::dispatch(hub, method, params).await,
         method @ ("niri.source" | "niri.action") => {
@@ -142,7 +141,7 @@ async fn call(
     let ui = method.starts_with("ui.");
     let network = matches!(
         method.as_str(),
-        "network.set_wifi" | "network.connect" | "network.disconnect"
+        "network.set_wifi" | "network.connect" | "network.disconnect" | "network.forget"
     );
     let helper = matches!(
         method.as_str(),
@@ -150,6 +149,7 @@ async fn call(
             | "network.set_wifi"
             | "network.connect"
             | "network.disconnect"
+            | "network.forget"
             | "niri.action"
             | "settings.set"
             | "settings.publish"

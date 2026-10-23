@@ -1,7 +1,7 @@
 //! Admission-only controls on the reader's connection and owner generation.
 use super::*;
 use nacre_protocol::{
-    core_services::{CoreCall, CoreResult, NetworkTarget},
+    core_services::{CoreCall, CoreResult, NetworkState, NetworkTarget, WifiSecurity},
     Capability, Method,
 };
 use serde_json::Value;
@@ -11,6 +11,17 @@ use zbus::zvariant::{OwnedObjectPath, OwnedValue};
 const WIFI: u8 = 1;
 const CONNECT: u8 = 2;
 const DISCONNECT: u8 = 4;
+const FORGET: u8 = 8;
+const METHODS: [&str; 4] = [
+    "network.set_wifi",
+    "network.connect",
+    "network.disconnect",
+    "network.forget",
+];
+/// Stable text clients use to re-prompt; the code is the existing `validation`.
+pub const SECRET_REQUIRED: &str = "Network secret required";
+const WIFI_SETTINGS: &str = "802-11-wireless";
+const SECURITY_SETTINGS: &str = "802-11-wireless-security";
 const TIMEOUT: u32 = 10_000;
 
 #[derive(Clone)]
@@ -18,6 +29,9 @@ pub struct Requests {
     sender: mpsc::Sender<Action>,
     capabilities: Rc<Cell<u8>>,
     owner_boundary: Rc<Cell<bool>>,
+    /// Profiles this daemon just created with a secret, by device. A profile that
+    /// fails authentication is deleted again so a wrong password is never saved.
+    created: Rc<std::cell::RefCell<BTreeMap<EntityId, String>>>,
 }
 
 pub(super) struct Action {
@@ -33,6 +47,7 @@ pub(super) fn channel(owner_boundary: Rc<Cell<bool>>) -> (Requests, mpsc::Receiv
             sender,
             capabilities: Rc::new(Cell::new(0)),
             owner_boundary,
+            created: Rc::default(),
         },
         receiver,
     )
@@ -57,6 +72,7 @@ impl Requests {
             "network.set_wifi" => WIFI,
             "network.connect" => CONNECT,
             "network.disconnect" => DISCONNECT,
+            "network.forget" => FORGET,
             _ => return false,
         };
         !self.owner_boundary.get() && !self.sender.is_closed() && self.capabilities.get() & bit != 0
@@ -67,7 +83,7 @@ impl Requests {
             "../../../../../protocol/schema/core-service-call.json"
         ))
         .expect("core call schema");
-        ["network.set_wifi", "network.connect", "network.disconnect"]
+        METHODS
             .into_iter()
             .filter(|method| self.supports(method))
             .map(|method| {
@@ -111,7 +127,10 @@ pub async fn dispatch(
     if !call.valid()
         || !matches!(
             call,
-            CoreCall::WifiPower(_) | CoreCall::NetworkConnect(_) | CoreCall::NetworkDisconnect(_)
+            CoreCall::WifiPower(_)
+                | CoreCall::NetworkConnect(_)
+                | CoreCall::NetworkDisconnect(_)
+                | CoreCall::NetworkForget(_)
         )
     {
         return Err(invalid());
@@ -194,6 +213,102 @@ pub(super) fn apply_failures(state: &mut NetworkState, failures: &mut BTreeMap<E
     }
 }
 
+type Settings = HashMap<String, HashMap<String, OwnedValue>>;
+
+fn value<'a>(
+    value: impl Into<zbus::zvariant::Value<'a>>,
+) -> std::result::Result<OwnedValue, Failure> {
+    OwnedValue::try_from(value.into()).map_err(|_| unavailable())
+}
+
+/// Settings handed to NetworkManager for a new profile. The secret exists only in
+/// this request; the daemon keeps no copy and NetworkManager owns its storage.
+fn wifi_settings(
+    hidden_ssid: Option<&[u8]>,
+    key_mgmt: Option<&str>,
+    secret: Option<&str>,
+) -> std::result::Result<Settings, Failure> {
+    let mut settings = Settings::new();
+    if let Some(ssid) = hidden_ssid {
+        settings.insert(
+            "connection".into(),
+            HashMap::from([
+                (
+                    "id".into(),
+                    value(String::from_utf8_lossy(ssid).into_owned())?,
+                ),
+                ("type".into(), value(WIFI_SETTINGS)?),
+            ]),
+        );
+        settings.insert(
+            WIFI_SETTINGS.into(),
+            HashMap::from([
+                ("ssid".into(), value(ssid.to_vec())?),
+                ("mode".into(), value("infrastructure")?),
+                ("hidden".into(), value(true)?),
+            ]),
+        );
+    }
+    if let (Some(key_mgmt), Some(secret)) = (key_mgmt, secret) {
+        // WPA-PSK takes 8..63 characters or 64 hex digits; SAE any non-empty text.
+        if key_mgmt == "wpa-psk"
+            && !((8..=63).contains(&secret.len())
+                || (secret.len() == 64 && secret.bytes().all(|b| b.is_ascii_hexdigit())))
+        {
+            return Err(invalid());
+        }
+        settings.insert(
+            SECURITY_SETTINGS.into(),
+            HashMap::from([
+                ("key-mgmt".into(), value(key_mgmt)?),
+                ("psk".into(), value(secret)?),
+            ]),
+        );
+    }
+    Ok(settings)
+}
+
+/// Delete a profile this daemon created when its first activation failed
+/// authentication, so a wrong password is not left saved. Failures are ignored:
+/// the profile is only a convenience copy and the next attempt creates a new one.
+pub(super) async fn settle_created(
+    connection: &zbus::Connection,
+    owner: &str,
+    requests: &Requests,
+    ids: &IdentityTable,
+    state: &NetworkState,
+    failures: &BTreeMap<EntityId, Rc<()>>,
+) {
+    let entries: Vec<_> = requests.created.borrow().clone().into_iter().collect();
+    for (device, profile) in entries {
+        let active = ids
+            .live
+            .get(&identity_key("connection", &profile))
+            .and_then(|id| state.connections.items.get(id))
+            .map(|saved| saved.active);
+        if failures.contains_key(&device) {
+            let _ = tokio::time::timeout(
+                Duration::from_secs(2),
+                mutate(
+                    connection,
+                    owner,
+                    &profile,
+                    "Delete",
+                    "org.freedesktop.NetworkManager.Settings.Connection",
+                    &(),
+                ),
+            )
+            .await;
+        }
+        if active == Some(true)
+            || failures.contains_key(&device)
+            || !state.devices.items.contains_key(&device)
+        {
+            requests.created.borrow_mut().remove(&device);
+        }
+    }
+}
+
 fn action_device(action: &Action) -> Option<&EntityId> {
     match &action.call {
         CoreCall::NetworkConnect(p) => Some(&p.device),
@@ -250,6 +365,9 @@ fn read_error(error: CoreError) -> Failure {
 }
 fn invalid() -> Failure {
     Failure::new(ErrorCode::Validation, "Invalid network parameters", false).dispatch_state(false)
+}
+fn secret_required() -> Failure {
+    Failure::new(ErrorCode::Validation, SECRET_REQUIRED, true).dispatch_state(false)
 }
 fn stale() -> Failure {
     Failure::new(
@@ -349,7 +467,7 @@ pub(super) async fn capabilities(connection: &zbus::Connection, owner: &str) -> 
         capabilities |= WIFI;
     }
     if method("ActivateConnection") && method("AddAndActivateConnection2") {
-        capabilities |= CONNECT;
+        capabilities |= CONNECT | FORGET;
     }
     if method("DeactivateConnection") {
         capabilities |= DISCONNECT;
@@ -374,12 +492,13 @@ fn source<'a>(
 async fn mutate<A: serde::Serialize + zbus::zvariant::DynamicType>(
     connection: &zbus::Connection,
     owner: &str,
+    object: &str,
     method: &str,
     interface: &str,
     args: &A,
 ) -> std::result::Result<zbus::Message, Failure> {
     let reply = connection
-        .call_method(Some(owner), NM_MANAGER, Some(interface), method, args)
+        .call_method(Some(owner), object, Some(interface), method, args)
         .await
         .map_err(backend_error)?;
     if reply.body().len() > MAX_REPLY_BYTES {
@@ -413,6 +532,7 @@ pub(super) async fn execute(
         CoreCall::WifiPower(_) => "network.set_wifi",
         CoreCall::NetworkConnect(_) => "network.connect",
         CoreCall::NetworkDisconnect(_) => "network.disconnect",
+        CoreCall::NetworkForget(_) => "network.forget",
         _ => return Err(invalid()),
     };
     if !requests.supports(method) {
@@ -435,8 +555,9 @@ pub(super) async fn execute(
     enum Mutation {
         Wifi(bool),
         Activate(OwnedObjectPath, OwnedObjectPath, OwnedObjectPath),
-        Add(OwnedObjectPath, OwnedObjectPath),
+        Add(Settings, &'static str, OwnedObjectPath, OwnedObjectPath),
         Deactivate(OwnedObjectPath),
+        Delete(OwnedObjectPath),
         Noop,
     }
     let (mutation, changed) = match &action.call {
@@ -451,7 +572,54 @@ pub(super) async fn execute(
                     if device.kind != 2 || fresh.device != p.device {
                         return Err(stale());
                     }
-                    Mutation::Add(device_path, path(point)?)
+                    match p.secret.as_deref() {
+                        Some(secret) => {
+                            let raw_point = device
+                                .access_points
+                                .iter()
+                                .find(|candidate| candidate.path == point)
+                                .ok_or_else(stale)?;
+                            let key_mgmt = match raw_point.wpa_flags | raw_point.rsn_flags {
+                                flags if flags & 0x100 != 0 => "wpa-psk",
+                                flags if flags & 0x400 != 0 => "sae",
+                                _ => return Err(invalid()),
+                            };
+                            let settings = wifi_settings(None, Some(key_mgmt), Some(secret))?;
+                            Mutation::Add(settings, "to-disk", device_path, path(point)?)
+                        }
+                        None => {
+                            // Saved profiles carry their own secrets inside NetworkManager.
+                            if fresh.secured
+                                && !state
+                                    .connections
+                                    .items
+                                    .values()
+                                    .any(|saved| saved.ssid.as_deref() == Some(fresh.name.as_str()))
+                            {
+                                return Err(secret_required());
+                            }
+                            Mutation::Add(Settings::new(), "volatile", device_path, path(point)?)
+                        }
+                    }
+                }
+                NetworkTarget::HiddenSsid(ssid) => {
+                    if device.kind != 2 {
+                        return Err(stale());
+                    }
+                    let key_mgmt = match p.security.unwrap_or(if p.secret.is_some() {
+                        WifiSecurity::WpaPsk
+                    } else {
+                        WifiSecurity::Open
+                    }) {
+                        WifiSecurity::Open if p.secret.is_none() => None,
+                        WifiSecurity::WpaPsk if p.secret.is_some() => Some("wpa-psk"),
+                        WifiSecurity::Sae if p.secret.is_some() => Some("sae"),
+                        WifiSecurity::Open => return Err(invalid()),
+                        _ => return Err(secret_required()),
+                    };
+                    let settings =
+                        wifi_settings(Some(ssid.as_bytes()), key_mgmt, p.secret.as_deref())?;
+                    Mutation::Add(settings, "to-disk", device_path, path("/")?)
                 }
                 NetworkTarget::Connection(id) => {
                     let profile = source(ids, "connection", id)?;
@@ -482,6 +650,15 @@ pub(super) async fn execute(
                 }
             };
             (mutation, true)
+        }
+        CoreCall::NetworkForget(p) => {
+            let profile = source(ids, "connection", &p.connection)?;
+            // Only saved Wi-Fi profiles; wired and VPN profiles are not forgotten here.
+            match state.connections.items.get(&p.connection) {
+                Some(saved) if saved.kind == "wifi" => {}
+                _ => return Err(stale()),
+            }
+            (Mutation::Delete(path(profile)?), true)
         }
         CoreCall::NetworkDisconnect(_) => {
             let device = device.ok_or_else(stale)?;
@@ -523,6 +700,7 @@ pub(super) async fn execute(
             mutate(
                 connection,
                 owner,
+                NM_MANAGER,
                 "Set",
                 "org.freedesktop.DBus.Properties",
                 &(
@@ -537,6 +715,7 @@ pub(super) async fn execute(
             let reply = mutate(
                 connection,
                 owner,
+                NM_MANAGER,
                 "ActivateConnection",
                 NM_SERVICE,
                 &(profile, device, point),
@@ -547,18 +726,18 @@ pub(super) async fn execute(
                 .deserialize()
                 .map_err(|_| unavailable().dispatch_state(true))?;
         }
-        Mutation::Add(device, point) => {
-            let settings: HashMap<String, HashMap<String, OwnedValue>> = HashMap::new();
-            let options = HashMap::from([("persist", zbus::zvariant::Value::new("volatile"))]);
+        Mutation::Add(settings, persist, device, point) => {
+            let options = HashMap::from([("persist", zbus::zvariant::Value::new(persist))]);
             let reply = mutate(
                 connection,
                 owner,
+                NM_MANAGER,
                 "AddAndActivateConnection2",
                 NM_SERVICE,
                 &(settings, device, point, options),
             )
             .await?;
-            let _: (
+            let (profile, _, _): (
                 OwnedObjectPath,
                 OwnedObjectPath,
                 HashMap<String, OwnedValue>,
@@ -566,11 +745,31 @@ pub(super) async fn execute(
                 .body()
                 .deserialize()
                 .map_err(|_| unavailable().dispatch_state(true))?;
+            if persist == "to-disk" {
+                if let Some(device) = action_device(action) {
+                    requests
+                        .created
+                        .borrow_mut()
+                        .insert(device.clone(), profile.as_str().to_owned());
+                }
+            }
+        }
+        Mutation::Delete(profile) => {
+            mutate(
+                connection,
+                owner,
+                profile.as_str(),
+                "Delete",
+                "org.freedesktop.NetworkManager.Settings.Connection",
+                &(),
+            )
+            .await?;
         }
         Mutation::Deactivate(active) => {
             mutate(
                 connection,
                 owner,
+                NM_MANAGER,
                 "DeactivateConnection",
                 NM_SERVICE,
                 &(active,),

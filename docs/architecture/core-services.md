@@ -44,7 +44,7 @@ A failed or ambiguous operation must not update the UI optimistically.
 
 | Topic v1 | Data | Reserved methods v1 and parameters |
 | --- | --- | --- |
-| `network` | Radio state, devices, access points, saved connections; no secrets | `network.set_wifi {enabled}`; `network.connect {device,target:{kind:"access_point"\|"connection",id}}`; `network.disconnect {device}` |
+| `network` | Radio state, devices, access points, saved connections (saved Wi-Fi rows add `ssid`, `security`, `autoconnect`, `last_used`); no secrets | `network.set_wifi {enabled}`; `network.connect {device,target:{kind:"access_point"\|"connection"\|"hidden_ssid",id},secret?,security?}`; `network.disconnect {device}`; `network.forget {connection}` (N0042) |
 | `bluetooth` | Adapters and their power/discovery state; devices with connected/paired/trusted/pairing/battery | `bluetooth.set_power {adapter,powered}`; `bluetooth.connect`, `bluetooth.disconnect`, `bluetooth.pair`, each `{device}` |
 | `power.profiles` | Available profiles, active ID, optional degraded/unavailable reason | `power.set_profile {profile}` |
 | `battery` | Independent optional battery percentage and charging readback | Topic contract only; no profile selection |

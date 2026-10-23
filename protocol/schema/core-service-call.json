@@ -152,6 +152,22 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "network.forget"
+        },
+        "p": {
+          "$ref": "#/$defs/ConnectionTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "bluetooth.set_power"
         },
         "p": {
@@ -544,6 +560,26 @@
         },
         "target": {
           "$ref": "#/$defs/NetworkTarget"
+        },
+        "secret": {
+          "description": "N0042: sent once, handed to NetworkManager and never stored, echoed or logged.\nValid for `access_point` and `hidden_ssid` targets only.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "security": {
+          "description": "Only for `hidden_ssid`; defaults to `wpa_psk` with a secret, otherwise `open`.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WifiSecurity"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -584,7 +620,35 @@
             "kind",
             "id"
           ]
+        },
+        {
+          "description": "N0042: join a hidden network; `id` is the SSID text (1..32 bytes), not an entity ID.",
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "const": "hidden_ssid"
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            }
+          },
+          "required": [
+            "kind",
+            "id"
+          ]
         }
+      ]
+    },
+    "WifiSecurity": {
+      "description": "Security for a hidden SSID with a secret; access points derive it from their flags.",
+      "type": "string",
+      "enum": [
+        "open",
+        "wpa_psk",
+        "sae"
       ]
     },
     "DeviceTarget": {
@@ -596,6 +660,17 @@
       },
       "required": [
         "device"
+      ]
+    },
+    "ConnectionTarget": {
+      "type": "object",
+      "properties": {
+        "connection": {
+          "$ref": "#/$defs/EntityId"
+        }
+      },
+      "required": [
+        "connection"
       ]
     },
     "BluetoothPower": {

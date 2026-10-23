@@ -84,7 +84,7 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
         }
     }
     assert_eq!(topics, 12);
-    assert_eq!(calls.len(), 19);
+    assert_eq!(calls.len(), 20);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),
@@ -546,4 +546,37 @@ fn tray_menu_cycles_depth_and_untrusted_image_urls_are_refused() {
     assert!(!serde_json::from_value::<CoreSnapshot>(snapshot)
         .unwrap()
         .valid());
+}
+
+#[test]
+fn network_secret_hidden_ssid_and_forget_contracts() {
+    let call = |p: serde_json::Value| -> CoreCall {
+        serde_json::from_value(json!({"m":"network.connect","p":p})).unwrap()
+    };
+    let ap = json!({"kind":"access_point","id":"ap-1"});
+    let hidden = json!({"kind":"hidden_ssid","id":"Hidden Net"});
+    assert!(call(json!({"device":"wifi-1","target":ap,"secret":"hunter2hunter2"})).valid());
+    assert!(call(json!({"device":"wifi-1","target":hidden,"secret":"x","security":"sae"})).valid());
+    assert!(call(json!({"device":"wifi-1","target":hidden})).valid());
+    for invalid in [
+        json!({"device":"wifi-1","target":ap,"secret":""}),
+        json!({"device":"wifi-1","target":ap,"secret":"a".repeat(129)}),
+        json!({"device":"wifi-1","target":ap,"secret":"nul\u{0}byte"}),
+        json!({"device":"wifi-1","target":ap,"security":"sae"}),
+        json!({"device":"wifi-1","target":{"kind":"connection","id":"c-1"},"secret":"hunter2hunter2"}),
+        json!({"device":"wifi-1","target":{"kind":"hidden_ssid","id":""}}),
+        json!({"device":"wifi-1","target":{"kind":"hidden_ssid","id":"x".repeat(33)}}),
+    ] {
+        assert!(!call(invalid).valid());
+    }
+    // The secret is never part of Debug output (logs, panics, traces).
+    let secret = call(json!({"device":"wifi-1","target":ap,"secret":"hunter2hunter2"}));
+    assert!(!format!("{secret:?}").contains("hunter2"));
+    let forget: CoreCall =
+        serde_json::from_value(json!({"m":"network.forget","p":{"connection":"connection-1"}}))
+            .unwrap();
+    assert!(forget.valid());
+    let bad: CoreCall =
+        serde_json::from_value(json!({"m":"network.forget","p":{"connection":"../x"}})).unwrap();
+    assert!(!bad.valid());
 }

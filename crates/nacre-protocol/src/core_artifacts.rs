@@ -86,7 +86,8 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             json!({"health":health,"wireless_enabled":false,
             "devices":entities(json!({"wifi-1":{"name":"Wireless","kind":"wifi","connected":false}})),
             "access_points":entities(json!({"ap-1":{"device":"wifi-1","name":"Public fixture","strength":70,"secured":true,"active":false,"connection":"connection-1"}})),
-            "connections":entities(json!({"connection-1":{"name":"Public fixture","kind":"wifi","active":false}}))}),
+            "connections":entities(json!({"connection-1":{"name":"Public fixture","kind":"wifi","active":false,
+                "ssid":"Public fixture","security":"wpa_psk","autoconnect":true,"last_used":1800000000_u64}}))}),
             vec![
                 ("network.set_wifi", json!({"enabled":true})),
                 (
@@ -97,6 +98,15 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
                     "network.connect",
                     json!({"device":"wifi-1","target":{"kind":"connection","id":"connection-1"}}),
                 ),
+                (
+                    "network.connect",
+                    json!({"device":"wifi-1","target":{"kind":"access_point","id":"ap-1"},"secret":"fixture-passphrase"}),
+                ),
+                (
+                    "network.connect",
+                    json!({"device":"wifi-1","target":{"kind":"hidden_ssid","id":"Hidden fixture"},"secret":"fixture-passphrase","security":"wpa_psk"}),
+                ),
+                ("network.forget", json!({"connection":"connection-1"})),
                 ("network.disconnect", json!({"device":"wifi-1"})),
                 ("network.set_wifi", json!({"enabled":false})),
             ],
@@ -242,6 +252,8 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
     let errors = vec![
         json!({"t":"call","id":"policy","m":"network.set_wifi","p":{"enabled":true}}),
         json!({"t":"ret","id":"policy","err":{"code":"permission_denied","message":"System policy denied the operation","retry":false}}),
+        json!({"t":"call","id":"secret","m":"network.connect","p":{"device":"wifi-1","target":{"kind":"access_point","id":"ap-2"}}}),
+        json!({"t":"ret","id":"secret","err":{"code":"validation","message":"Network secret required","retry":true,"dispatched":false}}),
         json!({"t":"call","id":"cancelled","m":"bluetooth.pair","p":{"device":"device-1"}}),
         json!({"t":"ret","id":"cancelled","err":{"code":"permission_denied","message":"Authentication was cancelled","retry":false}}),
         json!({"t":"call","id":"stale","m":"audio.set_volume","p":{"node":"old-node","volume":0.5}}),

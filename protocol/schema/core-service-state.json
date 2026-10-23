@@ -509,6 +509,38 @@
         },
         "active": {
           "type": "boolean"
+        },
+        "ssid": {
+          "description": "Saved Wi-Fi profiles only (N0042). Display text; secrets are never published.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "security": {
+          "description": "`open`, `wep`, `wpa_psk`, `sae`, `eap` or `other`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 16
+        },
+        "autoconnect": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "last_used": {
+          "description": "Seconds since the Unix epoch of the last successful activation; omitted if never.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 1,
+          "maximum": 9007199254740991
         }
       },
       "required": [

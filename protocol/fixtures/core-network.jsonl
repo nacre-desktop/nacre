@@ -1,12 +1,18 @@
-{"t":"snap","topic":"network","seq":0,"data":{"health":{"available":true,"stale":false},"wireless_enabled":false,"devices":{"items":{"wifi-1":{"name":"Wireless","kind":"wifi","connected":false}},"order":["wifi-1"]},"access_points":{"items":{"ap-1":{"device":"wifi-1","name":"Public fixture","strength":70,"secured":true,"active":false,"connection":"connection-1"}},"order":["ap-1"]},"connections":{"items":{"connection-1":{"name":"Public fixture","kind":"wifi","active":false}},"order":["connection-1"]}}}
+{"t":"snap","topic":"network","seq":0,"data":{"health":{"available":true,"stale":false},"wireless_enabled":false,"devices":{"items":{"wifi-1":{"name":"Wireless","kind":"wifi","connected":false}},"order":["wifi-1"]},"access_points":{"items":{"ap-1":{"device":"wifi-1","name":"Public fixture","strength":70,"secured":true,"active":false,"connection":"connection-1"}},"order":["ap-1"]},"connections":{"items":{"connection-1":{"name":"Public fixture","kind":"wifi","active":false,"ssid":"Public fixture","security":"wpa_psk","autoconnect":true,"last_used":1800000000}},"order":["connection-1"]}}}
 {"t":"call","id":0,"m":"network.set_wifi","p":{"enabled":true},"timeout":10000}
 {"t":"ret","id":0,"ok":{"changed":true}}
 {"t":"call","id":1,"m":"network.connect","p":{"device":"wifi-1","target":{"kind":"access_point","id":"ap-1"}},"timeout":10000}
 {"t":"ret","id":1,"ok":{"changed":true}}
 {"t":"call","id":2,"m":"network.connect","p":{"device":"wifi-1","target":{"kind":"connection","id":"connection-1"}},"timeout":10000}
 {"t":"ret","id":2,"ok":{"changed":true}}
-{"t":"call","id":3,"m":"network.disconnect","p":{"device":"wifi-1"},"timeout":10000}
+{"t":"call","id":3,"m":"network.connect","p":{"device":"wifi-1","target":{"kind":"access_point","id":"ap-1"},"secret":"fixture-passphrase"},"timeout":10000}
 {"t":"ret","id":3,"ok":{"changed":true}}
-{"t":"call","id":4,"m":"network.set_wifi","p":{"enabled":false},"timeout":10000}
+{"t":"call","id":4,"m":"network.connect","p":{"device":"wifi-1","target":{"kind":"hidden_ssid","id":"Hidden fixture"},"secret":"fixture-passphrase","security":"wpa_psk"},"timeout":10000}
 {"t":"ret","id":4,"ok":{"changed":true}}
+{"t":"call","id":5,"m":"network.forget","p":{"connection":"connection-1"},"timeout":10000}
+{"t":"ret","id":5,"ok":{"changed":true}}
+{"t":"call","id":6,"m":"network.disconnect","p":{"device":"wifi-1"},"timeout":10000}
+{"t":"ret","id":6,"ok":{"changed":true}}
+{"t":"call","id":7,"m":"network.set_wifi","p":{"enabled":false},"timeout":10000}
+{"t":"ret","id":7,"ok":{"changed":true}}
 {"t":"patch","topic":"network","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}
