@@ -225,8 +225,8 @@ fn engine(
 ) -> Option<(i32, Value)> {
     let args = args.iter().map(|a| (*a).to_owned()).collect::<Vec<_>>();
     let output = process::run(&env.engine.to_string_lossy(), &args, input, timeout).ok()?;
-    let text = String::from_utf8_lossy(&output.stdout.get(..64 * 1024).unwrap_or(&output.stdout))
-        .into_owned();
+    let stdout = output.stdout.get(..64 * 1024).unwrap_or(&output.stdout);
+    let text = String::from_utf8_lossy(stdout).into_owned();
     let value = text
         .lines()
         .rev()

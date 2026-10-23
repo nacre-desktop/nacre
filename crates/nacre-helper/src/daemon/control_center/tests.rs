@@ -623,13 +623,13 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
     assert_eq!(next.night_light, state.night_light);
     assert_eq!(next.recorder, Some(Recorder { recording: true }));
     assert_eq!(next.airplane, Some(Toggle { enabled: true }));
-    assert_eq!(
+    assert!(
         collect(&f.env(), &probe(true), &next)
             .night_light
             .unwrap()
-            .enabled,
-        true
+            .enabled
     );
+
     // Two internal panels cannot be mapped to the one backlight.
     let two = Probe {
         outputs: vec!["eDP-1".into(), "eDP-2".into()],
