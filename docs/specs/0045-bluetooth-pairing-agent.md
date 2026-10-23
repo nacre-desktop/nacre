@@ -20,7 +20,7 @@ output for PIN, passkey and confirmation prompts. The daemon had the reserved `b
   `org.bluez` has an owner on the system bus.
 - `bluetooth.pair {device}` (already reserved) is now served: it resolves `device`, registers the agent, calls
   `Device1.Pair()` and returns `{changed:true}` when pairing succeeded, `{changed:false}` when the device is already
-  paired. It waits for the whole pairing (method timeout 155 s), so a UI sends it without blocking and watches the topic.
+  paired. It waits for the whole pairing (method timeout 115 s after N0047; it was 155 s, which the protocol refuses), so a UI sends it without blocking and watches the topic.
 - `bluetooth.pair.respond {device, accept, pin?, passkey?}`: answers the current prompt. `accept:false` rejects and carries
   neither secret. `pin` (1..16 printable ASCII characters) only for `pin`, `passkey` (0..999999) only for `passkey`,
   neither for `confirm`/`authorize`; a mismatch is `validation` and leaves the prompt open. No waiting prompt (or another

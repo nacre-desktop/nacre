@@ -673,7 +673,13 @@ fn methods_are_advertised_only_while_bluez_is_present() -> Result<()> {
         );
         let methods = f.hub.borrow().methods();
         assert_eq!(methods["bluetooth.pair"].class, Capability::System);
-        assert!(methods["bluetooth.pair"].timeout > 150_000);
+        assert_eq!(methods["bluetooth.pair"].timeout, 115_000);
+        // Guard: the full Welcome, with BlueZ present, must pass the protocol's own validation.
+        f.hub
+            .borrow()
+            .welcome()
+            .validate()
+            .expect("welcome with bluetooth is valid");
         assert_eq!(methods["bluetooth.pair.respond"].timeout, CONTROL_TIMEOUT);
         f.bluez = None;
         eventually("gone", || f.state().is_some_and(|s| !s.health.available)).await;

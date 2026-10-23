@@ -652,6 +652,9 @@ async fn socket_client(
     Ok((writer, reader, task, welcome))
 }
 fn advertised(welcome: Message) -> BTreeMap<String, Method> {
+    welcome
+        .validate()
+        .expect("welcome passes protocol validation");
     let Message::Welcome { methods, .. } = welcome else {
         panic!("expected welcome");
     };

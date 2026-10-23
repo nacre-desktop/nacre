@@ -37,7 +37,8 @@ const AGENT_PATH: &str = "/org/nacre/bluetooth/agent";
 const CAPABILITY: &str = "KeyboardDisplay";
 /// A prompt the user does not answer in this time is withdrawn and the pairing times out.
 const PROMPT_TIMEOUT: Duration = Duration::from_secs(60);
-const PAIR_TIMEOUT: Duration = Duration::from_secs(150);
+/// Advertised as PAIR_TIMEOUT + 5 s, which must stay within the protocol's 120 s method limit.
+const PAIR_TIMEOUT: Duration = Duration::from_secs(110);
 const QUICK: Duration = Duration::from_secs(5);
 const CONTROL_TIMEOUT: u32 = 10_000;
 

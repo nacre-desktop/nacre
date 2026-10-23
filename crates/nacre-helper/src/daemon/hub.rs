@@ -882,6 +882,47 @@ impl Hub {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// Guard: every method any module can advertise must pass the protocol's Welcome validation
+    /// (timeouts 1..=120000 ms). Backend-dependent methods (network, notifications, bluetooth)
+    /// are covered by their own fixtures that validate the full Welcome.
+    #[test]
+    fn every_static_method_set_passes_welcome_validation() {
+        let mut methods = nacre_protocol::core_methods();
+        for set in [
+            super::super::pill_controls::methods(),
+            super::super::settings::methods(),
+            super::super::shell_actions::methods(),
+            super::super::niri_actions::methods(),
+            super::super::session_policy::methods(),
+            super::super::helpers::methods(),
+            super::super::menu::methods(),
+            super::super::widths::methods(),
+            super::super::active_wallpaper::methods(),
+            super::super::ai_chat::methods(),
+            super::super::dashboard_extras::methods(),
+            super::super::dashboard_player::methods(),
+            super::super::brain::methods(),
+            super::super::i18n::methods(),
+        ] {
+            methods.extend(set);
+        }
+        let welcome = Message::Welcome {
+            proto: nacre_protocol::VERSION,
+            min: nacre_protocol::MIN_VERSION,
+            boot: "guard".into(),
+            topics: BTreeMap::new(),
+            methods: methods.clone(),
+            frame_ms: Some(16),
+        };
+        welcome.validate().unwrap_or_else(|_| {
+            let bad: Vec<_> = methods
+                .iter()
+                .filter(|(_, m)| !(1..=120_000).contains(&m.timeout))
+                .map(|(n, m)| (n.clone(), m.timeout))
+                .collect();
+            panic!("welcome invalid; out-of-range timeouts: {bad:?}")
+        });
+    }
     #[test]
     fn internal_observers_get_changes_and_bounded_events_without_client_slots() {
         let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
