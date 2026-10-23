@@ -66,8 +66,12 @@ class ShellRouteTests(unittest.TestCase):
                 self.assertIn(row["route"], ROUTES, row["command"])
         self.assertNotIn("quickshell", text)
         self.assertNotIn(" ipc ", text)
-        for call in re.findall(r'nacrectl" ui (\S+) (\S+)', text):
+        # Literal targets only; brightness/keyboard-light share one case through "$target".
+        for call in re.findall(r'nacrectl" ui ([A-Za-z]+) ([A-Za-z]+)', text):
             self.assertIn(".".join(call), ROUTES)
+        self.assertIn('ui "$target" step', text)
+        self.assertIn("brightness.step", ROUTES)
+        self.assertIn("keyboardLight.step", ROUTES)
         for row in REGISTRY["apps"]:
             self.assertIn(row["route"], ROUTES)
 

@@ -75,7 +75,9 @@ shows a small reconnecting mark after two seconds, retries from 50 ms to two
 seconds, and resubscribes on a new boot ID. Keybindings use native `nacrectl`
 (the helper under another name), with no shell or Python in that path. `ui.*`
 calls go to whichever shell registered as the UI provider. Existing `nacre`
-commands continue working; `qs ipc` is a compatibility fallback for one release.
+commands, the app launchers (`nacre-settings`, `nacre-welcome`, `nacre-colors`, `nacre-menu`)
+and every generated bind use this one `nacrectl ui` path (N0048); `qs ipc` remains only as a
+compatibility fallback in `nacrectl ui` (expiry: Group F QML deletion pass).
 
 ## 5. Services outside the view
 
