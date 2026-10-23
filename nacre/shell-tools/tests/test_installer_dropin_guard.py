@@ -577,9 +577,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
         self.assertEqual(self.calls().count("--user restart nacre-daemon.service"), 2)
         # N0053: source/ and tools/ roll back with the helper (never a mixed install), and
         # nacre-shell restarts once, after the second daemon restart, on the restored tree.
-        self.assertEqual(
-            (self.dest / "source/marker.txt").read_text(), "old source\n"
-        )
+        self.assertEqual((self.dest / "source/marker.txt").read_text(), "old source\n")
         self.assertFalse((self.dest / "source/new-only.txt").exists())
         self.assertEqual((self.dest / "tools/old-only.txt").read_text(), "old tools\n")
         self.assertFalse((self.dest / "tools/fish_title.fish").exists())
