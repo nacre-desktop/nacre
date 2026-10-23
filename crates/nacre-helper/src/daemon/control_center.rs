@@ -226,11 +226,20 @@ pub fn handles(method: &str) -> bool {
 
 // ---------------------------------------------------------------- commands
 
+/// A child process never inherits the service-manager socket: systemd's own tools (`systemctl`)
+/// and the helper report their errors to it, which the daemon's supervisor would read as its own.
+fn command(program: impl AsRef<std::ffi::OsStr>, args: &[String]) -> std::process::Command {
+    let mut command = std::process::Command::new(program);
+    command.args(args).env_remove("NOTIFY_SOCKET");
+    command
+}
+fn strings(args: &[&str]) -> Vec<String> {
+    args.iter().map(|a| (*a).to_owned()).collect()
+}
 /// A bounded tool run whose output is parsed; `None` on any failure.
 fn tool(program: &str, args: &[&str], timeout: Duration) -> Option<String> {
-    let args = args.iter().map(|a| (*a).to_owned()).collect::<Vec<_>>();
-    let output = process::checked(program, &args, None, timeout).ok()?;
-    (output.stdout.len() <= OUTPUT_LIMIT)
+    let output = process::capture(command(program, &strings(args)), None, timeout).ok()?;
+    (output.status.success() && output.stdout.len() <= OUTPUT_LIMIT)
         .then(|| String::from_utf8(output.stdout).ok())
         .flatten()
 }
@@ -241,8 +250,8 @@ fn engine(
     input: Option<&str>,
     timeout: Duration,
 ) -> Option<(i32, Value)> {
-    let args = args.iter().map(|a| (*a).to_owned()).collect::<Vec<_>>();
-    let output = process::run(&env.engine.to_string_lossy(), &args, input, timeout).ok()?;
+    let command = command(&env.engine, &strings(args));
+    let output = process::capture(command, input.map(str::as_bytes), timeout).ok()?;
     let stdout = output.stdout.get(..64 * 1024).unwrap_or(&output.stdout);
     let text = String::from_utf8_lossy(stdout).into_owned();
     let value = text
@@ -618,9 +627,10 @@ fn set_airplane(env: &Env, enabled: bool) -> std::result::Result<(), Failure> {
 
 /// `(stay awake active, recording active)`; `None` when systemd cannot be asked.
 fn units(env: &Env) -> (Option<bool>, Option<bool>) {
-    let args = ["--user", "is-active", STAY_AWAKE_UNIT, RECORDING_UNIT].map(String::from);
+    let args = strings(&["--user", "is-active", STAY_AWAKE_UNIT, RECORDING_UNIT]);
     // A non-zero exit only says that some unit is inactive; the lines carry the states.
-    let Ok(output) = process::run(&env.systemctl, &args, None, Duration::from_secs(5)) else {
+    let Ok(output) = process::capture(command(&env.systemctl, &args), None, Duration::from_secs(5))
+    else {
         return (None, None);
     };
     let text = String::from_utf8_lossy(&output.stdout);
@@ -715,6 +725,8 @@ fn spawn_capture(env: &Env, args: &[&str]) -> std::result::Result<(), Failure> {
     }
     let child = tokio::process::Command::new(&env.engine)
         .args(args)
+        // The helper must not talk to the daemon's service-manager socket.
+        .env_remove("NOTIFY_SOCKET")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

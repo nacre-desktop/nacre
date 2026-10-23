@@ -14,7 +14,8 @@ id. Safe mode refuses every method (`permission_denied`, `dispatched:false`) and
 registry. A method is in the welcome registry only while its backend is present (table below); a direct
 call without the backend fails `unavailable`. The registry is per connection: reconnect after a backend
 appears. Success `{changed:true}` records an accepted action, not state; read `controls`.
-Capability class `system` for hardware/session-wide writes, `desktop` for the rest. Tool work runs
+Child processes never inherit `NOTIFY_SOCKET` (systemd's own tools and the helper report errors
+there, which the supervisor would read as the daemon's). Capability class `system` for hardware/session-wide writes, `desktop` for the rest. Tool work runs
 off the event loop with bounded time and output.
 
 ## Methods
