@@ -15,8 +15,9 @@ fn strings(values: &[&str]) -> Vec<String> {
     values.iter().map(|value| (*value).to_owned()).collect()
 }
 
+/// Polls a condition; the bound only stops a hang, no test waits for it to elapse.
 async fn eventually(mut check: impl FnMut() -> bool) {
-    for _ in 0..250 {
+    for _ in 0..1500 {
         if check() {
             return;
         }
@@ -178,6 +179,15 @@ struct Fixture {
     dir: PathBuf,
     clock: Rc<Cell<i64>>,
     wake: Rc<Notify>,
+    /// Target of the rotation's live sleep; `None` while it is not waiting on the clock.
+    armed: Rc<Cell<Option<i64>>>,
+}
+/// Clears `armed` when the polled sleep future completes or is dropped.
+struct Armed(Rc<Cell<Option<i64>>>);
+impl Drop for Armed {
+    fn drop(&mut self) {
+        self.0.set(None);
+    }
 }
 const T0: i64 = 1_800_000_000_000;
 const ENTRY: &str =
@@ -189,8 +199,9 @@ impl Fixture {
         let dir = home.path().join("engine");
         std::fs::create_dir_all(&dir).unwrap();
         let script = format!(
-            "#!/bin/sh\ndir='{}'\ncase \"$2\" in\n  catalog) cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo '{}' | sed \"s|PATH|$3|g\" ;;\n  session) seen=0; while :; do total=$(wc -l < \"$dir/session\"); [ \"$total\" -gt \"$seen\" ] && tail -n +$((seen+1)) \"$dir/session\" && seen=$total; sleep 0.05; done ;;\nesac\n",
+            "#!/bin/sh\ndir='{}'\nst='{}'\ncase \"$2\" in\n  catalog) cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo \"$3\" > \"$st/last.txt\"; printf '{{\"path\":\"%s\",\"poster\":\"%s\",\"appliedAtMs\":%s}}' \"$3\" \"$3\" \"$(cat \"$dir/now\")\" > \"$st/media.json\"; echo '{}' | sed \"s|PATH|$3|g\" ;;\n  session) seen=0; while :; do total=$(wc -l < \"$dir/session\"); [ \"$total\" -gt \"$seen\" ] && tail -n +$((seen+1)) \"$dir/session\" && seen=$total; sleep 0.05; done ;;\nesac\n",
             dir.display(),
+            paths.state.join("wallpaper").display(),
             ENTRY
         );
         let engine = dir.join("engine");
@@ -208,7 +219,9 @@ impl Fixture {
             dir,
             clock: Rc::new(Cell::new(T0)),
             wake: Rc::new(Notify::new()),
+            armed: Rc::new(Cell::new(None)),
         };
+        std::fs::write(fixture.dir.join("now"), T0.to_string()).unwrap();
         fixture.catalog(&["/w/a.png", "/w/b.png", "/w/c.png"]);
         fixture.current("/w/a.png", T0);
         let mut document = json!({"version":1,"rotationAnchorMs":T0});
@@ -252,17 +265,32 @@ impl Fixture {
             .collect()
     }
     fn advance(&self, to: i64) {
+        std::fs::write(self.dir.join("now"), (T0 + to).to_string()).unwrap();
         self.clock.set(T0 + to);
         self.wake.notify_waiters();
     }
+    /// Waits until the rotation idles on the clock at `at`: every change before it, including
+    /// the engine call that follows a wake-up, is finished, so the clock may move again.
+    async fn parked(&self, at: i64) {
+        eventually(|| self.armed.get() == Some(T0 + at)).await;
+    }
+    /// Waits until the rotation stopped waiting on the clock (paused).
+    async fn unarmed(&self) {
+        eventually(|| self.armed.get().is_none()).await;
+    }
     fn env(&self) -> Env {
         let (clock, wake, now) = (self.clock.clone(), self.wake.clone(), self.clock.clone());
+        let armed = self.armed.clone();
         Env {
             engine: self.dir.join("engine"),
             now_ms: Rc::new(move || now.get()),
             sleep: Rc::new(move |target| {
                 let (clock, wake) = (clock.clone(), wake.clone());
+                let armed = armed.clone();
                 Box::pin(async move {
+                    // Set on the first poll: `select!` builds the future even while paused.
+                    armed.set(Some(target));
+                    let _guard = Armed(armed);
                     loop {
                         let notified = wake.notified();
                         if clock.get() >= target {
@@ -289,7 +317,7 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
                 fixture.paths.clone(),
                 fixture.env(),
             ));
-            quiet().await;
+            fixture.parked(300_000).await;
             assert!(fixture.selects().is_empty());
             fixture.advance(300_000 - 1);
             quiet().await;
@@ -299,8 +327,8 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
             );
             fixture.advance(300_000);
             eventually(|| fixture.selects() == ["/w/b.png"]).await;
-            fixture.current("/w/b.png", T0 + 300_000);
             // The next interval counts from the change.
+            fixture.parked(600_000).await;
             fixture.advance(599_999);
             quiet().await;
             assert_eq!(fixture.selects().len(), 1);
@@ -308,6 +336,7 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
             std::fs::write(fixture.dir.join("fail"), "").unwrap();
             fixture.advance(600_000);
             eventually(|| fixture.selects().len() == 2).await;
+            fixture.parked(600_000 + 60_000).await;
             fixture.advance(600_000 + 59_999);
             quiet().await;
             assert_eq!(fixture.selects().len(), 2);
@@ -315,7 +344,7 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
             fixture.advance(600_000 + 60_000);
             eventually(|| fixture.selects().len() == 3).await;
             assert_eq!(fixture.selects()[2], "/w/c.png");
-            fixture.current("/w/c.png", T0 + 660_000);
+            fixture.parked(960_000).await;
             // Locked sessions do not rotate; unlocking resumes at once.
             let session = fixture.dir.join("session");
             let append = |line: &str| {
@@ -327,14 +356,14 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
                 writeln!(file, "{line}").unwrap();
             };
             append("{\"locked\":true,\"sleeping\":false,\"path\":\"\"}");
-            quiet().await;
+            fixture.unarmed().await;
             fixture.advance(2_000_000);
             quiet().await;
             assert_eq!(fixture.selects().len(), 3);
             append("{\"locked\":false,\"sleeping\":false,\"path\":\"\"}");
             eventually(|| fixture.selects().len() == 4).await;
             assert_eq!(fixture.selects()[3], "/w/a.png", "sequential order wraps");
-            fixture.current("/w/a.png", T0 + 2_000_000);
+            fixture.parked(2_300_000).await;
             // Fewer than two wallpapers pause until the library changes.
             fixture.catalog(&["/w/a.png"]);
             fixture.advance(2_300_000);

@@ -32,7 +32,7 @@ impl Fixture {
         script(
             &root.join("wpctl"),
             &format!(
-                "d='{d}'\ncase \"$2\" in @DEFAULT_AUDIO_SINK@) n=sink;; @DEFAULT_AUDIO_SOURCE@) n=source;; *) exit 1;; esac\ncase \"$1\" in\n get-volume) printf 'Volume: %s' \"$(cat $d/$n.vol)\"; [ -f $d/$n.muted ] && printf ' [MUTED]'; echo;;\n inspect) echo 'id 9, type PipeWire:Interface:Node'; echo \"  * node.description = \\\"$(cat $d/$n.desc)\\\"\"; echo \"    node.name = \\\"$(cat $d/$n.name)\\\"\";;\nesac\n"
+                "d='{d}'\necho x >> $d/wpctl.log\ncase \"$2\" in @DEFAULT_AUDIO_SINK@) n=sink;; @DEFAULT_AUDIO_SOURCE@) n=source;; *) exit 1;; esac\ncase \"$1\" in\n get-volume) printf 'Volume: %s' \"$(cat $d/$n.vol)\"; [ -f $d/$n.muted ] && printf ' [MUTED]'; echo;;\n inspect) echo 'id 9, type PipeWire:Interface:Node'; echo \"  * node.description = \\\"$(cat $d/$n.desc)\\\"\"; echo \"    node.name = \\\"$(cat $d/$n.name)\\\"\";;\nesac\n"
             ),
         );
         script(
@@ -81,13 +81,31 @@ impl Fixture {
         out
     }
     async fn next(&mut self) -> OsdEvent {
-        for _ in 0..250 {
+        for _ in 0..1500 {
             if let Some(event) = self.events().into_iter().next() {
                 return event;
             }
             tokio::time::sleep(Duration::from_millis(20)).await;
         }
         panic!("no OSD event");
+    }
+    /// Waits until the session is past its silent baseline. The baseline makes four `wpctl`
+    /// calls; any further call comes from the event loop, which only starts after it. Events
+    /// sent before the fake `pactl` opens its tail are lost, so the sink event is repeated.
+    async fn running(&self) {
+        let calls = || {
+            std::fs::read_to_string(self.path("wpctl.log")).map_or(0, |log| log.lines().count())
+        };
+        for _ in 0..1500 {
+            if calls() > 4 {
+                return;
+            }
+            if self.path("pactl-started").exists() {
+                self.pactl("Event 'change' on sink #5");
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        panic!("the session never left its baseline");
     }
     async fn none(&mut self) {
         tokio::time::sleep(Duration::from_millis(300)).await;
@@ -186,7 +204,7 @@ async fn audio_defaults_report_levels_mute_microphone_and_output_changes() {
     LocalSet::new()
         .run_until(async {
             let task = tokio::task::spawn_local(session(f.hub.clone(), f.env(), None));
-            baseline().await;
+            f.running().await;
             f.none().await;
             f.set("sink.vol", "0.60");
             f.pactl("Event 'change' on sink #5");
@@ -240,7 +258,7 @@ async fn capslock_and_night_light_report_only_changes_after_the_baseline() {
     LocalSet::new()
         .run_until(async {
             let task = tokio::task::spawn_local(session(f.hub.clone(), f.env(), None));
-            baseline().await;
+            f.running().await;
             f.none().await;
             f.set("leds/input3::capslock/brightness", "0\n");
             let e = f.next().await;
@@ -391,7 +409,7 @@ async fn power_profile_and_keyboard_backlight_follow_the_system_bus() {
         .run_until(async {
             let task =
                 tokio::task::spawn_local(session(f.hub.clone(), f.env(), Some(client.clone())));
-            baseline().await;
+            f.running().await;
             f.none().await;
             let service = proxy(
                 &client,
