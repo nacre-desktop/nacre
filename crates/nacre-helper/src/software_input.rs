@@ -3,19 +3,22 @@ use crate::{compositor::backend::Backend, files, paths::Paths, state, Result};
 use serde_json::{json, Value};
 use std::{fs, path::Path, time::Duration};
 
+/// Comma-separated XKB layout identifiers, as the Settings picker offers them.
+pub fn layouts_valid(layouts: &str) -> bool {
+    layouts.len() <= 160
+        && layouts.split(',').all(|part| {
+            !part.is_empty()
+                && part.len() <= 32
+                && part
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
+        })
+}
 pub fn preferences(config: &Path) -> Result<Value> {
     let value = state::read_strict(&config.join("software-input.json"), json!({}))?;
     if let Some(layout) = value.get("keyboardLayouts") {
         let layout = layout.as_str().ok_or("Invalid keyboard layouts")?;
-        if layout.len() > 160
-            || layout.split(',').any(|part| {
-                part.is_empty()
-                    || part.len() > 32
-                    || !part
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
-            })
-        {
+        if !layouts_valid(layout) {
             return Err("Use comma-separated XKB layout identifiers".into());
         }
     }
@@ -61,18 +64,33 @@ pub fn reset_layouts(paths: &Paths) -> Result<Value> {
 }
 
 pub fn set_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
-    if layouts.len() > 160
-        || layouts.split(',').any(|s| {
-            s.is_empty()
-                || s.len() > 32
-                || !s
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric() || "_-".contains(c))
-        })
-    {
+    if !layouts_valid(layouts) {
         return Err("Use comma-separated XKB layout identifiers".into());
     }
     apply(paths, json!({"keyboardLayouts":layouts}))
+}
+/// The Settings page's layout write: empty means "System default".
+pub fn switch_layouts(paths: &Paths, layouts: &str) -> Result<Value> {
+    if layouts.is_empty() {
+        reset_layouts(paths)
+    } else {
+        set_layouts(paths, layouts)
+    }
+}
+/// The Settings page's touchpad switch. Hyprland names the devices it switches, so one must be
+/// known; niri switches the class.
+pub fn switch_touchpad(paths: &Paths, enabled: bool) -> Result<Value> {
+    let backend = Backend::new(paths.clone(), std::env::vars().collect())?;
+    let hyprland = backend.name() == "hyprland";
+    let devices = if hyprland {
+        crate::software_actions::touchpads()
+    } else {
+        Vec::new()
+    };
+    if hyprland && devices.is_empty() {
+        return Err("No touchpad identity is available".into());
+    }
+    set_touchpad(paths, enabled, devices)
 }
 fn apply(paths: &Paths, patch: Value) -> Result<Value> {
     let mut backend = Backend::new(paths.clone(), std::env::vars().collect())?;

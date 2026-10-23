@@ -11,6 +11,8 @@
 {"t":"ret","id":4,"ok":{"changed":true}}
 {"t":"call","id":5,"m":"bluetooth.disconnect","p":{"device":"device-1"},"timeout":10000}
 {"t":"ret","id":5,"ok":{"changed":true}}
-{"t":"call","id":6,"m":"bluetooth.set_power","p":{"adapter":"adapter-1","powered":false},"timeout":10000}
+{"t":"call","id":6,"m":"bluetooth.set_trusted","p":{"device":"device-1","trusted":true},"timeout":10000}
 {"t":"ret","id":6,"ok":{"changed":true}}
+{"t":"call","id":7,"m":"bluetooth.set_power","p":{"adapter":"adapter-1","powered":false},"timeout":10000}
+{"t":"ret","id":7,"ok":{"changed":true}}
 {"t":"patch","topic":"bluetooth","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SystemStatus",
+  "description": "The System page's read-only status: what the QML Maintenance page showed (`maintenance state`)\nplus the update-cache age and the AUR review policy provenance. Strings are display text from\nlocal state, bounded and without control characters.",
+  "type": "object",
+  "properties": {
+    "checked": {
+      "type": "string",
+      "maxLength": 64
+    },
+    "release": {
+      "description": "Installed release revision, if one is recorded.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 64
+    },
+    "services": {
+      "description": "Unit name to its state (`active`, `inactive`, `failed`, `ready on demand`, `unavailable`).",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "failed_services": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "config_errors": {
+      "description": "The compositor's configuration errors; empty when valid.",
+      "type": "string",
+      "maxLength": 2048
+    },
+    "drift": {
+      "description": "Managed files whose content differs from what the installer wrote.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "brain_sync": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 256
+    },
+    "performance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResourceSample"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "session_event": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 128
+    },
+    "updates_age_seconds": {
+      "description": "Age of the package update cache; absent when it was never written.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0
+    },
+    "aur_review": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AurProvenance"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "checked",
+    "services",
+    "failed_services",
+    "config_errors",
+    "drift"
+  ],
+  "$defs": {
+    "ResourceSample": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "cpu_core_percent": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0
+        },
+        "memory_mib": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0
+        }
+      },
+      "required": [
+        "cpu_core_percent",
+        "memory_mib"
+      ]
+    },
+    "AurProvenance": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "description": "`required` (every recipe is reviewed) or `native`.",
+          "type": "string",
+          "maxLength": 32
+        },
+        "source": {
+          "description": "Where the policy value comes from, e.g. `registered-profile-setting`.",
+          "type": "string",
+          "maxLength": 64
+        },
+        "profile": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "mode",
+        "source",
+        "profile"
+      ]
+    }
+  }
+}

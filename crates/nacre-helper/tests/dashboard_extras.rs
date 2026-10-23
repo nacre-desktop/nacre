@@ -103,6 +103,7 @@ const TOOLS: [(&str, &str); 5] = [
         r#"d="$FAKE_DIR/clip"; t=$(printf '\t')
 case "$1" in
 list) cat "$d/rows" ;;
+wipe) : > "$d/rows"; : >> "$CLIPHIST_DB_PATH" ;;
 decode) IFS= read -r line; cat "$d/data-${line%%"$t"*}" ;;
 delete) IFS= read -r line; grep -v "^${line%%"$t"*}$t" "$d/rows" > "$d/rows.new"; mv "$d/rows.new" "$d/rows"; : >> "$CLIPHIST_DB_PATH" ;;
 esac
@@ -359,6 +360,7 @@ fn methods_and_topics_are_advertised_and_never_expose_private_state_by_default()
         "focus.stop",
         "clipboard.copy",
         "clipboard.clear",
+        "clipboard.clear_history",
         "screenshots.open",
         "ai.usage.refresh",
     ] {
@@ -654,6 +656,20 @@ fn clipboard_topic_copy_and_clear_keep_pins_and_stay_bounded_and_private() -> Re
             .is_some_and(|o| o.len() == 1)
     })?;
     assert_eq!(after["entries"]["order"][0], "c5");
+    // N0051: clearing the history also removes the pinned clip and the files that described it.
+    assert_eq!(
+        client.ok("clipboard.clear_history", json!({}))?["changed"],
+        true
+    );
+    assert_eq!(lines(&clip.join("rows")).lines().count(), 0);
+    assert!(!extras.join("pins.json").exists());
+    client.until("clipboard", "wiped", |s| {
+        s["entries"]["order"].as_array().is_some_and(Vec::is_empty)
+    })?;
+    assert_eq!(
+        client.ok("clipboard.clear_history", json!({}))?["changed"],
+        false
+    );
     Ok(())
 }
 

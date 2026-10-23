@@ -221,6 +221,7 @@ pub fn generate() -> BTreeMap<String, String> {
     out.extend(crate::osd::exports());
     out.extend(crate::control_center::exports());
     out.extend(crate::system_settings::exports());
+    out.extend(crate::settings_asks::exports());
     out.extend(crate::colors::exports());
     out
 }

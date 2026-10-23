@@ -232,6 +232,22 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "bluetooth.set_trusted"
+        },
+        "p": {
+          "$ref": "#/$defs/BluetoothTrusted"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "bluetooth.pair"
         },
         "p": {
@@ -750,6 +766,23 @@
       "required": [
         "adapter",
         "discovering"
+      ]
+    },
+    "BluetoothTrusted": {
+      "description": "N0051: mark one device trusted (it may reconnect without asking) or not. BlueZ `Trusted`.",
+      "type": "object",
+      "properties": {
+        "device": {
+          "$ref": "#/$defs/EntityId"
+        },
+        "trusted": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "device",
+        "trusted"
       ]
     },
     "BluetoothPairRespond": {

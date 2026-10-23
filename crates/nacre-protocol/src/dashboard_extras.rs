@@ -289,6 +289,9 @@ pub enum DashboardExtrasCall {
     ClipboardCopy(EntityTarget),
     #[serde(rename = "clipboard.clear")]
     ClipboardClear(Refresh),
+    /// N0051: also removes pinned clips (the Privacy page's clear).
+    #[serde(rename = "clipboard.clear_history")]
+    ClipboardClearHistory(Refresh),
     #[serde(rename = "screenshots.open")]
     ScreenshotsOpen(EntityTarget),
     #[serde(rename = "ai.usage.refresh")]
@@ -437,6 +440,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
     let mut frames = vec![json!({"t":"snap","topic":"clipboard","seq":0,"data":clip})];
     frames.extend(call(1, "clipboard.copy", json!({"id":"c41"})));
     frames.extend(call(2, "clipboard.clear", json!({})));
+    frames.extend(call(4, "clipboard.clear_history", json!({})));
     frames.push(json!({"t":"patch","topic":"clipboard","base":0,"seq":1,"data":{"entries":{"items":{"c42":null,"c41":null},"order":[]}}}));
     frames.push(json!({"t":"call","id":3,"m":"clipboard.copy","p":{"id":"c41"}}));
     frames.push(json!({"t":"ret","id":3,"err":{"code":"stale_revision","message":"Clipboard entry no longer exists","retry":true}}));

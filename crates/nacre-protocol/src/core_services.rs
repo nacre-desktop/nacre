@@ -1181,6 +1181,13 @@ pub struct BluetoothPower {
     pub adapter: EntityId,
     pub powered: bool,
 }
+/// N0051: mark one device trusted (it may reconnect without asking) or not. BlueZ `Trusted`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BluetoothTrusted {
+    pub device: EntityId,
+    pub trusted: bool,
+}
 /// N0047: start or stop discovery on one adapter. A started discovery stops by itself after a
 /// fixed time, so a UI that goes away never leaves the radio scanning.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -1323,6 +1330,8 @@ pub enum CoreCall {
     BluetoothConnect(DeviceTarget),
     #[serde(rename = "bluetooth.disconnect")]
     BluetoothDisconnect(DeviceTarget),
+    #[serde(rename = "bluetooth.set_trusted")]
+    BluetoothTrusted(BluetoothTrusted),
     #[serde(rename = "bluetooth.pair")]
     BluetoothPair(DeviceTarget),
     #[serde(rename = "bluetooth.pair.respond")]
@@ -1400,6 +1409,7 @@ impl CoreCall {
                     && (p.pin.is_none() || p.passkey.is_none())
             }
             Self::BluetoothPower(p) => p.adapter.valid(),
+            Self::BluetoothTrusted(p) => p.device.valid(),
             Self::BluetoothDiscovery(p) => p.adapter.valid(),
             Self::PowerProfile(p) => p.profile.valid(),
             Self::AudioDefault(p) => p.node.valid(),

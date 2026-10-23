@@ -44,6 +44,8 @@ struct State {
     connected: bool,
     connects: usize,
     fail_connect: bool,
+    /// What the paired device's `Trusted` was last set to; unset means trusted, as paired.
+    trusted: Option<bool>,
 }
 #[derive(Clone, Default)]
 struct Backend {
@@ -150,7 +152,13 @@ impl Device {
     }
     #[zbus(property)]
     fn trusted(&self) -> bool {
-        self.1
+        self.1 && self.0.state().trusted.unwrap_or(true)
+    }
+    #[zbus(property)]
+    fn set_trusted(&mut self, trusted: bool) {
+        if self.1 {
+            self.0.state().trusted = Some(trusted);
+        }
     }
     #[zbus(property, name = "RSSI")]
     fn rssi(&self) -> i16 {
@@ -771,6 +779,7 @@ fn methods_are_advertised_only_while_bluez_is_present() -> Result<()> {
                 "bluetooth.pair.respond",
                 "bluetooth.set_discovery",
                 "bluetooth.set_power",
+                "bluetooth.set_trusted",
             ]
         );
         let methods = f.hub.borrow().methods();
@@ -1005,6 +1014,43 @@ fn power_discovery_connect_and_disconnect_reach_bluez_and_the_topic() -> Result<
             .await
             .unwrap_err();
         assert_eq!(bad.code, ErrorCode::Validation);
+
+        // N0051: trust and untrust write BlueZ `Trusted`; the same value is not written again.
+        let trust = |trusted: bool| json!({"device":PAIRED_ID,"trusted":trusted});
+        assert!(device(&f).trusted);
+        assert_eq!(
+            f.call("bluetooth.set_trusted", trust(true)).await.unwrap(),
+            json!({"changed":false})
+        );
+        assert_eq!(f.backend.state().trusted, None, "no write when unchanged");
+        assert_eq!(
+            f.call("bluetooth.set_trusted", trust(false)).await.unwrap(),
+            json!({"changed":true})
+        );
+        assert_eq!(f.backend.state().trusted, Some(false));
+        eventually("topic follows", || !device(&f).trusted).await;
+        assert_eq!(
+            f.call("bluetooth.set_trusted", trust(true)).await.unwrap(),
+            json!({"changed":true})
+        );
+        eventually("trusted again", || device(&f).trusted).await;
+        let stale = f
+            .call(
+                "bluetooth.set_trusted",
+                json!({"device":"dev_FF","trusted":true}),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(stale.code, ErrorCode::StaleRevision);
+        for params in [
+            json!({"device":"../x","trusted":true}),
+            json!({"device":PAIRED_ID}),
+            json!({"device":PAIRED_ID,"trusted":"yes"}),
+            json!({"device":PAIRED_ID,"trusted":true,"extra":1}),
+        ] {
+            let error = f.call("bluetooth.set_trusted", params).await.unwrap_err();
+            assert_eq!(error.code, ErrorCode::Validation);
+        }
         Ok(())
     })
 }

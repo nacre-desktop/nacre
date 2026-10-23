@@ -56,7 +56,9 @@ impl Fixture {
         write(
             &root.join("pw.json"),
             r#"[{"id":42,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"alsa_output.fake","media.class":"Audio/Sink"}}},
-               {"id":43,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"video.fake","media.class":"Video/Source"}}}]"#,
+               {"id":43,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"video.fake","media.class":"Video/Source"}}},
+               {"id":44,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"alsa_input.fake","media.class":"Audio/Source"}}},
+               {"id":45,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"stream.fake","media.class":"Stream/Output/Audio"}}}]"#,
         );
         script(
             &root.join("wpctl"),
@@ -250,6 +252,48 @@ fn audio_refuses_bad_targets_missing_nodes_and_vanished_devices() {
             .unwrap_err();
         assert_eq!(error.code, ErrorCode::Unavailable);
         assert!(f.text("wpctl.log").is_empty(), "nothing was written");
+    });
+}
+
+#[test]
+fn the_default_device_is_a_named_sink_or_source_and_nothing_else() {
+    run(async {
+        let f = Fixture::new();
+        for node in ["alsa_output.fake", "alsa_input.fake"] {
+            let reply = f
+                .call("audio.set_default", json!({ "node": node }))
+                .await
+                .unwrap();
+            assert_eq!(reply, json!({"changed":true}));
+        }
+        assert_eq!(f.text("wpctl.log"), "set-default 42\nset-default 44\n");
+        // A stream, a video node and an unknown name are unavailable; bad names never get that far.
+        for node in ["stream.fake", "video.fake", "nope"] {
+            let error = f
+                .call("audio.set_default", json!({ "node": node }))
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::Unavailable, "{node}");
+        }
+        for params in [
+            json!({}),
+            json!({"node":""}),
+            json!({"node":"a b"}),
+            json!({"node":"$(id)"}),
+            json!({"node":"alsa_output.fake","target":"sink"}),
+        ] {
+            let error = f
+                .call("audio.set_default", params.clone())
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::Validation, "{params}");
+            assert_eq!(error.dispatched, Some(false));
+        }
+        assert_eq!(
+            f.text("wpctl.log").lines().count(),
+            2,
+            "nothing else written"
+        );
     });
 }
 
@@ -533,6 +577,7 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
         for name in [
             "audio.set_volume",
             "audio.set_mute",
+            "audio.set_default",
             "keyboard_light.set",
             "power.set_profile",
             "airplane.set",

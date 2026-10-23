@@ -302,6 +302,21 @@ pub(crate) fn clip_clear(paths: &Paths) -> Result<bool> {
     prune_clip_history(paths, &clip_rows()?)?;
     Ok(removed)
 }
+/// N0051: the Privacy page's "clear history": every clip including pinned ones (`cliphist wipe`),
+/// then the private files that only described them (thumbnails, pins, the age index). Returns
+/// whether there was anything to clear.
+pub(crate) fn clip_wipe(paths: &Paths) -> Result<bool> {
+    let had = !clip_rows()?.is_empty();
+    run_command(&["cliphist", "wipe"], None)?;
+    let gone = |result: std::io::Result<()>| match result {
+        Err(error) if error.kind() != std::io::ErrorKind::NotFound => Err(error),
+        _ => Ok(()),
+    };
+    gone(fs::remove_dir_all(state(paths).join("images")))?;
+    gone(fs::remove_file(state(paths).join("pins.json")))?;
+    gone(fs::remove_file(clip_timestamp_path(paths)))?;
+    Ok(had)
+}
 fn clips(paths: &Paths) -> Result<Value> {
     let rows = clip_rows()?;
     prune_clip_history(paths, &rows)?;
@@ -824,7 +839,7 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
         Err(command.exec().into())
     }
 }
-fn bindings(paths: &Paths) -> Result<Value> {
+pub(crate) fn bindings(paths: &Paths) -> Result<Value> {
     let mut backend = Backend::new(paths.clone(), env::vars().collect::<BTreeMap<_, _>>())?;
     let files = backend.module_call(
         "binding_source_files",

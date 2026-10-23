@@ -124,6 +124,7 @@ fn calls_reject_bad_parameters_and_unknown_fields() {
         ("focus.stop", json!({})),
         ("clipboard.copy", json!({"id":"c1"})),
         ("clipboard.clear", json!({})),
+        ("clipboard.clear_history", json!({})),
         ("screenshots.open", json!({"id":"s1"})),
         ("ai.usage.refresh", json!({})),
     ] {

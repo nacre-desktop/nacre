@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ShortcutsState",
+  "description": "The `shortcuts` topic: the bindings of the running compositor, `SUPER` ones first.",
+  "type": "object",
+  "properties": {
+    "health": {
+      "$ref": "#/$defs/Health"
+    },
+    "items": {
+      "$ref": "#/$defs/Entities_Shortcut"
+    }
+  },
+  "required": [
+    "health",
+    "items"
+  ],
+  "$defs": {
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "Entities_Shortcut": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/Shortcut"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "Shortcut": {
+      "description": "One key binding as the compositor reports it, with the Nacre menu route it opens, if any.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "description": "`SUPER+SHIFT+S`",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "submap": {
+          "description": "The key table the binding lives in; absent for the main one.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "menu": {
+          "description": "A Nacre menu route, such as `actions.emoji`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "key",
+        "description"
+      ]
+    },
+    "EntityId": {
+      "description": "Opaque daemon-issued identifier. Never interpret as a path, address or command.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])"
+    }
+  }
+}

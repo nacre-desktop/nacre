@@ -2,6 +2,7 @@
 export type AudioTarget = ("sink") | ("source") | ("node")
 export type AudioSetVolume = { ["target"]: AudioTarget, ["node"]: (string | nil)?, ["value"]: number }
 export type AudioSetMute = { ["target"]: AudioTarget, ["node"]: (string | nil)?, ["muted"]: boolean }
+export type AudioSetDefault = { ["node"]: string }
 export type KeyboardLightSet = { ["level"]: number }
 export type PowerSetProfile = { ["profile"]: PowerProfileName }
 export type EnabledSet = { ["enabled"]: boolean }

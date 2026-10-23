@@ -386,29 +386,12 @@ fn run() -> Result<i32> {
                 nacre_helper::software_input::preferences(&paths.config)
             }
             [operation, value] if operation == "layouts" => {
-                if value.is_empty() {
-                    nacre_helper::software_input::reset_layouts(&paths)
-                } else {
-                    nacre_helper::software_input::set_layouts(&paths, value)
-                }
+                nacre_helper::software_input::switch_layouts(&paths, value)
             }
             [operation, value]
                 if operation == "touchpad" && (value == "true" || value == "false") =>
             {
-                let backend = nacre_helper::compositor::backend::Backend::new(
-                    paths.clone(),
-                    std::env::vars().collect(),
-                )?;
-                let devices = if backend.name() == "hyprland" {
-                    nacre_helper::software_actions::touchpads()
-                } else {
-                    Vec::new()
-                };
-                if backend.name() == "hyprland" && devices.is_empty() {
-                    Err("No touchpad identity is available".into())
-                } else {
-                    nacre_helper::software_input::set_touchpad(&paths, value == "true", devices)
-                }
+                nacre_helper::software_input::switch_touchpad(&paths, value == "true")
             }
             _ => Err("Unknown input preference request".into()),
         };

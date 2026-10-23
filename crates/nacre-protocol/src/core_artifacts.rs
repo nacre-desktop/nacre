@@ -133,6 +133,10 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
                 ("bluetooth.connect", json!({"device":"device-1"})),
                 ("bluetooth.disconnect", json!({"device":"device-1"})),
                 (
+                    "bluetooth.set_trusted",
+                    json!({"device":"device-1","trusted":true}),
+                ),
+                (
                     "bluetooth.set_power",
                     json!({"adapter":"adapter-1","powered":false}),
                 ),

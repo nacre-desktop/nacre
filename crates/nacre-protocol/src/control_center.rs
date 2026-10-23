@@ -37,6 +37,14 @@ pub struct AudioSetVolume {
     #[schemars(range(min = 0.0, max = 1.0))]
     pub value: f64,
 }
+/// N0051: make one device the default output or input. `node` is the PipeWire `node.name` of
+/// an `Audio/Sink` or `Audio/Source` device (the item id Bead lists); anything else is refused.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct AudioSetDefault {
+    #[schemars(length(min = 1, max = 128))]
+    pub node: String,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AudioSetMute {
@@ -196,6 +204,11 @@ impl AudioSetVolume {
         }
     }
 }
+impl AudioSetDefault {
+    pub fn validate(&self) -> Result<(), Failure> {
+        node_name(&self.node).then_some(()).ok_or_else(invalid)
+    }
+}
 impl AudioSetMute {
     pub fn validate(&self) -> Result<(), Failure> {
         if target_valid(self.target, &self.node) {
@@ -247,6 +260,12 @@ fn table() -> Vec<(&'static str, serde_json::Value, Capability, u32)> {
         (
             "audio.set_mute",
             schema(schemars::schema_for!(AudioSetMute)),
+            Capability::System,
+            10_000,
+        ),
+        (
+            "audio.set_default",
+            schema(schemars::schema_for!(AudioSetDefault)),
             Capability::System,
             10_000,
         ),
@@ -371,6 +390,11 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
             schemars::schema_for!(AudioSetMute),
         ),
         (
+            "AudioSetDefault",
+            "audio-set-default",
+            schemars::schema_for!(AudioSetDefault),
+        ),
+        (
             "KeyboardLightSet",
             "keyboard-light-set",
             schemars::schema_for!(KeyboardLightSet),
@@ -432,6 +456,11 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "audio.set_mute",
             json!({"target":"node","node":"alsa_output.pci-0000_00_1f.3.analog-stereo","muted":true}),
+            json!({"changed":true}),
+        ),
+        (
+            "audio.set_default",
+            json!({"node":"alsa_output.pci-0000_00_1f.3.analog-stereo"}),
             json!({"changed":true}),
         ),
         (
@@ -547,7 +576,20 @@ mod tests {
         );
         assert!(serde_json::from_value::<ScreenshotCapture>(json!({"mode":"area"})).is_err());
         assert!(serde_json::from_value::<AppearanceSet>(json!({"mode":"auto"})).is_ok());
-        assert_eq!(methods().len(), 13);
+        assert_eq!(methods().len(), 14);
+        assert!(AudioSetDefault {
+            node: "alsa_output.pci-0000_00_1f.3.analog-stereo".into()
+        }
+        .validate()
+        .is_ok());
+        assert!(AudioSetDefault {
+            node: "bad name".into()
+        }
+        .validate()
+        .is_err());
+        assert!(
+            serde_json::from_value::<AudioSetDefault>(json!({"node":"x","target":"sink"})).is_err()
+        );
         assert!(methods().values().all(|m| m.v == 1 && m.timeout <= 120_000));
     }
     #[test]

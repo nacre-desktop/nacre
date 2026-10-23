@@ -1,0 +1,12 @@
+{"t":"snap","topic":"shortcuts","seq":0,"data":{"health":{"available":true,"stale":false},"items":{"items":{"k0":{"key":"SUPER+SPACE","description":"Launcher"},"k1":{"key":"SUPER+PERIOD","description":"Emoji","menu":"actions.emoji"}},"order":["k0","k1"]}}}
+{"t":"patch","topic":"shortcuts","base":0,"seq":1,"data":{"items":{"items":{"k1":null},"order":["k0"]}}}
+{"t":"call","id":700,"m":"shortcuts.refresh","p":{}}
+{"t":"ret","id":700,"ok":{"requested":true}}
+{"t":"call","id":701,"m":"capabilities.refresh","p":{}}
+{"t":"ret","id":701,"ok":{"requested":true}}
+{"t":"call","id":702,"m":"launcher.clear_history","p":{}}
+{"t":"ret","id":702,"ok":{"changed":true}}
+{"t":"call","id":703,"m":"tools.launch","p":{"tool":"audio-manager"}}
+{"t":"ret","id":703,"ok":{"launched":true}}
+{"t":"call","id":704,"m":"system.status","p":{}}
+{"t":"ret","id":704,"ok":{"checked":"2026-10-23T18:00:00.000000+00:00","release":"0123456789ab","services":{"nacre-shell.service":"active","xdg-desktop-portal.service":"ready on demand"},"failed_services":[],"config_errors":"","drift":[],"brain_sync":"No synchronization attempt recorded","updates_age_seconds":3600,"aur_review":{"mode":"required","source":"general-profile-default","profile":"default"}}}

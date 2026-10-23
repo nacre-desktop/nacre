@@ -163,3 +163,22 @@ pub async fn clear(hub: &Shared, paths: &Paths) -> std::result::Result<Value, Fa
         )),
     }
 }
+
+/// N0051: clear the whole history, pinned clips included (the Privacy page; `clear` keeps pins).
+pub async fn clear_history(hub: &Shared, paths: &Paths) -> std::result::Result<Value, Failure> {
+    let work = paths.clone();
+    let result = tokio::time::timeout(
+        Duration::from_secs(30),
+        tokio::task::spawn_blocking(move || desktop_extras::clip_wipe(&work)),
+    )
+    .await;
+    refresh(hub, paths).await;
+    match result {
+        Ok(Ok(Ok(changed))) => Ok(json!({"changed":changed})),
+        _ => Err(failure(
+            ErrorCode::Io,
+            "Clipboard history could not be cleared",
+            true,
+        )),
+    }
+}

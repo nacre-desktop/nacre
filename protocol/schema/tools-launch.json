@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ToolsLaunch",
+  "type": "object",
+  "properties": {
+    "tool": {
+      "$ref": "#/$defs/Tool"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "tool"
+  ],
+  "$defs": {
+    "Tool": {
+      "description": "A fixed program the Settings pages start. Nothing else about the command line is caller input.",
+      "oneOf": [
+        {
+          "description": "The audio routing manager (`pavucontrol`).",
+          "type": "string",
+          "const": "audio-manager"
+        },
+        {
+          "description": "The network connection editor (`nm-connection-editor`).",
+          "type": "string",
+          "const": "connection-editor"
+        },
+        {
+          "description": "`nacre setup` in a terminal: installs the optional AI and Brain add-ons.",
+          "type": "string",
+          "const": "setup"
+        },
+        {
+          "description": "The AI workspace (accounts, usage and projects) in a terminal.",
+          "type": "string",
+          "const": "ai-workspace"
+        },
+        {
+          "description": "The AUR review policy and where it comes from, in a terminal.",
+          "type": "string",
+          "const": "aur-review-policy"
+        },
+        {
+          "description": "Start `power-profiles-daemon` (polkit asks the session's agent).",
+          "type": "string",
+          "const": "power-service"
+        }
+      ]
+    }
+  }
+}

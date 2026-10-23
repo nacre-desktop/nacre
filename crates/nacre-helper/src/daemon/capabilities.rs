@@ -4,17 +4,24 @@
 //! plus three probes made once per daemon start: input devices, `powerprofilesctl` and `pacman`.
 //! A flag the registry names but QML never defined (`batterySaver`, `cursorShake`) is absent, which
 //! consumers evaluate as false, exactly as QML did.
+//!
+//! N0051 adds `bluetooth` (the `bluetooth` topic lists an adapter) and `battery` (a laptop battery
+//! in `/sys/class/power_supply`, probed with the rest) and `capabilities.refresh`, which probes
+//! again so a late-started `power-profiles-daemon` or a docked battery shows without a restart.
 use super::{
     behaviours::changed,
-    hub::{Hub, Shared},
+    hub::{failure, Hub, Shared},
 };
 use crate::{process, Result};
 use nacre_protocol::{
     core_services::Health,
+    pill_controls::PillEmpty,
     system_settings::{CapabilitiesState, CAPABILITIES_TOPIC},
+    ErrorCode, Failure, Method,
 };
 use serde_json::Value;
 use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
+use tokio::sync::Notify;
 
 const DESKTOP_OPTIONS: [&str; 8] = [
     "gapsIn",
@@ -33,6 +40,8 @@ const DEVICES_LIMIT: u64 = 1024 * 1024;
 pub struct Env {
     /// `/proc/bus/input/devices`
     pub devices: PathBuf,
+    /// `/sys/class/power_supply`
+    pub power_supply: PathBuf,
     pub powerprofilesctl: String,
     pub which: Arc<dyn Fn(&str) -> bool + Send + Sync>,
 }
@@ -40,6 +49,7 @@ impl Env {
     fn production() -> Self {
         Self {
             devices: "/proc/bus/input/devices".into(),
+            power_supply: "/sys/class/power_supply".into(),
             powerprofilesctl: "powerprofilesctl".into(),
             which: Arc::new(|program| {
                 if program.contains('/') {
@@ -56,9 +66,24 @@ impl Env {
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 struct Probe {
     touchpad: bool,
+    battery: bool,
     packages: bool,
     power_profiles: bool,
     performance_profile: bool,
+}
+/// A power-supply device of type `Battery` that is not a peripheral's (`scope` is `Device` for a
+/// mouse or a headset), as UPower's `isLaptopBattery` decides.
+fn laptop_battery(dir: &std::path::Path) -> bool {
+    let read = |entry: &std::path::Path, name: &str| {
+        std::fs::read_to_string(entry.join(name)).map(|text| text.trim().to_owned())
+    };
+    std::fs::read_dir(dir).is_ok_and(|entries| {
+        entries.flatten().take(64).any(|entry| {
+            let path = entry.path();
+            read(&path, "type").is_ok_and(|kind| kind == "Battery")
+                && !read(&path, "scope").is_ok_and(|scope| scope == "Device")
+        })
+    })
 }
 fn probe(env: &Env) -> Probe {
     use std::io::Read;
@@ -83,6 +108,7 @@ fn probe(env: &Env) -> Probe {
         power_profiles && run(&["list"]).is_some_and(|list| list.contains("performance"));
     Probe {
         touchpad,
+        battery: laptop_battery(&env.power_supply),
         packages: (env.which)("pacman"),
         power_profiles,
         performance_profile,
@@ -104,6 +130,13 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
             .as_array()
             .is_some_and(|all| all.iter().any(|item| item == name))
     };
+    // The `bluetooth` topic lists an adapter while BlueZ is there (QML: `NacreBluetooth.available`).
+    let bluetooth = hub.snapshot_ref("bluetooth").is_some_and(|state| {
+        state["health"]["available"] == true
+            && state["adapters"]["order"]
+                .as_array()
+                .is_some_and(|adapters| !adapters.is_empty())
+    });
     let mut flags = BTreeMap::from([
         ("ai".into(), component("ai")),
         ("brain".into(), component("brain")),
@@ -111,6 +144,8 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
         ("powerProfiles".into(), probe.power_profiles),
         ("performanceProfile".into(), probe.performance_profile),
         ("touchpad".into(), probe.touchpad),
+        ("battery".into(), probe.battery),
+        ("bluetooth".into(), bluetooth),
         ("panelDragging".into(), capability("nativePanelDrag")),
         ("windowCapture".into(), capability("windowCapture")),
         ("niriWorkspaces".into(), niri),
@@ -156,21 +191,61 @@ pub fn initial(hub: &Shared) -> Result<()> {
 pub async fn run(hub: Shared) -> Result<()> {
     run_with(hub, Env::production()).await
 }
+/// The Settings-page services (N0049, N0051) run in this daemon: not safe mode, and the
+/// `capabilities` service started. The methods that need no backend of their own are advertised
+/// only then, so a bare hub (tests, a partial daemon) offers none of them.
+pub fn pages_up(hub: &Hub) -> bool {
+    !hub.safe && hub.services.contains_key("capabilities")
+}
+/// `capabilities.refresh`: probe again. A request made while a probe runs is not lost.
+static REFRESH: Notify = Notify::const_new();
+pub fn handles(method: &str) -> bool {
+    method == "capabilities.refresh"
+}
+pub fn dispatch(hub: &Hub, params: Value) -> std::result::Result<Value, Failure> {
+    serde_json::from_value::<PillEmpty>(params).map_err(|_| {
+        failure(ErrorCode::Validation, "Invalid capabilities request", false).dispatch_state(false)
+    })?;
+    if !pages_up(hub) {
+        return Err(
+            failure(ErrorCode::Unavailable, "Capabilities are unavailable", true)
+                .dispatch_state(false),
+        );
+    }
+    REFRESH.notify_one();
+    Ok(serde_json::json!({"requested":true}))
+}
+/// Advertised while the service runs.
+pub fn available_methods(hub: &Hub) -> BTreeMap<String, Method> {
+    let mut methods = nacre_protocol::settings_asks::methods();
+    methods.retain(|name, _| handles(name));
+    if !pages_up(hub) {
+        methods.clear();
+    }
+    methods
+}
 async fn run_with(hub: Shared, env: Env) -> Result<()> {
-    let probe = tokio::task::spawn_blocking(move || probe(&env)).await?;
+    let probing = env.clone();
+    let mut probed = tokio::task::spawn_blocking(move || probe(&probing)).await?;
     let mut notices = hub.borrow().observe();
     hub.borrow_mut().service("capabilities", "running", 0)?;
     loop {
-        publish(&hub, &probe)?;
-        changed(
-            &mut notices,
-            &[
-                "compositor",
-                "settings.store.desktop",
-                "settings.store.profile",
-            ],
-        )
-        .await?;
+        publish(&hub, &probed)?;
+        tokio::select! {
+            result = changed(
+                &mut notices,
+                &[
+                    "compositor",
+                    "bluetooth",
+                    "settings.store.desktop",
+                    "settings.store.profile",
+                ],
+            ) => result?,
+            () = REFRESH.notified() => {
+                let probing = env.clone();
+                probed = tokio::task::spawn_blocking(move || probe(&probing)).await?;
+            }
+        }
     }
 }
 

@@ -36,6 +36,27 @@ struct Store {
     deadline: Option<Instant>,
 }
 
+enum InputChange {
+    Layouts(String),
+    Touchpad(bool),
+}
+#[cfg(test)]
+type InputWriter = fn(&Paths, &InputChange) -> Result<()>;
+/// Tests replace the compositor-facing write; nothing else is faked.
+#[cfg(test)]
+static INPUT_WRITER: std::sync::Mutex<Option<InputWriter>> = std::sync::Mutex::new(None);
+fn write_input(paths: &Paths, change: InputChange) -> Result<()> {
+    #[cfg(test)]
+    if let Some(writer) = *INPUT_WRITER.lock().unwrap() {
+        return writer(paths, &change);
+    }
+    match change {
+        InputChange::Layouts(layouts) => crate::software_input::switch_layouts(paths, &layouts),
+        InputChange::Touchpad(enabled) => crate::software_input::switch_touchpad(paths, enabled),
+    }
+    .map(|_| ())
+}
+
 pub struct Service {
     stores: Mutex<BTreeMap<String, Store>>,
     changed: Notify,
@@ -183,6 +204,9 @@ impl Service {
 
     pub async fn set(&self, request: SettingsSet) -> std::result::Result<Value, Failure> {
         request.validate()?;
+        if request.store == "software-input" {
+            return self.set_input(request).await;
+        }
         if request.store == "desktop" {
             if request.key.len() != 1
                 || validation::descriptor("desktop", &request.key)
@@ -291,6 +315,114 @@ impl Service {
         self.changed.notify_one();
         self.durable_changed.notify_waiters();
         serde_json::to_value(&store.snapshot).map_err(|_| unavailable())
+    }
+
+    /// N0051: the `software-input` store is read-only to the generic writer because a change is
+    /// also a compositor change. A write goes through the same projection the QML page used
+    /// (`input-preferences`): the file, the managed compositor block, a reload, and a rollback of
+    /// both on failure. The store then republishes from the file.
+    async fn set_input(&self, request: SettingsSet) -> std::result::Result<Value, Failure> {
+        let [key] = request.key.as_slice() else {
+            return Err(denied());
+        };
+        let change = match (key.as_str(), &request.value) {
+            ("keyboardLayouts", Value::String(layouts)) => {
+                if !crate::software_input::layouts_valid(layouts) && !layouts.is_empty() {
+                    return Err(failure(
+                        ErrorCode::InvalidRequest,
+                        "Invalid settings value",
+                        false,
+                    ));
+                }
+                InputChange::Layouts(layouts.clone())
+            }
+            ("touchpadEnabled", Value::Bool(enabled)) => InputChange::Touchpad(*enabled),
+            ("keyboardLayouts" | "touchpadEnabled", _) => {
+                return Err(failure(
+                    ErrorCode::InvalidRequest,
+                    "Invalid settings value",
+                    false,
+                ))
+            }
+            _ => return Err(denied()),
+        };
+        {
+            let stores = self.stores.lock().await;
+            let store = stores.get("software-input").ok_or_else(denied)?;
+            if request.rev != store.snapshot.rev {
+                return Err(failure(
+                    ErrorCode::StaleRevision,
+                    "Settings changed; refresh before writing",
+                    true,
+                ));
+            }
+            if store.snapshot.error.is_some() {
+                return Err(failure(
+                    ErrorCode::Unavailable,
+                    "Resolve the settings file error before writing",
+                    false,
+                ));
+            }
+            let paths = self.paths.clone();
+            // The lock is held across the write: a hand edit cannot interleave.
+            tokio::task::spawn_blocking(move || write_input(&paths, change))
+                .await
+                .map_err(|_| failure(ErrorCode::Internal, "Input write failed", false))?
+                .map_err(|_| {
+                    failure(
+                        ErrorCode::Io,
+                        "Input preferences could not be applied",
+                        true,
+                    )
+                })?;
+        }
+        self.refresh().await.map_err(|_| unavailable())?;
+        self.get(SettingsGet {
+            store: "software-input".into(),
+        })
+        .await
+    }
+
+    /// N0051: forget launcher history (recent entries and frecency counts); favorites and hidden
+    /// entries stay. `changed:false` when there was nothing to forget.
+    pub async fn clear_launcher_history(&self) -> std::result::Result<Value, Failure> {
+        let mut stores = self.stores.lock().await;
+        let store = stores.get_mut("launcher").ok_or_else(unavailable)?;
+        if store.snapshot.error.is_some() {
+            return Err(failure(
+                ErrorCode::Unavailable,
+                "Resolve the settings file error before writing",
+                false,
+            ));
+        }
+        let has = |key: &str| match &store.snapshot.data[key] {
+            Value::Array(items) => !items.is_empty(),
+            Value::Object(items) => !items.is_empty(),
+            _ => false,
+        };
+        if !has("recent") && !has("usage") {
+            return Ok(serde_json::json!({"changed":false}));
+        }
+        let next = store
+            .snapshot
+            .rev
+            .checked_add(1)
+            .filter(|rev| *rev <= MAX_SAFE_INTEGER)
+            .ok_or_else(unavailable)?;
+        let (previous, previous_deadline) = (store.snapshot.clone(), store.deadline);
+        store.snapshot.data["recent"] = serde_json::json!([]);
+        store.snapshot.data["usage"] = serde_json::json!({});
+        store.snapshot.rev = next;
+        store.snapshot.dirty = true;
+        store.deadline = Some(Instant::now() + QUIET);
+        if self.publish(store).is_err() {
+            store.snapshot = previous;
+            store.deadline = previous_deadline;
+            return Err(unavailable());
+        }
+        self.changed.notify_one();
+        self.durable_changed.notify_waiters();
+        Ok(serde_json::json!({"changed":true}))
     }
 
     pub async fn publish_owned(
@@ -803,6 +935,11 @@ pub fn methods() -> BTreeMap<String, Method> {
             },
         )
     })
+    .chain(
+        nacre_protocol::settings_asks::methods()
+            .into_iter()
+            .filter(|(name, _)| name == "launcher.clear_history"),
+    )
     .collect()
 }
 
@@ -828,6 +965,7 @@ pub async fn dispatch(
         Publish(SettingsPublish),
         Provider(SettingsProviderWrite),
         Desktop(DesktopSettingsCall),
+        ClearLauncherHistory,
     }
     let mutation = match method {
         "settings.get" => {
@@ -856,6 +994,11 @@ pub async fn dispatch(
                 serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
             Mutation::Desktop(request)
+        }
+        "launcher.clear_history" => {
+            serde_json::from_value::<nacre_protocol::pill_controls::PillEmpty>(params)
+                .map_err(|_| invalid())?;
+            Mutation::ClearLauncherHistory
         }
         _ => {
             return Err(failure(
@@ -886,6 +1029,7 @@ pub async fn dispatch(
             Mutation::Publish(request) => service.publish_owned(request).await,
             Mutation::Provider(request) => service.provider_write(request).await,
             Mutation::Desktop(request) => service.desktop(request).await,
+            Mutation::ClearLauncherHistory => service.clear_launcher_history().await,
         }
     })
     .await
@@ -1619,6 +1763,158 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(target).unwrap(),
             "{\"enabled\":false}"
+        );
+    }
+
+    /// Stands in for the compositor-facing write: the file the real writer would produce.
+    fn fake_input(paths: &Paths, change: &InputChange) -> Result<()> {
+        let path = state::settings_path_in(paths, "software-input")?;
+        let mut data = state::read_strict(&path, json!({}))?;
+        match change {
+            InputChange::Layouts(layouts) if layouts.is_empty() => {
+                data.as_object_mut().unwrap().remove("keyboardLayouts");
+            }
+            InputChange::Layouts(layouts) => data["keyboardLayouts"] = json!(layouts),
+            InputChange::Touchpad(enabled) => data["touchpadEnabled"] = json!(enabled),
+        }
+        state::write(&path, &data)
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn software_input_is_written_through_the_input_writer_and_republished() {
+        let (_home, _paths, hub, service) = fixture().await;
+        *INPUT_WRITER.lock().unwrap() = Some(fake_input);
+        let rev = service
+            .get(SettingsGet {
+                store: "software-input".into(),
+            })
+            .await
+            .unwrap()["rev"]
+            .as_u64()
+            .unwrap();
+        let set = |key: &str, value: Value, rev: u64| SettingsSet {
+            store: "software-input".into(),
+            key: vec![key.into()],
+            value,
+            rev,
+        };
+        let saved = service
+            .set(set("keyboardLayouts", json!("us,no"), rev))
+            .await
+            .unwrap();
+        assert_eq!(saved["data"]["keyboardLayouts"], "us,no");
+        let rev_after = saved["rev"].as_u64().unwrap();
+        assert!(rev_after > rev);
+        assert_eq!(
+            hub.borrow()
+                .snapshot("settings.store.software-input")
+                .unwrap()["data"]["keyboardLayouts"],
+            "us,no",
+            "the topic follows the file"
+        );
+        // A stale revision writes nothing.
+        let stale = service
+            .set(set("touchpadEnabled", json!(false), rev))
+            .await
+            .unwrap_err();
+        assert_eq!(stale.code, ErrorCode::StaleRevision);
+        let saved = service
+            .set(set("touchpadEnabled", json!(false), rev_after))
+            .await
+            .unwrap();
+        assert_eq!(saved["data"]["touchpadEnabled"], false);
+        assert_eq!(saved["data"]["keyboardLayouts"], "us,no", "other keys stay");
+        // An empty layout string is "System default".
+        let rev = saved["rev"].as_u64().unwrap();
+        let reset = service
+            .set(set("keyboardLayouts", json!(""), rev))
+            .await
+            .unwrap();
+        assert!(reset["data"].get("keyboardLayouts").is_none());
+        let rev = reset["rev"].as_u64().unwrap();
+        for (key, value, code) in [
+            (
+                "keyboardLayouts",
+                json!("us,,no"),
+                ErrorCode::InvalidRequest,
+            ),
+            ("keyboardLayouts", json!("us no"), ErrorCode::InvalidRequest),
+            (
+                "keyboardLayouts",
+                json!("u".repeat(161)),
+                ErrorCode::InvalidRequest,
+            ),
+            ("keyboardLayouts", json!(5), ErrorCode::InvalidRequest),
+            ("touchpadEnabled", json!("no"), ErrorCode::InvalidRequest),
+            ("touchpadDevices", json!(["x"]), ErrorCode::PermissionDenied),
+            ("version", json!(2), ErrorCode::PermissionDenied),
+        ] {
+            let error = service.set(set(key, value.clone(), rev)).await.unwrap_err();
+            assert_eq!(error.code, code, "{key} {value}");
+        }
+        let mut nested = set("keyboardLayouts", json!("us"), rev);
+        nested.key.push("x".into());
+        assert!(service.set(nested).await.is_err());
+        // A failed write changes nothing and reports an I/O failure.
+        fn failing(_: &Paths, _: &InputChange) -> Result<()> {
+            Err("compositor refused".into())
+        }
+        *INPUT_WRITER.lock().unwrap() = Some(failing);
+        let error = service
+            .set(set("touchpadEnabled", json!(true), rev))
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::Io);
+        let current = service
+            .get(SettingsGet {
+                store: "software-input".into(),
+            })
+            .await
+            .unwrap();
+        assert_eq!(current["rev"].as_u64().unwrap(), rev);
+        *INPUT_WRITER.lock().unwrap() = None;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn launcher_history_clears_recents_and_frecency_but_not_favorites() {
+        let (_home, _paths, hub, service) = fixture().await;
+        assert_eq!(
+            service.clear_launcher_history().await.unwrap(),
+            json!({"changed":false}),
+            "nothing to forget"
+        );
+        for (action, id) in [
+            ("favorite", "firefox"),
+            ("record", "kitty"),
+            ("record", "nvim"),
+        ] {
+            service
+                .admit_launcher_preferences(action, &json!({"id":id,"enabled":true}))
+                .await
+                .unwrap();
+        }
+        let before = service
+            .launcher_preferences("load", &json!({}))
+            .await
+            .unwrap();
+        assert_eq!(before["recent"].as_array().unwrap().len(), 2);
+        assert_eq!(before["usage"].as_object().unwrap().len(), 2);
+        assert_eq!(
+            service.clear_launcher_history().await.unwrap(),
+            json!({"changed":true})
+        );
+        let after = service
+            .launcher_preferences("load", &json!({}))
+            .await
+            .unwrap();
+        assert_eq!(after["recent"], json!([]));
+        assert_eq!(after["usage"], json!({}));
+        assert_eq!(after["favorites"], json!(["firefox"]));
+        let topic = hub.borrow().snapshot("settings.store.launcher").unwrap();
+        assert_eq!(topic["data"]["recent"], json!([]));
+        assert_eq!(
+            service.clear_launcher_history().await.unwrap(),
+            json!({"changed":false})
         );
     }
 

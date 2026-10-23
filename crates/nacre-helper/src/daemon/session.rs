@@ -72,6 +72,18 @@ async fn dispatch(
         method if super::login_theme::handles(method) => {
             super::login_theme::dispatch(hub, params).await
         }
+        method if super::capabilities::handles(method) => {
+            super::capabilities::dispatch(&hub.borrow(), params)
+        }
+        method if super::shortcuts::handles(method) => {
+            super::shortcuts::dispatch(&hub.borrow(), params)
+        }
+        method if super::system_status::handles(method) => {
+            super::system_status::dispatch(hub, params).await
+        }
+        method if super::tools_launch::handles(method) => {
+            super::tools_launch::dispatch(hub, params).await
+        }
         method if super::colors_app::handles(method) => {
             super::colors_app::dispatch(hub, method, params).await
         }
@@ -100,13 +112,18 @@ async fn dispatch(
         | "bluetooth.set_power"
         | "bluetooth.set_discovery"
         | "bluetooth.connect"
-        | "bluetooth.disconnect")
+        | "bluetooth.disconnect"
+        | "bluetooth.set_trusted")
             if !hub.borrow().safe =>
         {
             super::bluetooth::dispatch(hub, method, params).await
         }
-        method @ ("settings.get" | "settings.set" | "settings.publish" | "settings.provider"
-        | "settings.desktop") => super::settings::dispatch(hub, method, params).await,
+        method @ ("settings.get"
+        | "settings.set"
+        | "settings.publish"
+        | "settings.provider"
+        | "settings.desktop"
+        | "launcher.clear_history") => super::settings::dispatch(hub, method, params).await,
         method @ ("niri.source" | "niri.action") => {
             super::niri_actions::dispatch(hub, method, params).await
         }
@@ -180,11 +197,13 @@ async fn call(
             | "bluetooth.set_discovery"
             | "bluetooth.connect"
             | "bluetooth.disconnect"
+            | "bluetooth.set_trusted"
             | "niri.action"
             | "settings.set"
             | "settings.publish"
             | "settings.provider"
             | "settings.desktop"
+            | "launcher.clear_history"
             | "workspace.activate"
             | "workspace.scroll"
             | "window.focus"

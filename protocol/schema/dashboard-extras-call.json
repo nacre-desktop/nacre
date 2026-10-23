@@ -99,6 +99,23 @@
       ]
     },
     {
+      "description": "N0051: also removes pinned clips (the Privacy page's clear).",
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "clipboard.clear_history"
+        },
+        "p": {
+          "$ref": "#/$defs/Refresh"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
       "type": "object",
       "properties": {
         "m": {

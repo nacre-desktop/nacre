@@ -3,6 +3,8 @@
 {"t":"ret","id":1,"ok":{"changed":true}}
 {"t":"call","id":2,"m":"clipboard.clear","p":{}}
 {"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"call","id":4,"m":"clipboard.clear_history","p":{}}
+{"t":"ret","id":4,"ok":{"changed":true}}
 {"t":"patch","topic":"clipboard","base":0,"seq":1,"data":{"entries":{"items":{"c42":null,"c41":null},"order":[]}}}
 {"t":"call","id":3,"m":"clipboard.copy","p":{"id":"c41"}}
 {"t":"ret","id":3,"err":{"code":"stale_revision","message":"Clipboard entry no longer exists","retry":true}}

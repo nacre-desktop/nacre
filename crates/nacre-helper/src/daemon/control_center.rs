@@ -176,7 +176,7 @@ fn backend_present(hub: &Hub, env: &Env, method: &str) -> bool {
             .is_some_and(|state| !state[member].is_null())
     };
     match method {
-        "audio.set_volume" | "audio.set_mute" => pipewire(env),
+        "audio.set_volume" | "audio.set_mute" | "audio.set_default" => pipewire(env),
         "keyboard_light.set" => keyboard_present(env),
         "power.set_profile" => env.has(&env.powerprofilesctl) && socket_present(&env.system_bus),
         "airplane.set" => rfkill_present(env),
@@ -210,6 +210,7 @@ pub fn handles(method: &str) -> bool {
         method,
         "audio.set_volume"
             | "audio.set_mute"
+            | "audio.set_default"
             | "keyboard_light.set"
             | "power.set_profile"
             | "airplane.set"
@@ -311,6 +312,12 @@ pub async fn dispatch(
                 Audio::Mute(request.muted),
             )
             .await?;
+            json!({"changed":true})
+        }
+        "audio.set_default" => {
+            let request: AudioSetDefault = serde_json::from_value(params).map_err(|_| invalid())?;
+            request.validate()?;
+            set_default(env, request.node).await?;
             json!({"changed":true})
         }
         "keyboard_light.set" => {
@@ -426,7 +433,7 @@ async fn audio(
         let selector = match target {
             AudioTarget::Sink => SINK.to_owned(),
             AudioTarget::Source => SOURCE.to_owned(),
-            AudioTarget::Node => resolve_node(&env, node.as_deref().unwrap_or_default())?,
+            AudioTarget::Node => resolve_node(&env, node.as_deref().unwrap_or_default(), false)?,
         };
         // A missing target is "unavailable", not a failed write.
         tool(
@@ -459,8 +466,24 @@ async fn audio(
     })
     .await
 }
+/// N0051: make a device the default output or input. The name must be a PipeWire `Audio/Sink` or
+/// `Audio/Source` node; only its numeric id reaches `wpctl`.
+async fn set_default(env: Env, node: String) -> std::result::Result<(), Failure> {
+    let guard = pill_controls::audio_lock()
+        .try_lock_owned()
+        .map_err(|_| busy("Audio control is busy"))?;
+    blocking(move || {
+        let _guard = guard;
+        let id = resolve_node(&env, &node, true)?;
+        tool(&env.wpctl, &["set-default", &id], Duration::from_secs(5))
+            .map(|_| ())
+            .ok_or_else(action_error)
+    })
+    .await
+}
 /// The numeric PipeWire id of an audio node named `name` (nothing else is ever passed on).
-fn resolve_node(env: &Env, name: &str) -> std::result::Result<String, Failure> {
+/// `device` narrows it to a sink or source, the only nodes that can be a default.
+fn resolve_node(env: &Env, name: &str, device: bool) -> std::result::Result<String, Failure> {
     let dump = tool(&env.pw_dump, &[], Duration::from_secs(5))
         .and_then(|text| serde_json::from_str::<Value>(&text).ok())
         .ok_or_else(|| unavailable("Audio devices are unavailable"))?;
@@ -472,7 +495,13 @@ fn resolve_node(env: &Env, name: &str) -> std::result::Result<String, Failure> {
                 && object["info"]["props"]["node.name"] == name
                 && object["info"]["props"]["media.class"]
                     .as_str()
-                    .is_some_and(|class| class.starts_with("Audio/") || class.contains("/Audio"))
+                    .is_some_and(|class| {
+                        if device {
+                            matches!(class, "Audio/Sink" | "Audio/Source")
+                        } else {
+                            class.starts_with("Audio/") || class.contains("/Audio")
+                        }
+                    })
         })
         .and_then(|object| object["id"].as_u64())
         .map(|id| id.to_string())

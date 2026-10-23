@@ -37,11 +37,14 @@ pub mod settings;
 pub mod settings_controller;
 pub mod settings_validation;
 pub mod shell_actions;
+pub mod shortcuts;
 pub mod socket;
 pub mod supervisor;
+pub mod system_status;
 #[cfg(test)]
 pub(crate) mod test_logs;
 pub mod time_settings;
+pub mod tools_launch;
 pub mod wallpaper;
 pub mod widths;
 pub mod workers;
@@ -276,8 +279,12 @@ async fn serve(
     let settings_page_services = if !counter.safe {
         time_settings::initial(&hub)?;
         capabilities::initial(&hub)?;
-        let (time_hub, capabilities_hub) = (hub.clone(), hub.clone());
+        shortcuts::initial(&hub)?;
+        let (time_hub, capabilities_hub, shortcuts_hub) = (hub.clone(), hub.clone(), hub.clone());
         vec![
+            tokio::task::spawn_local(supervisor::run("shortcuts", hub.clone(), move || {
+                shortcuts::run(shortcuts_hub.clone())
+            })),
             tokio::task::spawn_local(supervisor::run("time", hub.clone(), move || {
                 time_settings::run(time_hub.clone())
             })),

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AudioSetDefault",
+  "description": "N0051: make one device the default output or input. `node` is the PipeWire `node.name` of\nan `Audio/Sink` or `Audio/Source` device (the item id Bead lists); anything else is refused.",
+  "type": "object",
+  "properties": {
+    "node": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "node"
+  ]
+}

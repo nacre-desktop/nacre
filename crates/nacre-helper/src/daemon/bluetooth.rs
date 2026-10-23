@@ -31,7 +31,7 @@ use zbus::{
 
 pub const TOPIC: &str = "bluetooth.pairing";
 pub const STATE_TOPIC: &str = "bluetooth";
-const METHODS: [&str; 7] = [
+const METHODS: [&str; 8] = [
     "bluetooth.pair",
     "bluetooth.pair.respond",
     "bluetooth.pair.cancel",
@@ -39,6 +39,7 @@ const METHODS: [&str; 7] = [
     "bluetooth.set_discovery",
     "bluetooth.connect",
     "bluetooth.disconnect",
+    "bluetooth.set_trusted",
 ];
 const BLUEZ: &str = "org.bluez";
 const AGENT_PATH: &str = "/org/nacre/bluetooth/agent";
@@ -721,6 +722,32 @@ impl Service {
         }
     }
 
+    /// N0051: BlueZ `Trusted` on one device, resolved from the id like every other device call.
+    async fn set_trusted(
+        &self,
+        device: EntityId,
+        trusted: bool,
+    ) -> std::result::Result<Value, Failure> {
+        let (path, properties) = self.find(&device, "org.bluez.Device1").await?;
+        if flag(&properties, "Trusted") == trusted {
+            return Ok(json!({"changed":false}));
+        }
+        self.call(
+            &path,
+            "org.freedesktop.DBus.Properties",
+            "Set",
+            &(
+                "org.bluez.Device1",
+                "Trusted",
+                zbus::zvariant::Value::from(trusted),
+            ),
+            QUICK,
+        )
+        .await
+        .map_err(|_| unavailable().dispatch_state(true))?;
+        Ok(json!({"changed":true}))
+    }
+
     async fn pair(
         self: &Rc<Self>,
         hub: &Shared,
@@ -965,6 +992,7 @@ pub async fn dispatch(
         CoreCall::BluetoothDiscovery(p) => service.set_discovery(p.adapter, p.discovering).await,
         CoreCall::BluetoothConnect(target) => service.link(target.device, true).await,
         CoreCall::BluetoothDisconnect(target) => service.link(target.device, false).await,
+        CoreCall::BluetoothTrusted(p) => service.set_trusted(p.device, p.trusted).await,
         _ => Err(invalid()),
     };
     service.publish(&hub);

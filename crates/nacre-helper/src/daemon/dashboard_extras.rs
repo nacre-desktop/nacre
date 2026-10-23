@@ -112,6 +112,7 @@ pub fn handles(method: &str) -> bool {
             | "focus.stop"
             | "clipboard.copy"
             | "clipboard.clear"
+            | "clipboard.clear_history"
             | "screenshots.open"
             | "ai.usage.refresh"
     )
@@ -137,6 +138,7 @@ pub fn methods() -> BTreeMap<String, Method> {
         ("focus.stop", 5000, &none),
         ("clipboard.copy", 15000, &target),
         ("clipboard.clear", 30000, &none),
+        ("clipboard.clear_history", 30000, &none),
         ("screenshots.open", 5000, &target),
         ("ai.usage.refresh", 30000, &none),
     ]
@@ -189,6 +191,10 @@ pub async fn dispatch(
         DashboardExtrasCall::ClipboardClear(_) => {
             let _slot = slot().await?;
             clipboard::clear(&hub, &requests.paths).await
+        }
+        DashboardExtrasCall::ClipboardClearHistory(_) => {
+            let _slot = slot().await?;
+            clipboard::clear_history(&hub, &requests.paths).await
         }
         DashboardExtrasCall::ScreenshotsOpen(target) => {
             screenshots::open(&hub, &requests.paths, &target.id).await
