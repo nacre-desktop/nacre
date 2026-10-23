@@ -285,7 +285,7 @@ async fn set_brightness(
         .try_lock_owned()
         .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
     let name = screen.clone();
-    let level = tokio::task::spawn_blocking(move || {
+    let level = crate::process::offload(move || {
         let _guard = guard;
         set_brightness_native(
             &screen,
@@ -323,7 +323,7 @@ async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<V
         .try_lock_owned()
         .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
     let up = step == KeyboardLightStep::Up;
-    let result = tokio::task::spawn_blocking(move || {
+    let result = crate::process::offload(move || {
         let _guard = guard;
         adjust_keyboard_light_native(up, Path::new("/sys"), &mut native_run)
     })

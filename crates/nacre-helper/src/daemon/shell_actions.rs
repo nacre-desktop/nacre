@@ -224,7 +224,7 @@ async fn run_command(
     program: &'static str,
     arguments: Vec<String>,
 ) -> Result<std::process::Output, Failure> {
-    tokio::task::spawn_blocking(move || {
+    crate::process::offload(move || {
         crate::process::run(program, &arguments, None, Duration::from_secs(10))
     })
     .await

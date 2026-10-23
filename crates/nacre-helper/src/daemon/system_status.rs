@@ -101,7 +101,7 @@ pub async fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
     let unavailable = || {
         failure(ErrorCode::Unavailable, "System status is unavailable", true).dispatch_state(false)
     };
-    let work = tokio::task::spawn_blocking(|| {
+    let work = crate::process::offload(|| {
         let state = diagnostics_native::maintenance_state().ok()?;
         let policy = Paths::environment()
             .ok()

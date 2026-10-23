@@ -226,7 +226,7 @@ pub fn available_methods(hub: &Hub) -> BTreeMap<String, Method> {
 }
 async fn run_with(hub: Shared, env: Env) -> Result<()> {
     let probing = env.clone();
-    let mut probed = tokio::task::spawn_blocking(move || probe(&probing)).await?;
+    let mut probed = crate::process::offload(move || probe(&probing)).await?;
     let mut notices = hub.borrow().observe();
     hub.borrow_mut().service("capabilities", "running", 0)?;
     loop {
@@ -243,7 +243,7 @@ async fn run_with(hub: Shared, env: Env) -> Result<()> {
             ) => result?,
             () = REFRESH.notified() => {
                 let probing = env.clone();
-                probed = tokio::task::spawn_blocking(move || probe(&probing)).await?;
+                probed = crate::process::offload(move || probe(&probing)).await?;
             }
         }
     }

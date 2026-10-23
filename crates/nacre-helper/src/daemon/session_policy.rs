@@ -262,7 +262,7 @@ impl Observer {
             }
         }
         let executable = self.paths.share.join("shell/bin/qs");
-        tokio::task::spawn_blocking(move || -> Result<String> {
+        crate::process::offload(move || -> Result<String> {
             let mut command = Command::new(executable);
             command.args(["-c", "nacre", "ipc", "call", "nacre", "state"]);
             match process::capture(command, None, Duration::from_secs(5)) {
@@ -343,7 +343,7 @@ impl Observer {
         )?;
         let directory = self.paths.state.join("session");
         let saved = record.clone();
-        tokio::task::spawn_blocking(move || session_watch::publish(&directory, &saved)).await??;
+        crate::process::offload(move || session_watch::publish(&directory, &saved)).await??;
         let value = wire(&record)?;
         self.hub
             .borrow_mut()

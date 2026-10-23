@@ -470,7 +470,7 @@ pub async fn dispatch(
             serde_json::from_value::<nacre_protocol::pill_controls::PillEmpty>(params)
                 .map_err(|_| invalid())?;
             let paths = env.paths.clone();
-            let targets = tokio::task::spawn_blocking(move || targets_reply(&paths))
+            let targets = crate::process::offload(move || targets_reply(&paths))
                 .await
                 .ok()
                 .flatten()
@@ -502,7 +502,7 @@ async fn catalog(env: &Env) -> std::result::Result<ColorsCatalog, Failure> {
     let output = engine(env, &["colors", "catalog"], None, CATALOG_LIMIT).await?;
     let raw = engine_value(&output)?;
     let (thumbs, allowed) = (env.thumbs(), env.paths.cache.clone());
-    tokio::task::spawn_blocking(move || {
+    crate::process::offload(move || {
         catalog_reply(&raw, &mut |sources| {
             pngs(
                 thumbs.clone(),
@@ -550,7 +550,7 @@ async fn run_preview(
     let raw = engine_value(&output)?;
     let source = raw["thumbnail"].as_str().unwrap_or("").to_owned();
     let (posters, allowed) = (env.posters(), env.paths.cache.clone());
-    let poster = tokio::task::spawn_blocking(move || {
+    let poster = crate::process::offload(move || {
         pngs(
             posters,
             &allowed,

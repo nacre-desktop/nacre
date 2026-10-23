@@ -265,7 +265,7 @@ fn engine(
 async fn blocking<T: Send + 'static>(
     work: impl FnOnce() -> std::result::Result<T, Failure> + Send + 'static,
 ) -> std::result::Result<T, Failure> {
-    tokio::task::spawn_blocking(work)
+    crate::process::offload(work)
         .await
         .map_err(|_| action_error())?
 }
@@ -1000,7 +1000,7 @@ pub async fn initial(hub: &Shared) -> Result<()> {
         slow: true,
     };
     let prior = empty_state();
-    let state = tokio::task::spawn_blocking(move || collect(&env, &probe, &prior)).await?;
+    let state = crate::process::offload(move || collect(&env, &probe, &prior)).await?;
     publish(hub, &state)
 }
 
@@ -1023,7 +1023,7 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
             slow,
         };
         let (read_env, prior) = (env.clone(), state.clone());
-        state = tokio::task::spawn_blocking(move || collect(&read_env, &probe, &prior)).await?;
+        state = crate::process::offload(move || collect(&read_env, &probe, &prior)).await?;
         if slow {
             state.appearance = read_appearance(&hub).await;
         }

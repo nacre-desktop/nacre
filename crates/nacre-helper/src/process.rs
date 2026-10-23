@@ -177,3 +177,36 @@ mod tests {
         assert!(start.elapsed() < Duration::from_secs(2));
     }
 }
+
+/// The off-loaded job panicked or the daemon is shutting down.
+#[derive(Debug)]
+pub struct Offloaded;
+impl std::fmt::Display for Offloaded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Off-loaded task did not finish")
+    }
+}
+impl std::error::Error for Offloaded {}
+
+/// Run blocking work that may wait on an external backend (a child process, a sysfs scan) on its
+/// own short-lived thread instead of tokio's two-thread blocking pool. A hung backend can then
+/// occupy at most `OFFLOAD_LIMIT` threads and never starves the pool that settings, files and
+/// the compositor reader use, so daemon readiness cannot wait on it (N0053).
+pub async fn offload<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> std::result::Result<T, Offloaded> {
+    const OFFLOAD_LIMIT: usize = 8;
+    static SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(OFFLOAD_LIMIT);
+    let permit = SLOTS.acquire().await.map_err(|_| Offloaded)?;
+    let (send, receive) = tokio::sync::oneshot::channel();
+    thread::Builder::new()
+        .name("nacre-offload".into())
+        .stack_size(512 * 1024)
+        .spawn(move || {
+            let _ = send.send(work());
+        })
+        .map_err(|_| Offloaded)?;
+    let result = receive.await.map_err(|_| Offloaded);
+    drop(permit);
+    result
+}

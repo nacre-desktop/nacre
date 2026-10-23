@@ -3163,3 +3163,99 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
     }
     Ok(())
 }
+
+/// N0053: readiness (sd_notify READY and the socket) never waits on an external backend. Every
+/// command the probes run hangs forever and both D-Bus buses accept a connection and never reply.
+#[test]
+fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("nh-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let folder = home.path().join("private");
+    fs::create_dir(&folder)?;
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+    let endpoint = folder.join("daemon.sock");
+    let bin = home.path().join("hang-bin");
+    fs::create_dir(&bin)?;
+    for name in [
+        "powerprofilesctl",
+        "pactl",
+        "wpctl",
+        "rfkill",
+        "ddcutil",
+        "brightnessctl",
+        "systemctl",
+        "timedatectl",
+        "localectl",
+        "loginctl",
+        "busctl",
+        "nmcli",
+        "pacman",
+    ] {
+        let path = bin.join(name);
+        fs::write(&path, "#!/bin/sh\nexec /usr/bin/sleep 3000\n")?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
+    }
+    // A bus that accepts and never answers the authentication.
+    let mut silent = Vec::new();
+    let mut held = Vec::new();
+    for name in ["session", "system"] {
+        let listener = UnixListener::bind(home.path().join(format!("silent-{name}")))?;
+        let stop = Arc::new(AtomicBool::new(false));
+        let done = stop.clone();
+        listener.set_nonblocking(true)?;
+        held.push(thread::spawn(move || {
+            let mut streams = Vec::new();
+            while !done.load(Ordering::Relaxed) {
+                match listener.accept() {
+                    Ok((stream, _)) => streams.push(stream),
+                    Err(_) => thread::sleep(Duration::from_millis(20)),
+                }
+            }
+        }));
+        silent.push(stop);
+    }
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let log = home.path().join("daemon.log");
+    let started = Instant::now();
+    let mut child = command(home.path(), &source_path, &endpoint);
+    child
+        .arg("daemon")
+        .env("NOTIFY_SOCKET", &notify)
+        .env("PATH", &bin)
+        .env(
+            "DBUS_SESSION_BUS_ADDRESS",
+            format!("unix:path={}", home.path().join("silent-session").display()),
+        )
+        .env(
+            "DBUS_SYSTEM_BUS_ADDRESS",
+            format!("unix:path={}", home.path().join("silent-system").display()),
+        )
+        .stdout(Stdio::null())
+        .stderr(fs::File::create(&log)?);
+    let _child = Process(child.spawn()?);
+    let mut packet = [0; 256];
+    let size = notifications
+        .recv(&mut packet)
+        .map_err(|_| "No READY within two seconds while backends hang")?;
+    assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    assert!(started.elapsed() < Duration::from_secs(2));
+    let value = status(home.path(), &source_path, &endpoint)?;
+    assert_eq!(value["services"]["compositor"]["status"], "running");
+    for service in ["capabilities", "controls"] {
+        assert_ne!(
+            value["services"][service]["status"], "running",
+            "{service} must not claim health while its backend hangs"
+        );
+    }
+    for stop in silent {
+        stop.store(true, Ordering::Relaxed);
+    }
+    for handle in held {
+        let _ = handle.join();
+    }
+    Ok(())
+}

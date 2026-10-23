@@ -76,7 +76,7 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
             let guard = audio_lock().try_lock_owned().map_err(|_| {
                 failure(ErrorCode::Busy, "Audio control is busy", true).dispatch_state(false)
             })?;
-            tokio::task::spawn_blocking(move || {
+            crate::process::offload(move || {
                 let _guard = guard;
                 adjust_volume(request.delta)
             })
@@ -89,7 +89,7 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
             let guard = audio_lock().try_lock_owned().map_err(|_| {
                 failure(ErrorCode::Busy, "Audio control is busy", true).dispatch_state(false)
             })?;
-            tokio::task::spawn_blocking(move || {
+            crate::process::offload(move || {
                 let _guard = guard;
                 toggle_mute()
             })
@@ -100,7 +100,7 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
             let request: BluetoothEnabled =
                 serde_json::from_value(params).map_err(|_| invalid())?;
             ensure_backend(method)?;
-            tokio::task::spawn_blocking(move || set_bluetooth(request.enabled))
+            crate::process::offload(move || set_bluetooth(request.enabled))
                 .await
                 .map_err(|_| action_error())??;
         }

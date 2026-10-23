@@ -215,7 +215,7 @@ pub async fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
                 .dispatch_state(false),
         );
     }
-    tokio::task::spawn_blocking(move || {
+    crate::process::offload(move || {
         struct Release;
         impl Drop for Release {
             fn drop(&mut self) {
