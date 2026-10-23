@@ -1,0 +1,242 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ControlsState",
+  "description": "The `controls` topic. A member is present only while its backend is. `brightness` maps an\noutput name to a percent for the outputs whose level is known (internal panel; DDC outputs are\nread when a client subscribes and after `brightness.set`).",
+  "type": "object",
+  "properties": {
+    "health": {
+      "$ref": "#/$defs/Health"
+    },
+    "brightness": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "format": "uint8",
+        "minimum": 0,
+        "maximum": 255
+      }
+    },
+    "keyboard": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/KeyboardLight"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "airplane": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Toggle"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "night_light": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NightLight"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "stay_awake": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Toggle"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "recorder": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Recorder"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "appearance": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Appearance"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "health",
+    "brightness"
+  ],
+  "$defs": {
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "KeyboardLight": {
+      "type": "object",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "max": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 1,
+          "maximum": 65535
+        }
+      },
+      "required": [
+        "level",
+        "max"
+      ]
+    },
+    "Toggle": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "NightLight": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "external": {
+          "description": "Another controller owns night light; `night_light.set` is refused.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled",
+        "external"
+      ]
+    },
+    "Recorder": {
+      "type": "object",
+      "properties": {
+        "recording": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "recording"
+      ]
+    },
+    "Appearance": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/AppearanceMode"
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    },
+    "AppearanceMode": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "description": "Follow the wallpaper-derived automatic mode.",
+          "type": "string",
+          "const": "auto"
+        }
+      ]
+    }
+  }
+}

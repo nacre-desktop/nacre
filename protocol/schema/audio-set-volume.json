@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AudioSetVolume",
+  "description": "Absolute volume. `value` is the **linear** level in [0,1], the scale the QML slider wrote\n(`audio.volume`) and the one `AudioNode.volume` / `readback.linear_volume` report. A slider\nthat is perceptual (cube root) converts with `value = slider^3` before calling.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "#/$defs/AudioTarget"
+    },
+    "node": {
+      "description": "PipeWire `node.name`; required for `node`, forbidden otherwise.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "value": {
+      "type": "number",
+      "format": "double",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "value"
+  ],
+  "$defs": {
+    "AudioTarget": {
+      "oneOf": [
+        {
+          "description": "The default output at the time of the call.",
+          "type": "string",
+          "const": "sink"
+        },
+        {
+          "description": "The default input at the time of the call.",
+          "type": "string",
+          "const": "source"
+        },
+        {
+          "description": "The PipeWire node named by `node`.",
+          "type": "string",
+          "const": "node"
+        }
+      ]
+    }
+  }
+}

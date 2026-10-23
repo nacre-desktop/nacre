@@ -63,6 +63,9 @@ async fn dispatch(
         | "brightness.set"
         | "brightness.adjust"
         | "keyboard_light.adjust") => super::bar_services::dispatch(hub, method, params).await,
+        method if super::control_center::handles(method) => {
+            super::control_center::dispatch(hub, method, params).await
+        }
         method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
             super::pill_controls::dispatch(hub, method, params).await
         }
@@ -178,6 +181,7 @@ async fn call(
             | "audio.toggle_mute"
             | "bluetooth.set_enabled"
     );
+    let helper = helper || super::control_center::handles(&method);
     let future = AssertUnwindSafe(dispatch(
         hub,
         client,
@@ -423,6 +427,19 @@ mod tests {
             ("keyboard_light.adjust", json!({"step":"up"})),
             ("audio.toggle_mute", json!({})),
             ("bluetooth.set_enabled", json!({"enabled":true})),
+            ("audio.set_volume", json!({"target":"sink","value":0.5})),
+            ("audio.set_mute", json!({"target":"sink","muted":true})),
+            ("keyboard_light.set", json!({"level":1})),
+            ("power.set_profile", json!({"profile":"balanced"})),
+            ("airplane.set", json!({"enabled":true})),
+            ("night_light.set", json!({"enabled":true})),
+            ("stay_awake.set", json!({"enabled":true})),
+            ("recorder.start", json!({"mode":"region"})),
+            ("recorder.stop", json!({})),
+            ("screenshot.capture", json!({"mode":"region"})),
+            ("color_picker.pick", json!({})),
+            ("wallpaper.next", json!({})),
+            ("appearance.set_mode", json!({"mode":"dark"})),
         ] {
             let error = dispatch(
                 hub.clone(),

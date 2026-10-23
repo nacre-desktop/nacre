@@ -350,6 +350,7 @@ impl Hub {
             {
                 methods.extend(super::dashboard_player::methods());
             }
+            methods.extend(super::control_center::available_methods(self));
             if self.snapshot_ref(super::brain::TOPIC).is_some() {
                 methods.extend(super::brain::methods());
             }

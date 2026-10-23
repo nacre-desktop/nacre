@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PowerSetProfile",
+  "type": "object",
+  "properties": {
+    "profile": {
+      "$ref": "#/$defs/PowerProfileName"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "profile"
+  ],
+  "$defs": {
+    "PowerProfileName": {
+      "type": "string",
+      "enum": [
+        "power-saver",
+        "balanced",
+        "performance"
+      ]
+    }
+  }
+}

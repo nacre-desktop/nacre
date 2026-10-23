@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AudioSetMute",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "#/$defs/AudioTarget"
+    },
+    "node": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "muted": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "target",
+    "muted"
+  ],
+  "$defs": {
+    "AudioTarget": {
+      "oneOf": [
+        {
+          "description": "The default output at the time of the call.",
+          "type": "string",
+          "const": "sink"
+        },
+        {
+          "description": "The default input at the time of the call.",
+          "type": "string",
+          "const": "source"
+        },
+        {
+          "description": "The PipeWire node named by `node`.",
+          "type": "string",
+          "const": "node"
+        }
+      ]
+    }
+  }
+}

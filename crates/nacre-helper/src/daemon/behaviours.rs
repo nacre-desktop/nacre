@@ -102,7 +102,7 @@ pub(super) async fn proxy<'a>(
         .await
 }
 
-async fn settings_data(hub: &Shared, store: &str) -> Option<Value> {
+pub(super) async fn settings_data(hub: &Shared, store: &str) -> Option<Value> {
     let settings = hub.borrow().settings.clone()?;
     let state = settings
         .get(SettingsGet {
@@ -149,7 +149,7 @@ fn rotation_pool(entries: &[Value], kind: &str) -> Vec<String> {
 
 /// QML `wallpaper-rotation.js` `next`: sequential, or a shuffled bag that never
 /// repeats the current image until the bag is empty. Returns the choice and the bag.
-fn rotation_next(
+pub(super) fn rotation_next(
     entries: &[String],
     current: &str,
     shuffle: bool,
@@ -202,18 +202,18 @@ fn valid_entry(entry: &Value) -> bool {
 }
 
 /// The inputs of one rotation decision, re-read from the files the UI used.
-struct Plan {
+pub(super) struct Plan {
     enabled: bool,
-    kind: String,
-    shuffle: bool,
+    pub(super) kind: String,
+    pub(super) shuffle: bool,
     interval_ms: i64,
     anchor_ms: i64,
-    current: String,
+    pub(super) current: String,
 }
 
 /// Preferences come from the daemon's own `wallpaper-picker` store (the helper's
 /// `Media::settings` would call back into this daemon).
-async fn read_plan(hub: &Shared, paths: &Paths, startup_ms: i64) -> Result<Plan> {
+pub(super) async fn read_plan(hub: &Shared, paths: &Paths, startup_ms: i64) -> Result<Plan> {
     let media = Media::new(paths.clone(), paths.assets())?;
     let mut prefs = settings_data(hub, "wallpaper-picker")
         .await
@@ -319,7 +319,7 @@ async fn helper(
     (output.len() <= limit).then(|| (status.success(), output))
 }
 
-async fn catalog_pool(engine: &Path, kind: &str) -> Option<Vec<String>> {
+pub(super) async fn catalog_pool(engine: &Path, kind: &str) -> Option<Vec<String>> {
     let (success, output) = helper(
         engine,
         &["wallpaper-media", "catalog"],
@@ -339,7 +339,7 @@ async fn catalog_pool(engine: &Path, kind: &str) -> Option<Vec<String>> {
 /// The existing selection path: the picker's `wallpaper-media select`, which writes
 /// the media state and presentation record the daemon's `wallpaper.active` topic
 /// publishes, so the palette follows.
-async fn select(engine: &Path, path: &str) -> bool {
+pub(super) async fn select(engine: &Path, path: &str) -> bool {
     let Some((true, output)) = helper(
         engine,
         &["wallpaper-media", "select", path],

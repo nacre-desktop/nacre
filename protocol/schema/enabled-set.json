@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EnabledSet",
+  "description": "Shared by `airplane.set`, `night_light.set` and `stay_awake.set`.",
+  "type": "object",
+  "properties": {
+    "enabled": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "enabled"
+  ]
+}

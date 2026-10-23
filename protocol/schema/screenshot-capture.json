@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ScreenshotCapture",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "$ref": "#/$defs/ScreenshotMode"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "mode"
+  ],
+  "$defs": {
+    "ScreenshotMode": {
+      "oneOf": [
+        {
+          "description": "Area selection copied to the clipboard (the control-centre tile).",
+          "type": "string",
+          "const": "region"
+        },
+        {
+          "description": "The whole screen, saved and copied.",
+          "type": "string",
+          "const": "screen"
+        },
+        {
+          "description": "The focused window, saved and copied.",
+          "type": "string",
+          "const": "window"
+        }
+      ]
+    }
+  }
+}

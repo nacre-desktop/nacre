@@ -4,6 +4,7 @@ pub mod ai_chat;
 pub mod artifacts;
 pub mod bar_services;
 pub mod compositor;
+pub mod control_center;
 mod core_artifacts;
 pub mod core_services;
 pub mod dashboard_extras;

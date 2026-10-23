@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AppearanceSet",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "$ref": "#/$defs/AppearanceMode"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "mode"
+  ],
+  "$defs": {
+    "AppearanceMode": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        {
+          "description": "Follow the wallpaper-derived automatic mode.",
+          "type": "string",
+          "const": "auto"
+        }
+      ]
+    }
+  }
+}

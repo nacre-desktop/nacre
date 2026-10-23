@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AudioTarget",
+  "oneOf": [
+    {
+      "description": "The default output at the time of the call.",
+      "type": "string",
+      "const": "sink"
+    },
+    {
+      "description": "The default input at the time of the call.",
+      "type": "string",
+      "const": "source"
+    },
+    {
+      "description": "The PipeWire node named by `node`.",
+      "type": "string",
+      "const": "node"
+    }
+  ]
+}

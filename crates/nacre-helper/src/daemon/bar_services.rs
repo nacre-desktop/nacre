@@ -18,6 +18,13 @@ const WATCHER_PATH: &str = "/StatusNotifierWatcher";
 const WATCHER_IFACE: &str = "org.kde.StatusNotifierWatcher";
 const ITEM_IFACE: &str = "org.kde.StatusNotifierItem";
 
+/// The lane brightness and keyboard-backlight writes share: a concurrent write fails `busy`.
+pub(super) fn brightness_lane() -> Arc<tokio::sync::Mutex<()>> {
+    BRIGHTNESS_LOCK
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
+}
+
 pub fn available_methods(hub: &super::hub::Hub) -> BTreeMap<String, Method> {
     if hub.safe {
         return BTreeMap::new();
@@ -158,6 +165,7 @@ pub async fn dispatch(
             let reply =
                 set_brightness(&hub, &request.output, i32::from(request.percent), false).await?;
             super::osd::brightness(&hub, &reply);
+            super::control_center::changed();
             Ok(reply)
         }
         "brightness.adjust" => {
@@ -167,6 +175,7 @@ pub async fn dispatch(
             let reply =
                 set_brightness(&hub, &request.output, i32::from(request.delta), true).await?;
             super::osd::brightness(&hub, &reply);
+            super::control_center::changed();
             Ok(reply)
         }
         "keyboard_light.adjust" => {
@@ -176,6 +185,7 @@ pub async fn dispatch(
             if let (Some(level), Some(max)) = (reply["level"].as_i64(), reply["max"].as_i64()) {
                 super::osd::keyboard(&hub, level, max);
             }
+            super::control_center::changed();
             Ok(reply)
         }
         "tray.activate" | "tray.secondary_activate" | "tray.context_menu" => {

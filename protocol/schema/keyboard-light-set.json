@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "KeyboardLightSet",
+  "description": "Absolute keyboard backlight in raw steps; the maximum is `controls.keyboard.max`.",
+  "type": "object",
+  "properties": {
+    "level": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "maximum": 65535
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "level"
+  ]
+}

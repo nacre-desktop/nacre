@@ -10,6 +10,7 @@ pub mod brain;
 pub mod client;
 pub mod compositor;
 pub mod compositor_control;
+pub mod control_center;
 pub mod crashes;
 pub mod dashboard_extras;
 pub mod dashboard_metrics;
@@ -250,6 +251,23 @@ async fn serve(
     } else {
         None
     };
+    // N0046: the `controls` topic; producers run only while a client subscribes.
+    let controls_service = if !counter.safe {
+        let controls_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "controls",
+            hub.clone(),
+            move || {
+                let hub = controls_hub.clone();
+                async move {
+                    control_center::initial(&hub).await?;
+                    control_center::run(hub).await
+                }
+            },
+        )))
+    } else {
+        None
+    };
     let menu_service = if !counter.safe {
         let service_hub = hub.clone();
         let factory_hub = hub.clone();
@@ -481,6 +499,14 @@ async fn serve(
         if let Err(error) = service.await {
             if !error.is_cancelled() {
                 tracing::error!("OSD supervisor failed during shutdown");
+            }
+        }
+    }
+    if let Some(service) = controls_service {
+        service.abort();
+        if let Err(error) = service.await {
+            if !error.is_cancelled() {
+                tracing::error!("Controls supervisor failed during shutdown");
             }
         }
     }

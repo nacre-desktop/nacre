@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RecorderStart",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "$ref": "#/$defs/RecorderMode"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "mode"
+  ],
+  "$defs": {
+    "RecorderMode": {
+      "oneOf": [
+        {
+          "description": "Interactive area selection (slurp), as the QML \"record\" action.",
+          "type": "string",
+          "const": "region"
+        },
+        {
+          "description": "The focused output.",
+          "type": "string",
+          "const": "screen"
+        }
+      ]
+    }
+  }
+}
