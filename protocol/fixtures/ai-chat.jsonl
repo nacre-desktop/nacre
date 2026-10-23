@@ -13,5 +13,7 @@
 {"t":"call","id":4,"m":"ai.chat.cancel","p":{"channel":"p1"}}
 {"t":"ret","id":4,"ok":{"channel":"p1"}}
 {"t":"patch","topic":"ai.chat","base":5,"seq":6,"data":{"channels":{"p1":{"state":{"busy":false,"status":""}}}}}
+{"t":"call","id":5,"m":"ai.chat.saved","p":{"channel":"p1"}}
+{"t":"ret","id":5,"ok":{"chats":[{"key":"0123456789abcdef01234567","id":"thread-1","title":"Fixture chat","agent":"codex","account":"Default","state":"saved"}]}}
 {"t":"ev","topic":"ai.chat","name":"send_failed","seq":1,"data":{"channel":"p1","text":"unsent","attachments":[]}}
 {"t":"patch","topic":"ai.chat","base":6,"seq":7,"data":{"channels":{"p1":null}}}

@@ -18,6 +18,7 @@ pub const MAX_MESSAGES_JSON: usize = 128 * 1024;
 pub const MAX_QUESTION_JSON: usize = 32 * 1024;
 pub const MAX_SEND_CHARS: usize = 64_000;
 pub const MAX_ATTACHMENTS: usize = 8;
+pub const MAX_SAVED: usize = 30;
 const MAX_ATTACHMENT_JSON: usize = 4096;
 const MAX_ANSWERS_JSON: usize = 16 * 1024;
 
@@ -147,6 +148,42 @@ pub struct AiProvider {
     pub channel: String,
     pub provider: Provider,
 }
+/// One saved chat; `key` is accepted by `ai.chat.resume`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AiSaved {
+    #[schemars(length(min = 1, max = 128))]
+    pub key: String,
+    #[schemars(length(max = 256))]
+    pub id: String,
+    #[schemars(length(max = 100))]
+    pub title: String,
+    pub agent: Provider,
+    #[schemars(length(max = 128))]
+    pub account: String,
+    #[schemars(length(max = 32))]
+    pub state: String,
+}
+/// Result of `ai.chat.saved`: newest first, at most [`MAX_SAVED`].
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AiSavedList {
+    #[schemars(length(max = 30))]
+    pub chats: Vec<AiSaved>,
+}
+impl AiSavedList {
+    pub fn validate(&self) -> Result<(), Failure> {
+        let ok = |c: &AiSaved| {
+            (1..=128).contains(&c.key.len())
+                && c.id.len() <= 256
+                && c.title.chars().count() <= 100
+                && c.account.len() <= 128
+                && c.state.len() <= 32
+        };
+        (self.chats.len() <= MAX_SAVED && self.chats.iter().all(ok))
+            .then_some(())
+            .ok_or_else(|| invalid("Invalid saved chat list"))
+    }
+}
+
 /// Event published when the worker refused a submission, so the composer can
 /// restore the unsent text.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -294,19 +331,20 @@ pub fn methods() -> BTreeMap<String, Method> {
     use crate::Capability;
     let schemas = schemas();
     let schema = |name: &str| schemas[name].clone();
-    let ack = schema("ai-chat-ack");
     [
-        ("ai.chat.open", "ai-chat-channel", 10_000),
-        ("ai.chat.send", "ai-chat-send", 3_000),
-        ("ai.chat.cancel", "ai-chat-channel", 3_000),
-        ("ai.chat.approve", "ai-chat-approve", 3_000),
-        ("ai.chat.new", "ai-chat-channel", 3_000),
-        ("ai.chat.resume", "ai-chat-resume", 3_000),
-        ("ai.chat.provider", "ai-chat-provider", 3_000),
-        ("ai.chat.workspace", "ai-chat-channel", 3_000),
+        ("ai.chat.open", "ai-chat-channel", "ai-chat-ack", 10_000),
+        ("ai.chat.send", "ai-chat-send", "ai-chat-ack", 3_000),
+        ("ai.chat.cancel", "ai-chat-channel", "ai-chat-ack", 3_000),
+        ("ai.chat.approve", "ai-chat-approve", "ai-chat-ack", 3_000),
+        ("ai.chat.new", "ai-chat-channel", "ai-chat-ack", 3_000),
+        ("ai.chat.resume", "ai-chat-resume", "ai-chat-ack", 3_000),
+        ("ai.chat.provider", "ai-chat-provider", "ai-chat-ack", 3_000),
+        ("ai.chat.workspace", "ai-chat-channel", "ai-chat-ack", 3_000),
+        // Reads every project's provider history through the existing list helpers.
+        ("ai.chat.saved", "ai-chat-channel", "ai-chat-saved", 45_000),
     ]
     .into_iter()
-    .map(|(name, params, timeout)| {
+    .map(|(name, params, result, timeout)| {
         (
             name.to_owned(),
             Method {
@@ -314,7 +352,7 @@ pub fn methods() -> BTreeMap<String, Method> {
                 class: Capability::Desktop,
                 timeout,
                 params: schema(params),
-                result: ack.clone(),
+                result: schema(result),
             },
         )
     })
@@ -339,6 +377,7 @@ fn schemas() -> BTreeMap<String, Value> {
         ("ai-chat-provider".to_owned(), one::<AiProvider>()),
         ("ai-chat-send-failed".to_owned(), one::<AiSendFailed>()),
         ("ai-chat-ack".to_owned(), one::<AiAck>()),
+        ("ai-chat-saved".to_owned(), one::<AiSavedList>()),
     ])
 }
 
@@ -358,6 +397,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         ("ai-chat-provider", "AiProvider"),
         ("ai-chat-send-failed", "AiSendFailed"),
         ("ai-chat-ack", "AiAck"),
+        ("ai-chat-saved", "AiSavedList"),
     ] {
         types.push_str(&format!(
             "export type {type_name} = {}\n",
@@ -414,6 +454,8 @@ pub fn transcript() -> Vec<Value> {
         json!({"t":"call","id":4,"m":"ai.chat.cancel","p":{"channel":"p1"}}),
         json!({"t":"ret","id":4,"ok":{"channel":"p1"}}),
         json!({"t":"patch","topic":TOPIC,"base":5,"seq":6,"data":{"channels":{"p1":{"state":{"busy":false,"status":""}}}}}),
+        json!({"t":"call","id":5,"m":"ai.chat.saved","p":{"channel":"p1"}}),
+        json!({"t":"ret","id":5,"ok":{"chats":[{"key":"0123456789abcdef01234567","id":"thread-1","title":"Fixture chat","agent":"codex","account":"Default","state":"saved"}]}}),
         json!({"t":"ev","topic":TOPIC,"name":EVENT_SEND_FAILED,"seq":1,"data":{"channel":"p1","text":"unsent","attachments":[]}}),
         json!({"t":"patch","topic":TOPIC,"base":6,"seq":7,"data":{"channels":{"p1":null}}}),
     ]

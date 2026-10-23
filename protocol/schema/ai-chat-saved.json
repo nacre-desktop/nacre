@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AiSavedList",
+  "description": "Result of `ai.chat.saved`: newest first, at most [`MAX_SAVED`].",
+  "type": "object",
+  "properties": {
+    "chats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AiSaved"
+      },
+      "maxItems": 30
+    }
+  },
+  "required": [
+    "chats"
+  ],
+  "$defs": {
+    "AiSaved": {
+      "description": "One saved chat; `key` is accepted by `ai.chat.resume`.",
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "agent": {
+          "$ref": "#/$defs/Provider"
+        },
+        "account": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "state": {
+          "type": "string",
+          "maxLength": 32
+        }
+      },
+      "required": [
+        "key",
+        "id",
+        "title",
+        "agent",
+        "account",
+        "state"
+      ]
+    },
+    "Provider": {
+      "type": "string",
+      "enum": [
+        "codex",
+        "claude"
+      ]
+    }
+  }
+}

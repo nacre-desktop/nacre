@@ -3000,6 +3000,19 @@ emit({'type':'assistant','message':{'content':[{'type':'text','text':'daemon hos
         opened.channels["p1"].state.provider,
         nacre_protocol::ai_chat::Provider::Claude
     );
+    // The fixture providers list nothing; the call still answers with a valid list.
+    match call(
+        &mut reader,
+        &mut mirror,
+        9,
+        "ai.chat.saved",
+        json!({"channel":"p1"}),
+    )? {
+        Reply::Ok { ok } => nacre_protocol::ai_chat::AiSavedList::validate(
+            &serde_json::from_value(ok).expect("saved list shape"),
+        )?,
+        other => panic!("saved failed: {other:?}"),
+    }
     assert!(matches!(
         call(
             &mut reader,

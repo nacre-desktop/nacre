@@ -7,15 +7,22 @@ use super::hub::{failure, Shared};
 use crate::Result;
 use nacre_protocol::{
     ai_chat::{
-        AiApprove, AiChannel, AiChannelRef, AiChat, AiMessage, AiProvider, AiResume, AiSend,
-        AiState, Provider, Role, EVENT_SEND_FAILED, MAX_CHANNELS, MAX_MESSAGES, MAX_MESSAGES_JSON,
-        MAX_QUESTION_JSON, MAX_TEXT_JSON, TOPIC,
+        AiApprove, AiChannel, AiChannelRef, AiChat, AiMessage, AiProvider, AiResume, AiSavedList,
+        AiSend, AiState, Provider, Role, EVENT_SEND_FAILED, MAX_CHANNELS, MAX_MESSAGES,
+        MAX_MESSAGES_JSON, MAX_QUESTION_JSON, MAX_SAVED, MAX_TEXT_JSON, TOPIC,
     },
     ErrorCode, Failure, Method,
 };
 use serde::de::DeserializeOwned;
 use serde_json::{json, Value};
-use std::{cell::RefCell, collections::BTreeMap, process::Stdio, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    collections::BTreeMap,
+    process::Stdio,
+    rc::Rc,
+    sync::Arc,
+    time::Duration,
+};
 use tokio::{
     io::{AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     process::{ChildStdin, Command},
@@ -263,6 +270,9 @@ pub struct Host {
     hosted: Rc<Hosted>,
     tasks: RefCell<JoinSet<()>>,
     spawn: Box<dyn Fn(&str) -> Command>,
+    /// Reads the saved-chat list (blocking); replaced by tests.
+    saved: Arc<dyn Fn() -> std::result::Result<Value, String> + Send + Sync>,
+    listing: Cell<bool>,
 }
 impl Default for Host {
     fn default() -> Self {
@@ -307,7 +317,42 @@ impl Host {
             hosted: Rc::default(),
             tasks: RefCell::default(),
             spawn,
+            saved: Arc::new(|| {
+                let paths = crate::paths::Paths::environment().map_err(|e| e.to_string())?;
+                crate::desktop_extras::chat_list(&paths).map_err(|e| e.to_string())
+            }),
+            listing: Cell::new(false),
         }
+    }
+    /// The QML "Recent chats" list: same helpers and key table as `ai.chat.resume`.
+    async fn saved(&self) -> std::result::Result<Value, Failure> {
+        if self.listing.replace(true) {
+            return Err(
+                failure(ErrorCode::Busy, "Saved chats are being read", true).dispatch_state(false)
+            );
+        }
+        let read = self.saved.clone();
+        let rows = tokio::time::timeout(
+            Duration::from_secs(40),
+            tokio::task::spawn_blocking(move || read()),
+        )
+        .await;
+        self.listing.set(false);
+        let rows = match rows {
+            Ok(Ok(Ok(rows))) => rows,
+            _ => return Err(unavailable("Could not read saved chats")),
+        };
+        let list = AiSavedList {
+            chats: rows
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|row| serde_json::from_value(row.clone()).ok())
+                .take(MAX_SAVED)
+                .collect(),
+        };
+        list.validate().map_err(|f| f.dispatch_state(false))?;
+        serde_json::to_value(list).map_err(|_| unavailable("Could not read saved chats"))
     }
     fn start(&self, hub: &Shared, name: &str) -> std::result::Result<Rc<Channel>, Failure> {
         if self.hosted.channels.borrow().len() >= MAX_CHANNELS {
@@ -482,6 +527,10 @@ pub async fn dispatch(
             let request = checked(parse::<AiChannelRef>(params), AiChannelRef::validate)?;
             host.open(&hub, &request.channel).await?;
             return Ok(json!({"channel": request.channel}));
+        }
+        "ai.chat.saved" => {
+            checked(parse::<AiChannelRef>(params), AiChannelRef::validate)?;
+            return host.saved().await;
         }
         "ai.chat.send" => {
             let r = checked(parse::<AiSend>(params), AiSend::validate)?;
@@ -845,6 +894,44 @@ done
                 assert!(hub.borrow().snapshot(TOPIC).is_some());
             })
             .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn saved_lists_the_helper_rows_bounded_and_refuses_overlap_and_failure() {
+        let rows: Vec<Value> = (0..40)
+            .map(|i| json!({"key":format!("k{i}"),"id":"t","title":"Fixture","agent":"claude","account":"Default","state":"saved"}))
+            .collect();
+        let host = Rc::new(Host {
+            saved: Arc::new(move || Ok(Value::Array(rows.clone()))),
+            ..Host::default()
+        });
+        let hub = Hub::new("test".into(), false, Duration::from_millis(16)).shared();
+        hub.borrow_mut().ai_chat = Some(host.clone());
+        local()
+            .run_until(async {
+                let list = call(&hub, "ai.chat.saved", json!({"channel":""}))
+                    .await
+                    .unwrap();
+                assert_eq!(list["chats"].as_array().unwrap().len(), MAX_SAVED);
+                assert_eq!(list["chats"][0]["key"], "k0");
+                let bad = call(&hub, "ai.chat.saved", json!({"channel":"BAD"}))
+                    .await
+                    .unwrap_err();
+                assert_eq!(bad.code, ErrorCode::Validation);
+                host.listing.set(true);
+                let busy = call(&hub, "ai.chat.saved", json!({"channel":""}))
+                    .await
+                    .unwrap_err();
+                assert_eq!(busy.code, ErrorCode::Busy);
+            })
+            .await;
+        let host = Host {
+            saved: Arc::new(|| Err("no history".into())),
+            ..Host::default()
+        };
+        let failed = host.saved().await.unwrap_err();
+        assert_eq!(failed.code, ErrorCode::Unavailable);
+        assert!(!host.listing.get(), "the guard is released after a failure");
     }
 
     #[tokio::test(flavor = "current_thread")]

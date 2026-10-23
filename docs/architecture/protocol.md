@@ -472,7 +472,8 @@ exact. Full network device snapshots/actions and other bar services remain defer
 ## Daemon-hosted AI chat v1
 
 `ai.chat` carries one bounded snapshot per hosted sidebar channel, and
-`ai.chat.open|send|cancel|approve|new|resume|provider|workspace` drive it (see
+`ai.chat.open|send|cancel|approve|new|resume|provider|workspace|saved` drive it (`saved` lists up to 30
+recent chats whose keys `resume` accepts; N0041) (see
 `ai-chat*.json`, `ai-chat.d.luau` and `ai-chat.jsonl`; spec N0032). Neither is
 advertised in safe mode. At most four channels are hosted, each holding the newest
 64 messages within 128 KiB of escaped text, so the whole topic fits one frame;

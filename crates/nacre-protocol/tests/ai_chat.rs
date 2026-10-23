@@ -50,15 +50,17 @@ fn methods_and_exports_are_published() {
         "resume",
         "provider",
         "workspace",
+        "saved",
     ] {
         let method = &methods[&format!("ai.chat.{name}")];
-        assert!(method.timeout <= 10_000 && method.params.is_object());
+        assert!(method.timeout <= 45_000 && method.params.is_object());
     }
     let generated = artifacts::generate();
     for path in [
         "protocol/schema/ai-chat.json",
         "protocol/schema/ai-chat-send.json",
         "protocol/schema/ai-chat-send-failed.json",
+        "protocol/schema/ai-chat-saved.json",
         "protocol/luau/ai-chat.d.luau",
         "protocol/fixtures/ai-chat.jsonl",
     ] {
@@ -144,4 +146,31 @@ fn snapshot_bounds_reject_oversized_channels_messages_and_questions() {
     full.messages.clear();
     full.state.question = Some(json!({"q":"x".repeat(33 * 1024)}));
     assert!(full.validate().is_err());
+}
+
+#[test]
+fn saved_chat_list_is_bounded_and_its_fixture_validates() {
+    let saved = |n: usize| ai_chat::AiSavedList {
+        chats: (0..n)
+            .map(|i| ai_chat::AiSaved {
+                key: format!("k{i}"),
+                id: "t".into(),
+                title: "title".into(),
+                agent: ai_chat::Provider::Claude,
+                account: "Default".into(),
+                state: "saved".into(),
+            })
+            .collect(),
+    };
+    saved(ai_chat::MAX_SAVED).validate().unwrap();
+    assert!(saved(ai_chat::MAX_SAVED + 1).validate().is_err());
+    let mut list = saved(1);
+    list.chats[0].key.clear();
+    assert!(list.validate().is_err());
+    let result = ai_chat::transcript()
+        .into_iter()
+        .find(|f| f["t"] == "ret" && f["id"] == 5)
+        .unwrap();
+    let fixture: ai_chat::AiSavedList = serde_json::from_value(result["ok"].clone()).unwrap();
+    fixture.validate().unwrap();
 }

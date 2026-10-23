@@ -696,7 +696,8 @@ fn list_source(project: &Value, agent: &str) -> Result<Vec<Value>> {
         })
         .collect())
 }
-fn chat_list(paths: &Paths) -> Result<Value> {
+/// Newest saved chats (at most 30); also refreshes the key table `load` resolves.
+pub(crate) fn chat_list(paths: &Paths) -> Result<Value> {
     let mut records = Vec::new();
     for project in projects(paths)? {
         for agent in ["codex", "claude"] {
