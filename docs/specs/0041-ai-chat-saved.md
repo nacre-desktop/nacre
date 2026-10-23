@@ -1,6 +1,6 @@
 # N0041 — `ai.chat.saved` and Bead chat i18n ids
 
-Status: **Implemented; pending lead review and exact-head CI; unpublished**. Consumer: Bead B0043
+Status: **Implemented; full desktop CI replica green on dev-2 (head before docs); pushed**. Consumer: Bead B0043
 (`docs/specs/0043-ai-sidebar.md` on Bead, ask A and D). Additive; QML unchanged.
 
 ## 1. `ai.chat.saved` (version 1, class `desktop`, advertised with the other `ai.chat` methods, absent in safe mode)
