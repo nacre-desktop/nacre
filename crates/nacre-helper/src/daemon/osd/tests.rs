@@ -93,9 +93,8 @@ impl Fixture {
     /// calls; any further call comes from the event loop, which only starts after it. Events
     /// sent before the fake `pactl` opens its tail are lost, so the sink event is repeated.
     async fn running(&self) {
-        let calls = || {
-            std::fs::read_to_string(self.path("wpctl.log")).map_or(0, |log| log.lines().count())
-        };
+        let calls =
+            || std::fs::read_to_string(self.path("wpctl.log")).map_or(0, |log| log.lines().count());
         for _ in 0..1500 {
             if calls() > 4 {
                 return;
