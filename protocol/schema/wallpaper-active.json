@@ -82,6 +82,17 @@
         },
         "palette": {
           "$ref": "#/$defs/WallpaperPalette"
+        },
+        "motion": {
+          "description": "Present only when the active wallpaper is a video or animated GIF; `path`\nand `file_identity` above stay the cached still poster.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallpaperMotion"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -113,7 +124,7 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0,
-          "maximum": 134217728
+          "maximum": 9007199254740991
         },
         "mtime_sec": {
           "type": "integer",
@@ -195,6 +206,36 @@
       "enum": [
         "dark",
         "light"
+      ]
+    },
+    "WallpaperMotion": {
+      "description": "The playable source of a moving wallpaper. Same path rules as the poster;\nthe identity `size` is not capped at the poster's 128 MiB.",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/MotionKind"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^/(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*://)[^\\u0000]*$"
+        },
+        "file_identity": {
+          "$ref": "#/$defs/WallpaperFileIdentity"
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "file_identity"
+      ]
+    },
+    "MotionKind": {
+      "type": "string",
+      "enum": [
+        "video",
+        "animation"
       ]
     }
   }

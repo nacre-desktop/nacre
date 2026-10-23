@@ -82,7 +82,34 @@ pub struct ActiveWallpaper {
     pub file_identity: WallpaperFileIdentity,
     pub presentation: Presentation,
     pub palette: WallpaperPalette,
+    /// Present only when the active wallpaper is a video or animated GIF; `path`
+    /// and `file_identity` above stay the cached still poster.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub motion: Option<WallpaperMotion>,
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum MotionKind {
+    Video,
+    Animation,
+}
+
+/// The playable source of a moving wallpaper. Same path rules as the poster;
+/// the identity `size` is not capped at the poster's 128 MiB.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperMotion {
+    pub kind: MotionKind,
+    #[schemars(
+        length(min = 1, max = 4096),
+        regex(pattern = r"^/(?!.*(?:^|/)\.\.(?:/|$))(?!.*://)[^\u0000]*$")
+    )]
+    pub path: String,
+    pub file_identity: WallpaperFileIdentity,
+}
+
+/// Largest still poster; motion files are bounded only by the safe-integer size.
+pub const POSTER_BYTES: u64 = 134_217_728;
 
 /// Stable metadata tuple for a bounded local file read. Consumers compare it
 /// before and after decoding through the same open file descriptor.
@@ -92,7 +119,7 @@ pub struct WallpaperFileIdentity {
     pub device: String,
     #[schemars(length(min = 1, max = 20), regex(pattern = "^(0|[1-9][0-9]{0,19})$"))]
     pub inode: String,
-    #[schemars(range(min = 0, max = 134217728_u64))]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub size: u64,
     #[schemars(range(min = -9007199254740991_i64, max = 9007199254740991_i64))]
     pub mtime_sec: i64,
@@ -114,7 +141,7 @@ impl WallpaperFileIdentity {
         }
         if !valid_id(&self.device)
             || !valid_id(&self.inode)
-            || self.size > 134_217_728
+            || self.size > MAX_SAFE_INTEGER
             || self.mtime_sec.unsigned_abs() > MAX_SAFE_INTEGER
             || self.ctime_sec.unsigned_abs() > MAX_SAFE_INTEGER
             || self.mtime_nsec > 999_999_999
@@ -224,22 +251,32 @@ impl WallpaperActive {
         }
     }
 }
+impl WallpaperMotion {
+    pub fn is_valid(&self) -> bool {
+        valid_path(&self.path) && self.file_identity.validate().is_ok()
+    }
+}
+fn valid_path(value: &str) -> bool {
+    let path = std::path::Path::new(value);
+    value.len() <= 4096
+        && path.is_absolute()
+        && !value.contains('\0')
+        && !value.contains("://")
+        && !path
+            .components()
+            .any(|c| matches!(c, std::path::Component::ParentDir))
+}
 impl ActiveWallpaper {
     pub fn validate(&self) -> Result<(), Failure> {
-        let path = std::path::Path::new(&self.path);
         let palette = &self.palette;
         if self.revision == 0
             || self.revision > MAX_SAFE_INTEGER
             || self.palette_revision != self.revision
             || self.palette_revision > MAX_SAFE_INTEGER
-            || self.path.len() > 4096
-            || !path.is_absolute()
-            || self.path.contains('\0')
-            || self.path.contains("://")
-            || path
-                .components()
-                .any(|c| matches!(c, std::path::Component::ParentDir))
+            || !valid_path(&self.path)
             || self.file_identity.validate().is_err()
+            || self.file_identity.size > POSTER_BYTES
+            || self.motion.as_ref().is_some_and(|m| !m.is_valid())
             || palette.colours.is_empty()
             || palette.colours.len() > 128
             || !["background", "onSurface", "primary"]

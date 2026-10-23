@@ -79,6 +79,11 @@ struct Watcher {
     paths: BTreeMap<i32, PathBuf>,
 }
 impl Watcher {
+    /// Holds `media.json`, which the daemon reads for the video source after
+    /// `presentation.json` is published.
+    fn media_directory(&self) -> PathBuf {
+        parent(&self.scheme).join("wallpaper")
+    }
     fn rescan(&mut self) -> Result<()> {
         let mut wanted = BTreeSet::from([
             self.root.clone(),
@@ -87,6 +92,9 @@ impl Watcher {
             self.config.clone(),
         ]);
         wanted.extend(self.engines.iter().map(|engine| parent(engine)));
+        if self.presentation {
+            wanted.insert(self.media_directory());
+        }
         let required = wanted.clone();
         if let Some(selected) = &self.selected {
             wanted.extend(selected.ancestors().skip(1).map(Path::to_path_buf));
@@ -195,6 +203,10 @@ impl Watcher {
                 if self.presentation && name == "presentation.json" {
                     dirty |= 0x80;
                 }
+                if self.presentation && name == "wallpaper" && mask & ISDIR != 0 {
+                    self.rescan()?;
+                    dirty |= 0x80;
+                }
                 if Some(name.as_os_str()) == self.scheme.file_name()
                     && mask & (0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800) != 0
                 {
@@ -206,6 +218,10 @@ impl Watcher {
                         dirty |= all;
                     }
                     *previous = current;
+                }
+            } else if self.presentation && path == self.media_directory() {
+                if name == "media.json" {
+                    dirty |= 0x80;
                 }
             } else if path == self.config {
                 if name == "cli.json" || name == "wallpaper-picker.json" {
@@ -488,8 +504,13 @@ mod tests {
         let event = || vec![(1, 0x80, OsString::from("presentation.json"))];
         let mut previous = flavour(&scheme)?;
         assert_eq!(watcher.apply(event(), &mut previous)?, 0x80);
+        let media = parent(&scheme).join("wallpaper");
+        watcher.paths.insert(3, media);
+        let media_event = || vec![(3, 0x80, OsString::from("media.json"))];
+        assert_eq!(watcher.apply(media_event(), &mut previous)?, 0x80);
         watcher.presentation = false;
         assert_eq!(watcher.apply(event(), &mut previous)?, 0);
+        assert_eq!(watcher.apply(media_event(), &mut previous)?, 0);
         let external = home.path().join("mounted");
         watcher.selected = Some(external.join("wall.png"));
         watcher.paths.insert(2, external);

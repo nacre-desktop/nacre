@@ -3,8 +3,8 @@ use super::hub::{failure, Notice, Shared};
 use crate::{paths::Paths, Result};
 use nacre_protocol::{
     wallpaper::{
-        ActiveWallpaper, Presentation, WallpaperActivate, WallpaperActive, WallpaperFileIdentity,
-        WallpaperPalette,
+        ActiveWallpaper, MotionKind, Presentation, WallpaperActivate, WallpaperActive,
+        WallpaperFileIdentity, WallpaperMotion, WallpaperPalette,
     },
     Capability, ErrorCode, Failure, Method, MAX_SAFE_INTEGER,
 };
@@ -20,7 +20,9 @@ use std::{
 
 pub const TOPIC: &str = "wallpaper.active";
 const RECORD_BYTES: u64 = 128 * 1024;
-const IMAGE_BYTES: u64 = 128 * 1024 * 1024;
+const IMAGE_BYTES: u64 = nacre_protocol::wallpaper::POSTER_BYTES;
+/// Videos are large; the identity carries the exact size, so only sanity-bound it.
+const MOTION_BYTES: u64 = 64 * 1024 * 1024 * 1024;
 
 /// Resolve through directory descriptors, refusing symlinks at every component.
 /// Only user-owned regular files below safe ancestors are eligible for disclosure.
@@ -77,6 +79,31 @@ fn private_file(path: &Path, limit: u64) -> Result<File> {
         directory = file.into();
     }
     Err("Missing private wallpaper file".into())
+}
+
+/// The playable source of a video or animated-GIF wallpaper, taken from the private
+/// selection record only when it still describes the published poster. Any problem
+/// simply leaves the still wallpaper without `motion`.
+fn read_motion(paths: &Paths, poster: &str) -> Option<WallpaperMotion> {
+    let file = private_file(&paths.state.join("wallpaper/media.json"), RECORD_BYTES).ok()?;
+    let mut bytes = Vec::new();
+    file.take(RECORD_BYTES + 1).read_to_end(&mut bytes).ok()?;
+    let media: Value = serde_json::from_slice(&bytes).ok()?;
+    if media["poster"].as_str() != Some(poster) || media["dynamic"] != true {
+        return None;
+    }
+    let path = media["path"].as_str()?;
+    let file = private_file(Path::new(path), MOTION_BYTES).ok()?;
+    let motion = WallpaperMotion {
+        kind: if media["animated"] == true {
+            MotionKind::Animation
+        } else {
+            MotionKind::Video
+        },
+        path: path.into(),
+        file_identity: WallpaperFileIdentity::from_metadata(&file.metadata().ok()?),
+    };
+    motion.is_valid().then_some(motion)
 }
 
 fn read_pair(
@@ -156,6 +183,7 @@ fn read_pair(
         return Err("Incomplete wallpaper palette".into());
     }
     let pair = ActiveWallpaper {
+        motion: read_motion(paths, path),
         revision: 1,
         palette_revision: 1,
         path: path.into(),
@@ -507,6 +535,78 @@ mod tests {
         fs::set_permissions(external.path(), fs::Permissions::from_mode(0o777))?;
         assert!(read_pair(&paths, &mut None).is_err());
         fs::set_permissions(external.path(), fs::Permissions::from_mode(0o700))?;
+        Ok(())
+    }
+
+    #[test]
+    fn video_and_animation_publish_motion_and_stills_do_not() -> Result<()> {
+        let (home, paths, hub) = fixture()?;
+        let poster = home.path().join("wall.png");
+        let clip = home.path().join("clip.mp4");
+        fs::write(&clip, b"not a real video, only metadata is read")?;
+        let media = paths.state.join("wallpaper/media.json");
+        fs::create_dir_all(media.parent().unwrap())?;
+        let write = |poster: &Path, dynamic: bool, animated: bool, path: &Path| -> Result<()> {
+            fs::write(
+                &media,
+                serde_json::to_vec(
+                    &json!({"path":path,"poster":poster,"dynamic":dynamic,"animated":animated}),
+                )?,
+            )?;
+            Ok(())
+        };
+        let mut producer = Producer::default();
+        // Still wallpaper: no motion member at all.
+        write(&poster, false, false, &poster)?;
+        producer.refresh(&hub, &paths)?;
+        let still = hub.borrow().snapshot(TOPIC).unwrap();
+        assert!(still["current"].get("motion").is_none());
+        assert_eq!(still["revision"], 1);
+        // Video: motion appears with the file's identity, a new revision, on every output.
+        write(&poster, true, false, &clip)?;
+        producer.refresh(&hub, &paths)?;
+        let video = hub.borrow().snapshot(TOPIC).unwrap();
+        let motion = &video["current"]["motion"];
+        assert_eq!(motion["kind"], "video");
+        assert_eq!(motion["path"], json!(clip));
+        let identity: WallpaperFileIdentity =
+            serde_json::from_value(motion["file_identity"].clone())?;
+        assert!(identity.matches(&fs::metadata(&clip)?));
+        assert_eq!(video["outputs"]["DP-2"]["motion"], *motion);
+        assert_eq!(video["revision"], 2);
+        // Unchanged inputs do not bump the revision.
+        producer.refresh(&hub, &paths)?;
+        assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 2);
+        // Animated GIF.
+        let gif = home.path().join("anim.gif");
+        fs::write(&gif, b"GIF89a")?;
+        write(&poster, true, true, &gif)?;
+        producer.refresh(&hub, &paths)?;
+        let animation = hub.borrow().snapshot(TOPIC).unwrap();
+        assert_eq!(animation["current"]["motion"]["kind"], "animation");
+        assert_eq!(animation["revision"], 3);
+        // A record for another poster, a symlink, a special file or a missing file: still only.
+        let other = home.path().join("other.png");
+        image::DynamicImage::new_rgb8(2, 2).save(&other)?;
+        write(&other, true, false, &clip)?;
+        let (pair, _) = read_pair(&paths, &mut None)?;
+        assert!(pair.motion.is_none());
+        let alias = home.path().join("alias.mp4");
+        symlink(&clip, &alias)?;
+        write(&poster, true, false, &alias)?;
+        assert!(read_pair(&paths, &mut None)?.0.motion.is_none());
+        write(&poster, true, false, &home.path().join("missing.mp4"))?;
+        assert!(read_pair(&paths, &mut None)?.0.motion.is_none());
+        fs::set_permissions(&clip, fs::Permissions::from_mode(0o666))?;
+        write(&poster, true, false, &clip)?;
+        assert!(read_pair(&paths, &mut None)?.0.motion.is_none());
+        fs::set_permissions(&clip, fs::Permissions::from_mode(0o600))?;
+        // Back to a still wallpaper removes the member again.
+        write(&poster, false, false, &poster)?;
+        producer.refresh(&hub, &paths)?;
+        let back = hub.borrow().snapshot(TOPIC).unwrap();
+        assert!(back["current"].get("motion").is_none());
+        assert_eq!(back["revision"], 4);
         Ok(())
     }
 }

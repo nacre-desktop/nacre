@@ -1,6 +1,9 @@
 use nacre_protocol::{
     artifacts, framing,
-    wallpaper::{WallpaperActivate, WallpaperActive, WallpaperFileIdentity},
+    wallpaper::{
+        ActiveWallpaper, MotionKind, WallpaperActivate, WallpaperActive, WallpaperFileIdentity,
+        WallpaperMotion,
+    },
     Message, Mirror, Update, MAX_SAFE_INTEGER,
 };
 use serde_json::json;
@@ -136,6 +139,44 @@ fn file_identity_is_decimal_and_bounded() {
     identity.inode = "18446744073709551616".into();
     assert!(identity.validate().is_err());
     identity.inode = "1".into();
+    identity.size = MAX_SAFE_INTEGER;
+    identity.validate().unwrap();
     identity.size += 1;
     assert!(identity.validate().is_err());
+}
+
+#[test]
+fn motion_is_optional_validated_and_not_capped_at_the_poster_size() {
+    let mut pair: ActiveWallpaper = serde_json::from_value(json!({
+        "revision":1,"palette_revision":1,"path":"/home/user/poster.png","file_identity":{"device":"2049","inode":"1","size":4096,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}
+    })).unwrap();
+    assert!(pair.motion.is_none());
+    pair.validate().unwrap();
+    assert!(!serde_json::to_string(&pair).unwrap().contains("motion"));
+    let mut motion: WallpaperMotion = serde_json::from_value(json!({
+        "kind":"video","path":"/home/user/clip.mp4","file_identity":{"device":"2049","inode":"2","size":402653184,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0}
+    })).unwrap();
+    pair.motion = Some(motion.clone());
+    pair.validate().unwrap();
+    motion.kind = MotionKind::Animation;
+    pair.motion = Some(motion.clone());
+    pair.validate().unwrap();
+    for bad in [
+        "clip.mp4",
+        "/home/user/../clip.mp4",
+        "https://example.test/clip.mp4",
+    ] {
+        pair.motion = Some(WallpaperMotion {
+            path: bad.into(),
+            ..motion.clone()
+        });
+        assert!(pair.validate().is_err(), "{bad}");
+    }
+    pair.motion = None;
+    pair.file_identity.size = 134_217_729;
+    assert!(pair.validate().is_err(), "poster stays capped");
+    assert!(serde_json::from_value::<WallpaperMotion>(
+        json!({"kind":"audio","path":"/a","file_identity":motion.file_identity})
+    )
+    .is_err());
 }
