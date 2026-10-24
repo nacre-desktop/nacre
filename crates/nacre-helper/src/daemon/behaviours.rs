@@ -290,7 +290,7 @@ impl Env {
 }
 
 /// Run a helper subcommand without a shell; bounded output and time.
-async fn helper(
+pub(crate) async fn helper(
     engine: &Path,
     args: &[&str],
     limit: usize,

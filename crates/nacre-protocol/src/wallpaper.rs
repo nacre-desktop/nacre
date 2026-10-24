@@ -238,9 +238,12 @@ pub struct WallpaperCatalogueEntry {
     pub kind: WallpaperKind,
     #[schemars(length(max = 512))]
     pub title: String,
-    /// JPEG, at most 640x400, 256 KiB, in `$XDG_CACHE_HOME/nacre/wallpaper-media/`.
+    /// JPEG, at most 640x400 and 256 KiB, in the 128-entry `$XDG_CACHE_HOME/nacre/wallpaper-media/` thumbnail cache.
     #[schemars(length(max = 4096))]
     pub thumbnail: String,
+    /// JPEG, at most 1600x1000 and 2 MiB, in the same bounded cache; empty if unavailable.
+    #[schemars(length(max = 4096))]
+    pub preview: String,
     pub active: bool,
 }
 impl WallpaperCatalogue {
@@ -250,7 +253,9 @@ impl WallpaperCatalogue {
                 !valid_path(&entry.id)
                     || entry.title.len() > 512
                     || entry.thumbnail.len() > 4096
+                    || entry.preview.len() > 4096
                     || (!entry.thumbnail.is_empty() && !valid_path(&entry.thumbnail))
+                    || (!entry.preview.is_empty() && !valid_path(&entry.preview))
             })
         {
             return Err(Failure::new(
@@ -382,6 +387,7 @@ mod tests {
                 kind: WallpaperKind::Image,
                 title: "Lake".into(),
                 thumbnail: "/cache/wallpaper-media/lake.jpg".into(),
+                preview: "/cache/wallpaper-media/lake-preview.jpg".into(),
                 active: true,
             }],
         };

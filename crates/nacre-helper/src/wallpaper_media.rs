@@ -11,6 +11,9 @@ use std::{
 use unicode_casefold::UnicodeCaseFold;
 pub const IMAGES: [&str; 7] = ["jpg", "jpeg", "png", "webp", "gif", "tif", "tiff"];
 pub const VIDEOS: [&str; 6] = ["mp4", "webm", "mkv", "mov", "avi", "m4v"];
+const THUMBNAIL_LIMIT_BYTES: u64 = 256 * 1024;
+const PREVIEW_LIMIT_BYTES: u64 = 2 * 1024 * 1024;
+const THUMBNAIL_CACHE_COUNT: usize = 128;
 fn native_engine_identity() -> Result<&'static str> {
     static ID: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     if let Some(value) = ID.get() {
@@ -75,6 +78,75 @@ impl std::fmt::Display for ToolFailure {
 }
 impl std::error::Error for ToolFailure {}
 pub type PaletteCommand = Box<dyn Fn(&[String]) -> Result<Option<String>> + Send + Sync>;
+
+fn cached_thumbnail(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|meta| {
+        meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES
+    })
+}
+
+fn cached_preview(path: &Path) -> bool {
+    fs::symlink_metadata(path).is_ok_and(|meta| {
+        meta.file_type().is_file() && meta.len() <= PREVIEW_LIMIT_BYTES
+    })
+}
+
+fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
+    let mut files = fs::read_dir(cache)?
+        .filter_map(std::result::Result::ok)
+        .filter_map(|entry| {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            let key = name.strip_suffix("-thumbnail.jpg")?;
+            if key.len() != 64 || !key.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return None;
+            }
+            Some((key.to_owned(), entry.path(), entry.metadata().ok()))
+        })
+        .collect::<Vec<_>>();
+    files.sort_by_key(|(_, path, meta)| {
+        std::cmp::Reverse(
+            meta.as_ref()
+                .and_then(|meta| meta.modified().ok())
+                .unwrap_or(std::time::UNIX_EPOCH),
+        )
+    });
+    let mut kept = 0;
+    for (key, path, meta) in files {
+        let valid = meta.as_ref().is_some_and(|meta| {
+            meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES
+        });
+        if !valid {
+            let _ = fs::remove_file(path);
+            let preview = cache.join(format!("{key}-preview.jpg"));
+            if preview.exists() {
+                fs::remove_file(preview)?;
+            }
+        } else if key == keep_key || kept < THUMBNAIL_CACHE_COUNT - 1 {
+            kept += usize::from(key != keep_key);
+        } else {
+            fs::remove_file(path)?;
+            let preview = cache.join(format!("{key}-preview.jpg"));
+            if preview.exists() {
+                fs::remove_file(preview)?;
+            }
+        }
+    }
+    for entry in fs::read_dir(cache)? {
+        let entry = entry?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let Some(key) = name.strip_suffix("-preview.jpg") else {
+            continue;
+        };
+        if key.len() == 64
+            && key.bytes().all(|b| b.is_ascii_hexdigit())
+            && !cached_thumbnail(&cache.join(format!("{key}-thumbnail.jpg")))
+        {
+            fs::remove_file(entry.path())?;
+        }
+    }
+    Ok(())
+}
+
 pub struct Media {
     pub paths: Paths,
     pub assets: PathBuf,
@@ -524,19 +596,46 @@ impl Media {
         fs::create_dir_all(&cache)?;
         let thumb = cache.join(format!("{key}-thumbnail.jpg"));
         let preview = cache.join(format!("{key}-preview.jpg"));
-        if !thumb.exists() || !preview.exists() {
+        if !cached_thumbnail(&thumb) || !cached_preview(&preview) {
             let image =
                 image::DynamicImage::ImageRgba8(orient_decoder::load_rgba_oriented(poster)?)
                     .to_rgb8();
-            for (path, bounds) in [(&thumb, (640, 400)), (&preview, (1600, 1000))] {
-                if path.exists() {
-                    continue;
+            if !cached_thumbnail(&thumb) {
+                let resized = orient_decoder::thumbnail_rgb(
+                    &image,
+                    (640, 400),
+                    orient_decoder::Filter::Lanczos,
+                )?;
+                let mut encoded = None;
+                for quality in [88, 80, 72, 64, 56, 48] {
+                    let bytes = crate::image_paint::encode_jpeg(&resized, quality)?;
+                    if bytes.len() as u64 <= THUMBNAIL_LIMIT_BYTES {
+                        encoded = Some(bytes);
+                        break;
+                    }
                 }
-                let resized =
-                    orient_decoder::thumbnail_rgb(&image, bounds, orient_decoder::Filter::Lanczos)?;
-                crate::files::atomic(path, &crate::image_paint::encode_jpeg(&resized, 88)?)?;
+                let bytes = encoded.ok_or("Wallpaper thumbnail exceeds the cache entry limit")?;
+                crate::files::atomic(&thumb, &bytes)?;
+            }
+            if !cached_preview(&preview) {
+                let resized = orient_decoder::thumbnail_rgb(
+                    &image,
+                    (1600, 1000),
+                    orient_decoder::Filter::Lanczos,
+                )?;
+                let mut encoded = None;
+                for quality in [88, 80, 72, 64, 56, 48] {
+                    let bytes = crate::image_paint::encode_jpeg(&resized, quality)?;
+                    if bytes.len() as u64 <= PREVIEW_LIMIT_BYTES {
+                        encoded = Some(bytes);
+                        break;
+                    }
+                }
+                let bytes = encoded.ok_or("Wallpaper preview exceeds the cache entry limit")?;
+                crate::files::atomic(&preview, &bytes)?;
             }
         }
+        trim_thumbnail_cache(&cache, &key)?;
         Ok(json!({"thumbnail":thumb,"preview":preview}))
     }
     pub fn describe(&self, path: &Path) -> Result<Value> {
@@ -1741,4 +1840,39 @@ pub fn run(args: &[String]) -> Result<i32> {
     };
     println!("{}", json::dumps(&value, false)?);
     Ok(code)
+}
+
+#[cfg(test)]
+mod thumbnail_cache_tests {
+    use super::*;
+
+    #[test]
+    fn thumbnail_cache_keeps_current_and_caps_entries_and_bytes() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        for index in 0..(THUMBNAIL_CACHE_COUNT + 8) {
+            let key = format!("{index:064x}");
+            fs::write(
+                directory.path().join(format!("{key}-thumbnail.jpg")),
+                vec![0_u8; 256],
+            )?;
+            fs::write(
+                directory.path().join(format!("{key}-preview.jpg")),
+                vec![0_u8; 512],
+            )?;
+        }
+        let current = format!("{:064x}", THUMBNAIL_CACHE_COUNT + 7);
+        trim_thumbnail_cache(directory.path(), &current)?;
+        let thumbnails = fs::read_dir(directory.path())?
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| entry.file_name().to_string_lossy().ends_with("-thumbnail.jpg"))
+            .collect::<Vec<_>>();
+        assert_eq!(thumbnails.len(), THUMBNAIL_CACHE_COUNT);
+        assert!(cached_thumbnail(
+            &directory.path().join(format!("{current}-thumbnail.jpg"))
+        ));
+        assert!(thumbnails
+            .iter()
+            .all(|entry| entry.metadata().unwrap().len() <= THUMBNAIL_LIMIT_BYTES));
+        Ok(())
+    }
 }

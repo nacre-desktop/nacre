@@ -466,27 +466,24 @@ pub async fn catalogue(hub: &Shared) -> std::result::Result<nacre_protocol::wall
         .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
     let engine = std::env::current_exe()
         .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
-    let output = crate::process::offload(move || {
-        crate::process::run_bytes(
-            "nice",
-            &[
-                "-n".into(),
-                "10".into(),
-                engine.to_string_lossy().into_owned(),
-                "wallpaper-media".into(),
-                "catalog".into(),
-            ],
-            None,
-            std::time::Duration::from_secs(12),
-        )
-    })
+    let engine_arg = engine.to_string_lossy().into_owned();
+    let engine = std::path::PathBuf::from("nice");
+    let output = super::behaviours::helper(
+        &engine,
+        &[
+            "-n", "10", "--", &engine_arg,
+            "wallpaper-media", "catalog",
+        ],
+        8 * 1024 * 1024,
+        std::time::Duration::from_secs(12),
+    )
     .await
-    .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?
-    .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
-    if !output.status.success() || output.stdout.len() > 8 * 1024 * 1024 {
+    .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    let (success, bytes) = output;
+    if !success {
         return Err(failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true));
     }
-    let raw: Value = serde_json::from_slice(&output.stdout)
+    let raw: Value = serde_json::from_slice(&bytes)
         .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
     let rows = raw["entries"].as_array()
         .filter(|rows| rows.len() <= 2048)
@@ -503,9 +500,14 @@ pub async fn catalogue(hub: &Shared) -> std::result::Result<nacre_protocol::wall
         let title = row["name"].as_str().unwrap_or("");
         let poster = row["poster"].as_str().unwrap_or("");
         let thumb = row["thumbnail"].as_str().unwrap_or("");
+        let preview_source = row["preview"].as_str().unwrap_or("");
         let thumbnail = std::fs::canonicalize(thumb).ok().filter(|path| {
             path.starts_with(&cache)
                 && std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.len() <= 256 * 1024)
+        }).map(|path| path.to_string_lossy().into_owned()).unwrap_or_default();
+        let preview = std::fs::canonicalize(preview_source).ok().filter(|path| {
+            path.starts_with(&cache)
+                && std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.len() <= 2 * 1024 * 1024)
         }).map(|path| path.to_string_lossy().into_owned()).unwrap_or_default();
         let dynamic = row["dynamic"] == true;
         let animated = row["animated"] == true;
@@ -522,6 +524,7 @@ pub async fn catalogue(hub: &Shared) -> std::result::Result<nacre_protocol::wall
             id: id.into(), kind,
             title: bounded_title,
             thumbnail,
+            preview,
             active: is_active,
         });
     }
