@@ -357,12 +357,12 @@ pub(super) async fn select(engine: &Path, path: &str) -> bool {
 }
 
 /// `wallpaper-media session --watch`: logind lock and sleep state, as the QML used it.
-struct Session {
+pub(super) struct Session {
     _child: tokio::process::Child,
     lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
 }
 impl Session {
-    fn spawn(engine: &Path) -> Result<Self> {
+    pub(super) fn spawn(engine: &Path) -> Result<Self> {
         let mut child = Command::new(engine)
             .args(["wallpaper-media", "session", "--watch"])
             .stdin(Stdio::null())
@@ -380,7 +380,7 @@ impl Session {
         })
     }
     /// True while the session is asleep or locked.
-    async fn next(&mut self) -> Result<bool> {
+    pub(super) async fn next(&mut self) -> Result<bool> {
         let line = self
             .lines
             .next_line()

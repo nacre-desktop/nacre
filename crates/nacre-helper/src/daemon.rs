@@ -47,6 +47,7 @@ pub mod time_settings;
 pub mod tools_launch;
 pub mod updates;
 pub mod wallpaper;
+pub mod weather_photo;
 pub mod widths;
 pub mod workers;
 pub mod writer_lease;
@@ -202,6 +203,18 @@ async fn serve(
         updates::initial(&hub)?;
         let updates_hub = hub.clone();
         Some(tokio::task::spawn_local(updates::run(updates_hub)))
+    } else {
+        None
+    };
+    weather_photo::initial(&hub)?;
+    let weather_photo_service = if !counter.safe {
+        let photo_hub = hub.clone();
+        let photo_paths = paths.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "weather-photo",
+            hub.clone(),
+            move || weather_photo::run(photo_hub.clone(), photo_paths.clone()),
+        )))
     } else {
         None
     };
@@ -483,6 +496,10 @@ async fn serve(
         }
     }
     if let Some(service) = updates_service {
+        service.abort();
+        let _ = service.await;
+    }
+    if let Some(service) = weather_photo_service {
         service.abort();
         let _ = service.await;
     }

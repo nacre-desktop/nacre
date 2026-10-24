@@ -26,7 +26,7 @@ const MOTION_BYTES: u64 = 64 * 1024 * 1024 * 1024;
 
 /// Resolve through directory descriptors, refusing symlinks at every component.
 /// Only user-owned regular files below safe ancestors are eligible for disclosure.
-fn private_file(path: &Path, limit: u64) -> Result<File> {
+pub(super) fn private_file(path: &Path, limit: u64) -> Result<File> {
     use rustix::fs::{open, openat, Mode, OFlags};
     let parts: Vec<_> = path
         .components()

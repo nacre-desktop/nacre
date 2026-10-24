@@ -23,6 +23,7 @@ pub mod settings_asks;
 pub mod shell_actions;
 pub mod system_settings;
 pub mod wallpaper;
+pub mod weather_photo;
 pub mod widths;
 
 use schemars::JsonSchema;
