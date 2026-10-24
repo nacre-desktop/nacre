@@ -47,7 +47,7 @@ waits for `LastScan`, refuses radio-off/wired/invalid, tolerates NotAllowed, hid
 backend detail; stream nodes, ordering, peak-client exclusion, update on stream
 events; stream volume/mute argv and refusals; peak levels, lease start/stop (the
 child exits with the lease), retry and missing tool. Protocol generator output and
-fixtures regenerated (14 topics, 25 calls). The control tests that share the
+fixtures regenerated (15 topics, 27 calls). The control tests that share the
 process-wide audio lane now take turns (a latent race, exposed by the extra calls).
 
 Temporary duplicates: none. QML keeps its own PipeWire/nmcli paths until the core

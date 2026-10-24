@@ -654,6 +654,8 @@ async fn vpn_execute(
             .insert(active.as_str().to_owned(), id.clone());
     }
     serde_json::to_value(CoreResult { changed: true }).map_err(|_| unavailable())
+}
+
 /// Ask for a rescan, then wait (bounded) until NetworkManager reports a newer `LastScan`, so
 /// the reply marks the end of the scan the client shows progress for. A scan refused as too
 /// soon after the previous one changed nothing and is not an error.

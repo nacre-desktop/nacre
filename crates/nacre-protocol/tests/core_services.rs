@@ -96,7 +96,7 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             }
         }
     }
-    assert_eq!(topics, 14);
+    assert_eq!(topics, 15);
     assert_eq!(calls.len(), 27);
     for method in calls {
         assert!(

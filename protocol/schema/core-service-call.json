@@ -164,23 +164,6 @@
       ]
     },
     {
-      "description": "N0061: ask NetworkManager to rescan on one Wi-Fi device; the reply follows the scan.",
-      "type": "object",
-      "properties": {
-        "m": {
-          "type": "string",
-          "const": "network.scan"
-        },
-        "p": {
-          "$ref": "#/$defs/DeviceTarget"
-        }
-      },
-      "required": [
-        "m",
-        "p"
-      ]
-    },
-    {
       "type": "object",
       "properties": {
         "m": {
@@ -205,6 +188,23 @@
         },
         "p": {
           "$ref": "#/$defs/ConnectionTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "description": "N0061: ask NetworkManager to rescan on one Wi-Fi device; the reply follows the scan.",
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "network.scan"
+        },
+        "p": {
+          "$ref": "#/$defs/DeviceTarget"
         }
       },
       "required": [
