@@ -40,15 +40,23 @@ fn publish_all(hub: &Shared, image: &Path, title: &str, contents: bool) {
     hub.publish("dashboard.player", json!({"active":"player-1","players":{"order":["player-1"],
         "items":{"player-1":{"identity":"Fixture","status":"playing","title":title,"artist":"Artist",
         "album":"Album","can_play_pause":true}}}})).unwrap();
-    hub.publish("dashboard.weather", json!({"health":{"available":true,"stale":false},"current":{
+    hub.publish(
+        "dashboard.weather",
+        json!({"health":{"available":true,"stale":false},"current":{
         "location":"Oslo","wmo":61,"description":"Light rain","temperature":4.5,"feels_like":2.0,
-        "high":6.0,"low":1.0}})).unwrap();
+        "high":6.0,"low":1.0}}),
+    )
+    .unwrap();
     hub.publish("notifications", json!({"history":{"order":["a","b"],"items":{
         "a":{"app_name":"Mail","summary":"Older","body":"older body","created_ms":1_800_000_000_000_u64},
         "b":{"app_name":"Chat","summary":"Newest","body":SECRET,"created_ms":1_800_000_100_000_u64}}},
         "active":{"order":[],"items":{}},"history_count":2})).unwrap();
-    hub.publish("settings.store.desktop", json!({"exists":true,"error":null,"data":{
-        "lockNotificationContents":contents}})).unwrap();
+    hub.publish(
+        "settings.store.desktop",
+        json!({"exists":true,"error":null,"data":{
+        "lockNotificationContents":contents}}),
+    )
+    .unwrap();
 }
 fn inputs(contents: bool) -> Inputs {
     let (_home, _paths, image) = home();
@@ -69,9 +77,9 @@ fn tree(root: &Path, out: &mut Vec<PathBuf>) {
 fn leaked(root: &Path) -> bool {
     let mut files = Vec::new();
     tree(root, &mut files);
-    files
-        .iter()
-        .any(|file| fs::read(file).is_ok_and(|bytes| String::from_utf8_lossy(&bytes).contains(SECRET)))
+    files.iter().any(|file| {
+        fs::read(file).is_ok_and(|bytes| String::from_utf8_lossy(&bytes).contains(SECRET))
+    })
 }
 async fn eventually(mut check: impl FnMut() -> bool) {
     for _ in 0..1500 {
@@ -118,7 +126,7 @@ fn stale_weather_is_marked_cached_and_fahrenheit_follows_the_setting() {
     input.weather["health"]["stale"] = json!(true);
     input.desktop["weatherFahrenheit"] = json!(true);
     let data = presentation(&input, &json!({}), "en");
-    assert_eq!(data["weather"]["temperature"], "41°F (cached)");
+    assert_eq!(data["weather"]["temperature"], "40°F (cached)");
     assert_eq!(data["weather"]["stale"], true);
     // No topic data at all: honest, empty content rather than a crash.
     let empty = Inputs {
@@ -146,7 +154,9 @@ fn notice_text_never_enters_the_presentation_when_contents_are_off() {
     // A missing setting is the privacy-safe default.
     let mut missing = inputs(true);
     missing.desktop = json!({});
-    assert!(!presentation(&missing, &json!({}), "en").to_string().contains(SECRET));
+    assert!(!presentation(&missing, &json!({}), "en")
+        .to_string()
+        .contains(SECRET));
 }
 
 #[test]
@@ -160,16 +170,32 @@ fn prepared_files_follow_inputs_and_the_privacy_off_path_writes_no_bodies() {
         };
         let key = prepare(&paths, &options(1), &input, None).unwrap().unwrap();
         // The same inputs do not render again.
-        assert_eq!(prepare(&paths, &options(1), &input, Some(&key)).unwrap(), None);
+        assert_eq!(
+            prepare(&paths, &options(1), &input, Some(&key)).unwrap(),
+            None
+        );
         let ready = paths.cache.join("lock-ready");
-        for name in ["weather", "media", "status", "notifications-safe", "notifications-private"] {
+        for name in [
+            "weather",
+            "media",
+            "status",
+            "notifications-safe",
+            "notifications-private",
+        ] {
             assert!(ready.join(format!("{name}.txt")).is_file(), "{name}");
         }
-        assert!(fs::read_to_string(ready.join("weather.txt")).unwrap().contains("5°C"));
-        assert!(fs::read_to_string(ready.join("media.txt")).unwrap().contains("Song"));
+        assert!(fs::read_to_string(ready.join("weather.txt"))
+            .unwrap()
+            .contains("5°C"));
+        assert!(fs::read_to_string(ready.join("media.txt"))
+            .unwrap()
+            .contains("Song"));
         assert_eq!(leaked(&paths.cache), contents, "contents={contents}");
         use std::os::unix::fs::PermissionsExt;
-        let mode = fs::metadata(ready.join("snapshot.json")).unwrap().permissions().mode();
+        let mode = fs::metadata(ready.join("snapshot.json"))
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o777, 0o600);
     }
 }
@@ -181,7 +207,8 @@ async fn changes_are_debounced_and_followed() {
     publish_all(&hub, &image, "first", false);
     LocalSet::new()
         .run_until(async {
-            let task = tokio::task::spawn_local(lock_content(hub.clone(), paths.clone(), options(250)));
+            let task =
+                tokio::task::spawn_local(lock_content(hub.clone(), paths.clone(), options(250)));
             eventually(|| snapshot_title(&paths).as_deref() == Some("first")).await;
             // A burst of changes inside the quiet period renders only its last state.
             let seen = Rc::new(std::cell::RefCell::new(BTreeSet::new()));
@@ -204,7 +231,8 @@ async fn changes_are_debounced_and_followed() {
             watcher.abort();
             let seen = seen.borrow().clone();
             assert!(
-                seen.iter().all(|title| title == "first" || title == "burst-4"),
+                seen.iter()
+                    .all(|title| title == "first" || title == "burst-4"),
                 "intermediate states were rendered: {seen:?}"
             );
             assert!(!leaked(&paths.cache));

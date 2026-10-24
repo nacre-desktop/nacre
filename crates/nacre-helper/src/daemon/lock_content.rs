@@ -5,12 +5,10 @@
 //! behaviour builds the same presentation from daemon topics and calls the helper's own
 //! `lock_prepare::prepare` in-process (no CLI), so the files, modes and privacy rules are the
 //! helper's. Part of the N0039 `behaviours` bundle: QML stands down through `behavioursHeld`.
-use super::{
-    behaviours::changed,
-    hub::Shared,
-    menu,
+use super::{behaviours::changed, hub::Shared, menu};
+use crate::{
+    image_text::FontBook, lock_dashboard, lock_info::Info, lock_prepare, paths::Paths, Result,
 };
-use crate::{image_text::FontBook, lock_dashboard, lock_info::Info, lock_prepare, paths::Paths, Result};
 use chrono::{TimeZone, Utc};
 use serde_json::{json, Map, Value};
 use std::{path::PathBuf, time::Duration};
@@ -73,7 +71,7 @@ impl Inputs {
     }
 }
 
-fn ordered<'a>(entities: &'a Value) -> impl Iterator<Item = &'a Value> {
+fn ordered(entities: &Value) -> impl Iterator<Item = &Value> {
     entities["order"]
         .as_array()
         .into_iter()
@@ -115,7 +113,9 @@ fn weather_icon(wmo: Option<u64>) -> &'static str {
 fn file_url(path: &str) -> String {
     format!(
         "file://{}",
-        path.replace('%', "%25").replace('?', "%3F").replace('#', "%23")
+        path.replace('%', "%25")
+            .replace('?', "%3F")
+            .replace('#', "%23")
     )
 }
 fn fraction(used: Option<f64>, total: Option<f64>) -> Value {
@@ -131,7 +131,7 @@ fn presentation(inputs: &Inputs, messages: &Value, language: &str) -> Value {
     let desktop = &inputs.desktop;
     let flag = |key: &str, default: bool| desktop[key].as_bool().unwrap_or(default);
     let contents = flag("lockNotificationContents", false);
-    let tr = |id: &str, fallback: &str, args: Value| {
+    let say = |id: &str, fallback: &str, args: Value| {
         nacre_i18n::translate(messages, language, id, fallback, &args)
     };
     let current = &inputs.wallpaper["current"];
@@ -146,21 +146,21 @@ fn presentation(inputs: &Inputs, messages: &Value, language: &str) -> Value {
         "location": reading["location"].as_str().unwrap_or(""),
         "icon": if description.is_empty() { "cloud_off" } else { weather_icon(reading["wmo"].as_u64()) },
         "detail": degrees(&reading["feels_like"], fahrenheit).map_or(String::new(), |value0|
-            tr("ui.weather.detail.feels-like-value0", "Feels like {value0}", json!({"value0": value0}))),
+            say("ui.weather.detail.feels-like-value0", "Feels like {value0}", json!({"value0": value0}))),
         "range": match (degrees(&reading["high"], fahrenheit), degrees(&reading["low"], fahrenheit)) {
-            (Some(high), Some(low)) => tr("weather.high-low", "High {high} · Low {low}", json!({"high": high, "low": low})),
+            (Some(high), Some(low)) => say("weather.high-low", "High {high} · Low {low}", json!({"high": high, "low": low})),
             _ => String::new(),
         },
         "description": if description.is_empty() { String::new() } else {
-            tr(&format!("weather.condition.{}", slug(description)), description, Value::Null) },
+            say(&format!("weather.condition.{}", slug(description)), description, Value::Null) },
         "temperature": match temperature {
-            Some(text) if stale => tr("weather.cached-temperature", "{temperature} (cached)", json!({"temperature": text})),
+            Some(text) if stale => say("weather.cached-temperature", "{temperature} (cached)", json!({"temperature": text})),
             Some(text) => text,
             None => String::new(),
         },
         "stale": stale,
         "error": if reading.is_null() {
-            tr("ui.weather.error.weather-unavailable-try-again-or-set-a-city-in-settings",
+            say("ui.weather.error.weather-unavailable-try-again-or-set-a-city-in-settings",
                "Weather unavailable; try again or set a city in Settings.", Value::Null)
         } else { String::new() },
     });
@@ -179,9 +179,7 @@ fn presentation(inputs: &Inputs, messages: &Value, language: &str) -> Value {
 
     // Retained notices: kept history plus non-transient active ones, newest first, at most 64.
     let mut rows: Vec<&Value> = ordered(&inputs.notices["history"]).collect();
-    rows.extend(
-        ordered(&inputs.notices["active"]).filter(|row| row["transient"] != true),
-    );
+    rows.extend(ordered(&inputs.notices["active"]).filter(|row| row["transient"] != true));
     rows.sort_by_key(|row| std::cmp::Reverse(row["created_ms"].as_u64().unwrap_or(0)));
     let notifications: Vec<Value> = rows
         .iter()
@@ -202,7 +200,9 @@ fn presentation(inputs: &Inputs, messages: &Value, language: &str) -> Value {
         .collect();
     let count = inputs.notices["history_count"]
         .as_u64()
-        .map_or(notifications.len() as u64, |total| total.max(notifications.len() as u64));
+        .map_or(notifications.len() as u64, |total| {
+            total.max(notifications.len() as u64)
+        });
 
     let system = &inputs.system;
     let disk = ordered(&system["disks"])
@@ -257,7 +257,10 @@ fn prepare(
         context.fonts = FontBook::with_overrides(
             [
                 ("IBM Plex Sans".into(), fonts.join("FixtureSans.ttf")),
-                ("Material Symbols Rounded".into(), fonts.join("FixtureSymbols.ttf")),
+                (
+                    "Material Symbols Rounded".into(),
+                    fonts.join("FixtureSymbols.ttf"),
+                ),
             ]
             .into_iter()
             .collect(),
@@ -271,34 +274,33 @@ fn prepare(
 pub async fn lock_content(hub: Shared, paths: Paths, options: Options) -> Result<()> {
     let mut notices = hub.borrow().observe();
     let mut last: Option<String> = None;
-    let mut dirty = true;
     loop {
-        if dirty {
-            // Restart the quiet period on every relevant change.
-            while let Ok(result) =
-                tokio::time::timeout(options.debounce, changed(&mut notices, &TOPICS)).await
-            {
-                result?;
-            }
-            dirty = false;
-            let (inputs, work_paths, previous) = (Inputs::read(&hub), paths.clone(), last.clone());
-            let work_options = options.clone();
-            match tokio::task::spawn_blocking(move || prepare(&work_paths, &work_options, &inputs, previous.as_deref()))
-                .await
-            {
-                Ok(Ok(Some(key))) => last = Some(key),
-                Ok(Ok(None)) => {}
-                // Retry on the next change or tick; the previous prepared files stay in place.
-                Ok(Err(error)) => {
-                    last = None;
-                    tracing::warn!(%error, "Lock content could not be prepared");
-                }
-                Err(_) => return Err("Lock preparation task failed".into()),
-            }
+        // Restart the quiet period on every relevant change (the first pass is the startup run).
+        while let Ok(result) =
+            tokio::time::timeout(options.debounce, changed(&mut notices, &TOPICS)).await
+        {
+            result?;
         }
+        let (inputs, work_paths, previous) = (Inputs::read(&hub), paths.clone(), last.clone());
+        let work_options = options.clone();
+        match tokio::task::spawn_blocking(move || {
+            prepare(&work_paths, &work_options, &inputs, previous.as_deref())
+        })
+        .await
+        {
+            Ok(Ok(Some(key))) => last = Some(key),
+            Ok(Ok(None)) => {}
+            // Retry on the next change or tick; the previous prepared files stay in place.
+            Ok(Err(error)) => {
+                last = None;
+                tracing::warn!(%error, "Lock content could not be prepared");
+            }
+            Err(_) => return Err("Lock preparation task failed".into()),
+        }
+        // A change that arrived during the run is already queued and wakes this at once.
         tokio::select! {
-            result = changed(&mut notices, &TOPICS) => { result?; dirty = true; }
-            _ = tokio::time::sleep(options.tick) => dirty = true,
+            result = changed(&mut notices, &TOPICS) => result?,
+            _ = tokio::time::sleep(options.tick) => {}
         }
     }
 }
