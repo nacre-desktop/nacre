@@ -88,10 +88,11 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
 
 #[test]
 fn activation_revision_is_positive_and_safe() {
-    assert!(WallpaperActivate { revision: 1 }.validate().is_ok());
-    assert!(WallpaperActivate { revision: 0 }.validate().is_err());
+    assert!(WallpaperActivate { revision: 1, id: None }.validate().is_ok());
+    assert!(WallpaperActivate { revision: 0, id: None }.validate().is_err());
     assert!(WallpaperActivate {
-        revision: MAX_SAFE_INTEGER + 1
+        revision: MAX_SAFE_INTEGER + 1,
+        id: None,
     }
     .validate()
     .is_err());
@@ -102,6 +103,9 @@ fn activation_revision_is_positive_and_safe() {
         "protocol/schema/wallpaper-activate.json",
         "protocol/luau/wallpaper-active.d.luau",
         "protocol/fixtures/wallpaper-active.jsonl",
+        "protocol/schema/wallpaper-catalogue.json",
+        "protocol/luau/wallpaper-catalogue.d.luau",
+        "protocol/fixtures/wallpaper-catalogue.jsonl",
     ] {
         assert!(
             generated.contains_key(path),

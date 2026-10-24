@@ -327,12 +327,13 @@ pub async fn outputs(
 }
 
 pub fn methods() -> BTreeMap<String, Method> {
+    use nacre_protocol::wallpaper::WallpaperCatalogue;
     BTreeMap::from([(
         "wallpaper.activate".into(),
         Method {
             v: 1,
             class: Capability::Desktop,
-            timeout: 1000,
+            timeout: 30_000,
             params: serde_json::from_str(include_str!(
                 "../../../../protocol/schema/wallpaper-activate.json"
             ))
@@ -342,10 +343,23 @@ pub fn methods() -> BTreeMap<String, Method> {
             ))
             .expect("wallpaper result schema"),
         },
+    ), (
+        "wallpaper.catalogue".into(),
+        Method {
+            v: 1,
+            class: Capability::Desktop,
+            timeout: 30_000,
+            params: serde_json::json!({"type":"object","properties":{},"additionalProperties":false}),
+            result: serde_json::to_value(schemars::schema_for!(WallpaperCatalogue))
+                .expect("wallpaper catalogue schema"),
+        },
     )])
 }
 
-pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
+fn activation_state(
+    hub: &Shared,
+    params: Value,
+) -> std::result::Result<(WallpaperActivate, WallpaperActive), Failure> {
     let request: WallpaperActivate = serde_json::from_value(params)
         .map_err(|_| failure(ErrorCode::Validation, "Invalid wallpaper activation", false))?;
     request.validate()?;
@@ -354,7 +368,8 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
         .snapshot(TOPIC)
         .and_then(|v| serde_json::from_value(v).ok())
         .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-    if !state.available || state.stale {
+    let selecting = request.id.is_some();
+    if state.stale || (!state.available && !(selecting && state.current.is_none())) {
         return Err(failure(
             ErrorCode::Unavailable,
             "Wallpaper is unavailable",
@@ -368,7 +383,153 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
             true,
         ));
     }
+    Ok((request, state))
+}
+
+fn select_media(engine: &Path, id: &str) -> bool {
+    let Ok(output) = crate::process::run_bytes(
+        "nice",
+        &[
+            "-n".into(),
+            "10".into(),
+            engine.to_string_lossy().into_owned(),
+            "wallpaper-media".into(),
+            "select".into(),
+            id.into(),
+        ],
+        None,
+        std::time::Duration::from_secs(15),
+    ) else {
+        return false;
+    };
+    output.status.success()
+        && String::from_utf8_lossy(&output.stdout)
+            .lines()
+            .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+            .any(|entry| entry["error"].is_null() && entry["path"] == id)
+}
+
+pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
+    let (request, state) = activation_state(&hub, params)?;
+    if request.id.is_some() {
+        return Err(failure(ErrorCode::Validation, "Catalogue selection requires async dispatch", false));
+    }
     Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"))
+}
+
+pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
+    let (request, state) = activation_state(&hub, params)?;
+    if let Some(id) = request.id {
+        let paths = crate::paths::Paths::environment()
+            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        let catalogue = catalogue(&hub).await?;
+        if !catalogue.entries.iter().any(|entry| entry.id == id) {
+            return Err(failure(ErrorCode::Validation, "Unknown wallpaper catalogue id", false));
+        }
+        let latest: WallpaperActive = hub.borrow().snapshot(TOPIC)
+            .and_then(|value| serde_json::from_value(value).ok())
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        if latest.stale
+            || (!latest.available && latest.current.is_some())
+            || latest.revision != request.revision
+        {
+            return Err(failure(ErrorCode::StaleRevision, "Wallpaper changed; refresh active state", true));
+        }
+        let engine = std::env::current_exe()
+            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        let id_for_child = id.clone();
+        let selected = crate::process::offload(move || select_media(&engine, &id_for_child))
+        .await
+        .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper selection failed", true))?
+        ;
+        if !selected {
+            return Err(failure(ErrorCode::Unavailable, "Wallpaper selection failed", true));
+        }
+        Producer::default()
+            .refresh(&hub, &paths)
+            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper selection failed", true))?;
+        let selected_state: WallpaperActive = hub
+            .borrow()
+            .snapshot(TOPIC)
+            .and_then(|v| serde_json::from_value(v).ok())
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        return selected_state.current
+            .map(|current| serde_json::to_value(current).expect("finite wallpaper pair"))
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true));
+    }
+    Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"))
+}
+
+pub async fn catalogue(hub: &Shared) -> std::result::Result<nacre_protocol::wallpaper::WallpaperCatalogue, Failure> {
+    use nacre_protocol::wallpaper::{WallpaperCatalogue, WallpaperCatalogueEntry, WallpaperKind};
+    let paths = crate::paths::Paths::environment()
+        .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    let engine = std::env::current_exe()
+        .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    let output = crate::process::offload(move || {
+        crate::process::run_bytes(
+            "nice",
+            &[
+                "-n".into(),
+                "10".into(),
+                engine.to_string_lossy().into_owned(),
+                "wallpaper-media".into(),
+                "catalog".into(),
+            ],
+            None,
+            std::time::Duration::from_secs(12),
+        )
+    })
+    .await
+    .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?
+    .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    if !output.status.success() || output.stdout.len() > 8 * 1024 * 1024 {
+        return Err(failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true));
+    }
+    let raw: Value = serde_json::from_slice(&output.stdout)
+        .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    let rows = raw["entries"].as_array()
+        .filter(|rows| rows.len() <= 2048)
+        .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true))?;
+    let active: Option<WallpaperActive> = hub.borrow().snapshot(TOPIC)
+        .and_then(|value| serde_json::from_value(value).ok())
+        ;
+    let current = active.and_then(|state| state.current);
+    let cache = paths.cache.join("wallpaper-media");
+    let cache = std::fs::canonicalize(&cache).unwrap_or(cache);
+    let mut entries = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Some(id) = row["path"].as_str().filter(|s| !s.is_empty() && s.len() <= 4096) else { continue };
+        let title = row["name"].as_str().unwrap_or("");
+        let poster = row["poster"].as_str().unwrap_or("");
+        let thumb = row["thumbnail"].as_str().unwrap_or("");
+        let thumbnail = std::fs::canonicalize(thumb).ok().filter(|path| {
+            path.starts_with(&cache)
+                && std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.len() <= 256 * 1024)
+        }).map(|path| path.to_string_lossy().into_owned()).unwrap_or_default();
+        let dynamic = row["dynamic"] == true;
+        let animated = row["animated"] == true;
+        let kind = if dynamic && !animated { WallpaperKind::Video } else { WallpaperKind::Image };
+        let is_active = current.as_ref().is_some_and(|wallpaper| {
+            wallpaper.path == poster || wallpaper.motion.as_ref().is_some_and(|motion| motion.path == id)
+        });
+        let mut bounded_title = String::new();
+        for character in title.chars() {
+            if bounded_title.len() + character.len_utf8() > 512 { break; }
+            bounded_title.push(character);
+        }
+        entries.push(WallpaperCatalogueEntry {
+            id: id.into(), kind,
+            title: bounded_title,
+            thumbnail,
+            active: is_active,
+        });
+    }
+    let catalogue = WallpaperCatalogue { entries };
+    catalogue
+        .validate()
+        .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is invalid", true))?;
+    Ok(catalogue)
 }
 
 #[cfg(test)]
@@ -404,6 +565,25 @@ mod tests {
         )?;
         initial(&hub)?;
         Ok((home, paths, hub))
+    }
+
+    #[test]
+    fn selection_invokes_existing_media_selector_and_requires_matching_source() -> Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+        let directory = tempfile::tempdir()?;
+        let engine = directory.path().join("fake-engine");
+        fs::write(
+            &engine,
+            "#!/bin/sh\n[ \"$1\" = wallpaper-media ] && [ \"$2\" = select ] || exit 2\nprintf '{\"error\":null,\"path\":\"%s\"}\\n' \"$3\"\n",
+        )?;
+        fs::set_permissions(&engine, fs::Permissions::from_mode(0o700))?;
+        assert!(select_media(&engine, "/pictures/lake.png"));
+        fs::write(
+            &engine,
+            "#!/bin/sh\nprintf '{\"error\":null,\"path\":\"/pictures/other.png\"}\\n'\n",
+        )?;
+        assert!(!select_media(&engine, "/pictures/lake.png"));
+        Ok(())
     }
     #[test]
     fn revisions_pair_palette_output_hotplug_stale_recovery_and_activation() -> Result<()> {

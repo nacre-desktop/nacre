@@ -104,7 +104,13 @@ async fn dispatch(
             super::dashboard_extras::dispatch(hub, method, params).await
         }
         "wallpaper.activate" if !hub.borrow().safe => {
-            super::active_wallpaper::activate(hub, params)
+            super::active_wallpaper::activate_request(hub, params).await
+        }
+        "wallpaper.catalogue" if !hub.borrow().safe => {
+            super::active_wallpaper::catalogue(&hub).await
+                .and_then(|catalogue| serde_json::to_value(catalogue).map_err(|_| {
+                    failure(ErrorCode::Internal, "Wallpaper catalogue encoding failed", false)
+                }))
         }
         method @ ("workspace.activate" | "workspace.scroll" | "window.focus") => {
             super::shell_actions::compositor(hub, method, params).await

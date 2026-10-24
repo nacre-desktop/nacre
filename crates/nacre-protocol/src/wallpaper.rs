@@ -191,12 +191,20 @@ pub enum PaletteMode {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperActivate {
-    #[schemars(range(min = 1, max = 9007199254740991_u64))]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub revision: u64,
+    /// Optional catalogue source id. When present the daemon selects this item,
+    /// after checking the active revision and that the id is in the catalogue.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 4096))]
+    pub id: Option<String>,
 }
 impl WallpaperActivate {
     pub fn validate(&self) -> Result<(), Failure> {
-        if self.revision == 0 || self.revision > MAX_SAFE_INTEGER {
+        if (self.revision == 0 && self.id.is_none())
+            || self.revision > MAX_SAFE_INTEGER
+            || self.id.as_ref().is_some_and(|id| !valid_path(id))
+        {
             Err(Failure::new(
                 ErrorCode::Validation,
                 "Invalid wallpaper revision",
@@ -205,6 +213,53 @@ impl WallpaperActivate {
         } else {
             Ok(())
         }
+    }
+}
+
+/// Lease-only wallpaper picker catalogue. Thumbnail paths refer to the helper's
+/// bounded cache and are empty when a cached thumbnail is not available.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperCatalogue {
+    #[schemars(length(max = 2048))]
+    pub entries: Vec<WallpaperCatalogueEntry>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum WallpaperKind {
+    Image,
+    Video,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperCatalogueEntry {
+    #[schemars(length(min = 1, max = 4096))]
+    pub id: String,
+    pub kind: WallpaperKind,
+    #[schemars(length(max = 512))]
+    pub title: String,
+    /// JPEG, at most 640x400, 256 KiB, in `$XDG_CACHE_HOME/nacre/wallpaper-media/`.
+    #[schemars(length(max = 4096))]
+    pub thumbnail: String,
+    pub active: bool,
+}
+impl WallpaperCatalogue {
+    pub fn validate(&self) -> Result<(), Failure> {
+        if self.entries.len() > 2048
+            || self.entries.iter().any(|entry| {
+                !valid_path(&entry.id)
+                    || entry.title.len() > 512
+                    || entry.thumbnail.len() > 4096
+                    || (!entry.thumbnail.is_empty() && !valid_path(&entry.thumbnail))
+            })
+        {
+            return Err(Failure::new(
+                ErrorCode::Validation,
+                "Invalid wallpaper catalogue",
+                false,
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -317,5 +372,37 @@ mod tests {
             .generations
             .insert("0".repeat(64), MAX_SAFE_INTEGER + 1);
         assert!(state.validate().is_err());
+    }
+
+    #[test]
+    fn catalogue_is_bounded_and_accepts_only_local_absolute_ids_and_thumbnails() {
+        let good = WallpaperCatalogue {
+            entries: vec![WallpaperCatalogueEntry {
+                id: "/pictures/lake.png".into(),
+                kind: WallpaperKind::Image,
+                title: "Lake".into(),
+                thumbnail: "/cache/wallpaper-media/lake.jpg".into(),
+                active: true,
+            }],
+        };
+        assert!(good.validate().is_ok());
+        let mut bad = good.clone();
+        bad.entries[0].id = "https://example.invalid/image".into();
+        assert!(bad.validate().is_err());
+        let mut bad = good;
+        bad.entries[0].thumbnail = "/cache/../private.jpg".into();
+        assert!(bad.validate().is_err());
+    }
+
+    #[test]
+    fn selection_is_additive_and_revision_zero_is_only_for_initial_selection() {
+        let legacy: WallpaperActivate = serde_json::from_value(serde_json::json!({"revision":1})).unwrap();
+        assert!(legacy.validate().is_ok());
+        let selection: WallpaperActivate = serde_json::from_value(serde_json::json!({
+            "revision":0,"id":"/pictures/lake.png"
+        })).unwrap();
+        assert!(selection.validate().is_ok());
+        let invalid: WallpaperActivate = serde_json::from_value(serde_json::json!({"revision":0})).unwrap();
+        assert!(invalid.validate().is_err());
     }
 }
