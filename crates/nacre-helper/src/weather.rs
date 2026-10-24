@@ -71,13 +71,26 @@ pub fn url(base: &str, query: &[(&str, &str)]) -> String {
 }
 fn fetch(url: &str) -> Result<Value> {
     require_https(url)?;
-    let agent = ureq::Agent::config_builder()
-        .timeout_global(Some(Duration::from_secs(8)))
-        .https_only(true)
-        .build()
-        .new_agent();
+    fetch_using(url, true, Duration::from_secs(8))
+}
+// Only the tests call this with a loopback HTTP endpoint. No environment override or
+// insecure endpoint is accepted by the standalone/daemon production entry point.
+fn fetch_using(url: &str, https: bool, timeout: Duration) -> Result<Value> {
+    #[cfg(not(test))]
+    require_https(url)?;
+    let config = ureq::Agent::config_builder()
+        .timeout_global(Some(timeout))
+        .https_only(https);
+    let agent = if https {
+        config.build()
+    } else {
+        config.max_redirects(0).build()
+    }
+    .new_agent();
     let mut response = agent.get(url).header("User-Agent", "Nacre/1.0").call()?;
-    if response.get_uri().scheme_str() != Some("https") {
+    if response.status().is_redirection()
+        || (https && response.get_uri().scheme_str() != Some("https"))
+    {
         return Err("HTTPS redirect required".into());
     }
     let bytes = response
@@ -188,22 +201,55 @@ fn stale(previous: Value) -> Value {
     }
     value
 }
-fn refresh(paths: &Paths) -> Value {
-    let path = cache(paths);
-    let previous = fs::read_to_string(&path)
+pub fn cached(paths: &Paths) -> Value {
+    fs::read_to_string(cache(paths))
         .ok()
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-        .unwrap_or(json!({}));
+        .filter(Value::is_object)
+        .unwrap_or(json!({}))
+}
+fn cache_lock(paths: &Paths) -> Result<Option<nix::fcntl::Flock<fs::File>>> {
+    fs::create_dir_all(&paths.cache)?;
+    fs::set_permissions(&paths.cache, fs::Permissions::from_mode(0o700))?;
+    let file = fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(paths.cache.join("weather.lock"))?;
+    file.set_permissions(fs::Permissions::from_mode(0o600))?;
+    match nix::fcntl::Flock::lock(file, nix::fcntl::FlockArg::LockExclusiveNonblock) {
+        Ok(guard) => Ok(Some(guard)),
+        Err((_, nix::errno::Errno::EWOULDBLOCK)) => Ok(None),
+        Err((_, error)) => Err(error.into()),
+    }
+}
+pub fn refresh(paths: &Paths, settings: &Value) -> Value {
+    refresh_with(paths, settings, fetch)
+}
+
+fn refresh_with(
+    paths: &Paths,
+    settings: &Value,
+    mut fetch: impl FnMut(&str) -> Result<Value>,
+) -> Value {
+    let path = cache(paths);
+    let previous = cached(paths);
+    let mut location = settings["weatherLocation"]
+        .as_str()
+        .unwrap_or("")
+        .trim()
+        .to_owned();
+    if location.is_empty() && settings["weatherIpLookup"].as_bool() != Some(true) {
+        return stale(previous);
+    }
+    // QML can still invoke the standalone command: share the lane across processes too.
+    let _guard = match cache_lock(paths) {
+        Ok(Some(guard)) => guard,
+        _ => return stale(previous),
+    };
     let result = (|| -> Result<Value> {
-        let settings = fs::read_to_string(paths.config.join("desktop.json"))
-            .ok()
-            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
-            .unwrap_or(json!({}));
-        let mut location = settings["weatherLocation"]
-            .as_str()
-            .unwrap_or("")
-            .trim()
-            .to_owned();
         if location.is_empty() {
             location = fetch("https://ipinfo.io/json")?["city"]
                 .as_str()
@@ -284,7 +330,11 @@ pub fn run(args: &[String]) -> Result<i32> {
         return Ok(0);
     }
     let paths = Paths::environment()?;
-    let data = refresh(&paths);
+    let settings = fs::read_to_string(paths.config.join("desktop.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+        .unwrap_or(json!({}));
+    let data = refresh(&paths, &settings);
     println!("{}", serde_json::to_string(&data)?);
     Ok(0)
 }
@@ -345,5 +395,163 @@ mod tests {
     fn weather_endpoint_requires_https() {
         assert!(require_https("https://api.open-meteo.com/v1/forecast").is_ok());
         assert!(require_https("http://api.open-meteo.com/v1/forecast").is_err());
+    }
+}
+
+#[cfg(test)]
+mod network_tests {
+    use super::*;
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+    };
+
+    fn server(
+        body: Vec<u8>,
+        headers: &'static str,
+        delay: Duration,
+    ) -> (String, thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}/", listener.local_addr().unwrap());
+        let handle = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            let mut request = [0; 4096];
+            let _ = stream.read(&mut request);
+            thread::sleep(delay);
+            let _ = write!(
+                stream,
+                "HTTP/1.1 {headers}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            );
+            let _ = stream.write_all(&body);
+        });
+        (endpoint, handle)
+    }
+    fn fake(body: &[u8]) -> Result<Value> {
+        let (endpoint, handle) = server(body.to_vec(), "200 OK", Duration::ZERO);
+        let result = fetch_using(&endpoint, false, Duration::from_secs(2));
+        handle.join().unwrap();
+        result
+    }
+    #[test]
+    fn http_ok_timeout_oversize_redirect_and_bad_json() {
+        assert_eq!(fake(br#"{"ok":true}"#).unwrap()["ok"], true);
+        assert!(fake(b"not JSON").is_err());
+        let mut boundary = br#"{"ok":true}"#.to_vec();
+        boundary.resize(LIMIT as usize, b' ');
+        assert_eq!(fake(&boundary).unwrap()["ok"], true);
+        boundary.push(b' ');
+        let error = fake(&boundary).unwrap_err().to_string().to_lowercase();
+        assert!(
+            error.contains("limit") || error.contains("too large"),
+            "{error}"
+        );
+        let (endpoint, handle) = server(
+            Vec::new(),
+            "302 Found\r\nLocation: http://127.0.0.1:1/forbidden",
+            Duration::ZERO,
+        );
+        assert!(fetch_using(&endpoint, false, Duration::from_secs(2))
+            .unwrap_err()
+            .to_string()
+            .to_lowercase()
+            .contains("redirect"));
+        handle.join().unwrap();
+        let (endpoint, handle) = server(Vec::new(), "200 OK", Duration::from_millis(200));
+        let started = std::time::Instant::now();
+        assert!(fetch_using(&endpoint, false, Duration::from_millis(30)).is_err());
+        assert!(started.elapsed() < Duration::from_millis(150));
+        handle.join().unwrap();
+        assert!(fetch("http://127.0.0.1:1/").is_err());
+    }
+    fn forecast() -> Value {
+        json!({"timezone":"UTC","current":{"weather_code":0,"time":"2027-01-15T08:00","temperature_2m":12,"apparent_temperature":11,"is_day":1},"hourly":{"time":["2027-01-15T08:00"],"temperature_2m":[12],"precipitation_probability":[10],"weather_code":[0]},"daily":{"time":["2027-01-15"],"temperature_2m_min":[6],"temperature_2m_max":[14],"weather_code":[0],"precipitation_probability_max":[10],"sunrise":["07"],"sunset":["17"],"uv_index_max":[2]}})
+    }
+    #[test]
+    fn consent_city_resolution_cache_and_stale_failure_share_the_worker() {
+        let root = tempfile::tempdir().unwrap();
+        let paths = Paths::new(root.path());
+        fs::create_dir_all(&paths.cache).unwrap();
+        fs::write(cache(&paths), "null").unwrap();
+        assert!(
+            cached(&paths).is_object(),
+            "Malformed cache cannot break daemon startup"
+        );
+        for settings in [
+            json!({}),
+            json!({"weatherIpLookup":false}),
+            json!({"weatherIpLookup":"true"}),
+        ] {
+            let result = refresh_with(&paths, &settings, |_| {
+                panic!("Consent off must make zero requests")
+            });
+            assert_eq!(result["stale"], true);
+        }
+        assert!(
+            !paths.cache.join("weather.lock").exists(),
+            "Consent off cannot create coordination files"
+        );
+        let guard = cache_lock(&paths).unwrap().unwrap();
+        let busy = refresh_with(&paths, &json!({"weatherLocation":"Harbour"}), |_| {
+            panic!("Concurrent standalone/daemon fetch forbidden")
+        });
+        assert_eq!(busy["stale"], true);
+        drop(guard);
+        for consent in [false, true] {
+            let mut calls = Vec::new();
+            let data = refresh_with(
+                &paths,
+                &json!({"weatherLocation":"Harbour","weatherIpLookup":consent}),
+                |endpoint| {
+                    calls.push(endpoint.to_owned());
+                    let body = if endpoint.contains("geocoding") {
+                        json!({"results":[{"latitude":60,"longitude":5}]})
+                    } else if endpoint.contains("air-quality") {
+                        json!({"current":{"us_aqi":20}})
+                    } else {
+                        forecast()
+                    };
+                    fake(serde_json::to_string(&body).unwrap().as_bytes())
+                },
+            );
+            assert!(
+                !calls.iter().any(|s| s.contains("ipinfo")),
+                "A city always bypasses IP lookup"
+            );
+            assert_eq!(data["stale"], false);
+            assert_eq!(data["aqi"], 20.0);
+            assert_eq!(data["latitude"], 60.0);
+            let cached: Value = serde_json::from_slice(&fs::read(cache(&paths)).unwrap()).unwrap();
+            assert_eq!(cached, data);
+        }
+        let cached: Value = serde_json::from_slice(&fs::read(cache(&paths)).unwrap()).unwrap();
+        let stale = refresh_with(&paths, &json!({"weatherLocation":"Harbour"}), |_| {
+            Err("fake timeout".into())
+        });
+        assert_eq!(stale["checked"], cached["checked"]);
+        assert_eq!(stale["temperature"], cached["temperature"]);
+        assert_eq!(stale["stale"], true);
+        let mut calls = Vec::new();
+        let data = refresh_with(&paths, &json!({"weatherIpLookup":true}), |endpoint| {
+            calls.push(endpoint.to_owned());
+            Ok(if endpoint.contains("ipinfo") {
+                json!({"city":"Harbour"})
+            } else if endpoint.contains("air-quality") {
+                json!({})
+            } else {
+                forecast()
+            })
+        });
+        assert!(calls[0].contains("ipinfo"));
+        assert!(
+            !calls.iter().any(|s| s.contains("geocoding")),
+            "Same city reuses cached coordinates"
+        );
+        assert_eq!(data["stale"], false);
+        assert!(data["aqi"].is_null(), "AQI is optional");
     }
 }

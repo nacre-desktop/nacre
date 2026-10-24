@@ -26,6 +26,7 @@
   "lockNotificationContents": false,
   "weatherLocation": "",
   "weatherFahrenheit": false,
+  "weatherIpLookup": false,
   "interfaceFont": "",
   "language": "system",
   "frameTopEnabled": true,

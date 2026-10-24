@@ -81,7 +81,6 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
         let mut paused = watch_session;
         let mut attempted: Option<Location> = None;
         let mut pending: Option<LocalBoxFuture<'static, Result<fetch::Photo>>> = None;
-        let mut locating: Option<LocalBoxFuture<'static, Result<Option<Location>>>> = None;
         let mut current = None;
         let mut timer = tokio::time::interval(Duration::from_secs(1));
         timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -91,15 +90,6 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                 result = interest.changed() => {result?; if !*interest.borrow() {break;}},
                 result = notices.recv() => {let _ = result;},
                 state = async {session.as_mut().expect("session").next().await}, if session.is_some() => {paused = state?;},
-                result = async {locating.as_mut().expect("location").await}, if locating.is_some() => {
-                    locating = None;
-                    let location = result?;
-                    if location != current {
-                        pending = None;
-                        attempted = None;
-                        current = location;
-                    }
-                },
                 result = async {pending.as_mut().expect("pending").await}, if pending.is_some() => {
                     pending = None;
                     if enabled(&hub) && !paused {
@@ -111,17 +101,18 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                         }
                     }
                 },
-                _ = timer.tick() => {
-                    if locating.is_none() && enabled(&hub) && !paused {
-                        locating = Some(Box::pin(fetch::location(paths.clone())));
-                    }
-                },
+                _ = timer.tick() => {},
+            }
+            let location = super::weather::location(&hub);
+            if location != current {
+                pending = None;
+                attempted = None;
+                current = location;
             }
             let consent = enabled(&hub);
             if !consent || paused {
                 // Dropping the future drops/kills its curl child. No completion can publish.
                 pending = None;
-                locating = None;
                 attempted = None;
                 current = None;
                 publish(
@@ -190,11 +181,6 @@ mod tests {
             .run_until(async {
                 let home = tempfile::tempdir()?;
                 let paths = Paths::new(home.path());
-                std::fs::create_dir_all(&paths.cache)?;
-                std::fs::write(
-                    paths.cache.join("weather.json"),
-                    br#"{"location":"Harbour","latitude":60,"longitude":5}"#,
-                )?;
                 let hub = super::super::hub::Hub::new(
                     "photo-test".into(),
                     false,
@@ -202,6 +188,10 @@ mod tests {
                 )
                 .shared();
                 initial(&hub)?;
+                hub.borrow_mut().publish(
+                    super::super::weather::TOPIC,
+                    json!({"current":{"location":"Harbour","latitude":60,"longitude":5}}),
+                )?;
                 consent(&hub, false);
                 let calls = Rc::new(Cell::new(0));
                 let cancelled = Rc::new(Cell::new(0));

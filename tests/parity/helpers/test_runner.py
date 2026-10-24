@@ -210,6 +210,23 @@ class RunnerTests(unittest.TestCase):
             )
         )
 
+    def test_weather_ip_consent_default_never_erases_enabled_difference(self):
+        case = {"helper": "desktop-settings"}
+        old = {"stdout": {"data": {}}}
+        new = {"stdout": {"data": {"weatherIpLookup": False}}}
+        self.assertEqual(
+            runner.compatible_files(old, case), runner.compatible_files(new, case)
+        )
+        new["stdout"]["data"]["weatherIpLookup"] = True
+        self.assertNotEqual(
+            runner.compatible_files(old, case), runner.compatible_files(new, case)
+        )
+        for invalid in (None, 0, "true"):
+            new["stdout"]["data"]["weatherIpLookup"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                runner.compatible_files(new, case)
+        self.assertEqual(old, {"stdout": {"data": {}}})
+
     def test_automatic_wallpaper_default_never_erases_enabled_difference(self):
         old = {
             "stdout": {

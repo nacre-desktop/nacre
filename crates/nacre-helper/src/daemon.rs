@@ -48,6 +48,7 @@ pub mod time_settings;
 pub mod tools_launch;
 pub mod updates;
 pub mod wallpaper;
+pub mod weather;
 pub mod weather_photo;
 pub mod widths;
 pub mod workers;
@@ -204,6 +205,15 @@ async fn serve(
         updates::initial(&hub)?;
         let updates_hub = hub.clone();
         Some(tokio::task::spawn_local(updates::run(updates_hub)))
+    } else {
+        None
+    };
+    let weather_service = if !counter.safe {
+        weather::initial(&hub)?;
+        Some(tokio::task::spawn_local(weather::run(
+            hub.clone(),
+            paths.clone(),
+        )))
     } else {
         None
     };
@@ -507,6 +517,10 @@ async fn serve(
                 tracing::error!("Width supervisor failed during shutdown");
             }
         }
+    }
+    if let Some(service) = weather_service {
+        service.abort();
+        let _ = service.await;
     }
     if let Some(service) = updates_service {
         service.abort();

@@ -3233,6 +3233,34 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         }));
         silent.push(stop);
     }
+    // N0057: a local HTTP proxy accepts HTTPS CONNECT and never replies. The real
+    // weather HTTP stack must hang off-thread, without making a real network request.
+    let proxy = std::net::TcpListener::bind("127.0.0.1:0")?;
+    let proxy_address = format!("http://{}", proxy.local_addr()?);
+    proxy.set_nonblocking(true)?;
+    let weather_started = Arc::new(AtomicBool::new(false));
+    let weather_seen = weather_started.clone();
+    let stop = Arc::new(AtomicBool::new(false));
+    let done = stop.clone();
+    held.push(thread::spawn(move || {
+        let mut streams = Vec::new();
+        while !done.load(Ordering::Relaxed) {
+            match proxy.accept() {
+                Ok((stream, _)) => {
+                    weather_seen.store(true, Ordering::Relaxed);
+                    streams.push(stream);
+                }
+                Err(_) => thread::sleep(Duration::from_millis(10)),
+            }
+        }
+    }));
+    silent.push(stop);
+    let config = home.path().join("config/nacre");
+    fs::create_dir_all(&config)?;
+    fs::write(
+        config.join("desktop.json"),
+        br#"{"weatherLocation":"Fixture city","weatherIpLookup":false}"#,
+    )?;
     let notify = home.path().join("notify.sock");
     let notifications = UnixDatagram::bind(&notify)?;
     notifications.set_read_timeout(Some(Duration::from_secs(2)))?;
@@ -3242,6 +3270,10 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     child
         .arg("daemon")
         .env("NOTIFY_SOCKET", &notify)
+        .env("HTTPS_PROXY", &proxy_address)
+        .env("https_proxy", &proxy_address)
+        .env("ALL_PROXY", &proxy_address)
+        .env("NO_PROXY", "")
         .env("PATH", &bin)
         .env(
             "DBUS_SESSION_BUS_ADDRESS",
@@ -3267,6 +3299,14 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     assert!(
         check_started.exists(),
         "The hanging update check must actually start"
+    );
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while !weather_started.load(Ordering::Relaxed) && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert!(
+        weather_started.load(Ordering::Relaxed),
+        "Hanging weather HTTP must actually start"
     );
     let value = status(home.path(), &source_path, &endpoint)?;
     assert_eq!(value["services"]["compositor"]["status"], "running");

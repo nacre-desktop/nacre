@@ -65,14 +65,13 @@ clears the published asset and drops the async request future, killing its owned
 curl child. A changed weather identity cancels the preceding attempt. No failed
 request is retried until a fresh activation or location change.
 
-The existing native weather worker owns city resolution and coordinates. Its
-bounded `weather.json` output is the current location input; the reserved
-`dashboard.weather` topic has no producer or coordinates at this revision. This
-source never performs its own geolocation or reads QML's private photo cache.
-It waits without network when the existing weather reading is absent/invalid.
-The worker output is sampled only while leased; location changes are observed
-within one second. Wire the eventual daemon weather producer to this same
-identity when N0019 completes; the standalone worker cache remains its contract.
+The existing native weather worker owns city resolution and coordinates. N0057
+now publishes them on `dashboard.weather`, and this source reads that identity
+from the in-process hub, including retained cached readings. It never performs
+its own geolocation or reads QML's private photo cache. It waits without network
+when the weather reading is absent/invalid. Location topic changes wake the
+leased photo source directly; the former once-per-second weather.json reads
+have been removed. See [N0057](0057-daemon-weather-producer.md).
 
 The clean cache is `$XDG_CACHE_HOME/nacre/daemon-weather-photo/` (absolute XDG
 root, otherwise `~/.cache/nacre/`): one image and one metadata record, plus bounded

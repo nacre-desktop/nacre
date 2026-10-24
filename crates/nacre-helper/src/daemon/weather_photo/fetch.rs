@@ -532,39 +532,6 @@ async fn load_at(
 pub async fn load(paths: Paths, location: Location) -> Result<Photo> {
     load_at(paths, location, CITY_API, INFO_API, None).await
 }
-pub async fn location(paths: Paths) -> Result<Option<Location>> {
-    crate::process::offload(move || -> Result<Option<Location>> {
-        let f = match super::super::active_wallpaper::private_file(
-            &paths.cache.join("weather.json"),
-            512000,
-        ) {
-            Ok(f) => f,
-            Err(_) => return Ok(None),
-        };
-        let mut b = Vec::new();
-        f.take(512001).read_to_end(&mut b)?;
-        if b.len() > 512000 {
-            return Ok(None);
-        }
-        let v: Value = match serde_json::from_slice(&b) {
-            Ok(v) => v,
-            Err(_) => return Ok(None),
-        };
-        let l = Location {
-            city: v["location"]
-                .as_str()
-                .unwrap_or("")
-                .trim()
-                .chars()
-                .take(100)
-                .collect(),
-            latitude: v["latitude"].as_f64().unwrap_or(f64::NAN),
-            longitude: v["longitude"].as_f64().unwrap_or(f64::NAN),
-        };
-        Ok(safe_location(&l).then_some(l))
-    })
-    .await?
-}
 
 #[cfg(test)]
 mod tests {

@@ -54,6 +54,11 @@ def canonical_desktop(data):
                 value = snapshot.pop(old)
                 for key in keys:
                     snapshot.setdefault(key, value)
+    # N0057: the new consent preference defaults off on both sides. Explicit
+    # values remain observable; never erase a mistakenly enabled lookup.
+    if "weatherIpLookup" in data and not isinstance(data["weatherIpLookup"], bool):
+        raise ValueError("Weather IP lookup consent must remain boolean")
+    data.setdefault("weatherIpLookup", False)
     data.setdefault("dashboardEnabled", True)
     data.setdefault("lipHoverDelay", 350)
     for key, value in {

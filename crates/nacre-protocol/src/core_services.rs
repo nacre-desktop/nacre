@@ -623,6 +623,13 @@ pub struct WeatherDay {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WeatherCurrent {
     pub location: String,
+    /// Resolved city coordinates, shared with the daemon photo source (N0057).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = -90.0, max = 90.0))]
+    pub latitude: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = -180.0, max = 180.0))]
+    pub longitude: Option<f64>,
     pub timezone: String,
     pub local_time: String,
     pub wmo: Option<u16>,
@@ -645,6 +652,9 @@ pub struct WeatherCurrent {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WeatherState {
     pub health: Health,
+    /// A refresh was accepted and is running off the readiness path.
+    #[serde(default)]
+    pub refreshing: bool,
     /// Unix seconds, matching the existing helper's checked field.
     #[schemars(range(min = 0.0, max = 9007199254740991.0))]
     pub checked: Option<f64>,
@@ -1023,7 +1033,11 @@ impl CoreSnapshot {
             Self::Weather(s) => {
                 s.checked.is_none_or(timestamp_seconds_valid)
                     && s.current.as_ref().is_none_or(|c| {
-                        c.hours.valid()
+                        c.latitude
+                            .is_none_or(|n| n.is_finite() && (-90.0..=90.0).contains(&n))
+                            && c.longitude
+                                .is_none_or(|n| n.is_finite() && (-180.0..=180.0).contains(&n))
+                            && c.hours.valid()
                             && c.days.valid()
                             && c.hours.items.len() <= 24
                             && c.days.items.len() <= 10

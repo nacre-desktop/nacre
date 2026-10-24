@@ -1661,6 +1661,11 @@
         "health": {
           "$ref": "#/$defs/Health"
         },
+        "refreshing": {
+          "description": "A refresh was accepted and is running off the readiness path.",
+          "type": "boolean",
+          "default": false
+        },
         "checked": {
           "description": "Unix seconds, matching the existing helper's checked field.",
           "type": [
@@ -1695,6 +1700,25 @@
       "properties": {
         "location": {
           "type": "string"
+        },
+        "latitude": {
+          "description": "Resolved city coordinates, shared with the daemon photo source (N0057).",
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": -90.0,
+          "maximum": 90.0
+        },
+        "longitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "double",
+          "minimum": -180.0,
+          "maximum": 180.0
         },
         "timezone": {
           "type": "string"

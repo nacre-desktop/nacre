@@ -359,6 +359,9 @@ impl Hub {
             if self.snapshot_ref(super::updates::TOPIC).is_some() {
                 methods.extend(super::updates::methods());
             }
+            if self.snapshot_ref(super::weather::TOPIC).is_some() {
+                methods.extend(super::weather::methods());
+            }
             methods.extend(super::tools_launch::available_methods(self));
             methods.extend(super::colors_app::available_methods(self));
             if self.snapshot_ref(super::brain::TOPIC).is_some() {
