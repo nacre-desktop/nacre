@@ -90,3 +90,16 @@ The mark lives in memory only (lost on daemon restart or NetworkManager owner ch
 - unavailable without NetworkManager (no methods, starting state), stale keep on a failed read, Welcome validation.
 - Protocol: `reserved_transcripts_replay...` now covers 14 topics / 26 calls; generated schemas, Luau types and
   `protocol/fixtures/core-vpn.jsonl` come from `cargo run -p nacre-protocol --example export`.
+
+## Validation
+
+- Full `desktop` job of `.github/workflows/check.yml` replicated in `ghcr.io/archlinux/archlinux:latest` on a remote build host
+  (12 CPUs, 24 GiB; exact head `e994f3ce`, rebased on `8b704fb1`): `cargo fmt --check`, `cargo clippy --all-targets -D warnings`,
+  `cargo build --examples`, `cargo test` (74 test binaries, all green; the five `vpn_*` daemon tests and the extended
+  `reserved_transcripts_replay_typed_calls_and_complete_snapshots` included), the minimal protocol consumer, the release helper,
+  helper sandbox integrity (29 tests), translation coverage and generation, `tools/check.py` (all suites) and the native English and
+  pseudo-language galleries. `cargo run -p nacre-protocol --example export -- --check` is current after the rebase.
+- Consumer evidence: Bead B0087 drives the topic and both calls against this daemon build and a fake NetworkManager on a private
+  bus in nested sessions beside the QML shell (see Bead `docs/specs/0087-vpn.md`).
+- Size: product code +411/-12 lines (`network.rs` +146, `controls.rs` +159, protocol types +85, `session.rs` +11, artifacts +11); tests
+  +579 (`vpn_tests.rs` after rustfmt, +2 in protocol); generated schemas, Luau types and `core-vpn.jsonl` are the exporter's output.
