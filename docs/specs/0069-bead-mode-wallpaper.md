@@ -1,7 +1,8 @@
 # N0069 — Wallpaper in the installed Bead mode
 
-Status: implementation and desktop video rehearsal complete; blocked on the
-real-systemd lifecycle rehearsal and its safety incident review. No live install.
+Status: Done — versioned installation, private video/pause/resume, full desktop
+CI and real-systemd lifecycle rehearsal passed. Lead application remains separate;
+no live install was performed.
 
 The N0054 installer copied only `nacre-shell` and `shell/`. Bead B0021/B0046
 already attach the wallpaper consumer when `--daemon-socket` is supplied, but
@@ -77,13 +78,34 @@ the 244-state pseudo gallery and 185-state wide-font gallery passed. The private
 container needed scoped Git safe-directory settings and CARGO_BUILD_JOBS=2 for
 nested fixture builds.
 
-The separate real-systemd crash-loop rehearsal did not run. Its private
-container initialization failed with cgroup/bootstrap errors; a later unmasked
-systemd boot started sysctl/udev setup units and was stopped. Possible host
-kernel effects are unverified because there is no captured pre-run baseline.
-No blind rollback was attempted; further probes were stopped pending incident
-review. Private incident evidence is retained with the CI report. This missing lifecycle check
-blocks acceptance and integration despite the green repository CI.
+The earlier real-systemd initialization attempts failed with cgroup/bootstrap
+errors. An unmasked container boot started sysctl/udev setup units and was stopped.
+Lead review on 2026-10-24 confirmed the host's own Arch sysctl configuration
+already sets the recorded values: no effective host change; incident closed.
+The continuation uses image-time unit masks, `container=docker`, read-only
+`/proc/sys` and `/sys`, and a private cgroup namespace with no host cgroup-root
+bind. Inspect output was saved before container removal.
+
+The safe continuation passed the real systemd user-manager fixture (exit 0):
+install → Bead switch → persisted restart → crash-loop QML fallback → rollback
+→ repeat. The renderer-child cleanup assertion passed. The first available host
+under HOST SELECTION was used because the preferred host had all four task slots
+occupied. The container was not privileged: only `SYS_ADMIN` was added to mount
+cgroup2 inside its private cgroup namespace. Docker's default read-only system
+paths remained intact, `/sys` was bound read-only without recursive host mounts,
+and no host cgroup root was bound. Before PID1, a guard verified the container
+marker, image masks, private namespace and read-only kernel paths. Critical
+masked units stayed inactive with zero start timestamps and no journal entries.
+The container, both owned image versions and remote task directory were removed.
+Raw before/after/stopped inspect JSON, mask states, boot guard and fixture output
+are retained in `.lead/safe-systemd-evidence/`; exact scripts and the mask list
+are in `.lead/safe-systemd-{run,probe}.sh` and
+`.lead/safe-systemd-context/`. No product code changed during this continuation.
+
+Follow-up ask (outside N0069): `.github/workflows/arch-packages.yml` starts a
+privileged systemd PID1 container with a host cgroup bind and no explicit masks
+or container marker. Review/harden that similar unmasked pattern separately;
+it is deliberately unchanged here.
 
 Private desktop rehearsal passed with matching Niri configuration, palette,
 video, 2880×1800 physical / 1920×1200 logical output and scale 1.5. Both arms
@@ -107,6 +129,27 @@ All sampled SwapPss values and both arm page-in deltas were zero. Renderer DRM
 accounting and the actual hardware decode mode were unavailable; VA-API was
 requested, not demonstrated. The higher visible-playback CPU cost is an existing
 renderer limitation, not a quality reduction or an optimization claim.
+
+### Separate finding for the next unit: decoder and presentation paths
+
+At Bead `c9a1032`, `crates/nacre-shell/src/wallpaper_motion.rs` launches
+`--hwdec=vaapi`. The renderer's `main.rs` maps it to libmpv `hwdec=vaapi-copy`
+(the default); `--hwdec=auto` maps to `auto-copy`, not `auto-safe`.
+`crates/nacre-shell/src/bin/bead-wallpaper-video/mpv.rs` passes that option to
+mpv, uses `vo=libmpv`, and creates a render context with `MPV_RENDER_PARAM_API_TYPE`
+`sw`, writing BGR0 frames into wl_shm. Hardware decoding can therefore coexist
+with CPU conversion/scaling/copy-back and software presentation. Failing hardware
+decoding falls back to software; the captured log lacks a `hwdec-current` mode,
+so actual VA-API decoding in the 51%-CPU run is not demonstrated.
+
+QML `NacreDesktopVideo.qml` uses Qt Multimedia `MediaPlayer` / `VideoOutput`
+without forcing a decoder or a `QT_FFMPEG_DECODING_HW_DEVICE_TYPES` value. The
+rehearsal log explicitly reports the FFmpeg backend (n9.0.2), H.264 input at
+1920×1080/60 fps, and QtQuick OpenGL rendering. OpenGL presentation does not
+prove hardware decoding; the selected FFmpeg hardware decoder is unreported.
+The 51.0% versus 5.5% CPU gap needs a separate decoder/presentation investigation
+with actual decoder telemetry on both sides. No renderer options or code are
+changed for that finding in N0069.
 
 The desktop had no libmpv. The rehearsal used private Arch mpv 1:0.41.0-6
 libraries and changed only a copied libmpv DT_NEEDED path from absolute

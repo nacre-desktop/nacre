@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 18 | [N0069 Bead wallpaper](0069-bead-mode-wallpaper.md) | Blocked; implementation validated | Versioned helpers and private video/pause/resume verified; full Arch desktop CI passed. Real-systemd lifecycle rehearsal incomplete; private probe safety incident requires review before integration. |
+| 18 | [N0069 Bead wallpaper](0069-bead-mode-wallpaper.md) | Done | Versioned helpers, private video/pause/resume, full Arch desktop CI and safely masked real-systemd lifecycle rehearsal passed. Earlier incident closed by lead: no effective host change. CPU/decoder-path finding and unmasked packaging-CI follow-up recorded; no renderer fix or live install. |
 | 1 | [N0002 F4 acceptance](0002-f4-whole-group-acceptance.md) | Done | Original8a accepted under owner Niri-debt/Hyprland<=12 rule; all10Hypr valid. Runtime integrated dfcedea7; checker/test-fixture fixes through 9b37c663, CI39402420054 SUCCESS (desktop + fresh-install). |
 | 2 | [N0009 installer handoff](0009-f4-switch-prerequisites.md) | Done | Source ab3bcae4, exact CI39431539570 SUCCESS (desktop + fresh-install); 459 shell-tool tests and 534 parity cases pass, frozen references unchanged. Cooperative destination handoff accepted; no live action. |
 | 3 | [N0014 F4 switch-lite](0014-f4-switch-lite.md) | Integrated; exact-head CI pending | `nacre f4 status/enable/disable/rollback` on main. Owner desktop needs the full source shell install to deploy daemon units, then a supervised enable. |
