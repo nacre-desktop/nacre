@@ -680,15 +680,27 @@ impl Engine {
                 "apps" => "apps",
                 "search" => "home",
                 "actions" => "actions",
+                "palette" => "palette",
                 _ => "home",
             }
             .into()
         });
-        let route = model::resolve(&route, self.loaded.context.rows());
+        let palette = request.mode == "palette" || route == "palette";
+        let route = if palette {
+            "palette".to_owned()
+        } else {
+            model::resolve(&route, self.loaded.context.rows())
+        };
         self.loaded.context.now = clock();
         let scoped = model::scope(&request.query);
-        let conversion = self.calculation_result(&scoped)?;
-        let rows = if let Some(result) = &conversion {
+        let conversion = if palette {
+            None
+        } else {
+            self.calculation_result(&scoped)?
+        };
+        let rows = if palette {
+            nacre_menu::palette::query(&self.loaded.context, &request.query)
+        } else if let Some(result) = &conversion {
             if result.ok {
                 let value = result
                     .value
@@ -1375,7 +1387,7 @@ async fn run_inner(
                 }).await? {
                     Ok(mut loaded)=>{
                         watches.add(loaded.directories.iter().cloned().chain(roots.iter().cloned()))?;
-                        loaded.context.snapshot=engine.loaded.context.snapshot.clone();loaded.context.library=engine.loaded.context.library.clone();loaded.context.workflows=engine.loaded.context.workflows.clone();loaded.context.compositor=engine.loaded.context.compositor.clone();
+                        loaded.context.snapshot=engine.loaded.context.snapshot.clone();loaded.context.library=engine.loaded.context.library.clone();loaded.context.workflows=engine.loaded.context.workflows.clone();loaded.context.compositor=engine.loaded.context.compositor.clone();loaded.context.palette_windows=engine.loaded.context.palette_windows.clone();
                         let changed = engine.loaded.fingerprint != loaded.fingerprint;
                         engine.replace(loaded)?;engine.prepare_queries().await?;hub.borrow_mut().publish("menu",engine.status())?;
                         if changed {
@@ -1946,7 +1958,15 @@ fn apply_preferences(engine: &mut Engine, result: &Value) -> std::result::Result
 // Only these compositor fields affect launcher results. Focus/geometry changes
 // must not rebuild the installed-app/software/font index on the next keypress.
 fn compositor_inputs(context: &mut Context, snapshot: &Value) {
-    let windows:Vec<_>=array(&snapshot["windowOrder"]).iter().filter_map(|id|id.as_str().and_then(|id|snapshot["windows"].get(id))).map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
+    let source_windows: Vec<_> = array(&snapshot["windowOrder"])
+        .iter()
+        .filter_map(|id| id.as_str().and_then(|id| snapshot["windows"].get(id)))
+        .collect();
+    context.palette_windows = source_windows
+        .iter()
+        .map(|row| json!({"windowId":row["id"],"title":row["title"],"workspace":{"id":row["workspace"]["id"]}}))
+        .collect();
+    let windows:Vec<_>=source_windows.iter().map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
     let next = json!({"windows":windows});
     if context.compositor != next {
         context.inputs_changed();
@@ -1959,6 +1979,9 @@ fn conversion_query(term: &str) -> bool {
         .any(|word| matches!(word, "to" | "in"))
 }
 fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, String)> {
+    if request.mode == "palette" || request.route.as_deref() == Some("palette") {
+        return None;
+    }
     let scope = model::scope(&request.query);
     let kind = scope["kind"].as_str().unwrap_or("all");
     let term = text::field(&scope, "text");
@@ -2228,7 +2251,12 @@ mod tests {
             json!({"id":"fixture","name":"Fixture app","comment":"Synthetic","genericName":"","icon":"fixture","categories":[],"keywords":[],"command":["fixture","$HOME;$(touch forbidden)"],"runInTerminal":false,"workingDirectory":""}),
         )];
         context.visible_apps = context.all_apps.clone();
+        context.legacy_actions = nacre_menu::browser::default_actions(&context);
         context.preferences = json!({"favorites":[],"hidden":[],"recent":[],"usage":{}});
+        context.palette_windows = json!([
+            {"windowId":"niri-window:1","title":"Editor fixture","workspace":{"id":"niri-workspace:2"}},
+            {"windowId":"niri-window:2","title":"Calculator fixture","workspace":{"id":"niri-workspace:3"}}
+        ]);
         Ok(Engine {
             loaded: Loaded {
                 context,
@@ -2512,6 +2540,171 @@ mod tests {
             result["items"].get("nacre-menu:apps").is_some(),
             "An application and group with the same raw ID must both survive"
         );
+        Ok(())
+    }
+    #[test]
+    fn palette_empty_and_matching_queries_keep_qml_order() -> Result<()> {
+        let mut engine = engine()?;
+        let empty = engine.query(serde_json::from_value(json!({
+            "query":"", "mode":"palette", "route":"palette"
+        }))?)?;
+        let names: Vec<_> = array(&empty["order"])
+            .iter()
+            .map(|id| {
+                empty["items"][id.as_str().unwrap()]["name"]
+                    .as_str()
+                    .unwrap()
+            })
+            .collect();
+        assert_eq!(
+            &names[..7],
+            [
+                "Open wallpaper picker",
+                "Calculator",
+                "Open Nacre Colors",
+                "Open Nacre Settings",
+                "Open Nacre AI",
+                "Open Nacre Brain",
+                "Open files"
+            ]
+        );
+        assert!(!names
+            .iter()
+            .any(|name| *name == "Search Nacre Brain" || *name == "Power menu"));
+        let selected = engine.activate(serde_json::from_value(json!({
+            "id":empty["order"][0],
+            "activation":empty["items"][empty["order"][0].as_str().unwrap()]["activation"],
+            "catalog_rev":engine.rev
+        }))?)?;
+        let selected: MenuUiActivate = serde_json::from_value(json!({
+            "row":selected["uiRow"], "catalog_rev":selected["catalog_rev"]
+        }))?;
+        selected.validate()?;
+        assert_eq!(selected.row.operation, "legacy-action");
+
+        let query = |engine: &mut Engine, text: &str| -> Result<Value> {
+            Ok(engine.query(serde_json::from_value(json!({
+                "query":text, "mode":"palette", "route":"palette"
+            }))?)?)
+        };
+        let actions = query(&mut engine, "calculator")?;
+        assert_eq!(array(&actions["order"]).len(), 2);
+        assert_eq!(
+            actions["items"][actions["order"][0].as_str().unwrap()]["name"],
+            "Calculator"
+        );
+        assert_eq!(
+            actions["items"][actions["order"][1].as_str().unwrap()]["kind"],
+            "window"
+        );
+        let settings = query(&mut engine, "settings")?;
+        let settings_names: Vec<_> = array(&settings["order"])
+            .iter()
+            .map(|id| {
+                settings["items"][id.as_str().unwrap()]["name"]
+                    .as_str()
+                    .unwrap()
+            })
+            .collect();
+        assert_eq!(
+            settings_names,
+            [
+                "Open Nacre Settings",
+                "Wi-Fi settings",
+                "Bluetooth settings",
+                "Sound settings"
+            ]
+        );
+
+        let windows = query(&mut engine, "> editor")?;
+        assert_eq!(array(&windows["order"]).len(), 1);
+        let window = &windows["items"][windows["order"][0].as_str().unwrap()];
+        assert_eq!(window["name"], "Editor fixture");
+        assert_eq!(window["description"], "Window · workspace niri-workspace:2");
+        let activated = engine.activate(serde_json::from_value(json!({
+            "id":windows["order"][0],
+            "activation":window["activation"],
+            "catalog_rev":engine.rev
+        }))?)?;
+        let selected: MenuUiActivate = serde_json::from_value(json!({
+            "row":activated["uiRow"], "catalog_rev":activated["catalog_rev"]
+        }))?;
+        selected.validate()?;
+        assert_eq!(selected.row.operation, "focus");
+        Ok(())
+    }
+    #[test]
+    fn palette_puts_windows_before_at_most_eight_fuzzy_apps() -> Result<()> {
+        let mut engine = engine()?;
+        engine.loaded.context.visible_apps = (0..12)
+            .map(|index| {
+                std::sync::Arc::new(json!({
+                    "id":format!("editor-{index}.desktop"), "name":format!("Editor {index}"),
+                    "comment":"Editor application", "genericName":"", "keywords":[],
+                    "icon":"editor", "categories":[], "command":["editor"]
+                }))
+            })
+            .collect();
+        let result = engine.query(serde_json::from_value(json!({
+            "query":"editor", "mode":"palette", "route":"palette"
+        }))?)?;
+        let order = array(&result["order"]);
+        assert_eq!(order.len(), 9);
+        let first = &result["items"][order[0].as_str().unwrap()];
+        assert_eq!(first["kind"], "window");
+        assert_eq!(first["name"], "Editor fixture");
+        for id in &order[1..] {
+            let item = &result["items"][id.as_str().unwrap()];
+            assert_eq!(item["kind"], "app");
+            assert_eq!(item["description"], "Application");
+            assert_eq!(item["icon"], "apps");
+        }
+        let names: Vec<_> = order[1..]
+            .iter()
+            .map(|id| {
+                result["items"][id.as_str().unwrap()]["name"]
+                    .as_str()
+                    .unwrap()
+            })
+            .collect();
+        assert_eq!(
+            names,
+            [
+                "Editor 0", "Editor 1", "Editor 2", "Editor 3", "Editor 4", "Editor 5", "Editor 6",
+                "Editor 7"
+            ]
+        );
+        Ok(())
+    }
+    #[test]
+    fn palette_brain_prefix_returns_only_the_literal_brain_action() -> Result<()> {
+        let mut engine = engine()?;
+        for (query, value) in [
+            ("brain: project notes", "project notes"),
+            ("> brain: hello", "n: hello"),
+        ] {
+            let result = engine.query(serde_json::from_value(json!({
+                "query":query, "mode":"palette", "route":"palette"
+            }))?)?;
+            assert_eq!(array(&result["order"]).len(), 1);
+            let row = &result["items"][result["order"][0].as_str().unwrap()];
+            assert_eq!(row["name"], format!("Search brain for {value}"));
+            let activated = engine.activate(serde_json::from_value(json!({
+                "id":result["order"][0],
+                "activation":row["activation"],
+                "catalog_rev":engine.rev
+            }))?)?;
+            let selected: MenuUiActivate = serde_json::from_value(json!({
+                "row":activated["uiRow"], "catalog_rev":activated["catalog_rev"]
+            }))?;
+            selected.validate()?;
+            assert_eq!(selected.row.operation, "legacy-action");
+            assert_eq!(selected.row.action.as_deref(), Some("brain-query"));
+            assert_eq!(
+                selected.row.value,
+                Some(nacre_protocol::menu::MenuActionValue::Text(value.into()))
+            );
+        }
         Ok(())
     }
     #[tokio::test(flavor = "current_thread")]

@@ -483,6 +483,39 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
             json!({"t":"ret","id":2,"ok":empty}),
         ],
     ));
+    let palette_order = [
+        (
+            "nacre-menu:nacre-action:wallpaper:",
+            "Open wallpaper picker",
+        ),
+        ("nacre-menu:nacre-action:calculator:", "Calculator"),
+        ("nacre-menu:nacre-action:colors:", "Open Nacre Colors"),
+    ];
+    let palette_rows = palette_order
+        .iter()
+        .map(|(id, name)| ((*id).to_owned(), item(name, "action")))
+        .collect::<BTreeMap<_, _>>();
+    let palette = MenuQueryResult {
+        query: String::new(),
+        mode: "palette".into(),
+        route: "palette".into(),
+        catalog_rev: 1,
+        order: palette_order
+            .iter()
+            .map(|(id, _)| (*id).to_owned())
+            .collect(),
+        items: palette_rows,
+        total: Some(3),
+        conversion: None,
+        message: None,
+    };
+    cases.push((
+        "menu-palette",
+        vec![
+            json!({"t":"call","id":3,"m":"menu.query","p":{"query":"","mode":"palette","route":"palette"}}),
+            json!({"t":"ret","id":3,"ok":palette}),
+        ],
+    ));
     let mut steps = vec![];
     // Query interpretation remains the engine's job; these are shape examples.
     for (i, (query, kind, label)) in [

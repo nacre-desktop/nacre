@@ -32,6 +32,8 @@ pub struct Context {
     pub bluetooth: Value,
     pub wallpapers: Value,
     pub compositor: Value,
+    /// Stable window IDs and workspace IDs for the command palette only.
+    pub palette_windows: Value,
     pub controls: Value,
     pub players: Value,
     pub power: Value,
@@ -79,6 +81,7 @@ impl Context {
             bluetooth: json!({}),
             wallpapers: json!({}),
             compositor: json!({}),
+            palette_windows: json!([]),
             controls: json!({}),
             players: json!({}),
             power: json!({}),

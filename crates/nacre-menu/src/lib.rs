@@ -9,6 +9,7 @@ pub mod desktop;
 pub mod emoji;
 mod index;
 pub mod model;
+pub mod palette;
 mod providers;
 pub mod search;
 mod software;

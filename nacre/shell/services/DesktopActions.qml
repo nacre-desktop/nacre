@@ -268,6 +268,14 @@ Singleton {
             NacrePanelState.openMode("apps", "= ");
             return;
         }
+        if (action === "brain-query") {
+            DesktopExtras.brainQuery = value;
+            v.left = true;
+            DesktopExtras.request("brain", {
+                query: value
+            });
+            return;
+        }
         if (action === "colors") {
             NacreColorsApp.open();
             return;

@@ -18,7 +18,7 @@ pub struct MenuQuery {
     #[serde(default)]
     #[schemars(length(max = 65536))]
     pub query: String,
-    /// Open string vocabulary: apps/search/actions initially; no client ranking.
+    /// Open string vocabulary: apps/search/actions/palette; no client ranking.
     #[serde(default = "apps")]
     #[schemars(length(min = 1, max = 128))]
     pub mode: String,

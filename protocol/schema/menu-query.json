@@ -10,7 +10,7 @@
       "default": ""
     },
     "mode": {
-      "description": "Open string vocabulary: apps/search/actions initially; no client ranking.",
+      "description": "Open string vocabulary: apps/search/actions/palette; no client ranking.",
       "type": "string",
       "minLength": 1,
       "maxLength": 128,

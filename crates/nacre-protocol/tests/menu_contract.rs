@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 #[test]
 fn launcher_goldens_use_typed_bounded_methods_and_stable_maps() {
     let traces = artifacts::menu_transcripts();
-    assert_eq!(traces.len(), 5);
+    assert_eq!(traces.len(), 6);
     let mut populated = false;
     for trace in traces.values() {
         for line in trace.lines() {
