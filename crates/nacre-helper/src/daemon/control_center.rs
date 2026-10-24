@@ -75,7 +75,7 @@ impl Env {
             systemctl: "systemctl".into(),
             brightnessctl: "brightnessctl".into(),
             ddcutil: "ddcutil".into(),
-            sys: "/sys".into(),
+            sys: light_devices::sys_root(),
             runtime: std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from),
             system_bus: "/run/dbus/system_bus_socket".into(),
             rfkill_dev: "/dev/rfkill".into(),
@@ -167,10 +167,9 @@ fn systemd_present(env: &Env) -> bool {
             .as_ref()
             .is_some_and(|runtime| socket_present(&runtime.join("bus")))
 }
+/// N0067: from the last light scan (`scan_lights`); never reads sysfs on the async thread.
 fn keyboard_present(env: &Env) -> bool {
-    env.has(&env.brightnessctl)
-        && light_devices::discover(&[], &env.sys, &mut |_, _, _| Err("unused".into()))
-            .is_ok_and(|found| !found["keyboard"].is_null())
+    env.has(&env.brightnessctl) && light_devices::keyboard_cached(&env.sys)
 }
 fn backend_present(hub: &Hub, env: &Env, method: &str) -> bool {
     let controls = |member: &str| {
@@ -889,9 +888,49 @@ struct Probe {
     /// Re-read night light.
     slow: bool,
 }
+fn light_externals(env: &Env, probe: &Probe) -> Vec<Value> {
+    if probe.ddc && env.has(&env.ddcutil) {
+        probe
+            .outputs
+            .iter()
+            .filter(|name| !internal(name))
+            .map(|name| json!(name))
+            .collect()
+    } else {
+        Vec::new()
+    }
+}
+/// N0067: backlight, keyboard-light and DDC reads can hang on slow firmware. They run on their own
+/// thread, one scan at a time: while a scan is still stuck the next ones are skipped (`None`, the
+/// prior values stay), and a scan that takes longer than the bound is abandoned by the caller.
+async fn scan_lights(env: &Env, probe: &Probe) -> Option<Value> {
+    static BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    use std::sync::atomic::Ordering::SeqCst;
+    if BUSY.swap(true, SeqCst) {
+        return None;
+    }
+    let externals = light_externals(env, probe);
+    let bound = Duration::from_secs(if externals.is_empty() { 2 } else { 8 });
+    let env = env.clone();
+    let scan = crate::process::offload(move || {
+        let found = light_devices::discover(&externals, &env.sys, &mut light_run(&env)).ok();
+        if let Some(found) = &found {
+            light_devices::note_keyboard(&env.sys, !found["keyboard"].is_null());
+        }
+        BUSY.store(false, SeqCst);
+        found
+    });
+    tokio::time::timeout(bound, scan).await.ok()?.ok()?
+}
+
 /// One read of everything but `appearance` (settings, async). Members whose backend is absent
 /// stay `None`; slow or DDC members not re-read keep their `prior` value.
-fn collect(env: &Env, probe: &Probe, prior: &ControlsState) -> ControlsState {
+fn collect(
+    env: &Env,
+    probe: &Probe,
+    prior: &ControlsState,
+    lights: Option<Value>,
+) -> ControlsState {
     let mut state = ControlsState {
         health: Health {
             available: true,
@@ -911,18 +950,7 @@ fn collect(env: &Env, probe: &Probe, prior: &ControlsState) -> ControlsState {
         recorder: None,
         appearance: prior.appearance.clone(),
     };
-    let externals = if probe.ddc && env.has(&env.ddcutil) {
-        probe
-            .outputs
-            .iter()
-            .filter(|name| !internal(name))
-            .map(|name| json!(name))
-            .collect::<Vec<_>>()
-    } else {
-        Vec::new()
-    };
-    let mut run = light_run(env);
-    if let Ok(found) = light_devices::discover(&externals, &env.sys, &mut run) {
+    if let Some(found) = lights {
         let panels = probe
             .outputs
             .iter()
@@ -1034,7 +1062,8 @@ pub async fn initial(hub: &Shared) -> Result<()> {
         slow: true,
     };
     let prior = empty_state();
-    let state = crate::process::offload(move || collect(&env, &probe, &prior)).await?;
+    let lights = scan_lights(&env, &probe).await;
+    let state = crate::process::offload(move || collect(&env, &probe, &prior, lights)).await?;
     publish(hub, &state)
 }
 
@@ -1056,8 +1085,10 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
             ddc: full,
             slow,
         };
+        let lights = scan_lights(&env, &probe).await;
         let (read_env, prior) = (env.clone(), state.clone());
-        state = crate::process::offload(move || collect(&read_env, &probe, &prior)).await?;
+        state =
+            crate::process::offload(move || collect(&read_env, &probe, &prior, lights)).await?;
         if slow {
             state.appearance = read_appearance(&hub).await;
         }

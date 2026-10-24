@@ -324,7 +324,7 @@ impl Env {
         Self {
             wpctl: "wpctl".into(),
             pactl: "pactl".into(),
-            leds: "/sys/class/leds".into(),
+            leds: crate::light_devices::sys_root().join("class/leds"),
             night: ["control-tools.json", "control-tools-niri.json"]
                 .map(|name| paths.state.join(name))
                 .into(),
@@ -439,6 +439,33 @@ fn find_capslock(leds: &Path) -> Option<PathBuf> {
         .collect::<Vec<_>>();
     found.sort();
     found.into_iter().next()
+}
+
+/// N0067: one caps-lock LED read (discovery included), run off the async thread.
+type CapsRead = (Option<PathBuf>, Option<bool>);
+fn read_caps(leds: PathBuf, known: Option<PathBuf>) -> CapsRead {
+    let path = known.or_else(|| find_capslock(&leds));
+    let value = path.as_deref().and_then(read_flag);
+    (path.filter(|_| value.is_some()), value)
+}
+/// At most one read is in flight; a LED that hangs only stops its own updates.
+fn start_caps(job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>, leds: &Path, known: &Option<PathBuf>) {
+    if job.is_none() {
+        let (leds, known) = (leds.to_owned(), known.clone());
+        *job = Some(tokio::task::spawn_local(async move {
+            crate::process::offload(move || read_caps(leds, known)).await.ok()
+        }));
+    }
+}
+async fn caps_done(job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>) -> Option<CapsRead> {
+    match job {
+        Some(handle) => {
+            let result = handle.await.ok().flatten();
+            *job = None;
+            result
+        }
+        None => std::future::pending().await,
+    }
 }
 
 /// The ownership record `control-tools night-light` writes: on only while its owner runs.
@@ -575,8 +602,10 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
     refresh_audio(&hub, &env).await?;
     let mut sink = read_node(&env.wpctl, SINK).await;
     let mut source = read_node(&env.wpctl, SOURCE).await;
-    let mut capslock_path = find_capslock(&env.leds);
-    let mut caps = capslock_path.as_deref().and_then(read_flag);
+    let mut capslock_path: Option<PathBuf> = None;
+    let mut caps: Option<bool> = None;
+    let mut caps_job = None;
+    start_caps(&mut caps_job, &env.leds, &capslock_path);
     let mut night = read_night(&env.night);
     let mut profile = match &system {
         Some(system) => active_profile(system).await,
@@ -645,19 +674,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
             }
             _ = ticker.tick() => {
                 count = count.wrapping_add(1);
-                if capslock_path.is_none() {
-                    capslock_path = find_capslock(&env.leds);
-                }
-                if let Some(next) = capslock_path.as_deref().and_then(read_flag) {
-                    if caps.is_some_and(|before| before != next) {
-                        let mut event = OsdEvent::new(OsdKind::Capslock, now_ms());
-                        event.value = Some(f64::from(u8::from(next)));
-                        pending.add(event);
-                    }
-                    caps = Some(next);
-                } else {
-                    capslock_path = None;
-                }
+                start_caps(&mut caps_job, &env.leds, &capslock_path);
                 if count.is_multiple_of(4) {
                     let next = read_night(&env.night);
                     if next != night {
@@ -666,6 +683,17 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                         pending.add(event);
                         night = next;
                     }
+                }
+            }
+            Some((path, value)) = caps_done(&mut caps_job) => {
+                capslock_path = path;
+                if let Some(next) = value {
+                    if caps.is_some_and(|before| before != next) {
+                        let mut event = OsdEvent::new(OsdKind::Capslock, now_ms());
+                        event.value = Some(f64::from(u8::from(next)));
+                        pending.add(event);
+                    }
+                    caps = Some(next);
                 }
             }
             () = next_or_pending(&mut power) => {

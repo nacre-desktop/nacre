@@ -292,7 +292,7 @@ async fn set_brightness(
             screens,
             amount,
             relative,
-            Path::new("/sys"),
+            &light_devices::sys_root(),
             &mut native_run,
         )
     })
@@ -311,9 +311,9 @@ fn percent(current: i64, maximum: i64) -> i64 {
     (current * 100 + maximum / 2) / maximum
 }
 
+/// N0067: the `controls` producer's scan fills this cache; method tables never read sysfs.
 fn keyboard_light_present() -> bool {
-    light_devices::discover(&[], Path::new("/sys"), &mut |_, _, _| Err("unused".into()))
-        .is_ok_and(|found| !found["keyboard"].is_null())
+    light_devices::keyboard_cached(&light_devices::sys_root())
 }
 
 async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<Value, Failure> {
@@ -325,7 +325,7 @@ async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<V
     let up = step == KeyboardLightStep::Up;
     let result = crate::process::offload(move || {
         let _guard = guard;
-        adjust_keyboard_light_native(up, Path::new("/sys"), &mut native_run)
+        adjust_keyboard_light_native(up, &light_devices::sys_root(), &mut native_run)
     })
     .await
     .map_err(|_| {

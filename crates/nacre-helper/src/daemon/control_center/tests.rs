@@ -146,6 +146,7 @@ esac
         }
     }
     fn install(&self) {
+        light_devices::refresh_keyboard(&self.path("sys"));
         set_env(Some(self.env()));
     }
     /// Pretend these tools are not installed.
@@ -176,6 +177,13 @@ fn audio_turn() -> std::sync::MutexGuard<'static, ()> {
     static TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
     TURN.lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// `collect` with a synchronous light scan, as `scan_lights` would provide.
+fn collect_now(f: &Fixture, probe: &Probe, prior: &ControlsState) -> ControlsState {
+    let env = f.env();
+    let lights = light_devices::discover(&light_externals(&env, probe), &env.sys, &mut light_run(&env)).ok();
+    collect(&env, probe, prior, lights)
 }
 
 fn run<F: std::future::Future>(future: F) -> F::Output {
@@ -678,6 +686,7 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
         assert_eq!(error.code, ErrorCode::Unavailable);
         // No keyboard backlight: the method disappears.
         std::fs::remove_dir_all(f.path("sys/class/leds")).unwrap();
+        f.install();
         assert!(!all(&f).iter().any(|m| m == "keyboard_light.set"));
         // Tools without a session or a control device do not count as a backend.
         std::fs::remove_file(f.path("rfkill_dev")).unwrap();
@@ -717,7 +726,7 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
         ddc: true,
         slow,
     };
-    let state = collect(&f.env(), &probe(true), &empty_state());
+    let state = collect_now(&f, &probe(true), &empty_state());
     state.validate().unwrap();
     assert_eq!(
         state.brightness,
@@ -743,12 +752,12 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
     write(&f.path("night"), "true");
     write(&f.path("rec"), "");
     write(&f.path("sys/class/rfkill/rfkill0/soft"), "1\n");
-    let next = collect(&f.env(), &probe(false), &state);
+    let next = collect_now(&f, &probe(false), &state);
     assert_eq!(next.night_light, state.night_light);
     assert_eq!(next.recorder, Some(Recorder { recording: true }));
     assert_eq!(next.airplane, Some(Toggle { enabled: true }));
     assert!(
-        collect(&f.env(), &probe(true), &next)
+        collect_now(&f, &probe(true), &next)
             .night_light
             .unwrap()
             .enabled
@@ -760,14 +769,14 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
         ddc: false,
         slow: false,
     };
-    assert!(collect(&f.env(), &two, &empty_state())
+    assert!(collect_now(&f, &two, &empty_state())
         .brightness
         .is_empty());
     // Missing backends leave their members out.
     std::fs::remove_dir_all(f.path("sys/class/leds")).unwrap();
     std::fs::remove_dir_all(f.path("sys/class/rfkill")).unwrap();
     f.without(&["wf-recorder", "systemd-inhibit"]);
-    let bare = collect(&f.env(), &probe(false), &empty_state());
+    let bare = collect_now(&f, &probe(false), &empty_state());
     assert!(bare.keyboard.is_none() && bare.airplane.is_none());
     assert!(bare.stay_awake.is_none() && bare.recorder.is_none());
 }

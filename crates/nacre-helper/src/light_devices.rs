@@ -5,10 +5,44 @@ use regex::Regex;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
+    collections::BTreeMap,
     fs, io,
     path::{Path, PathBuf},
+    sync::Mutex,
     time::Duration,
 };
+
+/// The sysfs root. `NACRE_SYS_ROOT` lets tests point the daemon at a fake tree (N0067).
+pub fn sys_root() -> PathBuf {
+    std::env::var_os("NACRE_SYS_ROOT").map_or_else(|| "/sys".into(), PathBuf::from)
+}
+
+/// N0067: reading an ACPI-backed attribute (asus-wmi `max_brightness`) can take 160 ms or hang for
+/// seconds. `max_brightness` never changes, so it is read once per device; and the daemon's
+/// synchronous code only ever asks whether a keyboard backlight was seen, never scans.
+static MAXIMA: Mutex<BTreeMap<PathBuf, i64>> = Mutex::new(BTreeMap::new());
+static KEYBOARD: Mutex<BTreeMap<PathBuf, bool>> = Mutex::new(BTreeMap::new());
+
+fn locked<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// The last scan's answer for `root`; `false` until a scan has finished. Never touches sysfs.
+pub fn keyboard_cached(root: &Path) -> bool {
+    locked(&KEYBOARD).get(root).copied().unwrap_or(false)
+}
+
+pub fn note_keyboard(root: &Path, present: bool) {
+    locked(&KEYBOARD).insert(root.to_path_buf(), present);
+}
+
+/// Blocking scan that records keyboard presence; run it off the async thread.
+pub fn refresh_keyboard(root: &Path) {
+    let found = discover(&[], root, &mut |_, _, _| Err("unused".into()));
+    if let Ok(found) = found {
+        note_keyboard(root, !found["keyboard"].is_null());
+    }
+}
 
 fn message(id: &str, fallback: &str) -> String {
     i18n::tr(&format!("helper.light-devices.{id}"), fallback)
@@ -54,8 +88,26 @@ fn integer(path: &Path) -> Option<i64> {
     }
 }
 
+fn maximum(path: &Path, cached: bool) -> Option<i64> {
+    let file = path.join("max_brightness");
+    if cached {
+        if let Some(value) = locked(&MAXIMA).get(&file) {
+            return Some(*value);
+        }
+    }
+    let value = integer(&file)?;
+    if value > 0 {
+        locked(&MAXIMA).insert(file, value);
+    }
+    Some(value)
+}
+
 pub fn sys_device(path: &Path, kind: &str) -> Option<Value> {
-    let maximum = integer(&path.join("max_brightness"))?;
+    device(path, kind, true)
+}
+
+fn device(path: &Path, kind: &str, cached: bool) -> Option<Value> {
+    let maximum = maximum(path, cached)?;
     let current = integer(&path.join("brightness"))?;
     if maximum == 0 || current > maximum {
         return None;
@@ -244,7 +296,7 @@ pub fn write(
             "leds"
         };
         let path = root.join("class").join(class).join(device);
-        let current = sys_device(&path, kind)
+        let current = device(&path, kind, false)
             .filter(|current| {
                 equals_integer(&descriptor["maximum"], current["maximum"].as_i64().unwrap())
             })

@@ -37,7 +37,7 @@ impl Sources {
     pub fn system() -> Self {
         Self {
             proc: "/proc".into(),
-            sys: "/sys".into(),
+            sys: crate::light_devices::sys_root(),
             etc: "/etc".into(),
             user: nix::unistd::User::from_uid(nix::unistd::getuid())
                 .ok()
@@ -406,7 +406,10 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
                     }
                     if gpu.is_none() && ticks.is_multiple_of(GPU_EVERY) {
                         let sys = sources.sys.clone();
-                        gpu = Some(tokio::task::spawn_blocking(move || gpu_state(&sys)));
+                        // N0067: GPU sensors read ACPI/hwmon files; keep them off tokio's blocking pool.
+                        gpu = Some(tokio::task::spawn_local(async move {
+                            crate::process::offload(move || gpu_state(&sys)).await.ok().flatten()
+                        }));
                     }
                     ticks = ticks.wrapping_add(1);
                     publish(&hub, state(&latest, &metrics))?;

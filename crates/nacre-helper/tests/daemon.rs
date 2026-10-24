@@ -3236,6 +3236,19 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         fs::write(&path, "#!/bin/sh\nexec /usr/bin/sleep 3000\n")?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
     }
+    // N0067: every LED and backlight attribute is a FIFO nobody writes to: any read blocks forever.
+    let sys = home.path().join("hung-sys");
+    for (class, device, files) in [
+        ("leds", "asus::kbd_backlight", &["max_brightness", "brightness"][..]),
+        ("leds", "input3::capslock", &["brightness"][..]),
+        ("backlight", "intel_backlight", &["max_brightness", "brightness"][..]),
+    ] {
+        let folder = sys.join("class").join(class).join(device);
+        fs::create_dir_all(&folder)?;
+        for file in files {
+            assert!(Command::new("mkfifo").arg(folder.join(file)).status()?.success());
+        }
+    }
     let audio_started = home.path().join("pactl-started");
     fs::write(
         bin.join("pactl"),
@@ -3313,6 +3326,7 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         .env("ALL_PROXY", &proxy_address)
         .env("NO_PROXY", "")
         .env("PATH", &bin)
+        .env("NACRE_SYS_ROOT", &sys)
         .env(
             "DBUS_SESSION_BUS_ADDRESS",
             format!("unix:path={}", home.path().join("silent-session").display()),
@@ -3398,6 +3412,21 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         "running"
     );
     assert!(responsive.elapsed() < Duration::from_secs(2));
+    // N0067: with the LED/backlight reads blocked, status still answers within 200 ms, every time,
+    // also while a client holds the `controls` subscription (its producer scans the lights).
+    let mut controls = UnixStream::connect(&endpoint)?;
+    writeln!(controls, "{}", json!({"t":"hello","proto":1,"client":"hung-sysfs"}))?;
+    writeln!(controls, "{}", json!({"t":"sub","topics":["controls"]}))?;
+    for _ in 0..5 {
+        let asked = Instant::now();
+        status(home.path(), &source_path, &endpoint)?;
+        assert!(
+            asked.elapsed() < Duration::from_millis(200),
+            "status took {:?} while sysfs reads hang",
+            asked.elapsed()
+        );
+        thread::sleep(Duration::from_millis(300));
+    }
     for stop in silent {
         stop.store(true, Ordering::Relaxed);
     }
