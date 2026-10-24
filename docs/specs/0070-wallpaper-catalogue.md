@@ -10,4 +10,6 @@ The picker subscribes to `wallpaper.active` for the current revision and calls `
 
 The catalogue call runs only on demand through the daemon's bounded helper lane, uses `nice -n 10`, and is bounded to 12 seconds and 8 MiB of output. Selection is bounded to 15 seconds. N0053 startup behavior is unchanged: READY does not wait for wallpaper enumeration or previews; the method becomes available with the active wallpaper topic. Catalog data and selection do not add a settings store; existing picker preferences remain in `wallpaper-picker`.
 
+The Arch Fish 4.9 CI fixture pre-seeds and snapshots the user's Fish config files because first launch creates the empty config directory and default `config.fish`; the assertion checks that Nacre's greeting hook leaves those files unchanged.
+
 The source UI uses static/dynamic filters, search over name and path, and carousel/spotlight/hexagon layouts. Its selected item previews while browsing and commits on close; static and motion media share the catalogue, with cached still thumbnails/posters. B0100 owns the Bead UI and parity evidence.

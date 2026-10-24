@@ -28,6 +28,17 @@ class TerminalBrandingTests(unittest.TestCase):
     ):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
+            fish_config = home / ".config/fish"
+            fish_config.mkdir(parents=True)
+            user_config = fish_config / "config.fish"
+            user_config.write_text(
+                "# User-owned Fish configuration.\nset -g user_marker preserved\n"
+            )
+            before = {
+                path.relative_to(fish_config).as_posix(): path.read_bytes()
+                for path in fish_config.rglob("*")
+                if path.is_file()
+            }
             commands = home / "bin"
             commands.mkdir()
             (commands / "nacre-terminal-logo").write_text(
@@ -49,6 +60,7 @@ class TerminalBrandingTests(unittest.TestCase):
                 env={
                     **os.environ,
                     "HOME": str(home),
+                    "XDG_CONFIG_HOME": str(home / ".config"),
                     "PATH": str(commands) + os.pathsep + os.environ["PATH"],
                 },
                 capture_output=True,
@@ -57,7 +69,12 @@ class TerminalBrandingTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(result.stdout.strip(), "NACRE_GREETING_OK")
-            self.assertFalse((home / ".config/fish").exists())
+            after = {
+                path.relative_to(fish_config).as_posix(): path.read_bytes()
+                for path in fish_config.rglob("*")
+                if path.is_file()
+            }
+            self.assertEqual(after, before, "Fish greeting changed user config files")
 
     @unittest.skipUnless(shutil.which("rsvg-convert"), "SVG renderer unavailable")
     def test_prepared_branding_reuses_pixels_and_invalidates_changed_geometry(self):
