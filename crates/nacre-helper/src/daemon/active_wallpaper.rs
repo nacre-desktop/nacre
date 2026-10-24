@@ -327,7 +327,6 @@ pub async fn outputs(
 }
 
 pub fn methods() -> BTreeMap<String, Method> {
-    use nacre_protocol::wallpaper::WallpaperCatalogue;
     BTreeMap::from([(
         "wallpaper.activate".into(),
         Method {
@@ -350,8 +349,10 @@ pub fn methods() -> BTreeMap<String, Method> {
             class: Capability::Desktop,
             timeout: 30_000,
             params: serde_json::json!({"type":"object","properties":{},"additionalProperties":false}),
-            result: serde_json::to_value(schemars::schema_for!(WallpaperCatalogue))
-                .expect("wallpaper catalogue schema"),
+            result: serde_json::from_str(include_str!(
+                "../../../../protocol/schema/wallpaper-catalogue.json"
+            ))
+            .expect("wallpaper catalogue schema"),
         },
     )])
 }
