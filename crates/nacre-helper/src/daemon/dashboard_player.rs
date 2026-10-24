@@ -1008,7 +1008,12 @@ mod tests {
                 let _quiet = fake("quiet", quiet.clone()).await?;
                 let loud_bus = fake("loud", loud.clone()).await?;
                 // No client yet: nothing connected, nothing published but the starting state.
-                tokio::time::sleep(Duration::from_millis(200)).await;
+                tokio::time::timeout(Duration::from_secs(5), async {
+                    while !hub.borrow().methods().contains_key("player.seek") {
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await?;
                 assert_eq!(hub.borrow().snapshot(TOPIC).unwrap(), idle);
                 if service.is_finished() {
                     (&mut service).await??;

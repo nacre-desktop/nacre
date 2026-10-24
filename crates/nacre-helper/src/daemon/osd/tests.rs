@@ -37,7 +37,7 @@ impl Fixture {
         );
         script(
             &root.join("pactl"),
-            &format!("touch '{d}/pactl-started'\nexec tail -n 0 -F '{d}/events'\n"),
+            &format!("[ \"$1\" = subscribe ] || exit 1\ntouch '{d}/pactl-started'\nexec tail -n 0 -F '{d}/events'\n"),
         );
         std::fs::create_dir_all(root.join("leds/input3::capslock")).unwrap();
         std::fs::write(root.join("leds/input3::capslock/brightness"), "0\n").unwrap();
@@ -491,6 +491,135 @@ async fn a_failing_pactl_degrades_only_audio_and_is_retried() {
             let e = f.next().await;
             assert_eq!((e.kind, e.value), (OsdKind::Capslock, Some(1.0)));
             task.abort();
+        })
+        .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn audio_lease_publishes_devices_and_tracks_pactl_changes() {
+    let f = Fixture::new();
+    script(
+        &f.path("pactl"),
+        &format!(
+            r#"
+d='{}'
+case "$1" in
+ subscribe) touch "$d/pactl-started"; exec tail -n 0 -F "$d/events";;
+ --format=json) cat "$d/$3.json";;
+ get-default-sink) cat "$d/pulse-sink.name";;
+ get-default-source) cat "$d/pulse-source.name";;
+ *) exit 1;;
+esac
+"#,
+            f.dir.path().display()
+        ),
+    );
+    let sink = |muted| {
+        json!([{
+            "name":"pulse-speakers", "properties":{"node.name":"alsa_output.speakers"}, "description":"Speakers", "mute":muted,
+            "volume":{"front-left":{"value":32768},"front-right":{"value":32768}}
+        }])
+    };
+    f.set("pulse-sink.name", "pulse-speakers");
+    f.set("pulse-source.name", "pulse-mic");
+    let mut unavailable = unavailable_audio();
+    audio_nodes(
+        "[{\"name\":\"legacy-pulse-only\"}]",
+        AudioKind::Output,
+        &mut unavailable,
+    )
+    .unwrap();
+    assert!(unavailable.nodes.items.is_empty());
+    f.set("sinks.json", &sink(false).to_string());
+    f.set(
+        "sources.json",
+        &json!([{
+            "name":"pulse-mic", "description":"Microphone", "mute":true,
+            "properties":{"node.name":"alsa_input.mic"}, "monitor_of_sink":null,
+            "volume":{"mono":{"value":65536}}
+        }, {
+            "name":"pulse-monitor", "properties":{"node.name":"not_a_selectable_input"},
+            "monitor_of_sink":1
+        }, {"name":"legacy-pulse-only"}])
+        .to_string(),
+    );
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(serve(f.hub.clone(), f.env(), false));
+            let (client, _) = f.hub.borrow_mut().add_client().unwrap();
+            f.hub
+                .borrow_mut()
+                .subscribe(client, &["audio".into()], false)
+                .unwrap();
+            let fixture = &f;
+            let wait = |muted: bool| async move {
+                tokio::time::timeout(Duration::from_secs(5), async {
+                    loop {
+                        let data = fixture.hub.borrow().snapshot("audio").unwrap();
+                        if data["health"]["available"] == true
+                            && data["nodes"]["items"]["alsa_output.speakers"]["muted"] == muted
+                        {
+                            return data;
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                })
+                .await
+                .unwrap()
+            };
+            let first = wait(false).await;
+            let state: AudioState = serde_json::from_value(first).unwrap();
+            assert!(CoreSnapshot::Audio(state.clone()).valid());
+            assert_eq!(state.default_output.unwrap().0, "alsa_output.speakers");
+            assert_eq!(state.default_input.unwrap().0, "alsa_input.mic");
+            let reading = state.nodes.items[&EntityId("alsa_output.speakers".into())]
+                .readback
+                .as_ref()
+                .unwrap();
+            assert_eq!(reading.linear_volume, Some(0.125));
+            assert_eq!(reading.perceptual_volume, Some(0.5));
+            f.set("sinks.json", &sink(true).to_string());
+            // Let the OSD's silent wpctl baseline finish before delivering a bus event.
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            f.pactl("Event 'change' on sink #1");
+            wait(true).await;
+            let mut devices = sink(true);
+            let mut headphones = devices[0].clone();
+            headphones["name"] = json!("pulse-headphones");
+            headphones["properties"]["node.name"] = json!("bluez_output.headphones");
+            headphones["description"] = json!("Headphones");
+            devices.as_array_mut().unwrap().push(headphones);
+            f.set("sinks.json", &devices.to_string());
+            f.set("sink.name", "bluez_output.headphones");
+            f.set("pulse-sink.name", "pulse-headphones");
+            f.pactl("Event 'change' on server");
+            tokio::time::timeout(Duration::from_secs(5), async {
+                loop {
+                    let data = f.hub.borrow().snapshot("audio").unwrap();
+                    if data["default_output"] == "bluez_output.headphones" {
+                        assert_eq!(data["nodes"]["order"].as_array().unwrap().len(), 3);
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+            .await
+            .unwrap();
+            f.set("sinks.json", "invalid JSON");
+            f.pactl("Event 'remove' on sink #1");
+            tokio::time::timeout(Duration::from_secs(5), async {
+                loop {
+                    if f.hub.borrow().snapshot("audio").unwrap()["health"]["available"] == false {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+            .await
+            .unwrap();
+            f.hub.borrow_mut().remove_client(client);
+            task.abort();
+            let _ = task.await;
         })
         .await;
 }

@@ -3198,6 +3198,14 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         fs::write(&path, "#!/bin/sh\nexec /usr/bin/sleep 3000\n")?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
     }
+    let audio_started = home.path().join("pactl-started");
+    fs::write(
+        bin.join("pactl"),
+        format!(
+            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            audio_started.display()
+        ),
+    )?;
     let check_started = home.path().join("checkupdates-started");
     fs::write(
         bin.join("checkupdates"),
@@ -3268,11 +3276,135 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
             "{service} must not claim health while its backend hangs"
         );
     }
+    // N0059: leasing audio starts the same hung pactl used by OSD. All three
+    // topics remain honest unavailable snapshots, and the hub still serves status.
+    let raw = UnixStream::connect(&endpoint)?;
+    raw.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let mut reader = BufReader::new(raw);
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"hello","proto":1,"client":"hung-system-state"})
+    )?;
+    let mut line = String::new();
+    reader.read_line(&mut line)?;
+    writeln!(
+        reader.get_mut(),
+        "{}",
+        json!({"t":"sub","topics":["audio","battery","power.profiles"]})
+    )?;
+    let mut mirror = nacre_protocol::Mirror::default();
+    mirror.receive(&serde_json::from_str::<nacre_protocol::Message>(
+        line.trim(),
+    )?);
+    for _ in 0..3 {
+        line.clear();
+        reader.read_line(&mut line)?;
+        let message: nacre_protocol::Message = serde_json::from_str(line.trim())?;
+        mirror.receive(&message);
+    }
+    for topic in ["audio", "battery", "power.profiles"] {
+        assert_eq!(mirror.topics[topic].1["health"]["available"], false);
+    }
+    let deadline = Instant::now() + Duration::from_secs(8);
+    while !audio_started.exists() && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert!(
+        audio_started.exists(),
+        "audio lease must start the hanging pactl"
+    );
+    let responsive = Instant::now();
+    assert_eq!(
+        status(home.path(), &source_path, &endpoint)?["services"]["compositor"]["status"],
+        "running"
+    );
+    assert!(responsive.elapsed() < Duration::from_secs(2));
     for stop in silent {
         stop.store(true, Ordering::Relaxed);
     }
     for handle in held {
         let _ = handle.join();
     }
+    Ok(())
+}
+
+struct HungBattery(Arc<AtomicBool>);
+#[zbus::interface(name = "org.freedesktop.UPower.Device")]
+impl HungBattery {
+    #[zbus(property)]
+    async fn percentage(&self) -> f64 {
+        self.0.store(true, Ordering::Relaxed);
+        std::future::pending().await
+    }
+}
+
+/// A functioning bus with a nonresponding service is distinct from the N0053
+/// nonresponding bus-authentication fixture. Neither may delay daemon readiness.
+#[tokio::test(flavor = "current_thread")]
+async fn daemon_ready_within_two_seconds_while_upower_property_never_replies() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("nh-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let folder = home.path().join("private");
+    fs::create_dir(&folder)?;
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+    let endpoint = folder.join("daemon.sock");
+    let mut bus = Process(
+        Command::new("dbus-daemon")
+            .args([
+                "--session",
+                "--nofork",
+                "--print-address",
+                &format!("--address=unix:path={}", home.path().join("bus").display()),
+            ])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()?,
+    );
+    let mut address = String::new();
+    BufReader::new(bus.0.stdout.take().ok_or("Missing bus stdout")?).read_line(&mut address)?;
+    let address = address.trim();
+    let requested = Arc::new(AtomicBool::new(false));
+    let _service = zbus::connection::Builder::address(address)?
+        .name("org.freedesktop.UPower")?
+        .serve_at(
+            "/org/freedesktop/UPower/devices/DisplayDevice",
+            HungBattery(requested.clone()),
+        )?
+        .build()
+        .await?;
+    let notify = home.path().join("notify.sock");
+    let notifications = tokio::net::UnixDatagram::bind(&notify)?;
+    let started = Instant::now();
+    let _child = Process(
+        command(home.path(), &source_path, &endpoint)
+            .arg("daemon")
+            .env("NOTIFY_SOCKET", &notify)
+            .env("DBUS_SYSTEM_BUS_ADDRESS", address)
+            .env("DBUS_SESSION_BUS_ADDRESS", address)
+            // No ambient tools or real devices are discoverable by the fixture.
+            .env("PATH", home.path().join("no-tools"))
+            .stdout(Stdio::null())
+            .stderr(fs::File::create(home.path().join("daemon.log"))?)
+            .spawn()?,
+    );
+    let mut packet = [0; 256];
+    let size =
+        tokio::time::timeout(Duration::from_secs(2), notifications.recv(&mut packet)).await??;
+    assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    assert!(started.elapsed() < Duration::from_secs(2));
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while !requested.load(Ordering::Relaxed) {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await?;
+    // This command only connects to the task-private daemon socket.
+    assert_eq!(
+        status(home.path(), &source_path, &endpoint)?["services"]["compositor"]["status"],
+        "running"
+    );
     Ok(())
 }

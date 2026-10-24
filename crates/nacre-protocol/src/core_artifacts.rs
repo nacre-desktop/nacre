@@ -170,7 +170,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         ),
         (
             "power.profiles",
-            json!({"health":health,"active":"balanced","profiles":entities(json!({
+            json!({"health":health,"active":"balanced","degraded":"thermal","holds":[{"profile":"balanced","reason":"Fixture hold","application_id":"org.example.fixture"}],"profiles":entities(json!({
             "balanced":{"name":"Balanced","available":true},
             "performance":{"name":"Performance","available":false,"reason":"Unavailable on this device"},
             "power-saver":{"name":"Power saver","available":true}}))}),
@@ -453,9 +453,9 @@ fn compatibility_transcripts() -> BTreeMap<String, String> {
             "battery",
             json!({"health":{"available":false,"stale":false}}),
             vec![
-                json!({"health":health,"percentage":62.5,"charging":false}),
-                json!({"percentage":63.0,"charging":true}),
-                json!({"health":{"available":false,"stale":true},"percentage":null,"charging":null}),
+                json!({"health":health,"percentage":62.5,"charging":false,"state":2,"time_to_empty_seconds":7200,"on_battery":true}),
+                json!({"percentage":63.0,"charging":true,"state":1,"time_to_empty_seconds":null,"time_to_full_seconds":1800,"on_battery":false}),
+                json!({"health":{"available":false,"stale":true},"percentage":null,"charging":null,"state":null,"time_to_empty_seconds":null,"time_to_full_seconds":null,"on_battery":null}),
             ],
         ),
         (

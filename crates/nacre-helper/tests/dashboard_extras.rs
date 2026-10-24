@@ -415,11 +415,18 @@ fn focus_session_owns_and_restores_dnd_and_survives_bad_calls() -> Result {
         client.err("focus.start", json!({"minutes":5}))?,
         "invalid_request"
     );
+    let pause_started = now_ms();
     client.ok("focus.pause", json!({}))?;
+    let pause_finished = now_ms();
     let paused = client.until(FOCUS, "paused", |s| s["status"] == "paused")?;
     assert!(paused.get("deadline_ms").is_none());
     let remaining = paused["remaining_s"].as_u64().unwrap();
-    assert!((1498..=1500).contains(&remaining), "{remaining}");
+    let minimum = deadline.saturating_sub(pause_finished).div_ceil(1000);
+    let maximum = deadline.saturating_sub(pause_started).div_ceil(1000);
+    assert!(
+        (minimum..=maximum).contains(&remaining),
+        "{remaining} outside {minimum}..={maximum}"
+    );
     client.ok("focus.resume", json!({}))?;
     client.until(FOCUS, "resumed", |s| {
         s["status"] == "running" && s["deadline_ms"].is_u64()

@@ -10,12 +10,16 @@ use super::{
 use crate::{paths::Paths, Result};
 use futures_util::{stream::LocalBoxStream, Stream, StreamExt};
 use nacre_protocol::{
-    core_services::{CoreSnapshot, Health, OsdState},
+    core_services::{
+        AudioKind, AudioNode, AudioReadback, AudioState, CoreSnapshot, Entities, EntityId, Health,
+        OsdState,
+    },
     osd::{OsdEvent, OsdKind, EVENT, TOPIC},
 };
 use serde_json::Value;
 use std::{
     cell::RefCell,
+    collections::BTreeMap,
     ffi::OsString,
     path::{Path, PathBuf},
     process::Stdio,
@@ -52,7 +56,126 @@ pub fn initial(hub: &Shared) -> Result<()> {
     debug_assert!(CoreSnapshot::Osd(state.clone()).valid());
     hub.borrow_mut()
         .publish(TOPIC, serde_json::to_value(state)?)?;
+    publish_audio(hub, unavailable_audio())?;
     Ok(())
+}
+
+fn unavailable_audio() -> AudioState {
+    AudioState {
+        health: Health {
+            available: false,
+            stale: false,
+            error: None,
+        },
+        nodes: Entities {
+            items: Default::default(),
+            order: Vec::new(),
+        },
+        default_output: None,
+        default_input: None,
+    }
+}
+
+fn publish_audio(hub: &Shared, state: AudioState) -> Result<()> {
+    debug_assert!(CoreSnapshot::Audio(state.clone()).valid());
+    hub.borrow_mut()
+        .publish("audio", serde_json::to_value(state)?)?;
+    Ok(())
+}
+
+// Pulse volumes are the cube root of PipeWire's linear volume. Preserve both
+// readings so clients use the same perceptual slider as the existing shell.
+fn audio_nodes(
+    data: &str,
+    kind: AudioKind,
+    state: &mut AudioState,
+) -> Option<BTreeMap<String, EntityId>> {
+    let mut aliases = BTreeMap::new();
+    let entries: Vec<Value> = serde_json::from_str(data).ok()?;
+    for entry in entries.into_iter().take(2048 - state.nodes.items.len()) {
+        // Pulse monitor pseudo-sources are not selectable PipeWire input nodes.
+        let monitor = entry
+            .get("monitor_of_sink")
+            .is_some_and(|value| !value.is_null() && value.as_u64() != Some(u64::from(u32::MAX)));
+        if kind == AudioKind::Input && (monitor || entry["properties"]["device.class"] == "monitor")
+        {
+            continue;
+        }
+        let Some(name) = entry["properties"]["node.name"].as_str() else {
+            continue;
+        };
+        let pulse_name = entry["name"].as_str()?;
+        let id = EntityId(name.to_owned());
+        if !id.valid() || state.nodes.items.contains_key(&id) {
+            continue;
+        }
+        let channels = entry["volume"].as_object()?;
+        let perceptual = channels
+            .values()
+            .filter_map(|channel| channel["value"].as_f64())
+            .reduce(f64::max)?
+            / 65536.0;
+        if !perceptual.is_finite() || perceptual < 0.0 {
+            return None;
+        }
+        let linear = perceptual.powi(3);
+        if !linear.is_finite() {
+            return None;
+        }
+        let muted = entry["mute"].as_bool()?;
+        let label = entry["description"]
+            .as_str()
+            .unwrap_or(name)
+            .chars()
+            .take(200)
+            .collect();
+        state.nodes.items.insert(
+            id.clone(),
+            AudioNode {
+                name: label,
+                kind: kind.clone(),
+                volume: linear,
+                muted,
+                ready: true,
+                readback: Some(AudioReadback {
+                    linear_volume: Some(linear),
+                    perceptual_volume: Some(perceptual),
+                    muted: Some(muted),
+                }),
+                icon: None,
+                target: None,
+            },
+        );
+        aliases.insert(pulse_name.to_owned(), id.clone());
+        state.nodes.order.push(id);
+    }
+    Some(aliases)
+}
+
+async fn read_audio(env: &Env) -> Option<AudioState> {
+    let mut state = unavailable_audio();
+    let sinks = tool(&env.pactl, &["--format=json", "list", "sinks"]).await?;
+    let sources = tool(&env.pactl, &["--format=json", "list", "sources"]).await?;
+    let sink_names = audio_nodes(&sinks, AudioKind::Output, &mut state)?;
+    let source_names = audio_nodes(&sources, AudioKind::Input, &mut state)?;
+    for (command, names, default) in [
+        ("get-default-sink", &sink_names, &mut state.default_output),
+        (
+            "get-default-source",
+            &source_names,
+            &mut state.default_input,
+        ),
+    ] {
+        if let Some(name) = tool(&env.pactl, &[command]).await {
+            *default = names.get(name.trim()).cloned();
+        }
+    }
+    state.health.available = !state.nodes.items.is_empty();
+    Some(state)
+}
+
+async fn refresh_audio(hub: &Shared, env: &Env) -> Result<()> {
+    publish_audio(hub, read_audio(env).await.unwrap_or_else(unavailable_audio))
 }
 
 fn now_ms() -> u64 {
@@ -169,7 +292,7 @@ async fn tool(program: &OsString, args: &[&str]) -> Option<String> {
         .spawn()
         .ok()?;
     let mut out = String::new();
-    let mut stdout = child.stdout.take()?.take(16 * 1024);
+    let mut stdout = child.stdout.take()?.take(1024 * 1024);
     tokio::time::timeout(Duration::from_secs(2), async {
         stdout.read_to_string(&mut out).await.ok()?;
         child.wait().await.ok().filter(|s| s.success())
@@ -272,16 +395,21 @@ fn read_night(records: &[PathBuf]) -> bool {
 }
 
 async fn active_profile(system: &zbus::Connection) -> Option<String> {
-    for (destination, path) in PROFILE_SERVICES {
-        if let Ok(service) = proxy(system, destination, path, destination).await {
-            if let Ok(profile) = service.get_property::<String>("ActiveProfile").await {
-                return ["power-saver", "balanced", "performance"]
-                    .contains(&profile.as_str())
-                    .then_some(profile);
+    tokio::time::timeout(Duration::from_secs(2), async {
+        for (destination, path) in PROFILE_SERVICES {
+            if let Ok(service) = proxy(system, destination, path, destination).await {
+                if let Ok(profile) = service.get_property::<String>("ActiveProfile").await {
+                    return ["power-saver", "balanced", "performance"]
+                        .contains(&profile.as_str())
+                        .then_some(profile);
+                }
             }
         }
-    }
-    None
+        None
+    })
+    .await
+    .ok()
+    .flatten()
 }
 
 async fn next_or_pending<T>(stream: &mut (impl Stream<Item = T> + Unpin)) -> T {
@@ -356,31 +484,35 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
     let mut backlight: LocalBoxStream<'static, i32> = futures_util::stream::pending().boxed_local();
     let mut keyboard_max = 0i32;
     if let Some(system) = &system {
-        if let Ok(streams) = signals(
-            system,
-            &[PROFILE_SERVICES[0].0, PROFILE_SERVICES[1].0],
-            None,
-            None,
-        )
-        .await
-        {
-            power = streams;
-        }
-        if let Ok(light) = proxy(system, UPOWER, KEYBOARD_PATH, KEYBOARD_IFACE).await {
-            if let Ok(max) = light.call::<_, _, i32>("GetMaxBrightness", &()).await {
-                if let Ok(changes) = light.receive_signal("BrightnessChanged").await {
-                    keyboard_max = max;
-                    backlight = changes
-                        .filter_map(
-                            |message| async move { message.body().deserialize::<i32>().ok() },
-                        )
-                        .boxed_local();
+        let _ = tokio::time::timeout(Duration::from_secs(2), async {
+            if let Ok(streams) = signals(
+                system,
+                &[PROFILE_SERVICES[0].0, PROFILE_SERVICES[1].0],
+                None,
+                None,
+            )
+            .await
+            {
+                power = streams;
+            }
+            if let Ok(light) = proxy(system, UPOWER, KEYBOARD_PATH, KEYBOARD_IFACE).await {
+                if let Ok(max) = light.call::<_, _, i32>("GetMaxBrightness", &()).await {
+                    if let Ok(changes) = light.receive_signal("BrightnessChanged").await {
+                        keyboard_max = max;
+                        backlight = changes
+                            .filter_map(|message| async move {
+                                message.body().deserialize::<i32>().ok()
+                            })
+                            .boxed_local();
+                    }
                 }
             }
-        }
+        })
+        .await;
     }
 
     // Baseline: nothing below is reported until it differs from what is read here.
+    refresh_audio(&hub, &env).await?;
     let mut sink = read_node(&env.wpctl, SINK).await;
     let mut source = read_node(&env.wpctl, SOURCE).await;
     let mut capslock_path = find_capslock(&env.leds);
@@ -401,6 +533,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
             line = lines.next() => {
                 let Some(line) = line else {
                     _audio_child = None;
+                    publish_audio(&hub, unavailable_audio())?;
                     lines = futures_util::stream::pending().boxed_local();
                     retry_at = Some(Instant::now() + backoff);
                     backoff = (backoff * 2).min(env.retry * 32);
@@ -423,12 +556,14 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                     retry_at = Some(Instant::now() + backoff);
                     backoff = (backoff * 2).min(env.retry * 32);
                 }
+                refresh_audio(&hub, &env).await?;
                 // A silent fresh baseline: changes while audio was down are not replayed.
                 sink = read_node(&env.wpctl, SINK).await;
                 source = read_node(&env.wpctl, SOURCE).await;
             }
             () = due(audio_at) => {
                 audio_at = None;
+                refresh_audio(&hub, &env).await?;
                 if std::mem::take(&mut dirty_sink) {
                     if let Some(now) = read_node(&env.wpctl, SINK).await {
                         if let Some(event) = audio_event(sink.as_ref(), &now, OsdKind::Volume, Some(OsdKind::Output)) {
@@ -498,34 +633,36 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
     }
 }
 
-/// Wait until the last subscriber is gone.
-async fn idle(interest: &mut tokio::sync::watch::Receiver<bool>) -> Result<()> {
-    while *interest.borrow() {
-        interest.changed().await?;
-    }
-    Ok(())
-}
-
 pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     serve(hub, Env::production(&paths), true).await
 }
 
 async fn serve(hub: Shared, env: Env, system_bus: bool) -> Result<()> {
     let mut interest = hub.borrow_mut().watch_interest(TOPIC);
+    let mut audio_interest = hub.borrow_mut().watch_interest("audio");
     hub.borrow_mut().service("osd", "running", 0)?;
     loop {
-        while !*interest.borrow() {
-            interest.changed().await?;
+        while !*interest.borrow() && !*audio_interest.borrow() {
+            tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result? }
         }
         let system = if system_bus {
-            zbus::Connection::system().await.ok()
+            tokio::time::timeout(Duration::from_secs(2), zbus::Connection::system())
+                .await
+                .ok()
+                .and_then(std::result::Result::ok)
         } else {
             None
         };
         tokio::select! {
             result = session(hub.clone(), env.clone(), system) => result?,
-            result = idle(&mut interest) => result?,
+            result = async {
+                loop {
+                    if !*interest.borrow() && !*audio_interest.borrow() { return Ok::<(), Box<dyn std::error::Error + Send + Sync>>(()); }
+                    tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result? }
+                }
+            } => result?,
         }
+        publish_audio(&hub, unavailable_audio())?;
     }
 }
 

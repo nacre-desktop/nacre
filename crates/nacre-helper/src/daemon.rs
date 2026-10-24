@@ -40,6 +40,7 @@ pub mod shell_actions;
 pub mod shortcuts;
 pub mod socket;
 pub mod supervisor;
+pub mod system_power;
 pub mod system_status;
 #[cfg(test)]
 pub(crate) mod test_logs;
@@ -255,7 +256,19 @@ async fn serve(
     } else {
         (None, None)
     };
-    // N0043: producers start only while a client subscribes to `osd`.
+    // N0059: publish unavailable immediately; background probes never gate READY.
+    let system_power_service = if !counter.safe {
+        system_power::initial(&hub)?;
+        let power_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "system-power",
+            hub.clone(),
+            move || system_power::run(power_hub.clone()),
+        )))
+    } else {
+        None
+    };
+    // N0043/N0059: one audio subscription serves both OSD and audio state leases.
     let osd_service = if !counter.safe {
         osd::initial(&hub)?;
         let (osd_hub, osd_paths) = (hub.clone(), paths.clone());
@@ -549,6 +562,10 @@ async fn serve(
                 tracing::error!("Bluetooth supervisor failed during shutdown");
             }
         }
+    }
+    if let Some(service) = system_power_service {
+        service.abort();
+        let _ = service.await;
     }
     if let Some(service) = osd_service {
         service.abort();

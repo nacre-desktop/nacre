@@ -191,12 +191,22 @@ pub struct PowerProfile {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
 }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct ProfileHold {
+    pub profile: String,
+    pub reason: String,
+    pub application_id: String,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PowerProfilesState {
     pub health: Health,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub active: Option<EntityId>,
     pub profiles: Entities<PowerProfile>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub degraded: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub holds: Vec<ProfileHold>,
 }
 
 /// Battery readback is independent of profile selection. Missing is unknown.
@@ -208,6 +218,19 @@ pub struct BatteryState {
     pub percentage: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub charging: Option<bool>,
+    /// UPower state: 0 unknown, 1 charging, 2 discharging, 3 empty,
+    /// 4 fully charged, 5 pending charge, 6 pending discharge.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 6))]
+    pub state: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0))]
+    pub time_to_empty_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0))]
+    pub time_to_full_seconds: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_battery: Option<bool>,
 }
 
 /// Independently available backend readings. Unknown members are omitted.
@@ -904,7 +927,9 @@ impl CoreSnapshot {
                         .as_ref()
                         .is_none_or(|id| s.profiles.items.contains_key(id))
             }
-            Self::Battery(s) => s.percentage.is_none_or(percent_valid),
+            Self::Battery(s) => {
+                s.percentage.is_none_or(percent_valid) && s.state.is_none_or(|state| state <= 6)
+            }
             Self::Audio(s) => {
                 s.nodes.valid()
                     && s.default_output.as_ref().is_none_or(|id| {
