@@ -1,6 +1,7 @@
 # N0060 — calendar and media daemon producers
 
-Status: implementing; no live changes or publishing. Scope: existing reserved
+Status: implemented and validated; pending lead acceptance.
+No live deployment, tags, releases or package publication. Scope: existing reserved
 `dashboard.calendar`, `dashboard.media`, and `dashboard.calendar.refresh` contracts.
 No schema additions are needed. The protocol exporter adds separate producer
 lifecycle transcripts, preserving the frozen scenarios.
@@ -25,6 +26,8 @@ recurrences, including exceptions. All-day dates use midnight and “All day”.
 instant and nonexistent times are skipped. Floating times retain the helper's
 current system-local fixed offset; displayed date/time labels use system Local.
 This preserves the existing limitation for floating events across a DST change.
+`homeZone`/`homeCity` affect the home clock, not calendar labels. Only DTSTART is
+projected; end times and ongoing events that started before today are not included.
 Malformed blocks are skipped, so a wholly malformed export can be an empty list.
 
 The daemon reads only the settings owner's published snapshot. It publishes an
@@ -61,9 +64,13 @@ response bound, private track-keyed cache and existing cache expiry. Shared cach
 reads now require regular files and cap both metadata and actual reads at 8 MB.
 The topic also caps total serialized lyric lines at 500 KB, leaving room for plain
 lyrics and entity IDs within the protocol's 1 MiB frame limit. No idle retry
-or second MPRIS backend. Browser identity presentation cleanup follows media.js.
-As current QML does, artwork is empty and palette false, so no new artwork fetch
-or album-palette work is enabled; the reserved palette field remains empty.
+or second MPRIS backend. Browser identity presentation cleanup follows media.js. The reserved player
+contract does not expose desktopEntry (which QML also checks), so a browser with
+a non-browser identity can miss that cleanup; this is a documented matching gap,
+not a reason to add another MPRIS backend.
+As current QML does, artwork is empty and palette false, so the enrichment helper
+performs no artwork fetch or album-palette work. The existing player service still
+owns artwork; the reserved palette field remains empty.
 The existing QML spectrum process is outside this contract and remains unchanged.
 
 ## Acceptance and cleanup
@@ -80,3 +87,27 @@ The QML and daemon adapters share the same Rust readers. The legacy QML adapter
 is a temporary dual path: delete 7 days after the Bead replacement is trusted
 (owner core switch and stable calendar/lyrics use); do not duplicate its parser.
 No user-visible UI/layout changes or private desktop captures are part of this unit.
+
+## Validation result
+
+The full desktop CI command set passed in a disposable Arch container. Native
+checks included formatting, protocol exporter reproducibility, Clippy with warnings
+as errors, examples, all Cargo tests (including 729 helper unit cases and 24 daemon
+integration cases), the minimal consumer and release helper. The FIFO readiness
+case retained its strict two-second assertion before and after weather integration;
+an isolated pre-rebase run completed in 86.5 ms.
+The initial fixture's XDG root/private-home permissions were corrected before the
+passing complete run. Final native gates were repeated after source-policy changes.
+
+The source checker passed: 491 tooling cases (one explicitly opt-in Wayland soak
+skipped), 120 AI, 52 Brain, 487 shell-helper cases, 534 helper parity cases with
+zero failures, frozen native workflows, QML formatting and Python/JavaScript checks.
+A disposable checkout ownership mismatch was normalized before resuming source
+checks; no product policy was changed. Native audits passed 244 states per language,
+the AUR pager gallery, and 185 states per language with the alternate font.
+A bounded independent read-only review found no remaining correctness issues.
+
+The complete desktop job was repeated after rebasing onto weather producer/fix
+`c6dc627b`. The combined revision passed every job command with exit status zero;
+calendar, media and weather startup/dispatch/shutdown coexist without changing
+provider logic. Final acceptance remains with the lead.
