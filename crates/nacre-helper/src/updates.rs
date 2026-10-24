@@ -215,12 +215,18 @@ fn count_updates() -> Result<Value> {
             break;
         }
     }
+    commands.retain(|cmd| available(&cmd[0]));
+    collect_counts(&commands, |cmd| {
+        run_command(cmd, Duration::from_secs(90), "dashboard update count")
+    })
+}
+fn collect_counts(
+    commands: &[Vec<String>],
+    mut run: impl FnMut(&[String]) -> Result<std::process::Output>,
+) -> Result<Value> {
     let mut count = 0;
     for cmd in commands {
-        if !available(&cmd[0]) {
-            continue;
-        }
-        let out = run_command(&cmd, Duration::from_secs(90), "dashboard update count")?;
+        let out = run(cmd)?;
         count += count_result(
             &cmd[0],
             out.status.code().unwrap_or(1),
@@ -352,7 +358,7 @@ fn preflight() -> Result<Value> {
 fn cache(p: &Paths) -> PathBuf {
     p.cache.join("updates.json")
 }
-fn refresh(p: &Paths) -> Result<()> {
+fn cache_lock(p: &Paths) -> Result<Option<nix::fcntl::Flock<fs::File>>> {
     fs::create_dir_all(&p.cache)?;
     fs::set_permissions(&p.cache, fs::Permissions::from_mode(0o700))?;
     let target = cache(p);
@@ -370,10 +376,30 @@ fn refresh(p: &Paths) -> Result<()> {
         .mode(0o600)
         .open(lock)?;
     file.set_permissions(fs::Permissions::from_mode(0o600))?;
-    let _guard = match nix::fcntl::Flock::lock(file, nix::fcntl::FlockArg::LockExclusiveNonblock) {
-        Ok(lock) => lock,
-        Err(_) => return Ok(()),
+    match nix::fcntl::Flock::lock(file, nix::fcntl::FlockArg::LockExclusiveNonblock) {
+        Ok(lock) => Ok(Some(lock)),
+        Err((_, nix::errno::Errno::EWOULDBLOCK)) => Ok(None),
+        Err((_, error)) => Err(error.into()),
+    }
+}
+
+pub(crate) fn dashboard_count() -> Result<Value> {
+    // Linux priority is per thread: lower only this short-lived offload worker.
+    // Children inherit it without adding another nice increment to an already
+    // nice-10 daemon, as wrapping every command with `nice -n 10` would do.
+    if rustix::process::getpriority_process(None)? < 10 {
+        rustix::process::setpriority_process(None, 10)?;
+    }
+    let p = Paths::environment()?;
+    let _guard = cache_lock(&p)?.ok_or("An update check is already running")?;
+    count_updates()
+}
+
+fn refresh(p: &Paths) -> Result<()> {
+    let Some(_guard) = cache_lock(p)? else {
+        return Ok(());
     };
+    let target = cache(p);
     let mut data = count_updates()?;
     let pre = preflight()?;
     if let (Some(a), Some(b)) = (data.as_object_mut(), pre.as_object()) {
@@ -611,5 +637,56 @@ mod preflight_progress_tests {
         assert!(String::from_utf8(progress)
             .unwrap()
             .contains("timed out after 1 s"));
+    }
+}
+
+#[cfg(test)]
+mod count_worker_tests {
+    use super::*;
+
+    #[test]
+    fn fake_checkupdates_zero_multiple_error_and_timeout() -> Result<()> {
+        let root = tempfile::tempdir()?;
+        let fake = root.path().join("checkupdates");
+        let commands = vec![vec!["checkupdates".to_owned()]];
+        for (body, expected) in [
+            ("exit 2", Some(0)),
+            ("printf 'one 1 -> 2\\n\\ntwo 3 -> 4\\n'", Some(2)),
+            ("echo failure >&2; exit 1", None),
+            ("exec /usr/bin/sleep 5", None),
+        ] {
+            fs::write(&fake, format!("#!/bin/sh\n{body}\n"))?;
+            fs::set_permissions(&fake, fs::Permissions::from_mode(0o755))?;
+            let result = collect_counts(&commands, |_| {
+                process::run(
+                    fake.to_str().unwrap(),
+                    &[],
+                    None,
+                    Duration::from_millis(250),
+                )
+            });
+            match expected {
+                Some(count) => assert_eq!(result?["count"], count),
+                None => assert!(result.is_err()),
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod shared_lock_tests {
+    use super::*;
+    #[test]
+    fn daemon_and_standalone_share_the_cache_lock() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let guard = cache_lock(&paths)?.expect("first check owns the lock");
+        assert!(cache_lock(&paths)?.is_none());
+        // The legacy refresh must exit before attempting any package command.
+        refresh(&paths)?;
+        drop(guard);
+        assert!(cache_lock(&paths)?.is_some());
+        Ok(())
     }
 }

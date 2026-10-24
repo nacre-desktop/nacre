@@ -883,7 +883,13 @@ fn dashboard_extras_settings_writes_use_the_registered_revision_fenced_writer() 
         client.err("settings.set", set("order", json!(["focus"]), &rev))?,
         "stale_revision"
     );
-    let rev = written["rev"].clone();
+    // Saving a new document can normalize version metadata and advance its
+    // revision. Test value validation against the durable revision, not a race
+    // with the writer's quiet-period flush.
+    let rev = client.until(topic, "durable settings", |s| {
+        s["dirty"] == false && s["data"]["enabled"] == json!(["focus", "ai-usage"])
+    })?["rev"]
+        .clone();
     for bad in [
         json!(["Focus"]),
         json!([{"x":1}]),
@@ -897,9 +903,9 @@ fn dashboard_extras_settings_writes_use_the_registered_revision_fenced_writer() 
             "{bad}"
         );
     }
-    client.ok("settings.set", set("weatherPhotos", json!(false), &rev))?;
+    let written = client.ok("settings.set", set("weatherPhotos", json!(false), &rev))?;
     assert_eq!(
-        client.err("settings.set", set("unknown", json!(true), &json!(2)))?,
+        client.err("settings.set", set("unknown", json!(true), &written["rev"]))?,
         "permission_denied"
     );
     client.until(topic, "mirrored", |s| {

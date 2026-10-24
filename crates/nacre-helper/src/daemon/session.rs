@@ -78,6 +78,7 @@ async fn dispatch(
         method if super::shortcuts::handles(method) => {
             super::shortcuts::dispatch(&hub.borrow(), params)
         }
+        "dashboard.updates.refresh" => super::updates::dispatch(hub, params),
         method if super::system_status::handles(method) => {
             super::system_status::dispatch(hub, params).await
         }

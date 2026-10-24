@@ -632,6 +632,9 @@ pub struct WeatherState {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct UpdatesState {
     pub health: Health,
+    /// A background refresh is running; callers need not wait for package mirrors.
+    #[serde(default)]
+    pub refreshing: bool,
     #[schemars(range(min = 0.0, max = 9007199254740991.0))]
     pub checked: Option<f64>,
     /// None means unknown, including a failed refresh; never treat as zero.

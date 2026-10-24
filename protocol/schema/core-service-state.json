@@ -1897,6 +1897,11 @@
         "health": {
           "$ref": "#/$defs/Health"
         },
+        "refreshing": {
+          "description": "A background refresh is running; callers need not wait for package mirrors.",
+          "type": "boolean",
+          "default": false
+        },
         "checked": {
           "type": [
             "number",

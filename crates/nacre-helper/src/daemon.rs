@@ -45,6 +45,7 @@ pub mod system_status;
 pub(crate) mod test_logs;
 pub mod time_settings;
 pub mod tools_launch;
+pub mod updates;
 pub mod wallpaper;
 pub mod widths;
 pub mod workers;
@@ -194,6 +195,13 @@ async fn serve(
                 )
             },
         )))
+    } else {
+        None
+    };
+    let updates_service = if !counter.safe {
+        updates::initial(&hub)?;
+        let updates_hub = hub.clone();
+        Some(tokio::task::spawn_local(updates::run(updates_hub)))
     } else {
         None
     };
@@ -473,6 +481,10 @@ async fn serve(
                 tracing::error!("Width supervisor failed during shutdown");
             }
         }
+    }
+    if let Some(service) = updates_service {
+        service.abort();
+        let _ = service.await;
     }
     compositor_service.abort();
     if let Some(service) = tray_watcher_service {

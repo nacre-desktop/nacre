@@ -218,7 +218,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         ),
         (
             "dashboard.updates",
-            json!({"health":health,"checked":1800000000,"count":3,"text":"3 updates"}),
+            json!({"health":health,"refreshing":false,"checked":1800000000,"count":3,"text":"3"}),
             vec![("dashboard.updates.refresh", json!({}))],
         ),
         (

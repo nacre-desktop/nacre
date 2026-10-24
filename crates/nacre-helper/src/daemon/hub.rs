@@ -356,6 +356,9 @@ impl Hub {
             methods.extend(super::capabilities::available_methods(self));
             methods.extend(super::shortcuts::available_methods(self));
             methods.extend(super::system_status::available_methods(self));
+            if self.snapshot_ref(super::updates::TOPIC).is_some() {
+                methods.extend(super::updates::methods());
+            }
             methods.extend(super::tools_launch::available_methods(self));
             methods.extend(super::colors_app::available_methods(self));
             if self.snapshot_ref(super::brain::TOPIC).is_some() {

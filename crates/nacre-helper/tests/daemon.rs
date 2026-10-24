@@ -3192,11 +3192,20 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         "busctl",
         "nmcli",
         "pacman",
+        "checkupdates",
     ] {
         let path = bin.join(name);
         fs::write(&path, "#!/bin/sh\nexec /usr/bin/sleep 3000\n")?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755))?;
     }
+    let check_started = home.path().join("checkupdates-started");
+    fs::write(
+        bin.join("checkupdates"),
+        format!(
+            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            check_started.display()
+        ),
+    )?;
     // A bus that accepts and never answers the authentication.
     let mut silent = Vec::new();
     let mut held = Vec::new();
@@ -3243,6 +3252,14 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         .map_err(|_| "No READY within two seconds while backends hang")?;
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
     assert!(started.elapsed() < Duration::from_secs(2));
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while !check_started.exists() && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert!(
+        check_started.exists(),
+        "The hanging update check must actually start"
+    );
     let value = status(home.path(), &source_path, &endpoint)?;
     assert_eq!(value["services"]["compositor"]["status"], "running");
     for service in ["capabilities", "controls"] {
