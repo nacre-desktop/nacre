@@ -9,11 +9,14 @@ converges to the QML shell from any interrupted state.
 """
 
 import argparse
+import base64
 import fcntl
 import json
 import os
 import re
 import shlex
+import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -30,7 +33,7 @@ SHELL, WINDOWS, FALLBACK = (
 DROPIN_NAME = "60-nacre-ui-shell.conf"
 MARK = "# managed by nacre ui-shell; remove with: nacre ui-shell qml\n"
 SAFE = re.compile(r"/[A-Za-z0-9_./+=:@-]+")
-DEFAULT_LAUNCHER = "/usr/bin/bead-shell"
+DEFAULT_LAUNCHER = None
 DONE = {"complete", "rolled-back"}
 # What `nacrectl call ui.dispatch` really prints when nothing can answer (whitespace removed, lower case):
 # the daemon's hub says "UI provider is unavailable"; a down daemon says "Nacre daemon is unavailable".
@@ -43,12 +46,13 @@ NO_PROVIDER = (
 )
 
 
-def dropin_text(launcher):
+def dropin_text(launcher, notifications="none"):
     return (
         f"{MARK}[Unit]\nDescription=Nacre native desktop shell (Bead)\n"
-        f"Wants={WINDOWS}\nOnFailure={FALLBACK}\n"
+        f"Wants={WINDOWS} {f4.SOCKET}\nAfter={f4.SOCKET}\nOnFailure={FALLBACK}\n"
         "StartLimitIntervalSec=60\nStartLimitBurst=3\n\n"
-        f"[Service]\nExecStart=\nExecStart={launcher} start\nUMask=0077\nLimitCORE=0\n"
+        f"[Service]\nExecStart=\nExecStart={launcher} start\nRestart=on-failure\nRestartSec=2\n"
+        f"Environment=NACRE_UI_NOTIFICATIONS={notifications}\nUMask=0077\nLimitCORE=0\n"
     ).encode()
 
 
@@ -79,6 +83,112 @@ class UiShell(f4.Switch):
         self.index = self.state / "ui-shell"
         self.sleep, self.now = sleep, now
         self.managed = (self.dropin, self.windows, self.fallback)
+
+    def selected_launcher(self, launcher=None):
+        if launcher:
+            return launcher
+        installs = [
+            r
+            for r in self.records()
+            if r["operation"] == "install" and r["status"] == "complete"
+        ]
+        return installs[-1]["launcher"] if installs else ""
+
+    def install(self, binary, shell):
+        """Copy a matched source build; only a completed journal selects it.
+
+        Failed/interrupted copies are inert. Previous completed versions stay usable.
+        No systemd or desktop files are changed by installation.
+        """
+        if self.dropin.exists() or any(r["status"] not in DONE for r in self.records()):
+            raise RuntimeError("Run nacre ui-shell qml before installing another build")
+        binary, shell = Path(binary).absolute(), Path(shell).absolute()
+
+        def source_file(path):
+            # Source snapshots can use hardlinks. Copies break those links; never accept symlinks.
+            f4.checked(path.parent, directory=True)
+            info = path.lstat()
+            if (
+                not stat.S_ISREG(info.st_mode)
+                or info.st_uid not in {0, os.getuid()}
+                or info.st_mode & 0o022
+            ):
+                raise RuntimeError(f"Unsafe source file: {path}")
+
+        source_file(binary)
+        f4.checked(shell, directory=True)
+        if not binary.is_file() or not os.access(binary, os.X_OK):
+            raise RuntimeError("Bead binary must be an executable regular file")
+        if not (shell / "palette.json").is_file() or not (shell / "bar").is_dir():
+            raise RuntimeError("Expected the matching Bead shell/ tree")
+        for path in shell.rglob("*"):
+            if path.is_symlink():
+                target = path.resolve(strict=True)
+                if not target.is_relative_to(shell) or not target.is_file():
+                    raise RuntimeError(
+                        f"Shell link must target a file inside its tree: {path}"
+                    )
+                source_file(target)
+            elif path.is_dir():
+                f4.checked(path, directory=True)
+            else:
+                source_file(path)
+        root = self.home / ".local/share/nacre/bead"
+        f4.mkdir(root)
+        record = self.begin("install")
+        version = root / record["id"]
+        launcher = version / "launch"
+        record["launcher"] = str(launcher)
+        self.save(record)
+
+        def copy():
+            version.mkdir(mode=0o700)
+            shutil.copytree(shell, version / "shell")
+            shutil.copy2(binary, version / "nacre-shell")
+            # Absolute immutable paths prevent subsequent checkout changes from changing a trial.
+            script = (
+                "#!/bin/sh\nset -eu\n"
+                f"cd {shlex.quote(str(version))}\n"
+                'case "${1:-}" in\n'
+                "check) exec ./nacre-shell --help ;;\n"
+                "start) shift ;;\n"
+                '*) echo "usage: launch check|start" >&2; exit 2 ;;\nesac\n'
+                ': "${XDG_RUNTIME_DIR:?}"\n'
+                '[ "${NACRE_UI_NOTIFICATIONS:-none}" != daemon ] || set -- --notices\n'
+                "exec ./nacre-shell --bar --core-views --ui-provider "
+                '--command-socket "$XDG_RUNTIME_DIR/bead-ui.sock" '
+                '--daemon-socket "${NACRE_DAEMON_SOCKET:-$XDG_RUNTIME_DIR/nacre/daemon.sock}" "$@"\n'
+            )
+            f4.atomic(launcher, script.encode(), 0o700)
+            for asset in version.rglob("*"):
+                if asset.is_file():
+                    with asset.open("rb") as stream:
+                        os.fsync(stream.fileno())
+                else:
+                    f4.syncdir(asset)
+            f4.syncdir(version)
+            f4.syncdir(root)
+
+        try:
+            self.phase(record, "copy-build", copy)
+
+            def check():
+                reasons = self.launcher_reasons(str(launcher))
+                if reasons:
+                    raise RuntimeError("; ".join(reasons))
+
+            self.phase(record, "check-build", check)
+        except Exception:
+            record["status"] = "rolled-back"
+            self.save(record)
+            raise
+        record["status"] = "complete"
+        self.save(record)
+        return {
+            "status": "complete",
+            "launcher": str(launcher),
+            "version": record["id"],
+        }
 
     # -- observation -------------------------------------------------------
     def props(self, unit, *names):
@@ -173,6 +283,10 @@ class UiShell(f4.Switch):
 
     # -- status / preflight -------------------------------------------------
     def launcher_reasons(self, launcher):
+        if not launcher:
+            return [
+                "No Bead source build installed; run nacre ui-shell install --binary FILE --shell DIR"
+            ]
         if not SAFE.fullmatch(launcher or ""):
             return [f"Launcher must be a plain absolute path: {launcher}"]
         try:
@@ -233,6 +347,7 @@ class UiShell(f4.Switch):
 
     def status(self, launcher=DEFAULT_LAUNCHER):
         records = self.records()
+        launcher = self.selected_launcher(launcher)
         reasons, _, _ = self.readiness(launcher, "none")
         present = self.dropin.exists()
         loaded = self.loaded()
@@ -242,6 +357,7 @@ class UiShell(f4.Switch):
             else "qml"
             if not present and not loaded
             else "mixed",
+            "launcher": launcher or None,
             "dropin_present": present,
             "dropin_loaded": loaded,
             "windows": self.props(WINDOWS, "ActiveState")["ActiveState"],
@@ -298,22 +414,32 @@ class UiShell(f4.Switch):
     def converge_qml(self, record):
         """Idempotent: every step is safe to repeat from any interrupted point."""
 
-        def remove():
-            if not self.mark_ok(self.dropin):
-                raise RuntimeError(
-                    f"Drop-in is not managed by this tool: {self.dropin}"
-                )
-            if self.dropin.exists():
-                self.dropin.unlink()
-                f4.syncdir(self.dropin.parent)
+        def restore_paths(paths):
+            prior = record.get("prior", {})
+            for path in paths:
+                if not self.mark_ok(path):
+                    raise RuntimeError(f"File is not managed by this tool: {path}")
+                saved = prior.get(path.name)
+                if saved is None:
+                    if path.exists():
+                        path.unlink()
+                        f4.syncdir(path.parent)
+                else:
+                    f4.atomic(path, base64.b64decode(saved["data"]), saved["mode"])
 
         def stop_windows():
             if self.props(WINDOWS, "LoadState")["LoadState"] == "loaded":
                 self.ctl("stop", WINDOWS)
 
-        self.phase(record, "remove-dropin", remove)
+        self.phase(record, "remove-dropin", lambda: restore_paths([self.dropin]))
         self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
         self.phase(record, "stop-windows", stop_windows)
+        self.phase(
+            record,
+            "restore-companions",
+            lambda: restore_paths([self.windows, self.fallback]),
+        )
+        self.phase(record, "reload-restored", lambda: self.ctl("daemon-reload"))
         self.phase(record, "restart-shell", self.restart)
         self.phase(record, "health", self.verify_qml)
 
@@ -325,9 +451,20 @@ class UiShell(f4.Switch):
             not self.dropin.exists()
             and not self.loaded()
             and all(r["status"] in DONE for r in records)
+            and not any(
+                r["operation"] == "bead" and r["status"] == "complete" for r in records
+            )
         ):
             return {"status": "complete", "shell": "qml"}
-        record = self.begin("qml")
+        previous = next(
+            (
+                r
+                for r in reversed(records)
+                if r["operation"] in {"qml", "bead"} and r["status"] != "rolled-back"
+            ),
+            {},
+        )
+        record = self.begin("qml", prior=previous.get("prior", {}))
         try:
             self.converge_qml(record)
         except Exception as error:
@@ -349,12 +486,13 @@ class UiShell(f4.Switch):
         return {"status": "complete", "shell": "qml", "transaction": record["id"]}
 
     def bead(self, launcher, notifications):
+        launcher = self.selected_launcher(launcher)
         records = self.records()
         if any(r["status"] not in DONE for r in records):
             raise RuntimeError(
                 "Incomplete ui-shell transaction; run nacre ui-shell qml"
             )
-        want = dropin_text(launcher)
+        want = dropin_text(launcher, notifications)
         if self.dropin.exists():
             if f4.read(self.dropin) != want:
                 raise RuntimeError(
@@ -442,8 +580,12 @@ class UiShell(f4.Switch):
 
 def dispatch(args, home, release_state, **kw):
     parser = argparse.ArgumentParser(prog="nacre ui-shell")
-    parser.add_argument("operation", choices=("status", "bead", "qml", "rollback"))
+    parser.add_argument(
+        "operation", choices=("status", "install", "bead", "qml", "rollback")
+    )
     parser.add_argument("--launcher", default=DEFAULT_LAUNCHER)
+    parser.add_argument("--binary", type=Path)
+    parser.add_argument("--shell", type=Path)
     parser.add_argument("--notifications", choices=("none", "daemon"))
     parser.add_argument(
         "--recover",
@@ -452,8 +594,9 @@ def dispatch(args, home, release_state, **kw):
     )
     parsed = parser.parse_args(args)
     f4.require_ordinary_user()
+    f4.mkdir(Path(release_state))
     lock_path = f4.checked(Path(release_state) / "release.lock")
-    fd = os.open(lock_path, os.O_RDONLY | os.O_NOFOLLOW)
+    fd = os.open(lock_path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CREAT, 0o600)
     with os.fdopen(fd) as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | (fcntl.LOCK_NB if parsed.recover else 0))
@@ -476,6 +619,10 @@ def dispatch(args, home, release_state, **kw):
                 "status": "ignored",
                 "detail": "the shell is restarting; the start limit is not exhausted",
             }
+        if parsed.operation == "install":
+            if not parsed.binary or not parsed.shell:
+                raise RuntimeError("install requires --binary and --shell")
+            return switch.install(parsed.binary, parsed.shell)
         if parsed.operation == "status":
             return switch.status(parsed.launcher)
         if parsed.operation == "bead":

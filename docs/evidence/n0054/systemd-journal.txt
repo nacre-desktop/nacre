@@ -1,0 +1,19 @@
+Oct 24 02:06:26 fa148df78125 systemd[216]: Started nacre-shell.service.
+Oct 24 02:06:31 fa148df78125 systemd[216]: nacre-shell.service: Main process exited, code=exited, status=3/NOTIMPLEMENTED
+Oct 24 02:06:31 fa148df78125 systemd[216]: nacre-shell.service: Failed with result 'exit-code'.
+Oct 24 02:06:31 fa148df78125 systemd[216]: nacre-shell.service: Triggering OnFailure= dependencies.
+Oct 24 02:06:33 fa148df78125 systemd[216]: nacre-shell.service: Scheduled restart job, restart counter is at 1.
+Oct 24 02:06:33 fa148df78125 systemd[216]: nacre-shell.service: Main process exited, code=exited, status=3/NOTIMPLEMENTED
+Oct 24 02:06:33 fa148df78125 systemd[216]: nacre-shell.service: Failed with result 'exit-code'.
+Oct 24 02:06:33 fa148df78125 systemd[216]: nacre-shell.service: Triggering OnFailure= dependencies.
+Oct 24 02:06:35 fa148df78125 systemd[216]: nacre-shell.service: Scheduled restart job, restart counter is at 2.
+Oct 24 02:06:35 fa148df78125 systemd[216]: nacre-shell.service: Start request repeated too quickly.
+Oct 24 02:06:35 fa148df78125 systemd[216]: nacre-shell.service: Failed with result 'start-limit-hit'.
+Oct 24 02:06:35 fa148df78125 systemd[216]: nacre-shell.service: Triggering OnFailure= dependencies.
+Oct 24 02:06:35 fa148df78125 systemd[216]: Reload requested from client PID 366 ('systemctl') (unit nacre-ui-shell-fallback.service)...
+Oct 24 02:06:36 fa148df78125 systemd[216]: Reload requested from client PID 374 ('systemctl') (unit nacre-ui-shell-fallback.service)...
+Oct 24 02:06:36 fa148df78125 systemd[216]: Started nacre-shell.service.
+Oct 24 02:06:40 fa148df78125 systemd[216]: Started nacre-ui-shell-fallback.service.
+Oct 24 02:06:45 fa148df78125 systemd[216]: Stopping nacre-shell.service...
+Oct 24 02:06:45 fa148df78125 systemd[216]: Stopped nacre-shell.service.
+Oct 24 02:06:45 fa148df78125 systemd[216]: Started nacre-shell.service.

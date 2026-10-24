@@ -1,0 +1,53 @@
+N0054 full desktop CI replication — PASS, exit 0
+Base: 2748720158ac8fe361e3f7a0e5663d0e5d10645a plus the N0054 Python overlay below.
+Container: ghcr.io/archlinux/archlinux:latest; 8 CPUs / 12 GiB; cargo jobs=2; nice=10.
+All executable desktop-job steps from .github/workflows/check.yml ran.
+The host lacked tmux; docker exec -d retained the job across SSH disconnects.
+The single tools-suite skip is reported by the suite; all 22 ui-shell tests ran.
+Only docs/evidence were added after these product/test source hashes were verified.
+
+33f56a89246a05f830ba64de3acf5c8ca87b1adaa293542f802b3c9b1a5a75cb  tools/ui_shell_switch.py
+357fffc352ceef947b260246427c2f683be1b4c60e4d2ccf34a15a304e21d875  tools/tests/test_ui_shell_switch.py
+00a7dc63f6c489f6739bc32d67ae7437f48936dbfb18f3783f2ae08f5939661c  tools/tests/rehearse_ui_shell_systemd.py
+
++ cargo build -j2 --release --locked --manifest-path deps/orient/Cargo.toml -p orient-cli
++ cargo fmt --check
++ cargo clippy -j2 --all-targets -- -D warnings
++ cargo build -j2 --locked --examples
++ cargo test -j2 --quiet
++ cargo run -j2 --locked --manifest-path crates/nacre-protocol/tests/minimal-consumer/Cargo.toml --target-dir target
+Minimal protocol consumer passed; JSON Value occupies 32 bytes
++ cargo build -j2 --locked --release -p nacre-helper --bin nacre-helper
++ /tmp/check-env/bin/python -m unittest discover -s tests/parity/helpers -p test_runner.py
+Ran 28 tests in 0.958s
+OK
++ npm ci --ignore-scripts --no-audit --no-fund
++ /tmp/check-env/bin/python tools/i18n/check.py
+Translation coverage passed: 4062 owned messages.
++ /tmp/check-env/bin/python tools/i18n/generate.py
++ dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
+Python formatting and lint passed.
+Python, JSON, shell syntax and retired-tree checks passed.
+Lua syntax passed.
+All desktop QML/JavaScript parsed and formatted with local Qt.
+Compositor boundary and generated configuration checks passed.
+tools/tests: Ran 491 tests in 497.731s; OK (skipped=1)
+ai/tests: Ran 120 tests in 2.396s; OK
+brain/tests: Ran 52 tests in 3.791s; OK
+nacre/shell-tools/tests: Ran 487 tests in 484.845s; OK
+Native Niri legacy assertions and frozen reference integrity passed.
+Native palette and wallpaper immutable workflow references passed.
+Native Hyprland legacy assertions passed.
+Helper parity harness integrity passed.
+Helper parity: 534 cases, 0 failures
+Current palette CLI imported and parsed successfully.
+Brain JavaScript syntax and formatting passed.
+Spicetify JavaScript syntax and formatting passed.
++ dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
+Native translation audit passed: 244 states per language. Report/screenshots: /tmp/nacre-pseudo-audit
++ /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-pseudo-audit/aur-review
+AUR pager gallery captured without builds, installs or live desktop access.
++ dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family 'DejaVu Sans' --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
+Native translation audit passed: 185 states per language. Report/screenshots: /tmp/nacre-pseudo-wide-font
+
+Final process exit status: 0

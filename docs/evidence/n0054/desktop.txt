@@ -1,0 +1,33 @@
+PASS baseline: QML shell on the private compositor  [nacre-background,nacre-border-exclusion,nacre-drawers]
+PASS baseline: QML owns notifications
+PASS baseline: QML registered as UI provider  [UImethodisunavailable]
+PASS status: ready_for_bead is empty  [{"active": "qml", "launcher": "$WORK/b0029-qopz64e_/home/.local/share/nacre/bead/3abcd4a65cfe428d8d3e8973bc9ff84d/launch", "dropin_present": false, "dropin_loaded": false, "w]
+PASS crashing Bead: switch fails and QML is restored  [Bead failed: Timed out: shell not running; the QML shell was restored; transaction f06c52819b3a4346963297a04c866ced
+]
+PASS bead: switch completes  [{"status": "complete", "shell": "bead", "transaction": "bceadfcf7da04d6c8de74b6791ea1654"}
+]
+PASS bead: layer surfaces are Bead's, QML bar/panels gone  [bead-dev,bead-dev-edge,bead-wallpaper]
+PASS bead: shell and QML windows companion running  [('active', 'active')]
+PASS bead: Bead is the registered UI provider  [InvalidUIdispatcharguments]
+PASS bead: nobody owns notifications (--notifications none)
+PASS bead: QML Settings opens via the unchanged IPC  [  WARN: Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8]
+PASS bead: opening Settings did not take the notification bus
+PASS bead: status reports bead
+PASS native settings: on-demand app running
+PASS native settings: nacrectl ui route  [null]
+PASS native colors: on-demand app running
+PASS native colors: nacrectl ui route  [null]
+PASS native welcome: on-demand app running
+PASS native welcome: nacrectl ui route  [null]
+PASS native chat: on-demand app running
+PASS native chat: nacrectl ui route  [null]
+PASS qml: one-step rollback  [{"status": "complete", "shell": "qml", "transaction": "0b3e5d98201647b384b61aac16346199"}
+]
+PASS qml: QML surfaces back, Bead's gone  [nacre-background,nacre-border-exclusion,nacre-drawers]
+PASS crash loop: OnFailure fallback restored QML  [stop nacre-qml-windows.service; stop nacre-qml-windows.service; stop nacre-shell.service; start nacre-shell.service pid=2922068]
+PASS killed switch: a shell is still running
+PASS killed switch: `qml` converges to QML  [{"status": "complete", "shell": "qml", "transaction": "faffa2e149234cf7b3ba444a0c057de9"}
+]
+PASS no incomplete transactions remain  [[]]
+27/27 checks passed; logs $WORK/b0029-qopz64e_/logs

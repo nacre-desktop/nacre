@@ -117,6 +117,8 @@ class Manager:
             if self.provider():
                 return done(command, "", 1, "UI method is unavailable\n")
             return done(command, "", 1, "UI provider is unavailable\n")
+        if Path(command[0]).name == "launch" and command[1:] == ["check"]:
+            return subprocess.run(command, **kwargs)
         assert command[:2] == ["systemctl", "--user"]
         action, *args = command[2:]
         if action == "show-environment":
@@ -268,6 +270,8 @@ class SwitchTests(Base):
         dropin = (self.manager.root / (m.SHELL + ".d") / m.DROPIN_NAME).read_text()
         self.assertIn(f"ExecStart=\nExecStart={self.launcher} start\n", dropin)
         self.assertIn(f"OnFailure={m.FALLBACK}", dropin)
+        self.assertIn(f"Wants={m.WINDOWS} {f4.SOCKET}", dropin)
+        self.assertIn(f"After={f4.SOCKET}", dropin)
         windows = (self.manager.root / m.WINDOWS).read_text()
         self.assertIn(
             f"ConditionPathExists={self.manager.root / (m.SHELL + '.d') / m.DROPIN_NAME}",
@@ -289,6 +293,140 @@ class SwitchTests(Base):
         )  # already QML: nothing restarted
         self.bead()
         self.assertBead()
+
+    def test_rollback_restores_prior_companion_bytes_and_modes(self):
+        switch = self.switch()
+        for path in (switch.windows, switch.fallback):
+            path.write_text(m.MARK + "[Unit]\nDescription=previous\n")
+            path.chmod(0o600)
+        before = {p: f4.file_state(p) for p in switch.managed}
+        self.bead()
+        switch.qml()
+        self.assertEqual({p: f4.file_state(p) for p in switch.managed}, before)
+        self.assertQml()
+
+    def test_install_retains_previous_and_selects_only_completed_build(self):
+        switch = self.switch()
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        first = switch.install(self.launcher, assets)
+        second = switch.install(self.launcher, assets)
+        self.assertNotEqual(first["launcher"], second["launcher"])
+        self.assertTrue(Path(first["launcher"]).is_file())
+        self.assertEqual(switch.selected_launcher(), second["launcher"])
+        text = Path(second["launcher"]).read_text()
+        self.assertIn("--core-views --ui-provider", text)
+        self.assertNotIn("--seconds", text)
+        self.assertTrue(Path(second["launcher"]).with_name("shell").is_dir())
+        self.assertEqual(self.manager.mutations, 0)
+
+    def test_install_interruption_leaves_previous_selection(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        first = self.switch().install(self.launcher, assets)
+        for phase in ("copy-build", "check-build"):
+
+            def hook(name, phase=phase):
+                if name == phase:
+                    raise Crash
+
+            with self.assertRaises(Crash):
+                self.switch(phase_hook=hook).install(self.launcher, assets)
+            self.assertEqual(self.switch().selected_launcher(), first["launcher"])
+            self.switch().qml()
+            self.assertEqual(self.switch().selected_launcher(), first["launcher"])
+
+    def test_install_rejects_symlink_assets(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").symlink_to(self.launcher)
+        with self.assertRaises(RuntimeError):
+            self.switch().install(self.launcher, assets)
+        self.assertEqual(self.switch().records(), [])
+
+    def test_source_hardlinks_become_independent_installed_assets(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        palette = assets / "palette.json"
+        palette.write_text("{}")
+        (assets / "duplicate.json").hardlink_to(palette)
+        (assets / "alias.json").symlink_to("palette.json")
+        result = self.switch().install(self.launcher, assets)
+        installed = Path(result["launcher"]).parent / "shell/palette.json"
+        self.assertEqual(installed.stat().st_nlink, 1)
+        self.assertFalse(installed.with_name("alias.json").is_symlink())
+        palette.write_text("changed")
+        self.assertEqual(installed.read_text(), "{}")
+
+    def test_source_launcher_passes_notification_choice(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        self.launcher.write_text(
+            '#!/bin/sh\n[ "$1" = --help ] && exit 0\nprintf \'%s\\n\' "$@" > "$XDG_RUNTIME_DIR/arguments"\n'
+        )
+        result = self.switch().install(self.launcher, assets)
+        for choice in ("none", "daemon"):
+            subprocess.run(
+                [result["launcher"], "start"],
+                check=True,
+                env={
+                    "XDG_RUNTIME_DIR": str(self.home),
+                    "NACRE_UI_NOTIFICATIONS": choice,
+                },
+            )
+            args = (self.home / "arguments").read_text().splitlines()
+            self.assertEqual("--notices" in args, choice == "daemon")
+            self.assertIn("--ui-provider", args)
+            self.assertIn(str(self.home / "nacre/daemon.sock"), args)
+
+    def test_recovery_after_each_completed_phase_restores_exact_files(self):
+        forward = [
+            "write-units",
+            "reload-units",
+            "write-dropin",
+            "reload",
+            "restart-shell",
+            "health",
+        ]
+        backward = [
+            "remove-dropin",
+            "reload",
+            "stop-windows",
+            "restore-companions",
+            "reload-restored",
+            "restart-shell",
+            "health",
+        ]
+        for operation, phases in (("bead", forward), ("qml", backward)):
+            for point in phases:
+                with self.subTest(operation=operation, phase=point):
+                    self.setUp()
+                    switch = self.switch()
+                    before = {p: f4.file_state(p) for p in switch.managed}
+                    if operation == "qml":
+                        self.bead()
+                    phase = switch.phase
+
+                    def interrupt(record, name, action, point=point, phase=phase):
+                        phase(record, name, action)
+                        if name == point:
+                            raise Crash
+
+                    switch.phase = interrupt
+                    with self.assertRaises(Crash):
+                        if operation == "bead":
+                            switch.bead(str(self.launcher), "none")
+                        else:
+                            switch.qml()
+                    self.switch().qml()
+                    self.assertQml()
+                    self.assertEqual(
+                        {p: f4.file_state(p) for p in switch.managed}, before
+                    )
+                    self.assertNotIn("applying", self.statuses())
 
     def test_repeat_is_idempotent_and_different_dropin_refused(self):
         self.bead()
@@ -451,7 +589,15 @@ class SwitchTests(Base):
                 )  # only the recovery record
 
     def test_crash_during_qml_phases_then_retry_converges(self):
-        phases = ["remove-dropin", "reload", "stop-windows", "restart-shell", "health"]
+        phases = [
+            "remove-dropin",
+            "reload",
+            "stop-windows",
+            "restore-companions",
+            "reload-restored",
+            "restart-shell",
+            "health",
+        ]
         for point in phases:
             with self.subTest(point):
                 self.setUp()
@@ -488,6 +634,30 @@ class SwitchTests(Base):
             self.switch().qml()
         self.switch().qml()
         self.assertQml()
+
+    def test_interrupted_terminal_journal_cleanup_converges(self):
+        self.bead()
+        switch = self.switch()
+        save = switch.save
+
+        def interrupt(record):
+            save(record)
+            if record["operation"] == "qml" and record["status"] == "complete":
+                raise Crash
+
+        switch.save = interrupt
+        with self.assertRaises(Crash):
+            switch.qml()
+        self.assertQml()
+        self.switch().qml()
+        self.assertTrue(
+            all(
+                r["status"] == "rolled-back"
+                for r in self.switch().records()
+                if r["operation"] == "bead"
+            )
+        )
+        self.assertIsNone(self.switch().status(str(self.launcher))["notifications"])
 
     def test_unmanaged_dropin_is_never_removed(self):
         self.bead()
