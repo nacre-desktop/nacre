@@ -7,7 +7,7 @@ mod clipboard;
 mod focus;
 mod screenshots;
 mod usage;
-mod watch;
+pub(super) mod watch;
 
 use super::hub::{failure, Shared};
 use crate::{paths::Paths, Result};

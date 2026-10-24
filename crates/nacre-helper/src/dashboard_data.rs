@@ -6,6 +6,8 @@ use serde_json::{json, Value};
 use std::{
     collections::HashSet,
     fs,
+    io::Read,
+    os::unix::fs::OpenOptionsExt,
     path::{Path, PathBuf},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -137,15 +139,8 @@ pub fn validate(data: &Value) -> Result<Value> {
                 if key == "homeZone" && !text.is_empty() {
                     zone(text)?;
                 }
-                if key == "calendarFile"
-                    && !text.is_empty()
-                    && !expanded(text, &paths).is_absolute()
-                {
-                    return Err(tr(
-                        "helper.dashboard-data.use-an-absolute-local-calendar-path",
-                        "Use an absolute local calendar path",
-                    )
-                    .into());
+                if key == "calendarFile" && !text.is_empty() {
+                    calendar_path(text, &paths)?;
                 }
             }
             _ => {
@@ -160,21 +155,53 @@ pub fn validate(data: &Value) -> Result<Value> {
     }
     Ok(result)
 }
+/// Shared local-source policy for preferences, the helper and the daemon watcher.
+pub(crate) fn calendar_path(path: &str, paths: &Paths) -> Result<PathBuf> {
+    if path.chars().count() > 1024 || path.chars().any(|v| (v as u32) < 32) {
+        return Err(tr("helper.dashboard-data.invalid-text", "Invalid text").into());
+    }
+    let source = expanded(path, paths);
+    if !source.is_absolute() {
+        return Err(tr(
+            "helper.dashboard-data.use-an-absolute-local-calendar-path",
+            "Use an absolute local calendar path",
+        )
+        .into());
+    }
+    Ok(source)
+}
 pub fn calendar(path: &str, current: DateTime<Utc>) -> Value {
+    let Ok(paths) = Paths::environment() else {
+        return json!({"events":[],"error":"Calendar paths unavailable","configured":!path.is_empty()});
+    };
+    calendar_at(path, current, &paths)
+}
+pub fn calendar_at(path: &str, current: DateTime<Utc>, paths: &Paths) -> Value {
     if path.is_empty() {
         return json!({"events":[],"error":"","configured":false});
     }
     let parse = || -> Result<Value> {
-        let paths = Paths::environment()?;
-        let source = expanded(path, &paths);
-        if fs::metadata(&source)?.len() > 2_000_000 {
+        let source = calendar_path(path, paths)?;
+        let file = fs::OpenOptions::new()
+            .read(true)
+            .custom_flags(nix::libc::O_NONBLOCK)
+            .open(&source)?;
+        let metadata = file.metadata()?;
+        if !metadata.is_file() {
+            return Err("Calendar must be a regular file".into());
+        }
+        let mut text = Vec::new();
+        if metadata.len() <= 2_000_000 {
+            file.take(2_000_001).read_to_end(&mut text)?;
+        }
+        if metadata.len() > 2_000_000 || text.len() > 2_000_000 {
             return Err(tr(
                 "helper.dashboard-data.calendar-exceeds2mb",
                 "Calendar exceeds2MB",
             )
             .into());
         }
-        let text = fs::read_to_string(&source)?;
+        let text = String::from_utf8(text)?;
         let text = regex::Regex::new(r"\r?\n[ \t]")?.replace_all(&text, "");
         let mut events = Vec::new();
         let mut recurring = false;

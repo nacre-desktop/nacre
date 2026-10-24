@@ -330,6 +330,25 @@ fn compatibility_transcripts() -> BTreeMap<String, String> {
     let stored = entities(json!({"stored-1":notice}));
     let cases = [
         (
+            "calendar-producer",
+            "dashboard.calendar",
+            json!({"health":{"available":false,"stale":false},"configured":false,"events":empty}),
+            vec![
+                json!({"health":health,"configured":true,"events":entities(json!({"event-1":{"title":"All day","start":1893542400_u64,"time":"All day","date":"Wed 02 Jan"}}))}),
+                json!({"health":{"error":{"code":"unavailable","message":"Recurring events require an expanded calendar export.","retry":true}}}),
+                json!({"health":{"available":false,"error":{"message":"Calendar exceeds2MB"}},"events":{"items":{"event-1":null},"order":[]}}),
+            ],
+        ),
+        (
+            "media-producer",
+            "dashboard.media",
+            json!({"health":{"available":false,"stale":false},"key":"","lines":empty,"plain":"","palette":{},"lyrics_message":"","cache_seconds":0}),
+            vec![
+                json!({"health":health,"key":"fixture-track","lines":entities(json!({"l0":{"time":1.5,"text":"Public fixture lyric"}})),"plain":"Public fixture lyric","cache_seconds":1800}),
+                json!({"health":{"available":false},"key":"","lines":{"items":{"l0":null},"order":[]},"plain":"","cache_seconds":0}),
+            ],
+        ),
+        (
             "notifications-popup-policy",
             "notifications",
             json!({"health":health,"do_not_disturb":false,

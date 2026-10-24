@@ -79,6 +79,7 @@ async fn dispatch(
             super::shortcuts::dispatch(&hub.borrow(), params)
         }
         "dashboard.weather.refresh" => super::weather::dispatch(hub, params),
+        "dashboard.calendar.refresh" => super::calendar::dispatch(hub, params),
         "dashboard.updates.refresh" => super::updates::dispatch(hub, params),
         method if super::system_status::handles(method) => {
             super::system_status::dispatch(hub, params).await

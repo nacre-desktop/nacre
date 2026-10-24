@@ -1,0 +1,4 @@
+{"t":"snap","topic":"dashboard.calendar","seq":0,"data":{"health":{"available":false,"stale":false},"configured":false,"events":{"items":{},"order":[]}}}
+{"t":"patch","topic":"dashboard.calendar","base":0,"seq":1,"data":{"health":{"available":true,"stale":false},"configured":true,"events":{"items":{"event-1":{"title":"All day","start":1893542400,"time":"All day","date":"Wed 02 Jan"}},"order":["event-1"]}}}
+{"t":"patch","topic":"dashboard.calendar","base":1,"seq":2,"data":{"health":{"error":{"code":"unavailable","message":"Recurring events require an expanded calendar export.","retry":true}}}}
+{"t":"patch","topic":"dashboard.calendar","base":2,"seq":3,"data":{"health":{"available":false,"error":{"message":"Calendar exceeds2MB"}},"events":{"items":{"event-1":null},"order":[]}}}

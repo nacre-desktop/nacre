@@ -6,8 +6,9 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
-    os::unix::fs::PermissionsExt,
-    path::PathBuf,
+    io::Read,
+    os::unix::fs::{OpenOptionsExt, PermissionsExt},
+    path::{Path, PathBuf},
     sync::OnceLock,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -155,6 +156,23 @@ pub fn lyrics(text: &Value) -> Value {
     lines.truncate(2000);
     json!(lines)
 }
+fn read_cache(path: &Path) -> Result<Value> {
+    const MAXIMUM: u64 = 8_000_000;
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NONBLOCK)
+        .open(path)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.len() > MAXIMUM {
+        return Err("Media cache exceeds bounds".into());
+    }
+    let mut bytes = Vec::new();
+    file.take(MAXIMUM + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAXIMUM {
+        return Err("Media cache exceeds bounds".into());
+    }
+    Ok(serde_json::from_slice(&bytes)?)
+}
 pub fn track_data(meta: &Value) -> Result<Value> {
     let key = format!(
         "{:x}",
@@ -178,7 +196,7 @@ pub fn track_data(meta: &Value) -> Result<Value> {
     }
     let path = cache.join(format!("{key}.json"));
     if path.exists() {
-        let cached: Value = serde_json::from_slice(&fs::read(&path)?)?;
+        let cached = read_cache(&path)?;
         let modified = fs::metadata(&path)?
             .modified()?
             .duration_since(UNIX_EPOCH)?
@@ -363,4 +381,21 @@ pub fn spectrum() -> Result<i32> {
         .args(["-p", path.to_str().ok_or("Invalid spectrum path")?])
         .exec()
         .into())
+}
+
+#[cfg(test)]
+mod cache_bounds_tests {
+    use super::*;
+    #[test]
+    fn cache_reads_are_bounded_and_reject_special_files() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("cache.json");
+        fs::write(&path, b"{}").unwrap();
+        assert_eq!(read_cache(&path).unwrap(), json!({}));
+        fs::File::create(&path).unwrap().set_len(8_000_001).unwrap();
+        assert!(read_cache(&path).is_err());
+        let fifo = root.path().join("cache.fifo");
+        nix::unistd::mkfifo(&fifo, nix::sys::stat::Mode::S_IRUSR).unwrap();
+        assert!(read_cache(&fifo).is_err());
+    }
 }

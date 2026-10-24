@@ -1,0 +1,3 @@
+{"t":"snap","topic":"dashboard.media","seq":0,"data":{"health":{"available":false,"stale":false},"key":"","lines":{"items":{},"order":[]},"plain":"","palette":{},"lyrics_message":"","cache_seconds":0}}
+{"t":"patch","topic":"dashboard.media","base":0,"seq":1,"data":{"health":{"available":true,"stale":false},"key":"fixture-track","lines":{"items":{"l0":{"time":1.5,"text":"Public fixture lyric"}},"order":["l0"]},"plain":"Public fixture lyric","cache_seconds":1800}}
+{"t":"patch","topic":"dashboard.media","base":1,"seq":2,"data":{"health":{"available":false},"key":"","lines":{"items":{"l0":null},"order":[]},"plain":"","cache_seconds":0}}

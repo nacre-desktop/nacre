@@ -246,7 +246,7 @@ fn battery_is_independent_and_osd_repeats_without_replaying_expired_events() {
             .keys()
             .filter(|file| file.starts_with("protocol/fixtures/core-compat-"))
             .count(),
-        10
+        12
     );
 }
 
@@ -654,4 +654,22 @@ fn pairing_prompts_carry_a_code_only_when_one_is_shown() {
     assert!(!state("confirm", None));
     assert!(!state("pin", Some("1234")));
     assert!(!state("display", Some("")));
+}
+
+#[test]
+fn calendar_and_media_producer_lifecycles_match_reserved_contracts() {
+    let calendar = compatibility_states("calendar-producer");
+    assert!(!calendar[0]["health"]["available"].as_bool().unwrap());
+    assert_eq!(calendar[1]["events"]["order"].as_array().unwrap().len(), 1);
+    assert_eq!(calendar[2]["health"]["available"], true);
+    assert!(calendar[2]["health"]["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("Recurring"));
+    assert_eq!(calendar[3]["events"]["order"], json!([]));
+    let media = compatibility_states("media-producer");
+    assert_eq!(media[0]["health"]["available"], false);
+    assert_eq!(media[1]["lines"]["order"], json!(["l0"]));
+    assert_eq!(media[2]["lines"]["order"], json!([]));
+    assert_eq!(media[2]["plain"], "");
 }

@@ -3448,3 +3448,50 @@ async fn daemon_ready_within_two_seconds_while_upower_property_never_replies() -
     );
     Ok(())
 }
+
+#[test]
+fn calendar_fifo_never_blocks_daemon_ready() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("nd-cal-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let folder = home.path().join("private");
+    fs::create_dir(&folder)?;
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+    let endpoint = folder.join("daemon.sock");
+    let config = home.path().join("config/nacre");
+    fs::create_dir_all(&config)?;
+    let fifo = home.path().join("slow-calendar.ics");
+    nix::unistd::mkfifo(
+        &fifo,
+        nix::sys::stat::Mode::S_IRUSR | nix::sys::stat::Mode::S_IWUSR,
+    )?;
+    fs::write(
+        config.join("dashboard.json"),
+        serde_json::to_vec(&json!({"calendarFile":fifo}))?,
+    )?;
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let start = Instant::now();
+    let mut cmd = command(home.path(), &source_path, &endpoint);
+    let _child = Process(
+        cmd.arg("daemon")
+            .env("NOTIFY_SOCKET", &notify)
+            .stdout(Stdio::null())
+            .stderr(fs::File::create(home.path().join("daemon.log"))?)
+            .spawn()?,
+    );
+    let mut packet = [0; 256];
+    let size = notifications.recv(&mut packet).map_err(|error| {
+        format!(
+            "READY failed after {:?}: {error}; {}",
+            start.elapsed(),
+            fs::read_to_string(home.path().join("daemon.log")).unwrap_or_default()
+        )
+    })?;
+    assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    eprintln!("calendar FIFO READY in {:?}", start.elapsed());
+    assert!(start.elapsed() < Duration::from_secs(2));
+    Ok(())
+}

@@ -7,6 +7,7 @@ pub mod bar_tray_watcher;
 pub mod behaviours;
 pub mod bluetooth;
 pub mod brain;
+pub mod calendar;
 pub mod capabilities;
 pub mod client;
 pub mod colors_app;
@@ -21,6 +22,7 @@ pub mod helpers;
 pub mod hub;
 pub mod i18n;
 pub mod login_theme;
+pub mod media;
 pub mod menu;
 pub mod menu_worker;
 pub mod network;
@@ -197,6 +199,31 @@ async fn serve(
                     generations.clone(),
                 )
             },
+        )))
+    } else {
+        None
+    };
+    let calendar_service = if !counter.safe {
+        calendar::initial(&hub)?;
+        let wake = Rc::new(tokio::sync::Notify::new());
+        hub.borrow_mut().calendar = Some(wake.clone());
+        let calendar_hub = hub.clone();
+        let calendar_paths = paths.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "dashboard-calendar",
+            hub.clone(),
+            move || calendar::run(calendar_hub.clone(), calendar_paths.clone(), wake.clone()),
+        )))
+    } else {
+        None
+    };
+    let media_service = if !counter.safe {
+        media::initial(&hub)?;
+        let media_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "dashboard-media",
+            hub.clone(),
+            move || media::run(media_hub.clone()),
         )))
     } else {
         None
@@ -519,6 +546,14 @@ async fn serve(
         }
     }
     if let Some(service) = weather_service {
+        service.abort();
+        let _ = service.await;
+    }
+    if let Some(service) = media_service {
+        service.abort();
+        let _ = service.await;
+    }
+    if let Some(service) = calendar_service {
         service.abort();
         let _ = service.await;
     }

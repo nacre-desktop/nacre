@@ -93,6 +93,7 @@ pub struct Hub {
     pub network: Option<super::network::Requests>,
     pub bluetooth: Option<Rc<super::bluetooth::Service>>,
     pub notifications: Option<super::notifications::Requests>,
+    pub calendar: Option<Rc<Notify>>,
     pub player: Option<super::dashboard_player::Requests>,
     pub session: Option<super::session_policy::Requests>,
     pub menu: Option<super::menu::Requests>,
@@ -126,6 +127,7 @@ impl Hub {
             network: None,
             bluetooth: None,
             notifications: None,
+            calendar: None,
             player: None,
             session: None,
             menu: None,
@@ -356,6 +358,9 @@ impl Hub {
             methods.extend(super::capabilities::available_methods(self));
             methods.extend(super::shortcuts::available_methods(self));
             methods.extend(super::system_status::available_methods(self));
+            if self.calendar.is_some() {
+                methods.extend(super::calendar::methods());
+            }
             if self.snapshot_ref(super::updates::TOPIC).is_some() {
                 methods.extend(super::updates::methods());
             }
