@@ -7,6 +7,7 @@ use crate::Result;
 use nacre_protocol::{
     core_services::{
         AccessPoint, Connection, CoreSnapshot, Device, Entities, EntityId, Health, NetworkState,
+        VpnConnection, VpnConnectionState, VpnState,
     },
     framing,
     network::NetworkWatch,
@@ -24,6 +25,8 @@ use std::{
 
 pub const TOPIC: &str = "network.watch";
 pub const CORE_TOPIC: &str = "network";
+/// N0062: saved VPN profiles, derived from the same NetworkManager snapshot as `network`.
+pub const VPN_TOPIC: &str = "vpn";
 
 const NM_SERVICE: &str = "org.freedesktop.NetworkManager";
 const NM_MANAGER: &str = "/org/freedesktop/NetworkManager";
@@ -104,6 +107,7 @@ impl NetworkProjection {
         let state = unavailable_state(self.last_good.clone(), error);
         hub.borrow_mut()
             .publish(CORE_TOPIC, serde_json::to_value(&state)?)?;
+        publish_vpn_unavailable(hub, &state.health)?;
         #[cfg(test)]
         if let Some(witness) = &self.publication_witness {
             let _ = witness.send(state);
@@ -127,6 +131,34 @@ pub fn publish_core_starting(hub: &Shared) -> Result<()> {
     };
     hub.borrow_mut()
         .publish(CORE_TOPIC, serde_json::to_value(state)?)?;
+    let vpn = VpnState {
+        health: Health {
+            available: false,
+            stale: false,
+            error: None,
+        },
+        connections: empty_entities(),
+    };
+    hub.borrow_mut()
+        .publish(VPN_TOPIC, serde_json::to_value(vpn)?)?;
+    Ok(())
+}
+
+/// The `vpn` topic when NetworkManager cannot be read: the last good profiles stay,
+/// marked stale, exactly like `network`.
+fn publish_vpn_unavailable(hub: &Shared, health: &Health) -> Result<()> {
+    let kept = health
+        .stale
+        .then(|| hub.borrow().snapshot(VPN_TOPIC))
+        .flatten()
+        .and_then(|value| serde_json::from_value::<VpnState>(value).ok())
+        .map_or_else(empty_entities, |state| state.connections);
+    let state = VpnState {
+        health: health.clone(),
+        connections: kept,
+    };
+    hub.borrow_mut()
+        .publish(VPN_TOPIC, serde_json::to_value(state)?)?;
     Ok(())
 }
 
@@ -222,6 +254,7 @@ struct RawProfile {
     path: String,
     name: String,
     kind: String,
+    uuid: String,
     ssid: Option<Vec<u8>>,
     security: Option<String>,
     autoconnect: Option<bool>,
@@ -234,6 +267,8 @@ struct RawNetwork {
     devices: Vec<RawDevice>,
     profiles: Vec<RawProfile>,
     active_connections: Vec<(String, String)>,
+    /// NetworkManager `ActiveConnection.State` of active VPN profiles only, by active path.
+    vpn_states: HashMap<String, u32>,
     primary_connection: Option<String>,
 }
 
@@ -242,7 +277,7 @@ async fn read_snapshot(
     connection: &zbus::Connection,
     ids: &mut IdentityTable,
 ) -> std::result::Result<NetworkState, CoreError> {
-    let (state, candidate_ids) = read_snapshot_candidate(connection, ids).await?;
+    let (state, candidate_ids, _) = read_snapshot_candidate(connection, ids).await?;
     *ids = candidate_ids;
     Ok(state)
 }
@@ -250,14 +285,18 @@ async fn read_snapshot(
 async fn read_snapshot_candidate(
     connection: &zbus::Connection,
     ids: &IdentityTable,
-) -> std::result::Result<(NetworkState, IdentityTable), CoreError> {
+) -> std::result::Result<(NetworkState, IdentityTable, VpnCandidate), CoreError> {
     let mut candidate_ids = ids.clone();
     let raw = read_raw(connection).await?;
-    let state = project(raw, &mut candidate_ids)?;
+    let state = project(raw.clone(), &mut candidate_ids)?;
     if !CoreSnapshot::Network(state.clone()).valid() {
         return Err(CoreError::Invalid);
     }
-    Ok((state, candidate_ids))
+    let vpn = project_vpn(&raw, &candidate_ids);
+    if !CoreSnapshot::Vpn(vpn.state.clone()).valid() {
+        return Err(CoreError::Invalid);
+    }
+    Ok((state, candidate_ids, vpn))
 }
 
 async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwork, CoreError> {
@@ -443,6 +482,11 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
         let connection_settings = settings.get("connection").ok_or(CoreError::Unavailable)?;
         let name = display_text(&variant_string(connection_settings.get("id"))?, 128);
         let kind = display_text(&variant_string(connection_settings.get("type"))?, 64);
+        let uuid = connection_settings
+            .get("uuid")
+            .and_then(|v| v.downcast_ref::<&str>().ok())
+            .map(str::to_owned)
+            .unwrap_or_default();
         // Saved Wi-Fi details (N0042). GetSettings never returns secret values.
         let get = |section: &str, key: &str| settings.get(section)?.get(key)?.try_clone().ok();
         let wifi = kind == "802-11-wireless";
@@ -475,11 +519,13 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
             last_used: get("connection", "timestamp")
                 .and_then(|v| u64::try_from(v).ok())
                 .filter(|seconds| (1..=MAX_SAFE_INTEGER).contains(seconds)),
+            uuid,
             kind,
         });
     }
 
     let mut active_connections = Vec::with_capacity(active_paths.len());
+    let mut vpn_states = HashMap::new();
     for path in active_paths {
         let saved: OwnedObjectPath = property(
             connection,
@@ -489,6 +535,19 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
         )
         .await?;
         if saved.as_str() != "/" {
+            if profiles
+                .iter()
+                .any(|p| p.path == saved.as_str() && matches!(p.kind.as_str(), "vpn" | "wireguard"))
+            {
+                let state = property::<u32>(
+                    connection,
+                    path.as_str(),
+                    "org.freedesktop.NetworkManager.Connection.Active",
+                    "State",
+                )
+                .await?;
+                vpn_states.insert(path.as_str().to_owned(), state);
+            }
             active_connections.push((path.as_str().to_owned(), saved.as_str().to_owned()));
         }
     }
@@ -498,6 +557,7 @@ async fn read_raw(connection: &zbus::Connection) -> std::result::Result<RawNetwo
         devices,
         profiles,
         active_connections,
+        vpn_states,
         primary_connection: optional_path(primary_path),
     })
 }
@@ -647,6 +707,77 @@ fn project(
         connections: profiles,
         primary_connection,
     })
+}
+
+/// What one snapshot says about VPN profiles, plus the active-connection paths the
+/// failure watcher needs to map a NetworkManager signal back to a profile ID.
+struct VpnCandidate {
+    state: VpnState,
+    actives: HashMap<String, EntityId>,
+}
+
+/// Saved `vpn` and `wireguard` profiles with the IDs `project` issued for them (N0062).
+/// `active` follows `nmcli connection show` (QML): any active connection for the profile.
+fn project_vpn(raw: &RawNetwork, ids: &IdentityTable) -> VpnCandidate {
+    let mut rows = Vec::new();
+    for profile in &raw.profiles {
+        if !matches!(profile.kind.as_str(), "vpn" | "wireguard")
+            || !nacre_protocol::core_services::uuid_valid(&profile.uuid)
+        {
+            continue;
+        }
+        if let Some(id) = ids.live.get(&identity_key("connection", &profile.path)) {
+            rows.push((profile, id.clone()));
+        }
+    }
+    rows.sort_by_cached_key(|(profile, _)| (profile.name.to_lowercase(), profile.uuid.clone()));
+    let mut actives = HashMap::new();
+    let mut active_state = BTreeMap::new();
+    for (active_path, profile_path) in &raw.active_connections {
+        if let Some((_, id)) = rows
+            .iter()
+            .find(|(profile, _)| &profile.path == profile_path)
+        {
+            actives.insert(active_path.clone(), id.clone());
+            active_state.insert(
+                id.clone(),
+                match raw.vpn_states.get(active_path) {
+                    Some(2) => VpnConnectionState::Connected,
+                    Some(3 | 4) => VpnConnectionState::Disconnecting,
+                    _ => VpnConnectionState::Connecting,
+                },
+            );
+        }
+    }
+    let mut connections = empty_entities();
+    for (profile, id) in rows {
+        let state = active_state
+            .get(&id)
+            .copied()
+            .unwrap_or(VpnConnectionState::Disconnected);
+        connections.order.push(id.clone());
+        connections.items.insert(
+            id,
+            VpnConnection {
+                name: display_text(&profile.name, 128),
+                kind: profile.kind.clone(),
+                uuid: profile.uuid.clone(),
+                state,
+                active: state != VpnConnectionState::Disconnected,
+            },
+        );
+    }
+    VpnCandidate {
+        state: VpnState {
+            health: Health {
+                available: true,
+                stale: false,
+                error: None,
+            },
+            connections,
+        },
+        actives,
+    }
 }
 
 fn identity(
@@ -1154,6 +1285,8 @@ async fn observe_on_connection(
     let (refresh, mut refreshes) = tokio::sync::mpsc::channel(1);
     let (owner_changed_tx, mut owner_changed) = tokio::sync::oneshot::channel();
     let owner_boundary = Rc::new(Cell::new(false));
+    let (requests, mut actions) = controls::channel(owner_boundary.clone());
+    let event_vpn = requests.vpn.clone();
     let authentication_failures =
         Rc::new(std::cell::RefCell::new(std::collections::BTreeMap::new()));
     let event_authentication_failures = authentication_failures.clone();
@@ -1177,6 +1310,7 @@ async fn observe_on_connection(
                     &event_devices.borrow(),
                     &mut event_authentication_failures.borrow_mut(),
                 );
+                controls::observe_vpn_failure(message, &event_vpn);
             }
             #[cfg(test)]
             if let Some(events) = &watcher_events {
@@ -1202,7 +1336,6 @@ async fn observe_on_connection(
     let mut watcher = AbortWatcher(Some(watcher));
     drop(refresh);
 
-    let (requests, mut actions) = controls::channel(owner_boundary.clone());
     hub.borrow_mut().network = Some(requests.clone());
     let _readiness = controls::Readiness(requests.clone());
     let loop_result: Result<()> = async {
@@ -1273,7 +1406,7 @@ async fn observe_on_connection(
                 return Err("NetworkManager owner changed during snapshot".into());
             }
 
-            let (mut state, candidate_ids) = match snapshot {
+            let (mut state, candidate_ids, vpn) = match snapshot {
                 Ok(snapshot) => snapshot,
                 Err(error) => {
                     projection.publish_failure(&hub, error)?;
@@ -1325,6 +1458,11 @@ async fn observe_on_connection(
             if let Some(witness) = &projection.publication_witness {
                 let _ = witness.send(state.clone());
             }
+            *requests.vpn.actives.borrow_mut() = vpn.actives;
+            let mut vpn_state = vpn.state;
+            controls::apply_vpn_failures(&mut vpn_state, &requests.vpn);
+            hub.borrow_mut()
+                .publish(VPN_TOPIC, serde_json::to_value(&vpn_state)?)?;
             projection.ids = candidate_ids;
             *published_devices.borrow_mut() = projection.ids.live.iter().filter_map(|(key, id)| {
                 key.strip_prefix("device\0").map(|path| (path.to_owned(), id.clone()))
@@ -1879,7 +2017,7 @@ mod core_tests {
                 let old_server = owner_fixture(&address).await?;
                 let client = fixture_client(&address).await?;
                 let old_owner = fixture_owner(&client).await?;
-                let (last_good, _) = read_snapshot_candidate(&client, &IdentityTable::new(99))
+                let (last_good, _, _) = read_snapshot_candidate(&client, &IdentityTable::new(99))
                     .await
                     .map_err(|_| "Initial private snapshot failed")?;
                 let hub = super::super::hub::Hub::new(
@@ -2141,6 +2279,7 @@ mod core_tests {
                 (ACTIVE_ETHERNET.into(), PROFILE_ETHERNET.into()),
                 (ACTIVE_WIFI.into(), PROFILE_WIFI.into()),
             ],
+            vpn_states: HashMap::new(),
             primary_connection: Some(ACTIVE_WIFI.into()),
         }
     }

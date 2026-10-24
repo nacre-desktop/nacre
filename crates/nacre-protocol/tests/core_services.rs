@@ -96,8 +96,8 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             }
         }
     }
-    assert_eq!(topics, 13);
-    assert_eq!(calls.len(), 24);
+    assert_eq!(topics, 14);
+    assert_eq!(calls.len(), 26);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),

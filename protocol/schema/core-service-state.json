@@ -24,6 +24,22 @@
       "properties": {
         "topic": {
           "type": "string",
+          "const": "vpn"
+        },
+        "data": {
+          "$ref": "#/$defs/VpnState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
           "const": "bluetooth"
         },
         "data": {
@@ -563,6 +579,98 @@
         "name",
         "kind",
         "active"
+      ]
+    },
+    "VpnState": {
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "connections": {
+          "description": "Ordered by name, then UUID. The IDs are the `network` topic's connection IDs.",
+          "$ref": "#/$defs/Entities_VpnConnection"
+        }
+      },
+      "required": [
+        "health",
+        "connections"
+      ]
+    },
+    "Entities_VpnConnection": {
+      "description": "Collections use stable IDs and explicit ordering; never arrays of entities.",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "patternProperties": {
+            "^[A-Za-z0-9_.:-]{1,128}$(?![\\s\\S])": {
+              "$ref": "#/$defs/VpnConnection"
+            }
+          },
+          "maxProperties": 2048
+        },
+        "order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityId"
+          },
+          "maxItems": 2048,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "items",
+        "order"
+      ]
+    },
+    "VpnConnection": {
+      "description": "N0062: a saved NetworkManager `vpn` or `wireguard` profile. Secrets are never published.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Display text.",
+          "type": "string",
+          "maxLength": 128
+        },
+        "kind": {
+          "description": "`vpn` (a VPN plugin) or `wireguard`.",
+          "type": "string",
+          "maxLength": 16
+        },
+        "uuid": {
+          "description": "The profile's NetworkManager UUID (stable across restarts; not a secret).",
+          "type": "string",
+          "minLength": 36,
+          "maxLength": 36,
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$(?![\\s\\S])"
+        },
+        "state": {
+          "$ref": "#/$defs/VpnConnectionState"
+        },
+        "active": {
+          "description": "NetworkManager has an active connection for the profile (connecting, connected or\ndisconnecting), as `nmcli connection show` reports a device for it.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "uuid",
+        "state",
+        "active"
+      ]
+    },
+    "VpnConnectionState": {
+      "description": "N0062: where one saved VPN profile stands. `failed` is the last activation that\nended in an error (secrets missing or refused, timeout, service failure); it stays\nuntil the profile is activated again or connects.",
+      "type": "string",
+      "enum": [
+        "disconnected",
+        "connecting",
+        "connected",
+        "disconnecting",
+        "failed"
       ]
     },
     "BluetoothState": {

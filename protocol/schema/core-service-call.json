@@ -168,6 +168,38 @@
       "properties": {
         "m": {
           "type": "string",
+          "const": "vpn.connect"
+        },
+        "p": {
+          "$ref": "#/$defs/ConnectionTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
+          "const": "vpn.disconnect"
+        },
+        "p": {
+          "$ref": "#/$defs/ConnectionTarget"
+        }
+      },
+      "required": [
+        "m",
+        "p"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "m": {
+          "type": "string",
           "const": "bluetooth.set_power"
         },
         "p": {

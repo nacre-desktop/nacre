@@ -102,6 +102,47 @@ pub struct Connection {
     #[schemars(range(min = 1, max = 9007199254740991_u64))]
     pub last_used: Option<u64>,
 }
+/// N0062: where one saved VPN profile stands. `failed` is the last activation that
+/// ended in an error (secrets missing or refused, timeout, service failure); it stays
+/// until the profile is activated again or connects.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum VpnConnectionState {
+    Disconnected,
+    Connecting,
+    Connected,
+    Disconnecting,
+    Failed,
+}
+/// N0062: a saved NetworkManager `vpn` or `wireguard` profile. Secrets are never published.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct VpnConnection {
+    /// Display text.
+    #[schemars(length(max = 128))]
+    pub name: String,
+    /// `vpn` (a VPN plugin) or `wireguard`.
+    #[schemars(length(max = 16))]
+    pub kind: String,
+    /// The profile's NetworkManager UUID (stable across restarts; not a secret).
+    #[schemars(
+        length(min = 36, max = 36),
+        regex(
+            pattern = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$(?![\\s\\S])"
+        )
+    )]
+    pub uuid: String,
+    pub state: VpnConnectionState,
+    /// NetworkManager has an active connection for the profile (connecting, connected or
+    /// disconnecting), as `nmcli connection show` reports a device for it.
+    pub active: bool,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct VpnState {
+    pub health: Health,
+    /// Ordered by name, then UUID. The IDs are the `network` topic's connection IDs.
+    pub connections: Entities<VpnConnection>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NetworkState {
     pub health: Health,
@@ -858,6 +899,8 @@ pub struct PlayerState {
 pub enum CoreSnapshot {
     #[serde(rename = "network")]
     Network(NetworkState),
+    #[serde(rename = "vpn")]
+    Vpn(VpnState),
     #[serde(rename = "bluetooth")]
     Bluetooth(BluetoothState),
     #[serde(rename = "bluetooth.pairing")]
@@ -888,6 +931,15 @@ pub enum CoreSnapshot {
     Player(PlayerState),
 }
 
+/// A canonical 8-4-4-4-12 hexadecimal UUID, as NetworkManager reports profile UUIDs.
+pub fn uuid_valid(value: &str) -> bool {
+    value.len() == 36
+        && value.bytes().enumerate().all(|(index, byte)| match index {
+            8 | 13 | 18 | 23 => byte == b'-',
+            _ => byte.is_ascii_hexdigit(),
+        })
+}
+
 impl CoreSnapshot {
     pub fn valid(&self) -> bool {
         match self {
@@ -908,6 +960,21 @@ impl CoreSnapshot {
                                 .connection
                                 .as_ref()
                                 .is_none_or(|id| s.connections.items.contains_key(id))
+                    })
+            }
+            Self::Vpn(s) => {
+                s.connections.valid()
+                    && s.connections.items.values().all(|c| {
+                        matches!(c.kind.as_str(), "vpn" | "wireguard")
+                            && c.name.chars().count() <= 128
+                            && uuid_valid(&c.uuid)
+                            && c.active
+                                == matches!(
+                                    c.state,
+                                    VpnConnectionState::Connecting
+                                        | VpnConnectionState::Connected
+                                        | VpnConnectionState::Disconnecting
+                                )
                     })
             }
             Self::Bluetooth(s) => {
@@ -1364,6 +1431,10 @@ pub enum CoreCall {
     NetworkDisconnect(DeviceTarget),
     #[serde(rename = "network.forget")]
     NetworkForget(ConnectionTarget),
+    #[serde(rename = "vpn.connect")]
+    VpnConnect(ConnectionTarget),
+    #[serde(rename = "vpn.disconnect")]
+    VpnDisconnect(ConnectionTarget),
     #[serde(rename = "bluetooth.set_power")]
     BluetoothPower(BluetoothPower),
     #[serde(rename = "bluetooth.set_discovery")]
@@ -1437,7 +1508,9 @@ impl CoreCall {
                         }
                     }
             }
-            Self::NetworkForget(p) => p.connection.valid(),
+            Self::NetworkForget(p) | Self::VpnConnect(p) | Self::VpnDisconnect(p) => {
+                p.connection.valid()
+            }
             Self::NetworkDisconnect(p)
             | Self::BluetoothConnect(p)
             | Self::BluetoothDisconnect(p)

@@ -112,6 +112,17 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             ],
         ),
         (
+            "vpn",
+            json!({"health":health,
+            "connections":entities(json!({
+                "vpn-1":{"name":"Fixture office","kind":"vpn","uuid":"11111111-2222-4333-8444-555555555555","state":"connected","active":true},
+                "vpn-2":{"name":"Fixture wireguard","kind":"wireguard","uuid":"66666666-7777-4888-9999-000000000000","state":"disconnected","active":false}}))}),
+            vec![
+                ("vpn.connect", json!({"connection":"vpn-2"})),
+                ("vpn.disconnect", json!({"connection":"vpn-1"})),
+            ],
+        ),
+        (
             "bluetooth",
             json!({"health":health,
             "adapters":entities(json!({"adapter-1":{"name":"Bluetooth","powered":false,"discovering":false}})),

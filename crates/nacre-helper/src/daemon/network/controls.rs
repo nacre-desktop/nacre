@@ -1,7 +1,7 @@
 //! Admission-only controls on the reader's connection and owner generation.
 use super::*;
 use nacre_protocol::{
-    core_services::{CoreCall, CoreResult, NetworkState, NetworkTarget, WifiSecurity},
+    core_services::{CoreCall, CoreResult, NetworkState, NetworkTarget, VpnState, WifiSecurity},
     Capability, Method,
 };
 use serde_json::Value;
@@ -12,11 +12,13 @@ const WIFI: u8 = 1;
 const CONNECT: u8 = 2;
 const DISCONNECT: u8 = 4;
 const FORGET: u8 = 8;
-const METHODS: [&str; 4] = [
+const METHODS: [&str; 6] = [
     "network.set_wifi",
     "network.connect",
     "network.disconnect",
     "network.forget",
+    "vpn.connect",
+    "vpn.disconnect",
 ];
 /// Stable text clients use to re-prompt; the code is the existing `validation`.
 pub const SECRET_REQUIRED: &str = "Network secret required";
@@ -32,6 +34,15 @@ pub struct Requests {
     /// Profiles this daemon just created with a secret, by device. A profile that
     /// fails authentication is deleted again so a wrong password is never saved.
     created: Rc<std::cell::RefCell<BTreeMap<EntityId, String>>>,
+    pub(super) vpn: Rc<VpnTracking>,
+}
+
+/// N0062: which VPN profiles last failed to activate, and which active-connection path
+/// belongs to which profile (to map NetworkManager's `StateChanged` signal back).
+#[derive(Default)]
+pub(super) struct VpnTracking {
+    pub(super) failed: std::cell::RefCell<std::collections::BTreeSet<EntityId>>,
+    pub(super) actives: std::cell::RefCell<HashMap<String, EntityId>>,
 }
 
 pub(super) struct Action {
@@ -48,6 +59,7 @@ pub(super) fn channel(owner_boundary: Rc<Cell<bool>>) -> (Requests, mpsc::Receiv
             capabilities: Rc::new(Cell::new(0)),
             owner_boundary,
             created: Rc::default(),
+            vpn: Rc::default(),
         },
         receiver,
     )
@@ -73,6 +85,8 @@ impl Requests {
             "network.connect" => CONNECT,
             "network.disconnect" => DISCONNECT,
             "network.forget" => FORGET,
+            "vpn.connect" => CONNECT,
+            "vpn.disconnect" => DISCONNECT,
             _ => return false,
         };
         !self.owner_boundary.get() && !self.sender.is_closed() && self.capabilities.get() & bit != 0
@@ -131,6 +145,8 @@ pub async fn dispatch(
                 | CoreCall::NetworkConnect(_)
                 | CoreCall::NetworkDisconnect(_)
                 | CoreCall::NetworkForget(_)
+                | CoreCall::VpnConnect(_)
+                | CoreCall::VpnDisconnect(_)
         )
     {
         return Err(invalid());
@@ -192,6 +208,49 @@ pub(super) fn observe_failure(
         failures.insert(id.clone(), Rc::new(()));
     } else if state == 100 {
         failures.remove(id);
+    }
+}
+
+/// A VPN activation that ends in an error after NetworkManager admitted it (missing or
+/// refused secrets, timeout, service failure) is remembered as `failed` (N0062).
+pub(super) fn observe_vpn_failure(message: &zbus::Message, vpn: &VpnTracking) {
+    let header = message.header();
+    if header.interface().map(|name| name.as_str())
+        != Some("org.freedesktop.NetworkManager.Connection.Active")
+        || header.member().map(|name| name.as_str()) != Some("StateChanged")
+    {
+        return;
+    }
+    let Some(path) = header.path().map(|path| path.as_str()) else {
+        return;
+    };
+    // Deactivated (4) because of: IP config invalid, connect timeout, service start
+    // timeout/failure, no secrets, login failed. User disconnects and drops are not failures.
+    let Ok((4, reason)) = message.body().deserialize::<(u32, u32)>() else {
+        return;
+    };
+    if (5..=10).contains(&reason) {
+        if let Some(id) = vpn.actives.borrow().get(path) {
+            vpn.failed.borrow_mut().insert(id.clone());
+        }
+    }
+}
+
+pub(super) fn apply_vpn_failures(state: &mut VpnState, vpn: &VpnTracking) {
+    use nacre_protocol::core_services::VpnConnectionState as S;
+    let mut failed = vpn.failed.borrow_mut();
+    failed.retain(|id| {
+        state
+            .connections
+            .items
+            .get(id)
+            .is_some_and(|c| !matches!(c.state, S::Connecting | S::Connected))
+    });
+    for id in failed.iter() {
+        if let Some(connection) = state.connections.items.get_mut(id) {
+            connection.state = S::Failed;
+            connection.active = false;
+        }
     }
 }
 
@@ -507,6 +566,86 @@ async fn mutate<A: serde::Serialize + zbus::zvariant::DynamicType>(
     Ok(reply)
 }
 
+/// `vpn.connect` / `vpn.disconnect` (N0062): NetworkManager admission only, like the
+/// network calls. Secrets stay with NetworkManager and the user's secret agents; none
+/// cross this call, and a refusal later shows up as the `failed` state.
+#[allow(clippy::too_many_arguments)]
+async fn vpn_execute(
+    connection: &zbus::Connection,
+    owner: &str,
+    ids: &IdentityTable,
+    requests: &Requests,
+    action: &Action,
+    raw: &RawNetwork,
+    state: &NetworkState,
+    id: &EntityId,
+    connect: bool,
+) -> std::result::Result<Value, Failure> {
+    if !requests.supports(if connect {
+        "vpn.connect"
+    } else {
+        "vpn.disconnect"
+    }) {
+        return Err(unavailable());
+    }
+    let profile = source(ids, "connection", id)?;
+    match state.connections.items.get(id) {
+        Some(saved) if matches!(saved.kind.as_str(), "vpn" | "wireguard") => {}
+        _ => return Err(stale()),
+    }
+    let active = raw
+        .active_connections
+        .iter()
+        .find(|(_, saved)| saved == profile)
+        .map(|(active, _)| active.as_str());
+    let path = |value: &str| OwnedObjectPath::try_from(value.to_owned()).map_err(|_| stale());
+    let (profile, active) = (path(profile)?, active.map(path).transpose()?);
+    if connect == active.is_some() {
+        return serde_json::to_value(CoreResult { changed: false }).map_err(|_| unavailable());
+    }
+    require_network_manager_owner(connection, owner)
+        .await
+        .map_err(|_| unavailable())?;
+    if requests.owner_boundary.get()
+        || action.reply.is_closed()
+        || tokio::time::Instant::now() >= action.deadline
+    {
+        return Err(unavailable().dispatch_state(false));
+    }
+    if let Some(active) = active {
+        mutate(
+            connection,
+            owner,
+            NM_MANAGER,
+            "DeactivateConnection",
+            NM_SERVICE,
+            &(active,),
+        )
+        .await?;
+    } else {
+        requests.vpn.failed.borrow_mut().remove(id);
+        let reply = mutate(
+            connection,
+            owner,
+            NM_MANAGER,
+            "ActivateConnection",
+            NM_SERVICE,
+            &(profile, path("/")?, path("/")?),
+        )
+        .await?;
+        let active: OwnedObjectPath = reply
+            .body()
+            .deserialize()
+            .map_err(|_| unavailable().dispatch_state(true))?;
+        requests
+            .vpn
+            .actives
+            .borrow_mut()
+            .insert(active.as_str().to_owned(), id.clone());
+    }
+    serde_json::to_value(CoreResult { changed: true }).map_err(|_| unavailable())
+}
+
 pub(super) async fn execute(
     connection: &zbus::Connection,
     owner: &str,
@@ -528,6 +667,21 @@ pub(super) async fn execute(
     // returns before the following topic read. Do not issue unpublished IDs.
     ids.live
         .retain(|key, id| fresh_ids.live.get(key) == Some(id));
+    if let CoreCall::VpnConnect(p) | CoreCall::VpnDisconnect(p) = &action.call {
+        let connect = matches!(action.call, CoreCall::VpnConnect(_));
+        return vpn_execute(
+            connection,
+            owner,
+            ids,
+            requests,
+            action,
+            &raw,
+            &state,
+            &p.connection,
+            connect,
+        )
+        .await;
+    }
     let method = match &action.call {
         CoreCall::WifiPower(_) => "network.set_wifi",
         CoreCall::NetworkConnect(_) => "network.connect",
@@ -783,3 +937,6 @@ pub(super) async fn execute(
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod vpn_tests;
