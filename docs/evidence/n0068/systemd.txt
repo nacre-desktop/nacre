@@ -1,0 +1,66 @@
+$ systemctl --user daemon-reload 
+  
+$ systemctl --user start nacre-daemon.socket 
+  
+$ systemctl --user enable --now nacre-shell.service 
+  Created symlink '/home/tester/.config/systemd/user/default.target.wants/nacre-shell.service' → '/home/tester/.config/systemd/user/nacre-shell.service'.
+
+$ /usr/sbin/python /work/tools/releases.py ui-shell install --binary /home/tester/stub-bead --shell /home/tester/build-shell 
+ {"status": "complete", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "version": "0c3579d43e134543bccd0b5f93df7117"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "qml", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": false, "dropin_loaded": false, "daemon_dropin_present": false, "windows": "inactive", "notifications": null, "ready_for_bead": [], "incomplete": []}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell bead --notifications none 
+ {"status": "complete", "shell": "bead", "transaction": "238524cfe1384412a47d9d106419f6a9"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "bead", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": true, "dropin_loaded": true, "daemon_dropin_present": false, "windows": "active", "notifications": "none", "ready_for_bead": [], "incomplete": []}
+ 
+$ systemctl --user stop nacre-shell.service 
+  
+$ systemctl --user stop nacre-daemon.socket 
+  
+$ systemctl --user daemon-reload 
+  
+$ systemctl --user start nacre-shell.service 
+  
+$ systemctl --user is-active nacre-daemon.socket 
+ active
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "bead", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": true, "dropin_loaded": true, "daemon_dropin_present": false, "windows": "active", "notifications": "none", "ready_for_bead": [], "incomplete": []}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "qml", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": false, "dropin_loaded": false, "daemon_dropin_present": false, "windows": "inactive", "notifications": null, "ready_for_bead": [], "incomplete": []}
+ 
+$ systemctl --user is-active nacre-shell.service 
+ active
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell rollback 
+ {"status": "complete", "shell": "qml"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell bead --notifications none 
+ {"status": "complete", "shell": "bead", "transaction": "4fa9b41a32604638a5ce59d0876737fb"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell qml 
+ {"status": "complete", "shell": "qml", "transaction": "c753b3d8a9bb4c37ba0fb28b81cb93a5"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "qml", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": false, "dropin_loaded": false, "daemon_dropin_present": false, "windows": "inactive", "notifications": null, "ready_for_bead": [], "incomplete": []}
+ 
+$ systemctl --user restart nacre-daemon.service 
+  
+$ /usr/sbin/python /work/tools/releases.py ui-shell bead --notifications daemon 
+ {"status": "complete", "shell": "bead", "transaction": "1ad80acb48d94b0eaf8e499274230785"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "bead", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": true, "dropin_loaded": true, "daemon_dropin_present": true, "windows": "active", "notifications": "daemon", "ready_for_bead": [], "incomplete": []}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell qml 
+ {"status": "complete", "shell": "qml", "transaction": "870afd3ef83c481c8a3da66a6e2dbf84"}
+ 
+$ /usr/sbin/python /work/tools/releases.py ui-shell status 
+ {"active": "qml", "launcher": "/home/tester/.local/share/nacre/bead/0c3579d43e134543bccd0b5f93df7117/launch", "dropin_present": false, "dropin_loaded": false, "daemon_dropin_present": false, "windows": "inactive", "notifications": null, "ready_for_bead": [], "incomplete": []}
+ 
+PASS: install → switch → persisted restart → use → crash-loop fallback → rollback → repeat → daemon takeover and back

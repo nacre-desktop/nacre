@@ -31,6 +31,9 @@ SHELL, WINDOWS, FALLBACK = (
     "nacre-ui-shell-fallback.service",
 )
 DROPIN_NAME = "60-nacre-ui-shell.conf"
+DAEMON = f4.DAEMON
+DAEMON_DROPIN_NAME = "60-nacre-ui-shell-daemon.conf"
+DAEMON_FLAGS = ("--notifications=daemon", "--behaviours=daemon")
 MARK = "# managed by nacre ui-shell; remove with: nacre ui-shell qml\n"
 SAFE = re.compile(r"/[A-Za-z0-9_./+=:@-]+")
 DEFAULT_LAUNCHER = None
@@ -56,6 +59,13 @@ def dropin_text(launcher, notifications="none"):
     ).encode()
 
 
+def daemon_text(argv):
+    """Bead with --notifications daemon: the daemon owns notifications and the QML-owned behaviours."""
+    return (
+        f"{MARK}[Service]\nExecStart=\nExecStart={' '.join([*argv, *DAEMON_FLAGS])}\n"
+    ).encode()
+
+
 def windows_text(dropin, qml_argv):
     return (
         f"{MARK}[Unit]\nDescription=Nacre QML windows (Settings, Colors, Welcome) beside Bead\n"
@@ -78,11 +88,12 @@ class UiShell(f4.Switch):
         super().__init__(home, state, **kw)
         self.unit_dir = self.config / "systemd/user"
         self.dropin = self.unit_dir / (SHELL + ".d") / DROPIN_NAME
+        self.daemon_dropin = self.unit_dir / (DAEMON + ".d") / DAEMON_DROPIN_NAME
         self.windows = self.unit_dir / WINDOWS
         self.fallback = self.unit_dir / FALLBACK
         self.index = self.state / "ui-shell"
         self.sleep, self.now = sleep, now
-        self.managed = (self.dropin, self.windows, self.fallback)
+        self.managed = (self.dropin, self.windows, self.fallback, self.daemon_dropin)
 
     def selected_launcher(self, launcher=None):
         if launcher:
@@ -281,6 +292,71 @@ class UiShell(f4.Switch):
                 "QML provider did not register",
             )
 
+    # -- daemon takeover (N0068) ---------------------------------------------
+    def daemon_argv(self):
+        """The packaged daemon command line without any authority flags."""
+        found = re.search(
+            r"argv\[\]=(.*?) ; ignore_errors",
+            self.props(DAEMON, "ExecStart")["ExecStart"],
+        )
+        argv = [
+            a
+            for a in (shlex.split(found[1]) if found else [])
+            if not a.startswith(("--notifications=", "--behaviours="))
+        ]
+        if not argv or not all(
+            SAFE.fullmatch(a) or re.fullmatch(r"--?[a-z][a-z-]*(=[a-z-]+)?", a)
+            for a in argv
+        ):
+            raise RuntimeError("Cannot determine a plain daemon command line")
+        return argv
+
+    def daemon_ready(self, notifications):
+        """The daemon answers; with notifications it also owns them (topic published, service running)."""
+
+        def ready():
+            try:
+                result = self.runner(
+                    [
+                        *self.health_command,
+                        "call",
+                        "--timeout",
+                        "3000",
+                        "daemon.status",
+                        "{}",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=6,
+                    env=self.binding,
+                )
+                status = json.loads(result.stdout)
+            except (OSError, ValueError, subprocess.SubprocessError):
+                return False
+            return not notifications or (
+                "notifications" in status.get("topics", [])
+                and status.get("services", {}).get("notifications", {}).get("status")
+                == "running"
+            )
+
+        what = (
+            "daemon notifications did not become available"
+            if notifications
+            else "daemon did not answer"
+        )
+        self.wait(ready, what, 30)
+
+    def restart_daemon(self):
+        self.ctl("restart", DAEMON)
+
+    def restart_daemon_best_effort(self):
+        # Rollback: the shell must still be restarted if the daemon cannot be; daemon-ready reports it.
+        try:
+            self.restart_daemon()
+        except subprocess.SubprocessError:
+            pass
+
     # -- status / preflight -------------------------------------------------
     def launcher_reasons(self, launcher):
         if not launcher:
@@ -337,10 +413,18 @@ class UiShell(f4.Switch):
                 reasons.append(f"Refusing to overwrite unmanaged file: {path}")
         if not all(SAFE.fullmatch(str(p)) for p in self.managed):
             reasons.append("Configuration path contains unsupported characters")
+        if notifications == "daemon":
+            for path in units[DAEMON].get("DropInPaths", "").split():
+                if Path(path) != self.daemon_dropin and re.search(
+                    rb"^\s*ExecStart\s*=", f4.read(Path(path)), re.M
+                ):
+                    reasons.append(
+                        f"Foreign drop-in overrides the daemon ExecStart: {path}"
+                    )
         if notifications not in {"none", "daemon"}:
             reasons.append(
                 "Choose --notifications none (no desktop notifications while Bead is active) "
-                "or daemon (needs the daemon notifications producer)"
+                "or daemon (the daemon takes over notifications and behaviours)"
             )
         reasons += self.launcher_reasons(launcher)
         return reasons, units, effective
@@ -360,6 +444,7 @@ class UiShell(f4.Switch):
             "launcher": launcher or None,
             "dropin_present": present,
             "dropin_loaded": loaded,
+            "daemon_dropin_present": self.daemon_dropin.exists(),
             "windows": self.props(WINDOWS, "ActiveState")["ActiveState"],
             "notifications": next(
                 (
@@ -431,7 +516,12 @@ class UiShell(f4.Switch):
             if self.props(WINDOWS, "LoadState")["LoadState"] == "loaded":
                 self.ctl("stop", WINDOWS)
 
-        self.phase(record, "remove-dropin", lambda: restore_paths([self.dropin]))
+        daemon = record.get("daemon", False)
+        self.phase(
+            record,
+            "remove-dropin",
+            lambda: restore_paths([self.dropin, self.daemon_dropin]),
+        )
         self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
         self.phase(record, "stop-windows", stop_windows)
         self.phase(
@@ -440,7 +530,11 @@ class UiShell(f4.Switch):
             lambda: restore_paths([self.windows, self.fallback]),
         )
         self.phase(record, "reload-restored", lambda: self.ctl("daemon-reload"))
+        if daemon:  # back to the legacy daemon before QML starts and asks for the name
+            self.phase(record, "restart-daemon", self.restart_daemon_best_effort)
         self.phase(record, "restart-shell", self.restart)
+        if daemon:
+            self.phase(record, "daemon-ready", lambda: self.daemon_ready(False))
         self.phase(record, "health", self.verify_qml)
 
     def qml(self, recover=False):
@@ -449,6 +543,7 @@ class UiShell(f4.Switch):
         self.layout(self.snapshot()[0])
         if (
             not self.dropin.exists()
+            and not self.daemon_dropin.exists()
             and not self.loaded()
             and all(r["status"] in DONE for r in records)
             and not any(
@@ -464,7 +559,11 @@ class UiShell(f4.Switch):
             ),
             {},
         )
-        record = self.begin("qml", prior=previous.get("prior", {}))
+        record = self.begin(
+            "qml",
+            prior=previous.get("prior", {}),
+            daemon=bool(previous.get("daemon")) or self.daemon_dropin.exists(),
+        )
         try:
             self.converge_qml(record)
         except Exception as error:
@@ -503,27 +602,12 @@ class UiShell(f4.Switch):
             self.verify_bead()
             return {"status": "complete", "shell": "bead"}
         reasons, units, _ = self.readiness(launcher, notifications)
-        if notifications == "daemon":
+        daemon = notifications == "daemon"
+        if daemon:
             self.layout(units)
-            topics = json.loads(
-                self.runner(
-                    [
-                        *self.health_command,
-                        "call",
-                        "--timeout",
-                        "3000",
-                        "daemon.status",
-                        "{}",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                    timeout=6,
-                    env=self.binding_env(),
-                ).stdout
-            ).get("topics", [])
-            if "notifications" not in topics:
-                reasons.append("The daemon does not advertise the notifications topic")
+            self.binding = self.binding_env()
+            if not reasons:
+                want_daemon = daemon_text(self.daemon_argv())
         if reasons:
             raise RuntimeError("; ".join(dict.fromkeys(reasons)))
         argv = re.search(
@@ -544,6 +628,7 @@ class UiShell(f4.Switch):
             "bead",
             launcher=launcher,
             notifications=notifications,
+            daemon=daemon,
             qml_exec=qml_argv,
             prior={p.name: f4.file_state(p) for p in self.managed},
         )
@@ -555,10 +640,22 @@ class UiShell(f4.Switch):
 
             self.phase(record, "write-units", write_units)
             self.phase(record, "reload-units", lambda: self.ctl("daemon-reload"))
+            if daemon:
+                self.phase(
+                    record,
+                    "write-daemon-dropin",
+                    lambda: f4.atomic(self.daemon_dropin, want_daemon, 0o644),
+                )
             self.phase(
                 record, "write-dropin", lambda: f4.atomic(self.dropin, want, 0o644)
             )
             self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
+            if daemon:
+                # QML releases org.freedesktop.Notifications, the daemon restarts and
+                # takes it, and only then does Bead start.
+                self.phase(record, "stop-shell", lambda: self.ctl("stop", SHELL))
+                self.phase(record, "restart-daemon", self.restart_daemon)
+                self.phase(record, "daemon-ready", lambda: self.daemon_ready(True))
             self.phase(record, "restart-shell", self.restart)
             self.phase(record, "health", self.verify_bead)
             record["status"] = "complete"

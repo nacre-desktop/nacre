@@ -52,7 +52,11 @@ import json,sys
 if 'ui.dispatch' in sys.argv:
  print('UI method is unavailable',file=sys.stderr); sys.exit(1)
 if 'daemon.status' in sys.argv:
- print(json.dumps({'boot':'stub','safe':False,'services':{'settings':{'status':'running'}},'topics':['settings.store.desktop']}))
+ import os
+ try: flags=open(os.environ['XDG_RUNTIME_DIR']+'/daemon-args').read()
+ except OSError: flags=''
+ mine='--notifications=daemon' in flags
+ print(json.dumps({'boot':'stub','safe':False,'services':{'settings':{'status':'running'},**({'notifications':{'status':'running'}} if mine else {})},'topics':['settings.store.desktop']+(['notifications'] if mine else [])}))
 else:
  print(json.dumps({'store':'desktop','rev':1,'exists':True,'data':{},'error':None,'dirty':False}))
 """,
@@ -81,7 +85,14 @@ write(
     root / "nacre-shell.service.d/50-nacre-f4.conf",
     "[Service]\nEnvironment=NACRE_DAEMON_CLIENT=1\n",
 )
-write(root / "nacre-daemon.service", "[Service]\nExecStart=/usr/bin/sleep infinity\n")
+# Stub daemon: records the flags it was started with (the helper stub above reads them).
+daemon = home / "stub-daemon"
+write(
+    daemon,
+    '#!/bin/sh\nprintf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/daemon-args"\nexec /usr/bin/sleep infinity\n',
+    0o700,
+)
+write(root / "nacre-daemon.service", f"[Service]\nExecStart={daemon}\n")
 write(root / "nacre-daemon.socket", "[Socket]\nListenStream=%t/nacre/daemon.sock\n")
 ctl("daemon-reload")
 ctl("start", "nacre-daemon.socket")
@@ -119,7 +130,35 @@ assert not (root / "nacre-ui-shell-fallback.service").exists()
 ui("bead", "--notifications", "none")
 ui("qml")
 assert ui("status")["active"] == "qml"
+# N0068: daemon notifications take over the daemon flags, and qml gives them back.
+args = rt / "daemon-args"
+
+
+def flags():
+    # The unit is Type=simple: restart returns before the stub has written its arguments.
+    end = time.monotonic() + 10
+    while time.monotonic() < end:
+        try:
+            return args.read_text().split()
+        except OSError:
+            time.sleep(0.2)
+    raise AssertionError("the daemon stub did not start")
+
+
+args.unlink(missing_ok=True)
+ctl("restart", "nacre-daemon.service")
+assert flags() == [], flags()
+ui("bead", "--notifications", "daemon")
+assert ui("status")["active"] == "bead"
+assert flags() == ["--notifications=daemon", "--behaviours=daemon"], flags()
+daemon_dropin = root / "nacre-daemon.service.d/60-nacre-ui-shell-daemon.conf"
+assert daemon_dropin.is_file()
+args.unlink()
+ui("qml")
+assert ui("status")["active"] == "qml"
+assert flags() == [], flags()
+assert not daemon_dropin.exists()
 print(
-    "PASS: install → switch → persisted restart → use → crash-loop fallback → rollback → repeat",
+    "PASS: install → switch → persisted restart → use → crash-loop fallback → rollback → repeat → daemon takeover and back",
     flush=True,
 )

@@ -47,6 +47,20 @@ class Manager:
         self.client_on = True
         self.daemon_down = False
         self.result = "success"  # the shell unit's Result property
+        # Daemon model (N0068): reload caches the drop-in, restart applies it.
+        self.daemon_cfg = self.daemon_mode = False
+        self.notifications_broken = False
+        self.daemon_foreign = []
+
+    def daemon_dropin_path(self):
+        return self.root / (m.DAEMON + ".d") / m.DAEMON_DROPIN_NAME
+
+    def notifications_running(self):
+        """The managed daemon takes the bus name only once the QML shell has released it."""
+        qml_up = (
+            self.shell[0] == "qml" and self.shell[2] == "active" and self.shell_active
+        )
+        return self.daemon_mode and not self.notifications_broken and not qml_up
 
     def dropin_text(self):
         path = self.root / (m.SHELL + ".d") / m.DROPIN_NAME
@@ -57,6 +71,10 @@ class Manager:
         kind = "bead" if self.cfg["bead"] else "qml"
         state = "failed" if kind == "bead" and self.bead_crashes else "active"
         self.shell = (kind, self.pid, state)
+        if kind == "qml" and self.daemon_mode:
+            self.violations.append("qml shell started beside the managed daemon")
+        if kind == "bead" and self.daemon_cfg and not self.notifications_running():
+            self.violations.append("bead started before the daemon owned notifications")
         if (
             kind == "bead"
             and self.cfg["windows"]
@@ -92,8 +110,22 @@ class Manager:
                         {
                             "boot": "b",
                             "safe": False,
-                            "services": {"settings": {"status": "running"}},
-                            "topics": self.topics,
+                            "services": {
+                                "settings": {"status": "running"},
+                                **(
+                                    {"notifications": {"status": "running"}}
+                                    if self.notifications_running()
+                                    else {}
+                                ),
+                            },
+                            "topics": [
+                                *self.topics,
+                                *(
+                                    ["notifications"]
+                                    if self.notifications_running()
+                                    else []
+                                ),
+                            ],
                         }
                     ),
                 )
@@ -142,6 +174,18 @@ class Manager:
         if action == "daemon-reload":
             self.cfg["bead"] = (self.root / (m.SHELL + ".d") / m.DROPIN_NAME).exists()
             self.cfg["windows"] = (self.root / m.WINDOWS).exists()
+            self.daemon_cfg = self.daemon_dropin_path().exists()
+        elif action == "restart" and args[0] == m.DAEMON:
+            self.daemon_mode = self.daemon_cfg
+            if (
+                self.daemon_mode
+                and self.shell[0] == "qml"
+                and self.shell[2] == "active"
+            ):
+                self.violations.append("daemon restarted while QML held the name")
+        elif action == "stop" and args[0] == m.SHELL:
+            self.windows = None
+            self.shell = (self.shell[0], self.shell[1], "inactive")
         elif action == "restart" and args[0] == m.SHELL:
             self.windows = None
             self.start_shell()
@@ -189,6 +233,20 @@ class Manager:
             values = {
                 "LoadState": "loaded" if self.cfg["windows"] else "not-found",
                 "ActiveState": "active" if self.windows else "inactive",
+            }
+        elif name == m.DAEMON:
+            values = {
+                "FragmentPath": "/usr/lib/systemd/user/" + name,
+                "LoadState": "loaded",
+                "UnitFileState": "static",
+                "ActiveState": "inactive",
+                "ExecStart": "{ path=/usr/bin/nacre-daemon ; argv[]=/usr/bin/nacre-daemon ; ignore_errors=no ; }",
+                "DropInPaths": " ".join(
+                    [
+                        *self.daemon_foreign,
+                        *([str(self.daemon_dropin_path())] if self.daemon_cfg else []),
+                    ]
+                ),
             }
         else:
             values = {
@@ -245,12 +303,17 @@ class Base(unittest.TestCase):
 
     def assertQml(self):
         mgr = self.manager
+        self.assertFalse(mgr.daemon_mode)
+        self.assertFalse(mgr.daemon_dropin_path().exists())
         self.assertEqual(
             (mgr.shell[0], mgr.shell[2], mgr.windows), ("qml", "active", None)
         )
         self.assertFalse(mgr.cfg["bead"])
         self.assertFalse((mgr.root / (m.SHELL + ".d") / m.DROPIN_NAME).exists())
         self.assertEqual(mgr.violations, [])
+
+    def daemon_bead(self, **kw):
+        return self.switch(**kw).bead(str(self.launcher), "daemon")
 
     def assertBead(self):
         mgr = self.manager
@@ -450,7 +513,6 @@ class SwitchTests(Base):
                 str(self.foreign_dropin())
             ),
             "unmanaged file": lambda: (mgr.root / m.WINDOWS).write_text("[Service]\n"),
-            "notifications topic": lambda: None,
             "not running": lambda: setattr(mgr, "shell_active", False),
             "socket is not active": lambda: setattr(mgr, "socket_active", False),
         }
@@ -461,8 +523,6 @@ class SwitchTests(Base):
                     notifications = None
                 if reason == "plain absolute path":
                     launcher = "relative/bead-shell"
-                if reason == "notifications topic":
-                    notifications = "daemon"
                 setup()
                 before = self.manager.mutations
                 with self.assertRaisesRegex(RuntimeError, reason):
@@ -483,14 +543,117 @@ class SwitchTests(Base):
         path.write_text("[Service]\nExecStart=\nExecStart=/bin/true\n")
         return path
 
-    def test_daemon_notifications_need_producer_topic(self):
-        self.manager.topics.append("notifications")
-        self.assertEqual(
-            self.switch().bead(str(self.launcher), "daemon")["shell"], "bead"
+    def test_daemon_mode_sequences_the_name_handover_and_rolls_back_exactly(self):
+        mgr = self.manager
+        before = {p: f4.file_state(p) for p in self.switch().managed}
+        self.assertEqual(self.daemon_bead()["shell"], "bead")
+        self.assertBead()
+        self.assertTrue(mgr.daemon_mode and mgr.notifications_running())
+        text = mgr.daemon_dropin_path().read_text()
+        self.assertIn(
+            "ExecStart=\nExecStart=/usr/bin/nacre-daemon --notifications=daemon --behaviours=daemon\n",
+            text,
         )
         self.assertEqual(
             self.switch().status(str(self.launcher))["notifications"], "daemon"
         )
+        order = [
+            c[2:]
+            for c in mgr.calls
+            if c[:2] == ["systemctl", "--user"] and c[2] in {"stop", "restart"}
+        ]
+        self.assertEqual(
+            order, [["stop", m.SHELL], ["restart", m.DAEMON], ["restart", m.SHELL]]
+        )
+        self.assertEqual(self.daemon_bead()["shell"], "bead")  # repeat is idempotent
+        self.switch().qml()
+        self.assertQml()
+        self.assertEqual({p: f4.file_state(p) for p in self.switch().managed}, before)
+        self.assertEqual(mgr.violations, [])
+
+    def test_daemon_mode_refuses_a_foreign_daemon_exec_override(self):
+        self.manager.daemon_foreign.append(str(self.manager.root / "other-daemon.conf"))
+        (self.manager.root / "other-daemon.conf").write_text(
+            "[Service]\nExecStart=\nExecStart=/bin/true\n"
+        )
+        with self.assertRaisesRegex(
+            RuntimeError, "Foreign drop-in overrides the daemon"
+        ):
+            self.daemon_bead()
+        self.assertEqual(self.manager.mutations, 0)
+        self.assertFalse(self.manager.daemon_dropin_path().exists())
+
+    def test_daemon_notifications_that_never_appear_restore_qml_and_the_legacy_daemon(
+        self,
+    ):
+        self.manager.notifications_broken = True
+        with self.assertRaisesRegex(
+            RuntimeError, "notifications did not become available"
+        ):
+            self.daemon_bead()
+        self.assertQml()
+        self.assertTrue(all(s == "rolled-back" for s in self.statuses()))
+
+    def test_crash_at_every_daemon_phase_converges_to_qml(self):
+        phases = [
+            "write-units",
+            "reload-units",
+            "write-daemon-dropin",
+            "write-dropin",
+            "reload",
+            "stop-shell",
+            "restart-daemon",
+            "daemon-ready",
+            "restart-shell",
+            "health",
+        ]
+        for point in phases:
+            with self.subTest(point=point):
+                self.setUp()
+
+                def hook(name, point=point):
+                    if name == point:
+                        raise Crash
+
+                with self.assertRaises(Crash):
+                    self.daemon_bead(phase_hook=hook)
+                self.switch().qml()
+                self.assertQml()
+                self.assertEqual(self.manager.violations, [])
+                self.assertNotIn("applying", self.statuses())
+
+    def test_crash_at_every_daemon_rollback_phase_converges(self):
+        phases = [
+            "remove-dropin",
+            "reload",
+            "stop-windows",
+            "restore-companions",
+            "reload-restored",
+            "restart-daemon",
+            "restart-shell",
+            "daemon-ready",
+            "health",
+        ]
+        for point in phases:
+            with self.subTest(point=point):
+                self.setUp()
+                self.daemon_bead()
+
+                def hook(name, point=point):
+                    if name == point:
+                        raise Crash
+
+                with self.assertRaises(Crash):
+                    self.switch(phase_hook=hook).qml()
+                self.switch().qml()
+                self.assertQml()
+                self.assertEqual(self.manager.violations, [])
+
+    def test_rollback_still_restarts_the_shell_when_the_daemon_restart_fails(self):
+        self.daemon_bead()
+        self.manager.fail["restart"] = 1  # the daemon restart is the first restart
+        self.switch().qml()
+        self.assertEqual(self.manager.shell[0], "qml")
 
     def test_health_failures_restore_qml(self):
         def crash_loop():
