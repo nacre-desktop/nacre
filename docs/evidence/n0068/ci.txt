@@ -1,0 +1,89 @@
+N0068 full desktop CI replication on dev-2 (ghcr-equivalent archlinux, 8 CPUs/12g, seccomp+apparmor unconfined): PASS
+Commit b306ddf1. Cargo steps (fmt, clippy -D warnings, examples, test, minimal consumer, release) passed (set -e), then:
+1:=== ci_public_checkout
+3:=== orient
+117:=== cargo-fmt
+118:=== clippy
+430:=== examples
+455:=== test
+837:=== minimal
+856:=== release
+862:=== parity-tooling
+868:=== sandbox
+870:======================================================================
+884:======================================================================
+896:======================================================================
+908:======================================================================
+920:======================================================================
+936:======================================================================
+
+      6 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+      5 test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+      2 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+=== sandbox
+............................
+----------------------------------------------------------------------
+Ran 28 tests in 0.804s
+
+OK
+=== npm
+=== i18n
+Translation coverage passed: 4169 owned messages.
+Generated translation assets are current.
+=== check.py
+Shortcut documentation matches the compositor contract.
+Python formatting and lint passed.
+Python, JSON, shell syntax and retired-tree checks passed.
+Window class routing and floating rules are consistent.
+Lua syntax passed.
+All desktop QML/JavaScript parsed and formatted with local Qt.
+Compositor boundary and generated configuration checks passed.
+tools/tests: Ran 496 tests in 378.211s; OK (skipped=1)
+ai/tests: Ran 120 tests in 1.945s; OK
+brain/tests: Ran 52 tests in 3.768s; OK
+fuse: device /dev/fuse not found. Kernel module not loaded?
+error: fuse init failed: Can't mount path /root/.cache/doc
+
+(/usr/lib/xdg-desktop-portal:16374): xdg-desktop-portal-WARNING **: 18:08:48.033: Document portal fuse mount point unknown: GDBus.Error:org.freedesktop.DBus.Error.ServiceUnknown: The name :1.3 was not
+
+(/usr/lib/xdg-desktop-portal:16374): xdg-desktop-portal-WARNING **: 18:08:48.036: Failed to create RealtimeKit proxy: Could not connect: No such file or directory
+
+(/usr/lib/xdg-desktop-portal:16374): xdg-desktop-portal-WARNING **: 18:08:48.036: The location portal requires an access impl
+
+(/usr/lib/xdg-desktop-portal:16374): xdg-desktop-portal-WARNING **: 18:08:48.036: The camera portal requires an access impl
+nacre/shell-tools/tests: Ran 487 tests in 504.127s; OK
+Native Niri legacy assertions and frozen reference integrity passed.
+Native palette and wallpaper immutable workflow references passed.
+Native Hyprland legacy assertions passed.
+Helper parity harness integrity passed.
+Helper parity: 534 cases, 0 failures
+Current palette CLI imported and parsed successfully.
+Brain JavaScript syntax and formatting passed.
+Spicetify JavaScript syntax and formatting passed.
+=== gallery
+bar captured
+notices captured
+settings captured
+colors captured
+welcome captured
+controls captured
+feedback captured
+themes captured
+launcher captured
+chat captured
+summary captured
+media captured
+wallpaper captured
+login captured
+dashboard captured
+extras captured
+Native translation audit passed: 244 states per language. Report/screenshots: /tmp/nacre-pseudo-audit
+AUR pager gallery captured without builds, installs or live desktop access.
+colors captured
+controls captured
+launcher captured
+chat captured
+summary captured
+Native translation audit passed: 185 states per language. Report/screenshots: /tmp/nacre-pseudo-wide-font
+CI-PASS
+EXIT=0
