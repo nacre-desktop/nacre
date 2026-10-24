@@ -55,6 +55,7 @@ def dropin_text(launcher, notifications="none"):
         f"Wants={WINDOWS} {f4.SOCKET}\nAfter={f4.SOCKET}\nOnFailure={FALLBACK}\n"
         "StartLimitIntervalSec=60\nStartLimitBurst=3\n\n"
         f"[Service]\nExecStart=\nExecStart={launcher} start\nRestart=on-failure\nRestartSec=2\n"
+        "KillMode=control-group\nTimeoutStopSec=10\n"
         f"Environment=NACRE_UI_NOTIFICATIONS={notifications}\nUMask=0077\nLimitCORE=0\n"
     ).encode()
 
@@ -118,7 +119,10 @@ class UiShell(f4.Switch):
         def source_file(path):
             # Source snapshots can use hardlinks. Copies break those links; never accept symlinks.
             f4.checked(path.parent, directory=True)
-            info = path.lstat()
+            try:
+                info = path.lstat()
+            except OSError as error:
+                raise RuntimeError(f"Unsafe source file: {path}") from error
             if (
                 not stat.S_ISREG(info.st_mode)
                 or info.st_uid not in {0, os.getuid()}
@@ -126,10 +130,16 @@ class UiShell(f4.Switch):
             ):
                 raise RuntimeError(f"Unsafe source file: {path}")
 
-        source_file(binary)
+        binaries = [
+            binary,
+            binary.with_name("bead-wallpaper-video"),
+            binary.with_name("nacre-wallpaper-decode"),
+        ]
+        for executable in binaries:
+            source_file(executable)
+            if not os.access(executable, os.X_OK):
+                raise RuntimeError(f"Bead binary must be executable: {executable}")
         f4.checked(shell, directory=True)
-        if not binary.is_file() or not os.access(binary, os.X_OK):
-            raise RuntimeError("Bead binary must be an executable regular file")
         if not (shell / "palette.json").is_file() or not (shell / "bar").is_dir():
             raise RuntimeError("Expected the matching Bead shell/ tree")
         for path in shell.rglob("*"):
@@ -155,13 +165,18 @@ class UiShell(f4.Switch):
         def copy():
             version.mkdir(mode=0o700)
             shutil.copytree(shell, version / "shell")
-            shutil.copy2(binary, version / "nacre-shell")
+            for executable in binaries:
+                shutil.copy2(
+                    executable,
+                    version / ("nacre-shell" if executable == binary else executable.name),
+                )
             # Absolute immutable paths prevent subsequent checkout changes from changing a trial.
             script = (
                 "#!/bin/sh\nset -eu\n"
                 f"cd {shlex.quote(str(version))}\n"
                 'case "${1:-}" in\n'
-                "check) exec ./nacre-shell --help ;;\n"
+                "check) test -x ./nacre-wallpaper-decode; "
+                "./bead-wallpaper-video --check; exec ./nacre-shell --help ;;\n"
                 "start) shift ;;\n"
                 '*) echo "usage: launch check|start" >&2; exit 2 ;;\nesac\n'
                 ': "${XDG_RUNTIME_DIR:?}"\n'
