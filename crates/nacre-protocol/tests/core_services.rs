@@ -2,6 +2,19 @@ use nacre_protocol::{artifacts, core_services::*, framing, patch, Message};
 use serde_json::{json, Value};
 
 #[test]
+fn generated_weather_example_keeps_coordinates_and_refresh_state() {
+    let exports = artifacts::generate();
+    let line = exports["protocol/fixtures/core-dashboard-weather.jsonl"]
+        .lines()
+        .next()
+        .unwrap();
+    let frame: Value = serde_json::from_str(line).unwrap();
+    assert_eq!(frame["data"]["refreshing"], false);
+    assert_eq!(frame["data"]["current"]["latitude"], 60.0);
+    assert_eq!(frame["data"]["current"]["longitude"], 5.0);
+}
+
+#[test]
 fn validated_map_keys_keep_their_element_types_in_luau() {
     let exports = artifacts::generate();
     let types = &exports["protocol/luau/core-services.d.luau"];

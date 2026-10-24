@@ -1,6 +1,6 @@
 # N0057 — Daemon weather producer
 
-- Status: In progress (implementation and remote desktop CI)
+- Status: Implemented and validated; pending lead review
 - Date: 2026-10-24
 - Scope: produce `dashboard.weather` before the Bead switch; reuse the native worker.
 
@@ -84,5 +84,28 @@ compares missing `weatherIpLookup` as false on both sides, rejects non-boolean
 values, and keeps explicit true observable through a negative control.
 N0053's full-daemon guard adds a silent local HTTP CONNECT proxy, requires the
 weather request actually to start, and still requires READY within two seconds.
-Full desktop CI evidence is recorded below after execution; no local builds/tests,
-live session changes, deployment or publication are authorized by this unit.
+The complete desktop job passed in an isolated Arch CI container on implementation
+`b6264ea9`: Rust fmt/clippy/examples/tests/release build, minimal protocol consumer,
+29 sandbox-integrity tests, translation checks, and `tools/check.py` (491 tools
+with one skip, 120 AI, 52 Brain, 487 shell-tools, native contract checks, 534 helper
+parity cases with zero failures, and JavaScript checks). Native translation audits
+passed at 244 and 185 states per language; the AUR pager gallery also passed.
+The full-daemon 22-test suite includes the HTTP-hang READY-within-two-seconds guard;
+the helper library passed 721 tests.
+
+A final clean-tree check exposed the weather fixture's separate source table in
+`core_artifacts.rs`. That table now generates coordinates and refresh state;
+export plus `export --check`, protocol fmt/clippy/tests, and all nine weather
+tests passed after this fixture-only correction. The producer code is unchanged
+from the full job. Frozen expected helper files were not regenerated.
+
+Simplicity review: one existing fetcher/normalizer serves both entry points. The
+new code adds only typed adaptation, scheduling, ownership of the shared lane and
+failure retention; it reuses offload, hub/settings observation and the photo
+location type, with no second provider or service framework.
+No local builds/tests, live session changes, deployment or publication occurred.
+
+Integration evidence: after rebasing onto N0059's audio/power producers, the merged
+checkout passed fmt, non-mutating export check, all-target clippy, examples, all
+Rust tests (723 helper library tests), the minimal consumer, release build, 29
+harness-integrity tests and all 534 parity cases. The checkout remained clean.

@@ -209,8 +209,8 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         ),
         (
             "dashboard.weather",
-            json!({"health":health,"checked":1800000000.25,"provider":"Open-Meteo","current":{
-            "location":"Fixture location","timezone":"UTC","local_time":"2027-01-15T08:00","wmo":0,"description":"Clear sky",
+            json!({"health":health,"checked":1800000000.25,"provider":"Open-Meteo","refreshing":false,"current":{
+            "location":"Fixture location","latitude":60.0,"longitude":5.0,"timezone":"UTC","local_time":"2027-01-15T08:00","wmo":0,"description":"Clear sky",
             "temperature":12.0,"feels_like":11.0,"high":14.0,"low":6.0,"humidity":50.0,"wind":10.0,"direction":180.0,"pressure":1013.0,"aqi":20.0,"is_day":true,
             "hours":entities(json!({"hour-1":{"time":"2027-01-15T08:00","temperature":12.0,"wmo":0,"rain":10.0}})),
             "days":entities(json!({"day-1":{"date":"2027-01-15","high":14.0,"low":6.0,"wmo":0,"rain":10.0,"sunrise":"2027-01-15T07:00","sunset":"2027-01-15T17:00","uv":2.0}}))}}),
