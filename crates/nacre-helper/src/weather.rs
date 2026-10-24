@@ -236,12 +236,12 @@ fn refresh_with(
 ) -> Value {
     let path = cache(paths);
     let previous = cached(paths);
-    let mut location = settings["weatherLocation"]
+    let location = settings["weatherLocation"]
         .as_str()
         .unwrap_or("")
         .trim()
         .to_owned();
-    if location.is_empty() && settings["weatherIpLookup"].as_bool() != Some(true) {
+    if location.is_empty() {
         return stale(previous);
     }
     // QML can still invoke the standalone command: share the lane across processes too.
@@ -250,15 +250,6 @@ fn refresh_with(
         _ => return stale(previous),
     };
     let result = (|| -> Result<Value> {
-        if location.is_empty() {
-            location = fetch("https://ipinfo.io/json")?["city"]
-                .as_str()
-                .unwrap_or("")
-                .to_owned();
-        }
-        if location.is_empty() {
-            return Err("Set a weather city in Settings".into());
-        }
         let (lat, lon) = if previous["location"] == location
             && previous["latitude"].is_number()
             && previous["longitude"].is_number()
@@ -483,8 +474,8 @@ mod network_tests {
         );
         for settings in [
             json!({}),
-            json!({"weatherIpLookup":false}),
-            json!({"weatherIpLookup":"true"}),
+            json!({"weatherLocation":"  "}),
+            json!({"weatherIpLookup":true}),
         ] {
             let result = refresh_with(&paths, &settings, |_| {
                 panic!("Consent off must make zero requests")
@@ -501,11 +492,11 @@ mod network_tests {
         });
         assert_eq!(busy["stale"], true);
         drop(guard);
-        for consent in [false, true] {
+        for legacy in [json!({}), json!({"weatherIpLookup":true})] {
             let mut calls = Vec::new();
             let data = refresh_with(
                 &paths,
-                &json!({"weatherLocation":"Harbour","weatherIpLookup":consent}),
+                &json!({"weatherLocation":"Harbour","weatherIpLookup":legacy.get("weatherIpLookup")}),
                 |endpoint| {
                     calls.push(endpoint.to_owned());
                     let body = if endpoint.contains("geocoding") {
@@ -520,7 +511,7 @@ mod network_tests {
             );
             assert!(
                 !calls.iter().any(|s| s.contains("ipinfo")),
-                "A city always bypasses IP lookup"
+                "Only the configured city is used"
             );
             assert_eq!(data["stale"], false);
             assert_eq!(data["aqi"], 20.0);
@@ -536,17 +527,15 @@ mod network_tests {
         assert_eq!(stale["temperature"], cached["temperature"]);
         assert_eq!(stale["stale"], true);
         let mut calls = Vec::new();
-        let data = refresh_with(&paths, &json!({"weatherIpLookup":true}), |endpoint| {
+        let data = refresh_with(&paths, &json!({"weatherLocation":"Harbour"}), |endpoint| {
             calls.push(endpoint.to_owned());
-            Ok(if endpoint.contains("ipinfo") {
-                json!({"city":"Harbour"})
-            } else if endpoint.contains("air-quality") {
+            Ok(if endpoint.contains("air-quality") {
                 json!({})
             } else {
                 forecast()
             })
         });
-        assert!(calls[0].contains("ipinfo"));
+        assert!(!calls.iter().any(|s| s.contains("ipinfo")));
         assert!(
             !calls.iter().any(|s| s.contains("geocoding")),
             "Same city reuses cached coordinates"

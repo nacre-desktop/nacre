@@ -3259,7 +3259,7 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     fs::create_dir_all(&config)?;
     fs::write(
         config.join("desktop.json"),
-        br#"{"weatherLocation":"Fixture city","weatherIpLookup":false}"#,
+        br#"{"weatherLocation":"Fixture city","weatherIpLookup":true}"#,
     )?;
     let notify = home.path().join("notify.sock");
     let notifications = UnixDatagram::bind(&notify)?;

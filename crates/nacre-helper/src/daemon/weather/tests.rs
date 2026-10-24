@@ -89,10 +89,8 @@ async fn startup_manual_refresh_and_settings_changes() -> Result<()> {
             )
             .shared();
             initial(&hub)?;
-            hub.borrow_mut().publish(
-                "settings.store.desktop",
-                json!({"error":null,"data":{"weatherIpLookup":false}}),
-            )?;
+            hub.borrow_mut()
+                .publish("settings.store.desktop", json!({"error":null,"data":{}}))?;
             let task = tokio::task::spawn_local(run(hub.clone(), paths.clone()));
             tokio::time::timeout(Duration::from_secs(2), async {
                 loop {
@@ -113,7 +111,7 @@ async fn startup_manual_refresh_and_settings_changes() -> Result<()> {
             // A setting update during a running refresh queues another attempt and does no network.
             hub.borrow_mut().publish(
                 "settings.store.desktop",
-                json!({"error":null,"data":{"weatherIpLookup":false,"weatherFahrenheit":true}}),
+                json!({"error":null,"data":{"weatherFahrenheit":true}}),
             )?;
             tokio::time::timeout(Duration::from_secs(2), async {
                 while hub.borrow().snapshot(TOPIC).unwrap()["refreshing"] == true

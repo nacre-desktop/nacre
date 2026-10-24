@@ -203,8 +203,7 @@ fn weather_settings(settings: &Value) -> Value {
     json!([
         settings.is_object(),
         settings["weatherLocation"],
-        settings["weatherFahrenheit"],
-        settings["weatherIpLookup"]
+        settings["weatherFahrenheit"]
     ])
 }
 pub(super) fn location(hub: &Shared) -> Option<nacre_protocol::weather_photo::Location> {

@@ -80,8 +80,7 @@ by browsers, provider CLIs, GeoClue or package managers depend on their configur
 
 | Caller / destination | Data sent and trigger | Consent / integrity |
 | --- | --- | --- |
-| Weather: `ipinfo.io/json` | IP lookup at shell weather startup/30-minute refresh when city is blank. | Automatic existing behavior; set a city to avoid this lookup. 8-second request timeout, 512 KiB response cap. |
-| Weather: `geocoding-api.open-meteo.com/v1/search` | Configured/detected city, language; when city coordinates are not cached. | Existing weather behavior. |
+| Weather: `geocoding-api.open-meteo.com/v1/search` | Configured city, language; when city coordinates are not cached. | Existing weather behavior. |
 | Weather: `api.open-meteo.com/v1/forecast`, `air-quality-api.open-meteo.com/v1/air-quality` | City latitude/longitude, requested fields and timezone; weather refresh. | Existing weather behavior; cached location/forecast file is 0600. |
 | Media: `lrclib.net/api/get` | Track, artist, album and duration when media details update with lyrics enabled. | Dashboard lyrics setting, currently enabled by default; 6-second timeout and 300 KiB response cap. |
 | Media: player-supplied artwork URLs | Artwork URL via QML media images, dashboard album palette and lock artwork. | Rendering/settings dependent; may disclose listening activity. Python fetches bound size/time and require HTTPS, including final redirect scheme. QML image loading does not share those Python checks. |

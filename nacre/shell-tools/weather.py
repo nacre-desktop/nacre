@@ -138,8 +138,6 @@ def refresh():
     location = settings.get("weatherLocation", "").strip()
     try:
         if not location:
-            location = fetch_json("https://ipinfo.io/json").get("city", "")
-        if not location:
             raise ValueError(
                 tr(
                     "helper.weather.set-a-weather-city-in-settings",
