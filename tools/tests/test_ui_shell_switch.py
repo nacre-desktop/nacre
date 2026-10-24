@@ -35,6 +35,7 @@ class Manager:
         self.cfg = {"bead": False, "windows": False}
         self.shell = ("qml", 1, "active")  # kind, pid, state
         self.windows = None
+        self.wallpaper = None  # supervised child in the shell's control group
         self.pid = 1
         self.calls, self.violations = [], []
         self.fail, self.flap, self.after_mutation = {}, False, None
@@ -75,6 +76,9 @@ class Manager:
             self.violations.append("qml shell started beside the managed daemon")
         if kind == "bead" and self.daemon_cfg and not self.notifications_running():
             self.violations.append("bead started before the daemon owned notifications")
+        if kind == "bead" and state == "active":
+            self.pid += 1
+            self.wallpaper = self.pid
         if (
             kind == "bead"
             and self.cfg["windows"]
@@ -86,6 +90,8 @@ class Manager:
     def check(self):
         if self.shell and self.shell[0] == "qml" and self.windows:
             self.violations.append("qml shell beside windows host")
+        if self.shell and self.shell[0] == "qml" and self.wallpaper:
+            self.violations.append("qml shell beside Bead wallpaper child")
 
     def provider(self):
         if not self.shell or self.shell[2] != "active":
@@ -184,10 +190,10 @@ class Manager:
             ):
                 self.violations.append("daemon restarted while QML held the name")
         elif action == "stop" and args[0] == m.SHELL:
-            self.windows = None
+            self.windows = self.wallpaper = None
             self.shell = (self.shell[0], self.shell[1], "inactive")
         elif action == "restart" and args[0] == m.SHELL:
-            self.windows = None
+            self.windows = self.wallpaper = None
             self.start_shell()
         elif action == "reset-failed":
             pass
@@ -316,6 +322,7 @@ class Base(unittest.TestCase):
         self.assertEqual(
             (mgr.shell[0], mgr.shell[2], mgr.windows), ("qml", "active", None)
         )
+        self.assertIsNone(mgr.wallpaper)
         self.assertFalse(mgr.cfg["bead"])
         self.assertFalse((mgr.root / (m.SHELL + ".d") / m.DROPIN_NAME).exists())
         self.assertEqual(mgr.violations, [])
@@ -327,6 +334,7 @@ class Base(unittest.TestCase):
         mgr = self.manager
         self.assertEqual((mgr.shell[0], mgr.shell[2]), ("bead", "active"))
         self.assertIsNotNone(mgr.windows)
+        self.assertIsNotNone(mgr.wallpaper)
         self.assertEqual(mgr.violations, [])
 
     def statuses(self):
@@ -341,6 +349,7 @@ class SwitchTests(Base):
         dropin = (self.manager.root / (m.SHELL + ".d") / m.DROPIN_NAME).read_text()
         self.assertIn(f"ExecStart=\nExecStart={self.launcher} start\n", dropin)
         self.assertIn(f"OnFailure={m.FALLBACK}", dropin)
+        self.assertIn("KillMode=control-group", dropin)
         self.assertIn(f"Wants={m.WINDOWS} {f4.SOCKET}", dropin)
         self.assertIn(f"After={f4.SOCKET}", dropin)
         windows = (self.manager.root / m.WINDOWS).read_text()

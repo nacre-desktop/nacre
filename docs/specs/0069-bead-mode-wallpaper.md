@@ -64,11 +64,15 @@ Evidence and CPU/memory results will be recorded after those runs.
 
 ## Apply and undo (lead only)
 
-After deploying the updated Nacre control tools through the normal managed
-code install, use a matched Bead build whose binary directory contains
-`nacre-shell`, `bead-wallpaper-video`, and `nacre-wallpaper-decode`:
+From the reviewed durable Nacre checkout, first run the controller-refresh
+Python block in [N0054's owner runbook](0054-trial-switch-readiness.md#owner-runbook).
+It calls `releases.install_controller(root)` under the existing release lock;
+a shell-only code install does not refresh this controller. Do not run a full
+shell installer for this fix. Then use a matched Bead build whose binary directory
+contains `nacre-shell`, `bead-wallpaper-video`, and `nacre-wallpaper-decode`:
 
 ```sh
+BEAD_BUILD="$(realpath "$HOME/.local/share/nacre/ai/lead/bead-preview/current")"
 nacre ui-shell qml
 nacre ui-shell install --binary "$BEAD_BUILD/bin/nacre-shell" --shell "$BEAD_BUILD/shell"
 nacre ui-shell bead --notifications daemon
