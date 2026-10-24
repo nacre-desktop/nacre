@@ -284,6 +284,14 @@ class Base(unittest.TestCase):
         self.launcher = Path(self.temp.name) / "bead-shell"
         self.launcher.write_text("#!/bin/sh\n")
         self.launcher.chmod(0o700)
+        self.wallpaper_video = self.launcher.with_name("bead-wallpaper-video")
+        self.wallpaper_video.write_text(
+            '#!/bin/sh\n[ "${1:-}" = --check ] && exit 0\n'
+        )
+        self.wallpaper_video.chmod(0o700)
+        self.wallpaper_decode = self.launcher.with_name("nacre-wallpaper-decode")
+        self.wallpaper_decode.write_text("#!/bin/sh\nexit 1\n")
+        self.wallpaper_decode.chmod(0o700)
         self.manager = Manager(self.home, self.launcher)
         self.clock = Clock()
 
@@ -381,7 +389,19 @@ class SwitchTests(Base):
         text = Path(second["launcher"]).read_text()
         self.assertIn("--core-views --ui-provider", text)
         self.assertNotIn("--seconds", text)
+        self.assertIn("./bead-wallpaper-video --check", text)
+        self.assertIn("-x ./nacre-wallpaper-decode", text)
+        self.assertIn("--daemon-socket", text)
         self.assertTrue(Path(second["launcher"]).with_name("shell").is_dir())
+        self.assertEqual(
+            {p.name for p in Path(second["launcher"]).parent.iterdir()}
+            & {"bead-wallpaper-video", "nacre-wallpaper-decode"},
+            {"bead-wallpaper-video", "nacre-wallpaper-decode"},
+        )
+        for name in ("bead-wallpaper-video", "nacre-wallpaper-decode"):
+            installed = Path(second["launcher"]).with_name(name)
+            self.assertTrue(installed.is_file())
+            self.assertTrue(os.access(installed, os.X_OK))
         self.assertEqual(self.manager.mutations, 0)
 
     def test_install_interruption_leaves_previous_selection(self):
@@ -408,6 +428,43 @@ class SwitchTests(Base):
         with self.assertRaises(RuntimeError):
             self.switch().install(self.launcher, assets)
         self.assertEqual(self.switch().records(), [])
+
+    def test_install_requires_safe_executable_wallpaper_helpers(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        video = self.launcher.with_name("bead-wallpaper-video")
+        decoder = self.launcher.with_name("nacre-wallpaper-decode")
+        for path in (video, decoder):
+            original = path.read_bytes()
+            path.unlink()
+            with self.subTest(missing=path.name):
+                with self.assertRaisesRegex(RuntimeError, "Unsafe source file"):
+                    self.switch().install(self.launcher, assets)
+                self.assertEqual(self.switch().records(), [])
+            path.write_bytes(original)
+            path.chmod(0o700)
+        decoder.chmod(0o600)
+        with self.assertRaisesRegex(RuntimeError, "executable"):
+            self.switch().install(self.launcher, assets)
+        self.assertEqual(self.switch().records(), [])
+        decoder.chmod(0o700)
+        video.unlink()
+        video.symlink_to(decoder)
+        with self.assertRaisesRegex(RuntimeError, "Unsafe source file"):
+            self.switch().install(self.launcher, assets)
+        self.assertEqual(self.switch().records(), [])
+
+    def test_failed_wallpaper_helper_check_keeps_previous_install_selected(self):
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        first = self.switch().install(self.launcher, assets)
+        self.wallpaper_video.write_text("#!/bin/sh\nexit 1\n")
+        with self.assertRaisesRegex(RuntimeError, "Launcher check failed"):
+            self.switch().install(self.launcher, assets)
+        self.assertEqual(self.switch().selected_launcher(), first["launcher"])
+        self.assertEqual(self.switch().records()[-1]["status"], "rolled-back")
 
     def test_source_hardlinks_become_independent_installed_assets(self):
         assets = self.home / "build-shell"

@@ -69,11 +69,22 @@ write(
     bead,
     """#!/bin/sh
 [ "${1:-}" = --help ] && exit 0
+./bead-wallpaper-video --daemon-socket "${NACRE_DAEMON_SOCKET:-$XDG_RUNTIME_DIR/nacre/daemon.sock}" &
 while [ ! -e "$XDG_RUNTIME_DIR/crash" ]; do sleep .2; done
 exit 3
 """,
     0o700,
 )
+write(
+    home / "bead-wallpaper-video",
+    """#!/bin/sh
+[ "${1:-}" = --check ] && exit 0
+echo $$ > "$XDG_RUNTIME_DIR/wallpaper.pid"
+while :; do sleep 1; done
+""",
+    0o700,
+)
+write(home / "nacre-wallpaper-decode", "#!/bin/sh\nexit 1\n", 0o700)
 shell = home / "build-shell"
 (shell / "bar").mkdir(parents=True, exist_ok=True)
 write(shell / "palette.json", "{}")
@@ -102,6 +113,8 @@ assert Path(installed["launcher"]).is_file()
 assert ui("status")["ready_for_bead"] == []
 ui("bead", "--notifications", "none")
 assert ui("status")["active"] == "bead"
+wallpaper_pid = int((rt / "wallpaper.pid").read_text())
+os.kill(wallpaper_pid, 0)
 # Real service manager re-reads the persisted selection on the next start.
 ctl("stop", "nacre-shell.service")
 ctl("stop", "nacre-daemon.socket")
@@ -128,8 +141,15 @@ assert not (root / "nacre-qml-windows.service").exists()
 assert not (root / "nacre-ui-shell-fallback.service").exists()
 (rt / "crash").unlink()
 ui("bead", "--notifications", "none")
+wallpaper_pid = int((rt / "wallpaper.pid").read_text())
 ui("qml")
 assert ui("status")["active"] == "qml"
+try:
+    os.kill(wallpaper_pid, 0)
+except ProcessLookupError:
+    pass
+else:
+    raise AssertionError("wallpaper renderer child survived the Bead shell")
 # N0068: daemon notifications take over the daemon flags, and qml gives them back.
 args = rt / "daemon-args"
 
