@@ -18,6 +18,8 @@ The control-centre actions and the `controls` state topic (N0046, [spec](../spec
 
 The Settings page contracts (N0049, [spec](../specs/0049-settings-page-contracts.md)) add the `time` topic with `time.zones`, `time.set_timezone` and `time.set_ntp` (timedated over the system bus; writes ask polkit interactively), `login.install_theme` (the documented `pkexec` login-theme install) and the `capabilities` topic carrying the flags the Settings registry's `visibleWhen`/`enabledWhen` conditions name.
 
+The Displays contract (N0063, [spec](../specs/0063-displays-contract.md)) adds the `displays` topic (outputs with make, model, modes, current mode, scale, position, transform, VRR and a pending-change countdown) and `display.apply`, `display.confirm`, `display.revert`: every change is a transaction that the daemon reverts after 20 seconds unless it is confirmed, using the desktop settings controller's journal and independent rollback unit.
+
 The second batch of Settings contracts (N0051, [spec](../specs/0051-settings-asks-batch-2.md)) adds `bluetooth.set_trusted`, `audio.set_default {node}`, `clipboard.clear_history`, `launcher.clear_history`, the `shortcuts` topic with `shortcuts.refresh`, `capabilities.refresh` and the `bluetooth`/`battery` flags, the read-only `system.status`, the closed-set `tools.launch`, and makes the `software-input` store writable through `settings.set` (it applies the compositor input block, with rollback).
 
 ## Transport and bounds
