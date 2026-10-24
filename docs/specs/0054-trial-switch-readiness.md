@@ -23,6 +23,12 @@ crash recovery and exact restoration of files changed by the switch.
 
 ### Remaining consumer gaps and limits
 
+Update (Bead B0084, `docs/specs/0084-trial-switch-routes.md` in the Bead repo): the route table statuses below were
+re-verified and `shell-routes.json` now states them; every `nacrectl ui` route is answered by Bead except the selector
+prompt (fails fast). Lock-screen media buttons (`lock-info previous|next|toggle`) now fall back from a refusing UI
+provider to the daemon `player.*` methods, so they work with either shell. The lock screen's prepared content
+(`lock-prepare`, fed by QML's presentation) has no Bead feeder yet; see the Bead spec's asks.
+
 `nacre/shell-tools/shell-routes.json` is the inventory of QML entry points. Its
 historical Bead statuses are not proof of the selected binary's capabilities.
 It lists partial mode/palette/overview, controls sections, drawer names and

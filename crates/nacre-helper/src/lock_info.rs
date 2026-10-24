@@ -114,7 +114,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     let kind = positional[0].as_str();
     if ["previous", "next", "toggle"].contains(&kind) {
         if settings.get("lockMedia").is_none_or(json::truthy) {
-            info.ipc("mpris", if kind == "toggle" { "playPause" } else { kind })?;
+            info.media_key(kind)?;
         }
         return Ok(0);
     }
@@ -165,7 +165,29 @@ impl Info {
             Ok,
         )
     }
+    /// Lock-screen media buttons. The registered UI gets them first (QML hosts `mpris`); a UI without
+    /// that target (Bead) refuses, and the daemon's MPRIS projection answers instead.
+    pub fn media_key(&self, kind: &str) -> Result<()> {
+        use crate::daemon::client::{player_key, ui_call, UiReply};
+        let (action, method) = match kind {
+            "toggle" => ("playPause", "player.play_pause"),
+            "next" => ("next", "player.next"),
+            _ => ("previous", "player.previous"),
+        };
+        match ui_call("mpris", action, &[]) {
+            UiReply::Ok(_) => Ok(()),
+            UiReply::Refused => player_key(method),
+            UiReply::NoProvider => self.ipc("mpris", action).map(drop),
+        }
+    }
     pub fn ipc(&self, target: &str, action: &str) -> Result<String> {
+        use crate::daemon::client::{ui_call, UiReply};
+        match ui_call(target, action, &[]) {
+            UiReply::Ok(Value::String(text)) => return Ok(text),
+            UiReply::Ok(other) => return Ok(other.to_string()),
+            UiReply::Refused => return Err(DesktopUnavailable.into()),
+            UiReply::NoProvider => {}
+        }
         let output = crate::process::run(
             self.paths
                 .share

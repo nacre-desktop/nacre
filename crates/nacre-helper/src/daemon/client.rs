@@ -280,6 +280,90 @@ async fn watch_messages(topic: &str) -> Result<i32> {
         retry = (retry * 2).min(2000);
     }
 }
+/// How a provider-neutral route call made from a helper process ended (N0048).
+#[derive(Debug, PartialEq)]
+pub enum UiReply {
+    /// The registered UI answered.
+    Ok(Value),
+    /// A UI is registered and refused the call or could not do it.
+    Refused,
+    /// No daemon, or the daemon proved that no UI is registered.
+    NoProvider,
+}
+/// `nacrectl ui TARGET METHOD ARGS` for a helper that must not care which shell is running.
+pub fn ui_call(target: &str, method: &str, args: &[&str]) -> UiReply {
+    let Ok(runtime) = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+    else {
+        return UiReply::NoProvider;
+    };
+    runtime.block_on(async {
+        let Ok(mut client) = connect().await else {
+            return UiReply::NoProvider;
+        };
+        match client
+            .call(
+                "ui.dispatch",
+                json!({"target":target,"method":method,"args":args}),
+                None,
+            )
+            .await
+        {
+            Ok(value) => UiReply::Ok(value),
+            Err(error)
+                if error
+                    .downcast_ref::<nacre_protocol::Failure>()
+                    .is_some_and(|f| {
+                        f.code == ErrorCode::Unavailable && f.dispatched == Some(false)
+                    }) =>
+            {
+                UiReply::NoProvider
+            }
+            Err(_) => UiReply::Refused,
+        }
+    })
+}
+/// The daemon's own answer to a media key, for shells that do not host the QML `mpris` target:
+/// the active `dashboard.player` entity gets `player.{play_pause,next,previous}`.
+pub fn player_key(method: &str) -> Result<()> {
+    if !["player.play_pause", "player.next", "player.previous"].contains(&method) {
+        return Err("Unknown player key".into());
+    }
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    runtime.block_on(async {
+        let mut client = connect().await?;
+        framing::write(
+            &mut client.writer,
+            &Message::Sub {
+                topics: vec!["dashboard.player".into()],
+            },
+        )
+        .await?;
+        let data = tokio::time::timeout(Duration::from_secs(2), async {
+            loop {
+                match client.reader.next().await?.ok_or("Daemon disconnected")? {
+                    Message::Snap { topic, data, .. } if topic == "dashboard.player" => {
+                        return Ok::<Value, crate::Error>(data)
+                    }
+                    Message::Error { err } => return Err(err.into()),
+                    _ => {}
+                }
+            }
+        })
+        .await
+        .map_err(|_| "No media player state")??;
+        let players = &data["players"];
+        let id = data["active"]
+            .as_str()
+            .or_else(|| players["order"][0].as_str())
+            .ok_or("No media player")?;
+        client.call(method, json!({"player":id}), None).await?;
+        Ok(())
+    })
+}
 /// The only remaining `quickshell ipc` caller for shell routes (N0048). It runs when the
 /// daemon is absent or no UI provider is registered, which today means the QML shell
 /// is the only provider that can exist. Expiry: delete this function and the
