@@ -291,9 +291,7 @@ class Base(unittest.TestCase):
         self.launcher.write_text("#!/bin/sh\n")
         self.launcher.chmod(0o700)
         self.wallpaper_video = self.launcher.with_name("bead-wallpaper-video")
-        self.wallpaper_video.write_text(
-            '#!/bin/sh\n[ "${1:-}" = --check ] && exit 0\n'
-        )
+        self.wallpaper_video.write_text('#!/bin/sh\n[ "${1:-}" = --check ] && exit 0\n')
         self.wallpaper_video.chmod(0o700)
         self.wallpaper_decode = self.launcher.with_name("nacre-wallpaper-decode")
         self.wallpaper_decode.write_text("#!/bin/sh\nexit 1\n")

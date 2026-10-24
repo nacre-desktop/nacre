@@ -168,7 +168,8 @@ class UiShell(f4.Switch):
             for executable in binaries:
                 shutil.copy2(
                     executable,
-                    version / ("nacre-shell" if executable == binary else executable.name),
+                    version
+                    / ("nacre-shell" if executable == binary else executable.name),
                 )
             # Absolute immutable paths prevent subsequent checkout changes from changing a trial.
             script = (
