@@ -89,7 +89,29 @@ fn cached_preview(path: &Path) -> bool {
         .is_ok_and(|meta| meta.file_type().is_file() && meta.len() <= PREVIEW_LIMIT_BYTES)
 }
 
-fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
+fn animated_gif(path: &Path, suffix: &str) -> Result<bool> {
+    if suffix != "gif" {
+        return Ok(false);
+    }
+    let mut options = gif::DecodeOptions::new();
+    options.skip_frame_decoding(true);
+    let mut decoder = options.read_info(fs::File::open(path)?)?;
+    let mut count = 0;
+    while decoder.read_next_frame()?.is_some() {
+        count += 1;
+    }
+    Ok(count > 1)
+}
+
+fn video_poster_key(path: &Path) -> Result<String> {
+    let meta = fs::metadata(path)?;
+    Ok(format!(
+        "{:x}",
+        Sha256::digest(format!("{}{}{}", path.display(), meta.len(), nanos(&meta)).as_bytes())
+    ))
+}
+
+fn trim_thumbnail_cache(cache: &Path, keep_keys: &std::collections::HashSet<String>) -> Result<()> {
     let mut files = fs::read_dir(cache)?
         .filter_map(std::result::Result::ok)
         .filter_map(|entry| {
@@ -108,6 +130,16 @@ fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
                 .unwrap_or(std::time::UNIX_EPOCH),
         )
     });
+    let protected = files
+        .iter()
+        .filter(|(key, _, meta)| {
+            keep_keys.contains(key)
+                && meta.as_ref().is_some_and(|meta| {
+                    meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES
+                })
+        })
+        .count()
+        .min(THUMBNAIL_CACHE_COUNT);
     let mut kept = 0;
     for (key, path, meta) in files {
         let valid = meta
@@ -119,8 +151,11 @@ fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
             if preview.exists() {
                 fs::remove_file(preview)?;
             }
-        } else if key == keep_key || kept < THUMBNAIL_CACHE_COUNT - 1 {
-            kept += usize::from(key != keep_key);
+        } else if keep_keys.contains(&key) || kept < THUMBNAIL_CACHE_COUNT.saturating_sub(protected)
+        {
+            if !keep_keys.contains(&key) {
+                kept += 1;
+            }
         } else {
             fs::remove_file(path)?;
             let preview = cache.join(format!("{key}-preview.jpg"));
@@ -589,6 +624,13 @@ impl Media {
         ))
     }
     pub fn previews(&self, poster: &Path) -> Result<Value> {
+        self.previews_preserving(poster, None)
+    }
+    fn previews_preserving(
+        &self,
+        poster: &Path,
+        mut keep_keys: Option<&mut std::collections::HashSet<String>>,
+    ) -> Result<Value> {
         let key = Self::preview_key(poster)?;
         let cache = self.cache();
         fs::create_dir_all(&cache)?;
@@ -633,10 +675,22 @@ impl Media {
                 crate::files::atomic(&preview, &bytes)?;
             }
         }
-        trim_thumbnail_cache(&cache, &key)?;
+        if let Some(keep_keys) = keep_keys.as_mut() {
+            keep_keys.insert(key.clone());
+            trim_thumbnail_cache(&cache, keep_keys)?;
+        } else {
+            trim_thumbnail_cache(&cache, &std::collections::HashSet::from([key.clone()]))?;
+        }
         Ok(json!({"thumbnail":thumb,"preview":preview}))
     }
     pub fn describe(&self, path: &Path) -> Result<Value> {
+        self.describe_preserving(path, None)
+    }
+    fn describe_preserving(
+        &self,
+        path: &Path,
+        keep_keys: Option<&mut std::collections::HashSet<String>>,
+    ) -> Result<Value> {
         let path = crate::paths::weak_canonical(&crate::paths::expand(path)?)?;
         let suffix = path
             .extension()
@@ -651,28 +705,11 @@ impl Media {
             )
             .into());
         }
-        let animated = if suffix == "gif" {
-            let mut options = gif::DecodeOptions::new();
-            options.skip_frame_decoding(true);
-            let mut decoder = options.read_info(fs::File::open(&path)?)?;
-            let mut count = 0;
-            while decoder.read_next_frame()?.is_some() {
-                count += 1;
-            }
-            count > 1
-        } else {
-            false
-        };
+        let animated = animated_gif(&path, &suffix)?;
         let dynamic = VIDEOS.contains(&suffix.as_str()) || animated;
         let mut poster = path.clone();
         if dynamic {
-            let meta = fs::metadata(&path)?;
-            let key = format!(
-                "{:x}",
-                Sha256::digest(
-                    format!("{}{}{}", path.display(), meta.len(), nanos(&meta)).as_bytes()
-                )
-            );
+            let key = video_poster_key(&path)?;
             let cache = self.cache();
             fs::create_dir_all(&cache)?;
             poster = cache.join(format!("{key}.png"));
@@ -719,12 +756,62 @@ impl Media {
                 temporary.persist(&poster)?;
             }
         }
-        let preview = self.previews(&poster)?;
+        let preview = self.previews_preserving(&poster, keep_keys)?;
         Ok(
             json!({"path":path,"name":path.file_stem().unwrap_or_default().to_string_lossy().replace('_'," "),"poster":poster,"dynamic":dynamic,"animated":animated,"thumbnail":preview["thumbnail"],"preview":preview["preview"]}),
         )
     }
     pub fn catalog(&self) -> Result<Value> {
+        self.catalog_with_ids(None)
+    }
+
+    fn catalogue_metadata(&self, path: &Path, suffix: &str) -> Result<Value> {
+        let animated = animated_gif(path, suffix).unwrap_or(false);
+        let dynamic = VIDEOS.contains(&suffix) || animated;
+        let poster = if dynamic {
+            let cached = self
+                .cache()
+                .join(format!("{}.png", video_poster_key(path)?));
+            if cached.is_file() {
+                cached
+            } else {
+                path.to_path_buf()
+            }
+        } else {
+            path.to_path_buf()
+        };
+        let (thumbnail, preview) = if poster.is_file() {
+            let key = Self::preview_key(&poster)?;
+            let cache = self.cache();
+            let thumbnail = cache.join(format!("{key}-thumbnail.jpg"));
+            let preview = cache.join(format!("{key}-preview.jpg"));
+            (
+                if cached_thumbnail(&thumbnail) {
+                    thumbnail.to_string_lossy().into_owned()
+                } else {
+                    String::new()
+                },
+                if cached_preview(&preview) {
+                    preview.to_string_lossy().into_owned()
+                } else {
+                    String::new()
+                },
+            )
+        } else {
+            (String::new(), String::new())
+        };
+        Ok(json!({
+            "path":path,
+            "name":path.file_stem().unwrap_or_default().to_string_lossy().replace('_'," "),
+            "poster":poster,
+            "dynamic":dynamic,
+            "animated":animated,
+            "thumbnail":thumbnail,
+            "preview":preview
+        }))
+    }
+
+    pub fn catalog_with_ids(&self, ids: Option<&[String]>) -> Result<Value> {
         fs::create_dir_all(&self.library)?;
         fs::create_dir_all(self.library.join("Dynamic"))?;
         let mut entries = walkdir::WalkDir::new(&self.library)
@@ -738,6 +825,12 @@ impl Media {
             .collect::<Result<Vec<_>>>()?;
         entries.sort_by_key(|path| path.to_string_lossy().case_fold().collect::<String>());
         let (mut rows, mut errors) = (Vec::new(), Vec::new());
+        let requested = ids.map(|ids| {
+            ids.iter()
+                .cloned()
+                .collect::<std::collections::HashSet<_>>()
+        });
+        let mut keep_keys = std::collections::HashSet::new();
         for path in entries {
             let suffix = path
                 .extension()
@@ -746,14 +839,30 @@ impl Media {
             if path.is_file()
                 && (IMAGES.contains(&suffix.as_str()) || VIDEOS.contains(&suffix.as_str()))
             {
-                match self.describe(&path) {
-                    Ok(value) => rows.push(value),
-                    Err(_) => errors.push(
-                        path.file_name()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .into_owned(),
-                    ),
+                let canonical = crate::paths::weak_canonical(&path)?;
+                let id = canonical.to_string_lossy().into_owned();
+                let materialize = requested
+                    .as_ref()
+                    .is_none_or(|requested| requested.contains(&id));
+                if materialize {
+                    match self
+                        .describe_preserving(&canonical, requested.as_ref().map(|_| &mut keep_keys))
+                    {
+                        Ok(value) => rows.push(value),
+                        Err(_) => {
+                            errors.push(
+                                path.file_name()
+                                    .unwrap_or_default()
+                                    .to_string_lossy()
+                                    .into_owned(),
+                            );
+                            if requested.is_some() {
+                                rows.push(self.catalogue_metadata(&canonical, &suffix)?);
+                            }
+                        }
+                    }
+                } else {
+                    rows.push(self.catalogue_metadata(&canonical, &suffix)?);
                 }
             }
         }
@@ -1749,12 +1858,25 @@ pub fn run(args: &[String]) -> Result<i32> {
     let mut values = Vec::new();
     let mut stream = false;
     let mut watch = false;
+    let mut catalogue_ids = None;
+    let mut reading_catalogue_ids = false;
     for arg in args {
         if arg == "--help" || arg == "-h" {
             print!("{USAGE}\npositional arguments:\n  {{catalog,demo-start,demo-restore,select,preferences,theme,import,pick,session,warm,serve}}\n  path\n\noptions:\n  -h, --help            show this help message and exit\n  --stream-presentation\n");
             return Ok(0);
         }
-        if arg == "--stream-presentation" {
+        if arg == "--catalogue-ids" {
+            if catalogue_ids.is_some() {
+                return Ok(argument_error("--catalogue-ids may only be specified once"));
+            }
+            catalogue_ids = Some(Vec::new());
+            reading_catalogue_ids = true;
+        } else if reading_catalogue_ids {
+            catalogue_ids
+                .as_mut()
+                .expect("ids initialized")
+                .push(arg.clone());
+        } else if arg == "--stream-presentation" {
             stream = true;
         } else if arg == "--watch" {
             watch = true;
@@ -1784,6 +1906,11 @@ pub fn run(args: &[String]) -> Result<i32> {
             values[2..].join(" ")
         )));
     }
+    if catalogue_ids.as_ref().is_some_and(|ids| ids.len() > 128)
+        || (catalogue_ids.is_some() && (action != "catalog" || values.len() != 1))
+    {
+        return Ok(argument_error("invalid --catalogue-ids arguments"));
+    }
     if stream {
         std::env::set_var("NACRE_PRESENTATION_STREAM", "1");
     }
@@ -1804,7 +1931,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         let media = Media::new(paths.clone(), paths.assets())?;
         let mut cli = crate::palette_cli::Cli::environment(true)?;
         match action.as_str() {
-            "catalog" => media.catalog(),
+            "catalog" => media.catalog_with_ids(catalogue_ids.as_deref()),
             "pick" => media.pick(),
             "warm" => media.warm(&mut cli, true),
             "preferences" | "theme" | "import" => {
@@ -1859,7 +1986,10 @@ mod thumbnail_cache_tests {
             )?;
         }
         let current = format!("{:064x}", THUMBNAIL_CACHE_COUNT + 7);
-        trim_thumbnail_cache(directory.path(), &current)?;
+        trim_thumbnail_cache(
+            directory.path(),
+            &std::collections::HashSet::from([current.clone()]),
+        )?;
         let thumbnails = fs::read_dir(directory.path())?
             .filter_map(std::result::Result::ok)
             .filter(|entry| {
@@ -1876,6 +2006,112 @@ mod thumbnail_cache_tests {
         assert!(thumbnails
             .iter()
             .all(|entry| entry.metadata().unwrap().len() <= THUMBNAIL_LIMIT_BYTES));
+        Ok(())
+    }
+
+    fn media_fixture() -> Result<(tempfile::TempDir, Media)> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        let library = home.path().join("Pictures/Wallpapers");
+        fs::create_dir_all(&library)?;
+        fs::write(
+            paths.config.join("cli.json"),
+            serde_json::to_vec(&json!({"wallpaper":{"directory":library}}))?,
+        )?;
+        let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+        Ok((home, Media::new(paths, assets)?))
+    }
+
+    #[test]
+    fn catalogue_metadata_is_cheap_and_batch_hydration_preserves_only_requested_previews(
+    ) -> Result<()> {
+        let (_home, media) = media_fixture()?;
+        for index in 0..130 {
+            let path = media.library.join(format!("wall-{index:03}.png"));
+            image::DynamicImage::new_rgba8(8, 8).save(path)?;
+        }
+        let video = media.library.join("unreadable.mp4");
+        fs::write(&video, b"metadata request must not decode video")?;
+        let gif = media.library.join("animated.gif");
+        {
+            let output = fs::File::create(&gif)?;
+            let mut encoder = gif::Encoder::new(output, 1, 1, &[0, 0, 0, 255, 255, 255])?;
+            encoder.write_frame(&gif::Frame::from_indexed_pixels(1, 1, vec![0], None))?;
+            encoder.write_frame(&gif::Frame::from_indexed_pixels(1, 1, vec![1], None))?;
+        }
+
+        let metadata = media.catalog_with_ids(Some(&[]))?;
+        let entries = metadata["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 132);
+        assert!(entries
+            .iter()
+            .all(|row| row["thumbnail"] == "" && row["preview"] == ""));
+        let video_row = entries
+            .iter()
+            .find(|row| row["path"] == video.to_string_lossy().as_ref())
+            .unwrap();
+        assert_eq!(video_row["dynamic"], true);
+        assert_eq!(video_row["animated"], false);
+        assert_eq!(video_row["poster"], video.to_string_lossy().as_ref());
+        let gif_row = entries
+            .iter()
+            .find(|row| row["path"] == gif.to_string_lossy().as_ref())
+            .unwrap();
+        assert_eq!(gif_row["dynamic"], true);
+        assert_eq!(gif_row["animated"], true);
+        assert!(!media.cache().exists());
+
+        let selected_ids = (0..THUMBNAIL_CACHE_COUNT)
+            .map(|index| {
+                media
+                    .library
+                    .join(format!("wall-{index:03}.png"))
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect::<Vec<_>>();
+        let hydrated = media.catalog_with_ids(Some(&selected_ids))?;
+        let entries = hydrated["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 132);
+        let thumbnails = entries
+            .iter()
+            .filter_map(|row| row["thumbnail"].as_str())
+            .filter(|path| !path.is_empty())
+            .collect::<Vec<_>>();
+        assert_eq!(thumbnails.len(), THUMBNAIL_CACHE_COUNT);
+        assert!(thumbnails.iter().all(|path| Path::new(path).is_file()));
+        assert_eq!(
+            entries.iter().filter(|row| row["preview"] != "").count(),
+            THUMBNAIL_CACHE_COUNT
+        );
+        let cached_thumbnails = fs::read_dir(media.cache())?
+            .filter_map(std::result::Result::ok)
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .ends_with("-thumbnail.jpg")
+            })
+            .count();
+        assert_eq!(cached_thumbnails, THUMBNAIL_CACHE_COUNT);
+        Ok(())
+    }
+
+    #[test]
+    fn legacy_catalogue_call_still_materializes_thumbnails() -> Result<()> {
+        let (_home, media) = media_fixture()?;
+        let path = media.library.join("single.png");
+        fs::create_dir_all(&media.library)?;
+        image::DynamicImage::new_rgba8(8, 8).save(&path)?;
+        let catalogue = media.catalog()?;
+        let entry = &catalogue["entries"][0];
+        assert!(entry["thumbnail"]
+            .as_str()
+            .is_some_and(|path| !path.is_empty()));
+        assert!(entry["preview"]
+            .as_str()
+            .is_some_and(|path| !path.is_empty()));
         Ok(())
     }
 }

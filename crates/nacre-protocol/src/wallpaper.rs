@@ -224,6 +224,33 @@ pub struct WallpaperCatalogue {
     pub entries: Vec<WallpaperCatalogueEntry>,
 }
 
+/// Optional bounded thumbnail hydration for a full metadata catalogue.
+/// Missing `ids` retains the legacy eager catalogue behavior; an empty list
+/// requests metadata only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperCatalogueRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(schema_with = "catalogue_ids_schema")]
+    pub ids: Option<Vec<String>>,
+}
+
+impl WallpaperCatalogueRequest {
+    pub fn validate(&self) -> Result<(), Failure> {
+        let Some(ids) = &self.ids else {
+            return Ok(());
+        };
+        let mut seen = std::collections::BTreeSet::new();
+        if ids.len() > 128 || ids.iter().any(|id| !valid_path(id) || !seen.insert(id)) {
+            return Err(Failure::new(
+                ErrorCode::Validation,
+                "Invalid wallpaper catalogue ids",
+                false,
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum WallpaperKind {
@@ -236,6 +263,9 @@ pub struct WallpaperCatalogueEntry {
     #[schemars(length(min = 1, max = 4096))]
     pub id: String,
     pub kind: WallpaperKind,
+    /// True for animated images (currently animated GIFs); video remains `kind: video`.
+    #[serde(default)]
+    pub animated: bool,
     #[schemars(length(max = 512))]
     pub title: String,
     /// JPEG, at most 640x400 and 256 KiB, in the 128-entry `$XDG_CACHE_HOME/nacre/wallpaper-media/` thumbnail cache.
@@ -326,6 +356,19 @@ fn valid_path(value: &str) -> bool {
             .components()
             .any(|c| matches!(c, std::path::Component::ParentDir))
 }
+fn catalogue_ids_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type":"array",
+        "maxItems":128,
+        "uniqueItems":true,
+        "items":{
+            "type":"string",
+            "minLength":1,
+            "maxLength":4096,
+            "pattern":r"^/(?!.*(?:^|/)\.\.(?:/|$))(?!.*://)[^\u0000]*$"
+        }
+    })
+}
 impl ActiveWallpaper {
     pub fn validate(&self) -> Result<(), Failure> {
         let palette = &self.palette;
@@ -385,6 +428,7 @@ mod tests {
             entries: vec![WallpaperCatalogueEntry {
                 id: "/pictures/lake.png".into(),
                 kind: WallpaperKind::Image,
+                animated: false,
                 title: "Lake".into(),
                 thumbnail: "/cache/wallpaper-media/lake.jpg".into(),
                 preview: "/cache/wallpaper-media/lake-preview.jpg".into(),
@@ -398,6 +442,40 @@ mod tests {
         let mut bad = good;
         bad.entries[0].thumbnail = "/cache/../private.jpg".into();
         assert!(bad.validate().is_err());
+    }
+
+    #[test]
+    fn catalogue_request_bounds_and_validates_optional_hydration_ids() {
+        let legacy: WallpaperCatalogueRequest =
+            serde_json::from_value(serde_json::json!({})).unwrap();
+        assert!(legacy.validate().is_ok());
+        let metadata: WallpaperCatalogueRequest =
+            serde_json::from_value(serde_json::json!({"ids":[]})).unwrap();
+        assert!(metadata.validate().is_ok());
+        let selected: WallpaperCatalogueRequest = serde_json::from_value(serde_json::json!({
+            "ids":["/pictures/lake.png"]
+        }))
+        .unwrap();
+        assert!(selected.validate().is_ok());
+        let duplicate: WallpaperCatalogueRequest = serde_json::from_value(serde_json::json!({
+            "ids":["/pictures/lake.png","/pictures/lake.png"]
+        }))
+        .unwrap();
+        assert!(duplicate.validate().is_err());
+        let too_many = WallpaperCatalogueRequest {
+            ids: Some((0..129).map(|i| format!("/pictures/{i}.png")).collect()),
+        };
+        assert!(too_many.validate().is_err());
+    }
+
+    #[test]
+    fn animated_defaults_false_for_pre_n0070_catalogue_entries() {
+        let old = serde_json::from_value::<WallpaperCatalogueEntry>(serde_json::json!({
+            "id":"/pictures/lake.png","kind":"image","title":"Lake",
+            "thumbnail":"","preview":"","active":false
+        }))
+        .unwrap();
+        assert!(!old.animated);
     }
 
     #[test]

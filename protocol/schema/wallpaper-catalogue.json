@@ -27,6 +27,11 @@
         "kind": {
           "$ref": "#/$defs/WallpaperKind"
         },
+        "animated": {
+          "description": "True for animated images (currently animated GIFs); video remains `kind: video`.",
+          "type": "boolean",
+          "default": false
+        },
         "title": {
           "type": "string",
           "maxLength": 512

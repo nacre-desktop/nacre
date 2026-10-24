@@ -1,8 +1,8 @@
 use nacre_protocol::{
     artifacts, framing,
     wallpaper::{
-        ActiveWallpaper, MotionKind, WallpaperActivate, WallpaperActive, WallpaperFileIdentity,
-        WallpaperMotion,
+        ActiveWallpaper, MotionKind, WallpaperActivate, WallpaperActive, WallpaperCatalogueRequest,
+        WallpaperFileIdentity, WallpaperMotion,
     },
     Message, Mirror, Update, MAX_SAFE_INTEGER,
 };
@@ -114,6 +114,7 @@ fn activation_revision_is_positive_and_safe() {
         "protocol/luau/wallpaper-active.d.luau",
         "protocol/fixtures/wallpaper-active.jsonl",
         "protocol/schema/wallpaper-catalogue.json",
+        "protocol/schema/wallpaper-catalogue-request.json",
         "protocol/luau/wallpaper-catalogue.d.luau",
         "protocol/fixtures/wallpaper-catalogue.jsonl",
     ] {
@@ -133,6 +134,31 @@ fn activation_revision_is_positive_and_safe() {
             "missing Luau declaration {declaration}"
         );
     }
+    assert!(generated["protocol/luau/wallpaper-catalogue.d.luau"]
+        .contains("export type WallpaperCatalogueRequest ="));
+    assert!(generated["protocol/luau/wallpaper-catalogue.d.luau"]
+        .contains("export type WallpaperCatalogueEntry ="));
+    let request_schema: serde_json::Value =
+        serde_json::from_str(&generated["protocol/schema/wallpaper-catalogue-request.json"])
+            .unwrap();
+    assert_eq!(
+        request_schema["properties"]["ids"]["items"]["pattern"],
+        r"^/(?!.*(?:^|/)\.\.(?:/|$))(?!.*://)[^\u0000]*$"
+    );
+}
+
+#[test]
+fn catalogue_request_distinguishes_legacy_metadata_and_hydration_calls() {
+    let legacy: WallpaperCatalogueRequest = serde_json::from_value(json!({})).unwrap();
+    let metadata: WallpaperCatalogueRequest = serde_json::from_value(json!({"ids":[]})).unwrap();
+    let hydration: WallpaperCatalogueRequest =
+        serde_json::from_value(json!({"ids":["/pictures/lake.png"]})).unwrap();
+    assert_eq!(legacy.ids, None);
+    assert_eq!(metadata.ids, Some(vec![]));
+    assert_eq!(hydration.ids, Some(vec!["/pictures/lake.png".into()]));
+    assert!(
+        legacy.validate().is_ok() && metadata.validate().is_ok() && hydration.validate().is_ok()
+    );
 }
 
 #[test]

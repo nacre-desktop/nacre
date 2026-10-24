@@ -43,6 +43,85 @@ const IMAGE_BYTES: u64 = nacre_protocol::wallpaper::POSTER_BYTES;
 /// Videos are large; the identity carries the exact size, so only sanity-bound it.
 const MOTION_BYTES: u64 = 64 * 1024 * 1024 * 1024;
 
+fn catalogue_helper_args(engine: &str, ids: Option<&[String]>) -> Vec<String> {
+    let mut args = vec![
+        "-n".to_owned(),
+        "10".to_owned(),
+        "--".to_owned(),
+        engine.to_owned(),
+        "wallpaper-media".to_owned(),
+        "catalog".to_owned(),
+    ];
+    if let Some(ids) = ids {
+        args.push("--catalogue-ids".to_owned());
+        args.extend(ids.iter().cloned());
+    }
+    args
+}
+
+fn catalogue_entry(
+    row: &Value,
+    current: Option<&ActiveWallpaper>,
+    cache: &Path,
+) -> Option<nacre_protocol::wallpaper::WallpaperCatalogueEntry> {
+    use nacre_protocol::wallpaper::{WallpaperCatalogueEntry, WallpaperKind};
+    let id = row["path"]
+        .as_str()
+        .filter(|s| !s.is_empty() && s.len() <= 4096)?;
+    let title = row["name"].as_str().unwrap_or("");
+    let poster = row["poster"].as_str().unwrap_or("");
+    let thumb = row["thumbnail"].as_str().unwrap_or("");
+    let preview_source = row["preview"].as_str().unwrap_or("");
+    let thumbnail = std::fs::canonicalize(thumb)
+        .ok()
+        .filter(|path| {
+            path.starts_with(cache)
+                && std::fs::metadata(path)
+                    .is_ok_and(|meta| meta.is_file() && meta.len() <= 256 * 1024)
+        })
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let preview = std::fs::canonicalize(preview_source)
+        .ok()
+        .filter(|path| {
+            path.starts_with(cache)
+                && std::fs::metadata(path)
+                    .is_ok_and(|meta| meta.is_file() && meta.len() <= 2 * 1024 * 1024)
+        })
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let dynamic = row["dynamic"] == true;
+    let animated = row["animated"] == true;
+    let kind = if dynamic && !animated {
+        WallpaperKind::Video
+    } else {
+        WallpaperKind::Image
+    };
+    let active = current.is_some_and(|wallpaper| {
+        wallpaper.path == poster
+            || wallpaper
+                .motion
+                .as_ref()
+                .is_some_and(|motion| motion.path == id)
+    });
+    let mut bounded_title = String::new();
+    for character in title.chars() {
+        if bounded_title.len() + character.len_utf8() > 512 {
+            break;
+        }
+        bounded_title.push(character);
+    }
+    Some(WallpaperCatalogueEntry {
+        id: id.into(),
+        kind,
+        animated,
+        title: bounded_title,
+        thumbnail,
+        preview,
+        active,
+    })
+}
+
 /// Resolve through directory descriptors, refusing symlinks at every component.
 /// Only user-owned regular files below safe ancestors are eligible for disclosure.
 pub(super) fn private_file(path: &Path, limit: u64) -> Result<File> {
@@ -369,7 +448,10 @@ pub fn methods() -> BTreeMap<String, Method> {
                 v: 1,
                 class: Capability::Desktop,
                 timeout: 30_000,
-                params: serde_json::json!({"type":"object","properties":{},"additionalProperties":false}),
+                params: serde_json::from_str(include_str!(
+                    "../../../../protocol/schema/wallpaper-catalogue-request.json"
+                ))
+                .expect("wallpaper catalogue request schema"),
                 result: serde_json::from_str(include_str!(
                     "../../../../protocol/schema/wallpaper-catalogue.json"
                 ))
@@ -454,7 +536,7 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
     if let Some(id) = request.id {
         let paths = crate::paths::Paths::environment()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        let catalogue = catalogue(&hub).await?;
+        let catalogue = catalogue(&hub, serde_json::json!({"ids":[]})).await?;
         if !catalogue.entries.iter().any(|entry| entry.id == id) {
             return Err(failure(
                 ErrorCode::Validation,
@@ -508,8 +590,17 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
 
 pub async fn catalogue(
     hub: &Shared,
+    params: Value,
 ) -> std::result::Result<nacre_protocol::wallpaper::WallpaperCatalogue, Failure> {
-    use nacre_protocol::wallpaper::{WallpaperCatalogue, WallpaperCatalogueEntry, WallpaperKind};
+    use nacre_protocol::wallpaper::{WallpaperCatalogue, WallpaperCatalogueRequest};
+    let request: WallpaperCatalogueRequest = serde_json::from_value(params).map_err(|_| {
+        failure(
+            ErrorCode::Validation,
+            "Invalid wallpaper catalogue request",
+            false,
+        )
+    })?;
+    request.validate()?;
     let paths = crate::paths::Paths::environment().map_err(|_| {
         failure(
             ErrorCode::Unavailable,
@@ -526,9 +617,11 @@ pub async fn catalogue(
     })?;
     let engine_arg = engine.to_string_lossy().into_owned();
     let engine = std::path::PathBuf::from("nice");
+    let helper_args = catalogue_helper_args(&engine_arg, request.ids.as_deref());
+    let helper_args = helper_args.iter().map(String::as_str).collect::<Vec<_>>();
     let output = super::behaviours::helper(
         &engine,
-        &["-n", "10", "--", &engine_arg, "wallpaper-media", "catalog"],
+        &helper_args,
         8 * 1024 * 1024,
         std::time::Duration::from_secs(12),
     )
@@ -565,6 +658,16 @@ pub async fn catalogue(
                 true,
             )
         })?;
+    if request.ids.as_ref().is_some_and(|ids| {
+        ids.iter()
+            .any(|id| !rows.iter().any(|row| row["path"].as_str() == Some(id)))
+    }) {
+        return Err(failure(
+            ErrorCode::Validation,
+            "Unknown wallpaper catalogue id",
+            false,
+        ));
+    }
     let active: Option<WallpaperActive> = hub
         .borrow()
         .snapshot(TOPIC)
@@ -572,66 +675,10 @@ pub async fn catalogue(
     let current = active.and_then(|state| state.current);
     let cache = paths.cache.join("wallpaper-media");
     let cache = std::fs::canonicalize(&cache).unwrap_or(cache);
-    let mut entries = Vec::with_capacity(rows.len());
-    for row in rows {
-        let Some(id) = row["path"]
-            .as_str()
-            .filter(|s| !s.is_empty() && s.len() <= 4096)
-        else {
-            continue;
-        };
-        let title = row["name"].as_str().unwrap_or("");
-        let poster = row["poster"].as_str().unwrap_or("");
-        let thumb = row["thumbnail"].as_str().unwrap_or("");
-        let preview_source = row["preview"].as_str().unwrap_or("");
-        let thumbnail = std::fs::canonicalize(thumb)
-            .ok()
-            .filter(|path| {
-                path.starts_with(&cache)
-                    && std::fs::metadata(path)
-                        .is_ok_and(|meta| meta.is_file() && meta.len() <= 256 * 1024)
-            })
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let preview = std::fs::canonicalize(preview_source)
-            .ok()
-            .filter(|path| {
-                path.starts_with(&cache)
-                    && std::fs::metadata(path)
-                        .is_ok_and(|meta| meta.is_file() && meta.len() <= 2 * 1024 * 1024)
-            })
-            .map(|path| path.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let dynamic = row["dynamic"] == true;
-        let animated = row["animated"] == true;
-        let kind = if dynamic && !animated {
-            WallpaperKind::Video
-        } else {
-            WallpaperKind::Image
-        };
-        let is_active = current.as_ref().is_some_and(|wallpaper| {
-            wallpaper.path == poster
-                || wallpaper
-                    .motion
-                    .as_ref()
-                    .is_some_and(|motion| motion.path == id)
-        });
-        let mut bounded_title = String::new();
-        for character in title.chars() {
-            if bounded_title.len() + character.len_utf8() > 512 {
-                break;
-            }
-            bounded_title.push(character);
-        }
-        entries.push(WallpaperCatalogueEntry {
-            id: id.into(),
-            kind,
-            title: bounded_title,
-            thumbnail,
-            preview,
-            active: is_active,
-        });
-    }
+    let entries = rows
+        .iter()
+        .filter_map(|row| catalogue_entry(row, current.as_ref(), &cache))
+        .collect();
     let catalogue = WallpaperCatalogue { entries };
     catalogue.validate().map_err(|_| {
         failure(
@@ -702,6 +749,74 @@ mod tests {
         assert!(SelectionGuard::acquire().is_err());
         drop(guard);
         assert!(SelectionGuard::acquire().is_ok());
+    }
+
+    #[test]
+    fn catalogue_helper_args_preserve_legacy_and_targeted_hydration_modes() {
+        let base = vec![
+            "-n".to_owned(),
+            "10".to_owned(),
+            "--".to_owned(),
+            "/bin/nacre-helper".to_owned(),
+            "wallpaper-media".to_owned(),
+            "catalog".to_owned(),
+        ];
+        assert_eq!(catalogue_helper_args("/bin/nacre-helper", None), base);
+        let ids: Vec<String> = vec![];
+        let mut metadata = base.clone();
+        metadata.push("--catalogue-ids".to_owned());
+        assert_eq!(
+            catalogue_helper_args("/bin/nacre-helper", Some(&ids)),
+            metadata
+        );
+        let ids = vec!["/pictures/a.png".to_owned(), "/videos/b.mp4".to_owned()];
+        let mut selected = metadata;
+        selected.extend(ids);
+        assert_eq!(
+            catalogue_helper_args(
+                "/bin/nacre-helper",
+                Some(&["/pictures/a.png".to_owned(), "/videos/b.mp4".to_owned(),])
+            ),
+            selected
+        );
+    }
+
+    #[test]
+    fn catalogue_keeps_animated_images_in_image_kind_and_marks_active_source() {
+        use nacre_protocol::wallpaper::WallpaperKind;
+        let row = json!({
+            "path":"/pictures/animated.gif",
+            "poster":"/cache/wallpaper-media/animated.png",
+            "name":"Animated",
+            "dynamic":true,
+            "animated":true,
+            "thumbnail":"",
+            "preview":""
+        });
+        let current: ActiveWallpaper = serde_json::from_value(json!({
+            "revision":1,
+            "palette_revision":1,
+            "path":"/cache/wallpaper-media/animated.png",
+            "file_identity":{"device":"1","inode":"2","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
+            "presentation":"crop",
+            "palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}},
+            "motion":{"kind":"animation","path":"/pictures/animated.gif","file_identity":{"device":"1","inode":"3","size":5,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0}}
+        }))
+        .unwrap();
+        let entry = catalogue_entry(&row, Some(&current), Path::new("/nonexistent"))
+            .expect("valid catalogue row");
+        assert_eq!(entry.kind, WallpaperKind::Image);
+        assert!(entry.animated);
+        assert!(entry.active);
+        assert!(entry.thumbnail.is_empty());
+        let video = catalogue_entry(
+            &json!({"path":"/videos/clip.mp4","poster":"/cache/clip.png","name":"Clip","dynamic":true,"animated":false,"thumbnail":"","preview":""}),
+            None,
+            Path::new("/nonexistent"),
+        )
+        .expect("valid video row");
+        assert_eq!(video.kind, WallpaperKind::Video);
+        assert!(!video.animated);
     }
 
     #[test]
