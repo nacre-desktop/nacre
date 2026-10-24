@@ -138,15 +138,28 @@ impl Drop for OwnedChild {
 }
 
 fn daemon(home: &Path, endpoint: &Path, managed: bool, client_opt_in: bool) -> OwnedChild {
+    daemon_with_tools(
+        home,
+        endpoint,
+        managed,
+        client_opt_in,
+        &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools"),
+    )
+}
+
+fn daemon_with_tools(
+    home: &Path,
+    endpoint: &Path,
+    managed: bool,
+    client_opt_in: bool,
+    tools: &Path,
+) -> OwnedChild {
     let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     command
         .env_clear()
         .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .env("HOME", home)
-        .env(
-            "NACRE_HELPER_TOOLS",
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools"),
-        )
+        .env("NACRE_HELPER_TOOLS", tools)
         .env("XDG_CONFIG_HOME", home.join("config"))
         .env("XDG_STATE_HOME", home.join("state"))
         .env("XDG_CACHE_HOME", home.join("cache"))
@@ -601,4 +614,118 @@ fn private_bus_scenario() {
         "restarted daemon did not exit cleanly"
     );
     wait_owner(&connection, false);
+}
+
+/// N0068: the installed layout (shell/tools + shell/source/config), a history file written by
+/// the QML shell, a name owned by another server that is released later, and a daemon that
+/// is stopped while managed notifications cannot run must all behave without a restart or abort.
+#[test]
+fn managed_notifications_takeover_private_bus() {
+    if std::env::var_os("NACRE_NOTIFICATION_TEST_CHILD").is_some() {
+        takeover_scenario();
+        return;
+    }
+    let home = tempfile::tempdir().expect("private test HOME");
+    let endpoint = directories(home.path());
+    let output = Command::new("dbus-run-session")
+        .args([
+            "--",
+            std::env::current_exe()
+                .expect("test executable")
+                .to_str()
+                .expect("UTF-8 test executable"),
+            "--exact",
+            "managed_notifications_takeover_private_bus",
+            "--nocapture",
+        ])
+        .env("NACRE_NOTIFICATION_TEST_CHILD", "1")
+        .env("NACRE_NOTIFICATION_TEST_HOME", home.path())
+        .env("NACRE_NOTIFICATION_TEST_SOCKET", endpoint)
+        .output()
+        .expect("run fixture on a private D-Bus session");
+    assert!(
+        output.status.success(),
+        "private-bus child failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+fn takeover_scenario() {
+    let home = PathBuf::from(std::env::var_os("NACRE_NOTIFICATION_TEST_HOME").expect("test HOME"));
+    let endpoint =
+        PathBuf::from(std::env::var_os("NACRE_NOTIFICATION_TEST_SOCKET").expect("test socket"));
+    let _niri = NiriSource::new(&home.join("runtime/niri.sock"))
+        .expect("start isolated Niri socket fixture");
+    let connection = Connection::session().expect("connect to dbus-run-session bus");
+    let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre");
+
+    // Installed layout: tools next to source/config, no shell/config folder.
+    let tools = home.join("data/nacre/shell/tools");
+    let config = home.join("data/nacre/shell/source/config");
+    fs::create_dir_all(&tools).unwrap();
+    fs::create_dir_all(&config).unwrap();
+    fs::copy(
+        source.join("shell-tools/notification-policy.json"),
+        tools.join("notification-policy.json"),
+    )
+    .unwrap();
+    fs::copy(
+        source.join("shell/config/NacreNotifications.qml"),
+        config.join("NacreNotifications.qml"),
+    )
+    .unwrap();
+    // A history file as the QML shell writes it.
+    let history = home.join("state/nacre/shell/notifications");
+    fs::create_dir_all(&history).unwrap();
+    fs::set_permissions(&history, fs::Permissions::from_mode(0o700)).unwrap();
+    fs::write(
+        history.join("history.json"),
+        format!(
+            r#"[{{"key":"k1","time":"{}","summary":"From QML","body":"","appName":"kitty","appIcon":"","image":"","urgency":1}}]"#,
+            chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+        ),
+    )
+    .unwrap();
+    fs::set_permissions(
+        history.join("history.json"),
+        fs::Permissions::from_mode(0o600),
+    )
+    .unwrap();
+
+    // Another server owns the name first; the daemon must wait, then take it over unrestarted.
+    let dbus =
+        Proxy::new(&connection, DBUS, "/org/freedesktop/DBus", DBUS).expect("D-Bus control proxy");
+    let acquired: u32 = dbus
+        .call("RequestName", &(NOTIFICATIONS, 0u32))
+        .expect("claim private notification name");
+    assert_eq!(acquired, 1, "fixture must become the primary owner");
+    let mut managed = daemon_with_tools(&home, &endpoint, true, false, &tools);
+    thread::sleep(Duration::from_millis(800));
+    assert_eq!(
+        dbus.call::<_, _, String>("GetNameOwner", &(NOTIFICATIONS,))
+            .expect("fixture still owns the name"),
+        connection.unique_name().unwrap().as_str()
+    );
+    let _: u32 = dbus
+        .call("ReleaseName", &(NOTIFICATIONS,))
+        .expect("release fixture-owned name");
+    wait_owner(&connection, true);
+    let rows = notifications_snapshot(&home).to_string();
+    assert!(
+        rows.contains("From QML"),
+        "QML history was not loaded: {rows}"
+    );
+    assert!(managed.stop().success(), "daemon did not stop cleanly");
+
+    // Managed notifications that cannot start (no policy) must not crash the daemon on stop.
+    let empty = home.join("data/empty-tools");
+    fs::create_dir_all(&empty).unwrap();
+    let mut broken = daemon_with_tools(&home, &endpoint, true, false, &empty);
+    thread::sleep(Duration::from_millis(1000));
+    let status = broken.stop();
+    assert!(
+        status.code().is_some(),
+        "daemon aborted on stop: {status:?}"
+    );
 }

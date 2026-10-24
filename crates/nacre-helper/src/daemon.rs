@@ -457,11 +457,12 @@ async fn serve(
         let notifications_paths = paths.clone();
         Some(tokio::task::spawn_local(async move {
             let result = notifications::run(notifications_hub.clone(), notifications_paths).await;
-            if result.is_err() {
+            if let Err(error) = &result {
                 let _ = notifications_hub
                     .borrow_mut()
                     .service("notifications", "unavailable", 0);
                 tracing::warn!(
+                    reason = %error,
                     "Managed notifications stopped; other daemon services remain available"
                 );
             }
@@ -548,9 +549,14 @@ async fn serve(
         if let Some(requests) = &hub.borrow().notifications {
             requests.stop();
         }
+        // A finished JoinHandle must not be polled again, so abort only on timeout.
         match tokio::time::timeout(Duration::from_secs(10), &mut service).await {
             Ok(Ok(Ok(()))) => {}
-            _ => {
+            Ok(_) => {
+                notification_flush_failed = true;
+                tracing::warn!("Notification service had already failed before shutdown");
+            }
+            Err(_) => {
                 notification_flush_failed = true;
                 service.abort();
                 let _ = service.await;
@@ -768,8 +774,14 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         .with_writer(std::io::stderr)
         .try_init()
         .map_err(|_| "Cannot initialize daemon logging")?;
-    std::panic::set_hook(Box::new(|_| {
-        tracing::error!("Daemon task panicked; payload omitted")
+    // The payload may carry user data, so only the source location is logged.
+    std::panic::set_hook(Box::new(|info| match info.location() {
+        Some(at) => tracing::error!(
+            file = at.file(),
+            line = at.line(),
+            "Daemon task panicked; payload omitted"
+        ),
+        None => tracing::error!("Daemon task panicked; payload omitted"),
     }));
     let paths = Paths::environment()?;
     let writer_lease = std::sync::Arc::new(writer_lease::WriterLease::acquire_for_paths(

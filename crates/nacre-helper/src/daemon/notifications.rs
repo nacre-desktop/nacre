@@ -229,19 +229,22 @@ fn channel() -> (Requests, mpsc::Receiver<Request>) {
     )
 }
 
+/// Source checkout: nacre/shell-tools + nacre/shell/config. Installed tree:
+/// shell/tools + shell/source/config (there is no shell/config there).
+fn policy_source(assets: &std::path::Path) -> Result<std::path::PathBuf> {
+    let base = assets
+        .parent()
+        .ok_or("Missing notification configuration")?;
+    ["shell/config", "source/config", "config"]
+        .iter()
+        .map(|folder| base.join(folder).join("NacreNotifications.qml"))
+        .find(|path| path.is_file())
+        .ok_or_else(|| "Notification timeout policy is unavailable".into())
+}
+
 fn policy(paths: &Paths, raw: &Value) -> Result<Policy> {
     let assets = paths.assets();
-    let qml = if assets.file_name().is_some_and(|name| name == "shell-tools") {
-        assets
-            .parent()
-            .ok_or("Missing notification configuration")?
-            .join("shell/config/NacreNotifications.qml")
-    } else {
-        assets
-            .parent()
-            .ok_or("Missing notification configuration")?
-            .join("config/NacreNotifications.qml")
-    };
+    let qml = policy_source(&assets)?;
     let qml = std::fs::read_to_string(qml)?;
     let timeout =
         regex::Regex::new(r"(?m)^\s*property\s+int\s+defaultExpireTimeout\s*:\s*([0-9]+)\s*$")?
@@ -636,6 +639,36 @@ fn destructive(call: &CoreCall) -> bool {
 }
 
 /// Separate startup authority. The normal daemon never calls this function.
+/// Wait until nobody owns the notification name (true), or until stop is requested (false).
+/// Any failure to watch the bus degrades to a one-second retry.
+async fn wait_name_released(ingress: &Ingress) -> bool {
+    let watch = async {
+        let connection = zbus::Connection::session().await.ok()?;
+        let dbus = zbus::fdo::DBusProxy::new(&connection).await.ok()?;
+        let mut owners = dbus.receive_name_owner_changed().await.ok()?;
+        let name = zbus::names::BusName::try_from(bus::NAME).ok()?;
+        while dbus.name_has_owner(name.clone()).await.ok()? {
+            loop {
+                let change = owners.next().await?;
+                let args = change.args().ok()?;
+                if args.name().as_str() == bus::NAME && args.new_owner().is_none() {
+                    break;
+                }
+            }
+        }
+        Some(())
+    };
+    tokio::select! {
+        _=ingress.stop.notified()=>false,
+        released=watch=>{
+            if released.is_none() {
+                tokio::select! {_=ingress.stop.notified()=>return false,_=tokio::time::sleep(Duration::from_secs(1))=>{}}
+            }
+            true
+        },
+    }
+}
+
 pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     let mut notices = hub.borrow().observe();
     let raw_policy = crate::notification_history::policy(&paths)?;
@@ -716,11 +749,21 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         let mut bus = match bus::Owned::start(connection, ingress.clone()).await {
             Ok(bus) => bus,
             Err(_) => {
+                // Another server owns the name (for example the QML shell). Stay
+                // up and try again, still without queueing, once it is released.
                 ingress.ready.store(false, Ordering::Release);
                 publish(&hub, &model, &storage, &ingress, false, true)?;
                 hub.borrow_mut().service("notifications", "refused", 0)?;
-                hub.borrow_mut().notifications = None;
-                return Ok(());
+                rows = model
+                    .persisted_rows()?
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default();
+                if !wait_name_released(&ingress).await {
+                    hub.borrow_mut().notifications = None;
+                    return Ok(());
+                }
+                continue;
             }
         };
         let dbus = zbus::fdo::DBusProxy::new(&bus.connection).await?;
@@ -956,6 +999,37 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn policy_is_found_in_source_and_installed_layouts() {
+        let root = tempfile::tempdir().unwrap();
+        let put = |folder: &str| {
+            let dir = root.path().join(folder);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("NacreNotifications.qml"), "").unwrap();
+            dir.join("NacreNotifications.qml")
+        };
+        let source = root.path().join("source-tree");
+        let installed = root.path().join("installed");
+        std::fs::create_dir_all(&source).unwrap();
+        // Installed: shell/tools beside shell/source/config (no shell/config).
+        let installed_qml = {
+            let dir = installed.join("source/config");
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(dir.join("NacreNotifications.qml"), "").unwrap();
+            dir.join("NacreNotifications.qml")
+        };
+        assert_eq!(
+            policy_source(&installed.join("tools")).unwrap(),
+            installed_qml
+        );
+        assert!(policy_source(&source.join("shell-tools")).is_err());
+        let source_qml = put("source-tree/shell/config");
+        assert_eq!(
+            policy_source(&source.join("shell-tools")).unwrap(),
+            source_qml
+        );
+    }
 
     #[tokio::test]
     async fn timed_out_image_work_keeps_its_capacity_until_the_worker_exits() {
