@@ -50,6 +50,7 @@ pub mod menu_registry;
 pub mod network_state;
 pub mod niri_acceptance_monitor;
 pub mod niri_acceptance_systemd;
+pub mod niri_custom_binds;
 pub mod niri_hover_install;
 mod niri_hover_pointer;
 pub mod niri_hover_probe;

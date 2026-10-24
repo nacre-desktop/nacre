@@ -353,7 +353,7 @@ pub fn prepare_configuration(
     profile: &Value,
     keyboard: &Value,
     stock: bool,
-    validate: impl FnOnce(&Path) -> Result<()>,
+    mut validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let directory = backend.join("nacre/shell-tools");
     let contract: Value =
@@ -509,11 +509,71 @@ pub fn prepare_configuration(
         text.push('\n');
     }
     text.push_str("hotkey-overlay {\n    skip-at-startup\n}\n");
-    fs::write(config.join("config.kdl"), text)?;
+    // User-owned custom.kdl is included last and its binds win: a generated bind
+    // on the same key is dropped (and noted in the file) so niri sees no duplicate.
+    let custom = paths.config.join("niri/custom.kdl");
+    let originals: Vec<(PathBuf, String)> = if custom.is_file() {
+        [
+            "bindings.kdl",
+            "monitor-workspace-actions.kdl",
+            "workspace-visitors.kdl",
+        ]
+        .iter()
+        .map(|name| config.join(name))
+        .map(|path| fs::read_to_string(&path).map(|text| (path, text)))
+        .collect::<std::io::Result<_>>()?
+    } else {
+        Vec::new()
+    };
+    let mut with_custom = false;
+    if custom.is_file() {
+        match fs::read_to_string(&custom) {
+            Ok(user) => {
+                let wanted = crate::niri_custom_binds::bound_keys(&user);
+                for (path, original) in &originals {
+                    let (mut kept, dropped) =
+                        crate::niri_custom_binds::drop_overridden(original, &wanted);
+                    if !dropped.is_empty() {
+                        eprintln!(
+                            "custom.kdl overrides generated binds: {}",
+                            dropped.join(", ")
+                        );
+                        kept.push_str(&format!(
+                            "// Overridden by custom.kdl: {}\n",
+                            dropped.join(", ")
+                        ));
+                        fs::write(path, kept)?;
+                    }
+                }
+                with_custom = true;
+            }
+            Err(error) => eprintln!("custom.kdl unreadable, not included: {error}"),
+        }
+    }
+    let plain = text.clone();
+    if with_custom {
+        text.push_str(&format!(
+            "include {}\n",
+            json::encode(&custom.to_string_lossy())?
+        ));
+    }
+    fs::write(config.join("config.kdl"), &text)?;
     for file in fs::read_dir(&config)? {
         fs::set_permissions(file?.path(), fs::Permissions::from_mode(0o600))?;
     }
-    validate(&config.join("config.kdl"))?;
+    if let Err(error) = validate(&config.join("config.kdl")) {
+        if !with_custom {
+            return Err(error);
+        }
+        eprintln!(
+            "custom.kdl makes the niri configuration invalid ({error}); session starts without it"
+        );
+        for (path, original) in &originals {
+            fs::write(path, original)?;
+        }
+        fs::write(config.join("config.kdl"), plain)?;
+        validate(&config.join("config.kdl"))?;
+    }
     if stock {
         let marker = destination.join("stock-niri");
         fs::write(&marker, "Prepared with --stock-niri\n")?;
@@ -921,6 +981,106 @@ mod tests {
         assert!(!paths.config.join("niri/workspaces.kdl").exists());
         Ok(())
     }
+    /// Prepare the first frozen case with an optional user custom.kdl; `fail_with_custom`
+    /// makes the validator reject any config that includes it.
+    fn prepare_with_custom(
+        custom: Option<&str>,
+        fail_with_custom: bool,
+    ) -> Result<(tempfile::TempDir, usize)> {
+        let reference: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/niri-session-preparation-reference.json"
+        ))?;
+        let case = &reference["cases"][0];
+        let frozen_backend = crate::test_support::legacy_compositor_backend()?;
+        let backend = frozen_backend.path().canonicalize()?;
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(paths.config.join("niri"))?;
+        fs::create_dir_all(&paths.state)?;
+        fs::write(paths.config.join("desktop.json"), "{}")?;
+        fs::write(
+            paths.state.join("scheme.json"),
+            serde_json::to_vec(&case["scheme"])?,
+        )?;
+        if let Some(text) = custom {
+            fs::write(paths.config.join("niri/custom.kdl"), text)?;
+        }
+        let destination = home.path().join("stage");
+        fs::create_dir_all(destination.join("home-view"))?;
+        let mut calls = 0;
+        prepare_configuration(
+            &backend,
+            &destination,
+            &paths,
+            &case["profile"],
+            &case["keyboard"],
+            false,
+            |config| {
+                calls += 1;
+                if fail_with_custom && fs::read_to_string(config)?.contains("custom.kdl") {
+                    return Err("invalid".into());
+                }
+                Ok(())
+            },
+        )?;
+        Ok((home, calls))
+    }
+    fn staged(home: &tempfile::TempDir, name: &str) -> Result<String> {
+        Ok(fs::read_to_string(
+            home.path().join("stage/config").join(name),
+        )?)
+    }
+
+    #[test]
+    fn custom_binds_override_generated_ones_and_are_included_last() -> Result<()> {
+        let user =
+            "binds {\n    Super+Shift+S { close-window; }\n    Super+Tab { toggle-overview; }\n}\n";
+        let (home, calls) = prepare_with_custom(Some(user), false)?;
+        assert_eq!(calls, 1);
+        let root = staged(&home, "config.kdl")?;
+        let custom = home.path().join(".config/nacre/niri/custom.kdl");
+        assert!(root.contains(&format!("include \"{}\"\n", custom.display())));
+        let bindings = staged(&home, "bindings.kdl")?;
+        assert!(!bindings.contains("    Super+Shift+S "));
+        assert!(bindings.contains("    Print "));
+        assert!(bindings.contains("// Overridden by custom.kdl: Super+Shift+S"));
+        assert!(!bindings.contains("    Super+TAB "));
+        assert_eq!(fs::read_to_string(&custom)?, user);
+        Ok(())
+    }
+    #[test]
+    fn custom_with_only_new_binds_keeps_generated_bindings_untouched() -> Result<()> {
+        let (home, _) =
+            prepare_with_custom(Some("binds {\n    Super+F9 { close-window; }\n}\n"), false)?;
+        let (plain, _) = prepare_with_custom(None, false)?;
+        assert_eq!(
+            staged(&home, "bindings.kdl")?,
+            staged(&plain, "bindings.kdl")?
+        );
+        assert!(staged(&home, "config.kdl")?.contains("custom.kdl"));
+        Ok(())
+    }
+    #[test]
+    fn invalid_custom_falls_back_to_the_plain_session() -> Result<()> {
+        let user = "binds {\n    Super+Shift+S { close-window; }\n}\n";
+        let (home, calls) = prepare_with_custom(Some(user), true)?;
+        assert_eq!(calls, 2);
+        assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
+        let (plain, _) = prepare_with_custom(None, false)?;
+        assert_eq!(
+            staged(&home, "bindings.kdl")?,
+            staged(&plain, "bindings.kdl")?
+        );
+        Ok(())
+    }
+    #[test]
+    fn missing_custom_adds_no_include() -> Result<()> {
+        let (home, calls) = prepare_with_custom(None, true)?;
+        assert_eq!(calls, 1);
+        assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
+        Ok(())
+    }
+
     #[test]
     fn frozen_preparation_bytes_modes_and_partial_failure_writes() -> Result<()> {
         let reference: Value = serde_json::from_str(include_str!(
