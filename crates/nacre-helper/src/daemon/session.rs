@@ -111,7 +111,7 @@ async fn dispatch(
         }
         "session.request" => super::shell_actions::session(hub, params).await,
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect"
-        | "network.forget" | "vpn.connect" | "vpn.disconnect") => {
+        | "network.forget" | "network.scan" | "vpn.connect" | "vpn.disconnect") => {
             super::network::dispatch(hub, method, params, timeout).await
         }
         method @ ("bluetooth.pair"
@@ -195,6 +195,7 @@ async fn call(
             | "network.forget"
             | "vpn.connect"
             | "vpn.disconnect"
+            | "network.scan"
     );
     let helper = matches!(
         method.as_str(),
@@ -205,6 +206,7 @@ async fn call(
             | "network.forget"
             | "vpn.connect"
             | "vpn.disconnect"
+            | "network.scan"
             | "bluetooth.pair"
             | "bluetooth.pair.respond"
             | "bluetooth.pair.cancel"

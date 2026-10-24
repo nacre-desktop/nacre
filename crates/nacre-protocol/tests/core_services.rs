@@ -97,7 +97,7 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
         }
     }
     assert_eq!(topics, 14);
-    assert_eq!(calls.len(), 26);
+    assert_eq!(calls.len(), 27);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),
@@ -596,6 +596,25 @@ fn network_secret_hidden_ssid_and_forget_contracts() {
     let bad: CoreCall =
         serde_json::from_value(json!({"m":"network.forget","p":{"connection":"../x"}})).unwrap();
     assert!(!bad.valid());
+}
+
+#[test]
+fn scan_and_peak_contracts_are_bounded() {
+    let scan = |device: &str| {
+        serde_json::from_value::<CoreCall>(json!({"m":"network.scan","p":{"device":device}}))
+            .unwrap()
+            .valid()
+    };
+    assert!(scan("wifi-1"));
+    assert!(!scan("../x"));
+    let peak = |level: f64| {
+        serde_json::from_value::<CoreSnapshot>(json!({"topic":"audio.peak","data":{
+            "health":{"available":true,"stale":false},"level":level}}))
+        .unwrap()
+        .valid()
+    };
+    assert!(peak(0.0) && peak(1.0));
+    assert!(!peak(1.01) && !peak(-0.01));
 }
 
 #[test]

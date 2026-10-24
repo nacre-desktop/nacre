@@ -326,6 +326,15 @@ pub struct AudioState {
     pub default_input: Option<EntityId>,
 }
 
+/// N0061: the default microphone's peak level, published only while a client holds a lease.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioPeakState {
+    pub health: Health,
+    /// Peak of the latest window, 0 (silent) to 1 (full scale).
+    #[schemars(range(min = 0.0, max = 1.0))]
+    pub level: f64,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NotificationAction {
     pub label: String,
@@ -911,6 +920,8 @@ pub enum CoreSnapshot {
     Battery(BatteryState),
     #[serde(rename = "audio")]
     Audio(AudioState),
+    #[serde(rename = "audio.peak")]
+    AudioPeak(AudioPeakState),
     #[serde(rename = "notifications")]
     Notifications(NotificationsState),
     #[serde(rename = "osd")]
@@ -1043,6 +1054,7 @@ impl CoreSnapshot {
                             })
                     })
             }
+            Self::AudioPeak(s) => s.level.is_finite() && (0.0..=1.0).contains(&s.level),
             Self::Notifications(s) => {
                 s.active.valid()
                     && s.history.valid()
@@ -1435,6 +1447,9 @@ pub enum CoreCall {
     VpnConnect(ConnectionTarget),
     #[serde(rename = "vpn.disconnect")]
     VpnDisconnect(ConnectionTarget),
+    /// N0061: ask NetworkManager to rescan on one Wi-Fi device; the reply follows the scan.
+    #[serde(rename = "network.scan")]
+    NetworkScan(DeviceTarget),
     #[serde(rename = "bluetooth.set_power")]
     BluetoothPower(BluetoothPower),
     #[serde(rename = "bluetooth.set_discovery")]
@@ -1512,6 +1527,7 @@ impl CoreCall {
                 p.connection.valid()
             }
             Self::NetworkDisconnect(p)
+            | Self::NetworkScan(p)
             | Self::BluetoothConnect(p)
             | Self::BluetoothDisconnect(p)
             | Self::BluetoothPair(p)

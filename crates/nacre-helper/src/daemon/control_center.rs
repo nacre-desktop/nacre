@@ -44,6 +44,7 @@ pub struct Env {
     /// The daemon's own executable, which hosts the `control-tools`/`menu-backend` commands.
     pub engine: PathBuf,
     pub wpctl: String,
+    pub pactl: String,
     pub pw_dump: String,
     pub rfkill: String,
     pub powerprofilesctl: String,
@@ -67,6 +68,7 @@ impl Env {
         Ok(Self {
             engine: std::env::current_exe()?,
             wpctl: "wpctl".into(),
+            pactl: "pactl".into(),
             pw_dump: "pw-dump".into(),
             rfkill: "rfkill".into(),
             powerprofilesctl: "powerprofilesctl".into(),
@@ -434,6 +436,9 @@ async fn audio(
             AudioTarget::Sink => SINK.to_owned(),
             AudioTarget::Source => SOURCE.to_owned(),
             AudioTarget::Node => resolve_node(&env, node.as_deref().unwrap_or_default(), false)?,
+            AudioTarget::Stream => {
+                return set_stream(&env, node.as_deref().unwrap_or_default(), &action)
+            }
         };
         // A missing target is "unavailable", not a failed write.
         tool(
@@ -465,6 +470,35 @@ async fn audio(
         done.map(|_| ()).ok_or_else(action_error)
     })
     .await
+}
+/// N0061: one application stream, addressed by its `audio` topic id. Only the numeric pactl
+/// index reaches the command line. pactl takes raw volume units (65536 = 100 % of the
+/// perceptual scale), so the contract's linear value is converted with a cube root.
+fn set_stream(env: &Env, id: &str, action: &Audio) -> std::result::Result<(), Failure> {
+    let (kind, index) = stream_id(id).ok_or_else(invalid)?;
+    let index = index.to_string();
+    let done = match action {
+        Audio::Volume(value) => {
+            let raw = (value.cbrt() * 65536.0).round().to_string();
+            tool(
+                &env.pactl,
+                &[&format!("set-{kind}-volume"), &index, &raw],
+                Duration::from_secs(5),
+            )
+        }
+        Audio::Mute(muted) => tool(
+            &env.pactl,
+            &[
+                &format!("set-{kind}-mute"),
+                &index,
+                if *muted { "1" } else { "0" },
+            ],
+            Duration::from_secs(5),
+        ),
+    };
+    // A stream that ended is the usual failure: report it as unavailable, not as a bad write.
+    done.map(|_| ())
+        .ok_or_else(|| unavailable("Audio stream is unavailable"))
 }
 /// N0051: make a device the default output or input. The name must be a PipeWire `Audio/Sink` or
 /// `Audio/Source` node; only its numeric id reaches `wpctl`.

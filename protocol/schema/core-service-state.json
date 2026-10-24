@@ -120,6 +120,22 @@
       "properties": {
         "topic": {
           "type": "string",
+          "const": "audio.peak"
+        },
+        "data": {
+          "$ref": "#/$defs/AudioPeakState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
           "const": "notifications"
         },
         "data": {
@@ -1234,6 +1250,26 @@
           ]
         }
       }
+    },
+    "AudioPeakState": {
+      "description": "N0061: the default microphone's peak level, published only while a client holds a lease.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "level": {
+          "description": "Peak of the latest window, 0 (silent) to 1 (full scale).",
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "health",
+        "level"
+      ]
     },
     "NotificationsState": {
       "type": "object",

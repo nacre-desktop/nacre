@@ -2,6 +2,7 @@
 pub mod active_wallpaper;
 pub mod ai_chat;
 pub mod attach;
+pub mod audio_peak;
 pub mod bar_services;
 pub mod bar_tray_watcher;
 pub mod behaviours;
@@ -315,6 +316,18 @@ async fn serve(
             "osd",
             hub.clone(),
             move || osd::run(osd_hub.clone(), osd_paths.clone()),
+        )))
+    } else {
+        None
+    };
+    // N0061: the microphone peak capture runs only while `audio.peak` has a subscriber.
+    let audio_peak_service = if !counter.safe {
+        audio_peak::initial(&hub)?;
+        let peak_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "audio-peak",
+            hub.clone(),
+            move || audio_peak::run(peak_hub.clone(), audio_peak::Env::production()),
         )))
     } else {
         None
@@ -634,6 +647,10 @@ async fn serve(
                 tracing::error!("OSD supervisor failed during shutdown");
             }
         }
+    }
+    if let Some(service) = audio_peak_service {
+        service.abort();
+        let _ = service.await;
     }
     if let Some(service) = controls_service {
         service.abort();

@@ -38,6 +38,9 @@ struct State {
     added_psk: Option<String>,
     created: bool,
     created_active: bool,
+    // N0061: Device.Wireless LastScan, and a NotAllowed refusal of RequestScan.
+    last_scan: i64,
+    too_soon: bool,
     deleted: Vec<String>,
 }
 #[derive(Clone, Default)]
@@ -267,9 +270,40 @@ impl DeviceFixture {
         }
     }
 }
+#[derive(Debug, zbus::DBusError)]
+#[zbus(prefix = "org.freedesktop.NetworkManager.Device")]
+enum DeviceError {
+    #[zbus(error)]
+    ZBus(zbus::Error),
+    NotAllowed(String),
+}
+impl From<zbus::fdo::Error> for DeviceError {
+    fn from(error: zbus::fdo::Error) -> Self {
+        Self::ZBus(error.into())
+    }
+}
 struct Wireless(Backend);
 #[zbus::interface(name = "org.freedesktop.NetworkManager.Device.Wireless")]
 impl Wireless {
+    #[zbus(property)]
+    fn last_scan(&self) -> i64 {
+        self.0.state.lock().unwrap().last_scan
+    }
+    async fn request_scan(
+        &self,
+        options: HashMap<String, OwnedValue>,
+    ) -> std::result::Result<(), DeviceError> {
+        assert!(options.is_empty());
+        self.0.admission("scan").await?;
+        let mut state = self.0.state.lock().unwrap();
+        if state.too_soon {
+            return Err(DeviceError::NotAllowed(
+                "Scanning not allowed immediately".into(),
+            ));
+        }
+        state.last_scan += 1;
+        Ok(())
+    }
     #[zbus(property)]
     fn active_access_point(&self) -> OwnedObjectPath {
         if self.0.state.lock().unwrap().active {
@@ -578,6 +612,74 @@ async fn network_controls_admission_and_authoritative_readback() -> crate::Resul
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn network_scan_follows_the_scan_and_tolerates_a_recent_one() -> crate::Result<()> {
+    tokio::time::timeout(
+        Duration::from_secs(20),
+        tokio::task::LocalSet::new().run_until(async {
+            let f = Fixture::new().await?;
+            let device = f.device();
+            // The radio is off: nothing is asked of NetworkManager.
+            assert_eq!(
+                f.call("network.scan", json!({"device":device}))
+                    .await
+                    .unwrap_err()
+                    .code,
+                ErrorCode::Unavailable
+            );
+            assert!(f.backend.state.lock().unwrap().calls.is_empty());
+            f.call("network.set_wifi", json!({"enabled":true})).await?;
+            f.wait(|s| s.wireless_enabled).await;
+            assert_eq!(
+                f.call("network.scan", json!({"device":device})).await?,
+                json!({"changed":true})
+            );
+            assert_eq!(f.backend.state.lock().unwrap().last_scan, 1);
+            assert!(f
+                .backend
+                .state
+                .lock()
+                .unwrap()
+                .calls
+                .contains(&"scan".to_owned()));
+            // A scan right after another is refused by NetworkManager and changes nothing.
+            f.backend.state.lock().unwrap().too_soon = true;
+            assert_eq!(
+                f.call("network.scan", json!({"device":device})).await?,
+                json!({"changed":false})
+            );
+            assert_eq!(f.backend.state.lock().unwrap().last_scan, 1);
+            f.backend.state.lock().unwrap().too_soon = false;
+            // A wired device, a bad id and a backend refusal.
+            let wired = f.snapshot().devices.order[1].clone();
+            assert_eq!(
+                f.call("network.scan", json!({"device":wired}))
+                    .await
+                    .unwrap_err()
+                    .code,
+                ErrorCode::StaleRevision
+            );
+            assert_eq!(
+                f.call("network.scan", json!({"device":"/untrusted/path"}))
+                    .await
+                    .unwrap_err()
+                    .code,
+                ErrorCode::Validation
+            );
+            f.backend.state.lock().unwrap().mode = 2;
+            let error = f
+                .call("network.scan", json!({"device":device}))
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::Unavailable);
+            assert!(!error.message.contains("private"));
+            Ok::<(), crate::Error>(())
+        }),
+    )
+    .await??;
+    Ok(())
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn network_controls_stale_wrong_kind_cross_device_and_denied() -> crate::Result<()> {
     tokio::time::timeout(Duration::from_secs(20), tokio::task::LocalSet::new().run_until(async {
         let f = Fixture::new().await?;
@@ -701,7 +803,7 @@ async fn network_controls_welcome_and_boot_scoping() -> crate::Result<()> {
             let f = Fixture::new().await?;
             let (mut writer, mut reader, task, welcome) = socket_client(f.hub.clone()).await?;
             let methods = advertised(welcome);
-            assert_eq!(methods.len(), 4);
+            assert_eq!(methods.len(), 5);
             assert!(methods.values().all(|m| m.v == 1 && m.timeout == TIMEOUT));
             framing::write(
                 &mut writer,
@@ -776,7 +878,7 @@ async fn network_controls_owner_replacement_never_replays() -> crate::Result<()>
         f.task = tokio::task::spawn_local(observe_on_connection(f.hub.clone(), Rc::new(Cell::new(0)), projection, connection, ObserveHooks::default()));
         f.wait(|s| s.health.available).await;
         assert_ne!(old_device, f.device());
-        assert_eq!(advertised(f.hub.borrow().welcome()).len(), 4);
+        assert_eq!(advertised(f.hub.borrow().welcome()).len(), 5);
         assert!(replacement.state.lock().unwrap().calls.is_empty());
         assert_eq!(f.call("network.disconnect", json!({"device":old_device})).await.unwrap_err().code, ErrorCode::StaleRevision);
         assert!(replacement.state.lock().unwrap().calls.is_empty());
@@ -816,7 +918,7 @@ async fn network_controls_link_loss_skips_queued_actions() -> crate::Result<()> 
             f.backend.release.notify_one();
             f.wait(|s| s.wireless_enabled).await;
             let (writer, reader, task, welcome) = socket_client(f.hub.clone()).await?;
-            assert_eq!(advertised(welcome).len(), 4);
+            assert_eq!(advertised(welcome).len(), 5);
             // Reader and actor share one queue; a roundtrip fences the skipped call.
             assert_eq!(
                 f.call("network.disconnect", json!({"device":f.device()}))

@@ -83,6 +83,70 @@ fn publish_audio(hub: &Shared, state: AudioState) -> Result<()> {
     Ok(())
 }
 
+/// `(perceptual, linear, muted)` of a pactl sink, source or stream entry.
+fn levels(entry: &Value) -> Option<(f64, f64, bool)> {
+    let perceptual = entry["volume"]
+        .as_object()?
+        .values()
+        .filter_map(|channel| channel["value"].as_f64())
+        .reduce(f64::max)?
+        / 65536.0;
+    let linear = perceptual.powi(3);
+    (perceptual.is_finite() && perceptual >= 0.0 && linear.is_finite()).then_some((
+        perceptual,
+        linear,
+        entry["mute"].as_bool()?,
+    ))
+}
+
+/// The most application streams one kind publishes.
+const MAX_STREAMS: usize = 64;
+/// The peak monitor's own capture stream (see `peak`); it is not an application.
+pub(super) const PEAK_CLIENT: &str = "nacre-peak";
+
+/// N0061: application playback (`sink-input`) or capture (`source-output`) streams. The id
+/// `<prefix>:<pactl index>` is what `audio.set_volume`/`audio.set_mute` take as a `stream`
+/// target; `name` is the application's name. A stream that cannot be read is skipped.
+fn audio_streams(data: &str, kind: AudioKind, prefix: &str, state: &mut AudioState) {
+    let Ok(entries) = serde_json::from_str::<Vec<Value>>(data) else {
+        return;
+    };
+    for entry in entries.into_iter().take(MAX_STREAMS) {
+        let properties = &entry["properties"];
+        if properties["application.name"] == PEAK_CLIENT || state.nodes.items.len() >= 2048 {
+            continue;
+        }
+        let (Some(index), Some((perceptual, linear, muted))) =
+            (entry["index"].as_u64(), levels(&entry))
+        else {
+            continue;
+        };
+        let id = EntityId(format!("{prefix}:{index}"));
+        let text = |key: &str| properties[key].as_str().filter(|text| !text.is_empty());
+        let name = text("application.name")
+            .or_else(|| text("media.name"))
+            .unwrap_or_default();
+        state.nodes.items.insert(
+            id.clone(),
+            AudioNode {
+                name: name.chars().take(200).collect(),
+                kind: kind.clone(),
+                volume: linear,
+                muted,
+                ready: true,
+                readback: Some(AudioReadback {
+                    linear_volume: Some(linear),
+                    perceptual_volume: Some(perceptual),
+                    muted: Some(muted),
+                }),
+                icon: text("application.icon_name").map(|icon| icon.chars().take(128).collect()),
+                target: None,
+            },
+        );
+        state.nodes.order.push(id);
+    }
+}
+
 // Pulse volumes are the cube root of PipeWire's linear volume. Preserve both
 // readings so clients use the same perceptual slider as the existing shell.
 fn audio_nodes(
@@ -109,20 +173,7 @@ fn audio_nodes(
         if !id.valid() || state.nodes.items.contains_key(&id) {
             continue;
         }
-        let channels = entry["volume"].as_object()?;
-        let perceptual = channels
-            .values()
-            .filter_map(|channel| channel["value"].as_f64())
-            .reduce(f64::max)?
-            / 65536.0;
-        if !perceptual.is_finite() || perceptual < 0.0 {
-            return None;
-        }
-        let linear = perceptual.powi(3);
-        if !linear.is_finite() {
-            return None;
-        }
-        let muted = entry["mute"].as_bool()?;
+        let (perceptual, linear, muted) = levels(&entry)?;
         let label = entry["description"]
             .as_str()
             .unwrap_or(name)
@@ -168,6 +219,15 @@ async fn read_audio(env: &Env) -> Option<AudioState> {
     ] {
         if let Some(name) = tool(&env.pactl, &[command]).await {
             *default = names.get(name.trim()).cloned();
+        }
+    }
+    // Streams are optional: an old server without them still has its devices.
+    for (list, kind, prefix) in [
+        ("sink-inputs", AudioKind::Playback, "sink-input"),
+        ("source-outputs", AudioKind::Capture, "source-output"),
+    ] {
+        if let Some(data) = tool(&env.pactl, &["--format=json", "list", list]).await {
+            audio_streams(&data, kind, prefix, &mut state);
         }
     }
     state.health.available = !state.nodes.items.is_empty();
@@ -543,7 +603,9 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                 let server = line.ends_with(" on server");
                 let relevant = |what: &str| line.contains(&format!(" on {what} #"));
                 let (s, m) = (server || relevant("sink"), server || relevant("source"));
-                if s || m {
+                // Stream events only refresh the audio topic (N0061).
+                let streams = relevant("sink-input") || relevant("source-output");
+                if s || m || streams {
                     dirty_sink |= s;
                     dirty_source |= m;
                     audio_at.get_or_insert(Instant::now() + AUDIO_DEBOUNCE);

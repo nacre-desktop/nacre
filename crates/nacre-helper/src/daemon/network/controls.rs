@@ -12,14 +12,20 @@ const WIFI: u8 = 1;
 const CONNECT: u8 = 2;
 const DISCONNECT: u8 = 4;
 const FORGET: u8 = 8;
-const METHODS: [&str; 6] = [
+const SCAN: u8 = 16;
+const METHODS: [&str; 7] = [
     "network.set_wifi",
     "network.connect",
     "network.disconnect",
     "network.forget",
     "vpn.connect",
     "vpn.disconnect",
+    "network.scan",
 ];
+const WIRELESS: &str = "org.freedesktop.NetworkManager.Device.Wireless";
+/// How long `network.scan` waits for NetworkManager to finish; below the method deadline.
+const SCAN_WAIT: Duration = Duration::from_secs(7);
+const SCAN_POLL: Duration = Duration::from_millis(250);
 /// Stable text clients use to re-prompt; the code is the existing `validation`.
 pub const SECRET_REQUIRED: &str = "Network secret required";
 const WIFI_SETTINGS: &str = "802-11-wireless";
@@ -87,6 +93,7 @@ impl Requests {
             "network.forget" => FORGET,
             "vpn.connect" => CONNECT,
             "vpn.disconnect" => DISCONNECT,
+            "network.scan" => SCAN,
             _ => return false,
         };
         !self.owner_boundary.get() && !self.sender.is_closed() && self.capabilities.get() & bit != 0
@@ -147,6 +154,7 @@ pub async fn dispatch(
                 | CoreCall::NetworkForget(_)
                 | CoreCall::VpnConnect(_)
                 | CoreCall::VpnDisconnect(_)
+                | CoreCall::NetworkScan(_)
         )
     {
         return Err(invalid());
@@ -372,6 +380,7 @@ fn action_device(action: &Action) -> Option<&EntityId> {
     match &action.call {
         CoreCall::NetworkConnect(p) => Some(&p.device),
         CoreCall::NetworkDisconnect(p) => Some(&p.device),
+        CoreCall::NetworkScan(p) => Some(&p.device),
         _ => None,
     }
 }
@@ -523,7 +532,8 @@ pub(super) async fn capabilities(connection: &zbus::Connection, owner: &str) -> 
     });
     let mut capabilities = 0;
     if wifi {
-        capabilities |= WIFI;
+        // The radio switch and the per-device rescan are both Wi-Fi controls.
+        capabilities |= WIFI | SCAN;
     }
     if method("ActivateConnection") && method("AddAndActivateConnection2") {
         capabilities |= CONNECT | FORGET;
@@ -644,6 +654,46 @@ async fn vpn_execute(
             .insert(active.as_str().to_owned(), id.clone());
     }
     serde_json::to_value(CoreResult { changed: true }).map_err(|_| unavailable())
+/// Ask for a rescan, then wait (bounded) until NetworkManager reports a newer `LastScan`, so
+/// the reply marks the end of the scan the client shows progress for. A scan refused as too
+/// soon after the previous one changed nothing and is not an error.
+async fn request_scan(
+    connection: &zbus::Connection,
+    owner: &str,
+    device: &str,
+    action: &Action,
+) -> std::result::Result<bool, Failure> {
+    let last = || async {
+        property::<i64>(connection, device, WIRELESS, "LastScan")
+            .await
+            .map_err(read_error)
+    };
+    let before = last().await?;
+    let options = HashMap::<String, zbus::zvariant::Value>::new();
+    match connection
+        .call_method(
+            Some(owner),
+            device,
+            Some(WIRELESS),
+            "RequestScan",
+            &(options,),
+        )
+        .await
+    {
+        Ok(_) => {}
+        Err(zbus::Error::MethodError(name, _, _)) if name.as_str().ends_with(".NotAllowed") => {
+            return Ok(false)
+        }
+        Err(error) => return Err(backend_error(error)),
+    }
+    let limit = (tokio::time::Instant::now() + SCAN_WAIT).min(action.deadline);
+    while tokio::time::Instant::now() < limit && !action.reply.is_closed() {
+        tokio::time::sleep(SCAN_POLL).await;
+        if last().await.is_ok_and(|now| now != before) {
+            break;
+        }
+    }
+    Ok(true)
 }
 
 pub(super) async fn execute(
@@ -687,6 +737,7 @@ pub(super) async fn execute(
         CoreCall::NetworkConnect(_) => "network.connect",
         CoreCall::NetworkDisconnect(_) => "network.disconnect",
         CoreCall::NetworkForget(_) => "network.forget",
+        CoreCall::NetworkScan(_) => "network.scan",
         _ => return Err(invalid()),
     };
     if !requests.supports(method) {
@@ -696,6 +747,7 @@ pub(super) async fn execute(
     let device_path = match &action.call {
         CoreCall::NetworkConnect(p) => Some((&p.device, source(ids, "device", &p.device)?)),
         CoreCall::NetworkDisconnect(p) => Some((&p.device, source(ids, "device", &p.device)?)),
+        CoreCall::NetworkScan(p) => Some((&p.device, source(ids, "device", &p.device)?)),
         _ => None,
     };
     if let Some((id, _)) = device_path {
@@ -711,10 +763,11 @@ pub(super) async fn execute(
         Activate(OwnedObjectPath, OwnedObjectPath, OwnedObjectPath),
         Add(Settings, &'static str, OwnedObjectPath, OwnedObjectPath),
         Deactivate(OwnedObjectPath),
+        Scan(OwnedObjectPath),
         Delete(OwnedObjectPath),
         Noop,
     }
-    let (mutation, changed) = match &action.call {
+    let (mutation, mut changed) = match &action.call {
         CoreCall::WifiPower(p) => (Mutation::Wifi(p.enabled), raw.wireless_enabled != p.enabled),
         CoreCall::NetworkConnect(p) => {
             let device = device.ok_or_else(stale)?;
@@ -804,6 +857,16 @@ pub(super) async fn execute(
                 }
             };
             (mutation, true)
+        }
+        CoreCall::NetworkScan(_) => {
+            let device = device.ok_or_else(stale)?;
+            if device.kind != 2 {
+                return Err(stale());
+            }
+            if !raw.wireless_enabled {
+                return Err(unavailable().dispatch_state(false));
+            }
+            (Mutation::Scan(path(&device.path)?), true)
         }
         CoreCall::NetworkForget(p) => {
             let profile = source(ids, "connection", &p.connection)?;
@@ -929,6 +992,9 @@ pub(super) async fn execute(
                 &(active,),
             )
             .await?;
+        }
+        Mutation::Scan(device) => {
+            changed = request_scan(connection, owner, device.as_str(), action).await?;
         }
         Mutation::Noop => {}
     }

@@ -22,6 +22,9 @@ pub enum AudioTarget {
     Source,
     /// The PipeWire node named by `node`.
     Node,
+    /// N0061: one application stream, `node` being its `audio` topic id (`sink-input:<n>` for
+    /// playback, `source-output:<n>` for capture).
+    Stream,
 }
 /// Absolute volume. `value` is the **linear** level in [0,1], the scale the QML slider wrote
 /// (`audio.volume`) and the one `AudioNode.volume` / `readback.linear_volume` report. A slider
@@ -30,7 +33,7 @@ pub enum AudioTarget {
 #[serde(deny_unknown_fields)]
 pub struct AudioSetVolume {
     pub target: AudioTarget,
-    /// PipeWire `node.name`; required for `node`, forbidden otherwise.
+    /// PipeWire `node.name` for `node`, a stream id for `stream`; forbidden otherwise.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 128))]
     pub node: Option<String>,
@@ -185,10 +188,22 @@ fn node_name(value: &str) -> bool {
             b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b':' | b'-' | b'@' | b'+')
         })
 }
+/// `sink-input:<n>` or `source-output:<n>`: the only stream ids the daemon publishes.
+pub fn stream_id(value: &str) -> Option<(&'static str, u32)> {
+    let (kind, number) = value.split_once(':')?;
+    let kind = ["sink-input", "source-output"]
+        .into_iter()
+        .find(|known| *known == kind)?;
+    if !(1..=10).contains(&number.len()) || !number.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    number.parse().ok().map(|n| (kind, n))
+}
 fn target_valid(target: AudioTarget, node: &Option<String>) -> bool {
     match (target, node) {
         (AudioTarget::Node, Some(name)) => node_name(name),
-        (AudioTarget::Node, None) | (_, Some(_)) => false,
+        (AudioTarget::Stream, Some(id)) => stream_id(id).is_some(),
+        (AudioTarget::Node | AudioTarget::Stream, None) | (_, Some(_)) => false,
         (_, None) => true,
     }
 }
@@ -562,6 +577,31 @@ mod tests {
         }
         .validate()
         .is_err());
+    }
+    #[test]
+    fn stream_targets_take_only_daemon_stream_ids() {
+        let volume = |node: Option<&str>| AudioSetVolume {
+            target: AudioTarget::Stream,
+            node: node.map(Into::into),
+            value: 0.5,
+        };
+        for good in ["sink-input:7", "source-output:4294967295", "sink-input:0"] {
+            assert!(volume(Some(good)).validate().is_ok(), "{good}");
+        }
+        for bad in [
+            None,
+            Some("sink-input:"),
+            Some("sink-input:-1"),
+            Some("sink-input:1 2"),
+            Some("sink-input:12345678901"),
+            Some("sink-input:99999999999"),
+            Some("sink:3"),
+            Some("alsa_output.x"),
+            Some("sink-input:7;rm"),
+        ] {
+            assert!(volume(bad).validate().is_err(), "{bad:?}");
+        }
+        assert_eq!(stream_id("source-output:12"), Some(("source-output", 12)));
     }
     #[test]
     fn requests_reject_unknown_fields_and_names_are_stable() {

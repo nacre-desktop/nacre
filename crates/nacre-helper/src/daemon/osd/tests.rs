@@ -530,6 +530,33 @@ esac
     )
     .unwrap();
     assert!(unavailable.nodes.items.is_empty());
+    // N0061: application streams, minus the peak monitor's own capture.
+    let streams = |playing: bool| {
+        let mut list = vec![json!({
+            "index":9, "mute":false, "volume":{"mono":{"value":65536}},
+            "properties":{"application.name":PEAK_CLIENT}
+        })];
+        if playing {
+            list.push(json!({
+                "index":7, "mute":true,
+                "volume":{"front-left":{"value":32768},"front-right":{"value":16384}},
+                "properties":{"application.name":"Fixture player","media.name":"Track",
+                    "application.icon_name":"fixture-icon"}
+            }));
+            list.push(json!({
+                "index":8, "mute":false, "volume":{"mono":{"value":65536}},
+                "properties":{"media.name":"Only a stream title"}
+            }));
+        }
+        json!(list).to_string()
+    };
+    f.set("sink-inputs.json", &streams(true));
+    f.set(
+        "source-outputs.json",
+        &json!([{"index":3,"mute":false,"volume":{"mono":{"value":0}},
+            "properties":{"application.name":"Fixture recorder"}}])
+        .to_string(),
+    );
     f.set("sinks.json", &sink(false).to_string());
     f.set(
         "sources.json",
@@ -578,6 +605,30 @@ esac
                 .unwrap();
             assert_eq!(reading.linear_volume, Some(0.125));
             assert_eq!(reading.perceptual_volume, Some(0.5));
+            let node = |id: &str| state.nodes.items.get(&EntityId(id.into()));
+            let player = node("sink-input:7").unwrap();
+            assert_eq!(player.kind, AudioKind::Playback);
+            assert_eq!(player.name, "Fixture player");
+            assert_eq!(player.icon.as_deref(), Some("fixture-icon"));
+            assert!(player.muted && player.ready);
+            assert_eq!(player.volume, 0.125);
+            assert_eq!(node("sink-input:8").unwrap().name, "Only a stream title");
+            assert_eq!(node("source-output:3").unwrap().kind, AudioKind::Capture);
+            assert!(
+                node("sink-input:9").is_none(),
+                "the peak monitor is not an application"
+            );
+            f.set("sink-inputs.json", &streams(false));
+            f.pactl("Event 'remove' on sink-input #7");
+            tokio::time::timeout(Duration::from_secs(5), async {
+                while f.hub.borrow().snapshot("audio").unwrap()["nodes"]["items"]["sink-input:7"]
+                    != Value::Null
+                {
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+            .await
+            .unwrap();
             f.set("sinks.json", &sink(true).to_string());
             // Let the OSD's silent wpctl baseline finish before delivering a bus event.
             tokio::time::sleep(Duration::from_millis(100)).await;
@@ -597,7 +648,7 @@ esac
                 loop {
                     let data = f.hub.borrow().snapshot("audio").unwrap();
                     if data["default_output"] == "bluez_output.headphones" {
-                        assert_eq!(data["nodes"]["order"].as_array().unwrap().len(), 3);
+                        assert_eq!(data["nodes"]["order"].as_array().unwrap().len(), 4);
                         break;
                     }
                     tokio::time::sleep(Duration::from_millis(20)).await;

@@ -107,6 +107,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
                     json!({"device":"wifi-1","target":{"kind":"hidden_ssid","id":"Hidden fixture"},"secret":"fixture-passphrase","security":"wpa_psk"}),
                 ),
                 ("network.forget", json!({"connection":"connection-1"})),
+                ("network.scan", json!({"device":"wifi-1"})),
                 ("network.disconnect", json!({"device":"wifi-1"})),
                 ("network.set_wifi", json!({"enabled":false})),
             ],
@@ -204,6 +205,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
                 ),
             ],
         ),
+        ("audio.peak", json!({"health":health,"level":0.25}), vec![]),
         (
             "notifications",
             json!({"health":health,"do_not_disturb":false,"active":entities(json!({"notice-1":{

@@ -16,6 +16,11 @@
       "description": "The PipeWire node named by `node`.",
       "type": "string",
       "const": "node"
+    },
+    {
+      "description": "N0061: one application stream, `node` being its `audio` topic id (`sink-input:<n>` for\nplayback, `source-output:<n>` for capture).",
+      "type": "string",
+      "const": "stream"
     }
   ]
 }

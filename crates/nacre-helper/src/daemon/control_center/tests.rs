@@ -64,6 +64,10 @@ impl Fixture {
             &root.join("wpctl"),
             &format!("[ -f '{d}/gone' ] && exit 1\ncase \"$1\" in get-volume) echo 'Volume: 0.50';; *) echo \"$@\" >> '{d}/wpctl.log';; esac\n"),
         );
+        script(
+            &root.join("pactl"),
+            &format!("[ -f '{d}/gone' ] && exit 1\n[ \"$2\" = 99 ] && exit 1\necho \"$@\" >> '{d}/pactl.log'\n"),
+        );
         script(&root.join("pw-dump"), &format!("cat '{d}/pw.json'\n"));
         script(
             &root.join("rfkill"),
@@ -125,6 +129,7 @@ esac
         Env {
             engine: self.path("engine"),
             wpctl: p("wpctl"),
+            pactl: p("pactl"),
             pw_dump: p("pw-dump"),
             rfkill: p("rfkill"),
             powerprofilesctl: p("powerprofilesctl"),
@@ -166,6 +171,13 @@ async fn released() {
     panic!("the capture lane was not released");
 }
 
+/// The audio lane is one process-wide lock: tests that use it take turns instead of racing.
+fn audio_turn() -> std::sync::MutexGuard<'static, ()> {
+    static TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    TURN.lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 fn run<F: std::future::Future>(future: F) -> F::Output {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -176,6 +188,7 @@ fn run<F: std::future::Future>(future: F) -> F::Output {
 
 #[test]
 fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
+    let _turn = audio_turn();
     run(async {
         let f = Fixture::new();
         f.call("audio.set_volume", json!({"target":"sink","value":0.125}))
@@ -211,11 +224,65 @@ fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
              set-volume -l 1.0 42 0.0000\n\
              set-mute 42 1\n"
         );
+        // N0061: application streams go to pactl by numeric index only.
+        for (node, value) in [("sink-input:7", 0.125), ("source-output:12", 1.0)] {
+            f.call(
+                "audio.set_volume",
+                json!({"target":"stream","node":node,"value":value}),
+            )
+            .await
+            .unwrap();
+        }
+        f.call(
+            "audio.set_mute",
+            json!({"target":"stream","node":"sink-input:7","muted":true}),
+        )
+        .await
+        .unwrap();
+        f.call(
+            "audio.set_mute",
+            json!({"target":"stream","node":"source-output:12","muted":false}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            f.text("pactl.log"),
+            "set-sink-input-volume 7 32768\n\
+             set-source-output-volume 12 65536\n\
+             set-sink-input-mute 7 1\n\
+             set-source-output-mute 12 0\n"
+        );
+        for node in [
+            "sink-input:7;id",
+            "sink:7",
+            "sink-input:",
+            "alsa_output.fake",
+        ] {
+            let error = f
+                .call(
+                    "audio.set_mute",
+                    json!({"target":"stream","node":node,"muted":true}),
+                )
+                .await
+                .unwrap_err();
+            assert_eq!(error.code, ErrorCode::Validation, "{node}");
+        }
+        // A stream that ended (pactl refuses the index) is unavailable.
+        let error = f
+            .call(
+                "audio.set_mute",
+                json!({"target":"stream","node":"sink-input:99","muted":true}),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::Unavailable);
+        assert_eq!(f.text("pactl.log").lines().count(), 4);
     });
 }
 
 #[test]
 fn audio_refuses_bad_targets_missing_nodes_and_vanished_devices() {
+    let _turn = audio_turn();
     run(async {
         let f = Fixture::new();
         for params in [
@@ -257,6 +324,7 @@ fn audio_refuses_bad_targets_missing_nodes_and_vanished_devices() {
 
 #[test]
 fn the_default_device_is_a_named_sink_or_source_and_nothing_else() {
+    let _turn = audio_turn();
     run(async {
         let f = Fixture::new();
         for node in ["alsa_output.fake", "alsa_input.fake"] {

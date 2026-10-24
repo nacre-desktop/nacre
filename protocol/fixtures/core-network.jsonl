@@ -11,8 +11,10 @@
 {"t":"ret","id":4,"ok":{"changed":true}}
 {"t":"call","id":5,"m":"network.forget","p":{"connection":"connection-1"},"timeout":10000}
 {"t":"ret","id":5,"ok":{"changed":true}}
-{"t":"call","id":6,"m":"network.disconnect","p":{"device":"wifi-1"},"timeout":10000}
+{"t":"call","id":6,"m":"network.scan","p":{"device":"wifi-1"},"timeout":10000}
 {"t":"ret","id":6,"ok":{"changed":true}}
-{"t":"call","id":7,"m":"network.set_wifi","p":{"enabled":false},"timeout":10000}
+{"t":"call","id":7,"m":"network.disconnect","p":{"device":"wifi-1"},"timeout":10000}
 {"t":"ret","id":7,"ok":{"changed":true}}
+{"t":"call","id":8,"m":"network.set_wifi","p":{"enabled":false},"timeout":10000}
+{"t":"ret","id":8,"ok":{"changed":true}}
 {"t":"patch","topic":"network","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}
