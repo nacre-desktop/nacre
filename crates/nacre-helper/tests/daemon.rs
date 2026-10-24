@@ -3239,14 +3239,25 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     // N0067: every LED and backlight attribute is a FIFO nobody writes to: any read blocks forever.
     let sys = home.path().join("hung-sys");
     for (class, device, files) in [
-        ("leds", "asus::kbd_backlight", &["max_brightness", "brightness"][..]),
+        (
+            "leds",
+            "asus::kbd_backlight",
+            &["max_brightness", "brightness"][..],
+        ),
         ("leds", "input3::capslock", &["brightness"][..]),
-        ("backlight", "intel_backlight", &["max_brightness", "brightness"][..]),
+        (
+            "backlight",
+            "intel_backlight",
+            &["max_brightness", "brightness"][..],
+        ),
     ] {
         let folder = sys.join("class").join(class).join(device);
         fs::create_dir_all(&folder)?;
         for file in files {
-            assert!(Command::new("mkfifo").arg(folder.join(file)).status()?.success());
+            assert!(Command::new("mkfifo")
+                .arg(folder.join(file))
+                .status()?
+                .success());
         }
     }
     let audio_started = home.path().join("pactl-started");
@@ -3343,6 +3354,7 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         .recv(&mut packet)
         .map_err(|_| "No READY within two seconds while backends hang")?;
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    eprintln!("N0067 READY with hung sysfs: {:?}", started.elapsed());
     assert!(started.elapsed() < Duration::from_secs(2));
     let deadline = Instant::now() + Duration::from_secs(2);
     while !check_started.exists() && Instant::now() < deadline {
@@ -3415,11 +3427,16 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     // N0067: with the LED/backlight reads blocked, status still answers within 200 ms, every time,
     // also while a client holds the `controls` subscription (its producer scans the lights).
     let mut controls = UnixStream::connect(&endpoint)?;
-    writeln!(controls, "{}", json!({"t":"hello","proto":1,"client":"hung-sysfs"}))?;
+    writeln!(
+        controls,
+        "{}",
+        json!({"t":"hello","proto":1,"client":"hung-sysfs"})
+    )?;
     writeln!(controls, "{}", json!({"t":"sub","topics":["controls"]}))?;
     for _ in 0..5 {
         let asked = Instant::now();
         status(home.path(), &source_path, &endpoint)?;
+        eprintln!("N0067 status with hung sysfs: {:?}", asked.elapsed());
         assert!(
             asked.elapsed() < Duration::from_millis(200),
             "status took {:?} while sysfs reads hang",

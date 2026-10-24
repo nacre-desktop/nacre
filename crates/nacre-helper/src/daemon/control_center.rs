@@ -1087,8 +1087,7 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
         };
         let lights = scan_lights(&env, &probe).await;
         let (read_env, prior) = (env.clone(), state.clone());
-        state =
-            crate::process::offload(move || collect(&read_env, &probe, &prior, lights)).await?;
+        state = crate::process::offload(move || collect(&read_env, &probe, &prior, lights)).await?;
         if slow {
             state.appearance = read_appearance(&hub).await;
         }

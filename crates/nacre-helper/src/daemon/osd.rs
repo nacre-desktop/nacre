@@ -449,15 +449,23 @@ fn read_caps(leds: PathBuf, known: Option<PathBuf>) -> CapsRead {
     (path.filter(|_| value.is_some()), value)
 }
 /// At most one read is in flight; a LED that hangs only stops its own updates.
-fn start_caps(job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>, leds: &Path, known: &Option<PathBuf>) {
+fn start_caps(
+    job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>,
+    leds: &Path,
+    known: &Option<PathBuf>,
+) {
     if job.is_none() {
         let (leds, known) = (leds.to_owned(), known.clone());
         *job = Some(tokio::task::spawn_local(async move {
-            crate::process::offload(move || read_caps(leds, known)).await.ok()
+            crate::process::offload(move || read_caps(leds, known))
+                .await
+                .ok()
         }));
     }
 }
-async fn caps_done(job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>) -> Option<CapsRead> {
+async fn caps_done(
+    job: &mut Option<tokio::task::JoinHandle<Option<CapsRead>>>,
+) -> Option<CapsRead> {
     match job {
         Some(handle) => {
             let result = handle.await.ok().flatten();

@@ -24,7 +24,9 @@ static MAXIMA: Mutex<BTreeMap<PathBuf, i64>> = Mutex::new(BTreeMap::new());
 static KEYBOARD: Mutex<BTreeMap<PathBuf, bool>> = Mutex::new(BTreeMap::new());
 
 fn locked<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
-    mutex.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    mutex
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 /// The last scan's answer for `root`; `false` until a scan has finished. Never touches sysfs.
@@ -103,10 +105,10 @@ fn maximum(path: &Path, cached: bool) -> Option<i64> {
 }
 
 pub fn sys_device(path: &Path, kind: &str) -> Option<Value> {
-    device(path, kind, true)
+    read_device(path, kind, true)
 }
 
-fn device(path: &Path, kind: &str, cached: bool) -> Option<Value> {
+fn read_device(path: &Path, kind: &str, cached: bool) -> Option<Value> {
     let maximum = maximum(path, cached)?;
     let current = integer(&path.join("brightness"))?;
     if maximum == 0 || current > maximum {
@@ -296,7 +298,7 @@ pub fn write(
             "leds"
         };
         let path = root.join("class").join(class).join(device);
-        let current = device(&path, kind, false)
+        let current = read_device(&path, kind, false)
             .filter(|current| {
                 equals_integer(&descriptor["maximum"], current["maximum"].as_i64().unwrap())
             })

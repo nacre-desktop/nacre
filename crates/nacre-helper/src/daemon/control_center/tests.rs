@@ -182,7 +182,12 @@ fn audio_turn() -> std::sync::MutexGuard<'static, ()> {
 /// `collect` with a synchronous light scan, as `scan_lights` would provide.
 fn collect_now(f: &Fixture, probe: &Probe, prior: &ControlsState) -> ControlsState {
     let env = f.env();
-    let lights = light_devices::discover(&light_externals(&env, probe), &env.sys, &mut light_run(&env)).ok();
+    let lights = light_devices::discover(
+        &light_externals(&env, probe),
+        &env.sys,
+        &mut light_run(&env),
+    )
+    .ok();
     collect(&env, probe, prior, lights)
 }
 
@@ -769,9 +774,7 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
         ddc: false,
         slow: false,
     };
-    assert!(collect_now(&f, &two, &empty_state())
-        .brightness
-        .is_empty());
+    assert!(collect_now(&f, &two, &empty_state()).brightness.is_empty());
     // Missing backends leave their members out.
     std::fs::remove_dir_all(f.path("sys/class/leds")).unwrap();
     std::fs::remove_dir_all(f.path("sys/class/rfkill")).unwrap();
