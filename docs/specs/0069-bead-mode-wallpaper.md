@@ -69,8 +69,10 @@ geometry and screenshot coverage rather than asserting an absent IPC field.
 
 ## Validation and evidence
 
-The 24 private-HOME fake-systemctl switch/install tests passed as UID 1000.
-The full remote Arch desktop CI replica passed, including 761 native unit tests
+The initial 24 private-HOME fake-systemctl switch/install tests passed as UID
+1000. After integrating N0068's daemon handover, all 29 combined tests passed,
+and the real-manager fixture also verified daemon takeover and return to QML.
+The full remote Arch desktop CI replica before that rebase passed, including 761 native unit tests
 plus integrations, 493 tools tests (one opt-in Wayland soak skipped by the job),
 120 AI tests, 52 Brain tests, 487 shell-tool tests, and 534 frozen helper parity
 cases with zero failures. Ruff, QML/JS format/parse, Lua, translation checks,
@@ -88,7 +90,8 @@ bind. Inspect output was saved before container removal.
 
 The safe continuation passed the real systemd user-manager fixture (exit 0):
 install → Bead switch → persisted restart → crash-loop QML fallback → rollback
-→ repeat. The renderer-child cleanup assertion passed. The first available host
+→ repeat. The renderer-child cleanup assertion passed. After the N0068 rebase,
+the fixture passed again, including daemon takeover and return to QML. The first available host
 under HOST SELECTION was used because the preferred host had all four task slots
 occupied. The container was not privileged: only `SYS_ADMIN` was added to mount
 cgroup2 inside its private cgroup namespace. Docker's default read-only system
@@ -100,7 +103,9 @@ The container, both owned image versions and remote task directory were removed.
 Raw before/after/stopped inspect JSON, mask states, boot guard and fixture output
 are retained in `.lead/safe-systemd-evidence/`; exact scripts and the mask list
 are in `.lead/safe-systemd-{run,probe}.sh` and
-`.lead/safe-systemd-context/`. No product code changed during this continuation.
+`.lead/safe-systemd-context/`. Rebased fixture/inspect evidence is in
+`.lead/safe-systemd-evidence-rebased/`. N0068's sequencing and checks were
+preserved during conflict resolution; decoder and renderer code remain unchanged.
 
 Follow-up ask (outside N0069): `.github/workflows/arch-packages.yml` starts a
 privileged systemd PID1 container with a host cgroup bind and no explicit masks
