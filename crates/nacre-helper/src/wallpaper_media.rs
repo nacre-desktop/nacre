@@ -103,7 +103,7 @@ fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
             Some((key.to_owned(), entry.path(), entry.metadata().ok()))
         })
         .collect::<Vec<_>>();
-    files.sort_by_key(|(_, path, meta)| {
+    files.sort_by_key(|(_, _, meta)| {
         std::cmp::Reverse(
             meta.as_ref()
                 .and_then(|meta| meta.modified().ok())

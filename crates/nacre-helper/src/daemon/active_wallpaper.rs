@@ -19,6 +19,25 @@ use std::{
 };
 
 pub const TOPIC: &str = "wallpaper.active";
+thread_local! {
+    static SELECTION_BUSY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+struct SelectionGuard;
+impl SelectionGuard {
+    fn acquire() -> std::result::Result<Self, Failure> {
+        if SELECTION_BUSY.with(|busy| busy.replace(true)) {
+            Err(failure(ErrorCode::Busy, "Wallpaper selection is busy", true).dispatch_state(false))
+        } else {
+            Ok(Self)
+        }
+    }
+}
+impl Drop for SelectionGuard {
+    fn drop(&mut self) {
+        SELECTION_BUSY.with(|busy| busy.set(false));
+    }
+}
 const RECORD_BYTES: u64 = 128 * 1024;
 const IMAGE_BYTES: u64 = nacre_protocol::wallpaper::POSTER_BYTES;
 /// Videos are large; the identity carries the exact size, so only sanity-bound it.
@@ -420,6 +439,11 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
 
 pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
     let (request, state) = activation_state(&hub, params)?;
+    let _selection_guard = if request.id.is_some() {
+        Some(SelectionGuard::acquire()?)
+    } else {
+        None
+    };
     if let Some(id) = request.id {
         let paths = crate::paths::Paths::environment()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
@@ -588,6 +612,14 @@ mod tests {
         )?;
         assert!(!select_media(&engine, "/pictures/lake.png"));
         Ok(())
+    }
+
+    #[test]
+    fn selection_action_admission_is_single_flight_and_releases_on_drop() {
+        let guard = SelectionGuard::acquire().unwrap();
+        assert!(SelectionGuard::acquire().is_err());
+        drop(guard);
+        assert!(SelectionGuard::acquire().is_ok());
     }
     #[test]
     fn revisions_pair_palette_output_hotplug_stale_recovery_and_activation() -> Result<()> {
