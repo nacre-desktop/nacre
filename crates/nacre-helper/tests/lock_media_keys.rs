@@ -58,11 +58,7 @@ fn run(kind: &str, refuse: bool) -> Result<Vec<Value>> {
         );
         let methods = json!({"player.play_pause": descriptor("desktop"), "player.next": descriptor("desktop"), "player.previous": descriptor("desktop")});
         let snap = json!({"t":"snap","topic":"dashboard.player","seq":1,"data":{"health":{"available":true,"stale":false},"active":"player-2","players":{"items":{},"order":["player-1","player-2"]}}});
-        seen.extend(serve(
-            &server,
-            methods,
-            &[snap, json!({"t":"ret","ok":{}})],
-        ));
+        seen.extend(serve(&server, methods, &[snap, json!({"t":"ret","ok":{}})]));
         seen
     });
     let output = Command::new(env!("CARGO_BIN_EXE_nacre-helper"))
@@ -76,13 +72,21 @@ fn run(kind: &str, refuse: bool) -> Result<Vec<Value>> {
         .env("NACRE_DAEMON_SOCKET", &endpoint)
         .output()?;
     let seen = daemon.join().map_err(|_| "fake daemon failed")?;
-    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     Ok(seen)
 }
 
 #[test]
 fn a_provider_that_hosts_mpris_gets_the_key_and_nothing_else_is_called() -> Result<()> {
-    for (kind, action) in [("toggle", "playPause"), ("next", "next"), ("previous", "previous")] {
+    for (kind, action) in [
+        ("toggle", "playPause"),
+        ("next", "next"),
+        ("previous", "previous"),
+    ] {
         let seen = run(kind, false)?;
         assert_eq!(seen.len(), 1, "{kind}");
         assert_eq!(seen[0]["m"], "ui.dispatch");

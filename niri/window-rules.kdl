@@ -82,6 +82,21 @@ window-rule {
 }
 
 window-rule {
+    match app-id="^nacre-settings$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^nacre-colors$"
+    open-floating true
+}
+
+window-rule {
+    match app-id="^nacre-welcome$"
+    open-floating true
+}
+
+window-rule {
     match app-id="^(nacre-brain|nacre-brain|chrome-.*(nacre_brain|nacre-observatory)_auth_open[.]html-.*)$"
 }
 

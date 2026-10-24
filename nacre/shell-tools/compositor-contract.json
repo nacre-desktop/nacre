@@ -1298,6 +1298,39 @@
           "floating": true
         },
         "id": "nacre-welcome"
+      },
+      {
+        "kind": "window-rule",
+        "selector": {
+          "app_id_regex": "^nacre-settings$"
+        },
+        "effects": {
+          "centered": true,
+          "floating": true
+        },
+        "id": "nacre-settings-bead"
+      },
+      {
+        "kind": "window-rule",
+        "selector": {
+          "app_id_regex": "^nacre-colors$"
+        },
+        "effects": {
+          "centered": true,
+          "floating": true
+        },
+        "id": "nacre-colors-bead"
+      },
+      {
+        "kind": "window-rule",
+        "selector": {
+          "app_id_regex": "^nacre-welcome$"
+        },
+        "effects": {
+          "centered": true,
+          "floating": true
+        },
+        "id": "nacre-welcome-bead"
       }
     ],
     "hypr/conf/brain.lua": [
