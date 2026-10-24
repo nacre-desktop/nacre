@@ -1,0 +1,11 @@
+{"t":"snap","topic":"displays","seq":0,"data":{"health":{"available":true,"stale":false},"can_configure":true,"can_mirror":false,"scales":[1.0,1.25,1.5,1.75,2.0,2.5,3.0],"outputs":[{"name":"DP-1","make":"Dell","model":"U2415","enabled":true,"width":1920,"height":1080,"refresh_hz":60.0,"mode":"1920x1080@60.000Hz","modes":["1920x1080@60.000Hz","1920x1080@144.000Hz","1280x720@60.000Hz"],"scale":1.0,"x":0,"y":0,"transform":0,"vrr":false},{"name":"DP-2","make":"LG","model":"27GL850","enabled":true,"width":1920,"height":1080,"refresh_hz":60.0,"mode":"1920x1080@60.000Hz","modes":["1920x1080@60.000Hz","1920x1080@144.000Hz","1280x720@60.000Hz"],"scale":1.0,"x":1920,"y":0,"transform":0,"vrr":false}]}}
+{"t":"patch","topic":"displays","base":0,"seq":1,"data":{"pending":{"seconds":20,"deadline_ms":1792000020000}}}
+{"t":"patch","topic":"displays","base":1,"seq":2,"data":{"pending":null}}
+{"t":"call","id":700,"m":"display.apply","p":{"output":"DP-1","arrangement":"extend-right"}}
+{"t":"ret","id":700,"ok":{"pending":{"seconds":20,"deadline_ms":1792000020000}}}
+{"t":"call","id":701,"m":"display.apply","p":{"output":"DP-2","scale":1.5,"mode":"1920x1080@144.000Hz"}}
+{"t":"ret","id":701,"ok":{"pending":{"seconds":20,"deadline_ms":1792000050000}}}
+{"t":"call","id":702,"m":"display.confirm","p":{}}
+{"t":"ret","id":702,"ok":{"changed":true}}
+{"t":"call","id":703,"m":"display.revert","p":{}}
+{"t":"ret","id":703,"ok":{"changed":false}}

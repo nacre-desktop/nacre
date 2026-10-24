@@ -345,7 +345,14 @@ impl State {
                     number(get(mode, "refresh_rate")?)? / 1000.0
                 ));
             }
-            monitors.push(json!({"id":name,"name":name,"outputId":name,"x":get(logical,"x")?,"y":get(logical,"y")?,"width":mode.get("width").unwrap_or(get(logical,"width")?),"height":mode.get("height").unwrap_or(get(logical,"height")?),"logicalWidth":get(logical,"width")?,"logicalHeight":get(logical,"height")?,"scale":logical.get("scale").cloned().unwrap_or(json!(1)),"transform":transform,"refreshRate":number(mode.get("refresh_rate").unwrap_or(&json!(0)))?/1000.0,"reserved":[0,0,0,0],"reservedKnown":false,"focused":focused.is_some_and(|row|row["outputId"]==name.as_str()),"activeWorkspace":workspaces.iter().find(|workspace|workspace["outputId"]==name.as_str()&&workspace["active"]==true),"availableModes":available}));
+            let mut monitor = json!({"id":name,"name":name,"outputId":name,"x":get(logical,"x")?,"y":get(logical,"y")?,"width":mode.get("width").unwrap_or(get(logical,"width")?),"height":mode.get("height").unwrap_or(get(logical,"height")?),"logicalWidth":get(logical,"width")?,"logicalHeight":get(logical,"height")?,"scale":logical.get("scale").cloned().unwrap_or(json!(1)),"transform":transform,"refreshRate":number(mode.get("refresh_rate").unwrap_or(&json!(0)))?/1000.0,"reserved":[0,0,0,0],"reservedKnown":false,"focused":focused.is_some_and(|row|row["outputId"]==name.as_str()),"activeWorkspace":workspaces.iter().find(|workspace|workspace["outputId"]==name.as_str()&&workspace["active"]==true),"availableModes":available});
+            // N0063: facts niri reports that the Displays page shows (absent in older fixtures).
+            for (from, to) in [("make", "make"), ("model", "model"), ("vrr_enabled", "vrr")] {
+                if let Some(value) = row.get(from).filter(|value| !value.is_null()) {
+                    monitor[to] = value.clone();
+                }
+            }
+            monitors.push(monitor);
         }
         let mut windows = Vec::new();
         for (key, row) in &self.windows {

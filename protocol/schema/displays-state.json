@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DisplaysState",
+  "description": "The `displays` topic. `outputs` lists the enabled outputs; while `health.available` is false\nthe last list is kept and `health.stale` says so.",
+  "type": "object",
+  "properties": {
+    "health": {
+      "$ref": "#/$defs/Health"
+    },
+    "can_configure": {
+      "description": "False when the compositor cannot configure outputs (QML: `monitorConfiguration`).",
+      "type": "boolean"
+    },
+    "can_mirror": {
+      "description": "False when it cannot mirror them (QML: `monitorMirroring`; niri).",
+      "type": "boolean"
+    },
+    "scales": {
+      "description": "The scales `display.apply` accepts.",
+      "type": "array",
+      "items": {
+        "type": "number",
+        "format": "double"
+      },
+      "maxItems": 16
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DisplayOutput"
+      },
+      "maxItems": 16
+    },
+    "pending": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DisplayPending"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "health",
+    "can_configure",
+    "can_mirror",
+    "scales",
+    "outputs"
+  ],
+  "$defs": {
+    "Health": {
+      "type": "object",
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "stale": {
+          "description": "Retained last-good data may be displayed but is visibly stale.",
+          "type": "boolean"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "available",
+        "stale"
+      ]
+    },
+    "Failure": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/ErrorCode"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retry": {
+          "type": "boolean"
+        },
+        "dispatched": {
+          "description": "False only when the daemon proves no UI provider received the call.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retry"
+      ]
+    },
+    "ErrorCode": {
+      "type": "string",
+      "enum": [
+        "invalid_request",
+        "unsupported_version",
+        "too_large",
+        "permission_denied",
+        "unknown_topic",
+        "unknown_method",
+        "unavailable",
+        "busy",
+        "timeout",
+        "stale_revision",
+        "validation",
+        "io",
+        "internal"
+      ]
+    },
+    "DisplayOutput": {
+      "description": "One connected output. Sizes are physical pixels of the current mode, positions logical.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "make": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "width": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "height": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "refresh_hz": {
+          "type": "number",
+          "format": "double"
+        },
+        "mode": {
+          "description": "The entry of `modes` that is the current mode, when the compositor lists it.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 40
+        },
+        "modes": {
+          "description": "`WIDTHxHEIGHT@RATEHz`, the strings `display.apply` accepts.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 256
+        },
+        "scale": {
+          "type": "number",
+          "format": "double"
+        },
+        "x": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "y": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "transform": {
+          "description": "0 normal, 1 to 3 rotated 90/180/270 degrees, 4 to 7 the flipped variants.",
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0,
+          "maximum": 7
+        },
+        "vrr": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "enabled",
+        "width",
+        "height",
+        "refresh_hz",
+        "modes",
+        "scale",
+        "x",
+        "y",
+        "transform"
+      ]
+    },
+    "DisplayPending": {
+      "description": "A change awaiting `display.confirm`.",
+      "type": "object",
+      "properties": {
+        "seconds": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "deadline_ms": {
+          "description": "Unix milliseconds at which the daemon's armed rollback restores the previous layout.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "seconds",
+        "deadline_ms"
+      ]
+    }
+  }
+}

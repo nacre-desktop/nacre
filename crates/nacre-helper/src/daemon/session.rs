@@ -78,6 +78,9 @@ async fn dispatch(
         method if super::shortcuts::handles(method) => {
             super::shortcuts::dispatch(&hub.borrow(), params)
         }
+        method if super::displays::handles(method) => {
+            super::displays::dispatch(hub, method, params).await
+        }
         "dashboard.weather.refresh" => super::weather::dispatch(hub, params),
         "dashboard.calendar.refresh" => super::calendar::dispatch(hub, params),
         "dashboard.updates.refresh" => super::updates::dispatch(hub, params),
@@ -226,6 +229,7 @@ async fn call(
         || super::control_center::handles(&method)
         || super::time_settings::handles(&method)
         || super::login_theme::handles(&method)
+        || super::displays::handles(&method)
         || matches!(
             method.as_str(),
             "colors.apply" | "colors.export" | "colors.set_target"
@@ -492,6 +496,9 @@ mod tests {
             ("time.set_timezone", json!({"zone":"UTC"})),
             ("time.set_ntp", json!({"enabled":true})),
             ("login.install_theme", json!({})),
+            ("display.apply", json!({"output":"DP-1","scale":1.5})),
+            ("display.confirm", json!({})),
+            ("display.revert", json!({})),
         ] {
             let error = dispatch(
                 hub.clone(),

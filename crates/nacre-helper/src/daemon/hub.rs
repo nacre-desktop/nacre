@@ -357,6 +357,7 @@ impl Hub {
             methods.extend(super::login_theme::available_methods(self));
             methods.extend(super::capabilities::available_methods(self));
             methods.extend(super::shortcuts::available_methods(self));
+            methods.extend(super::displays::available_methods(self));
             methods.extend(super::system_status::available_methods(self));
             if self.calendar.is_some() {
                 methods.extend(super::calendar::methods());
@@ -922,6 +923,7 @@ mod tests {
             super::super::brain::methods(),
             super::super::i18n::methods(),
             nacre_protocol::system_settings::methods(),
+            nacre_protocol::displays::methods(),
         ] {
             methods.extend(set);
         }

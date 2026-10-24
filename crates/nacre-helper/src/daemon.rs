@@ -18,6 +18,7 @@ pub mod crashes;
 pub mod dashboard_extras;
 pub mod dashboard_metrics;
 pub mod dashboard_player;
+pub mod displays;
 pub mod helpers;
 pub mod hub;
 pub mod i18n;
@@ -351,8 +352,13 @@ async fn serve(
         time_settings::initial(&hub)?;
         capabilities::initial(&hub)?;
         shortcuts::initial(&hub)?;
-        let (time_hub, capabilities_hub, shortcuts_hub) = (hub.clone(), hub.clone(), hub.clone());
+        displays::initial(&hub)?;
+        let (time_hub, capabilities_hub, shortcuts_hub, displays_hub) =
+            (hub.clone(), hub.clone(), hub.clone(), hub.clone());
         vec![
+            tokio::task::spawn_local(supervisor::run("displays", hub.clone(), move || {
+                displays::run(displays_hub.clone())
+            })),
             tokio::task::spawn_local(supervisor::run("shortcuts", hub.clone(), move || {
                 shortcuts::run(shortcuts_hub.clone())
             })),

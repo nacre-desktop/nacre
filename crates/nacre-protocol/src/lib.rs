@@ -9,6 +9,7 @@ pub mod control_center;
 mod core_artifacts;
 pub mod core_services;
 pub mod dashboard_extras;
+pub mod displays;
 pub mod framing;
 pub mod helpers;
 pub mod i18n;

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DisplayApply",
+  "description": "Either an arrangement (`arrangement`, with `output` the primary display) or an edit of one\noutput (`scale`, and optionally `mode`, with `output` the target). Exactly one of the two.",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    },
+    "arrangement": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DisplayArrangement"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "scale": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "format": "double"
+    },
+    "mode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 40
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "output"
+  ],
+  "$defs": {
+    "DisplayArrangement": {
+      "description": "How the connected displays sit relative to the primary one (QML \"Extend right/left, Mirror\").",
+      "type": "string",
+      "enum": [
+        "extend-right",
+        "extend-left",
+        "mirror"
+      ]
+    }
+  }
+}
