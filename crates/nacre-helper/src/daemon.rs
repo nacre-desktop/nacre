@@ -22,6 +22,7 @@ pub mod displays;
 pub mod helpers;
 pub mod hub;
 pub mod i18n;
+pub mod lock_content;
 pub mod login_theme;
 pub mod media;
 pub mod menu;
@@ -461,6 +462,7 @@ async fn serve(
     let behaviour_services = if managed_behaviours && !counter.safe {
         let (rotation_hub, rotation_paths) = (hub.clone(), paths.clone());
         let (power_hub, alerts_hub, alerts_paths) = (hub.clone(), hub.clone(), paths.clone());
+        let (lock_hub, lock_paths) = (hub.clone(), paths.clone());
         let services = vec![
             tokio::task::spawn_local(supervisor::run(
                 "wallpaper-rotation",
@@ -472,6 +474,9 @@ async fn serve(
             })),
             tokio::task::spawn_local(supervisor::run("battery-alerts", hub.clone(), move || {
                 behaviours::run_battery_alerts(alerts_hub.clone(), alerts_paths.clone())
+            })),
+            tokio::task::spawn_local(supervisor::run("lock-content", hub.clone(), move || {
+                lock_content::run_lock_content(lock_hub.clone(), lock_paths.clone())
             })),
         ];
         hub.borrow_mut().service("behaviours", "running", 0)?;

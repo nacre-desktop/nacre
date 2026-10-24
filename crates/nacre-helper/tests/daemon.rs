@@ -3164,6 +3164,44 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
     Ok(())
 }
 
+/// N0065: the lock-content behaviour is off the readiness path. With `--behaviours=daemon` and
+/// buses that never answer, READY still arrives within two seconds and the service is listed.
+#[test]
+fn lock_content_behaviour_keeps_daemon_ready_within_two_seconds() -> Result<()> {
+    let home = tempfile::Builder::new().prefix("lc-").tempdir()?;
+    fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
+    let source_path = home.path().join("niri.sock");
+    let _source = Source::new(source_path.clone())?;
+    let folder = home.path().join("private");
+    fs::create_dir(&folder)?;
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
+    let endpoint = folder.join("daemon.sock");
+    let notify = home.path().join("notify.sock");
+    let notifications = UnixDatagram::bind(&notify)?;
+    notifications.set_read_timeout(Some(Duration::from_secs(2)))?;
+    let started = Instant::now();
+    let mut child = command(home.path(), &source_path, &endpoint);
+    child
+        .args(["daemon", "--behaviours=daemon"])
+        .env("NOTIFY_SOCKET", &notify)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    let _child = Process(child.spawn()?);
+    let mut packet = [0; 256];
+    let size = notifications
+        .recv(&mut packet)
+        .map_err(|_| "No READY within two seconds with lock content enabled")?;
+    assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
+    assert!(started.elapsed() < Duration::from_secs(2));
+    let value = status(home.path(), &source_path, &endpoint)?;
+    assert_eq!(value["services"]["behaviours"]["status"], "running");
+    assert!(
+        value["services"]["lock-content"].is_object(),
+        "lock-content must be supervised: {value}"
+    );
+    Ok(())
+}
+
 /// N0053: readiness (sd_notify READY and the socket) never waits on an external backend. Every
 /// command the probes run hangs forever and both D-Bus buses accept a connection and never reply.
 #[test]

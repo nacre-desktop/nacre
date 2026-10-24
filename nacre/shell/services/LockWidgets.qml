@@ -72,6 +72,9 @@ Singleton {
 
         interval: 100
         onTriggered: {
+            // The daemon prepares the lock content when it owns the always-on behaviours (N0065).
+            if (NacreDaemon.behavioursHeld)
+                return;
             if (!writer.running) {
                 root.dirty = false;
                 writer.running = true;
