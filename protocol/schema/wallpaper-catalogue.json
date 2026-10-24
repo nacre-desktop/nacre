@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "WallpaperCatalogue",
+  "description": "Lease-only wallpaper picker catalogue. Thumbnail paths refer to the helper's\nbounded cache and are empty when a cached thumbnail is not available.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/WallpaperCatalogueEntry"
+      },
+      "maxItems": 2048
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "$defs": {
+    "WallpaperCatalogueEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "kind": {
+          "$ref": "#/$defs/WallpaperKind"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "thumbnail": {
+          "description": "JPEG, at most 640x400 and 256 KiB, in the 128-entry `$XDG_CACHE_HOME/nacre/wallpaper-media/` thumbnail cache.",
+          "type": "string",
+          "maxLength": 4096
+        },
+        "preview": {
+          "description": "JPEG, at most 1600x1000 and 2 MiB, in the same bounded cache; empty if unavailable.",
+          "type": "string",
+          "maxLength": 4096
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "title",
+        "thumbnail",
+        "preview",
+        "active"
+      ]
+    },
+    "WallpaperKind": {
+      "type": "string",
+      "enum": [
+        "image",
+        "video"
+      ]
+    }
+  }
+}

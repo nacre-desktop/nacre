@@ -402,13 +402,16 @@ mod tests {
 
     #[test]
     fn selection_is_additive_and_revision_zero_is_only_for_initial_selection() {
-        let legacy: WallpaperActivate = serde_json::from_value(serde_json::json!({"revision":1})).unwrap();
+        let legacy: WallpaperActivate =
+            serde_json::from_value(serde_json::json!({"revision":1})).unwrap();
         assert!(legacy.validate().is_ok());
         let selection: WallpaperActivate = serde_json::from_value(serde_json::json!({
             "revision":0,"id":"/pictures/lake.png"
-        })).unwrap();
+        }))
+        .unwrap();
         assert!(selection.validate().is_ok());
-        let invalid: WallpaperActivate = serde_json::from_value(serde_json::json!({"revision":0})).unwrap();
+        let invalid: WallpaperActivate =
+            serde_json::from_value(serde_json::json!({"revision":0})).unwrap();
         assert!(invalid.validate().is_err());
     }
 }

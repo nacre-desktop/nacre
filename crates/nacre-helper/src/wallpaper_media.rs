@@ -80,15 +80,13 @@ impl std::error::Error for ToolFailure {}
 pub type PaletteCommand = Box<dyn Fn(&[String]) -> Result<Option<String>> + Send + Sync>;
 
 fn cached_thumbnail(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok_and(|meta| {
-        meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES
-    })
+    fs::symlink_metadata(path)
+        .is_ok_and(|meta| meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES)
 }
 
 fn cached_preview(path: &Path) -> bool {
-    fs::symlink_metadata(path).is_ok_and(|meta| {
-        meta.file_type().is_file() && meta.len() <= PREVIEW_LIMIT_BYTES
-    })
+    fs::symlink_metadata(path)
+        .is_ok_and(|meta| meta.file_type().is_file() && meta.len() <= PREVIEW_LIMIT_BYTES)
 }
 
 fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
@@ -112,9 +110,9 @@ fn trim_thumbnail_cache(cache: &Path, keep_key: &str) -> Result<()> {
     });
     let mut kept = 0;
     for (key, path, meta) in files {
-        let valid = meta.as_ref().is_some_and(|meta| {
-            meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES
-        });
+        let valid = meta
+            .as_ref()
+            .is_some_and(|meta| meta.file_type().is_file() && meta.len() <= THUMBNAIL_LIMIT_BYTES);
         if !valid {
             let _ = fs::remove_file(path);
             let preview = cache.join(format!("{key}-preview.jpg"));
@@ -1864,7 +1862,12 @@ mod thumbnail_cache_tests {
         trim_thumbnail_cache(directory.path(), &current)?;
         let thumbnails = fs::read_dir(directory.path())?
             .filter_map(std::result::Result::ok)
-            .filter(|entry| entry.file_name().to_string_lossy().ends_with("-thumbnail.jpg"))
+            .filter(|entry| {
+                entry
+                    .file_name()
+                    .to_string_lossy()
+                    .ends_with("-thumbnail.jpg")
+            })
             .collect::<Vec<_>>();
         assert_eq!(thumbnails.len(), THUMBNAIL_CACHE_COUNT);
         assert!(cached_thumbnail(

@@ -5,5 +5,5 @@ export type WallpaperPalette = { ["mode"]: PaletteMode, ["colours"]: { [string]:
 export type WallpaperFileIdentity = { ["device"]: string, ["inode"]: string, ["size"]: number, ["mtime_sec"]: number, ["mtime_nsec"]: number, ["ctime_sec"]: number, ["ctime_nsec"]: number }
 export type Presentation = "crop" | "fit" | "fill" | "centre"
 export type PaletteMode = "dark" | "light"
-export type WallpaperActivate = { ["revision"]: number }
+export type WallpaperActivate = { ["revision"]: number, ["id"]: (string | nil)? }
 return {}
