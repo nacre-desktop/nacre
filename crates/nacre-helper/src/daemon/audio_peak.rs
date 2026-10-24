@@ -53,8 +53,10 @@ pub fn initial(hub: &Shared) -> Result<()> {
 /// Peak of 16-bit little-endian samples, 0..1, in steps of 0.01.
 fn peak(window: &[u8]) -> f64 {
     let top = window
-        .chunks_exact(2)
-        .map(|pair| i32::from(i16::from_le_bytes([pair[0], pair[1]])).unsigned_abs())
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|pair| i32::from(i16::from_le_bytes(*pair)).unsigned_abs())
         .max()
         .unwrap_or(0);
     (f64::from(top) / 32768.0 * 100.0).round().min(100.0) / 100.0
