@@ -104,6 +104,41 @@ def daemon_active():
     )
 
 
+def active_ui_shell():
+    """Return the configured active shell from the ui-shell status command."""
+    command = [str(HOME / ".local/bin/nacre"), "ui-shell", "status"]
+    try:
+        result = subprocess.run(
+            command, capture_output=True, text=True, check=True, timeout=15
+        )
+        active = json.loads(result.stdout).get("active")
+    except (OSError, subprocess.SubprocessError, ValueError, AttributeError) as error:
+        raise RuntimeError(
+            f"Could not determine the active Nacre shell: {error}"
+        ) from error
+    if active not in {"qml", "bead"}:
+        raise RuntimeError(f"Cannot install while the active Nacre shell is {active!r}")
+    return active
+
+
+def validate_bead_live():
+    """Validate the running Bead shell and daemon without probing QML."""
+    status = active_ui_shell()
+    if status != "bead":
+        raise RuntimeError("Bead shell is no longer active after the code-only install")
+    shell = subprocess.run(
+        ["systemctl", "--user", "is-active", "--quiet", "nacre-shell.service"]
+    )
+    if shell.returncode:
+        raise RuntimeError("Bead shell unit nacre-shell.service is not active")
+    if not wait_daemon_healthy():
+        raise RuntimeError("Nacre daemon is not healthy while Bead is active")
+    print(
+        "Validated Bead shell: nacre-shell.service active with Bead drop-in loaded; "
+        "Nacre daemon healthy. QML source staged and unvalidated; source.good unchanged."
+    )
+
+
 def daemon_status_healthy(text):
     """Services present and none failed, topics advertised, not in safe mode."""
     try:
@@ -310,6 +345,15 @@ def dry_run():
     else:
         changed = "yes"
     print("Dry run (code-only): nothing is changed.")
+    shell = active_ui_shell()
+    print(
+        "Plan: validate "
+        + (
+            "Bead shell and daemon; stage QML source unvalidated."
+            if shell == "bead"
+            else "QML desktop load and source digest."
+        )
+    )
     print("Helper binary changed: " + changed)
     if changed == "no":
         print("Plan: leave " + DAEMON_UNIT + " as is.")
@@ -694,6 +738,7 @@ def guard_retired_niri_bindings():
 def deploy(code_only=False, retire_niri_experiment=False):
     guard_retired_niri_bindings()
     dropins = retired_dropins(retire_niri_experiment)
+    shell_to_validate = active_ui_shell() if code_only else "qml"
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"
     if not helper.is_file():
@@ -893,7 +938,10 @@ def deploy(code_only=False, retire_niri_experiment=False):
                 target, previous_helper, trees=source_saved and tools_saved
             )
         subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
-        validate_live(source_digest(SHELL))
+        if shell_to_validate == "bead":
+            validate_bead_live()
+        else:
+            validate_live(source_digest(SHELL))
         plan = niri_session_refresh_plan()
         if plan:
             print_niri_plan(plan)

@@ -284,7 +284,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
         (self.dest / "bin").mkdir(parents=True, exist_ok=True)
         return root, shell
 
-    def deploy_fixture(self, code_only, opt_in):
+    def deploy_fixture(self, code_only, opt_in, active_shell="qml"):
         root, shell = self.fixture_deployment()
 
         def run(command, **kwargs):
@@ -296,6 +296,8 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.multiple(installer, ROOT=root, SHELL=shell),
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
+            patch.object(installer, "active_ui_shell", return_value=active_shell),
+            patch.object(installer, "wait_daemon_healthy", return_value=True),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
@@ -550,6 +552,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.multiple(installer, ROOT=root, SHELL=shell, DAEMON_WAIT_SECONDS=0.5),
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
+            patch.object(installer, "active_ui_shell", return_value="qml"),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
@@ -568,6 +571,64 @@ class InstallerDropinGuardTests(unittest.TestCase):
             (self.dest / "tools/nacre-helper").read_bytes(),
             (root / "nacre-helper").read_bytes(),
         )
+
+    def test_code_only_bead_validates_bead_and_daemon_without_qml_probe(self):
+        root, shell = self.fixture_deployment()
+        self.put(self.dest / "source.good/last-good.qml", "last validated\n")
+
+        def run(command, **kwargs):
+            if command[0] in {"systemctl", str(self.dest / "tools/nacre-helper")}:
+                return RUN(command, **kwargs)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.multiple(installer, ROOT=root, SHELL=shell),
+            patch.object(installer.subprocess, "run", side_effect=run),
+            patch.object(installer, "active_ui_shell", return_value="bead") as status,
+            patch.object(installer, "wait_daemon_healthy", return_value=True) as daemon,
+            patch.object(installer, "validate_live") as qml,
+            patch.object(installer, "stop_other_shells"),
+            patch.object(installer.compositor, "reload"),
+        ):
+            installer.deploy(code_only=True)
+        qml.assert_not_called()
+        self.assertGreaterEqual(status.call_count, 2)
+        daemon.assert_called_once()
+        self.assertEqual(
+            (self.dest / "source.good/last-good.qml").read_text(), "last validated\n"
+        )
+
+    def test_code_only_qml_keeps_live_qml_validation(self):
+        root, shell = self.fixture_deployment()
+
+        def run(command, **kwargs):
+            if command[0] in {"systemctl", str(self.dest / "tools/nacre-helper")}:
+                return RUN(command, **kwargs)
+            return subprocess.CompletedProcess(command, 0, "", "")
+
+        with (
+            patch.multiple(installer, ROOT=root, SHELL=shell),
+            patch.object(installer.subprocess, "run", side_effect=run),
+            patch.object(installer, "active_ui_shell", return_value="qml"),
+            patch.object(installer, "validate_live") as qml,
+            patch.object(installer, "stop_other_shells"),
+            patch.object(installer.compositor, "reload"),
+        ):
+            installer.deploy(code_only=True)
+        qml.assert_called_once()
+
+    def test_code_only_dry_run_names_the_shell_validation(self):
+        with (
+            patch.object(installer, "active_ui_shell", return_value="bead"),
+            patch.object(installer, "ROOT", self.base),
+            patch.object(installer, "DEST", self.dest),
+            patch.object(installer, "daemon_active", return_value=False),
+            patch.object(installer, "niri_session_refresh_plan", return_value=None),
+            contextlib.redirect_stdout(io.StringIO()) as output,
+        ):
+            installer.dry_run()
+        self.assertIn("validate Bead shell and daemon", output.getvalue())
+        self.assertIn("QML source unvalidated", output.getvalue())
 
     def test_code_only_unhealthy_daemon_restores_previous_helper(self):
         old = self.fake_helper(self.HEALTHY)
@@ -676,6 +737,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.multiple(installer, ROOT=root),
             patch.object(installer, "repo_revision", return_value="new"),
             patch.object(installer, "daemon_active", return_value=True),
+            patch.object(installer, "active_ui_shell", return_value="qml"),
             contextlib.redirect_stdout(out),
         ):
             installer.dry_run()
