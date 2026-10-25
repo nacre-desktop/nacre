@@ -26,6 +26,8 @@ pub struct Env {
     pub path: Vec<PathBuf>,
     /// The daemon's own executable, which hosts `aur-review policy`.
     pub engine: PathBuf,
+    /// Installed shell tools directory (`NacrePaths.tools`).
+    pub tools: PathBuf,
 }
 impl Env {
     fn production() -> Self {
@@ -34,6 +36,9 @@ impl Env {
                 .map(|path| std::env::split_paths(&path).collect())
                 .unwrap_or_default(),
             engine: std::env::current_exe().unwrap_or_default(),
+            tools: crate::paths::Paths::environment()
+                .map(|paths| paths.tools())
+                .unwrap_or_default(),
         }
     }
     fn find(&self, program: &str) -> Option<PathBuf> {
@@ -59,20 +64,19 @@ fn env() -> Env {
         .unwrap_or_else(Env::production)
 }
 
-/// The command line of each tool: the program to start, its arguments and the other programs it
-/// needs. Terminal tools run in `kitty`, as the QML pages did.
-fn command(tool: Tool, engine: &Path) -> (&'static str, Vec<OsString>, Vec<&'static str>) {
+/// The program, arguments and other programs needed by each closed tool route.
+fn command(tool: Tool, engine: &Path, tools: &Path) -> (PathBuf, Vec<OsString>, Vec<&'static str>) {
     let args = |items: &[&str]| items.iter().map(OsString::from).collect::<Vec<_>>();
     match tool {
-        Tool::AudioManager => ("pavucontrol", vec![], vec![]),
-        Tool::ConnectionEditor => ("nm-connection-editor", vec![], vec![]),
+        Tool::AudioManager => ("pavucontrol".into(), vec![], vec![]),
+        Tool::ConnectionEditor => ("nm-connection-editor".into(), vec![], vec![]),
         Tool::Setup => (
-            "kitty",
+            "kitty".into(),
             args(&["--title", "Nacre setup", "--", "nacre", "setup"]),
             vec!["nacre"],
         ),
         Tool::AiWorkspace => (
-            "kitty",
+            "kitty".into(),
             args(&[
                 "--class",
                 "nacre-ai-dashboard",
@@ -87,27 +91,17 @@ fn command(tool: Tool, engine: &Path) -> (&'static str, Vec<OsString>, Vec<&'sta
         Tool::AurReviewPolicy => {
             let mut all = args(&["--hold", "--title", "AUR review policy provenance", "--"]);
             all.extend([engine.into(), "aur-review".into(), "policy".into()]);
-            ("kitty", all, vec![])
+            ("kitty".into(), all, vec![])
         }
         Tool::PowerService => (
-            "pkexec",
+            "pkexec".into(),
             args(&["systemctl", "start", "power-profiles-daemon"]),
             // Installed means the service has something to start.
             vec!["powerprofilesctl", "systemctl"],
         ),
-        Tool::Updates => (
-            "kitty",
-            args(&[
-                "--class",
-                "nacre-control",
-                "--title",
-                "System updates",
-                "--",
-                "nacre",
-                "updates",
-            ]),
-            vec!["nacre"],
-        ),
+        // QML invokes this exact entry point. control.sh owns terminal creation and
+        // routes the action through the installed helper.
+        Tool::Updates => (tools.join("control.sh"), args(&["updates"]), vec![]),
     }
 }
 
@@ -136,9 +130,14 @@ pub async fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
     let request: ToolsLaunch = serde_json::from_value(params)
         .map_err(|_| refused("Invalid tool request", ErrorCode::Validation))?;
     let env = env();
-    let (program, args, needs) = command(request.tool, &env.engine);
+    let (program, args, needs) = command(request.tool, &env.engine, &env.tools);
     let missing = || refused("The tool is not installed", ErrorCode::Unavailable);
-    let path = env.find(program).ok_or_else(missing)?;
+    let path = if program.is_absolute() {
+        program.is_file().then_some(program)
+    } else {
+        env.find(program.to_str().unwrap_or_default())
+    }
+    .ok_or_else(missing)?;
     if needs.iter().any(|other| env.find(other).is_none()) {
         return Err(missing());
     }

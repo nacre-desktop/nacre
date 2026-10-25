@@ -23,7 +23,16 @@ impl Fixture {
         set_env(Some(Env {
             path: vec![dir.path().to_path_buf()],
             engine: "/opt/nacre/nacre-helper".into(),
+            tools: dir.path().join("tools"),
         }));
+        std::fs::create_dir_all(dir.path().join("tools")).unwrap();
+        let control = dir.path().join("tools/control.sh");
+        std::fs::write(
+            &control,
+            format!("#!/bin/sh\necho \"control.sh $@\" >> '{}'\n", log.display()),
+        )
+        .unwrap();
+        std::fs::set_permissions(&control, std::fs::Permissions::from_mode(0o755)).unwrap();
         let hub = Hub::new("tools".into(), false, Duration::from_millis(1)).shared();
         hub.borrow_mut()
             .service("capabilities", "running", 0)
@@ -91,7 +100,7 @@ fn each_tool_starts_exactly_its_command() {
             ),
             (
                 "updates",
-                "kitty --class nacre-control --title System updates -- nacre updates\n",
+                "control.sh updates\n",
             ),
         ] {
             std::fs::remove_file(f.dir.path().join("log")).ok();
