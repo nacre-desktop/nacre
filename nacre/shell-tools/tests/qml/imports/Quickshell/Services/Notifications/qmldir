@@ -1,3 +1,2 @@
 module Quickshell.Services.Notifications
 NotificationServer 1.0 NotificationServer.qml
-NotificationUrgency 1.0 NotificationUrgency.qml
