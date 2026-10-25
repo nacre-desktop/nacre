@@ -1,6 +1,7 @@
 # N0073 — Retire the QML windows companion in Bead mode
 
-Status: Implemented; fake-systemd and Arch desktop CI evidence pending.
+Status: Implemented; fake and safely contained real-systemd rehearsals and the
+full remote Arch desktop CI job passed.
 
 ## Finding and route audit
 
@@ -34,11 +35,18 @@ N0069/B0099. QML mode's shell and routes are unchanged.
 
 ## Validation
 
-- Fake systemctl tests cover fresh switch/rollback, managed legacy companion and
-  helper cleanup, failures, and interruption at each new convergence phase.
-- Real-systemd fixture asserts no companion unit or dependency in Bead mode.
-- Full `.github/workflows/check.yml` `desktop` job on the designated remote
-  Arch container: pending.
+- Fake systemctl suite: `python -m unittest discover -s tools/tests -p
+  test_ui_shell_switch.py` passed 30/30, covering fresh switch/rollback,
+  managed legacy companion/helper cleanup, failures and interruption at each
+  convergence phase.
+- Real user-manager fixture passed in the N0069-style disposable systemd
+  container; it verified no companion dependency/unit in Bead mode, crash-loop
+  recovery, QML rollback and Bead wallpaper child cleanup.
+- Full `.github/workflows/check.yml` desktop job passed on prod in a capped
+  Arch container: Cargo 769/769, tools 499, AI 120, Brain 52, shell-tools 490,
+  helper parity 534/534; pseudo and wide-font translation galleries 244 and
+  185 states. One unrelated socket deadline test transiently returned EAGAIN;
+  the exact `cargo test -j2 --quiet` retry passed. Container exit: 0, no OOM.
 
 ## Temporary duplicates
 
