@@ -1,4 +1,5 @@
 //! Actual native entry points on private sockets; no ambient desktop or bus discovery.
+mod memory;
 use nacre_helper::{daemon::writer_lease::WriterLease, Result};
 use serde_json::{json, Value};
 use std::{

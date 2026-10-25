@@ -284,7 +284,12 @@ pub async fn lock_content(hub: Shared, paths: Paths, options: Options) -> Result
         let (inputs, work_paths, previous) = (Inputs::read(&hub), paths.clone(), last.clone());
         let work_options = options.clone();
         match tokio::task::spawn_blocking(move || {
-            prepare(&work_paths, &work_options, &inputs, previous.as_deref())
+            let result = prepare(&work_paths, &work_options, &inputs, previous.as_deref());
+            // prepare has dropped its renderer, fonts and all raster/PNG buffers.
+            // glibc otherwise retains these freed pages in blocking-thread arenas
+            // even after Tokio retires the thread. Reclaim on errors too.
+            crate::process::reclaim_unused_memory();
+            result
         })
         .await
         {

@@ -774,6 +774,7 @@ fn authorities(arguments: &[String]) -> Result<(bool, bool)> {
     Ok((notifications.unwrap_or(false), behaviours.unwrap_or(false)))
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
+    crate::process::configure_daemon_allocator();
     let (managed_notifications, managed_behaviours) = authorities(arguments)?;
     let filter = match std::env::var("RUST_LOG") {
         Ok(value) => tracing_subscriber::EnvFilter::try_new(value)

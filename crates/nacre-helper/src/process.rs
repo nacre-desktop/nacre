@@ -7,6 +7,29 @@ use std::{
     time::Duration,
 };
 use wait_timeout::ChildExt;
+
+/// Configure only the daemon, before its runtime or backend threads start.
+pub(crate) fn configure_daemon_allocator() {
+    #[cfg(target_env = "gnu")]
+    #[allow(unsafe_code)]
+    // SAFETY: called during single-threaded daemon startup, with a valid glibc
+    // parameter. Keep the default 128 KiB threshold static: its dynamic growth
+    // otherwise moves later raster buffers into persistent thread arenas.
+    unsafe {
+        nix::libc::mallopt(nix::libc::M_MMAP_THRESHOLD, 128 * 1024);
+    }
+}
+
+/// Return freed burst allocations to the OS after their owning scope has ended.
+pub(crate) fn reclaim_unused_memory() {
+    #[cfg(target_env = "gnu")]
+    #[allow(unsafe_code)]
+    // SAFETY: malloc_trim accepts no pointers and is thread-safe.
+    unsafe {
+        nix::libc::malloc_trim(0);
+    }
+}
+
 pub fn run(
     program: &str,
     arguments: &[String],

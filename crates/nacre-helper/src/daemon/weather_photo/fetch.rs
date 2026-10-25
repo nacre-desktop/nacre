@@ -252,8 +252,14 @@ fn now() -> f64 {
         .unwrap_or_default()
         .as_secs_f64()
 }
-fn decode(bytes: Vec<u8>) -> Result<()> {
-    let fmt = image::guess_format(&bytes)?;
+fn decode(bytes: &[u8]) -> Result<()> {
+    let result = validate(bytes);
+    // The validator and its decoded pixels have both gone out of scope.
+    crate::process::reclaim_unused_memory();
+    result
+}
+fn validate(bytes: &[u8]) -> Result<()> {
+    let fmt = image::guess_format(bytes)?;
     if fmt != image::ImageFormat::Jpeg && fmt != image::ImageFormat::Png {
         return Err("unsupported photo format".into());
     }
@@ -303,7 +309,7 @@ fn cached(paths: &Paths, l: &Location) -> Option<Photo> {
     let f = super::super::active_wallpaper::private_file(&p, IMAGE_LIMIT).ok()?;
     let mut b = Vec::new();
     f.take(IMAGE_LIMIT + 1).read_to_end(&mut b).ok()?;
-    if b.len() as u64 > IMAGE_LIMIT || decode(b).is_err() {
+    if b.len() as u64 > IMAGE_LIMIT || decode(&b).is_err() {
         return None;
     }
     x.path = p.to_string_lossy().into_owned();
@@ -475,7 +481,7 @@ async fn load_at(
     let kind = m.mime.as_str();
     let b = request(&m.url, IMAGE_LIMIT, kind, &d, test_origin).await?;
     let b = crate::process::offload(move || -> Result<Vec<u8>> {
-        decode(b.clone())?;
+        decode(&b)?;
         Ok(b)
     })
     .await??;

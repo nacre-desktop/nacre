@@ -301,13 +301,17 @@ impl<'a> Painter<'a> {
                         (h / factor).round_ties_even() as u32,
                     ),
                 )?;
+                drop(source);
                 let x = (canvas.width() as i64 - i64::from(WIDTH)) / 2;
                 let y = (canvas.height() as i64 - i64::from(HEIGHT)) / 2;
                 let crop = image::imageops::crop_imm(&canvas, x as u32, y as u32, WIDTH, HEIGHT)
                     .to_image();
+                drop(canvas);
                 let resized =
                     orient_decoder::resize_rgba(&crop, size, orient_decoder::Filter::Bicubic)?;
+                drop(crop);
                 let mut image = orient_decoder::blur_rgba(&resized, 40.0 * RESOLUTION as f32)?;
+                drop(resized);
                 paint::composite(
                     &mut image,
                     &RgbaImage::from_pixel(
