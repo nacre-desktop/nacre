@@ -109,13 +109,13 @@ Target window for a public announcement: about early December, with Bead.
 
 ### B0128 audit — 2026-10-25
 
-The Bead/Nacre expiry and dead-artifact audit found no Nacre deletion eligible
-today. Pass (a)'s earliest date is 2026-10-28; QML and its harnesses remain until
-the owner-approved Bead soak/retirement gate. Nacre has no unit-named measurement
-spikes or committed `docs/specs/evidence/` directory. `bluetooth.set_enabled`
-remains referenced by protocol schemas, fixtures and helper dispatch; deleting
-that compatibility method is a breaking change. The full inventory and Bead's
-large-evidence proposal are in Bead B0128.
+The tool-backed sweep removed two unreferenced Rust helpers (9 lines), four
+unused QML test types plus their exports (39 lines), and four stale Bead IDs
+from en/context (8 lines): 56 lines, four deleted files. Dead-code warning
+builds and workspace symbol/reference scans found no further safe deletions.
+Orient remains read-only. Pass (a) is earliest 2026-10-28; QML retirement still
+waits for the owner-approved soak. Bead B0128 records the shared inventory and
+evidence policy; widgets remain with B0130.
 
 - **Pass (a), one week after daemon mode is stable on the laptop.** Daemon
   mode has been on since 2026-10-21. Delete the replaced Python originals of
