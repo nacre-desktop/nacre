@@ -51,7 +51,8 @@ NO_PROVIDER = (
 def dropin_text(launcher, notifications="none"):
     return (
         f"{MARK}[Unit]\nDescription=Nacre native desktop shell (Bead)\n"
-        f"Wants={f4.SOCKET}\nAfter={f4.SOCKET}\nOnFailure={FALLBACK}\n"
+        f"Wants={f4.SOCKET} {DAEMON}\nAfter={f4.SOCKET} {DAEMON}\n"
+        f"OnFailure={FALLBACK}\n"
         "StartLimitIntervalSec=60\nStartLimitBurst=3\n\n"
         f"[Service]\nExecStart=\nExecStart={launcher} start\nRestart=on-failure\nRestartSec=2\n"
         "KillMode=control-group\nTimeoutStopSec=10\n"

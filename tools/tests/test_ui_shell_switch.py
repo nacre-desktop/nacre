@@ -350,10 +350,10 @@ class SwitchTests(Base):
         self.assertIn(f"ExecStart=\nExecStart={self.launcher} start\n", dropin)
         self.assertIn(f"OnFailure={m.FALLBACK}", dropin)
         self.assertIn("KillMode=control-group", dropin)
-        self.assertIn(f"Wants={f4.SOCKET}", dropin)
+        self.assertIn(f"Wants={f4.SOCKET} {m.DAEMON}\n", dropin)
         self.assertNotIn(m.WINDOWS, dropin)
         self.assertFalse((self.manager.root / m.WINDOWS).exists())
-        self.assertIn(f"After={f4.SOCKET}", dropin)
+        self.assertIn(f"After={f4.SOCKET} {m.DAEMON}\n", dropin)
         self.assertIn(
             "ui-shell qml --recover", (self.manager.root / m.FALLBACK).read_text()
         )

@@ -69,6 +69,10 @@ write(
     bead,
     """#!/bin/sh
 [ "${1:-}" = --help ] && exit 0
+systemctl --user is-active --quiet nacre-daemon.service || {
+    echo 'daemon was not active when Bead started' >&2
+    exit 91
+}
 ./bead-wallpaper-video --daemon-socket "${NACRE_DAEMON_SOCKET:-$XDG_RUNTIME_DIR/nacre/daemon.sock}" &
 while [ ! -e "$XDG_RUNTIME_DIR/crash" ]; do sleep .2; done
 exit 3
@@ -100,7 +104,7 @@ write(
 daemon = home / "stub-daemon"
 write(
     daemon,
-    '#!/bin/sh\nprintf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/daemon-args"\nexec /usr/bin/sleep infinity\n',
+    '#!/bin/sh\nprintf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/daemon-args"\ntouch "$XDG_RUNTIME_DIR/daemon-ready"\nexec /usr/bin/sleep infinity\n',
     0o700,
 )
 write(root / "nacre-daemon.service", f"[Service]\nExecStart={daemon}\n")
@@ -115,6 +119,9 @@ ui("bead", "--notifications", "none")
 assert ui("status")["active"] == "bead"
 bead_dropin = (root / "nacre-shell.service.d/60-nacre-ui-shell.conf").read_text()
 assert "nacre-qml-windows.service" not in bead_dropin
+assert "Wants=nacre-daemon.socket nacre-daemon.service" in bead_dropin
+assert "After=nacre-daemon.socket nacre-daemon.service" in bead_dropin
+assert (rt / "daemon-ready").is_file(), "daemon did not start before Bead"
 assert not (root / "nacre-qml-windows.service").exists()
 assert "LoadState=not-found" in ctl(
     "show", "--property=LoadState", "nacre-qml-windows.service"
@@ -123,6 +130,7 @@ wallpaper_pid = int((rt / "wallpaper.pid").read_text())
 os.kill(wallpaper_pid, 0)
 # Real service manager re-reads the persisted selection on the next start.
 ctl("stop", "nacre-shell.service")
+ctl("stop", "nacre-daemon.service")
 ctl("stop", "nacre-daemon.socket")
 ctl("daemon-reload")
 ctl("start", "nacre-shell.service")

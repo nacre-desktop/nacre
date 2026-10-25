@@ -470,7 +470,7 @@ impl Hub {
         }
     }
     pub fn status(&self) -> Value {
-        json!({"boot":self.boot,"safe":self.safe,"clients":self.clients.len(),"services":self.services,"topics":self.topics.keys().cloned().collect::<Vec<_>>()})
+        json!({"boot":self.boot,"safe":self.safe,"clients":self.clients.len(),"services":self.services,"topics":self.topics.keys().cloned().collect::<Vec<_>>(),"methods":self.methods()})
     }
     pub fn service(&mut self, name: &str, status: &str, failures: usize) -> Result<(), Failure> {
         self.services
@@ -1000,6 +1000,18 @@ mod tests {
                 .collect();
             panic!("welcome invalid; out-of-range timeouts: {bad:?}")
         });
+    }
+    #[test]
+    fn status_reports_methods_added_after_service_readiness() {
+        let mut hub = Hub::new("fixture".into(), false, Duration::from_millis(16));
+        assert!(hub.status()["methods"].get("menu.query").is_none());
+
+        hub.service("menu", "running", 0).unwrap();
+
+        let status = hub.status();
+        assert!(status["methods"].get("menu.query").is_some());
+        let welcome = serde_json::to_value(hub.welcome()).unwrap();
+        assert_eq!(status["methods"], welcome["methods"]);
     }
     #[test]
     fn internal_observers_get_changes_and_bounded_events_without_client_slots() {
