@@ -1,7 +1,7 @@
 //! Complete native Niri boundary, sharing one lazy request connection per caller.
 use super::{
-    niri_actions, niri_config, niri_desktop, niri_events, niri_night_light, niri_state::Error,
-    niri_transport,
+    niri_actions, niri_bindings, niri_config, niri_desktop, niri_events, niri_night_light,
+    niri_state::Error, niri_transport,
 };
 use crate::paths::Paths;
 use serde_json::{json, Map, Value};
@@ -110,34 +110,10 @@ impl Backend {
         ))
     }
     pub fn binding_source_files(&self) -> Result<Vec<PathBuf>> {
-        let default = self.paths.config.join("niri");
-        let parent = self
-            .environment
-            .get("NACRE_NIRI_CONFIG")
-            .filter(|value| !value.is_empty())
-            .and_then(|value| Path::new(value).parent())
-            .unwrap_or(&default);
-        let entries = match fs::read_dir(parent) {
-            Ok(entries) => entries,
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(vec![]),
-            Err(error) => return Err(failure("OSError", error.to_string())),
-        };
-        let mut paths = Vec::new();
-        for entry in entries {
-            let path = entry
-                .map_err(|error| failure("OSError", error.to_string()))?
-                .path();
-            if path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.ends_with(".kdl") && name.contains("bindings"))
-            {
-                paths.push(path);
-            }
-        }
-        paths.sort();
-        Ok(paths)
+        let root = niri_bindings::loader(&self.paths, &self.environment);
+        Ok(niri_bindings::source_files(&root, &self.paths.home))
     }
+
     pub fn capture_bindings(&self, path: &Path, kind: &str) -> Result<Value> {
         niri_config::bindings(
             &fs::read_to_string(path).map_err(|error| failure("OSError", error.to_string()))?,
@@ -151,18 +127,13 @@ impl Backend {
         max_bytes: Option<usize>,
     ) -> Result<Value> {
         if name == "bindings" {
-            let mut records = Vec::new();
-            for path in self.binding_source_files()? {
-                let captured = self.capture_bindings(&path, "bindings")?;
-                records.extend(
-                    captured
-                        .as_array()
-                        .ok_or_else(|| failure("ValueError", "Malformed binding records"))?
-                        .clone(),
-                );
-            }
-            return niri_config::binding_query(&Value::Array(records));
+            let (_, records) = niri_bindings::inventory(
+                &niri_bindings::loader(&self.paths, &self.environment),
+                &self.paths.home,
+            )?;
+            return niri_config::binding_query(&records);
         }
+
         self.actions.query_bounded(
             name,
             timeout.as_secs_f64(),
@@ -312,20 +283,13 @@ mod tests {
         let home = tempfile::tempdir()?;
         let paths = Paths::new(home.path());
         fs::create_dir_all(paths.config.join("niri"))?;
-        let reference: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/niri-bindings-reference.json"
-        ))?;
-        let case = &reference["cases"][1];
         fs::write(
-            paths.config.join("niri/bindings.kdl"),
-            case["request"]["text"].as_str().ok_or("Missing bindings")?,
+            paths.config.join("niri/config.kdl"),
+            "binds { Super+Q { close-window; }; }\n",
         )?;
         let mut backend = Backend::new(paths, BTreeMap::new());
         let value = backend.query("bindings", Duration::from_secs(3), None)?;
-        assert_eq!(
-            crate::json::encode(&value)? + "\n",
-            case["observed"]["stdout"]
-        );
+        assert_eq!(value[0]["key"], "Q");
         assert!(!backend.actions.transport.connected());
         assert!(
             matches!(backend.events(),Err(error) if error.message=="NIRI_SOCKET is unavailable")

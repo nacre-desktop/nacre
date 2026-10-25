@@ -605,6 +605,14 @@ fn brain_search_at(words: &[String], root: &Path) -> Result<Value> {
     Ok(Value::Array(results))
 }
 fn menu_route(command: &str) -> String {
+    if let Some((_, tail)) = command.split_once("nacrectl ui nacre menu ") {
+        if let Some(route) = tail.split_whitespace().next().filter(|r| {
+            r.bytes()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == b'.' || c == b'-')
+        }) {
+            return route.into();
+        }
+    }
     if command.starts_with("grim -g ") {
         return "actions.capture.area".into();
     }
@@ -839,13 +847,34 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
         Err(command.exec().into())
     }
 }
+pub(crate) fn binding_files(paths: &Paths) -> Result<Vec<PathBuf>> {
+    let mut backend = Backend::new(paths.clone(), env::vars().collect())?;
+    let value = backend.module_call("binding_source_files", &[json!(paths.home)], &json!({}))?;
+    Ok(value
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .map(PathBuf::from)
+        .collect())
+}
 pub(crate) fn bindings(paths: &Paths) -> Result<Value> {
     let mut backend = Backend::new(paths.clone(), env::vars().collect::<BTreeMap<_, _>>())?;
-    let files = backend.module_call(
-        "binding_source_files",
-        &[json!(paths.home.to_string_lossy())],
-        &json!({"timeout":12}),
-    )?;
+    bindings_from(&mut backend, paths)
+}
+pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Value> {
+    let niri = matches!(backend, Backend::Niri(_));
+    // Niri already supplies effective records in include order. Per-file
+    // metadata is needed only for Hyprland's live binding projection.
+    let files = if niri {
+        json!([])
+    } else {
+        backend.module_call(
+            "binding_source_files",
+            &[json!(paths.home.to_string_lossy())],
+            &json!({"timeout":12}),
+        )?
+    };
     let mut source = BTreeMap::<(String, String), String>::new();
     if let Some(files) = files.as_array() {
         for file in files {
@@ -909,7 +938,9 @@ pub(crate) fn bindings(paths: &Paths) -> Result<Value> {
         } else {
             key
         };
-        let combo = if modifiers.is_empty() {
+        let combo = if let Some(combo) = binding["combo"].as_str() {
+            combo.to_owned()
+        } else if modifiers.is_empty() {
             key.to_owned()
         } else {
             format!("{}+{key}", modifiers.join("+"))
@@ -925,6 +956,12 @@ pub(crate) fn bindings(paths: &Paths) -> Result<Value> {
                     .unwrap_or("")
                     .into()
             });
+        if niri {
+            description = description
+                .strip_prefix("Nacre:")
+                .unwrap_or(&description)
+                .to_owned();
+        }
         if !submap.is_empty() {
             description = format!("{submap} · {description}");
         }
@@ -1096,6 +1133,44 @@ mod tests {
         );
         assert_eq!(menu_route("loginctl lock-session"), "power.lock");
         assert_eq!(menu_route("unrelated command"), "");
+        assert_eq!(
+            menu_route("nacrectl ui nacre menu learn.shortcuts"),
+            "learn.shortcuts"
+        );
+    }
+
+    #[test]
+    fn niri_titles_native_and_spawn_binds_reach_the_qml_projection() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let root = home.path().join("config.kdl");
+        fs::write(home.path().join("included.kdl"), "binds { Super+K hotkey-overlay-title=\"Earlier include\" { spawn \"old-tool\"; }; Super+Mod5+Q hotkey-overlay-title=\"Old native title\" { close-window; }; }\n")?;
+        fs::write(&root, "include \"included.kdl\"\nbinds { Super+K hotkey-overlay-title=\"Custom title\" { spawn \"nacrectl\" \"ui\" \"nacre\" \"menu\" \"learn.shortcuts\"; }; ISO_Level3_Shift+Super+Q { close-window; }; Super+T { spawn \"/usr/bin/custom-tool\" \"arg\"; }; }\n")?;
+        let mut backend = Backend::new(
+            paths.clone(),
+            BTreeMap::from([
+                ("NACRE_COMPOSITOR".into(), "niri".into()),
+                ("NIRI_CONFIG".into(), root.to_string_lossy().into_owned()),
+            ]),
+        )?;
+        let rows = bindings_from(&mut backend, &paths)?;
+        assert_eq!(rows.as_array().unwrap().len(), 3);
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["key"] == "SUPER+T" && r["description"] == "custom-tool"));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["description"] == "Custom title" && r["menu"] == "learn.shortcuts"));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["key"] == "SUPER+Mod5+Q" && r["description"] == "close window"));
+        Ok(())
     }
 
     #[test]

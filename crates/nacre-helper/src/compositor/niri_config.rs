@@ -356,55 +356,11 @@ pub fn monitors(monitors: &Value) -> Result<String> {
 }
 pub fn bindings(source: &str, kind: &str) -> Result<Value> {
     if kind != "bindings" {
-        return Err(invalid("Only generated niri bindings can be inspected"));
+        return Err(invalid("Only niri bindings can be inspected"));
     }
-    if !source.starts_with("// Generated from compositor-contract.json;") {
-        return Err(Error {
-            kind: "RuntimeError",
-            message: "Private KDL overrides require niri's hotkey overlay".into(),
-        });
-    }
-    let pattern = regex::Regex::new(
-        r#"^\s+(\S+)\s+(.+?)\s+\{\s+(spawn-sh "(?:[^"\\]|\\.)*"|[a-z-]+);\s+\}$"#,
-    )
-    .map_err(|error| invalid(&error.to_string()))?;
-    let description = regex::Regex::new(r#"hotkey-overlay-title=("(?:[^"\\]|\\.)*")"#)
-        .map_err(|error| invalid(&error.to_string()))?;
-    let mut records = Vec::new();
-    for line in source.lines() {
-        let Some(captures) = pattern.captures(line) else {
-            continue;
-        };
-        let keys = captures[1]
-            .replace("Super", "SUPER")
-            .replace("Ctrl", "CTRL")
-            .replace("Alt", "ALT")
-            .replace("Shift", "SHIFT");
-        let description = description
-            .captures(&captures[2])
-            .map(|value| crate::json::parse_value(&value[1]))
-            .transpose()
-            .map_err(|error| Error {
-                kind: "JSONDecodeError",
-                message: error.to_string(),
-            })?
-            .unwrap_or(Value::from(""));
-        let action = &captures[3];
-        let (method, args) = if let Some(command) = action.strip_prefix("spawn-sh ") {
-            (
-                "exec_cmd",
-                vec![crate::json::parse_value(command).map_err(|error| Error {
-                    kind: "JSONDecodeError",
-                    message: error.to_string(),
-                })?],
-            )
-        } else {
-            (action, vec![])
-        };
-        records.push(serde_json::json!({"keys":keys,"submap":"","flags":{"description":description},"action":{"method":method,"args":args}}));
-    }
-    Ok(Value::from(records))
+    super::niri_bindings::parse(source)
 }
+
 pub fn binding_query(records: &Value) -> Result<Value> {
     let mut result = Vec::new();
     for record in records
@@ -426,7 +382,7 @@ pub fn binding_query(records: &Value) -> Result<Value> {
                 _ => 0,
             })
             .sum::<u64>();
-        result.push(serde_json::json!({"modmask":modifiers,"key":keys[keys.len()-1],"submap":"","description":record["flags"]["description"],"dispatcher":"__lua","arg":""}));
+        result.push(serde_json::json!({"combo":record["keys"],"modmask":modifiers,"key":keys[keys.len()-1],"submap":"","description":record["flags"]["description"],"dispatcher":"__lua","arg":record["action"]["args"].as_array().map(|a| a.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(" ")).unwrap_or_default()}));
     }
     Ok(Value::from(result))
 }
@@ -453,46 +409,6 @@ pub(super) fn frozen_rendering_output(case: &Value) -> crate::Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn frozen_generated_binding_records_and_query_projection() -> crate::Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../../tests/fixtures/niri-bindings-reference.json"
-        ))?;
-        for case in reference["cases"].as_array().ok_or("Missing cases")? {
-            let input = &case["request"];
-            let result = bindings(
-                input["text"].as_str().ok_or("Missing source")?,
-                input["kind"].as_str().ok_or("Missing kind")?,
-            )
-            .and_then(|records| {
-                if input["method"] == "query" {
-                    binding_query(&records)
-                } else {
-                    Ok(records)
-                }
-            });
-            let (result, exit) = match result {
-                Ok(value) => (value, 0),
-                Err(error) => (
-                    serde_json::json!({"error":error.message,"type":error.kind}),
-                    1,
-                ),
-            };
-            assert_eq!(
-                crate::json::encode(&result)? + "\n",
-                case["observed"]["stdout"],
-                "{}",
-                input["name"]
-            );
-            assert_eq!(
-                Value::from(exit),
-                case["observed"]["exit"],
-                "{}",
-                input["name"]
-            );
-        }
-        Ok(())
-    }
     #[test]
     fn frozen_current_python_rendering_bytes_and_validation() -> crate::Result<()> {
         let reference: Value = serde_json::from_str(include_str!(

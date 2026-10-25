@@ -26,6 +26,7 @@ sha2 = "0.10"
 hmac = "=0.12.1"
 tempfile = "3"
 regex = "1"
+kdl = "=4.7.1"
 nix = { version = "0.30", features = ["fs", "user", "signal", "feature", "socket", "term", "poll"] }
 chrono = "0.4"
 chrono-tz = "0.10"

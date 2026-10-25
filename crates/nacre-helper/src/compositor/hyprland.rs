@@ -715,6 +715,30 @@ impl<T: Transport> Backend<T> {
 mod tests {
     use super::*;
     #[test]
+    fn shortcut_source_discovery_keeps_hyprland_lua_paths() -> crate::Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = crate::paths::Paths::new(home.path());
+        let conf = home.path().join(".config/hypr/conf");
+        std::fs::create_dir_all(&conf)?;
+        std::fs::create_dir_all(&paths.config)?;
+        let custom = conf.join("custom.lua");
+        std::fs::write(
+            &custom,
+            "hl.bind(\"SUPER + K\", hl.dsp.exec_cmd(\"custom\"), {description=\"Custom\"})\n",
+        )?;
+        std::fs::write(conf.join("unrelated.lua"), "-- no bindings\n")?;
+        let shortcuts = paths.config.join("shortcuts.lua");
+        std::fs::write(
+            &shortcuts,
+            "hl.bind(\"SUPER + A\", hl.dsp.exec_cmd(\"action\"))\n",
+        )?;
+        assert_eq!(
+            binding_source_files(home.path(), &paths.config)?,
+            vec![custom, shortcuts]
+        );
+        Ok(())
+    }
+    #[test]
     fn frozen_actual_lua_binding_capture_records_and_errors() -> crate::Result<()> {
         let reference: Value = serde_json::from_str(include_str!(
             "../../tests/fixtures/hyprland-bindings-reference.json"

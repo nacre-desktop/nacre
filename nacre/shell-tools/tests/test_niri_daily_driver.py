@@ -187,7 +187,7 @@ class NiriDailyDriverTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 backend.cycle_window("left")
 
-    def test_generated_shortcuts_are_inspectable_without_native_ipc(self):
+    def test_generated_and_private_shortcuts_are_inspectable_without_native_ipc(self):
         backend = niri.Backend()
         path = ROOT.parents[1] / "niri/bindings.kdl"
         with patch.object(backend, "binding_source_files", return_value=[path]):
@@ -198,9 +198,10 @@ class NiriDailyDriverTests(unittest.TestCase):
         self.assertFalse(backend.capabilities["bindingIntrospection"])
         with tempfile.TemporaryDirectory() as folder:
             private = Path(folder) / "bindings.kdl"
-            private.write_text("binds { Super+Q { close-window; } }")
-            with self.assertRaisesRegex(RuntimeError, "Private KDL"):
-                backend.capture_bindings(private)
+            private.write_text("binds {\n    Super+Q { close-window; }\n}\n")
+            records = backend.capture_bindings(private)
+            self.assertEqual(records[0]["keys"], "SUPER+Q")
+            self.assertEqual(records[0]["action"]["method"], "close-window")
 
     def test_toggle_values_and_dimensions_are_validated_before_rendering(self):
         backend = niri.Backend()

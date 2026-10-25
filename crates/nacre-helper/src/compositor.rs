@@ -7,6 +7,7 @@ pub mod hyprland_runtime;
 pub mod hyprland_transport;
 pub mod niri;
 pub mod niri_actions;
+mod niri_bindings;
 pub mod niri_config;
 pub mod niri_desktop;
 pub mod niri_events;

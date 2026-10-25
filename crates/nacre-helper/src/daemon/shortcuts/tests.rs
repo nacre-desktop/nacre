@@ -1,6 +1,7 @@
 //! A fake reader stands in for the compositor; nothing is queried.
 use super::*;
 use std::sync::Mutex;
+static RUN_LOCK: Mutex<()> = Mutex::new(());
 
 fn hub() -> Shared {
     Hub::new("shortcuts".into(), false, Duration::from_millis(1)).shared()
@@ -72,6 +73,7 @@ async fn until(what: &str, check: impl Fn() -> bool) {
 
 #[test]
 fn the_topic_waits_for_the_compositor_reads_on_refresh_and_keeps_the_last_good_list() {
+    let _guard = RUN_LOCK.lock().unwrap();
     runtime(async {
         let hub = hub();
         initial(&hub).unwrap();
@@ -84,6 +86,7 @@ fn the_topic_waits_for_the_compositor_reads_on_refresh_and_keeps_the_last_good_l
         )));
         let fake = script.clone();
         let env = Env {
+            files: Arc::new(|| Ok(vec![])),
             read: Arc::new(move || {
                 let mut script = fake.lock().unwrap();
                 script.1 += 1;
@@ -154,6 +157,90 @@ fn the_topic_waits_for_the_compositor_reads_on_refresh_and_keeps_the_last_good_l
             dispatch(&hub.borrow(), json!({})).unwrap_err().code,
             ErrorCode::Unavailable
         );
+        task.abort();
+    });
+}
+
+#[test]
+fn config_edits_replacements_and_missing_file_creation_refresh_the_topic() {
+    let _guard = RUN_LOCK.lock().unwrap();
+    runtime(async {
+        let home = tempfile::tempdir().unwrap();
+        let config = home.path().join("config.kdl");
+        let custom_dir = home.path().join("custom");
+        std::fs::create_dir(&custom_dir).unwrap();
+        let include = custom_dir.join("custom.kdl");
+        std::fs::write(&config, "include optional=true \"custom/custom.kdl\"\n").unwrap();
+        let hub = hub();
+        initial(&hub).unwrap();
+        hub.borrow_mut()
+            .publish("compositor", json!({"available":true}))
+            .unwrap();
+        let read_home = home.path().to_path_buf();
+        let read_config = config.clone();
+        let watched = config.clone();
+        let watch_home = home.path().to_path_buf();
+        let env = Env {
+            read: Arc::new(move || {
+                let paths = Paths::new(&read_home);
+                let mut backend = crate::compositor::backend::Backend::new(
+                    paths.clone(),
+                    BTreeMap::from([
+                        ("NACRE_COMPOSITOR".into(), "niri".into()),
+                        (
+                            "NIRI_CONFIG".into(),
+                            read_config.to_string_lossy().into_owned(),
+                        ),
+                    ]),
+                )?;
+                crate::desktop_extras::bindings_from(&mut backend, &paths)
+            }),
+            files: Arc::new(move || {
+                crate::compositor::niri::Backend::new(
+                    Paths::new(&watch_home),
+                    BTreeMap::from([(
+                        "NIRI_CONFIG".into(),
+                        watched.to_string_lossy().into_owned(),
+                    )]),
+                )
+                .binding_source_files()
+                .map_err(Into::into)
+            }),
+        };
+        let task = tokio::task::spawn_local(run_with(hub.clone(), env));
+        until("empty initial read", || state(&hub).health.available).await;
+        std::fs::write(
+            &include,
+            "binds { Super+A hotkey-overlay-title=\"First\" { close-window; }; }\n",
+        )
+        .unwrap();
+        until("missing include created", || {
+            state(&hub).items.order.len() == 1
+        })
+        .await;
+        std::fs::write(&include, "binds { Super+B { close-window; }; }\n").unwrap();
+        until("in-place edit", || {
+            state(&hub).items.items.values().any(|r| r.key == "SUPER+B")
+        })
+        .await;
+        let replacement = home.path().join("replacement.kdl");
+        std::fs::write(&replacement, "binds { Super+C { close-window; }; }\n").unwrap();
+        std::fs::rename(replacement, &include).unwrap();
+        until("atomic replacement", || {
+            state(&hub).items.items.values().any(|r| r.key == "SUPER+C")
+        })
+        .await;
+        std::fs::write(&include, "binds {").unwrap();
+        until("invalid included file is stale", || {
+            state(&hub).health.stale
+        })
+        .await;
+        std::fs::write(&include, "binds { Super+D { close-window; }; }\n").unwrap();
+        until("invalid included file fixed", || {
+            !state(&hub).health.stale
+                && state(&hub).items.items.values().any(|r| r.key == "SUPER+D")
+        })
+        .await;
         task.abort();
     });
 }

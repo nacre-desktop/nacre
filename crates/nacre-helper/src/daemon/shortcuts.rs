@@ -1,7 +1,7 @@
 //! N0051: the `shortcuts` topic, the key bindings of the running compositor with the Nacre menu
 //! route each opens. It is the list the QML Settings "Shortcuts" page showed (`desktop-extras
 //! keys`): the compositor is asked once it is up, and again on `shortcuts.refresh`; a config
-//! reload is not watched. A failed read keeps the last good list, marked stale.
+//! reload is watched. A failed read keeps the last good list, marked stale.
 use super::{
     behaviours::changed,
     hub::{failure, Hub, Shared},
@@ -25,11 +25,13 @@ static REFRESH: Notify = Notify::const_new();
 pub struct Env {
     /// The compositor's bindings: `[{key, description, submap, menu}]`.
     pub read: Arc<dyn Fn() -> Result<Value> + Send + Sync>,
+    pub files: Arc<dyn Fn() -> Result<Vec<std::path::PathBuf>> + Send + Sync>,
 }
 impl Env {
     fn production() -> Self {
         Self {
             read: Arc::new(|| desktop_extras::bindings(&Paths::environment()?)),
+            files: Arc::new(|| desktop_extras::binding_files(&Paths::environment()?)),
         }
     }
 }
@@ -124,6 +126,7 @@ pub async fn run(hub: Shared) -> Result<()> {
 }
 async fn run_with(hub: Shared, env: Env) -> Result<()> {
     let mut notices = hub.borrow().observe();
+    let mut watcher = Watcher::new()?;
     hub.borrow_mut().service("shortcuts", "running", 0)?;
     let (mut want, mut was_up) = (true, false);
     loop {
@@ -132,6 +135,12 @@ async fn run_with(hub: Shared, env: Env) -> Result<()> {
         was_up = up;
         if want && up {
             want = false;
+            let files = env.files.clone();
+            if let Ok(Ok(files)) =
+                tokio::task::spawn_blocking(move || files().map_err(|e| e.to_string())).await
+            {
+                watcher.rearm(&files)?;
+            }
             let read = env.read.clone();
             let outcome = tokio::time::timeout(
                 READ_LIMIT,
@@ -149,6 +158,7 @@ async fn run_with(hub: Shared, env: Env) -> Result<()> {
         tokio::select! {
             result = changed(&mut notices, &["compositor"]) => result?,
             () = REFRESH.notified() => want = true,
+            result = watcher.changed() => { result?; want = true; },
         }
     }
 }
@@ -177,6 +187,78 @@ pub fn dispatch(hub: &Hub, params: Value) -> std::result::Result<Value, Failure>
     }
     REFRESH.notify_one();
     Ok(json!({"requested":true}))
+}
+
+/// Watch containing directories as well as symlink targets: atomic replacement
+/// and N0078's in-place writes must both survive without a polling timer.
+struct Watcher {
+    fd: tokio::io::unix::AsyncFd<rustix::fd::OwnedFd>,
+    directories: BTreeMap<std::path::PathBuf, i32>,
+}
+impl Watcher {
+    #[allow(unsafe_code)]
+    fn new() -> Result<Self> {
+        use rustix::fs::inotify::{init, CreateFlags};
+        let fd = init(CreateFlags::NONBLOCK | CreateFlags::CLOEXEC)?;
+        Ok(Self {
+            // SAFETY: this nonblocking descriptor is owned for the AsyncFd lifetime.
+            fd: unsafe {
+                tokio::io::unix::AsyncFd::register_with_interest(fd, tokio::io::Interest::READABLE)?
+            },
+            directories: BTreeMap::new(),
+        })
+    }
+    fn rearm(&mut self, files: &[std::path::PathBuf]) -> Result<()> {
+        use rustix::fs::inotify::{add_watch, remove_watch, WatchFlags};
+        let wanted: std::collections::BTreeSet<_> = files
+            .iter()
+            .flat_map(|p| [Some(p.clone()), std::fs::canonicalize(p).ok()])
+            .flatten()
+            .filter_map(|p| {
+                p.parent()
+                    .and_then(|p| p.ancestors().find(|p| p.is_dir()))
+                    .map(std::path::Path::to_path_buf)
+            })
+            .collect();
+        self.directories.retain(|path, wd| {
+            if wanted.contains(path) {
+                true
+            } else {
+                let _ = remove_watch(self.fd.get_ref(), *wd);
+                false
+            }
+        });
+        for path in wanted {
+            let wd = add_watch(
+                self.fd.get_ref(),
+                &path,
+                WatchFlags::CLOSE_WRITE
+                    | WatchFlags::MOVED_TO
+                    | WatchFlags::MOVED_FROM
+                    | WatchFlags::CREATE
+                    | WatchFlags::DELETE
+                    | WatchFlags::DELETE_SELF
+                    | WatchFlags::MOVE_SELF,
+            )?;
+            self.directories.insert(path, wd);
+        }
+        Ok(())
+    }
+    async fn changed(&self) -> Result<()> {
+        let mut buffer = [0u8; 8192];
+        loop {
+            let mut ready = self.fd.readable().await?;
+            match ready.try_io(|fd| {
+                rustix::io::read(fd.get_ref(), &mut buffer).map_err(std::io::Error::from)
+            }) {
+                Ok(result) => {
+                    result?;
+                    return Ok(());
+                }
+                Err(_) => continue,
+            }
+        }
+    }
 }
 
 #[cfg(test)]
