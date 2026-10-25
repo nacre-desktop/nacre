@@ -44,6 +44,11 @@
           "description": "Start `power-profiles-daemon` (polkit asks the session's agent).",
           "type": "string",
           "const": "power-service"
+        },
+        {
+          "description": "Open the existing confirmed system updater in a terminal.",
+          "type": "string",
+          "const": "updates"
         }
       ]
     }

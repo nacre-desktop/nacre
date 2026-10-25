@@ -95,6 +95,19 @@ fn command(tool: Tool, engine: &Path) -> (&'static str, Vec<OsString>, Vec<&'sta
             // Installed means the service has something to start.
             vec!["powerprofilesctl", "systemctl"],
         ),
+        Tool::Updates => (
+            "kitty",
+            args(&[
+                "--class",
+                "nacre-control",
+                "--title",
+                "System updates",
+                "--",
+                "nacre",
+                "updates",
+            ]),
+            vec!["nacre"],
+        ),
     }
 }
 

@@ -113,6 +113,8 @@ pub enum Tool {
     AurReviewPolicy,
     /// Start `power-profiles-daemon` (polkit asks the session's agent).
     PowerService,
+    /// Open the existing confirmed system updater in a terminal.
+    Updates,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -269,6 +271,11 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         (
             "tools.launch",
             json!({"tool":"audio-manager"}),
+            json!({"launched":true}),
+        ),
+        (
+            "tools.launch",
+            json!({"tool":"updates"}),
             json!({"launched":true}),
         ),
         (

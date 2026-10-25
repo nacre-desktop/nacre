@@ -71,6 +71,7 @@ fn each_tool_starts_exactly_its_command() {
             "pkexec",
             "powerprofilesctl",
             "systemctl",
+            "nacre",
         ]);
         for (tool, line) in [
             ("audio-manager", "pavucontrol \n"),
@@ -87,6 +88,10 @@ fn each_tool_starts_exactly_its_command() {
             (
                 "power-service",
                 "pkexec systemctl start power-profiles-daemon\n",
+            ),
+            (
+                "updates",
+                "kitty --class nacre-control --title System updates -- nacre updates\n",
             ),
         ] {
             std::fs::remove_file(f.dir.path().join("log")).ok();

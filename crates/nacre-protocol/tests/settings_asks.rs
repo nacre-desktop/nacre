@@ -34,7 +34,7 @@ fn transcript_replays_and_every_state_validates() {
             _ => {}
         }
     }
-    assert_eq!((states, calls), (2, 5));
+    assert_eq!((states, calls), (2, 6));
     let shortcuts = &mirror.topics[settings_asks::SHORTCUTS_TOPIC].1;
     assert_eq!(shortcuts["items"]["order"], serde_json::json!(["k0"]));
 }

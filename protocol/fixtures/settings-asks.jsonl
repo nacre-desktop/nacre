@@ -8,5 +8,7 @@
 {"t":"ret","id":702,"ok":{"changed":true}}
 {"t":"call","id":703,"m":"tools.launch","p":{"tool":"audio-manager"}}
 {"t":"ret","id":703,"ok":{"launched":true}}
-{"t":"call","id":704,"m":"system.status","p":{}}
-{"t":"ret","id":704,"ok":{"checked":"2026-10-23T18:00:00.000000+00:00","release":"0123456789ab","services":{"nacre-shell.service":"active","xdg-desktop-portal.service":"ready on demand"},"failed_services":[],"config_errors":"","drift":[],"brain_sync":"No synchronization attempt recorded","updates_age_seconds":3600,"aur_review":{"mode":"required","source":"general-profile-default","profile":"default"}}}
+{"t":"call","id":704,"m":"tools.launch","p":{"tool":"updates"}}
+{"t":"ret","id":704,"ok":{"launched":true}}
+{"t":"call","id":705,"m":"system.status","p":{}}
+{"t":"ret","id":705,"ok":{"checked":"2026-10-23T18:00:00.000000+00:00","release":"0123456789ab","services":{"nacre-shell.service":"active","xdg-desktop-portal.service":"ready on demand"},"failed_services":[],"config_errors":"","drift":[],"brain_sync":"No synchronization attempt recorded","updates_age_seconds":3600,"aur_review":{"mode":"required","source":"general-profile-default","profile":"default"}}}
