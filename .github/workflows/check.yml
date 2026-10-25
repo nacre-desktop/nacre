@@ -115,7 +115,8 @@ jobs:
           NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-pseudo-audit/aur-review
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
       - name: Daemon raster memory regression
-        run: NACRE_MEMORY_BINARY="$PWD/target/release/nacre-helper" cargo test -j2 --locked -p nacre-helper --test daemon memory:: -- --ignored --nocapture
+        run: |
+          NACRE_MEMORY_BINARY="$PWD/target/release/nacre-helper" cargo test -j2 --locked -p nacre-helper --test daemon memory:: -- --ignored --nocapture
       - name: Native gallery evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
