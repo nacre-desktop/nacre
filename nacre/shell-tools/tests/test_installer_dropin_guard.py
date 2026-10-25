@@ -707,7 +707,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
         with patch.object(installer.subprocess, "run", side_effect=prepare):
             installer.refresh_niri_session(plan)
         self.assertEqual((session / "config/config.kdl").read_text(), "new config\n")
-        previous = session.with_name("session.previous")
+        previous = session.with_name("session.rollback")
         self.assertEqual((previous / "config/config.kdl").read_text(), "old config\n")
         self.assertEqual(custom.read_text(), "mine\n")
 
@@ -724,7 +724,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
         self.assertEqual((session / "config/config.kdl").read_text(), "old config\n")
         self.assertEqual((session / "source-revision").read_text(), "old\n")
         self.assertFalse((session / "partial").exists())
-        self.assertFalse(session.with_name("session.previous").exists())
+        self.assertFalse(session.with_name("session.rollback").exists())
         self.assertEqual(custom.read_text(), "mine\n")
 
     def test_dry_run_prints_both_steps_and_changes_nothing(self):

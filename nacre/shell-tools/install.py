@@ -293,35 +293,58 @@ def niri_session_refresh_plan():
 
 def print_niri_plan(plan):
     reason, command, _ = plan
-    backup = niri_session().with_name("session.previous")
+    backup = niri_session().with_name("session.rollback")
     print(
         "Plan: refresh the generated niri session config ("
         + reason
-        + ").\n  1. move "
+        + ").\n  1. copy "
         + str(niri_session())
         + " to "
         + str(backup)
         + " (previous backup replaced)\n  2. run: "
         + " ".join(command)
-        + "\n  3. on failure, move the backup back.\n"
+        + "\n  3. on failure, restore files in place from the backup.\n"
+        "  Session/home-view directories stay in place for running mount namespaces.\n"
         "  Your custom.kdl and other user files are not touched. Running niri "
         "reloads config.kdl live; startup items (spawn-at-startup) apply at the "
         "next login."
     )
 
 
+def restore_session_tree(source, target):
+    """Restore files without replacing directories held by running bind mounts."""
+    target.mkdir(parents=True, exist_ok=True)
+    for item in source.iterdir():
+        destination = target / item.name
+        if item.is_dir():
+            restore_session_tree(item, destination)
+        else:
+            with tempfile.NamedTemporaryFile(dir=target, delete=False) as temporary:
+                name = Path(temporary.name)
+            try:
+                shutil.copy2(item, name)
+                name.replace(destination)
+            finally:
+                name.unlink(missing_ok=True)
+    for item in target.iterdir():
+        if not (source / item.name).exists():
+            shutil.rmtree(item) if item.is_dir() else item.unlink()
+    shutil.copystat(source, target)
+
+
 def refresh_niri_session(plan):
     _, command, _ = plan
-    backup = niri_session().with_name("session.previous")
+    # Old installers moved the bound view into session.previous. Never delete
+    # that legacy tree: a running compositor may still hold its directory inode.
+    backup = niri_session().with_name("session.rollback")
     if backup.exists():
         shutil.rmtree(backup)
-    niri_session().rename(backup)
+    shutil.copytree(niri_session(), backup)
     try:
         subprocess.run(command, check=True)
     except BaseException:
-        if niri_session().exists():
-            shutil.rmtree(niri_session())
-        backup.rename(niri_session())
+        restore_session_tree(backup, niri_session())
+        shutil.rmtree(backup)
         print(
             "Niri session preparation failed; the previous session config was restored.",
             file=sys.stderr,

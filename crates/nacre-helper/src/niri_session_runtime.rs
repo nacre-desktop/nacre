@@ -372,7 +372,7 @@ pub fn prepare_configuration(
         })
         .collect();
     let config = destination.join("config");
-    fs::create_dir(&config)?;
+    fs::create_dir_all(&config)?;
     fs::set_permissions(&config, fs::Permissions::from_mode(0o700))?;
     let generated = crate::compositor_config::render(&contract, &directory, "niri")?;
     for (name, text) in generated
@@ -665,22 +665,20 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
         helper = PathBuf::from(String::from_utf8(output.stdout)?.trim());
     }
     let files = crate::niri_session_stage::file_map(&backend, &profile)?;
+    fs::create_dir_all(destination)?;
+    let staged = tempfile::tempdir_in(destination)?;
+    let home_view = staged.path().join("home-view");
     print!(
         "{}",
         crate::niri_session_stage::stage(
-            &backend,
-            &destination.join("home-view"),
-            &profile,
-            &files,
-            &compiler,
-            &helper
+            &backend, &home_view, &profile, &files, &compiler, &helper
         )?
     );
     let bins = paths.share.join("shell/bin");
     if bins.is_dir() {
         crate::niri_session_stage::copy_tree(
             &bins,
-            &destination.join("home-view/.local/share/nacre/shell/bin"),
+            &home_view.join(".local/share/nacre/shell/bin"),
             &[],
         )?;
     }
@@ -709,6 +707,12 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
             Ok(())
         },
     )?;
+    // A running bwrap namespace holds this directory's inode, not its pathname.
+    // Keep directories alive and replace files atomically, including executables.
+    refresh_tree(&home_view, &destination.join("home-view"))?;
+    if !stock && destination.join("stock-niri").exists() {
+        fs::remove_file(destination.join("stock-niri"))?;
+    }
     let revision = crate::process::checked(
         "git",
         &[
@@ -721,6 +725,33 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
         Duration::from_secs(10),
     )?;
     fs::write(destination.join("source-revision"), revision.stdout)?;
+    Ok(())
+}
+
+fn refresh_tree(source: &Path, target: &Path) -> Result<()> {
+    fs::create_dir_all(target)?;
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        let destination = target.join(entry.file_name());
+        if entry.file_type()?.is_dir() {
+            refresh_tree(&entry.path(), &destination)?;
+        } else {
+            let temporary = tempfile::NamedTempFile::new_in(target)?;
+            crate::niri_session_stage::copied(&entry.path(), temporary.path())?;
+            temporary.persist(&destination)?;
+        }
+    }
+    for entry in fs::read_dir(target)? {
+        let entry = entry?;
+        if !source.join(entry.file_name()).exists() {
+            if entry.file_type()?.is_dir() {
+                fs::remove_dir_all(entry.path())?;
+            } else {
+                fs::remove_file(entry.path())?;
+            }
+        }
+    }
+    fs::set_permissions(target, fs::metadata(source)?.permissions())?;
     Ok(())
 }
 
