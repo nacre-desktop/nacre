@@ -1,7 +1,7 @@
 // Keep one full-size wallpaper behind all workspaces, including the overview.
 // Include before user settings so local appearance choices can override this.
 layer-rule {
-    match namespace="^nacre-background$"
+    match namespace="^(nacre-background|bead-wallpaper|bead-wallpaper-video)$"
     place-within-backdrop true
 }
 

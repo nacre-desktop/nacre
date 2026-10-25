@@ -18,6 +18,15 @@ niri = config.niri
 
 
 class NiriConfigTests(unittest.TestCase):
+    def test_wallpaper_fragment_matches_bead_wallpaper_namespaces(self):
+        wallpaper = (ROOT / "niri/wallpaper.kdl").read_text()
+        self.assertIn(
+            'match namespace="^(nacre-background|bead-wallpaper|'
+            'bead-wallpaper-video)$"',
+            wallpaper,
+        )
+        self.assertIn("place-within-backdrop true", wallpaper)
+
     def test_tabs_capture_cycle_and_floating_sizes_are_lowered(self):
         generated = config.render(config.load(), backend="niri")
         binds = generated["niri/bindings.kdl"]

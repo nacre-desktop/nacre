@@ -255,11 +255,13 @@ reviewed top-level includes **before** user settings so later user bindings and
 properties win. Included files contain full top-level sections; includes inside
 `binds` or `layout` are invalid. See the upstream
 [include merge rules](https://niri-wm.github.io/niri/Configuration:-Include.html).
-The separate `niri/wallpaper.kdl` fragment places the existing `nacre-background`
-surface in Niri's backdrop with transparent workspace backgrounds and soft,
-dark workspace shadows. This keeps empty workspace boundaries visible over
-one stationary wallpaper behind the native overview,
-following [Noctalia's stationary wallpaper setup](https://github.com/noctalia-dev/noctalia-docs/blob/main/src/content/docs/noctalia/compositor-settings/niri.mdx#option-2-stationary-wallpaper).
+The `niri/wallpaper.kdl` fragment and generated package-session config match
+`nacre-background`, `bead-wallpaper` and `bead-wallpaper-video`. Bead's static
+wallpaper is placed in the backdrop; its video surface remains on Niri's Bottom
+layer, with the static poster providing a backdrop during workspace switches.
+Transparent workspace backgrounds and soft, dark workspace shadows keep empty
+workspace boundaries visible over one stationary wallpaper behind the native
+overview, following [Noctalia's stationary wallpaper setup](https://github.com/noctalia-dev/noctalia-docs/blob/main/src/content/docs/noctalia/compositor-settings/niri.mdx#option-2-stationary-wallpaper).
 Both session and preview preparation include this fragment before user settings.
 Validate without a session or a user-config write:
 

@@ -795,6 +795,11 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 self.assertIn('include "desktop.kdl"', config.read_text())
                 self.assertIn('include "palette.kdl"', config.read_text())
+                self.assertIn(
+                    'layer-rule { match namespace="^(nacre-background|bead-wallpaper|'
+                    'bead-wallpaper-video)$"; place-within-backdrop true; }',
+                    config.read_text(),
+                )
                 appearance = (config.parent / "desktop.kdl").read_text()
                 self.assertIn("focus-ring { width 3; }", appearance)
                 self.assertIn("border { width 3; }", appearance)

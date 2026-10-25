@@ -163,7 +163,10 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     if private.exists():
         result.pop(config / "custom.kdl")
     entry = "\n".join("include " + json.dumps(name) for name in includes)
-    entry += '\nlayer-rule { match namespace="^nacre-background$"; place-within-backdrop true; }\n'
+    entry += (
+        '\nlayer-rule { match namespace="^(nacre-background|bead-wallpaper|'
+        'bead-wallpaper-video)$"; place-within-backdrop true; }\n'
+    )
     entry += 'layout { background-color "transparent"; }\n'
     entry += "hotkey-overlay { skip-at-startup; }\n"
     entry += (

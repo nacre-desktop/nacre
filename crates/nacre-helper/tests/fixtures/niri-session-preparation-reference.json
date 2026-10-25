@@ -78,7 +78,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -217,7 +217,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -368,7 +368,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -515,7 +515,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -664,7 +664,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -809,7 +809,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -960,7 +960,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -1107,7 +1107,7 @@
             "mode": 384
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 384
           },
           "config/window-rules.kdl": {
@@ -1245,7 +1245,7 @@
             "mode": 420
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 420
           },
           "config/window-rules.kdl": {
@@ -1361,7 +1361,7 @@
             "mode": 420
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 420
           },
           "config/window-rules.kdl": {
@@ -1468,7 +1468,7 @@
             "mode": 420
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 420
           },
           "config/window-rules.kdl": {
@@ -1575,7 +1575,7 @@
             "mode": 420
           },
           "config/wallpaper.kdl": {
-            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^nacre-background$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
+            "text": "// Keep one full-size wallpaper behind all workspaces, including the overview.\n// Include before user settings so local appearance choices can override this.\nlayer-rule {\n    match namespace=\"^(nacre-background|bead-wallpaper|bead-wallpaper-video)$\"\n    place-within-backdrop true\n}\n\nlayout {\n    background-color \"transparent\"\n}\n\noverview {\n    workspace-shadow {\n        // Soft depth keeps empty workspaces visible without a bright box outline.\n        on\n        softness 40\n        spread 10\n        offset x=0 y=8\n        color \"#00000070\"\n    }\n}\n",
             "mode": 420
           },
           "config/window-rules.kdl": {
