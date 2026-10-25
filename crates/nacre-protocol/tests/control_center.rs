@@ -31,7 +31,7 @@ fn transcript_replays_and_every_state_validates() {
             _ => {}
         }
     }
-    assert_eq!((states, calls), (2, 15));
+    assert_eq!((states, calls), (2, 16));
     let state = &mirror.topics[control_center::TOPIC].1;
     assert_eq!(state["brightness"]["eDP-1"], 65);
     assert_eq!(state["recorder"]["recording"], true);

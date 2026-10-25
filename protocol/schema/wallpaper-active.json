@@ -10,6 +10,10 @@
     "stale": {
       "type": "boolean"
     },
+    "previous_available": {
+      "description": "QML `rotationReady`, shared by manual Next and Previous; false for a\nstale/unavailable wallpaper, a singleton pool, sleep/lock or selection.",
+      "type": "boolean"
+    },
     "revision": {
       "type": "integer",
       "format": "uint64",

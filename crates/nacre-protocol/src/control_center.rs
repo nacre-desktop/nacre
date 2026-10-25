@@ -345,6 +345,12 @@ fn table() -> Vec<(&'static str, serde_json::Value, Capability, u32)> {
             120_000,
         ),
         (
+            "wallpaper.previous",
+            schema(schemars::schema_for!(PillEmpty)),
+            Capability::Desktop,
+            120_000,
+        ),
+        (
             "appearance.set_mode",
             schema(schemars::schema_for!(AppearanceSet)),
             Capability::Desktop,
@@ -516,6 +522,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         ),
         ("color_picker.pick", json!({}), json!({"changed":true})),
         ("wallpaper.next", json!({}), json!({"changed":true})),
+        ("wallpaper.previous", json!({}), json!({"changed":true})),
         (
             "appearance.set_mode",
             json!({"mode":"auto"}),
@@ -616,7 +623,28 @@ mod tests {
         );
         assert!(serde_json::from_value::<ScreenshotCapture>(json!({"mode":"area"})).is_err());
         assert!(serde_json::from_value::<AppearanceSet>(json!({"mode":"auto"})).is_ok());
-        assert_eq!(methods().len(), 14);
+        let methods = methods();
+        assert_eq!(methods.len(), 15);
+        assert_eq!(
+            methods.keys().map(String::as_str).collect::<Vec<_>>(),
+            [
+                "airplane.set",
+                "appearance.set_mode",
+                "audio.set_default",
+                "audio.set_mute",
+                "audio.set_volume",
+                "color_picker.pick",
+                "keyboard_light.set",
+                "night_light.set",
+                "power.set_profile",
+                "recorder.start",
+                "recorder.stop",
+                "screenshot.capture",
+                "stay_awake.set",
+                "wallpaper.next",
+                "wallpaper.previous",
+            ]
+        );
         assert!(AudioSetDefault {
             node: "alsa_output.pci-0000_00_1f.3.analog-stereo".into()
         }
@@ -630,7 +658,7 @@ mod tests {
         assert!(
             serde_json::from_value::<AudioSetDefault>(json!({"node":"x","target":"sink"})).is_err()
         );
-        assert!(methods().values().all(|m| m.v == 1 && m.timeout <= 120_000));
+        assert!(methods.values().all(|m| m.v == 1 && m.timeout <= 120_000));
     }
     #[test]
     fn state_bounds() {

@@ -645,6 +645,237 @@ fn appearance_and_wallpaper_use_the_existing_commands() {
 }
 
 #[test]
+fn wallpaper_previous_respects_topic_readiness_and_uses_the_existing_pool_selector() {
+    run(async {
+        let f = Fixture::new();
+        let env = f.env();
+        let settings =
+            crate::daemon::settings::Service::load(f.hub.clone(), env.paths.clone(), None)
+                .await
+                .unwrap();
+        f.hub.borrow_mut().settings = Some(settings);
+        f.hub
+            .borrow_mut()
+            .wallpaper_history
+            .set_readiness(true, false);
+        let wallpaper_dir = env.paths.state.join("wallpaper");
+        std::fs::create_dir_all(&env.paths.home).unwrap();
+        std::fs::create_dir_all(&wallpaper_dir).unwrap();
+        let current_poster = env.paths.home.join("current.png");
+        let next_poster = env.paths.home.join("next.png");
+        image::DynamicImage::new_rgb8(2, 2)
+            .save(&current_poster)
+            .unwrap();
+        image::DynamicImage::new_rgb8(3, 3)
+            .save(&next_poster)
+            .unwrap();
+        let mut presentation: Value = serde_json::from_str(include_str!(
+            "../../../../../nacre/shell-tools/reference-style.json"
+        ))
+        .unwrap();
+        presentation["poster"] = json!(current_poster);
+        presentation["mode"] = json!("dark");
+        std::fs::write(
+            env.paths.state.join("presentation.json"),
+            serde_json::to_vec(&presentation).unwrap(),
+        )
+        .unwrap();
+        let write_media = |path: &str, poster: &std::path::Path| {
+            std::fs::write(
+                wallpaper_dir.join("media.json"),
+                json!({"path":path,"poster":poster,"dynamic":false,"appliedAtMs":1}).to_string(),
+            )
+            .unwrap();
+            std::fs::write(
+                wallpaper_dir.join("last.txt"),
+                format!("{}\n", poster.display()),
+            )
+            .unwrap();
+        };
+        write_media("/w/b.png", &current_poster);
+        super::super::active_wallpaper::initial(&f.hub).unwrap();
+        f.hub
+            .borrow_mut()
+            .publish(
+                "compositor",
+                json!({"available":true,"outputs":{"DP-1":{}}}),
+            )
+            .unwrap();
+        f.hub
+            .borrow_mut()
+            .wallpaper_history
+            .committed(Some("/w/a.png"));
+        super::super::active_wallpaper::Producer::default()
+            .refresh(&f.hub, &env.paths)
+            .unwrap();
+        assert_eq!(
+            f.hub
+                .borrow()
+                .snapshot(super::super::active_wallpaper::TOPIC)
+                .unwrap()["previous_available"],
+            true
+        );
+
+        // media.json may lead presentation.json during a selection. Until its poster
+        // is the published pair, navigation fails closed and history remains unchanged.
+        write_media("/w/c.png", &next_poster);
+        super::super::active_wallpaper::Producer::default()
+            .refresh(&f.hub, &env.paths)
+            .unwrap();
+        assert_eq!(f.hub.borrow().wallpaper_history.current(), Some("/w/b.png"));
+        assert_eq!(
+            f.hub
+                .borrow()
+                .wallpaper_history
+                .entries()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["/w/a.png"]
+        );
+        assert!(!f
+            .hub
+            .borrow()
+            .snapshot(super::super::active_wallpaper::TOPIC)
+            .unwrap()["previous_available"]
+            .as_bool()
+            .unwrap_or(false));
+        assert!(!wallpaper_previous(&f.hub, &env).await.unwrap());
+        assert!(!f.text("engine.log").contains("wallpaper-media select"));
+
+        write_media("/w/b.png", &current_poster);
+        super::super::active_wallpaper::Producer::default()
+            .refresh(&f.hub, &env.paths)
+            .unwrap();
+        assert_eq!(
+            f.hub
+                .borrow()
+                .snapshot(super::super::active_wallpaper::TOPIC)
+                .unwrap()["previous_available"],
+            true
+        );
+        std::fs::write(
+            f.path("catalog.json"),
+            json!({"entries":[
+                {"path":"/w/a.png","poster":"/w/a.png","name":"a","dynamic":false,"animated":false,"preview":null,"thumbnail":null},
+                {"path":"/w/b.png","poster":"/w/b.png","name":"b","dynamic":false,"animated":false,"preview":null,"thumbnail":null}
+            ]}).to_string(),
+        )
+        .unwrap();
+        script(
+            &f.path("engine"),
+            &format!(
+                r#"d='{}'
+st='{}'
+poster='{}'
+case "$2" in
+  catalog)
+    touch "$d/catalog-started"
+    while [ -f "$d/block-catalog" ] && [ ! -f "$d/release-catalog" ]; do sleep 0.01; done
+    cat "$d/catalog.json"
+    ;;
+  select)
+    echo "$3" >> "$d/selects"
+    printf '{{"error":null,"path":"%s","poster":"%s","name":"n","dynamic":false,"animated":false,"preview":null,"thumbnail":null}}\n' "$3" "$3"
+    printf '{{"path":"%s","poster":"%s","dynamic":false,"appliedAtMs":1}}' "$3" "$poster" > "$st/media.json"
+    printf '%s\n' "$poster" > "$st/last.txt"
+    ;;
+esac
+"#,
+                f.path("engine").parent().unwrap().display(),
+                wallpaper_dir.display(),
+                current_poster.display(),
+            ),
+        );
+        std::fs::write(f.path("block-catalog"), "").unwrap();
+        let race_hub = f.hub.clone();
+        let race_env = f.env();
+        let blocked_navigation =
+            tokio::task::spawn_local(async move { wallpaper_previous(&race_hub, &race_env).await });
+        for _ in 0..200 {
+            if f.path("catalog-started").exists() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(
+            f.path("catalog-started").exists(),
+            "catalog request started"
+        );
+        super::super::active_wallpaper::set_rotation_readiness(&f.hub, true, true).unwrap();
+        std::fs::write(f.path("release-catalog"), "").unwrap();
+        assert!(!blocked_navigation.await.unwrap().unwrap());
+        assert!(
+            f.text("selects").is_empty(),
+            "lock during catalog lookup prevents selection"
+        );
+        super::super::active_wallpaper::set_rotation_readiness(&f.hub, true, false).unwrap();
+
+        assert!(wallpaper_previous(&f.hub, &env).await.unwrap());
+        assert_eq!(f.text("selects").trim(), "/w/a.png");
+        assert_eq!(f.hub.borrow().wallpaper_history.current(), Some("/w/a.png"));
+        assert!(f.hub.borrow().wallpaper_history.entries().is_empty());
+
+        std::fs::write(
+            f.path("catalog.json"),
+            json!({"entries":[
+                {"path":"/w/a.png","poster":"/w/a.png","name":"a","dynamic":false,"animated":false,"preview":null,"thumbnail":null}
+            ]}).to_string(),
+        )
+        .unwrap();
+        assert!(!wallpaper_previous(&f.hub, &env).await.unwrap());
+        assert!(
+            !f.hub
+                .borrow()
+                .snapshot(super::super::active_wallpaper::TOPIC)
+                .unwrap()["previous_available"]
+                .as_bool()
+                .unwrap_or(false),
+            "a newly observed singleton catalog immediately disables rotation"
+        );
+        std::fs::write(
+            f.path("catalog.json"),
+            json!({"entries":[
+                {"path":"/w/a.png","poster":"/w/a.png","name":"a","dynamic":false,"animated":false,"preview":null,"thumbnail":null},
+                {"path":"/w/b.png","poster":"/w/b.png","name":"b","dynamic":false,"animated":false,"preview":null,"thumbnail":null}
+            ]}).to_string(),
+        )
+        .unwrap();
+        super::super::active_wallpaper::set_rotation_readiness(&f.hub, true, false).unwrap();
+
+        std::fs::remove_file(f.path("release-catalog")).unwrap();
+        std::fs::remove_file(f.path("catalog-started")).unwrap();
+        let race_hub = f.hub.clone();
+        let race_env = f.env();
+        let blocked_next =
+            tokio::task::spawn_local(async move { wallpaper_next(&race_hub, &race_env).await });
+        for _ in 0..200 {
+            if f.path("catalog-started").exists() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        assert!(
+            f.path("catalog-started").exists(),
+            "next catalog request started"
+        );
+        super::super::active_wallpaper::set_rotation_readiness(&f.hub, true, true).unwrap();
+        std::fs::write(f.path("release-catalog"), "").unwrap();
+        assert!(!blocked_next.await.unwrap().unwrap());
+        assert_eq!(f.text("selects").trim(), "/w/a.png");
+        super::super::active_wallpaper::set_rotation_readiness(&f.hub, true, false).unwrap();
+
+        super::super::active_wallpaper::unavailable(&f.hub).unwrap();
+        assert!(!wallpaper_previous(&f.hub, &env).await.unwrap());
+        assert_eq!(
+            f.text("selects").lines().count(),
+            1,
+            "unavailable wallpaper does not navigate"
+        );
+    });
+}
+
+#[test]
 fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
     run(async {
         let f = Fixture::new();
@@ -672,9 +903,9 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
             assert!(full.iter().any(|m| m == name), "{name} in {full:?}");
         }
         // Wallpaper and appearance need the settings service, absent in this fixture.
-        assert!(!full
-            .iter()
-            .any(|m| m == "wallpaper.next" || m == "appearance.set_mode"));
+        assert!(!full.iter().any(|m| m == "wallpaper.next"
+            || m == "wallpaper.previous"
+            || m == "appearance.set_mode"));
         f.without(&["wf-recorder", "grim", "hyprpicker", "systemd-inhibit"]);
         let reduced = all(&f);
         for name in [
@@ -712,6 +943,7 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
             ("power.set_profile", json!({"profile":"balanced"})),
             ("color_picker.pick", json!({})),
             ("wallpaper.next", json!({})),
+            ("wallpaper.previous", json!({})),
         ] {
             let error = f.call(method, params).await.unwrap_err();
             assert_eq!(

@@ -188,7 +188,7 @@ fn backend_present(hub: &Hub, env: &Env, method: &str) -> bool {
         }
         "screenshot.capture" => env.has("grim") && env.has("slurp"),
         "color_picker.pick" => env.has("hyprpicker"),
-        "wallpaper.next" => {
+        "wallpaper.next" | "wallpaper.previous" => {
             hub.settings.is_some() && hub.snapshot_ref(super::active_wallpaper::TOPIC).is_some()
         }
         "appearance.set_mode" => hub.settings.is_some(),
@@ -222,6 +222,7 @@ pub fn handles(method: &str) -> bool {
             | "screenshot.capture"
             | "color_picker.pick"
             | "wallpaper.next"
+            | "wallpaper.previous"
             | "appearance.set_mode"
     )
 }
@@ -396,6 +397,10 @@ pub async fn dispatch(
         "wallpaper.next" => {
             let _: PillEmpty = serde_json::from_value(params).map_err(|_| invalid())?;
             json!({"changed":wallpaper_next(&hub, &env).await?})
+        }
+        "wallpaper.previous" => {
+            let _: PillEmpty = serde_json::from_value(params).map_err(|_| invalid())?;
+            json!({"changed":wallpaper_previous(&hub, &env).await?})
         }
         "appearance.set_mode" => {
             let request: AppearanceSet = serde_json::from_value(params).map_err(|_| invalid())?;
@@ -853,23 +858,154 @@ async fn read_appearance(hub: &Shared) -> Option<Appearance> {
 /// The QML `advanceRotation(true)`: the next wallpaper of the configured kind, shuffled or in
 /// order, through the same selection command the picker and the rotation use.
 async fn wallpaper_next(hub: &Shared, env: &Env) -> std::result::Result<bool, Failure> {
+    let has_active_topic = hub
+        .borrow()
+        .snapshot(super::active_wallpaper::TOPIC)
+        .is_some();
+    if has_active_topic {
+        let available = hub
+            .borrow()
+            .snapshot(super::active_wallpaper::TOPIC)
+            .and_then(|data| {
+                serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok()
+            })
+            .is_some_and(|state| state.available && !state.stale);
+        if !available {
+            return Ok(false);
+        }
+        super::active_wallpaper::Producer::default()
+            .refresh(hub, &env.paths)
+            .map_err(|_| action_error())?;
+    }
+    let active = hub
+        .borrow()
+        .snapshot(super::active_wallpaper::TOPIC)
+        .and_then(|data| {
+            serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok()
+        });
+    if active
+        .as_ref()
+        .is_some_and(|state| !state.available || state.stale || !state.previous_available)
+    {
+        return Ok(false);
+    }
     let now = chrono::Utc::now().timestamp_millis();
     let plan = behaviours::read_plan(hub, &env.paths, now)
         .await
         .map_err(|_| unavailable("Wallpaper settings are unavailable"))?;
+    if active.is_some()
+        && super::active_wallpaper::committed_source(hub).as_deref() != Some(plan.current.as_str())
+    {
+        super::active_wallpaper::mark_source_unstable(hub).map_err(|_| action_error())?;
+        return Ok(false);
+    }
     let pool = behaviours::catalog_pool(&env.engine, &plan.kind)
         .await
         .ok_or_else(|| unavailable("The wallpaper library is unavailable"))?;
+    if pool.len() < 2 {
+        super::active_wallpaper::update_pool_readiness(hub, false).map_err(|_| action_error())?;
+        return Ok(false);
+    }
+    let selection = super::active_wallpaper::SelectionGuard::acquire_tracked(hub)?;
+    if active.is_some() && !super::active_wallpaper::selection_environment_ready(hub) {
+        return Ok(false);
+    }
+    if active.is_some()
+        && super::active_wallpaper::committed_source(hub).as_deref() != Some(plan.current.as_str())
+    {
+        super::active_wallpaper::mark_source_unstable(hub).map_err(|_| action_error())?;
+        return Ok(false);
+    }
     let random = (uuid::Uuid::new_v4().as_u128() >> 75) as f64 / (1u64 << 53) as f64;
     let (choice, _) = behaviours::rotation_next(&pool, &plan.current, plan.shuffle, &[], random);
     let Some(path) = choice else {
         return Ok(false);
     };
-    if behaviours::select(&env.engine, &path).await {
+    let selected = behaviours::select(&env.engine, &path).await;
+    drop(selection);
+    if selected {
+        if hub
+            .borrow()
+            .snapshot(super::active_wallpaper::TOPIC)
+            .is_some()
+        {
+            super::active_wallpaper::Producer::default()
+                .refresh(hub, &env.paths)
+                .map_err(|_| action_error())?;
+        }
         Ok(true)
     } else {
         Err(action_error())
     }
+}
+
+/// QML `previousWallpaper()`: traverse the committed, bounded history or wrap
+/// to the preceding item in the existing behavior worker's configured pool.
+async fn wallpaper_previous(hub: &Shared, env: &Env) -> std::result::Result<bool, Failure> {
+    let was_available = hub
+        .borrow()
+        .snapshot(super::active_wallpaper::TOPIC)
+        .and_then(|data| {
+            serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok()
+        })
+        .is_some_and(|state| state.available && !state.stale);
+    if !was_available {
+        return Ok(false);
+    }
+    super::active_wallpaper::Producer::default()
+        .refresh(hub, &env.paths)
+        .map_err(|_| action_error())?;
+    let state: nacre_protocol::wallpaper::WallpaperActive = hub
+        .borrow()
+        .snapshot(super::active_wallpaper::TOPIC)
+        .and_then(|data| serde_json::from_value(data).ok())
+        .ok_or_else(|| unavailable("Wallpaper is unavailable"))?;
+    if !state.available || state.stale || !state.previous_available {
+        return Ok(false);
+    }
+    // Check before tracked admission marks the topic temporarily unavailable.
+    let selection = super::active_wallpaper::SelectionGuard::acquire_tracked(hub)?;
+    let plan = behaviours::read_plan(hub, &env.paths, chrono::Utc::now().timestamp_millis())
+        .await
+        .map_err(|_| unavailable("Wallpaper settings are unavailable"))?;
+    let Some(current) = super::active_wallpaper::committed_source(hub) else {
+        super::active_wallpaper::mark_source_unstable(hub).map_err(|_| action_error())?;
+        return Ok(false);
+    };
+    if current != plan.current {
+        super::active_wallpaper::mark_source_unstable(hub).map_err(|_| action_error())?;
+        return Ok(false);
+    }
+    let Some(pool) = behaviours::catalog_pool(&env.engine, &plan.kind).await else {
+        super::active_wallpaper::update_pool_readiness(hub, false).map_err(|_| action_error())?;
+        return Err(unavailable("The wallpaper library is unavailable"));
+    };
+    if pool.len() < 2 {
+        super::active_wallpaper::update_pool_readiness(hub, false).map_err(|_| action_error())?;
+        return Ok(false);
+    }
+    if !super::active_wallpaper::selection_environment_ready(hub) {
+        return Ok(false);
+    }
+    if super::active_wallpaper::committed_source(hub).as_deref() != Some(current.as_str()) {
+        super::active_wallpaper::mark_source_unstable(hub).map_err(|_| action_error())?;
+        return Ok(false);
+    }
+    let Some(target) = super::active_wallpaper::previous_target(hub, &pool, &current) else {
+        super::active_wallpaper::update_pool_readiness(hub, false).map_err(|_| action_error())?;
+        return Ok(false);
+    };
+    let selected = behaviours::select(&env.engine, &target).await;
+    if !selected {
+        super::active_wallpaper::previous_failed(hub, &target);
+        drop(selection);
+        return Err(action_error());
+    }
+    drop(selection);
+    super::active_wallpaper::Producer::default()
+        .refresh(hub, &env.paths)
+        .map_err(|_| action_error())?;
+    Ok(true)
 }
 
 // ----------------------------------------------------------------- state

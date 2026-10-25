@@ -28,5 +28,7 @@
 {"t":"ret","id":512,"ok":{"changed":true}}
 {"t":"call","id":513,"m":"wallpaper.next","p":{}}
 {"t":"ret","id":513,"ok":{"changed":true}}
-{"t":"call","id":514,"m":"appearance.set_mode","p":{"mode":"auto"}}
+{"t":"call","id":514,"m":"wallpaper.previous","p":{}}
 {"t":"ret","id":514,"ok":{"changed":true}}
+{"t":"call","id":515,"m":"appearance.set_mode","p":{"mode":"auto"}}
+{"t":"ret","id":515,"ok":{"changed":true}}

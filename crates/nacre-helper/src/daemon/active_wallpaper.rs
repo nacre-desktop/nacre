@@ -115,19 +115,36 @@ thread_local! {
     static SELECTION_BUSY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
-struct SelectionGuard;
+pub(super) struct SelectionGuard {
+    refresh_readiness: Option<Shared>,
+}
 impl SelectionGuard {
-    fn acquire() -> std::result::Result<Self, Failure> {
+    pub(super) fn acquire() -> std::result::Result<Self, Failure> {
         if SELECTION_BUSY.with(|busy| busy.replace(true)) {
             Err(failure(ErrorCode::Busy, "Wallpaper selection is busy", true).dispatch_state(false))
         } else {
-            Ok(Self)
+            Ok(Self {
+                refresh_readiness: None,
+            })
         }
+    }
+    pub(super) fn acquire_tracked(hub: &Shared) -> std::result::Result<Self, Failure> {
+        let mut selection = Self::acquire()?;
+        selection.refresh_readiness = Some(hub.clone());
+        refresh_previous_availability(hub)
+            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        Ok(selection)
+    }
+    pub(super) fn is_busy() -> bool {
+        SELECTION_BUSY.with(|busy| busy.get())
     }
 }
 impl Drop for SelectionGuard {
     fn drop(&mut self) {
         SELECTION_BUSY.with(|busy| busy.set(false));
+        if let Some(hub) = &self.refresh_readiness {
+            let _ = refresh_previous_availability(hub);
+        }
     }
 }
 const RECORD_BYTES: u64 = 128 * 1024;
@@ -389,12 +406,58 @@ fn read_pair(
     Ok((pair, fingerprint))
 }
 
+/// Return QML's `actualCurrent` source path rather than the daemon topic's still poster path.
+fn selected_path(paths: &Paths, pair: &ActiveWallpaper) -> Option<String> {
+    let media_file = private_file(&paths.state.join("wallpaper/media.json"), RECORD_BYTES).ok();
+    let selected = if let Some(file) = media_file {
+        let mut bytes = Vec::new();
+        file.take(RECORD_BYTES + 1).read_to_end(&mut bytes).ok()?;
+        if bytes.len() as u64 > RECORD_BYTES {
+            return None;
+        }
+        let media: Value = serde_json::from_slice(&bytes).ok()?;
+        if media["poster"].as_str() != Some(pair.path.as_str()) {
+            // The selection record can lead presentation.json during a commit. Do not
+            // treat that new selection as history until its poster is actually active.
+            return None;
+        }
+        media["path"].as_str().map(str::to_owned)
+    } else {
+        private_file(&paths.state.join("wallpaper/last.txt"), 4097)
+            .ok()
+            .and_then(|file| {
+                let mut bytes = Vec::new();
+                file.take(4097).read_to_end(&mut bytes).ok()?;
+                if bytes.len() > 4096 {
+                    return None;
+                }
+                String::from_utf8(bytes)
+                    .ok()
+                    .map(|path| path.trim().to_owned())
+            })
+    };
+    selected
+        .or_else(|| pair.motion.as_ref().map(|motion| motion.path.clone()))
+        .or_else(|| Some(pair.path.clone()))
+        .filter(|path| {
+            !path.is_empty()
+                && path.len() <= 4096
+                && path.starts_with('/')
+                && !path.contains('\0')
+                && !path.contains("://")
+                && !Path::new(path)
+                    .components()
+                    .any(|component| matches!(component, Component::ParentDir))
+        })
+}
+
 pub fn initial(hub: &Shared) -> Result<()> {
     hub.borrow_mut().publish(
         TOPIC,
         serde_json::to_value(WallpaperActive {
             available: false,
             stale: false,
+            previous_available: false,
             revision: 0,
             current: None,
             outputs: BTreeMap::new(),
@@ -402,6 +465,98 @@ pub fn initial(hub: &Shared) -> Result<()> {
         })?,
     )?;
     Ok(())
+}
+
+/// Update readiness from the existing behavior worker's configured wallpaper pool and
+/// session watcher; history itself remains private to the Hub.
+pub(super) fn set_rotation_readiness(hub: &Shared, pool_ready: bool, sleeping: bool) -> Result<()> {
+    hub.borrow_mut()
+        .wallpaper_history
+        .set_readiness(pool_ready, sleeping);
+    refresh_previous_availability(hub)
+}
+
+pub(super) fn update_pool_readiness(hub: &Shared, pool_ready: bool) -> Result<()> {
+    let sleeping = hub.borrow().wallpaper_history.sleeping();
+    set_rotation_readiness(hub, pool_ready, sleeping)
+}
+
+/// Recheck daemon-owned rotation gates after an async manual-selection lookup.
+/// This intentionally ignores SelectionGuard's own busy bit; the caller owns it.
+pub(super) fn selection_environment_ready(hub: &Shared) -> bool {
+    let hub = hub.borrow();
+    hub.settings.is_some()
+        && hub.wallpaper_history.pool_ready()
+        && !hub.wallpaper_history.sleeping()
+}
+
+pub(super) fn refresh_previous_availability(hub: &Shared) -> Result<()> {
+    let Some(data) = hub.borrow().snapshot(TOPIC) else {
+        return Ok(());
+    };
+    let mut state: WallpaperActive = serde_json::from_value(data)?;
+    let (pool_ready, sleeping, has_settings, committed_source) = {
+        let hub = hub.borrow();
+        (
+            hub.wallpaper_history.pool_ready(),
+            hub.wallpaper_history.sleeping(),
+            hub.settings.is_some(),
+            hub.wallpaper_history.current().is_some() && hub.wallpaper_history.selection_stable(),
+        )
+    };
+    state.previous_available = previous_available(
+        &state,
+        has_settings,
+        committed_source,
+        pool_ready,
+        sleeping,
+        SelectionGuard::is_busy(),
+    );
+    state.validate()?;
+    hub.borrow_mut()
+        .publish(TOPIC, serde_json::to_value(state)?)?;
+    Ok(())
+}
+
+fn previous_available(
+    state: &WallpaperActive,
+    has_settings: bool,
+    committed_source: bool,
+    pool_ready: bool,
+    sleeping: bool,
+    busy: bool,
+) -> bool {
+    state.available
+        && !state.stale
+        && state.current.is_some()
+        && has_settings
+        && committed_source
+        && pool_ready
+        && !sleeping
+        && !busy
+}
+
+pub(super) fn previous_target(hub: &Shared, pool: &[String], current: &str) -> Option<String> {
+    hub.borrow_mut().wallpaper_history.previous(pool, current)
+}
+
+pub(super) fn previous_failed(hub: &Shared, target: &str) {
+    hub.borrow_mut().wallpaper_history.selection_failed(target);
+}
+
+pub(super) fn committed_source(hub: &Shared) -> Option<String> {
+    let hub = hub.borrow();
+    hub.wallpaper_history
+        .selection_stable()
+        .then(|| hub.wallpaper_history.current().map(str::to_owned))
+        .flatten()
+}
+
+pub(super) fn mark_source_unstable(hub: &Shared) -> Result<()> {
+    hub.borrow_mut()
+        .wallpaper_history
+        .set_selection_stable(false);
+    refresh_previous_availability(hub)
 }
 
 #[derive(Default)]
@@ -431,6 +586,10 @@ impl Producer {
         let Some(outputs) = outputs else {
             state.available = false;
             state.stale = state.current.is_some();
+            state.previous_available = false;
+            hub.borrow_mut()
+                .wallpaper_history
+                .set_selection_stable(false);
             state.error = Some("Wallpaper outputs are unavailable".into());
             state.validate()?;
             hub.borrow_mut()
@@ -454,9 +613,20 @@ impl Producer {
                     }
                     self.fingerprint = Some(fingerprint);
                 }
+                let selected = selected_path(paths, &pair);
                 pair.revision = state.revision;
                 pair.palette_revision = state.revision;
                 state.current = Some(pair);
+                if let Some(selected) = selected.as_deref() {
+                    hub.borrow_mut().wallpaper_history.committed(Some(selected));
+                    hub.borrow_mut()
+                        .wallpaper_history
+                        .set_selection_stable(true);
+                } else {
+                    hub.borrow_mut()
+                        .wallpaper_history
+                        .set_selection_stable(false);
+                }
                 state.available = true;
                 state.stale = false;
                 state.error = None;
@@ -464,6 +634,10 @@ impl Producer {
             Err(_) => {
                 state.available = false;
                 state.stale = state.current.is_some();
+                state.previous_available = false;
+                hub.borrow_mut()
+                    .wallpaper_history
+                    .set_selection_stable(false);
                 state.error = Some("Wallpaper presentation is unavailable".into());
             }
         }
@@ -473,6 +647,24 @@ impl Producer {
                 .outputs
                 .extend(outputs.keys().map(|key| (key.clone(), pair.clone())));
         }
+        let (pool_ready, sleeping, has_settings, committed_source) = {
+            let hub = hub.borrow();
+            (
+                hub.wallpaper_history.pool_ready(),
+                hub.wallpaper_history.sleeping(),
+                hub.settings.is_some(),
+                hub.wallpaper_history.current().is_some()
+                    && hub.wallpaper_history.selection_stable(),
+            )
+        };
+        state.previous_available = previous_available(
+            &state,
+            has_settings,
+            committed_source,
+            pool_ready,
+            sleeping,
+            SelectionGuard::is_busy(),
+        );
         state.validate()?;
         hub.borrow_mut()
             .publish(TOPIC, serde_json::to_value(state)?)?;
@@ -488,6 +680,10 @@ pub fn unavailable(hub: &Shared) -> Result<()> {
     )?;
     state.available = false;
     state.stale = state.current.is_some();
+    state.previous_available = false;
+    hub.borrow_mut()
+        .wallpaper_history
+        .set_selection_stable(false);
     state.error = Some("Wallpaper monitoring is unavailable".into());
     hub.borrow_mut()
         .publish(TOPIC, serde_json::to_value(state)?)?;
@@ -621,7 +817,7 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
 pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
     let (request, state) = activation_state(&hub, params)?;
     let _selection_guard = if request.id.is_some() {
-        Some(SelectionGuard::acquire()?)
+        Some(SelectionGuard::acquire_tracked(&hub)?)
     } else {
         None
     };
@@ -842,8 +1038,51 @@ mod tests {
     fn selection_action_admission_is_single_flight_and_releases_on_drop() {
         let guard = SelectionGuard::acquire().unwrap();
         assert!(SelectionGuard::acquire().is_err());
+        assert!(SelectionGuard::is_busy());
         drop(guard);
+        assert!(!SelectionGuard::is_busy());
         assert!(SelectionGuard::acquire().is_ok());
+    }
+
+    #[test]
+    fn previous_availability_requires_live_multi_item_ready_state() -> Result<()> {
+        let (_home, paths, hub) = fixture()?;
+        let mut producer = Producer::default();
+        producer.refresh(&hub, &paths)?;
+        let state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert!(previous_available(&state, true, true, true, false, false));
+        assert!(
+            !previous_available(&state, true, true, false, false, false),
+            "singleton pool"
+        );
+        assert!(
+            !previous_available(&state, true, false, true, false, false),
+            "source not committed"
+        );
+        assert!(
+            !previous_available(&state, true, true, true, true, false),
+            "locked or sleeping"
+        );
+        assert!(
+            !previous_available(&state, true, true, true, false, true),
+            "selection busy"
+        );
+        assert!(
+            !previous_available(&state, false, true, true, false, false),
+            "settings disconnected"
+        );
+        let mut unavailable_state = state;
+        unavailable_state.available = false;
+        unavailable_state.stale = true;
+        assert!(!previous_available(
+            &unavailable_state,
+            true,
+            true,
+            true,
+            false,
+            false
+        ));
+        Ok(())
     }
 
     #[test]
@@ -979,6 +1218,101 @@ mod tests {
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["stale"], false);
         Ok(())
     }
+
+    #[test]
+    fn history_commits_only_after_the_selected_poster_is_published() -> Result<()> {
+        let (_home, paths, hub) = fixture()?;
+        let wallpaper_dir = paths.state.join("wallpaper");
+        fs::create_dir_all(&wallpaper_dir)?;
+        fs::write(wallpaper_dir.join("last.txt"), "/pictures/first.png")?;
+        let mut producer = Producer::default();
+        producer.refresh(&hub, &paths)?;
+        assert_eq!(
+            hub.borrow().wallpaper_history.current(),
+            Some("/pictures/first.png")
+        );
+        assert!(hub.borrow().wallpaper_history.entries().is_empty());
+
+        let second = paths.home.join("second.png");
+        image::DynamicImage::new_rgb8(3, 3).save(&second)?;
+        let mut presentation: Value =
+            serde_json::from_slice(&fs::read(paths.state.join("presentation.json"))?)?;
+        fs::write(
+            wallpaper_dir.join("media.json"),
+            json!({"path":"/pictures/second.png","poster":second,"dynamic":false}).to_string(),
+        )?;
+        producer.refresh(&hub, &paths)?;
+        assert_eq!(
+            hub.borrow().wallpaper_history.current(),
+            Some("/pictures/first.png"),
+            "a newer media record cannot commit before its poster is presented"
+        );
+        assert!(hub.borrow().wallpaper_history.entries().is_empty());
+        assert!(!hub.borrow().wallpaper_history.selection_stable());
+
+        presentation["poster"] = json!(second);
+        fs::write(
+            paths.state.join("presentation.json"),
+            serde_json::to_vec(&presentation)?,
+        )?;
+        producer.refresh(&hub, &paths)?;
+        assert_eq!(
+            hub.borrow().wallpaper_history.current(),
+            Some("/pictures/second.png")
+        );
+        assert!(hub.borrow().wallpaper_history.selection_stable());
+        assert_eq!(
+            hub.borrow()
+                .wallpaper_history
+                .entries()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["/pictures/first.png"]
+        );
+
+        presentation["poster"] = json!(paths.home.join("missing.png"));
+        fs::write(
+            paths.state.join("presentation.json"),
+            serde_json::to_vec(&presentation)?,
+        )?;
+        fs::write(wallpaper_dir.join("last.txt"), "/pictures/failed.png")?;
+        assert!(producer.refresh(&hub, &paths).is_ok());
+        assert_eq!(
+            hub.borrow().wallpaper_history.current(),
+            Some("/pictures/second.png")
+        );
+        assert_eq!(
+            hub.borrow()
+                .wallpaper_history
+                .entries()
+                .iter()
+                .map(String::as_str)
+                .collect::<Vec<_>>(),
+            ["/pictures/first.png"]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn missing_optional_source_records_validated_static_presentation() -> Result<()> {
+        let (_home, paths, hub) = fixture()?;
+        assert!(!paths.state.join("wallpaper/media.json").exists());
+        assert!(!paths.state.join("wallpaper/last.txt").exists());
+
+        Producer::default().refresh(&hub, &paths)?;
+
+        let pair = hub.borrow().snapshot(TOPIC).unwrap();
+        let source = pair["current"]["path"].as_str().unwrap();
+        assert_eq!(
+            hub.borrow().wallpaper_history.current(),
+            Some(source),
+            "a validated static presentation remains the source fallback"
+        );
+        assert!(hub.borrow().wallpaper_history.selection_stable());
+        Ok(())
+    }
+
     #[test]
     fn private_paths_reject_symlinks_escapes_permissions_special_files_and_limits() -> Result<()> {
         let (home, paths, _hub) = fixture()?;

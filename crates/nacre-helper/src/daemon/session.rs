@@ -518,6 +518,7 @@ mod tests {
             ("screenshot.capture", json!({"mode":"region"})),
             ("color_picker.pick", json!({})),
             ("wallpaper.next", json!({})),
+            ("wallpaper.previous", json!({})),
             ("appearance.set_mode", json!({"mode":"dark"})),
             ("time.zones", json!({})),
             ("time.set_timezone", json!({"zone":"UTC"})),

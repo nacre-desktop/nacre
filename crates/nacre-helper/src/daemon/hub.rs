@@ -106,6 +106,9 @@ pub struct Hub {
     pub compositor: Option<super::compositor_control::Control>,
     pub settings: Option<Rc<super::settings::Service>>,
     pub ai_chat: Option<Rc<super::ai_chat::Host>>,
+    /// QML's bounded previous-wallpaper stack, updated only when the active
+    /// wallpaper producer observes a successful selection.
+    pub(super) wallpaper_history: super::behaviours::WallpaperHistory,
 }
 impl Hub {
     pub fn configure_spectrum(
@@ -175,6 +178,7 @@ impl Hub {
             compositor: None,
             settings: None,
             ai_chat: None,
+            wallpaper_history: super::behaviours::WallpaperHistory::default(),
         }
     }
     pub fn shared(self) -> Shared {

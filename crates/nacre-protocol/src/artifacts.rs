@@ -363,17 +363,17 @@ fn wallpaper_active_exports() -> BTreeMap<String, String> {
             json!({"t":"ret","id":4,"ok":{"revision":1,"palette_revision":1,"path":"/cache/nacre/wallpaper-media/lake.png","file_identity":{"device":"1","inode":"2","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}}}),
         ].iter().map(|frame| serde_json::to_string(frame).expect("wallpaper catalogue transcript") + "\n").collect(),
     );
-    let out_state = json!({"available":true,"stale":false,"revision":1,"current":image,"outputs":{"DP-1":image},"error":null});
+    let out_state = json!({"available":true,"stale":false,"previous_available":true,"revision":1,"current":image,"outputs":{"DP-1":image},"error":null});
     let second = json!({"revision":2,"palette_revision":2,"path":"/home/user/Pictures/second.png","file_identity":{"device":"2049","inode":"123457","size":8192,"mtime_sec":1700000001,"mtime_nsec":2,"ctime_sec":1700000001,"ctime_nsec":2},"presentation":"crop","palette":{"mode":"light","colours":{"background":"#ffffff","onSurface":"#111111","primary":"#2255aa"}},"motion":{"kind":"video","path":"/home/user/Videos/clip.mp4","file_identity":{"device":"2049","inode":"123458","size":402653184,"mtime_sec":1700000001,"mtime_nsec":3,"ctime_sec":1700000001,"ctime_nsec":3}}});
     let frames = [
-        json!({"t":"snap","topic":"wallpaper.active","seq":0,"data":{"available":false,"stale":false,"revision":0,"current":null,"outputs":{}}}),
+        json!({"t":"snap","topic":"wallpaper.active","seq":0,"data":{"available":false,"stale":false,"previous_available":false,"revision":0,"current":null,"outputs":{}}}),
         json!({"t":"patch","topic":"wallpaper.active","base":0,"seq":1,"data":out_state.clone()}),
         json!({"t":"call","id":1,"m":"wallpaper.activate","p":{"revision":1}}),
         json!({"t":"ret","id":1,"ok":image.clone()}),
         json!({"t":"patch","topic":"wallpaper.active","base":1,"seq":2,"data":{"revision":2,"current":second.clone(),"outputs":{"DP-1":second}}}),
         json!({"t":"call","id":2,"m":"wallpaper.activate","p":{"revision":1}}),
         json!({"t":"ret","id":2,"err":{"code":"stale_revision","message":"Wallpaper changed; refresh active state","retry":true}}),
-        json!({"t":"patch","topic":"wallpaper.active","base":2,"seq":3,"data":{"available":false,"stale":true,"error":"Wallpaper source temporarily unavailable"}}),
+        json!({"t":"patch","topic":"wallpaper.active","base":2,"seq":3,"data":{"available":false,"stale":true,"previous_available":false,"error":"Wallpaper source temporarily unavailable"}}),
         json!({"t":"call","id":3,"m":"wallpaper.activate","p":{"revision":2}}),
         json!({"t":"ret","id":3,"err":{"code":"stale_revision","message":"Wallpaper unavailable; refresh active state","retry":true}}),
         json!({"t":"patch","topic":"wallpaper.active","base":3,"seq":4,"data":{"available":true,"stale":false,"error":null}}),

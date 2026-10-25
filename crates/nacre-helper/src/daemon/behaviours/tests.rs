@@ -85,6 +85,108 @@ fn rotation_choice_matches_the_qml_script() {
 }
 
 #[test]
+fn wallpaper_history_records_only_committed_selection_and_traverses_like_qml() {
+    let pool = strings(&["/a", "/b", "/c"]);
+    let mut history = WallpaperHistory::default();
+    history.committed(Some("/a"));
+    history.committed(Some("/b"));
+    history.committed(Some("/c"));
+    assert_eq!(
+        history
+            .entries
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["/a", "/b"]
+    );
+
+    let target = history.previous(&pool, "/c").unwrap();
+    assert_eq!(target, "/b");
+    // A failed helper selection leaves both the current path and history untouched.
+    history.selection_failed(&target);
+    assert_eq!(history.current.as_deref(), Some("/c"));
+    assert_eq!(
+        history
+            .entries
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["/a", "/b"]
+    );
+
+    let target = history.previous(&pool, "/c").unwrap();
+    history.committed(Some(&target));
+    assert_eq!(history.current.as_deref(), Some("/b"));
+    assert_eq!(
+        history
+            .entries
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["/a"]
+    );
+    let target = history.previous(&pool, "/b").unwrap();
+    assert_eq!(target, "/a");
+    history.committed(Some(&target));
+    assert!(
+        history.entries.is_empty(),
+        "walking backwards removes traversed entries"
+    );
+}
+
+#[test]
+fn wallpaper_history_filters_pool_wraps_without_history_and_is_bounded() {
+    let mut history = WallpaperHistory::default();
+    history.committed(Some("/a"));
+    history.committed(Some("/b"));
+    history.committed(Some("/c"));
+    history.committed(Some("/d"));
+    let filtered_pool = strings(&["/a", "/c", "/d"]);
+    let target = history.previous(&filtered_pool, "/d").unwrap();
+    assert_eq!(target, "/c", "invalid pool entries are skipped");
+    history.committed(Some(&target));
+    assert_eq!(
+        history
+            .entries
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>(),
+        ["/a"]
+    );
+
+    let mut empty = WallpaperHistory::default();
+    empty.committed(Some("/b"));
+    assert!(
+        empty.previous(&strings(&["/b"]), "/b").is_none(),
+        "singleton pools are unavailable"
+    );
+    let target = empty.previous(&strings(&["/a", "/b", "/c"]), "/b").unwrap();
+    assert_eq!(
+        target, "/a",
+        "empty history wraps to the preceding pool entry"
+    );
+    empty.selection_failed(&target);
+    assert!(
+        empty.entries.is_empty(),
+        "failed fallback does not create history"
+    );
+    empty.committed(Some(&target));
+    assert_eq!(
+        empty.entries.iter().map(String::as_str).collect::<Vec<_>>(),
+        ["/b"]
+    );
+
+    let mut bounded = WallpaperHistory::default();
+    bounded.committed(Some("/0"));
+    for index in 1..=101 {
+        bounded.committed(Some(&format!("/{index}")));
+    }
+    assert_eq!(bounded.entries.len(), 100);
+    assert_eq!(bounded.entries.front().map(String::as_str), Some("/1"));
+    assert_eq!(bounded.entries.back().map(String::as_str), Some("/100"));
+}
+
+#[test]
 fn power_profile_follows_the_enabled_source_setting() {
     let data = json!({"enabled":true,"ac":"balanced","battery":"power-saver"});
     assert_eq!(desired_profile(Some(&data), false), "balanced");
@@ -199,7 +301,7 @@ impl Fixture {
         let dir = home.path().join("engine");
         std::fs::create_dir_all(&dir).unwrap();
         let script = format!(
-            "#!/bin/sh\ndir='{}'\nst='{}'\ncase \"$2\" in\n  catalog) cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo \"$3\" > \"$st/last.txt\"; printf '{{\"path\":\"%s\",\"poster\":\"%s\",\"appliedAtMs\":%s}}' \"$3\" \"$3\" \"$(cat \"$dir/now\")\" > \"$st/media.json\"; echo '{}' | sed \"s|PATH|$3|g\" ;;\n  session) seen=0; while :; do total=$(wc -l < \"$dir/session\"); [ \"$total\" -gt \"$seen\" ] && tail -n +$((seen+1)) \"$dir/session\" && seen=$total; sleep 0.05; done ;;\nesac\n",
+            "#!/bin/sh\ndir='{}'\nst='{}'\ncase \"$2\" in\n  catalog) touch \"$dir/catalog-started\"; cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo \"$3\" > \"$st/last.txt\"; printf '{{\"path\":\"%s\",\"poster\":\"%s\",\"appliedAtMs\":%s}}' \"$3\" \"$3\" \"$(cat \"$dir/now\")\" > \"$st/media.json\"; echo '{}' | sed \"s|PATH|$3|g\" ;;\n  session) touch \"$dir/session-started\"; seen=0; while :; do [ -f \"$dir/session-end\" ] && exit 0; total=$(wc -l < \"$dir/session\"); [ \"$total\" -gt \"$seen\" ] && tail -n +$((seen+1)) \"$dir/session\" && seen=$total; sleep 0.05; done ;;\nesac\n",
             dir.display(),
             paths.state.join("wallpaper").display(),
             ENTRY
@@ -366,6 +468,10 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
             fixture.parked(2_300_000).await;
             // Fewer than two wallpapers pause until the library changes.
             fixture.catalog(&["/w/a.png"]);
+            hub.borrow_mut()
+                .publish("wallpaper.watch", json!({"generation":2}))
+                .unwrap();
+            quiet().await;
             fixture.advance(2_300_000);
             quiet().await;
             assert_eq!(fixture.selects().len(), 4);
@@ -391,6 +497,125 @@ async fn disabled_rotation_does_nothing() {
             quiet().await;
             assert!(fixture.selects().is_empty());
             task.abort();
+        })
+        .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
+    let fixture = Fixture::new(json!({"rotationEnabled":false,"rotationMinutes":5}));
+    let (hub, _settings) = hub_with_settings(&fixture.paths).await;
+    hub.borrow_mut()
+        .wallpaper_history
+        .committed(Some("/fixture/current.png"));
+    hub.borrow_mut()
+        .wallpaper_history
+        .set_selection_stable(true);
+    let pair = json!({
+        "revision":1,"palette_revision":1,"path":"/fixture/current.png",
+        "file_identity":{"device":"1","inode":"4","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
+        "presentation":"crop",
+        "palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}
+    });
+    hub.borrow_mut()
+        .publish(
+            super::super::active_wallpaper::TOPIC,
+            json!({"available":false,"stale":false,"previous_available":false,"revision":0,
+                "current":null,"outputs":{}}),
+        )
+        .unwrap();
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(rotation(
+                hub.clone(),
+                fixture.paths.clone(),
+                fixture.env(),
+            ));
+            quiet().await;
+            assert!(!fixture.dir.join("session-started").exists());
+            assert!(!fixture.dir.join("catalog-started").exists());
+
+            hub.borrow_mut()
+                .publish(
+                    super::super::active_wallpaper::TOPIC,
+                    json!({"available":true,"stale":false,"previous_available":false,"revision":1,
+                        "current":pair.clone(),"outputs":{"fixture":pair.clone()}}),
+                )
+                .unwrap();
+            eventually(|| fixture.dir.join("session-started").exists()).await;
+            eventually(|| fixture.dir.join("catalog-started").exists()).await;
+            eventually(|| {
+                hub.borrow()
+                    .snapshot(super::super::active_wallpaper::TOPIC)
+                    .is_some_and(|state| state["previous_available"] == true)
+            })
+            .await;
+
+            hub.borrow_mut()
+                .publish(
+                    super::super::active_wallpaper::TOPIC,
+                    json!({"available":false,"stale":true,"previous_available":false,"revision":1,
+                        "current":pair.clone(),"outputs":{"fixture":pair.clone()}}),
+                )
+                .unwrap();
+            eventually(|| {
+                hub.borrow()
+                    .snapshot(super::super::active_wallpaper::TOPIC)
+                    .is_some_and(|state| state["previous_available"] != true)
+            })
+            .await;
+            task.abort();
+        })
+        .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn ended_session_stream_clears_rotation_readiness() {
+    let fixture = Fixture::new(json!({"rotationEnabled":false,"rotationMinutes":5}));
+    let (hub, _settings) = hub_with_settings(&fixture.paths).await;
+    hub.borrow_mut()
+        .wallpaper_history
+        .committed(Some("/fixture/current.png"));
+    hub.borrow_mut()
+        .wallpaper_history
+        .set_selection_stable(true);
+    let pair = json!({
+        "revision":1,"palette_revision":1,"path":"/fixture/current.png",
+        "file_identity":{"device":"1","inode":"4","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
+        "presentation":"crop",
+        "palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}
+    });
+    hub.borrow_mut()
+        .publish(
+            super::super::active_wallpaper::TOPIC,
+            json!({"available":true,"stale":false,"previous_available":false,"revision":1,
+                "current":pair.clone(),"outputs":{"fixture":pair}}),
+        )
+        .unwrap();
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(rotation(
+                hub.clone(),
+                fixture.paths.clone(),
+                fixture.env(),
+            ));
+            eventually(|| fixture.dir.join("session-started").exists()).await;
+            eventually(|| {
+                hub.borrow()
+                    .snapshot(super::super::active_wallpaper::TOPIC)
+                    .is_some_and(|state| state["previous_available"] == true)
+            })
+            .await;
+
+            std::fs::write(fixture.dir.join("session-end"), "").unwrap();
+            eventually(|| task.is_finished()).await;
+            assert!(!hub
+                .borrow()
+                .snapshot(super::super::active_wallpaper::TOPIC)
+                .unwrap()["previous_available"]
+                .as_bool()
+                .unwrap_or(false));
+            assert!(task.await.unwrap().is_err());
         })
         .await;
 }

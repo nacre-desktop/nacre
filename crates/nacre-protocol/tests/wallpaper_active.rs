@@ -38,6 +38,19 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
         "outputs":{"DP-1":{"revision":1,"palette_revision":1,"path":"/home/user/wall.png","file_identity":{"device":"2049","inode":"123456","size":4096,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},"presentation":"crop","palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}}}
     })).unwrap();
     state.validate().unwrap();
+    assert!(!state.previous_available);
+    let mut stale_ready = state.clone();
+    stale_ready.available = false;
+    stale_ready.stale = true;
+    stale_ready.previous_available = true;
+    assert!(stale_ready.validate().is_err());
+    let mut previous_without_current = state.clone();
+    previous_without_current.current = None;
+    previous_without_current.outputs.clear();
+    previous_without_current.revision = 0;
+    previous_without_current.available = false;
+    previous_without_current.previous_available = true;
+    assert!(previous_without_current.validate().is_err());
     let mut unavailable = state.clone();
     unavailable.available = false;
     unavailable.stale = true;

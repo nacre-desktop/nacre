@@ -17,7 +17,7 @@ use futures_util::{
 use nacre_protocol::settings::{SettingsGet, SettingsPublish};
 use serde_json::{json, Value};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     path::{Path, PathBuf},
     process::Stdio,
     rc::Rc,
@@ -129,6 +129,58 @@ pub(super) async fn changed(
     }
 }
 
+async fn changed_topic(
+    notices: &mut tokio::sync::broadcast::Receiver<Notice>,
+    topics: &[&str],
+) -> Result<String> {
+    use tokio::sync::broadcast::error::RecvError;
+    loop {
+        match notices.recv().await {
+            Ok(Notice::Changed { topic, .. }) if topics.contains(&topic.as_str()) => {
+                return Ok(topic)
+            }
+            Ok(_) => {}
+            Err(RecvError::Lagged(_)) => return Ok(String::new()),
+            Err(RecvError::Closed) => return Err("Daemon notices ended".into()),
+        }
+    }
+}
+
+fn active_wallpaper_identity(hub: &Shared) -> Option<(bool, bool, u64)> {
+    hub.borrow()
+        .snapshot(super::active_wallpaper::TOPIC)
+        .and_then(|data| {
+            serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok()
+        })
+        .map(|state| (state.available, state.stale, state.revision))
+}
+
+async fn changed_wallpaper_state(
+    notices: &mut tokio::sync::broadcast::Receiver<Notice>,
+    hub: &Shared,
+    identity: &mut Option<(bool, bool, u64)>,
+) -> Result<()> {
+    loop {
+        let topic = changed_topic(
+            notices,
+            &[
+                "wallpaper.watch",
+                "settings.store.wallpaper-picker",
+                super::active_wallpaper::TOPIC,
+            ],
+        )
+        .await?;
+        if topic == super::active_wallpaper::TOPIC {
+            let updated = active_wallpaper_identity(hub);
+            if updated == *identity {
+                continue;
+            }
+            *identity = updated;
+        }
+        return Ok(());
+    }
+}
+
 // ------------------------------------------------------- wallpaper rotation
 
 /// QML `wallpaper-rotation.js` `pool`: the wallpapers a rotation kind may use.
@@ -209,6 +261,125 @@ pub(super) struct Plan {
     interval_ms: i64,
     anchor_ms: i64,
     pub(super) current: String,
+}
+
+/// QML's in-memory wallpaperHistory, shared by every daemon selection path.
+/// Paths remain private to the daemon and the stack never exceeds its QML limit.
+#[derive(Default)]
+pub(super) struct WallpaperHistory {
+    current: Option<String>,
+    entries: VecDeque<String>,
+    pending_previous: Option<PreviousTraversal>,
+    pool_ready: bool,
+    sleeping: bool,
+    selection_stable: bool,
+}
+struct PreviousTraversal {
+    target: String,
+    filtered: VecDeque<String>,
+    from_history: bool,
+}
+impl WallpaperHistory {
+    pub(super) fn set_readiness(&mut self, pool_ready: bool, sleeping: bool) {
+        self.pool_ready = pool_ready;
+        self.sleeping = sleeping;
+    }
+    pub(super) fn pool_ready(&self) -> bool {
+        self.pool_ready
+    }
+    pub(super) fn sleeping(&self) -> bool {
+        self.sleeping
+    }
+    pub(super) fn current(&self) -> Option<&str> {
+        self.current.as_deref()
+    }
+    pub(super) fn selection_stable(&self) -> bool {
+        self.selection_stable
+    }
+    pub(super) fn set_selection_stable(&mut self, stable: bool) {
+        self.selection_stable = stable;
+    }
+    #[cfg(test)]
+    pub(super) fn entries(&self) -> &VecDeque<String> {
+        &self.entries
+    }
+
+    /// Plan the QML previous operation without changing history until a selection commits.
+    pub(super) fn previous(&mut self, pool: &[String], current: &str) -> Option<String> {
+        if pool.len() < 2 {
+            return None;
+        }
+        let mut filtered: VecDeque<String> = self
+            .entries
+            .iter()
+            .filter(|path| pool.contains(path))
+            .cloned()
+            .collect();
+        while filtered.back().is_some_and(|path| path == current) {
+            filtered.pop_back();
+        }
+        let from_history = filtered.back().cloned();
+        let target = from_history.clone().unwrap_or_else(|| {
+            let index = pool
+                .iter()
+                .position(|path| path == current)
+                .map_or(-1, |i| i as isize);
+            let previous = (index - 1 + pool.len() as isize).rem_euclid(pool.len() as isize);
+            pool[previous as usize].clone()
+        });
+        self.pending_previous = Some(PreviousTraversal {
+            target: target.clone(),
+            filtered,
+            from_history: from_history.is_some(),
+        });
+        Some(target)
+    }
+
+    pub(super) fn selection_failed(&mut self, target: &str) {
+        if self
+            .pending_previous
+            .as_ref()
+            .is_some_and(|pending| pending.target == target)
+        {
+            self.pending_previous = None;
+        }
+    }
+
+    /// Record a presentation only after the wallpaper producer observes it.
+    pub(super) fn committed(&mut self, selected: Option<&str>) {
+        let Some(selected) = selected.filter(|path| path.len() <= 4096 && local_path(path)) else {
+            return;
+        };
+        let Some(previous) = self.current.replace(selected.to_owned()) else {
+            return;
+        };
+        if previous == selected {
+            return;
+        }
+        if let Some(traversal) = self.pending_previous.take() {
+            if traversal.target == selected {
+                self.entries = traversal.filtered;
+                if traversal.from_history {
+                    if let Some(index) = self.entries.iter().rposition(|path| path == selected) {
+                        // Match QML slice(0, lastIndexOf(target)): the target is removed too.
+                        self.entries.truncate(index);
+                    }
+                } else {
+                    self.push(previous);
+                }
+                return;
+            }
+        }
+        self.pending_previous = None;
+        self.push(previous);
+    }
+
+    fn push(&mut self, path: String) {
+        self.entries.push_back(path);
+        while self.entries.len() > 100 {
+            self.entries.pop_front();
+        }
+    }
 }
 
 /// Preferences come from the daemon's own `wallpaper-picker` store (the helper's
@@ -405,22 +576,65 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
     let mut session: Option<Session> = None;
     loop {
         let plan = read_plan(&hub, &paths, startup).await.ok();
-        if plan.as_ref().is_some_and(|plan| plan.enabled) && session.is_none() {
+        let active_wallpaper = hub
+            .borrow()
+            .snapshot(super::active_wallpaper::TOPIC)
+            .and_then(|data| {
+                serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok()
+            })
+            .is_some_and(|state| state.available && !state.stale);
+        let mut active_identity = active_wallpaper_identity(&hub);
+        let settings_ready = hub.borrow().settings.is_some();
+        super::active_wallpaper::set_rotation_readiness(&hub, false, paused)?;
+        let should_load_pool =
+            plan.as_ref().is_some_and(|plan| plan.enabled) || (active_wallpaper && settings_ready);
+        let pool = if should_load_pool {
+            if let Some(plan) = &plan {
+                catalog_pool(&env.engine, &plan.kind).await
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let pool_ready = pool.as_ref().is_some_and(|pool| pool.len() > 1);
+        drop(pool);
+        let watch_session = plan.as_ref().is_some_and(|plan| plan.enabled)
+            || (active_wallpaper && settings_ready && pool_ready);
+        if watch_session && session.is_none() {
             session = Some(Session::spawn(&env.engine)?);
+            // Fail closed until the new watcher reports its current lock/sleep state.
+            paused = true;
+        } else if !watch_session {
+            session = None;
+            paused = false;
         }
+        super::active_wallpaper::set_rotation_readiness(&hub, pool_ready, paused)?;
         let due = plan.as_ref().map_or(i64::MAX, |plan| {
             (plan.anchor_ms.max(attempted) + plan.interval_ms).max(retry)
         });
         let armed = plan.as_ref().is_some_and(|plan| plan.enabled) && !paused && !blocked;
         tokio::select! {
             () = (env.sleep)(due), if armed => {}
-            result = changed(&mut notices, &["wallpaper.watch", "wallpaper.active", "settings.store.wallpaper-picker"]) => {
+            result = changed_wallpaper_state(&mut notices, &hub, &mut active_identity) => {
                 result?;
                 blocked = false;
                 continue;
             }
             state = async { session.as_mut().expect("watcher").next().await }, if session.is_some() => {
-                paused = state?;
+                paused = match state {
+                    Ok(paused) => paused,
+                    Err(error) => {
+                        // A dead logind watcher must not leave a stale enabled control.
+                        super::active_wallpaper::set_rotation_readiness(&hub, false, true)?;
+                        return Err(error);
+                    }
+                };
+                super::active_wallpaper::set_rotation_readiness(
+                    &hub,
+                    pool_ready,
+                    paused,
+                )?;
                 continue;
             }
         }
@@ -443,11 +657,37 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
             bag.clear();
             key = identity;
         }
+        if active_wallpaper
+            && super::active_wallpaper::committed_source(&hub).as_deref()
+                != Some(plan.current.as_str())
+        {
+            super::active_wallpaper::mark_source_unstable(&hub)?;
+            retry = (env.now_ms)() + RETRY_AFTER_FAILURE_MS;
+            continue;
+        }
         let (choice, remaining) =
             rotation_next(&pool, &plan.current, plan.shuffle, &bag, (env.random)());
         bag = remaining;
         if let Some(path) = choice {
-            if select(&env.engine, &path).await {
+            let Ok(selection) = super::active_wallpaper::SelectionGuard::acquire_tracked(&hub)
+            else {
+                retry = (env.now_ms)() + RETRY_AFTER_FAILURE_MS;
+                continue;
+            };
+            let selected = select(&env.engine, &path).await;
+            let has_wallpaper_topic = hub
+                .borrow()
+                .snapshot(super::active_wallpaper::TOPIC)
+                .is_some();
+            if selected && has_wallpaper_topic {
+                if let Err(error) =
+                    super::active_wallpaper::Producer::default().refresh(&hub, &paths)
+                {
+                    tracing::warn!(%error, "Could not immediately publish rotated wallpaper");
+                }
+            }
+            drop(selection);
+            if selected {
                 retry = 0;
                 attempted = (env.now_ms)();
             } else {

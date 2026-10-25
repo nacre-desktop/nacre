@@ -4,6 +4,10 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperWatch {
     pub available: bool,
@@ -49,6 +53,10 @@ impl WallpaperWatch {
 pub struct WallpaperActive {
     pub available: bool,
     pub stale: bool,
+    /// QML `rotationReady`, shared by manual Next and Previous; false for a
+    /// stale/unavailable wallpaper, a singleton pool, sleep/lock or selection.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub previous_available: bool,
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub revision: u64,
     pub current: Option<ActiveWallpaper>,
@@ -319,6 +327,9 @@ impl WallpaperActive {
                 true
             };
         let valid = valid
+            && (self.available || !self.previous_available)
+            && (!self.stale || !self.previous_available)
+            && (self.current.is_some() || !self.previous_available)
             && match self.current.as_ref() {
                 Some(current) => {
                     current.validate().is_ok()
