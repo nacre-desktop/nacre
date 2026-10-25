@@ -1392,6 +1392,14 @@ as shell descendants. See [presentation witnesses](../../tools/performance-probe
 The selected palette is precomputed: this is a warm-cache functional scenario.
 Its five-second observation and two-second lock wait are not latency estimates.
 
+Short-lived native wallpaper commands cache the executable SHA-256 in
+`cache/nacre/native-engine-identity.json` (at most 4 KiB). The cache is accepted
+only for an owned, regular, non-writable-by-others file matching the executable’s
+full device/inode/size/mode/owner/mtime/ctime identity; invalid or unavailable
+cache data falls back to hashing the pinned executable. The palette key is
+unchanged. Catalogue prewarming processes only requested IDs, even though the
+metadata catalogue includes other rows. Neither cache contains decoded frames.
+
 A busy-host smoke recorded 274 host swap-in pages at 4,096 bytes/page
 (1,122,304 bytes), exceeding the owner's 1 MiB gate, while sampled processes
 had SwapPss zero. It supplies functional evidence only. The required desktop-PC

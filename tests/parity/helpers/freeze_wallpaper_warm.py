@@ -33,6 +33,9 @@ results.append(media.warm(include_demo=False));print(json.dumps(results))
 def file_list(home, files):
     rows = []
     for path in home.rglob("*"):
+        if path == home / ".cache/nacre/native-engine-identity.json":
+            files.validate_native_engine_identity_cache(path)
+            continue
         name = files.normalize(str(path.relative_to(home)))
         if path.is_symlink():
             record = dict(link=files.normalize(str(path.readlink())))

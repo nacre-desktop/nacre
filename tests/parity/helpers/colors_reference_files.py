@@ -7,6 +7,7 @@ Current JSON spacing/newlines are checked before canonicalizing volatile fields.
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import stat
 
@@ -139,10 +140,88 @@ class Files:
                     "@PNG_" + hashlib.sha256(path.read_bytes()).hexdigest() + "@"
                 )
 
+    def validate_native_engine_identity_cache(self, path):
+        """Validate the one expected runtime cache before omitting it from parity."""
+        metadata = path.lstat()
+        if (
+            not stat.S_ISREG(metadata.st_mode)
+            or metadata.st_uid != os.getuid()
+            or metadata.st_mode & 0o022
+            or metadata.st_size > 4096
+        ):
+            raise ValueError("Unsafe native engine identity cache")
+        raw = path.read_bytes()
+        if len(raw) > 4096:
+            raise ValueError("Oversized native engine identity cache")
+        record = json.loads(raw)
+        if json.dumps(record, separators=(",", ":")) != raw.decode():
+            raise ValueError("Native engine identity cache serialization changed")
+        if not isinstance(record, dict) or set(record) != {
+            "engine",
+            "identity",
+            "sha256",
+        }:
+            raise ValueError("Invalid native engine identity cache fields")
+        pin_path = (
+            Path(__file__).resolve().parents[3]
+            / "nacre/shell-cli/src/nacre_shell/engine-pin.json"
+        )
+        pin = json.loads(pin_path.read_text())
+        if record["engine"] != pin.get("engine"):
+            raise ValueError("Native engine identity cache has the wrong engine ID")
+        identity = record["identity"]
+        fields = {
+            "device",
+            "inode",
+            "size",
+            "mtime_sec",
+            "mtime_nsec",
+            "ctime_sec",
+            "ctime_nsec",
+        }
+        if not isinstance(identity, dict) or set(identity) != fields:
+            raise ValueError("Invalid native executable identity fields")
+        for key in ("device", "inode"):
+            value = identity[key]
+            if (
+                not isinstance(value, str)
+                or not value.isascii()
+                or not value.isdecimal()
+                or len(value) > 20
+                or (len(value) > 1 and value.startswith("0"))
+                or int(value) > 2**64 - 1
+            ):
+                raise ValueError("Invalid native executable device/inode")
+        safe_integer = 2**53 - 1
+        if (
+            type(identity["size"]) is not int
+            or not 0 <= identity["size"] <= safe_integer
+            or any(
+                type(identity[key]) is not int
+                or not -safe_integer <= identity[key] <= safe_integer
+                for key in ("mtime_sec", "ctime_sec")
+            )
+            or any(
+                type(identity[key]) is not int or not 0 <= identity[key] <= 999_999_999
+                for key in ("mtime_nsec", "ctime_nsec")
+            )
+        ):
+            raise ValueError("Invalid native executable timestamps/size")
+        digest = record["sha256"]
+        if (
+            not isinstance(digest, str)
+            or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
+        ):
+            raise ValueError("Invalid native engine identity SHA-256")
+
     def snapshot(self):
         result = {}
         for path in sorted(self.home.rglob("*")):
             name = self.normalize(str(path.relative_to(self.home)))
+            if path == self.home / ".cache/nacre/native-engine-identity.json":
+                self.validate_native_engine_identity_cache(path)
+                continue
             if path.is_symlink():
                 result[name] = dict(link=self.normalize(str(path.readlink())))
             elif path.is_file():
