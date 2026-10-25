@@ -113,7 +113,10 @@ fn audio_streams(data: &str, kind: AudioKind, prefix: &str, state: &mut AudioSta
     };
     for entry in entries.into_iter().take(MAX_STREAMS) {
         let properties = &entry["properties"];
-        if properties["application.name"] == PEAK_CLIENT || state.nodes.items.len() >= 2048 {
+        if properties["application.name"] == PEAK_CLIENT
+            || properties["application.name"] == super::audio_spectrum::CLIENT
+            || state.nodes.items.len() >= 2048
+        {
             continue;
         }
         let (Some(index), Some((perceptual, linear, muted))) =
@@ -738,10 +741,13 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
 async fn serve(hub: Shared, env: Env, system_bus: bool) -> Result<()> {
     let mut interest = hub.borrow_mut().watch_interest(TOPIC);
     let mut audio_interest = hub.borrow_mut().watch_interest("audio");
+    let mut spectrum_interest = hub
+        .borrow_mut()
+        .watch_interest(super::audio_spectrum::TOPIC);
     hub.borrow_mut().service("osd", "running", 0)?;
     loop {
-        while !*interest.borrow() && !*audio_interest.borrow() {
-            tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result? }
+        while !*interest.borrow() && !*audio_interest.borrow() && !*spectrum_interest.borrow() {
+            tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result?, result = spectrum_interest.changed() => result? }
         }
         let system = if system_bus {
             tokio::time::timeout(Duration::from_secs(2), zbus::Connection::system())
@@ -755,8 +761,8 @@ async fn serve(hub: Shared, env: Env, system_bus: bool) -> Result<()> {
             result = session(hub.clone(), env.clone(), system) => result?,
             result = async {
                 loop {
-                    if !*interest.borrow() && !*audio_interest.borrow() { return Ok::<(), Box<dyn std::error::Error + Send + Sync>>(()); }
-                    tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result? }
+                    if !*interest.borrow() && !*audio_interest.borrow() && !*spectrum_interest.borrow() { return Ok::<(), Box<dyn std::error::Error + Send + Sync>>(()); }
+                    tokio::select! { result = interest.changed() => result?, result = audio_interest.changed() => result?, result = spectrum_interest.changed() => result? }
                 }
             } => result?,
         }

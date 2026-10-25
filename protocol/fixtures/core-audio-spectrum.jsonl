@@ -1,0 +1,4 @@
+{"t":"snap","topic":"audio.spectrum","seq":0,"data":{"health":{"available":true,"stale":false},"bands":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","level":0.25,"peak":0.5,"onset":1,"beat":true,"paused":false}}
+{"t":"call","id":0,"m":"audio.spectrum.configure","p":{"bands":"32","rate_hz":60},"timeout":10000}
+{"t":"ret","id":0,"ok":{"changed":true}}
+{"t":"patch","topic":"audio.spectrum","base":0,"seq":1,"data":{"health":{"available":false,"stale":true,"error":{"code":"unavailable","message":"Service unavailable","retry":true}}}}

@@ -96,8 +96,8 @@ fn reserved_transcripts_replay_typed_calls_and_complete_snapshots() {
             }
         }
     }
-    assert_eq!(topics, 15);
-    assert_eq!(calls.len(), 27);
+    assert_eq!(topics, 16);
+    assert_eq!(calls.len(), 28);
     for method in calls {
         assert!(
             !nacre_protocol::core_methods().contains_key(&method),
@@ -691,4 +691,26 @@ fn calendar_and_media_producer_lifecycles_match_reserved_contracts() {
     assert_eq!(media[1]["lines"]["order"], json!(["l0"]));
     assert_eq!(media[2]["lines"]["order"], json!([]));
     assert_eq!(media[2]["plain"], "");
+}
+#[test]
+fn spectrum_rejects_invalid_bands_and_leases() {
+    let snapshot = |bands| {
+        serde_json::from_value::<CoreSnapshot>(json!({"topic":"audio.spectrum","data":{
+            "health":{"available":true,"stale":false,"error":null},"bands":bands,
+            "level":0.25,"peak":0.5,"onset":0,"beat":false,"paused":false
+        }}))
+        .unwrap()
+    };
+    assert!(snapshot("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=").valid());
+    assert!(!snapshot("!!!!!!!!!!!!!!!!!!!!!!!!").valid());
+    assert!(!snapshot("AAAAAAAAAAAAAAAAAAAAAAAA").valid());
+    let lease = |params| {
+        serde_json::from_value::<CoreCall>(json!({"m":"audio.spectrum.configure","p":params}))
+    };
+    assert!(lease(json!({})).unwrap().valid());
+    assert!(lease(json!({"bands":"64","rate_hz":60})).unwrap().valid());
+    assert!(!lease(json!({"rate_hz":0})).unwrap().valid());
+    assert!(!lease(json!({"rate_hz":61})).unwrap().valid());
+    assert!(lease(json!({"bands":"17"})).is_err());
+    assert!(lease(json!({"extra":true})).is_err());
 }

@@ -136,6 +136,22 @@
       "properties": {
         "topic": {
           "type": "string",
+          "const": "audio.spectrum"
+        },
+        "data": {
+          "$ref": "#/$defs/AudioSpectrumState"
+        }
+      },
+      "required": [
+        "topic",
+        "data"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
           "const": "notifications"
         },
         "data": {
@@ -1269,6 +1285,54 @@
       "required": [
         "health",
         "level"
+      ]
+    },
+    "AudioSpectrumState": {
+      "description": "N0072: compact spectrum of the default output monitor. Bytes run low to high\nover 20..20000 Hz; divide decoded unsigned bytes by 255 for display values.",
+      "type": "object",
+      "properties": {
+        "health": {
+          "$ref": "#/$defs/Health"
+        },
+        "bands": {
+          "type": "string",
+          "maxLength": 88,
+          "pattern": "^([A-Za-z0-9+/]{22}==|[A-Za-z0-9+/]{43}=|[A-Za-z0-9+/]{86}==)$"
+        },
+        "level": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "peak": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0.0,
+          "maximum": 1.0
+        },
+        "onset": {
+          "description": "Monotonic onset counter: consumers compare it with their last frame.\nUnlike a one-frame pulse this survives delivery coalescing.",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "beat": {
+          "type": "boolean"
+        },
+        "paused": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "health",
+        "bands",
+        "level",
+        "peak",
+        "onset",
+        "beat",
+        "paused"
       ]
     },
     "NotificationsState": {

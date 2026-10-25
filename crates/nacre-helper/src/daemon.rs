@@ -3,6 +3,7 @@ pub mod active_wallpaper;
 pub mod ai_chat;
 pub mod attach;
 pub mod audio_peak;
+pub mod audio_spectrum;
 pub mod bar_services;
 pub mod bar_tray_watcher;
 pub mod behaviours;
@@ -332,6 +333,17 @@ async fn serve(
     } else {
         None
     };
+    let spectrum_service = if !counter.safe {
+        audio_spectrum::initial(&hub)?;
+        let spectrum_hub = hub.clone();
+        Some(tokio::task::spawn_local(supervisor::run(
+            "audio-spectrum",
+            hub.clone(),
+            move || audio_spectrum::run(spectrum_hub.clone(), audio_spectrum::Env::production()),
+        )))
+    } else {
+        None
+    };
     // N0045: connects to the system bus; the agent is registered only while a pairing runs.
     let bluetooth_service = if !counter.safe {
         bluetooth::initial(&hub)?;
@@ -655,6 +667,10 @@ async fn serve(
         }
     }
     if let Some(service) = audio_peak_service {
+        service.abort();
+        let _ = service.await;
+    }
+    if let Some(service) = spectrum_service {
         service.abort();
         let _ = service.await;
     }

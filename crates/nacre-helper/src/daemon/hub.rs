@@ -38,6 +38,7 @@ struct Topic {
     bytes: usize,
 }
 struct Subscription {
+    spectrum: nacre_protocol::core_services::SpectrumLease,
     delivered: Option<Rc<Topic>>,
     considered: Option<u64>,
     generation: u64,
@@ -107,6 +108,41 @@ pub struct Hub {
     pub ai_chat: Option<Rc<super::ai_chat::Host>>,
 }
 impl Hub {
+    pub fn configure_spectrum(
+        &mut self,
+        id: u64,
+        lease: nacre_protocol::core_services::SpectrumLease,
+    ) -> Result<(), Failure> {
+        let subscription = self
+            .clients
+            .get_mut(&id)
+            .and_then(|c| c.topics.get_mut(super::audio_spectrum::TOPIC))
+            .ok_or_else(|| {
+                failure(
+                    ErrorCode::InvalidRequest,
+                    "Subscribe to audio.spectrum first",
+                    false,
+                )
+            })?;
+        subscription.spectrum = lease;
+        subscription.force = true;
+        subscription.next = Instant::now();
+        if let Some(client) = self.clients.get(&id) {
+            client.wake.notify_one();
+        }
+        Ok(())
+    }
+    pub fn spectrum_period(&self) -> Duration {
+        let rate = self
+            .clients
+            .values()
+            .filter_map(|c| c.topics.get(super::audio_spectrum::TOPIC))
+            .map(|s| s.spectrum.rate_hz)
+            .max()
+            .unwrap_or(60);
+        self.frame
+            .max(Duration::from_secs_f64(1.0 / f64::from(rate)))
+    }
     pub fn new(boot: String, safe: bool, frame: Duration) -> Self {
         let (internal, _) = broadcast::channel(MAX_EVENTS);
         Self {
@@ -345,6 +381,9 @@ impl Hub {
             if self.dashboard.is_some() {
                 methods.extend(super::dashboard_extras::methods());
             }
+            if self.topics.contains_key(super::audio_spectrum::TOPIC) {
+                methods.extend(super::audio_spectrum::methods());
+            }
             if self
                 .services
                 .get("dashboard-player")
@@ -491,6 +530,7 @@ impl Hub {
             client.topics.insert(
                 topic.clone(),
                 Subscription {
+                    spectrum: Default::default(),
                     delivered: None,
                     considered: None,
                     generation: client.generation,
@@ -673,6 +713,16 @@ impl Hub {
                     Some(deadline.map_or(subscription.next, |d: Instant| d.min(subscription.next)));
                 continue;
             }
+            let topic = if name == super::audio_spectrum::TOPIC {
+                let data = super::audio_spectrum::project(&topic.data, subscription.spectrum.bands);
+                Rc::new(Topic {
+                    seq: topic.seq,
+                    bytes: topic.bytes,
+                    data,
+                })
+            } else {
+                topic.clone()
+            };
             let message = match &subscription.delivered {
                 Some(delivered) if !subscription.force => {
                     match patch::diff(&delivered.data, &topic.data) {
@@ -749,7 +799,14 @@ impl Hub {
                 if subscription.generation == *generation {
                     subscription.delivered = Some(topic.clone());
                     subscription.considered = Some(topic.seq);
-                    subscription.next = now + self.frame;
+                    let frame = if name == super::audio_spectrum::TOPIC {
+                        self.frame.max(Duration::from_secs_f64(
+                            1.0 / f64::from(subscription.spectrum.rate_hz),
+                        ))
+                    } else {
+                        self.frame
+                    };
+                    subscription.next = now + frame;
                 }
             }
         }

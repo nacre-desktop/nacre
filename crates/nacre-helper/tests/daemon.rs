@@ -3261,6 +3261,15 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         }
     }
     let audio_started = home.path().join("pactl-started");
+    let spectrum_started = home.path().join("spectrum-started");
+    fs::write(
+        bin.join("parec"),
+        format!(
+            "#!/bin/sh\necho started > '{}'\nexec /usr/bin/sleep 3000\n",
+            spectrum_started.display()
+        ),
+    )?;
+    fs::set_permissions(bin.join("parec"), fs::Permissions::from_mode(0o755))?;
     fs::write(
         bin.join("pactl"),
         format!(
@@ -3356,6 +3365,17 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
     eprintln!("N0067 READY with hung sysfs: {:?}", started.elapsed());
     assert!(started.elapsed() < Duration::from_secs(2));
+    // N0072: no capture subprocess on the readiness path or while unleased.
+    assert!(!spectrum_started.exists());
+    let spectrum_status = status(home.path(), &source_path, &endpoint)?;
+    assert!(spectrum_status["topics"]
+        .as_array()
+        .unwrap()
+        .contains(&json!("audio.spectrum")));
+    assert_eq!(
+        spectrum_status["services"]["audio-spectrum"]["status"],
+        "running"
+    );
     let deadline = Instant::now() + Duration::from_secs(2);
     while !check_started.exists() && Instant::now() < deadline {
         thread::sleep(Duration::from_millis(10));

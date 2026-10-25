@@ -46,6 +46,9 @@ async fn dispatch(
     transfer: super::helpers::Transfer,
 ) -> Result<Value, Failure> {
     match method.as_str() {
+        "audio.spectrum.configure" if !hub.borrow().safe => {
+            super::audio_spectrum::configure(&hub, client, params)
+        }
         method if method.starts_with("notifications.") && !hub.borrow().safe => {
             super::notifications::dispatch(hub, client, method, params, timeout).await
         }

@@ -335,6 +335,69 @@ pub struct AudioPeakState {
     pub level: f64,
 }
 
+/// N0072: compact spectrum of the default output monitor. Bytes run low to high
+/// over 20..20000 Hz; divide decoded unsigned bytes by 255 for display values.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct AudioSpectrumState {
+    pub health: Health,
+    #[schemars(
+        length(max = 88),
+        regex(pattern = r"^([A-Za-z0-9+/]{22}==|[A-Za-z0-9+/]{43}=|[A-Za-z0-9+/]{86}==)$")
+    )]
+    pub bands: String,
+    #[schemars(range(min = 0.0, max = 1.0))]
+    pub level: f64,
+    #[schemars(range(min = 0.0, max = 1.0))]
+    pub peak: f64,
+    /// Monotonic onset counter: consumers compare it with their last frame.
+    /// Unlike a one-frame pulse this survives delivery coalescing.
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub onset: u64,
+    pub beat: bool,
+    pub paused: bool,
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub enum SpectrumBands {
+    #[serde(rename = "16")]
+    Sixteen,
+    #[serde(rename = "32")]
+    #[default]
+    ThirtyTwo,
+    #[serde(rename = "64")]
+    SixtyFour,
+}
+impl SpectrumBands {
+    pub fn count(self) -> usize {
+        match self {
+            Self::Sixteen => 16,
+            Self::ThirtyTwo => 32,
+            Self::SixtyFour => 64,
+        }
+    }
+}
+fn spectrum_rate() -> u8 {
+    60
+}
+/// Configure the caller's existing subscription; unsubscribe/disconnect releases it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SpectrumLease {
+    #[serde(default)]
+    pub bands: SpectrumBands,
+    #[serde(default = "spectrum_rate")]
+    #[schemars(range(min = 1, max = 60))]
+    pub rate_hz: u8,
+}
+impl Default for SpectrumLease {
+    fn default() -> Self {
+        Self {
+            bands: SpectrumBands::default(),
+            rate_hz: 60,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct NotificationAction {
     pub label: String,
@@ -922,6 +985,8 @@ pub enum CoreSnapshot {
     Audio(AudioState),
     #[serde(rename = "audio.peak")]
     AudioPeak(AudioPeakState),
+    #[serde(rename = "audio.spectrum")]
+    AudioSpectrum(AudioSpectrumState),
     #[serde(rename = "notifications")]
     Notifications(NotificationsState),
     #[serde(rename = "osd")]
@@ -1055,6 +1120,17 @@ impl CoreSnapshot {
                     })
             }
             Self::AudioPeak(s) => s.level.is_finite() && (0.0..=1.0).contains(&s.level),
+            Self::AudioSpectrum(s) => {
+                use base64::Engine;
+                [s.level, s.peak]
+                    .iter()
+                    .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
+                    && s.bands.len() <= 88
+                    && base64::engine::general_purpose::STANDARD
+                        .decode(&s.bands)
+                        .is_ok_and(|bytes| matches!(bytes.len(), 16 | 32 | 64))
+                    && timestamp_valid(s.onset)
+            }
             Self::Notifications(s) => {
                 s.active.valid()
                     && s.history.valid()
@@ -1423,6 +1499,8 @@ pub struct NotificationInhibited {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(tag = "m", content = "p")]
 pub enum CoreCall {
+    #[serde(rename = "audio.spectrum.configure")]
+    SpectrumConfigure(SpectrumLease),
     #[serde(rename = "notifications.set_dnd")]
     NotificationDnd(NotificationDnd),
     #[serde(rename = "notifications.dismiss")]
@@ -1495,6 +1573,7 @@ pub enum CoreCall {
 impl CoreCall {
     pub fn valid(&self) -> bool {
         match self {
+            Self::SpectrumConfigure(p) => (1..=60).contains(&p.rate_hz),
             Self::WifiPower(_)
             | Self::NotificationDnd(_)
             | Self::NotificationClear(_)

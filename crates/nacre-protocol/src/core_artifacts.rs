@@ -207,6 +207,14 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         ),
         ("audio.peak", json!({"health":health,"level":0.25}), vec![]),
         (
+            "audio.spectrum",
+            json!({"health":health,"bands":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","level":0.25,"peak":0.5,"onset":1,"beat":true,"paused":false}),
+            vec![(
+                "audio.spectrum.configure",
+                json!({"bands":"32","rate_hz":60}),
+            )],
+        ),
+        (
             "notifications",
             json!({"health":health,"do_not_disturb":false,"active":entities(json!({"notice-1":{
             "app_name":"Fixture app","summary":"Fixture notice","body":"Public test content","urgency":"normal","resident":false,"transient":false,"created_ms":1800000000000_u64,
