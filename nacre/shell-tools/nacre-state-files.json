@@ -113,6 +113,23 @@
       }
     },
     {
+      "id": "widgets",
+      "paths": [
+        "nacre/widgets.json"
+      ],
+      "owner": "Bead widget layout",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {
+        "layout": null
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
+    },
+    {
       "id": "dashboard-extras",
       "paths": [
         "nacre/dashboard-extras.json"

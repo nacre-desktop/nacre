@@ -637,6 +637,37 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
         matches!(call(&mut second, "settings.get", json!({"store":"colors"}))?, Reply::Ok {ok} if ok["rev"]==2 && ok["dirty"]==false && ok["data"]["favorites"]==json!([]))
     );
     assert_eq!(get(&mut first)?["rev"], 0);
+    let widgets_before = match call(&mut first, "settings.get", json!({"store":"widgets"}))? {
+        Reply::Ok { ok } => ok,
+        _ => return Err("Widgets settings read failed".into()),
+    };
+    assert_eq!(widgets_before["data"]["layout"], Value::Null);
+    let widget_layout = json!({"version":1,"hosts":{"top_bar":{"instances":[]}}});
+    assert!(
+        matches!(call(&mut first,"settings.set",json!({"store":"widgets","key":["layout"],"value":widget_layout,"rev":0}))?,Reply::Ok {ok} if ok["rev"]==1 && ok["dirty"]==true)
+    );
+    assert!(
+        matches!(call(&mut second,"settings.set",json!({"store":"widgets","key":["layout"],"value":null,"rev":0}))?,Reply::Err{err} if err.code==nacre_protocol::ErrorCode::StaleRevision)
+    );
+    let widget_path = home.path().join("config/nacre/widgets.json");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let snapshot = match call(&mut first, "settings.get", json!({"store":"widgets"}))? {
+            Reply::Ok { ok } => ok,
+            _ => return Err("Widgets settings read failed".into()),
+        };
+        if snapshot["dirty"] == false {
+            break;
+        }
+        if Instant::now() > deadline {
+            return Err("Widgets settings publication did not finish".into());
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(
+        fs::metadata(&widget_path)?.permissions().mode() & 0o777,
+        0o600
+    );
     let (one, two) = thread::scope(|scope| {
         let a = scope.spawn(|| {
             call(
@@ -724,6 +755,19 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     let snapshot = get(&mut link(&endpoint)?)?;
     assert_eq!(snapshot["data"]["unknown"], 42);
     assert_eq!(snapshot["dirty"], false);
+    let widgets = match call(
+        &mut link(&endpoint)?,
+        "settings.get",
+        json!({"store":"widgets"}),
+    )? {
+        Reply::Ok { ok } => ok,
+        _ => return Err("Widgets settings did not survive daemon restart".into()),
+    };
+    assert_eq!(widgets["rev"], 0);
+    assert_eq!(
+        widgets["data"]["layout"]["hosts"]["top_bar"]["instances"],
+        json!([])
+    );
     restarted.0.kill()?;
     restarted.0.wait()?;
     Ok(())

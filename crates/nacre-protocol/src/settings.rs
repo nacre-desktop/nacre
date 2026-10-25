@@ -249,6 +249,19 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
             .map(|frame| serde_json::to_string(frame).expect("settings transcript") + "\n")
             .collect(),
     );
+    out.insert("protocol/fixtures/settings-widgets.jsonl".into(), [
+        json!({"t":"call","id":200,"m":"settings.get","p":{"store":"widgets"}}),
+        json!({"t":"ret","id":200,"ok":{"store":"widgets","rev":0,"exists":false,"data":{"layout":null},"dirty":false}}),
+        json!({"t":"snap","topic":"settings.store.widgets","seq":0,"data":{"store":"widgets","rev":0,"exists":false,"data":{"layout":null},"dirty":false}}),
+        json!({"t":"call","id":201,"m":"settings.set","p":{"store":"widgets","key":["layout"],"value":{"version":1,"hosts":{}},"rev":0}}),
+        json!({"t":"ret","id":201,"ok":{"store":"widgets","rev":1,"exists":false,"data":{"layout":{"version":1,"hosts":{}}},"dirty":true}}),
+        json!({"t":"patch","topic":"settings.store.widgets","base":0,"seq":1,"data":{"rev":1,"data":{"layout":{"version":1,"hosts":{}}},"dirty":true}}),
+        json!({"t":"call","id":202,"m":"settings.set","p":{"store":"widgets","key":["layout"],"value":null,"rev":1}}),
+        json!({"t":"ret","id":202,"ok":{"store":"widgets","rev":2,"exists":false,"data":{"layout":null},"dirty":true}}),
+        json!({"t":"patch","topic":"settings.store.widgets","base":1,"seq":2,"data":{"rev":2,"data":{"layout":null},"dirty":true}}),
+        json!({"t":"call","id":203,"m":"settings.set","p":{"store":"widgets","key":["layout"],"value":{"version":1,"hosts":{}},"rev":0}}),
+        json!({"t":"ret","id":203,"err":{"code":"stale_revision","message":"Settings changed; refresh before writing","retry":true}}),
+    ].iter().map(|frame| serde_json::to_string(frame).expect("widgets transcript")+"\n").collect());
     out.insert("protocol/fixtures/settings-publish.jsonl".into(), [
         json!({"t":"call","id":190,"m":"settings.publish","p":{"store":"battery-alerts","value":{"version":1,"severity":2},"rev":0}}),
         json!({"t":"ret","id":190,"ok":{"store":"battery-alerts","rev":1,"exists":false,"data":{"version":1,"severity":2},"dirty":true}}),

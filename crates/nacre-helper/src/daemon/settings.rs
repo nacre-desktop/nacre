@@ -263,12 +263,18 @@ impl Service {
             ));
         }
         let descriptor = validation::descriptor(&request.store, &request.key);
+        let widget_layout_key =
+            request.store == "widgets" && request.key.len() == 1 && request.key[0] == "layout";
+        let widget_layout = widget_layout_key
+            && (request.value.is_null() || request.value.is_object())
+            && serde_json::to_vec(&request.value).is_ok_and(|bytes| bytes.len() <= 256 * 1024);
         let history_reset =
             request.store == "launcher" && validation::history_reset(&request.key, &request.value);
-        if descriptor.is_none() && !history_reset {
+        if descriptor.is_none() && !history_reset && !widget_layout_key {
             return Err(denied());
         }
         if descriptor.is_some_and(|descriptor| !validation::valid_value(descriptor, &request.value))
+            || (widget_layout_key && !widget_layout)
             || (request.key.len() == 1
                 && !validation::extras_list(&request.store, &request.key[0], &request.value))
         {
@@ -1328,6 +1334,122 @@ mod tests {
                 &failed, target, &expected
             ));
         }
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn widgets_layout_is_bounded_revisioned_private_and_persistent() {
+        let (_home, paths, hub, service) = fixture().await;
+        let initial = service
+            .get(SettingsGet {
+                store: "widgets".into(),
+            })
+            .await
+            .unwrap();
+        assert_eq!(initial["data"]["layout"], Value::Null);
+        let layout = json!({"version":1,"hosts":{"top_bar":{"instances":[]}}});
+        let accepted = service
+            .set(SettingsSet {
+                store: "widgets".into(),
+                key: vec!["layout".into()],
+                value: layout.clone(),
+                rev: 0,
+            })
+            .await
+            .unwrap();
+        assert_eq!(accepted["rev"], 1);
+        assert_eq!(
+            hub.borrow().snapshot(&topic("widgets")).unwrap()["data"]["layout"],
+            layout
+        );
+        assert_eq!(
+            service
+                .set(SettingsSet {
+                    store: "widgets".into(),
+                    key: vec!["layout".into()],
+                    value: Value::Null,
+                    rev: 0,
+                })
+                .await
+                .unwrap_err()
+                .code,
+            ErrorCode::StaleRevision
+        );
+        assert_eq!(
+            service
+                .set(SettingsSet {
+                    store: "widgets".into(),
+                    key: vec!["layout".into()],
+                    value: Value::Null,
+                    rev: 1,
+                })
+                .await
+                .unwrap()["rev"],
+            2
+        );
+        assert_eq!(
+            service
+                .set(SettingsSet {
+                    store: "widgets".into(),
+                    key: vec!["layout".into()],
+                    value: layout.clone(),
+                    rev: 2,
+                })
+                .await
+                .unwrap()["rev"],
+            3
+        );
+        assert_eq!(
+            service
+                .set(SettingsSet {
+                    store: "widgets".into(),
+                    key: vec!["layout".into()],
+                    value: json!(["not an object"]),
+                    rev: 3,
+                })
+                .await
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
+        );
+        let too_large = json!({"payload":"x".repeat(256 * 1024)});
+        assert_eq!(
+            service
+                .set(SettingsSet {
+                    store: "widgets".into(),
+                    key: vec!["layout".into()],
+                    value: too_large,
+                    rev: 3,
+                })
+                .await
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
+        );
+        service
+            .stores
+            .lock()
+            .await
+            .get_mut("widgets")
+            .unwrap()
+            .deadline = Some(Instant::now());
+        service.flush().await.unwrap();
+        let path = paths.config.join("widgets.json");
+        assert_eq!(
+            std::fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+        drop(service);
+        let lease = Arc::new(WriterLease::acquire_for_paths(&paths.config, &paths.state).unwrap());
+        let reloaded = Service::load(hub, paths, Some(lease)).await.unwrap();
+        assert_eq!(
+            reloaded
+                .get(SettingsGet {
+                    store: "widgets".into()
+                })
+                .await
+                .unwrap()["data"]["layout"],
+            layout
+        );
     }
 
     #[tokio::test(flavor = "current_thread")]

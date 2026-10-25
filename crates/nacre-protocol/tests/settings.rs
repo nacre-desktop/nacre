@@ -67,6 +67,27 @@ fn settings_transcript_replays_revision_flush_and_last_good_error() {
 }
 
 #[test]
+fn widgets_settings_contract_replays_default_write_and_revision_conflict() {
+    let generated = artifacts::generate();
+    let mut mirror = Mirror::default();
+    for line in generated["protocol/fixtures/settings-widgets.jsonl"].lines() {
+        let message = framing::decode(line.as_bytes()).unwrap();
+        if let Message::Call { m, p, .. } = &message {
+            if m == "settings.set" {
+                let request: SettingsSet = serde_json::from_value(p.clone()).unwrap();
+                assert_eq!(request.store, "widgets");
+                assert_eq!(request.key, vec!["layout"]);
+                request.validate().unwrap();
+            }
+        }
+        assert!(!matches!(mirror.receive(&message), Update::Resync(_)));
+    }
+    let widgets = &mirror.topics["settings.store.widgets"].1;
+    assert_eq!(widgets["rev"], 2);
+    assert_eq!(widgets["data"]["layout"], Value::Null);
+}
+
+#[test]
 fn settings_luau_defines_nested_errors_and_rejects_reserved_path_components() {
     let generated = artifacts::generate();
     let types = &generated["protocol/luau/settings.d.luau"];

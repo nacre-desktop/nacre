@@ -148,6 +148,15 @@ pub fn document(store: &str, data: &Value) -> bool {
 }
 
 fn document_with_developer(store: &str, data: &Value, developer: bool) -> bool {
+    if store == "widgets" {
+        return data.as_object().is_some_and(|object| {
+            object.len() == 1
+                && object.get("layout").is_some_and(|value| {
+                    (value.is_null() || value.is_object())
+                        && serde_json::to_vec(value).is_ok_and(|bytes| bytes.len() <= 256 * 1024)
+                })
+        });
+    }
     if store == "battery-alerts" {
         return data.is_object()
             && data
