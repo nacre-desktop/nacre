@@ -240,9 +240,6 @@ impl Prepared {
         }
     }
 }
-pub fn match_score(row: &Value, term: &str) -> i32 {
-    Prepared::new(row).score(&ScoringQuery::from_normalized(term))
-}
 pub fn ranked<'a>(
     rows: &'a [Value],
     query: &str,

@@ -285,12 +285,6 @@ impl WriterLease {
             .find(|pinned| pinned.path == parent)
     }
 
-    pub fn config_dir_fd(&self) -> &File {
-        self.path_root(&self.config_path.join(".writer.lock"))
-            .and_then(|root| root.dirs.last())
-            .expect("lease always pins config root")
-    }
-
     pub fn directory_fd(&self, path: &Path) -> Option<&File> {
         self.path_root(path).and_then(|root| root.dirs.last())
     }
