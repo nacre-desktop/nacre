@@ -113,6 +113,12 @@ assert Path(installed["launcher"]).is_file()
 assert ui("status")["ready_for_bead"] == []
 ui("bead", "--notifications", "none")
 assert ui("status")["active"] == "bead"
+bead_dropin = (root / "nacre-shell.service.d/60-nacre-ui-shell.conf").read_text()
+assert "nacre-qml-windows.service" not in bead_dropin
+assert not (root / "nacre-qml-windows.service").exists()
+assert "LoadState=not-found" in ctl(
+    "show", "--property=LoadState", "nacre-qml-windows.service"
+)
 wallpaper_pid = int((rt / "wallpaper.pid").read_text())
 os.kill(wallpaper_pid, 0)
 # Real service manager re-reads the persisted selection on the next start.

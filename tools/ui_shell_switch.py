@@ -3,9 +3,8 @@
 
 One unit (nacre-shell.service) is always the UI. Bead mode is exactly one managed
 drop-in that replaces its ExecStart, so two shells can never be started by systemd
-or by D-Bus activation. The QML Settings/Colors/Welcome windows run in a companion
-unit that only exists while that drop-in does. `qml` removes the drop-in and
-converges to the QML shell from any interrupted state.
+or by D-Bus activation. `qml` removes the drop-in and converges to the QML shell
+from any interrupted state.
 """
 
 import argparse
@@ -52,7 +51,7 @@ NO_PROVIDER = (
 def dropin_text(launcher, notifications="none"):
     return (
         f"{MARK}[Unit]\nDescription=Nacre native desktop shell (Bead)\n"
-        f"Wants={WINDOWS} {f4.SOCKET}\nAfter={f4.SOCKET}\nOnFailure={FALLBACK}\n"
+        f"Wants={f4.SOCKET}\nAfter={f4.SOCKET}\nOnFailure={FALLBACK}\n"
         "StartLimitIntervalSec=60\nStartLimitBurst=3\n\n"
         f"[Service]\nExecStart=\nExecStart={launcher} start\nRestart=on-failure\nRestartSec=2\n"
         "KillMode=control-group\nTimeoutStopSec=10\n"
@@ -64,16 +63,6 @@ def daemon_text(argv):
     """Bead with --notifications daemon: the daemon owns notifications and the QML-owned behaviours."""
     return (
         f"{MARK}[Service]\nExecStart=\nExecStart={' '.join([*argv, *DAEMON_FLAGS])}\n"
-    ).encode()
-
-
-def windows_text(dropin, qml_argv):
-    return (
-        f"{MARK}[Unit]\nDescription=Nacre QML windows (Settings, Colors, Welcome) beside Bead\n"
-        f"PartOf={SHELL}\nAfter={SHELL}\nConditionPathExists={dropin}\n\n"
-        f"[Service]\nType=simple\nEnvironment={f4.KEY}=1\nEnvironment=NACRE_QML_WINDOWS_ONLY=1\n"
-        f"ExecStart={' '.join(qml_argv)}\nRestart=on-failure\nRestartSec=2\n"
-        "KillMode=control-group\nTimeoutStopSec=10\n"
     ).encode()
 
 
@@ -284,8 +273,8 @@ class UiShell(f4.Switch):
         if self.loaded() != bead:
             raise RuntimeError("Loaded drop-in does not match the requested shell")
         win = self.props(WINDOWS, "LoadState", "ActiveState")
-        if bead and win["ActiveState"] != "active":
-            raise RuntimeError("QML windows companion is not running")
+        if bead and (win["LoadState"] == "loaded" or win["ActiveState"] == "active"):
+            raise RuntimeError("QML windows companion remains installed or running")
         if not bead and win["ActiveState"] == "active":
             raise RuntimeError(
                 "QML windows companion still running beside the QML shell"
@@ -651,11 +640,27 @@ class UiShell(f4.Switch):
         try:
 
             def write_units():
-                f4.atomic(self.windows, windows_text(self.dropin, qml_argv), 0o644)
                 f4.atomic(self.fallback, fallback_text(recover), 0o644)
 
             self.phase(record, "write-units", write_units)
             self.phase(record, "reload-units", lambda: self.ctl("daemon-reload"))
+            self.phase(
+                record,
+                "stop-windows",
+                lambda: (
+                    self.ctl("stop", WINDOWS)
+                    if self.props(WINDOWS, "LoadState")["LoadState"] == "loaded"
+                    else None
+                ),
+            )
+            self.phase(
+                record,
+                "remove-windows",
+                lambda: self._remove_windows_unit(),
+            )
+            self.phase(
+                record, "reload-without-windows", lambda: self.ctl("daemon-reload")
+            )
             if daemon:
                 self.phase(
                     record,
@@ -689,6 +694,13 @@ class UiShell(f4.Switch):
                 f"Bead failed: {error}; the QML shell was restored; transaction {record['id']}"
             ) from error
         return {"status": "complete", "shell": "bead", "transaction": record["id"]}
+
+    def _remove_windows_unit(self):
+        if not self.mark_ok(self.windows):
+            raise RuntimeError(f"Refusing to remove unmanaged file: {self.windows}")
+        if self.windows.exists():
+            self.windows.unlink()
+            f4.syncdir(self.windows.parent)
 
 
 def dispatch(args, home, release_state, **kw):

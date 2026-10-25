@@ -35,6 +35,7 @@ class Manager:
         self.cfg = {"bead": False, "windows": False}
         self.shell = ("qml", 1, "active")  # kind, pid, state
         self.windows = None
+        self.qml_wallpaper_helpers = []
         self.wallpaper = None  # supervised child in the shell's control group
         self.pid = 1
         self.calls, self.violations = [], []
@@ -199,6 +200,7 @@ class Manager:
             pass
         elif action == "stop" and args[0] == m.WINDOWS:
             self.windows = None
+            self.qml_wallpaper_helpers = []
         else:
             raise AssertionError(command)
         self.check()
@@ -331,7 +333,7 @@ class Base(unittest.TestCase):
     def assertBead(self):
         mgr = self.manager
         self.assertEqual((mgr.shell[0], mgr.shell[2]), ("bead", "active"))
-        self.assertIsNotNone(mgr.windows)
+        self.assertIsNone(mgr.windows)
         self.assertIsNotNone(mgr.wallpaper)
         self.assertEqual(mgr.violations, [])
 
@@ -348,15 +350,10 @@ class SwitchTests(Base):
         self.assertIn(f"ExecStart=\nExecStart={self.launcher} start\n", dropin)
         self.assertIn(f"OnFailure={m.FALLBACK}", dropin)
         self.assertIn("KillMode=control-group", dropin)
-        self.assertIn(f"Wants={m.WINDOWS} {f4.SOCKET}", dropin)
+        self.assertIn(f"Wants={f4.SOCKET}", dropin)
+        self.assertNotIn(m.WINDOWS, dropin)
+        self.assertFalse((self.manager.root / m.WINDOWS).exists())
         self.assertIn(f"After={f4.SOCKET}", dropin)
-        windows = (self.manager.root / m.WINDOWS).read_text()
-        self.assertIn(
-            f"ConditionPathExists={self.manager.root / (m.SHELL + '.d') / m.DROPIN_NAME}",
-            windows,
-        )
-        self.assertIn("NACRE_QML_WINDOWS_ONLY=1", windows)
-        self.assertIn("ExecStart=/usr/bin/nacre-shell start", windows)
         self.assertIn(
             "ui-shell qml --recover", (self.manager.root / m.FALLBACK).read_text()
         )
@@ -370,6 +367,30 @@ class SwitchTests(Base):
             self.manager.mutations, mutations
         )  # already QML: nothing restarted
         self.bead()
+        self.assertBead()
+
+    def test_qml_rollback_stops_legacy_companion_before_bead_switch(self):
+        switch = self.switch()
+        switch.dropin.parent.mkdir(parents=True)
+        switch.dropin.write_text(m.MARK + f"[Unit]\nWants={m.WINDOWS} {f4.SOCKET}\n")
+        switch.windows.write_text(m.MARK + "[Unit]\nDescription=legacy QML companion\n")
+        self.manager.cfg["bead"] = True
+        self.manager.cfg["windows"] = True
+        self.manager.shell = ("bead", 2, "active")
+        self.manager.windows = 2
+        self.manager.wallpaper = 3
+        self.manager.qml_wallpaper_helpers = [3, 4, 5]
+
+        switch.qml()
+
+        self.assertQml()
+        self.assertEqual(self.manager.qml_wallpaper_helpers, [])
+        self.assertFalse(switch.windows.exists())
+        self.bead()
+
+        self.assertIsNone(self.manager.windows)
+        self.assertEqual(self.manager.qml_wallpaper_helpers, [])
+        self.assertFalse(switch.windows.exists())
         self.assertBead()
 
     def test_rollback_restores_prior_companion_bytes_and_modes(self):
@@ -513,6 +534,9 @@ class SwitchTests(Base):
         forward = [
             "write-units",
             "reload-units",
+            "stop-windows",
+            "remove-windows",
+            "reload-without-windows",
             "write-dropin",
             "reload",
             "restart-shell",
@@ -662,6 +686,9 @@ class SwitchTests(Base):
         phases = [
             "write-units",
             "reload-units",
+            "stop-windows",
+            "remove-windows",
+            "reload-without-windows",
             "write-daemon-dropin",
             "write-dropin",
             "reload",
@@ -776,6 +803,9 @@ class SwitchTests(Base):
         phases = [
             "write-units",
             "reload-units",
+            "stop-windows",
+            "remove-windows",
+            "reload-without-windows",
             "write-dropin",
             "reload",
             "restart-shell",
