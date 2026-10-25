@@ -44,6 +44,8 @@ pub fn initial(hub: &Shared) -> crate::Result<()> {
             checked: None,
             count: None,
             text: String::new(),
+            packages: Vec::new(),
+            truncated: false,
         },
     )
 }
@@ -94,6 +96,8 @@ fn complete(state: &mut UpdatesState, data: Option<Value>) {
         state.count = data["count"].as_u64().and_then(|n| n.try_into().ok());
         state.checked = data["checked"].as_f64();
         state.text = data["text"].as_str().unwrap_or("").to_owned();
+        state.packages = serde_json::from_value(data["packages"].clone()).unwrap_or_default();
+        state.truncated = data["truncated"].as_bool().unwrap_or(false);
         state.health = Health {
             available: state.count.is_some(),
             stale: false,
@@ -102,6 +106,8 @@ fn complete(state: &mut UpdatesState, data: Option<Value>) {
     } else {
         state.count = None;
         state.text.clear();
+        state.packages.clear();
+        state.truncated = false;
         state.health = Health {
             available: false,
             stale: true,

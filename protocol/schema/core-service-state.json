@@ -2217,11 +2217,53 @@
         },
         "text": {
           "type": "string"
+        },
+        "packages": {
+          "description": "At most 500 pending upgrades, parsed from the count worker's existing commands.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/UpdatePackage"
+          },
+          "default": [],
+          "maxItems": 500
+        },
+        "truncated": {
+          "description": "More package rows were returned than the bounded `packages` list can hold.",
+          "type": "boolean",
+          "default": false
         }
       },
       "required": [
         "health",
         "text"
+      ]
+    },
+    "UpdatePackage": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "old": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "new": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "repo": {
+          "description": "Package repository, or `aur` for the existing `paru/yay -Qua` source.",
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "name",
+        "old",
+        "new",
+        "repo"
       ]
     },
     "CalendarState": {

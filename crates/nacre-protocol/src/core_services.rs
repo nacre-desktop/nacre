@@ -787,6 +787,34 @@ pub struct UpdatesState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<u32>,
     pub text: String,
+    /// At most 500 pending upgrades, parsed from the count worker's existing commands.
+    #[serde(default)]
+    #[schemars(extend("maxItems" = 500))]
+    pub packages: Vec<UpdatePackage>,
+    /// More package rows were returned than the bounded `packages` list can hold.
+    #[serde(default)]
+    pub truncated: bool,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct UpdatePackage {
+    #[schemars(length(max = 256))]
+    pub name: String,
+    #[schemars(length(max = 128))]
+    pub old: String,
+    #[schemars(length(max = 128))]
+    pub new: String,
+    /// Package repository, or `aur` for the existing `paru/yay -Qua` source.
+    #[schemars(length(max = 64))]
+    pub repo: String,
+}
+impl UpdatePackage {
+    pub fn valid(&self) -> bool {
+        !self.name.is_empty()
+            && self.name.len() <= 256
+            && self.old.len() <= 128
+            && self.new.len() <= 128
+            && self.repo.len() <= 64
+    }
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct CalendarEvent {
@@ -1223,7 +1251,12 @@ impl CoreSnapshot {
                             })
                     })
             }
-            Self::Updates(s) => s.checked.is_none_or(timestamp_seconds_valid),
+            Self::Updates(s) => {
+                s.checked.is_none_or(timestamp_seconds_valid)
+                    && s.packages.len() <= 500
+                    && s.packages.iter().all(UpdatePackage::valid)
+                    && (!s.truncated || s.packages.len() == 500)
+            }
             Self::Calendar(s) => {
                 s.events.valid() && s.events.items.values().all(|e| timestamp_valid(e.start))
             }

@@ -1,5 +1,6 @@
 //! Read-only bounded update status worker. This helper never upgrades packages.
 use crate::{paths::Paths, process, Result};
+use nacre_protocol::core_services::UpdatePackage;
 use serde_json::{json, Value};
 use std::{
     fs,
@@ -188,6 +189,8 @@ fn bounded_output(
         }
     }
 }
+const MAX_DASHBOARD_PACKAGES: usize = 500;
+
 fn count_result(command: &str, code: i32, stdout: &str, stderr: &str) -> Result<usize> {
     let allowed = if command == "checkupdates" {
         [0, 2].contains(&code)
@@ -201,6 +204,28 @@ fn count_result(command: &str, code: i32, stdout: &str, stderr: &str) -> Result<
         .lines()
         .filter(|line| !line.trim().is_empty())
         .count())
+}
+fn parse_package_line(line: &str, aur: bool) -> Result<UpdatePackage> {
+    let fields = line.split_whitespace().collect::<Vec<_>>();
+    if fields.len() != 4 || fields[2] != "->" {
+        return Err("Could not parse pending package update".into());
+    }
+    let (repo, name) = if aur {
+        ("aur", fields[0].rsplit('/').next().unwrap_or(fields[0]))
+    } else if let Some((repo, name)) = fields[0].split_once('/') {
+        (repo, name)
+    } else {
+        ("", fields[0])
+    };
+    if name.is_empty() || fields[1].is_empty() || fields[3].is_empty() {
+        return Err("Could not parse pending package update".into());
+    }
+    Ok(UpdatePackage {
+        name: name.to_owned(),
+        old: fields[1].to_owned(),
+        new: fields[3].to_owned(),
+        repo: repo.to_owned(),
+    })
 }
 fn count_updates() -> Result<Value> {
     let mut commands = Vec::<Vec<String>>::new();
@@ -224,18 +249,26 @@ fn collect_counts(
     commands: &[Vec<String>],
     mut run: impl FnMut(&[String]) -> Result<std::process::Output>,
 ) -> Result<Value> {
-    let mut count = 0;
+    let mut packages = Vec::new();
+    let mut count = 0usize;
     for cmd in commands {
         let out = run(cmd)?;
+        let stdout = String::from_utf8_lossy(&out.stdout);
         count += count_result(
             &cmd[0],
             out.status.code().unwrap_or(1),
-            &String::from_utf8_lossy(&out.stdout),
+            &stdout,
             &String::from_utf8_lossy(&out.stderr),
         )?;
+        let aur = cmd.get(1).is_some_and(|arg| arg == "-Qua");
+        for line in stdout.lines().filter(|line| !line.trim().is_empty()) {
+            if packages.len() < MAX_DASHBOARD_PACKAGES {
+                packages.push(parse_package_line(line, aur)?);
+            }
+        }
     }
     Ok(
-        json!({"text":count.to_string(),"count":count,"checked":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64()}),
+        json!({"text":count.to_string(),"count":count,"checked":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64(),"truncated":count > MAX_DASHBOARD_PACKAGES,"packages":packages}),
     )
 }
 fn pkg_release(s: &str) -> String {
@@ -444,7 +477,9 @@ pub fn run(args: &[String]) -> Result<i32> {
             println!("{}", d["message"].as_str().unwrap());
         }
         if d["rebuildNeeded"] == true {
-            println!("Prepare a matching Quickshell package together with the pending Qt release; see docs/features/runtime.md");
+            println!(
+                "Prepare a matching Quickshell package together with the pending Qt release; see docs/features/runtime.md"
+            );
             return Ok(3);
         }
         return Ok(0);
@@ -643,6 +678,61 @@ mod preflight_progress_tests {
 #[cfg(test)]
 mod count_worker_tests {
     use super::*;
+    use std::os::unix::process::ExitStatusExt;
+
+    fn output(code: i32, stdout: &str, stderr: &str) -> std::process::Output {
+        std::process::Output {
+            status: std::process::ExitStatus::from_raw(code << 8),
+            stdout: stdout.as_bytes().to_vec(),
+            stderr: stderr.as_bytes().to_vec(),
+        }
+    }
+
+    #[test]
+    fn parses_checkupdates_and_paru_rows_with_source_repositories() {
+        let commands = vec![
+            vec!["checkupdates".into()],
+            vec!["paru".into(), "-Qua".into()],
+        ];
+        let mut rows = [
+            output(
+                0,
+                "extra/firefox 128.0-1 -> 129.0-1\ncore/linux 6.1-1 -> 6.2-1\n",
+                "",
+            ),
+            output(0, "ripgrep 14.1-1 -> 14.1-2\n", ""),
+        ]
+        .into_iter();
+        let result = collect_counts(&commands, |_| Ok(rows.next().unwrap())).unwrap();
+        assert_eq!(result["count"], 3);
+        assert_eq!(
+            result["packages"][0],
+            json!({"name":"firefox","old":"128.0-1","new":"129.0-1","repo":"extra"})
+        );
+        assert_eq!(result["packages"][2]["repo"], "aur");
+        assert_eq!(result["packages"][2]["name"], "ripgrep");
+        assert_eq!(result["truncated"], false);
+    }
+
+    #[test]
+    fn package_rows_are_capped_and_empty_or_invalid_results_are_safe() {
+        let command = vec![vec!["checkupdates".into()]];
+        let listing = (0..501)
+            .map(|i| format!("extra/pkg{i} 1 -> 2\n"))
+            .collect::<String>();
+        let capped = collect_counts(&command, |_| Ok(output(0, &listing, ""))).unwrap();
+        assert_eq!(capped["count"], 501);
+        assert_eq!(capped["packages"].as_array().unwrap().len(), 500);
+        assert_eq!(capped["truncated"], true);
+
+        let empty = collect_counts(&command, |_| Ok(output(2, "", ""))).unwrap();
+        assert_eq!(empty["count"], 0);
+        assert_eq!(empty["packages"], json!([]));
+        assert_eq!(empty["truncated"], false);
+
+        assert!(collect_counts(&command, |_| Ok(output(1, "", "mirror failed"))).is_err());
+        assert!(collect_counts(&command, |_| Ok(output(0, "broken package row\n", ""))).is_err());
+    }
 
     #[test]
     fn fake_checkupdates_zero_multiple_error_and_timeout() -> Result<()> {

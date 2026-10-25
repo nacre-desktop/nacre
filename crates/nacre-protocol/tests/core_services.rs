@@ -15,6 +15,27 @@ fn generated_weather_example_keeps_coordinates_and_refresh_state() {
 }
 
 #[test]
+fn updates_contract_exposes_bounded_package_details_additively() {
+    let exports = artifacts::generate();
+    let line = exports["protocol/fixtures/core-dashboard-updates.jsonl"]
+        .lines()
+        .next()
+        .unwrap();
+    let frame: Value = serde_json::from_str(line).unwrap();
+    assert_eq!(frame["data"]["packages"].as_array().unwrap().len(), 3);
+    assert_eq!(frame["data"]["packages"][0]["repo"], "extra");
+    assert_eq!(frame["data"]["packages"][2]["repo"], "aur");
+    assert_eq!(frame["data"]["truncated"], false);
+
+    // Older publishers omit these additive members and remain readable.
+    let old: CoreSnapshot = serde_json::from_value(json!({"topic":"dashboard.updates","data":{
+        "health":{"available":true,"stale":false},"refreshing":false,"checked":1800000000,
+        "count":3,"text":"3"}}))
+    .unwrap();
+    assert!(old.valid());
+}
+
+#[test]
 fn validated_map_keys_keep_their_element_types_in_luau() {
     let exports = artifacts::generate();
     let types = &exports["protocol/luau/core-services.d.luau"];
