@@ -2624,8 +2624,13 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
     fs::write(config.join("wallpaper-picker.json"), "{}")?;
     assert_eq!(next_line(&mut first_read)?, expected("picker-preference")?);
     assert_eq!(next_line(&mut second_read)?, expected("picker-preference")?);
+    let engine_changed_at = Instant::now();
     fs::write(&bridge, "bridge replacement")?;
     assert_eq!(next_line(&mut first_read)?, expected("engine-replacement")?);
+    assert!(
+        engine_changed_at.elapsed() >= Duration::from_millis(450),
+        "legacy engine debounce was shortened"
+    );
     quiet(&second_read)?;
     fs::write(&installed, "helper replacement")?;
     assert_eq!(
@@ -2761,6 +2766,14 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
     fs::write(&presentation, serde_json::to_vec(&record)?)?;
     let scheme = state_dir.join("scheme.json");
     fs::write(&scheme, r#"{"mode":"dark"}"#)?;
+    let write_presentation = |bytes: &[u8]| -> Result<()> {
+        let mut temporary = tempfile::NamedTempFile::new_in(&state_dir)?;
+        temporary.write_all(bytes)?;
+        temporary
+            .persist(&presentation)
+            .map_err(|error| error.error)?;
+        Ok(())
+    };
 
     let log = home.path().join("daemon.log");
     let mut daemon = Process(
@@ -2850,8 +2863,13 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
 
     record["mode"] = json!("light");
     record["poster"] = json!(image_b);
-    fs::write(&presentation, serde_json::to_vec(&record)?)?;
+    let presentation_changed_at = Instant::now();
+    write_presentation(&serde_json::to_vec(&record)?)?;
     let changed = read_active(&mut reader, &mut mirror)?;
+    assert!(
+        presentation_changed_at.elapsed() < Duration::from_millis(450),
+        "daemon active presentation was delayed by the legacy debounce"
+    );
     assert!(changed.available && changed.revision > active.revision);
     assert_eq!(
         changed.current.as_ref().unwrap().palette.mode,
@@ -2862,7 +2880,7 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
         Reply::Ok { .. }
     ));
 
-    fs::write(&presentation, b"invalid")?;
+    write_presentation(b"invalid")?;
     let stale = read_active(&mut reader, &mut mirror)?;
     assert!(!stale.available && stale.stale);
     assert_eq!(stale.current, changed.current);
@@ -2870,7 +2888,7 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
         call(&mut reader, 3, stale.revision)?,
         Reply::Err { .. }
     ));
-    fs::write(&presentation, serde_json::to_vec(&record)?)?;
+    write_presentation(&serde_json::to_vec(&record)?)?;
     let recovered = read_active(&mut reader, &mut mirror)?;
     assert!(recovered.available && !recovered.stale);
     assert_eq!(recovered.revision, changed.revision);

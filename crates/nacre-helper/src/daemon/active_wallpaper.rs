@@ -11,14 +11,106 @@ use nacre_protocol::{
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::MetadataExt;
+use std::sync::{Mutex, OnceLock};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet, VecDeque},
     fs::File,
     io::Read,
     path::{Component, Path},
 };
 
 pub const TOPIC: &str = "wallpaper.active";
+const PALETTE_PREWARM_BATCH: usize = 32;
+const PALETTE_PREWARM_QUEUE: usize = 128;
+
+#[derive(Default)]
+struct PalettePrewarmQueue {
+    ids: VecDeque<String>,
+    active: HashSet<String>,
+    running: bool,
+}
+static PALETTE_PREWARM: OnceLock<Mutex<PalettePrewarmQueue>> = OnceLock::new();
+
+fn enqueue_palette_prewarm(ids: &[String]) {
+    let queue = PALETTE_PREWARM.get_or_init(|| Mutex::new(PalettePrewarmQueue::default()));
+    let start = {
+        let Ok(mut state) = queue.lock() else {
+            return;
+        };
+        for id in ids.iter().take(PALETTE_PREWARM_QUEUE) {
+            if state.ids.len() >= PALETTE_PREWARM_QUEUE {
+                break;
+            }
+            if !state.active.contains(id) && !state.ids.contains(id) {
+                state.ids.push_back(id.clone());
+            }
+        }
+        if state.running || state.ids.is_empty() {
+            false
+        } else {
+            state.running = true;
+            true
+        }
+    };
+    if start {
+        tokio::spawn(async move { run_palette_prewarm().await });
+    }
+}
+
+async fn run_palette_prewarm() {
+    loop {
+        let batch = {
+            let queue = PALETTE_PREWARM.get_or_init(|| Mutex::new(PalettePrewarmQueue::default()));
+            let Ok(mut state) = queue.lock() else {
+                return;
+            };
+            let count = state.ids.len().min(PALETTE_PREWARM_BATCH);
+            let batch = state.ids.drain(..count).collect::<Vec<_>>();
+            if batch.is_empty() {
+                state.running = false;
+                return;
+            }
+            state.active.extend(batch.iter().cloned());
+            batch
+        };
+        if let Ok(engine) = std::env::current_exe() {
+            let engine = engine.to_string_lossy().into_owned();
+            let mut owned = vec![
+                "-n".to_owned(),
+                "10".to_owned(),
+                "--".to_owned(),
+                engine,
+                "wallpaper-media".to_owned(),
+                "prewarm".to_owned(),
+                "--catalogue-ids".to_owned(),
+            ];
+            owned.extend(batch.iter().cloned());
+            let args = owned.iter().map(String::as_str).collect::<Vec<_>>();
+            if super::behaviours::helper(
+                Path::new("nice"),
+                &args,
+                64 * 1024,
+                std::time::Duration::from_secs(120),
+            )
+            .await
+            .is_none_or(|(success, _)| !success)
+            {
+                eprintln!("Wallpaper palette prewarm failed");
+            }
+        } else {
+            eprintln!("Wallpaper palette prewarm could not resolve the helper executable");
+        }
+        if let Ok(mut state) = PALETTE_PREWARM
+            .get_or_init(|| Mutex::new(PalettePrewarmQueue::default()))
+            .lock()
+        {
+            for id in batch {
+                state.active.remove(&id);
+            }
+        }
+    }
+}
+
 thread_local! {
     static SELECTION_BUSY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -687,6 +779,9 @@ pub async fn catalogue(
             true,
         )
     })?;
+    if let Some(ids) = request.ids.as_deref() {
+        enqueue_palette_prewarm(ids);
+    }
     Ok(catalogue)
 }
 

@@ -18,6 +18,7 @@ use std::{
     time::{Duration, Instant},
 };
 const MASK: u32 = 0x8 | 0x40 | 0x80 | 0x100 | 0x200 | 0x400 | 0x800;
+const COMPLETE_FILE_CHANGE: u32 = 0x8 | 0x40 | 0x80 | 0x200 | 0x400 | 0x800;
 const ISDIR: u32 = 0x40000000;
 const IGNORED: u32 = 0x8000;
 #[derive(Debug)]
@@ -190,6 +191,7 @@ impl Watcher {
                 .selected
                 .as_ref()
                 .is_some_and(|selected| selected.starts_with(path.join(&name)))
+                && mask & COMPLETE_FILE_CHANGE != 0
             {
                 dirty |= 0x80;
             }
@@ -200,7 +202,10 @@ impl Watcher {
                     }
                 }
             } else if path == parent(&self.scheme) {
-                if self.presentation && name == "presentation.json" {
+                if self.presentation
+                    && name == "presentation.json"
+                    && mask & COMPLETE_FILE_CHANGE != 0
+                {
                     dirty |= 0x80;
                 }
                 if self.presentation && name == "wallpaper" && mask & ISDIR != 0 {
@@ -220,7 +225,7 @@ impl Watcher {
                     *previous = current;
                 }
             } else if self.presentation && path == self.media_directory() {
-                if name == "media.json" {
+                if name == "media.json" && mask & COMPLETE_FILE_CHANGE != 0 {
                     dirty |= 0x80;
                 }
             } else if path == self.config {
@@ -293,8 +298,8 @@ impl Watcher {
     }
 }
 /// Same event parser/filter as the standalone command, registered on the daemon
-/// runtime. Distinct engine paths have independent debounce deadlines; common
-/// library/scheme changes notify every source. No timer is armed while idle.
+/// runtime. Daemon presentation changes are published immediately; distinct
+/// engine paths retain independent debounce deadlines. No timer is armed idle.
 #[allow(unsafe_code)]
 pub(crate) async fn observe(
     paths: &Paths,
@@ -327,16 +332,10 @@ pub(crate) async fn observe(
     let descriptor = unsafe { tokio::io::unix::AsyncFd::register(descriptor) }?;
     let mut buffer = vec![MaybeUninit::uninit(); 262144];
     let mut deadlines = vec![None; watcher.engines.len()];
-    let mut presentation_deadline = None;
     watcher.selected = publish(None)?;
     watcher.rescan()?;
     loop {
-        let next = deadlines
-            .iter()
-            .flatten()
-            .copied()
-            .chain(presentation_deadline)
-            .min();
+        let next = deadlines.iter().flatten().copied().min();
         let timeout = async {
             match next {
                 Some(next) => tokio::time::sleep_until(next).await,
@@ -353,7 +352,11 @@ pub(crate) async fn observe(
                 drop(ready);
                 let dirty = watcher.apply(events, &mut previous)?;
                 if dirty & 0x80 != 0 {
-                    presentation_deadline = Some(tokio::time::Instant::now() + Duration::from_millis(500));
+                    // Presentation/media records are atomic, so this refresh
+                    // observes a complete pair. Multiple events in one read
+                    // coalesce into one current-state publication.
+                    watcher.selected = publish(Some(0x80))?;
+                    watcher.rescan()?;
                 }
                 for (index, deadline) in deadlines.iter_mut().enumerate() {
                     if dirty & (1 << index) != 0 {
@@ -364,10 +367,6 @@ pub(crate) async fn observe(
             _ = timeout => {
                 let now = tokio::time::Instant::now();
                 let mut changed = 0;
-                if presentation_deadline.is_some_and(|deadline| deadline <= now) {
-                    presentation_deadline = None;
-                    changed |= 0x80;
-                }
                 for (index, deadline) in deadlines.iter_mut().enumerate() {
                     if deadline.is_some_and(|deadline| deadline <= now) {
                         *deadline = None;
