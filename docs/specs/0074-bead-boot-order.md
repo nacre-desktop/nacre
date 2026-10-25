@@ -12,7 +12,8 @@ can be learned without reconnecting the shell.
 | Generated unit | `Wants=` and `After=` include `nacre-daemon.socket` and `nacre-daemon.service` |
 | Fake manager | Asserts both dependency lines and preserves fallback/rollback coverage |
 | Real user manager | PASS: daemon active when Bead starts; persisted restart, crash-loop fallback, rollback and daemon takeover pass |
-| Full desktop CI | Pending |
+| Method registry | `daemon.status.methods` mirrors Welcome; hub test observes `menu.query` after readiness |
+| Full desktop CI | PASS: remote Arch replica; Python suites 499/120/52/490, parity 534, native and gallery checks |
 
 ## Change
 
