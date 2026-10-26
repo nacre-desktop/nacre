@@ -1395,7 +1395,7 @@ Its five-second observation and two-second lock wait are not latency estimates.
 Short-lived native wallpaper commands cache the executable SHA-256 in
 `cache/nacre/native-engine-identity.json` (at most 4 KiB). The cache is accepted
 only for an owned, regular, non-writable-by-others file matching the executable’s
-full device/inode/size/mode/owner/mtime/ctime identity; invalid or unavailable
+full device/inode/size/mtime/ctime identity; invalid or unavailable
 cache data falls back to hashing the pinned executable. The palette key is
 unchanged. Catalogue prewarming processes only requested IDs, even though the
 metadata catalogue includes other rows. Neither cache contains decoded frames.
