@@ -235,7 +235,9 @@ async fn serve(
     let updates_service = if !counter.safe {
         updates::initial(&hub)?;
         let updates_hub = hub.clone();
-        Some(tokio::task::spawn_local(updates::run(updates_hub)))
+        let wake = std::sync::Arc::new(tokio::sync::Notify::new());
+        hub.borrow_mut().updates_wake = Some(wake.clone());
+        Some(tokio::task::spawn_local(updates::run(updates_hub, wake)))
     } else {
         None
     };

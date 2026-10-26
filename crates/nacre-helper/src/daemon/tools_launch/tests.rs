@@ -37,6 +37,7 @@ impl Fixture {
         hub.borrow_mut()
             .service("capabilities", "running", 0)
             .unwrap();
+        hub.borrow_mut().updates_wake = Some(std::sync::Arc::new(tokio::sync::Notify::new()));
         Self { dir, hub }
     }
     async fn launch(&self, params: Value) -> Result<Value, Failure> {
@@ -151,5 +152,18 @@ fn only_named_tools_start_and_missing_programs_are_unavailable() {
         let error = f.launch(json!({"tool":"audio-manager"})).await.unwrap_err();
         assert_eq!(error.code, ErrorCode::PermissionDenied);
         assert!(available_methods(&f.hub.borrow()).is_empty());
+    });
+}
+
+#[test]
+fn updater_exit_notifies_the_dashboard_refresh_service() {
+    run(async {
+        let f = Fixture::new(&[]);
+        let wake = f.hub.borrow().updates_wake.clone().unwrap();
+        f.launch(json!({"tool":"updates"})).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(1), wake.notified())
+            .await
+            .expect("completed updater wakes dashboard updates refresh");
+        assert_eq!(f.log(), "control.sh updates\n");
     });
 }

@@ -7,12 +7,14 @@ use nacre_protocol::{
 use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
+    path::PathBuf,
     sync::{Arc, OnceLock},
     time::Duration,
 };
 
 pub const TOPIC: &str = "dashboard.updates";
 const INTERVAL: Duration = Duration::from_secs(1800);
+const DATABASE_DEBOUNCE: Duration = Duration::from_secs(2);
 static LANE: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
 
 pub fn methods() -> BTreeMap<String, Method> {
@@ -55,7 +57,7 @@ fn publish(hub: &Shared, state: &UpdatesState) -> crate::Result<()> {
     Ok(())
 }
 
-fn start(hub: Shared) -> Result<(), Failure> {
+pub(super) fn start(hub: Shared) -> Result<(), Failure> {
     let guard = LANE
         .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
         .clone()
@@ -139,12 +141,71 @@ pub fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
     Ok(json!({"changed":false}))
 }
 
-pub async fn run(hub: Shared) -> crate::Result<()> {
+async fn wait_settled_change(
+    watch: &mut super::dashboard_extras::watch::Watch,
+    quiet: Duration,
+) -> crate::Result<()> {
+    watch.next().await?;
+    loop {
+        match tokio::time::timeout(quiet, watch.next()).await {
+            Ok(Ok(_)) => continue,
+            Ok(Err(error)) => return Err(error),
+            Err(_) => return Ok(()),
+        }
+    }
+}
+
+fn local_database_watch(path: PathBuf) -> crate::Result<super::dashboard_extras::watch::Watch> {
+    use rustix::fs::inotify::WatchFlags;
+    super::dashboard_extras::watch::Watch::new(vec![(
+        path,
+        WatchFlags::CLOSE_WRITE
+            | WatchFlags::MOVED_TO
+            | WatchFlags::MOVED_FROM
+            | WatchFlags::CREATE
+            | WatchFlags::DELETE,
+    )])
+}
+
+async fn watch_local_database(path: PathBuf, changed: tokio::sync::mpsc::UnboundedSender<()>) {
+    let mut watch = match local_database_watch(path) {
+        Ok(watch) => watch,
+        Err(error) => {
+            tracing::warn!(%error, "Cannot watch pacman local database");
+            return;
+        }
+    };
+    loop {
+        if let Err(error) = wait_settled_change(&mut watch, DATABASE_DEBOUNCE).await {
+            tracing::warn!(%error, "Pacman local database watch stopped");
+            return;
+        }
+        if changed.send(()).is_err() {
+            return;
+        }
+    }
+}
+
+pub async fn run(hub: Shared, wake: Arc<tokio::sync::Notify>) -> crate::Result<()> {
     let mut timer = tokio::time::interval(INTERVAL);
     timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let (changed, mut changes) = tokio::sync::mpsc::unbounded_channel();
+    tokio::task::spawn_local(watch_local_database(
+        PathBuf::from("/var/lib/pacman/local"),
+        changed,
+    ));
+    let mut watch_open = true;
     loop {
-        timer.tick().await;
-        // Manual and timer refreshes share the same lane; busy ticks are skipped.
+        tokio::select! {
+            _ = timer.tick() => {},
+            _ = wake.notified() => {},
+            changed = changes.recv(), if watch_open => {
+                if changed.is_none() {
+                    watch_open = false;
+                }
+            }
+        }
+        // Timer, updater exit and settled package database changes share the same lane.
         let _ = start(hub.clone());
     }
 }
@@ -209,5 +270,24 @@ mod refresh_tests {
             dispatch(safe, json!({})).unwrap_err().code,
             ErrorCode::PermissionDenied
         );
+    }
+}
+
+#[cfg(test)]
+mod pacman_watch_tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[tokio::test]
+    async fn fake_local_database_changes_are_debounced() {
+        let directory = tempfile::tempdir().unwrap();
+        let mut watch = local_database_watch(directory.path().to_owned()).unwrap();
+        let first = directory.path().join("pkg-1");
+        std::fs::write(&first, "one").unwrap();
+        let started = Instant::now();
+        wait_settled_change(&mut watch, Duration::from_millis(80))
+            .await
+            .unwrap();
+        assert!(started.elapsed() >= Duration::from_millis(70));
     }
 }

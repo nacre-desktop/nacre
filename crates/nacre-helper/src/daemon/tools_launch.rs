@@ -153,8 +153,14 @@ pub async fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
         failure(ErrorCode::Io, "The tool could not be started", true).dispatch_state(false)
     })?;
     // The program belongs to the session now; reaping it keeps the daemon free of zombies.
+    let updates_wake = (request.tool == Tool::Updates)
+        .then(|| hub.borrow().updates_wake.clone())
+        .flatten();
     std::thread::spawn(move || {
         let _ = child.wait();
+        if let Some(wake) = updates_wake {
+            wake.notify_one();
+        }
     });
     Ok(json!({"launched":true}))
 }
