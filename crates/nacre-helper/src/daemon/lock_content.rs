@@ -239,13 +239,14 @@ fn prepare(
     paths: &Paths,
     options: &Options,
     inputs: &Inputs,
+    now: chrono::DateTime<chrono::Local>,
     last: Option<&str>,
 ) -> Result<Option<String>> {
     let language = menu::message_language(&inputs.desktop);
     let messages = menu::translations(paths, &language).unwrap_or(json!({}));
     let data = presentation(inputs, &messages, &language);
     // The greeting follows the hour; everything else is in the presentation itself.
-    let key = format!("{}|{}", chrono::Local::now().format("%Y%m%d%H"), data);
+    let key = format!("{}|{}", now.format("%Y%m%d%H"), data);
     if last == Some(key.as_str()) {
         return Ok(None);
     }
@@ -284,7 +285,13 @@ pub async fn lock_content(hub: Shared, paths: Paths, options: Options) -> Result
         let (inputs, work_paths, previous) = (Inputs::read(&hub), paths.clone(), last.clone());
         let work_options = options.clone();
         match tokio::task::spawn_blocking(move || {
-            let result = prepare(&work_paths, &work_options, &inputs, previous.as_deref());
+            let result = prepare(
+                &work_paths,
+                &work_options,
+                &inputs,
+                chrono::Local::now(),
+                previous.as_deref(),
+            );
             // prepare has dropped its renderer, fonts and all raster/PNG buffers.
             // glibc otherwise retains these freed pages in blocking-thread arenas
             // even after Tokio retires the thread. Reclaim on errors too.

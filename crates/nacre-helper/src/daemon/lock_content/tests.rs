@@ -168,10 +168,13 @@ fn prepared_files_follow_inputs_and_the_privacy_off_path_writes_no_bodies() {
             publish_all(&hub, &image, "Song", contents);
             Inputs::read(&hub)
         };
-        let key = prepare(&paths, &options(1), &input, None).unwrap().unwrap();
+        let now = chrono::Local::now();
+        let key = prepare(&paths, &options(1), &input, now, None)
+            .unwrap()
+            .unwrap();
         // The same inputs do not render again.
         assert_eq!(
-            prepare(&paths, &options(1), &input, Some(&key)).unwrap(),
+            prepare(&paths, &options(1), &input, now, Some(&key)).unwrap(),
             None
         );
         let ready = paths.cache.join("lock-ready");

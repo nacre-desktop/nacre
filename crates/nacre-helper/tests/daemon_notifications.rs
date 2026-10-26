@@ -485,27 +485,34 @@ fn private_bus_scenario() {
 
     let mut managed = daemon(&home, &endpoint, true, false);
     wait_owner(&connection, true);
-    let method_names = advertised_methods(&home)
-        .as_object()
-        .expect("daemon method map")
-        .keys()
-        .filter(|method| method.starts_with("notifications."))
-        .cloned()
-        .collect::<std::collections::BTreeSet<_>>();
-    assert_eq!(
-        method_names,
-        [
-            "notifications.clear",
-            "notifications.dismiss",
-            "notifications.invoke_action",
-            "notifications.set_dnd",
-            "notifications.set_hover",
-            "notifications.set_inhibited",
-        ]
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
-    );
+    let expected_methods = [
+        "notifications.clear",
+        "notifications.dismiss",
+        "notifications.invoke_action",
+        "notifications.set_dnd",
+        "notifications.set_hover",
+        "notifications.set_inhibited",
+    ]
+    .into_iter()
+    .map(str::to_owned)
+    .collect::<std::collections::BTreeSet<_>>();
+    // The Freedesktop name is acquired before the daemon publishes readiness
+    // and its dynamic method set. Wait for that separate startup milestone.
+    let deadline = Instant::now() + Duration::from_secs(8);
+    let method_names = loop {
+        let methods = advertised_methods(&home)
+            .as_object()
+            .expect("daemon method map")
+            .keys()
+            .filter(|method| method.starts_with("notifications."))
+            .cloned()
+            .collect::<std::collections::BTreeSet<_>>();
+        if methods == expected_methods || Instant::now() >= deadline {
+            break methods;
+        }
+        thread::sleep(Duration::from_millis(20));
+    };
+    assert_eq!(method_names, expected_methods);
     legacy_history_save(&home);
     let native = native_proxy(&connection);
     let started = Instant::now();

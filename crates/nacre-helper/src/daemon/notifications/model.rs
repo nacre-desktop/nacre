@@ -1696,6 +1696,25 @@ mod tests {
     }
 
     #[test]
+    fn restored_history_keeps_the_25_hour_dst_day_boundary() {
+        let row = |time| {
+            json!({
+                "key":"fixture",
+                "time":time,
+                "summary":"DST boundary",
+                "body":"",
+                "appName":"fixture.app",
+                "appIcon":"",
+                "urgency":1
+            })
+        };
+        let before = restored_notification(&row("2026-10-25T00:30:00+02:00")).unwrap();
+        let after = restored_notification(&row("2026-10-26T00:30:00+01:00")).unwrap();
+
+        assert_eq!(after.created_ms - before.created_ms, 25 * 60 * 60 * 1000);
+    }
+
+    #[test]
     fn replacement_keeps_notice_id_increments_revision_and_rotates_private_action_ids() {
         let now = Instant::now();
         let wall = system_now_ms();
