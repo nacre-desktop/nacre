@@ -953,6 +953,21 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
     Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"))
 }
 
+fn metadata_catalogue_contains(paths: Paths, id: &str) -> crate::Result<bool> {
+    let assets = paths.assets();
+    let media = crate::wallpaper_media::Media::new(paths, assets)?;
+    let catalogue = media.catalog_with_ids(Some(&[]))?;
+    let entries = catalogue["entries"]
+        .as_array()
+        .filter(|entries| entries.len() <= 2048)
+        .ok_or_else(|| std::io::Error::other("Invalid wallpaper catalogue"))?;
+    Ok(entries.iter().any(|entry| {
+        entry["path"]
+            .as_str()
+            .is_some_and(|path| !path.is_empty() && path.len() <= 4096 && path == id)
+    }))
+}
+
 pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
     let (request, state) = activation_state(&hub, params)?;
     let _selection_guard = if request.id.is_some() {
@@ -963,8 +978,22 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
     if let Some(id) = request.id {
         let paths = crate::paths::Paths::environment()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        let catalogue = catalogue(&hub, serde_json::json!({"ids":[]})).await?;
-        if !catalogue.entries.iter().any(|entry| entry.id == id) {
+        let paths_for_catalogue = paths.clone();
+        let id_for_catalogue = id.clone();
+        let known = crate::process::offload(move || {
+            metadata_catalogue_contains(paths_for_catalogue, &id_for_catalogue)
+        })
+        .await
+        .ok()
+        .and_then(std::result::Result::ok)
+        .ok_or_else(|| {
+            failure(
+                ErrorCode::Unavailable,
+                "Wallpaper catalogue is unavailable",
+                true,
+            )
+        })?;
+        if !known {
             return Err(failure(
                 ErrorCode::Validation,
                 "Unknown wallpaper catalogue id",
@@ -1181,6 +1210,62 @@ mod tests {
         drop(guard);
         assert!(!SelectionGuard::is_busy());
         assert!(SelectionGuard::acquire().is_ok());
+    }
+
+    #[test]
+    fn activation_membership_matches_metadata_catalogue_without_hydrating_thumbnails() -> Result<()>
+    {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let library = paths.home.join("Pictures/Wallpapers");
+        fs::create_dir_all(&library)?;
+        let image_path = library.join("still.png");
+        image::DynamicImage::new_rgb8(4, 4).save(&image_path)?;
+        let video_path = library.join("clip.mp4");
+        fs::write(&video_path, b"metadata-only video fixture")?;
+        let outside_path = paths.home.join("outside.png");
+        image::DynamicImage::new_rgb8(4, 4).save(&outside_path)?;
+
+        let metadata = crate::wallpaper_media::Media::new(paths.clone(), paths.assets())?
+            .catalog_with_ids(Some(&[]))?;
+        let rows = metadata["entries"]
+            .as_array()
+            .ok_or("missing metadata rows")?;
+        assert_eq!(rows.len(), 2);
+        for row in rows {
+            assert_eq!(row["thumbnail"], "");
+            assert_eq!(row["preview"], "");
+            let id = row["path"].as_str().ok_or("missing metadata path")?;
+            assert!(metadata_catalogue_contains(paths.clone(), id)?);
+        }
+        assert!(metadata_catalogue_contains(
+            paths.clone(),
+            &image_path.canonicalize()?.to_string_lossy()
+        )?);
+        assert!(metadata_catalogue_contains(
+            paths.clone(),
+            &video_path.canonicalize()?.to_string_lossy()
+        )?);
+        assert!(!metadata_catalogue_contains(
+            paths.clone(),
+            &outside_path.canonicalize()?.to_string_lossy()
+        )?);
+        assert!(!metadata_catalogue_contains(
+            paths.clone(),
+            &library.join("missing.png").to_string_lossy()
+        )?);
+        assert!(!metadata_catalogue_contains(
+            paths.clone(),
+            "/../../etc/passwd"
+        )?);
+        assert!(!paths.cache.join("wallpaper-media").exists());
+        assert!(WallpaperActivate {
+            revision: 1,
+            id: Some("/../../etc/passwd".into()),
+        }
+        .validate()
+        .is_err());
+        Ok(())
     }
 
     #[test]
