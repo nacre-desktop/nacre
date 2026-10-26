@@ -20,6 +20,7 @@ QtObject {
     readonly property string device: descriptor?.device || ""
     readonly property bool available: readable && present && maximum > 0 && (isDdc || !!device)
     signal adjusted
+    signal externalAdjusted
     onDescriptorChanged: {
         epoch++;
         readEpoch = epoch;
@@ -39,8 +40,11 @@ QtObject {
     function parseCurrent(text) {
         const raw = Number(text.trim());
         if (text.trim() && Number.isInteger(raw) && raw >= 0 && raw <= maximum && readEpoch === epoch && pending < 0 && !writer.running) {
+            const changed = Math.abs(brightness - raw / maximum) > 0.0001;
             brightness = raw / maximum;
             readable = true;
+            if (changed)
+                externalAdjusted();
         }
     }
     function readNative() {

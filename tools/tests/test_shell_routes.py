@@ -100,9 +100,18 @@ class ShellRouteTests(unittest.TestCase):
                 for call in ui_calls(text):
                     self.assertTrue(registered(call), (name, call))
                     seen.add(call[:2])
-        # Spot-check that the parser really saw the launcher family and the hardware keys.
+                if name.endswith("keybinding.lua") or name.endswith("bindings.kdl"):
+                    for method in (
+                        "audio.step",
+                        "brightness.adjust",
+                        "keyboard_light.adjust",
+                    ):
+                        self.assertEqual(
+                            text.count(f"nacrectl call {method}"), 2, (backend, method)
+                        )
+        # Hardware key steps are daemon calls; brightness UI routes remain for manual controls.
         self.assertIn(("nacre", "launcher"), seen)
-        self.assertIn(("brightness", "step"), seen)
+        self.assertNotIn(("brightness", "step"), seen)
 
     def test_committed_binding_files_use_only_registered_ui_routes(self):
         for name in BINDING_FILES:

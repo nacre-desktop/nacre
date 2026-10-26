@@ -61,6 +61,14 @@ TestCase {
         };
         verify(state.monitors[0].available);
         compare(state.monitors[0].brightness, .5);
+        verify(state.applyDaemonLevel("eDP-1", .65));
+        compare(state.monitors[0].brightness, .65);
+        verify(!state.applyDaemonLevel("missing", .4));
+        let externalSteps = 0;
+        state.monitors[0].externalAdjusted.connect(() => externalSteps++);
+        state.monitors[0].parseCurrent("60");
+        compare(state.monitors[0].brightness, .6);
+        compare(externalSteps, 1);
         compare(state.monitors[0].writer.starts, 0);
         verify(!findChild(state, "screenLightTimer").running);
         NacrePanelState.screens = {

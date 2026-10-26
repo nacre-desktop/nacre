@@ -2,14 +2,14 @@
 // Include before user bindings/rules so user-owned choices take precedence.
 binds {
     XF86AudioMute repeat=false allow-when-locked=true hotkey-overlay-title="Nacre:mute" { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
-    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-down" { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"; }
-    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-up" { spawn-sh "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+"; }
+    XF86AudioLowerVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-down" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call audio.step \"{\\\"direction\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-)"; }
+    XF86AudioRaiseVolume repeat=true allow-when-locked=true hotkey-overlay-title="Nacre:volume-up" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call audio.step \"{\\\"direction\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+)"; }
     XF86AudioMicMute repeat=false hotkey-overlay-title="Nacre:mic-mute" { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
     XF86PowerOff repeat=false allow-when-locked=true hotkey-overlay-title="Nacre:lock" { spawn-sh "loginctl lock-session"; }
-    XF86MonBrightnessDown repeat=false hotkey-overlay-title="Nacre:brightness-down" { spawn "nacrectl" "ui" "brightness" "step" "down"; }
-    XF86MonBrightnessUp repeat=false hotkey-overlay-title="Nacre:brightness-up" { spawn "nacrectl" "ui" "brightness" "step" "up"; }
-    XF86KbdBrightnessUp repeat=false hotkey-overlay-title="Nacre:keyboard-up" { spawn "nacrectl" "ui" "keyboardLight" "step" "up"; }
-    XF86KbdBrightnessDown repeat=false hotkey-overlay-title="Nacre:keyboard-down" { spawn "nacrectl" "ui" "keyboardLight" "step" "down"; }
+    XF86MonBrightnessDown repeat=true hotkey-overlay-title="Nacre:brightness-down" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call brightness.adjust \"{\\\"delta\\\":-5,\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl set 5%-)"; }
+    XF86MonBrightnessUp repeat=true hotkey-overlay-title="Nacre:brightness-up" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call brightness.adjust \"{\\\"delta\\\":5,\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl set 5%+)"; }
+    XF86KbdBrightnessUp repeat=true hotkey-overlay-title="Nacre:keyboard-up" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call keyboard_light.adjust \"{\\\"step\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl -d '*kbd_backlight*' set 1+)"; }
+    XF86KbdBrightnessDown repeat=true hotkey-overlay-title="Nacre:keyboard-down" { spawn-sh "key_ms=$(date +%s%3N); nacrectl call keyboard_light.adjust \"{\\\"step\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl -d '*kbd_backlight*' set 1-)"; }
     Super+period repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
     Super+Ctrl+E repeat=false hotkey-overlay-title="Nacre:emoji" { spawn "nacrectl" "ui" "nacre" "menu" "actions.emoji" ""; }
     Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }

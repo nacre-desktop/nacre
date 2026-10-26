@@ -4,20 +4,32 @@
   "type": "object",
   "properties": {
     "output": {
-      "type": "string",
+      "type": [
+        "string",
+        "null"
+      ],
       "minLength": 1,
-      "maxLength": 128
+      "maxLength": 128,
+      "default": null
     },
     "delta": {
       "type": "integer",
       "format": "int8",
       "minimum": -100,
       "maximum": 100
+    },
+    "key_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0,
+      "default": null
     }
   },
   "additionalProperties": false,
   "required": [
-    "output",
     "delta"
   ]
 }

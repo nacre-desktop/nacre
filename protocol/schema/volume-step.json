@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VolumeStep",
+  "type": "object",
+  "properties": {
+    "direction": {
+      "$ref": "#/$defs/VolumeDirection"
+    },
+    "key_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0,
+      "default": null
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "direction"
+  ],
+  "$defs": {
+    "VolumeDirection": {
+      "type": "string",
+      "enum": [
+        "up",
+        "down"
+      ]
+    }
+  }
+}

@@ -12,11 +12,13 @@ Singleton {
     readonly property string error: channel.error
     readonly property bool controlsVisible: NacreBrightness.controlsVisible
     signal adjusted
+    signal externalAdjusted
     NacreLightChannel {
         id: channel
         descriptor: NacreBrightness.hardware.keyboard
         present: !!descriptor
         onAdjusted: root.adjusted()
+        onExternalAdjusted: root.externalAdjusted()
     }
     function refresh() {
         channel.readNative();
@@ -26,6 +28,12 @@ Singleton {
     }
     function setBrightness(value) {
         return channel.setBrightness(value);
+    }
+    function applyDaemonLevel(value, max) {
+        if (!Number.isFinite(value) || !Number.isInteger(max) || max !== maximum || max <= 0)
+            return false;
+        channel.brightness = Math.max(0, Math.min(1, value));
+        return true;
     }
     function step(direction) {
         if (!available || !["up", "down"].includes(direction))

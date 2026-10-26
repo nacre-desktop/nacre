@@ -298,6 +298,16 @@ pub fn brightness(hub: &Shared, reply: &Value) {
     report(hub, event);
 }
 
+/// Optimistic value for a held volume key; the PipeWire signal is allowed to follow.
+pub fn volume(hub: &Shared, level: f64) {
+    if !level.is_finite() || !(0.0..=1.0).contains(&level) {
+        return;
+    }
+    let mut event = OsdEvent::new(OsdKind::Volume, now_ms());
+    event.value = Some(level);
+    report(hub, event);
+}
+
 /// `keyboard_light.adjust` reply level and maximum (raw steps).
 pub fn keyboard(hub: &Shared, level: i64, max: i64) {
     if let (Ok(max), true) = (u32::try_from(max), level >= 0 && max > 0) {

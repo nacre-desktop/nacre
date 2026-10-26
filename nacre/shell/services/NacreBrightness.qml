@@ -63,6 +63,15 @@ Singleton {
         const name = NacreCompositor.focusedMonitor?.name;
         return monitors.find(monitor => monitor.modelData.name === name) || monitors[0] || null;
     }
+    function applyDaemonLevel(device, value) {
+        if (typeof device !== "string" || !Number.isFinite(value))
+            return false;
+        const monitor = monitors.find(candidate => candidate.modelData.name === device);
+        if (!monitor)
+            return false;
+        monitor.brightness = Math.max(0, Math.min(1, value));
+        return true;
+    }
     function step(direction) {
         const monitor = focused();
         if (!monitor || !["up", "down"].includes(direction))

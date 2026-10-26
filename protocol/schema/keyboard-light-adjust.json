@@ -6,6 +6,15 @@
   "properties": {
     "step": {
       "$ref": "#/$defs/KeyboardLightStep"
+    },
+    "key_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "format": "uint64",
+      "minimum": 0,
+      "default": null
     }
   },
   "additionalProperties": false,

@@ -3,7 +3,7 @@ export type TrayItemAction = { ["item"]: string, ["x"]: (number)?, ["y"]: (numbe
 export type TrayScrollAxis = "horizontal" | "vertical"
 export type TrayScroll = { ["item"]: string, ["axis"]: TrayScrollAxis, ["delta"]: number }
 export type BrightnessSet = { ["output"]: string, ["percent"]: number }
-export type BrightnessAdjust = { ["output"]: string, ["delta"]: number }
+export type BrightnessAdjust = { ["output"]: (string | nil)?, ["delta"]: number, ["key_ms"]: (number | nil)? }
 export type KeyboardLightStep = "up" | "down"
-export type KeyboardLightAdjust = { ["step"]: KeyboardLightStep }
+export type KeyboardLightAdjust = { ["step"]: KeyboardLightStep, ["key_ms"]: (number | nil)? }
 return {}

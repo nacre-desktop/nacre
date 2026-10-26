@@ -1,4 +1,5 @@
 pragma Singleton
+import QtQuick
 import Quickshell
 import Quickshell.Services.Pipewire
 
@@ -14,6 +15,7 @@ Singleton {
     readonly property real volume: available ? sink.audio.volume : 0
     readonly property bool micMuted: micAvailable ? source.audio.muted : false
     readonly property real micVolume: micAvailable ? source.audio.volume : 0
+    property real osdVolumeOverride: -1
     PwObjectTracker {
         objects: [...root.outputs, ...root.playbackStreams, root.source].filter(node => !!node)
     }
@@ -21,12 +23,21 @@ Singleton {
         return !!node && Pipewire.nodes.values.includes(node) && node.ready && !!node.audio;
     }
     function setVolume(value, target = sink) {
-        if (target === sink && usable(target) && Number.isFinite(value))
+        if (target === sink && usable(target) && Number.isFinite(value)) {
+            osdVolumeExpiry.stop();
+            osdVolumeOverride = -1;
             target.audio.volume = Math.max(0, Math.min(1, value));
+        }
     }
     function setMicVolume(value, target = source) {
         if (target === source && usable(target) && Number.isFinite(value))
             target.audio.volume = Math.max(0, Math.min(1, value));
+    }
+    function setOsdVolume(value) {
+        if (!Number.isFinite(value) || value < 0)
+            return;
+        osdVolumeOverride = Math.min(1, value);
+        osdVolumeExpiry.restart();
     }
     function chooseOutput(id) {
         const node = outputs.find(item => String(item.id) === id);
@@ -42,5 +53,10 @@ Singleton {
     function toggleMic() {
         if (micAvailable)
             source.audio.muted = !source.audio.muted;
+    }
+    Timer {
+        id: osdVolumeExpiry
+        interval: 2200
+        onTriggered: root.osdVolumeOverride = -1
     }
 }

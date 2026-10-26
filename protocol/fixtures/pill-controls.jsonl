@@ -1,5 +1,7 @@
 {"t":"call","id":411,"m":"audio.adjust_volume","p":{"delta":0.05}}
 {"t":"ret","id":411,"ok":{"changed":true}}
+{"t":"call","id":414,"m":"audio.step","p":{"direction":"up","key_ms":1782450000000}}
+{"t":"ret","id":414,"ok":{"changed":true}}
 {"t":"call","id":412,"m":"audio.toggle_mute","p":{}}
 {"t":"ret","id":412,"ok":{"changed":true}}
 {"t":"call","id":413,"m":"bluetooth.set_enabled","p":{"enabled":false}}

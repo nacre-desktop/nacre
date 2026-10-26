@@ -10,7 +10,7 @@ QtObject {
     property int screenCount: Quickshell.screens.length
     readonly property var monitor: NacreBrightness.getMonitorForScreen(output)
     readonly property bool level: ["volume", "microphone", "display", "keyboard"].includes(channel)
-    readonly property real value: channel === "display" ? monitor?.brightness || 0 : channel === "keyboard" ? NacreKeyboardLight.brightness : channel === "microphone" ? NacreAudio.micVolume : NacreAudio.volume
+    readonly property real value: channel === "display" ? monitor?.brightness || 0 : channel === "keyboard" ? NacreKeyboardLight.brightness : channel === "microphone" ? NacreAudio.micVolume : channel === "volume" && NacreAudio.osdVolumeOverride >= 0 ? NacreAudio.osdVolumeOverride : NacreAudio.volume
     readonly property bool muted: channel === "volume" ? NacreAudio.muted : channel === "microphone" ? NacreAudio.micMuted : false
     readonly property bool enabledState: channel === "capslock" ? NacreCapsLock.active : channel === "dnd" ? NacreNotifs.dnd : channel === "night-light" ? NacreControlTools.data.nightLightEnabled === true : !muted
     readonly property string title: {

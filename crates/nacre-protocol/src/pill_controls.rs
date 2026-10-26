@@ -13,6 +13,21 @@ pub struct VolumeAdjust {
     pub delta: f64,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum VolumeDirection {
+    Up,
+    Down,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct VolumeStep {
+    pub direction: VolumeDirection,
+    #[serde(default)]
+    pub key_ms: Option<u64>,
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PillEmpty {}
@@ -43,6 +58,7 @@ fn invalid() -> Failure {
 pub fn methods() -> BTreeMap<String, Method> {
     [
         ("audio.adjust_volume", schemars::schema_for!(VolumeAdjust), Capability::System),
+        ("audio.step", schemars::schema_for!(VolumeStep), Capability::System),
         ("audio.toggle_mute", schemars::schema_for!(PillEmpty), Capability::System),
         ("bluetooth.set_enabled", schemars::schema_for!(BluetoothEnabled), Capability::System),
     ]
@@ -69,6 +85,16 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         ),
         ("PillEmpty", "pill-empty", schemars::schema_for!(PillEmpty)),
         (
+            "VolumeDirection",
+            "volume-direction",
+            schemars::schema_for!(VolumeDirection),
+        ),
+        (
+            "VolumeStep",
+            "volume-step",
+            schemars::schema_for!(VolumeStep),
+        ),
+        (
             "BluetoothEnabled",
             "bluetooth-enabled",
             schemars::schema_for!(BluetoothEnabled),
@@ -89,6 +115,8 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
     let frames = [
         json!({"t":"call","id":411,"m":"audio.adjust_volume","p":{"delta":0.05}}),
         json!({"t":"ret","id":411,"ok":{"changed":true}}),
+        json!({"t":"call","id":414,"m":"audio.step","p":{"direction":"up","key_ms":1782450000000_u64}}),
+        json!({"t":"ret","id":414,"ok":{"changed":true}}),
         json!({"t":"call","id":412,"m":"audio.toggle_mute","p":{}}),
         json!({"t":"ret","id":412,"ok":{"changed":true}}),
         json!({"t":"call","id":413,"m":"bluetooth.set_enabled","p":{"enabled":false}}),
@@ -117,7 +145,7 @@ mod tests {
     }
     #[test]
     fn methods_are_semantic_and_inputs_reject_unknown_fields() {
-        assert_eq!(methods().len(), 3);
+        assert_eq!(methods().len(), 4);
         assert!(
             serde_json::from_value::<VolumeAdjust>(json!({"delta":0.1,"node":"arbitrary"}))
                 .is_err()

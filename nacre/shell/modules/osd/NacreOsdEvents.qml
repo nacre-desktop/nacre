@@ -24,6 +24,7 @@ Item {
     property bool shown: false
     property string channel: "volume"
     readonly property alias notice: notice
+    property var osdTopic: null
     property string pendingChannel: ""
     function allowed() {
         return armed && !visibilities.osd && !visibilities.session && !WallpaperPlayback.locked && !NacrePanelState.hidden && screen.name === NacrePanelState.activeName();
@@ -60,6 +61,27 @@ Item {
         if (outputSwitchPending && audioReady) {
             outputSwitchPending = false;
             show("output");
+        }
+    }
+    Component.onCompleted: if (NacreDaemon.enabled)
+        osdTopic = NacreDaemon.subscribe("osd")
+    Component.onDestruction: if (osdTopic)
+        NacreDaemon.unsubscribe("osd")
+    Connections {
+        target: NacreDaemon
+        function onEvent(topic, name, data) {
+            if (topic !== "osd" || name !== "changed" || !data)
+                return;
+            if (data.kind === "volume") {
+                NacreAudio.setOsdVolume(data.value);
+                root.show();
+            } else if (data.kind === "brightness") {
+                NacreBrightness.applyDaemonLevel(data.device, data.value);
+                root.show("display");
+            } else if (data.kind === "keyboard") {
+                NacreKeyboardLight.applyDaemonLevel(data.value, data.max);
+                root.show("keyboard");
+            }
         }
     }
     onAudioReadyChanged: {
@@ -119,14 +141,24 @@ Item {
     }
     Connections {
         target: root.monitor
+        ignoreUnknownSignals: true
         function onAdjusted() {
             root.show("display");
+        }
+        function onExternalAdjusted() {
+            if (!NacreDaemon.enabled)
+                root.show("display");
         }
     }
     Connections {
         target: NacreKeyboardLight
+        ignoreUnknownSignals: true
         function onAdjusted() {
             root.show("keyboard");
+        }
+        function onExternalAdjusted() {
+            if (!NacreDaemon.enabled)
+                root.show("keyboard");
         }
     }
     Connections {

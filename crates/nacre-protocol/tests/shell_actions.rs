@@ -41,6 +41,10 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
                     "audio.adjust_volume" => serde_json::from_value::<VolumeAdjust>(p)
                         .unwrap()
                         .validate(),
+                    "audio.step" => {
+                        let _: VolumeStep = serde_json::from_value(p).unwrap();
+                        Ok(())
+                    }
                     "audio.toggle_mute" => {
                         let _: PillEmpty = serde_json::from_value(p).unwrap();
                         Ok(())
@@ -58,7 +62,7 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
     }
     assert_eq!(
         calls.len(),
-        14,
+        15,
         "Every new method needs a typed golden call"
     );
 }
@@ -68,7 +72,7 @@ fn published_action_schemas_refuse_additional_fields() {
     let mut methods = nacre_protocol::shell_actions::methods();
     methods.extend(nacre_protocol::bar_services::methods());
     methods.extend(nacre_protocol::pill_controls::methods());
-    assert_eq!(methods.len(), 14);
+    assert_eq!(methods.len(), 15);
     for (name, method) in methods {
         assert_eq!(
             method.params["additionalProperties"],

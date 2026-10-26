@@ -20,12 +20,29 @@ class BindingContractTests(unittest.TestCase):
             (TOOLS / "tests/fixtures/keybindings-defaults.json").read_text()
         )
         actual = capture(TOOLS.parent / "hypr/conf/keybinding.lua")
+        compositor_contract = json.loads(
+            (TOOLS.parent / "nacre/shell-tools/compositor-contract.json").read_text()
+        )
+        hardware_bindings = {
+            row["keys"]: row
+            for row in compositor_contract["outputs"]["hypr/conf/keybinding.lua"]
+            if row.get("kind") == "binding"
+            and row.get("keys")
+            in {
+                "XF86AudioLowerVolume",
+                "XF86AudioRaiseVolume",
+                "XF86MonBrightnessDown",
+                "XF86MonBrightnessUp",
+                "XF86KbdBrightnessDown",
+                "XF86KbdBrightnessUp",
+            }
+        }
 
         def normalize(rows):
             return sorted(json.dumps(row, sort_keys=True) for row in rows)
 
-        # The frozen default actions/flags remain the reference. Only their
-        # explicitly migrated UI transport changes; never rewrite that fixture.
+        # The frozen defaults remain the reference; the six hardware steps
+        # migrate to the current daemon commands in the neutral contract.
         migrated = json.loads(json.dumps(expected["hypr/conf/keybinding.lua"]))
         shell_ui = {
             "launcher": ["nacre", "launcher", ""],
@@ -42,6 +59,14 @@ class BindingContractTests(unittest.TestCase):
         }
         changed = 0
         for row in migrated:
+            hardware = hardware_bindings.get(row["keys"])
+            if hardware:
+                row["action"] = {
+                    "method": "exec_cmd",
+                    "args": [hardware["parameters"]["command"]],
+                }
+                row["flags"] = dict(hardware["options"])
+                continue
             if row["action"]["method"] != "exec_cmd":
                 continue
             command = row["action"]["args"][0]
@@ -53,7 +78,7 @@ class BindingContractTests(unittest.TestCase):
             if arguments is not None:
                 row["action"]["args"][0] = "nacrectl ui " + shlex.join(arguments)
                 changed += 1
-        self.assertEqual(changed, 15)
+        self.assertEqual(changed, 11)
         self.assertEqual(normalize(actual), normalize(migrated))
         self.assertEqual(len(actual), 93)
 

@@ -10,5 +10,7 @@
 {"t":"ret","id":403,"ok":{"changed":true,"output":"output-1","level_percent":65}}
 {"t":"call","id":406,"m":"brightness.adjust","p":{"output":"output-1","delta":-5}}
 {"t":"ret","id":406,"ok":{"changed":true,"output":"output-1","level_percent":60}}
-{"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up"}}
+{"t":"call","id":408,"m":"brightness.adjust","p":{"delta":5,"key_ms":1782450000000}}
+{"t":"ret","id":408,"ok":{"changed":true,"output":"output-1","level_percent":65}}
+{"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up","key_ms":1782450000000}}
 {"t":"ret","id":407,"ok":{"changed":true,"level":2,"max":3}}

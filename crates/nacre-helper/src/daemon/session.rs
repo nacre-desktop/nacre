@@ -96,9 +96,10 @@ async fn dispatch(
         method if super::colors_app::handles(method) => {
             super::colors_app::dispatch(hub, method, params).await
         }
-        method @ ("audio.adjust_volume" | "audio.toggle_mute" | "bluetooth.set_enabled") => {
-            super::pill_controls::dispatch(hub, method, params).await
-        }
+        method @ ("audio.adjust_volume"
+        | "audio.step"
+        | "audio.toggle_mute"
+        | "bluetooth.set_enabled") => super::pill_controls::dispatch(hub, method, params).await,
         method if method.starts_with("ai.chat.") && !hub.borrow().safe => {
             super::ai_chat::dispatch(hub, method, params).await
         }
@@ -249,6 +250,7 @@ async fn call(
             | "brightness.adjust"
             | "keyboard_light.adjust"
             | "audio.adjust_volume"
+            | "audio.step"
             | "audio.toggle_mute"
             | "bluetooth.set_enabled"
     );

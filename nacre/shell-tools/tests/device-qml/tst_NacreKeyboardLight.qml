@@ -19,6 +19,9 @@ TestCase {
         const keys = NacreKeyboardLight;
         verify(keys.available);
         compare(keys.brightness, 0);
+        verify(keys.applyDaemonLevel(.5, 3));
+        compare(keys.brightness, .5);
+        verify(keys.applyDaemonLevel(0, 3));
         verify(!findChild(keys, "keyboardLightTimer").running);
         keys.step("up");
         compare(keys.brightness, 1 / 3);

@@ -7,11 +7,34 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     path::Path,
-    sync::{Arc, OnceLock},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, OnceLock,
+    },
     time::Duration,
 };
 
 static BRIGHTNESS_LOCK: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
+static BRIGHTNESS_STEPS: OnceLock<Arc<tokio::sync::Mutex<BTreeMap<String, BrightnessStep>>>> =
+    OnceLock::new();
+static KEYBOARD_STEPS: OnceLock<Arc<tokio::sync::Mutex<Option<KeyboardStep>>>> = OnceLock::new();
+static BRIGHTNESS_STEP_REVISION: AtomicU64 = AtomicU64::new(0);
+static LAST_STEP_MARKER_MS: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Clone, Copy)]
+struct BrightnessStep {
+    revision: u64,
+    previous: u8,
+    target: u8,
+}
+
+#[derive(Clone, Copy)]
+struct KeyboardStep {
+    revision: u64,
+    previous: i64,
+    target: i64,
+    max: i64,
+}
 
 const WATCHER: &str = "org.kde.StatusNotifierWatcher";
 const WATCHER_PATH: &str = "/StatusNotifierWatcher";
@@ -162,8 +185,14 @@ pub async fn dispatch(
         "brightness.set" => {
             let request: BrightnessSet = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            let reply =
-                set_brightness(&hub, &request.output, i32::from(request.percent), false).await?;
+            let reply = set_brightness(
+                &hub,
+                &request.output,
+                i32::from(request.percent),
+                false,
+                None,
+            )
+            .await?;
             super::osd::brightness(&hub, &reply);
             super::control_center::changed();
             Ok(reply)
@@ -172,19 +201,65 @@ pub async fn dispatch(
             let request: BrightnessAdjust =
                 serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            let reply =
-                set_brightness(&hub, &request.output, i32::from(request.delta), true).await?;
+            let output = request
+                .output
+                .clone()
+                .or_else(|| {
+                    hub.borrow()
+                        .snapshot("compositor")
+                        .and_then(|state| state["focus"]["outputId"].as_str().map(str::to_owned))
+                })
+                .ok_or_else(|| {
+                    failure(
+                        ErrorCode::Unavailable,
+                        "Focused output is unavailable",
+                        true,
+                    )
+                })?;
+            let step = if let Some(key_ms) = request.key_ms {
+                optimistic_brightness_step(&hub, &output, request.delta, key_ms)
+                    .await
+                    .ok()
+            } else {
+                None
+            };
+            let (amount, relative) = step.map_or((i32::from(request.delta), true), |step| {
+                (i32::from(step.target), false)
+            });
+            let reply = set_brightness(&hub, &output, amount, relative, step).await?;
             super::osd::brightness(&hub, &reply);
+            if step.is_none() {
+                if let (Some(key_ms), Some(value)) =
+                    (request.key_ms, reply["level_percent"].as_u64())
+                {
+                    osd_step_marker("brightness", value as f64 / 100.0, key_ms);
+                }
+            }
             super::control_center::changed();
             Ok(reply)
         }
         "keyboard_light.adjust" => {
             let request: KeyboardLightAdjust =
                 serde_json::from_value(params).map_err(|_| invalid())?;
-            let reply = adjust_keyboard_light(request.step).await?;
-            if let (Some(level), Some(max)) = (reply["level"].as_i64(), reply["max"].as_i64()) {
-                super::osd::keyboard(&hub, level, max);
-            }
+            let optimistic = if let Some(key_ms) = request.key_ms {
+                optimistic_keyboard_step(&hub, request.step, key_ms)
+                    .await
+                    .ok()
+            } else {
+                None
+            };
+            let reply = if let Some(step) = optimistic {
+                apply_keyboard_step(&hub, step).await?
+            } else {
+                let reply = adjust_keyboard_light(request.step).await?;
+                if let (Some(level), Some(max)) = (reply["level"].as_i64(), reply["max"].as_i64()) {
+                    super::osd::keyboard(&hub, level, max);
+                    if let Some(key_ms) = request.key_ms {
+                        osd_step_marker("keyboard", level as f64 / max as f64, key_ms);
+                    }
+                }
+                reply
+            };
             super::control_center::changed();
             Ok(reply)
         }
@@ -211,11 +286,94 @@ pub async fn dispatch(
     }
 }
 
+async fn optimistic_brightness_step(
+    hub: &Shared,
+    output: &str,
+    delta: i8,
+    key_ms: u64,
+) -> std::result::Result<BrightnessStep, Failure> {
+    let lane = BRIGHTNESS_STEPS
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(BTreeMap::new())))
+        .clone();
+    let mut guard = lane.lock_owned().await;
+    let mut state = hub.borrow().snapshot("controls").ok_or_else(|| {
+        failure(
+            ErrorCode::Unavailable,
+            "Brightness state is unavailable",
+            true,
+        )
+    })?;
+    let previous = guard
+        .get(output)
+        .map(|step| step.target)
+        .or_else(|| {
+            state["brightness"][output]
+                .as_u64()
+                .and_then(|value| u8::try_from(value).ok())
+        })
+        .ok_or_else(|| {
+            failure(
+                ErrorCode::Unavailable,
+                "Brightness level is unavailable",
+                true,
+            )
+        })?;
+    let target = (i32::from(previous) + i32::from(delta)).clamp(0, 100) as u8;
+    let step = BrightnessStep {
+        revision: BRIGHTNESS_STEP_REVISION
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1),
+        previous,
+        target,
+    };
+    guard.insert(output.to_owned(), step);
+    state["brightness"][output] = json!(target);
+    hub.borrow_mut()
+        .publish("controls", state)
+        .map_err(|_| failure(ErrorCode::Internal, "Brightness state update failed", false))?;
+    super::osd::brightness(hub, &json!({"output":output,"level_percent":target}));
+    osd_step_marker("brightness", target as f64 / 100.0, key_ms);
+    drop(guard);
+    Ok(step)
+}
+
+async fn rollback_brightness_step(hub: &Shared, output: &str, failed: BrightnessStep) {
+    let lane = BRIGHTNESS_STEPS
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(BTreeMap::new())))
+        .clone();
+    let mut desired = lane.lock_owned().await;
+    if desired
+        .get(output)
+        .is_some_and(|latest| latest.revision == failed.revision)
+    {
+        desired.insert(
+            output.to_owned(),
+            BrightnessStep {
+                revision: BRIGHTNESS_STEP_REVISION
+                    .fetch_add(1, Ordering::Relaxed)
+                    .wrapping_add(1),
+                previous: failed.previous,
+                target: failed.previous,
+            },
+        );
+        if let Some(mut state) = hub.borrow().snapshot("controls") {
+            state["brightness"][output] = json!(failed.previous);
+            let _ = hub.borrow_mut().publish("controls", state);
+        }
+        super::osd::brightness(
+            hub,
+            &json!({"output":output,"level_percent":failed.previous}),
+        );
+        super::control_center::changed();
+    }
+}
+
 async fn set_brightness(
     hub: &Shared,
     output: &str,
     amount: i32,
     relative: bool,
+    optimistic: Option<BrightnessStep>,
 ) -> std::result::Result<Value, Failure> {
     let compositor = hub
         .borrow()
@@ -281,9 +439,25 @@ async fn set_brightness(
     let lane = BRIGHTNESS_LOCK
         .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
         .clone();
-    let guard = lane
-        .try_lock_owned()
-        .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
+    let guard = lane.lock_owned().await;
+    let mut amount = amount;
+    let mut relative = relative;
+    if optimistic.is_some() {
+        let desired = BRIGHTNESS_STEPS
+            .get_or_init(|| Arc::new(tokio::sync::Mutex::new(BTreeMap::new())))
+            .clone()
+            .lock_owned()
+            .await;
+        let latest = desired.get(output).ok_or_else(|| {
+            failure(
+                ErrorCode::Unavailable,
+                "Brightness target is unavailable",
+                true,
+            )
+        })?;
+        amount = i32::from(latest.target);
+        relative = false;
+    }
     let name = screen.clone();
     let level = crate::process::offload(move || {
         let _guard = guard;
@@ -299,10 +473,20 @@ async fn set_brightness(
     .await
     .map_err(|_| {
         failure(ErrorCode::Internal, "Brightness worker failed", false).dispatch_state(true)
-    })?
-    .map_err(|_| {
-        failure(ErrorCode::Io, "Output brightness update failed", false).dispatch_state(true)
     })?;
+    let level = match level {
+        Ok(level) => level,
+        Err(_) => {
+            if let Some(step) = optimistic {
+                rollback_brightness_step(hub, output, step).await;
+            }
+            return Err(
+                failure(ErrorCode::Io, "Output brightness update failed", false)
+                    .dispatch_state(true),
+            );
+        }
+    };
+    super::control_center::changed();
     Ok(json!({"changed":true,"output":name,"level_percent":level}))
 }
 
@@ -320,8 +504,8 @@ async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<V
     let guard = BRIGHTNESS_LOCK
         .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
         .clone()
-        .try_lock_owned()
-        .map_err(|_| failure(ErrorCode::Busy, "Brightness controls are busy", true))?;
+        .lock_owned()
+        .await;
     let up = step == KeyboardLightStep::Up;
     let result = crate::process::offload(move || {
         let _guard = guard;
@@ -344,11 +528,217 @@ async fn adjust_keyboard_light(step: KeyboardLightStep) -> std::result::Result<V
     Ok(json!({"changed":changed,"level":level,"max":max}))
 }
 
+async fn optimistic_keyboard_step(
+    hub: &Shared,
+    step: KeyboardLightStep,
+    key_ms: u64,
+) -> std::result::Result<KeyboardStep, Failure> {
+    let lane = KEYBOARD_STEPS
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(None)))
+        .clone();
+    let mut desired = lane.lock_owned().await;
+    let mut state = hub.borrow().snapshot("controls").ok_or_else(|| {
+        failure(
+            ErrorCode::Unavailable,
+            "Keyboard light state is unavailable",
+            true,
+        )
+    })?;
+    let max = state["keyboard"]["max"]
+        .as_i64()
+        .filter(|value| *value > 0)
+        .ok_or_else(|| {
+            failure(
+                ErrorCode::Unavailable,
+                "Keyboard backlight is unavailable",
+                true,
+            )
+        })?;
+    let previous = desired
+        .as_ref()
+        .filter(|latest| latest.max == max)
+        .map(|latest| latest.target)
+        .or_else(|| state["keyboard"]["level"].as_i64())
+        .ok_or_else(|| {
+            failure(
+                ErrorCode::Unavailable,
+                "Keyboard light level is unavailable",
+                true,
+            )
+        })?;
+    let target = match step {
+        KeyboardLightStep::Up => (previous + 1) % (max + 1),
+        KeyboardLightStep::Down => (previous - 1).max(0),
+    };
+    let next = KeyboardStep {
+        revision: BRIGHTNESS_STEP_REVISION
+            .fetch_add(1, Ordering::Relaxed)
+            .wrapping_add(1),
+        previous,
+        target,
+        max,
+    };
+    *desired = Some(next);
+    state["keyboard"]["level"] = json!(target);
+    hub.borrow_mut().publish("controls", state).map_err(|_| {
+        failure(
+            ErrorCode::Internal,
+            "Keyboard light state update failed",
+            false,
+        )
+    })?;
+    super::osd::keyboard(hub, target, max);
+    osd_step_marker("keyboard", target as f64 / max as f64, key_ms);
+    Ok(next)
+}
+
+async fn apply_keyboard_step(
+    hub: &Shared,
+    requested: KeyboardStep,
+) -> std::result::Result<Value, Failure> {
+    let guard = BRIGHTNESS_LOCK
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
+        .clone()
+        .lock_owned()
+        .await;
+    let lane = KEYBOARD_STEPS
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(None)))
+        .clone();
+    let latest = lane.lock_owned().await.as_ref().copied().ok_or_else(|| {
+        failure(
+            ErrorCode::Unavailable,
+            "Keyboard light target is unavailable",
+            true,
+        )
+    })?;
+    let result = crate::process::offload(move || {
+        let _guard = guard;
+        set_keyboard_light_native(
+            latest.target,
+            latest.max,
+            &light_devices::sys_root(),
+            &mut native_run,
+        )
+    })
+    .await
+    .map_err(|_| {
+        failure(ErrorCode::Internal, "Keyboard light worker failed", false).dispatch_state(true)
+    })?;
+    let (level, max, changed) = match result {
+        Ok(result) => result,
+        Err(_) => {
+            rollback_keyboard_step(hub, requested).await;
+            return Err(
+                failure(ErrorCode::Io, "Keyboard light update failed", false).dispatch_state(true),
+            );
+        }
+    };
+    if level != latest.target || max != latest.max {
+        super::osd::keyboard(hub, level, max);
+    }
+    super::control_center::changed();
+    Ok(json!({"changed":changed,"level":level,"max":max}))
+}
+
+async fn rollback_keyboard_step(hub: &Shared, failed: KeyboardStep) {
+    let lane = KEYBOARD_STEPS
+        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(None)))
+        .clone();
+    let mut desired = lane.lock_owned().await;
+    if desired
+        .as_ref()
+        .is_some_and(|latest| latest.revision == failed.revision)
+    {
+        *desired = Some(KeyboardStep {
+            revision: BRIGHTNESS_STEP_REVISION
+                .fetch_add(1, Ordering::Relaxed)
+                .wrapping_add(1),
+            previous: failed.previous,
+            target: failed.previous,
+            max: failed.max,
+        });
+        if let Some(mut state) = hub.borrow().snapshot("controls") {
+            state["keyboard"]["level"] = json!(failed.previous);
+            let _ = hub.borrow_mut().publish("controls", state);
+        }
+        super::osd::keyboard(hub, failed.previous, failed.max);
+        super::control_center::changed();
+    }
+}
+
+fn set_keyboard_light_native(
+    target: i64,
+    expected_max: i64,
+    root: &Path,
+    run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
+) -> Result<(i64, i64, bool)> {
+    let discovered = light_devices::discover(&[], root, run)?;
+    let device = discovered
+        .get("keyboard")
+        .filter(|row| !row.is_null())
+        .ok_or("Keyboard backlight is unavailable")?;
+    let max = device["maximum"]
+        .as_i64()
+        .filter(|value| *value > 0)
+        .ok_or("Keyboard backlight range is unavailable")?;
+    let current = device["current"]
+        .as_i64()
+        .ok_or("Keyboard backlight level is unavailable")?;
+    if max != expected_max {
+        return Err("Keyboard backlight range changed".into());
+    }
+    if current == target {
+        return Ok((current, max, false));
+    }
+    let written = light_devices::write(device, target, root, run)?;
+    Ok((
+        written["current"]
+            .as_i64()
+            .ok_or("Keyboard backlight level is unavailable")?,
+        max,
+        true,
+    ))
+}
+
+fn osd_step_marker(kind: &str, value: f64, key_ms: u64) {
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |elapsed| elapsed.as_millis() as u64);
+    let mut previous = LAST_STEP_MARKER_MS.load(Ordering::Relaxed);
+    loop {
+        if now_ms.saturating_sub(previous) < 20 {
+            return;
+        }
+        match LAST_STEP_MARKER_MS.compare_exchange_weak(
+            previous,
+            now_ms,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => break,
+            Err(current) => previous = current,
+        }
+    }
+    tracing::info!(
+        "OSD_STEP kind={kind} value={value:.3} ms_since_key={} key_ms={key_ms} timebase=unix_ms",
+        now_ms.saturating_sub(key_ms)
+    );
+}
+
 /// Mirrors the QML step: up wraps past the maximum to off, down stops at off.
 /// `None` means there is no keyboard backlight; no write is issued when the level would not change.
 fn adjust_keyboard_light_native(
     up: bool,
     root: &Path,
+    run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
+) -> Result<Option<(i64, i64, bool)>> {
+    adjust_keyboard_light_native_with(up, root, &mut |_, _, _| Ok(()), run)
+}
+
+fn adjust_keyboard_light_native_with(
+    up: bool,
+    root: &Path,
+    before_write: &mut impl FnMut(i64, i64, i64) -> Result<()>,
     run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
 ) -> Result<Option<(i64, i64, bool)>> {
     let discovered = light_devices::discover(&[], root, run)?;
@@ -365,6 +755,7 @@ fn adjust_keyboard_light_native(
     } else {
         (current - 1).max(0)
     };
+    before_write(next, maximum, current)?;
     if next == current {
         return Ok(Some((current, maximum, false)));
     }
@@ -418,6 +809,9 @@ fn set_brightness_native(
     } else {
         maximum * i64::from(amount) / 100
     };
+    if value.clamp(0, maximum) == current {
+        return Ok(percent(current, maximum));
+    }
     let written = light_devices::write(device, value, root, run)?;
     let level = written["current"]
         .as_i64()

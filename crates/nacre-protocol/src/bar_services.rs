@@ -44,10 +44,13 @@ pub struct BrightnessSet {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BrightnessAdjust {
+    #[serde(default)]
     #[schemars(length(min = 1, max = 128))]
-    pub output: String,
+    pub output: Option<String>,
     #[schemars(range(min = -100, max = 100))]
     pub delta: i8,
+    #[serde(default)]
+    pub key_ms: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
@@ -61,6 +64,8 @@ pub enum KeyboardLightStep {
 #[serde(deny_unknown_fields)]
 pub struct KeyboardLightAdjust {
     pub step: KeyboardLightStep,
+    #[serde(default)]
+    pub key_ms: Option<u64>,
 }
 
 impl TrayItemAction {
@@ -92,7 +97,7 @@ impl BrightnessSet {
 }
 impl BrightnessAdjust {
     pub fn validate(&self) -> Result<(), Failure> {
-        if valid_id(&self.output) && (-100..=100).contains(&self.delta) {
+        if self.output.as_deref().is_none_or(valid_id) && (-100..=100).contains(&self.delta) {
             Ok(())
         } else {
             Err(invalid())
@@ -229,7 +234,9 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         json!({"t":"ret","id":403,"ok":{"changed":true,"output":"output-1","level_percent":65}}),
         json!({"t":"call","id":406,"m":"brightness.adjust","p":{"output":"output-1","delta":-5}}),
         json!({"t":"ret","id":406,"ok":{"changed":true,"output":"output-1","level_percent":60}}),
-        json!({"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up"}}),
+        json!({"t":"call","id":408,"m":"brightness.adjust","p":{"delta":5,"key_ms":1782450000000_u64}}),
+        json!({"t":"ret","id":408,"ok":{"changed":true,"output":"output-1","level_percent":65}}),
+        json!({"t":"call","id":407,"m":"keyboard_light.adjust","p":{"step":"up","key_ms":1782450000000_u64}}),
         json!({"t":"ret","id":407,"ok":{"changed":true,"level":2,"max":3}}),
     ];
     files.insert(
@@ -286,11 +293,19 @@ mod tests {
         .validate()
         .is_ok());
         assert!(BrightnessAdjust {
-            output: "DP-1".into(),
-            delta: 101
+            output: Some("DP-1".into()),
+            delta: 101,
+            key_ms: None,
         }
         .validate()
         .is_err());
+        assert!(BrightnessAdjust {
+            output: None,
+            delta: 5,
+            key_ms: Some(1782450000000),
+        }
+        .validate()
+        .is_ok());
         assert!(KeyboardLightAdjust::deserialize(json!({"step":"sideways"})).is_err());
         assert!(KeyboardLightAdjust::deserialize(json!({"step":"up","x":1})).is_err());
         assert_eq!(methods().len(), 7);
