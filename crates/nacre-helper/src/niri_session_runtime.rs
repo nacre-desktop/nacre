@@ -391,6 +391,12 @@ pub fn prepare_configuration(
         config.join("wallpaper.kdl"),
         fs::read(backend.join("niri/wallpaper.kdl"))?,
     )?;
+    // Keep Bead's pearl window policy in the generated session so refreshes do
+    // not depend on user-owned custom.kdl or an installed Bead checkout.
+    fs::write(
+        config.join("bead-pearls.kdl"),
+        "// Source: Bead shell/niri-pearls.kdl (origin/main).\nwindow-rule {\n    match app-id=\"^bead[.]pearl$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+    )?;
     fs::write(
         config.join("keyboard.kdl"),
         crate::compositor_config::render_keyboard(keyboard, "niri")?,
@@ -451,6 +457,7 @@ pub fn prepare_configuration(
         "wallpaper.kdl",
         "bindings.kdl",
         "window-rules.kdl",
+        "bead-pearls.kdl",
         "keyboard.kdl",
         "profile.kdl",
         "colors.kdl",
@@ -1174,10 +1181,23 @@ mod tests {
             }
             for entry in fs::read_dir(destination.join("config"))? {
                 let file = entry?.path();
+                let name = file.file_name().unwrap().to_string_lossy();
+                // Bead's session-only rule is covered by the focused runtime
+                // assertion above; keep this legacy Nacre snapshot unchanged.
+                if name == "bead-pearls.kdl" {
+                    continue;
+                }
                 let text = fs::read_to_string(&file)?
                     .replace(home.path().to_str().unwrap(), "$HOME")
                     .replace(backend.to_str().unwrap(), "$REPO");
-                files.insert(format!("config/{}", file.file_name().unwrap().to_string_lossy()), value!({"text":text, "mode": fs::metadata(&file)?.permissions().mode() & 0o777}));
+                let text = text
+                    .split_inclusive('\n')
+                    .filter(|line| !line.contains("bead-pearls.kdl"))
+                    .collect::<String>();
+                files.insert(
+                    format!("config/{name}"),
+                    value!({"text":text, "mode": fs::metadata(&file)?.permissions().mode() & 0o777}),
+                );
             }
             if destination.join("stock-niri").is_file() {
                 files.insert(

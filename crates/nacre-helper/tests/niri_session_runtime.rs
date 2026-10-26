@@ -177,6 +177,27 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     let destination = home.path().join(".local/share/nacre/niri-on-pc/session");
     assert!(destination.join("source-revision").is_file());
     assert!(destination.join("stock-niri").is_file());
+    let config = fs::read_to_string(destination.join("config/config.kdl"))?;
+    assert_eq!(
+        config
+            .lines()
+            .filter(|line| line.starts_with("include ") && line.contains("bead-pearls.kdl"))
+            .count(),
+        1
+    );
+    let window_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
+    let pearls = fs::read_to_string(destination.join("config/bead-pearls.kdl"))?;
+    let pearl_match = "match app-id=\"^bead[.]pearl$\"";
+    assert_eq!(pearls.matches(pearl_match).count(), 1);
+    assert_eq!(
+        window_rules.matches(pearl_match).count() + pearls.matches(pearl_match).count(),
+        1
+    );
+    assert!(pearls.contains("default-floating-position x=0 y=0 relative-to=\"top-left\""));
+    assert!(pearls.contains("open-focused false"));
+    assert!(pearls.contains("border { off; }"));
+    assert!(pearls.contains("focus-ring { off; }"));
+    assert!(pearls.contains("shadow { off; }"));
     assert_eq!(
         fs::read(destination.join("config/workspace-visitors.kdl"))?,
         fs::read(repo.join("niri/workspace-visitors.kdl"))?
