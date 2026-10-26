@@ -1254,78 +1254,134 @@ impl Media {
             },
             None,
         )?;
-        let mut prepared = false;
-        if marker.exists() {
-            let result = (|| -> Result<bool> {
-                let data = state::read(&marker, json!({}))?;
-                let digest = format!("{:x}", Sha256::digest(fs::read(&poster)?));
-                let thumbnail = self
-                    .paths
-                    .cache
-                    .join("wallpapers")
-                    .join(digest)
-                    .join("thumbnail.jpg");
-                if !thumbnail.exists() {
-                    fs::create_dir_all(thumbnail.parent().ok_or("Missing wallpaper cache")?)?;
-                    let image = image::DynamicImage::ImageRgba8(orient_decoder::load_rgba(
-                        Path::new(item["preview"].as_str().ok_or("Missing preview")?),
-                    )?)
-                    .to_rgb8();
-                    fs::write(&thumbnail, crate::image_paint::encode_jpeg(&image, 85)?)?;
+        let media_path = self.wallpaper_state().join("media.json");
+        let early_media = item["dynamic"] == true;
+        let previous_bytes = if early_media {
+            match fs::read(&media_path) {
+                Ok(bytes) => Some(bytes),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+                Err(error) => return Err(error.into()),
+            }
+        } else {
+            None
+        };
+        if early_media {
+            item["appliedAtMs"] = json!(self
+                .now_ms
+                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
+            atomic(&media_path, &item)?;
+        }
+        let outcome = (|| -> Result<()> {
+            let mut prepared = false;
+            if marker.exists() {
+                let result = (|| -> Result<bool> {
+                    let data = state::read(&marker, json!({}))?;
+                    let digest = format!("{:x}", Sha256::digest(fs::read(&poster)?));
+                    let thumbnail = self
+                        .paths
+                        .cache
+                        .join("wallpapers")
+                        .join(digest)
+                        .join("thumbnail.jpg");
+                    if !thumbnail.exists() {
+                        fs::create_dir_all(thumbnail.parent().ok_or("Missing wallpaper cache")?)?;
+                        let image = image::DynamicImage::ImageRgba8(orient_decoder::load_rgba(
+                            Path::new(item["preview"].as_str().ok_or("Missing preview")?),
+                        )?)
+                        .to_rgb8();
+                        fs::write(&thumbnail, crate::image_paint::encode_jpeg(&image, 85)?)?;
+                    }
+                    cli.publisher.commit_prepared(
+                        &poster,
+                        &data,
+                        &thumbnail,
+                        cli.publish,
+                        automatic,
+                    )
+                })();
+                match result {
+                    Ok(value) => prepared = value,
+                    Err(error) => eprintln!("Prepared wallpaper selection: {error}"),
                 }
-                cli.publisher
-                    .commit_prepared(&poster, &data, &thumbnail, cli.publish, automatic)
-            })();
-            match result {
-                Ok(value) => prepared = value,
-                Err(error) => eprintln!("Prepared wallpaper selection: {error}"),
             }
-        }
-        if !prepared {
-            let mut words = vec![
-                "wallpaper".into(),
-                "--file".into(),
-                poster.to_string_lossy().into_owned(),
-            ];
-            if automatic {
-                words.extend([
-                    "--mode".into(),
-                    settings["paletteMode"]
-                        .as_str()
-                        .ok_or("Invalid palette mode")?
-                        .into(),
-                ]);
-            }
-            let legacy = self.paths.home.join(".local/bin/nacre-shell");
-            let bridge = self.paths.share.join("shell/bin/nacre_shell");
-            let mut command = if legacy.is_file() && !automatic {
-                vec![
-                    legacy.to_string_lossy().into_owned(),
-                    "wallpaper-image".into(),
+            if !prepared {
+                let mut words = vec![
+                    "wallpaper".into(),
+                    "--file".into(),
                     poster.to_string_lossy().into_owned(),
-                ]
-            } else {
-                let path = if bridge.is_file() {
-                    bridge
+                ];
+                if automatic {
+                    words.extend([
+                        "--mode".into(),
+                        settings["paletteMode"]
+                            .as_str()
+                            .ok_or("Invalid palette mode")?
+                            .into(),
+                    ]);
+                }
+                let legacy = self.paths.home.join(".local/bin/nacre-shell");
+                let bridge = self.paths.share.join("shell/bin/nacre_shell");
+                let mut command = if legacy.is_file() && !automatic {
+                    vec![
+                        legacy.to_string_lossy().into_owned(),
+                        "wallpaper-image".into(),
+                        poster.to_string_lossy().into_owned(),
+                    ]
                 } else {
-                    self.assets.join("cli-bridge.sh")
+                    let path = if bridge.is_file() {
+                        bridge
+                    } else {
+                        self.assets.join("cli-bridge.sh")
+                    };
+                    let mut command = vec![path.to_string_lossy().into_owned()];
+                    command.extend(words.clone());
+                    command
                 };
-                let mut command = vec![path.to_string_lossy().into_owned()];
-                command.extend(words.clone());
-                command
-            };
-            if legacy.is_file() && automatic && command.len() == 3 {
-                command.extend([
-                    "--mode".into(),
-                    settings["paletteMode"].as_str().unwrap().into(),
-                ]);
+                if legacy.is_file() && automatic && command.len() == 3 {
+                    command.extend([
+                        "--mode".into(),
+                        settings["paletteMode"].as_str().unwrap().into(),
+                    ]);
+                }
+                self.execute_cli(cli, words, command)?;
             }
-            self.execute_cli(cli, words, command)?;
+            Ok(())
+        })();
+        if let Err(error) = outcome {
+            if early_media {
+                let rollback = match previous_bytes {
+                    Some(bytes) => (|| -> Result<()> {
+                        crate::files::atomic(&media_path, &bytes)?;
+                        fs::File::open(media_path.parent().ok_or("Invalid wallpaper media path")?)?
+                            .sync_all()?;
+                        Ok(())
+                    })(),
+                    None => (|| -> Result<()> {
+                        match fs::remove_file(&media_path) {
+                            Ok(()) => (),
+                            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+                            Err(error) => return Err(error.into()),
+                        }
+                        fs::File::open(media_path.parent().ok_or("Invalid wallpaper media path")?)?
+                            .sync_all()?;
+                        Ok(())
+                    })(),
+                };
+                if let Err(rollback_error) = rollback {
+                    return Err(format!(
+                        "Wallpaper selection failed ({error}); previous media record restore failed ({rollback_error})"
+                    )
+                    .into());
+                }
+            }
+            return Err(error);
         }
-        item["appliedAtMs"] = json!(self
-            .now_ms
-            .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
-        atomic(&self.wallpaper_state().join("media.json"), &item)?;
+        if !early_media {
+            item["appliedAtMs"] = json!(self
+                .now_ms
+                .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
+            atomic(&media_path, &item)?;
+        }
         Ok(item)
     }
     fn prepare_login(&self, poster: &Path) -> Result<()> {
@@ -2369,6 +2425,55 @@ mod thumbnail_cache_tests {
             publisher,
             publish: false,
         })
+    }
+
+    #[test]
+    fn video_media_is_visible_to_publisher_and_restored_after_failure() -> Result<()> {
+        let (_home, mut media) = media_fixture()?;
+        let video = media.library.join("clip.mp4");
+        fs::write(&video, b"fixture video source")?;
+        let poster = media
+            .cache()
+            .join(format!("{}.png", video_poster_key(&video)?));
+        fs::create_dir_all(poster.parent().ok_or("missing poster cache")?)?;
+        image::DynamicImage::new_rgb8(16, 16).save(&poster)?;
+
+        let media_path = media.wallpaper_state().join("media.json");
+        let previous = json!({
+            "path":"/pictures/old.mp4",
+            "poster":"/cache/old.png",
+            "dynamic":true,
+            "animated":false,
+            "appliedAtMs":17
+        });
+        atomic(&media_path, &previous)?;
+        let previous_bytes = fs::read(&media_path)?;
+        let expected_source = video.canonicalize()?.to_string_lossy().into_owned();
+        let expected_poster = poster.canonicalize()?.to_string_lossy().into_owned();
+        let observed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let observed_by_publisher = observed.clone();
+        let record_path = media_path.clone();
+        let applied_at = 1_700_000_000_123_i64;
+        media.now_ms = Some(applied_at);
+        media.palette_command = Some(Box::new(move |_| {
+            let visible = state::read(&record_path, json!({}))?;
+            observed_by_publisher.store(
+                visible["path"] == expected_source
+                    && visible["poster"] == expected_poster
+                    && visible["dynamic"] == true
+                    && visible["animated"] == false
+                    && visible["appliedAtMs"] == applied_at,
+                std::sync::atomic::Ordering::SeqCst,
+            );
+            Err(std::io::Error::other("fixture publication failure").into())
+        }));
+
+        let mut cli = test_palette_cli(&media)?;
+        assert!(media.select(&mut cli, &video).is_err());
+        assert!(observed.load(std::sync::atomic::Ordering::SeqCst));
+        assert_eq!(fs::read(&media_path)?, previous_bytes);
+        assert_eq!(state::read(&media_path, json!({}))?, previous);
+        Ok(())
     }
 
     #[test]

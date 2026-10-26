@@ -2872,3 +2872,21 @@ The 103-file / 507,373-byte final receipt has SHA-256
 it is copied and SHA-verified on both hosts. Private capture-process audit is zero.
 Live desktop/configuration and installed runtime remain unchanged. Published
 CI must be green before the additive core-schema follow-up or F4.
+
+### B0134 video activation and poster predecode, 2026-10-26
+
+A single-pointer MP4 sample measured 759.5 ms wallpaper / 762.95 ms picker.
+A separate double-activation Right+Return sample measured 773.67 ms wallpaper /
+777.25 ms picker. The first active topic carried poster and palette at about
+105 ms; motion arrived around 670 ms after `wallpaper-media select` wrote its
+record. A ~58 ms JPEG preview decode was rejected because the confirmed pair
+used a different cached PNG. Static V11 pointer selection measured 135.741 ms;
+there is no passing post-change video timing yet.
+
+The targeted catalogue now advertises the exact cached video poster and both
+file identities. The helper publishes its media record before palette
+activation; the daemon retains old motion only while the published poster,
+identity, palette and presentation remain unchanged and its source identity is
+still valid. Matching static, malformed/missing media, or changed source clears
+motion. The client must match the advertised poster and both identities against
+the activated pair before using predecoded pixels.

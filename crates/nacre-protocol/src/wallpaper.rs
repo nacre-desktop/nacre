@@ -266,6 +266,18 @@ pub enum WallpaperKind {
     Video,
 }
 
+/// A validated video source and its already extracted, still poster for early decode.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperVideoPredecode {
+    #[schemars(
+        length(min = 1, max = 4096),
+        regex(pattern = r"^/(?!.*(?:^|/)\.\.(?:/|$))(?!.*://)[^\u0000]*$")
+    )]
+    pub poster_path: String,
+    pub poster_file_identity: WallpaperFileIdentity,
+    pub source_file_identity: WallpaperFileIdentity,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperCatalogueEntry {
     #[schemars(length(min = 1, max = 4096))]
@@ -283,6 +295,8 @@ pub struct WallpaperCatalogueEntry {
     #[schemars(length(max = 4096))]
     pub preview: String,
     pub active: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub video_predecode: Option<Box<WallpaperVideoPredecode>>,
 }
 impl WallpaperCatalogue {
     pub fn validate(&self) -> Result<(), Failure> {
@@ -294,6 +308,14 @@ impl WallpaperCatalogue {
                     || entry.preview.len() > 4096
                     || (!entry.thumbnail.is_empty() && !valid_path(&entry.thumbnail))
                     || (!entry.preview.is_empty() && !valid_path(&entry.preview))
+                    || entry.video_predecode.as_ref().is_some_and(|predecode| {
+                        entry.kind != WallpaperKind::Video
+                            || entry.animated
+                            || predecode.poster_path == entry.id
+                            || !valid_path(&predecode.poster_path)
+                            || predecode.poster_file_identity.validate().is_err()
+                            || predecode.source_file_identity.validate().is_err()
+                    })
             })
         {
             return Err(Failure::new(
@@ -417,6 +439,7 @@ impl ActiveWallpaper {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
     #[test]
     fn source_keys_and_counters_are_bounded_and_optional_fields_remain_forward_compatible() {
         let mut state: WallpaperWatch = serde_json::from_value(serde_json::json!({
@@ -444,6 +467,7 @@ mod tests {
                 thumbnail: "/cache/wallpaper-media/lake.jpg".into(),
                 preview: "/cache/wallpaper-media/lake-preview.jpg".into(),
                 active: true,
+                video_predecode: None,
             }],
         };
         assert!(good.validate().is_ok());
@@ -452,6 +476,47 @@ mod tests {
         assert!(bad.validate().is_err());
         let mut bad = good;
         bad.entries[0].thumbnail = "/cache/../private.jpg".into();
+        assert!(bad.validate().is_err());
+    }
+
+    #[test]
+    fn video_predecode_is_optional_video_only_and_validates_both_identities() {
+        let record = json!({
+            "entries":[{
+                "id":"/videos/clip.mp4",
+                "kind":"video",
+                "title":"Clip",
+                "thumbnail":"",
+                "preview":"",
+                "active":false,
+                "video_predecode":{
+                    "poster_path":"/cache/wallpaper-media/clip.png",
+                    "poster_file_identity":{"device":"1","inode":"2","size":8,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
+                    "source_file_identity":{"device":"1","inode":"3","size":32,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0}
+                }
+            }]
+        });
+        let valid: WallpaperCatalogue = serde_json::from_value(record.clone()).unwrap();
+        assert!(valid.validate().is_ok());
+
+        let mut bad = record.clone();
+        bad["entries"][0]["kind"] = json!("image");
+        let bad: WallpaperCatalogue = serde_json::from_value(bad).unwrap();
+        assert!(bad.validate().is_err());
+
+        let mut bad = record.clone();
+        bad["entries"][0]["animated"] = json!(true);
+        let bad: WallpaperCatalogue = serde_json::from_value(bad).unwrap();
+        assert!(bad.validate().is_err());
+
+        let mut bad = record.clone();
+        bad["entries"][0]["video_predecode"]["poster_path"] = json!("/cache/../outside.png");
+        let bad: WallpaperCatalogue = serde_json::from_value(bad).unwrap();
+        assert!(bad.validate().is_err());
+
+        let mut bad = record;
+        bad["entries"][0]["video_predecode"]["source_file_identity"]["inode"] = json!("03");
+        let bad: WallpaperCatalogue = serde_json::from_value(bad).unwrap();
         assert!(bad.validate().is_err());
     }
 

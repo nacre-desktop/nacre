@@ -10,7 +10,7 @@ use nacre_protocol::{
 };
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::os::unix::fs::MetadataExt;
+use std::os::unix::fs::{FileExt, MetadataExt};
 use std::sync::{Mutex, OnceLock};
 use std::{
     collections::{BTreeMap, HashSet, VecDeque},
@@ -172,6 +172,7 @@ fn catalogue_entry(
     row: &Value,
     current: Option<&ActiveWallpaper>,
     cache: &Path,
+    requested_ids: Option<&[String]>,
 ) -> Option<nacre_protocol::wallpaper::WallpaperCatalogueEntry> {
     use nacre_protocol::wallpaper::{WallpaperCatalogueEntry, WallpaperKind};
     let id = row["path"]
@@ -213,6 +214,11 @@ fn catalogue_entry(
                 .as_ref()
                 .is_some_and(|motion| motion.path == id)
     });
+    let video_predecode = requested_ids
+        .filter(|ids| ids.iter().any(|requested| requested.as_str() == id))
+        .filter(|_| kind == WallpaperKind::Video)
+        .and_then(|_| video_predecode(id, poster, cache))
+        .map(Box::new);
     let mut bounded_title = String::new();
     for character in title.chars() {
         if bounded_title.len() + character.len_utf8() > 512 {
@@ -228,6 +234,37 @@ fn catalogue_entry(
         thumbnail,
         preview,
         active,
+        video_predecode,
+    })
+}
+
+fn video_predecode(
+    source_path: &str,
+    poster_path: &str,
+    cache: &Path,
+) -> Option<nacre_protocol::wallpaper::WallpaperVideoPredecode> {
+    if source_path == poster_path || !Path::new(poster_path).starts_with(cache) {
+        return None;
+    }
+    let source = private_file(Path::new(source_path), MOTION_BYTES).ok()?;
+    let poster = private_file(Path::new(poster_path), IMAGE_BYTES).ok()?;
+    let source_identity = WallpaperFileIdentity::from_metadata(&source.metadata().ok()?);
+    let poster_identity = WallpaperFileIdentity::from_metadata(&poster.metadata().ok()?);
+    if source_identity.validate().is_err() || poster_identity.validate().is_err() {
+        return None;
+    }
+    let mut signature = [0; 8];
+    if poster.read_at(&mut signature, 0).ok() != Some(signature.len())
+        || signature != *b"\x89PNG\r\n\x1a\n"
+        || !source_identity.matches(&source.metadata().ok()?)
+        || !poster_identity.matches(&poster.metadata().ok()?)
+    {
+        return None;
+    }
+    Some(nacre_protocol::wallpaper::WallpaperVideoPredecode {
+        poster_path: poster_path.into(),
+        poster_file_identity: poster_identity,
+        source_file_identity: source_identity,
     })
 }
 
@@ -291,31 +328,108 @@ pub(super) fn private_file(path: &Path, limit: u64) -> Result<File> {
 /// The playable source of a video or animated-GIF wallpaper, taken from the private
 /// selection record only when it still describes the published poster. Any problem
 /// simply leaves the still wallpaper without `motion`.
-fn read_motion(paths: &Paths, poster: &str) -> Option<WallpaperMotion> {
-    let file = private_file(&paths.state.join("wallpaper/media.json"), RECORD_BYTES).ok()?;
+enum MotionRead {
+    None,
+    Pending,
+    Active(WallpaperMotion),
+}
+
+fn read_motion(paths: &Paths, poster: &str) -> MotionRead {
+    let Ok(file) = private_file(&paths.state.join("wallpaper/media.json"), RECORD_BYTES) else {
+        return MotionRead::None;
+    };
     let mut bytes = Vec::new();
-    file.take(RECORD_BYTES + 1).read_to_end(&mut bytes).ok()?;
-    let media: Value = serde_json::from_slice(&bytes).ok()?;
-    if media["poster"].as_str() != Some(poster) || media["dynamic"] != true {
-        return None;
+    if file.take(RECORD_BYTES + 1).read_to_end(&mut bytes).is_err() {
+        return MotionRead::None;
     }
-    let path = media["path"].as_str()?;
-    let file = private_file(Path::new(path), MOTION_BYTES).ok()?;
+    if bytes.len() as u64 > RECORD_BYTES {
+        return MotionRead::None;
+    }
+    let Ok(media) = serde_json::from_slice::<Value>(&bytes) else {
+        return MotionRead::None;
+    };
+    let (Some(media_poster), Some(path), Some(dynamic), Some(animated)) = (
+        media["poster"].as_str(),
+        media["path"].as_str(),
+        media["dynamic"].as_bool(),
+        media["animated"].as_bool(),
+    ) else {
+        return MotionRead::None;
+    };
+    if !dynamic && (animated || path != media_poster)
+        || dynamic && (path == media_poster || !media_poster.ends_with(".png"))
+    {
+        return MotionRead::None;
+    }
+    let Ok(poster_file) = private_file(Path::new(media_poster), IMAGE_BYTES) else {
+        return MotionRead::None;
+    };
+    let Ok(source_file) = private_file(
+        Path::new(path),
+        if dynamic { MOTION_BYTES } else { IMAGE_BYTES },
+    ) else {
+        return MotionRead::None;
+    };
+    let Ok(poster_meta) = poster_file.metadata() else {
+        return MotionRead::None;
+    };
+    let Ok(source_meta) = source_file.metadata() else {
+        return MotionRead::None;
+    };
+    let poster_identity = WallpaperFileIdentity::from_metadata(&poster_meta);
+    let source_identity = WallpaperFileIdentity::from_metadata(&source_meta);
+    if poster_identity.validate().is_err() || source_identity.validate().is_err() {
+        return MotionRead::None;
+    }
+    if dynamic {
+        let mut signature = [0; 8];
+        let signature_read = poster_file.read_at(&mut signature, 0).ok();
+        let (Ok(poster_after), Ok(source_after)) = (poster_file.metadata(), source_file.metadata())
+        else {
+            return MotionRead::None;
+        };
+        if signature_read != Some(signature.len())
+            || signature != *b"\x89PNG\r\n\x1a\n"
+            || !poster_identity.matches(&poster_after)
+            || !source_identity.matches(&source_after)
+        {
+            return MotionRead::None;
+        }
+    }
+    if media_poster != poster {
+        return MotionRead::Pending;
+    }
+    if !dynamic {
+        return MotionRead::None;
+    }
     let motion = WallpaperMotion {
-        kind: if media["animated"] == true {
+        kind: if animated {
             MotionKind::Animation
         } else {
             MotionKind::Video
         },
         path: path.into(),
-        file_identity: WallpaperFileIdentity::from_metadata(&file.metadata().ok()?),
+        file_identity: source_identity,
     };
-    motion.is_valid().then_some(motion)
+    if motion.is_valid() {
+        MotionRead::Active(motion)
+    } else {
+        MotionRead::None
+    }
 }
 
+#[cfg(test)]
 fn read_pair(
     paths: &Paths,
     watched: &mut Option<std::path::PathBuf>,
+) -> Result<(ActiveWallpaper, String)> {
+    read_pair_with_previous(paths, watched, None)
+}
+
+fn read_pair_with_previous(
+    paths: &Paths,
+    watched: &mut Option<std::path::PathBuf>,
+    previous: Option<&ActiveWallpaper>,
 ) -> Result<(ActiveWallpaper, String)> {
     let file = private_file(&paths.state.join("presentation.json"), RECORD_BYTES)?;
     let mut bytes = Vec::new();
@@ -389,8 +503,8 @@ fn read_pair(
     {
         return Err("Incomplete wallpaper palette".into());
     }
-    let pair = ActiveWallpaper {
-        motion: read_motion(paths, path),
+    let mut pair = ActiveWallpaper {
+        motion: None,
         revision: 1,
         palette_revision: 1,
         path: path.into(),
@@ -401,9 +515,34 @@ fn read_pair(
             colours,
         },
     };
+    match read_motion(paths, path) {
+        MotionRead::Active(motion) => pair.motion = Some(motion),
+        MotionRead::Pending => pair.motion = retain_previous_motion(previous, &pair),
+        MotionRead::None => {}
+    }
     pair.validate()?;
     let fingerprint = format!("{:x}", Sha256::digest(serde_json::to_vec(&pair)?));
     Ok((pair, fingerprint))
+}
+
+fn retain_previous_motion(
+    previous: Option<&ActiveWallpaper>,
+    current: &ActiveWallpaper,
+) -> Option<WallpaperMotion> {
+    let previous = previous?;
+    if previous.path != current.path
+        || previous.file_identity != current.file_identity
+        || previous.palette != current.palette
+        || previous.presentation != current.presentation
+    {
+        return None;
+    }
+    let motion = previous.motion.as_ref()?;
+    let source = private_file(Path::new(&motion.path), MOTION_BYTES).ok()?;
+    motion
+        .file_identity
+        .matches(&source.metadata().ok()?)
+        .then(|| motion.clone())
 }
 
 /// Return QML's `actualCurrent` source path rather than the daemon topic's still poster path.
@@ -571,7 +710,7 @@ impl Producer {
             .snapshot(TOPIC)
             .ok_or("Missing wallpaper topic")?;
         let mut state: WallpaperActive = serde_json::from_value(previous)?;
-        let pair = read_pair(paths, &mut self.watched);
+        let pair = read_pair_with_previous(paths, &mut self.watched, state.current.as_ref());
         let compositor = hub.borrow().snapshot("compositor");
         let outputs = compositor
             .as_ref()
@@ -965,7 +1104,7 @@ pub async fn catalogue(
     let cache = std::fs::canonicalize(&cache).unwrap_or(cache);
     let entries = rows
         .iter()
-        .filter_map(|row| catalogue_entry(row, current.as_ref(), &cache))
+        .filter_map(|row| catalogue_entry(row, current.as_ref(), &cache, request.ids.as_deref()))
         .collect();
     let catalogue = WallpaperCatalogue { entries };
     catalogue.validate().map_err(|_| {
@@ -1137,7 +1276,7 @@ mod tests {
             "motion":{"kind":"animation","path":"/pictures/animated.gif","file_identity":{"device":"1","inode":"3","size":5,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0}}
         }))
         .unwrap();
-        let entry = catalogue_entry(&row, Some(&current), Path::new("/nonexistent"))
+        let entry = catalogue_entry(&row, Some(&current), Path::new("/nonexistent"), None)
             .expect("valid catalogue row");
         assert_eq!(entry.kind, WallpaperKind::Image);
         assert!(entry.animated);
@@ -1147,10 +1286,58 @@ mod tests {
             &json!({"path":"/videos/clip.mp4","poster":"/cache/clip.png","name":"Clip","dynamic":true,"animated":false,"thumbnail":"","preview":""}),
             None,
             Path::new("/nonexistent"),
+            None,
         )
         .expect("valid video row");
         assert_eq!(video.kind, WallpaperKind::Video);
         assert!(!video.animated);
+        assert!(video.video_predecode.is_none());
+    }
+
+    #[test]
+    fn requested_video_catalogue_includes_only_a_secure_cached_poster() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let library = home.path().join("Videos");
+        let cache = paths.cache.join("wallpaper-media");
+        fs::create_dir_all(&library)?;
+        fs::create_dir_all(&cache)?;
+        let source = library.join("clip.mp4");
+        fs::write(&source, b"video source")?;
+        let poster = cache.join("clip.png");
+        image::DynamicImage::new_rgb8(4, 2).save(&poster)?;
+        let id = source.to_string_lossy().into_owned();
+        let poster_path = poster.to_string_lossy().into_owned();
+        let row = json!({
+            "path":id,
+            "poster":poster_path,
+            "name":"Clip",
+            "dynamic":true,
+            "animated":false,
+            "thumbnail":"",
+            "preview":""
+        });
+        let cache = fs::canonicalize(cache)?;
+        let metadata_only = catalogue_entry(&row, None, &cache, Some(&[])).unwrap();
+        assert!(metadata_only.video_predecode.is_none());
+        let other_ids = vec![home
+            .path()
+            .join("Videos/other.mp4")
+            .to_string_lossy()
+            .into_owned()];
+        let unrequested = catalogue_entry(&row, None, &cache, Some(&other_ids)).unwrap();
+        assert!(unrequested.video_predecode.is_none());
+        let requested_ids = vec![id];
+        let requested = catalogue_entry(&row, None, &cache, Some(&requested_ids)).unwrap();
+        let predecode = requested.video_predecode.unwrap();
+        assert_eq!(predecode.poster_path, poster_path);
+        assert!(predecode
+            .poster_file_identity
+            .matches(&fs::metadata(&poster)?));
+        assert!(predecode
+            .source_file_identity
+            .matches(&fs::metadata(&source)?));
+        Ok(())
     }
 
     #[test]
@@ -1450,6 +1637,72 @@ mod tests {
         let back = hub.borrow().snapshot(TOPIC).unwrap();
         assert!(back["current"].get("motion").is_none());
         assert_eq!(back["revision"], 4);
+        Ok(())
+    }
+
+    #[test]
+    fn pending_video_selection_keeps_only_a_still_matching_previous_motion() -> Result<()> {
+        let (home, paths, hub) = fixture()?;
+        let poster_a = home.path().join("wall.png");
+        let source_a = home.path().join("clip-a.mp4");
+        let poster_b = home.path().join("poster-b.png");
+        let source_b = home.path().join("clip-b.mp4");
+        fs::write(&source_a, b"video A")?;
+        fs::write(&source_b, b"video B")?;
+        image::DynamicImage::new_rgb8(3, 2).save(&poster_b)?;
+        let media = paths.state.join("wallpaper/media.json");
+        fs::create_dir_all(media.parent().ok_or("missing media directory")?)?;
+        let write_media = |poster: &Path, source: &Path, dynamic: bool| -> Result<()> {
+            fs::write(
+                &media,
+                serde_json::to_vec(&json!({
+                    "path":source,
+                    "poster":poster,
+                    "dynamic":dynamic,
+                    "animated":false
+                }))?,
+            )?;
+            Ok(())
+        };
+        let mut producer = Producer::default();
+        write_media(&poster_a, &source_a, true)?;
+        producer.refresh(&hub, &paths)?;
+        let active_a = hub.borrow().snapshot(TOPIC).unwrap();
+        assert_eq!(active_a["current"]["motion"]["path"], json!(source_a));
+        let revision_a = active_a["revision"].as_u64().unwrap();
+
+        // A new secure selection record leads its presentation, so keep showing A.
+        write_media(&poster_b, &source_b, true)?;
+        producer.refresh(&hub, &paths)?;
+        let pending_b = hub.borrow().snapshot(TOPIC).unwrap();
+        assert_eq!(pending_b["current"]["path"], json!(poster_a));
+        assert_eq!(pending_b["current"]["motion"]["path"], json!(source_a));
+        assert_eq!(pending_b["revision"], revision_a);
+
+        // If A's source changes while B is pending, do not retain its stale motion.
+        fs::write(&source_a, b"video A replaced")?;
+        producer.refresh(&hub, &paths)?;
+        let invalidated_a = hub.borrow().snapshot(TOPIC).unwrap();
+        assert!(invalidated_a["current"].get("motion").is_none());
+
+        // Publishing B's poster joins the already-secure B media record.
+        let presentation_path = paths.state.join("presentation.json");
+        let mut presentation: Value = serde_json::from_slice(&fs::read(&presentation_path)?)?;
+        presentation["poster"] = json!(poster_b);
+        fs::write(&presentation_path, serde_json::to_vec(&presentation)?)?;
+        producer.refresh(&hub, &paths)?;
+        let active_b = hub.borrow().snapshot(TOPIC).unwrap();
+        assert_eq!(active_b["current"]["motion"]["path"], json!(source_b));
+        let motion_identity: WallpaperFileIdentity =
+            serde_json::from_value(active_b["current"]["motion"]["file_identity"].clone())?;
+        assert!(motion_identity.matches(&fs::metadata(&source_b)?));
+
+        // An explicit static record for the now-published poster clears motion.
+        write_media(&poster_b, &poster_b, false)?;
+        producer.refresh(&hub, &paths)?;
+        assert!(hub.borrow().snapshot(TOPIC).unwrap()["current"]
+            .get("motion")
+            .is_none());
         Ok(())
     }
 }
