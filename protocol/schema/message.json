@@ -35,6 +35,39 @@
       ]
     },
     {
+      "description": "A single bounded request on the daemon's private fast socket. This\nmessage is self-contained and is answered with exactly one `Ret`; it\nnever negotiates a topic or method catalogue.",
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "const": "fastcall"
+        },
+        "proto": {
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0,
+          "maximum": 65535
+        },
+        "id": {
+          "$ref": "#/$defs/Id"
+        },
+        "m": {
+          "type": "string"
+        },
+        "p": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {}
+        }
+      },
+      "required": [
+        "t",
+        "proto",
+        "id",
+        "m"
+      ]
+    },
+    {
       "type": "object",
       "properties": {
         "t": {
@@ -426,6 +459,21 @@
     }
   ],
   "$defs": {
+    "Id": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "format": "int64",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      ]
+    },
     "Method": {
       "type": "object",
       "properties": {
@@ -462,21 +510,6 @@
         "desktop",
         "system",
         "privileged"
-      ]
-    },
-    "Id": {
-      "anyOf": [
-        {
-          "type": "integer",
-          "format": "int64",
-          "minimum": -9007199254740991,
-          "maximum": 9007199254740991
-        },
-        {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
-        }
       ]
     },
     "Failure": {
