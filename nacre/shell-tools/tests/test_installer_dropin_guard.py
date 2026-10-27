@@ -725,6 +725,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
             installer.install_user_client_links()
         backup = self.state / "backups/nacrectl.pre-native"
         self.assertEqual(backup.read_text(), "stale binary")
+        self.assertEqual(backup.stat().st_mode & 0o777, 0o600)
         self.assertTrue(alias.is_symlink())
         self.assertEqual(
             alias.resolve(), self.home / ".local/share/nacre/shell/tools/nacre-helper"

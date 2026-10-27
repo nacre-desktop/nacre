@@ -537,6 +537,8 @@ def install_daemon_links(target):
 def install_user_client_links():
     """Point the public CLI aliases at the atomically installed native helper."""
     directory = HOME / ".local/bin"
+    if directory.is_symlink():
+        raise RuntimeError("Refusing linked user command directory: " + str(directory))
     directory.mkdir(parents=True, exist_ok=True)
     for name in USER_CLIENTS:
         alias = directory / name
@@ -545,13 +547,28 @@ def install_user_client_links():
             continue
         if alias.is_file() and not alias.is_symlink():
             backup = STATE / "backups" / (name + ".pre-native")
+            if backup.parent.is_symlink():
+                raise RuntimeError("Refusing linked client backup directory")
             backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if backup.is_symlink() or (backup.exists() and not backup.is_file()):
+                raise RuntimeError("Refusing unsafe client backup path: " + str(backup))
             if not backup.exists():
-                shutil.copy2(alias, backup)
-        pending = alias.with_name("." + alias.name + ".next")
-        pending.unlink(missing_ok=True)
-        pending.symlink_to(desired)
-        os.replace(pending, alias)
+                fd, name = tempfile.mkstemp(prefix=".client-backup-", dir=backup.parent)
+                os.close(fd)
+                temporary = Path(name)
+                try:
+                    shutil.copy2(alias, temporary)
+                    os.chmod(temporary, 0o600)
+                    try:
+                        os.link(temporary, backup)
+                    except FileExistsError:
+                        pass
+                finally:
+                    temporary.unlink(missing_ok=True)
+        with tempfile.TemporaryDirectory(prefix=".nacre-link-", dir=directory) as stage:
+            pending = Path(stage) / alias.name
+            pending.symlink_to(desired)
+            os.replace(pending, alias)
 
 
 def retire_native_helpers(directory):
@@ -1029,10 +1046,12 @@ def deploy(code_only=False, retire_niri_experiment=False):
         entries.append(entry)
         path.parent.mkdir(parents=True, exist_ok=True)
         if link:
-            pending = path.with_name("." + path.name + ".next")
-            pending.unlink(missing_ok=True)
-            pending.symlink_to(link)
-            os.replace(pending, path)
+            with tempfile.TemporaryDirectory(
+                prefix=".nacre-link-", dir=path.parent
+            ) as stage:
+                pending = Path(stage) / path.name
+                pending.symlink_to(link)
+                os.replace(pending, path)
         else:
             path.write_text(body)
             if mode:
