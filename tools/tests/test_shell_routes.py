@@ -107,8 +107,12 @@ class ShellRouteTests(unittest.TestCase):
                         "keyboard_light.adjust",
                     ):
                         self.assertEqual(
-                            text.count(f"nacrectl call {method}"), 2, (backend, method)
+                            text.count(f"nacrectl key-step {method}"),
+                            2,
+                            (backend, method),
                         )
+                    self.assertNotIn("nacrectl status", text, name)
+                    self.assertEqual(text.count("-eq 69"), 6, name)
         # Hardware key steps are daemon calls; brightness UI routes remain for manual controls.
         self.assertIn(("nacre", "launcher"), seen)
         self.assertNotIn(("brightness", "step"), seen)

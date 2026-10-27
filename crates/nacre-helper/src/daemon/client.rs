@@ -386,13 +386,27 @@ fn legacy_ui(arguments: &[String]) -> Result<i32> {
         .into())
 }
 fn usage() -> i32 {
-    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
+    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl key-step METHOD JSON\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
     0
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
     if arguments.is_empty() || matches!(arguments,[flag] if matches!(flag.as_str(),"--help"|"help"))
     {
         return Ok(usage());
+    }
+    // Hardware key repeats need neither a Tokio runtime nor the daemon's full
+    // method catalogue. Pipeline hello and the fixed, validated call, then
+    // read raw frames to keep the connection alive without parsing the welcome
+    // table or constructing the general CLI runtime.
+    if arguments
+        .first()
+        .is_some_and(|command| command == "key-step")
+    {
+        return match key_step(&arguments[1..]) {
+            Ok(()) => Ok(0),
+            Err(KeyStepError::DaemonAbsent) => Ok(69),
+            Err(KeyStepError::Failed(error)) => Err(error),
+        };
     }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -491,5 +505,157 @@ pub fn run(arguments: &[String]) -> Result<i32> {
             println!("{}", serde_json::to_string(&result)?);
             Ok(0)
         }
+    }
+}
+
+enum KeyStepError {
+    DaemonAbsent,
+    Failed(crate::Error),
+}
+
+fn key_step(arguments: &[String]) -> std::result::Result<(), KeyStepError> {
+    let path = socket::path().map_err(KeyStepError::Failed)?;
+    key_step_at(arguments, &path)
+}
+
+fn key_step_at(
+    arguments: &[String],
+    path: &std::path::Path,
+) -> std::result::Result<(), KeyStepError> {
+    use std::{
+        io::{BufRead, BufReader, Read, Write},
+        os::unix::net::UnixStream,
+        time::Duration,
+    };
+
+    let fail = |error: crate::Error| KeyStepError::Failed(error);
+    let [method, params] = arguments else {
+        return Err(fail("Expected key-step METHOD JSON".into()));
+    };
+    if !matches!(
+        method.as_str(),
+        "audio.step" | "brightness.adjust" | "keyboard_light.adjust"
+    ) {
+        return Err(fail("Unsupported key-step method".into()));
+    }
+    let params: Value = serde_json::from_str(params).map_err(|error| fail(error.into()))?;
+    let call = Message::Call {
+        id: Id::Integer(1),
+        m: method.clone(),
+        p: params,
+        timeout: None,
+    };
+    let hello = Message::Hello {
+        proto: nacre_protocol::VERSION,
+        min: Some(nacre_protocol::MIN_VERSION),
+        client: "nacrectl-key".into(),
+    };
+    socket::validate_endpoint(path).map_err(|error| {
+        if error.downcast_ref::<std::io::Error>().is_some_and(absent) {
+            KeyStepError::DaemonAbsent
+        } else {
+            fail(error)
+        }
+    })?;
+    let mut stream = UnixStream::connect(path).map_err(|error| {
+        if absent(&error) {
+            KeyStepError::DaemonAbsent
+        } else {
+            fail(error.into())
+        }
+    })?;
+    let peer = nix::sys::socket::getsockopt(&stream, nix::sys::socket::sockopt::PeerCredentials)
+        .map_err(|error| fail(error.into()))?;
+    socket::check_uid(peer.uid()).map_err(fail)?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .map_err(|error| fail(error.into()))?;
+    let mut request = framing::encode(&hello).map_err(|error| fail(error.into()))?;
+    request.extend(framing::encode(&call).map_err(|error| fail(error.into()))?);
+    stream
+        .write_all(&request)
+        .map_err(|error| fail(error.into()))?;
+    let mut reader = BufReader::new(stream);
+    let mut frame = Vec::with_capacity(256);
+    for index in 0..2 {
+        frame.clear();
+        let bytes = reader
+            .by_ref()
+            .take((nacre_protocol::MAX_FRAME + 1) as u64)
+            .read_until(b'\n', &mut frame)
+            .map_err(|error| fail(error.into()))?;
+        if bytes == 0 || bytes > nacre_protocol::MAX_FRAME || frame.last() != Some(&b'\n') {
+            return Err(fail("Daemon returned an invalid key-step response".into()));
+        }
+        if index == 1 {
+            let reply: Value =
+                serde_json::from_slice(&frame).map_err(|error| fail(error.into()))?;
+            if reply.get("t") != Some(&Value::String("ret".into()))
+                || reply.get("ok").is_none()
+                || reply.get("err").is_some()
+            {
+                return Err(fail("Daemon rejected key-step request".into()));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod key_step_tests {
+    use super::*;
+    use std::{
+        io::{BufRead, BufReader, Write},
+        os::unix::fs::PermissionsExt,
+        os::unix::net::UnixListener,
+    };
+
+    #[test]
+    fn key_step_pipelines_only_the_fixed_hardware_calls() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let parent = home.path().join("nacre");
+        std::fs::create_dir(&parent)?;
+        std::fs::set_permissions(&parent, std::fs::Permissions::from_mode(0o700))?;
+        let path = parent.join("daemon.sock");
+        let listener = UnixListener::bind(&path)?;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))?;
+        let server = std::thread::spawn(move || -> std::io::Result<Value> {
+            let (stream, _) = listener.accept()?;
+            let mut reader = BufReader::new(stream);
+            let mut hello = String::new();
+            let mut call = String::new();
+            reader.read_line(&mut hello)?;
+            reader.read_line(&mut call)?;
+            reader
+                .get_mut()
+                .write_all(b"{\"t\":\"welcome\"}\n{\"t\":\"ret\",\"id\":1,\"ok\":{}}\n")?;
+            Ok(serde_json::from_str(&call).unwrap())
+        });
+        key_step_at(
+            &[
+                "audio.step".into(),
+                r#"{"direction":"up","key_ms":123}"#.into(),
+            ],
+            &path,
+        )
+        .map_err(|error| match error {
+            KeyStepError::DaemonAbsent => "test daemon unexpectedly absent".into(),
+            KeyStepError::Failed(error) => error,
+        })?;
+        let call = server.join().expect("mock daemon thread")?;
+        assert_eq!(call["m"], "audio.step");
+        assert_eq!(call["p"]["key_ms"], 123);
+        assert!(key_step_at(&["daemon.status".into(), "{}".into()], &path).is_err());
+        assert!(matches!(
+            key_step_at(
+                &[
+                    "audio.step".into(),
+                    r#"{"direction":"up","key_ms":123}"#.into(),
+                ],
+                &parent.join("missing.sock"),
+            ),
+            Err(KeyStepError::DaemonAbsent)
+        ));
+        Ok(())
     }
 }

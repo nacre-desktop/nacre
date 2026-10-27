@@ -33,7 +33,7 @@
         "keys": "XF86AudioLowerVolume",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call audio.step \"{\\\"direction\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step audio.step \"{\\\"direction\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:volume-down",
@@ -46,7 +46,7 @@
         "keys": "XF86AudioRaiseVolume",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call audio.step \"{\\\"direction\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step audio.step \"{\\\"direction\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:volume-up",
@@ -82,7 +82,7 @@
         "keys": "XF86MonBrightnessDown",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call brightness.adjust \"{\\\"delta\\\":-5,\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl set 5%-)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step brightness.adjust \"{\\\"delta\\\":-5,\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then brightnessctl set 5%-; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:brightness-down",
@@ -94,7 +94,7 @@
         "keys": "XF86MonBrightnessUp",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call brightness.adjust \"{\\\"delta\\\":5,\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl set 5%+)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step brightness.adjust \"{\\\"delta\\\":5,\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then brightnessctl set 5%+; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:brightness-up",
@@ -106,7 +106,7 @@
         "keys": "XF86KbdBrightnessUp",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call keyboard_light.adjust \"{\\\"step\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl -d '*kbd_backlight*' set 1+)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step keyboard_light.adjust \"{\\\"step\\\":\\\"up\\\",\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then brightnessctl -d '*kbd_backlight*' set 1+; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:keyboard-up",
@@ -118,7 +118,7 @@
         "keys": "XF86KbdBrightnessDown",
         "action": "application.launch",
         "parameters": {
-          "command": "key_ms=$(date +%s%3N); nacrectl call keyboard_light.adjust \"{\\\"step\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || (nacrectl status >/dev/null 2>&1 || brightnessctl -d '*kbd_backlight*' set 1-)"
+          "command": "key_ms=$(date +%s%3N); nacrectl key-step keyboard_light.adjust \"{\\\"step\\\":\\\"down\\\",\\\"key_ms\\\":$key_ms}\" || { rc=$?; if [ \"$rc\" -eq 69 ]; then brightnessctl -d '*kbd_backlight*' set 1-; else exit \"$rc\"; fi; }"
         },
         "options": {
           "description": "Nacre:keyboard-down",
