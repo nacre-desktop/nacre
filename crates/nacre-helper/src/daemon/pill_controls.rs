@@ -9,13 +9,95 @@ use std::{
     collections::BTreeMap,
     sync::{
         atomic::{AtomicU64, Ordering},
+        mpsc::{self, SyncSender},
         Arc, OnceLock,
     },
+    thread::JoinHandle,
     time::Duration,
 };
 
 static AUDIO_LOCK: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
 static LAST_STEP_MARKER_MS: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct FastAudioStep {
+    pub(crate) delta: f64,
+    pub(crate) key_ms: Option<u64>,
+}
+
+pub(crate) struct AudioStepCompletion {
+    pub(crate) result: Result<AudioStepOutcome, Failure>,
+    pub(crate) key_ms: Option<u64>,
+}
+
+pub(crate) struct AudioStepWorker {
+    stop: Arc<std::sync::atomic::AtomicBool>,
+    sender: Option<SyncSender<FastAudioStep>>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl AudioStepWorker {
+    pub(crate) fn start(
+        completed: tokio::sync::mpsc::UnboundedSender<AudioStepCompletion>,
+    ) -> crate::Result<Self> {
+        let (sender, receiver) = mpsc::sync_channel::<FastAudioStep>(64);
+        let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let thread_stop = stop.clone();
+        let thread = std::thread::Builder::new()
+            .name("nacre-audio-step".into())
+            .stack_size(512 * 1024)
+            .spawn(move || {
+                let runtime = match tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                {
+                    Ok(runtime) => runtime,
+                    Err(error) => {
+                        tracing::error!(%error, "Audio step worker runtime failed");
+                        return;
+                    }
+                };
+                while !thread_stop.load(Ordering::Acquire) {
+                    let request = match receiver.recv_timeout(Duration::from_millis(100)) {
+                        Ok(request) => request,
+                        Err(mpsc::RecvTimeoutError::Timeout) => continue,
+                        Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                    };
+                    let guard = runtime.block_on(audio_lock().lock_owned());
+                    let result = step_audio_sink(request.delta);
+                    drop(guard);
+                    let _ = completed.send(AudioStepCompletion {
+                        result,
+                        key_ms: request.key_ms,
+                    });
+                }
+            })?;
+        Ok(Self {
+            stop,
+            sender: Some(sender),
+            thread: Some(thread),
+        })
+    }
+
+    pub(crate) fn sender(&self) -> SyncSender<FastAudioStep> {
+        self.sender
+            .as_ref()
+            .expect("audio worker is active")
+            .clone()
+    }
+}
+
+impl Drop for AudioStepWorker {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        self.sender.take();
+        if let Some(thread) = self.thread.take() {
+            if thread.join().is_err() {
+                tracing::warn!("Audio step worker panicked");
+            }
+        }
+    }
+}
 
 pub fn methods() -> BTreeMap<String, Method> {
     nacre_protocol::pill_controls::methods()
@@ -107,16 +189,7 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
             })
             .await
             .map_err(|_| action_error())??;
-            publish_step_result(&hub, &outcome)?;
-            let value = outcome.channels[0];
-            if let Some(key_ms) = request.key_ms {
-                let now_ms = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_or(0, |elapsed| elapsed.as_millis() as u64);
-                if step_marker_allowed(now_ms) {
-                    tracing::info!("OSD_STEP kind=volume value={value:.3} ms_since_key={} key_ms={key_ms} timebase=unix_ms", now_ms.saturating_sub(key_ms));
-                }
-            }
+            publish_audio_step(&hub, &outcome, request.key_ms)?;
         }
         "audio.toggle_mute" => {
             let _: PillEmpty = serde_json::from_value(params).map_err(|_| invalid())?;
@@ -150,7 +223,11 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
     Ok(json!({"changed":true}))
 }
 
-fn publish_step_result(hub: &Shared, outcome: &AudioStepOutcome) -> Result<(), Failure> {
+pub(crate) fn publish_audio_step(
+    hub: &Shared,
+    outcome: &AudioStepOutcome,
+    key_ms: Option<u64>,
+) -> Result<(), Failure> {
     let value = outcome.channels[0];
     let Some(mut state) = hub.borrow().snapshot("audio") else {
         super::osd::volume(hub, value);
@@ -169,6 +246,14 @@ fn publish_step_result(hub: &Shared, outcome: &AudioStepOutcome) -> Result<(), F
     }
     if is_default {
         super::osd::volume(hub, value);
+    }
+    if let Some(key_ms) = key_ms {
+        let now_ms = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_millis() as u64);
+        if step_marker_allowed(now_ms) {
+            tracing::info!("OSD_STEP kind=volume value={value:.3} ms_since_key={} key_ms={key_ms} timebase=unix_ms", now_ms.saturating_sub(key_ms));
+        }
     }
     Ok(())
 }

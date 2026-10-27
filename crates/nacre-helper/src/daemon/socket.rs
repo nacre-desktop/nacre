@@ -38,11 +38,10 @@ pub fn fast_path() -> Result<PathBuf> {
 }
 pub fn fast_path_for(main: &Path) -> Result<PathBuf> {
     let parent = main.parent().ok_or("Invalid daemon socket parent")?;
-    let name = main
-        .file_name()
-        .and_then(std::ffi::OsStr::to_str)
-        .ok_or("Invalid daemon socket name")?;
-    let path = parent.join(format!("{name}.fast"));
+    let path = parent.join("fast.sock");
+    if path == main {
+        return Err("Fast endpoint must differ from the daemon endpoint".into());
+    }
     if path.as_os_str().as_bytes().len() > 107 {
         return Err("Fast daemon socket path is too long".into());
     }
@@ -304,7 +303,7 @@ mod tests {
         fs::set_permissions(&parent, fs::Permissions::from_mode(0o700))?;
         let main = parent.join("daemon.sock");
         let fast = fast_path_for(&main)?;
-        assert_eq!(fast, parent.join("daemon.sock.fast"));
+        assert_eq!(fast, parent.join("fast.sock"));
         let listener = FastListener::acquire(&main)?;
         assert!(validate_endpoint(&fast).is_ok());
         assert_eq!(fs::symlink_metadata(&fast)?.mode() & 0o777, 0o600);

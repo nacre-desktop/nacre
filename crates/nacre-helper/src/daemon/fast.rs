@@ -9,6 +9,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
+        mpsc::SyncSender,
         Arc,
     },
     thread::{self, JoinHandle},
@@ -16,16 +17,17 @@ use std::{
 };
 use tokio::sync::mpsc;
 
-pub struct Server {
+pub(super) struct Server {
     stop: Arc<AtomicBool>,
     path: PathBuf,
     thread: Option<JoinHandle<crate::Result<()>>>,
 }
 
 impl Server {
-    pub fn start(
+    pub(super) fn start(
         mut listener: socket::FastListener,
         requests: mpsc::Sender<Message>,
+        audio_steps: SyncSender<super::pill_controls::FastAudioStep>,
         safe_mode: bool,
         audio_available: bool,
     ) -> crate::Result<Self> {
@@ -37,7 +39,14 @@ impl Server {
             .stack_size(512 * 1024)
             .spawn(move || {
                 let listener = listener.take()?;
-                run(listener, thread_stop, requests, safe_mode, audio_available)
+                run(
+                    listener,
+                    thread_stop,
+                    requests,
+                    audio_steps,
+                    safe_mode,
+                    audio_available,
+                )
             })?;
         Ok(Self {
             stop,
@@ -71,6 +80,7 @@ fn run(
     listener: UnixListener,
     stop: Arc<AtomicBool>,
     requests: mpsc::Sender<Message>,
+    audio_steps: SyncSender<super::pill_controls::FastAudioStep>,
     safe_mode: bool,
     audio_available: bool,
 ) -> crate::Result<()> {
@@ -85,7 +95,13 @@ fn run(
         }
         let _ = stream.set_read_timeout(Some(Duration::from_millis(250)));
         let _ = stream.set_write_timeout(Some(Duration::from_millis(250)));
-        let response = handle(&mut stream, &requests, safe_mode, audio_available);
+        let response = handle(
+            &mut stream,
+            &requests,
+            &audio_steps,
+            safe_mode,
+            audio_available,
+        );
         if let Err(error) = response {
             tracing::debug!(%error, "One-shot daemon request failed");
         }
@@ -96,6 +112,7 @@ fn run(
 fn handle(
     stream: &mut UnixStream,
     requests: &mpsc::Sender<Message>,
+    audio_steps: &SyncSender<super::pill_controls::FastAudioStep>,
     safe_mode: bool,
     audio_available: bool,
 ) -> crate::Result<()> {
@@ -135,6 +152,49 @@ fn handle(
             };
             if let Some(err) = reject {
                 (id, Reply::Err { err }, method)
+            } else if method == "audio.step" {
+                let Message::FastCall { p, .. } = &request else {
+                    unreachable!()
+                };
+                let step =
+                    serde_json::from_value::<nacre_protocol::pill_controls::VolumeStep>(p.clone())
+                        .map_err(|_| {
+                            Failure::new(ErrorCode::Validation, "Invalid audio step", false)
+                        })?;
+                let delta = match step.direction {
+                    nacre_protocol::pill_controls::VolumeDirection::Up => 0.05,
+                    nacre_protocol::pill_controls::VolumeDirection::Down => -0.05,
+                };
+                match audio_steps.try_send(super::pill_controls::FastAudioStep {
+                    delta,
+                    key_ms: step.key_ms,
+                }) {
+                    Ok(()) => (
+                        id,
+                        Reply::Ok {
+                            ok: json!({"changed":true}),
+                        },
+                        method,
+                    ),
+                    Err(std::sync::mpsc::TrySendError::Full(_)) => (
+                        id,
+                        Reply::Err {
+                            err: Failure::new(ErrorCode::Busy, "Audio step queue is full", true),
+                        },
+                        method,
+                    ),
+                    Err(std::sync::mpsc::TrySendError::Disconnected(_)) => (
+                        id,
+                        Reply::Err {
+                            err: Failure::new(
+                                ErrorCode::Unavailable,
+                                "Audio step worker is stopping",
+                                true,
+                            ),
+                        },
+                        method,
+                    ),
+                }
             } else {
                 match requests.try_send(request) {
                     Ok(()) => (
@@ -209,8 +269,8 @@ fn write_message(stream: &mut UnixStream, message: &Message) -> crate::Result<()
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nix::sys::socket::{getsockopt, sockopt::PeerCredentials};
     use nacre_protocol::Id;
+    use nix::sys::socket::{getsockopt, sockopt::PeerCredentials};
     use std::{
         io::{BufRead, BufReader, Write},
         os::unix::{fs::PermissionsExt, net::UnixListener as StdListener},
@@ -241,7 +301,8 @@ mod tests {
         let fast_path = socket::fast_path_for(&main_path)?;
         let listener = socket::FastListener::acquire(&main_path)?;
         let (send, mut receive) = mpsc::channel(4);
-        let server = Server::start(listener, send, false, false)?;
+        let (audio_send, audio_receive) = std::sync::mpsc::sync_channel(4);
+        let server = Server::start(listener, send, audio_send, false, true)?;
 
         assert_eq!(
             exchange(
@@ -276,6 +337,24 @@ mod tests {
             }
         );
         assert_eq!(receive.blocking_recv(), Some(queued));
+        let audio = Message::FastCall {
+            proto: nacre_protocol::VERSION,
+            id: Id::Integer(3),
+            m: "audio.step".into(),
+            p: json!({"direction":"up","key_ms":99}),
+        };
+        assert_eq!(
+            exchange(&fast_path, &audio),
+            Message::Ret {
+                id: Id::Integer(3),
+                reply: Reply::Ok {
+                    ok: json!({"changed":true})
+                },
+            }
+        );
+        let queued = audio_receive.try_recv().unwrap();
+        assert_eq!(queued.delta, 0.05);
+        assert_eq!(queued.key_ms, Some(99));
         drop(server);
         assert!(!fast_path.exists());
         Ok(())

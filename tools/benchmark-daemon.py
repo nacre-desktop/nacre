@@ -401,8 +401,8 @@ def measure(tools, env, options, output):
                 )
                 if method == "audio.step" and options.key_interval_ms:
                     time.sleep(options.key_interval_ms / 1000)
-        fast_clock_elapsed = time.monotonic() - fast_clock_start
         time.sleep(0.5)
+        fast_clock_elapsed = time.monotonic() - fast_clock_start
         fast_finished = lab.performance.process(daemon.pid)
         if (
             not fast_started

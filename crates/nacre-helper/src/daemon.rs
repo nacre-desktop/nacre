@@ -77,9 +77,16 @@ async fn serve(
     let fast_listener = socket::FastListener::acquire(&listener.path)?;
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     let (fast_requests, mut fast_rx) = tokio::sync::mpsc::channel(256);
+    let (audio_step_events, mut audio_step_rx) = tokio::sync::mpsc::unbounded_channel();
+    let audio_step_worker = pill_controls::AudioStepWorker::start(audio_step_events)?;
     let audio_available = pill_controls::fast_backend_present("audio.step");
-    let fast_server =
-        fast::Server::start(fast_listener, fast_requests, counter.safe, audio_available)?;
+    let fast_server = fast::Server::start(
+        fast_listener,
+        fast_requests,
+        audio_step_worker.sender(),
+        counter.safe,
+        audio_available,
+    )?;
     helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
@@ -563,6 +570,16 @@ async fn serve(
                     }
                 });
             },
+            Some(completion)=audio_step_rx.recv()=>{
+                match completion.result {
+                    Ok(outcome)=>{
+                        if let Err(error)=pill_controls::publish_audio_step(&hub,&outcome,completion.key_ms) {
+                            tracing::warn!(code=?error.code,"Completed audio step could not be published");
+                        }
+                    },
+                    Err(error)=>tracing::warn!(code=?error.code,"Queued audio step failed"),
+                }
+            },
             result=fast_calls.join_next(),if !fast_calls.is_empty()=>match result {
                 Some(Ok(()))=>{},
                 Some(Err(_))=>tracing::error!("Queued one-shot daemon call task failed"),
@@ -577,6 +594,7 @@ async fn serve(
         }
     }
     drop(fast_server);
+    drop(audio_step_worker);
     fast_calls.abort_all();
     while fast_calls.join_next().await.is_some() {}
     clients.abort_all();
