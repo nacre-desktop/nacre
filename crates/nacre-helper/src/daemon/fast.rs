@@ -1,11 +1,11 @@
 //! Independent one-shot request lane. It never enters the producer runtime
 //! before acknowledging a bounded hardware call.
 use super::socket;
-use nacre_protocol::{framing, ErrorCode, Failure, Id, Message, Reply, MAX_FRAME};
+use nacre_protocol::{framing, ErrorCode, Failure, Message, Reply, MAX_FRAME};
 use serde_json::json;
 use std::{
     io::{BufRead, BufReader, Read, Write},
-    os::unix::{fs::MetadataExt, net::{UnixListener, UnixStream}},
+    os::unix::net::{UnixListener, UnixStream},
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -105,9 +105,13 @@ fn handle(
     let frame = read_frame(stream)?;
     let message = framing::decode(&frame)?;
     let (id, reply, method) = match message {
-        Message::FastCall { id, m, .. } if m == "daemon.ping" => {
-            (id, Reply::Ok { ok: serde_json::Value::Null }, m)
-        }
+        Message::FastCall { id, m, .. } if m == "daemon.ping" => (
+            id,
+            Reply::Ok {
+                ok: serde_json::Value::Null,
+            },
+            m,
+        ),
         request @ Message::FastCall { .. } => {
             let Message::FastCall { id, m, .. } = &request else {
                 unreachable!()
@@ -133,7 +137,13 @@ fn handle(
                 (id, Reply::Err { err }, method)
             } else {
                 match requests.try_send(request) {
-                    Ok(()) => (id, Reply::Ok { ok: json!({"changed":true}) }, method),
+                    Ok(()) => (
+                        id,
+                        Reply::Ok {
+                            ok: json!({"changed":true}),
+                        },
+                        method,
+                    ),
                     Err(mpsc::error::TrySendError::Full(_)) => (
                         id,
                         Reply::Err {
@@ -144,7 +154,11 @@ fn handle(
                     Err(mpsc::error::TrySendError::Closed(_)) => (
                         id,
                         Reply::Err {
-                            err: Failure::new(ErrorCode::Unavailable, "Fast request lane is stopping", true),
+                            err: Failure::new(
+                                ErrorCode::Unavailable,
+                                "Fast request lane is stopping",
+                                true,
+                            ),
                         },
                         method,
                     ),
@@ -163,7 +177,11 @@ fn handle(
     };
     write_message(stream, &Message::Ret { id, reply })?;
     if std::env::var_os("NACRE_FAST_TRACE").is_some() {
-        tracing::info!(method, server_us = started.elapsed().as_micros(), "FAST_CALL");
+        tracing::info!(
+            method,
+            server_us = started.elapsed().as_micros(),
+            "FAST_CALL"
+        );
     }
     Ok(())
 }
@@ -192,6 +210,7 @@ fn write_message(stream: &mut UnixStream, message: &Message) -> crate::Result<()
 mod tests {
     use super::*;
     use nix::sys::socket::{getsockopt, sockopt::PeerCredentials};
+    use nacre_protocol::Id;
     use std::{
         io::{BufRead, BufReader, Write},
         os::unix::{fs::PermissionsExt, net::UnixListener as StdListener},
@@ -201,7 +220,9 @@ mod tests {
         let mut stream = UnixStream::connect(path).unwrap();
         let peer = getsockopt(&stream, PeerCredentials).unwrap();
         assert_eq!(peer.uid(), nix::unistd::getuid().as_raw());
-        stream.write_all(&framing::encode(request).unwrap()).unwrap();
+        stream
+            .write_all(&framing::encode(request).unwrap())
+            .unwrap();
         let mut reader = BufReader::new(stream);
         let mut line = String::new();
         reader.read_line(&mut line).unwrap();
@@ -234,7 +255,9 @@ mod tests {
             ),
             Message::Ret {
                 id: Id::Integer(1),
-                reply: Reply::Ok { ok: serde_json::Value::Null },
+                reply: Reply::Ok {
+                    ok: serde_json::Value::Null
+                },
             }
         );
         let queued = Message::FastCall {
@@ -247,7 +270,9 @@ mod tests {
             exchange(&fast_path, &queued),
             Message::Ret {
                 id: Id::Integer(2),
-                reply: Reply::Ok { ok: json!({"changed":true}) },
+                reply: Reply::Ok {
+                    ok: json!({"changed":true})
+                },
             }
         );
         assert_eq!(receive.blocking_recv(), Some(queued));

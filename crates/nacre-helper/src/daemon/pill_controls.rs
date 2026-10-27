@@ -209,7 +209,9 @@ pub(crate) struct AudioStepOutcome {
 
 #[derive(Clone, Debug, PartialEq)]
 enum VolumeParam {
-    NodeProps { node_id: u64 },
+    NodeProps {
+        node_id: u64,
+    },
     DeviceRoute {
         device_id: u64,
         route_index: u64,
@@ -245,10 +247,7 @@ fn object_id(value: &Value) -> Option<u64> {
 
 fn current_param<'a>(object: &'a Value, name: &str) -> Option<&'a Value> {
     let params = object.get("info")?.get("params")?.get(name)?;
-    params
-        .as_array()
-        .and_then(|items| items.last())
-        .or_else(|| params.as_object())
+    params.as_array()?.last()
 }
 
 fn volume_data(props: &Value) -> Option<(Vec<f64>, usize)> {
@@ -389,22 +388,14 @@ fn step_audio_sink_with(
         ),
     };
     let payload = serde_json::to_string(&payload).map_err(|_| action_error())?;
-    run(
-        "pw-cli",
-        &["set-param", &object_id, param, &payload],
-        true,
-    )?;
+    run("pw-cli", &["set-param", &object_id, param, &payload], true)?;
     Ok(AudioStepOutcome {
         node_name: sink.node_name,
         channels,
     })
 }
 
-fn run_pipewire_action(
-    program: &str,
-    args: &[&str],
-    mutation: bool,
-) -> Result<String, Failure> {
+fn run_pipewire_action(program: &str, args: &[&str], mutation: bool) -> Result<String, Failure> {
     let args = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
     let error = || {
         if mutation {
@@ -415,8 +406,8 @@ fn run_pipewire_action(
     };
     let mut command = std::process::Command::new(program);
     command.args(&args).env_remove("NOTIFY_SOCKET");
-    let output = crate::process::capture(command, None, Duration::from_secs(3))
-        .map_err(|_| error())?;
+    let output =
+        crate::process::capture(command, None, Duration::from_secs(3)).map_err(|_| error())?;
     if !output.status.success() {
         return Err(error());
     }
@@ -638,15 +629,23 @@ mod tests {
             second.channels,
             vec![0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
         );
-        let set = set.last().unwrap();
-        assert_eq!(&set[..3], ["set-param", "30", "Route"]);
-        let payload: Value = serde_json::from_str(&set[3]).unwrap();
+        let first = serde_json::from_str::<Value>(&set[0][3]).unwrap();
+        assert_eq!(
+            first["props"]["channelVolumes"],
+            json!([0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85])
+        );
+        let final_set = set.last().unwrap();
+        assert_eq!(&final_set[..3], ["set-param", "30", "Route"]);
+        let payload: Value = serde_json::from_str(&final_set[3]).unwrap();
         assert_eq!(payload["index"], 4);
         assert_eq!(payload["device"], 2);
-        assert_eq!(payload["props"]["channelVolumes"].as_array().unwrap().len(), 8);
+        assert_eq!(
+            payload["props"]["channelVolumes"].as_array().unwrap().len(),
+            8
+        );
         assert_eq!(
             payload["props"]["channelVolumes"],
-            json!([0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85])
+            json!([0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90])
         );
         assert_eq!(payload["save"], true);
     }
@@ -654,8 +653,14 @@ mod tests {
     #[test]
     fn step_normalizes_short_volume_vector_to_the_full_channel_map() {
         let stepped = stepped_channel_volumes(&[0.40, 0.25], 8, 0.05).unwrap();
-        assert_eq!(stepped, vec![0.45, 0.30, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45]);
-        assert_eq!(stepped_channel_volumes(&[0.0, 0.5], 2, -0.05), Some(vec![0.0, 0.45]));
+        assert_eq!(
+            stepped,
+            vec![0.45, 0.30, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45]
+        );
+        assert_eq!(
+            stepped_channel_volumes(&[0.0, 0.5], 2, -0.05),
+            Some(vec![0.0, 0.45])
+        );
     }
 
     #[test]

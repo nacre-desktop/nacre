@@ -190,23 +190,23 @@ async fn dispatch(
 
 pub(super) async fn dispatch_fast(hub: Shared, message: Message) -> Result<Value, Failure> {
     let Message::FastCall { m, p, .. } = message else {
-        return Err(failure(ErrorCode::InvalidRequest, "Expected one-shot call", false));
+        return Err(failure(
+            ErrorCode::InvalidRequest,
+            "Expected one-shot call",
+            false,
+        ));
     };
     if !matches!(
         m.as_str(),
         "audio.step" | "brightness.adjust" | "keyboard_light.adjust"
     ) {
-        return Err(failure(ErrorCode::InvalidRequest, "Unsupported queued call", false));
+        return Err(failure(
+            ErrorCode::InvalidRequest,
+            "Unsupported queued call",
+            false,
+        ));
     }
-    dispatch(
-        hub,
-        0,
-        m,
-        p,
-        None,
-        super::helpers::Transfer::default(),
-    )
-    .await
+    dispatch(hub, 0, m, p, None, super::helpers::Transfer::default()).await
 }
 async fn call(
     hub: Shared,

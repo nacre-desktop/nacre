@@ -6,6 +6,7 @@ use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
     io::{self, BufRead, BufReader as StdBufReader, Read, Write},
+    os::unix::net::UnixStream as StdUnixStream,
     time::Duration,
 };
 use tokio::{
@@ -579,7 +580,7 @@ fn legacy_key_step_at(
             fail(error)
         }
     })?;
-    let mut stream = UnixStream::connect(path).map_err(|error| {
+    let mut stream = StdUnixStream::connect(path).map_err(|error| {
         if absent(&error) {
             KeyStepError::DaemonAbsent
         } else {
@@ -667,7 +668,9 @@ fn fast_call_at(
         p: params,
     };
     let bytes = framing::encode(&request).map_err(|error| fail(error.into()))?;
-    stream.write_all(&bytes).map_err(|error| fail(error.into()))?;
+    stream
+        .write_all(&bytes)
+        .map_err(|error| fail(error.into()))?;
     let mut reader = StdBufReader::new(stream);
     let mut frame = Vec::with_capacity(256);
     let bytes = reader
@@ -688,7 +691,9 @@ fn fast_call_at(
             reply: Reply::Err { err },
         }
         | Message::Error { err } => Err(fail(err.into())),
-        _ => Err(fail("Daemon returned a mismatched one-shot response".into())),
+        _ => Err(fail(
+            "Daemon returned a mismatched one-shot response".into(),
+        )),
     }
 }
 
@@ -749,9 +754,9 @@ mod key_step_tests {
             let mut reader = BufReader::new(stream);
             let mut call = String::new();
             reader.read_line(&mut call)?;
-            reader.get_mut().write_all(
-                b"{\"t\":\"ret\",\"id\":1,\"ok\":{\"changed\":true}}\n",
-            )?;
+            reader
+                .get_mut()
+                .write_all(b"{\"t\":\"ret\",\"id\":1,\"ok\":{\"changed\":true}}\n")?;
             Ok(serde_json::from_str(&call).unwrap())
         });
         key_step_at(
@@ -799,9 +804,9 @@ mod key_step_tests {
             let mut call = String::new();
             reader.read_line(&mut hello)?;
             reader.read_line(&mut call)?;
-            reader.get_mut().write_all(
-                b"{\"t\":\"welcome\"}\n{\"t\":\"ret\",\"id\":1,\"ok\":{}}\n",
-            )?;
+            reader
+                .get_mut()
+                .write_all(b"{\"t\":\"welcome\"}\n{\"t\":\"ret\",\"id\":1,\"ok\":{}}\n")?;
             Ok(())
         });
         key_step_at(

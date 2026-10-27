@@ -78,12 +78,8 @@ async fn serve(
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     let (fast_requests, mut fast_rx) = tokio::sync::mpsc::channel(256);
     let audio_available = pill_controls::fast_backend_present("audio.step");
-    let fast_server = fast::Server::start(
-        fast_listener,
-        fast_requests,
-        counter.safe,
-        audio_available,
-    )?;
+    let fast_server =
+        fast::Server::start(fast_listener, fast_requests, counter.safe, audio_available)?;
     helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;

@@ -324,14 +324,14 @@ impl Message {
                         "audio.step" => {
                             serde_json::from_value::<pill_controls::VolumeStep>(p.clone()).is_ok()
                         }
-                        "brightness.adjust" => serde_json::from_value::<
-                            bar_services::BrightnessAdjust,
-                        >(p.clone())
-                        .is_ok_and(|request| request.validate().is_ok()),
-                        "keyboard_light.adjust" => serde_json::from_value::<
-                            bar_services::KeyboardLightAdjust,
-                        >(p.clone())
-                        .is_ok(),
+                        "brightness.adjust" => {
+                            serde_json::from_value::<bar_services::BrightnessAdjust>(p.clone())
+                                .is_ok_and(|request| request.validate().is_ok())
+                        }
+                        "keyboard_light.adjust" => {
+                            serde_json::from_value::<bar_services::KeyboardLightAdjust>(p.clone())
+                                .is_ok()
+                        }
                         _ => false,
                     }
             }
