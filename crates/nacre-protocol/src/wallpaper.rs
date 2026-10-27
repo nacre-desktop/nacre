@@ -314,6 +314,7 @@ impl WallpaperCatalogue {
                     || entry.palette.as_ref().is_some_and(|palette| {
                         !matches!(palette.mode, PaletteMode::Dark | PaletteMode::Light)
                             || palette.colours.len() < 3
+                            || palette.colours.len() > 64
                             || !["background", "onSurface", "primary"]
                                 .iter()
                                 .all(|role| palette.colours.contains_key(*role))
@@ -508,6 +509,16 @@ mod tests {
         assert!(catalogue.entries[0].palette.is_some());
         catalogue.entries[0].palette.as_mut().unwrap().colours.insert("broken".into(), "red".into());
         assert!(catalogue.validate().is_err());
+        catalogue.entries[0].palette.as_mut().unwrap().colours.remove("broken");
+        for index in 0..62 {
+            catalogue.entries[0]
+                .palette
+                .as_mut()
+                .unwrap()
+                .colours
+                .insert(format!("extra-{index}"), "#112233".into());
+        }
+        assert!(catalogue.validate().is_err(), "catalogue palettes are capped at 64 roles");
     }
 
     #[test]

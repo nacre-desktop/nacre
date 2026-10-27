@@ -148,15 +148,21 @@ impl SelectionGuard {
             || ASYNC_SELECTION_BUSY.with(|busy| busy.get().is_some())
     }
 }
-struct AsyncSelectionGuard(u64);
+struct AsyncSelectionGuard {
+    generation: u64,
+    hub: Shared,
+}
 impl Drop for AsyncSelectionGuard {
     fn drop(&mut self) {
-        if SELECTION_GENERATION.load(Ordering::Acquire) == self.0 {
+        if SELECTION_GENERATION.load(Ordering::Acquire) == self.generation {
             ASYNC_SELECTION_BUSY.with(|busy| {
-                if busy.get() == Some(self.0) {
+                if busy.get() == Some(self.generation) {
                     busy.set(None);
                 }
             });
+            if let Err(error) = refresh_previous_availability(&self.hub) {
+                eprintln!("Wallpaper selection availability refresh failed: {error}");
+            }
         }
     }
 }
@@ -940,6 +946,7 @@ fn activation_state(
     Ok((request, state))
 }
 
+#[cfg(test)]
 fn select_media(engine: &Path, id: &str) -> bool {
     let Ok(output) = crate::process::run_bytes(
         "nice",
@@ -961,6 +968,37 @@ fn select_media(engine: &Path, id: &str) -> bool {
             .lines()
             .filter_map(|line| serde_json::from_str::<Value>(line).ok())
             .any(|entry| entry["error"].is_null() && entry["path"] == id)
+}
+
+fn valid_catalogue_selection(path: &Path, library: &Path) -> bool {
+    if !path.is_absolute() || path.as_os_str().len() > 4096 {
+        return false;
+    }
+    let Some(suffix) = path.extension().and_then(|suffix| suffix.to_str()) else {
+        return false;
+    };
+    let suffix = suffix.to_ascii_lowercase();
+    let Some(canonical) = std::fs::canonicalize(path).ok() else {
+        return false;
+    };
+    if canonical != path
+        || !canonical.starts_with(library)
+        || (!crate::wallpaper_media::IMAGES.contains(&suffix.as_str())
+            && !crate::wallpaper_media::VIDEOS.contains(&suffix.as_str()))
+    {
+        return false;
+    }
+    let limit = if crate::wallpaper_media::VIDEOS.contains(&suffix.as_str()) {
+        MOTION_BYTES
+    } else {
+        IMAGE_BYTES
+    };
+    private_file(&canonical, limit).is_ok_and(|file| {
+        file.metadata().is_ok_and(|metadata| {
+            let identity = WallpaperFileIdentity::from_metadata(&metadata);
+            identity.validate().is_ok() && identity.matches(&metadata)
+        })
+    })
 }
 
 pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
@@ -985,32 +1023,8 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
         let media = crate::wallpaper_media::Media::new(paths.clone(), paths.assets()).map_err(
             |_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true),
         )?;
-        let candidate = Path::new(&id);
-        let canonical = std::fs::canonicalize(candidate).ok();
         let library = std::fs::canonicalize(&media.library).unwrap_or(media.library.clone());
-        let suffix = candidate
-            .extension()
-            .and_then(|s| s.to_str())
-            .unwrap_or("")
-            .to_ascii_lowercase();
-        let supported = crate::wallpaper_media::IMAGES.contains(&suffix.as_str())
-            || crate::wallpaper_media::VIDEOS.contains(&suffix.as_str());
-        let known = canonical.as_ref().is_some_and(|path| {
-            if path != candidate || !path.starts_with(&library) || !supported {
-                return false;
-            }
-            let limit = if crate::wallpaper_media::VIDEOS.contains(&suffix.as_str()) {
-                MOTION_BYTES
-            } else {
-                IMAGE_BYTES
-            };
-            private_file(path, limit).is_ok_and(|file| {
-                file.metadata().is_ok_and(|metadata| {
-                    let identity = WallpaperFileIdentity::from_metadata(&metadata);
-                    identity.validate().is_ok() && identity.matches(&metadata)
-                })
-            })
-        });
+        let known = valid_catalogue_selection(Path::new(&id), &library);
         if !known {
             return Err(failure(
                 ErrorCode::Validation,
@@ -1061,6 +1075,9 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             failure(ErrorCode::Unavailable, "Wallpaper selection could not be queued", true)
         })?;
         ASYNC_SELECTION_BUSY.with(|busy| busy.set(Some(generation)));
+        if let Err(error) = refresh_previous_availability(&hub) {
+            eprintln!("Wallpaper selection availability refresh failed: {error}");
+        }
         drop(_publication);
         SELECTION_TASK.with(|slot| {
             let previous = slot.borrow_mut().take();
@@ -1070,7 +1087,10 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             let worker_hub = hub.clone();
             let worker_paths = paths.clone();
             *slot.borrow_mut() = Some(tokio::task::spawn_local(async move {
-                let _selection_guard = AsyncSelectionGuard(generation);
+                let _selection_guard = AsyncSelectionGuard {
+                    generation,
+                    hub: worker_hub.clone(),
+                };
                 if let Some(previous) = previous {
                     let _ = previous.await;
                 }
@@ -1271,8 +1291,7 @@ mod tests {
     }
 
     #[test]
-    fn activation_membership_matches_metadata_catalogue_without_hydrating_thumbnails() -> Result<()>
-    {
+    fn direct_selection_validation_checks_library_membership_and_file_identity() -> Result<()> {
         let home = tempfile::tempdir()?;
         let paths = Paths::new(home.path());
         let library = paths.home.join("Pictures/Wallpapers");
@@ -1283,40 +1302,14 @@ mod tests {
         fs::write(&video_path, b"metadata-only video fixture")?;
         let outside_path = paths.home.join("outside.png");
         image::DynamicImage::new_rgb8(4, 4).save(&outside_path)?;
-
-        let metadata = crate::wallpaper_media::Media::new(paths.clone(), paths.assets())?
-            .catalog_with_ids(Some(&[]))?;
-        let rows = metadata["entries"]
-            .as_array()
-            .ok_or("missing metadata rows")?;
-        assert_eq!(rows.len(), 2);
-        for row in rows {
-            assert_eq!(row["thumbnail"], "");
-            assert_eq!(row["preview"], "");
-            let id = row["path"].as_str().ok_or("missing metadata path")?;
-            assert!(metadata_catalogue_contains(paths.clone(), id)?);
-        }
-        assert!(metadata_catalogue_contains(
-            paths.clone(),
-            &image_path.canonicalize()?.to_string_lossy()
-        )?);
-        assert!(metadata_catalogue_contains(
-            paths.clone(),
-            &video_path.canonicalize()?.to_string_lossy()
-        )?);
-        assert!(!metadata_catalogue_contains(
-            paths.clone(),
-            &outside_path.canonicalize()?.to_string_lossy()
-        )?);
-        assert!(!metadata_catalogue_contains(
-            paths.clone(),
-            &library.join("missing.png").to_string_lossy()
-        )?);
-        assert!(!metadata_catalogue_contains(
-            paths.clone(),
-            "/../../etc/passwd"
-        )?);
-        assert!(!paths.cache.join("wallpaper-media").exists());
+        symlink(&outside_path, library.join("escape.png"))?;
+        let canonical_library = library.canonicalize()?;
+        assert!(valid_catalogue_selection(&image_path, &canonical_library));
+        assert!(valid_catalogue_selection(&video_path, &canonical_library));
+        assert!(!valid_catalogue_selection(&outside_path, &canonical_library));
+        assert!(!valid_catalogue_selection(&library.join("escape.png"), &canonical_library));
+        assert!(!valid_catalogue_selection(&library.join("missing.png"), &canonical_library));
+        assert!(!valid_catalogue_selection(Path::new("/../../etc/passwd"), &canonical_library));
         assert!(WallpaperActivate {
             revision: 1,
             id: Some("/../../etc/passwd".into()),

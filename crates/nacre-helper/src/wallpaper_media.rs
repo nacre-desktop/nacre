@@ -291,7 +291,7 @@ pub struct Media {
 }
 const PALETTE_CACHE_COUNT: usize = 64;
 const PALETTE_PREWARM_COUNT: usize = 32;
-const CATALOGUE_PALETTE_LIMIT: usize = 128;
+const CATALOGUE_PALETTE_LIMIT: usize = 64;
 
 fn trim_palette_cache(cache: &Path, keep: usize) -> Result<()> {
     let mut entries = fs::read_dir(cache)?
@@ -978,6 +978,7 @@ impl Media {
         });
         let mut keep_keys = std::collections::HashSet::new();
         let mut palette_count = 0usize;
+        let full_catalogue = requested.as_ref().is_none_or(|ids| ids.is_empty());
         for path in entries {
             let suffix = path
                 .extension()
@@ -999,7 +1000,8 @@ impl Media {
                             let targeted = requested
                                 .as_ref()
                                 .is_some_and(|requested| requested.contains(&id));
-                            if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                            if (targeted || full_catalogue)
+                                && palette_count < CATALOGUE_PALETTE_LIMIT
                                 && self.attach_cached_palette(&mut value)?
                             {
                                 palette_count += 1;
@@ -1018,7 +1020,8 @@ impl Media {
                                 let targeted = requested
                                     .as_ref()
                                     .is_some_and(|requested| requested.contains(&id));
-                                if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                                if (targeted || full_catalogue)
+                                    && palette_count < CATALOGUE_PALETTE_LIMIT
                                     && self.attach_cached_palette(&mut value)?
                                 {
                                     palette_count += 1;
@@ -1032,7 +1035,7 @@ impl Media {
                     let targeted = requested
                         .as_ref()
                         .is_some_and(|requested| requested.contains(&id));
-                    if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                    if (targeted || full_catalogue) && palette_count < CATALOGUE_PALETTE_LIMIT
                         && self.attach_cached_palette(&mut value)?
                     {
                         palette_count += 1;
@@ -1092,7 +1095,7 @@ impl Media {
             }
             normalized.insert(name.into(), json!(format!("#{}", value.to_ascii_lowercase())));
         }
-        if colours.len() > 128 || colours.keys().any(|name| name.is_empty() || name.len() > 64)
+        if colours.len() > 64 || colours.keys().any(|name| name.is_empty() || name.len() > 64)
             || data["mode"].as_str() != Some(mode)
             || !data["input"].is_object()
             || !data["source"].is_object()
@@ -2388,6 +2391,37 @@ mod thumbnail_cache_tests {
         assert!(selection_generation_matches("8", "8\n").unwrap());
         assert!(!selection_generation_matches("8", "9").unwrap());
         assert!(selection_generation_matches("bad", "9").is_err());
+    }
+
+    #[test]
+    fn empty_ids_full_catalogue_includes_bounded_cached_palettes() -> Result<()> {
+        let (_home, media) = media_fixture()?;
+        for index in 0..17 {
+            let image = media.library.join(format!("wall-{index:02}.png"));
+            image::DynamicImage::new_rgb8(4, 4).save(&image)?;
+            let poster = image.canonicalize()?;
+            let marker = media.palette_marker(
+                &poster,
+                "default",
+                None,
+                Some(&poster),
+                None,
+                None,
+            )?;
+            let data = json!({
+                "mode":"dark",
+                "input":{"harmony":false},
+                "source":{"digest":"0".repeat(64)},
+                "colours":{"background":"#101820","onSurface":"#f0f4f8","primary":"#22aa88"}
+            });
+            crate::files::atomic(&marker, &serde_json::to_vec(&data)?)?;
+        }
+
+        let catalogue = media.catalog_with_ids(Some(&[]))?;
+        let entries = catalogue["entries"].as_array().ok_or("missing entries")?;
+        assert_eq!(entries.len(), 17);
+        assert_eq!(entries.iter().filter(|entry| !entry["palette"].is_null()).count(), 17);
+        Ok(())
     }
 
     #[test]
