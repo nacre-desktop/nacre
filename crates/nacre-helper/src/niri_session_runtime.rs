@@ -773,10 +773,7 @@ fn prepare_staged_configuration(
     refresh_tree(&candidate_config, &final_config)?;
     if stock {
         let marker = tempfile::NamedTempFile::new_in(destination)?;
-        crate::niri_session_stage::copied(
-            &candidate.path().join("stock-niri"),
-            marker.path(),
-        )?;
+        crate::niri_session_stage::copied(&candidate.path().join("stock-niri"), marker.path())?;
         marker
             .persist(destination.join("stock-niri"))
             .map_err(|error| error.error)?;
@@ -1183,7 +1180,7 @@ mod tests {
         fs::write(paths.config.join("desktop.json"), "{}")?;
         fs::write(
             paths.state.join("scheme.json"),
-            serde_json::to_vec(&case["scheme"])?
+            serde_json::to_vec(&case["scheme"])?,
         )?;
         let destination = home.path().join("session");
         fs::create_dir_all(destination.join("config"))?;
