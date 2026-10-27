@@ -18,6 +18,70 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_session_refresh_validates_reloads_and_keeps_previous_tree(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder) / "home"
+            session = home / ".local/share/nacre/niri-on-pc/session"
+            session.mkdir(parents=True)
+            (session / "source-revision").write_text("old\n")
+            config = session / "config/config.kdl"
+            config.parent.mkdir()
+            config.write_text("previous config\n")
+            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
+            helper.parent.mkdir(parents=True)
+            helper.touch()
+            calls = []
+
+            def run(command, check):
+                calls.append(command)
+                if command[1] == "niri-session-runtime":
+                    config.write_text("validated config\n")
+                return subprocess.CompletedProcess(command, 0)
+
+            with (
+                patch.object(m, "HOME", home),
+                patch.dict(os.environ, {"NIRI_SOCKET": "fixture.sock"}),
+                patch.object(m.subprocess, "run", side_effect=run),
+            ):
+                m.refresh_session(Path("/fixture/nacre"))
+            self.assertEqual(config.read_text(), "validated config\n")
+            self.assertEqual(
+                (session.with_name("session.rollback") / "config/config.kdl").read_text(),
+                "previous config\n",
+            )
+            self.assertEqual([call[1:3] for call in calls], [
+                ["niri-session-runtime", "--backend"],
+                ["compositor", "action"],
+            ])
+
+    def test_session_refresh_failure_restores_files_in_place(self):
+        with tempfile.TemporaryDirectory() as folder:
+            home = Path(folder) / "home"
+            session = home / ".local/share/nacre/niri-on-pc/session"
+            session.mkdir(parents=True)
+            (session / "source-revision").write_text("old\n")
+            config = session / "config/config.kdl"
+            config.parent.mkdir()
+            config.write_text("previous config\n")
+            inode = config.parent.stat().st_ino
+            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
+            helper.parent.mkdir(parents=True)
+            helper.touch()
+
+            def fail(command, check):
+                config.write_text("partial config\n")
+                raise subprocess.CalledProcessError(1, command)
+
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m.subprocess, "run", side_effect=fail),
+            ):
+                with self.assertRaises(subprocess.CalledProcessError):
+                    m.refresh_session(Path("/fixture/nacre"))
+            self.assertEqual(config.read_text(), "previous config\n")
+            self.assertEqual(config.parent.stat().st_ino, inode)
+            self.assertFalse(session.with_name("session.rollback").exists())
+
     def test_installed_controller_contains_session_modules_and_all_session_help(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
