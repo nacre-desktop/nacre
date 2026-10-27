@@ -100,7 +100,7 @@ class ReleaseTests(unittest.TestCase):
                     Path(__file__).parents[2] / "nacre/shell-tools" / name, tools / name
                 )
             with patch.multiple(m, HOME=home, CONTROL=control):
-                m.install_controller(Path(__file__).parents[1])
+                m.install_controller(Path(__file__).parents[2])
             self.assertTrue((control / "package_sessions.py").is_file())
             self.assertTrue((control / "package_niri.py").is_file())
             wrapper = home / ".local/bin/nacre"
