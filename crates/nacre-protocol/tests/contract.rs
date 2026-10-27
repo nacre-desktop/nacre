@@ -38,6 +38,39 @@ fn framing_bounds_types_duplicates_and_unknown_optional_fields() {
     maximum.push(b' ');
     assert!(framing::decode(&maximum).is_err());
 }
+#[test]
+fn one_shot_calls_are_single_validated_frames() {
+    let message = Message::FastCall {
+        proto: nacre_protocol::VERSION,
+        id: Id::Integer(17),
+        m: "audio.step".into(),
+        p: serde_json::json!({"direction":"up","key_ms":123}),
+    };
+    let encoded = framing::encode(&message).unwrap();
+    assert_eq!(framing::decode(&encoded).unwrap(), message);
+    for bad in [
+        Message::FastCall {
+            proto: 0,
+            id: Id::Integer(1),
+            m: "daemon.ping".into(),
+            p: serde_json::json!({}),
+        },
+        Message::FastCall {
+            proto: nacre_protocol::VERSION,
+            id: Id::Integer(1),
+            m: "daemon.status".into(),
+            p: serde_json::json!({}),
+        },
+        Message::FastCall {
+            proto: nacre_protocol::VERSION,
+            id: Id::Integer(1),
+            m: "audio.step".into(),
+            p: serde_json::json!([]),
+        },
+    ] {
+        assert!(framing::encode(&bad).is_err());
+    }
+}
 #[tokio::test(flavor = "current_thread")]
 async fn raw_bridge_frames_keep_unknown_fields_whitespace_and_cancelled_bytes() {
     use tokio::io::{AsyncWriteExt, BufReader};

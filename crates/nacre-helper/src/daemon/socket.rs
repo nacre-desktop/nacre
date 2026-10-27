@@ -33,6 +33,21 @@ pub fn path() -> Result<PathBuf> {
         env::var_os("XDG_RUNTIME_DIR").as_deref(),
     )
 }
+pub fn fast_path() -> Result<PathBuf> {
+    fast_path_for(&path()?)
+}
+pub fn fast_path_for(main: &Path) -> Result<PathBuf> {
+    let parent = main.parent().ok_or("Invalid daemon socket parent")?;
+    let name = main
+        .file_name()
+        .and_then(std::ffi::OsStr::to_str)
+        .ok_or("Invalid daemon socket name")?;
+    let path = parent.join(format!("{name}.fast"));
+    if path.as_os_str().as_bytes().len() > 107 {
+        return Err("Fast daemon socket path is too long".into());
+    }
+    Ok(path)
+}
 pub(crate) fn path_from(
     selected: Option<&std::ffi::OsStr>,
     runtime: Option<&std::ffi::OsStr>,
@@ -209,9 +224,94 @@ impl Drop for Listener {
     }
 }
 
+/// Daemon-owned one-shot endpoint. The primary listener already holds the
+/// daemon directory lock, so this sidecar shares that lifetime and lock.
+pub struct FastListener {
+    listener: Option<UnixListener>,
+    pub path: PathBuf,
+    cleanup: Option<(u64, u64)>,
+}
+impl FastListener {
+    pub fn acquire(main: &Path) -> Result<Self> {
+        let path = fast_path_for(main)?;
+        let parent = path.parent().ok_or("Invalid fast socket parent")?;
+        directory(parent, false)?;
+        match fs::symlink_metadata(&path) {
+            Ok(meta) => {
+                if !meta.file_type().is_socket()
+                    || meta.uid() != nix::unistd::getuid().as_raw()
+                    || meta.mode() & 0o777 != 0o600
+                {
+                    return Err("Refusing occupied or foreign fast endpoint".into());
+                }
+                let probe = socket(
+                    AddressFamily::Unix,
+                    SockType::Stream,
+                    SockFlag::SOCK_NONBLOCK | SockFlag::SOCK_CLOEXEC,
+                    None,
+                )?;
+                match connect(probe.as_raw_fd(), &UnixAddr::new(&path)?) {
+                    Ok(()) => return Err("Another server owns the fast endpoint".into()),
+                    Err(nix::errno::Errno::ECONNREFUSED) => fs::remove_file(&path)?,
+                    Err(nix::errno::Errno::ENOENT) => {}
+                    Err(_) => return Err("Fast endpoint is active or unavailable".into()),
+                }
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Err(error) => return Err(error.into()),
+        }
+        let listener = UnixListener::bind(&path)?;
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+        let meta = fs::symlink_metadata(&path)?;
+        listener.set_nonblocking(false)?;
+        Ok(Self {
+            listener: Some(listener),
+            path,
+            cleanup: Some((meta.dev(), meta.ino())),
+        })
+    }
+    pub fn take(&mut self) -> Result<UnixListener> {
+        self.listener
+            .take()
+            .ok_or_else(|| "Fast listener was already taken".into())
+    }
+}
+impl Drop for FastListener {
+    fn drop(&mut self) {
+        if let Some((device, inode)) = self.cleanup {
+            match fs::symlink_metadata(&self.path) {
+                Ok(meta) if meta.dev() == device && meta.ino() == inode => {
+                    if fs::remove_file(&self.path).is_err() {
+                        tracing::warn!("Fast daemon socket cleanup failed");
+                    }
+                }
+                Ok(_) => tracing::warn!("Fast daemon endpoint changed before cleanup"),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+                Err(_) => tracing::warn!("Fast daemon socket cleanup inspection failed"),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn fast_endpoint_shares_the_private_daemon_directory_and_cleans_up() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let parent = home.path().join("nacre");
+        fs::create_dir(&parent)?;
+        fs::set_permissions(&parent, fs::Permissions::from_mode(0o700))?;
+        let main = parent.join("daemon.sock");
+        let fast = fast_path_for(&main)?;
+        assert_eq!(fast, parent.join("daemon.sock.fast"));
+        let listener = FastListener::acquire(&main)?;
+        assert!(validate_endpoint(&fast).is_ok());
+        assert_eq!(fs::symlink_metadata(&fast)?.mode() & 0o777, 0o600);
+        drop(listener);
+        assert!(!fast.exists());
+        Ok(())
+    }
     #[test]
     fn activation_requires_a_listener_not_a_connected_unix_stream() -> Result<()> {
         let home = tempfile::tempdir()?;

@@ -15,10 +15,7 @@ use std::{
 };
 
 static AUDIO_LOCK: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
-static STEP_STATE_LOCK: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
 static LAST_STEP_MARKER_MS: AtomicU64 = AtomicU64::new(0);
-static AUDIO_STEP_REVISION: AtomicU64 = AtomicU64::new(0);
-static LATEST_AUDIO_STEP_REVISION: AtomicU64 = AtomicU64::new(0);
 
 pub fn methods() -> BTreeMap<String, Method> {
     nacre_protocol::pill_controls::methods()
@@ -29,11 +26,12 @@ pub fn methods() -> BTreeMap<String, Method> {
 
 fn backend_present(method: &str) -> bool {
     let (program, service) = match method {
-        "audio.adjust_volume" | "audio.step" | "audio.toggle_mute" => ("wpctl", "pipewire-0"),
+        "audio.adjust_volume" | "audio.toggle_mute" | "audio.step" => ("wpctl", "pipewire-0"),
         "bluetooth.set_enabled" => ("bluetoothctl", "system_bus_socket"),
         _ => return false,
     };
     executable(program)
+        && (method != "audio.step" || (executable("pw-dump") && executable("pw-cli")))
         && match method {
             "audio.adjust_volume" | "audio.step" | "audio.toggle_mute" => {
                 std::env::var_os("XDG_RUNTIME_DIR").is_some_and(|runtime| {
@@ -45,6 +43,10 @@ fn backend_present(method: &str) -> bool {
             }
             _ => false,
         }
+}
+
+pub(crate) fn fast_backend_present(method: &str) -> bool {
+    backend_present(method)
 }
 
 fn socket_present(path: &std::path::Path) -> bool {
@@ -98,39 +100,15 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
                 VolumeDirection::Down => -0.05,
             };
             ensure_backend(method)?;
-            // Update the published desired state and OSD before waiting for PipeWire.
-            let state_guard = STEP_STATE_LOCK
-                .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
-                .clone()
-                .lock_owned()
-                .await;
-            let mut state = hub.borrow().snapshot("audio").ok_or_else(unavailable)?;
-            let output = state["default_output"]
-                .as_str()
-                .ok_or_else(unavailable)?
-                .to_owned();
-            let node = state["nodes"]["items"]
-                .get_mut(&output)
-                .ok_or_else(unavailable)?;
-            let current = node["volume"]
-                .as_f64()
-                .filter(|v| v.is_finite() && *v >= 0.0)
-                .ok_or_else(unavailable)?;
-            let previous = current;
-            let value = (current + delta).clamp(0.0, 1.0);
-            node["volume"] = json!(value);
-            if let Some(readback) = node.get_mut("readback") {
-                readback["linear_volume"] = json!(value);
-                readback["perceptual_volume"] = json!(value.cbrt());
-            }
-            hub.borrow_mut()
-                .publish("audio", state)
-                .map_err(|_| action_error())?;
-            let revision = AUDIO_STEP_REVISION
-                .fetch_add(1, Ordering::Relaxed)
-                .wrapping_add(1);
-            LATEST_AUDIO_STEP_REVISION.store(revision, Ordering::Relaxed);
-            super::osd::volume(&hub, value);
+            let guard = audio_lock().lock_owned().await;
+            let outcome = crate::process::offload(move || {
+                let _guard = guard;
+                step_audio_sink(delta)
+            })
+            .await
+            .map_err(|_| action_error())??;
+            publish_step_result(&hub, &outcome)?;
+            let value = outcome.channels[0];
             if let Some(key_ms) = request.key_ms {
                 let now_ms = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
@@ -138,27 +116,6 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
                 if step_marker_allowed(now_ms) {
                     tracing::info!("OSD_STEP kind=volume value={value:.3} ms_since_key={} key_ms={key_ms} timebase=unix_ms", now_ms.saturating_sub(key_ms));
                 }
-            }
-            drop(state_guard);
-            let guard = audio_lock().lock_owned().await;
-            let latest = hub
-                .borrow()
-                .snapshot("audio")
-                .and_then(|state| {
-                    let output = state["default_output"].as_str()?.to_owned();
-                    let value = state["nodes"]["items"].get(&output)?["volume"].as_f64()?;
-                    Some((output, value))
-                })
-                .ok_or_else(unavailable)?;
-            let result = crate::process::offload(move || {
-                let _guard = guard;
-                set_volume_value(latest.1)
-            })
-            .await
-            .map_err(|_| action_error())?;
-            if let Err(error) = result {
-                rollback_audio_step(&hub, &output, revision, previous).await;
-                return Err(error);
             }
         }
         "audio.toggle_mute" => {
@@ -193,31 +150,27 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
     Ok(json!({"changed":true}))
 }
 
-async fn rollback_audio_step(hub: &Shared, output: &str, revision: u64, previous: f64) {
-    if LATEST_AUDIO_STEP_REVISION.load(Ordering::Relaxed) != revision {
-        return;
-    }
-    let lane = STEP_STATE_LOCK
-        .get_or_init(|| Arc::new(tokio::sync::Mutex::new(())))
-        .clone();
-    let _guard = lane.lock_owned().await;
-    if LATEST_AUDIO_STEP_REVISION.load(Ordering::Relaxed) != revision {
-        return;
-    }
-    if let Some(mut state) = hub.borrow().snapshot("audio") {
-        if state["default_output"].as_str() != Some(output) {
-            return;
+fn publish_step_result(hub: &Shared, outcome: &AudioStepOutcome) -> Result<(), Failure> {
+    let value = outcome.channels[0];
+    let Some(mut state) = hub.borrow().snapshot("audio") else {
+        super::osd::volume(hub, value);
+        return Ok(());
+    };
+    let is_default = state["default_output"].as_str() == Some(outcome.node_name.as_str());
+    if let Some(node) = state["nodes"]["items"].get_mut(&outcome.node_name) {
+        node["volume"] = json!(value);
+        if let Some(readback) = node.get_mut("readback") {
+            readback["linear_volume"] = json!(value);
+            readback["perceptual_volume"] = json!(value.cbrt());
         }
-        if let Some(node) = state["nodes"]["items"].get_mut(output) {
-            node["volume"] = json!(previous);
-            if let Some(readback) = node.get_mut("readback") {
-                readback["linear_volume"] = json!(previous);
-                readback["perceptual_volume"] = json!(previous.cbrt());
-            }
-            let _ = hub.borrow_mut().publish("audio", state);
-            super::osd::volume(hub, previous);
-        }
+        hub.borrow_mut()
+            .publish("audio", state)
+            .map_err(|_| action_error())?;
     }
+    if is_default {
+        super::osd::volume(hub, value);
+    }
+    Ok(())
 }
 
 fn step_marker_allowed(now_ms: u64) -> bool {
@@ -248,14 +201,229 @@ fn adjust_volume(delta: f64) -> Result<(), Failure> {
     adjust_volume_with(delta, &mut run_action)
 }
 
-fn set_volume_value(value: f64) -> Result<f64, Failure> {
-    let text = format!("{:.3}", value.clamp(0.0, 1.0));
-    run_action(
-        "wpctl",
-        &["set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", &text],
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct AudioStepOutcome {
+    pub(crate) node_name: String,
+    pub(crate) channels: Vec<f64>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+enum VolumeParam {
+    NodeProps { node_id: u64 },
+    DeviceRoute {
+        device_id: u64,
+        route_index: u64,
+        route_device: u64,
+    },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct SinkVolume {
+    node_name: String,
+    param: VolumeParam,
+    current: Vec<f64>,
+    channel_count: usize,
+}
+
+fn parse_object_id(output: &str) -> Option<u64> {
+    output.lines().find_map(|line| {
+        line.trim()
+            .strip_prefix("id ")?
+            .split(',')
+            .next()?
+            .trim()
+            .parse()
+            .ok()
+    })
+}
+
+fn object_id(value: &Value) -> Option<u64> {
+    value
+        .as_u64()
+        .or_else(|| value.as_str()?.parse::<u64>().ok())
+}
+
+fn current_param<'a>(object: &'a Value, name: &str) -> Option<&'a Value> {
+    let params = object.get("info")?.get("params")?.get(name)?;
+    params
+        .as_array()
+        .and_then(|items| items.last())
+        .or_else(|| params.as_object())
+}
+
+fn volume_data(props: &Value) -> Option<(Vec<f64>, usize)> {
+    let current = props
+        .get("channelVolumes")?
+        .as_array()?
+        .iter()
+        .map(Value::as_f64)
+        .collect::<Option<Vec<_>>>()?;
+    let channel_count = props
+        .get("channelMap")
+        .and_then(Value::as_array)
+        .map_or(current.len(), Vec::len);
+    if current.is_empty()
+        || current.len() > 64
+        || channel_count == 0
+        || channel_count > 64
+        || current.len() > channel_count
+        || current
+            .iter()
+            .any(|volume| !volume.is_finite() || !(0.0..=4.0).contains(volume))
+    {
+        return None;
+    }
+    Some((current, channel_count))
+}
+
+fn sink_volume_from_dump(node_id: u64, dump: &Value) -> Option<SinkVolume> {
+    let objects = dump.as_array()?;
+    let node = objects.iter().find(|object| {
+        object["type"] == "PipeWire:Interface:Node" && object["id"].as_u64() == Some(node_id)
+    })?;
+    let node_props = node.get("info")?.get("props")?;
+    let node_name = node_props.get("node.name")?.as_str()?.to_owned();
+    let device_id = node_props.get("device.id").and_then(object_id);
+    let route_device = node_props.get("card.profile.device").and_then(object_id);
+
+    if let (Some(device_id), Some(route_device)) = (device_id, route_device) {
+        let device = objects.iter().find(|object| {
+            object["type"] == "PipeWire:Interface:Device"
+                && object["id"].as_u64() == Some(device_id)
+        })?;
+        let route = device
+            .get("info")?
+            .get("params")?
+            .get("Route")?
+            .as_array()?
+            .iter()
+            .find(|route| object_id(&route["device"]) == Some(route_device))?;
+        let route_index = object_id(&route["index"])?;
+        let route_device = object_id(&route["device"])?;
+        let (current, channel_count) = volume_data(route.get("props")?)?;
+        return Some(SinkVolume {
+            node_name,
+            param: VolumeParam::DeviceRoute {
+                device_id,
+                route_index,
+                route_device,
+            },
+            current,
+            channel_count,
+        });
+    }
+
+    let props = current_param(node, "Props")?;
+    let (current, channel_count) = volume_data(props)?;
+    Some(SinkVolume {
+        node_name,
+        param: VolumeParam::NodeProps { node_id },
+        current,
+        channel_count,
+    })
+}
+
+fn stepped_channel_volumes(current: &[f64], count: usize, delta: f64) -> Option<Vec<f64>> {
+    if current.is_empty()
+        || current.len() > count
+        || count == 0
+        || count > 64
+        || !delta.is_finite()
+        || current
+            .iter()
+            .any(|volume| !volume.is_finite() || !(0.0..=4.0).contains(volume))
+    {
+        return None;
+    }
+    Some(
+        (0..count)
+            .map(|index| {
+                let previous = current.get(index).copied().unwrap_or(current[0]);
+                ((previous + delta).clamp(0.0, 1.0) * 1000.0).round() / 1000.0
+            })
+            .collect(),
+    )
+}
+
+fn step_audio_sink(delta: f64) -> Result<AudioStepOutcome, Failure> {
+    let mut run = |program: &str, args: &[&str], mutation: bool| {
+        if program == "wpctl" {
+            run_action(program, args, mutation)
+        } else {
+            run_pipewire_action(program, args, mutation)
+        }
+    };
+    step_audio_sink_with(delta, &mut run)
+}
+
+fn step_audio_sink_with(
+    delta: f64,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Result<AudioStepOutcome, Failure> {
+    let inspect = run("wpctl", &["inspect", "@DEFAULT_AUDIO_SINK@"], false)?;
+    let node_id = parse_object_id(&inspect).ok_or_else(unavailable)?;
+    let dump = run("pw-dump", &[], false)?;
+    let dump: Value = serde_json::from_str(&dump).map_err(|_| unavailable())?;
+    let sink = sink_volume_from_dump(node_id, &dump).ok_or_else(unavailable)?;
+    let channels = stepped_channel_volumes(&sink.current, sink.channel_count, delta)
+        .ok_or_else(unavailable)?;
+    let (object_id, param, payload) = match sink.param {
+        VolumeParam::NodeProps { node_id } => (
+            node_id.to_string(),
+            "Props",
+            json!({"channelVolumes":channels.clone()}),
+        ),
+        VolumeParam::DeviceRoute {
+            device_id,
+            route_index,
+            route_device,
+        } => (
+            device_id.to_string(),
+            "Route",
+            json!({
+                "index":route_index,
+                "device":route_device,
+                "props":{"channelVolumes":channels.clone()},
+                "save":true
+            }),
+        ),
+    };
+    let payload = serde_json::to_string(&payload).map_err(|_| action_error())?;
+    run(
+        "pw-cli",
+        &["set-param", &object_id, param, &payload],
         true,
     )?;
-    Ok(value.clamp(0.0, 1.0))
+    Ok(AudioStepOutcome {
+        node_name: sink.node_name,
+        channels,
+    })
+}
+
+fn run_pipewire_action(
+    program: &str,
+    args: &[&str],
+    mutation: bool,
+) -> Result<String, Failure> {
+    let args = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
+    let error = || {
+        if mutation {
+            action_error()
+        } else {
+            unavailable()
+        }
+    };
+    let mut command = std::process::Command::new(program);
+    command.args(&args).env_remove("NOTIFY_SOCKET");
+    let output = crate::process::capture(command, None, Duration::from_secs(3))
+        .map_err(|_| error())?;
+    if !output.status.success() {
+        return Err(error());
+    }
+    if output.stdout.len() > 4 * 1024 * 1024 || output.stderr.len() > 4096 {
+        return Err(error());
+    }
+    String::from_utf8(output.stdout).map_err(|_| error())
 }
 
 #[cfg(test)]
@@ -406,6 +574,88 @@ mod tests {
         assert_eq!(parse_volume("Volume: 5\n"), None);
         assert_eq!(parse_volume("Volume: NaN\n"), None);
         assert_eq!(parse_volume("noise"), None);
+    }
+
+    #[test]
+    fn step_updates_all_eight_current_pipewire_channels() {
+        let mut dump = json!([
+            {
+                "id": 17,
+                "type": "PipeWire:Interface:Node",
+                "info": {
+                    "props": {
+                        "node.name": "pro_audio_sink",
+                        "media.class": "Audio/Sink",
+                        "device.id": "30",
+                        "card.profile.device": "2"
+                    },
+                    "params": {}
+                }
+            },
+            {
+                "id": 30,
+                "type": "PipeWire:Interface:Device",
+                "info": {
+                    "params": {
+                        "Route": [{
+                            "index": 4,
+                            "device": 2,
+                            "props": {
+                                "channelMap": ["FL", "FR", "FC", "LFE", "RL", "RR", "SL", "SR"],
+                                "channelVolumes": [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+                            }
+                        }]
+                    }
+                }
+            }
+        ]);
+        let mut set = Vec::new();
+        let mut run = |program: &str, args: &[&str], mutation: bool| {
+            if program == "wpctl" {
+                assert_eq!(args, ["inspect", "@DEFAULT_AUDIO_SINK@"]);
+                return Ok("id 17, type PipeWire:Interface:Node\n".into());
+            }
+            if program == "pw-dump" {
+                assert!(args.is_empty());
+                return Ok(dump.to_string());
+            }
+            assert_eq!(program, "pw-cli");
+            assert!(mutation);
+            let payload: Value = serde_json::from_str(args[3]).unwrap();
+            dump[1]["info"]["params"]["Route"][0]["props"]["channelVolumes"] =
+                payload["props"]["channelVolumes"].clone();
+            set.push(args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>());
+            Ok(String::new())
+        };
+        let result = step_audio_sink_with(0.05, &mut run).unwrap();
+        assert_eq!(result.node_name, "pro_audio_sink");
+        assert_eq!(
+            result.channels,
+            vec![0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]
+        );
+        let second = step_audio_sink_with(0.05, &mut run).unwrap();
+        assert_eq!(
+            second.channels,
+            vec![0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
+        );
+        let set = set.last().unwrap();
+        assert_eq!(&set[..3], ["set-param", "30", "Route"]);
+        let payload: Value = serde_json::from_str(&set[3]).unwrap();
+        assert_eq!(payload["index"], 4);
+        assert_eq!(payload["device"], 2);
+        assert_eq!(payload["props"]["channelVolumes"].as_array().unwrap().len(), 8);
+        assert_eq!(
+            payload["props"]["channelVolumes"],
+            json!([0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85])
+        );
+        assert_eq!(payload["save"], true);
+    }
+
+    #[test]
+    fn step_normalizes_short_volume_vector_to_the_full_channel_map() {
+        let stepped = stepped_channel_volumes(&[0.40, 0.25], 8, 0.05).unwrap();
+        assert_eq!(stepped, vec![0.45, 0.30, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45]);
+        assert_eq!(stepped_channel_volumes(&[0.0, 0.5], 2, -0.05), Some(vec![0.0, 0.45]));
     }
 
     #[test]

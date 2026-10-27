@@ -21,6 +21,7 @@ pub mod dashboard_extras;
 pub mod dashboard_metrics;
 pub mod dashboard_player;
 pub mod displays;
+pub mod fast;
 pub mod helpers;
 pub mod hub;
 pub mod i18n;
@@ -73,7 +74,16 @@ async fn serve(
     managed_notifications: bool,
     managed_behaviours: bool,
 ) -> Result<()> {
+    let fast_listener = socket::FastListener::acquire(&listener.path)?;
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
+    let (fast_requests, mut fast_rx) = tokio::sync::mpsc::channel(256);
+    let audio_available = pill_controls::fast_backend_present("audio.step");
+    let fast_server = fast::Server::start(
+        fast_listener,
+        fast_requests,
+        counter.safe,
+        audio_available,
+    )?;
     helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
@@ -537,6 +547,7 @@ async fn serve(
     let mut terminate = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
     let mut interrupt = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
     let mut clients = tokio::task::JoinSet::new();
+    let mut fast_calls = tokio::task::JoinSet::new();
     let watchdog = notify::watchdog();
     tokio::pin!(watchdog);
     loop {
@@ -548,6 +559,19 @@ async fn serve(
             accepted=listener_socket.accept()=>{
                 let (stream,_)=accepted?;let hub=hub.clone();clients.spawn_local(async move {session::serve(stream,hub).await});
             },
+            Some(request)=fast_rx.recv()=>{
+                let hub=hub.clone();
+                fast_calls.spawn_local(async move {
+                    if let Err(error)=session::dispatch_fast(hub,request).await {
+                        tracing::warn!(code=?error.code,"Queued one-shot daemon call failed");
+                    }
+                });
+            },
+            result=fast_calls.join_next(),if !fast_calls.is_empty()=>match result {
+                Some(Ok(()))=>{},
+                Some(Err(_))=>tracing::error!("Queued one-shot daemon call task failed"),
+                None=>{},
+            },
             result=clients.join_next(),if !clients.is_empty()=>match result {
                 Some(Ok(Ok(())))=>{},
                 Some(Ok(Err(error)))=>tracing::debug!(code=?error.code,"Client disconnected"),
@@ -556,6 +580,9 @@ async fn serve(
             },
         }
     }
+    drop(fast_server);
+    fast_calls.abort_all();
+    while fast_calls.join_next().await.is_some() {}
     clients.abort_all();
     while clients.join_next().await.is_some() {}
     let mut notification_flush_failed = false;

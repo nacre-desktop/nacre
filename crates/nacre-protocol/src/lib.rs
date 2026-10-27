@@ -207,6 +207,17 @@ pub enum Message {
         min: Option<u16>,
         client: String,
     },
+    /// A single bounded request on the daemon's private fast socket. This
+    /// message is self-contained and is answered with exactly one `Ret`; it
+    /// never negotiates a topic or method catalogue.
+    FastCall {
+        proto: u16,
+        id: Id,
+        m: String,
+        #[serde(default = "parameters")]
+        #[schemars(with = "BTreeMap<String, Value>")]
+        p: Value,
+    },
     Welcome {
         proto: u16,
         min: u16,
@@ -295,6 +306,34 @@ impl Message {
                     && min.unwrap_or(*proto) > 0
                     && min.unwrap_or(*proto) <= *proto
                     && name(client)
+            }
+            Self::FastCall { proto, id, m, p } => {
+                *proto == crate::VERSION
+                    && id.valid()
+                    && matches!(
+                        m.as_str(),
+                        "daemon.ping"
+                            | "audio.step"
+                            | "brightness.adjust"
+                            | "keyboard_light.adjust"
+                    )
+                    && name(m)
+                    && p.is_object()
+                    && match m.as_str() {
+                        "daemon.ping" => p.as_object().is_some_and(|params| params.is_empty()),
+                        "audio.step" => {
+                            serde_json::from_value::<pill_controls::VolumeStep>(p.clone()).is_ok()
+                        }
+                        "brightness.adjust" => serde_json::from_value::<
+                            bar_services::BrightnessAdjust,
+                        >(p.clone())
+                        .is_ok_and(|request| request.validate().is_ok()),
+                        "keyboard_light.adjust" => serde_json::from_value::<
+                            bar_services::KeyboardLightAdjust,
+                        >(p.clone())
+                        .is_ok(),
+                        _ => false,
+                    }
             }
             Self::Welcome {
                 proto,

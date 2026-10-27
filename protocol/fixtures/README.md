@@ -9,6 +9,7 @@ All messages are exact JSONL wire objects; names and content are synthetic.
 | Transcript | Replay |
 | --- | --- |
 | handshake | Client hello (with unknown optional field), daemon welcome |
+| fast-call | A single self-contained one-shot request and correlated return; no welcome frame |
 | state | Welcome, initial snap, valid coalesced patch, wrong-base patch, client resync, replacement snap |
 | null-snapshot | Two daemon snapshots; a new null object member cannot be introduced by RFC 7396 |
 | calls | Alternating client calls and daemon success/unknown-method/timeout replies |
