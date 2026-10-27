@@ -12,6 +12,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::{FileExt, MetadataExt};
 use std::sync::{Mutex, OnceLock};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::{
     collections::{BTreeMap, HashSet, VecDeque},
     fs::File,
@@ -22,6 +23,10 @@ use std::{
 pub const TOPIC: &str = "wallpaper.active";
 const PALETTE_PREWARM_BATCH: usize = 32;
 const PALETTE_PREWARM_QUEUE: usize = 128;
+static SELECTION_GENERATION: AtomicU64 = AtomicU64::new(0);
+thread_local! {
+    static SELECTION_TASK: std::cell::RefCell<Option<tokio::task::JoinHandle<()>>> = const { std::cell::RefCell::new(None) };
+}
 
 #[derive(Default)]
 struct PalettePrewarmQueue {
@@ -953,46 +958,42 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
     Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"))
 }
 
-fn metadata_catalogue_contains(paths: Paths, id: &str) -> crate::Result<bool> {
-    let assets = paths.assets();
-    let media = crate::wallpaper_media::Media::new(paths, assets)?;
-    let catalogue = media.catalog_with_ids(Some(&[]))?;
-    let entries = catalogue["entries"]
-        .as_array()
-        .filter(|entries| entries.len() <= 2048)
-        .ok_or_else(|| std::io::Error::other("Invalid wallpaper catalogue"))?;
-    Ok(entries.iter().any(|entry| {
-        entry["path"]
-            .as_str()
-            .is_some_and(|path| !path.is_empty() && path.len() <= 4096 && path == id)
-    }))
-}
-
 pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result<Value, Failure> {
     let (request, state) = activation_state(&hub, params)?;
-    let _selection_guard = if request.id.is_some() {
-        Some(SelectionGuard::acquire_tracked(&hub)?)
-    } else {
-        None
-    };
     if let Some(id) = request.id {
         let paths = crate::paths::Paths::environment()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        let paths_for_catalogue = paths.clone();
-        let id_for_catalogue = id.clone();
-        let known = crate::process::offload(move || {
-            metadata_catalogue_contains(paths_for_catalogue, &id_for_catalogue)
-        })
-        .await
-        .ok()
-        .and_then(std::result::Result::ok)
-        .ok_or_else(|| {
-            failure(
-                ErrorCode::Unavailable,
-                "Wallpaper catalogue is unavailable",
-                true,
-            )
-        })?;
+        // Validate the requested library member directly. The hot path never
+        // constructs a catalogue or walks the wallpaper tree.
+        let media = crate::wallpaper_media::Media::new(paths.clone(), paths.assets()).map_err(
+            |_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true),
+        )?;
+        let candidate = Path::new(&id);
+        let canonical = std::fs::canonicalize(candidate).ok();
+        let library = std::fs::canonicalize(&media.library).unwrap_or(media.library.clone());
+        let suffix = candidate
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_ascii_lowercase();
+        let supported = crate::wallpaper_media::IMAGES.contains(&suffix.as_str())
+            || crate::wallpaper_media::VIDEOS.contains(&suffix.as_str());
+        let known = canonical.as_ref().is_some_and(|path| {
+            if path != candidate || !path.starts_with(&library) || !supported {
+                return false;
+            }
+            let limit = if crate::wallpaper_media::VIDEOS.contains(&suffix.as_str()) {
+                MOTION_BYTES
+            } else {
+                IMAGE_BYTES
+            };
+            private_file(path, limit)
+                .and_then(|file| file.metadata().map_err(Into::into))
+                .is_ok_and(|metadata| {
+                    let identity = WallpaperFileIdentity::from_metadata(&metadata);
+                    identity.validate().is_ok() && identity.matches(&metadata)
+                })
+        });
         if !known {
             return Err(failure(
                 ErrorCode::Validation,
@@ -1015,31 +1016,48 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                 true,
             ));
         }
-        let engine = std::env::current_exe()
-            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        let id_for_child = id.clone();
-        let selected = crate::process::offload(move || select_media(&engine, &id_for_child))
-            .await
-            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper selection failed", true))?;
-        if !selected {
+        let latest: WallpaperActive = hub
+            .borrow()
+            .snapshot(TOPIC)
+            .and_then(|value| serde_json::from_value(value).ok())
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        if latest.stale || latest.revision != request.revision {
             return Err(failure(
-                ErrorCode::Unavailable,
-                "Wallpaper selection failed",
+                ErrorCode::StaleRevision,
+                "Wallpaper changed; refresh active state",
                 true,
             ));
         }
-        Producer::default()
-            .refresh(&hub, &paths)
-            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper selection failed", true))?;
-        let selected_state: WallpaperActive = hub
-            .borrow()
-            .snapshot(TOPIC)
-            .and_then(|v| serde_json::from_value(v).ok())
-            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        return selected_state
-            .current
-            .map(|current| serde_json::to_value(current).expect("finite wallpaper pair"))
-            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true));
+        let engine = std::env::current_exe()
+            .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
+        let generation = SELECTION_GENERATION.fetch_add(1, Ordering::AcqRel).wrapping_add(1);
+        SELECTION_TASK.with(|slot| {
+            if let Some(previous) = slot.borrow_mut().take() {
+                previous.abort();
+            }
+            let worker_hub = hub.clone();
+            let worker_paths = paths.clone();
+            *slot.borrow_mut() = Some(tokio::task::spawn_local(async move {
+                use tokio::process::Command;
+                let child = Command::new("nice")
+                    .args(["-n", "10", "--"])
+                    .arg(engine)
+                    .args(["wallpaper-media", "select"])
+                    .arg(&id)
+                    .kill_on_drop(true)
+                    .stdout(std::process::Stdio::piped())
+                    .stderr(std::process::Stdio::null())
+                    .output()
+                    .await;
+                let selected = child.is_ok_and(|output| output.status.success());
+                if selected && SELECTION_GENERATION.load(Ordering::Acquire) == generation {
+                    if Producer::default().refresh(&worker_hub, &worker_paths).is_err() {
+                        eprintln!("Wallpaper selection refresh failed");
+                    }
+                }
+            }));
+        });
+        return Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"));
     }
     Ok(serde_json::to_value(state.current).expect("finite wallpaper pair"))
 }
