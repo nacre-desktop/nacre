@@ -190,6 +190,13 @@ pub struct WallpaperPalette {
     #[schemars(schema_with = "colours_schema")]
     pub colours: BTreeMap<String, String>,
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct WallpaperCataloguePalette {
+    pub mode: PaletteMode,
+    #[schemars(schema_with = "catalogue_colours_schema")]
+    pub colours: BTreeMap<String, String>,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum PaletteMode {
@@ -297,7 +304,7 @@ pub struct WallpaperCatalogueEntry {
     pub active: bool,
     /// Cached wallpaper-derived palette, present only when its marker validates.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub palette: Option<WallpaperPalette>,
+    pub palette: Option<WallpaperCataloguePalette>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub video_predecode: Option<Box<WallpaperVideoPredecode>>,
 }
@@ -352,6 +359,9 @@ fn outputs_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema
 }
 fn colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
     schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":128,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
+}
+fn catalogue_colours_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({"type":"object","minProperties":3,"maxProperties":64,"required":["background","onSurface","primary"],"propertyNames":{"type":"string","minLength":1,"maxLength":64},"additionalProperties":{"type":"string","pattern":"^#[0-9A-Fa-f]{6}$"}})
 }
 impl WallpaperActive {
     pub fn validate(&self) -> Result<(), Failure> {

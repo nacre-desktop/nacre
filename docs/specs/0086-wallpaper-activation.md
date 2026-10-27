@@ -10,7 +10,7 @@ Bead now submits every selection immediately and fences acknowledgements with a 
 
 Nacre validates the selected path directly under the configured wallpaper library, checks the supported suffix and open-file identity, and does not build/scan the catalogue or spawn `wallpaper-media select` before its acknowledgement. It records a generation fence, acknowledges the current active state, and starts a replaceable background selection task. The task persists the selected media and extracts/publishes the palette only while its generation remains current. Writes and rollback are fenced under the existing publication lock. Cached palette metadata accompanies catalogue entries for same-commit client application.
 
-New palette cache metadata is bounded to 64 catalogue attachments × 64 colour roles (budget below 1 MiB at the protocol limits). The active wallpaper palette contract remains capped at 128 roles. No product compatibility duplicate was introduced.
+Catalogue palette data is bounded to 64 attachments per response and Bead retains at most 64 palette entries, each with at most 64 colour roles (under 1 MiB at protocol limits). The active wallpaper palette contract remains capped at 128 roles. No product compatibility duplicate was introduced.
 
 ## Validation and acceptance
 
