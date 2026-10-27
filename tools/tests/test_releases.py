@@ -49,10 +49,13 @@ class ReleaseTests(unittest.TestCase):
                 (session.with_name("session.rollback") / "config/config.kdl").read_text(),
                 "previous config\n",
             )
-            self.assertEqual([call[1:3] for call in calls], [
-                ["niri-session-runtime", "--backend"],
-                ["compositor", "action"],
-            ])
+            self.assertEqual(
+                [call[1:3] for call in calls],
+                [
+                    ["niri-session-runtime", "--backend"],
+                    ["compositor", "action"],
+                ],
+            )
 
     def test_session_refresh_failure_restores_files_in_place(self):
         with tempfile.TemporaryDirectory() as folder:
