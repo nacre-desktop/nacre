@@ -1105,8 +1105,9 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
     for socket in source.event_sockets.lock().unwrap().iter_mut() {
         writeln!(socket, "{large_window}")?;
     }
-    // The existing bounded pool retires after30s. Both D-Bus connections must
-    // stay on the daemon runtime, without blocking API/executor worker threads.
+    // The bounded blocking pool retires after30s. Both D-Bus connections stay
+    // on the daemon runtime; the independently scheduled fast/audio lanes remain
+    // parked while idle and do not leave transient helper threads behind.
     thread::sleep(Duration::from_secs(35));
     assert_eq!(fs::read(&latest)?, unchanged);
     let tasks = fs::read_dir(format!("/proc/{}/task", daemon.0.id()))?
@@ -1121,9 +1122,14 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
         })
         .collect::<Vec<_>>();
     let log = fs::read_to_string(home.path().join("daemon.log"))?;
+    let mut thread_names = names
+        .iter()
+        .map(|(name, _)| name.trim().to_owned())
+        .collect::<Vec<_>>();
+    thread_names.sort();
     assert_eq!(
-        tasks.len(),
-        1,
+        thread_names,
+        vec!["nacre-audio-ste", "nacre-fast-daem", "nacre-helper"],
         "Remaining threads: {names:?}; log tail: {}",
         log.lines()
             .rev()
