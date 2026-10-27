@@ -719,8 +719,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
     def test_user_client_aliases_atomically_replace_regular_binary_once(self):
         alias = self.home / ".local/bin/nacrectl"
         self.put(alias, "stale binary")
-        with patch.object(installer, "HOME", self.home), patch.object(
-            installer, "STATE", self.state
+        with (
+            patch.object(installer, "HOME", self.home),
+            patch.object(installer, "STATE", self.state),
         ):
             installer.install_user_client_links()
         backup = self.state / "backups/nacrectl.pre-native"
@@ -731,8 +732,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
             alias.resolve(), self.home / ".local/share/nacre/shell/tools/nacre-helper"
         )
         backup.write_text("original backup")
-        with patch.object(installer, "HOME", self.home), patch.object(
-            installer, "STATE", self.state
+        with (
+            patch.object(installer, "HOME", self.home),
+            patch.object(installer, "STATE", self.state),
         ):
             installer.install_user_client_links()
         self.assertEqual(backup.read_text(), "original backup")

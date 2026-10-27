@@ -91,7 +91,9 @@ class ReleaseTests(unittest.TestCase):
             control.mkdir(parents=True)
             tools.mkdir(parents=True)
             for name in ("nacre_state.py", "writer_lease.py"):
-                shutil.copy2(Path(__file__).parents[2] / "nacre/shell-tools" / name, tools / name)
+                shutil.copy2(
+                    Path(__file__).parents[2] / "nacre/shell-tools" / name, tools / name
+                )
             with patch.multiple(m, HOME=home, CONTROL=control):
                 m.install_controller(Path(__file__).parents[1])
             self.assertTrue((control / "package_sessions.py").is_file())

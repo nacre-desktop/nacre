@@ -447,13 +447,17 @@ def refresh_session(installed):
     shutil.copytree(session, backup)
     try:
         subprocess.run(
-            [str(helper), "niri-session-runtime", "--backend", str(installed), "prepare"],
+            [
+                str(helper),
+                "niri-session-runtime",
+                "--backend",
+                str(installed),
+                "prepare",
+            ],
             check=True,
         )
         if os.environ.get("NIRI_SOCKET"):
-            subprocess.run(
-                [str(helper), "compositor", "action", "reload"], check=True
-            )
+            subprocess.run([str(helper), "compositor", "action", "reload"], check=True)
     except BaseException:
         restore_session_tree(backup, session)
         shutil.rmtree(backup)
