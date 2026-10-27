@@ -95,7 +95,11 @@ class ReleaseTests(unittest.TestCase):
             tools = home / ".local/share/nacre/shell/tools"
             control.mkdir(parents=True)
             tools.mkdir(parents=True)
-            for name in ("nacre_state.py", "writer_lease.py"):
+            for name in (
+                "nacre_state.py",
+                "nacre-state-files.json",
+                "writer_lease.py",
+            ):
                 shutil.copy2(
                     Path(__file__).parents[2] / "nacre/shell-tools" / name, tools / name
                 )
