@@ -46,7 +46,9 @@ class ReleaseTests(unittest.TestCase):
                 m.refresh_session(Path("/fixture/nacre"))
             self.assertEqual(config.read_text(), "validated config\n")
             self.assertEqual(
-                (session.with_name("session.rollback") / "config/config.kdl").read_text(),
+                (
+                    session.with_name("session.rollback") / "config/config.kdl"
+                ).read_text(),
                 "previous config\n",
             )
             self.assertEqual(
