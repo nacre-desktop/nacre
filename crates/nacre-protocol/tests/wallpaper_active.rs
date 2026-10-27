@@ -153,6 +153,13 @@ fn activation_revision_is_positive_and_safe() {
         .contains("export type WallpaperCatalogueEntry ="));
     assert!(generated["protocol/luau/wallpaper-catalogue.d.luau"]
         .contains("export type WallpaperVideoPredecode ="));
+    assert!(generated["protocol/luau/wallpaper-catalogue.d.luau"]
+        .contains("export type WallpaperPalette ="));
+    let catalogue_schema: serde_json::Value =
+        serde_json::from_str(&generated["protocol/schema/wallpaper-catalogue.json"]).unwrap();
+    assert!(catalogue_schema["$defs"]["WallpaperCatalogueEntry"]["properties"]
+        .get("palette")
+        .is_some());
     let request_schema: serde_json::Value =
         serde_json::from_str(&generated["protocol/schema/wallpaper-catalogue-request.json"])
             .unwrap();

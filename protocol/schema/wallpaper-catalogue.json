@@ -49,6 +49,16 @@
         "active": {
           "type": "boolean"
         },
+        "palette": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WallpaperPalette"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "video_predecode": {
           "anyOf": [
             {
@@ -154,6 +164,44 @@
         "mtime_nsec",
         "ctime_sec",
         "ctime_nsec"
+      ]
+    },
+    "WallpaperPalette": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "$ref": "#/$defs/PaletteMode"
+        },
+        "colours": {
+          "type": "object",
+          "minProperties": 3,
+          "maxProperties": 128,
+          "required": [
+            "background",
+            "onSurface",
+            "primary"
+          ],
+          "propertyNames": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^#[0-9A-Fa-f]{6}$"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "colours"
+      ]
+    },
+    "PaletteMode": {
+      "type": "string",
+      "enum": [
+        "dark",
+        "light"
       ]
     }
   }

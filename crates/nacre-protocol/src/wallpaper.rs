@@ -295,6 +295,9 @@ pub struct WallpaperCatalogueEntry {
     #[schemars(length(max = 4096))]
     pub preview: String,
     pub active: bool,
+    /// Cached wallpaper-derived palette, present only when its marker validates.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub palette: Option<WallpaperPalette>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub video_predecode: Option<Box<WallpaperVideoPredecode>>,
 }
@@ -308,6 +311,20 @@ impl WallpaperCatalogue {
                     || entry.preview.len() > 4096
                     || (!entry.thumbnail.is_empty() && !valid_path(&entry.thumbnail))
                     || (!entry.preview.is_empty() && !valid_path(&entry.preview))
+                    || entry.palette.as_ref().is_some_and(|palette| {
+                        !matches!(palette.mode, PaletteMode::Dark | PaletteMode::Light)
+                            || palette.colours.len() < 3
+                            || !["background", "onSurface", "primary"]
+                                .iter()
+                                .all(|role| palette.colours.contains_key(*role))
+                            || palette.colours.iter().any(|(name, colour)| {
+                                name.is_empty()
+                                    || name.len() > 64
+                                    || colour.len() != 7
+                                    || !colour.starts_with('#')
+                                    || !colour[1..].bytes().all(|byte| byte.is_ascii_hexdigit())
+                            })
+                    })
                     || entry.video_predecode.as_ref().is_some_and(|predecode| {
                         entry.kind != WallpaperKind::Video
                             || entry.animated
@@ -467,6 +484,7 @@ mod tests {
                 thumbnail: "/cache/wallpaper-media/lake.jpg".into(),
                 preview: "/cache/wallpaper-media/lake-preview.jpg".into(),
                 active: true,
+                palette: None,
                 video_predecode: None,
             }],
         };
@@ -477,6 +495,19 @@ mod tests {
         let mut bad = good;
         bad.entries[0].thumbnail = "/cache/../private.jpg".into();
         assert!(bad.validate().is_err());
+    }
+
+    #[test]
+    fn cached_catalogue_palette_is_optional_and_validated() {
+        let mut catalogue: WallpaperCatalogue = serde_json::from_value(json!({"entries":[{
+            "id":"/pictures/lake.png","kind":"image","title":"Lake",
+            "thumbnail":"","preview":"","active":false,
+            "palette":{"mode":"dark","colours":{"background":"#101820","onSurface":"#f0f4f8","primary":"#22aa88"}}
+        }]})).unwrap();
+        assert!(catalogue.validate().is_ok());
+        assert!(catalogue.entries[0].palette.is_some());
+        catalogue.entries[0].palette.as_mut().unwrap().colours.insert("broken".into(), "red".into());
+        assert!(catalogue.validate().is_err());
     }
 
     #[test]

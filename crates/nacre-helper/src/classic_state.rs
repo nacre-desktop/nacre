@@ -964,6 +964,15 @@ pub fn publication_lock(paths: &Paths) -> Result<PublicationGuard> {
         path,
     })
 }
+
+fn wallpaper_selection_is_current(paths: &Paths) -> Result<bool> {
+    let Ok(generation) = std::env::var("NACRE_WALLPAPER_GENERATION") else {
+        return Ok(true);
+    };
+    let generation = generation.parse::<u64>()?;
+    let current = fs::read_to_string(paths.state.join("wallpaper/current-selection-generation"))?;
+    Ok(current.trim().parse::<u64>()? == generation)
+}
 pub struct Publisher {
     pub paths: Paths,
     pub assets: std::path::PathBuf,
@@ -1124,6 +1133,9 @@ impl Publisher {
         live: bool,
         refresh_before_reload: bool,
     ) -> Result<()> {
+        if !wallpaper_selection_is_current(&self.paths)? {
+            return Err("Wallpaper palette selection superseded".into());
+        }
         let paths = &self.paths;
         let mut data = state::read(&paths.state.join("scheme.json"), Value::Null)?;
         let options = crate::owned_settings::read(
@@ -1499,6 +1511,9 @@ impl Publisher {
             != crate::paths::weak_canonical(&self.paths.state.join("palette-commit.lock"))?
         {
             return Err("Palette lock belongs to a different home".into());
+        }
+        if !wallpaper_selection_is_current(&self.paths)? {
+            return Err("Wallpaper palette selection superseded".into());
         }
         let current = match state::read(&self.paths.state.join("scheme.json"), Value::Null) {
             Ok(Value::Null) if allow_mode_change => {

@@ -291,6 +291,7 @@ pub struct Media {
 }
 const PALETTE_CACHE_COUNT: usize = 64;
 const PALETTE_PREWARM_COUNT: usize = 32;
+const CATALOGUE_PALETTE_LIMIT: usize = 128;
 
 fn trim_palette_cache(cache: &Path, keep: usize) -> Result<()> {
     let mut entries = fs::read_dir(cache)?
@@ -316,6 +317,10 @@ fn trim_palette_cache(cache: &Path, keep: usize) -> Result<()> {
         fs::remove_file(path)?;
     }
     Ok(())
+}
+
+fn selection_generation_matches(requested: &str, current: &str) -> Result<bool> {
+    Ok(requested.parse::<u64>()? == current.trim().parse::<u64>()?)
 }
 impl Media {
     pub fn new(paths: Paths, assets: PathBuf) -> Result<Self> {
@@ -349,6 +354,21 @@ impl Media {
     }
     pub fn preferences_path(&self) -> PathBuf {
         self.prefs_path.clone()
+    }
+    fn selection_generation_current(&self) -> Result<bool> {
+        let Ok(generation) = std::env::var("NACRE_WALLPAPER_GENERATION") else {
+            return Ok(true);
+        };
+        let generation = generation.parse::<u64>()?;
+        let current = fs::read_to_string(self.wallpaper_state().join("current-selection-generation"))?;
+        selection_generation_matches(&generation, &current)
+    }
+    fn atomic_selection_value(&self, path: &Path, value: &Value) -> Result<()> {
+        let _publication = crate::classic_state::publication_lock(&self.paths)?;
+        if !self.selection_generation_current()? {
+            return Err("Wallpaper selection superseded".into());
+        }
+        atomic(path, value)
     }
     pub fn session() -> Result<Value> {
         Self::session_on(&zbus::blocking::Connection::system()?)
@@ -957,6 +977,7 @@ impl Media {
                 .collect::<std::collections::HashSet<_>>()
         });
         let mut keep_keys = std::collections::HashSet::new();
+        let mut palette_count = 0usize;
         for path in entries {
             let suffix = path
                 .extension()
@@ -974,7 +995,17 @@ impl Media {
                     match self
                         .describe_preserving(&canonical, requested.as_ref().map(|_| &mut keep_keys))
                     {
-                        Ok(value) => rows.push(value),
+                        Ok(mut value) => {
+                            let targeted = requested
+                                .as_ref()
+                                .is_some_and(|requested| requested.contains(&id));
+                            if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                                && self.attach_cached_palette(&mut value)?
+                            {
+                                palette_count += 1;
+                            }
+                            rows.push(value)
+                        },
                         Err(_) => {
                             errors.push(
                                 path.file_name()
@@ -983,12 +1014,30 @@ impl Media {
                                     .into_owned(),
                             );
                             if requested.is_some() {
-                                rows.push(self.catalogue_metadata(&canonical, &suffix)?);
+                                let mut value = self.catalogue_metadata(&canonical, &suffix)?;
+                                let targeted = requested
+                                    .as_ref()
+                                    .is_some_and(|requested| requested.contains(&id));
+                                if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                                    && self.attach_cached_palette(&mut value)?
+                                {
+                                    palette_count += 1;
+                                }
+                                rows.push(value);
                             }
                         }
                     }
                 } else {
-                    rows.push(self.catalogue_metadata(&canonical, &suffix)?);
+                    let mut value = self.catalogue_metadata(&canonical, &suffix)?;
+                    let targeted = requested
+                        .as_ref()
+                        .is_some_and(|requested| requested.contains(&id));
+                    if (targeted || (requested.is_none() && palette_count < CATALOGUE_PALETTE_LIMIT))
+                        && self.attach_cached_palette(&mut value)?
+                    {
+                        palette_count += 1;
+                    }
+                    rows.push(value);
                 }
             }
         }
@@ -997,6 +1046,68 @@ impl Media {
         Ok(
             json!({"entries":rows,"preferences":self.settings()?,"media":self.media_state()?,"errors":errors,"palettes":palettes}),
         )
+    }
+    fn attach_cached_palette(&self, item: &mut Value) -> Result<bool> {
+        let Some(poster) = item["poster"].as_str().map(Path::new) else {
+            return Ok(false);
+        };
+        let source = item["path"].as_str().map(Path::new);
+        let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
+        let settings = self.settings()?;
+        let automatic = json::truthy(&settings["paletteAutoMode"]);
+        let selected_mode = settings["paletteMode"].as_str().unwrap_or("dark");
+        let modes = if automatic {
+            vec![Some(selected_mode), Some(if selected_mode == "dark" { "light" } else { "dark" })]
+        } else {
+            vec![None]
+        };
+        let mut cached = None;
+        for mode in modes {
+            let Ok(marker) = self.palette_marker(
+                poster,
+                scheme["flavour"].as_str().unwrap_or("default"),
+                None,
+                source,
+                mode,
+                None,
+            ) else { continue };
+            if let Ok(data) = state::read(&marker, json!({})) {
+                if data.is_object() && data["input"].is_object() && data["source"].is_object() {
+                    cached = Some(data);
+                    break;
+                }
+            }
+        }
+        let Some(data) = cached else { return Ok(false) };
+        let Some(colours) = data["colours"].as_object() else { return Ok(false) };
+        let Some(mode) = data["mode"].as_str().filter(|mode| matches!(*mode, "dark" | "light")) else {
+            return Ok(false);
+        };
+        let mut normalized = serde_json::Map::new();
+        for name in ["background", "onSurface", "primary"] {
+            let Some(value) = colours.get(name).and_then(Value::as_str) else { return Ok(false) };
+            let value = value.strip_prefix('#').unwrap_or(value);
+            if value.len() != 6 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                return Ok(false);
+            }
+            normalized.insert(name.into(), json!(format!("#{}", value.to_ascii_lowercase())));
+        }
+        if colours.len() > 128 || colours.keys().any(|name| name.is_empty() || name.len() > 64)
+            || data["mode"].as_str() != Some(mode)
+            || !data["input"].is_object()
+            || !data["source"].is_object()
+        {
+            return Ok(false);
+        }
+        for (name, value) in colours {
+            if normalized.contains_key(name) { continue; }
+            let Some(colour) = value.as_str().map(|value| value.strip_prefix('#').unwrap_or(value)) else { continue };
+            if colour.len() == 6 && colour.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                normalized.insert(name.clone(), json!(format!("#{}", colour.to_ascii_lowercase())));
+            }
+        }
+        item["palette"] = json!({"mode":mode,"colours":normalized});
+        Ok(true)
     }
     pub fn prepared_theme(
         &self,
@@ -1226,9 +1337,15 @@ impl Media {
         Ok(result)
     }
     pub fn select(&self, cli: &mut crate::palette_cli::Cli, path: &Path) -> Result<Value> {
+        if !self.selection_generation_current()? {
+            return Err("Wallpaper selection superseded".into());
+        }
         let previous = self.settings()?;
         let outcome = self.select_inner(cli, path);
-        if outcome.is_err() && json::truthy(&previous["paletteAutoMode"]) {
+        if outcome.is_err()
+            && self.selection_generation_current()?
+            && json::truthy(&previous["paletteAutoMode"])
+        {
             self.preference(&json!({"paletteMode":previous["paletteMode"]}))?;
         }
         outcome
@@ -1238,6 +1355,9 @@ impl Media {
         let poster = PathBuf::from(item["poster"].as_str().ok_or("Missing wallpaper poster")?);
         let automatic = json::truthy(&self.settings()?["paletteAutoMode"]);
         if automatic {
+            if !self.selection_generation_current()? {
+                return Err("Wallpaper selection superseded".into());
+            }
             self.preference(&json!({"paletteMode":Self::wallpaper_mode(&poster)?}))?;
         }
         let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
@@ -1266,15 +1386,21 @@ impl Media {
             None
         };
         if early_media {
+            if !self.selection_generation_current()? {
+                return Err("Wallpaper selection superseded".into());
+            }
             item["appliedAtMs"] = json!(self
                 .now_ms
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
-            atomic(&media_path, &item)?;
+            self.atomic_selection_value(&media_path, &item)?;
         }
         let outcome = (|| -> Result<()> {
             let mut prepared = false;
             if marker.exists() {
                 let result = (|| -> Result<bool> {
+                    if !self.selection_generation_current()? {
+                        return Err("Wallpaper selection superseded".into());
+                    }
                     let data = state::read(&marker, json!({}))?;
                     let digest = format!("{:x}", Sha256::digest(fs::read(&poster)?));
                     let thumbnail = self
@@ -1305,6 +1431,9 @@ impl Media {
                 }
             }
             if !prepared {
+                if !self.selection_generation_current()? {
+                    return Err("Wallpaper selection superseded".into());
+                }
                 let mut words = vec![
                     "wallpaper".into(),
                     "--file".into(),
@@ -1349,14 +1478,25 @@ impl Media {
         })();
         if let Err(error) = outcome {
             if early_media {
+                if !self.selection_generation_current()? {
+                    return Err(error);
+                }
                 let rollback = match previous_bytes {
                     Some(bytes) => (|| -> Result<()> {
+                        let _publication = crate::classic_state::publication_lock(&self.paths)?;
+                        if !self.selection_generation_current()? {
+                            return Err("Wallpaper selection superseded".into());
+                        }
                         crate::files::atomic(&media_path, &bytes)?;
                         fs::File::open(media_path.parent().ok_or("Invalid wallpaper media path")?)?
                             .sync_all()?;
                         Ok(())
                     })(),
                     None => (|| -> Result<()> {
+                        let _publication = crate::classic_state::publication_lock(&self.paths)?;
+                        if !self.selection_generation_current()? {
+                            return Err("Wallpaper selection superseded".into());
+                        }
                         match fs::remove_file(&media_path) {
                             Ok(()) => (),
                             Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
@@ -1377,10 +1517,13 @@ impl Media {
             return Err(error);
         }
         if !early_media {
+            if !self.selection_generation_current()? {
+                return Err("Wallpaper selection superseded".into());
+            }
             item["appliedAtMs"] = json!(self
                 .now_ms
                 .unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
-            atomic(&media_path, &item)?;
+            self.atomic_selection_value(&media_path, &item)?;
         }
         Ok(item)
     }
@@ -2239,6 +2382,13 @@ pub fn run(args: &[String]) -> Result<i32> {
 #[cfg(test)]
 mod thumbnail_cache_tests {
     use super::*;
+
+    #[test]
+    fn selection_generation_fence_rejects_superseded_and_malformed_tokens() {
+        assert!(selection_generation_matches("8", "8\n").unwrap());
+        assert!(!selection_generation_matches("8", "9").unwrap());
+        assert!(selection_generation_matches("bad", "9").is_err());
+    }
 
     #[test]
     fn native_identity_cache_reuses_matching_digest() -> Result<()> {

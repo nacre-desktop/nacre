@@ -118,6 +118,7 @@ async fn run_palette_prewarm() {
 
 thread_local! {
     static SELECTION_BUSY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static ASYNC_SELECTION_BUSY: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
 }
 
 pub(super) struct SelectionGuard {
@@ -125,7 +126,9 @@ pub(super) struct SelectionGuard {
 }
 impl SelectionGuard {
     pub(super) fn acquire() -> std::result::Result<Self, Failure> {
-        if SELECTION_BUSY.with(|busy| busy.replace(true)) {
+        if ASYNC_SELECTION_BUSY.with(|busy| busy.get().is_some())
+            || SELECTION_BUSY.with(|busy| busy.replace(true))
+        {
             Err(failure(ErrorCode::Busy, "Wallpaper selection is busy", true).dispatch_state(false))
         } else {
             Ok(Self {
@@ -142,6 +145,19 @@ impl SelectionGuard {
     }
     pub(super) fn is_busy() -> bool {
         SELECTION_BUSY.with(|busy| busy.get())
+            || ASYNC_SELECTION_BUSY.with(|busy| busy.get().is_some())
+    }
+}
+struct AsyncSelectionGuard(u64);
+impl Drop for AsyncSelectionGuard {
+    fn drop(&mut self) {
+        if SELECTION_GENERATION.load(Ordering::Acquire) == self.0 {
+            ASYNC_SELECTION_BUSY.with(|busy| {
+                if busy.get() == Some(self.0) {
+                    busy.set(None);
+                }
+            });
+        }
     }
 }
 impl Drop for SelectionGuard {
@@ -239,6 +255,7 @@ fn catalogue_entry(
         thumbnail,
         preview,
         active,
+        palette: serde_json::from_value(row["palette"].clone()).ok(),
         video_predecode,
     })
 }
@@ -987,12 +1004,12 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             } else {
                 IMAGE_BYTES
             };
-            private_file(path, limit)
-                .and_then(|file| file.metadata().map_err(Into::into))
-                .is_ok_and(|metadata| {
+            private_file(path, limit).is_ok_and(|file| {
+                file.metadata().is_ok_and(|metadata| {
                     let identity = WallpaperFileIdentity::from_metadata(&metadata);
                     identity.validate().is_ok() && identity.matches(&metadata)
                 })
+            })
         });
         if !known {
             return Err(failure(
@@ -1021,7 +1038,10 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             .snapshot(TOPIC)
             .and_then(|value| serde_json::from_value(value).ok())
             .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        if latest.stale || latest.revision != request.revision {
+        if latest.stale
+            || (!latest.available && latest.current.is_some())
+            || latest.revision != request.revision
+        {
             return Err(failure(
                 ErrorCode::StaleRevision,
                 "Wallpaper changed; refresh active state",
@@ -1031,19 +1051,39 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
         let engine = std::env::current_exe()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
         let generation = SELECTION_GENERATION.fetch_add(1, Ordering::AcqRel).wrapping_add(1);
+        let generation_file = paths
+            .state
+            .join("wallpaper/current-selection-generation");
+        let _publication = crate::classic_state::publication_lock(&paths).map_err(|_| {
+            failure(ErrorCode::Unavailable, "Wallpaper selection could not be queued", true)
+        })?;
+        crate::files::atomic(&generation_file, generation.to_string().as_bytes()).map_err(|_| {
+            failure(ErrorCode::Unavailable, "Wallpaper selection could not be queued", true)
+        })?;
+        ASYNC_SELECTION_BUSY.with(|busy| busy.set(Some(generation)));
+        drop(_publication);
         SELECTION_TASK.with(|slot| {
-            if let Some(previous) = slot.borrow_mut().take() {
+            let previous = slot.borrow_mut().take();
+            if let Some(previous) = &previous {
                 previous.abort();
             }
             let worker_hub = hub.clone();
             let worker_paths = paths.clone();
             *slot.borrow_mut() = Some(tokio::task::spawn_local(async move {
+                let _selection_guard = AsyncSelectionGuard(generation);
+                if let Some(previous) = previous {
+                    let _ = previous.await;
+                }
+                if SELECTION_GENERATION.load(Ordering::Acquire) != generation {
+                    return;
+                }
                 use tokio::process::Command;
                 let child = Command::new("nice")
                     .args(["-n", "10", "--"])
                     .arg(engine)
                     .args(["wallpaper-media", "select"])
                     .arg(&id)
+                    .env("NACRE_WALLPAPER_GENERATION", generation.to_string())
                     .kill_on_drop(true)
                     .stdout(std::process::Stdio::piped())
                     .stderr(std::process::Stdio::null())
