@@ -85,6 +85,16 @@ MANAGED_UNITS = (
     "waybar.service",
     "nacre-brain-ui-wallpaper.timer",
 )
+USER_CLIENTS = (
+    "nacre-daemon",
+    "nacrectl",
+    "nacre-app",
+    "nacre-settings",
+    "nacre-welcome",
+    "nacre-desktop-extras",
+    "nacre-maintenance",
+    "nacre-welcome-state",
+)
 
 
 def niri_session():
@@ -342,6 +352,8 @@ def refresh_niri_session(plan):
     shutil.copytree(niri_session(), backup)
     try:
         subprocess.run(command, check=True)
+        if os.environ.get("NIRI_SOCKET"):
+            compositor().reload(timeout=None)
     except BaseException:
         restore_session_tree(backup, niri_session())
         shutil.rmtree(backup)
@@ -355,6 +367,13 @@ def refresh_niri_session(plan):
         + str(backup)
         + "). Running niri reloads config.kdl live; startup items apply at next login."
     )
+
+
+def refresh_niri_session_if_changed():
+    plan = niri_session_refresh_plan()
+    if plan:
+        print_niri_plan(plan)
+        refresh_niri_session(plan)
 
 
 def dry_run():
@@ -513,6 +532,26 @@ def install_daemon_links(target):
     for alias in aliases:
         if not alias.is_symlink():
             alias.symlink_to("../tools/nacre-helper")
+
+
+def install_user_client_links():
+    """Point the public CLI aliases at the atomically installed native helper."""
+    directory = HOME / ".local/bin"
+    directory.mkdir(parents=True, exist_ok=True)
+    for name in USER_CLIENTS:
+        alias = directory / name
+        desired = Path("../share/nacre/shell/tools/nacre-helper")
+        if alias.is_symlink() and os.readlink(alias) == str(desired):
+            continue
+        if alias.is_file() and not alias.is_symlink():
+            backup = STATE / "backups" / (name + ".pre-native")
+            backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if not backup.exists():
+                shutil.copy2(alias, backup)
+        pending = alias.with_name("." + alias.name + ".next")
+        pending.unlink(missing_ok=True)
+        pending.symlink_to(desired)
+        os.replace(pending, alias)
 
 
 def retire_native_helpers(directory):
@@ -834,6 +873,8 @@ def deploy(code_only=False, retire_niri_experiment=False):
     previous_helper = save_previous_helper(helper, target) if code_only else None
     install_native_helper(helper, target)
     install_daemon_links(target)
+    if code_only:
+        install_user_client_links()
     # The release transaction already backed up this owned runtime tree.
     retire_native_helpers(DEST / "tools")
     # Retire the superseded procedural-image dedication from owned helper code.
@@ -965,10 +1006,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
             validate_bead_live()
         else:
             validate_live(source_digest(SHELL))
-        plan = niri_session_refresh_plan()
-        if plan:
-            print_niri_plan(plan)
-            refresh_niri_session(plan)
+        refresh_niri_session_if_changed()
         return
     if backup is None:
         STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -991,8 +1029,10 @@ def deploy(code_only=False, retire_niri_experiment=False):
         entries.append(entry)
         path.parent.mkdir(parents=True, exist_ok=True)
         if link:
-            path.unlink(missing_ok=True)
-            path.symlink_to(link)
+            pending = path.with_name("." + path.name + ".next")
+            pending.unlink(missing_ok=True)
+            pending.symlink_to(link)
+            os.replace(pending, path)
         else:
             path.write_text(body)
             if mode:
@@ -1010,8 +1050,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
     )
     write(DEST / "bin/qs", (ROOT / "launch.sh").read_text(), mode=0o755)
     write(DEST / "bin/nacre_shell", (ROOT / "cli-bridge.sh").read_text(), mode=0o755)
-    for name in ("nacrectl", "nacre-daemon"):
-        write(HOME / ".local/bin" / name, link=DEST / "bin" / name)
+    for name in USER_CLIENTS:
+        write(
+            HOME / ".local/bin" / name,
+            link=Path("../share/nacre/shell/tools/nacre-helper"),
+        )
     # Files are staged only. Enabling or starting the daemon requires its owner's decision.
     for name in ("nacre-daemon.socket", "nacre-daemon.service"):
         write(HOME / ".config/systemd/user" / name, (ROOT / name).read_text())
@@ -1131,6 +1174,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
         ["systemctl", "--user", "restart", "nacre-shell.service"], check=True
     )
     validate_live(source_digest(SHELL))
+    refresh_niri_session_if_changed()
     print("Native shell installed. Backup:", backup)
 
 

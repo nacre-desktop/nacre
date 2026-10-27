@@ -386,6 +386,13 @@ def install_controller(repo):
         "ui_shell_switch.py",
         "check-overlays.py",
         "configure.py",
+        "keyboard.py",
+        "package_hyprland.py",
+        "package_niri.py",
+        "package_runtime.py",
+        "package_sessions.py",
+        "package_managers.py",
+        "setup.py",
     ):
         shutil.copy2(repo / "tools" / name, CONTROL / name)
     wrapper = HOME / ".local/bin/nacre"
@@ -394,6 +401,64 @@ def install_controller(repo):
         '#!/bin/sh\nexec python3 "$HOME/.local/share/nacre/control/releases.py" "$@"\n'
     )
     wrapper.chmod(0o755)
+
+
+def session_parser():
+    parser = argparse.ArgumentParser(prog="nacre session")
+    commands = parser.add_subparsers(dest="command", required=True)
+    for compositor_name in ("hyprland", "niri"):
+        commands.add_parser(compositor_name, help=f"start a {compositor_name} session")
+    commands.add_parser("refresh", help="validate and reload the prepared Niri session")
+    return parser
+
+
+def restore_session_tree(source, target):
+    """Restore files in place so a running bind mount keeps its directory inode."""
+    target.mkdir(parents=True, exist_ok=True)
+    for item in source.iterdir():
+        destination = target / item.name
+        if item.is_dir():
+            restore_session_tree(item, destination)
+        else:
+            fd, name = tempfile.mkstemp(prefix="." + item.name + ".", dir=target)
+            os.close(fd)
+            temporary = Path(name)
+            try:
+                shutil.copy2(item, temporary)
+                os.replace(temporary, destination)
+            finally:
+                temporary.unlink(missing_ok=True)
+    for item in target.iterdir():
+        if not (source / item.name).exists():
+            shutil.rmtree(item) if item.is_dir() else item.unlink()
+
+
+def refresh_session(installed):
+    """Regenerate, validate, and reload the already-prepared private Niri session."""
+    session = HOME / ".local/share/nacre/niri-on-pc/session"
+    if not (session / "source-revision").is_file():
+        raise RuntimeError("No prepared Niri-on-PC session is available to refresh")
+    helper = HOME / ".local/share/nacre/shell/tools/nacre-helper"
+    if not helper.is_file():
+        raise RuntimeError("The installed Nacre helper is unavailable")
+    backup = session.with_name("session.rollback")
+    if backup.exists():
+        shutil.rmtree(backup)
+    shutil.copytree(session, backup)
+    try:
+        subprocess.run(
+            [str(helper), "niri-session-runtime", "--backend", str(installed), "prepare"],
+            check=True,
+        )
+        if os.environ.get("NIRI_SOCKET"):
+            subprocess.run(
+                [str(helper), "compositor", "action", "reload"], check=True
+            )
+    except BaseException:
+        restore_session_tree(backup, session)
+        shutil.rmtree(backup)
+        raise
+    print("Niri session refreshed and validated; previous files kept at " + str(backup))
 
 
 def prune_releases(keep=10):
@@ -801,14 +866,16 @@ def main():
             raise SystemExit(str(error)) from error
         return
     if len(sys.argv) > 1 and sys.argv[1] == "session":
-        import package_sessions
-
         installed = Path("/usr/share/nacre")
-        if len(sys.argv) != 3 or not (installed / "package.json.installed").is_file():
-            raise SystemExit(
-                "Usage after installing packages: nacre session COMPOSITOR"
-            )
-        package_sessions.start(installed, sys.argv[2])
+        session = session_parser().parse_args(sys.argv[2:])
+        if session.command == "refresh":
+            refresh_session(installed)
+        else:
+            if not (installed / "package.json.installed").is_file():
+                raise SystemExit("Install Nacre packages before starting a session")
+            import package_sessions
+
+            package_sessions.start(installed, session.command)
         return
     if len(sys.argv) > 1 and sys.argv[1] == "setup":
         installed = Path("/usr/share/nacre/tools/setup.py")

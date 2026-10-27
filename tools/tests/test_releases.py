@@ -1,6 +1,8 @@
 import importlib.util
 import fcntl
 import os
+import shutil
+import subprocess
 import tempfile
 import unittest
 from contextlib import nullcontext
@@ -16,6 +18,37 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_installed_controller_contains_session_modules_and_all_session_help(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            control = home / ".local/share/nacre/control"
+            tools = home / ".local/share/nacre/shell/tools"
+            control.mkdir(parents=True)
+            tools.mkdir(parents=True)
+            for name in ("nacre_state.py", "writer_lease.py"):
+                shutil.copy2(Path(__file__).parents[2] / "nacre/shell-tools" / name, tools / name)
+            with patch.multiple(m, HOME=home, CONTROL=control):
+                m.install_controller(Path(__file__).parents[1])
+            self.assertTrue((control / "package_sessions.py").is_file())
+            self.assertTrue((control / "package_niri.py").is_file())
+            wrapper = home / ".local/bin/nacre"
+            for args in (
+                ["--help"],
+                ["session", "--help"],
+                ["session", "niri", "--help"],
+                ["session", "hyprland", "--help"],
+                ["session", "refresh", "--help"],
+            ):
+                result = subprocess.run(
+                    [str(wrapper), *args],
+                    env={**os.environ, "HOME": str(home)},
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn("usage:", result.stdout)
+
     def test_deploy_contention_refuses_before_plan_or_destination_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

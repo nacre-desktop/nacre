@@ -704,12 +704,47 @@ class InstallerDropinGuardTests(unittest.TestCase):
             self.put(session / "config/config.kdl", "new config\n")
             return subprocess.CompletedProcess(command, 0)
 
-        with patch.object(installer.subprocess, "run", side_effect=prepare):
+        with (
+            patch.object(installer.subprocess, "run", side_effect=prepare),
+            patch.object(installer, "compositor") as compositor,
+            patch.dict(os.environ, {"NIRI_SOCKET": "fixture.sock"}),
+        ):
             installer.refresh_niri_session(plan)
+        compositor.return_value.reload.assert_called_once_with(timeout=None)
         self.assertEqual((session / "config/config.kdl").read_text(), "new config\n")
         previous = session.with_name("session.rollback")
         self.assertEqual((previous / "config/config.kdl").read_text(), "old config\n")
         self.assertEqual(custom.read_text(), "mine\n")
+
+    def test_user_client_aliases_atomically_replace_regular_binary_once(self):
+        alias = self.home / ".local/bin/nacrectl"
+        self.put(alias, "stale binary")
+        with patch.object(installer, "HOME", self.home), patch.object(
+            installer, "STATE", self.state
+        ):
+            installer.install_user_client_links()
+        backup = self.state / "backups/nacrectl.pre-native"
+        self.assertEqual(backup.read_text(), "stale binary")
+        self.assertTrue(alias.is_symlink())
+        self.assertEqual(
+            alias.resolve(), self.home / ".local/share/nacre/shell/tools/nacre-helper"
+        )
+        backup.write_text("original backup")
+        with patch.object(installer, "HOME", self.home), patch.object(
+            installer, "STATE", self.state
+        ):
+            installer.install_user_client_links()
+        self.assertEqual(backup.read_text(), "original backup")
+        for name in (
+            "nacre-daemon",
+            "nacre-app",
+            "nacre-settings",
+            "nacre-welcome",
+            "nacre-desktop-extras",
+            "nacre-maintenance",
+            "nacre-welcome-state",
+        ):
+            self.assertTrue((self.home / ".local/bin" / name).is_symlink(), name)
 
     def test_niri_refresh_failure_restores_previous_session(self):
         session, custom = self.niri_fixture()

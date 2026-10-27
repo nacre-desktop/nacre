@@ -696,7 +696,7 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
             value!({"layout":"us", "model":"", "variant":"", "options":""})
         }
     };
-    prepare_configuration(
+    prepare_staged_configuration(
         &backend,
         destination,
         paths,
@@ -732,6 +732,55 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
         Duration::from_secs(10),
     )?;
     fs::write(destination.join("source-revision"), revision.stdout)?;
+    Ok(())
+}
+
+fn prepare_staged_configuration(
+    backend: &Path,
+    destination: &Path,
+    paths: &Paths,
+    profile: &Value,
+    keyboard: &Value,
+    stock: bool,
+    validate: impl FnMut(&Path) -> Result<()>,
+) -> Result<()> {
+    let candidate = tempfile::tempdir_in(destination)?;
+    prepare_configuration(
+        backend,
+        candidate.path(),
+        paths,
+        profile,
+        keyboard,
+        stock,
+        validate,
+    )?;
+    // Validation finishes against the complete candidate tree before any live
+    // file is replaced. Directories remain in place for running bind mounts.
+    let candidate_config = candidate.path().join("config");
+    let final_config = destination.join("config");
+    let candidate_prefix = candidate_config.to_string_lossy();
+    let final_prefix = final_config.to_string_lossy();
+    for entry in fs::read_dir(&candidate_config)? {
+        let path = entry?.path();
+        if path.is_file() {
+            let original = fs::read_to_string(&path)?;
+            let committed = original.replace(candidate_prefix.as_ref(), final_prefix.as_ref());
+            if committed != original {
+                fs::write(path, committed)?;
+            }
+        }
+    }
+    refresh_tree(&candidate_config, &final_config)?;
+    if stock {
+        let marker = tempfile::NamedTempFile::new_in(destination)?;
+        crate::niri_session_stage::copied(
+            &candidate.path().join("stock-niri"),
+            marker.path(),
+        )?;
+        marker
+            .persist(destination.join("stock-niri"))
+            .map_err(|error| error.error)?;
+    }
     Ok(())
 }
 
@@ -1116,6 +1165,60 @@ mod tests {
         let (home, calls) = prepare_with_custom(None, true)?;
         assert_eq!(calls, 1);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
+        Ok(())
+    }
+
+    #[test]
+    fn staged_refresh_validates_before_replacing_the_prepared_config() -> Result<()> {
+        let reference: Value = serde_json::from_str(include_str!(
+            "../tests/fixtures/niri-session-preparation-reference.json"
+        ))?;
+        let case = &reference["cases"][0];
+        let frozen_backend = crate::test_support::legacy_compositor_backend()?;
+        let backend = frozen_backend.path().canonicalize()?;
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::create_dir_all(&paths.state)?;
+        fs::write(paths.config.join("desktop.json"), "{}")?;
+        fs::write(
+            paths.state.join("scheme.json"),
+            serde_json::to_vec(&case["scheme"])?
+        )?;
+        let destination = home.path().join("session");
+        fs::create_dir_all(destination.join("config"))?;
+        let root = destination.join("config/config.kdl");
+        fs::write(&root, "previous config\n")?;
+        let rejected = prepare_staged_configuration(
+            &backend,
+            &destination,
+            &paths,
+            &case["profile"],
+            &case["keyboard"],
+            false,
+            |_| Err("invalid candidate".into()),
+        );
+        assert!(rejected.is_err());
+        assert_eq!(fs::read_to_string(&root)?, "previous config\n");
+
+        prepare_staged_configuration(
+            &backend,
+            &destination,
+            &paths,
+            &case["profile"],
+            &case["keyboard"],
+            false,
+            |candidate| {
+                assert!(fs::read_to_string(&root)?.contains("previous config"));
+                assert!(fs::read_to_string(candidate)?.contains("include"));
+                Ok(())
+            },
+        )?;
+        let prepared = fs::read_to_string(&root)?;
+        assert!(prepared.contains(&format!(
+            "include \"{}/config/bindings.kdl\"",
+            destination.display()
+        )));
         Ok(())
     }
 
