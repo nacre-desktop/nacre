@@ -297,8 +297,8 @@ fn wallpaper_exports() -> BTreeMap<String, String> {
 fn wallpaper_active_exports() -> BTreeMap<String, String> {
     use crate::wallpaper::{
         ActiveWallpaper, PaletteMode, Presentation, WallpaperActivate, WallpaperActive,
-        WallpaperCatalogue, WallpaperCatalogueEntry, WallpaperCatalogueRequest, WallpaperPalette,
-        WallpaperFileIdentity, WallpaperKind, WallpaperVideoPredecode,
+        WallpaperCatalogue, WallpaperCatalogueEntry, WallpaperCatalogueRequest,
+        WallpaperFileIdentity, WallpaperKind, WallpaperPalette, WallpaperVideoPredecode,
     };
     let active_schema =
         serde_json::to_value(schemars::schema_for!(WallpaperActive)).expect("active schema");

@@ -360,8 +360,9 @@ impl Media {
             return Ok(true);
         };
         let generation = generation.parse::<u64>()?;
-        let current = fs::read_to_string(self.wallpaper_state().join("current-selection-generation"))?;
-        selection_generation_matches(&generation, &current)
+        let current =
+            fs::read_to_string(self.wallpaper_state().join("current-selection-generation"))?;
+        selection_generation_matches(&generation.to_string(), &current)
     }
     fn atomic_selection_value(&self, path: &Path, value: &Value) -> Result<()> {
         let _publication = crate::classic_state::publication_lock(&self.paths)?;
@@ -1007,7 +1008,7 @@ impl Media {
                                 palette_count += 1;
                             }
                             rows.push(value)
-                        },
+                        }
                         Err(_) => {
                             errors.push(
                                 path.file_name()
@@ -1035,7 +1036,8 @@ impl Media {
                     let targeted = requested
                         .as_ref()
                         .is_some_and(|requested| requested.contains(&id));
-                    if (targeted || full_catalogue) && palette_count < CATALOGUE_PALETTE_LIMIT
+                    if (targeted || full_catalogue)
+                        && palette_count < CATALOGUE_PALETTE_LIMIT
                         && self.attach_cached_palette(&mut value)?
                     {
                         palette_count += 1;
@@ -1060,7 +1062,14 @@ impl Media {
         let automatic = json::truthy(&settings["paletteAutoMode"]);
         let selected_mode = settings["paletteMode"].as_str().unwrap_or("dark");
         let modes = if automatic {
-            vec![Some(selected_mode), Some(if selected_mode == "dark" { "light" } else { "dark" })]
+            vec![
+                Some(selected_mode),
+                Some(if selected_mode == "dark" {
+                    "light"
+                } else {
+                    "dark"
+                }),
+            ]
         } else {
             vec![None]
         };
@@ -1073,7 +1082,9 @@ impl Media {
                 source,
                 mode,
                 None,
-            ) else { continue };
+            ) else {
+                continue;
+            };
             if let Ok(data) = state::read(&marker, json!({})) {
                 if data.is_object() && data["input"].is_object() && data["source"].is_object() {
                     cached = Some(data);
@@ -1082,20 +1093,33 @@ impl Media {
             }
         }
         let Some(data) = cached else { return Ok(false) };
-        let Some(colours) = data["colours"].as_object() else { return Ok(false) };
-        let Some(mode) = data["mode"].as_str().filter(|mode| matches!(*mode, "dark" | "light")) else {
+        let Some(colours) = data["colours"].as_object() else {
+            return Ok(false);
+        };
+        let Some(mode) = data["mode"]
+            .as_str()
+            .filter(|mode| matches!(*mode, "dark" | "light"))
+        else {
             return Ok(false);
         };
         let mut normalized = serde_json::Map::new();
         for name in ["background", "onSurface", "primary"] {
-            let Some(value) = colours.get(name).and_then(Value::as_str) else { return Ok(false) };
+            let Some(value) = colours.get(name).and_then(Value::as_str) else {
+                return Ok(false);
+            };
             let value = value.strip_prefix('#').unwrap_or(value);
             if value.len() != 6 || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
                 return Ok(false);
             }
-            normalized.insert(name.into(), json!(format!("#{}", value.to_ascii_lowercase())));
+            normalized.insert(
+                name.into(),
+                json!(format!("#{}", value.to_ascii_lowercase())),
+            );
         }
-        if colours.len() > 64 || colours.keys().any(|name| name.is_empty() || name.len() > 64)
+        if colours.len() > 64
+            || colours
+                .keys()
+                .any(|name| name.is_empty() || name.len() > 64)
             || data["mode"].as_str() != Some(mode)
             || !data["input"].is_object()
             || !data["source"].is_object()
@@ -1103,10 +1127,20 @@ impl Media {
             return Ok(false);
         }
         for (name, value) in colours {
-            if normalized.contains_key(name) { continue; }
-            let Some(colour) = value.as_str().map(|value| value.strip_prefix('#').unwrap_or(value)) else { continue };
+            if normalized.contains_key(name) {
+                continue;
+            }
+            let Some(colour) = value
+                .as_str()
+                .map(|value| value.strip_prefix('#').unwrap_or(value))
+            else {
+                continue;
+            };
             if colour.len() == 6 && colour.bytes().all(|byte| byte.is_ascii_hexdigit()) {
-                normalized.insert(name.clone(), json!(format!("#{}", colour.to_ascii_lowercase())));
+                normalized.insert(
+                    name.clone(),
+                    json!(format!("#{}", colour.to_ascii_lowercase())),
+                );
             }
         }
         item["palette"] = json!({"mode":mode,"colours":normalized});
@@ -2400,14 +2434,8 @@ mod thumbnail_cache_tests {
             let image = media.library.join(format!("wall-{index:02}.png"));
             image::DynamicImage::new_rgb8(4, 4).save(&image)?;
             let poster = image.canonicalize()?;
-            let marker = media.palette_marker(
-                &poster,
-                "default",
-                None,
-                Some(&poster),
-                None,
-                None,
-            )?;
+            let marker =
+                media.palette_marker(&poster, "default", None, Some(&poster), None, None)?;
             let data = json!({
                 "mode":"dark",
                 "input":{"harmony":false},
@@ -2420,7 +2448,13 @@ mod thumbnail_cache_tests {
         let catalogue = media.catalog_with_ids(Some(&[]))?;
         let entries = catalogue["entries"].as_array().ok_or("missing entries")?;
         assert_eq!(entries.len(), 17);
-        assert_eq!(entries.iter().filter(|entry| !entry["palette"].is_null()).count(), 17);
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| !entry["palette"].is_null())
+                .count(),
+            17
+        );
         Ok(())
     }
 

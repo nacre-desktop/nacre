@@ -184,7 +184,7 @@ impl WallpaperFileIdentity {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperPalette {
     pub mode: PaletteMode,
     #[schemars(schema_with = "colours_schema")]
@@ -507,9 +507,19 @@ mod tests {
         }]})).unwrap();
         assert!(catalogue.validate().is_ok());
         assert!(catalogue.entries[0].palette.is_some());
-        catalogue.entries[0].palette.as_mut().unwrap().colours.insert("broken".into(), "red".into());
+        catalogue.entries[0]
+            .palette
+            .as_mut()
+            .unwrap()
+            .colours
+            .insert("broken".into(), "red".into());
         assert!(catalogue.validate().is_err());
-        catalogue.entries[0].palette.as_mut().unwrap().colours.remove("broken");
+        catalogue.entries[0]
+            .palette
+            .as_mut()
+            .unwrap()
+            .colours
+            .remove("broken");
         for index in 0..62 {
             catalogue.entries[0]
                 .palette
@@ -518,7 +528,10 @@ mod tests {
                 .colours
                 .insert(format!("extra-{index}"), "#112233".into());
         }
-        assert!(catalogue.validate().is_err(), "catalogue palettes are capped at 64 roles");
+        assert!(
+            catalogue.validate().is_err(),
+            "catalogue palettes are capped at 64 roles"
+        );
     }
 
     #[test]

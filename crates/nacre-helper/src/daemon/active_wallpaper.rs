@@ -11,8 +11,8 @@ use nacre_protocol::{
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::{FileExt, MetadataExt};
-use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::{
     collections::{BTreeMap, HashSet, VecDeque},
     fs::File,
@@ -1020,9 +1020,14 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
         // Validate the requested library member directly. The hot path never
         // constructs a catalogue or walks the wallpaper tree.
-        let media = crate::wallpaper_media::Media::new(paths.clone(), paths.assets()).map_err(
-            |_| failure(ErrorCode::Unavailable, "Wallpaper catalogue is unavailable", true),
-        )?;
+        let media =
+            crate::wallpaper_media::Media::new(paths.clone(), paths.assets()).map_err(|_| {
+                failure(
+                    ErrorCode::Unavailable,
+                    "Wallpaper catalogue is unavailable",
+                    true,
+                )
+            })?;
         let library = std::fs::canonicalize(&media.library).unwrap_or(media.library.clone());
         let known = valid_catalogue_selection(Path::new(&id), &library);
         if !known {
@@ -1047,33 +1052,28 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                 true,
             ));
         }
-        let latest: WallpaperActive = hub
-            .borrow()
-            .snapshot(TOPIC)
-            .and_then(|value| serde_json::from_value(value).ok())
-            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        if latest.stale
-            || (!latest.available && latest.current.is_some())
-            || latest.revision != request.revision
-        {
-            return Err(failure(
-                ErrorCode::StaleRevision,
-                "Wallpaper changed; refresh active state",
-                true,
-            ));
-        }
         let engine = std::env::current_exe()
             .map_err(|_| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?;
-        let generation = SELECTION_GENERATION.fetch_add(1, Ordering::AcqRel).wrapping_add(1);
-        let generation_file = paths
-            .state
-            .join("wallpaper/current-selection-generation");
+        let generation = SELECTION_GENERATION
+            .fetch_add(1, Ordering::AcqRel)
+            .wrapping_add(1);
+        let generation_file = paths.state.join("wallpaper/current-selection-generation");
         let _publication = crate::classic_state::publication_lock(&paths).map_err(|_| {
-            failure(ErrorCode::Unavailable, "Wallpaper selection could not be queued", true)
+            failure(
+                ErrorCode::Unavailable,
+                "Wallpaper selection could not be queued",
+                true,
+            )
         })?;
-        crate::files::atomic(&generation_file, generation.to_string().as_bytes()).map_err(|_| {
-            failure(ErrorCode::Unavailable, "Wallpaper selection could not be queued", true)
-        })?;
+        crate::files::atomic(&generation_file, generation.to_string().as_bytes()).map_err(
+            |_| {
+                failure(
+                    ErrorCode::Unavailable,
+                    "Wallpaper selection could not be queued",
+                    true,
+                )
+            },
+        )?;
         ASYNC_SELECTION_BUSY.with(|busy| busy.set(Some(generation)));
         if let Err(error) = refresh_previous_availability(&hub) {
             eprintln!("Wallpaper selection availability refresh failed: {error}");
@@ -1110,10 +1110,13 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                     .output()
                     .await;
                 let selected = child.is_ok_and(|output| output.status.success());
-                if selected && SELECTION_GENERATION.load(Ordering::Acquire) == generation {
-                    if Producer::default().refresh(&worker_hub, &worker_paths).is_err() {
-                        eprintln!("Wallpaper selection refresh failed");
-                    }
+                if selected
+                    && SELECTION_GENERATION.load(Ordering::Acquire) == generation
+                    && Producer::default()
+                        .refresh(&worker_hub, &worker_paths)
+                        .is_err()
+                {
+                    eprintln!("Wallpaper selection refresh failed");
                 }
             }));
         });
@@ -1306,10 +1309,22 @@ mod tests {
         let canonical_library = library.canonicalize()?;
         assert!(valid_catalogue_selection(&image_path, &canonical_library));
         assert!(valid_catalogue_selection(&video_path, &canonical_library));
-        assert!(!valid_catalogue_selection(&outside_path, &canonical_library));
-        assert!(!valid_catalogue_selection(&library.join("escape.png"), &canonical_library));
-        assert!(!valid_catalogue_selection(&library.join("missing.png"), &canonical_library));
-        assert!(!valid_catalogue_selection(Path::new("/../../etc/passwd"), &canonical_library));
+        assert!(!valid_catalogue_selection(
+            &outside_path,
+            &canonical_library
+        ));
+        assert!(!valid_catalogue_selection(
+            &library.join("escape.png"),
+            &canonical_library
+        ));
+        assert!(!valid_catalogue_selection(
+            &library.join("missing.png"),
+            &canonical_library
+        ));
+        assert!(!valid_catalogue_selection(
+            Path::new("/../../etc/passwd"),
+            &canonical_library
+        ));
         assert!(WallpaperActivate {
             revision: 1,
             id: Some("/../../etc/passwd".into()),
