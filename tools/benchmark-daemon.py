@@ -615,6 +615,8 @@ def main():
                 environment,
                 DBUS_SESSION_BUS_ADDRESS="unix:path="
                 + str(Path(environment["XDG_RUNTIME_DIR"]) / "absent-session-bus"),
+                DBUS_SYSTEM_BUS_ADDRESS="unix:path="
+                + str(Path(environment["XDG_RUNTIME_DIR"]) / "absent-system-bus"),
                 HYPRLAND_NO_SYSTEMD="1",
             )
             kwargs["env"] = environment
@@ -623,7 +625,9 @@ def main():
                 command[0] = options.daemon_niri
         return original_popen(command, **kwargs)
 
-    def prepare(directory, revision=None, control=False, helper_binary=None):
+    def prepare(
+        directory, revision=None, control=False, helper_binary=None, daemon_client=None
+    ):
         if revision or control:
             raise ValueError("This tool measures only the supplied native daemon build")
         home = directory / "home"

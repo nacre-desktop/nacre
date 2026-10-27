@@ -1,86 +1,72 @@
-# N0085: instant volume and brightness key path
+# N0085: instant key path and cumulative audio steps
 
-## Goal
+## Goal and scope
 
-Make volume, display brightness, and keyboard-light key presses reach the Nacre
-daemon within 5 ms on the desktop test host. The current binding timestamps the
-keypress before launching `nacrectl`; the owner measured 67–82 ms for
-`nacrectl status` and 46–86 ms key-to-daemon on the laptop. The binding also
-starts a second `nacrectl status` process before falling back to `wpctl` or
-`brightnessctl`.
+Volume, display brightness, and keyboard-light key presses use a one-shot local
+daemon request. A fresh client sends one validated request immediately after
+connecting; it does not wait for or parse the welcome or its topic catalogue.
+The daemon answers `daemon.ping` off the producer runtime. Hardware steps enter
+a bounded queue and run outside producer polling, so slow producers do not
+hold up acknowledgements. Audio steps read the active PipeWire sink's current
+channel vector, add or subtract 0.05 from every channel, clamp to 0..1, and
+write the complete vector back. This fixes the 8-channel pro-audio sink reset
+caused by using a stale scalar from the cached audio topic.
 
-## Scope
+Generated niri bindings use `nacre-helper ctl key-step`; a missing/refused
+daemon endpoint returns 69 and selects the existing direct hardware fallback.
+Other daemon errors do not trigger fallback. The private fast sidecar checks
+same-user ownership, endpoint identity, request bounds, supported methods, and
+method-specific parameter schemas. No second compatibility client is kept.
 
-- Profile the existing command startup remotely with `strace -c` (and `perf`
-  when available), then use the smallest secure fast client/path that meets the
-  measured gate.
-- Update the compositor contract that generates Nacre's niri bindings. The
-  daemon-down fallback must use a cheap connection failure result and must not
-  spawn another `nacrectl`.
-- Preserve daemon peer identity/socket validation and the current action
-  semantics, including `key_ms` for OSD latency instrumentation.
-- Bead twin: B0149 in the assigned Bead worktree, including held-repeat OSD
-  smoothness and parity evidence. Cross-link its evidence/report here.
+## Validation
 
-## Non-goals
+Owner-reported laptop baseline: `nacre-helper --help` 10 ms,
+`nacre-helper ctl call daemon.ping {}` 43–46 ms, and `nacrectl status` 45–80
+ms. These are the live measurements that motivated this follow-up; the laptop
+was not run or modified during validation.
 
-No change to desktop hardware/lighting behavior, owner laptop runtime,
-keybindings outside generated Nacre niri bindings, or unrelated CLI startup.
-No install/deploy action is authorized by this task.
+The earlier socket-only 100-call comparison (synthetic 128-method welcome)
+measured the generated `bash -c` + `date +%s%3N` client shape at p50/p95
+3.130/4.004 ms before and 2.938/3.491 ms after. This does not model producer
+load and is retained only as a client-startup baseline.
 
-## Acceptance and evidence
+The loaded-daemon capture is in `.lead/evidence/n0085-daemon-load.json` with
+host/cgroup guard logs alongside it. It used a prebuilt helper (SHA256
+`e51154aaa243710ce3d0d13f50ff9973539e06798e4824dfd168fa0ca9754d28`) in a
+private nested Niri session on the desktop test host, with notifications and
+behaviours producer authorities enabled and every advertised topic subscribed
+(61/61). It ran 100 fresh helper processes for each fast method at a 125 ms
+audio repeat interval. Ping p50/p95 wall was 2.230/2.423 ms; its daemon-side
+server time was 0.023/0.031 ms. Audio p50/p95 wall was 2.865/3.057 ms; server
+time was 0.048/0.054 ms. Thus both measured total client-to-reply paths met
+5 ms and the daemon fast answer was below 2 ms. The capture's overall daemon
+CPU averaged 0.26% on the 12-core host; this does not reproduce the laptop's
+reported 10–17% CPU utilization, so the producer-load timing is a lower-load
+remote reproduction, not a claim of equivalent hardware saturation.
 
-- Remote profile captures the existing startup path; report the profile's
-  command and dominant costs.
-- Measure 100 calls on a remote host and report p50/p95 wall time before and
-  after. The key client must reach the daemon in at most 5 ms from key event.
-- Verify the daemon-down path reaches `wpctl`/`brightnessctl` without a second
-  daemon CLI invocation; daemon-present errors must not trigger hardware
-  fallback.
-- On the desktop test machine, repeat-hold capture for two seconds: zero OSD
-  dropped frames, and the displayed value changes within one frame of daemon
-  publication. Record source/window/scale and exact commands in the evidence.
-- Full Nacre CI: the complete `desktop` job from `.github/workflows/check.yml`
-  in `ghcr.io/archlinux/archlinux:latest` on the selected remote CI host.
-- Record removed product lines/files and report any performance/memory trade.
+The private PipeWire fixture began with eight channels at 0.30 and ended at
+0.30 after 100 alternating up/down steps; each invocation's fake `pw-cli`
+rejected payloads unless all eight `channelVolumes` were present. The focused
+`step_updates_all_eight_current_pipewire_channels` test checks two consecutive
+steps and verifies every channel changes cumulatively. `FAST_CALL` tracing
+provided 100 daemon-side timings per method. The host guard recorded no swap
+growth and minimum `MemAvailable` of 11,349,020 KiB. The fake PipeWire fixture
+validates the all-channel data path, not physical sink hardware.
 
-## Design choice
+Full Nacre CI was run in the task-named Arch CI container on the exact Nacre
+source revision recorded in `.lead/report.md`; the script and log are retained
+under `.lead/evidence/`. Bead has no code changes in this follow-up; its prior
+full CI pass and unresolved OSD frame-presentation discrepancy are recorded
+below and in the Bead worktree report. Nacre commits include `[no-publish]`.
 
-The key-specific `nacrectl key-step` branch runs before Tokio initialization.
-It permits only the three hardware-step methods, validates the same private
-socket endpoint and peer UID, then pipelines the normal protocol hello and
-call in one write. It does not deserialize the large welcome/method catalogue.
-It reads the two response frames as bounded raw lines and checks the small call
-reply. Exit status
-69 means only that the endpoint is absent or refused the connection; generated
-bindings use that status to select the existing hardware fallback. No parallel
-compatibility client is retained.
+## Limits and cleanup
 
-## Evidence
+The fast sidecar, audio worker, and persistent worker threads add bounded
+always-on memory; full CI's ignored daemon memory check covers the daemon
+baseline, but no paired host memory comparison was made for this isolated key
+path. Physical owner-laptop latency and audio output were not tested. The Bead
+hold capture still has one 32.07 ms presentation interval and does not meet its
+strict zero-drop gate; no zero-drop claim is made.
 
-Remote startup profile (`strace -c -f`, absent-daemon baseline): 399 syscalls,
-0.408 ms total syscall time. Dominant counts were 105 `mmap`, 53 `openat`, 49
-`read`, and 43 `close`, consistent with dynamic loading and process setup;
-this profile deliberately did not include a daemon response.
-
-Remote 100-call comparison used the generated binding shape (`bash -c`,
-`date +%s%3N`, then CLI) against a private Unix-socket fixture that returned a
-128-entry synthetic welcome table and a normal call reply. Baseline
-`nacrectl call audio.step`: p50 3.130 ms, p95 4.004 ms. Candidate
-`nacrectl key-step audio.step`: p50 2.938 ms, p95 3.491 ms. Maximum was
-4.346 ms for the candidate. This isolates shell/client/protocol cost; it does
-not simulate hardware or prove physical key-repeat timing.
-
-Full `.github/workflows/check.yml` `desktop` job passed in the remote Arch
-container: `cargo fmt --check`, `cargo clippy -j2 --all-targets -- -D warnings`,
-`cargo build -j2 --locked --examples`, `cargo test -j2 --quiet`, protocol
-consumer, `tools/check.py` (501 tests; AI 120, Brain 52, shell-tools 490),
-translation audits, native gallery, and ignored daemon memory test. The exact
-runner script and output are retained in the task-local `.lead/evidence/`.
-
-Bead twin evidence is in B0149. The paired QML/Bead OSD comparison records a
-visible track-relative gradient difference. The current Bead hold capture
-meets publish-to-visible within one 60 Hz frame but has a disagreement between
-the shell `FRAME_JANK` marker (0) and compositor presentation interval analysis
-(16 active intervals over 25 ms in the candidate; 15 in baseline). The Bead
-frame-drop gate remains unresolved; no zero-drop claim is made here.
+No duplicate implementation or temporary product path remains. Removed
+product lines/files: see `.lead/report.md`.
