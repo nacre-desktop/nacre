@@ -261,6 +261,7 @@ For custom bindings and the trash opt-in, see [configuration](configuration.md).
 | Super + Tab | Window overview |
 | Super + V | Clipboard history |
 | Super + W | Wallpaper picker |
+| Super + Shift + W | Widgets |
 | Super + Z | Hide or show the shell frame and panels |
 | Super + O | Toggle the main panel |
 | Super + I | Nacre Settings |
@@ -329,6 +330,7 @@ Number keys select existing workspaces on the focused output; their numbers can 
 | Super + Tab | Window overview |
 | Super + V | Clipboard history |
 | Super + W | Wallpaper picker |
+| Super + Shift + W | Widgets |
 | Super + Z | Hide or show the shell frame and panels |
 | Super + O | Toggle the main panel |
 | Super + I | Nacre Settings |

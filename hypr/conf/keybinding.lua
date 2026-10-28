@@ -83,6 +83,7 @@ hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("nacrectl ui nacre launcher ''"), {desc
 hl.bind("SUPER + TAB", hl.dsp.exec_cmd("nacrectl ui nacre mode overview"), {description="Nacre:overview"})
 hl.bind("SUPER + V", hl.dsp.exec_cmd("nacrectl ui nacre clipboard"), {description="Nacre:clipboard"})
 hl.bind("SUPER + W", hl.dsp.exec_cmd("nacrectl ui nacre launcher '>wallpaper '"), {description="Nacre:wallpaper"})
+hl.bind("SUPER + SHIFT + W", hl.dsp.exec_cmd("~/.local/bin/nacre-shell --app widgets"), {description="Nacre:widgets"})
 hl.bind("SUPER + Z", hl.dsp.exec_cmd("nacrectl ui nacre hide"), {})
 hl.bind("SUPER + O", hl.dsp.exec_cmd("nacrectl ui drawers toggle dashboard"), {})
 hl.bind("SUPER + I", hl.dsp.exec_cmd("~/.local/bin/nacre-settings"), {description="Nacre:settings"})

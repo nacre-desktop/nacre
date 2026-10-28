@@ -1012,6 +1012,17 @@
       },
       {
         "kind": "binding",
+        "keys": "SUPER + SHIFT + W",
+        "action": "application.launch",
+        "parameters": {
+          "command": "~/.local/bin/nacre-shell --app widgets"
+        },
+        "options": {
+          "description": "Nacre:widgets"
+        }
+      },
+      {
+        "kind": "binding",
         "keys": "SUPER + Z",
         "action": "application.launch",
         "parameters": {

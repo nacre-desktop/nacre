@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Nacre Widgets
+GenericName=Desktop Widgets
+Comment=Place and style widgets on your bar and desktop
+Exec=nacre-shell --app widgets
+TryExec=nacre-shell
+Icon=nacre-widgets
+Terminal=false
+StartupWMClass=org.quickshell
+Categories=Utility;Settings;
+Keywords=Nacre;Widgets;Desktop;Bar;

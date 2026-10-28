@@ -86,6 +86,12 @@ def files(root=ROOT):
     result[Path(".local/share/applications/nacre-settings.desktop")] = (
         root / "nacre/desktop/nacre-settings.desktop"
     )
+    result[Path(".local/share/applications/nacre-widgets.desktop")] = (
+        root / "nacre/desktop/nacre-widgets.desktop"
+    )
+    result[Path(".local/share/icons/hicolor/scalable/apps/nacre-widgets.svg")] = (
+        root / "nacre/shell/branding/nacre-widgets.svg"
+    )
     result[Path(".local/share/applications/nacre-terminal.desktop")] = (
         root / "nacre/desktop/nacre-terminal.desktop"
     )

@@ -51,6 +51,10 @@ class UsageKeybindingsTests(unittest.TestCase):
         self.assertEqual(personal.count("(opt-in) |"), 4)
         self.assertIn("Super + Ctrl + Q", personal)
 
+    def test_widgets_shortcut_is_labelled_in_the_generated_shortcut_list(self):
+        text = docs.generate(docs.load())
+        self.assertIn("Super + Shift + W | Widgets", text)
+
     def test_contract_change_changes_docs(self):
         contract = copy.deepcopy(docs.load())
         for rows in contract["outputs"].values():

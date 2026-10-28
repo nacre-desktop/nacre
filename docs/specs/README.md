@@ -10,6 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 19 | [N0090 Nacre Widgets app entry](0090-widgets-app-entry.md) | Done; full Arch desktop CI replica passed on dev-1 | Launcher entry and SVG icon installed through configure; Super+Shift+W is in generated config and shortcut list. |
 | 18 | [N0136 daemon previous wallpaper](0136-small-parity.md) | Implemented; full Arch desktop CI equivalent passed | Adopt the published optional `wallpaper.active.previous_available` and `wallpaper.previous {}` contract in Bead B0136. |
 | 18 | [N0069 Bead wallpaper](0069-bead-mode-wallpaper.md) | Done | Versioned helpers, private video/pause/resume, full Arch desktop CI and safely masked real-systemd lifecycle rehearsal passed. Earlier incident closed by lead: no effective host change. CPU/decoder-path finding and unmasked packaging-CI follow-up recorded; no renderer fix or live install. |
 | 18 | [N0070 wallpaper picker catalogue](0070-wallpaper-catalogue.md) | Implemented for Bead B0100; pending lead review | Request-lifetime `wallpaper.catalogue {}` and additive `wallpaper.activate {revision,id}` use the existing wallpaper-media cache and selector; no startup enumeration or catalogue subscription. |

@@ -95,6 +95,18 @@ class NiriConfigTests(unittest.TestCase):
         self.assertTrue(any("window.pin" in row["reason"] for row in unsupported))
         self.assertTrue(any("pointer" in row["reason"] for row in unsupported))
 
+    def test_widgets_binding_is_generated_without_replacing_wallpaper_shortcut(self):
+        text = config.render(config.load(), backend="niri")["niri/bindings.kdl"]
+        self.assertIn(
+            'Super+Shift+W repeat=false hotkey-overlay-title="Nacre:widgets" '
+            '{ spawn-sh "~/.local/bin/nacre-shell --app widgets"; }',
+            text,
+        )
+        self.assertIn(
+            'Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper"', text
+        )
+        self.assertEqual(text.count("Super+Shift+W "), 1)
+
     def test_pearl_rule_and_orient_colors_do_not_replace_user_settings(self):
         rules = config.render(config.load(), backend="niri")["niri/window-rules.kdl"]
         self.assertIn("Nacre Pearl (Launcher|Dashboard|AI|Controls|Media)", rules)

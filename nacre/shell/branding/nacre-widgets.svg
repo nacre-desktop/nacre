@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="nacre-widgets" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D8BFFF"/>
+      <stop offset="0.52" stop-color="#9AA9FF"/>
+      <stop offset="1" stop-color="#73D5E7"/>
+    </linearGradient>
+    <linearGradient id="nacre-widgets-highlight" x1="18" y1="11" x2="48" y2="53" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.06"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#nacre-widgets)" stroke="#FFFFFF" stroke-opacity="0.44" stroke-width="1.2">
+    <rect x="7" y="7" width="23" height="23" rx="7"/>
+    <rect x="34" y="7" width="23" height="23" rx="7"/>
+    <rect x="7" y="34" width="23" height="23" rx="7"/>
+    <rect x="34" y="34" width="23" height="23" rx="7"/>
+  </g>
+  <g fill="url(#nacre-widgets-highlight)">
+    <rect x="7" y="7" width="23" height="23" rx="7"/>
+    <rect x="34" y="7" width="23" height="23" rx="7"/>
+    <rect x="7" y="34" width="23" height="23" rx="7"/>
+    <rect x="34" y="34" width="23" height="23" rx="7"/>
+  </g>
+</svg>

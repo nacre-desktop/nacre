@@ -1161,6 +1161,19 @@
     {
       "action": {
         "args": [
+          "~/.local/bin/nacre-shell --app widgets"
+        ],
+        "method": "exec_cmd"
+      },
+      "flags": {
+        "description": "Nacre:widgets"
+      },
+      "keys": "SUPER + SHIFT + W",
+      "submap": ""
+    },
+    {
+      "action": {
+        "args": [
           "~/.local/bin/nacre-shell hide"
         ],
         "method": "exec_cmd"

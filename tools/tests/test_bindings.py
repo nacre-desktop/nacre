@@ -80,7 +80,7 @@ class BindingContractTests(unittest.TestCase):
                 changed += 1
         self.assertEqual(changed, 11)
         self.assertEqual(normalize(actual), normalize(migrated))
-        self.assertEqual(len(actual), 93)
+        self.assertEqual(len(actual), 94)
 
     def test_defaults_have_no_conflicts_or_personal_app_commands(self):
         root = TOOLS.parent

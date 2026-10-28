@@ -32,6 +32,7 @@ LABELS = {
     "overview": "Window overview",
     "clipboard": "Clipboard history",
     "wallpaper": "Wallpaper picker",
+    "widgets": "Widgets",
     "settings": "Nacre Settings",
     "power": "Power menu",
     "terminal": "Default terminal",

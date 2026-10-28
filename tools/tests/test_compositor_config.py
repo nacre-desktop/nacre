@@ -54,13 +54,20 @@ class CompositorConfigTests(unittest.TestCase):
                     source.write_text(generated[path])
                     actual = capture(source, "declarations")
                     if path in defaults:
+                        historical_defaults = defaults[path]
+                        if path == "hypr/conf/keybinding.lua":
+                            historical_defaults = [
+                                row
+                                for row in historical_defaults
+                                if row["keys"] != "SUPER + SHIFT + W"
+                            ]
                         self.assertEqual(
                             [
                                 row["value"]
                                 for row in actual
                                 if row["kind"] == "binding"
                             ],
-                            defaults[path],
+                            historical_defaults,
                         )
                         actual = [row for row in actual if row["kind"] != "binding"]
                         expected = [row for row in expected if row["kind"] != "binding"]
