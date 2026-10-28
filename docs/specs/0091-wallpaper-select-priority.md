@@ -1,6 +1,8 @@
 # N0091 — Keep wallpaper activation responsive during background warming
 
-Status: candidate; final warm/cold Bead acceptance and Nacre desktop CI pending.
+Status: implementation and Nacre desktop CI pass. Publication remains held for
+the corrected repeated-open Bead acceptance and its downstream selection/idle
+gates.
 
 ## Problem
 
@@ -31,9 +33,10 @@ and a normal-day cache seed; it is diagnostic evidence, not final acceptance.
 
 | Check | Result |
 |---|---|
+| Nacre desktop CI | PASS: `N0091_DESKTOP_CI_OK` on `71b1ff35037d7f67d5ff29b7283d54ad176cbc3a` |
+| Bead repeated-open route | Pending corrected three-open same-session capture; lead reports 4.0–4.6 s on every open on stable Bead `900369fb` and `86efa7e8` |
 | Bead warm-cache selection-to-presented aggregate p95 <120 ms | Pending final `--wallpaper-live` rerun |
 | Bead first-content frame: warm <150 ms, empty cache <300 ms | Pending final paired arms |
 | Bead shell CPU returns to idle within 2 s after close | Pending final TID-summed run |
-| Nacre desktop CI | Pending |
 
 No cache schema, protocol, or security boundary changes.
