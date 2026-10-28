@@ -422,14 +422,20 @@ def refresh_session(installed):
         raise RuntimeError("The installed Nacre helper is unavailable")
     from niri_session_refresh import backend_root, refresh
 
-    backend = backend_root(
-        installed if (installed / "package.json.installed").is_file() else None,
-        home=HOME,
-    )
+    package_root = None
+    if (installed / "package.json.installed").is_file() and Path(
+        __file__
+    ).resolve().is_relative_to(installed.resolve()):
+        package_root = installed
+    backend = backend_root(home=HOME, package_root=package_root)
+    command = [str(helper), "niri-session-runtime", "--backend", str(backend)]
+    if (session / "stock-niri").is_file():
+        command.append("--stock-niri")
+    command.append("prepare")
     backup = refresh(
         session,
         lambda: subprocess.run(
-            [str(helper), "niri-session-runtime", "--backend", str(backend), "prepare"],
+            command,
             check=True,
         ),
         (

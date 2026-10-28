@@ -393,7 +393,7 @@ pub fn stage(
     copy_tree(
         &repo.join("nacre/shell-tools"),
         &shell.join("tools"),
-        &["tests", "__pycache__", "nacre-helper"],
+        &["tests", "__pycache__", "nacre-helper", "backend"],
     )?;
     copied(helper, &shell.join("tools/nacre-helper"))?;
     let units = destination.join(".config/systemd/user");

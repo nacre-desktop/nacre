@@ -18,21 +18,141 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    @unittest.skipUnless(
+        os.environ.get("NACRE_HELPER_BINARY"),
+        "desktop CI supplies the candidate native helper",
+    )
+    def test_session_refresh_survives_checkout_removal_and_regenerates_volume_keys(
+        self,
+    ):
+        from importlib.util import module_from_spec, spec_from_file_location
+
+        root = Path(__file__).parents[2]
+        install_spec = spec_from_file_location(
+            "session_install", root / "nacre/shell-tools/install.py"
+        )
+        installer = module_from_spec(install_spec)
+        install_spec.loader.exec_module(installer)
+
+        with tempfile.TemporaryDirectory() as folder:
+            temp = Path(folder)
+            home = temp / "home"
+            checkout = temp / "checkout-a"
+            checkout.mkdir()
+            for name in (
+                "ai/systemd",
+                "bin",
+                "brain",
+                "fastfetch",
+                "fish",
+                "hypr",
+                "kitty",
+                "nacre/desktop",
+                "nacre/shell",
+                "nacre/shell-tools",
+                "niri",
+                "tools/patches",
+                "uwsm",
+            ):
+                source = root / name
+                if source.is_dir():
+                    shutil.copytree(
+                        source,
+                        checkout / name,
+                        ignore=shutil.ignore_patterns("tests", "__pycache__"),
+                    )
+            shutil.copy2(root / "VERSION", checkout / "VERSION")
+
+            shell = home / ".local/share/nacre/shell"
+            tools = shell / "tools"
+            shutil.copytree(checkout / "nacre/shell", shell / "source")
+            shutil.copytree(checkout / "nacre/shell-tools", tools)
+            helper = Path(os.environ["NACRE_HELPER_BINARY"])
+            shutil.copy2(helper, tools / "nacre-helper")
+            with (
+                patch.object(installer, "DEST", shell),
+                patch.object(
+                    installer, "repo_revision", return_value="installed-revision"
+                ),
+            ):
+                installer.install_session_backend(checkout)
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "CONTROL", home / ".local/share/nacre/control"),
+            ):
+                m.install_controller(root)
+
+            # A prior deploy marker is intentionally stale and must be ignored.
+            (tools / "nacre-backend-root").write_text(str(checkout) + "\n")
+            session = home / ".local/share/nacre/niri-on-pc/session"
+            (session / "config").mkdir(parents=True)
+            (session / "source-revision").write_text("old-revision\n")
+            (session / "config/config.kdl").write_text("old generated config\n")
+            (session / "stock-niri").write_text("stock Niri\n")
+            config = home / ".config/nacre"
+            config.mkdir(parents=True)
+            (config / "profile.json").write_text(
+                (root / "profiles/default.json").read_text()
+            )
+            (config / "desktop.json").write_text("{}\n")
+            (config / "niri").mkdir(parents=True)
+            (config / "niri/custom.kdl").write_text("// no volume overrides\n")
+            state = home / ".local/state/nacre"
+            state.mkdir(parents=True)
+            (state / "scheme.json").write_text(
+                '{"colours":{"primary":"#112233","secondary":"#445566",'
+                '"outlineVariant":"#778899","error":"#aabbcc"}}\n'
+            )
+
+            shutil.rmtree(checkout)
+            self.assertFalse(checkout.exists())
+            environment = dict(os.environ)
+            environment.update(
+                HOME=str(home),
+                XDG_CONFIG_HOME=str(home / ".config"),
+                XDG_STATE_HOME=str(home / ".local/state"),
+                XDG_CACHE_HOME=str(home / ".cache"),
+            )
+            for name in (
+                "NIRI_SOCKET",
+                "PYTHONPATH",
+                "NACRE_HELPER_TOOLS",
+                "NACRE_COMPOSITOR",
+                "NACRE_COMPOSITOR_TOOLS",
+            ):
+                environment.pop(name, None)
+            refreshed = subprocess.run(
+                [str(home / ".local/bin/nacre"), "session", "refresh"],
+                env=environment,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(
+                refreshed.returncode, 0, refreshed.stdout + refreshed.stderr
+            )
+            self.assertIn("Niri session refreshed and validated", refreshed.stdout)
+
+            generated = (session / "config/bindings.kdl").read_text()
+            self.assertIn("XF86AudioRaiseVolume", generated)
+            self.assertIn("XF86AudioLowerVolume", generated)
+            self.assertIn("nacrectl key-step audio.step", generated)
+            self.assertIn(
+                "installed-revision", (session / "source-revision").read_text()
+            )
+
     def test_session_refresh_validates_reloads_and_keeps_previous_tree(self):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder) / "home"
             session = home / ".local/share/nacre/niri-on-pc/session"
             session.mkdir(parents=True)
             (session / "source-revision").write_text("old\n")
+            (session / "stock-niri").write_text("stock Niri\n")
             config = session / "config/config.kdl"
             config.parent.mkdir()
             config.write_text("previous config\n")
             helper = home / ".local/share/nacre/shell/tools/nacre-helper"
             helper.parent.mkdir(parents=True)
             helper.touch()
-            (helper.parent / "nacre-backend-root").write_text(
-                str(Path(__file__).parents[2]) + "\n"
-            )
             calls = []
 
             def run(command, check):
@@ -61,7 +181,11 @@ class ReleaseTests(unittest.TestCase):
                     ["compositor", "action"],
                 ],
             )
-            self.assertEqual(calls[0][-2], str(Path(__file__).parents[2]))
+            self.assertEqual(
+                calls[0][calls[0].index("--backend") + 1],
+                str(home / ".local/share/nacre/shell/tools/backend"),
+            )
+            self.assertIn("--stock-niri", calls[0])
 
     def test_session_refresh_failure_restores_files_in_place(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -76,9 +200,6 @@ class ReleaseTests(unittest.TestCase):
             helper = home / ".local/share/nacre/shell/tools/nacre-helper"
             helper.parent.mkdir(parents=True)
             helper.touch()
-            (helper.parent / "nacre-backend-root").write_text(
-                str(Path(__file__).parents[2]) + "\n"
-            )
 
             def fail(command, check):
                 config.write_text("partial config\n")

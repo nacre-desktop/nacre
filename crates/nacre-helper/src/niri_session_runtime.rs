@@ -720,18 +720,23 @@ pub fn prepare(backend: &Path, destination: &Path, paths: &Paths, stock: bool) -
     if !stock && destination.join("stock-niri").exists() {
         fs::remove_file(destination.join("stock-niri"))?;
     }
-    let revision = crate::process::checked(
-        "git",
-        &[
-            "-C".into(),
-            backend.to_string_lossy().into_owned(),
-            "rev-parse".into(),
-            "HEAD".into(),
-        ],
-        None,
-        Duration::from_secs(10),
-    )?;
-    fs::write(destination.join("source-revision"), revision.stdout)?;
+    let revision = if backend.join("nacre-backend-revision").is_file() {
+        fs::read(backend.join("nacre-backend-revision"))?
+    } else {
+        crate::process::checked(
+            "git",
+            &[
+                "-C".into(),
+                backend.to_string_lossy().into_owned(),
+                "rev-parse".into(),
+                "HEAD".into(),
+            ],
+            None,
+            Duration::from_secs(10),
+        )?
+        .stdout
+    };
+    fs::write(destination.join("source-revision"), revision)?;
     Ok(())
 }
 

@@ -294,12 +294,61 @@ def niri_session_refresh_plan():
         str(DEST / "tools/nacre-helper"),
         "niri-session-runtime",
         "--backend",
-        str(session_refresh.backend_root(ROOT.parent.parent)),
+        str(session_refresh.backend_root(home=HOME)),
     ]
     if stock:
         command.append("--stock-niri")
     command.append("prepare")
     return current[:12] + " -> " + revision[:12], command, stock
+
+
+def install_session_backend(source_root):
+    """Install the session inputs beside the shell tools, independent of checkout."""
+    source_root = Path(source_root)
+    tools = DEST / "tools"
+    backend = tools / "backend"
+    pending = tools / "backend.next"
+    if pending.exists():
+        shutil.rmtree(pending)
+    (pending / "nacre").mkdir(parents=True)
+    (pending / "nacre/shell-tools").symlink_to("../..")
+    (pending / "nacre/shell").symlink_to("../../../source")
+    for name in (
+        "hypr",
+        "kitty",
+        "fastfetch",
+        "fish",
+        "uwsm",
+        "bin",
+        "brain",
+        "niri",
+    ):
+        source = source_root / name
+        if source.is_dir():
+            shutil.copytree(source, pending / name, symlinks=True)
+    source = source_root / "nacre/desktop"
+    if source.is_dir():
+        shutil.copytree(source, pending / "nacre/desktop", symlinks=True)
+    source = source_root / "ai/systemd"
+    if source.is_dir():
+        shutil.copytree(source, pending / "ai/systemd", symlinks=True)
+    source = source_root / "tools/patches/niri-26.04-overview-hover.patch"
+    if source.is_file():
+        (pending / "tools/patches").mkdir(parents=True)
+        shutil.copy2(source, pending / "tools/patches" / source.name)
+    source = source_root / "tools/build-helper.sh"
+    if source.is_file():
+        (pending / "tools").mkdir(exist_ok=True)
+        shutil.copy2(source, pending / "tools/build-helper.sh")
+    version = source_root / "VERSION"
+    if version.is_file():
+        shutil.copy2(version, pending / "VERSION")
+    revision = repo_revision()
+    if revision:
+        (pending / "nacre-backend-revision").write_text(revision + "\n")
+    if backend.exists():
+        shutil.rmtree(backend)
+    pending.rename(backend)
 
 
 def print_niri_plan(plan):
@@ -862,12 +911,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "tests", "nacre-helper"),
     )
-    (DEST / "tools/nacre-backend-root").write_text(
-        str(session_refresh.backend_root(ROOT.parent.parent)) + "\n"
-    )
     target = DEST / "tools/nacre-helper"
     previous_helper = save_previous_helper(helper, target) if code_only else None
     install_native_helper(helper, target)
+    install_session_backend(ROOT.parent.parent)
+    (DEST / "tools/nacre-backend-root").unlink(missing_ok=True)
     install_daemon_links(target)
     if code_only:
         install_user_client_links()

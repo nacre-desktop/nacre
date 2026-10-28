@@ -5,21 +5,15 @@ import tempfile
 from pathlib import Path
 
 
-def backend_root(source_root=None, *, home=None):
-    """Find the backend tree used to generate a session config."""
-    if source_root is not None:
-        return Path(source_root)
+def backend_root(*, home=None, package_root=None):
+    """Find the installed backend tree used to generate a session config."""
+    if (
+        package_root is not None
+        and (Path(package_root) / "package.json.installed").is_file()
+    ):
+        return Path(package_root)
     home = Path.home() if home is None else Path(home)
-    marker = home / ".local/share/nacre/shell/tools/nacre-backend-root"
-    if marker.is_file():
-        return Path(marker.read_text().strip())
-    package = Path("/usr/share/nacre")
-    if (package / "package.json.installed").is_file():
-        return package
-    compositor = home / ".local/share/nacre/shell/tools/nacre_native_compositor.py"
-    if compositor.is_file():
-        return compositor.resolve().parents[2]
-    raise RuntimeError("The installed Nacre backend tree is unavailable")
+    return home / ".local/share/nacre/shell/tools/backend"
 
 
 def restore_tree(source, target):
