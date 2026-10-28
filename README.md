@@ -30,6 +30,7 @@ needed.
 - **Detachable panels:** lift supported panels into ordinary windows.
 - **Optional AI and Brain:** conversations and a private Markdown knowledge browser;
   the core desktop works without either.
+- **Niri session refresh:** `nacre session refresh` validates and reloads the prepared session.
 
 The default profile shows five workspaces, with no personal startup apps or window
 assignments. Choose your own defaults through [configuration](docs/configuration.md).

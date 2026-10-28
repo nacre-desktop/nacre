@@ -21,6 +21,7 @@ sys.dont_write_bytecode = True
 from nacre_i18n import tr  # noqa: E402
 import nacre_state as _state  # noqa: E402
 import nacre_native_compositor as compositor  # noqa: E402
+import niri_session_refresh as session_refresh  # noqa: E402
 
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
@@ -293,7 +294,7 @@ def niri_session_refresh_plan():
         str(DEST / "tools/nacre-helper"),
         "niri-session-runtime",
         "--backend",
-        str(ROOT.parent.parent),
+        str(session_refresh.backend_root(ROOT.parent.parent)),
     ]
     if stock:
         command.append("--stock-niri")
@@ -321,42 +322,17 @@ def print_niri_plan(plan):
     )
 
 
-def restore_session_tree(source, target):
-    """Restore files without replacing directories held by running bind mounts."""
-    target.mkdir(parents=True, exist_ok=True)
-    for item in source.iterdir():
-        destination = target / item.name
-        if item.is_dir():
-            restore_session_tree(item, destination)
-        else:
-            with tempfile.NamedTemporaryFile(dir=target, delete=False) as temporary:
-                name = Path(temporary.name)
-            try:
-                shutil.copy2(item, name)
-                name.replace(destination)
-            finally:
-                name.unlink(missing_ok=True)
-    for item in target.iterdir():
-        if not (source / item.name).exists():
-            shutil.rmtree(item) if item.is_dir() else item.unlink()
-    shutil.copystat(source, target)
-
-
 def refresh_niri_session(plan):
     _, command, _ = plan
-    # Old installers moved the bound view into session.previous. Never delete
-    # that legacy tree: a running compositor may still hold its directory inode.
-    backup = niri_session().with_name("session.rollback")
-    if backup.exists():
-        shutil.rmtree(backup)
-    shutil.copytree(niri_session(), backup)
     try:
-        subprocess.run(command, check=True)
-        if os.environ.get("NIRI_SOCKET"):
-            compositor().reload(timeout=None)
+        backup = session_refresh.refresh(
+            niri_session(),
+            lambda: subprocess.run(command, check=True),
+            (lambda: compositor.reload(timeout=None))
+            if os.environ.get("NIRI_SOCKET")
+            else None,
+        )
     except BaseException:
-        restore_session_tree(backup, niri_session())
-        shutil.rmtree(backup)
         print(
             "Niri session preparation failed; the previous session config was restored.",
             file=sys.stderr,
@@ -885,6 +861,9 @@ def deploy(code_only=False, retire_niri_experiment=False):
         DEST / "tools",
         dirs_exist_ok=True,
         ignore=shutil.ignore_patterns("__pycache__", "tests", "nacre-helper"),
+    )
+    (DEST / "tools/nacre-backend-root").write_text(
+        str(session_refresh.backend_root(ROOT.parent.parent)) + "\n"
     )
     target = DEST / "tools/nacre-helper"
     previous_helper = save_previous_helper(helper, target) if code_only else None

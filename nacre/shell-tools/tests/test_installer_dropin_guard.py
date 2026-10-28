@@ -706,11 +706,11 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
         with (
             patch.object(installer.subprocess, "run", side_effect=prepare),
-            patch.object(installer, "compositor") as compositor,
+            patch.object(installer.compositor, "reload") as reload,
             patch.dict(os.environ, {"NIRI_SOCKET": "fixture.sock"}),
         ):
             installer.refresh_niri_session(plan)
-        compositor.return_value.reload.assert_called_once_with(timeout=None)
+        reload.assert_called_once_with(timeout=None)
         self.assertEqual((session / "config/config.kdl").read_text(), "new config\n")
         previous = session.with_name("session.rollback")
         self.assertEqual((previous / "config/config.kdl").read_text(), "old config\n")

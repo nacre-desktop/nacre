@@ -412,27 +412,6 @@ def session_parser():
     return parser
 
 
-def restore_session_tree(source, target):
-    """Restore files in place so a running bind mount keeps its directory inode."""
-    target.mkdir(parents=True, exist_ok=True)
-    for item in source.iterdir():
-        destination = target / item.name
-        if item.is_dir():
-            restore_session_tree(item, destination)
-        else:
-            fd, name = tempfile.mkstemp(prefix="." + item.name + ".", dir=target)
-            os.close(fd)
-            temporary = Path(name)
-            try:
-                shutil.copy2(item, temporary)
-                os.replace(temporary, destination)
-            finally:
-                temporary.unlink(missing_ok=True)
-    for item in target.iterdir():
-        if not (source / item.name).exists():
-            shutil.rmtree(item) if item.is_dir() else item.unlink()
-
-
 def refresh_session(installed):
     """Regenerate, validate, and reload the already-prepared private Niri session."""
     session = HOME / ".local/share/nacre/niri-on-pc/session"
@@ -441,27 +420,26 @@ def refresh_session(installed):
     helper = HOME / ".local/share/nacre/shell/tools/nacre-helper"
     if not helper.is_file():
         raise RuntimeError("The installed Nacre helper is unavailable")
-    backup = session.with_name("session.rollback")
-    if backup.exists():
-        shutil.rmtree(backup)
-    shutil.copytree(session, backup)
-    try:
-        subprocess.run(
-            [
-                str(helper),
-                "niri-session-runtime",
-                "--backend",
-                str(installed),
-                "prepare",
-            ],
+    from niri_session_refresh import backend_root, refresh
+
+    backend = backend_root(
+        installed if (installed / "package.json.installed").is_file() else None,
+        home=HOME,
+    )
+    backup = refresh(
+        session,
+        lambda: subprocess.run(
+            [str(helper), "niri-session-runtime", "--backend", str(backend), "prepare"],
             check=True,
+        ),
+        (
+            lambda: subprocess.run(
+                [str(helper), "compositor", "action", "reload"], check=True
+            )
         )
-        if os.environ.get("NIRI_SOCKET"):
-            subprocess.run([str(helper), "compositor", "action", "reload"], check=True)
-    except BaseException:
-        restore_session_tree(backup, session)
-        shutil.rmtree(backup)
-        raise
+        if os.environ.get("NIRI_SOCKET")
+        else None,
+    )
     print("Niri session refreshed and validated; previous files kept at " + str(backup))
 
 

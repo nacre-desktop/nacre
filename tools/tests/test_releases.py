@@ -30,6 +30,9 @@ class ReleaseTests(unittest.TestCase):
             helper = home / ".local/share/nacre/shell/tools/nacre-helper"
             helper.parent.mkdir(parents=True)
             helper.touch()
+            (helper.parent / "nacre-backend-root").write_text(
+                str(Path(__file__).parents[2]) + "\n"
+            )
             calls = []
 
             def run(command, check):
@@ -58,6 +61,7 @@ class ReleaseTests(unittest.TestCase):
                     ["compositor", "action"],
                 ],
             )
+            self.assertEqual(calls[0][-2], str(Path(__file__).parents[2]))
 
     def test_session_refresh_failure_restores_files_in_place(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -72,6 +76,9 @@ class ReleaseTests(unittest.TestCase):
             helper = home / ".local/share/nacre/shell/tools/nacre-helper"
             helper.parent.mkdir(parents=True)
             helper.touch()
+            (helper.parent / "nacre-backend-root").write_text(
+                str(Path(__file__).parents[2]) + "\n"
+            )
 
             def fail(command, check):
                 config.write_text("partial config\n")
