@@ -859,3 +859,5 @@ implementer live probe or push.
 
 Correction validation: 26 switch tests and 16 release tests pass on the dedicated
 SSH test host; configure and its test exactly match pre-extension 68d28945.
+
+2026-10-28: [N0089 wallpaper.activate without the publication flock](0089-wallpaper-activate-no-flock.md) — fixes lost picker selections (B0171).

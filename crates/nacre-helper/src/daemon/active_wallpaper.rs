@@ -1058,27 +1058,22 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
             .fetch_add(1, Ordering::AcqRel)
             .wrapping_add(1);
         let generation_file = paths.state.join("wallpaper/current-selection-generation");
-        let _publication = crate::classic_state::publication_lock(&paths).map_err(|_| {
+        // N0089: never take the publication flock here. This runs on the daemon's single event
+        // loop, and a running `wallpaper-media select` child holds that lock while it waits
+        // for this same loop (B0171 nested repro: every selection after the first stalled for
+        // seconds with the daemon parked in flock). The rename in `atomic` is already atomic,
+        // and the children re-check the generation under the lock before they publish.
+        crate::files::atomic(&generation_file, generation.to_string().as_bytes()).map_err(|_| {
             failure(
                 ErrorCode::Unavailable,
                 "Wallpaper selection could not be queued",
                 true,
             )
         })?;
-        crate::files::atomic(&generation_file, generation.to_string().as_bytes()).map_err(
-            |_| {
-                failure(
-                    ErrorCode::Unavailable,
-                    "Wallpaper selection could not be queued",
-                    true,
-                )
-            },
-        )?;
         ASYNC_SELECTION_BUSY.with(|busy| busy.set(Some(generation)));
         if let Err(error) = refresh_previous_availability(&hub) {
             eprintln!("Wallpaper selection availability refresh failed: {error}");
         }
-        drop(_publication);
         SELECTION_TASK.with(|slot| {
             let previous = slot.borrow_mut().take();
             if let Some(previous) = &previous {
