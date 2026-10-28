@@ -74,7 +74,7 @@ impl Context {
             .get()
             .ok_or("Launcher candidates are unavailable")?;
         let mut dynamic: Vec<_> = self
-            .global_dynamic_without_emoji(&term)
+            .global_dynamic_without_emoji(&term)?
             .into_iter()
             .map(|row| Arc::new(Candidate::new(row)))
             .collect();

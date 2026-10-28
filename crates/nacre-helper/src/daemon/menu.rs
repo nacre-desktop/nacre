@@ -75,6 +75,10 @@ impl Requests {
     }
 }
 pub fn methods() -> BTreeMap<String, Method> {
+    static METHODS: std::sync::OnceLock<BTreeMap<String, Method>> = std::sync::OnceLock::new();
+    METHODS.get_or_init(build_methods).clone()
+}
+fn build_methods() -> BTreeMap<String, Method> {
     let mut methods = BTreeMap::new();
     for (name, schema, result) in [
         (
@@ -1955,8 +1959,8 @@ fn apply_preferences(engine: &mut Engine, result: &Value) -> std::result::Result
     Ok(())
 }
 
-// Only these compositor fields affect launcher results. Focus/geometry changes
-// must not rebuild the installed-app/software/font index on the next keypress.
+// Window actions are query-dynamic, so title/workspace publications do not
+// invalidate the prepared installed-app/software/font candidate index.
 fn compositor_inputs(context: &mut Context, snapshot: &Value) {
     let source_windows: Vec<_> = array(&snapshot["windowOrder"])
         .iter()
@@ -1968,10 +1972,7 @@ fn compositor_inputs(context: &mut Context, snapshot: &Value) {
         .collect();
     let windows:Vec<_>=source_windows.iter().map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
     let next = json!({"windows":windows});
-    if context.compositor != next {
-        context.inputs_changed();
-        context.compositor = next;
-    }
+    context.compositor = next;
 }
 // The existing view requests conversion only for lowercase whole words to/in.
 fn conversion_query(term: &str) -> bool {
@@ -2748,11 +2749,14 @@ mod tests {
             json!({"query":"caption","mode":"apps"}),
         )?)?;
         let original = engine.loaded.context.compositor.clone();
+        assert!(engine.loaded.context.queries_prepared());
         snapshot["windows"]["1"]["isFocused"] = json!(true);
         compositor_inputs(&mut engine.loaded.context, &snapshot);
         assert_eq!(original, engine.loaded.context.compositor);
+        assert!(engine.loaded.context.queries_prepared());
         snapshot["windows"]["1"]["title"] = json!("Updated unique caption");
         compositor_inputs(&mut engine.loaded.context, &snapshot);
+        assert!(engine.loaded.context.queries_prepared());
         let result = engine.query(serde_json::from_value(
             json!({"query":"updated unique caption","mode":"apps"}),
         )?)?;

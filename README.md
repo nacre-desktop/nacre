@@ -32,6 +32,7 @@ needed.
 - **Optional AI and Brain:** conversations and a private Markdown knowledge browser;
   the core desktop works without either.
 - **Niri session refresh:** `nacre session refresh` validates and reloads the prepared session from the installed backend, so source checkout moves do not break refresh.
+- **Idle daemon:** launcher indexes stay prepared across compositor window updates, and method catalogues and executable availability are cached.
 
 The default profile shows five workspaces, with no personal startup apps or window
 assignments. Choose your own defaults through [configuration](docs/configuration.md).

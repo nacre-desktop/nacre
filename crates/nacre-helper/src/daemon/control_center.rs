@@ -21,7 +21,7 @@ use serde_json::{json, Value};
 use std::{
     cell::Cell,
     cell::RefCell,
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     process::Stdio,
     sync::Arc,
@@ -109,16 +109,30 @@ pub fn changed() {
     REFRESH.with(|notify| notify.notify_one());
 }
 
-fn executable(program: &str) -> bool {
+pub(crate) fn executable(program: &str) -> bool {
+    use std::sync::{Mutex, OnceLock};
+    static CACHE: OnceLock<Mutex<(std::ffi::OsString, HashMap<String, bool>)>> = OnceLock::new();
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let cache = CACHE.get_or_init(|| Mutex::new((path.clone(), HashMap::new())));
+    let mut cache = cache.lock().expect("executable cache poisoned");
+    if cache.0 != path {
+        cache.0 = path.clone();
+        cache.1.clear();
+    }
+    if let Some(found) = cache.1.get(program) {
+        return *found;
+    }
     use std::os::unix::fs::PermissionsExt;
     let usable = |path: &Path| {
         path.is_file() && std::fs::metadata(path).is_ok_and(|m| m.permissions().mode() & 0o111 != 0)
     };
-    if program.contains('/') {
-        return usable(Path::new(program));
-    }
-    std::env::var_os("PATH")
-        .is_some_and(|path| std::env::split_paths(&path).any(|dir| usable(&dir.join(program))))
+    let found = if program.contains('/') {
+        usable(Path::new(program))
+    } else {
+        std::env::split_paths(&path).any(|dir| usable(&dir.join(program)))
+    };
+    cache.1.insert(program.to_owned(), found);
+    found
 }
 fn socket_present(path: &Path) -> bool {
     use std::os::unix::fs::FileTypeExt;

@@ -48,6 +48,7 @@ def switches(pid):
     tasks = list(Path(f"/proc/{pid}/task").iterdir())
     return dict(
         voluntary=int(values["voluntary_ctxt_switches"]),
+        nonvoluntary=int(values["nonvoluntary_ctxt_switches"]),
         state=values["State"][0],
         threads=len(tasks),
     )
@@ -480,11 +481,9 @@ def measure(tools, env, options, output):
             and (after["pswpin"] - before["pswpin"]) * os.sysconf("SC_PAGE_SIZE")
             < 1_048_576
         )
-        cycles_valid = (
-            first["state"] == last["state"] == "S"
-            and first["threads"] == last["threads"] == 2
-            and max(threads) == 2
-        )
+        cycles_valid = first["state"] == last["state"] == "S" and first[
+            "threads"
+        ] == last["threads"] == max(threads)
         idle = dict(
             seconds=elapsed,
             valid=valid,
@@ -500,6 +499,8 @@ def measure(tools, env, options, output):
             wake_sleep_cycles=last["voluntary"] - first["voluntary"]
             if cycles_valid
             else None,
+            voluntary_context_switches=last["voluntary"] - first["voluntary"],
+            nonvoluntary_context_switches=last["nonvoluntary"] - first["nonvoluntary"],
             wakeup_method="Process voluntary switches with the local runtime and fast-lane thread sleeping; sleep/wake cycles, not kernel sched_wakeup counter",
             memory_mib={
                 key: statistics.median(row[key] / 1_048_576 for row in memories)

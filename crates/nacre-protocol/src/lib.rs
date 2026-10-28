@@ -158,29 +158,34 @@ pub enum Capability {
 }
 /// The always-present methods; service-specific registries extend this map.
 pub fn core_methods() -> BTreeMap<String, Method> {
-    [
-        ("daemon.status", Capability::Desktop),
-        ("daemon.ping", Capability::Desktop),
-        ("ui.dispatch", Capability::Ui),
-    ]
-    .into_iter()
-    .map(|(name, class)| {
-        (
-            name.into(),
-            Method {
-                v: 1,
-                class,
-                timeout: if class == Capability::Ui {
-                    UI_CALL_TIMEOUT_MS
-                } else {
-                    1000
-                },
-                params: serde_json::json!({"type":"object"}),
-                result: serde_json::json!({}),
-            },
-        )
-    })
-    .collect()
+    static METHODS: std::sync::OnceLock<BTreeMap<String, Method>> = std::sync::OnceLock::new();
+    METHODS
+        .get_or_init(|| {
+            [
+                ("daemon.status", Capability::Desktop),
+                ("daemon.ping", Capability::Desktop),
+                ("ui.dispatch", Capability::Ui),
+            ]
+            .into_iter()
+            .map(|(name, class)| {
+                (
+                    name.into(),
+                    Method {
+                        v: 1,
+                        class,
+                        timeout: if class == Capability::Ui {
+                            UI_CALL_TIMEOUT_MS
+                        } else {
+                            1000
+                        },
+                        params: serde_json::json!({"type":"object"}),
+                        result: serde_json::json!({}),
+                    },
+                )
+            })
+            .collect()
+        })
+        .clone()
 }
 
 fn parameters() -> Value {

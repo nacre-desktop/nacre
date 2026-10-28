@@ -137,15 +137,7 @@ fn socket_present(path: &std::path::Path) -> bool {
 }
 
 fn executable(program: &str) -> bool {
-    use std::os::unix::fs::PermissionsExt;
-    std::env::var_os("PATH").is_some_and(|path| {
-        std::env::split_paths(&path).any(|directory| {
-            let executable = directory.join(program);
-            executable.is_file()
-                && std::fs::metadata(executable)
-                    .is_ok_and(|metadata| metadata.permissions().mode() & 0o111 != 0)
-        })
-    })
+    super::control_center::executable(program)
 }
 
 pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value, Failure> {
