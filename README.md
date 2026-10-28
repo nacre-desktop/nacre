@@ -25,6 +25,7 @@ needed.
 - **One launcher:** apps, actions, settings, clipboard, wallpapers and shortcuts.
 - **Wallpaper colors:** Colors previews palettes and theme exports before applying.
 - **Static and animated wallpapers:** browse your library and choose motion behavior.
+- **Responsive wallpaper selection:** interactive activation takes priority over background warming; see [N0089](docs/specs/0089-wallpaper-activate-no-flock.md) and [N0091](docs/specs/0091-wallpaper-select-priority.md).
 - **Everyday controls:** notifications, audio, network, Bluetooth, capture and locking.
 - **Workspace pearls:** see open windows, focus them and switch workspaces from the bar.
 - **Detachable panels:** lift supported panels into ordinary windows.

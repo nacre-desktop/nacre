@@ -1096,7 +1096,9 @@ pub async fn activate_request(hub: Shared, params: Value) -> std::result::Result
                 }
                 use tokio::process::Command;
                 let child = Command::new("nice")
-                    .args(["-n", "10", "--"])
+                    // This is the foreground selection action. Keep catalogue and
+                    // raster prefetch children lower priority so they yield here.
+                    .args(["-n", "5", "--"])
                     .arg(engine)
                     .args(["wallpaper-media", "select"])
                     .arg(&id)
