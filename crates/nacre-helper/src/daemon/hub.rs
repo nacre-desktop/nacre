@@ -15,6 +15,9 @@ use tokio::sync::{broadcast, oneshot, Notify};
 const QUEUE_BYTES: usize = 2 * 1024 * 1024;
 const BASELINE_BYTES: usize = 8 * 1024 * 1024;
 const TOPIC_BYTES: usize = 32 * 1024 * 1024;
+/// N0096: consecutive ui.dispatch deadlines a live UI provider may miss before
+/// the daemon closes its link, so the shell reconnects and registers again.
+const PROVIDER_MISSES: u32 = 3;
 pub type Shared = Rc<std::cell::RefCell<Hub>>;
 #[derive(Clone, Debug)]
 pub enum Notice {
@@ -82,6 +85,8 @@ pub struct Hub {
     event_seq: BTreeMap<String, u64>,
     pub services: BTreeMap<String, Value>,
     provider: Option<(u64, BTreeMap<String, u16>)>,
+    /// Calls the current provider let reach their deadline since its last reply.
+    provider_misses: u32,
     routes: BTreeMap<Id, PendingRoute>,
     // One contiguous issued range per provider keeps retired-ID memory bounded.
     // An issued ID without an active route has completed or been canceled;
@@ -159,6 +164,7 @@ impl Hub {
             event_seq: BTreeMap::new(),
             services: BTreeMap::new(),
             provider: None,
+            provider_misses: 0,
             routes: BTreeMap::new(),
             issued_provider_routes: None,
             next_route: 0,
@@ -326,17 +332,20 @@ impl Hub {
         Ok((self.next_client, wake))
     }
     pub fn remove_client(&mut self, id: u64) {
-        if self.is_ui_provider(id) {
-            if let Some(notifications) = &self.notifications {
-                notifications.disconnected(id);
-            }
-        }
         if let Some(client) = self.clients.remove(&id) {
             client.wake.notify_one();
         }
         self.refresh_interest();
-        if self.provider.as_ref().is_some_and(|p| p.0 == id) {
+        self.retire_provider(id);
+    }
+    /// Drop `id`'s UI provider role and its in-flight routes; waiters fail fast.
+    fn retire_provider(&mut self, id: u64) {
+        if self.is_ui_provider(id) {
+            if let Some(notifications) = &self.notifications {
+                notifications.disconnected(id);
+            }
             self.provider = None;
+            self.provider_misses = 0;
         }
         self.routes.retain(|_, route| route.provider != id);
         if self
@@ -837,16 +846,19 @@ impl Hub {
                 true,
             ));
         }
-        if self
-            .provider
-            .as_ref()
-            .is_some_and(|provider| provider.0 != id)
-        {
-            return Err(failure(
-                ErrorCode::Busy,
-                "UI provider is already registered",
-                true,
-            ));
+        // N0096: the newest registration wins. During a shell switch the old
+        // shell can still hold its link (or be wedged) while the new one starts;
+        // routing must follow the new shell, never a stale provider id.
+        if let Some(old) = self.provider.as_ref().map(|p| p.0).filter(|old| *old != id) {
+            tracing::info!(
+                old,
+                new = id,
+                "UI provider replaced by a newer registration"
+            );
+            self.retire_provider(old);
+        }
+        if !self.is_ui_provider(id) {
+            self.provider_misses = 0;
         }
         self.provider = Some((id, methods));
         Ok(())
@@ -939,6 +951,9 @@ impl Hub {
             ));
         }
         if let Some(route) = self.routes.remove(id) {
+            if self.is_ui_provider(route.provider) {
+                self.provider_misses = 0;
+            }
             if route.reply.send(reply).is_err() {
                 tracing::debug!(route = ?id, "UI result arrived after caller deadline");
             }
@@ -948,6 +963,20 @@ impl Hub {
     pub fn cancel_route(&mut self, id: &Id) {
         if let Some(route) = self.routes.remove(id) {
             tracing::info!(route = ?id, provider = route.provider, method = %route.method, elapsed_ms = route.started.elapsed().as_millis(), deadline_ms = route.deadline_ms, "UI call timed out or was canceled before reply; action may still complete");
+            // A caller that gave up early is not evidence; a missed deadline is.
+            if self.is_ui_provider(route.provider)
+                && route.started.elapsed() >= Duration::from_millis(route.deadline_ms.into())
+            {
+                self.provider_misses += 1;
+                if self.provider_misses >= PROVIDER_MISSES {
+                    tracing::warn!(
+                        provider = route.provider,
+                        misses = self.provider_misses,
+                        "UI provider stopped answering; closing its link so it re-registers"
+                    );
+                    self.remove_client(route.provider);
+                }
+            }
         }
     }
     fn provider_route_number(&self, id: &Id) -> Option<u64> {
@@ -1210,7 +1239,7 @@ mod tests {
         ));
     }
     #[test]
-    fn oversized_state_and_duplicate_calls_and_second_ui_provider_are_rejected() {
+    fn oversized_state_and_duplicate_calls_are_rejected_and_newest_ui_provider_wins() {
         let (mut hub, id, _) = fixture();
         assert_eq!(
             hub.publish("x", json!({"v":"x".repeat(nacre_protocol::MAX_FRAME)}))
@@ -1225,12 +1254,57 @@ mod tests {
         );
         hub.register(id, BTreeMap::from([("ui.dispatch".into(), 1)]))
             .unwrap();
+        let (route, mut stale) = hub.forward("ui.dispatch", json!({}), None).unwrap();
         let (other, _) = hub.add_client().unwrap();
+        // N0096: a shell switch overlaps the old and the new shell; the newest
+        // registration takes the routing and the old provider's calls fail fast.
+        hub.register(other, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        assert_eq!(hub.provider.as_ref().unwrap().0, other);
+        assert!(stale.try_recv().is_err());
+        assert!(hub.routes.is_empty());
         assert_eq!(
-            hub.register(other, BTreeMap::new()).unwrap_err().code,
-            ErrorCode::Busy
+            hub.answer(id, &route, Reply::Ok { ok: Value::Null })
+                .unwrap_err()
+                .code,
+            ErrorCode::InvalidRequest
         );
-        assert_eq!(hub.provider.as_ref().unwrap().0, id);
+        let (fresh, _) = hub.forward("ui.dispatch", json!({}), None).unwrap();
+        assert_eq!(hub.routes[&fresh].provider, other);
+        // The old shell exiting afterwards does not unregister the new one.
+        hub.remove_client(id);
+        assert_eq!(hub.provider.as_ref().unwrap().0, other);
+    }
+    #[test]
+    fn provider_missing_consecutive_deadlines_is_closed_and_can_reregister() {
+        let (mut hub, provider, _) = fixture();
+        hub.register(provider, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        let miss = |hub: &mut Hub| {
+            let (route, _) = hub.forward("ui.dispatch", json!({}), Some(1)).unwrap();
+            std::thread::sleep(Duration::from_millis(3));
+            hub.cancel_route(&route);
+        };
+        // Early cancels are not misses, and any reply resets the count.
+        let (route, _) = hub.forward("ui.dispatch", json!({}), Some(60_000)).unwrap();
+        hub.cancel_route(&route);
+        miss(&mut hub);
+        miss(&mut hub);
+        let (route, _) = hub.forward("ui.dispatch", json!({}), None).unwrap();
+        hub.answer(provider, &route, Reply::Ok { ok: Value::Null })
+            .unwrap();
+        miss(&mut hub);
+        miss(&mut hub);
+        assert!(hub.has_client(provider));
+        miss(&mut hub);
+        assert!(!hub.has_client(provider));
+        assert!(hub.provider.is_none());
+        // The shell's reconnect registers again and receives calls.
+        let (again, _) = hub.add_client().unwrap();
+        hub.register(again, BTreeMap::from([("ui.dispatch".into(), 1)]))
+            .unwrap();
+        let (route, _) = hub.forward("ui.dispatch", json!({}), None).unwrap();
+        assert_eq!(hub.routes[&route].provider, again);
     }
     #[test]
     fn ui_routes_use_independent_ids_and_disconnect_drops_waiters() {
