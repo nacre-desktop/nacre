@@ -354,7 +354,8 @@ mod tests {
                 },
             }
         );
-        let Ok(crate::daemon::pill_controls::AudioStepCommand::Apply(queued)) = audio_receive.try_recv()
+        let Ok(crate::daemon::pill_controls::AudioStepCommand::Apply(queued)) =
+            audio_receive.try_recv()
         else {
             panic!("queued audio step");
         };
