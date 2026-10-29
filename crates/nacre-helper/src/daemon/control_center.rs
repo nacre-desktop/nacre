@@ -380,11 +380,38 @@ pub async fn dispatch(
             if recording == Some(true) {
                 return Err(busy("A recording is already running"));
             }
-            let name = match request.mode {
-                RecorderMode::Region => "record-start",
-                RecorderMode::Screen => "record-screen",
-            };
-            spawn_capture(&env, &["menu-backend", "tool", name])?;
+            let screen = request.mode == RecorderMode::Screen;
+            match request.audio {
+                // Sound goes through the launcher's recorder (virtual mix, cleaned up on stop).
+                Some(audio @ (RecorderAudio::System | RecorderAudio::Mixed)) => {
+                    let audio = if audio == RecorderAudio::System {
+                        "system"
+                    } else {
+                        "mixed"
+                    };
+                    spawn_capture_with(
+                        &env,
+                        &[
+                            "launcher-workflows",
+                            "record",
+                            if screen { "screen" } else { "area" },
+                        ],
+                        Some(json!({ "audio": audio }).to_string()),
+                    )?;
+                }
+                _ => spawn_capture(
+                    &env,
+                    &[
+                        "menu-backend",
+                        "tool",
+                        if screen {
+                            "record-screen"
+                        } else {
+                            "record-start"
+                        },
+                    ],
+                )?,
+            }
             json!({"changed":true})
         }
         "recorder.stop" => {
@@ -801,6 +828,14 @@ fn set_night_light(env: &Env, enabled: bool) -> std::result::Result<bool, Failur
 /// user: the reply means "started"; the tool notifies the user itself and is stopped after
 /// `CAPTURE_LIMIT`. One at a time. The caller closes its own panels first.
 fn spawn_capture(env: &Env, args: &[&str]) -> std::result::Result<(), Failure> {
+    spawn_capture_with(env, args, None)
+}
+/// `spawn_capture` with one JSON document on the tool's stdin (the helper's `input`).
+fn spawn_capture_with(
+    env: &Env,
+    args: &[&str],
+    input: Option<String>,
+) -> std::result::Result<(), Failure> {
     if CAPTURE_BUSY.with(|busy| busy.replace(true)) {
         return Err(busy("A capture tool is already running"));
     }
@@ -808,7 +843,11 @@ fn spawn_capture(env: &Env, args: &[&str]) -> std::result::Result<(), Failure> {
         .args(args)
         // The helper must not talk to the daemon's service-manager socket.
         .env_remove("NOTIFY_SOCKET")
-        .stdin(Stdio::null())
+        .stdin(if input.is_some() {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        })
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .kill_on_drop(true)
@@ -820,7 +859,13 @@ fn spawn_capture(env: &Env, args: &[&str]) -> std::result::Result<(), Failure> {
             return Err(action_error());
         }
     };
+    let stdin = child.stdin.take();
     tokio::task::spawn_local(async move {
+        if let (Some(text), Some(mut stdin)) = (input, stdin) {
+            use tokio::io::AsyncWriteExt;
+            // Dropping the pipe is the helper's end of input.
+            let _ = stdin.write_all(text.as_bytes()).await;
+        }
         if tokio::time::timeout(CAPTURE_LIMIT, child.wait())
             .await
             .is_err()

@@ -5,6 +5,17 @@
   "properties": {
     "mode": {
       "$ref": "#/$defs/RecorderMode"
+    },
+    "audio": {
+      "description": "What to record besides the picture; absent means no sound (the control-centre tile).",
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RecorderAudio"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "additionalProperties": false,
@@ -23,6 +34,25 @@
           "description": "The focused output.",
           "type": "string",
           "const": "screen"
+        }
+      ]
+    },
+    "RecorderAudio": {
+      "oneOf": [
+        {
+          "description": "No sound.",
+          "type": "string",
+          "const": "none"
+        },
+        {
+          "description": "The default output's monitor.",
+          "type": "string",
+          "const": "system"
+        },
+        {
+          "description": "The default output and the default microphone mixed.",
+          "type": "string",
+          "const": "mixed"
         }
       ]
     }

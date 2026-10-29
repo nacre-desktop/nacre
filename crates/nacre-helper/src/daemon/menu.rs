@@ -933,6 +933,20 @@ impl Engine {
             }
             return Ok(json!({"application":entry.data}));
         }
+        let mut row = row;
+        // The owner's search engine (QML `Sources.webUrl(webEngine, ...)`): the UI holds no
+        // source options, so the activated row carries the URL. Over-long queries fall back.
+        if row["operation"] == "search-web" && row.get("webUrl").is_none() {
+            let url = nacre_menu::sources::web_url(
+                self.loaded.context.source_options["webEngine"]
+                    .as_str()
+                    .unwrap_or("duckduckgo"),
+                row["value"].as_str().unwrap_or_default(),
+            );
+            if url.len() <= 8192 {
+                row["webUrl"] = json!(url);
+            }
+        }
         Ok(json!({"uiRow":row,"catalog_rev":self.rev}))
     }
     fn status(&self) -> Value {
@@ -2465,6 +2479,27 @@ mod tests {
             json!({"row":answer["uiRow"],"catalog_rev":engine.rev}),
         )?
         .validate()?;
+        Ok(())
+    }
+    #[test]
+    fn search_web_activation_carries_the_owners_engine() -> Result<()> {
+        let mut engine = engine()?;
+        engine.loaded.context.source_options["webEngine"] = json!("brave");
+        let query = engine.query(serde_json::from_value(
+            json!({"query":"a b&c","mode":"search"}),
+        )?)?;
+        let (id, item) = query["items"]
+            .as_object()
+            .and_then(|items| items.iter().find(|(id, _)| id.ends_with("search-web")))
+            .ok_or("Missing the web search row")?;
+        let request: MenuActivate = serde_json::from_value(json!({
+            "id":id,"activation":item["activation"],"catalog_rev":engine.rev
+        }))?;
+        let answer = engine.activate(request)?;
+        assert_eq!(
+            answer["uiRow"]["webUrl"],
+            "https://search.brave.com/search?q=a%20b%26c"
+        );
         Ok(())
     }
     #[test]

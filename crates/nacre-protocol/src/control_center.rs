@@ -103,6 +103,19 @@ pub enum RecorderMode {
 #[serde(deny_unknown_fields)]
 pub struct RecorderStart {
     pub mode: RecorderMode,
+    /// What to record besides the picture; absent means no sound (the control-centre tile).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub audio: Option<RecorderAudio>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum RecorderAudio {
+    /// No sound.
+    None,
+    /// The default output's monitor.
+    System,
+    /// The default output and the default microphone mixed.
+    Mixed,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]

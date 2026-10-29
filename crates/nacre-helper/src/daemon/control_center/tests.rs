@@ -102,6 +102,7 @@ case "$1 $2 $3" in
  "menu-backend tool stay-awake") if [ -f $d/stay ]; then rm $d/stay; else touch $d/stay; fi; echo '{{"message":""}}';;
  "menu-backend tool record-stop") rm -f $d/rec; echo '{{"message":""}}';;
  "menu-backend tool record-start") touch $d/rec;;
+ "launcher-workflows record "*) touch $d/rec; cat > $d/record.in;;
  "wallpaper-media theme "*) cat >> $d/theme.log; echo '{{}}';;
  "wallpaper-media catalog "*) echo '{{"entries":[{{"path":"/w/a.png","poster":"/w/a.png","name":"a","dynamic":false,"animated":false,"preview":null,"thumbnail":null}},{{"path":"/w/b.png","poster":"/w/b.png","name":"b","dynamic":false,"animated":false,"preview":null,"thumbnail":null}}]}}';;
  "wallpaper-media select "*) echo "{{\"path\":\"$3\",\"poster\":\"$3\",\"name\":\"n\",\"dynamic\":false,\"animated\":false,\"preview\":null,\"thumbnail\":null}}";;
@@ -563,6 +564,44 @@ fn stay_awake_and_recorder_follow_the_unit_state() {
             true
         );
         assert!(!f.path("rec").exists());
+    });
+}
+
+#[test]
+fn recorder_start_with_sound_uses_the_launcher_recorder() {
+    run(async {
+        let f = Fixture::new();
+        f.call("recorder.start", json!({"mode":"screen","audio":"mixed"}))
+            .await
+            .unwrap();
+        for _ in 0..100 {
+            if f.path("record.in").exists() && !f.text("record.in").is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+        assert!(f.path("rec").exists());
+        assert_eq!(f.text("record.in"), "{\"audio\":\"mixed\"}");
+        released().await;
+        assert!(f
+            .text("engine.log")
+            .contains("launcher-workflows record screen"));
+        f.call("recorder.stop", json!({})).await.unwrap();
+        // "none" is the plain tile path; unknown sounds are refused before anything runs.
+        f.call("recorder.start", json!({"mode":"region","audio":"none"}))
+            .await
+            .unwrap();
+        released().await;
+        assert!(f
+            .text("engine.log")
+            .contains("menu-backend tool record-start"));
+        assert_eq!(
+            f.call("recorder.start", json!({"mode":"region","audio":"loud"}))
+                .await
+                .unwrap_err()
+                .code,
+            ErrorCode::Validation
+        );
     });
 }
 
