@@ -25,6 +25,11 @@ pub(crate) struct FastAudioStep {
     pub(crate) key_ms: Option<u64>,
 }
 
+pub(crate) enum AudioStepCommand {
+    Apply(FastAudioStep),
+    Stop,
+}
+
 pub(crate) struct AudioStepCompletion {
     pub(crate) result: Result<AudioStepOutcome, Failure>,
     pub(crate) key_ms: Option<u64>,
@@ -32,7 +37,7 @@ pub(crate) struct AudioStepCompletion {
 
 pub(crate) struct AudioStepWorker {
     stop: Arc<std::sync::atomic::AtomicBool>,
-    sender: Option<SyncSender<FastAudioStep>>,
+    sender: Option<SyncSender<AudioStepCommand>>,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -40,7 +45,7 @@ impl AudioStepWorker {
     pub(crate) fn start(
         completed: tokio::sync::mpsc::UnboundedSender<AudioStepCompletion>,
     ) -> crate::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel::<FastAudioStep>(64);
+        let (sender, receiver) = mpsc::sync_channel::<AudioStepCommand>(64);
         let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let thread_stop = stop.clone();
         let thread = std::thread::Builder::new()
@@ -58,11 +63,13 @@ impl AudioStepWorker {
                     }
                 };
                 while !thread_stop.load(Ordering::Acquire) {
-                    let request = match receiver.recv_timeout(Duration::from_millis(100)) {
-                        Ok(request) => request,
-                        Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                        Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                    let request = match receiver.recv() {
+                        Ok(AudioStepCommand::Apply(request)) => request,
+                        Ok(AudioStepCommand::Stop) | Err(_) => break,
                     };
+                    if thread_stop.load(Ordering::Acquire) {
+                        break;
+                    }
                     let guard = runtime.block_on(audio_lock().lock_owned());
                     let result = step_audio_sink(request.delta);
                     drop(guard);
@@ -79,7 +86,7 @@ impl AudioStepWorker {
         })
     }
 
-    pub(crate) fn sender(&self) -> SyncSender<FastAudioStep> {
+    pub(crate) fn sender(&self) -> SyncSender<AudioStepCommand> {
         self.sender
             .as_ref()
             .expect("audio worker is active")
@@ -90,7 +97,9 @@ impl AudioStepWorker {
 impl Drop for AudioStepWorker {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
-        self.sender.take();
+        if let Some(sender) = self.sender.take() {
+            let _ = sender.try_send(AudioStepCommand::Stop);
+        }
         if let Some(thread) = self.thread.take() {
             if thread.join().is_err() {
                 tracing::warn!("Audio step worker panicked");
@@ -634,6 +643,37 @@ fn action_error() -> Failure {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn key_step_publishes_the_osd_in_the_same_call_without_any_poll() {
+        let hub = super::super::hub::Hub::new("step-osd".into(), false, Duration::from_millis(1))
+            .shared();
+        let mut notices = hub.borrow().observe();
+        let outcome = AudioStepOutcome {
+            node_name: "alsa_output.speakers".into(),
+            channels: vec![0.35],
+        };
+        publish_audio_step(&hub, &outcome, None).unwrap();
+        let mut seen = false;
+        while let Ok(notice) = notices.try_recv() {
+            if let super::super::hub::Notice::Event { topic, data, .. } = notice {
+                seen |= topic == "osd" && data["value"] == 0.35;
+            }
+        }
+        assert!(seen, "the OSD topic is published synchronously with the step");
+    }
+
+    #[test]
+    fn idle_audio_step_worker_waits_for_commands_and_stops_on_drop() {
+        let (completed, _results) = tokio::sync::mpsc::unbounded_channel();
+        let worker = AudioStepWorker::start(completed).unwrap();
+        let sender = worker.sender();
+        drop(worker);
+        assert!(matches!(
+            sender.try_send(AudioStepCommand::Stop),
+            Err(mpsc::TrySendError::Disconnected(_))
+        ));
+    }
 
     #[test]
     fn volume_parser_accepts_only_bounded_normalized_values() {

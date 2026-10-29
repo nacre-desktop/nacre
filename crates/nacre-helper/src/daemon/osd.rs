@@ -341,7 +341,7 @@ impl Env {
             night: ["control-tools.json", "control-tools-niri.json"]
                 .map(|name| paths.state.join(name))
                 .into(),
-            tick: Duration::from_millis(250),
+            tick: Duration::from_millis(500),
             retry: Duration::from_secs(2),
         }
     }
@@ -696,7 +696,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
             _ = ticker.tick() => {
                 count = count.wrapping_add(1);
                 start_caps(&mut caps_job, &env.leds, &capslock_path);
-                if count.is_multiple_of(4) {
+                if count.is_multiple_of(2) {
                     let next = read_night(&env.night);
                     if next != night {
                         let mut event = OsdEvent::new(OsdKind::NightLight, now_ms());

@@ -246,6 +246,27 @@ async fn audio_defaults_report_levels_mute_microphone_and_output_changes() {
         .await;
 }
 
+/// External changes (another app, a hardware key) arrive through `pactl subscribe`, never
+/// through the slow safety-net tick: with the tick effectively disabled they still publish.
+#[tokio::test(flavor = "current_thread")]
+async fn external_volume_changes_do_not_wait_for_the_tick() {
+    let mut f = Fixture::new();
+    LocalSet::new()
+        .run_until(async {
+            let mut env = f.env();
+            env.tick = Duration::from_secs(3600);
+            let task = tokio::task::spawn_local(session(f.hub.clone(), env, None));
+            f.running().await;
+            f.none().await;
+            f.set("sink.vol", "0.70");
+            f.pactl("Event 'change' on sink #5");
+            let e = f.next().await;
+            assert_eq!((e.kind, e.value), (OsdKind::Volume, Some(0.7)));
+            task.abort();
+        })
+        .await;
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn capslock_and_night_light_report_only_changes_after_the_baseline() {
     let mut f = Fixture::new();

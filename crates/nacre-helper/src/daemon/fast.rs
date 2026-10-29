@@ -27,7 +27,7 @@ impl Server {
     pub(super) fn start(
         mut listener: socket::FastListener,
         requests: mpsc::Sender<Message>,
-        audio_steps: SyncSender<super::pill_controls::FastAudioStep>,
+        audio_steps: SyncSender<super::pill_controls::AudioStepCommand>,
         safe_mode: bool,
         audio_available: bool,
     ) -> crate::Result<Self> {
@@ -80,7 +80,7 @@ fn run(
     listener: UnixListener,
     stop: Arc<AtomicBool>,
     requests: mpsc::Sender<Message>,
-    audio_steps: SyncSender<super::pill_controls::FastAudioStep>,
+    audio_steps: SyncSender<super::pill_controls::AudioStepCommand>,
     safe_mode: bool,
     audio_available: bool,
 ) -> crate::Result<()> {
@@ -112,7 +112,7 @@ fn run(
 fn handle(
     stream: &mut UnixStream,
     requests: &mpsc::Sender<Message>,
-    audio_steps: &SyncSender<super::pill_controls::FastAudioStep>,
+    audio_steps: &SyncSender<super::pill_controls::AudioStepCommand>,
     safe_mode: bool,
     audio_available: bool,
 ) -> crate::Result<()> {
@@ -165,10 +165,12 @@ fn handle(
                     nacre_protocol::pill_controls::VolumeDirection::Up => 0.05,
                     nacre_protocol::pill_controls::VolumeDirection::Down => -0.05,
                 };
-                match audio_steps.try_send(super::pill_controls::FastAudioStep {
-                    delta,
-                    key_ms: step.key_ms,
-                }) {
+                match audio_steps.try_send(super::pill_controls::AudioStepCommand::Apply(
+                    super::pill_controls::FastAudioStep {
+                        delta,
+                        key_ms: step.key_ms,
+                    },
+                )) {
                     Ok(()) => (
                         id,
                         Reply::Ok {
