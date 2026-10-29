@@ -427,6 +427,15 @@ mod gating_tests {
                 })
                 .await
                 .expect("a visible widget makes the daemon check");
+                // Keep the serial guard until the check releases the shared lane.
+                tokio::time::timeout(Duration::from_secs(120), async {
+                    while refreshing(&hub) {
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                    }
+                })
+                .await
+                .expect("the check finishes");
+                tokio::time::sleep(Duration::from_millis(50)).await;
                 task.abort();
                 let _ = task.await;
             })
