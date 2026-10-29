@@ -115,8 +115,9 @@ new install:
 | `dolphin-override` | Dolphin's desktop entry and the FileManager1 D-Bus service |
 | `wallpapers` | demo wallpapers in `~/Pictures/Wallpapers` |
 
-AI and Brain stay profile choices (`--with ai`, `--with brain`). Updating an
-existing installation keeps the modules it already uses.
+`ai` and `brain` are profile components: `nacre module enable ai` switches the
+profile and redeploys, like `nacre setup --with ai`. Updating an existing
+installation keeps the modules it already uses.
 
 ```sh
 nacre module list
@@ -135,17 +136,24 @@ edited after enabling stays, with your original beside it as `*.pre-nacre`.
 ## Uninstall
 
 ```sh
-nacre uninstall --plan          # list what would be removed or restored
+nacre uninstall --plan          # list what would be removed, restored and kept
 nacre uninstall                 # asks before changing anything
-nacre uninstall --keep-data     # also keep ~/.config/nacre and ~/.local/state/nacre
+nacre uninstall --purge         # also remove Nacre's settings and state
 sudo pacman -R nacre            # then remove the packages
 ```
 
-Uninstall removes exactly the files Nacre's manifest records, restores any file
-it replaced, removes its runtime links and then Nacre's settings and state
-directories. It keeps `~/.local/share/nacre` (chats, AI and Brain data), Brain
-notes and your own wallpapers; delete those yourself if you want them gone.
-Files you edited after setup are kept. Run `systemctl --user daemon-reload`
+Uninstall removes exactly the files Nacre's manifest records as written by
+setup and still unchanged, restores any file it replaced, removes its runtime
+links and drops what setup regenerates (its install receipts and
+`~/.cache/nacre`). It keeps everything you authored or changed: files in
+`~/.config/nacre` and `~/.local/state/nacre` that setup did not write (such as
+`niri/custom.kdl`, the widget layout, plugins, settings and recovery snapshots)
+and managed files you edited. The plan lists each kept file.
+
+`--purge` also removes `~/.config/nacre`, `~/.local/state/nacre` and
+`~/.cache/nacre`; the plan lists every file. Chats, AI and Brain data in
+`~/.local/share/nacre` stay unless you add `--purge-data`. Brain notes and your
+own wallpapers are never touched. Run `systemctl --user daemon-reload`
 afterwards.
 
 ## Choosing Hyprland or niri

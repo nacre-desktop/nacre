@@ -6,6 +6,7 @@ The module manifest lives beside configure.py's hash receipt.
 """
 
 import argparse
+import contextlib
 import datetime as dt
 from functools import partial
 import json
@@ -26,8 +27,8 @@ MODULES = {
     "xdg-open": "~/.local/bin/xdg-open shim that routes links and files through Nacre",
     "dolphin-override": "Dolphin desktop entry and FileManager1 D-Bus override",
     "wallpapers": "Demo wallpapers in ~/Pictures/Wallpapers",
-    "ai": "Nacre AI (follows the profile: nacre setup --with ai)",
-    "brain": "Brain (follows the profile: nacre setup --with brain)",
+    "ai": "Nacre AI apps and services (a profile component)",
+    "brain": "Brain notes app and sync (a profile component)",
 }
 BASE = ("core", "session")
 PROFILE = ("ai", "brain")
@@ -187,7 +188,7 @@ def _prune(home, path):
         parent = parent.parent
 
 
-def apply_removal(home, actions):
+def apply_removal(home, actions, snapshot=True):
     """Remove/restore planned paths; snapshot removed bytes like configure.apply."""
     from configure import atomic
 
@@ -203,19 +204,21 @@ def apply_removal(home, actions):
     for path, action in actions:
         dest, original = home / path, originals(home) / path
         if action in ("remove", "restore") and dest.is_file():
-            saved = backup / path
-            saved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-            shutil.copy2(dest, saved)
-            entries.append(dict(path=str(dest), backup=str(saved)))
+            if snapshot:
+                saved = backup / path
+                saved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                shutil.copy2(dest, saved)
+                entries.append(dict(path=str(dest), backup=str(saved)))
             dest.unlink()
         if action == "restore":
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(original, dest)
-            original.unlink()
         if action == "keep-edited" and original.is_file():
             # The user's own pre-Nacre file stays reachable beside their edit.
             shutil.copy2(original, dest.with_name(dest.name + ".pre-nacre"))
+        if original.is_file():
             original.unlink()
+            _prune(home, original.relative_to(home))
         receipt.pop(path, None)
         files.pop(path, None)
         if action in ("remove", "absent"):
@@ -233,14 +236,7 @@ def apply_removal(home, actions):
 
 def _extra(name):
     if name not in EXTRAS:
-        raise ValueError(
-            f"{name} is not an optional module"
-            + (
-                "; it follows the profile (nacre setup --with)"
-                if name in PROFILE
-                else ""
-            )
-        )
+        raise ValueError(f"{name} is not an optional module")
 
 
 def disable(home, name, *, apply=False):
@@ -264,33 +260,92 @@ def _under(path, roots):
     return any(path == root or path.startswith(root + "/") for root in roots)
 
 
-def uninstall(home, *, keep_data=False, apply=False):
-    """Plan or apply removal of exactly what the manifests say Nacre wrote."""
+# Nacre's install receipts and caches: safe to drop, setup regenerates them.
+GENERATED = (
+    ".local/state/nacre/configuration.json",
+    ".local/state/nacre/modules.json",
+    ".local/state/nacre/package-links.json",
+    ".cache/nacre",
+)
+# Snapshot trees are listed as one kept entry each.
+COLLAPSED = (".local/state/nacre/backups", ".local/state/nacre/releases")
+
+
+def _files_under(home, directory):
+    root = home / directory
+    if root.is_symlink() or root.is_file():
+        return [directory]
+    found = []
+    for folder, _dirs, names in os.walk(root):
+        for name in names:
+            found.append((Path(folder) / name).relative_to(home).as_posix())
+    return sorted(found)
+
+
+def uninstall(home, *, purge=False, purge_data=False, apply=False):
+    """Plan or apply removal of what the manifests say Nacre wrote.
+
+    By default user-authored or user-changed files in Nacre's own directories
+    stay; purge removes those directories too (purge_data also share/nacre)."""
     home = Path(home)
-    paths = [
-        path
-        for path in owned(home)
-        if not (keep_data and _under(path, OWN_DIRS))
-        # Nacre's own data dirs go as a whole below; restore nothing inside.
-        and (keep_data or not _under(path, OWN_DIRS[:2]))
+    purge = purge or purge_data
+    purged = [
+        d
+        for d in ((*OWN_DIRS[:2], ".cache/nacre") if purge else ())
+        + ((OWN_DIRS[2],) if purge_data else ())
+        if (home / d).exists()
     ]
-    actions = removal_plan(home, paths)
+    actions = removal_plan(
+        home, [path for path in owned(home) if not _under(path, purged)]
+    )
     link_file = home / ".local/state/nacre/package-links.json"
     links = _state().read_json_file(link_file) if link_file.is_file() else {}
     link_actions = [
         (path, "remove-link")
         for path, target in sorted(links.items())
-        if (home / path).is_symlink() and os.readlink(home / path) == target
+        if not _under(path, purged)
+        and (home / path).is_symlink()
+        and os.readlink(home / path) == target
     ]
-    dirs = [] if keep_data else [d for d in OWN_DIRS[:2] if (home / d).exists()]
+    generated = [] if purge else [path for path in GENERATED if (home / path).exists()]
+    handled = {path for path, _ in actions + link_actions} | set(generated)
+    kept = set()
+    if not purge:
+        for path in (p for d in OWN_DIRS[:2] for p in _files_under(home, d)):
+            if path in handled or _under(path, generated):
+                continue
+            if _under(path, [".local/state/nacre/originals"]):
+                continue  # Restored or moved beside an edited file.
+            kept.add(next((c for c in COLLAPSED if _under(path, [c])), path))
+    removed_purge = [p for d in purged for p in _files_under(home, d)]
     if apply:
-        apply_removal(home, actions)
+        apply_removal(home, actions, snapshot=False)
         for path, _ in link_actions:
             (home / path).unlink()
             _prune(home, Path(path))
-        for directory in dirs:
+        for path in (p for p in GENERATED if not purge):
+            target = home / path
+            if target.is_dir() and not target.is_symlink():
+                shutil.rmtree(target)
+            elif target.exists() or target.is_symlink():
+                target.unlink()
+            _prune(home, Path(path))
+        for directory in purged:
             shutil.rmtree(home / directory)
-    return actions, link_actions, dirs
+            _prune(home, Path(directory))
+        # Empty folders left by removed runtime links hold no data.
+        share = home / OWN_DIRS[2]
+        for folder, _dirs, _names in os.walk(share, topdown=False):
+            with contextlib.suppress(OSError):
+                Path(folder).rmdir()
+    return dict(
+        actions=actions,
+        links=link_actions,
+        generated=generated,
+        kept=sorted(kept),
+        purged=purged,
+        purged_files=removed_purge,
+    )
 
 
 def status_files(home):
@@ -340,36 +395,83 @@ def _confirm(args, question):
     return input(question + " (yes/no) [no]: ").strip().lower() in ("yes", "y")
 
 
+def _package_context(home, root):
+    """The recorded compositors, profile and keyboard of the last package setup."""
+    import releases
+    import setup
+    from keyboard import system_keyboard
+
+    current = releases.STATE / "current.json"
+    record = (
+        _state().read_json_file(
+            Path(_state().read_json_file(current)["release"]) / "release.json"
+        )
+        if current.is_file()
+        else {}
+    )
+    compositors = record.get("compositors") or [record.get("compositor")]
+    if not compositors[0]:
+        raise RuntimeError("Run nacre setup before changing modules")
+    return releases, setup.policy(root).load(home), system_keyboard(), compositors
+
+
+def _show(home, verb, name, paths):
+    print(f"{verb} {name}: {MODULES[name]}")
+    for path in paths:
+        note = (
+            " (replaces your file; the original is kept for disable/uninstall)"
+            if path.exists() and str(path.relative_to(home)) not in owned(home)
+            else ""
+        )
+        print(f"  change: {path}{note}")
+
+
+def _run(apply, plan_only, yes, done):
+    if plan_only or not _confirm(argparse.Namespace(yes=yes), "Apply?"):
+        return 0
+    apply()
+    print(done)
+    return 0
+
+
+def _profile_module(home, root, name, on, plan_only, yes):
+    """AI and Brain are profile components: switch the profile and redeploy."""
+    if not (root / "package.json.installed").is_file():
+        raise ValueError(
+            f"Source installs choose {name} with tools/manage.py --with {name}"
+        )
+    if on and not (root / "deployment" / name).is_dir():
+        raise RuntimeError(f"Install the nacre-{name} package first")
+    releases, profile, keyboard, compositors = _package_context(home, root)
+    profile = dict(
+        profile,
+        components=[c for c in profile["components"] if c != name]
+        + ([name] if on else []),
+    )
+    planned = releases.package_plan(root, profile, compositors, keyboard)
+    _show(
+        home,
+        "Enable" if on else "Disable",
+        name,
+        [p for p in planned if module_of(Path(p).relative_to(home)) == name],
+    )
+    apply = partial(releases.deploy_package, root, profile, keyboard, compositors)
+    return _run(apply, plan_only, yes, f"{'Enabled' if on else 'Disabled'} {name}.")
+
+
 def _enable(home, root, name, plan_only, yes):
     import configure
 
+    if name in PROFILE:
+        return _profile_module(home, root, name, True, plan_only, yes)
     _extra(name)
     wanted = resolve(home) | {name}
     if (root / "package.json.installed").is_file():
-        import releases
-        import setup
-
-        current = releases.STATE / "current.json"
-        record = (
-            _state().read_json_file(
-                Path(_state().read_json_file(current)["release"]) / "release.json"
-            )
-            if current.is_file()
-            else {}
-        )
-        compositors = record.get("compositors") or [record.get("compositor")]
-        if not compositors[0]:
-            raise RuntimeError("Run nacre setup before enabling modules")
-        profile = setup.policy(root).load(home)
-        from keyboard import system_keyboard
-
-        keyboard = system_keyboard()
+        releases, profile, keyboard, compositors = _package_context(home, root)
         planned = releases.package_plan(
             root, profile, compositors, keyboard, modules=wanted, adopt={name}
         )
-        paths = [
-            path for path in planned if module_of(Path(path).relative_to(home)) == name
-        ]
+        paths = [p for p in planned if module_of(Path(p).relative_to(home)) == name]
         apply = partial(
             releases.deploy_package,
             root,
@@ -383,19 +485,29 @@ def _enable(home, root, name, plan_only, yes):
         changed, _links, _ = configure.plan(home, root, modules=wanted, adopt={name})
         paths = [home / path for path, _ in changed if module_of(path) == name]
         apply = partial(configure.apply, home, root, modules=wanted, adopt={name})
-    print(f"Enable {name}: {MODULES[name]}")
-    for path in paths:
-        note = (
-            " (replaces your file; the original is kept for disable/uninstall)"
-            if path.exists() and str(path.relative_to(home)) not in owned(home)
-            else ""
+    _show(home, "Enable", name, paths)
+    return _run(apply, plan_only, yes, f"Enabled {name}.")
+
+
+def _print_uninstall(plan):
+    print("Nacre uninstall plan:")
+    _print_actions(None, plan["actions"] + plan["links"])
+    for path in plan["generated"]:
+        print(f"  remove (regenerated by setup): ~/{path}")
+    for path in plan["purged_files"]:
+        print(f"  remove (--purge): ~/{path}")
+    for path in plan["kept"]:
+        print(f"  keep (yours or created while using Nacre): ~/{path}")
+    print(
+        "  keep: Brain notes and your own wallpapers"
+        + (
+            ""
+            if OWN_DIRS[2] in plan["purged"]
+            else "; ~/.local/share/nacre (chats, AI and Brain data)"
         )
-        print(f"  write: {path}{note}")
-    if plan_only or not _confirm(argparse.Namespace(yes=yes), "Apply?"):
-        return 0
-    apply()
-    print(f"Enabled {name}.")
-    return 0
+    )
+    if not plan["purged"] and plan["kept"]:
+        print("  Use --purge to remove the kept Nacre settings and state too.")
 
 
 def main(argv, home, root):
@@ -405,7 +517,18 @@ def main(argv, home, root):
     module.add_argument("action", choices=("list", "enable", "disable"))
     module.add_argument("name", nargs="?")
     remove = commands.add_parser("uninstall", help="remove what Nacre wrote")
-    remove.add_argument("--keep-data", action="store_true")
+    remove.add_argument(
+        "--purge",
+        action="store_true",
+        help="also remove ~/.config/nacre, ~/.local/state/nacre and ~/.cache/nacre",
+    )
+    remove.add_argument(
+        "--purge-data",
+        action="store_true",
+        help="with --purge, also remove ~/.local/share/nacre (chats, AI, Brain data)",
+    )
+    # The default already keeps user data; accepted for compatibility.
+    remove.add_argument("--keep-data", action="store_true", help=argparse.SUPPRESS)
     for sub in (module, remove):
         sub.add_argument("--plan", action="store_true", help="print, change nothing")
         sub.add_argument("--yes", action="store_true", help="apply without asking")
@@ -418,19 +541,15 @@ def main(argv, home, root):
             print(f"{module_name}\t~/{path}\t{state}")
         return 0
     if args.command == "uninstall":
-        actions, links, dirs = uninstall(home, keep_data=args.keep_data)
-        print("Nacre uninstall plan:")
-        _print_actions(home, actions + links)
-        for directory in dirs:
-            print(f"  remove directory: ~/{directory} (Nacre settings and state)")
-        print(
-            "  keep: ~/.local/share/nacre (chats, AI and Brain data), Brain notes,"
-            " your own wallpapers"
-            + (", ~/.config/nacre and ~/.local/state/nacre" if args.keep_data else "")
-        )
+        if args.purge_data and not args.purge:
+            parser.error("--purge-data requires --purge")
+        if args.keep_data and args.purge:
+            parser.error("--keep-data and --purge are exclusive")
+        options = dict(purge=args.purge, purge_data=args.purge_data)
+        _print_uninstall(uninstall(home, **options))
         if args.plan or not _confirm(args, "Uninstall?"):
             return 0
-        uninstall(home, keep_data=args.keep_data, apply=True)
+        uninstall(home, apply=True, **options)
         print(
             "Removed. Run systemctl --user daemon-reload, then remove the packages"
             " with your package manager (for example: sudo pacman -R nacre)."
@@ -448,11 +567,14 @@ def main(argv, home, root):
         parser.error("module name required")
     if args.action == "enable":
         return _enable(home, root, args.name, args.plan, args.yes)
+    if args.name in PROFILE:
+        return _profile_module(home, root, args.name, False, args.plan, args.yes)
     actions = disable(home, args.name)
     print(f"Disable {args.name}:")
     _print_actions(home, actions)
-    if args.plan or not _confirm(args, "Apply?"):
-        return 0
-    disable(home, args.name, apply=True)
-    print(f"Disabled {args.name}.")
-    return 0
+    return _run(
+        partial(disable, home, args.name, apply=True),
+        args.plan,
+        args.yes,
+        f"Disabled {args.name}.",
+    )
