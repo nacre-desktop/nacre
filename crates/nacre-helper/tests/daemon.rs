@@ -3445,13 +3445,9 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
         spectrum_status["services"]["audio-spectrum"]["status"],
         "running"
     );
-    let deadline = Instant::now() + Duration::from_secs(2);
-    while !check_started.exists() && Instant::now() < deadline {
-        thread::sleep(Duration::from_millis(10));
-    }
     assert!(
-        check_started.exists(),
-        "The hanging update check must actually start"
+        !check_started.exists(),
+        "N0095: no update check runs while nobody subscribes to dashboard.updates"
     );
     let deadline = Instant::now() + Duration::from_secs(2);
     while !weather_started.load(Ordering::Relaxed) && Instant::now() < deadline {
@@ -3484,13 +3480,13 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     writeln!(
         reader.get_mut(),
         "{}",
-        json!({"t":"sub","topics":["audio","battery","power.profiles"]})
+        json!({"t":"sub","topics":["audio","battery","power.profiles","dashboard.updates"]})
     )?;
     let mut mirror = nacre_protocol::Mirror::default();
     mirror.receive(&serde_json::from_str::<nacre_protocol::Message>(
         line.trim(),
     )?);
-    for _ in 0..3 {
+    for _ in 0..4 {
         line.clear();
         reader.read_line(&mut line)?;
         let message: nacre_protocol::Message = serde_json::from_str(line.trim())?;
@@ -3499,6 +3495,15 @@ fn daemon_ready_within_two_seconds_while_every_external_backend_hangs() -> Resul
     for topic in ["audio", "battery", "power.profiles"] {
         assert_eq!(mirror.topics[topic].1["health"]["available"], false);
     }
+    // N0095: the visible widget (subscription) is what starts the hanging update check.
+    let deadline = Instant::now() + Duration::from_secs(4);
+    while !check_started.exists() && Instant::now() < deadline {
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert!(
+        check_started.exists(),
+        "The hanging update check must start once dashboard.updates is subscribed"
+    );
     let deadline = Instant::now() + Duration::from_secs(8);
     while !audio_started.exists() && Instant::now() < deadline {
         thread::sleep(Duration::from_millis(10));
