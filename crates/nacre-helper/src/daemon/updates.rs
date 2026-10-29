@@ -331,7 +331,9 @@ mod refresh_tests {
     use super::*;
     #[test]
     fn overlapping_refresh_and_safe_mode_are_rejected() {
-        let _serial = super::gating_tests::SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let _serial = super::gating_tests::SERIAL
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let hub =
             super::super::hub::Hub::new("updates-busy".into(), false, Duration::from_millis(16))
                 .shared();
@@ -379,8 +381,9 @@ mod gating_tests {
     pub(super) static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     fn fixture(checked: Option<f64>) -> (Shared, Arc<tokio::sync::Notify>) {
-        let hub = super::super::hub::Hub::new("updates-gate".into(), false, Duration::from_millis(1))
-            .shared();
+        let hub =
+            super::super::hub::Hub::new("updates-gate".into(), false, Duration::from_millis(1))
+                .shared();
         initial(&hub).unwrap();
         if let Some(checked) = checked {
             let mut state: UpdatesState =
@@ -415,7 +418,8 @@ mod gating_tests {
                     .subscribe(client, &[TOPIC.into()], false)
                     .unwrap();
                 tokio::time::timeout(Duration::from_secs(2), async {
-                    while !refreshing(&hub) && hub.borrow().snapshot(TOPIC).unwrap()["checked"].is_null()
+                    while !refreshing(&hub)
+                        && hub.borrow().snapshot(TOPIC).unwrap()["checked"].is_null()
                     {
                         tokio::time::sleep(Duration::from_millis(5)).await;
                     }

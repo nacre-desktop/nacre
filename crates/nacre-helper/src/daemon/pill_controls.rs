@@ -660,7 +660,10 @@ mod tests {
                 seen |= topic == "osd" && data["value"] == 0.35;
             }
         }
-        assert!(seen, "the OSD topic is published synchronously with the step");
+        assert!(
+            seen,
+            "the OSD topic is published synchronously with the step"
+        );
     }
 
     #[test]
