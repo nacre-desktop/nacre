@@ -354,7 +354,10 @@ mod tests {
                 },
             }
         );
-        let queued = audio_receive.try_recv().unwrap();
+        let Ok(super::pill_controls::AudioStepCommand::Apply(queued)) = audio_receive.try_recv()
+        else {
+            panic!("queued audio step");
+        };
         assert_eq!(queued.delta, 0.05);
         assert_eq!(queued.key_ms, Some(99));
         drop(server);
