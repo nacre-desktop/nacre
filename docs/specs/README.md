@@ -866,3 +866,5 @@ SSH test host; configure and its test exactly match pre-extension 68d28945.
 2026-10-28: [N0089 wallpaper.activate without the publication flock](0089-wallpaper-activate-no-flock.md) — fixes lost picker selections (B0171).
 
 2026-10-28: [N0091 foreground wallpaper selection priority](0091-wallpaper-select-priority.md) — keeps selection responsive while catalogue and raster warming run.
+
+2026-10-29: [N0096 UI provider liveness](0096-ui-provider-liveness.md) — newest UI provider wins; a provider missing 3 consecutive ui.dispatch deadlines is disconnected so it re-registers (Bead B0190).
