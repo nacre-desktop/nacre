@@ -1015,7 +1015,7 @@
         "keys": "SUPER + SHIFT + W",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell --app widgets"
+          "command": "nacrectl ui widgets open"
         },
         "options": {
           "description": "Nacre:widgets"
@@ -1160,6 +1160,18 @@
           ]
         },
         "id": "nacre-dolphin-files"
+      },
+      {
+        "kind": "window-rule",
+        "selector": {
+          "app_id_regex": "^nacre-widgets$"
+        },
+        "effects": {
+          "centered": true,
+          "floating": true,
+          "size": "70% 75%"
+        },
+        "id": "nacre-widgets-window"
       }
     ],
     "hypr/conf/nacre.lua": [
@@ -1481,7 +1493,7 @@
         "keys": "SUPER + CTRL + D",
         "action": "application.launch",
         "parameters": {
-          "command": "~/.local/bin/nacre-shell detach"
+          "command": "nacrectl ui pearls detach"
         },
         "options": {
           "description": "Nacre:detach-panel"

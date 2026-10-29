@@ -215,6 +215,18 @@
    "note": "Daemon keyboard_light.adjust (N0036)."
   },
   {
+   "id": "widgets.open",
+   "target": "widgets",
+   "method": "open",
+   "examples": [
+    []
+   ],
+   "qml": "NacreShellIpc.qml",
+   "bead": "done",
+   "spec": "N0097",
+   "note": "Nacre Widgets window (app_id nacre-widgets, opened floating); the QML shell only acknowledges."
+  },
+  {
    "id": "pearls.detach",
    "target": "pearls",
    "method": "detach",

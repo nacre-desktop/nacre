@@ -116,6 +116,12 @@
       "reason": "Unmapped window effects: size proportions use niri's working area"
     },
     {
+      "source": "hypr/conf/windowrule.lua",
+      "kind": "window-rule",
+      "id": "nacre-widgets-window",
+      "reason": "Unmapped window effects: size proportions use niri's working area"
+    },
+    {
       "source": "hypr/conf/nacre.lua",
       "kind": "window-rule",
       "id": "nacre-lock-preview",

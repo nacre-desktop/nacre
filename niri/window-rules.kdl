@@ -14,6 +14,13 @@ window-rule {
     default-window-height { proportion 0.75; }
 }
 
+window-rule {
+    match app-id="^nacre-widgets$"
+    open-floating true
+    default-column-width { proportion 0.7; }
+    default-window-height { proportion 0.75; }
+}
+
 layer-rule {
     match namespace="^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$"
     background-effect { blur true; }

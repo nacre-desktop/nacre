@@ -208,6 +208,17 @@ Scope {
         view.previewOnly = false;
     }
     IpcHandler {
+        id: widgetsIpc
+        // N0097: the Widgets app is a Bead app; the QML shell has no such window and only acknowledges.
+        Component.onCompleted: NacreDaemon.registerIpc("widgets", widgetsIpc, {
+            "open": []
+        })
+        Component.onDestruction: NacreDaemon.unregisterIpc("widgets", widgetsIpc)
+        target: "widgets"
+        function open(): void {
+        }
+    }
+    IpcHandler {
         id: leftDrawerIpc
         Component.onCompleted: NacreDaemon.registerIpc("leftDrawer", leftDrawerIpc, {
             "section": ["s"],

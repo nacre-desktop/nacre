@@ -19,9 +19,9 @@ class WindowRoutingTests(unittest.TestCase):
             (TOOLS / "tests/fixtures/window-routing-contract.json").read_text()
         )
         actual = capture(TOOLS.parent / "hypr/conf/windowrule.lua", "rules")
-        self.assertEqual(actual, expected[-2:])
-        self.assertEqual(len(actual), 2)
-        self.assertEqual(len({rule["name"] for rule in actual}), 2)
+        self.assertEqual(actual, expected[-3:])
+        self.assertEqual(len(actual), 3)
+        self.assertEqual(len({rule["name"] for rule in actual}), 3)
 
     def test_generated_route_conflicts_are_not_hidden_by_tables(self):
         with tempfile.TemporaryDirectory() as directory:

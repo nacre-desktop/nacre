@@ -4,7 +4,7 @@ hl.bind("SUPER + K", hl.dsp.exec_cmd("nacrectl ui nacre menu learn.shortcuts ''"
 hl.bind("SUPER + F1", hl.dsp.exec_cmd("nacrectl ui nacre menu learn.shortcuts ''"), {description="Nacre:shortcuts"})
 hl.bind("SUPER + A", hl.dsp.exec_cmd("nacrectl ui nacre left"), {description="Nacre:ai-sidebar"})
 hl.bind("Escape", hl.dsp.global("nacre_shell:dismissHoverEdges"), {non_consuming=true})
-hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("~/.local/bin/nacre-shell detach"), {description="Nacre:detach-panel"})
+hl.bind("SUPER + CTRL + D", hl.dsp.exec_cmd("nacrectl ui pearls detach"), {description="Nacre:detach-panel"})
 hl.window_rule({match={class="^org[.]quickshell$",title="^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"},float=true,rounding=18,border_size=0,no_anim=true})
 hl.unbind("SUPER + mouse:272")
 local drag_route = nil

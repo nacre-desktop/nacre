@@ -119,8 +119,10 @@ class ConfigurationTests(unittest.TestCase):
                 app["Comment"], "Place and style widgets on your bar and desktop"
             )
             self.assertEqual(
-                shlex.split(app["Exec"]), ["nacre-shell", "--app", "widgets"]
+                shlex.split(app["Exec"]), ["nacrectl", "ui", "widgets", "open"]
             )
+            self.assertEqual(app["TryExec"], "nacrectl")
+            self.assertEqual(app["StartupWMClass"], "nacre-widgets")
             self.assertEqual(app["Icon"], "nacre-widgets")
             self.assertIn("Utility", app["Categories"])
             installed_icon = (

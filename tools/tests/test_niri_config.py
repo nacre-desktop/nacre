@@ -95,11 +95,15 @@ class NiriConfigTests(unittest.TestCase):
         self.assertTrue(any("window.pin" in row["reason"] for row in unsupported))
         self.assertTrue(any("pointer" in row["reason"] for row in unsupported))
 
+    def test_widgets_window_opens_floating(self):
+        rules = config.render(config.load(), backend="niri")["niri/window-rules.kdl"]
+        self.assertIn('match app-id="^nacre-widgets$"\n    open-floating true\n', rules)
+
     def test_widgets_binding_is_generated_without_replacing_wallpaper_shortcut(self):
         text = config.render(config.load(), backend="niri")["niri/bindings.kdl"]
         self.assertIn(
             'Super+Shift+W repeat=false hotkey-overlay-title="Nacre:widgets" '
-            '{ spawn-sh "~/.local/bin/nacre-shell --app widgets"; }',
+            '{ spawn "nacrectl" "ui" "widgets" "open"; }',
             text,
         )
         self.assertIn(

@@ -89,5 +89,14 @@
       "monitor_w*0.6",
       "monitor_h*0.75"
     ]
+  },
+  {
+    "center": true,
+    "float": true,
+    "match": {
+      "class": "^nacre-widgets$"
+    },
+    "name": "nacre-widgets-window",
+    "size": "70% 75%"
   }
 ]

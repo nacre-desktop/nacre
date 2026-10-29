@@ -10,6 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 22 | N0097 widgets entry fix | Done; full Arch desktop CI replica passed on dev-2 | Super+Shift+W and the launcher entry now run `nacrectl ui widgets open`, Super+Ctrl+D runs `nacrectl ui pearls detach`, the Widgets window floats (was a nonexistent `nacre-shell --app`); StartupWMClass is `nacre-widgets`. |
 | 21 | [N0095 periodic daemon idle](0095-daemon-periodic-idle.md) | Done: private profile passed and full desktop CI green on dev-1; lead live audit pending | Candidate is below private CPU/wakeup limits; Lead owns live audit/deploy. |
 | 20 | [N0093 installed Niri session backend](0093-installed-session-backend.md) | Done; full Arch desktop CI replica passed on dev-2 | Deploy and `nacre session refresh` share the installed session backend; checkout removal, generated volume bindings, and `niri validate` passed in a private HOME. |
 | 19 | [N0090 Nacre Widgets app entry](0090-widgets-app-entry.md) | Done; full Arch desktop CI replica passed on dev-1 | Launcher entry and SVG icon installed through configure; Super+Shift+W is in generated config and shortcut list. |

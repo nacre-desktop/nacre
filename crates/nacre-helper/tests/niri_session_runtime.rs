@@ -187,7 +187,7 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     );
     let window_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
     let pearls = fs::read_to_string(destination.join("config/bead-pearls.kdl"))?;
-    let pearl_match = "match app-id=\"^bead[.]pearl$\"";
+    let pearl_match = "match app-id=\"^bead[.]pearl([.]pending)?$\"";
     assert_eq!(pearls.matches(pearl_match).count(), 1);
     assert_eq!(
         window_rules.matches(pearl_match).count() + pearls.matches(pearl_match).count(),
@@ -198,6 +198,7 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     assert!(pearls.contains("border { off; }"));
     assert!(pearls.contains("focus-ring { off; }"));
     assert!(pearls.contains("shadow { off; }"));
+    assert!(pearls.contains("match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n"));
     assert_eq!(
         fs::read(destination.join("config/workspace-visitors.kdl"))?,
         fs::read(repo.join("niri/workspace-visitors.kdl"))?

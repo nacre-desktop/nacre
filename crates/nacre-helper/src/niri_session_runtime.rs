@@ -395,7 +395,7 @@ pub fn prepare_configuration(
     // not depend on user-owned custom.kdl or an installed Bead checkout.
     fs::write(
         config.join("bead-pearls.kdl"),
-        "// Source: Bead shell/niri-pearls.kdl (origin/main).\nwindow-rule {\n    match app-id=\"^bead[.]pearl$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n",
+        "// Source: Bead shell/niri-pearls.kdl (origin/main).\nwindow-rule {\n    match app-id=\"^bead[.]pearl([.]pending)?$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n\n// B0200: a prepared target is invisible until release renames it to bead.pearl,\n// including niri's open and move animations while it is placed under the panel.\nwindow-rule {\n    match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n}\n\n// The Widgets app draws its own rounded outline; do not add compositor chrome.\nwindow-rule {\n    match app-id=\"^nacre-widgets$\"\n    border { off; }\n    focus-ring { off; }\n}\n",
     )?;
     fs::write(
         config.join("keyboard.kdl"),

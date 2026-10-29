@@ -1161,7 +1161,7 @@
     {
       "action": {
         "args": [
-          "~/.local/bin/nacre-shell --app widgets"
+          "nacrectl ui widgets open"
         ],
         "method": "exec_cmd"
       },
