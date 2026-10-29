@@ -298,13 +298,18 @@ pub fn brightness(hub: &Shared, reply: &Value) {
     report(hub, event);
 }
 
-/// Optimistic value for a held volume key; the PipeWire signal is allowed to follow.
-pub fn volume(hub: &Shared, level: f64) {
+/// A volume key step on the default sink: published even when the level is unchanged (at
+/// 0 % or 100 %) so the pill shows at the limits. The fields match the PipeWire watcher's
+/// event for the same state, which the duplicate filter then drops.
+pub fn volume(hub: &Shared, level: f64, muted: bool, label: &str, device: &str) {
     if !level.is_finite() || !(0.0..=1.0).contains(&level) {
         return;
     }
     let mut event = OsdEvent::new(OsdKind::Volume, now_ms());
     event.value = Some(level);
+    event.muted = Some(muted);
+    event.label = Some(label.chars().take(200).collect()).filter(|l: &String| !l.is_empty());
+    event.device = Some(device.to_owned()).filter(|d| !d.is_empty() && d.len() <= 128);
     report(hub, event);
 }
 

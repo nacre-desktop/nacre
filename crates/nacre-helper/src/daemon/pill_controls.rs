@@ -224,29 +224,27 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
     Ok(json!({"changed":true}))
 }
 
+/// The step always ran on `@DEFAULT_AUDIO_SINK@`, so the OSD is published unconditionally,
+/// also when the level did not change at 0 % or 100 %.
 pub(crate) fn publish_audio_step(
     hub: &Shared,
     outcome: &AudioStepOutcome,
     key_ms: Option<u64>,
 ) -> Result<(), Failure> {
-    let value = outcome.channels[0];
-    let Some(mut state) = hub.borrow().snapshot("audio") else {
-        super::osd::volume(hub, value);
-        return Ok(());
-    };
-    let is_default = state["default_output"].as_str() == Some(outcome.node_name.as_str());
-    if let Some(node) = state["nodes"]["items"].get_mut(&outcome.node_name) {
-        node["volume"] = json!(value);
-        if let Some(readback) = node.get_mut("readback") {
-            readback["linear_volume"] = json!(value);
-            readback["perceptual_volume"] = json!(value.cbrt());
+    let value = outcome.volume;
+    super::osd::volume(hub, value, outcome.muted, &outcome.label, &outcome.node_name);
+    let snapshot = hub.borrow().snapshot("audio");
+    if let Some(mut state) = snapshot {
+        if let Some(node) = state["nodes"]["items"].get_mut(&outcome.node_name) {
+            node["volume"] = json!(outcome.linear);
+            if let Some(readback) = node.get_mut("readback") {
+                readback["linear_volume"] = json!(outcome.linear);
+                readback["perceptual_volume"] = json!(value);
+            }
+            hub.borrow_mut()
+                .publish("audio", state)
+                .map_err(|_| action_error())?;
         }
-        hub.borrow_mut()
-            .publish("audio", state)
-            .map_err(|_| action_error())?;
-    }
-    if is_default {
-        super::osd::volume(hub, value);
     }
     if let Some(key_ms) = key_ms {
         let now_ms = std::time::SystemTime::now()
@@ -290,7 +288,13 @@ fn adjust_volume(delta: f64) -> Result<(), Failure> {
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AudioStepOutcome {
     pub(crate) node_name: String,
-    pub(crate) channels: Vec<f64>,
+    /// `node.description` (else `node.nick`), the label the PipeWire watcher reports.
+    pub(crate) label: String,
+    /// Mean linear (PipeWire) level, what `AudioNode.volume` reports.
+    pub(crate) linear: f64,
+    /// Perceptual (cubic, `wpctl get-volume`) level the OSD and the sliders show.
+    pub(crate) volume: f64,
+    pub(crate) muted: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -308,9 +312,11 @@ enum VolumeParam {
 #[derive(Clone, Debug, PartialEq)]
 struct SinkVolume {
     node_name: String,
+    label: String,
     param: VolumeParam,
     current: Vec<f64>,
     channel_count: usize,
+    muted: bool,
 }
 
 fn parse_object_id(output: &str) -> Option<u64> {
@@ -331,9 +337,15 @@ fn object_id(value: &Value) -> Option<u64> {
         .or_else(|| value.as_str()?.parse::<u64>().ok())
 }
 
+/// The newest entry of `name` that carries volumes. An ALSA sink lists a second `Props`
+/// object (device/latency settings, no `channelVolumes`) after the volume one.
 fn current_param<'a>(object: &'a Value, name: &str) -> Option<&'a Value> {
     let params = object.get("info")?.get("params")?.get(name)?;
-    params.as_array()?.last()
+    params
+        .as_array()?
+        .iter()
+        .rev()
+        .find(|entry| entry.get("channelVolumes").is_some())
 }
 
 fn volume_data(props: &Value) -> Option<(Vec<f64>, usize)> {
@@ -368,10 +380,18 @@ fn sink_volume_from_dump(node_id: u64, dump: &Value) -> Option<SinkVolume> {
     })?;
     let node_props = node.get("info")?.get("props")?;
     let node_name = node_props.get("node.name")?.as_str()?.to_owned();
+    let label = ["node.description", "node.nick"]
+        .iter()
+        .find_map(|key| node_props.get(*key)?.as_str().filter(|text| !text.is_empty()))
+        .unwrap_or_default()
+        .to_owned();
     let device_id = node_props.get("device.id").and_then(object_id);
     let route_device = node_props.get("card.profile.device").and_then(object_id);
 
-    if let (Some(device_id), Some(route_device)) = (device_id, route_device) {
+    // A device route owns the volume when the active profile has one for this node; a
+    // pro-audio profile (`device.routes = 0`) has none and the node's Props hold it.
+    let route = (|| {
+        let (device_id, route_device) = (device_id?, route_device?);
         let device = objects.iter().find(|object| {
             object["type"] == "PipeWire:Interface:Device"
                 && object["id"].as_u64() == Some(device_id)
@@ -383,31 +403,33 @@ fn sink_volume_from_dump(node_id: u64, dump: &Value) -> Option<SinkVolume> {
             .as_array()?
             .iter()
             .find(|route| object_id(&route["device"]) == Some(route_device))?;
-        let route_index = object_id(&route["index"])?;
-        let route_device = object_id(&route["device"])?;
-        let (current, channel_count) = volume_data(route.get("props")?)?;
-        return Some(SinkVolume {
-            node_name,
-            param: VolumeParam::DeviceRoute {
-                device_id,
-                route_index,
-                route_device,
-            },
-            current,
-            channel_count,
-        });
-    }
-
-    let props = current_param(node, "Props")?;
+        let param = VolumeParam::DeviceRoute {
+            device_id,
+            route_index: object_id(&route["index"])?,
+            route_device: object_id(&route["device"])?,
+        };
+        Some((param, route.get("props")?))
+    })();
+    let (param, props) = match route {
+        Some(route) => route,
+        None => (
+            VolumeParam::NodeProps { node_id },
+            current_param(node, "Props")?,
+        ),
+    };
     let (current, channel_count) = volume_data(props)?;
     Some(SinkVolume {
         node_name,
-        param: VolumeParam::NodeProps { node_id },
+        label,
+        param,
         current,
         channel_count,
+        muted: props.get("mute").and_then(Value::as_bool).unwrap_or(false),
     })
 }
 
+/// Steps every channel by `delta` on the perceptual (cubic) scale `wpctl set-volume 5%+`
+/// uses, snapped to whole percent and capped at 100 %; returns linear channel volumes.
 fn stepped_channel_volumes(current: &[f64], count: usize, delta: f64) -> Option<Vec<f64>> {
     if current.is_empty()
         || current.len() > count
@@ -423,8 +445,9 @@ fn stepped_channel_volumes(current: &[f64], count: usize, delta: f64) -> Option<
     Some(
         (0..count)
             .map(|index| {
-                let previous = current.get(index).copied().unwrap_or(current[0]);
-                ((previous + delta).clamp(0.0, 1.0) * 1000.0).round() / 1000.0
+                let previous = current.get(index).copied().unwrap_or(current[0]).cbrt();
+                let target = ((previous + delta).clamp(0.0, 1.0) * 100.0).round() / 100.0;
+                (target.powi(3) * 1e6).round() / 1e6
             })
             .collect(),
     )
@@ -441,17 +464,86 @@ fn step_audio_sink(delta: f64) -> Result<AudioStepOutcome, Failure> {
     step_audio_sink_with(delta, &mut run)
 }
 
+/// Prefer the direct PipeWire write (all channels, one round trip); when the sink's volume
+/// object cannot be read from `pw-dump`, step it with `wpctl` instead, so a reachable
+/// default sink always changes and always reports its level for the OSD.
 fn step_audio_sink_with(
     delta: f64,
     run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
 ) -> Result<AudioStepOutcome, Failure> {
     let inspect = run("wpctl", &["inspect", "@DEFAULT_AUDIO_SINK@"], false)?;
     let node_id = parse_object_id(&inspect).ok_or_else(unavailable)?;
-    let dump = run("pw-dump", &[], false)?;
-    let dump: Value = serde_json::from_str(&dump).map_err(|_| unavailable())?;
-    let sink = sink_volume_from_dump(node_id, &dump).ok_or_else(unavailable)?;
+    let sink = run("pw-dump", &[], false)
+        .ok()
+        .and_then(|dump| serde_json::from_str::<Value>(&dump).ok())
+        .and_then(|dump| sink_volume_from_dump(node_id, &dump));
+    match sink {
+        Some(sink) => step_pipewire_sink(sink, delta, run),
+        None => step_wpctl_sink(&inspect, delta, run),
+    }
+}
+
+fn step_wpctl_sink(
+    inspect: &str,
+    delta: f64,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Result<AudioStepOutcome, Failure> {
+    let property = |key: &str| {
+        inspect.lines().find_map(|line| {
+            let rest = line.trim_start_matches([' ', '*', '\t']).strip_prefix(key)?;
+            Some(rest.trim_start().strip_prefix('=')?.trim().trim_matches('"').to_owned())
+        })
+    };
+    let node_name = property("node.name").ok_or_else(unavailable)?;
+    let label = property("node.description")
+        .filter(|text| !text.is_empty())
+        .or_else(|| property("node.nick"))
+        .unwrap_or_default();
+    let step = format!("{:.2}{}", delta.abs(), if delta < 0.0 { "-" } else { "+" });
+    run(
+        "wpctl",
+        &["set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", &step],
+        true,
+    )?;
+    let readback = run("wpctl", &["get-volume", "@DEFAULT_AUDIO_SINK@"], false)
+        .map_err(|_| action_error())?;
+    let volume = parse_volume(&readback)
+        .ok_or_else(action_error)?
+        .min(1.0);
+    Ok(AudioStepOutcome {
+        node_name,
+        label,
+        linear: volume.powi(3),
+        volume: (volume * 1000.0).round() / 1000.0,
+        muted: readback.contains("[MUTED]"),
+    })
+}
+
+fn step_pipewire_sink(
+    sink: SinkVolume,
+    delta: f64,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Result<AudioStepOutcome, Failure> {
     let channels = stepped_channel_volumes(&sink.current, sink.channel_count, delta)
         .ok_or_else(unavailable)?;
+    let linear = channels.iter().sum::<f64>() / channels.len() as f64;
+    let outcome = AudioStepOutcome {
+        node_name: sink.node_name,
+        label: sink.label,
+        linear,
+        volume: (linear.cbrt() * 1000.0).round() / 1000.0,
+        muted: sink.muted,
+    };
+    // At 0 % or 100 % there is nothing to write, but the OSD is still reported.
+    if sink.current.len() == channels.len()
+        && sink
+            .current
+            .iter()
+            .zip(&channels)
+            .all(|(now, next)| (now - next).abs() < 1e-6)
+    {
+        return Ok(outcome);
+    }
     let (object_id, param, payload) = match sink.param {
         VolumeParam::NodeProps { node_id } => (
             node_id.to_string(),
@@ -475,10 +567,7 @@ fn step_audio_sink_with(
     };
     let payload = serde_json::to_string(&payload).map_err(|_| action_error())?;
     run("pw-cli", &["set-param", &object_id, param, &payload], true)?;
-    Ok(AudioStepOutcome {
-        node_name: sink.node_name,
-        channels,
-    })
+    Ok(outcome)
 }
 
 fn run_pipewire_action(program: &str, args: &[&str], mutation: bool) -> Result<String, Failure> {
@@ -651,19 +740,50 @@ mod tests {
         let mut notices = hub.borrow().observe();
         let outcome = AudioStepOutcome {
             node_name: "alsa_output.speakers".into(),
-            channels: vec![0.35],
+            label: "Speakers".into(),
+            linear: 0.35_f64.powi(3),
+            volume: 0.35,
+            muted: false,
         };
         publish_audio_step(&hub, &outcome, None).unwrap();
         let mut seen = false;
         while let Ok(notice) = notices.try_recv() {
             if let super::super::hub::Notice::Event { topic, data, .. } = notice {
-                seen |= topic == "osd" && data["value"] == 0.35;
+                seen |= topic == "osd"
+                    && data["value"] == 0.35
+                    && data["label"] == "Speakers"
+                    && data["device"] == "alsa_output.speakers";
             }
         }
         assert!(
             seen,
             "the OSD topic is published synchronously with the step"
         );
+    }
+
+    #[test]
+    fn step_at_the_limit_still_publishes_the_osd_without_an_audio_snapshot_entry() {
+        let hub = super::super::hub::Hub::new("step-limit".into(), false, Duration::from_millis(1))
+            .shared();
+        hub.borrow_mut()
+            .publish("audio", json!({"default_output":"other","nodes":{"items":{},"order":[]}}))
+            .unwrap();
+        let mut notices = hub.borrow().observe();
+        let outcome = AudioStepOutcome {
+            node_name: "alsa_output.pro-output-0".into(),
+            label: String::new(),
+            linear: 1.0,
+            volume: 1.0,
+            muted: true,
+        };
+        publish_audio_step(&hub, &outcome, Some(1)).unwrap();
+        let mut seen = false;
+        while let Ok(notice) = notices.try_recv() {
+            if let super::super::hub::Notice::Event { topic, data, .. } = notice {
+                seen |= topic == "osd" && data["value"] == 1.0 && data["muted"] == true;
+            }
+        }
+        assert!(seen, "a step at 100 % shows the pill");
     }
 
     #[test]
@@ -713,7 +833,7 @@ mod tests {
                             "device": 2,
                             "props": {
                                 "channelMap": ["FL", "FR", "FC", "LFE", "RL", "RR", "SL", "SR"],
-                                "channelVolumes": [0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80]
+                                "channelVolumes": cubes(&[0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80])
                             }
                         }]
                     }
@@ -740,19 +860,11 @@ mod tests {
         };
         let result = step_audio_sink_with(0.05, &mut run).unwrap();
         assert_eq!(result.node_name, "pro_audio_sink");
-        assert_eq!(
-            result.channels,
-            vec![0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85]
-        );
-        let second = step_audio_sink_with(0.05, &mut run).unwrap();
-        assert_eq!(
-            second.channels,
-            vec![0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90]
-        );
+        step_audio_sink_with(0.05, &mut run).unwrap();
         let first = serde_json::from_str::<Value>(&set[0][3]).unwrap();
         assert_eq!(
-            first["props"]["channelVolumes"],
-            json!([0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85])
+            perceptual(&first["props"]["channelVolumes"]),
+            vec![15, 25, 35, 45, 55, 65, 75, 85]
         );
         let final_set = set.last().unwrap();
         assert_eq!(&final_set[..3], ["set-param", "30", "Route"]);
@@ -764,23 +876,164 @@ mod tests {
             8
         );
         assert_eq!(
-            payload["props"]["channelVolumes"],
-            json!([0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90])
+            perceptual(&payload["props"]["channelVolumes"]),
+            vec![20, 30, 40, 50, 60, 70, 80, 90]
         );
         assert_eq!(payload["save"], true);
     }
 
+    fn cubes(levels: &[f64]) -> Value {
+        json!(levels.iter().map(|level| level.powi(3)).collect::<Vec<_>>())
+    }
+
+    /// Linear channel volumes as whole perceptual percent.
+    fn perceptual(volumes: &Value) -> Vec<i64> {
+        volumes
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| (v.as_f64().unwrap().cbrt() * 100.0).round() as i64)
+            .collect()
+    }
+
+    /// The owner's laptop sink (2026-10-29): a pro-audio profile node whose device has no
+    /// routes (`device.routes = 0`) and whose last `Props` entry holds ALSA settings only.
+    /// Both made every key step `Unavailable` before N0102.
+    fn pro_audio_dump(volume: f64, muted: bool) -> Value {
+        json!([
+            {
+                "id": 53,
+                "type": "PipeWire:Interface:Node",
+                "info": {
+                    "props": {
+                        "node.name": "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.pro-output-0",
+                        "node.description": "HD Audio Pro",
+                        "media.class": "Audio/Sink",
+                        "device.id": "42",
+                        "card.profile.device": "7",
+                        "device.routes": "0"
+                    },
+                    "params": {
+                        "Props": [
+                            {"volume": 1.0, "mute": muted, "channelVolumes": [volume, volume],
+                             "channelMap": ["AUX0", "AUX1"]},
+                            {"device": "hw:0,0", "deviceName": "", "params": []}
+                        ]
+                    }
+                }
+            },
+            {"id": 42, "type": "PipeWire:Interface:Device", "info": {"params": {"Route": [], "EnumRoute": []}}}
+        ])
+    }
+
+    fn pro_audio_run<'a>(
+        dump: &'a mut Value,
+        calls: &'a mut Vec<Vec<String>>,
+    ) -> impl FnMut(&str, &[&str], bool) -> Result<String, Failure> + 'a {
+        move |program: &str, args: &[&str], _mutation: bool| {
+            calls.push(
+                std::iter::once(program)
+                    .chain(args.iter().copied())
+                    .map(str::to_owned)
+                    .collect(),
+            );
+            match program {
+                "wpctl" => Ok("id 53, type PipeWire:Interface:Node\n".into()),
+                "pw-dump" => Ok(dump.to_string()),
+                _ => {
+                    assert_eq!(&args[..3], ["set-param", "53", "Props"]);
+                    let payload: Value = serde_json::from_str(args[3]).unwrap();
+                    dump[0]["info"]["params"]["Props"][0]["channelVolumes"] =
+                        payload["channelVolumes"].clone();
+                    Ok(String::new())
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn pro_audio_sink_without_routes_steps_its_node_props() {
+        let mut dump = pro_audio_dump(0.5_f64.powi(3), false);
+        let mut calls = Vec::new();
+        let mut run = pro_audio_run(&mut dump, &mut calls);
+        let up = step_audio_sink_with(0.05, &mut run).unwrap();
+        assert_eq!(up.volume, 0.55);
+        assert_eq!(up.label, "HD Audio Pro");
+        assert!(!up.muted);
+        let down = step_audio_sink_with(-0.05, &mut run).unwrap();
+        assert_eq!(down.volume, 0.5);
+        drop(run);
+        assert_eq!(calls.iter().filter(|c| c[0] == "pw-cli").count(), 2);
+        assert_eq!(
+            perceptual(&dump[0]["info"]["params"]["Props"][0]["channelVolumes"]),
+            vec![50, 50]
+        );
+    }
+
+    #[test]
+    fn steps_at_the_limits_report_the_level_without_writing() {
+        // The live readback: wpctl 0.98 = linear 0.938314; one step up caps at 100 %.
+        let mut dump = pro_audio_dump(0.938314, false);
+        let mut calls = Vec::new();
+        let mut run = pro_audio_run(&mut dump, &mut calls);
+        assert_eq!(step_audio_sink_with(0.05, &mut run).unwrap().volume, 1.0);
+        let held = step_audio_sink_with(0.05, &mut run).unwrap();
+        assert_eq!((held.volume, held.linear), (1.0, 1.0));
+        drop(run);
+        assert_eq!(calls.iter().filter(|c| c[0] == "pw-cli").count(), 1);
+
+        let mut dump = pro_audio_dump(0.0, true);
+        let mut calls = Vec::new();
+        let mut run = pro_audio_run(&mut dump, &mut calls);
+        let floor = step_audio_sink_with(-0.05, &mut run).unwrap();
+        assert_eq!((floor.volume, floor.muted), (0.0, true));
+        drop(run);
+        assert!(calls.iter().all(|c| c[0] != "pw-cli"));
+    }
+
+    #[test]
+    fn unreadable_pipewire_object_falls_back_to_wpctl_and_reads_the_level_back() {
+        let mut calls = Vec::new();
+        let mut run = |program: &str, args: &[&str], _mutation: bool| {
+            calls.push(
+                std::iter::once(program)
+                    .chain(args.iter().copied())
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>(),
+            );
+            Ok(match (program, args.first().copied()) {
+                ("wpctl", Some("inspect")) => "id 9, type PipeWire:Interface:Node\n    node.description = \"Speakers\"\n  * node.name = \"alsa_output.speakers\"\n".into(),
+                ("wpctl", Some("get-volume")) => "Volume: 1.00 [MUTED]\n".into(),
+                ("pw-dump", _) => "[]".into(),
+                _ => String::new(),
+            })
+        };
+        let outcome = step_audio_sink_with(0.05, &mut run).unwrap();
+        assert_eq!(
+            outcome,
+            AudioStepOutcome {
+                node_name: "alsa_output.speakers".into(),
+                label: "Speakers".into(),
+                linear: 1.0,
+                volume: 1.0,
+                muted: true,
+            }
+        );
+        assert_eq!(
+            calls[2],
+            ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "0.05+"]
+        );
+    }
+
     #[test]
     fn step_normalizes_short_volume_vector_to_the_full_channel_map() {
-        let stepped = stepped_channel_volumes(&[0.40, 0.25], 8, 0.05).unwrap();
+        let stepped = stepped_channel_volumes(&[0.064, 0.125], 8, 0.05).unwrap();
         assert_eq!(
-            stepped,
-            vec![0.45, 0.30, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45]
+            perceptual(&json!(stepped)),
+            vec![45, 55, 45, 45, 45, 45, 45, 45]
         );
-        assert_eq!(
-            stepped_channel_volumes(&[0.0, 0.5], 2, -0.05),
-            Some(vec![0.0, 0.45])
-        );
+        let stepped = stepped_channel_volumes(&[0.0, 0.125], 2, -0.05).unwrap();
+        assert_eq!(perceptual(&json!(stepped)), vec![0, 45]);
     }
 
     #[test]
