@@ -232,7 +232,13 @@ pub(crate) fn publish_audio_step(
     key_ms: Option<u64>,
 ) -> Result<(), Failure> {
     let value = outcome.volume;
-    super::osd::volume(hub, value, outcome.muted, &outcome.label, &outcome.node_name);
+    super::osd::volume(
+        hub,
+        value,
+        outcome.muted,
+        &outcome.label,
+        &outcome.node_name,
+    );
     let snapshot = hub.borrow().snapshot("audio");
     if let Some(mut state) = snapshot {
         if let Some(node) = state["nodes"]["items"].get_mut(&outcome.node_name) {
@@ -382,7 +388,12 @@ fn sink_volume_from_dump(node_id: u64, dump: &Value) -> Option<SinkVolume> {
     let node_name = node_props.get("node.name")?.as_str()?.to_owned();
     let label = ["node.description", "node.nick"]
         .iter()
-        .find_map(|key| node_props.get(*key)?.as_str().filter(|text| !text.is_empty()))
+        .find_map(|key| {
+            node_props
+                .get(*key)?
+                .as_str()
+                .filter(|text| !text.is_empty())
+        })
         .unwrap_or_default()
         .to_owned();
     let device_id = node_props.get("device.id").and_then(object_id);
@@ -490,8 +501,16 @@ fn step_wpctl_sink(
 ) -> Result<AudioStepOutcome, Failure> {
     let property = |key: &str| {
         inspect.lines().find_map(|line| {
-            let rest = line.trim_start_matches([' ', '*', '\t']).strip_prefix(key)?;
-            Some(rest.trim_start().strip_prefix('=')?.trim().trim_matches('"').to_owned())
+            let rest = line
+                .trim_start_matches([' ', '*', '\t'])
+                .strip_prefix(key)?;
+            Some(
+                rest.trim_start()
+                    .strip_prefix('=')?
+                    .trim()
+                    .trim_matches('"')
+                    .to_owned(),
+            )
         })
     };
     let node_name = property("node.name").ok_or_else(unavailable)?;
@@ -505,11 +524,9 @@ fn step_wpctl_sink(
         &["set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", &step],
         true,
     )?;
-    let readback = run("wpctl", &["get-volume", "@DEFAULT_AUDIO_SINK@"], false)
-        .map_err(|_| action_error())?;
-    let volume = parse_volume(&readback)
-        .ok_or_else(action_error)?
-        .min(1.0);
+    let readback =
+        run("wpctl", &["get-volume", "@DEFAULT_AUDIO_SINK@"], false).map_err(|_| action_error())?;
+    let volume = parse_volume(&readback).ok_or_else(action_error)?.min(1.0);
     Ok(AudioStepOutcome {
         node_name,
         label,
@@ -766,7 +783,10 @@ mod tests {
         let hub = super::super::hub::Hub::new("step-limit".into(), false, Duration::from_millis(1))
             .shared();
         hub.borrow_mut()
-            .publish("audio", json!({"default_output":"other","nodes":{"items":{},"order":[]}}))
+            .publish(
+                "audio",
+                json!({"default_output":"other","nodes":{"items":{},"order":[]}}),
+            )
             .unwrap();
         let mut notices = hub.borrow().observe();
         let outcome = AudioStepOutcome {
@@ -1021,7 +1041,14 @@ mod tests {
         );
         assert_eq!(
             calls[2],
-            ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "0.05+"]
+            [
+                "wpctl",
+                "set-volume",
+                "-l",
+                "1.0",
+                "@DEFAULT_AUDIO_SINK@",
+                "0.05+"
+            ]
         );
     }
 
