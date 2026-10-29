@@ -249,6 +249,20 @@ fn now_ms() -> u64 {
 
 thread_local! {
     static LAST: RefCell<Option<(OsdEvent, std::time::Instant)>> = const { RefCell::new(None) };
+    /// When the last volume key step published its level, and its mute state.
+    static KEY_STEP: std::cell::Cell<Option<(Instant, bool)>> = const { std::cell::Cell::new(None) };
+}
+
+/// The watcher reads the sink after our writes, so during a held key its level lags the
+/// key steps; such a reading would pull the pill back a step. A mute change still shows.
+const KEY_STEP_ECHO: Duration = Duration::from_millis(600);
+fn key_step_echo(event: &OsdEvent) -> bool {
+    event.kind == OsdKind::Volume
+        && KEY_STEP.with(|step| {
+            step.get().is_some_and(|(at, muted)| {
+                at.elapsed() < KEY_STEP_ECHO && event.muted == Some(muted)
+            })
+        })
 }
 
 /// Publish one OSD event. Invalid events and quick duplicates are dropped.
@@ -305,6 +319,7 @@ pub fn volume(hub: &Shared, level: f64, muted: bool, label: &str, device: &str) 
     if !level.is_finite() || !(0.0..=1.0).contains(&level) {
         return;
     }
+    KEY_STEP.with(|step| step.set(Some((Instant::now(), muted))));
     let mut event = OsdEvent::new(OsdKind::Volume, now_ms());
     event.value = Some(level);
     event.muted = Some(muted);
@@ -683,7 +698,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                 refresh_audio(&hub, &env).await?;
                 if std::mem::take(&mut dirty_sink) {
                     if let Some(now) = read_node(&env.wpctl, SINK).await {
-                        if let Some(event) = audio_event(sink.as_ref(), &now, OsdKind::Volume, Some(OsdKind::Output)) {
+                        if let Some(event) = audio_event(sink.as_ref(), &now, OsdKind::Volume, Some(OsdKind::Output)).filter(|event| !key_step_echo(event)) {
                             pending.add(event);
                         }
                         sink = Some(now);

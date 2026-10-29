@@ -27,7 +27,32 @@ pub(crate) struct FastAudioStep {
 
 pub(crate) enum AudioStepCommand {
     Apply(FastAudioStep),
+    /// The default output as the `audio` topic last published it.
+    Observe(AudioObservation),
     Stop,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct AudioObservation {
+    pub(crate) default: Option<String>,
+    /// Linear level of the default output's loudest channel.
+    pub(crate) linear: Option<f64>,
+    pub(crate) muted: Option<bool>,
+}
+
+/// The default output in the published `audio` snapshot.
+pub(crate) fn audio_observation(hub: &Shared) -> Option<AudioObservation> {
+    let hub = hub.borrow();
+    let state = hub.snapshot_ref("audio")?;
+    let default = state["default_output"].as_str().map(str::to_owned);
+    let node = default
+        .as_deref()
+        .and_then(|name| state["nodes"]["items"].get(name));
+    Some(AudioObservation {
+        default,
+        linear: node.and_then(|node| node["volume"].as_f64()),
+        muted: node.and_then(|node| node["muted"].as_bool()),
+    })
 }
 
 pub(crate) struct AudioStepCompletion {
@@ -41,43 +66,90 @@ pub(crate) struct AudioStepWorker {
     thread: Option<JoinHandle<()>>,
 }
 
+/// One worker iteration: every queued command is taken at once, so key presses that
+/// arrived while a write was running become one net step (N0102: a held key never
+/// builds a backlog that keeps moving the volume after release).
+fn drain_commands(
+    first: AudioStepCommand,
+    receiver: &mpsc::Receiver<AudioStepCommand>,
+    steps: &mut AudioSteps,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Option<Option<(f64, Option<u64>)>> {
+    let mut batch = None::<(f64, Option<u64>)>;
+    for command in std::iter::once(first).chain(receiver.try_iter()) {
+        match command {
+            AudioStepCommand::Stop => return None,
+            AudioStepCommand::Observe(observation) => steps.observe(observation, run),
+            AudioStepCommand::Apply(step) => {
+                let (delta, key_ms) = batch.get_or_insert((0.0, None));
+                *delta += step.delta;
+                // The oldest key of the batch, so OSD_STEP reports the full wait.
+                *key_ms = key_ms.or(step.key_ms);
+            }
+        }
+    }
+    Some(batch)
+}
+
+/// Runs one coalesced step: the OSD level is sent before the write (from the cached
+/// level), and again only when the write's result differs.
+fn run_batch(
+    steps: &mut AudioSteps,
+    delta: f64,
+    key_ms: Option<u64>,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+    send: &mut impl FnMut(AudioStepCompletion),
+) {
+    let mut previewed = None;
+    let result = steps.step(delta, run, &mut |outcome: &AudioStepOutcome| {
+        previewed = Some(outcome.clone());
+        send(AudioStepCompletion {
+            result: Ok(outcome.clone()),
+            key_ms,
+        });
+    });
+    if !matches!((&result, &previewed), (Ok(outcome), Some(shown)) if outcome == shown) {
+        send(AudioStepCompletion { result, key_ms });
+    }
+}
+
+/// The worker loop: blocks for a command, then runs everything queued as one batch.
+fn serve_steps(
+    receiver: &mpsc::Receiver<AudioStepCommand>,
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+    stop: &std::sync::atomic::AtomicBool,
+    send: &mut impl FnMut(AudioStepCompletion),
+) {
+    let mut steps = AudioSteps::default();
+    while !stop.load(Ordering::Acquire) {
+        let Ok(first) = receiver.recv() else { break };
+        let Some(batch) = drain_commands(first, receiver, &mut steps, run) else {
+            break;
+        };
+        if stop.load(Ordering::Acquire) {
+            break;
+        }
+        if let Some((delta, key_ms)) = batch {
+            let _guard = audio_lock().blocking_lock_owned();
+            run_batch(&mut steps, delta, key_ms, run, send);
+        }
+    }
+}
+
 impl AudioStepWorker {
     pub(crate) fn start(
         completed: tokio::sync::mpsc::UnboundedSender<AudioStepCompletion>,
     ) -> crate::Result<Self> {
-        let (sender, receiver) = mpsc::sync_channel::<AudioStepCommand>(64);
+        let (sender, receiver) = mpsc::sync_channel::<AudioStepCommand>(256);
         let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let thread_stop = stop.clone();
         let thread = std::thread::Builder::new()
             .name("nacre-audio-step".into())
             .stack_size(512 * 1024)
             .spawn(move || {
-                let runtime = match tokio::runtime::Builder::new_current_thread()
-                    .enable_all()
-                    .build()
-                {
-                    Ok(runtime) => runtime,
-                    Err(error) => {
-                        tracing::error!(%error, "Audio step worker runtime failed");
-                        return;
-                    }
-                };
-                while !thread_stop.load(Ordering::Acquire) {
-                    let request = match receiver.recv() {
-                        Ok(AudioStepCommand::Apply(request)) => request,
-                        Ok(AudioStepCommand::Stop) | Err(_) => break,
-                    };
-                    if thread_stop.load(Ordering::Acquire) {
-                        break;
-                    }
-                    let guard = runtime.block_on(audio_lock().lock_owned());
-                    let result = step_audio_sink(request.delta);
-                    drop(guard);
-                    let _ = completed.send(AudioStepCompletion {
-                        result,
-                        key_ms: request.key_ms,
-                    });
-                }
+                serve_steps(&receiver, &mut production_run, &thread_stop, &mut |completion| {
+                    let _ = completed.send(completion);
+                });
             })?;
         Ok(Self {
             stop,
@@ -105,6 +177,139 @@ impl Drop for AudioStepWorker {
                 tracing::warn!("Audio step worker panicked");
             }
         }
+    }
+}
+
+/// Own writes are echoed by the PipeWire watcher this long after them; a different level
+/// seen inside this window is our own earlier step, not an external change.
+const OWN_WRITE_ECHO: Duration = Duration::from_millis(500);
+
+/// The default sink's volume object, read once (`wpctl inspect` + `pw-dump`, ~0.1 s) and
+/// then kept current from our own writes and the `audio` topic, so a key step costs one
+/// `pw-cli set-param` and its OSD needs no read at all.
+#[derive(Default)]
+struct AudioSteps {
+    cache: Option<SinkVolume>,
+    /// The default output name of the last observation (a change re-reads the sink).
+    seen_default: Option<Option<String>>,
+    last_write: Option<std::time::Instant>,
+}
+
+enum SinkRead {
+    PipeWire(SinkVolume),
+    /// The volume object could not be read; `wpctl inspect` output for the wpctl path.
+    Wpctl(String),
+}
+
+fn read_sink(
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Result<SinkRead, Failure> {
+    let inspect = run("wpctl", &["inspect", "@DEFAULT_AUDIO_SINK@"], false)?;
+    let node_id = parse_object_id(&inspect).ok_or_else(unavailable)?;
+    let sink = run("pw-dump", &[], false)
+        .ok()
+        .and_then(|dump| serde_json::from_str::<Value>(&dump).ok())
+        .and_then(|dump| sink_volume_from_dump(node_id, &dump));
+    Ok(match sink {
+        Some(sink) => SinkRead::PipeWire(sink),
+        None => SinkRead::Wpctl(inspect),
+    })
+}
+
+impl AudioSteps {
+    fn observe(
+        &mut self,
+        observation: AudioObservation,
+        run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+    ) {
+        let changed_default = self.seen_default.as_ref() != Some(&observation.default);
+        self.seen_default = Some(observation.default.clone());
+        let reread = if changed_default {
+            observation.default.is_some()
+        } else if let Some(sink) = &mut self.cache {
+            if let Some(muted) = observation.muted {
+                sink.muted = muted;
+            }
+            let echo = self
+                .last_write
+                .is_some_and(|at| at.elapsed() < OWN_WRITE_ECHO);
+            match observation.linear {
+                Some(linear) if !echo && (linear - sink.level()).abs() > 0.002 => {
+                    // Another client changed it: follow a balanced sink, re-read otherwise.
+                    let balanced = sink
+                        .current
+                        .iter()
+                        .all(|volume| (volume - sink.current[0]).abs() < 1e-3);
+                    if balanced {
+                        sink.current.iter_mut().for_each(|volume| *volume = linear);
+                    }
+                    !balanced
+                }
+                _ => false,
+            }
+        } else {
+            false
+        };
+        if reread {
+            self.cache = match read_sink(run) {
+                Ok(SinkRead::PipeWire(sink)) => Some(sink),
+                _ => None,
+            };
+        }
+    }
+
+    fn step(
+        &mut self,
+        delta: f64,
+        run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+        preview: &mut impl FnMut(&AudioStepOutcome),
+    ) -> Result<AudioStepOutcome, Failure> {
+        let cached = self.cache.is_some();
+        if !cached {
+            match read_sink(run)? {
+                SinkRead::PipeWire(sink) => self.cache = Some(sink),
+                SinkRead::Wpctl(inspect) => return step_wpctl_sink(&inspect, delta, run),
+            }
+        }
+        let sink = self.cache.as_mut().ok_or_else(unavailable)?;
+        let channels = stepped_channel_volumes(&sink.current, sink.channel_count, delta)
+            .ok_or_else(unavailable)?;
+        let outcome = sink.outcome(&channels);
+        // At 0 % or 100 % there is nothing to write, but the OSD is still reported.
+        if sink.current.len() == channels.len()
+            && sink
+                .current
+                .iter()
+                .zip(&channels)
+                .all(|(now, next)| (now - next).abs() < 1e-6)
+        {
+            return Ok(outcome);
+        }
+        preview(&outcome);
+        match write_sink(sink, &channels, run) {
+            Ok(()) => {
+                sink.current = channels;
+                self.last_write = Some(std::time::Instant::now());
+                Ok(outcome)
+            }
+            // The cached object may be gone (sink re-created): re-read once.
+            Err(_) if cached => {
+                self.cache = None;
+                self.step(delta, run, preview)
+            }
+            Err(error) => {
+                self.cache = None;
+                Err(error)
+            }
+        }
+    }
+}
+
+fn production_run(program: &str, args: &[&str], mutation: bool) -> Result<String, Failure> {
+    if program == "wpctl" {
+        run_action(program, args, mutation)
+    } else {
+        run_pipewire_action(program, args, mutation)
     }
 }
 
@@ -296,7 +501,7 @@ pub(crate) struct AudioStepOutcome {
     pub(crate) node_name: String,
     /// `node.description` (else `node.nick`), the label the PipeWire watcher reports.
     pub(crate) label: String,
-    /// Mean linear (PipeWire) level, what `AudioNode.volume` reports.
+    /// Linear level of the loudest channel, what `AudioNode.volume` reports.
     pub(crate) linear: f64,
     /// Perceptual (cubic, `wpctl get-volume`) level the OSD and the sliders show.
     pub(crate) volume: f64,
@@ -465,33 +670,15 @@ fn stepped_channel_volumes(current: &[f64], count: usize, delta: f64) -> Option<
 }
 
 fn step_audio_sink(delta: f64) -> Result<AudioStepOutcome, Failure> {
-    let mut run = |program: &str, args: &[&str], mutation: bool| {
-        if program == "wpctl" {
-            run_action(program, args, mutation)
-        } else {
-            run_pipewire_action(program, args, mutation)
-        }
-    };
-    step_audio_sink_with(delta, &mut run)
+    step_audio_sink_with(delta, &mut production_run)
 }
 
-/// Prefer the direct PipeWire write (all channels, one round trip); when the sink's volume
-/// object cannot be read from `pw-dump`, step it with `wpctl` instead, so a reachable
-/// default sink always changes and always reports its level for the OSD.
+/// One uncached step (the `audio.step` method): read the sink, then write.
 fn step_audio_sink_with(
     delta: f64,
     run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
 ) -> Result<AudioStepOutcome, Failure> {
-    let inspect = run("wpctl", &["inspect", "@DEFAULT_AUDIO_SINK@"], false)?;
-    let node_id = parse_object_id(&inspect).ok_or_else(unavailable)?;
-    let sink = run("pw-dump", &[], false)
-        .ok()
-        .and_then(|dump| serde_json::from_str::<Value>(&dump).ok())
-        .and_then(|dump| sink_volume_from_dump(node_id, &dump));
-    match sink {
-        Some(sink) => step_pipewire_sink(sink, delta, run),
-        None => step_wpctl_sink(&inspect, delta, run),
-    }
+    AudioSteps::default().step(delta, run, &mut |_| {})
 }
 
 fn step_wpctl_sink(
@@ -536,36 +723,34 @@ fn step_wpctl_sink(
     })
 }
 
-fn step_pipewire_sink(
-    sink: SinkVolume,
-    delta: f64,
-    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
-) -> Result<AudioStepOutcome, Failure> {
-    let channels = stepped_channel_volumes(&sink.current, sink.channel_count, delta)
-        .ok_or_else(unavailable)?;
-    let linear = channels.iter().sum::<f64>() / channels.len() as f64;
-    let outcome = AudioStepOutcome {
-        node_name: sink.node_name,
-        label: sink.label,
-        linear,
-        volume: (linear.cbrt() * 1000.0).round() / 1000.0,
-        muted: sink.muted,
-    };
-    // At 0 % or 100 % there is nothing to write, but the OSD is still reported.
-    if sink.current.len() == channels.len()
-        && sink
-            .current
-            .iter()
-            .zip(&channels)
-            .all(|(now, next)| (now - next).abs() < 1e-6)
-    {
-        return Ok(outcome);
+impl SinkVolume {
+    /// Linear level of the loudest channel, as the PipeWire watcher reports it.
+    fn level(&self) -> f64 {
+        self.current.iter().copied().fold(0.0, f64::max)
     }
+
+    fn outcome(&self, channels: &[f64]) -> AudioStepOutcome {
+        let linear = channels.iter().copied().fold(0.0, f64::max);
+        AudioStepOutcome {
+            node_name: self.node_name.clone(),
+            label: self.label.clone(),
+            linear,
+            volume: (linear.cbrt() * 1000.0).round() / 1000.0,
+            muted: self.muted,
+        }
+    }
+}
+
+fn write_sink(
+    sink: &SinkVolume,
+    channels: &[f64],
+    run: &mut impl FnMut(&str, &[&str], bool) -> Result<String, Failure>,
+) -> Result<(), Failure> {
     let (object_id, param, payload) = match sink.param {
         VolumeParam::NodeProps { node_id } => (
             node_id.to_string(),
             "Props",
-            json!({"channelVolumes":channels.clone()}),
+            json!({"channelVolumes":channels}),
         ),
         VolumeParam::DeviceRoute {
             device_id,
@@ -577,14 +762,14 @@ fn step_pipewire_sink(
             json!({
                 "index":route_index,
                 "device":route_device,
-                "props":{"channelVolumes":channels.clone()},
+                "props":{"channelVolumes":channels},
                 "save":true
             }),
         ),
     };
     let payload = serde_json::to_string(&payload).map_err(|_| action_error())?;
     run("pw-cli", &["set-param", &object_id, param, &payload], true)?;
-    Ok(outcome)
+    Ok(())
 }
 
 fn run_pipewire_action(program: &str, args: &[&str], mutation: bool) -> Result<String, Failure> {
@@ -1009,6 +1194,217 @@ mod tests {
         assert_eq!((floor.volume, floor.muted), (0.0, true));
         drop(run);
         assert!(calls.iter().all(|c| c[0] != "pw-cli"));
+    }
+
+    /// A fake PipeWire for the worker: `pw-dump` is the live pro-audio fixture, every
+    /// `pw-cli` write takes `write_cost` and lands in the fixture; calls are counted.
+    #[derive(Clone)]
+    struct FakeSink {
+        dump: Arc<std::sync::Mutex<Value>>,
+        calls: Arc<std::sync::Mutex<Vec<String>>>,
+        write_cost: Duration,
+    }
+    impl FakeSink {
+        fn new(perceptual: f64, write_cost: Duration) -> Self {
+            Self {
+                dump: Arc::new(std::sync::Mutex::new(pro_audio_dump(
+                    perceptual.powi(3),
+                    false,
+                ))),
+                calls: Arc::default(),
+                write_cost,
+            }
+        }
+        fn run(&self) -> impl FnMut(&str, &[&str], bool) -> Result<String, Failure> {
+            let this = self.clone();
+            move |program: &str, args: &[&str], _mutation: bool| {
+                this.calls.lock().unwrap().push(program.to_owned());
+                match program {
+                    "wpctl" => Ok("id 53, type PipeWire:Interface:Node\n".into()),
+                    "pw-dump" => Ok(this.dump.lock().unwrap().to_string()),
+                    _ => {
+                        std::thread::sleep(this.write_cost);
+                        let payload: Value = serde_json::from_str(args[3]).unwrap();
+                        this.dump.lock().unwrap()[0]["info"]["params"]["Props"][0]
+                            ["channelVolumes"] = payload["channelVolumes"].clone();
+                        Ok(String::new())
+                    }
+                }
+            }
+        }
+        fn count(&self, program: &str) -> usize {
+            self.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|call| *call == program)
+                .count()
+        }
+        fn level(&self) -> Vec<i64> {
+            perceptual(&self.dump.lock().unwrap()[0]["info"]["params"]["Props"][0]["channelVolumes"])
+        }
+    }
+
+    fn observed(default: &str, perceptual: f64) -> AudioStepCommand {
+        AudioStepCommand::Observe(AudioObservation {
+            default: Some(default.into()),
+            linear: Some(perceptual.powi(3)),
+            muted: Some(false),
+        })
+    }
+
+    const SINK: &str = "alsa_output.pci-0000_00_1f.3-platform-skl_hda_dsp_generic.pro-output-0";
+
+    /// Starts the worker loop on a fake sink; returns the command sender, the completions
+    /// with their arrival time, and the loop thread.
+    fn fake_worker(
+        sink: &FakeSink,
+    ) -> (
+        SyncSender<AudioStepCommand>,
+        mpsc::Receiver<(std::time::Instant, AudioStepCompletion)>,
+        std::thread::JoinHandle<()>,
+    ) {
+        let (sender, receiver) = mpsc::sync_channel(256);
+        let (done, completions) = mpsc::channel();
+        let mut run = sink.run();
+        let thread = std::thread::spawn(move || {
+            let stop = std::sync::atomic::AtomicBool::new(false);
+            serve_steps(&receiver, &mut run, &stop, &mut |completion| {
+                let _ = done.send((std::time::Instant::now(), completion));
+            });
+        });
+        (sender, completions, thread)
+    }
+
+    fn press(sender: &SyncSender<AudioStepCommand>, delta: f64) {
+        sender
+            .try_send(AudioStepCommand::Apply(FastAudioStep {
+                delta,
+                key_ms: Some(1),
+            }))
+            .unwrap();
+    }
+
+    #[test]
+    fn held_key_on_a_slow_sink_coalesces_into_at_most_two_writes_and_stops_at_release() {
+        // Each write costs 100 ms (the old per-step cost was ~300 ms); 10 presses 5 ms apart.
+        let sink = FakeSink::new(0.30, Duration::from_millis(100));
+        let (sender, completions, thread) = fake_worker(&sink);
+        sender.try_send(observed(SINK, 0.30)).unwrap();
+        let started = std::time::Instant::now();
+        for _ in 0..10 {
+            press(&sender, 0.05);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        let released = std::time::Instant::now();
+        drop(sender);
+        thread.join().unwrap();
+        let after_release = released.elapsed();
+        let completions: Vec<_> = completions.try_iter().collect();
+        assert_eq!(sink.level(), vec![80, 80], "ten steps of 5 % from 30 %");
+        assert!(sink.count("pw-cli") <= 2, "writes: {}", sink.count("pw-cli"));
+        assert_eq!(sink.count("pw-dump"), 1, "the sink is read once");
+        let last = completions.last().unwrap();
+        assert_eq!(last.1.result.as_ref().unwrap().volume, 0.8);
+        // No backlog: the volume stops at most one write (100 ms) after the release.
+        assert!(
+            after_release < Duration::from_millis(250),
+            "still writing {after_release:?} after release ({:?} in all)",
+            started.elapsed()
+        );
+        assert!(last.0 < released + Duration::from_millis(250));
+        assert!(completions.len() <= 2, "one OSD per batch, no replay");
+    }
+
+    #[test]
+    fn cached_step_shows_the_osd_before_the_write_and_costs_one_call() {
+        let sink = FakeSink::new(0.50, Duration::from_millis(80));
+        let (sender, completions, thread) = fake_worker(&sink);
+        sender.try_send(observed(SINK, 0.50)).unwrap();
+        // The observation fills the cache off the key path.
+        while sink.count("pw-dump") == 0 {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        std::thread::sleep(Duration::from_millis(5));
+        let calls = sink.calls.lock().unwrap().len();
+        let key = std::time::Instant::now();
+        press(&sender, 0.05);
+        let (shown, completion) = completions.recv().unwrap();
+        let latency = shown.duration_since(key);
+        assert_eq!(completion.result.unwrap().volume, 0.55);
+        assert!(latency < Duration::from_millis(10), "OSD after {latency:?}");
+        drop(sender);
+        thread.join().unwrap();
+        assert_eq!(sink.calls.lock().unwrap().len() - calls, 1, "one pw-cli write");
+        assert!(completions.try_recv().is_err(), "the write agreed: no second OSD");
+        eprintln!("cached step: OSD {latency:?} after the key");
+    }
+
+    #[test]
+    fn observations_follow_external_changes_and_ignore_our_own_echo() {
+        let sink = FakeSink::new(0.50, Duration::ZERO);
+        let mut run = sink.run();
+        let mut steps = AudioSteps::default();
+        let observe = |steps: &mut AudioSteps, run: &mut _, default: &str, level: f64| {
+            let AudioStepCommand::Observe(observation) = observed(default, level) else {
+                unreachable!()
+            };
+            steps.observe(observation, run);
+        };
+        observe(&mut steps, &mut run, SINK, 0.50);
+        assert_eq!(sink.count("pw-dump"), 1);
+        let step = steps.step(0.05, &mut run, &mut |_| {}).unwrap();
+        assert_eq!(step.volume, 0.55);
+        // The watcher's late reading of an earlier level is our own echo.
+        observe(&mut steps, &mut run, SINK, 0.50);
+        assert_eq!(steps.step(0.05, &mut run, &mut |_| {}).unwrap().volume, 0.6);
+        // A slider change elsewhere, after the echo window, is adopted without a read.
+        steps.last_write = None;
+        observe(&mut steps, &mut run, SINK, 0.20);
+        assert_eq!(steps.step(0.05, &mut run, &mut |_| {}).unwrap().volume, 0.25);
+        assert_eq!(sink.count("pw-dump"), 1);
+        // A new default output is read again.
+        observe(&mut steps, &mut run, "bluez_output.headset", 0.20);
+        assert_eq!(sink.count("pw-dump"), 2);
+    }
+
+    /// Measures one step against a real PipeWire. It CHANGES the default sink's volume, so
+    /// run it only in a private session: `cargo test ... live_pipewire_step_cost -- --ignored`.
+    #[test]
+    #[ignore = "changes the default sink of the running PipeWire"]
+    fn live_pipewire_step_cost() {
+        let median = |mut samples: Vec<Duration>| {
+            samples.sort();
+            samples[samples.len() / 2]
+        };
+        let uncached = (0..6)
+            .map(|index| {
+                let started = std::time::Instant::now();
+                step_audio_sink(if index % 2 == 0 { -0.05 } else { 0.05 }).unwrap();
+                started.elapsed()
+            })
+            .collect();
+        let mut steps = AudioSteps::default();
+        let mut run = production_run;
+        steps.step(0.0, &mut run, &mut |_| {}).unwrap();
+        let (mut osd, mut write) = (Vec::new(), Vec::new());
+        for index in 0..20 {
+            let started = std::time::Instant::now();
+            let mut shown = None;
+            steps
+                .step(if index % 2 == 0 { -0.05 } else { 0.05 }, &mut run, &mut |_| {
+                    shown = Some(started.elapsed())
+                })
+                .unwrap();
+            write.push(started.elapsed());
+            osd.push(shown.unwrap());
+        }
+        eprintln!(
+            "STEP_COST uncached={:?} cached_write={:?} cached_osd={:?}",
+            median(uncached),
+            median(write),
+            median(osd)
+        );
     }
 
     #[test]
