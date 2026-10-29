@@ -402,6 +402,7 @@ mod gating_tests {
         tokio::time::sleep(Duration::from_millis(60)).await;
     }
 
+    #[allow(clippy::await_holding_lock)] // serialises on the process-wide update lane
     #[tokio::test(flavor = "current_thread")]
     async fn no_check_runs_without_a_subscriber_and_a_subscriber_triggers_one() {
         let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -432,6 +433,7 @@ mod gating_tests {
             .await;
     }
 
+    #[allow(clippy::await_holding_lock)]
     #[tokio::test(flavor = "current_thread")]
     async fn a_fresh_count_is_not_rechecked_on_subscribe() {
         let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
