@@ -127,7 +127,10 @@ class ConfigurationTests(unittest.TestCase):
                 home / ".local/share/icons/hicolor/scalable/apps/nacre-widgets.svg"
             )
             self.assertEqual(installed_icon.read_bytes(), icon.read_bytes())
-            self.assertEqual(icon.read_text().count("<rect "), 8)
+            # N0099: the Nacre shell with the widget-tiles app glyph, like the other apps.
+            self.assertIn('data-logo="nacre-logo"', icon.read_text())
+            self.assertIn('aria-label="Widgets"', icon.read_text())
+            self.assertNotIn("@", icon.read_text())
 
     def test_nacre_ai_installs_the_actual_executable_controller(self):
         with tempfile.TemporaryDirectory() as directory:

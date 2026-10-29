@@ -868,3 +868,4 @@ SSH test host; configure and its test exactly match pre-extension 68d28945.
 2026-10-28: [N0091 foreground wallpaper selection priority](0091-wallpaper-select-priority.md) — keeps selection responsive while catalogue and raster warming run.
 
 2026-10-29: [N0096 UI provider liveness](0096-ui-provider-liveness.md) — newest UI provider wins; a provider missing 3 consecutive ui.dispatch deadlines is disconnected so it re-registers (Bead B0190).
+2026-10-29: [N0099 Nacre Widgets app icon](0099-widgets-icon.md) — the widgets glyph inside the Nacre shell like the other app icons; installed pre-painted as nacre-widgets.svg (Bead B0198).
