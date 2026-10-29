@@ -74,6 +74,7 @@ migration, backup, recovery and downgrade guard above.
 | webapps | `nacre/menu/webapps.json` | menu registry | 1 | array |
 | reminders | `nacre/menu/reminders.json` | menu registry | 1 | array |
 | configuration | `nacre/configuration.json` | configure | 1 | object |
+| modules | `nacre/modules.json` | configure / nacre module | 1 | object |
 | package-links | `nacre/package-links.json` | package runtime | 1 | object |
 | defaults | `nacre/defaults.json` | package seed | 1 | object |
 | release-current | `nacre/releases/current.json` | releases | 1 | object |

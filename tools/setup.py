@@ -191,7 +191,47 @@ def selection(args, root, home, interactive):
     profile["components"] = list(
         dict.fromkeys(["configs", "shell", *profile["components"], *optional])
     )
+    args.selected_modules = modules(args, home, interactive)
     return profiles.validate(profile), keyboard, compositor
+
+
+def modules(args, home, interactive):
+    """Optional modules (theming, xdg-open, ...): existing choices, plus --module."""
+    import nacre_modules
+
+    extras = nacre_modules.EXTRAS
+    chosen = (
+        set()
+        if getattr(args, "only_modules", False)
+        else nacre_modules.resolve(home) & set(extras)
+    )
+    chosen |= set(getattr(args, "modules", None) or ())
+    if interactive:
+        for name in extras:
+            print(f"  {name}: {nacre_modules.MODULES[name]}")
+        answer = ask(
+            tr(
+                "setup.prompt.modules",
+                "Optional modules, comma-separated ({none} keeps only the shell and session)",
+                {"none": "none"},
+            ),
+            ",".join(name for name in extras if name in chosen) or "none",
+        ).strip()
+        chosen = {
+            name.strip()
+            for name in answer.split(",")
+            if name.strip() and answer.lower() not in ("none", "no")
+        }
+    unknown = chosen - set(extras)
+    if unknown:
+        raise ValueError(
+            tr(
+                "setup.error.unknown-module",
+                "Unknown optional module: {module}",
+                {"module": ", ".join(sorted(unknown))},
+            )
+        )
+    return [name for name in extras if name in chosen]
 
 
 def missing_packages(root, profile, compositor="hyprland"):
@@ -268,6 +308,15 @@ def main(argv=None):
     parser.add_argument(
         "--with", dest="optional", action="append", choices=("ai", "brain"), default=[]
     )
+    parser.add_argument(
+        "--module",
+        dest="modules",
+        action="append",
+        default=[],
+        metavar="NAME",
+        help="also enable an optional module (see nacre module list)",
+    )
+    parser.add_argument("--only-modules", action="store_true", help=argparse.SUPPRESS)
     for name in ("layout", "variant", "model", "options"):
         parser.add_argument("--" + name)
     args = parser.parse_args(argv)
@@ -307,6 +356,10 @@ def main(argv=None):
                 args, ROOT, Path.home(), interactive and not args.review_selected
             )
     selected_backends = [compositor, *getattr(args, "additional_compositors", [])]
+    import nacre_modules
+
+    chosen = getattr(args, "selected_modules", None)
+    enabled = nacre_modules.resolve(Path.home(), chosen, selected_backends)
     with tempfile.TemporaryDirectory(prefix="nacre-setup-") as temporary:
         selected = Path(temporary) / "profile.json"
         selected.write_text(json.dumps(profile))
@@ -323,6 +376,7 @@ def main(argv=None):
                     selected_backends,
                     keyboard,
                     validate_config=not missing,
+                    modules=chosen,
                 )
             else:
                 with _writer.writer_lease(Path.home() / ".config/nacre") as lease:
@@ -334,6 +388,7 @@ def main(argv=None):
                         keyboard,
                         validate_config=not missing,
                         lease=lease,
+                        modules=chosen,
                     )
             print(
                 tr(
@@ -343,6 +398,19 @@ def main(argv=None):
                         "profile": profile["id"],
                         "compositor": ", ".join(selected_backends),
                         "components": ", ".join(profile["components"]),
+                    },
+                )
+            )
+            print(
+                tr(
+                    "setup.plan.modules",
+                    "Modules: {modules}",
+                    {
+                        "modules": ", ".join(
+                            name
+                            for name in (*nacre_modules.BASE, *nacre_modules.EXTRAS)
+                            if name in enabled
+                        )
                     },
                 )
             )
@@ -362,7 +430,8 @@ def main(argv=None):
             if args.plan:
                 print(tr("setup.plan.files", "Private file plan:"))
                 for path in plan:
-                    print("  " + str(path))
+                    relative = Path(path).relative_to(Path.home())
+                    print(f"  {path} [{nacre_modules.module_of(relative)}]")
             if missing:
                 print(
                     tr(
@@ -394,6 +463,9 @@ def main(argv=None):
                         command += ["--also-compositor", backend]
                     for name, value in keyboard.items():
                         command += ["--" + name, value]
+                    if chosen is not None:
+                        command.append("--only-modules")
+                        command += [part for n in chosen for part in ("--module", n)]
                     if args.yes:
                         command.append("--yes")
                     return subprocess.call(command)
@@ -418,7 +490,9 @@ def main(argv=None):
                     tr("setup.cancelled", "Setup cancelled; no configuration changed.")
                 )
                 return 0
-            result = deploy_package(ROOT, profile, keyboard, selected_backends)
+            result = deploy_package(
+                ROOT, profile, keyboard, selected_backends, modules=chosen
+            )
             print(
                 tr(
                     "setup.applied",

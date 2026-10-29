@@ -16,9 +16,24 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
+def all_modules(case):
+    """These tests cover the managed-file mechanism of a full (pre-N0101)
+    install, so every module is on; selection is in test_install_modules.py."""
+    from unittest.mock import patch
+
+    everything = frozenset(module.nacre_modules.MODULES)
+    patcher = patch.object(
+        module.nacre_modules, "resolve", side_effect=lambda *a, **k: everything
+    )
+    patcher.start()
+    case.addCleanup(patcher.stop)
+
+
 class ConfigurationTests(unittest.TestCase):
     def setUp(self):
         from unittest.mock import patch
+
+        all_modules(self)
 
         selected = patch.object(
             module,
@@ -341,6 +356,9 @@ class ConfigurationTests(unittest.TestCase):
 
 
 class IdleMigrationTests(unittest.TestCase):
+    def setUp(self):
+        all_modules(self)
+
     def test_idle_migration_preserves_policy_and_other_drift_protection(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"

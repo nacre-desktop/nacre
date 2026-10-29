@@ -532,6 +532,17 @@
       "defaults": {}
     },
     {
+      "id": "modules",
+      "paths": [
+        "nacre/modules.json"
+      ],
+      "owner": "configure / nacre module",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": false,
+      "defaults": {}
+    },
+    {
       "id": "package-links",
       "paths": [
         "nacre/package-links.json"
