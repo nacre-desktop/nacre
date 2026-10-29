@@ -3,11 +3,15 @@
 Status: Implemented; pending lead review. Date: 2026-10-24.
 
 The daemon owns `dashboard.updates` using the existing `updates.rs` counter.
-It starts a background check immediately and every 1,800 seconds, independent
-of subscribers. `dashboard.updates.refresh` accepts an empty object and immediately
-returns `changed: false`; the topic carries completion. A concurrent request
-returns `busy`; a timer tick while busy is skipped. Safe mode does not start or
-advertise this service.
+The original implementation started a background check immediately and every
+1,800 seconds, independent of subscribers. N0095 supersedes that schedule: the
+automatic check begins with the first topic subscription and repeats every
+1,800 seconds while subscribed. Settled package-database changes and updater
+completion are retained while unsubscribed and trigger a refresh when a dashboard
+subscribes. Explicit `dashboard.updates.refresh` remains on-demand. The method
+accepts an empty object and immediately returns `changed: false`; the topic
+carries completion. A concurrent request returns `busy`. Safe mode does not
+start or advertise this service.
 
 Parity: the QML status worker invokes `nice -n 10 nacre-helper updates` immediately
 and every 30 minutes. A cache older than 30 minutes launches a refresh, which
