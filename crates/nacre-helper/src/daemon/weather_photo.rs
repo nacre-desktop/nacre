@@ -5,7 +5,7 @@ use crate::{paths::Paths, Result};
 use futures_util::future::LocalBoxFuture;
 pub use nacre_protocol::weather_photo::TOPIC;
 use nacre_protocol::weather_photo::{Asset, Location, State, Status};
-use std::{path::Path, rc::Rc, time::Duration};
+use std::{path::Path, rc::Rc};
 
 type Loader = Rc<dyn Fn(Paths, Location) -> LocalBoxFuture<'static, Result<fetch::Photo>>>;
 
@@ -82,8 +82,6 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
         let mut attempted: Option<Location> = None;
         let mut pending: Option<LocalBoxFuture<'static, Result<fetch::Photo>>> = None;
         let mut current = None;
-        let mut timer = tokio::time::interval(Duration::from_secs(1));
-        timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         while *interest.borrow() {
             tokio::select! {
                 biased;
@@ -101,7 +99,6 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                         }
                     }
                 },
-                _ = timer.tick() => {},
             }
             let location = super::weather::location(&hub);
             if location != current {
@@ -150,6 +147,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::cell::Cell;
+    use std::time::Duration;
 
     fn consent(hub: &Shared, value: bool) {
         hub.borrow_mut()
@@ -251,6 +249,52 @@ mod tests {
                 assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["status"], "idle");
                 tokio::time::sleep(Duration::from_millis(25)).await;
                 assert_eq!(calls.get(), 2, "no work after disconnect");
+                task.abort();
+                let _ = task.await;
+                Ok(())
+            })
+            .await
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_new_weather_location_restarts_the_photo_without_a_timer() -> Result<()> {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let home = tempfile::tempdir()?;
+                let hub = super::super::hub::Hub::new(
+                    "photo-loc".into(),
+                    false,
+                    Duration::from_millis(1),
+                )
+                .shared();
+                initial(&hub)?;
+                let place = |name: &str| {
+                    hub.borrow_mut()
+                        .publish(
+                            super::super::weather::TOPIC,
+                            json!({"current":{"location":name,"latitude":60,"longitude":5}}),
+                        )
+                        .unwrap()
+                };
+                place("Harbour");
+                consent(&hub, true);
+                let calls = Rc::new(Cell::new(0));
+                let count = calls.clone();
+                let loader: Loader = Rc::new(move |_, _| {
+                    count.set(count.get() + 1);
+                    Box::pin(std::future::pending())
+                });
+                let task = tokio::task::spawn_local(run_inner(
+                    hub.clone(),
+                    Paths::new(home.path()),
+                    loader,
+                    false,
+                ));
+                let (client, _) = hub.borrow_mut().add_client()?;
+                hub.borrow_mut().subscribe(client, &[TOPIC.into()], false)?;
+                until(|| calls.get() == 1).await;
+                place("Fjord");
+                until(|| calls.get() == 2).await;
                 task.abort();
                 let _ = task.await;
                 Ok(())
