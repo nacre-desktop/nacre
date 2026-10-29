@@ -9,13 +9,28 @@ use std::{
     collections::BTreeMap,
     path::PathBuf,
     sync::{Arc, OnceLock},
-    time::Duration,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 pub const TOPIC: &str = "dashboard.updates";
 const INTERVAL: Duration = Duration::from_secs(1800);
 const DATABASE_DEBOUNCE: Duration = Duration::from_secs(2);
 static LANE: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
+
+fn refresh_due_at(checked: Option<f64>, now: f64) -> bool {
+    checked.is_none_or(|checked| !checked.is_finite() || now - checked >= INTERVAL.as_secs_f64())
+}
+
+fn refresh_due(hub: &Shared) -> bool {
+    let checked = hub
+        .borrow()
+        .snapshot(TOPIC)
+        .and_then(|state| state["checked"].as_f64());
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0.0, |elapsed| elapsed.as_secs_f64());
+    refresh_due_at(checked, now)
+}
 
 pub fn methods() -> BTreeMap<String, Method> {
     BTreeMap::from([(
@@ -137,7 +152,19 @@ pub fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
             false,
         ));
     }
-    start(hub)?;
+    let (subscribed, wake) = {
+        let mut state = hub.borrow_mut();
+        let interest = state.watch_interest(TOPIC);
+        let subscribed = *interest.borrow();
+        let wake = state.updates_wake.clone();
+        (subscribed, wake)
+    };
+    start(hub.clone())?;
+    if subscribed {
+        if let Some(wake) = wake {
+            wake.notify_one();
+        }
+    }
     Ok(json!({"changed":false}))
 }
 
@@ -187,26 +214,69 @@ async fn watch_local_database(path: PathBuf, changed: tokio::sync::mpsc::Unbound
 }
 
 pub async fn run(hub: Shared, wake: Arc<tokio::sync::Notify>) -> crate::Result<()> {
-    let mut timer = tokio::time::interval(INTERVAL);
-    timer.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let mut interest = hub.borrow_mut().watch_interest(TOPIC);
     let (changed, mut changes) = tokio::sync::mpsc::unbounded_channel();
     tokio::task::spawn_local(watch_local_database(
         PathBuf::from("/var/lib/pacman/local"),
         changed,
     ));
     let mut watch_open = true;
+    let mut timer = None;
+    let mut pending = false;
+    let mut force = false;
     loop {
+        if !*interest.borrow() {
+            tokio::select! {
+                result = interest.changed() => result?,
+                _ = wake.notified() => { pending = true; force = true; },
+                changed = changes.recv(), if watch_open => {
+                    if changed.is_some() { pending = true; force = true; }
+                    else { watch_open = false; }
+                }
+            }
+            continue;
+        }
+        if timer.is_none() {
+            timer = Some(tokio::time::interval_at(
+                tokio::time::Instant::now() + INTERVAL,
+                INTERVAL,
+            ));
+            timer
+                .as_mut()
+                .expect("updates timer was just created")
+                .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            pending = true;
+        }
+        if pending {
+            if force || refresh_due(&hub) {
+                let _ = start(hub.clone());
+            }
+            pending = false;
+            force = false;
+            timer = Some(tokio::time::interval_at(
+                tokio::time::Instant::now() + INTERVAL,
+                INTERVAL,
+            ));
+            timer
+                .as_mut()
+                .expect("updates timer was just reset")
+                .set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        }
         tokio::select! {
-            _ = timer.tick() => {},
-            _ = wake.notified() => {},
+            result = interest.changed() => result?,
+            _ = timer.as_mut().expect("active updates lease has a timer").tick() => { pending = true; },
+            _ = wake.notified() => { pending = true; force = true; },
             changed = changes.recv(), if watch_open => {
                 if changed.is_none() {
                     watch_open = false;
+                } else {
+                    pending = true;
+                    force = true;
                 }
             }
         }
-        // Timer, updater exit and settled package database changes share the same lane.
-        let _ = start(hub.clone());
+        // Only an active dashboard lease triggers checks; package changes and updater
+        // completion are retained while idle so the next subscriber gets fresh data.
     }
 }
 
@@ -246,6 +316,14 @@ mod tests {
         assert!(state.health.error.unwrap().retry);
         assert!(dispatch(hub, json!({"unexpected":true})).is_err());
     }
+
+    #[test]
+    fn periodic_refresh_waits_at_least_thirty_minutes() {
+        assert!(refresh_due_at(None, 10_000.0));
+        assert!(!refresh_due_at(Some(10_000.0), 10_000.0 + 1_799.0));
+        assert!(refresh_due_at(Some(10_000.0), 10_000.0 + 1_800.0));
+        assert!(!refresh_due_at(Some(10_001.0), 10_000.0));
+    }
 }
 
 #[cfg(test)]
@@ -253,6 +331,7 @@ mod refresh_tests {
     use super::*;
     #[test]
     fn overlapping_refresh_and_safe_mode_are_rejected() {
+        let _serial = super::gating_tests::SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         let hub =
             super::super::hub::Hub::new("updates-busy".into(), false, Duration::from_millis(16))
                 .shared();
@@ -289,5 +368,86 @@ mod pacman_watch_tests {
             .await
             .unwrap();
         assert!(started.elapsed() >= Duration::from_millis(70));
+    }
+}
+
+#[cfg(test)]
+mod gating_tests {
+    use super::*;
+
+    /// Tests that start a check share the process-wide lane; run them one at a time.
+    pub(super) static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    fn fixture(checked: Option<f64>) -> (Shared, Arc<tokio::sync::Notify>) {
+        let hub = super::super::hub::Hub::new("updates-gate".into(), false, Duration::from_millis(1))
+            .shared();
+        initial(&hub).unwrap();
+        if let Some(checked) = checked {
+            let mut state: UpdatesState =
+                serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap()).unwrap();
+            state.checked = Some(checked);
+            publish(&hub, &state).unwrap();
+        }
+        let wake = Arc::new(tokio::sync::Notify::new());
+        hub.borrow_mut().updates_wake = Some(wake.clone());
+        (hub, wake)
+    }
+    fn refreshing(hub: &Shared) -> bool {
+        hub.borrow().snapshot(TOPIC).unwrap()["refreshing"] == true
+    }
+    async fn settle() {
+        tokio::time::sleep(Duration::from_millis(60)).await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn no_check_runs_without_a_subscriber_and_a_subscriber_triggers_one() {
+        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let (hub, wake) = fixture(None);
+                let task = tokio::task::spawn_local(run(hub.clone(), wake.clone()));
+                settle().await;
+                wake.notify_one();
+                settle().await;
+                assert!(!refreshing(&hub), "idle daemon never starts a check");
+                let (client, _) = hub.borrow_mut().add_client().unwrap();
+                hub.borrow_mut()
+                    .subscribe(client, &[TOPIC.into()], false)
+                    .unwrap();
+                tokio::time::timeout(Duration::from_secs(2), async {
+                    while !refreshing(&hub) && hub.borrow().snapshot(TOPIC).unwrap()["checked"].is_null()
+                    {
+                        tokio::time::sleep(Duration::from_millis(5)).await;
+                    }
+                })
+                .await
+                .expect("a visible widget makes the daemon check");
+                task.abort();
+                let _ = task.await;
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_fresh_count_is_not_rechecked_on_subscribe() {
+        let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs_f64();
+                let (hub, wake) = fixture(Some(now));
+                let task = tokio::task::spawn_local(run(hub.clone(), wake));
+                let (client, _) = hub.borrow_mut().add_client().unwrap();
+                hub.borrow_mut()
+                    .subscribe(client, &[TOPIC.into()], false)
+                    .unwrap();
+                settle().await;
+                assert!(!refreshing(&hub));
+                task.abort();
+                let _ = task.await;
+            })
+            .await;
     }
 }
