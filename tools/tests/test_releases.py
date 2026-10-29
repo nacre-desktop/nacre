@@ -18,6 +18,27 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_controller_files_include_every_local_module_they_import(self):
+        import ast
+
+        tools = Path(__file__).parents[1]
+        local = {path.stem for path in tools.glob("*.py")}
+        shipped = {Path(name).stem for name in m.CONTROLLER_FILES}
+        for name in m.CONTROLLER_FILES:
+            tree = ast.parse((tools / name).read_text())
+            for node in ast.walk(tree):
+                names = (
+                    [alias.name for alias in node.names]
+                    if isinstance(node, ast.Import)
+                    else [node.module]
+                    if isinstance(node, ast.ImportFrom) and node.module and not node.level
+                    else []
+                )
+                for module in names:
+                    top = module.split(".")[0]
+                    if top in local:
+                        self.assertIn(top, shipped, f"{name} imports {top}")
+
     @unittest.skipUnless(
         os.environ.get("NACRE_HELPER_BINARY"),
         "desktop CI supplies the candidate native helper",

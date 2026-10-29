@@ -379,22 +379,28 @@ def restore(release, record=None, force=False, *, lease=None):
             return _restore_locked(release, record, force, lease=held)
 
 
+# Everything the installed `nacre` command imports; a missing module breaks it after deploy.
+CONTROLLER_FILES = (
+    "releases.py",
+    "f4_switch.py",
+    "ui_shell_switch.py",
+    "check-overlays.py",
+    "configure.py",
+    "keyboard.py",
+    "nacre_modules.py",
+    "package_hyprland.py",
+    "package_niri.py",
+    "package_runtime.py",
+    "package_sessions.py",
+    "package_managers.py",
+    "package_transaction.py",
+    "setup.py",
+)
+
+
 def install_controller(repo):
     CONTROL.mkdir(parents=True, exist_ok=True)
-    for name in (
-        "releases.py",
-        "f4_switch.py",
-        "ui_shell_switch.py",
-        "check-overlays.py",
-        "configure.py",
-        "keyboard.py",
-        "package_hyprland.py",
-        "package_niri.py",
-        "package_runtime.py",
-        "package_sessions.py",
-        "package_managers.py",
-        "setup.py",
-    ):
+    for name in CONTROLLER_FILES:
         shutil.copy2(repo / "tools" / name, CONTROL / name)
     wrapper = HOME / ".local/bin/nacre"
     wrapper.parent.mkdir(parents=True, exist_ok=True)
