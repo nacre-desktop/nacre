@@ -1,6 +1,6 @@
 # N0095: Periodic daemon work while idle
 
-Status: Private profile accepted; full desktop CI passed (see report); lead live audit pending.
+Status: Private profile accepted; full desktop CI passed on dev-1 (Arch container); lead live audit pending.
 Date: 2026-10-29.
 
 ## Findings and changes

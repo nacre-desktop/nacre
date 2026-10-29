@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 21 | [N0095 periodic daemon idle](0095-daemon-periodic-idle.md) | Private profile passed; desktop CI blocked by 90-minute timebox | Candidate is below private CPU/wakeup limits; full desktop CI remains mandatory before integration. Lead owns live audit/deploy. |
+| 21 | [N0095 periodic daemon idle](0095-daemon-periodic-idle.md) | Done: private profile passed and full desktop CI green on dev-1; lead live audit pending | Candidate is below private CPU/wakeup limits; Lead owns live audit/deploy. |
 | 20 | [N0093 installed Niri session backend](0093-installed-session-backend.md) | Done; full Arch desktop CI replica passed on dev-2 | Deploy and `nacre session refresh` share the installed session backend; checkout removal, generated volume bindings, and `niri validate` passed in a private HOME. |
 | 19 | [N0090 Nacre Widgets app entry](0090-widgets-app-entry.md) | Done; full Arch desktop CI replica passed on dev-1 | Launcher entry and SVG icon installed through configure; Super+Shift+W is in generated config and shortcut list. |
 | 18 | [N0136 daemon previous wallpaper](0136-small-parity.md) | Implemented; full Arch desktop CI equivalent passed | Adopt the published optional `wallpaper.active.previous_available` and `wallpaper.previous {}` contract in Bead B0136. |
