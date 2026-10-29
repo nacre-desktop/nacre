@@ -553,6 +553,11 @@ async fn serve(
     let mut fast_calls = tokio::task::JoinSet::new();
     let watchdog = notify::watchdog();
     tokio::pin!(watchdog);
+    // N0102: the audio step worker keeps the default sink's level from the `audio` topic.
+    let audio_observer = audio_step_worker.sender();
+    let mut audio_notices = hub.borrow().observe();
+    let mut observed_audio = None;
+    let mut observing_audio = true;
     loop {
         tokio::select! {
             result=&mut ready,if !is_ready=>{result?;is_ready=true;tracing::info!("Daemon ready");},
@@ -569,6 +574,19 @@ async fn serve(
                         tracing::warn!(code=?error.code,"Queued one-shot daemon call failed");
                     }
                 });
+            },
+            notice=audio_notices.recv(),if observing_audio=>match notice {
+                Ok(hub::Notice::Changed{topic,..}) if topic=="audio"=>{
+                    let observation=pill_controls::audio_observation(&hub);
+                    if observation.is_some() && observation!=observed_audio {
+                        observed_audio=observation.clone();
+                        if let Some(observation)=observation {
+                            let _=audio_observer.try_send(pill_controls::AudioStepCommand::Observe(observation));
+                        }
+                    }
+                },
+                Err(tokio::sync::broadcast::error::RecvError::Closed)=>observing_audio=false,
+                _=>{},
             },
             Some(completion)=audio_step_rx.recv()=>{
                 match completion.result {
@@ -594,6 +612,7 @@ async fn serve(
         }
     }
     drop(fast_server);
+    drop(audio_observer);
     drop(audio_step_worker);
     fast_calls.abort_all();
     while fast_calls.join_next().await.is_some() {}
