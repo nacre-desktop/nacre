@@ -198,7 +198,8 @@ open panel. Hyprland also supports holding Super and dragging it away from the e
 `xdg-open` shim, the Dolphin override and demo wallpapers. `nacre module enable
 NAME` and `nacre module disable NAME` take `--plan` to preview. `nacre status
 --files` lists every file Nacre owns and its module, and `nacre uninstall --plan`
-shows what removing Nacre would do. See [installation](installation.md#modules-what-setup-touches).
+shows what removing Nacre would do (it keeps your own Nacre settings unless
+you add `--purge`). See [installation](installation.md#modules-what-setup-touches).
 
 ## Shortcut reference
 

@@ -367,6 +367,9 @@ class PackageSetupTests(unittest.TestCase):
                 source = root / "deployment/core" / relative
                 source.parent.mkdir(parents=True, exist_ok=True)
                 source.write_text("nacre " + relative + "\n")
+            assistant = root / "deployment/ai/.local/bin/nacre-ai-hello"
+            assistant.parent.mkdir(parents=True)
+            assistant.write_text("assistant\n")
             for directory in (".config", ".local/bin", ".local/share", ".local/state"):
                 (home / directory).mkdir(parents=True, exist_ok=True)
             mine = home / ".config/kitty/kitty.conf"
@@ -396,7 +399,17 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertTrue((home / ".local/bin/xdg-open").is_file())
                 main(["module", "disable", "theming-kitty", "--yes"])
                 self.assertEqual(mine.read_text(), "my kitty\n")
-                main(["uninstall", "--yes"])
+                # AI and Brain switch the profile component and redeploy.
+                main(["module", "enable", "ai", "--yes"])
+                self.assertTrue((home / ".local/bin/nacre-ai-hello").is_file())
+                selected = json.loads((home / ".config/nacre/profile.json").read_text())
+                self.assertIn("ai", selected["components"])
+                self.assertTrue((home / ".local/bin/xdg-open").is_file())
+                main(["module", "disable", "ai", "--yes"])
+                self.assertFalse((home / ".local/bin/nacre-ai-hello").exists())
+                selected = json.loads((home / ".config/nacre/profile.json").read_text())
+                self.assertNotIn("ai", selected["components"])
+                main(["uninstall", "--purge", "--yes"])
             self.assertEqual(snapshot(home, skip=("releases",)), before)
 
     def test_package_rollback_retains_system_runtime_reference_and_can_reapply(self):

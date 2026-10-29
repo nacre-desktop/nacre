@@ -18,7 +18,7 @@ Every path that `tools/configure.py` manages belongs to one module
 | 2 | `xdg-open` | `~/.local/bin/xdg-open` shim |
 | 2 | `dolphin-override` | `org.kde.dolphin.desktop` override, FileManager1 D-Bus activation |
 | 2 | `wallpapers` | `~/Pictures/Wallpapers/nacre-*.jpg` demo images |
-| profile | `ai`, `brain` | `nacre-ai*`, `nacre-brain*`, `~/.local/share/nacre/{ai,brain}`; still chosen by the profile (`--with ai`) |
+| profile | `ai`, `brain` | `nacre-ai*`, `nacre-brain*`, `~/.local/share/nacre/{ai,brain}`; profile components: `nacre module enable/disable ai` switches the profile and redeploys (package installs) |
 
 The Niri login entry is pacman-owned (`/usr/share/wayland-sessions`) and keeps
 including `custom.kdl` (0066); no user config is edited.
@@ -49,13 +49,17 @@ gets no extras. Selecting Hyprland adds `hypr-config`.
   `configure.apply`), with a snapshot as usual. Disable removes the module's
   managed files, restores originals, keeps files edited since (their original
   goes to `<file>.pre-nacre`) and snapshots removed bytes under `backups/<ts>`.
-- `nacre uninstall [--plan] [--keep-data] [--yes]` removes every manifest path
-  (restoring originals), package runtime links whose target still matches, then
-  `~/.config/nacre` and `~/.local/state/nacre`. It keeps `~/.local/share/nacre`
-  (chats, AI, Brain data), Brain notes and personal wallpapers. `--keep-data`
-  also keeps `~/.config/nacre` and `~/.local/state/nacre`. Empty directories
-  Nacre created are pruned; shared base directories are not. It does not call
-  systemctl or pacman; it prints both next steps.
+- `nacre uninstall [--plan] [--yes]` removes every manifest path that is still
+  unchanged (restoring originals), package runtime links whose target still
+  matches, the install receipts (`configuration.json`, `modules.json`,
+  `package-links.json`) and `~/.cache/nacre`. Everything else in
+  `~/.config/nacre` and `~/.local/state/nacre` is user-authored or changed
+  (custom.kdl, widgets.json, plugins, settings, backups) and stays; the plan
+  lists each kept file. `--purge` removes those two dirs and `~/.cache/nacre`
+  (every file listed); `--purge-data` also `~/.local/share/nacre` (chats, AI,
+  Brain data). `--keep-data` is accepted as an alias of the default. Empty
+  directories Nacre created are pruned; shared base directories are not. It
+  does not call systemctl or pacman; it prints both next steps.
 - `nacre status --files` prints `module, path, state` (managed, edited, missing,
   replaced, link) for every owned path.
 
@@ -73,9 +77,16 @@ gets no extras. Selecting Hyprland adds `hypr-config`.
 `tools/tests/test_install_modules.py` (temp HOMEs): fresh install writes only
 core/session paths; enable then disable of every extra restores a byte-identical
 HOME (including replaced user files and modes); edited files survive disable;
-uninstall returns the HOME to its pre-install state with user data intact;
-`--keep-data`; upgrade without `modules.json` keeps every module; status rows.
-`tools/tests/test_setup.py` covers the new wizard question and plan output.
+`uninstall --purge` returns the HOME to its pre-install state with user data
+intact; a default uninstall keeps custom.kdl, widgets.json and a user plugin and
+lists them, `--purge` removes and lists them; upgrade without `modules.json` keeps every module; status rows.
+`tools/tests/test_setup.py` covers the new wizard question, plan output and a
+package-mode run (extras, `ai` profile switch, purge uninstall).
 
 ## No temporary duplicates
 None added.
+
+## Lead decisions (2026-10-30)
+Hyprland keeps `hypr-config` forced on (a sourced include is a later unit); demo
+wallpapers stay off by default and are offered in setup; `ai`/`brain` switch the
+profile; uninstall prints the systemctl/pacman steps instead of running them.
