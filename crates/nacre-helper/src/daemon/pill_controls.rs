@@ -147,9 +147,14 @@ impl AudioStepWorker {
             .name("nacre-audio-step".into())
             .stack_size(512 * 1024)
             .spawn(move || {
-                serve_steps(&receiver, &mut production_run, &thread_stop, &mut |completion| {
-                    let _ = completed.send(completion);
-                });
+                serve_steps(
+                    &receiver,
+                    &mut production_run,
+                    &thread_stop,
+                    &mut |completion| {
+                        let _ = completed.send(completion);
+                    },
+                );
             })?;
         Ok(Self {
             stop,
@@ -791,6 +796,12 @@ fn run_pipewire_action(program: &str, args: &[&str], mutation: bool) -> Result<S
     if output.stdout.len() > 4 * 1024 * 1024 || output.stderr.len() > 4096 {
         return Err(error());
     }
+    // `pw-cli set-param` on a vanished object prints `Error: ... unknown global` and still
+    // exits 0; the step must see that to re-read the sink.
+    let failed = |bytes: &[u8]| bytes.windows(6).any(|window| window == b"Error:");
+    if mutation && (failed(&output.stdout) || failed(&output.stderr)) {
+        return Err(error());
+    }
     String::from_utf8(output.stdout).map_err(|_| error())
 }
 
@@ -1241,7 +1252,9 @@ mod tests {
                 .count()
         }
         fn level(&self) -> Vec<i64> {
-            perceptual(&self.dump.lock().unwrap()[0]["info"]["params"]["Props"][0]["channelVolumes"])
+            perceptual(
+                &self.dump.lock().unwrap()[0]["info"]["params"]["Props"][0]["channelVolumes"],
+            )
         }
     }
 
@@ -1276,6 +1289,9 @@ mod tests {
         (sender, completions, thread)
     }
 
+    /// The worker tests share the process-wide audio lock; one at a time keeps timings clean.
+    static WORKER_TESTS: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn press(sender: &SyncSender<AudioStepCommand>, delta: f64) {
         sender
             .try_send(AudioStepCommand::Apply(FastAudioStep {
@@ -1287,6 +1303,7 @@ mod tests {
 
     #[test]
     fn held_key_on_a_slow_sink_coalesces_into_at_most_two_writes_and_stops_at_release() {
+        let _serial = WORKER_TESTS.lock().unwrap_or_else(|p| p.into_inner());
         // Each write costs 100 ms (the old per-step cost was ~300 ms); 10 presses 5 ms apart.
         let sink = FakeSink::new(0.30, Duration::from_millis(100));
         let (sender, completions, thread) = fake_worker(&sink);
@@ -1302,7 +1319,11 @@ mod tests {
         let after_release = released.elapsed();
         let completions: Vec<_> = completions.try_iter().collect();
         assert_eq!(sink.level(), vec![80, 80], "ten steps of 5 % from 30 %");
-        assert!(sink.count("pw-cli") <= 2, "writes: {}", sink.count("pw-cli"));
+        assert!(
+            sink.count("pw-cli") <= 2,
+            "writes: {}",
+            sink.count("pw-cli")
+        );
         assert_eq!(sink.count("pw-dump"), 1, "the sink is read once");
         let last = completions.last().unwrap();
         assert_eq!(last.1.result.as_ref().unwrap().volume, 0.8);
@@ -1318,6 +1339,7 @@ mod tests {
 
     #[test]
     fn cached_step_shows_the_osd_before_the_write_and_costs_one_call() {
+        let _serial = WORKER_TESTS.lock().unwrap_or_else(|p| p.into_inner());
         let sink = FakeSink::new(0.50, Duration::from_millis(80));
         let (sender, completions, thread) = fake_worker(&sink);
         sender.try_send(observed(SINK, 0.50)).unwrap();
@@ -1335,9 +1357,36 @@ mod tests {
         assert!(latency < Duration::from_millis(10), "OSD after {latency:?}");
         drop(sender);
         thread.join().unwrap();
-        assert_eq!(sink.calls.lock().unwrap().len() - calls, 1, "one pw-cli write");
-        assert!(completions.try_recv().is_err(), "the write agreed: no second OSD");
+        assert_eq!(
+            sink.calls.lock().unwrap().len() - calls,
+            1,
+            "one pw-cli write"
+        );
+        assert!(
+            completions.try_recv().is_err(),
+            "the write agreed: no second OSD"
+        );
         eprintln!("cached step: OSD {latency:?} after the key");
+    }
+
+    #[test]
+    fn failed_cached_write_rereads_the_sink_and_retries_once() {
+        let sink = FakeSink::new(0.50, Duration::ZERO);
+        let mut inner = sink.run();
+        let mut fail_next = true;
+        let mut run = |program: &str, args: &[&str], mutation: bool| {
+            if program == "pw-cli" && std::mem::take(&mut fail_next) {
+                return Err(action_error());
+            }
+            inner(program, args, mutation)
+        };
+        let mut steps = AudioSteps::default();
+        // A zero step fills the cache without writing.
+        steps.step(0.0, &mut run, &mut |_| {}).unwrap();
+        let outcome = steps.step(0.05, &mut run, &mut |_| {}).unwrap();
+        assert_eq!(outcome.volume, 0.55);
+        assert_eq!(sink.count("pw-dump"), 2, "the stale object was read again");
+        assert_eq!(sink.level(), vec![55, 55]);
     }
 
     #[test]
@@ -1361,7 +1410,10 @@ mod tests {
         // A slider change elsewhere, after the echo window, is adopted without a read.
         steps.last_write = None;
         observe(&mut steps, &mut run, SINK, 0.20);
-        assert_eq!(steps.step(0.05, &mut run, &mut |_| {}).unwrap().volume, 0.25);
+        assert_eq!(
+            steps.step(0.05, &mut run, &mut |_| {}).unwrap().volume,
+            0.25
+        );
         assert_eq!(sink.count("pw-dump"), 1);
         // A new default output is read again.
         observe(&mut steps, &mut run, "bluez_output.headset", 0.20);
@@ -1392,9 +1444,11 @@ mod tests {
             let started = std::time::Instant::now();
             let mut shown = None;
             steps
-                .step(if index % 2 == 0 { -0.05 } else { 0.05 }, &mut run, &mut |_| {
-                    shown = Some(started.elapsed())
-                })
+                .step(
+                    if index % 2 == 0 { -0.05 } else { 0.05 },
+                    &mut run,
+                    &mut |_| shown = Some(started.elapsed()),
+                )
                 .unwrap();
             write.push(started.elapsed());
             osd.push(shown.unwrap());
