@@ -12,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from functools import partial
 
 TOOLS = Path(__file__).parents[1]
 sys.path.insert(0, str(TOOLS))
@@ -199,6 +200,7 @@ class PackageSetupTests(unittest.TestCase):
                 [
                     "Compositor (hyprland)",
                     "Enable AI tools (Nacre AI and Brain)?",
+                    "Optional modules, comma-separated (none keeps only the shell and session)",
                 ],
             )
             for caption in prompts[1]:
@@ -262,7 +264,7 @@ class PackageSetupTests(unittest.TestCase):
                 if language == "en":
                     self.assertEqual(
                         text,
-                        f"Nacre setup: profile={profile['id']}; compositor=hyprland; components={', '.join(profile['components'])}\nKeyboard: {json.dumps(keyboard_values)}\nPrivate file plan:\n  {private_path}\nMissing packages: PACKAGE_untranslated\n",
+                        f"Nacre setup: profile={profile['id']}; compositor=hyprland; components={', '.join(profile['components'])}\nModules: core, session, hypr-config\nKeyboard: {json.dumps(keyboard_values)}\nPrivate file plan:\n  {private_path} [core]\nMissing packages: PACKAGE_untranslated\n",
                     )
                 else:
                     for value in (
@@ -349,6 +351,53 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertFalse((home / ".config/nacre/keyboard.lua").exists())
                 self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
                 self.assertEqual(account.read_text(), "private fixture")
+
+    def test_package_modules_enable_disable_and_uninstall_in_a_temp_home(self):
+        import keyboard
+        import nacre_modules
+        from test_install_modules import snapshot
+
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            for relative in (
+                ".config/kitty/kitty.conf",
+                ".local/bin/xdg-open",
+                ".config/hypr/hyprland.lua",
+            ):
+                source = root / "deployment/core" / relative
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_text("nacre " + relative + "\n")
+            for directory in (".config", ".local/bin", ".local/share", ".local/state"):
+                (home / directory).mkdir(parents=True, exist_ok=True)
+            mine = home / ".config/kitty/kitty.conf"
+            mine.parent.mkdir()
+            mine.write_text("my kitty\n")
+            before = snapshot(home)
+            layout = {"layout": "us", "variant": "", "model": "", "options": ""}
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+                patch.object(keyboard, "system_keyboard", return_value=layout),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                releases.deploy_package(root, profile, layout, "hyprland")
+                # New install: core + session; Hyprland needs its config module.
+                self.assertTrue((home / ".config/hypr/hyprland.lua").is_file())
+                self.assertFalse((home / ".local/bin/xdg-open").exists())
+                self.assertEqual(mine.read_text(), "my kitty\n")
+                self.assertEqual(nacre_modules.read(home)["enabled"], ["hypr-config"])
+                main = partial(nacre_modules.main, home=home, root=root)
+                main(["module", "enable", "theming-kitty", "--yes"])
+                self.assertEqual(mine.read_text(), "nacre .config/kitty/kitty.conf\n")
+                main(["module", "enable", "xdg-open", "--yes"])
+                self.assertTrue((home / ".local/bin/xdg-open").is_file())
+                # A later plain setup keeps the chosen modules.
+                releases.deploy_package(root, profile, layout, "hyprland")
+                self.assertTrue((home / ".local/bin/xdg-open").is_file())
+                main(["module", "disable", "theming-kitty", "--yes"])
+                self.assertEqual(mine.read_text(), "my kitty\n")
+                main(["uninstall", "--yes"])
+            self.assertEqual(snapshot(home, skip=("releases",)), before)
 
     def test_package_rollback_retains_system_runtime_reference_and_can_reapply(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1068,7 +1117,7 @@ class PackageSetupTests(unittest.TestCase):
             with patch.dict(os.environ, {"XDG_CURRENT_DESKTOP": "niri"}):
                 self.assertEqual(setup.selection(args, root, home, False)[2], "niri")
 
-    def test_normal_wizard_only_asks_compositors_and_ai_tools(self):
+    def test_normal_wizard_asks_compositors_ai_tools_and_optional_modules(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, _ = self.niri_fixture(folder)
             args = setup.argparse.Namespace(
@@ -1081,10 +1130,14 @@ class PackageSetupTests(unittest.TestCase):
                 optional=[],
             )
             with patch.object(
-                setup, "ask", side_effect=["niri,hyprland", "yes"]
+                setup, "ask", side_effect=["niri,hyprland", "yes", "theming-kitty"]
             ) as prompts:
-                profile, _, primary = setup.selection(args, root, home, True)
-            self.assertEqual(prompts.call_count, 2)
+                with contextlib.redirect_stdout(io.StringIO()):
+                    profile, _, primary = setup.selection(args, root, home, True)
+            self.assertEqual(prompts.call_count, 3)
+            # A new install defaults every optional module off.
+            self.assertEqual(prompts.call_args.args[1], "none")
+            self.assertEqual(args.selected_modules, ["theming-kitty"])
             self.assertEqual(primary, "niri")
             self.assertEqual(args.additional_compositors, ["hyprland"])
             self.assertTrue({"ai", "brain"} <= set(profile["components"]))

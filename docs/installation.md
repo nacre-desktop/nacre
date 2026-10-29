@@ -68,8 +68,9 @@ nacre setup
 Pacman installs shared code and resolves repository dependencies. Run setup as
 your ordinary user, without sudo. Binary installation needs no compiler, npm or
 Python package downloads. The wizard inherits the keyboard layout, asks for
-compositor(s) and optional AI tools, then asks before applying.
-`nacre setup --plan` shows the complete private file plan. A custom profile is a
+compositor(s), optional AI tools and optional modules, then asks before applying.
+`nacre setup --plan` shows the complete private file plan, each path with its
+module. A custom profile is a
 validated JSON file; see
 [configuration](configuration.md).
 
@@ -97,6 +98,55 @@ restart your running desktop or certify it as tested. Save work, log out and
 select **Nacre (Hyprland)** or **Nacre (niri)** for the prepared compositor. Open
 Welcome with `nacre-welcome`, the launcher with Super+Space and Settings with
 Super+I. Check keyboard, displays, audio, network and lock/unlock.
+
+## Modules: what setup touches
+
+By default setup writes only Nacre's own files: `~/.config/nacre`,
+`~/.local/state/nacre`, `~/.local/share/nacre`, the `nacre-*` commands, desktop
+entries and user units (module `core`) and the login session wiring (module
+`session`). Everything that changes another app is an optional module, off on a
+new install:
+
+| Module | Files |
+| --- | --- |
+| `hypr-config` | `~/.config/hypr`, `~/.config/uwsm` (always on for the Hyprland session) |
+| `theming-kitty`, `theming-fish`, `theming-gtk`, `theming-rofi`, `theming-fastfetch` | that app's `~/.config` directory |
+| `xdg-open` | `~/.local/bin/xdg-open`, which routes links and files through Nacre |
+| `dolphin-override` | Dolphin's desktop entry and the FileManager1 D-Bus service |
+| `wallpapers` | demo wallpapers in `~/Pictures/Wallpapers` |
+
+AI and Brain stay profile choices (`--with ai`, `--with brain`). Updating an
+existing installation keeps the modules it already uses.
+
+```sh
+nacre module list
+nacre module enable theming-kitty --plan   # show the files, change nothing
+nacre module enable theming-kitty
+nacre module disable theming-kitty
+nacre setup --module xdg-open              # enable a module during setup
+nacre status --files                       # every path Nacre owns, with its module
+```
+
+Enabling a module may replace a file you already have, such as
+`~/.config/kitty/kitty.conf`; the plan says so and Nacre keeps the original.
+Disabling the module removes its files and puts your original back. A file you
+edited after enabling stays, with your original beside it as `*.pre-nacre`.
+
+## Uninstall
+
+```sh
+nacre uninstall --plan          # list what would be removed or restored
+nacre uninstall                 # asks before changing anything
+nacre uninstall --keep-data     # also keep ~/.config/nacre and ~/.local/state/nacre
+sudo pacman -R nacre            # then remove the packages
+```
+
+Uninstall removes exactly the files Nacre's manifest records, restores any file
+it replaced, removes its runtime links and then Nacre's settings and state
+directories. It keeps `~/.local/share/nacre` (chats, AI and Brain data), Brain
+notes and your own wallpapers; delete those yourself if you want them gone.
+Files you edited after setup are kept. Run `systemctl --user daemon-reload`
+afterwards.
 
 ## Choosing Hyprland or niri
 

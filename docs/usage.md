@@ -191,6 +191,15 @@ See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3
 can [open as ordinary windows](detachable-panels.md): Super+Ctrl+D detaches the
 open panel. Hyprland also supports holding Super and dragging it away from the edge.
 
+## Install modules
+
+`nacre module list` shows which optional parts are on: themed app configs
+(kitty, fish, GTK, rofi, fastfetch), Hyprland config management, the
+`xdg-open` shim, the Dolphin override and demo wallpapers. `nacre module enable
+NAME` and `nacre module disable NAME` take `--plan` to preview. `nacre status
+--files` lists every file Nacre owns and its module, and `nacre uninstall --plan`
+shows what removing Nacre would do. See [installation](installation.md#modules-what-setup-touches).
+
 ## Shortcut reference
 
 **Super** is usually the Windows key. These tables are generated defaults; private

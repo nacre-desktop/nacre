@@ -872,3 +872,5 @@ SSH test host; configure and its test exactly match pre-extension 68d28945.
 2026-10-29: [N0096 UI provider liveness](0096-ui-provider-liveness.md) — newest UI provider wins; a provider missing 3 consecutive ui.dispatch deadlines is disconnected so it re-registers (Bead B0190).
 
 2026-10-29: [N0100 launcher gaps](0100-launcher-gaps.md) — `recorder.start` takes an optional `audio` (none/system/mixed); the `search-web` activation row carries the owner's engine as `webUrl` (Bead B0199).
+
+2026-10-30: [N0101 install tiers and uninstall](0101-install-tiers.md) — new installs write only core+session paths; themed app configs, Hyprland config, xdg-open, Dolphin override and wallpapers are opt-in modules (`nacre module`); `nacre uninstall [--plan] [--keep-data]` and `nacre status --files` use the manifest. Existing installs keep their modules.

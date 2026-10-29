@@ -135,6 +135,7 @@ def paths(repo):
     ]
     result += [
         HOME / ".local/state/nacre/configuration.json",
+        HOME / ".local/state/nacre/modules.json",
         HOME / ".config/nacre/shell.json",
         HOME / ".config/nacre/profile.json",
         HOME / ".config/nacre/profile.lua",
@@ -725,12 +726,22 @@ def package_plan(
     *,
     validate_config=True,
     lease=None,
+    modules=None,
+    adopt=(),
 ):
     if lease is not None:
         lease.ensure_valid()
     import configure
+    import nacre_modules
     import package_runtime
+    import package_sessions
     from keyboard import system_keyboard
+
+    modules = nacre_modules.resolve(
+        HOME,
+        modules and set(modules) & set(nacre_modules.EXTRAS),
+        package_sessions.backends(compositor),
+    )
 
     keyboard = system_keyboard() if keyboard is None else keyboard
     with package_configuration(
@@ -744,7 +755,9 @@ def package_plan(
                 "Package declares both file and runtime link: "
                 + str(sorted(collisions)[0])
             )
-        changed, links, _ = configure.plan(HOME, repo, only=scope)
+        changed, links, _ = configure.plan(
+            HOME, repo, only=scope, modules=modules, adopt=adopt
+        )
         if links:
             raise RuntimeError(
                 "Source-linked configuration requires explicit source migration first"
@@ -761,18 +774,23 @@ def package_plan(
         return sorted(set(result), key=str)
 
 
-def deploy_package(repo, profile, keyboard, compositor):
+def deploy_package(repo, profile, keyboard, compositor, modules=None, adopt=()):
     """Apply prebuilt files without a running desktop; use the same rollback owner."""
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     with (STATE / "release.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         with _writer.writer_lease(HOME / ".config/nacre") as lease:
             lease.ensure_valid()
-            return _deploy_package_locked(repo, profile, keyboard, compositor, lease)
+            return _deploy_package_locked(
+                repo, profile, keyboard, compositor, lease, modules, adopt
+            )
 
 
-def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
+def _deploy_package_locked(
+    repo, profile, keyboard, compositor, lease, modules=None, adopt=()
+):
     import configure
+    import nacre_modules
     import package_runtime
     from keyboard import seed
     import setup
@@ -785,11 +803,17 @@ def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
         )
     if not (repo / "package.json.installed").is_file():
         raise RuntimeError("Package metadata missing")
-    desired = package_plan(repo, profile, compositor, keyboard, lease=lease)
+    modules = nacre_modules.resolve(
+        HOME, modules and set(modules) & set(nacre_modules.EXTRAS), selected
+    )
+    desired = package_plan(
+        repo, profile, compositor, keyboard, lease=lease, modules=modules, adopt=adopt
+    )
     lease.ensure_valid()
     extra = desired + [
         HOME / ".local/state/nacre/package-links.json",
         HOME / ".local/state/nacre/configuration.json",
+        nacre_modules.manifest_path(HOME),
     ]
     revision = package_runtime.metadata(repo)["revision"]
     release, record = capture(repo, revision, extra, package=True, lease=lease)
@@ -805,7 +829,7 @@ def _deploy_package_locked(repo, profile, keyboard, compositor, lease):
             seed(HOME, keyboard)
             lease.ensure_valid()
             package_runtime.legacy_units(HOME, repo, apply=True)
-            configure.apply(HOME, repo, only=scope)
+            configure.apply(HOME, repo, only=scope, modules=modules, adopt=adopt)
             profiles = setup.policy(repo)
             profiles.selected = lambda: profile
             profiles.install(HOME, lease=lease)
@@ -865,6 +889,22 @@ def main():
 
             package_sessions.start(installed, session.command)
         return
+    if sys.argv[1:2] in (["module"], ["uninstall"]) or sys.argv[1:3] == [
+        "status",
+        "--files",
+    ]:
+        import nacre_modules
+
+        STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with (STATE / "release.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                code = nacre_modules.main(
+                    sys.argv[1:], HOME, Path(__file__).resolve().parents[1]
+                )
+            except (OSError, RuntimeError, ValueError) as error:
+                raise SystemExit("nacre: " + str(error)) from error
+        raise SystemExit(code)
     if len(sys.argv) > 1 and sys.argv[1] == "setup":
         installed = Path("/usr/share/nacre/tools/setup.py")
         candidate = (

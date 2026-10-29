@@ -16,6 +16,8 @@ ROOT = Path(__file__).resolve().parent.parent
 # Standalone helpers share the translation runtime during source-tree tooling.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 _state = importlib.import_module("nacre_state")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import nacre_modules  # noqa: E402
 
 ACTIVE_DIRS = (
     "uwsm",
@@ -239,8 +241,23 @@ def configuration_scope(app_routes_only=False, only=()):
     )
 
 
+def enabled_files(root, enabled):
+    return {
+        path: source
+        for path, source in files(root).items()
+        if nacre_modules.module_of(path) in enabled
+    }
+
+
 def plan(
-    home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False, only=()
+    home,
+    root=ROOT,
+    migrate=False,
+    app_routes_only=False,
+    migrate_idle=False,
+    only=(),
+    modules=None,
+    adopt=(),
 ):
     scope = configuration_scope(app_routes_only, only)
     if not scope:
@@ -248,14 +265,18 @@ def plan(
         power_policy(home, root, migrate_idle)
     manifest = home / ".local/state/nacre/configuration.json"
     known = _state.read_json_file(manifest) if manifest.exists() else {}
-    desired = files(root)
-    if only and scope - desired.keys():
+    enabled = nacre_modules.resolve(home, receipt=known) if modules is None else modules
+    if only and scope - files(root).keys():
         raise ValueError("Requested file is not managed by this configuration")
+    desired = enabled_files(root, enabled)
     if scope:
         desired = {path: source for path, source in desired.items() if path in scope}
     links = {}
     for name in (*ACTIVE_DIRS, *RETIRED_DIRS):
-        if scope:
+        if scope or (
+            name in ACTIVE_DIRS
+            and nacre_modules.module_of(f".config/{name}/") not in enabled
+        ):
             continue
         path = home / ".config" / name
         if path.is_symlink():
@@ -326,6 +347,11 @@ def plan(
                 and relative == Path(".config/hypr/hypridle.conf")
                 and source.read_text() == IDLE_WRAPPER
             )
+            and not (
+                nacre_modules.module_of(relative) in adopt
+                and str(relative) not in known
+                and not dest.is_symlink()
+            )
         ):
             raise RuntimeError(f"Local edit preserved: {dest}")
         changed.append((relative, source))
@@ -373,8 +399,37 @@ def legacy_empty_launcher(relative, path):
         return False
 
 
+def record_modules(home, enabled, known, written=(), removed=()):
+    """Persist enabled extras and the module of every path Nacre wrote."""
+    state = nacre_modules.read(home)
+    state["enabled"] = sorted(enabled & set(nacre_modules.EXTRAS))
+    entries = state.setdefault("files", {})
+    for relative, value in known.items():
+        entries.setdefault(
+            relative,
+            dict(module=nacre_modules.module_of(relative), original=False),
+        )["sha256"] = value
+    for relative, original in written:
+        entry = entries.setdefault(
+            str(relative),
+            dict(module=nacre_modules.module_of(relative), original=False),
+        )
+        entry["original"] = entry["original"] or original
+        entry["sha256"] = digest(home / relative)
+    for relative in removed:
+        entries.pop(str(relative), None)
+    nacre_modules.write(home, state)
+
+
 def apply(
-    home, root=ROOT, migrate=False, app_routes_only=False, migrate_idle=False, only=()
+    home,
+    root=ROOT,
+    migrate=False,
+    app_routes_only=False,
+    migrate_idle=False,
+    only=(),
+    modules=None,
+    adopt=(),
 ):
     scope = configuration_scope(app_routes_only, only)
     seeds = (
@@ -382,8 +437,16 @@ def apply(
         if (root / "seed-paths.json").exists()
         else set()
     )
+    manifest = home / ".local/state/nacre/configuration.json"
+    enabled = (
+        nacre_modules.resolve(
+            home, receipt=_state.read_json_file(manifest) if manifest.exists() else {}
+        )
+        if modules is None
+        else modules
+    )
     changed, links, known = plan(
-        home, root, migrate, app_routes_only, migrate_idle, only
+        home, root, migrate, app_routes_only, migrate_idle, only, enabled, adopt
     )
     if not scope:
         from keyboard import seed
@@ -396,29 +459,21 @@ def apply(
     if policy is not None:
         atomic(home / ".config/nacre/hypridle.local.conf", policy, 0o600)
     if not changed and not links:
-        atomic(
-            home / ".local/state/nacre/configuration.json",
-            json.dumps(
-                (
-                    {
-                        **known,
-                        **{
-                            str(p): digest(home / p)
-                            for p in files(root)
-                            if p in scope and str(p) not in seeds
-                        },
-                    }
-                    if scope
-                    else {
-                        str(p): digest(home / p)
-                        for p in files(root)
-                        if str(p) not in seeds
-                    }
-                ),
-                indent=2,
-            ).encode(),
-            0o600,
+        current = enabled_files(root, enabled)
+        receipt = (
+            {
+                **known,
+                **{
+                    str(p): digest(home / p)
+                    for p in current
+                    if p in scope and str(p) not in seeds
+                },
+            }
+            if scope
+            else {str(p): digest(home / p) for p in current if str(p) not in seeds}
         )
+        atomic(manifest, json.dumps(receipt, indent=2).encode(), 0o600)
+        record_modules(home, enabled, receipt)
         return None
     backup = (
         home
@@ -453,8 +508,24 @@ def apply(
         for rel in ("custom.conf", "hyprlock.conf", "settings.ini", "config.rasi"):
             if (saved / rel).is_file():
                 shutil.copy2(saved / rel, dest / rel)
+    tracked = nacre_modules.read(home).get("files", {})
+    written, removed = [], []
     for relative, source in changed:
         dest = home / relative
+        adopted = (
+            source is not None
+            and nacre_modules.module_of(relative) in adopt
+            and str(relative) not in known
+            and str(relative) not in tracked
+            and dest.is_file()
+            and not dest.is_symlink()
+        )
+        if adopted:
+            # Keep the user's own file for module disable and uninstall.
+            original = nacre_modules.originals(home) / relative
+            original.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if not original.exists():
+                shutil.copy2(dest, original)
         if dest.exists() or dest.is_symlink():
             saved = backup / relative
             saved.parent.mkdir(parents=True, exist_ok=True)
@@ -466,6 +537,11 @@ def apply(
         if source is None:
             dest.unlink(missing_ok=True)
             known.pop(str(relative), None)
+            original = nacre_modules.originals(home) / relative
+            if tracked.get(str(relative), {}).get("original") and original.is_file():
+                shutil.copy2(original, dest)
+                original.unlink()
+            removed.append(relative)
         else:
             atomic(
                 dest,
@@ -474,11 +550,9 @@ def apply(
             )
             if str(relative) not in seeds:
                 known[str(relative)] = digest(dest)
-    atomic(
-        home / ".local/state/nacre/configuration.json",
-        json.dumps(known, indent=2).encode(),
-        0o600,
-    )
+            written.append((relative, adopted))
+    atomic(manifest, json.dumps(known, indent=2).encode(), 0o600)
+    record_modules(home, enabled, known, written, removed)
     atomic(backup / "manifest.json", json.dumps(entries, indent=2).encode(), 0o600)
     return backup
 
