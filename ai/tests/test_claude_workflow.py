@@ -2,11 +2,12 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
-from test_workflow import module
+from test_workflow import ROOT, module
 
 
 class ClaudeWorkflowTests(unittest.TestCase):
@@ -114,6 +115,31 @@ class ClaudeWorkflowTests(unittest.TestCase):
             )
             result = subprocess.run(
                 [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
+    def test_title_hook_fails_open_on_malformed_transcript_and_oversized_event(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text(
+                json.dumps({"type": "user", "message": {"content": "First prompt"}})
+                + "\n{malformed custom-title metadata\n"
+            )
+            event = json.dumps(
+                {"prompt": "Later prompt", "transcript_path": str(transcript)}
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+            result = subprocess.run(
+                [sys.executable, str(hook)],
+                input=" " * (64 * 1024 + 1),
+                text=True,
+                capture_output=True,
             )
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")

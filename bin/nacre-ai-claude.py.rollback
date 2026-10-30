@@ -373,6 +373,8 @@ def run(args):
         os.execvpe(binary, [binary, "auth", "login"], env)
     if args.command == "new" and not args.thread_id:
         args.thread_id = str(uuid.uuid4())
+    elif args.command == "new":
+        uuid.UUID(args.thread_id)
     sessions = None
     resume_session = None
     resume_title = ""

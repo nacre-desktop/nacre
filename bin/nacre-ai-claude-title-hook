@@ -8,6 +8,7 @@ import unicodedata
 from pathlib import Path
 
 MAX_TRANSCRIPT = 2 * 1024 * 1024
+MAX_EVENT = 64 * 1024
 
 
 def clean(value):
@@ -73,24 +74,32 @@ def candidates(data):
 
 def main():
     try:
-        event = json.load(sys.stdin)
+        raw_event = sys.stdin.buffer.read(MAX_EVENT + 1)
+        if len(raw_event) > MAX_EVENT:
+            return
+        event = json.loads(raw_event)
         if event.get("isMeta") or event.get("toolResult"):
             return
         transcript = Path(event.get("transcript_path", ""))
         if not transcript.is_file():
             return
-        size = transcript.stat().st_size
         # If this transcript is too large to inspect safely in the hook budget,
         # fail open rather than risk overwriting an old /rename record.
-        if size > MAX_TRANSCRIPT:
+        if transcript.stat().st_size > MAX_TRANSCRIPT:
             return
-        text = transcript.read_text(errors="replace")
+        with transcript.open("rb") as stream:
+            raw_transcript = stream.read(MAX_TRANSCRIPT + 1)
+        if len(raw_transcript) > MAX_TRANSCRIPT:
+            return
+        text = raw_transcript.decode(errors="replace")
         rows = []
         for line in text.splitlines():
+            if not line.strip():
+                continue
             try:
                 rows.extend(candidates(json.loads(line)))
             except (ValueError, TypeError):
-                continue
+                return
         if any(
             kind == "custom" and isinstance(value, str) and value.strip()
             for kind, value in rows
