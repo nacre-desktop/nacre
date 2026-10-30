@@ -739,11 +739,33 @@ fn history(
     }
     let mut matched = BTreeSet::new();
     for row in &mut rows {
+        let id = row["id"].as_str().unwrap_or("");
+        let suffix = format!("-{id}");
+        if let Some((name, _)) = running.iter().find(|(name, _)| name.ends_with(&suffix)) {
+            matched.insert(name.clone());
+            row["session"] = json!(name);
+            row["state"] = json!("running");
+        }
+    }
+    let mut cwd_rows = BTreeMap::<String, usize>::new();
+    let mut cwd_sessions = BTreeMap::<String, Vec<String>>::new();
+    for row in &rows {
+        if row["state"] != "running" {
+            *cwd_rows.entry(row["cwd"].as_str().unwrap_or("").into()).or_default() += 1;
+        }
+    }
+    for (name, cwd) in running {
+        if !matched.contains(name) {
+            cwd_sessions.entry(cwd.clone()).or_default().push(name.clone());
+        }
+    }
+    for row in &mut rows {
+        if row["state"] == "running" { continue; }
         let cwd = row["cwd"].as_str().unwrap_or("");
-        if let Some((name, _)) = running
-            .iter()
-            .find(|(name, pane)| pane.as_str() == cwd && !matched.contains(*name))
+        if cwd_rows.get(cwd) == Some(&1)
+            && cwd_sessions.get(cwd).is_some_and(|names| names.len() == 1)
         {
+            let name = &cwd_sessions[cwd][0];
             matched.insert(name.clone());
             row["session"] = json!(name);
             row["state"] = json!("running");
@@ -773,6 +795,9 @@ fn launch_args(
     status_line: &serde_json::Map<String, Value>,
     account: &str,
     resume: Option<&str>,
+    session_name: Option<&str>,
+    title_hook: Option<&Path>,
+    session_id: Option<&str>,
     vault: &Path,
     usage_binary: &Path,
 ) -> Vec<String> {
@@ -807,10 +832,21 @@ fn launch_args(
             .collect::<Vec<_>>()
             .join(" ")),
     );
-    args.extend([
-        "--settings".into(),
-        json!({"statusLine":status}).to_string(),
-    ]);
+    let mut overlay = serde_json::Map::new();
+    overlay.insert("statusLine".into(), Value::Object(status));
+    if let Some(hook) = title_hook {
+        overlay.insert("hooks".into(), json!({"UserPromptSubmit":[{"hooks":[{
+            "type":"command",
+            "command":format!("python3 {}", shell_quote(&hook.to_string_lossy()))
+        }]}]}));
+    }
+    args.extend(["--settings".into(), Value::Object(overlay).to_string()]);
+    if let Some(name) = session_name.filter(|name| !name.trim().is_empty()) {
+        args.extend(["--name".into(), name.into()]);
+    }
+    if let Some(id) = session_id {
+        args.extend(["--session-id".into(), id.into()]);
+    }
     if let Some(id) = resume {
         args.extend(["--resume".into(), id.into()]);
     }
@@ -989,11 +1025,52 @@ fn run_inner(args: &[String]) -> Result<i32> {
             .exec();
         return Err(error.into());
     }
+    let new_id = if command == "new" {
+        thread.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+    } else {
+        thread.clone().unwrap_or_default()
+    };
     if tmux {
+        if command == "resume" {
+            let id = thread
+                .as_deref()
+                .filter(|id| valid_id(id))
+                .ok_or_else(|| err("A valid Claude session ID is required"))?;
+            let running = running_sessions(&project, &account);
+            let suffix = format!("-{id}");
+            let exact = running
+                .keys()
+                .find(|name| name.ends_with(&suffix))
+                .cloned();
+            let attach = exact.or_else(|| {
+                let candidates = running
+                    .iter()
+                    .filter(|(_, cwd)| {
+                        normalized_workspace(Path::new(cwd)) == normalized_workspace(&path)
+                    })
+                    .map(|(name, _)| name.clone())
+                    .collect::<Vec<_>>();
+                let rows = history(&config, &path, chat_directory, &running).ok()?;
+                let matching_rows = rows
+                    .iter()
+                    .filter(|row| {
+                        row["cwd"].as_str().is_some_and(|cwd| {
+                            normalized_workspace(Path::new(cwd)) == normalized_workspace(&path)
+                        })
+                    })
+                    .count();
+                (candidates.len() == 1 && matching_rows == 1).then(|| candidates[0].clone())
+            });
+            if let Some(session) = attach {
+                let error = Command::new("tmux")
+                    .args(["attach-session", "-t", &format!("={session}")])
+                    .envs(&envs)
+                    .exec();
+                return Err(error.into());
+            }
+        }
         let tag = account_tag(&account);
-        let suffix = thread
-            .clone()
-            .unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string());
+        let suffix = new_id.clone();
         let name = format!("ai-{project}-claude-{tag}-{suffix}");
         let exe = env::current_exe()?;
         let child = tmux_child(
@@ -1002,7 +1079,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
             &project,
             &path.to_string_lossy(),
             &account,
-            thread.as_deref(),
+            Some(&suffix),
             chat_directory,
         );
         let error = Command::new("tmux")
@@ -1048,11 +1125,24 @@ fn run_inner(args: &[String]) -> Result<i32> {
             return Err(error.into());
         }
         let usage = home()?.join(".local/bin/nacre-ai-usage");
+        let transcript = project_directory(&config, &directory).join(format!("{id}.jsonl"));
+        let records = jsonl(&transcript);
+        let custom_title = records.iter().any(|record| {
+            record.get("type").and_then(Value::as_str) == Some("custom-title")
+                && record
+                    .get("customTitle")
+                    .and_then(Value::as_str)
+                    .is_some_and(|title| !title.trim().is_empty())
+        });
+        let name = (!custom_title).then(|| title_from(&records)).flatten();
         let argv = launch_args(
             ai_core::full_access(),
             &status,
             &account,
             Some(id),
+            name.as_deref(),
+            None,
+            None,
             &vault,
             &usage,
         );
@@ -1060,11 +1150,15 @@ fn run_inner(args: &[String]) -> Result<i32> {
         return Err(error.into());
     }
     let usage = home()?.join(".local/bin/nacre-ai-usage");
+    let hook = home()?.join(".local/bin/nacre-ai-claude-title-hook");
     let argv = launch_args(
         ai_core::full_access(),
         &status,
         &account,
         None,
+        None,
+        Some(&hook),
+        Some(&new_id),
         &vault,
         &usage,
     );
@@ -1222,7 +1316,7 @@ mod tests {
         let running = running_sessions_for(
             "chat",
             "work",
-            &format!("ai-chat-claude-profile-work-a\t{}\nai-chat-claude-profile-work-b\t{}\nai-chat-claude-default-c\t/fixture\n", root.display(), child.display()),
+            &format!("ai-chat-claude-profile-work-{CURRENT_ID}\t{}\nai-chat-claude-profile-work-b\t{}\nai-chat-claude-default-c\t/fixture\n", root.display(), child.display()),
         );
         let rows = history(&config, &root, true, &running).unwrap();
         assert_eq!(rows.iter().filter(|row| row["id"] == CURRENT_ID).count(), 1);
@@ -1233,6 +1327,7 @@ mod tests {
             .unwrap()
             .starts_with(root.to_str().unwrap()));
         assert_eq!(row["state"], "running");
+        assert_eq!(row["session"], format!("ai-chat-claude-profile-work-{CURRENT_ID}"));
         assert_eq!(row["updated_at"].as_f64().unwrap(), 1_800_000_000.123);
         assert!(rows.iter().any(|row| row["id"] == raw_id));
 
@@ -1359,12 +1454,14 @@ mod tests {
         let vault = Path::new("/private/brain");
         let usage = Path::new("/private/bin/nacre-ai-usage");
         let resume_id = "7b7db928-7582-4a1e-91b2-e6b601ca8a2d";
-        let standard = launch_args(false, &status, "work", Some(resume_id), vault, usage);
+        let standard = launch_args(false, &status, "work", Some(resume_id), Some("Saved chat"), None, None, vault, usage);
         assert!(!standard.contains(&"--dangerously-skip-permissions".into()));
         assert!(standard
             .windows(2)
             .any(|pair| pair[0] == "--resume" && pair[1] == resume_id));
-        let elevated = launch_args(true, &status, "", None, vault, usage);
+        assert!(standard.windows(2).any(|pair| pair[0] == "--name" && pair[1] == "Saved chat"));
+        let hook = Path::new("/private/bin/nacre-ai-claude-title-hook");
+        let elevated = launch_args(true, &status, "", None, None, Some(hook), Some(resume_id), vault, usage);
         assert!(elevated.contains(&"--dangerously-skip-permissions".into()));
         let settings_index = elevated
             .iter()
@@ -1373,6 +1470,9 @@ mod tests {
         let settings: Value = serde_json::from_str(&elevated[settings_index + 1]).unwrap();
         assert_eq!(settings["statusLine"]["padding"], 2);
         assert_eq!(settings["statusLine"]["mode"], "compact");
+        assert_eq!(settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["type"], "command");
+        assert!(settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"].as_str().unwrap().contains("nacre-ai-claude-title-hook"));
+        assert!(elevated.windows(2).any(|pair| pair[0] == "--session-id" && pair[1] == resume_id));
         assert_eq!(account_tag(""), "default");
         assert_eq!(account_tag("work"), "profile-work");
         assert!(

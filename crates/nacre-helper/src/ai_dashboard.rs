@@ -6,7 +6,7 @@ use std::{
     io::{self, IsTerminal, Read, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::PathBuf,
-    process::Command,
+    process::{Command, Stdio},
 };
 
 const DASHBOARD_OPTIONS: [&str; 6] = [
@@ -914,6 +914,15 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
                 return Err("Could not resume Claude session".into());
             }
         } else {
+            if Command::new("tmux")
+                .arg("-V")
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()
+                .is_ok()
+            {
+                args.push("--tmux".into());
+            }
             let status = Command::new(&args[0]).args(&args[1..]).status()?;
             if !status.success() {
                 return Err("Could not resume Claude session".into());
@@ -1219,6 +1228,15 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
             remote.push("--tmux".into());
             let status = run_remote(host, &remote, false)?;
             return Ok(status.status.code().unwrap_or(1));
+        }
+        if Command::new("tmux")
+            .arg("-V")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok()
+        {
+            command.arg("--tmux");
         }
         let status = command.status()?;
         return Ok(status.code().unwrap_or(1));
