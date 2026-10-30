@@ -527,6 +527,53 @@ fn running_sessions(project: &str, account: &str) -> std::collections::BTreeMap<
     };
     running_sessions_for(project, account, &String::from_utf8_lossy(&output.stdout))
 }
+fn current_tmux_session() -> Option<String> {
+    env::var_os("TMUX")?;
+    let mut command = Command::new("tmux");
+    command.args(["display-message", "-p", "#{session_name}"]);
+    let output = bounded_output(command, Duration::from_secs(2))?;
+    output
+        .status
+        .success()
+        .then(|| String::from_utf8_lossy(&output.stdout).trim().to_owned())
+        .filter(|name| !name.is_empty())
+}
+fn matching_running_session(
+    project: &str,
+    account: &str,
+    id: &str,
+    path: &Path,
+    config: &Path,
+    chat_directory: bool,
+) -> Result<Option<String>> {
+    let running = running_sessions(project, account);
+    let suffix = format!("-{id}");
+    if let Some(name) = running.keys().find(|name| name.ends_with(&suffix)) {
+        return Ok(Some(name.clone()));
+    }
+    let candidates = running
+        .iter()
+        .filter(|(_, cwd)| normalized_workspace(Path::new(cwd)) == normalized_workspace(path))
+        .map(|(name, _)| name.clone())
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+    let rows = history(config, path, chat_directory, &running).unwrap_or_default();
+    let matching_rows = rows
+        .iter()
+        .filter(|row| {
+            row["cwd"].as_str().is_some_and(|cwd| {
+                normalized_workspace(Path::new(cwd)) == normalized_workspace(path)
+            })
+        })
+        .collect::<Vec<_>>();
+    if candidates.len() == 1 && matching_rows.len() == 1 && matching_rows[0]["id"] == id {
+        Ok(Some(candidates[0].clone()))
+    } else {
+        Err(err("A Claude tmux session is running in this workspace, but its transcript cannot be matched safely. Identify the session and attach manually."))
+    }
+}
 fn project_directories(root: &Path, chat_directory: bool) -> Vec<PathBuf> {
     if chat_directory {
         let mut paths = vec![root.to_path_buf()];
@@ -778,6 +825,7 @@ fn prepare_environment(
     mut inherited: std::collections::HashMap<std::ffi::OsString, std::ffi::OsString>,
     config: &Path,
 ) -> std::collections::HashMap<std::ffi::OsString, std::ffi::OsString> {
+    inherited.remove(std::ffi::OsStr::new("NACRE_AI_CLAUDE_TMUX_CHILD"));
     inherited.insert("CLAUDE_CONFIG_DIR".into(), config.as_os_str().into());
     inherited
 }
@@ -790,17 +838,30 @@ fn merged_status_line(settings: &[Value]) -> serde_json::Map<String, Value> {
     }
     merged
 }
-fn launch_args(
+struct LaunchOptions<'a> {
     full_access: bool,
-    status_line: &serde_json::Map<String, Value>,
-    account: &str,
-    resume: Option<&str>,
-    session_name: Option<&str>,
-    title_hook: Option<&Path>,
-    session_id: Option<&str>,
-    vault: &Path,
-    usage_binary: &Path,
-) -> Vec<String> {
+    status_line: &'a serde_json::Map<String, Value>,
+    account: &'a str,
+    resume: Option<&'a str>,
+    session_name: Option<&'a str>,
+    title_hook: Option<&'a Path>,
+    session_id: Option<&'a str>,
+    vault: &'a Path,
+    usage_binary: &'a Path,
+}
+
+fn launch_args(options: LaunchOptions<'_>) -> Vec<String> {
+    let LaunchOptions {
+        full_access,
+        status_line,
+        account,
+        resume,
+        session_name,
+        title_hook,
+        session_id,
+        vault,
+        usage_binary,
+    } = options;
     let mut args = Vec::new();
     if full_access {
         args.push("--dangerously-skip-permissions".into());
@@ -862,7 +923,7 @@ fn tmux_child(
     chat: bool,
 ) -> String {
     let mut child = format!(
-        "{} nacre-ai-claude {} --project {} --path {} --account {}",
+        "NACRE_AI_CLAUDE_TMUX_CHILD=1 {} nacre-ai-claude {} --project {} --path {} --account {}",
         shell_quote(exe),
         command,
         shell_quote(project),
@@ -1002,6 +1063,8 @@ fn run_inner(args: &[String]) -> Result<i32> {
         return Err(err("A valid project ID and absolute path are required"));
     }
     let config = ai_core::account_home("claude", Some(&account))?;
+    let tmux_child = env::var_os("NACRE_AI_CLAUDE_TMUX_CHILD").as_deref()
+        == Some(std::ffi::OsStr::new("1"));
     let envs = prepare_environment(env::vars_os().collect(), &config);
     let skills = Command::new(home()?.join(".local/bin/nacre-ai-skills"))
         .args(["--claude-home", &config.to_string_lossy()])
@@ -1030,38 +1093,25 @@ fn run_inner(args: &[String]) -> Result<i32> {
     } else {
         thread.clone().unwrap_or_default()
     };
-    if tmux {
-        if command == "resume" {
-            let id = thread
-                .as_deref()
-                .filter(|id| valid_id(id))
-                .ok_or_else(|| err("A valid Claude session ID is required"))?;
-            let running = running_sessions(&project, &account);
-            let suffix = format!("-{id}");
-            let exact = running
-                .keys()
-                .find(|name| name.ends_with(&suffix))
-                .cloned();
-            let attach = exact.or_else(|| {
-                let candidates = running
-                    .iter()
-                    .filter(|(_, cwd)| {
-                        normalized_workspace(Path::new(cwd)) == normalized_workspace(&path)
-                    })
-                    .map(|(name, _)| name.clone())
-                    .collect::<Vec<_>>();
-                let rows = history(&config, &path, chat_directory, &running).ok()?;
-                let matching_rows = rows
-                    .iter()
-                    .filter(|row| {
-                        row["cwd"].as_str().is_some_and(|cwd| {
-                            normalized_workspace(Path::new(cwd)) == normalized_workspace(&path)
-                        })
-                    })
-                    .count();
-                (candidates.len() == 1 && matching_rows == 1).then(|| candidates[0].clone())
-            });
-            if let Some(session) = attach {
+    if command == "new" && !valid_id(&new_id) {
+        return Err(err("A valid Claude session ID is required"));
+    }
+    if command == "resume" && executable("tmux").is_some() {
+        let id = thread
+            .as_deref()
+            .filter(|id| valid_id(id))
+            .ok_or_else(|| err("A valid Claude session ID is required"))?;
+        if let Some(session) = matching_running_session(
+            &project,
+            &account,
+            id,
+            &path,
+            &config,
+            chat_directory,
+        )? {
+            let already_in_target = tmux_child
+                && current_tmux_session().as_deref() == Some(session.as_str());
+            if !already_in_target {
                 let error = Command::new("tmux")
                     .args(["attach-session", "-t", &format!("={session}")])
                     .envs(&envs)
@@ -1069,6 +1119,8 @@ fn run_inner(args: &[String]) -> Result<i32> {
                 return Err(error.into());
             }
         }
+    }
+    if tmux {
         let tag = account_tag(&account);
         let suffix = new_id.clone();
         let name = format!("ai-{project}-claude-{tag}-{suffix}");
@@ -1135,33 +1187,34 @@ fn run_inner(args: &[String]) -> Result<i32> {
                     .is_some_and(|title| !title.trim().is_empty())
         });
         let name = (!custom_title).then(|| title_from(&records)).flatten();
-        let argv = launch_args(
-            ai_core::full_access(),
-            &status,
-            &account,
-            Some(id),
-            name.as_deref(),
-            None,
-            None,
-            &vault,
-            &usage,
-        );
+        let hook = home()?.join(".local/bin/nacre-ai-claude-title-hook");
+        let argv = launch_args(LaunchOptions {
+            full_access: ai_core::full_access(),
+            status_line: &status,
+            account: &account,
+            resume: Some(id),
+            session_name: name.as_deref(),
+            title_hook: Some(&hook),
+            session_id: None,
+            vault: &vault,
+            usage_binary: &usage,
+        });
         let error = Command::new(binary).args(argv).envs(&envs).exec();
         return Err(error.into());
     }
     let usage = home()?.join(".local/bin/nacre-ai-usage");
     let hook = home()?.join(".local/bin/nacre-ai-claude-title-hook");
-    let argv = launch_args(
-        ai_core::full_access(),
-        &status,
-        &account,
-        None,
-        None,
-        Some(&hook),
-        Some(&new_id),
-        &vault,
-        &usage,
-    );
+    let argv = launch_args(LaunchOptions {
+        full_access: ai_core::full_access(),
+        status_line: &status,
+        account: &account,
+        resume: None,
+        session_name: None,
+        title_hook: Some(&hook),
+        session_id: Some(&new_id),
+        vault: &vault,
+        usage_binary: &usage,
+    });
     let error = Command::new(binary).args(argv).envs(&envs).exec();
     Err(error.into())
 }
@@ -1454,14 +1507,34 @@ mod tests {
         let vault = Path::new("/private/brain");
         let usage = Path::new("/private/bin/nacre-ai-usage");
         let resume_id = "7b7db928-7582-4a1e-91b2-e6b601ca8a2d";
-        let standard = launch_args(false, &status, "work", Some(resume_id), Some("Saved chat"), None, None, vault, usage);
+        let standard = launch_args(LaunchOptions {
+            full_access: false,
+            status_line: &status,
+            account: "work",
+            resume: Some(resume_id),
+            session_name: Some("Saved chat"),
+            title_hook: None,
+            session_id: None,
+            vault,
+            usage_binary: usage,
+        });
         assert!(!standard.contains(&"--dangerously-skip-permissions".into()));
         assert!(standard
             .windows(2)
             .any(|pair| pair[0] == "--resume" && pair[1] == resume_id));
         assert!(standard.windows(2).any(|pair| pair[0] == "--name" && pair[1] == "Saved chat"));
         let hook = Path::new("/private/bin/nacre-ai-claude-title-hook");
-        let elevated = launch_args(true, &status, "", None, None, Some(hook), Some(resume_id), vault, usage);
+        let elevated = launch_args(LaunchOptions {
+            full_access: true,
+            status_line: &status,
+            account: "",
+            resume: None,
+            session_name: None,
+            title_hook: Some(hook),
+            session_id: Some(resume_id),
+            vault,
+            usage_binary: usage,
+        });
         assert!(elevated.contains(&"--dangerously-skip-permissions".into()));
         let settings_index = elevated
             .iter()

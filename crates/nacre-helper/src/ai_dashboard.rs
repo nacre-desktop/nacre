@@ -887,6 +887,17 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
         }
         return Ok(());
     }
+    if agent == "claude" && project["host"].as_str().is_none() {
+        if let Some(session) = item["session"].as_str() {
+            let status = Command::new("tmux")
+                .args(["attach-session", "-t", &format!("={session}")])
+                .status()?;
+            if !status.success() {
+                return Err("Could not attach to the running Claude chat".into());
+            }
+            return Ok(());
+        }
+    }
     if agent == "claude" {
         let mut args = vec![
             "nacre-ai-claude".into(),
@@ -919,7 +930,7 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .status()
-                .is_ok()
+                .is_ok_and(|status| status.success())
             {
                 args.push("--tmux".into());
             }
@@ -1234,7 +1245,7 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()
-            .is_ok()
+            .is_ok_and(|status| status.success())
         {
             command.arg("--tmux");
         }

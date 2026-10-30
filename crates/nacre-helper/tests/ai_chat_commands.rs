@@ -94,6 +94,259 @@ fn claude_launch_preserves_profile_permissions_and_private_session_home() {
 }
 
 #[test]
+fn claude_tmux_new_reuses_one_uuid_for_tmux_child_and_claude_session() {
+    let temp = tempdir().unwrap();
+    let home = temp.path();
+    setup(home);
+    script(
+        &home.join(".local/bin/tmux"),
+        r#"#!/usr/bin/python3
+import json,os,sys,subprocess
+if sys.argv[1] == 'list-panes':
+    raise SystemExit(0)
+if sys.argv[1] == 'new-session':
+    open(os.path.join(os.environ['HOME'],'tmux-args.json'),'w').write(json.dumps(sys.argv[1:]))
+    raise SystemExit(subprocess.run(['/bin/sh','-c',sys.argv[-1]]).returncode)
+print(json.dumps(sys.argv[1:]))
+"#,
+    );
+    script(
+        &home.join(".local/bin/claude"),
+        "#!/usr/bin/python3\nimport json,sys\nprint(json.dumps(sys.argv[1:]))\n",
+    );
+    let root = home.join("chats");
+    fs::create_dir_all(&root).unwrap();
+    let result = run(
+        home,
+        &[
+            "nacre-ai-claude",
+            "new",
+            "--tmux",
+            "--project",
+            "fixture",
+            "--path",
+            root.to_str().unwrap(),
+            "--chat-directory",
+        ],
+    );
+    ok(&result);
+    let tmux_args: Value =
+        serde_json::from_slice(&fs::read(home.join("tmux-args.json")).unwrap()).unwrap();
+    let name = tmux_args[3].as_str().unwrap();
+    let whole_id = name.strip_prefix("ai-fixture-claude-default-").unwrap();
+    assert_eq!(
+        whole_id.split('-').map(str::len).collect::<Vec<_>>(),
+        [8, 4, 4, 4, 12]
+    );
+    let child = tmux_args[4].as_str().unwrap();
+    assert!(child.contains(&format!("--thread-id '{whole_id}'")));
+    let claude_args: Vec<String> = serde_json::from_slice(&result.stdout).unwrap();
+    assert!(claude_args
+        .windows(2)
+        .any(|pair| pair[0] == "--session-id" && pair[1] == whole_id));
+    let settings: Value = serde_json::from_str(
+        &claude_args[claude_args.iter().position(|arg| arg == "--settings").unwrap() + 1],
+    )
+    .unwrap();
+    assert!(settings["hooks"]["UserPromptSubmit"].is_array());
+}
+
+#[test]
+fn claude_new_rejects_a_non_uuid_thread_id_before_starting_tmux() {
+    let temp = tempdir().unwrap();
+    let home = temp.path();
+    setup(home);
+    script(&home.join(".local/bin/tmux"), "#!/bin/sh\ntouch \"$HOME/tmux-called\"\nexit 0\n");
+    script(
+        &home.join(".local/bin/claude"),
+        "#!/bin/sh\ntouch \"$HOME/claude-called\"\n",
+    );
+    let root = home.join("chats");
+    fs::create_dir_all(&root).unwrap();
+    let result = run(
+        home,
+        &[
+            "nacre-ai-claude",
+            "new",
+            "--tmux",
+            "--project",
+            "fixture",
+            "--path",
+            root.to_str().unwrap(),
+            "--thread-id",
+            "not-a-uuid",
+        ],
+    );
+    assert!(!result.status.success());
+    assert!(String::from_utf8_lossy(&result.stderr).contains("valid Claude session ID"));
+    assert!(!home.join("tmux-called").exists());
+    assert!(!home.join("claude-called").exists());
+}
+
+fn write_claude_transcript(home: &Path, cwd: &Path, id: &str, title: Value) {
+    let project_name = cwd
+        .to_string_lossy()
+        .chars()
+        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .collect::<String>();
+    let project = home.join(".claude/projects").join(project_name);
+    fs::create_dir_all(&project).unwrap();
+    let user = json!({
+        "type":"user", "sessionId":id,
+        "uuid":"11111111-1111-4111-8111-111111111111",
+        "cwd":cwd, "message":{"content":"first prompt"}
+    });
+    fs::write(
+        project.join(format!("{id}.jsonl")),
+        format!("{}\n{}\n", user, title),
+    )
+    .unwrap();
+}
+
+#[test]
+fn claude_resume_uses_ai_title_but_never_overwrites_a_custom_title() {
+    let temp = tempdir().unwrap();
+    let home = temp.path();
+    setup(home);
+    script(&home.join(".local/bin/tmux"), "#!/bin/sh\nif [ \"$1\" = list-panes ]; then exit 0; fi\nexit 0\n");
+    script(
+        &home.join(".local/bin/claude"),
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1:]==['agents','--json']: print('[]')\nelse: print(json.dumps(sys.argv[1:]))\n",
+    );
+    let cwd = home.join("saved-chat");
+    fs::create_dir_all(&cwd).unwrap();
+    for (id, title, expected_name) in [
+        (
+            "11111111-1111-4111-8111-111111111111",
+            json!({"type":"ai-title","aiTitle":"AI chosen title"}),
+            Some("AI chosen title"),
+        ),
+        (
+            "22222222-2222-4222-8222-222222222222",
+            json!({"type":"custom-title","customTitle":"Owner rename"}),
+            None,
+        ),
+    ] {
+        write_claude_transcript(home, &cwd, id, title);
+        let result = run(
+            home,
+            &[
+                "nacre-ai-claude",
+                "resume",
+                "--project",
+                "fixture",
+                "--path",
+                cwd.to_str().unwrap(),
+                "--thread-id",
+                id,
+            ],
+        );
+        ok(&result);
+        let args: Vec<String> = serde_json::from_slice(&result.stdout).unwrap();
+        let named = args.windows(2).find(|pair| pair[0] == "--name");
+        assert_eq!(named.map(|pair| pair[1].as_str()), expected_name);
+        assert!(args.iter().any(|arg| arg == "--resume"));
+        let settings: Value = serde_json::from_str(
+            &args[args.iter().position(|arg| arg == "--settings").unwrap() + 1],
+        )
+        .unwrap();
+        assert!(settings["hooks"]["UserPromptSubmit"].is_array());
+    }
+}
+
+#[test]
+fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambiguous_cwd() {
+    let temp = tempdir().unwrap();
+    let home = temp.path();
+    setup(home);
+    let cwd = home.join("saved-chat");
+    fs::create_dir_all(&cwd).unwrap();
+    let id = "11111111-1111-4111-8111-111111111111";
+    let legacy = "ai-fixture-claude-default-legacy";
+    let tmux_body = format!(
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1]=='list-panes': print({:?})\nelse: print(json.dumps(sys.argv[1:]))\n",
+        format!("{legacy}\t{}", cwd.display())
+    );
+    script(&home.join(".local/bin/tmux"), &tmux_body);
+    script(
+        &home.join(".local/bin/claude"),
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1:]==['agents','--json']: print('[]')\nelse: open(sys.argv[0] + '.called','w').write('called')\n",
+    );
+
+    write_claude_transcript(home, &cwd, id, json!({"type":"summary","summary":"Title"}));
+    let exact_name = format!("ai-fixture-claude-default-{id}");
+    let exact_body = format!(
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1]=='list-panes': print({:?})\nelse: print(json.dumps(sys.argv[1:]))\n",
+        format!("{exact_name}\t{}", cwd.display())
+    );
+    script(&home.join(".local/bin/tmux"), &exact_body);
+    let exact = run(
+        home,
+        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+    );
+    ok(&exact);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&exact.stdout).unwrap(),
+        json!(["attach-session", "-t", format!("={exact_name}")])
+    );
+
+    script(&home.join(".local/bin/tmux"), &tmux_body);
+    let unique = run(
+        home,
+        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+    );
+    ok(&unique);
+    assert_eq!(
+        serde_json::from_slice::<Value>(&unique.stdout).unwrap(),
+        json!(["attach-session", "-t", format!("={legacy}")])
+    );
+
+    let other_cwd = home.join("different-chat");
+    fs::create_dir_all(&other_cwd).unwrap();
+    let other_id = "33333333-3333-4333-8333-333333333333";
+    write_claude_transcript(
+        home,
+        &other_cwd,
+        other_id,
+        json!({"type":"summary","summary":"Different chat"}),
+    );
+    let wrong_row_tmux = format!(
+        "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1]=='list-panes': print({:?})\nelse: print(json.dumps(sys.argv[1:]))\n",
+        format!("{legacy}\t{}", other_cwd.display())
+    );
+    script(&home.join(".local/bin/tmux"), &wrong_row_tmux);
+    let wrong_row = run(
+        home,
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            other_cwd.to_str().unwrap(),
+            "--thread-id",
+            id,
+        ],
+    );
+    assert!(!wrong_row.status.success());
+    assert!(String::from_utf8_lossy(&wrong_row.stderr).contains("cannot be matched safely"));
+
+    write_claude_transcript(
+        home,
+        &cwd,
+        "22222222-2222-4222-8222-222222222222",
+        json!({"type":"summary","summary":"Second"}),
+    );
+    let ambiguous = run(
+        home,
+        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+    );
+    assert!(!ambiguous.status.success());
+    assert!(String::from_utf8_lossy(&ambiguous.stderr).contains("cannot be matched safely"));
+    assert!(!home.join(".local/bin/claude.called").exists());
+}
+
+#[test]
 fn codex_resume_keeps_exact_thread_history_and_permission_flags() {
     let temp = tempdir().unwrap();
     let home = temp.path();
