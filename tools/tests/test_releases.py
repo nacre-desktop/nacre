@@ -31,7 +31,9 @@ class ReleaseTests(unittest.TestCase):
                     [alias.name for alias in node.names]
                     if isinstance(node, ast.Import)
                     else [node.module]
-                    if isinstance(node, ast.ImportFrom) and node.module and not node.level
+                    if isinstance(node, ast.ImportFrom)
+                    and node.module
+                    and not node.level
                     else []
                 )
                 for module in names:
