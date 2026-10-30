@@ -1082,6 +1082,24 @@ def source_chats(project, account):
     ]
 
 
+def tmux_options(session):
+    """Keep Claude's viewport and wheel usable without altering tmux defaults."""
+    return [
+        ";",
+        "set-option",
+        "-t",
+        session,
+        "status",
+        "off",
+        ";",
+        "set-option",
+        "-t",
+        session,
+        "mouse",
+        "on",
+    ]
+
+
 def claude_command(project, command, account, thread_id=None):
     account = effective_account("claude", account)
     argv = [
@@ -1204,13 +1222,27 @@ def load_task(args):
         if item.get("session") and project.get("host"):
             return ssh_exec(
                 project["host"],
-                shlex.join(["tmux", "attach-session", "-t", "=" + item["session"]]),
+                shlex.join(
+                    [
+                        "tmux",
+                        "attach-session",
+                        "-t",
+                        "=" + item["session"],
+                        *tmux_options(item["session"]),
+                    ]
+                ),
             )
         if item.get("session"):
             os.execvpe(
                 "tmux",
-                ["tmux", "attach-session", "-t", "=" + item["session"]],
-                ssh_environment(),
+                [
+                    "tmux",
+                    "attach-session",
+                    "-t",
+                    "=" + item["session"],
+                    *tmux_options(item["session"]),
+                ],
+                dict(os.environ),
             )
         return launch_claude(
             dict(project, path=item.get("cwd") or project["path"]),

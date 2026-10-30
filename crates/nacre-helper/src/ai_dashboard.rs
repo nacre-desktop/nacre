@@ -867,11 +867,7 @@ fn launch_niri_history(
 }
 
 fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
-    let mut args = vec![
-        "attach-session".into(),
-        "-t".into(),
-        format!("={session}"),
-    ];
+    let mut args = vec!["attach-session".into(), "-t".into(), format!("={session}")];
     if claude {
         args.extend([
             ";".into(),
@@ -899,11 +895,7 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
     if let (Some(host), Some(session)) = (project["host"].as_str(), item["session"].as_str()) {
         let mut args = vec!["tmux".into()];
         args.extend(tmux_attach_args(session, agent == "claude"));
-        let output = run_remote(
-            host,
-            &args,
-            false,
-        )?;
+        let output = run_remote(host, &args, false)?;
         if !output.status.success() {
             return Err("Could not attach to the running task".into());
         }

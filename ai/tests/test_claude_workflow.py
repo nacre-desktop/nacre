@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 from pathlib import Path
 import subprocess
 import sys
@@ -11,6 +12,129 @@ from test_workflow import ROOT, module
 
 
 class ClaudeWorkflowTests(unittest.TestCase):
+    def assert_tmux_options(self, argv, session):
+        self.assertEqual(
+            argv[-12:],
+            [
+                ";",
+                "set-option",
+                "-t",
+                session,
+                "status",
+                "off",
+                ";",
+                "set-option",
+                "-t",
+                session,
+                "mouse",
+                "on",
+            ],
+        )
+        self.assertNotIn("-g", argv)
+
+    def test_claude_tmux_creation_and_direct_attach_set_session_options(self):
+        c = module("nacre-ai-claude")
+        thread = "11111111-1111-4111-8111-111111111111"
+        session = "ai-p-claude-default-" + thread
+        for command in ("new", "resume"):
+            with self.subTest(command=command), tempfile.TemporaryDirectory() as temp:
+                args = SimpleNamespace(
+                    command=command,
+                    tmux=True,
+                    thread_id=thread,
+                    project="p",
+                    account="",
+                    path=temp,
+                    chat_directory=True,
+                )
+                with (
+                    patch.dict(os.environ),
+                    patch.object(
+                        c,
+                        "environment",
+                        return_value=dict(os.environ, CLAUDE_CONFIG_DIR=temp),
+                    ),
+                    patch.object(c.subprocess, "run"),
+                    patch.object(c, "executable", return_value="/fake/claude"),
+                    patch.object(c, "resume_metadata", return_value=([], None)),
+                    patch.object(c, "tmux_resume_target", return_value=session),
+                    patch.object(
+                        c.os, "execvpe", side_effect=RuntimeError("intercept")
+                    ) as launch,
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "intercept"):
+                        c.run(args)
+                binary, argv, _ = launch.call_args.args
+                self.assertEqual(binary, "tmux")
+                if command == "new":
+                    self.assertEqual(
+                        argv[:5], ["tmux", "new-session", "-A", "-s", session]
+                    )
+                    self.assertIn(thread, shlex.split(argv[5]))
+                else:
+                    self.assertEqual(
+                        argv[:4], ["tmux", "attach-session", "-t", "=" + session]
+                    )
+                self.assert_tmux_options(argv, session)
+
+    def test_remote_running_claude_attach_sets_options_and_ssh_environment(self):
+        ai = module("nacre-ai")
+        project = {"id": "p", "path": "/chat", "host": "dev"}
+        session = "ai-p-claude-default-thread"
+        record = {
+            "id": "thread",
+            "agent": "claude",
+            "title": "Saved chat",
+            "project": project,
+            "session": session,
+            "updated_at": 1,
+        }
+        with (
+            patch.dict(os.environ, {"TERM": "xterm-kitty"}),
+            patch.object(ai, "chat_projects", return_value=[project]),
+            patch.object(ai, "project_chats", return_value=[record]),
+            patch.object(ai, "launch_claude") as launch,
+            patch.object(
+                ai.os, "execvpe", side_effect=RuntimeError("attached")
+            ) as attach,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "attached"):
+                ai.load_task(
+                    SimpleNamespace(command="latest", project=None, account="")
+                )
+        launch.assert_not_called()
+        binary, argv, env = attach.call_args.args
+        self.assertEqual(binary, "ssh")
+        tmux_argv = shlex.split(argv[-1])
+        self.assertEqual(tmux_argv[:4], ["tmux", "attach-session", "-t", "=" + session])
+        self.assert_tmux_options(tmux_argv, session)
+        self.assertEqual(env["TERM"], "xterm-256color")
+
+    def test_title_hook_uses_latest_summary_without_ai_title(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text(
+                "\n".join(
+                    json.dumps(row)
+                    for row in [
+                        {"type": "summary", "summary": "Old summary"},
+                        {"type": "summary", "summary": "Latest summary"},
+                    ]
+                )
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)],
+                input=json.dumps({"transcript_path": str(transcript)}),
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads(result.stdout)["hookSpecificOutput"]["sessionTitle"],
+                "Latest summary",
+            )
+
     def test_title_hook_prefers_ai_title_and_preserves_custom_title(self):
         hook = ROOT / "bin/nacre-ai-claude-title-hook"
         with tempfile.TemporaryDirectory() as temp:
@@ -18,7 +142,11 @@ class ClaudeWorkflowTests(unittest.TestCase):
             transcript.write_text(
                 json.dumps({"type": "user", "message": {"content": "First prompt"}})
                 + "\n"
+                + json.dumps({"type": "ai-title", "aiTitle": "Old AI title"})
+                + "\n"
                 + json.dumps({"type": "ai-title", "aiTitle": "AI summary title"})
+                + "\n"
+                + json.dumps({"type": "summary", "summary": "Newer summary"})
                 + "\n"
             )
             event = json.dumps(
@@ -42,11 +170,15 @@ class ClaudeWorkflowTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
 
-    def test_title_hook_uses_clean_first_prompt_and_fails_open(self):
+    def test_title_hook_waits_for_ai_title_and_fails_open(self):
         hook = ROOT / "bin/nacre-ai-claude-title-hook"
         with tempfile.TemporaryDirectory() as temp:
             transcript = Path(temp) / "session.jsonl"
-            transcript.write_text("")
+            transcript.write_text(
+                json.dumps(
+                    {"type": "user", "message": {"content": "First prompt text"}}
+                )
+            )
             event = json.dumps(
                 {
                     "prompt": "  Explain\x00   tmux persistence.  ",
@@ -56,10 +188,8 @@ class ClaudeWorkflowTests(unittest.TestCase):
             result = subprocess.run(
                 [sys.executable, str(hook)], input=event, text=True, capture_output=True
             )
-            self.assertEqual(
-                json.loads(result.stdout)["hookSpecificOutput"]["sessionTitle"],
-                "Explain tmux persistence",
-            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
             result = subprocess.run(
                 [sys.executable, str(hook)],
                 input="not json",
@@ -392,6 +522,7 @@ class ClaudeWorkflowTests(unittest.TestCase):
             "updated_at": 1,
         }
         with (
+            patch.dict(os.environ, {"TERM": "xterm-kitty"}),
             patch.object(ai, "chat_projects", return_value=[project]),
             patch.object(ai, "project_chats", return_value=[record]),
             patch.object(ai, "launch_claude") as launch,
@@ -404,10 +535,11 @@ class ClaudeWorkflowTests(unittest.TestCase):
                     SimpleNamespace(command="latest", project=None, account="")
                 )
         launch.assert_not_called()
-        self.assertEqual(
-            attach.call_args.args[:2],
-            ("tmux", ["tmux", "attach-session", "-t", "=" + session]),
-        )
+        binary, argv, env = attach.call_args.args
+        self.assertEqual(binary, "tmux")
+        self.assertEqual(argv[:4], ["tmux", "attach-session", "-t", "=" + session])
+        self.assert_tmux_options(argv, session)
+        self.assertEqual(env["TERM"], "xterm-kitty")
 
     def test_named_accounts_have_distinct_claude_home_not_codex_auth(self):
         c = module("nacre-ai-claude")

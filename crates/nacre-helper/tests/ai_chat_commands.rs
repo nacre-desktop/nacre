@@ -106,7 +106,7 @@ if sys.argv[1] == 'list-panes':
     raise SystemExit(0)
 if sys.argv[1] == 'new-session':
     open(os.path.join(os.environ['HOME'],'tmux-args.json'),'w').write(json.dumps(sys.argv[1:]))
-    raise SystemExit(subprocess.run(['/bin/sh','-c',sys.argv[-1]]).returncode)
+    raise SystemExit(subprocess.run(['/bin/sh','-c',sys.argv[5]]).returncode)
 print(json.dumps(sys.argv[1:]))
 "#,
     );
@@ -135,7 +135,7 @@ print(json.dumps(sys.argv[1:]))
     let name = tmux_args[3].as_str().unwrap();
     assert_eq!(tmux_args[5], ";");
     assert_eq!(
-        &tmux_args[6..],
+        &tmux_args.as_array().unwrap()[6..],
         [
             json!("set-option"),
             json!("-t"),
@@ -324,8 +324,21 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     assert_eq!(
         serde_json::from_slice::<Value>(&exact.stdout).unwrap(),
         json!([
-            "attach-session", "-t", format!("={exact_name}"), ";", "set-option", "-t",
-            exact_name, "status", "off", ";", "set-option", "-t", exact_name, "mouse", "on"
+            "attach-session",
+            "-t",
+            format!("={exact_name}"),
+            ";",
+            "set-option",
+            "-t",
+            exact_name,
+            "status",
+            "off",
+            ";",
+            "set-option",
+            "-t",
+            exact_name,
+            "mouse",
+            "on"
         ])
     );
 
@@ -347,8 +360,21 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     assert_eq!(
         serde_json::from_slice::<Value>(&unique.stdout).unwrap(),
         json!([
-            "attach-session", "-t", format!("={legacy}"), ";", "set-option", "-t", legacy,
-            "status", "off", ";", "set-option", "-t", legacy, "mouse", "on"
+            "attach-session",
+            "-t",
+            format!("={legacy}"),
+            ";",
+            "set-option",
+            "-t",
+            legacy,
+            "status",
+            "off",
+            ";",
+            "set-option",
+            "-t",
+            legacy,
+            "mouse",
+            "on"
         ])
     );
 

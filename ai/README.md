@@ -55,9 +55,15 @@ terminal detaches the client; reopening a running chat attaches to the same
 session. Without tmux, the launcher runs Claude directly. Existing Claude daemon
 sessions remain attachable.
 
-A per-session UserPromptSubmit hook promotes an available AI title/summary, or a
-short first-prompt title, into Claude's native custom title so the chat list and
-Remote Control use the same name. Resuming an untitled saved chat passes its
+Nacre's Claude tmux sessions use `status off` and `mouse on` per session: the
+status bar stays hidden and the wheel scrolls rather than navigating prompt
+history. Creation and attachment apply these options locally and over SSH;
+the owner's tmux defaults and configuration remain unchanged.
+
+A per-session UserPromptSubmit hook promotes an available AI title/summary into
+Claude's native custom title so the chat list and Remote Control use the same
+name. The hook emits nothing until Claude has generated an AI title or summary;
+a later prompt promotes that title without locking in the first prompt's text. Resuming an untitled saved chat passes its
 current list title with `--name`. The hook preserves `/rename` titles and never
 changes global Claude settings. Unreadable or oversized transcripts leave the
 current title unchanged. Deploy `nacre-ai-claude-title-hook` beside the

@@ -127,6 +127,24 @@ def resume_metadata(directory, thread_id, chat_directory=False):
         return None, None
 
 
+def tmux_options(session):
+    """Keep Claude's viewport and wheel usable without altering tmux defaults."""
+    return [
+        ";",
+        "set-option",
+        "-t",
+        session,
+        "status",
+        "off",
+        ";",
+        "set-option",
+        "-t",
+        session,
+        "mouse",
+        "on",
+    ]
+
+
 def session_key(value):
     return re.sub(r"[^0-9a-f]", "", str(value).lower())
 
@@ -418,7 +436,13 @@ def run(args):
             if resume_session:
                 os.execvpe(
                     "tmux",
-                    ["tmux", "attach-session", "-t", "=" + resume_session],
+                    [
+                        "tmux",
+                        "attach-session",
+                        "-t",
+                        "=" + resume_session,
+                        *tmux_options(resume_session),
+                    ],
                     env,
                 )
     if args.tmux:
@@ -440,7 +464,17 @@ def run(args):
             argv += ["--chat-directory"]
         argv += ["--tmux-child"]
         os.execvpe(
-            "tmux", ["tmux", "new-session", "-A", "-s", session, shlex.join(argv)], env
+            "tmux",
+            [
+                "tmux",
+                "new-session",
+                "-A",
+                "-s",
+                session,
+                shlex.join(argv),
+                *tmux_options(session),
+            ],
+            env,
         )
     directory = Path(args.path) if args.command == "resume" else prepare_directory(args)
     if not directory.is_dir():
