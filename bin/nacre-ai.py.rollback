@@ -1082,7 +1082,9 @@ def source_chats(project, account):
     ]
 
 
-def claude_command(project, command, account, thread_id=None):
+def claude_command(
+    project, command, account, thread_id=None, title=None, custom_title=False
+):
     account = effective_account("claude", account)
     argv = [
         command,
@@ -1095,11 +1097,17 @@ def claude_command(project, command, account, thread_id=None):
     ]
     if thread_id:
         argv += ["--thread-id", thread_id]
+    if title:
+        argv += ["--title", title]
+    if custom_title:
+        argv += ["--custom-title"]
     if project.get("chat_directory"):
         argv.append("--chat-directory")
+    if command in ("new", "resume") and (
+        project.get("host") or shutil.which("tmux")
+    ):
+        argv.append("--tmux")
     if project.get("host"):
-        if command in ("new", "resume"):
-            argv.append("--tmux")
         return [
             "ssh",
             "-o",
@@ -1134,8 +1142,10 @@ def claude_chats(project, account):
     ]
 
 
-def launch_claude(project, command, account, thread_id=None):
-    argv = claude_command(project, command, account, thread_id)
+def launch_claude(
+    project, command, account, thread_id=None, title=None, custom_title=False
+):
+    argv = claude_command(project, command, account, thread_id, title, custom_title)
     os.execvpe(argv[0], argv, ssh_environment())
 
 
@@ -1201,16 +1211,24 @@ def load_task(args):
     project = item["project"]
     account = item.get("account", args.account)
     if item.get("agent") == "claude":
-        if project.get("host") and item.get("session"):
+        if item.get("session") and project.get("host"):
             return ssh_exec(
                 project["host"],
                 shlex.join(["tmux", "attach-session", "-t", "=" + item["session"]]),
+            )
+        if item.get("session"):
+            os.execvpe(
+                "tmux",
+                ["tmux", "attach-session", "-t", "=" + item["session"]],
+                ssh_environment(),
             )
         return launch_claude(
             dict(project, path=item.get("cwd") or project["path"]),
             "resume",
             account,
             item["id"],
+            item.get("title"),
+            bool(item.get("custom_title")),
         )
     # Authentication follows the selected Codex account; chat identity and
     # storage follow the saved record. Running remote workers retain their login.

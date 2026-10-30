@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Give a new Claude session a stable title without replacing a user's rename."""
+
+import json
+import re
+import sys
+from pathlib import Path
+
+MAX_TRANSCRIPT = 2 * 1024 * 1024
+
+
+def clean(value):
+    if not isinstance(value, str):
+        return ""
+    value = re.sub(r"<[^>]{1,200}>", " ", value)
+    value = " ".join(value.split()).strip(" \t\r\n-:;,.")
+    if not value or re.search(
+        r"\b(?:system-reminder|local-command|command-name|task-notification)\b",
+        value,
+        re.I,
+    ):
+        return ""
+    if value.startswith(("/", "<")):
+        return ""
+    return value[:80].rstrip()
+
+
+def candidates(data):
+    result = []
+    if isinstance(data, dict):
+        record_type = data.get("type")
+        if record_type == "custom-title":
+            result.append(("custom", data.get("customTitle")))
+        elif record_type == "ai-title":
+            result.append(("ai", data.get("aiTitle")))
+        elif record_type == "summary":
+            result.append(("summary", data.get("summary")))
+        if record_type == "user":
+            message = data.get("message", {})
+            content = message.get("content", "") if isinstance(message, dict) else ""
+            if isinstance(content, str):
+                result.append(("prompt", content))
+            elif isinstance(content, list):
+                result.extend(
+                    ("prompt", item.get("text", ""))
+                    for item in content
+                    if isinstance(item, dict) and item.get("type") == "text"
+                )
+    return result
+
+
+def main():
+    try:
+        event = json.load(sys.stdin)
+        transcript = Path(event.get("transcript_path", ""))
+        if not transcript.is_file():
+            return
+        size = transcript.stat().st_size
+        # If this transcript is too large to inspect safely in the hook budget,
+        # fail open rather than risk overwriting an old /rename record.
+        if size > MAX_TRANSCRIPT:
+            return
+        text = transcript.read_text(errors="replace")
+        rows = []
+        for line in text.splitlines():
+            try:
+                rows.extend(candidates(json.loads(line)))
+            except (ValueError, TypeError):
+                continue
+        if any(
+            kind == "custom" and isinstance(value, str) and value.strip()
+            for kind, value in rows
+        ):
+            return
+        ai_title = next(
+            (
+                clean(value)
+                for kind, value in reversed(rows)
+                if kind == "ai" and clean(value)
+            ),
+            "",
+        )
+        summary = next(
+            (
+                clean(value)
+                for kind, value in reversed(rows)
+                if kind == "summary" and clean(value)
+            ),
+            "",
+        )
+        first_prompt = next(
+            (clean(value) for kind, value in rows if kind == "prompt" and clean(value)),
+            clean(event.get("prompt", "")),
+        )
+        title = ai_title or summary or first_prompt
+        if title:
+            print(
+                json.dumps(
+                    {
+                        "hookSpecificOutput": {
+                            "hookEventName": "UserPromptSubmit",
+                            "sessionTitle": title,
+                        }
+                    }
+                )
+            )
+    except Exception:
+        return
+
+
+if __name__ == "__main__":
+    main()

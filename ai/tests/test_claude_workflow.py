@@ -10,6 +10,61 @@ from test_workflow import module
 
 
 class ClaudeWorkflowTests(unittest.TestCase):
+    def test_title_hook_prefers_ai_title_and_preserves_custom_title(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text(
+                json.dumps(
+                    {"type": "user", "message": {"content": "First prompt"}}
+                )
+                + "\n"
+                + json.dumps({"type": "ai-title", "aiTitle": "AI summary title"})
+                + "\n"
+            )
+            event = json.dumps(
+                {"prompt": "Later prompt", "transcript_path": str(transcript)}
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(
+                json.loads(result.stdout)["hookSpecificOutput"]["sessionTitle"],
+                "AI summary title",
+            )
+            with transcript.open("a") as stream:
+                stream.write(json.dumps({"type": "custom-title", "customTitle": "Owner rename"}))
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
+    def test_title_hook_uses_clean_first_prompt_and_fails_open(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text("")
+            event = json.dumps(
+                {
+                    "prompt": "  Explain   tmux persistence.  ",
+                    "transcript_path": str(transcript),
+                }
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(
+                json.loads(result.stdout)["hookSpecificOutput"]["sessionTitle"],
+                "Explain tmux persistence",
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input="not json", text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
     def test_new_chat_uses_default_without_project_or_provider_picker(self):
         ai = module("nacre-ai")
         with (
@@ -129,6 +184,64 @@ class ClaudeWorkflowTests(unittest.TestCase):
         self.assertEqual(records[0]["updated_at"], 1700000000.123)
         self.assertEqual(records[0]["title"], "Native title")
         self.assertEqual(records[0]["state"], "running")
+
+    def test_claude_running_sessions_match_thread_id_before_shared_cwd(self):
+        c = module("nacre-ai-claude")
+        rows = [
+            SimpleNamespace(
+                session_id="11111111-1111-4111-8111-111111111111",
+                custom_title="One",
+                summary="",
+                first_prompt="",
+                last_modified=1,
+                cwd="/general",
+            ),
+            SimpleNamespace(
+                session_id="22222222-2222-4222-8222-222222222222",
+                custom_title="Two",
+                summary="",
+                first_prompt="",
+                last_modified=2,
+                cwd="/general",
+            ),
+        ]
+        running = {
+            "ai-general-chat-claude-default-11111111111141118111111111111111": "/general",
+            "ai-general-chat-claude-default-22222222222242228222222222222222": "/general",
+        }
+        records = c.records(rows, running, "/general")
+        self.assertEqual([row["session"] for row in records], list(running))
+        self.assertEqual([row["state"] for row in records], ["running", "running"])
+
+    def test_claude_legacy_cwd_match_requires_one_chat_and_one_tmux_session(self):
+        c = module("nacre-ai-claude")
+        rows = [
+            SimpleNamespace(
+                session_id=ident,
+                custom_title=None,
+                summary="",
+                first_prompt="",
+                last_modified=1,
+                cwd="/general",
+            )
+            for ident in ("one", "two")
+        ]
+        records = c.records(rows, {"legacy": "/general"}, "/general")
+        self.assertTrue(all(row["state"] == "saved" for row in records))
+
+    def test_local_claude_launch_uses_tmux_when_available(self):
+        ai = module("nacre-ai")
+        with patch.object(ai.shutil, "which", return_value="/usr/bin/tmux"):
+            argv = ai.claude_command({"id": "p", "path": "/repo"}, "new", "")
+        self.assertIn("--tmux", argv)
+
+    def test_claude_resume_carries_title_but_custom_title_is_marked(self):
+        ai = module("nacre-ai")
+        argv = ai.claude_command(
+            {"id": "p", "path": "/repo"}, "resume", "", "thread", "Nacre title", True
+        )
+        self.assertIn("--title", argv)
+        self.assertIn("--custom-title", argv)
 
     def test_named_accounts_have_distinct_claude_home_not_codex_auth(self):
         c = module("nacre-ai-claude")
@@ -335,6 +448,8 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
                     project="general-chat",
                     chat_directory=True,
                     thread_id="7b7db928-7582-4a1e-91b2-e6b601ca8a2d",
+                    title="Nacre title",
+                    custom_title=False,
                 )
                 with (
                     patch.dict(os.environ, {"HOME": temp}),
@@ -357,6 +472,15 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
                 )
                 if command == "resume":
                     self.assertEqual(argv[argv.index("--resume") + 1], args.thread_id)
+                    self.assertEqual(argv[argv.index("--name") + 1], args.title)
+                else:
+                    self.assertIn("--session-id", argv)
+                    self.assertEqual(
+                        argv[argv.index("--session-id") + 1], args.thread_id
+                    )
+                    overlay = json.loads(argv[argv.index("--settings") + 1])
+                    hook_command = overlay["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+                    self.assertIn("nacre-ai-claude-title-hook", hook_command)
 
     def test_resume_attaches_to_chat_handed_off_to_background(self):
         c = module("nacre-ai-claude")

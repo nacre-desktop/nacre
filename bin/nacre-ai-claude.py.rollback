@@ -76,25 +76,30 @@ def running_sessions(project, account):
     }
 
 
+def session_key(value):
+    return re.sub(r"[^0-9a-f]", "", str(value).lower())
+
+
 def records(sessions, running, fallback):
     output = []
     seen = set()
     matched = set()
+    by_id = {
+        session_key(match.group(1)): name
+        for name in running
+        if (match := re.search(r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$", name))
+    }
+    remaining = []
     for session in sessions:
         if session.session_id in seen:
             continue
         seen.add(session.session_id)
         cwd = session.cwd or fallback
-        tmux = next(
-            (
-                name
-                for name, path in running.items()
-                if path == cwd and name not in matched
-            ),
-            None,
-        )
+        tmux = by_id.get(session_key(session.session_id))
         if tmux:
             matched.add(tmux)
+        else:
+            remaining.append((session, cwd))
         output.append(
             {
                 "id": session.session_id,
@@ -104,11 +109,29 @@ def records(sessions, running, fallback):
                 or "New chat",
                 "updated_at": session.last_modified / 1000,
                 "cwd": cwd,
+                "custom_title": session.custom_title,
                 "state": "running" if tmux else "saved",
                 "session": tmux,
                 "agent": "claude",
             }
         )
+    # Legacy tmux names have no session ID. Use cwd only when the relationship
+    # is one-to-one, so a shared general-chat root never mislabels old chats.
+    cwd_counts = {}
+    for _, cwd in remaining:
+        cwd_counts[cwd] = cwd_counts.get(cwd, 0) + 1
+    for cwd, count in cwd_counts.items():
+        candidates = [
+            name
+            for name, path in running.items()
+            if path == cwd and name not in matched
+        ]
+        if count == 1 and len(candidates) == 1:
+            name = candidates[0]
+            record = next(row for row in output if row["cwd"] == cwd and row["state"] == "saved")
+            record["session"] = name
+            record["state"] = "running"
+            matched.add(name)
     return output
 
 
@@ -237,11 +260,12 @@ def run(args):
     binary = executable()  # Fail before creating worktrees when Claude is absent.
     if args.command == "login":
         os.execvpe(binary, [binary, "auth", "login"], env)
+    if args.command == "new" and not args.thread_id:
+        args.thread_id = str(uuid.uuid4())
     if args.tmux:
         tag = "profile-" + args.account if args.account else "default"
-        session = f"ai-{args.project}-claude-{tag}-" + (
-            args.thread_id or uuid.uuid4().hex
-        )
+        session_id = args.thread_id or uuid.uuid4().hex
+        session = f"ai-{args.project}-claude-{tag}-{session_id}"
         argv = [
             str(Path(__file__).resolve()),
             args.command,
@@ -252,8 +276,11 @@ def run(args):
             "--account",
             args.account,
         ]
-        if args.thread_id:
-            argv += ["--thread-id", args.thread_id]
+        argv += ["--thread-id", session_id]
+        if args.title:
+            argv += ["--title", args.title]
+        if args.custom_title:
+            argv += ["--custom-title"]
         if args.chat_directory:
             argv += ["--chat-directory"]
         os.execvpe(
@@ -275,6 +302,8 @@ def run(args):
         "--add-dir",
         str(vault),
     ]
+    if args.command == "new":
+        argv += ["--session-id", args.thread_id]
     # Per-session overlay keeps subscription metrics private and preserves a custom status line.
     status = {}
     for settings in (
@@ -294,14 +323,30 @@ def run(args):
     ]
     if status.get("command"):
         command += ["--delegate", status["command"]]
-    argv += [
-        "--settings",
-        json.dumps({"statusLine": {"type": "command", "command": shlex.join(command)}}),
-    ]
+    hook = Path(__file__).resolve().with_name("nacre-ai-claude-title-hook")
+    overlay = {
+        "statusLine": {"type": "command", "command": shlex.join(command)},
+        "hooks": {
+            "UserPromptSubmit": [
+                {
+                    "matcher": "",
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "command": shlex.join(["python3", str(hook)]),
+                        }
+                    ],
+                }
+            ]
+        },
+    }
+    argv += ["--settings", json.dumps(overlay)]
     if args.command == "resume":
         if not args.thread_id:
             raise ValueError("A Claude session ID is required")
         uuid.UUID(args.thread_id)
+        if args.title and not args.custom_title:
+            argv += ["--name", args.title]
         attached = background_session(binary, env, args.thread_id)
         if attached:
             os.execvpe(binary, [binary, "attach", attached], env)
@@ -316,6 +361,8 @@ def main():
     p.add_argument("--path", default=str(Path.home() / ".local/share/nacre/ai/chats"))
     p.add_argument("--account", default="")
     p.add_argument("--thread-id")
+    p.add_argument("--title", default="")
+    p.add_argument("--custom-title", action="store_true")
     p.add_argument("--chat-directory", action="store_true")
     p.add_argument("--tmux", action="store_true")
     args = p.parse_args()
