@@ -83,6 +83,41 @@ class ClaudeWorkflowTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
 
+    def test_title_hook_ignores_synthetic_prompt_and_meta_records(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text(
+                json.dumps(
+                    {
+                        "type": "user",
+                        "message": {
+                            "content": "<local-command-stdout>output</local-command-stdout>"
+                        },
+                    }
+                )
+                + "\n"
+                + json.dumps(
+                    {
+                        "type": "user",
+                        "isMeta": True,
+                        "message": {"content": "do not use this"},
+                    }
+                )
+                + "\n"
+            )
+            event = json.dumps(
+                {
+                    "prompt": "<local-command-stdout>output</local-command-stdout>",
+                    "transcript_path": str(transcript),
+                }
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
     def test_new_chat_uses_default_without_project_or_provider_picker(self):
         ai = module("nacre-ai")
         with (
@@ -246,6 +281,49 @@ class ClaudeWorkflowTests(unittest.TestCase):
         ]
         records = c.records(rows, {"legacy": "/general"}, "/general")
         self.assertTrue(all(row["state"] == "saved" for row in records))
+
+    def test_standalone_resume_matches_tmux_exact_id_and_safe_legacy(self):
+        c = module("nacre-ai-claude")
+        thread_id = "11111111-1111-4111-8111-111111111111"
+        exact = "ai-general-chat-claude-default-11111111111141118111111111111111"
+        with patch.object(c, "running_sessions", return_value={exact: "/general"}):
+            self.assertEqual(
+                c.tmux_resume_target("general-chat", "", thread_id, [], "/general"),
+                exact,
+            )
+        history = [
+            SimpleNamespace(session_id=thread_id, cwd="/chat", custom_title=None)
+        ]
+        with patch.object(c, "running_sessions", return_value={"old-random": "/chat"}):
+            self.assertEqual(
+                c.tmux_resume_target("general-chat", "", thread_id, history, "/chat"),
+                "old-random",
+            )
+            with self.assertRaisesRegex(ValueError, "ambiguous"):
+                c.tmux_resume_target(
+                    "general-chat",
+                    "",
+                    thread_id,
+                    history + [SimpleNamespace(session_id="other", cwd="/chat")],
+                    "/chat",
+                )
+
+    def test_resume_metadata_uses_current_sdk_custom_title(self):
+        c = module("nacre-ai-claude")
+        session = SimpleNamespace(
+            session_id="thread",
+            custom_title="Owner rename",
+            summary="AI title",
+            first_prompt="Prompt",
+            cwd="/chat",
+        )
+        api = SimpleNamespace(
+            list_sessions=lambda **kwargs: [session]
+        )
+        with patch.object(c, "sdk", return_value=api):
+            sessions, metadata = c.resume_metadata("/chat", "thread")
+        self.assertEqual(sessions, [session])
+        self.assertEqual(metadata.custom_title, "Owner rename")
 
     def test_local_claude_launch_uses_tmux_when_available(self):
         ai = module("nacre-ai")

@@ -13,6 +13,13 @@ MAX_TRANSCRIPT = 2 * 1024 * 1024
 def clean(value):
     if not isinstance(value, str):
         return ""
+    if re.search(
+        r"<\s*(?:local-command-stdout|local-command|command-name|command-args|"
+        r"task-notification|system-reminder|tool-result|tool_use|tool-use)\b",
+        value,
+        re.I,
+    ):
+        return ""
     value = "".join(
         " " if char.isspace() else char
         for char in value
@@ -34,6 +41,8 @@ def clean(value):
 def candidates(data):
     result = []
     if isinstance(data, dict):
+        if data.get("isMeta") or data.get("toolResult"):
+            return result
         record_type = data.get("type")
         if record_type == "custom-title":
             result.append(("custom", data.get("customTitle")))
@@ -43,6 +52,10 @@ def candidates(data):
             result.append(("summary", data.get("summary")))
         if record_type == "user":
             message = data.get("message", {})
+            if isinstance(message, dict) and (
+                message.get("isMeta") or message.get("toolResult")
+            ):
+                return result
             content = message.get("content", "") if isinstance(message, dict) else ""
             if isinstance(content, str):
                 result.append(("prompt", content))
@@ -50,7 +63,10 @@ def candidates(data):
                 result.extend(
                     ("prompt", item.get("text", ""))
                     for item in content
-                    if isinstance(item, dict) and item.get("type") == "text"
+                    if isinstance(item, dict)
+                    and item.get("type") == "text"
+                    and not item.get("isMeta")
+                    and not item.get("toolResult")
                 )
     return result
 
@@ -58,6 +74,8 @@ def candidates(data):
 def main():
     try:
         event = json.load(sys.stdin)
+        if event.get("isMeta") or event.get("toolResult"):
+            return
         transcript = Path(event.get("transcript_path", ""))
         if not transcript.is_file():
             return

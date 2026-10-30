@@ -61,12 +61,15 @@ def running_sessions(project, account):
         return {}
     tag = "profile-" + account if account else "default"
     prefix = f"ai-{project}-claude-{tag}-"
-    result = subprocess.run(
-        ["tmux", "list-panes", "-a", "-F", "#{session_name}\t#{pane_current_path}"],
-        text=True,
-        capture_output=True,
-        timeout=4,
-    )
+    try:
+        result = subprocess.run(
+            ["tmux", "list-panes", "-a", "-F", "#{session_name}\t#{pane_current_path}"],
+            text=True,
+            capture_output=True,
+            timeout=4,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
     return {
         name: cwd
         for row in result.stdout.splitlines()
@@ -74,6 +77,48 @@ def running_sessions(project, account):
         for name, cwd in [row.split("\t", 1)]
         if name.startswith(prefix)
     }
+
+
+def session_inventory(directory, chat_directory=False):
+    """Return bounded SDK metadata used for safe resume names and legacy matches."""
+    api = sdk()
+    root = Path(directory)
+    if chat_directory and root.is_dir():
+        paths = [
+            root,
+            *[
+                child
+                for child in root.iterdir()
+                if child.is_dir()
+                and not child.is_symlink()
+                and re.fullmatch(r"[0-9a-f]{32}", child.name)
+            ],
+        ]
+        return [
+            session
+            for path in paths
+            for session in api.list_sessions(
+                directory=str(path), limit=500, include_worktrees=False
+            )
+        ]
+    return api.list_sessions(
+        directory=str(root), limit=500, include_worktrees=True
+    )
+
+
+def resume_metadata(directory, thread_id, chat_directory=False):
+    """Read actual current title metadata; missing history must never imply no rename."""
+    try:
+        sessions = session_inventory(directory, chat_directory)
+        # SDK calls are read-only; de-duplicate in case overlapping path queries
+        # return the same transcript more than once.
+        unique = {session.session_id: session for session in sessions}
+        sessions = list(unique.values())
+        return sessions, next(
+            (session for session in sessions if session.session_id == thread_id), None
+        )
+    except Exception:
+        return None, None
 
 
 def session_key(value):
@@ -133,6 +178,72 @@ def records(sessions, running, fallback):
             record["state"] = "running"
             matched.add(name)
     return output
+
+
+def tmux_resume_target(project, account, thread_id, sessions, directory):
+    """Find an exact tmux identity or one provably unique legacy cwd match."""
+    running = running_sessions(project, account)
+    target_key = session_key(thread_id)
+    exact = [
+        name
+        for name in running
+        if (match := re.search(
+            r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$",
+            name,
+        ))
+        and session_key(match.group(1)) == target_key
+    ]
+    if len(exact) == 1:
+        return exact[0]
+    if len(exact) > 1:
+        raise ValueError("Multiple Claude tmux sessions match this chat ID")
+
+    # Old launchers used random suffixes. Attach only when transcript history
+    # proves this cwd has exactly one chat and exactly one live legacy session.
+    known_keys = {session_key(session.session_id) for session in (sessions or [])}
+    legacy = []
+    for name in running:
+        match = re.search(
+            r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$",
+            name,
+        )
+        if not match or session_key(match.group(1)) not in known_keys:
+            legacy.append(name)
+    cwd = None
+    metadata = None
+    if sessions is not None:
+        metadata = next(
+            (session for session in sessions if session.session_id == thread_id), None
+        )
+        cwd = str(metadata.cwd) if metadata and metadata.cwd else None
+    cwd = cwd or str(Path(directory))
+    cwd_history = [
+        session
+        for session in (sessions or [])
+        if str(Path(session.cwd or directory).resolve()) == str(Path(cwd).resolve())
+    ]
+    if metadata is None:
+        root = Path(directory).resolve()
+        cwd_legacy = [
+            name
+            for name in legacy
+            if Path(running[name]).resolve() == root
+            or root in Path(running[name]).resolve().parents
+        ]
+    else:
+        cwd_legacy = [
+            name
+            for name in legacy
+            if str(Path(running[name]).resolve()) == str(Path(cwd).resolve())
+        ]
+    if cwd_legacy:
+        if len(cwd_history) == 1 and cwd_history[0].session_id == thread_id and len(cwd_legacy) == 1:
+            return cwd_legacy[0]
+        raise ValueError(
+            "A legacy Claude tmux session is running in this workspace, but the chat match is ambiguous. "
+            "Use Nacre's chat list to attach safely."
+        )
+    return None
 
 
 def background_session(binary, env, thread_id):
@@ -262,6 +373,35 @@ def run(args):
         os.execvpe(binary, [binary, "auth", "login"], env)
     if args.command == "new" and not args.thread_id:
         args.thread_id = str(uuid.uuid4())
+    sessions = None
+    resume_session = None
+    resume_title = ""
+    resume_custom_title = False
+    if args.command == "resume":
+        if not args.thread_id:
+            raise ValueError("A Claude session ID is required")
+        uuid.UUID(args.thread_id)
+        sessions, metadata = resume_metadata(
+            args.path, args.thread_id, getattr(args, "chat_directory", False)
+        )
+        if metadata is not None:
+            resume_custom_title = bool(metadata.custom_title)
+            resume_title = (
+                metadata.custom_title
+                or metadata.summary
+                or metadata.first_prompt
+                or "New chat"
+            )
+        if not getattr(args, "tmux_child", False):
+            resume_session = tmux_resume_target(
+                args.project, args.account, args.thread_id, sessions, args.path
+            )
+            if resume_session:
+                os.execvpe(
+                    "tmux",
+                    ["tmux", "attach-session", "-t", "=" + resume_session],
+                    env,
+                )
     if args.tmux:
         tag = "profile-" + args.account if args.account else "default"
         session_id = args.thread_id or uuid.uuid4().hex
@@ -277,12 +417,13 @@ def run(args):
             args.account,
         ]
         argv += ["--thread-id", session_id]
-        if args.title:
+        if getattr(args, "title", ""):
             argv += ["--title", args.title]
-        if args.custom_title:
+        if getattr(args, "custom_title", False):
             argv += ["--custom-title"]
         if args.chat_directory:
             argv += ["--chat-directory"]
+        argv += ["--tmux-child"]
         os.execvpe(
             "tmux", ["tmux", "new-session", "-A", "-s", session, shlex.join(argv)], env
         )
@@ -342,11 +483,8 @@ def run(args):
     }
     argv += ["--settings", json.dumps(overlay)]
     if args.command == "resume":
-        if not args.thread_id:
-            raise ValueError("A Claude session ID is required")
-        uuid.UUID(args.thread_id)
-        if args.title and not args.custom_title:
-            argv += ["--name", args.title]
+        if resume_title and not resume_custom_title:
+            argv += ["--name", resume_title]
         attached = background_session(binary, env, args.thread_id)
         if attached:
             os.execvpe(binary, [binary, "attach", attached], env)
@@ -365,6 +503,7 @@ def main():
     p.add_argument("--custom-title", action="store_true")
     p.add_argument("--chat-directory", action="store_true")
     p.add_argument("--tmux", action="store_true")
+    p.add_argument("--tmux-child", action="store_true", help=argparse.SUPPRESS)
     args = p.parse_args()
     if (
         not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", args.project)
