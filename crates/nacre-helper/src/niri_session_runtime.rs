@@ -395,7 +395,7 @@ pub fn prepare_configuration(
     // not depend on user-owned custom.kdl or an installed Bead checkout.
     fs::write(
         config.join("bead-pearls.kdl"),
-        "// Source: Bead shell/niri-pearls.kdl (origin/main).\nwindow-rule {\n    match app-id=\"^bead[.]pearl([.]pending)?$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n}\n\n// B0200: a prepared target is invisible until release renames it to bead.pearl,\n// including niri's open and move animations while it is placed under the panel.\nwindow-rule {\n    match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n}\n\n// The Widgets app draws its own rounded outline; do not add compositor chrome.\nwindow-rule {\n    match app-id=\"^nacre-widgets$\"\n    border { off; }\n    focus-ring { off; }\n}\n",
+        "// Source: Bead shell/niri-pearls.kdl (origin/main).\n// Native pearl chrome is client-rendered, including its transparent bootstrap.\nwindow-rule {\n    match app-id=\"^bead[.]pearl([.]pending)?$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n    // B0210: a session-wide window blur would draw the blurred wallpaper (xray) behind the\n    // invisible prewarm and the client-rendered pearl: a ghost block at the docked spot.\n    background-effect { blur false; }\n}\n\n// B0200: a prepared target is invisible until release renames it to bead.pearl,\n// including niri's open and move animations while it is placed under the panel.\nwindow-rule {\n    match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n}\n\n// B0210: the Widgets app is an ordinary window (niri's border and focus ring light on focus).\n// Its background is opaque, so a session-wide xray blur adds nothing but the blurred\n// wallpaper showing through while the window animates open.\nwindow-rule {\n    match app-id=\"^nacre-widgets$\"\n    background-effect { blur false; }\n}\n",
     )?;
     fs::write(
         config.join("keyboard.kdl"),
@@ -457,7 +457,6 @@ pub fn prepare_configuration(
         "wallpaper.kdl",
         "bindings.kdl",
         "window-rules.kdl",
-        "bead-pearls.kdl",
         "keyboard.kdl",
         "profile.kdl",
         "colors.kdl",
@@ -474,6 +473,12 @@ pub fn prepare_configuration(
         ));
     }
     text.push_str("include \"desktop.kdl\"\n");
+    // N0103: after desktop.kdl, whose session-wide window rule (shadow, background blur)
+    // would otherwise override the pearl and Widgets rules; user custom.kdl still comes last.
+    text.push_str(&format!(
+        "include {}\n",
+        json::encode(&config.join("bead-pearls.kdl").to_string_lossy())?
+    ));
     let workspaces = workspace_declarations(&names, &desktop)?;
     fs::write(config.join("workspaces.kdl"), workspaces)?;
     let shortcuts = if desktop["monitorWorkspaceActions"] == true

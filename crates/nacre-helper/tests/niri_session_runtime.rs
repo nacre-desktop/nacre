@@ -199,6 +199,14 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     assert!(pearls.contains("focus-ring { off; }"));
     assert!(pearls.contains("shadow { off; }"));
     assert!(pearls.contains("match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n"));
+    assert!(pearls.contains("background-effect { blur false; }"));
+    // N0103: the pearl and Widgets rules come after desktop.kdl's session-wide window rule.
+    let include_at = |name: &str| {
+        config
+            .lines()
+            .position(|line| line.starts_with("include ") && line.contains(name))
+    };
+    assert!(include_at("bead-pearls.kdl") > include_at("desktop.kdl"));
     assert_eq!(
         fs::read(destination.join("config/workspace-visitors.kdl"))?,
         fs::read(repo.join("niri/workspace-visitors.kdl"))?
