@@ -145,7 +145,11 @@ print(json.dumps(sys.argv[1:]))
         .windows(2)
         .any(|pair| pair[0] == "--session-id" && pair[1] == whole_id));
     let settings: Value = serde_json::from_str(
-        &claude_args[claude_args.iter().position(|arg| arg == "--settings").unwrap() + 1],
+        &claude_args[claude_args
+            .iter()
+            .position(|arg| arg == "--settings")
+            .unwrap()
+            + 1],
     )
     .unwrap();
     assert!(settings["hooks"]["UserPromptSubmit"].is_array());
@@ -156,7 +160,10 @@ fn claude_new_rejects_a_non_uuid_thread_id_before_starting_tmux() {
     let temp = tempdir().unwrap();
     let home = temp.path();
     setup(home);
-    script(&home.join(".local/bin/tmux"), "#!/bin/sh\ntouch \"$HOME/tmux-called\"\nexit 0\n");
+    script(
+        &home.join(".local/bin/tmux"),
+        "#!/bin/sh\ntouch \"$HOME/tmux-called\"\nexit 0\n",
+    );
     script(
         &home.join(".local/bin/claude"),
         "#!/bin/sh\ntouch \"$HOME/claude-called\"\n",
@@ -208,7 +215,10 @@ fn claude_resume_uses_ai_title_but_never_overwrites_a_custom_title() {
     let temp = tempdir().unwrap();
     let home = temp.path();
     setup(home);
-    script(&home.join(".local/bin/tmux"), "#!/bin/sh\nif [ \"$1\" = list-panes ]; then exit 0; fi\nexit 0\n");
+    script(
+        &home.join(".local/bin/tmux"),
+        "#!/bin/sh\nif [ \"$1\" = list-panes ]; then exit 0; fi\nexit 0\n",
+    );
     script(
         &home.join(".local/bin/claude"),
         "#!/usr/bin/python3\nimport json,sys\nif sys.argv[1:]==['agents','--json']: print('[]')\nelse: print(json.dumps(sys.argv[1:]))\n",
@@ -282,7 +292,16 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     script(&home.join(".local/bin/tmux"), &exact_body);
     let exact = run(
         home,
-        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            cwd.to_str().unwrap(),
+            "--thread-id",
+            id,
+        ],
     );
     ok(&exact);
     assert_eq!(
@@ -293,7 +312,16 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     script(&home.join(".local/bin/tmux"), &tmux_body);
     let unique = run(
         home,
-        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            cwd.to_str().unwrap(),
+            "--thread-id",
+            id,
+        ],
     );
     ok(&unique);
     assert_eq!(
@@ -337,13 +365,41 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
         "22222222-2222-4222-8222-222222222222",
         json!({"type":"summary","summary":"Second"}),
     );
+    script(&home.join(".local/bin/tmux"), &tmux_body);
     let ambiguous = run(
         home,
-        &["nacre-ai-claude", "resume", "--project", "fixture", "--path", cwd.to_str().unwrap(), "--thread-id", id],
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            cwd.to_str().unwrap(),
+            "--thread-id",
+            id,
+        ],
     );
     assert!(!ambiguous.status.success());
     assert!(String::from_utf8_lossy(&ambiguous.stderr).contains("cannot be matched safely"));
     assert!(!home.join(".local/bin/claude.called").exists());
+
+    // A known different running chat in a shared cwd must not block this saved chat.
+    script(&home.join(".local/bin/tmux"), &exact_body);
+    let distinct = run(
+        home,
+        &[
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "fixture",
+            "--path",
+            cwd.to_str().unwrap(),
+            "--thread-id",
+            "22222222-2222-4222-8222-222222222222",
+        ],
+    );
+    ok(&distinct);
+    assert!(home.join(".local/bin/claude.called").exists());
 }
 
 #[test]

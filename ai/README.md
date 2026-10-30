@@ -49,3 +49,16 @@ read local session files directly; this path does not require
 `claude_agent_sdk` or the venv from `ai/install-claude.py`. The retained Python
 rollback sidebar still uses that optional dependency. Upstream history formats
 are fixture-tested; unsupported or malformed history is left untouched.
+
+Claude chats use tmux when it is installed, including local chats. Closing the
+terminal detaches the client; reopening a running chat attaches to the same
+session. Without tmux, the launcher runs Claude directly. Existing Claude daemon
+sessions remain attachable.
+
+A per-session UserPromptSubmit hook promotes an available AI title/summary, or a
+short first-prompt title, into Claude's native custom title so the chat list and
+Remote Control use the same name. Resuming an untitled saved chat passes its
+current list title with `--name`. The hook preserves `/rename` titles and never
+changes global Claude settings. Unreadable or oversized transcripts leave the
+current title unchanged. Deploy `nacre-ai-claude-title-hook` beside the
+Claude launcher along with the launcher update.

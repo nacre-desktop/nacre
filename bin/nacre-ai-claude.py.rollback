@@ -101,9 +101,7 @@ def session_inventory(directory, chat_directory=False):
                 directory=str(path), limit=500, include_worktrees=False
             )
         ]
-    return api.list_sessions(
-        directory=str(root), limit=500, include_worktrees=True
-    )
+    return api.list_sessions(directory=str(root), limit=500, include_worktrees=True)
 
 
 def resume_metadata(directory, thread_id, chat_directory=False):
@@ -117,7 +115,15 @@ def resume_metadata(directory, thread_id, chat_directory=False):
         return sessions, next(
             (session for session in sessions if session.session_id == thread_id), None
         )
-    except Exception:
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        AttributeError,
+        ImportError,
+        RuntimeError,
+        subprocess.SubprocessError,
+    ):
         return None, None
 
 
@@ -132,7 +138,11 @@ def records(sessions, running, fallback):
     by_id = {
         session_key(match.group(1)): name
         for name in running
-        if (match := re.search(r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$", name))
+        if (
+            match := re.search(
+                r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$", name
+            )
+        )
     }
     remaining = []
     for session in sessions:
@@ -154,7 +164,6 @@ def records(sessions, running, fallback):
                 or "New chat",
                 "updated_at": session.last_modified / 1000,
                 "cwd": cwd,
-                "custom_title": session.custom_title,
                 "state": "running" if tmux else "saved",
                 "session": tmux,
                 "agent": "claude",
@@ -173,7 +182,9 @@ def records(sessions, running, fallback):
         ]
         if count == 1 and len(candidates) == 1:
             name = candidates[0]
-            record = next(row for row in output if row["cwd"] == cwd and row["state"] == "saved")
+            record = next(
+                row for row in output if row["cwd"] == cwd and row["state"] == "saved"
+            )
             record["session"] = name
             record["state"] = "running"
             matched.add(name)
@@ -187,10 +198,12 @@ def tmux_resume_target(project, account, thread_id, sessions, directory):
     exact = [
         name
         for name in running
-        if (match := re.search(
-            r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$",
-            name,
-        ))
+        if (
+            match := re.search(
+                r"([0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$",
+                name,
+            )
+        )
         and session_key(match.group(1)) == target_key
     ]
     if len(exact) == 1:
@@ -237,7 +250,11 @@ def tmux_resume_target(project, account, thread_id, sessions, directory):
             if str(Path(running[name]).resolve()) == str(Path(cwd).resolve())
         ]
     if cwd_legacy:
-        if len(cwd_history) == 1 and cwd_history[0].session_id == thread_id and len(cwd_legacy) == 1:
+        if (
+            len(cwd_history) == 1
+            and cwd_history[0].session_id == thread_id
+            and len(cwd_legacy) == 1
+        ):
             return cwd_legacy[0]
         raise ValueError(
             "A legacy Claude tmux session is running in this workspace, but the chat match is ambiguous. "
@@ -419,10 +436,6 @@ def run(args):
             args.account,
         ]
         argv += ["--thread-id", session_id]
-        if getattr(args, "title", ""):
-            argv += ["--title", args.title]
-        if getattr(args, "custom_title", False):
-            argv += ["--custom-title"]
         if args.chat_directory:
             argv += ["--chat-directory"]
         argv += ["--tmux-child"]
@@ -501,8 +514,6 @@ def main():
     p.add_argument("--path", default=str(Path.home() / ".local/share/nacre/ai/chats"))
     p.add_argument("--account", default="")
     p.add_argument("--thread-id")
-    p.add_argument("--title", default="")
-    p.add_argument("--custom-title", action="store_true")
     p.add_argument("--chat-directory", action="store_true")
     p.add_argument("--tmux", action="store_true")
     p.add_argument("--tmux-child", action="store_true", help=argparse.SUPPRESS)

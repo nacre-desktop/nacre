@@ -560,6 +560,20 @@ fn matching_running_session(
         return Ok(None);
     }
     let rows = history(config, path, chat_directory, &running).unwrap_or_default();
+    // A session identified as another saved chat is not a legacy candidate.
+    let candidates = candidates
+        .into_iter()
+        .filter(|name| {
+            !rows.iter().any(|row| {
+                row["id"]
+                    .as_str()
+                    .is_some_and(|known| name.ends_with(&format!("-{known}")))
+            })
+        })
+        .collect::<Vec<_>>();
+    if candidates.is_empty() {
+        return Ok(None);
+    }
     let matching_rows = rows
         .iter()
         .filter(|row| {
@@ -798,16 +812,23 @@ fn history(
     let mut cwd_sessions = BTreeMap::<String, Vec<String>>::new();
     for row in &rows {
         if row["state"] != "running" {
-            *cwd_rows.entry(row["cwd"].as_str().unwrap_or("").into()).or_default() += 1;
+            *cwd_rows
+                .entry(row["cwd"].as_str().unwrap_or("").into())
+                .or_default() += 1;
         }
     }
     for (name, cwd) in running {
         if !matched.contains(name) {
-            cwd_sessions.entry(cwd.clone()).or_default().push(name.clone());
+            cwd_sessions
+                .entry(cwd.clone())
+                .or_default()
+                .push(name.clone());
         }
     }
     for row in &mut rows {
-        if row["state"] == "running" { continue; }
+        if row["state"] == "running" {
+            continue;
+        }
         let cwd = row["cwd"].as_str().unwrap_or("");
         if cwd_rows.get(cwd) == Some(&1)
             && cwd_sessions.get(cwd).is_some_and(|names| names.len() == 1)
@@ -896,10 +917,13 @@ fn launch_args(options: LaunchOptions<'_>) -> Vec<String> {
     let mut overlay = serde_json::Map::new();
     overlay.insert("statusLine".into(), Value::Object(status));
     if let Some(hook) = title_hook {
-        overlay.insert("hooks".into(), json!({"UserPromptSubmit":[{"hooks":[{
-            "type":"command",
-            "command":format!("python3 {}", shell_quote(&hook.to_string_lossy()))
-        }]}]}));
+        overlay.insert(
+            "hooks".into(),
+            json!({"UserPromptSubmit":[{"hooks":[{
+                "type":"command",
+                "command":format!("python3 {}", shell_quote(&hook.to_string_lossy()))
+            }]}]}),
+        );
     }
     args.extend(["--settings".into(), Value::Object(overlay).to_string()]);
     if let Some(name) = session_name.filter(|name| !name.trim().is_empty()) {
@@ -1063,8 +1087,9 @@ fn run_inner(args: &[String]) -> Result<i32> {
         return Err(err("A valid project ID and absolute path are required"));
     }
     let config = ai_core::account_home("claude", Some(&account))?;
-    let tmux_child = env::var_os("NACRE_AI_CLAUDE_TMUX_CHILD").as_deref()
-        == Some(std::ffi::OsStr::new("1"));
+    let is_tmux_child =
+        env::var_os("NACRE_AI_CLAUDE_TMUX_CHILD").as_deref() == Some(std::ffi::OsStr::new("1"));
+    env::remove_var("NACRE_AI_CLAUDE_TMUX_CHILD");
     let envs = prepare_environment(env::vars_os().collect(), &config);
     let skills = Command::new(home()?.join(".local/bin/nacre-ai-skills"))
         .args(["--claude-home", &config.to_string_lossy()])
@@ -1089,7 +1114,9 @@ fn run_inner(args: &[String]) -> Result<i32> {
         return Err(error.into());
     }
     let new_id = if command == "new" {
-        thread.clone().unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
+        thread
+            .clone()
+            .unwrap_or_else(|| uuid::Uuid::new_v4().to_string())
     } else {
         thread.clone().unwrap_or_default()
     };
@@ -1101,16 +1128,11 @@ fn run_inner(args: &[String]) -> Result<i32> {
             .as_deref()
             .filter(|id| valid_id(id))
             .ok_or_else(|| err("A valid Claude session ID is required"))?;
-        if let Some(session) = matching_running_session(
-            &project,
-            &account,
-            id,
-            &path,
-            &config,
-            chat_directory,
-        )? {
-            let already_in_target = tmux_child
-                && current_tmux_session().as_deref() == Some(session.as_str());
+        if let Some(session) =
+            matching_running_session(&project, &account, id, &path, &config, chat_directory)?
+        {
+            let already_in_target =
+                is_tmux_child && current_tmux_session().as_deref() == Some(session.as_str());
             if !already_in_target {
                 let error = Command::new("tmux")
                     .args(["attach-session", "-t", &format!("={session}")])
@@ -1380,7 +1402,10 @@ mod tests {
             .unwrap()
             .starts_with(root.to_str().unwrap()));
         assert_eq!(row["state"], "running");
-        assert_eq!(row["session"], format!("ai-chat-claude-profile-work-{CURRENT_ID}"));
+        assert_eq!(
+            row["session"],
+            format!("ai-chat-claude-profile-work-{CURRENT_ID}")
+        );
         assert_eq!(row["updated_at"].as_f64().unwrap(), 1_800_000_000.123);
         assert!(rows.iter().any(|row| row["id"] == raw_id));
 
@@ -1522,7 +1547,9 @@ mod tests {
         assert!(standard
             .windows(2)
             .any(|pair| pair[0] == "--resume" && pair[1] == resume_id));
-        assert!(standard.windows(2).any(|pair| pair[0] == "--name" && pair[1] == "Saved chat"));
+        assert!(standard
+            .windows(2)
+            .any(|pair| pair[0] == "--name" && pair[1] == "Saved chat"));
         let hook = Path::new("/private/bin/nacre-ai-claude-title-hook");
         let elevated = launch_args(LaunchOptions {
             full_access: true,
@@ -1543,9 +1570,19 @@ mod tests {
         let settings: Value = serde_json::from_str(&elevated[settings_index + 1]).unwrap();
         assert_eq!(settings["statusLine"]["padding"], 2);
         assert_eq!(settings["statusLine"]["mode"], "compact");
-        assert_eq!(settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["type"], "command");
-        assert!(settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"].as_str().unwrap().contains("nacre-ai-claude-title-hook"));
-        assert!(elevated.windows(2).any(|pair| pair[0] == "--session-id" && pair[1] == resume_id));
+        assert_eq!(
+            settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["type"],
+            "command"
+        );
+        assert!(
+            settings["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+                .as_str()
+                .unwrap()
+                .contains("nacre-ai-claude-title-hook")
+        );
+        assert!(elevated
+            .windows(2)
+            .any(|pair| pair[0] == "--session-id" && pair[1] == resume_id));
         assert_eq!(account_tag(""), "default");
         assert_eq!(account_tag("work"), "profile-work");
         assert!(

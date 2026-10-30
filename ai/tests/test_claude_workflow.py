@@ -16,9 +16,7 @@ class ClaudeWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             transcript = Path(temp) / "session.jsonl"
             transcript.write_text(
-                json.dumps(
-                    {"type": "user", "message": {"content": "First prompt"}}
-                )
+                json.dumps({"type": "user", "message": {"content": "First prompt"}})
                 + "\n"
                 + json.dumps({"type": "ai-title", "aiTitle": "AI summary title"})
                 + "\n"
@@ -35,7 +33,9 @@ class ClaudeWorkflowTests(unittest.TestCase):
                 "AI summary title",
             )
             with transcript.open("a") as stream:
-                stream.write(json.dumps({"type": "custom-title", "customTitle": "Owner rename"}))
+                stream.write(
+                    json.dumps({"type": "custom-title", "customTitle": "Owner rename"})
+                )
             result = subprocess.run(
                 [sys.executable, str(hook)], input=event, text=True, capture_output=True
             )
@@ -61,7 +61,10 @@ class ClaudeWorkflowTests(unittest.TestCase):
                 "Explain tmux persistence",
             )
             result = subprocess.run(
-                [sys.executable, str(hook)], input="not json", text=True, capture_output=True
+                [sys.executable, str(hook)],
+                input="not json",
+                text=True,
+                capture_output=True,
             )
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
@@ -80,6 +83,22 @@ class ClaudeWorkflowTests(unittest.TestCase):
             )
             result = subprocess.run(
                 [sys.executable, str(hook)], input=event, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
+    def test_title_hook_skips_excessive_record_count(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text("{}\n" * 5000)
+            result = subprocess.run(
+                [sys.executable, str(hook)],
+                input=json.dumps(
+                    {"prompt": "Title", "transcript_path": str(transcript)}
+                ),
+                text=True,
+                capture_output=True,
             )
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
@@ -218,7 +237,12 @@ class ClaudeWorkflowTests(unittest.TestCase):
             )
             self.assertEqual(
                 launch.call_args.args,
-                ({"id": "p", "path": "/worktree"}, "resume", "work", "claude-id"),
+                (
+                    {"id": "p", "path": "/worktree"},
+                    "resume",
+                    "work",
+                    "claude-id",
+                ),
             )
             codex.assert_not_called()
 
@@ -343,9 +367,7 @@ class ClaudeWorkflowTests(unittest.TestCase):
             first_prompt="Prompt",
             cwd="/chat",
         )
-        api = SimpleNamespace(
-            list_sessions=lambda **kwargs: [session]
-        )
+        api = SimpleNamespace(list_sessions=lambda **kwargs: [session])
         with patch.object(c, "sdk", return_value=api):
             sessions, metadata = c.resume_metadata("/chat", "thread")
         self.assertEqual(sessions, [session])
@@ -357,13 +379,35 @@ class ClaudeWorkflowTests(unittest.TestCase):
             argv = ai.claude_command({"id": "p", "path": "/repo"}, "new", "")
         self.assertIn("--tmux", argv)
 
-    def test_claude_resume_carries_title_but_custom_title_is_marked(self):
+    def test_local_running_claude_history_attaches_without_relaunch(self):
         ai = module("nacre-ai")
-        argv = ai.claude_command(
-            {"id": "p", "path": "/repo"}, "resume", "", "thread", "Nacre title", True
+        project = {"id": "p", "path": "/chat"}
+        session = "ai-p-claude-default-thread"
+        record = {
+            "id": "thread",
+            "agent": "claude",
+            "title": "Saved chat",
+            "project": project,
+            "session": session,
+            "updated_at": 1,
+        }
+        with (
+            patch.object(ai, "chat_projects", return_value=[project]),
+            patch.object(ai, "project_chats", return_value=[record]),
+            patch.object(ai, "launch_claude") as launch,
+            patch.object(
+                ai.os, "execvpe", side_effect=RuntimeError("attached")
+            ) as attach,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "attached"):
+                ai.load_task(
+                    SimpleNamespace(command="latest", project=None, account="")
+                )
+        launch.assert_not_called()
+        self.assertEqual(
+            attach.call_args.args[:2],
+            ("tmux", ["tmux", "attach-session", "-t", "=" + session]),
         )
-        self.assertIn("--title", argv)
-        self.assertIn("--custom-title", argv)
 
     def test_named_accounts_have_distinct_claude_home_not_codex_auth(self):
         c = module("nacre-ai-claude")
@@ -558,8 +602,15 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
         self,
     ):
         c = module("nacre-ai-claude")
-        for command in ("new", "resume"):
-            with self.subTest(command=command), tempfile.TemporaryDirectory() as temp:
+        for command, custom_title in (
+            ("new", None),
+            ("resume", None),
+            ("resume", "Owner rename"),
+        ):
+            with (
+                self.subTest(command=command, custom_title=custom_title),
+                tempfile.TemporaryDirectory() as temp,
+            ):
                 directory = Path(temp) / "chat"
                 directory.mkdir()
                 args = SimpleNamespace(
@@ -570,14 +621,25 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
                     project="general-chat",
                     chat_directory=True,
                     thread_id="7b7db928-7582-4a1e-91b2-e6b601ca8a2d",
-                    title="Nacre title",
-                    custom_title=False,
                 )
                 with (
                     patch.dict(os.environ, {"HOME": temp}),
                     patch.object(c.subprocess, "run"),
                     patch.object(c, "executable", return_value="/fake/claude"),
                     patch.object(c, "prepare_directory", return_value=directory),
+                    patch.object(
+                        c,
+                        "resume_metadata",
+                        return_value=(
+                            [],
+                            SimpleNamespace(
+                                custom_title=custom_title,
+                                summary="Nacre title",
+                                first_prompt="First",
+                            ),
+                        ),
+                    ),
+                    patch.object(c, "tmux_resume_target", return_value=None),
                     patch.object(c.os, "chdir"),
                     patch.object(
                         c.os, "execvpe", side_effect=RuntimeError("intercept")
@@ -594,14 +656,19 @@ class ClaudeAccessPolicyTests(unittest.TestCase):
                 )
                 if command == "resume":
                     self.assertEqual(argv[argv.index("--resume") + 1], args.thread_id)
-                    self.assertEqual(argv[argv.index("--name") + 1], args.title)
+                    if custom_title:
+                        self.assertNotIn("--name", argv)
+                    else:
+                        self.assertEqual(argv[argv.index("--name") + 1], "Nacre title")
                 else:
                     self.assertIn("--session-id", argv)
                     self.assertEqual(
                         argv[argv.index("--session-id") + 1], args.thread_id
                     )
                     overlay = json.loads(argv[argv.index("--settings") + 1])
-                    hook_command = overlay["hooks"]["UserPromptSubmit"][0]["hooks"][0]["command"]
+                    hook_command = overlay["hooks"]["UserPromptSubmit"][0]["hooks"][0][
+                        "command"
+                    ]
                     self.assertIn("nacre-ai-claude-title-hook", hook_command)
 
     def test_resume_attaches_to_chat_handed_off_to_background(self):

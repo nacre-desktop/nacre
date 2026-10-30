@@ -1082,9 +1082,7 @@ def source_chats(project, account):
     ]
 
 
-def claude_command(
-    project, command, account, thread_id=None, title=None, custom_title=False
-):
+def claude_command(project, command, account, thread_id=None):
     account = effective_account("claude", account)
     argv = [
         command,
@@ -1097,15 +1095,9 @@ def claude_command(
     ]
     if thread_id:
         argv += ["--thread-id", thread_id]
-    if title:
-        argv += ["--title", title]
-    if custom_title:
-        argv += ["--custom-title"]
     if project.get("chat_directory"):
         argv.append("--chat-directory")
-    if command in ("new", "resume") and (
-        project.get("host") or shutil.which("tmux")
-    ):
+    if command in ("new", "resume") and (project.get("host") or shutil.which("tmux")):
         argv.append("--tmux")
     if project.get("host"):
         return [
@@ -1142,10 +1134,8 @@ def claude_chats(project, account):
     ]
 
 
-def launch_claude(
-    project, command, account, thread_id=None, title=None, custom_title=False
-):
-    argv = claude_command(project, command, account, thread_id, title, custom_title)
+def launch_claude(project, command, account, thread_id=None):
+    argv = claude_command(project, command, account, thread_id)
     os.execvpe(argv[0], argv, ssh_environment())
 
 
@@ -1227,8 +1217,6 @@ def load_task(args):
             "resume",
             account,
             item["id"],
-            item.get("title"),
-            bool(item.get("custom_title")),
         )
     # Authentication follows the selected Codex account; chat identity and
     # storage follow the saved record. Running remote workers retain their login.

@@ -220,6 +220,7 @@ def main():
             "nacre-ai-account",
             "nacre-ai-chat",
             "nacre-ai-claude",
+            "nacre-ai-claude-title-hook",
             "nacre-ai-context",
             "nacre-ai-memory",
             "nacre-ai-usage",

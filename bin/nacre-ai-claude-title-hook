@@ -9,6 +9,7 @@ from pathlib import Path
 
 MAX_TRANSCRIPT = 2 * 1024 * 1024
 MAX_EVENT = 64 * 1024
+MAX_RECORDS = 4096
 
 
 def clean(value):
@@ -91,6 +92,8 @@ def main():
             raw_transcript = stream.read(MAX_TRANSCRIPT + 1)
         if len(raw_transcript) > MAX_TRANSCRIPT:
             return
+        if raw_transcript.count(b"\n") > MAX_RECORDS:
+            return
         text = raw_transcript.decode(errors="replace")
         rows = []
         for line in text.splitlines():
@@ -137,7 +140,7 @@ def main():
                     }
                 )
             )
-    except Exception:
+    except Exception:  # noqa: BLE001 - a title hook must fail open on every error
         return
 
 
