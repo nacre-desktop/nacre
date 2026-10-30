@@ -866,20 +866,42 @@ fn launch_niri_history(
     Ok(Some(runner.status()?))
 }
 
+fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
+    let mut args = vec![
+        "attach-session".into(),
+        "-t".into(),
+        format!("={session}"),
+    ];
+    if claude {
+        args.extend([
+            ";".into(),
+            "set-option".into(),
+            "-t".into(),
+            session.into(),
+            "status".into(),
+            "off".into(),
+            ";".into(),
+            "set-option".into(),
+            "-t".into(),
+            session.into(),
+            "mouse".into(),
+            "on".into(),
+        ]);
+    }
+    args
+}
+
 fn resume_record(item: &serde_json::Value) -> Result<()> {
     let project = &item["project"];
     let agent = item["agent"].as_str().unwrap_or("codex");
     let account = item["account"].as_str().unwrap_or("");
     let id = item["id"].as_str().ok_or("History record has no id")?;
     if let (Some(host), Some(session)) = (project["host"].as_str(), item["session"].as_str()) {
+        let mut args = vec!["tmux".into()];
+        args.extend(tmux_attach_args(session, agent == "claude"));
         let output = run_remote(
             host,
-            &[
-                "tmux".into(),
-                "attach-session".into(),
-                "-t".into(),
-                format!("={session}"),
-            ],
+            &args,
             false,
         )?;
         if !output.status.success() {
@@ -890,7 +912,7 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
     if agent == "claude" && project["host"].as_str().is_none() {
         if let Some(session) = item["session"].as_str() {
             let status = Command::new("tmux")
-                .args(["attach-session", "-t", &format!("={session}")])
+                .args(tmux_attach_args(session, true))
                 .status()?;
             if !status.success() {
                 return Err("Could not attach to the running Claude chat".into());
@@ -2024,6 +2046,38 @@ mod tests {
                 "Open brain",
                 "Settings",
                 "Close"
+            ]
+        );
+    }
+
+    #[test]
+    fn running_claude_attach_sets_tmux_options_without_changing_codex() {
+        assert_eq!(
+            tmux_attach_args("ai-project-claude-default-session", true),
+            vec![
+                "attach-session".to_owned(),
+                "-t".to_owned(),
+                "=ai-project-claude-default-session".to_owned(),
+                ";".to_owned(),
+                "set-option".to_owned(),
+                "-t".to_owned(),
+                "ai-project-claude-default-session".to_owned(),
+                "status".to_owned(),
+                "off".to_owned(),
+                ";".to_owned(),
+                "set-option".to_owned(),
+                "-t".to_owned(),
+                "ai-project-claude-default-session".to_owned(),
+                "mouse".to_owned(),
+                "on".to_owned(),
+            ]
+        );
+        assert_eq!(
+            tmux_attach_args("ai-project-codex-default-session", false),
+            vec![
+                "attach-session".to_owned(),
+                "-t".to_owned(),
+                "=ai-project-codex-default-session".to_owned()
             ]
         );
     }

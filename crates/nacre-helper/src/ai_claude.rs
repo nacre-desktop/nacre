@@ -1135,7 +1135,23 @@ fn run_inner(args: &[String]) -> Result<i32> {
                 is_tmux_child && current_tmux_session().as_deref() == Some(session.as_str());
             if !already_in_target {
                 let error = Command::new("tmux")
-                    .args(["attach-session", "-t", &format!("={session}")])
+                    .args([
+                        "attach-session",
+                        "-t",
+                        &format!("={session}"),
+                        ";",
+                        "set-option",
+                        "-t",
+                        &session,
+                        "status",
+                        "off",
+                        ";",
+                        "set-option",
+                        "-t",
+                        &session,
+                        "mouse",
+                        "on",
+                    ])
                     .envs(&envs)
                     .exec();
                 return Err(error.into());
@@ -1157,7 +1173,25 @@ fn run_inner(args: &[String]) -> Result<i32> {
             chat_directory,
         );
         let error = Command::new("tmux")
-            .args(["new-session", "-A", "-s", &name, &child])
+            .args([
+                "new-session",
+                "-A",
+                "-s",
+                &name,
+                &child,
+                ";",
+                "set-option",
+                "-t",
+                &name,
+                "status",
+                "off",
+                ";",
+                "set-option",
+                "-t",
+                &name,
+                "mouse",
+                "on",
+            ])
             .envs(&envs)
             .exec();
         return Err(error.into());

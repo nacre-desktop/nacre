@@ -133,6 +133,23 @@ print(json.dumps(sys.argv[1:]))
     let tmux_args: Value =
         serde_json::from_slice(&fs::read(home.join("tmux-args.json")).unwrap()).unwrap();
     let name = tmux_args[3].as_str().unwrap();
+    assert_eq!(tmux_args[5], ";");
+    assert_eq!(
+        &tmux_args[6..],
+        [
+            json!("set-option"),
+            json!("-t"),
+            json!(name),
+            json!("status"),
+            json!("off"),
+            json!(";"),
+            json!("set-option"),
+            json!("-t"),
+            json!(name),
+            json!("mouse"),
+            json!("on"),
+        ]
+    );
     let whole_id = name.strip_prefix("ai-fixture-claude-default-").unwrap();
     assert_eq!(
         whole_id.split('-').map(str::len).collect::<Vec<_>>(),
@@ -306,7 +323,10 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     ok(&exact);
     assert_eq!(
         serde_json::from_slice::<Value>(&exact.stdout).unwrap(),
-        json!(["attach-session", "-t", format!("={exact_name}")])
+        json!([
+            "attach-session", "-t", format!("={exact_name}"), ";", "set-option", "-t",
+            exact_name, "status", "off", ";", "set-option", "-t", exact_name, "mouse", "on"
+        ])
     );
 
     script(&home.join(".local/bin/tmux"), &tmux_body);
@@ -326,7 +346,10 @@ fn claude_resume_attaches_exact_and_unique_legacy_tmux_sessions_and_rejects_ambi
     ok(&unique);
     assert_eq!(
         serde_json::from_slice::<Value>(&unique.stdout).unwrap(),
-        json!(["attach-session", "-t", format!("={legacy}")])
+        json!([
+            "attach-session", "-t", format!("={legacy}"), ";", "set-option", "-t", legacy,
+            "status", "off", ";", "set-option", "-t", legacy, "mouse", "on"
+        ])
     );
 
     let other_cwd = home.join("different-chat");
