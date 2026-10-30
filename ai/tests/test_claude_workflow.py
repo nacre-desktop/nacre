@@ -48,7 +48,7 @@ class ClaudeWorkflowTests(unittest.TestCase):
             transcript.write_text("")
             event = json.dumps(
                 {
-                    "prompt": "  Explain   tmux persistence.  ",
+                    "prompt": "  Explain\x00   tmux persistence.  ",
                     "transcript_path": str(transcript),
                 }
             )
@@ -61,6 +61,24 @@ class ClaudeWorkflowTests(unittest.TestCase):
             )
             result = subprocess.run(
                 [sys.executable, str(hook)], input="not json", text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertEqual(result.stdout, "")
+
+    def test_title_hook_skips_oversized_transcript_to_protect_old_rename(self):
+        hook = ROOT / "bin/nacre-ai-claude-title-hook"
+        with tempfile.TemporaryDirectory() as temp:
+            transcript = Path(temp) / "session.jsonl"
+            transcript.write_text(
+                json.dumps({"type": "custom-title", "customTitle": "Owner rename"})
+                + "\n"
+                + (" " * (2 * 1024 * 1024))
+            )
+            event = json.dumps(
+                {"prompt": "Later prompt", "transcript_path": str(transcript)}
+            )
+            result = subprocess.run(
+                [sys.executable, str(hook)], input=event, text=True, capture_output=True
             )
             self.assertEqual(result.returncode, 0)
             self.assertEqual(result.stdout, "")
