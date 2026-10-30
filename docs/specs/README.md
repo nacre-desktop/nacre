@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 23 | N0104 Claude chat Remote Control names and tmux persistence | Implemented; pending lead review/deploy | Local tmux persistence and scoped mouse/status options, exact resume attachment and promotion of Claude AI titles; Python, Arch helper checks and laptop smoke passed. |
+| 23 | N0104 Claude chat Remote Control names and tmux persistence | Done; lead-reviewed, deployed 2026-10-30 to the pinned Python runtime (backup ~/.local/state/nacre/ai/backups/20261030-n0104); native helper ships with the next shell install | Local tmux persistence and scoped mouse/status options, exact resume attachment and promotion of Claude AI titles; Python, Arch helper checks and laptop smoke passed. |
 | 22 | N0097 widgets entry fix | Done; full Arch desktop CI replica passed on dev-2 | Super+Shift+W and the launcher entry now run `nacrectl ui widgets open`, Super+Ctrl+D runs `nacrectl ui pearls detach`, the Widgets window floats (was a nonexistent `nacre-shell --app`); StartupWMClass is `nacre-widgets`. |
 | 22 | [N0100 launcher gaps](0100-launcher-gaps.md) | Implemented; full Arch desktop CI replica pending | `recorder.start` optional `audio`, the `search-web` activation row carries `webUrl`; Bead B0199 uses both. |
 | 21 | [N0095 periodic daemon idle](0095-daemon-periodic-idle.md) | Done: private profile passed and full desktop CI green on dev-1; lead live audit pending | Candidate is below private CPU/wakeup limits; Lead owns live audit/deploy. |
