@@ -573,14 +573,8 @@ mod tests {
         let host = session.join("host.kdl");
         fs::write(&loader, "include \"host.kdl\"\ninclude \"desktop.kdl\"\n")?;
         fs::write(&desktop, "")?;
-        fs::write(&host, "input { touchpad { scroll-factor 0.35; } }\n")?;
-        let config = Configuration::active(
-            &paths,
-            &std::collections::BTreeMap::from([(
-                "NACRE_NIRI_CONFIG".into(),
-                loader.to_string_lossy().into_owned(),
-            )]),
-        );
+        fs::write(&host, "input {\n    touchpad { scroll-factor 0.35; }\n}\n")?;
+        let config = Configuration::active(&paths, &std::collections::BTreeMap::new());
         assert_eq!(config.loader, loader);
         assert_eq!(config.desktop, desktop);
         assert_eq!(config.host.as_deref(), Some(host.as_path()));
