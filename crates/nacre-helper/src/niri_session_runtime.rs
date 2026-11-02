@@ -1379,10 +1379,8 @@ mod tests {
     }
     #[test]
     fn custom_with_only_new_binds_keeps_generated_bindings_untouched() -> Result<()> {
-        let (home, _) = prepare_with_custom(
-            Some("binds {\n    Super+F9 { close-window; }\n}\n"),
-            false,
-        )?;
+        let (home, _) =
+            prepare_with_custom(Some("binds {\n    Super+F9 { close-window; }\n}\n"), false)?;
         let (plain, _) = prepare_with_custom(None, false)?;
         assert_eq!(
             staged(&home, "bindings.kdl")?,
