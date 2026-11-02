@@ -23,7 +23,13 @@ license notices. `stage.py` installs only below `$pkgdir/usr`; no package hook
 writes to a user's home, starts services or downloads accounts/models.
 
 The core build also compiles `nacre-shell`, `bead-wallpaper-video` and
-`nacre-wallpaper-decode` from the Nacre Cargo workspace with `--locked`.
+`nacre-wallpaper-decode` from the Nacre Cargo workspace with `--locked -j2`,
+using `CARGO_TARGET_DIR` when set. The package `check()` runs the locked Rust
+format, warning-denied Clippy, workspace and trace tests, no-default/all-feature
+checks, a debug shell build, pinned Luau 0.742 checks, moved product proofs,
+video smoke, Python suites and package staging checks. The native and Python
+product check modes use the same checker as desktop CI; the Python run is not
+duplicated in the package recipe.
 Cargo fetches the Bead framework at the full revision pinned in Nacre's
 manifest. The output `artifacts/ui-shell/` bundle contains `bin/` with all
 three executables and the matching `shell/` tree. The package stages it under
@@ -39,7 +45,10 @@ configuration/wrappers plus references to shared code through `configure.py`
 and the existing `releases.py` snapshot/rollback owner. Reference palette and
 lock assets seed only missing user files; later palette changes are preserved.
 Setup does not run source checks, provision a virtual environment or invoke
-source/native installers. Source contributors retain `install.sh`.
+source/native installers. Source contributors retain `install.sh`. The installed
+acceptance test checks the private three-binary bundle, matching `shell/`, the
+product and Outfit OFL notices, and confirms `/usr/bin/nacre-shell` remains the
+Nacre control wrapper rather than the Bead executable.
 
 The palette CLI is native: `/usr/bin/nacre_shell` dispatches through the packaged
 bridge to `/usr/lib/nacre/nacre-helper`. Its read-only assets remain under

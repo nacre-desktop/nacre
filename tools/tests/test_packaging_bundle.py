@@ -52,6 +52,7 @@ class UiShellBundleTests(unittest.TestCase):
             self.assertEqual(
                 (private / "shell/bar/main.luau").read_text(), "return {}\n"
             )
+            self.assertEqual((private / "shell/palette.json").read_text(), "{}\n")
             self.assertFalse((dest / "usr/bin/nacre-shell").exists())
             for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
                 self.assertEqual(

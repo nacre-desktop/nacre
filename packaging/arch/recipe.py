@@ -102,13 +102,21 @@ build() {{
 
 check() {{
   cd "$srcdir/nacre"
-  cargo test --locked --quiet
-  cargo build --locked --examples
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --locked -j2 -- -D warnings
+  cargo test --workspace --locked -j2
+  cargo test -p nacre-shell --features trace --locked -j2 memory_policy::tests::
+  cargo check -p nacre-shell --no-default-features --locked -j2
+  cargo check --workspace --all-features --locked -j2
+  cargo build -p nacre-shell --no-default-features --locked -j2
+  cargo build --locked --examples -j2
+  python tools/check_product_shell.py --download-analyzer "$srcdir/luau/luau-analyze"
+  python tools/check_product_shell.py --native-only --analyzer "$srcdir/luau/luau-analyze"
   npm ci --ignore-scripts --no-audit --no-fund
   python -m venv --system-site-packages "$srcdir/check-env"
   export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
   export NACRE_ORIENT_BINARY=/usr/bin/orient
-  python packaging/arch/check.py "$srcdir/check-env/bin/python"
+  python packaging/arch/check.py "$srcdir/check-env/bin/python" "$srcdir/artifacts/ui-shell"
 }}
 
 package_nacre() {{

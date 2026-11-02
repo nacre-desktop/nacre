@@ -91,11 +91,19 @@ def build(root, output, sources):
     )
     shutil.copy2(helper, native / "nacre-helper")
     # Build the product shell from this Nacre checkout. Its Bead framework
-    # dependencies are pinned in Cargo.toml and fetched by Cargo.
+    # dependencies are pinned in Cargo.toml and fetched by Cargo. Keep the
+    # artifact copy location aligned with Cargo, including caller overrides.
+    cargo_target = Path(os.environ.get("CARGO_TARGET_DIR", root / "target"))
+    if not cargo_target.is_absolute():
+        cargo_target = root / cargo_target
+    cargo_target = cargo_target.resolve()
     subprocess.run(
         [
             "cargo",
             "build",
+            "-j2",
+            "--target-dir",
+            str(cargo_target),
             "--release",
             "--locked",
             "-p",
@@ -114,7 +122,7 @@ def build(root, output, sources):
     bundle_bin = bundle / "bin"
     bundle_bin.mkdir(parents=True, exist_ok=True)
     for name in ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode"):
-        shutil.copy2(root / "target/release" / name, bundle_bin / name)
+        shutil.copy2(cargo_target / "release" / name, bundle_bin / name)
         (bundle_bin / name).chmod(0o755)
     shutil.copytree(root / "shell", bundle / "shell", dirs_exist_ok=True)
     for name in ("dolphin-style/styles", "thunar-style"):

@@ -54,6 +54,26 @@ for target in (binary, reference, *binary.parents, *reference.parents):
     if not target.is_symlink():
         assert metadata.st_mode & 0o022 == 0, target
 assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
+product_bundle = Path("/usr/lib/nacre/bead-shell")
+for name in ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode"):
+    executable = product_bundle / "bin" / name
+    assert executable.is_file() and not executable.is_symlink(), executable
+    with executable.open("rb") as stream:
+        assert stream.read(4) == b"\x7fELF", executable
+    assert executable.stat().st_mode & 0o755 == 0o755, executable
+    assert executable.stat().st_uid == 0, executable
+    assert run("pacman", "-Qoq", str(executable)).stdout.strip() == "nacre"
+for relative in ("shell/palette.json", "shell/bar"):
+    path = product_bundle / relative
+    assert path.is_file() if relative.endswith(".json") else path.is_dir(), path
+    assert path.stat().st_uid == 0, path
+wrapper = Path("/usr/bin/nacre-shell")
+assert wrapper.is_symlink()
+assert wrapper.resolve(strict=True) == Path(
+    "/usr/share/nacre/nacre/shell-tools/control.sh"
+)
+assert wrapper.resolve(strict=True) != (product_bundle / "bin/nacre-shell")
+assert run("pacman", "-Qoq", str(wrapper)).stdout.strip() == "nacre"
 for name in ("nacre-daemon", "nacrectl"):
     alias = Path("/usr/bin") / name
     assert alias.is_symlink() and alias.resolve(strict=True) == binary
@@ -89,6 +109,10 @@ for name in (
 ):
     notice = Path("/usr/share/licenses/nacre") / name
     assert notice.is_file() and notice.stat().st_uid == 0
+for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0", "Outfit-OFL.txt"):
+    notice = Path("/usr/share/licenses/nacre/bead-shell") / name
+    assert notice.is_file() and notice.stat().st_uid == 0, notice
+    assert run("pacman", "-Qoq", str(notice)).stdout.strip() == "nacre"
 # The public native CLI must work before setup creates private runtime links.
 wallpaper = Path("/usr/share/nacre/nacre/shell-tools/demo-wallpapers/forest.jpg")
 query = json.loads(run("nacre_shell", "wallpaper", "--print", str(wallpaper)).stdout)

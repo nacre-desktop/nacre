@@ -48,9 +48,29 @@ def cleanup(directory, timeout=15):
         time.sleep(0.1)
 
 
+PRODUCT_BINARIES = ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode")
+
+
+def verify_ui_shell(bundle):
+    bundle = Path(bundle)
+    for name in PRODUCT_BINARIES:
+        path = bundle / "bin" / name
+        if not path.is_file() or path.is_symlink():
+            raise RuntimeError(f"Missing regular UI shell executable: {path}")
+        with path.open("rb") as executable:
+            elf_magic = executable.read(4)
+        if not path.stat().st_mode & 0o111 or elf_magic != b"\x7fELF":
+            raise RuntimeError(f"Invalid UI shell executable: {path}")
+    if not (bundle / "shell/palette.json").is_file():
+        raise RuntimeError(f"Missing UI shell palette: {bundle / 'shell/palette.json'}")
+    if not (bundle / "shell/bar").is_dir():
+        raise RuntimeError(f"Missing UI shell bar bundle: {bundle / 'shell/bar'}")
+
+
 def main():
-    if len(sys.argv) != 2:
-        raise SystemExit("Usage: check.py PATH_TO_CHECK_PYTHON")
+    if len(sys.argv) != 3:
+        raise SystemExit("Usage: check.py PATH_TO_CHECK_PYTHON UI_SHELL_BUNDLE")
+    verify_ui_shell(sys.argv[2])
     runtime = Path(tempfile.mkdtemp(prefix="nacre-package-check-"))
     try:
         result = subprocess.run(
