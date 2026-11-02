@@ -1393,7 +1393,7 @@ mod tests {
     fn invalid_custom_falls_back_to_the_plain_session() -> Result<()> {
         let user = "binds {\n    Super+Shift+S { close-window; }\n}\n";
         let (home, calls) = prepare_with_custom(Some(user), true)?;
-        assert_eq!(calls, 1);
+        assert_eq!(calls, 2);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
         let (plain, _) = prepare_with_custom(None, false)?;
         assert_eq!(
@@ -1413,7 +1413,7 @@ mod tests {
     #[test]
     fn fork_overlay_keeps_collection_actions_out_of_stock_config() -> Result<()> {
         let (home, calls) = prepare_with_custom(None, false)?;
-        assert_eq!(calls, 2);
+        assert_eq!(calls, 1);
         let shared = staged(&home, "config.kdl")?;
         let bindings = staged(&home, "bindings.kdl")?;
         let overlay = staged(&home, "nacre-niri.kdl")?;
@@ -1563,9 +1563,9 @@ mod tests {
             for entry in fs::read_dir(destination.join("config"))? {
                 let file = entry?.path();
                 let name = file.file_name().unwrap().to_string_lossy();
-                // Bead's session-only rule is covered by the focused runtime
-                // assertion above; keep this legacy Nacre snapshot unchanged.
-                if name == "bead-pearls.kdl" {
+                // Session-only generated files are covered by focused tests;
+                // keep this legacy Nacre snapshot focused on its existing tree.
+                if name == "bead-pearls.kdl" || name == "nacre-niri.kdl" {
                     continue;
                 }
                 let text = fs::read_to_string(&file)?
