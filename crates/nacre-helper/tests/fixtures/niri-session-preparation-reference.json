@@ -58,7 +58,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -197,7 +197,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -348,7 +348,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -495,7 +495,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -644,7 +644,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -789,7 +789,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -940,7 +940,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -1087,7 +1087,7 @@
             "mode": 384
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 384
           },
           "config/keyboard.kdl": {
@@ -1229,7 +1229,7 @@
             "mode": 420
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 420
           },
           "config/keyboard.kdl": {
@@ -1345,7 +1345,7 @@
             "mode": 420
           },
           "config/host.kdl": {
-            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+            "text": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    mouse {\n        scroll-factor 1.5\n    }\n    touchpad {\n        natural-scroll\n        scroll-factor 0.35\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
             "mode": 420
           },
           "config/keyboard.kdl": {

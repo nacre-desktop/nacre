@@ -331,12 +331,23 @@ pub fn host_preferences(desktop: &Value) -> Result<String> {
         .cloned()
         .unwrap_or(value!(crate::desktop_settings::scroll_speed_default()));
     numeric(&scroll_speed, "Invalid scroll speed", 0.25, 2.0, false)?;
+    let mouse_scroll_speed = desktop
+        .get("mouseScrollSpeed")
+        .cloned()
+        .unwrap_or(value!(crate::desktop_settings::mouse_scroll_speed_default()));
+    numeric(
+        &mouse_scroll_speed,
+        "Invalid mouse scroll speed",
+        0.5,
+        3.0,
+        false,
+    )?;
     let gap = desktop.get("gapsOut").cloned().unwrap_or(value!(12));
     let border = desktop.get("borderSize").cloned().unwrap_or(value!(1));
     for value in [&gap, &border] {
         numeric(value, "Invalid saved window margins", 0.0, 100.0, false)?;
     }
-    let mut text=format!("prefer-no-csd\nlayout {{\n    gaps {}\n    default-column-width {{ proportion 0.5; }}\n    preset-column-widths {{\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }}\n    focus-ring {{ width {}; }}\n}}\ninput {{\n    touchpad {{\n",json::encode(&gap)?,json::encode(&border)?);
+    let mut text=format!("prefer-no-csd\nlayout {{\n    gaps {}\n    default-column-width {{ proportion 0.5; }}\n    preset-column-widths {{\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }}\n    focus-ring {{ width {}; }}\n}}\ninput {{\n    mouse {{\n        scroll-factor {}\n    }}\n    touchpad {{\n",json::encode(&gap)?,json::encode(&border)?,json::encode(&mouse_scroll_speed)?);
     if natural {
         text.push_str("        natural-scroll\n");
     }
@@ -1670,18 +1681,23 @@ mod tests {
     }
 
     #[test]
-    fn host_scroll_speed_defaults_and_applies_to_touchpad_only() -> Result<()> {
+    fn host_scroll_speeds_default_and_apply_to_both_devices() -> Result<()> {
         for speed in [0.25, 0.35, 1.25, 2.0] {
             let rendered = host_preferences(&value!({"scrollSpeed":speed}))?;
             let factor = format!("scroll-factor {}", serde_json::to_string(&value!(speed))?);
             assert_eq!(rendered.matches(&factor).count(), 1);
-            assert!(!rendered.contains("mouse {"));
+            assert!(rendered.contains("mouse {\n        scroll-factor 1.5"));
         }
         for speed in [value!(0.2), value!(2.1), value!(true)] {
             assert!(host_preferences(&value!({"scrollSpeed":speed})).is_err());
         }
         let migrated = host_preferences(&value!({}))?;
         assert_eq!(migrated.matches("scroll-factor 0.35").count(), 1);
+        assert_eq!(migrated.matches("scroll-factor 1.5").count(), 1);
+        assert!(host_preferences(&value!({"mouseScrollSpeed":2.25}))?.contains("scroll-factor 2.25"));
+        for speed in [0.49, 3.01] {
+            assert!(host_preferences(&value!({"mouseScrollSpeed":speed})).is_err());
+        }
         Ok(())
     }
 }
