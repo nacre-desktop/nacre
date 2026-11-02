@@ -28,7 +28,9 @@ class NacreNiriSessionTests(unittest.TestCase):
         self.assertIn('if [ "${NACRE_NIRI_FORK:-0}" = 1 ]', wrapper)
         self.assertIn("fork=/usr/bin/nacre-niri", wrapper)
         self.assertIn('exec "$fork" "$@"', wrapper)
-        self.assertIn("fork was selected but its version identity did not match", wrapper)
+        self.assertIn(
+            "fork was selected but its version identity did not match", wrapper
+        )
 
     def test_nacre_niri_command_uses_fork_binary_and_shared_config(self):
         config = Path(
@@ -91,9 +93,15 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertEqual(execute.call_args.args[1][6], "niri")
             self.assertEqual(environment["XDG_CURRENT_DESKTOP"], "niri")
             self.assertIn("NACRE_NIRI_FORK", environment["UWSM_FINALIZE_VARNAMES"])
-            self.assertNotIn(package_niri.COLLECTION_BEGIN, standard_bindings.read_text())
-            self.assertNotIn(package_niri.COLLECTION_BEGIN, managed_bindings.read_text())
-            self.assertEqual(custom.read_text(), "binds { Super+F12 { close-window; } }\n")
+            self.assertNotIn(
+                package_niri.COLLECTION_BEGIN, standard_bindings.read_text()
+            )
+            self.assertNotIn(
+                package_niri.COLLECTION_BEGIN, managed_bindings.read_text()
+            )
+            self.assertEqual(
+                custom.read_text(), "binds { Super+F12 { close-window; } }\n"
+            )
 
     def test_fork_session_prefers_existing_prepared_config_and_clears_stock_leak(self):
         with tempfile.TemporaryDirectory() as directory:
