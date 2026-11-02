@@ -392,17 +392,14 @@ pub(super) fn frozen_rendering_output(case: &Value) -> crate::Result<String> {
     let expected = case["observed"]["stdout"]
         .as_str()
         .ok_or("Missing frozen rendering")?;
-    if input["method"] == "render_desktop_options" {
-        let args = &input["args"][0];
-        let mut legacy: String = serde_json::from_str(expected)?;
-        if args["followMouse"] == true {
-            assert_eq!(legacy.matches("    focus-follows-mouse\n").count(), 1);
-            legacy = legacy.replace(
-                "    focus-follows-mouse\n",
-                "    focus-follows-mouse max-scroll-amount=\"0%\"\n",
-            );
-        }
-        return Ok(crate::json::encode(&Value::from(legacy))? + "\n");
+    if input["method"] == "render_desktop_options" && input["args"][0]["followMouse"] == true {
+        let legacy: String = serde_json::from_str(expected)?;
+        assert_eq!(legacy.matches("    focus-follows-mouse\n").count(), 1);
+        let bounded = legacy.replace(
+            "    focus-follows-mouse\n",
+            "    focus-follows-mouse max-scroll-amount=\"0%\"\n",
+        );
+        return Ok(crate::json::encode(&Value::from(bounded))? + "\n");
     }
     Ok(expected.to_string())
 }
