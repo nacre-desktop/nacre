@@ -388,12 +388,14 @@ pub fn render_with_capabilities(
 }
 
 fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Result<Value> {
-    if workspace_collections {
-        let bindings = generated["niri/bindings.kdl"]
-            .as_str()
-            .ok_or_else(|| invalid("Invalid generated bindings"))?;
-        generated["niri/bindings.kdl"] = json!(niri::with_collection_bindings(bindings)?);
-    }
+    let bindings = generated["niri/bindings.kdl"]
+        .as_str()
+        .ok_or_else(|| invalid("Invalid generated bindings"))?;
+    generated["niri/bindings.kdl"] = json!(if workspace_collections {
+        niri::with_collection_bindings(bindings)?
+    } else {
+        niri::strip_collection_bindings(bindings)?
+    });
     Ok(generated)
 }
 
@@ -402,6 +404,12 @@ fn active_niri_capabilities() -> crate::compositor::niri_transport::NacreCapabil
         .filter(|socket| !socket.is_empty())
         .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(&socket)))
         .unwrap_or_default()
+}
+pub(crate) fn ensure_collection_bindings(bindings: &str) -> Result<String> {
+    niri::with_collection_bindings(bindings)
+}
+pub(crate) fn strip_collection_bindings(bindings: &str) -> Result<String> {
+    niri::strip_collection_bindings(bindings)
 }
 pub fn render_profile(
     profile: &Value,

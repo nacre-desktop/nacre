@@ -72,7 +72,22 @@ pub(super) fn keys(value: &Value) -> Result<String> {
     }
     Ok(pieces.join("+"))
 }
-pub(super) fn with_collection_bindings(bindings: &str) -> Result<String> {
+const COLLECTION_BEGIN: &str = "    // N0110 native collection bindings begin\n";
+const COLLECTION_END: &str = "    // N0110 native collection bindings end\n";
+const COLLECTION_BINDINGS: &str = "    // N0110 native collection bindings begin\n\
+    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-next\" { focus-collection-next; }\n\
+    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-previous\" { focus-collection-previous; }\n\
+    Super+Ctrl+N repeat=false hotkey-overlay-title=\"Nacre:collection-create\" { create-collection; }\n\
+    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title=\"Nacre:collection-move-next\" { move-window-to-collection-next; }\n\
+    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n\
+    // N0110 native collection bindings end\n";
+pub(crate) fn with_collection_bindings(bindings: &str) -> Result<String> {
+    if bindings.contains(COLLECTION_BEGIN) || bindings.contains(COLLECTION_END) {
+        if bindings.contains(COLLECTION_BINDINGS) {
+            return Ok(bindings.to_owned());
+        }
+        return Err(invalid("Incomplete N0110 collection binding block"));
+    }
     let additions = [
         "Super+Ctrl+Alt+Tab",
         "Super+Ctrl+Alt+Shift+Tab",
@@ -106,15 +121,46 @@ pub(super) fn with_collection_bindings(bindings: &str) -> Result<String> {
     let end = bindings
         .rfind('}')
         .ok_or_else(|| invalid("Generated niri bindings block is incomplete"))?;
-    let additions = "    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-next\" { focus-collection-next; }\n\
-    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-previous\" { focus-collection-previous; }\n\
-    Super+Ctrl+N repeat=false hotkey-overlay-title=\"Nacre:collection-create\" { create-collection; }\n\
-    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title=\"Nacre:collection-move-next\" { move-window-to-collection-next; }\n\
-    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n";
-    let mut output = String::with_capacity(bindings.len() + additions.len());
+    let mut output = String::with_capacity(bindings.len() + COLLECTION_BINDINGS.len());
     output.push_str(&bindings[..end]);
-    output.push_str(additions);
+    output.push_str(COLLECTION_BINDINGS);
     output.push_str(&bindings[end..]);
+    Ok(output)
+}
+pub(crate) fn strip_collection_bindings(bindings: &str) -> Result<String> {
+    let begins = bindings
+        .match_indices(COLLECTION_BEGIN)
+        .map(|(index, _)| index)
+        .collect::<Vec<_>>();
+    let ends = bindings
+        .match_indices(COLLECTION_END)
+        .map(|(index, _)| index)
+        .collect::<Vec<_>>();
+    if begins.is_empty() && ends.is_empty() {
+        if [
+            "focus-collection-next",
+            "focus-collection-previous",
+            "create-collection",
+            "move-window-to-collection-next",
+            "move-window-to-collection-previous",
+        ]
+        .iter()
+        .any(|action| bindings.contains(action))
+        {
+            return Err(invalid("Unmarked N0110 collection bindings"));
+        }
+        return Ok(bindings.to_owned());
+    }
+    if begins.len() != 1 || ends.len() != 1 || begins[0] >= ends[0] {
+        return Err(invalid("Malformed N0110 collection binding block"));
+    }
+    let after_end = ends[0] + COLLECTION_END.len();
+    if &bindings[begins[0]..after_end] != COLLECTION_BINDINGS {
+        return Err(invalid("Modified N0110 collection binding block"));
+    }
+    let mut output = String::with_capacity(bindings.len() - (after_end - begins[0]));
+    output.push_str(&bindings[..begins[0]]);
+    output.push_str(&bindings[after_end..]);
     Ok(output)
 }
 fn shell_quote(text: &str) -> String {

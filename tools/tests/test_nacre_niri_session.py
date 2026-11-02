@@ -23,6 +23,13 @@ session_spec.loader.exec_module(package_sessions)
 
 
 class NacreNiriSessionTests(unittest.TestCase):
+    def test_prepared_wrapper_keeps_fork_selected_for_offline_queries(self):
+        wrapper = (ROOT / "uwsm/niri-session-bin/niri").read_text()
+        self.assertIn('if [ "${NACRE_NIRI_FORK:-0}" = 1 ]', wrapper)
+        self.assertIn("fork=/usr/bin/nacre-niri", wrapper)
+        self.assertIn('exec "$fork" "$@"', wrapper)
+        self.assertIn("fork was selected but its version identity did not match", wrapper)
+
     def test_nacre_niri_command_uses_fork_binary_and_shared_config(self):
         config = Path(
             "/home/test/.local/share/nacre/niri-on-pc/session/config/config.kdl"
@@ -56,6 +63,20 @@ class NacreNiriSessionTests(unittest.TestCase):
             config = home / ".config/nacre/niri/config.kdl"
             config.parent.mkdir(parents=True)
             config.write_text("// stock session fixture\n")
+            generated = (
+                package_niri.GENERATED_BINDINGS_HEADER
+                + "binds {\n"
+                + package_niri.COLLECTION_BLOCK
+                + "}\n"
+            )
+            standard_bindings = home / ".config/nacre/niri/bindings.kdl"
+            managed_dir = home / ".local/share/nacre/niri-on-pc/session/config"
+            managed_dir.mkdir(parents=True)
+            managed_bindings = managed_dir / "bindings.kdl"
+            standard_bindings.write_text(generated)
+            managed_bindings.write_text(generated)
+            custom = home / ".config/nacre/niri/custom.kdl"
+            custom.write_text("binds { Super+F12 { close-window; } }\n")
             with (
                 patch.object(package_niri, "validate"),
                 patch.object(package_niri.subprocess, "run"),
@@ -70,6 +91,9 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertEqual(execute.call_args.args[1][6], "niri")
             self.assertEqual(environment["XDG_CURRENT_DESKTOP"], "niri")
             self.assertIn("NACRE_NIRI_FORK", environment["UWSM_FINALIZE_VARNAMES"])
+            self.assertNotIn(package_niri.COLLECTION_BEGIN, standard_bindings.read_text())
+            self.assertNotIn(package_niri.COLLECTION_BEGIN, managed_bindings.read_text())
+            self.assertEqual(custom.read_text(), "binds { Super+F12 { close-window; } }\n")
 
     def test_fork_session_prefers_existing_prepared_config_and_clears_stock_leak(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -79,6 +103,13 @@ class NacreNiriSessionTests(unittest.TestCase):
             config.parent.mkdir(parents=True)
             config.write_text("// shared generated configuration\n")
             (prepared / "source-revision").write_text("a" * 40)
+            bindings = config.parent / "bindings.kdl"
+            bindings.write_text(
+                package_niri.GENERATED_BINDINGS_HEADER
+                + "binds {\n"
+                + package_niri.COLLECTION_BLOCK
+                + "}\n"
+            )
             with (
                 patch.object(package_niri, "validate") as validate,
                 patch.object(package_niri.subprocess, "run") as run,
@@ -99,6 +130,7 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertIn("NIRI_SOCKET", environment["UWSM_WAIT_VARNAMES"])
             self.assertIn("XCURSOR_THEME", environment["UWSM_FINALIZE_VARNAMES"])
             self.assertIn("NACRE_NIRI_FORK", environment["UWSM_FINALIZE_VARNAMES"])
+            self.assertIn(package_niri.COLLECTION_BEGIN, bindings.read_text())
             run.assert_called_once_with(
                 ["systemctl", "--user", "daemon-reload"], check=True
             )

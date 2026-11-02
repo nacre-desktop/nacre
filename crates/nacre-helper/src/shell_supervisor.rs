@@ -314,7 +314,9 @@ pub fn run(stamp: Option<&str>) -> Result<i32> {
         Duration::from_secs(20),
         Some((&signals, &mut stopping)),
     )?;
-    let root = Paths::environment()?.share.join("shell");
+    let paths = Paths::environment()?;
+    crate::niri_session_runtime::prepare_shell(&paths, &environment)?;
+    let root = paths.share.join("shell");
     let mut recovered = false;
     while !stopping {
         let mut command = Command::new(root.join("bin/qs"));
