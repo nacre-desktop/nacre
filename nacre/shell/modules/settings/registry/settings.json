@@ -507,6 +507,18 @@
       }
     },
     {
+      "id": "keyboard-mouse.scrolling",
+      "page": "keyboard-mouse",
+      "labelId": "settings.registry.keyboard-mouse.scrolling.label",
+      "order": 15,
+      "visibleWhen": {
+        "all": [
+          {"capability": "input.controls"},
+          {"capability": "input.touchpadSpeed"}
+        ]
+      }
+    },
+    {
       "id": "keyboard-mouse.touchpad",
       "page": "keyboard-mouse",
       "labelId": "settings.registry.keyboard-mouse.touchpad.label",
@@ -2587,10 +2599,10 @@
     {
       "id": "keyboard-mouse.touchpad.scrollSpeed",
       "page": "keyboard-mouse",
-      "section": "keyboard-mouse.touchpad",
+      "section": "keyboard-mouse.scrolling",
       "key": "scrollSpeed",
       "type": "number",
-      "default": 0.75,
+      "default": 0.35,
       "store": {
         "id": "desktop",
         "key": ["scrollSpeed"]
@@ -3797,6 +3809,22 @@
         "max": 1,
         "step": 0.05
       }
+    },
+    {
+      "id": "keyboard-mouse.mouse.mouseScrollSpeed",
+      "page": "keyboard-mouse",
+      "section": "keyboard-mouse.scrolling",
+      "key": "mouseScrollSpeed",
+      "type": "number",
+      "default": 1.5,
+      "store": {"id": "desktop", "key": ["mouseScrollSpeed"]},
+      "labelId": "settings.registry.keyboard-mouse.mouse.mouseScrollSpeed.label",
+      "descriptionId": "settings.registry.keyboard-mouse.mouse.mouseScrollSpeed.description",
+      "apply": "instant",
+      "advanced": false,
+      "synonyms": ["mouse scroll speed", "wheel speed"],
+      "visibleWhen": {"capability": "input.controls"},
+      "range": {"min": 0.5, "max": 3.0, "step": 0.1}
     },
     {
       "id": "keyboard-mouse.mouse.mouseAcceleration",

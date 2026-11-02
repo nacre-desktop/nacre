@@ -53,7 +53,7 @@ fn frozen_additive_niri_preferences() {
 
 #[test]
 fn scroll_speed_default_range_and_preset_exclusion() {
-    assert_eq!(settings::defaults()["scrollSpeed"], json!(0.75));
+    assert_eq!(settings::defaults()["scrollSpeed"], json!(0.35));
     assert!(!settings::preset_keys().contains(&"scrollSpeed".to_owned()));
     for value in [0.25, 0.75, 2.0] {
         assert_eq!(
@@ -63,6 +63,14 @@ fn scroll_speed_default_range_and_preset_exclusion() {
     }
     for value in [json!(0.249), json!(2.001), json!(true)] {
         assert!(settings::validate("scrollSpeed", &value, false).is_err());
+    }
+    assert_eq!(settings::defaults()["mouseScrollSpeed"], json!(1.5));
+    assert!(!settings::preset_keys().contains(&"mouseScrollSpeed".to_owned()));
+    for value in [0.5, 1.5, 3.0] {
+        assert_eq!(settings::validate("mouseScrollSpeed", &json!(value), false).unwrap(), json!(value));
+    }
+    for value in [json!(0.499), json!(3.001), json!(true)] {
+        assert!(settings::validate("mouseScrollSpeed", &value, false).is_err());
     }
 }
 
@@ -117,7 +125,7 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
     let home = tempfile::tempdir()?;
     let paths = Paths::new(home.path());
     fs::create_dir_all(&paths.config)?;
-    fs::write(paths.config.join("desktop.json"), r#"{"gapsIn":9}"#)?;
+    fs::write(paths.config.join("desktop.json"), r#"{"gapsIn":9,"scrollSpeed":0.35}"#)?;
     let calls = Rc::new(RefCell::new(Vec::new()));
     let config_path = paths
         .config
@@ -132,15 +140,20 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
         },
     )?;
     let migrated = settings.load()?;
-    assert_eq!(migrated["scrollSpeed"], json!(0.75));
+    assert_eq!(migrated["scrollSpeed"], json!(0.35));
     assert_eq!(migrated["gapsIn"], json!(9));
     settings.action("set", &["scrollSpeed".into(), "1.25".into()])?;
+    settings.action("set", &["mouseScrollSpeed".into(), "2.25".into()])?;
     let calls = calls.borrow();
-    assert_eq!(calls.len(), 1);
+    assert_eq!(calls.len(), 2);
     assert_eq!(calls[0].0, "set_desktop_options");
-    assert_eq!(calls[0].1, json!({"scrollSpeed":1.25}));
+    assert_eq!(calls[0].1["scrollSpeed"], json!(1.25));
+    assert_eq!(calls[0].1["mouseScrollSpeed"], json!(1.5));
+    assert_eq!(calls[1].1["scrollSpeed"], json!(1.25));
+    assert_eq!(calls[1].1["mouseScrollSpeed"], json!(2.25));
     let saved: Value = serde_json::from_slice(&fs::read(&settings.state)?)?;
     assert_eq!(saved["scrollSpeed"], json!(1.25));
+    assert_eq!(saved["mouseScrollSpeed"], json!(2.25));
     Ok(())
 }
 #[test]

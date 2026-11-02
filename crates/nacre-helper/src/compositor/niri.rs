@@ -83,18 +83,7 @@ impl Backend {
         )
     }
     pub fn configuration(&self) -> niri_desktop::Configuration {
-        niri_desktop::Configuration::new(
-            &self.paths,
-            self.environment
-                .get("NACRE_NIRI_CONFIG")
-                .filter(|value| !value.is_empty())
-                .or_else(|| self.environment.get("NIRI_CONFIG"))
-                .map(Path::new),
-            self.environment
-                .get("NACRE_NIRI_DESKTOP_CONFIG")
-                .filter(|value| !value.is_empty())
-                .map(Path::new),
-        )
+        niri_desktop::Configuration::active(&self.paths, &self.environment)
     }
     pub fn night_light_command(&self, enabled: bool) -> Value {
         json!(niri_night_light::command(

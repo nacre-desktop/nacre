@@ -16,6 +16,7 @@ struct Cached<'a> {
     data: Value,
     exists: bool,
     written: bool,
+    skip_generated_path: Option<PathBuf>,
 }
 
 impl Runtime for Cached<'_> {
@@ -45,6 +46,12 @@ impl Runtime for Cached<'_> {
             self.exists = true;
             self.written = true;
             Ok(())
+        } else if self.skip_generated_path.as_deref() == Some(path) {
+            // Niri's scroll settings have already been validated, atomically
+            // published to the active session files, and reloaded by the
+            // compositor transaction. Do not overwrite that projection with
+            // the legacy post-apply renderer.
+            Ok(())
         } else {
             // In particular the display-pending journal uses the established
             // synchronous, fsynced versioned writer before rollback is armed.
@@ -62,12 +69,31 @@ pub async fn execute(
 ) -> Result<(Result<Value>, Option<Value>)> {
     control
         .with(move |backend| {
+            let skip_scroll_projection = arguments.first().is_some_and(|action| action == "set")
+                && arguments
+                    .get(1)
+                    .is_some_and(|key| matches!(key.as_str(), "scrollSpeed" | "mouseScrollSpeed"))
+                && backend
+                    .module_call("backend_name", &[], &serde_json::json!({}))?
+                    .as_str()
+                    == Some("niri");
+            let skip_generated_path = if skip_scroll_projection {
+                let path = backend.module_call(
+                    "config_path",
+                    &[serde_json::json!(paths.home), serde_json::json!("desktop")],
+                    &serde_json::json!({}),
+                )?;
+                Some(PathBuf::from(path.as_str().ok_or("Invalid desktop configuration path")?))
+            } else {
+                None
+            };
             let runtime = Cached {
                 path: paths.config.join("desktop.json"),
                 native: Native::new(paths.clone(), backend),
                 data,
                 exists,
                 written: false,
+                skip_generated_path,
             };
             let mut controller = Settings::new(paths, runtime)?;
             let result = controller.execute(&arguments[0], &arguments[1..]);

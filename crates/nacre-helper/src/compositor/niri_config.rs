@@ -169,6 +169,14 @@ pub fn desktop(preferences: &Value) -> Result<String> {
     if !(0.25..=2.0).contains(&scroll_speed) {
         return Err(invalid("Invalid scroll speed"));
     }
+    let mouse_scroll_speed = preferences
+        .get("mouseScrollSpeed")
+        .map(|value| number(value, "Invalid mouse scroll speed"))
+        .transpose()?
+        .unwrap_or_else(crate::desktop_settings::mouse_scroll_speed_default);
+    if !(0.5..=3.0).contains(&mouse_scroll_speed) {
+        return Err(invalid("Invalid mouse scroll speed"));
+    }
     let mut keyboard = Vec::new();
     if let Some(layout) = preferences.get("keyboardLayouts") {
         keyboard.push(format!("xkb {{ layout {}; }}", text(layout)?));
@@ -206,6 +214,9 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         ),
     ] {
         let mut fields = Vec::new();
+        if device == "mouse" {
+            fields.push(format!("scroll-factor {mouse_scroll_speed}"));
+        }
         if device == "touchpad" {
             if enabled == Some(false) {
                 fields.push("off".into());
@@ -229,7 +240,7 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 fields.push(format!("accel-profile {}", text(value)?));
             }
         }
-        let mut specified = device == "touchpad"
+        let mut specified = device == "touchpad" || device == "mouse"
             || preferences.contains_key(speed)
             || (device == "mouse" && preferences.contains_key("mouseAcceleration"));
         for (key, field) in flags {
@@ -618,6 +629,8 @@ mod input_settings_tests {
             json!({"mouseAcceleration":"shell"}),
             json!({"scrollSpeed":0.2}),
             json!({"scrollSpeed":2.1}),
+            json!({"mouseScrollSpeed":0.49}),
+            json!({"mouseScrollSpeed":3.01}),
         ] {
             assert!(desktop(&value).is_err(), "{value}");
         }
@@ -625,15 +638,15 @@ mod input_settings_tests {
 
     #[test]
     fn touchpad_scroll_factor_defaults_and_respects_saved_preference() {
-        for (preferences, speed) in [(json!({}), "0.75"), (json!({"scrollSpeed":1.25}), "1.25")] {
+        for (preferences, speed) in [(json!({}), "0.35"), (json!({"scrollSpeed":1.25}), "1.25")] {
             let rendered = desktop(&preferences).unwrap();
             assert!(rendered.contains(&format!("touchpad {{ scroll-factor {speed}; }}")));
-            assert!(!rendered.contains("mouse {"));
+            assert!(rendered.contains("mouse { scroll-factor 1.5; }"));
         }
         let rendered = desktop(&json!({"scrollSpeed":1.25,"mouseNaturalScroll":true})).unwrap();
-        assert!(rendered.contains("mouse { natural-scroll; }"));
-        assert!(!rendered.contains("mouse { scroll-factor"));
-        assert!(!desktop(&json!({})).unwrap().contains("mouse {"));
+        assert!(rendered.contains("mouse { scroll-factor 1.5; natural-scroll; }"));
+        let rendered = desktop(&json!({"mouseScrollSpeed":2.25})).unwrap();
+        assert!(rendered.contains("mouse { scroll-factor 2.25; }"));
     }
 }
 
@@ -644,6 +657,6 @@ mod input_node_regression {
         let output = super::desktop(&serde_json::json!({"keyboardLayouts":"no","naturalScroll":true,"touchpadEnabled":false})).unwrap();
         assert_eq!(output.matches("input {").count(), 1);
         assert!(output.contains("layout \"no\""));
-        assert!(output.contains("touchpad { off; natural-scroll; scroll-factor 0.75;"));
+        assert!(output.contains("touchpad { off; natural-scroll; scroll-factor 0.35;"));
     }
 }
