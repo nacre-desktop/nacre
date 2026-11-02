@@ -419,6 +419,12 @@ pub fn palette_include(paths: &Paths, config: &Path) -> PathBuf {
 }
 
 /// Write in the original order, retaining its partial-output failure semantics.
+#[derive(Clone, Copy)]
+struct ConfigurationOptions {
+    stock: bool,
+    validate_overlay: bool,
+}
+
 pub fn prepare_configuration(
     backend: &Path,
     destination: &Path,
@@ -428,28 +434,27 @@ pub fn prepare_configuration(
     stock: bool,
     validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
-    prepare_configuration_with_collections(
+    prepare_configuration_inner(
         backend,
         destination,
         paths,
         profile,
         keyboard,
-        stock,
-        true,
-        false,
+        ConfigurationOptions {
+            stock,
+            validate_overlay: false,
+        },
         validate,
     )
 }
 
-fn prepare_configuration_with_collections(
+fn prepare_configuration_inner(
     backend: &Path,
     destination: &Path,
     paths: &Paths,
     profile: &Value,
     keyboard: &Value,
-    stock: bool,
-    workspace_collections: bool,
-    validate_overlay: bool,
+    options: ConfigurationOptions,
     mut validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let directory = backend.join("nacre/shell-tools");
@@ -669,14 +674,10 @@ fn prepare_configuration_with_collections(
         ));
     }
     fs::write(config.join("config.kdl"), &text)?;
-    if workspace_collections {
-        fs::write(
-            config.join("nacre-niri.kdl"),
-            crate::compositor_config::collection_overlay(),
-        )?;
-    } else {
-        let _ = fs::remove_file(config.join("nacre-niri.kdl"));
-    }
+    fs::write(
+        config.join("nacre-niri.kdl"),
+        crate::compositor_config::collection_overlay(),
+    )?;
     for file in fs::read_dir(&config)? {
         fs::set_permissions(file?.path(), fs::Permissions::from_mode(0o600))?;
     }
@@ -693,10 +694,10 @@ fn prepare_configuration_with_collections(
         fs::write(config.join("config.kdl"), plain)?;
         validate(&config.join("config.kdl"))?;
     }
-    if workspace_collections && validate_overlay {
+    if options.validate_overlay {
         validate(&config.join("nacre-niri.kdl"))?;
     }
-    if stock {
+    if options.stock {
         let marker = destination.join("stock-niri");
         fs::write(&marker, "Prepared with --stock-niri\n")?;
         fs::set_permissions(marker, fs::Permissions::from_mode(0o600))?;
@@ -823,10 +824,12 @@ pub fn prepare(
         paths,
         &profile,
         &keyboard,
-        stock,
-        compositor
-            .file_name()
-            .is_some_and(|name| name == std::ffi::OsStr::new("nacre-niri")),
+        ConfigurationOptions {
+            stock,
+            validate_overlay: compositor
+                .file_name()
+                .is_some_and(|name| name == std::ffi::OsStr::new("nacre-niri")),
+        },
         |config| {
             let status = std::process::Command::new(compositor)
                 .args(["validate", "-c"])
@@ -870,20 +873,17 @@ fn prepare_staged_configuration(
     paths: &Paths,
     profile: &Value,
     keyboard: &Value,
-    stock: bool,
-    validate_overlay: bool,
+    options: ConfigurationOptions,
     validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let candidate = tempfile::tempdir_in(destination)?;
-    prepare_configuration_with_collections(
+    prepare_configuration_inner(
         backend,
         candidate.path(),
         paths,
         profile,
         keyboard,
-        stock,
-        true,
-        validate_overlay,
+        options,
         validate,
     )?;
     // Validation finishes against the complete candidate tree before any live
@@ -903,7 +903,7 @@ fn prepare_staged_configuration(
         }
     }
     refresh_tree(&candidate_config, &final_config)?;
-    if stock {
+    if options.stock {
         let marker = tempfile::NamedTempFile::new_in(destination)?;
         crate::niri_session_stage::copied(&candidate.path().join("stock-niri"), marker.path())?;
         marker
@@ -1305,7 +1305,6 @@ mod tests {
     fn prepare_with_custom(
         custom: Option<&str>,
         fail_with_custom: bool,
-        workspace_collections: bool,
     ) -> Result<(tempfile::TempDir, usize)> {
         let reference: Value = serde_json::from_str(include_str!(
             "../tests/fixtures/niri-session-preparation-reference.json"
@@ -1334,15 +1333,16 @@ mod tests {
             "// Generated from compositor-contract.json; edit the neutral source.\nbinds {\n    // N0110 native collection bindings begin\n    Super+Ctrl+Alt+Tab { focus-collection-next; }\n    // N0110 native collection bindings end\n}\n",
         )?;
         let mut calls = 0;
-        prepare_configuration_with_collections(
+        prepare_configuration_inner(
             &backend,
             &destination,
             &paths,
             &case["profile"],
             &case["keyboard"],
-            false,
-            workspace_collections,
-            false,
+            ConfigurationOptions {
+                stock: false,
+                validate_overlay: false,
+            },
             |config| {
                 calls += 1;
                 if fail_with_custom && fs::read_to_string(config)?.contains("custom.kdl") {
@@ -1363,7 +1363,7 @@ mod tests {
     fn custom_binds_override_generated_ones_and_are_included_last() -> Result<()> {
         let user =
             "binds {\n    Super+Shift+S { close-window; }\n    Super+Tab { toggle-overview; }\n}\n";
-        let (home, calls) = prepare_with_custom(Some(user), false, false)?;
+        let (home, calls) = prepare_with_custom(Some(user), false)?;
         assert_eq!(calls, 1);
         let root = staged(&home, "config.kdl")?;
         let custom = home.path().join(".config/nacre/niri/custom.kdl");
@@ -1382,9 +1382,8 @@ mod tests {
         let (home, _) = prepare_with_custom(
             Some("binds {\n    Super+F9 { close-window; }\n}\n"),
             false,
-            false,
         )?;
-        let (plain, _) = prepare_with_custom(None, false, false)?;
+        let (plain, _) = prepare_with_custom(None, false)?;
         assert_eq!(
             staged(&home, "bindings.kdl")?,
             staged(&plain, "bindings.kdl")?
@@ -1395,10 +1394,10 @@ mod tests {
     #[test]
     fn invalid_custom_falls_back_to_the_plain_session() -> Result<()> {
         let user = "binds {\n    Super+Shift+S { close-window; }\n}\n";
-        let (home, calls) = prepare_with_custom(Some(user), true, false)?;
+        let (home, calls) = prepare_with_custom(Some(user), true)?;
         assert_eq!(calls, 1);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
-        let (plain, _) = prepare_with_custom(None, false, false)?;
+        let (plain, _) = prepare_with_custom(None, false)?;
         assert_eq!(
             staged(&home, "bindings.kdl")?,
             staged(&plain, "bindings.kdl")?
@@ -1407,7 +1406,7 @@ mod tests {
     }
     #[test]
     fn missing_custom_adds_no_include() -> Result<()> {
-        let (home, calls) = prepare_with_custom(None, true, false)?;
+        let (home, calls) = prepare_with_custom(None, true)?;
         assert_eq!(calls, 1);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
         Ok(())
@@ -1415,7 +1414,7 @@ mod tests {
 
     #[test]
     fn fork_overlay_keeps_collection_actions_out_of_stock_config() -> Result<()> {
-        let (home, calls) = prepare_with_custom(None, false, true)?;
+        let (home, calls) = prepare_with_custom(None, false)?;
         assert_eq!(calls, 2);
         let shared = staged(&home, "config.kdl")?;
         let bindings = staged(&home, "bindings.kdl")?;
@@ -1470,8 +1469,10 @@ mod tests {
             &paths,
             &case["profile"],
             &case["keyboard"],
-            false,
-            false,
+            ConfigurationOptions {
+                stock: false,
+                validate_overlay: false,
+            },
             |_| Err("invalid candidate".into()),
         );
         assert!(rejected.is_err());
@@ -1483,8 +1484,10 @@ mod tests {
             &paths,
             &case["profile"],
             &case["keyboard"],
-            false,
-            false,
+            ConfigurationOptions {
+                stock: false,
+                validate_overlay: false,
+            },
             |candidate| {
                 assert!(fs::read_to_string(&root)?.contains("previous config"));
                 assert!(fs::read_to_string(candidate)?.contains("include"));
