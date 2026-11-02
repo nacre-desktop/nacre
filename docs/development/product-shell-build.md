@@ -9,17 +9,17 @@ shape (`bin/{nacre-shell,bead-wallpaper-video,nacre-wallpaper-decode}` plus
 `shell/`):
 
 ```sh
-cargo build --locked --release -p nacre-shell \
+nice -n 10 cargo build --locked --release -j2 -p nacre-shell \
   --bin nacre-shell \
   --bin bead-wallpaper-video \
   --bin nacre-wallpaper-decode
 
 stage="$PWD/target/product-shell"
-mkdir -p "$stage/bin"
+mkdir -p "$stage/bin" "$stage/shell"
 install -m 755 target/release/nacre-shell "$stage/bin/nacre-shell"
 install -m 755 target/release/bead-wallpaper-video "$stage/bin/bead-wallpaper-video"
 install -m 755 target/release/nacre-wallpaper-decode "$stage/bin/nacre-wallpaper-decode"
-cp -a shell "$stage/shell"
+cp -a shell/. "$stage/shell/"
 ```
 
 For local development only, temporarily add this example to the root

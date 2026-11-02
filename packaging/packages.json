@@ -102,7 +102,9 @@
       "ttf-dejavu",
       "python-dbus-next",
       "python-jsonschema",
-      "bubblewrap"
+      "bubblewrap",
+      "curl",
+      "unzip"
     ],
     "core_optional": [
       "nacre-session-niri: Nacre session and dependencies for Niri",
