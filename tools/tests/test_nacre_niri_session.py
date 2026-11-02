@@ -126,6 +126,11 @@ class NacreNiriSessionTests(unittest.TestCase):
             prepared = home / ".local/share/nacre/niri-on-pc/session"
             (prepared / "config").mkdir(parents=True)
             (prepared / "source-revision").write_text("fixture\n")
+            wrapper_dir = home / ".config/uwsm/niri-session-bin"
+            wrapper_dir.mkdir(parents=True)
+            loginctl = wrapper_dir / "loginctl"
+            loginctl.write_text("#!/bin/sh\nexit 0\n")
+            loginctl.chmod(0o755)
 
             def source(fork):
                 environment = {
@@ -138,7 +143,7 @@ class NacreNiriSessionTests(unittest.TestCase):
                     [
                         "/bin/sh",
                         "-c",
-                        '. "$1"; printf "NIRI_CONFIG=%s\\nPATH=%s\\nNACRE_COMPOSITOR=%s\\n" "$NIRI_CONFIG" "$PATH" "$NACRE_COMPOSITOR"',
+                        '. "$1"; printf "NIRI_CONFIG=%s\\nPATH=%s\\nNACRE_COMPOSITOR=%s\\nLOGINCTL=%s\\n" "$NIRI_CONFIG" "$PATH" "$NACRE_COMPOSITOR" "$(command -v loginctl)"',
                         "probe",
                         str(script),
                     ],
@@ -152,12 +157,17 @@ class NacreNiriSessionTests(unittest.TestCase):
             stock = source(False)
             fork = source(True)
             shared = str(prepared / "config/config.kdl")
+            wrapped = str(wrapper_dir)
             self.assertEqual(stock["NIRI_CONFIG"], shared)
-            self.assertTrue(
-                stock["PATH"].startswith(str(home / ".config/uwsm/niri-session-bin"))
-            )
+            self.assertTrue(stock["PATH"].startswith(wrapped))
+            self.assertEqual(stock["LOGINCTL"], str(loginctl))
             self.assertEqual(fork["NIRI_CONFIG"], shared)
-            self.assertEqual(fork["PATH"], "/fixture/bin")
+            self.assertTrue(fork["PATH"].startswith(wrapped))
+            self.assertEqual(fork["LOGINCTL"], str(loginctl))
+            self.assertEqual(
+                package_niri.command(Path(shared), "nacre-niri")[6],
+                "/usr/bin/nacre-niri",
+            )
 
 
 if __name__ == "__main__":
