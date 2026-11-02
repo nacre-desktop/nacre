@@ -383,9 +383,8 @@ pub fn render_with_capabilities(
     backend: &str,
     workspace_collections: bool,
 ) -> Result<Value> {
-    let mut generated = render(contract, directory, backend)?;
-    augment_niri_render(&mut generated, backend == "niri" && workspace_collections)?;
-    Ok(generated)
+    let generated = render(contract, directory, backend)?;
+    augment_niri_render(generated, backend == "niri" && workspace_collections)
 }
 
 fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Result<Value> {
@@ -520,20 +519,46 @@ mod tests {
         )?)?;
         let stock = render_with_capabilities(&contract, &directory, "niri", false)?;
         let stock_bindings = stock["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
-        assert!(!stock_bindings.contains("focus-collection-next"));
+        for action in [
+            "focus-collection-next",
+            "focus-collection-previous",
+            "create-collection",
+            "move-window-to-collection-next",
+            "move-window-to-collection-previous",
+        ] {
+            assert!(!stock_bindings.contains(action), "stock emitted {action}");
+        }
         let native = render_with_capabilities(&contract, &directory, "niri", true)?;
         let native_bindings = native["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
-        for (combo, action) in [
+        let expected = [
             ("Super+Ctrl+Alt+Tab", "focus-collection-next"),
             ("Super+Ctrl+Alt+Shift+Tab", "focus-collection-previous"),
             ("Super+Ctrl+N", "create-collection"),
             ("Super+Ctrl+Shift+Page_Down", "move-window-to-collection-next"),
             ("Super+Ctrl+Shift+Page_Up", "move-window-to-collection-previous"),
-        ] {
-            assert!(native_bindings.contains(&format!("{combo} repeat=false")));
-            assert!(native_bindings.contains(action));
+        ];
+        let document: kdl::KdlDocument = native_bindings.parse()?;
+        let block = document
+            .nodes()
+            .iter()
+            .find(|node| node.name().value() == "binds")
+            .ok_or("Missing binds block")?;
+        let binds: Vec<_> = block
+            .children()
+            .into_iter()
+            .flat_map(|children| children.nodes())
+            .collect();
+        for (combo, action) in expected {
+            let binding = binds
+                .iter()
+                .find(|node| node.name().value() == combo)
+                .ok_or("Missing native collection binding")?;
+            let action_node = binding
+                .children()
+                .and_then(|children| children.nodes().first())
+                .ok_or("Missing native collection action")?;
+            assert_eq!(action_node.name().value(), action);
         }
-        assert!(native_bindings.ends_with("}\n"));
         let alias_collision = "binds {\n    Mod+Ctrl+N { spawn \"custom\"; }\n}\n";
         assert!(niri::with_collection_bindings(alias_collision).is_err());
         Ok(())
