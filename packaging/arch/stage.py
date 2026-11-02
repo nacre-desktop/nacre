@@ -365,7 +365,13 @@ def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None)
     shell = bundle / "shell"
     if not (shell / "palette.json").is_file() or not (shell / "bar").is_dir():
         raise FileNotFoundError(f"Incomplete matching shell tree: {shell}")
-    shutil.copytree(shell, destination / "shell", dirs_exist_ok=True)
+    staged_shell = destination / "shell"
+    shutil.copytree(shell, staged_shell, dirs_exist_ok=True)
+    for path in (staged_shell, *staged_shell.rglob("*")):
+        if path.is_dir():
+            path.chmod(0o755)
+        elif path.is_file():
+            path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
     notices = destination.parents[2] / "share/licenses/nacre/bead-shell"
     if product_root is not None:
         for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):

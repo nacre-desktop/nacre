@@ -30,6 +30,10 @@ class UiShellBundleTests(unittest.TestCase):
             (bundle / "shell/bar").mkdir(parents=True)
             (bundle / "shell/palette.json").write_text("{}\n")
             (bundle / "shell/bar/main.luau").write_text("return {}\n")
+            (bundle / "shell").chmod(0o775)
+            (bundle / "shell/bar").chmod(0o775)
+            (bundle / "shell/palette.json").chmod(0o664)
+            (bundle / "shell/bar/main.luau").chmod(0o775)
             product = root / "source/bead-shell"
             product.mkdir(parents=True)
             for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
@@ -53,6 +57,22 @@ class UiShellBundleTests(unittest.TestCase):
                 (private / "shell/bar/main.luau").read_text(), "return {}\n"
             )
             self.assertEqual((private / "shell/palette.json").read_text(), "{}\n")
+            self.assertEqual((private / "shell").stat().st_mode & 0o777, 0o755)
+            self.assertEqual((private / "shell/bar").stat().st_mode & 0o777, 0o755)
+            self.assertEqual(
+                (private / "shell/palette.json").stat().st_mode & 0o777, 0o644
+            )
+            self.assertEqual(
+                (private / "shell/bar/main.luau").stat().st_mode & 0o777, 0o755
+            )
+            self.assertEqual((bundle / "shell").stat().st_mode & 0o777, 0o775)
+            self.assertEqual((bundle / "shell/bar").stat().st_mode & 0o777, 0o775)
+            self.assertEqual(
+                (bundle / "shell/palette.json").stat().st_mode & 0o777, 0o664
+            )
+            self.assertEqual(
+                (bundle / "shell/bar/main.luau").stat().st_mode & 0o777, 0o775
+            )
             self.assertFalse((dest / "usr/bin/nacre-shell").exists())
             for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
                 self.assertEqual(
