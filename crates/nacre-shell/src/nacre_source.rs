@@ -1299,7 +1299,7 @@ pub fn check(path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
         .ok_or("workspace map missing")?
         .len();
     let label = format!("Workspaces: {count}");
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../bead-test/tests/fixtures");
+    let root = PathBuf::from(env!("BEAD_FRAMEWORK_ROOT")).join("crates/bead-test/tests/fixtures");
     let mut ui = bead_test::Harness::load(
         &root,
         std::path::Path::new("main.luau"),

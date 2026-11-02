@@ -19,7 +19,7 @@ pub(crate) fn root() -> std::path::PathBuf {
 }
 pub(crate) fn meter() -> Meter {
     Meter::fixed(vec![
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../bead-test/fonts/IBMPlexSans.ttf"),
+        Path::new(env!("BEAD_FRAMEWORK_ROOT")).join("crates/bead-test/fonts/IBMPlexSans.ttf"),
     ])
 }
 pub(crate) fn state(busy: bool, status: &str, question: Option<Json>) -> Json {

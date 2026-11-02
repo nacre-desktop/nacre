@@ -23,6 +23,9 @@ fn copy_tree(from: &Path, to: &Path) {
 fn repository() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
+fn bead_repository() -> PathBuf {
+    PathBuf::from(env!("BEAD_FRAMEWORK_ROOT"))
+}
 fn app(root: &Path, selected: &str) -> Harness {
     crate::i18n::init();
     let mut values = crate::desktop::values(&Default::default(), "");
@@ -83,12 +86,12 @@ fn example_plugin_enables_renders_unloads_and_a_faulting_plugin_is_switched_off(
     copy_tree(&repository().join("shell"), &root);
     let user = temp.join("data/plugins");
     copy_tree(
-        &repository().join("examples/plugins/hello"),
+        &bead_repository().join("examples/plugins/hello"),
         &user.join("hello"),
     );
     // Same widget, but it reads a store it never declared.
     copy_tree(
-        &repository().join("examples/plugins/hello"),
+        &bead_repository().join("examples/plugins/hello"),
         &user.join("nosy"),
     );
     let manifest = std::fs::read_to_string(user.join("nosy/plugin.toml")).unwrap();
@@ -166,7 +169,7 @@ fn launcher_plugin_mode_installs_a_local_folder_and_lists_its_access() {
     let root = temp.join("shell");
     std::fs::create_dir_all(&root).unwrap();
     let source = temp.join("src/hello");
-    copy_tree(&repository().join("examples/plugins/hello"), &source);
+    copy_tree(&bead_repository().join("examples/plugins/hello"), &source);
     let config = plugins::Config {
         system: Vec::new(),
         user: Some(temp.join("data/plugins")),
