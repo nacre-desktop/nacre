@@ -116,7 +116,9 @@ class NacreNiriSessionTests(unittest.TestCase):
             managed_dir = home / ".local/share/nacre/niri-on-pc/session/config"
             managed_dir.mkdir(parents=True)
             managed_bindings = managed_dir / "bindings.kdl"
-            generated = "// generated stock bindings\nbinds { Super+Q { close-window; } }\n"
+            generated = (
+                "// generated stock bindings\nbinds { Super+Q { close-window; } }\n"
+            )
             standard_bindings.write_text(generated)
             managed_bindings.write_text(generated)
             custom = home / ".config/nacre/niri/custom.kdl"
@@ -141,7 +143,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                 custom.read_text(), "binds { Super+F12 { close-window; } }\n"
             )
 
-    def test_fork_session_prefers_prepared_overlay_and_falls_back_to_shared_config(self):
+    def test_fork_session_prefers_prepared_overlay_and_falls_back_to_shared_config(
+        self,
+    ):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             prepared = home / ".local/share/nacre/niri-on-pc/session"
@@ -150,7 +154,9 @@ class NacreNiriSessionTests(unittest.TestCase):
             config.write_text("// shared generated configuration\n")
             (prepared / "source-revision").write_text("a" * 40)
             overlay = config.with_name("nacre-niri.kdl")
-            overlay.write_text('include "config.kdl"\nbinds { Super+Ctrl+Tab { focus-collection-next; } }\n')
+            overlay.write_text(
+                'include "config.kdl"\nbinds { Super+Ctrl+Tab { focus-collection-next; } }\n'
+            )
             with (
                 patch.object(package_niri, "validate") as validate,
                 patch.object(package_niri.subprocess, "run") as run,

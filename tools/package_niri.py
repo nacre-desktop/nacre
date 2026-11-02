@@ -27,13 +27,13 @@ TOOLKIT_ENVIRONMENT = {
     "XCURSOR_SIZE": "24",
 }
 COLLECTION_BINDINGS = (
-    'binds {\n'
+    "binds {\n"
     '    Super+Ctrl+Tab repeat=false hotkey-overlay-title="Nacre:collection-next" { focus-collection-next; }\n'
     '    Super+Ctrl+Shift+Tab repeat=false hotkey-overlay-title="Nacre:collection-previous" { focus-collection-previous; }\n'
     '    Super+Ctrl+N repeat=false hotkey-overlay-title="Nacre:collection-create" { create-collection; }\n'
     '    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title="Nacre:collection-move-next" { move-window-to-collection-next; }\n'
     '    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title="Nacre:collection-move-previous" { move-window-to-collection-previous; }\n'
-    '}\n'
+    "}\n"
 )
 
 def module(path, name):
