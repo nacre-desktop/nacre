@@ -609,7 +609,7 @@ impl Session {
                         Ok(v)
                     })?;
                 }
-                if changed && self.initialized && should_restore_reconnected(native_collections) {
+                if changed && self.initialized && !native_collections {
                     let focus = current["activeWorkspace"]["id"].clone();
                     let focus_window = current["activeWorkspace"]["activeWindowId"].clone();
                     for output in &reconnected {
@@ -702,10 +702,6 @@ fn focus_view(io: &mut Native, workspace: &str, window: &Value) -> Result<()> {
     }
     Ok(())
 }
-fn should_restore_reconnected(native_collections: bool) -> bool {
-    !native_collections
-}
-
 pub fn bring(paths: &Paths) -> Result<i32> {
     let _lock = files::lock(&paths.state.join("monitor-workspaces.lock"))?;
     let ledger: Value =
@@ -868,11 +864,6 @@ mod tests {
         value["workspaces"][0]["activeWindowId"] = Value::Null;
         session.observe(&mut value, &desktop);
         assert_eq!(session.views["B"].1, "niri-window:4");
-    }
-    #[test]
-    fn native_collections_replace_only_the_legacy_reconnect_focus_restore() {
-        assert!(should_restore_reconnected(false));
-        assert!(!should_restore_reconnected(true));
     }
     #[test]
     fn hidden_workspace_visitor_semantics_change_only_with_native_collections() {
