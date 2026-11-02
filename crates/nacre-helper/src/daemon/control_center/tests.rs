@@ -295,6 +295,46 @@ fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
 }
 
 #[test]
+fn absolute_volume_write_does_not_publish_an_optimistic_audio_level() {
+    let _turn = audio_turn();
+    run(async {
+        let f = Fixture::new();
+        f.hub
+            .borrow_mut()
+            .publish(
+                "audio",
+                json!({
+                    "default_output": "alsa_output.fake",
+                    "nodes": {
+                        "items": {"alsa_output.fake": {"volume": 1.0}},
+                        "order": ["alsa_output.fake"]
+                    }
+                }),
+            )
+            .unwrap();
+        let before = f.hub.borrow().snapshot("audio").unwrap();
+        let mut notices = f.hub.borrow().observe();
+
+        f.call("audio.set_volume", json!({"target":"sink","value":0.008}))
+            .await
+            .unwrap();
+
+        assert_eq!(
+            f.text("wpctl.log"),
+            "set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.2000\n"
+        );
+        assert_eq!(f.hub.borrow().snapshot("audio").unwrap(), before);
+        let audio_changed = std::iter::from_fn(|| notices.try_recv().ok()).any(|notice| {
+            matches!(
+                notice,
+                crate::daemon::hub::Notice::Changed { topic, .. } if topic == "audio"
+            )
+        });
+        assert!(!audio_changed);
+    });
+}
+
+#[test]
 fn audio_refuses_bad_targets_missing_nodes_and_vanished_devices() {
     let _turn = audio_turn();
     run(async {

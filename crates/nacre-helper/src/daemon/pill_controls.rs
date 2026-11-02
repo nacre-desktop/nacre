@@ -435,7 +435,9 @@ pub async fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value,
 }
 
 /// The step always ran on `@DEFAULT_AUDIO_SINK@`, so the OSD is published unconditionally,
-/// also when the level did not change at 0 % or 100 %.
+/// also when the level did not change at 0 % or 100 %. The audio topic remains owned by the
+/// PipeWire watcher: this cached step result can precede the write and must not race a slider
+/// write's authoritative readback.
 pub(crate) fn publish_audio_step(
     hub: &Shared,
     outcome: &AudioStepOutcome,
@@ -449,19 +451,6 @@ pub(crate) fn publish_audio_step(
         &outcome.label,
         &outcome.node_name,
     );
-    let snapshot = hub.borrow().snapshot("audio");
-    if let Some(mut state) = snapshot {
-        if let Some(node) = state["nodes"]["items"].get_mut(&outcome.node_name) {
-            node["volume"] = json!(outcome.linear);
-            if let Some(readback) = node.get_mut("readback") {
-                readback["linear_volume"] = json!(outcome.linear);
-                readback["perceptual_volume"] = json!(value);
-            }
-            hub.borrow_mut()
-                .publish("audio", state)
-                .map_err(|_| action_error())?;
-        }
-    }
     if let Some(key_ms) = key_ms {
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -975,15 +964,27 @@ mod tests {
     }
 
     #[test]
-    fn step_at_the_limit_still_publishes_the_osd_without_an_audio_snapshot_entry() {
+    fn step_at_the_limit_publishes_osd_without_overwriting_audio_readback() {
         let hub = super::super::hub::Hub::new("step-limit".into(), false, Duration::from_millis(1))
             .shared();
         hub.borrow_mut()
             .publish(
                 "audio",
-                json!({"default_output":"other","nodes":{"items":{},"order":[]}}),
+                json!({
+                    "default_output": "alsa_output.pro-output-0",
+                    "nodes": {
+                        "items": {
+                            "alsa_output.pro-output-0": {
+                                "volume": 0.2,
+                                "readback": {"linear_volume": 0.2}
+                            }
+                        },
+                        "order": ["alsa_output.pro-output-0"]
+                    }
+                }),
             )
             .unwrap();
+        let prior_audio = hub.borrow().snapshot("audio").unwrap();
         let mut notices = hub.borrow().observe();
         let outcome = AudioStepOutcome {
             node_name: "alsa_output.pro-output-0".into(),
@@ -993,13 +994,24 @@ mod tests {
             muted: true,
         };
         publish_audio_step(&hub, &outcome, Some(1)).unwrap();
-        let mut seen = false;
+        let (mut seen, mut audio_changed) = (false, false);
         while let Ok(notice) = notices.try_recv() {
-            if let super::super::hub::Notice::Event { topic, data, .. } = notice {
-                seen |= topic == "osd" && data["value"] == 1.0 && data["muted"] == true;
+            match notice {
+                super::super::hub::Notice::Event { topic, data, .. } => {
+                    seen |= topic == "osd" && data["value"] == 1.0 && data["muted"] == true;
+                }
+                super::super::hub::Notice::Changed { topic, .. } => {
+                    audio_changed |= topic == "audio";
+                }
+                super::super::hub::Notice::Resync(_) => {}
             }
         }
         assert!(seen, "a step at 100 % shows the pill");
+        assert!(
+            !audio_changed,
+            "a cached key step never publishes audio state"
+        );
+        assert_eq!(hub.borrow().snapshot("audio").unwrap(), prior_audio);
     }
 
     #[test]
