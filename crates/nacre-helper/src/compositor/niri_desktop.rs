@@ -460,7 +460,7 @@ mod tests {
         let host = session.join("host.kdl");
         fs::write(&loader, "include \"host.kdl\"\ninclude \"desktop.kdl\"\n")?;
         let original_desktop = "input { touchpad { scroll-factor 0.35; } }\n";
-        let original_host = "layout { gaps 14; }\ninput { mouse { scroll-factor 1.5; natural-scroll; } touchpad { scroll-factor 0.35; tap; } }\noutput \"DP-1\" { scale 1.5; }\nbinds { Super+Q { close-window; }; }\n";
+        let original_host = "layout { gaps 14; }\ninput {\n    mouse { scroll-factor 1.5; natural-scroll; }\n    touchpad { scroll-factor 0.35; tap; }\n}\noutput \"DP-1\" { scale 1.5; }\nbinds { Super+Q { close-window; }; }\n";
         fs::write(&desktop, original_desktop)?;
         fs::write(&host, original_host)?;
         fs::create_dir_all(&paths.config)?;
@@ -546,7 +546,7 @@ mod tests {
     }
     #[test]
     fn host_scroll_patch_preserves_non_scroll_settings() {
-        let source = "layout { gaps 14; }\ninput { mouse { natural-scroll; scroll-factor 1.5; } touchpad { tap; scroll-factor 0.35; } }\noutput \"DP-1\" { scale 1.5; }\nbinds { Super+Q { close-window; }; }\n";
+        let source = "layout { gaps 14; }\ninput {\n    mouse { natural-scroll; scroll-factor 1.5; }\n    touchpad { tap; scroll-factor 0.35; }\n}\noutput \"DP-1\" { scale 1.5; }\nbinds { Super+Q { close-window; }; }\n";
         let rendered = update_host_scroll_factors(source, 2.25, 0.55).unwrap();
         assert!(rendered.contains("gaps 14"));
         assert!(rendered.contains("natural-scroll"));

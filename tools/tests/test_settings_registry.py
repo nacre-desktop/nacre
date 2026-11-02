@@ -25,13 +25,53 @@ class SettingsRegistryTests(unittest.TestCase):
         }
         setting = settings["keyboard-mouse.touchpad.scrollSpeed"]
         self.assertEqual(setting["store"], {"id": "desktop", "key": ["scrollSpeed"]})
-        self.assertEqual(setting["default"], 0.75)
+        self.assertEqual(setting["default"], 0.35)
         self.assertEqual(setting["range"], {"min": 0.25, "max": 2.0, "step": 0.05})
         self.assertEqual(setting["apply"], "instant")
         self.assertEqual(
             setting["dependsOn"], "keyboard-mouse.touchpad.touchpadEnabled"
         )
         self.assertIn({"capability": "touchpad"}, setting["visibleWhen"]["all"])
+
+    def test_scroll_controls_are_adjacent_and_mouse_does_not_require_touchpad(self):
+        catalog_data = catalog()
+        sections = {
+            row["id"]: row
+            for fragment in catalog_data
+            for row in fragment.get("sections", [])
+        }
+        settings = {
+            row["id"]: row
+            for fragment in catalog_data
+            for row in fragment.get("settings", [])
+        }
+        scrolling = sections["keyboard-mouse.scrolling"]
+        self.assertEqual(scrolling["order"], 15)
+        self.assertEqual(scrolling["visibleWhen"]["all"], [
+            {"capability": "input.controls"},
+            {"capability": "input.touchpadSpeed"},
+        ])
+        touchpad = settings["keyboard-mouse.touchpad.scrollSpeed"]
+        mouse = settings["keyboard-mouse.mouse.mouseScrollSpeed"]
+        english = json.loads((ROOT / "nacre/shell/i18n/en.json").read_text())
+        self.assertEqual(touchpad["section"], scrolling["id"])
+        self.assertEqual(touchpad["default"], 0.35)
+        self.assertEqual(touchpad["range"], {"min": 0.25, "max": 2.0, "step": 0.05})
+        self.assertEqual(mouse["section"], scrolling["id"])
+        self.assertEqual(mouse["store"], {"id": "desktop", "key": ["mouseScrollSpeed"]})
+        self.assertEqual(mouse["default"], 1.5)
+        self.assertEqual(mouse["range"], {"min": 0.5, "max": 3.0, "step": 0.1})
+        self.assertEqual(mouse["visibleWhen"], {"capability": "input.controls"})
+        self.assertNotIn("dependsOn", mouse)
+        self.assertNotIn({"capability": "touchpad"}, mouse.get("visibleWhen", {}).get("all", []))
+        self.assertEqual(
+            english["settings.registry.keyboard-mouse.touchpad.scrollSpeed.label"],
+            "Touchpad scroll speed",
+        )
+        self.assertEqual(
+            english["settings.registry.keyboard-mouse.mouse.mouseScrollSpeed.label"],
+            "Mouse wheel scroll speed",
+        )
 
     def test_dolphin_theme_switch_matches_the_native_style_reader(self):
         import re
