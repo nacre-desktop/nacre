@@ -23,6 +23,21 @@ class CompositorBoundaryTests(unittest.TestCase):
             (root / "new.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
             self.assertEqual(len(boundary.check(root)), 1)
 
+    def test_imported_proofs_do_not_exempt_runtime_paths_with_the_same_name(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name, is_proof in (
+                ("bead-shell/spikes/capture.py", True),
+                ("bead-shell/ssh-placeholder/spikes/capture.py", True),
+                ("tools/capture.py", False),
+                ("nacre/shell-tools/bead-shell/capture.py", False),
+            ):
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('command=["niri","msg","windows"]\n')
+                self.assertEqual(bool(boundary.violations(path, root)), not is_proof)
+            self.assertEqual(len(boundary.check(root)), 2)
+
     def test_settings_review_exception_is_one_explicit_fixture(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

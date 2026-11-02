@@ -52,9 +52,16 @@ def native_program(value):
     return isinstance(value, str) and Path(value).name in NATIVE_PROGRAMS
 
 
+def excluded(path, root):
+    relative = path.relative_to(root)
+    # Imported history and private nested proofs are not installed dispatchers.
+    # Limit the exemption to this top-level archive, never an inner runtime path.
+    return relative.parts[:1] == ("bead-shell",) or bool(set(relative.parts) & EXCLUDED)
+
+
 def violations(path, root=ROOT):
     relative = path.relative_to(root).as_posix()
-    if allowed(relative) or set(path.relative_to(root).parts) & EXCLUDED:
+    if allowed(relative) or excluded(path, root):
         return []
     if (
         path.suffix not in (".py", ".qml", ".js", ".lua", ".json", ".sh", ".fish")
@@ -94,7 +101,7 @@ def violations(path, root=ROOT):
 def check(root=ROOT):
     failures = []
     for path in sorted(root.rglob("*")):
-        if path.is_file() and not set(path.relative_to(root).parts) & EXCLUDED:
+        if path.is_file() and not excluded(path, root):
             failures.extend(violations(path, root))
     return failures
 
