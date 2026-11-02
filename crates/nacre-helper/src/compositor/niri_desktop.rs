@@ -24,15 +24,24 @@ fn update_host_scroll_factors(source: &str, mouse: f64, touchpad: f64) -> Result
             node.set_children(kdl::KdlDocument::new());
             document.nodes_mut().push(node);
         }
-        let device = document.get_mut(device).ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
+        let device = document
+            .get_mut(device)
+            .ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
         if device.children().is_none() {
             device.set_children(kdl::KdlDocument::new());
         }
-        let children = device.children_mut().as_mut().ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
+        let children = device
+            .children_mut()
+            .as_mut()
+            .ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
         if children.get("scroll-factor").is_none() {
-            children.nodes_mut().push(kdl::KdlNode::new("scroll-factor"));
+            children
+                .nodes_mut()
+                .push(kdl::KdlNode::new("scroll-factor"));
         }
-        let factor = children.get_mut("scroll-factor").ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
+        let factor = children
+            .get_mut("scroll-factor")
+            .ok_or_else(|| error("ValueError", "Invalid generated input configuration"))?;
         factor.entries_mut().clear();
         factor.entries_mut().push(kdl::KdlEntry::new(value));
         Ok(())
@@ -40,11 +49,19 @@ fn update_host_scroll_factors(source: &str, mouse: f64, touchpad: f64) -> Result
     let mut document: kdl::KdlDocument = source
         .parse()
         .map_err(|value: kdl::KdlError| error("ValueError", value.to_string()))?;
-    let input = document.get_mut("input").ok_or_else(|| error("ValueError", "Managed host input configuration is missing"))?;
+    let input = document
+        .get_mut("input")
+        .ok_or_else(|| error("ValueError", "Managed host input configuration is missing"))?;
     if input.children().is_none() {
-        return Err(error("ValueError", "Managed host input configuration is missing"));
+        return Err(error(
+            "ValueError",
+            "Managed host input configuration is missing",
+        ));
     }
-    let input = input.children_mut().as_mut().ok_or_else(|| error("ValueError", "Managed host input configuration is missing"))?;
+    let input = input
+        .children_mut()
+        .as_mut()
+        .ok_or_else(|| error("ValueError", "Managed host input configuration is missing"))?;
     set_factor(input, "mouse", mouse)?;
     set_factor(input, "touchpad", touchpad)?;
     Ok(document.to_string())
@@ -75,7 +92,10 @@ impl Configuration {
             host: None,
         }
     }
-    pub fn active(paths: &crate::paths::Paths, env: &std::collections::BTreeMap<String, String>) -> Self {
+    pub fn active(
+        paths: &crate::paths::Paths,
+        env: &std::collections::BTreeMap<String, String>,
+    ) -> Self {
         let mut loader = super::niri_bindings::loader(paths, env);
         let explicit = ["NACRE_NIRI_CONFIG", "NIRI_CONFIG"]
             .iter()
@@ -90,7 +110,10 @@ impl Configuration {
         let files = super::niri_bindings::source_files(&loader, &paths.home);
         let included = |name: &str| {
             let generated = session.join(name);
-            files.iter().any(|path| path == &generated).then_some(generated)
+            files
+                .iter()
+                .any(|path| path == &generated)
+                .then_some(generated)
         };
         let standard_desktop = paths.config.join("niri/desktop.kdl");
         let explicit_desktop = env
@@ -98,14 +121,15 @@ impl Configuration {
             .filter(|value| !value.is_empty())
             .map(PathBuf::from)
             .filter(|path| files.iter().any(|file| file == path));
-        let desktop = explicit_desktop.or_else(|| included("desktop.kdl")).or_else(|| {
-            files.iter().any(|path| path == &standard_desktop).then_some(standard_desktop)
-        });
-        let mut config = Self::new(
-            paths,
-            Some(&loader),
-            desktop.as_deref(),
-        );
+        let desktop = explicit_desktop
+            .or_else(|| included("desktop.kdl"))
+            .or_else(|| {
+                files
+                    .iter()
+                    .any(|path| path == &standard_desktop)
+                    .then_some(standard_desktop)
+            });
+        let mut config = Self::new(paths, Some(&loader), desktop.as_deref());
         // The session builder owns these generated siblings. A user's custom includes
         // are never treated as generated settings targets.
         if config.desktop.parent() == Some(session.as_path()) {
@@ -119,7 +143,10 @@ impl Configuration {
         }
         let files = super::niri_bindings::source_files(&self.loader, &self.home);
         if !files.iter().any(|path| path == &self.desktop)
-            || self.host.as_ref().is_some_and(|host| !files.iter().any(|path| path == host))
+            || self
+                .host
+                .as_ref()
+                .is_some_and(|host| !files.iter().any(|path| path == host))
         {
             return Err(error("RuntimeError","Managed niri desktop include missing; regenerate the isolated session configuration"));
         }
@@ -158,12 +185,23 @@ impl Configuration {
             .parent()
             .ok_or_else(|| error("ValueError", "Invalid desktop configuration path"))?;
         let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(io_error)?;
-        let previous = if self.desktop.exists() { Some(fs::read(&self.desktop).map_err(io_error)?) } else { None };
-        let desktop_permissions = fs::metadata(&self.desktop).ok().map(|metadata| metadata.permissions());
+        let previous = if self.desktop.exists() {
+            Some(fs::read(&self.desktop).map_err(io_error)?)
+        } else {
+            None
+        };
+        let desktop_permissions = fs::metadata(&self.desktop)
+            .ok()
+            .map(|metadata| metadata.permissions());
         if let Some(permissions) = &desktop_permissions {
-            temporary.as_file().set_permissions(permissions.clone()).map_err(io_error)?;
+            temporary
+                .as_file()
+                .set_permissions(permissions.clone())
+                .map_err(io_error)?;
         }
-        temporary.write_all(niri_config::desktop(&values)?.as_bytes()).map_err(io_error)?;
+        temporary
+            .write_all(niri_config::desktop(&values)?.as_bytes())
+            .map_err(io_error)?;
         let monitors = match values
             .get("compositorDisplays")
             .and_then(|value| value.get("niri"))
@@ -176,32 +214,77 @@ impl Configuration {
             .map_err(io_error)?;
         temporary.flush().map_err(io_error)?;
         runtime.validate(temporary.path(), timeout)?;
-        let (host_path, host_candidate, host_previous, host_permissions) = if let Some(path) = &self.host {
-            let mut candidate = tempfile::NamedTempFile::new_in(path.parent().ok_or_else(|| error("ValueError", "Invalid host configuration path"))?).map_err(io_error)?;
-            let previous = fs::read(path).map_err(io_error)?;
-            let permissions = fs::metadata(path).ok().map(|metadata| metadata.permissions());
-            if let Some(permissions) = &permissions {
-                candidate.as_file().set_permissions(permissions.clone()).map_err(io_error)?;
-            }
-            let mouse = values.get("mouseScrollSpeed").and_then(Value::as_f64).unwrap_or_else(crate::desktop_settings::mouse_scroll_speed_default);
-            let touchpad = values.get("scrollSpeed").and_then(Value::as_f64).unwrap_or_else(crate::desktop_settings::scroll_speed_default);
-            candidate.write_all(update_host_scroll_factors(std::str::from_utf8(&previous).map_err(|value| error("UnicodeDecodeError", value.to_string()))?, mouse, touchpad)?.as_bytes()).map_err(io_error)?;
-            candidate.flush().map_err(io_error)?;
-            runtime.validate(candidate.path(), timeout)?;
-            (Some(path.clone()), Some(candidate), Some(previous), permissions)
-        } else { (None, None, None, None) };
-        temporary.persist(&self.desktop).map_err(|value| io_error(value.error))?;
+        let (host_path, host_candidate, host_previous, host_permissions) =
+            if let Some(path) = &self.host {
+                let mut candidate = tempfile::NamedTempFile::new_in(
+                    path.parent()
+                        .ok_or_else(|| error("ValueError", "Invalid host configuration path"))?,
+                )
+                .map_err(io_error)?;
+                let previous = fs::read(path).map_err(io_error)?;
+                let permissions = fs::metadata(path)
+                    .ok()
+                    .map(|metadata| metadata.permissions());
+                if let Some(permissions) = &permissions {
+                    candidate
+                        .as_file()
+                        .set_permissions(permissions.clone())
+                        .map_err(io_error)?;
+                }
+                let mouse = values
+                    .get("mouseScrollSpeed")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(crate::desktop_settings::mouse_scroll_speed_default);
+                let touchpad = values
+                    .get("scrollSpeed")
+                    .and_then(Value::as_f64)
+                    .unwrap_or_else(crate::desktop_settings::scroll_speed_default);
+                candidate
+                    .write_all(
+                        update_host_scroll_factors(
+                            std::str::from_utf8(&previous)
+                                .map_err(|value| error("UnicodeDecodeError", value.to_string()))?,
+                            mouse,
+                            touchpad,
+                        )?
+                        .as_bytes(),
+                    )
+                    .map_err(io_error)?;
+                candidate.flush().map_err(io_error)?;
+                runtime.validate(candidate.path(), timeout)?;
+                (
+                    Some(path.clone()),
+                    Some(candidate),
+                    Some(previous),
+                    permissions,
+                )
+            } else {
+                (None, None, None, None)
+            };
+        temporary
+            .persist(&self.desktop)
+            .map_err(|value| io_error(value.error))?;
         if let (Some(path), Some(candidate)) = (&host_path, host_candidate) {
             if let Err(value) = candidate.persist(path) {
-                restore(&self.desktop, previous.as_deref(), desktop_permissions.as_ref())?;
+                restore(
+                    &self.desktop,
+                    previous.as_deref(),
+                    desktop_permissions.as_ref(),
+                )?;
                 return Err(io_error(value.error));
             }
         }
         match runtime.reload(timeout) {
             Ok(value) => Ok(value),
             Err(failure) => {
-                restore(&self.desktop, previous.as_deref(), desktop_permissions.as_ref())?;
-                if let Some(path) = host_path { restore(&path, host_previous.as_deref(), host_permissions.as_ref())?; }
+                restore(
+                    &self.desktop,
+                    previous.as_deref(),
+                    desktop_permissions.as_ref(),
+                )?;
+                if let Some(path) = host_path {
+                    restore(&path, host_previous.as_deref(), host_permissions.as_ref())?;
+                }
                 Err(failure)
             }
         }
@@ -210,14 +293,21 @@ impl Configuration {
 fn restore(path: &Path, bytes: Option<&[u8]>, permissions: Option<&fs::Permissions>) -> Result<()> {
     match bytes {
         Some(bytes) => {
-            let parent = path.parent().ok_or_else(|| error("ValueError", "Invalid configuration path"))?;
+            let parent = path
+                .parent()
+                .ok_or_else(|| error("ValueError", "Invalid configuration path"))?;
             let mut temporary = tempfile::NamedTempFile::new_in(parent).map_err(io_error)?;
             temporary.write_all(bytes).map_err(io_error)?;
             temporary.flush().map_err(io_error)?;
             if let Some(permissions) = permissions {
-                temporary.as_file().set_permissions(permissions.clone()).map_err(io_error)?;
+                temporary
+                    .as_file()
+                    .set_permissions(permissions.clone())
+                    .map_err(io_error)?;
             }
-            temporary.persist(path).map_err(|value| io_error(value.error))?;
+            temporary
+                .persist(path)
+                .map_err(|value| io_error(value.error))?;
         }
         None if path.exists() => fs::remove_file(path).map_err(io_error)?,
         None => (),
@@ -398,12 +488,22 @@ mod tests {
         assert_eq!(fs::read(&host)?, original_host.as_bytes());
         assert!(runtime.calls.is_empty());
         runtime.input["validation_failure"] = serde_json::json!(true);
-        assert!(config.set(&serde_json::json!({"scrollSpeed":0.55}), Duration::from_secs(3), &mut runtime).is_err());
+        assert!(config
+            .set(
+                &serde_json::json!({"scrollSpeed":0.55}),
+                Duration::from_secs(3),
+                &mut runtime
+            )
+            .is_err());
         assert_eq!(fs::read(&desktop)?, original_desktop.as_bytes());
         assert_eq!(fs::read(&host)?, original_host.as_bytes());
         runtime.calls.clear();
         runtime.input["validation_failure"] = serde_json::json!(false);
-        config.set(&serde_json::json!({"scrollSpeed":0.55,"mouseScrollSpeed":2.25}), Duration::from_secs(3), &mut runtime)?;
+        config.set(
+            &serde_json::json!({"scrollSpeed":0.55,"mouseScrollSpeed":2.25}),
+            Duration::from_secs(3),
+            &mut runtime,
+        )?;
         let desktop_text = fs::read_to_string(&desktop)?;
         let host_text = fs::read_to_string(&host)?;
         assert!(desktop_text.contains("scroll-factor 0.55"));
@@ -413,13 +513,33 @@ mod tests {
         assert!(host_text.contains("output \"DP-1\""));
         assert!(host_text.contains("scale 1.5"));
         assert!(host_text.contains("Super+Q"));
-        assert_eq!(runtime.calls.iter().filter(|call| call["kind"] == "validate").count(), 2);
-        assert_eq!(runtime.calls.iter().filter(|call| call["kind"] == "reload").count(), 1);
+        assert_eq!(
+            runtime
+                .calls
+                .iter()
+                .filter(|call| call["kind"] == "validate")
+                .count(),
+            2
+        );
+        assert_eq!(
+            runtime
+                .calls
+                .iter()
+                .filter(|call| call["kind"] == "reload")
+                .count(),
+            1
+        );
 
         fs::write(&desktop, original_desktop)?;
         fs::write(&host, original_host)?;
         runtime.input["reload_failure"] = serde_json::json!(true);
-        assert!(config.set(&serde_json::json!({"scrollSpeed":0.7,"mouseScrollSpeed":2.5}), Duration::from_secs(3), &mut runtime).is_err());
+        assert!(config
+            .set(
+                &serde_json::json!({"scrollSpeed":0.7,"mouseScrollSpeed":2.5}),
+                Duration::from_secs(3),
+                &mut runtime
+            )
+            .is_err());
         assert_eq!(fs::read(&desktop)?, original_desktop.as_bytes());
         assert_eq!(fs::read(&host)?, original_host.as_bytes());
         Ok(())

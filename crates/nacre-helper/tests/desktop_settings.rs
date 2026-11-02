@@ -67,7 +67,10 @@ fn scroll_speed_default_range_and_preset_exclusion() {
     assert_eq!(settings::defaults()["mouseScrollSpeed"], json!(1.5));
     assert!(!settings::preset_keys().contains(&"mouseScrollSpeed".to_owned()));
     for value in [0.5, 1.5, 3.0] {
-        assert_eq!(settings::validate("mouseScrollSpeed", &json!(value), false).unwrap(), json!(value));
+        assert_eq!(
+            settings::validate("mouseScrollSpeed", &json!(value), false).unwrap(),
+            json!(value)
+        );
     }
     for value in [json!(0.499), json!(3.001), json!(true)] {
         assert!(settings::validate("mouseScrollSpeed", &value, false).is_err());
@@ -125,7 +128,10 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
     let home = tempfile::tempdir()?;
     let paths = Paths::new(home.path());
     fs::create_dir_all(&paths.config)?;
-    fs::write(paths.config.join("desktop.json"), r#"{"gapsIn":9,"scrollSpeed":0.35}"#)?;
+    fs::write(
+        paths.config.join("desktop.json"),
+        r#"{"gapsIn":9,"scrollSpeed":0.35}"#,
+    )?;
     let calls = Rc::new(RefCell::new(Vec::new()));
     let config_path = paths
         .config
