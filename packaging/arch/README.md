@@ -22,6 +22,17 @@ compiler/linker flags. Fonts are pinned makepkg sources with checksums and
 license notices. `stage.py` installs only below `$pkgdir/usr`; no package hook
 writes to a user's home, starts services or downloads accounts/models.
 
+The core build also compiles `nacre-shell`, `bead-wallpaper-video` and
+`nacre-wallpaper-decode` from the Nacre Cargo workspace with `--locked`.
+Cargo fetches the Bead framework at the full revision pinned in Nacre's
+manifest. The output `artifacts/ui-shell/` bundle contains `bin/` with all
+three executables and the matching `shell/` tree. The package stages it under
+`/usr/lib/nacre/bead-shell/`, preserving the existing `/usr/bin/nacre-shell`
+QML wrapper. To select that build, use
+`nacre ui-shell install --binary /usr/lib/nacre/bead-shell/bin/nacre-shell
+--shell /usr/lib/nacre/bead-shell/shell`. The installer copies the matched
+bundle into a private versioned user directory before checking it.
+
 Shared code is under `/usr/share/nacre`, native app-scoped modules under
 `/usr/lib/nacre`, and fonts under `/usr/share/fonts/nacre`. Setup deploys private
 configuration/wrappers plus references to shared code through `configure.py`

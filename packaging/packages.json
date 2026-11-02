@@ -56,7 +56,12 @@
       "qt6-declarative",
       "libgcc",
       "libstdc++",
-      "glib2"
+      "glib2",
+      "gcc-libs",
+      "libxkbcommon",
+      "gdk-pixbuf2",
+      "libpipewire",
+      "mpv"
     ],
     "ai": [
       "python",
@@ -82,7 +87,9 @@
       "nodejs",
       "rust",
       "cargo",
-      "cmake"
+      "cmake",
+      "clang",
+      "pkgconf"
     ],
     "check": [
       "ruff",

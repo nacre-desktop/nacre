@@ -55,6 +55,11 @@ def stage(root, destination, component, build):
 
     tools = root / "nacre/shell-tools"
     if component == "core":
+        stage_ui_shell(
+            build / "ui-shell",
+            destination / "usr/lib/nacre/bead-shell",
+            root / "bead-shell",
+        )
         copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
             "hypr",
@@ -336,6 +341,31 @@ def stage(root, destination, component, build):
         / ("nacre" if component == "core" else "nacre-" + component)
         / "LICENSE",
     )
+
+
+def stage_ui_shell(bundle, destination, product_root=None):
+    """Install the matched native UI bundle beside Nacre's QML wrapper."""
+    names = ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode")
+    for name in names:
+        source = bundle / "bin" / name
+        if not source.is_file():
+            raise FileNotFoundError(f"Missing UI shell binary: {source}")
+        target = destination / "bin" / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        target.chmod(0o755)
+    shell = bundle / "shell"
+    if not (shell / "palette.json").is_file() or not (shell / "bar").is_dir():
+        raise FileNotFoundError(f"Incomplete matching shell tree: {shell}")
+    shutil.copytree(shell, destination / "shell", dirs_exist_ok=True)
+    notices = destination.parents[2] / "share/licenses/nacre/bead-shell"
+    if product_root is not None:
+        for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
+            source = product_root / name
+            if not source.is_file():
+                raise FileNotFoundError(f"Missing product license notice: {source}")
+            notices.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, notices / name)
 
 
 if __name__ == "__main__":
