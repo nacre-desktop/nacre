@@ -59,6 +59,7 @@ def stage(root, destination, component, build):
             build / "ui-shell",
             destination / "usr/lib/nacre/bead-shell",
             root / "bead-shell",
+            root / "crates/nacre-shell/assets/fonts/Outfit-OFL.txt",
         )
         copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
@@ -343,7 +344,7 @@ def stage(root, destination, component, build):
     )
 
 
-def stage_ui_shell(bundle, destination, product_root=None):
+def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None):
     """Install the matched native UI bundle beside Nacre's QML wrapper."""
     names = ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode")
     for name in names:
@@ -366,6 +367,9 @@ def stage_ui_shell(bundle, destination, product_root=None):
                 raise FileNotFoundError(f"Missing product license notice: {source}")
             notices.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, notices / name)
+    if embedded_notice is not None:
+        notices.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(embedded_notice, notices / "Outfit-OFL.txt")
 
 
 if __name__ == "__main__":
