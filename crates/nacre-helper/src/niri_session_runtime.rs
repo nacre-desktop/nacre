@@ -1310,6 +1310,8 @@ mod tests {
             "../tests/fixtures/niri-session-preparation-reference.json"
         ))?;
         let case = &reference["cases"][0];
+        let mut profile = case["profile"].clone();
+        profile["workspaceNames"] = value!(["One", "Two", "Three"]);
         let frozen_backend = crate::test_support::legacy_compositor_backend()?;
         let backend = frozen_backend.path().canonicalize()?;
         let home = tempfile::tempdir()?;
@@ -1337,7 +1339,7 @@ mod tests {
             &backend,
             &destination,
             &paths,
-            &case["profile"],
+            &profile,
             &case["keyboard"],
             ConfigurationOptions {
                 stock: false,
