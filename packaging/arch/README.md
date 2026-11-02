@@ -133,7 +133,11 @@ Orient archive, verifies its source/version/recipe against Nacre's lock, and
 injects it into a clean stock-Arch chroot. No replacement Orient archive is
 rebuilt under that version. A manual `use_released_orient=false` run is available
 for dependency development; that run cannot publish to the binary repository.
-The optional Niri companion remains a separately pinned build.
+The Niri fork remains a separately built compositor package. The optional
+`nacre-session-nacre-niri` split is a dependency bundle for Nacre's setup/launch
+support; the compositor package owns the sole public Wayland entry. Core also
+ships the Nacre-managed UWSM desktop template under `/usr/share/nacre/uwsm`;
+this split does not create a duplicate login chooser entry.
 
 `Publish tested Arch repository` admits only successful package runs from this
 repository's main branch and requires passing Source CI for the exact compiled
