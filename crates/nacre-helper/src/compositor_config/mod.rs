@@ -302,9 +302,21 @@ pub fn execute(
                 message: e.to_string(),
             })
         }
-        ("neutral", "render") => render(argument(0, "contract")?, &directory, backend),
+        ("neutral", "render") => {
+            let native_collections = backend == "niri"
+                && active_niri_capabilities().workspace_collections;
+            render_with_capabilities(
+                argument(0, "contract")?,
+                &directory,
+                backend,
+                native_collections,
+            )
+        }
         ("hyprland", "render") => render_hyprland(argument(0, "contract")?, &directory),
-        ("niri", "render") => niri::render(argument(0, "contract")?),
+        ("niri", "render") => augment_niri_render(
+            niri::render(argument(0, "contract")?)?,
+            active_niri_capabilities().workspace_collections,
+        ),
         ("neutral", "profile_rules") => profile_rules(argument(0, "profile")?),
         ("neutral", "render_keyboard") => {
             render_keyboard(argument(0, "values")?, backend).map(Value::String)
@@ -361,6 +373,38 @@ pub fn render(contract: &Value, directory: &Path, backend: &str) -> Result<Value
         }
         other => Err(invalid(format!("Unsupported compositor backend: {other}"))),
     }
+}
+
+/// Runtime render entry point. The plain `render` function remains deterministic
+/// for static generation and preview fixtures.
+pub fn render_with_capabilities(
+    contract: &Value,
+    directory: &Path,
+    backend: &str,
+    workspace_collections: bool,
+) -> Result<Value> {
+    let mut generated = render(contract, directory, backend)?;
+    augment_niri_render(&mut generated, backend == "niri" && workspace_collections)?;
+    Ok(generated)
+}
+
+fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Result<Value> {
+    if workspace_collections {
+        let bindings = generated["niri/bindings.kdl"]
+            .as_str()
+            .ok_or_else(|| invalid("Invalid generated bindings"))?;
+        generated["niri/bindings.kdl"] = json!(niri::with_collection_bindings(bindings)?);
+    }
+    Ok(generated)
+}
+
+fn active_niri_capabilities() -> crate::compositor::niri_transport::NacreCapabilities {
+    std::env::var_os("NIRI_SOCKET")
+        .filter(|socket| !socket.is_empty())
+        .map(|socket| {
+            crate::compositor::niri_transport::nacre_capabilities(Path::new(&socket))
+        })
+        .unwrap_or_default()
 }
 pub fn render_profile(
     profile: &Value,
@@ -468,6 +512,33 @@ pub fn render_keyboard(values: &Value, backend: &str) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn collection_bindings_are_in_full_native_render_only() -> crate::Result<()> {
+        let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
+        let contract: Value = serde_json::from_slice(&std::fs::read(
+            directory.join("compositor-contract.json"),
+        )?)?;
+        let stock = render_with_capabilities(&contract, &directory, "niri", false)?;
+        let stock_bindings = stock["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
+        assert!(!stock_bindings.contains("focus-collection-next"));
+        let native = render_with_capabilities(&contract, &directory, "niri", true)?;
+        let native_bindings = native["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
+        for (combo, action) in [
+            ("Super+Ctrl+Alt+Tab", "focus-collection-next"),
+            ("Super+Ctrl+Alt+Shift+Tab", "focus-collection-previous"),
+            ("Super+Ctrl+N", "create-collection"),
+            ("Super+Ctrl+Shift+Page_Down", "move-window-to-collection-next"),
+            ("Super+Ctrl+Shift+Page_Up", "move-window-to-collection-previous"),
+        ] {
+            assert!(native_bindings.contains(&format!("{combo} repeat=false")));
+            assert!(native_bindings.contains(action));
+        }
+        assert!(native_bindings.ends_with("}\n"));
+        let alias_collision = "binds {\n    Mod+Ctrl+N { spawn \"custom\"; }\n}\n";
+        assert!(niri::with_collection_bindings(alias_collision).is_err());
+        Ok(())
+    }
+
     #[test]
     fn all_frozen_python_compiler_outputs_and_failures() -> crate::Result<()> {
         let reference: Value = serde_json::from_str(include_str!(

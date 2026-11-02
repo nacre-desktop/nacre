@@ -72,6 +72,52 @@ pub(super) fn keys(value: &Value) -> Result<String> {
     }
     Ok(pieces.join("+"))
 }
+pub(super) fn with_collection_bindings(bindings: &str) -> Result<String> {
+    let additions = [
+        "Super+Ctrl+Alt+Tab",
+        "Super+Ctrl+Alt+Shift+Tab",
+        "Super+Ctrl+N",
+        "Super+Ctrl+Shift+Page_Down",
+        "Super+Ctrl+Shift+Page_Up",
+    ];
+    let canonical = |combo: &str| {
+        let mut parts: Vec<_> = combo
+            .split('+')
+            .map(|part| {
+                if part.eq_ignore_ascii_case("Mod") || part.eq_ignore_ascii_case("Super") {
+                    "Super"
+                } else {
+                    part
+                }
+            })
+            .collect();
+        parts.sort_unstable();
+        parts.join("+")
+    };
+    for key in additions {
+        if bindings.lines().any(|line| {
+            line.trim_start()
+                .split_whitespace()
+                .next()
+                .is_some_and(|candidate| canonical(candidate) == canonical(key))
+        }) {
+            return Err(invalid(format!("Collection keybinding collision: {key}")));
+        }
+    }
+    let end = bindings
+        .rfind('}')
+        .ok_or_else(|| invalid("Generated niri bindings block is incomplete"))?;
+    let additions = "    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-next\" { focus-collection-next; }\n\
+    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-previous\" { focus-collection-previous; }\n\
+    Super+Ctrl+N repeat=false hotkey-overlay-title=\"Nacre:collection-create\" { create-collection; }\n\
+    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title=\"Nacre:collection-move-next\" { move-window-to-collection-next; }\n\
+    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n";
+    let mut output = String::with_capacity(bindings.len() + additions.len());
+    output.push_str(&bindings[..end]);
+    output.push_str(additions);
+    output.push_str(&bindings[end..]);
+    Ok(output)
+}
 fn shell_quote(text: &str) -> String {
     if !text.is_empty()
         && text

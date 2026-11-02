@@ -961,6 +961,7 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
                 .strip_prefix("Nacre:")
                 .unwrap_or(&description)
                 .to_owned();
+            description = translated_collection_description(&description);
         }
         if !submap.is_empty() {
             description = format!("{submap} · {description}");
@@ -979,6 +980,32 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
             ))
     });
     Ok(Value::Array(result))
+}
+
+fn translated_collection_description(description: &str) -> String {
+    match description {
+        "collection-next" => crate::i18n::tr(
+            "shortcuts.description.next-collection",
+            "Focus the next collection",
+        ),
+        "collection-previous" => crate::i18n::tr(
+            "shortcuts.description.previous-collection",
+            "Focus the previous collection",
+        ),
+        "collection-create" => crate::i18n::tr(
+            "shortcuts.description.create-collection",
+            "Create a collection",
+        ),
+        "collection-move-next" => crate::i18n::tr(
+            "shortcuts.description.move-window-to-next-collection",
+            "Move the window to the next collection",
+        ),
+        "collection-move-previous" => crate::i18n::tr(
+            "shortcuts.description.move-window-to-previous-collection",
+            "Move the window to the previous collection",
+        ),
+        _ => description.to_owned(),
+    }
 }
 pub fn run(args: &[String]) -> Result<i32> {
     let Some(action) = args.first().map(String::as_str) else {
@@ -1120,6 +1147,18 @@ pub fn run(args: &[String]) -> Result<i32> {
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    fn native_collection_shortcut_titles_are_translated() {
+        assert_eq!(
+            translated_collection_description("collection-next"),
+            "Focus the next collection"
+        );
+        assert_eq!(
+            translated_collection_description("collection-move-previous"),
+            "Move the window to the previous collection"
+        );
+    }
 
     #[test]
     fn menu_routes_keep_the_existing_desktop_targets() {

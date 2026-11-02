@@ -429,7 +429,13 @@ pub fn prepare_configuration(
     let config = destination.join("config");
     fs::create_dir_all(&config)?;
     fs::set_permissions(&config, fs::Permissions::from_mode(0o700))?;
-    let generated = crate::compositor_config::render(&contract, &directory, "niri")?;
+    let native_collections = active_capabilities(&std::env::vars().collect()).workspace_collections;
+    let generated = crate::compositor_config::render_with_capabilities(
+        &contract,
+        &directory,
+        "niri",
+        !stock && native_collections,
+    )?;
     for (name, text) in generated
         .as_object()
         .ok_or("Invalid generated configuration")?
