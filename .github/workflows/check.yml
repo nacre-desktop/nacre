@@ -18,7 +18,9 @@ jobs:
     container:
       image: ghcr.io/archlinux/archlinux:latest
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
-      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
+      # Arch Sway carries cap_sys_nice; its private video smoke needs that
+      # capability in the container bounding set to execute the packaged binary.
+      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add=SYS_NICE ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
     steps:
       - name: Rolling package cache key
         id: cache_epoch
