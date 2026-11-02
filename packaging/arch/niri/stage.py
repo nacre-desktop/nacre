@@ -37,13 +37,13 @@ def stage(source, destination):
     )
     # Pacman ownership is the system trust boundary; makepkg may split debug data.
     # Only private source builds need a matching per-user binary checksum.
-    public = Path(destination) / "usr/bin/nacre-niri"
+    public = Path(destination) / "usr/bin/nacre-niri-hover"
     public.parent.mkdir(parents=True, exist_ok=True)
     public.write_text(
         '#!/bin/sh\nexport NACRE_NIRI_HOVER_STREAM=1\nexec /usr/lib/nacre/niri/niri "$@"\n'
     )
     public.chmod(0o755)
-    licenses = Path(destination) / "usr/share/licenses/nacre-niri"
+    licenses = Path(destination) / "usr/share/licenses/nacre-niri-hover"
     licenses.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(source / "LICENSE", licenses / "LICENSE.niri")
     shutil.copyfile(ROOT / "LICENSE", licenses / "LICENSE.nacre")

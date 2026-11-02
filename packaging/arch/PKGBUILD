@@ -2,7 +2,7 @@
 # Candidate recipe; prepare a new pinned recipe for every tested release.
 # Maintainer: siverteh <92440237+Siverteh@users.noreply.github.com>
 pkgbase=nacre
-pkgname=('nacre' 'nacre-ai' 'nacre-brain' 'nacre-session-hyprland' 'nacre-session-niri')
+pkgname=('nacre' 'nacre-ai' 'nacre-brain' 'nacre-session-hyprland' 'nacre-session-niri' 'nacre-session-nacre-niri')
 pkgver=0.1.0dev2.r2536.g6e028bc6050e
 pkgrel=1
 pkgdesc='Desktop shell and guided per-user setup'
@@ -12,7 +12,7 @@ license=('GPL-3.0-only')
 # The Rust decoder links C archives; GCC LTO objects cannot be read by Rust's lld.
 # Cargo's own release optimization and normal strip/debug processing remain enabled.
 options=('!lto')
-depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml' 'hyprland>=0.56.2' 'xdg-desktop-portal-hyprland' 'niri>=26.04' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
+depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml' 'hyprland>=0.56.2' 'xdg-desktop-portal-hyprland' 'niri>=26.04' 'nacre-niri' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
 makedepends=('git' 'nodejs' 'rust' 'cargo' 'cmake' 'clang' 'pkgconf')
 checkdepends=('ruff' 'npm' 'lua' 'xorg-server-xvfb' 'xorg-xauth' 'mesa' 'dbus' 'ttf-dejavu' 'python-dbus-next' 'python-jsonschema' 'bubblewrap' 'curl' 'unzip' 'sway' 'swaybg')
 source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit=6e028bc6050e496c28dc268d9c5b9f3b12c8e4d0' 'orient::git+https://github.com/nacre-desktop/orient.git#commit=3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8' 'IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf' 'IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt' 'MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf' 'MaterialSymbols-LICENSE.txt::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE')
@@ -52,7 +52,7 @@ check() {
 package_nacre() {
   license=('GPL-3.0-only' 'MIT' 'MIT-CMU' 'BSD-3-Clause' 'IJG' 'Zlib' 'OFL-1.1' 'Apache-2.0' 'Unicode-3.0')
   depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv')
-  optdepends=('nacre-session-niri: Nacre session and dependencies for Niri' 'nacre-session-hyprland: Nacre session and dependencies for Hyprland' 'nacre-niri: Niri companion with native overview hover titles' 'nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
+  optdepends=('nacre-session-niri: Nacre session and dependencies for Niri' 'nacre-session-nacre-niri: Nacre session using nacre-niri' 'nacre-session-hyprland: Nacre session and dependencies for Hyprland' 'nacre-niri-hover: optional Niri overview hover titles' 'nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
 }
@@ -89,4 +89,12 @@ package_nacre-session-niri() {
   depends=("nacre=$pkgver" 'niri>=26.04' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" session-niri "$srcdir/artifacts"
+}
+
+package_nacre-session-nacre-niri() {
+  pkgdesc='Nacre login session using nacre-niri'
+  arch=('any')
+  depends=("nacre=$pkgver" 'nacre-niri' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
+  cd "$srcdir/nacre"
+  python packaging/arch/stage.py "$PWD" "$pkgdir" session-nacre-niri "$srcdir/artifacts"
 }

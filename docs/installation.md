@@ -201,11 +201,11 @@ available for development experiments.
 
 ### Niri hover companion
 
-The optional `nacre-niri` package adds window titles when hovering in native
+The optional `nacre-niri-hover` package adds window titles when hovering in native
 niri overview. Install its matching tested archive before preparing niri:
 
 ```sh
-sudo pacman -U nacre-niri-*.pkg.tar.zst
+sudo pacman -U nacre-niri-hover-*.pkg.tar.zst
 ```
 
 It installs under `/usr/lib/nacre/niri`, alongside `/usr/bin/niri`, without

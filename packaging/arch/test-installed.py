@@ -218,7 +218,7 @@ if backend in {"niri", "both"}:
     assert "Command Line:" in parsed.stdout and "--session --config" in parsed.stdout, (
         parsed.stdout + parsed.stderr
     )
-    assert Path("/usr/share/wayland-sessions/nacre-niri.desktop").is_file()
+    assert Path("/usr/share/wayland-sessions/nacre-session-niri.desktop").is_file()
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
     appearance = (home / ".config/nacre/niri/desktop.kdl").read_text()
     assert "focus-ring { width 3; }" in appearance

@@ -413,7 +413,7 @@ def install_controller(repo):
 def session_parser():
     parser = argparse.ArgumentParser(prog="nacre session")
     commands = parser.add_subparsers(dest="command", required=True)
-    for compositor_name in ("hyprland", "niri"):
+    for compositor_name in ("hyprland", "niri", "nacre-niri"):
         commands.add_parser(compositor_name, help=f"start a {compositor_name} session")
     commands.add_parser("refresh", help="validate and reload the prepared Niri session")
     return parser

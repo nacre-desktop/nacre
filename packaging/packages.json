@@ -111,7 +111,8 @@
     "core_optional": [
       "nacre-session-niri: Nacre session and dependencies for Niri",
       "nacre-session-hyprland: Nacre session and dependencies for Hyprland",
-      "nacre-niri: Niri companion with native overview hover titles",
+      "nacre-session-nacre-niri: Nacre login session using nacre-niri",
+      "nacre-niri-hover: optional Niri overview hover titles",
       "nacre-ai: optional assistant workspace",
       "nacre-brain: optional private Markdown knowledge library"
     ],
@@ -123,6 +124,7 @@
       "obsidian: alternate Markdown vault editor"
     ],
     "session_niri": ["niri>=26.04", "xwayland-satellite", "xdg-desktop-portal-gnome"],
+    "session_nacre_niri": ["nacre-niri", "xwayland-satellite", "xdg-desktop-portal-gnome"],
     "session_hyprland": ["hyprland>=0.56.2", "xdg-desktop-portal-hyprland"],
     "niri": [
       "niri", "cairo", "glib2", "glibc", "libdisplay-info", "libgcc",

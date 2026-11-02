@@ -242,10 +242,11 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     return result
 
 
-def validate(config):
+def validate(config, compositor="niri"):
+    binary = "/usr/bin/nacre-niri" if compositor == "nacre-niri" else "niri"
     try:
         subprocess.run(
-            ["niri", "validate", "-c", str(config)],
+            [binary, "validate", "-c", str(config)],
             check=True,
             capture_output=True,
             text=True,
@@ -259,7 +260,9 @@ def validate(config):
         raise RuntimeError("Niri configuration validation timed out") from error
 
 
-def command(config):
+def command(config, compositor="niri"):
+    if compositor not in ("niri", "nacre-niri"):
+        raise ValueError("Unknown Niri session compositor: " + compositor)
     return [
         "uwsm",
         "start",
@@ -267,25 +270,57 @@ def command(config):
         "-D",
         "niri",
         "--",
-        "niri",
+        "/usr/bin/nacre-niri" if compositor == "nacre-niri" else "niri",
         "--session",
         "--config",
         str(config),
     ]
 
 
-def session(home=None):
+def session(home=None, compositor="niri"):
     home = Path.home() if home is None else home
     config = home / ".config/nacre/niri/config.kdl"
+    prepared = home / ".local/share/nacre/niri-on-pc/session"
+    if compositor == "nacre-niri" and (prepared / "source-revision").is_file():
+        config = prepared / "config/config.kdl"
     if not config.is_file():
         raise RuntimeError(
             "Run nacre setup --compositor niri before choosing Nacre (niri)"
         )
-    validate(config)
+    validate(config, compositor)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
     # Let UWSM own export and logout cleanup of the static session variables.
     environment = {**os.environ, **TOOLKIT_ENVIRONMENT}
     environment["NACRE_COMPOSITOR"] = "niri"
+    environment["XDG_CURRENT_DESKTOP"] = "niri"
+    # UWSM continues to expose the standard desktop identity and finalizes the
+    # standard Niri session variables even though the selected executable differs.
+    environment["NACRE_NIRI_FORK"] = "0"
+    finalize_names = set(environment.get("UWSM_FINALIZE_VARNAMES", "").split())
+    environment["UWSM_FINALIZE_VARNAMES"] = " ".join(
+        sorted(finalize_names | {"NACRE_NIRI_FORK"})
+    )
+    if compositor == "nacre-niri":
+        environment["NACRE_NIRI_FORK"] = "1"
+        wait_names = set(environment.get("UWSM_WAIT_VARNAMES", "").split())
+        environment["UWSM_WAIT_VARNAMES"] = " ".join(
+            sorted(wait_names | {"NIRI_SOCKET"})
+        )
+        environment["UWSM_FINALIZE_VARNAMES"] = " ".join(
+            sorted(
+                set(environment["UWSM_FINALIZE_VARNAMES"].split())
+                | {
+                    "WAYLAND_DISPLAY",
+                    "DISPLAY",
+                    "NIRI_SOCKET",
+                    "NACRE_COMPOSITOR",
+                    "NIRI_CONFIG",
+                    "NACRE_NIRI_FORK",
+                    "XCURSOR_SIZE",
+                    "XCURSOR_THEME",
+                }
+            )
+        )
     environment["NIRI_CONFIG"] = str(config)
     for name in (
         "HYPRLAND_INSTANCE_SIGNATURE",
@@ -296,7 +331,7 @@ def session(home=None):
         environment.pop(name, None)
     os.execvpe(
         "uwsm",
-        command(config),
+        command(config, compositor),
         environment,
     )
 

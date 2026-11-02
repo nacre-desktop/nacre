@@ -40,11 +40,11 @@ class NiriPackageTests(unittest.TestCase):
             self.assertFalse((destination / "home").exists())
             self.assertIn(
                 "NACRE_NIRI_HOVER_STREAM=1",
-                (destination / "usr/bin/nacre-niri").read_text(),
+                (destination / "usr/bin/nacre-niri-hover").read_text(),
             )
             self.assertEqual((companion / "niri").stat().st_mode & 0o777, 0o755)
             self.assertTrue(
-                (destination / "usr/share/licenses/nacre-niri/LICENSE.niri").exists()
+                (destination / "usr/share/licenses/nacre-niri-hover/LICENSE.niri").exists()
             )
             # Pacman owns system artifacts, whereas private builds use exact hashes.
             # Simulate makepkg stripping debug tables after package() finishes.
@@ -65,6 +65,7 @@ class NiriPackageTests(unittest.TestCase):
 
     def test_recipe_pins_both_sources_and_checks_protocol_without_user_hooks(self):
         text = recipe.render(ROOT, "a" * 40)
+        self.assertIn("pkgname=nacre-niri-hover", text)
         self.assertIn("#commit=" + "a" * 40, text)
         self.assertIn("#commit=" + stage.builder.SOURCE, text)
         self.assertIn("--locked --lib nacre_overview_hover_tests", text)

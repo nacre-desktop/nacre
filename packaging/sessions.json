@@ -14,5 +14,13 @@
     "dependencies": "session_niri",
     "desktop": "uwsm/sessions/nacre-niri-package.desktop",
     "experimental": true
+  },
+  "nacre-niri": {
+    "label": "nacre-niri",
+    "module": "package_niri",
+    "package": "nacre-session-nacre-niri",
+    "dependencies": "session_nacre_niri",
+    "desktop": "uwsm/sessions/nacre-niri-managed.desktop",
+    "experimental": true
   }
 }
