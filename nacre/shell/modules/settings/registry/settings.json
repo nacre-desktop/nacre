@@ -2597,7 +2597,7 @@
       "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
     },
     {
-      "id": "keyboard-mouse.touchpad.scrollSpeed",
+      "id": "keyboard-mouse.scrolling.scrollSpeed",
       "page": "keyboard-mouse",
       "section": "keyboard-mouse.scrolling",
       "key": "scrollSpeed",
@@ -3811,7 +3811,7 @@
       }
     },
     {
-      "id": "keyboard-mouse.mouse.mouseScrollSpeed",
+      "id": "keyboard-mouse.scrolling.mouseScrollSpeed",
       "page": "keyboard-mouse",
       "section": "keyboard-mouse.scrolling",
       "key": "mouseScrollSpeed",

@@ -116,7 +116,7 @@ fn shared_scroll_setting_defaults_and_preserves_a_saved_value() {
     for (data, expected) in [(json!({}), 0.35), (json!({"scrollSpeed": 1.25}), 1.25)] {
         let (settings, _) = fixture(data);
         let rows = items(&settings.project(&stores("keyboard-mouse", "")));
-        let speed = row(&rows, "keyboard-mouse.touchpad.scrollSpeed");
+        let speed = row(&rows, "keyboard-mouse.scrolling.scrollSpeed");
         assert_eq!(speed["kind"], "number");
         assert_eq!(speed["number"], expected);
         assert_eq!(speed["label"], "Touchpad scroll speed");
@@ -124,7 +124,7 @@ fn shared_scroll_setting_defaults_and_preserves_a_saved_value() {
     for (data, expected) in [(json!({}), 1.5), (json!({"mouseScrollSpeed": 2.25}), 2.25)] {
         let (settings, _) = fixture(data);
         let rows = items(&settings.project(&stores("keyboard-mouse", "")));
-        let speed = row(&rows, "keyboard-mouse.mouse.mouseScrollSpeed");
+        let speed = row(&rows, "keyboard-mouse.scrolling.mouseScrollSpeed");
         assert_eq!(speed["kind"], "number");
         assert_eq!(speed["number"], expected);
         assert_eq!(speed["label"], "Mouse wheel scroll speed");
@@ -147,12 +147,12 @@ fn mouse_scroll_control_is_visible_without_a_touchpad() {
     );
     assert!(
         rows.iter()
-            .any(|row| row["id"] == "keyboard-mouse.mouse.mouseScrollSpeed")
+            .any(|row| row["id"] == "keyboard-mouse.scrolling.mouseScrollSpeed")
     );
     assert!(
         !rows
             .iter()
-            .any(|row| row["id"] == "keyboard-mouse.touchpad.scrollSpeed")
+            .any(|row| row["id"] == "keyboard-mouse.scrolling.scrollSpeed")
     );
 }
 
