@@ -143,7 +143,7 @@ fn mouse_scroll_control_is_visible_without_a_touchpad() {
     let rows = items(&settings.project(&stores("keyboard-mouse", "")));
     assert!(
         rows.iter()
-            .any(|row| row["id"] == "keyboard-mouse.scrolling")
+            .any(|row| row["id"] == "section:keyboard-mouse.scrolling")
     );
     assert!(
         rows.iter()
