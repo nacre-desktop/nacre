@@ -44,7 +44,9 @@ class NiriPackageTests(unittest.TestCase):
             )
             self.assertEqual((companion / "niri").stat().st_mode & 0o777, 0o755)
             self.assertTrue(
-                (destination / "usr/share/licenses/nacre-niri-hover/LICENSE.niri").exists()
+                (
+                    destination / "usr/share/licenses/nacre-niri-hover/LICENSE.niri"
+                ).exists()
             )
             # Pacman owns system artifacts, whereas private builds use exact hashes.
             # Simulate makepkg stripping debug tables after package() finishes.

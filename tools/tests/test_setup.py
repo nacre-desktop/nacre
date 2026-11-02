@@ -1696,14 +1696,22 @@ class ArchPackageLayoutTests(unittest.TestCase):
             self.assertEqual(
                 reference.resolve(), base / "core/usr/lib/nacre/nacre-helper"
             )
-            self.assertIn(Path("usr/share/wayland-sessions/nacre-session-niri.desktop"), owned)
+            self.assertIn(
+                Path("usr/share/wayland-sessions/nacre-session-niri.desktop"), owned
+            )
             self.assertIn(
                 "nacre session niri",
-                (base / "session-niri/usr/share/wayland-sessions/nacre-session-niri.desktop").read_text(),
+                (
+                    base
+                    / "session-niri/usr/share/wayland-sessions/nacre-session-niri.desktop"
+                ).read_text(),
             )
             self.assertIn(
                 "nacre session nacre-niri",
-                (base / "session-nacre-niri/usr/share/wayland-sessions/nacre-session-nacre-niri.desktop").read_text(),
+                (
+                    base
+                    / "session-nacre-niri/usr/share/wayland-sessions/nacre-session-nacre-niri.desktop"
+                ).read_text(),
             )
             self.assertEqual(
                 (base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper")

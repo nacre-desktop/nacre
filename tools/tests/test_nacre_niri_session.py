@@ -10,7 +10,9 @@ import unittest
 from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[2]
-spec = importlib.util.spec_from_file_location("package_niri_session", ROOT / "tools/package_niri.py")
+spec = importlib.util.spec_from_file_location(
+    "package_niri_session", ROOT / "tools/package_niri.py"
+)
 package_niri = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_niri)
 session_spec = importlib.util.spec_from_file_location(
@@ -22,7 +24,9 @@ session_spec.loader.exec_module(package_sessions)
 
 class NacreNiriSessionTests(unittest.TestCase):
     def test_nacre_niri_command_uses_fork_binary_and_shared_config(self):
-        config = Path("/home/test/.local/share/nacre/niri-on-pc/session/config/config.kdl")
+        config = Path(
+            "/home/test/.local/share/nacre/niri-on-pc/session/config/config.kdl"
+        )
         command = package_niri.command(config, "nacre-niri")
         self.assertEqual(command[command.index("-D") + 1], "niri")
         self.assertEqual(command[6], "/usr/bin/nacre-niri")
@@ -56,7 +60,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                 patch.object(package_niri, "validate"),
                 patch.object(package_niri.subprocess, "run"),
                 patch.object(package_niri.os, "execvpe") as execute,
-                patch.dict(package_niri.os.environ, {"NACRE_NIRI_FORK": "stale"}, clear=True),
+                patch.dict(
+                    package_niri.os.environ, {"NACRE_NIRI_FORK": "stale"}, clear=True
+                ),
             ):
                 package_niri.session(home)
             environment = execute.call_args.args[2]
@@ -77,7 +83,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                 patch.object(package_niri, "validate") as validate,
                 patch.object(package_niri.subprocess, "run") as run,
                 patch.object(package_niri.os, "execvpe") as execute,
-                patch.dict(package_niri.os.environ, {"NACRE_NIRI_FORK": "stale"}, clear=True),
+                patch.dict(
+                    package_niri.os.environ, {"NACRE_NIRI_FORK": "stale"}, clear=True
+                ),
             ):
                 package_niri.session(home, compositor="nacre-niri")
             validate.assert_called_once_with(config, "nacre-niri")
@@ -91,7 +99,9 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertIn("NIRI_SOCKET", environment["UWSM_WAIT_VARNAMES"])
             self.assertIn("XCURSOR_THEME", environment["UWSM_FINALIZE_VARNAMES"])
             self.assertIn("NACRE_NIRI_FORK", environment["UWSM_FINALIZE_VARNAMES"])
-            run.assert_called_once_with(["systemctl", "--user", "daemon-reload"], check=True)
+            run.assert_called_once_with(
+                ["systemctl", "--user", "daemon-reload"], check=True
+            )
 
     def test_fork_session_falls_back_to_nacre_generated_config(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -135,13 +145,17 @@ class NacreNiriSessionTests(unittest.TestCase):
                     env=environment,
                     text=True,
                 )
-                return dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
+                return dict(
+                    line.split("=", 1) for line in output.splitlines() if "=" in line
+                )
 
             stock = source(False)
             fork = source(True)
             shared = str(prepared / "config/config.kdl")
             self.assertEqual(stock["NIRI_CONFIG"], shared)
-            self.assertTrue(stock["PATH"].startswith(str(home / ".config/uwsm/niri-session-bin")))
+            self.assertTrue(
+                stock["PATH"].startswith(str(home / ".config/uwsm/niri-session-bin"))
+            )
             self.assertEqual(fork["NIRI_CONFIG"], shared)
             self.assertEqual(fork["PATH"], "/fixture/bin")
 
