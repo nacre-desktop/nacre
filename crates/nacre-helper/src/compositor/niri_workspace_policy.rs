@@ -10,7 +10,7 @@ use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env, fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 fn sets(desktop: &Value) -> BTreeMap<String, Vec<String>> {
@@ -209,8 +209,26 @@ pub struct Session {
     initialized: bool,
     signature: Value,
     adoptions: BTreeMap<String, String>,
+    native_collections: Option<bool>,
+    capability_socket: Option<String>,
 }
 impl Session {
+    fn native_collections(&mut self) -> bool {
+        let socket = env::var("NIRI_SOCKET").ok().filter(|socket| !socket.is_empty());
+        if socket != self.capability_socket {
+            self.capability_socket = socket.clone();
+            self.native_collections = None;
+        }
+        *self.native_collections.get_or_insert_with(|| {
+            socket
+                .as_ref()
+                .map(|socket| {
+                    super::niri_transport::nacre_capabilities(Path::new(socket))
+                        .workspace_collections
+                })
+                .unwrap_or(false)
+        })
+    }
     /// Track before reconciliation, while disconnected outputs retain their last
     /// view. Stable opaque IDs survive niri's per-output index renumbering.
     fn observe(&mut self, value: &mut Value, desktop: &Value) -> BTreeSet<String> {
@@ -265,7 +283,14 @@ impl Session {
             row["fixedSlot"] = json!(fixed);
             row["originOutput"] = json!(origin.0);
             row["originIndex"] = json!(origin.1);
-            row["visiting"] = json!(origin.0 != output);
+            // Native collections retain hidden rows with no output. NN0001
+            // refuses actions against them; they are not visitors on a monitor.
+            let visiting = origin.0 != output;
+            row["visiting"] = json!(if self.native_collections.unwrap_or(false) {
+                visiting && !output.is_empty()
+            } else {
+                visiting
+            });
             if row["active"] == true
                 && origin.0 == output
                 && (!self.initialized || self.connected.contains(&output))
@@ -289,10 +314,15 @@ impl Session {
         outputs
     }
     pub fn accept(&mut self, value: &mut Value) -> Result<()> {
+        if value["type"] == "configuration-reloaded" {
+            self.native_collections = None;
+            return Ok(());
+        }
         if value["type"] != "snapshot" {
             return Ok(());
         }
         let paths = Paths::environment()?;
+        let native_collections = self.native_collections();
         // Cover ledger reads and publication as well as compositor requests.
         // Bring uses this same lock when adopting a visitor.
         let _lock = files::lock(&paths.state.join("monitor-workspaces.lock"))?;
@@ -325,6 +355,7 @@ impl Session {
         ]);
         let signature = json!([
             policy,
+            native_collections,
             outputs,
             value["workspaces"]
                 .as_array()
@@ -513,7 +544,10 @@ impl Session {
                     // Removing a declaration unsets its name in niri. Explicitly
                     // unname any remaining empty visitor (including manual names).
                     for row in current["workspaces"].as_array().unwrap() {
-                        if row["name"].is_string() && !occupied(&current, key(row)) {
+                        if (!native_collections || row["outputId"].as_str().is_some())
+                            && row["name"].is_string()
+                            && !occupied(&current, key(row))
+                        {
                             if let Some((home, _)) = self.origins.get(key(row)) {
                                 if !outputs.contains(home) {
                                     action(
@@ -539,7 +573,10 @@ impl Session {
                                 .as_array()
                                 .unwrap()
                                 .iter()
-                                .find(|r| r["name"] == *name)
+                                .find(|r| {
+                                    r["name"] == *name
+                                        && (!native_collections || r["outputId"].as_str().is_some())
+                                })
                             {
                                 let reference = json!({"Id":number(key(row),"niri-workspace:")?});
                                 if row["outputId"] != *output {
@@ -573,7 +610,7 @@ impl Session {
                         Ok(v)
                     })?;
                 }
-                if changed && self.initialized {
+                if changed && self.initialized && should_restore_reconnected(native_collections) {
                     let focus = current["activeWorkspace"]["id"].clone();
                     let focus_window = current["activeWorkspace"]["activeWindowId"].clone();
                     for output in &reconnected {
@@ -665,6 +702,9 @@ fn focus_view(io: &mut Native, workspace: &str, window: &Value) -> Result<()> {
         }
     }
     Ok(())
+}
+fn should_restore_reconnected(native_collections: bool) -> bool {
+    !native_collections
 }
 
 pub fn bring(paths: &Paths) -> Result<i32> {
@@ -829,5 +869,39 @@ mod tests {
         value["workspaces"][0]["activeWindowId"] = Value::Null;
         session.observe(&mut value, &desktop);
         assert_eq!(session.views["B"].1, "niri-window:4");
+    }
+    #[test]
+    fn native_collections_replace_only_the_legacy_reconnect_focus_restore() {
+        assert!(should_restore_reconnected(false));
+        assert!(!should_restore_reconnected(true));
+    }
+    #[test]
+    fn hidden_workspace_visitor_semantics_change_only_with_native_collections() {
+        let desktop = json!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"A":["a1"],"B":["b1"]}});
+        let mut stock = Session::default();
+        let mut value = json!({"monitors":[{"name":"A"}],"workspaces":[
+            {"id":"niri-workspace:1","index":1,"name":"b1","outputId":null,"active":false}
+        ]});
+        stock.observe(&mut value, &desktop);
+        assert_eq!(value["workspaces"][0]["fixedSlot"], true);
+        assert_eq!(value["workspaces"][0]["visiting"], true);
+        assert_eq!(value["workspaces"][0]["originOutput"], "B");
+
+        let mut native = Session {
+            native_collections: Some(true),
+            ..Session::default()
+        };
+        native.observe(&mut value, &desktop);
+        assert_eq!(value["workspaces"][0]["visiting"], false);
+    }
+    #[test]
+    fn configuration_reload_invalidates_cached_native_features() -> Result<()> {
+        let mut session = Session {
+            native_collections: Some(true),
+            ..Session::default()
+        };
+        session.accept(&mut json!({"type":"configuration-reloaded"}))?;
+        assert_eq!(session.native_collections, None);
+        Ok(())
     }
 }

@@ -1041,6 +1041,56 @@ mod tests {
         assert!(!needs_hover_companion("widths", false, false));
     }
     #[test]
+    fn width_service_command_uses_live_capability_and_keeps_stock_fallback() -> Result<()> {
+        fn command_with_caps(enabled: bool) -> Result<Vec<String>> {
+            use std::{
+                io::{BufRead, BufReader, Write},
+                os::unix::net::UnixListener,
+                thread,
+            };
+            let home = tempfile::tempdir()?;
+            let paths = Paths::new(home.path());
+            let root = paths.share.join("niri-on-pc/session");
+            fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/source"))?;
+            fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/tools"))?;
+            fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/bin"))?;
+            fs::write(root.join("home-view/.local/share/nacre/shell/source/shell.qml"), "")?;
+            fs::write(root.join("home-view/.local/share/nacre/shell/tools/nacre_native_compositor.py"), "")?;
+            fs::write(root.join("home-view/.local/share/nacre/shell/bin/qs"), "")?;
+            fs::write(root.join("stock-niri"), "stock\n")?;
+            let socket = home.path().join("niri.sock");
+            let listener = UnixListener::bind(&socket)?;
+            let peer = thread::spawn(move || -> std::io::Result<()> {
+                let (stream, _) = listener.accept()?;
+                let mut stream = BufReader::new(stream);
+                let mut line = String::new();
+                stream.read_line(&mut line)?;
+                assert_eq!(serde_json::from_str::<Value>(&line).unwrap(), value!("NacreCapabilities"));
+                let mut stream = stream.into_inner();
+                let widths = enabled;
+                let response = value!({"Ok":{"NacreCapabilities":{
+                    "workspace_collections":false,
+                    "proportional_x11_widths":widths,
+                    "overview_hover":false
+                }}});
+                writeln!(stream, "{}", json::encode(&response).unwrap())
+            });
+            let environment = BTreeMap::from([
+                ("XDG_CURRENT_DESKTOP".into(), "niri".into()),
+                ("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned()),
+            ]);
+            let (argv, _) = command("widths-check", &environment, &paths, |_| None)?;
+            peer.join().map_err(|_| "Capability peer panicked")??;
+            Ok(argv)
+        }
+        let native = command_with_caps(true)?;
+        assert_eq!(native, vec!["/usr/bin/false"]);
+        let stock = command_with_caps(false)?;
+        assert!(stock.iter().any(|part| part == "niri_widths"));
+        assert!(stock.iter().any(|part| part == "--check-session"));
+        Ok(())
+    }
+    #[test]
     fn frozen_original_argument_parser_help_errors_and_exit_codes() -> Result<()> {
         for source in [
             include_str!("../tests/fixtures/niri-session-runtime-cli-reference.json"),

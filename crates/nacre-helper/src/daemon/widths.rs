@@ -144,6 +144,9 @@ pub fn observe_if_daemon(
 ) -> Result<Option<i32>> {
     use super::client::{self, ConnectError};
     use nacre_protocol::{framing, Id, Message, Mirror, Update};
+    if niri_widths::native_widths_enabled(environment) {
+        return Ok(Some(0));
+    }
     let explicit = std::env::var_os("NACRE_DAEMON_SOCKET").is_some();
     if !explicit
         && environment
