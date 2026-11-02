@@ -1,0 +1,11 @@
+{
+  "modules": [
+    "status/network-body.luau",
+    "status/bluetooth-body.luau",
+    "status/battery-body.luau",
+    "status/body.luau",
+    "sound/body.luau",
+    "control/vpn-body.luau"
+  ],
+  "assets": ["notifications/fallback.themed.svg"]
+}

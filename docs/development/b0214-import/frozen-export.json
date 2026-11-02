@@ -1,0 +1,275 @@
+{
+  "source": "f19eacaf7b3dedfbb54202358d88e699444366b1",
+  "source_tree": "a8fee73993e6626bad62ba03568692815f167d4b",
+  "nacre_base": "d391ad25065465ee39c5a03149a37aed5952828c",
+  "entries": [
+    {
+      "source": "crates/nacre-shell",
+      "destination": "crates/nacre-shell",
+      "kind": "tree",
+      "oid": "e0a0b8ff948149853f37cb74447ae88ef4932e05",
+      "mode": "040000"
+    },
+    {
+      "source": "shell",
+      "destination": "shell",
+      "kind": "tree",
+      "oid": "2248f5596bc49cbd91260fb5ebd9c71cf60e9d91",
+      "mode": "040000"
+    },
+    {
+      "source": "packaging",
+      "destination": "bead-shell/packaging",
+      "kind": "tree",
+      "oid": "dcbae41352b8377a51f821a00b70f1f17fa34ae1",
+      "mode": "040000"
+    },
+    {
+      "source": "scripts",
+      "destination": "bead-shell/scripts",
+      "kind": "tree",
+      "oid": "460dbf030beda8dc9fe50f20359338dbfe685df0",
+      "mode": "040000"
+    },
+    {
+      "source": "spikes",
+      "destination": "bead-shell/spikes",
+      "kind": "tree",
+      "oid": "c52568814e6a51fda1b630fffba613f02e15261f",
+      "mode": "040000"
+    },
+    {
+      "source": "ssh-placeholder",
+      "destination": "bead-shell/ssh-placeholder",
+      "kind": "tree",
+      "oid": "42ac26ba6e3f1aa9999c0d4f0e718b69edcfbea0",
+      "mode": "040000"
+    },
+    {
+      "source": "tools/daily-acceptance",
+      "destination": "bead-shell/tools/daily-acceptance",
+      "kind": "tree",
+      "oid": "aaf90532bf535ed483a32a6a85c275f8ed415844",
+      "mode": "040000"
+    },
+    {
+      "source": "tools/bake-welcome-demo.py",
+      "destination": "bead-shell/tools/bake-welcome-demo.py",
+      "kind": "blob",
+      "oid": "e71fc84132691872452ba303d47d605594df7682",
+      "mode": "100644"
+    },
+    {
+      "source": "tools/i18n-sync.py",
+      "destination": "bead-shell/tools/i18n-sync.py",
+      "kind": "blob",
+      "oid": "dbc65969abbbffb40f469c3b14a879e7ff4c9c7b",
+      "mode": "100755"
+    },
+    {
+      "source": "tools/check-luau.py",
+      "destination": "bead-shell/tools/check-luau.py",
+      "kind": "blob",
+      "oid": "cd521eadc57e71a61da84bace2d997b49fd879f4",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/README.md",
+      "destination": "bead-shell/examples/README.md",
+      "kind": "blob",
+      "oid": "4ea7f449351e032b785699e92a823548db2a9e61",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/hyprland.lua",
+      "destination": "bead-shell/examples/hyprland.lua",
+      "kind": "blob",
+      "oid": "b36f1730133d3906566f42f242aaf1e356247604",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/hyprland-backend.lua",
+      "destination": "bead-shell/examples/hyprland-backend.lua",
+      "kind": "blob",
+      "oid": "df9501d5320308b79b0afeba17106e1c9aa891eb",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/niri.kdl",
+      "destination": "bead-shell/examples/niri.kdl",
+      "kind": "blob",
+      "oid": "c68b0702adcde38b6b9c75e9693f2a6673f3dbe4",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/niri-backend.kdl",
+      "destination": "bead-shell/examples/niri-backend.kdl",
+      "kind": "blob",
+      "oid": "3f4be3c2f23b01479bd02e2879718f34972ad64e",
+      "mode": "100644"
+    },
+    {
+      "source": "docs",
+      "destination": "bead-shell/docs",
+      "kind": "tree",
+      "oid": "1cc6c5c1fba596cb7ab9c9148ddbeede44c342b6",
+      "mode": "040000"
+    },
+    {
+      "source": "FEASIBILITY.md",
+      "destination": "bead-shell/FEASIBILITY.md",
+      "kind": "blob",
+      "oid": "fadd9b7cdec9125d682a6645fee3bd3dc7570c2a",
+      "mode": "100644"
+    },
+    {
+      "source": "README.md",
+      "destination": "bead-shell/README.md",
+      "kind": "blob",
+      "oid": "87a549a3b269764841f3c52c9222998858ca497e",
+      "mode": "100644"
+    },
+    {
+      "source": "LICENSE.md",
+      "destination": "bead-shell/LICENSE.md",
+      "kind": "blob",
+      "oid": "2ee9d1b57c8972af3ff4ce0d702a37780a2af2c4",
+      "mode": "100644"
+    },
+    {
+      "source": "LICENSE-MIT",
+      "destination": "bead-shell/LICENSE-MIT",
+      "kind": "blob",
+      "oid": "6fed3a5f82375e415d586481091be0059069dfa7",
+      "mode": "100644"
+    },
+    {
+      "source": "LICENSE-GPL-3.0",
+      "destination": "bead-shell/LICENSE-GPL-3.0",
+      "kind": "blob",
+      "oid": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "mode": "100644"
+    },
+    {
+      "source": "deny.toml",
+      "destination": "bead-shell/deny-product.toml",
+      "kind": "blob",
+      "oid": "950af9425552d646c4089d8fd3798b1d884c79ad",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/backend-hyprland.png",
+      "destination": "bead-shell/examples/backend-hyprland.png",
+      "kind": "blob",
+      "oid": "5769d7e31a15a8c1566930883e26cad232a71fb3",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/backend-niri.png",
+      "destination": "bead-shell/examples/backend-niri.png",
+      "kind": "blob",
+      "oid": "0d0ce98a454e4edc4de9ad36aa0b787854906e01",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-hyprland-cpu.png",
+      "destination": "bead-shell/examples/bar-hyprland-cpu.png",
+      "kind": "blob",
+      "oid": "b480140201ee66624b2331cab7559201432bf1d2",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-hyprland-gl.png",
+      "destination": "bead-shell/examples/bar-hyprland-gl.png",
+      "kind": "blob",
+      "oid": "5545910247ed81892bfdbbb87b749651387054d8",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-niri-cpu.png",
+      "destination": "bead-shell/examples/bar-niri-cpu.png",
+      "kind": "blob",
+      "oid": "b6b506f7a38e768621d48909d5c2edcc1cda0ea2",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-niri-gl.png",
+      "destination": "bead-shell/examples/bar-niri-gl.png",
+      "kind": "blob",
+      "oid": "b52edc02ab049015916932c921cbf93b5e2d9ca3",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-panel-hyprland.png",
+      "destination": "bead-shell/examples/bar-panel-hyprland.png",
+      "kind": "blob",
+      "oid": "cf14655b697c64ecb37e620a2ebb321319ac4627",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-panel-niri.png",
+      "destination": "bead-shell/examples/bar-panel-niri.png",
+      "kind": "blob",
+      "oid": "316ee87ac569e7e227c06d07138b3e470ef7afa7",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-reference-hyprland.png",
+      "destination": "bead-shell/examples/bar-reference-hyprland.png",
+      "kind": "blob",
+      "oid": "b90db66e92fef28579dd91fe1efac8786fc477ea",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/bar-reference-niri.png",
+      "destination": "bead-shell/examples/bar-reference-niri.png",
+      "kind": "blob",
+      "oid": "21b117a2b62e99325af5cc8390e5b8dcf97895a3",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/feature1.png",
+      "destination": "bead-shell/examples/feature1.png",
+      "kind": "blob",
+      "oid": "491ebdfbb21a78432f6d30744de435ce3f64dd3c",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/feature2.png",
+      "destination": "bead-shell/examples/feature2.png",
+      "kind": "blob",
+      "oid": "c52ce04efcd59a6da9ef66bc7989e8311feb257a",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/hot-reload-error.png",
+      "destination": "bead-shell/examples/hot-reload-error.png",
+      "kind": "blob",
+      "oid": "4785a6543b5d9f697c7c0d245decdf472729b5df",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/launcher-port.png",
+      "destination": "bead-shell/examples/launcher-port.png",
+      "kind": "blob",
+      "oid": "bb4e1f7dba3fddf40b9d65374fffb92d14dbdf5b",
+      "mode": "100644"
+    },
+    {
+      "source": "examples/retained-renderers.png",
+      "destination": "bead-shell/examples/retained-renderers.png",
+      "kind": "blob",
+      "oid": "28d47fa9f33cc435f4028417d705f894bd18c0ab",
+      "mode": "100644"
+    }
+  ],
+  "verification": {
+    "selected_files": 3425,
+    "retained_commits": 1352,
+    "mapped_commits": 1562,
+    "byte_comparison": "all selected destination blob/tree IDs and file modes match; no extra files",
+    "identity_comparison": "author/committer name, email and ISO dates match every retained mapped commit",
+    "filtered_tip": "e5c8678df96c382826a2e3e0fc14a3e54558bcdc",
+    "message_policy": "Append [no-publish] to filtered-copy messages lacking it; preserve source public history and existing hash references."
+  }
+}
