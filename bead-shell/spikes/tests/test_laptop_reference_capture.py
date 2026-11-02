@@ -165,7 +165,7 @@ class LaptopReferenceCaptureTests(unittest.TestCase):
             self.assertEqual(control_env["BEAD_HARDENING_BUNDLE_ROOT"], str(control_bundle))
             self.assertEqual(control_env["BEAD_DASHBOARD_FIXTURES"],
                              str(control_bundle / "shell/tests/fixtures/dashboard"))
-            self.assertEqual(candidate_env["BEAD_HARDENING_BUNDLE_ROOT"], str(ROOT))
+            self.assertEqual(candidate_env["BEAD_HARDENING_BUNDLE_ROOT"], str(arm.WORKSPACE_ROOT))
             self.assertEqual(candidate_env["BEAD_DASHBOARD_FIXTURES"],
                              str(PRODUCT_SHELL / "tests/fixtures/dashboard"))
 
