@@ -282,6 +282,10 @@ def stage(root, destination, component, build):
             )
     elif component.startswith("session-"):
         name = component.removeprefix("session-")
+        if name == "nacre-niri":
+            # The fork package owns the one public Wayland login entry. This
+            # Nacre split package exists to opt into its dependencies only.
+            return
         desktop_name = (
             "nacre-session-niri.desktop"
             if name == "niri"

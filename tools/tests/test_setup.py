@@ -1690,6 +1690,14 @@ class ArchPackageLayoutTests(unittest.TestCase):
             if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
                 self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
+            self.assertIn(
+                Path("usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"),
+                owned,
+            )
+            self.assertNotIn(
+                Path("usr/share/wayland-sessions/nacre-session-nacre-niri.desktop"),
+                owned,
+            )
             self.assertIn(Path("usr/lib/nacre/nacre-helper"), owned)
             reference = base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper"
             self.assertTrue(reference.is_symlink())
