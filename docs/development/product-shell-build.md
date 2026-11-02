@@ -49,7 +49,7 @@ and full optimization to Bead workspace crates and its rendering, text, and
 image hot-path dependencies.
 
 The shell build script discovers the resolved `bead-test` manifest through
-`cargo metadata --locked --offline` and exports the pinned Bead checkout root to
+`cargo metadata --locked` and exports the pinned Bead checkout root to
 the product crate. Product tests that need Bead's IBM Plex fixture font,
 neutral UI fixture, or hello plugin use that root directly. This keeps those
 tests runnable from Nacre alone without copying framework fixtures into the
