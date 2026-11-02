@@ -447,10 +447,10 @@ impl<R: Runtime> Settings<R> {
             .filter(|key| {
                 !INPUT_KEYS.contains(&key.as_str())
                     && ![
-                    "language",
-                    "monoFont",
-                    "scrollSpeed",
-                    "niriWorkspaceMode",
+                        "language",
+                        "monoFont",
+                        "scrollSpeed",
+                        "niriWorkspaceMode",
                         "workspacePrimaryOutput",
                         "monitorWorkspaceActions",
                     ]

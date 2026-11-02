@@ -75,7 +75,12 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
         config_path: String,
     }
     impl Runtime for RuntimeFixture {
-        fn compositor(&mut self, operation: &str, args: &[Value], _kwargs: &Value) -> Result<Value> {
+        fn compositor(
+            &mut self,
+            operation: &str,
+            args: &[Value],
+            _kwargs: &Value,
+        ) -> Result<Value> {
             match operation {
                 "backend_name" => Ok(json!("niri")),
                 "capabilities" => Ok(json!({
@@ -83,8 +88,14 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
                     "perOutputWorkspaces":false
                 })),
                 "desktop_option_keys" => Ok(json!([
-                    "animations", "blur", "shadow", "followMouse", "naturalScroll",
-                    "gapsIn", "borderSize", "rounding"
+                    "animations",
+                    "blur",
+                    "shadow",
+                    "followMouse",
+                    "naturalScroll",
+                    "gapsIn",
+                    "borderSize",
+                    "rounding"
                 ])),
                 "config_path" => Ok(json!(self.config_path)),
                 "set_desktop_options" => {
