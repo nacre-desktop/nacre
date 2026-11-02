@@ -66,7 +66,11 @@ impl Fake {
                             let _ = reader.read(&mut byte);
                             break;
                         }
-                        let response = if request.to_string().contains("LoadConfigFile") {
+                        let reload = request
+                            .get("Action")
+                            .and_then(|action| action.get("LoadConfigFile"))
+                            .is_some();
+                        let response = if reload {
                             if reload_failure.exists() {
                                 json!({"Err":"Fixture reload rejected"})
                             } else {
@@ -951,7 +955,7 @@ fn daemon_desktop_and_set_scroll_writes_apply_to_private_niri_session() -> Resul
         .unwrap();
         fs::write(
             session.join("host.kdl"),
-            "layout { gaps 14; }\ninput {\n    mouse { scroll-factor 1.5; natural-scroll; }\n    touchpad { scroll-factor 0.35; tap; }\n}\noutput \"fixture\" { scale 1; }\nbinds { Super+Q { close-window; }; }\n",
+            "layout { gaps 14; }\ninput {\n    touchpad { natural-scroll; scroll-factor 0.35; tap; }\n}\noutput \"fixture\" { scale 1; }\nbinds { Super+Q { close-window; }; }\n",
         )
         .unwrap();
         fs::write(
@@ -1062,13 +1066,13 @@ printf '%s\n' "$*" >> "$FAKE_DIR/niri-validate.log"
     assert_eq!(fs::read(&desktop_path)?, before_desktop);
     assert_eq!(fs::read(&host_path)?, before_host);
 
-    fs::write(daemon.root().join("fake/niri-reload-failure"), b"")?;
+    fs::write(daemon.root().join("niri-reload-failure"), b"")?;
     let rejected = client.ok(
         "settings.desktop",
         json!({"arguments":["set","mouseScrollSpeed","2.75"],"rev":state["rev"]}),
     )?;
     assert!(rejected["error"].is_string());
-    fs::remove_file(daemon.root().join("fake/niri-reload-failure"))?;
+    fs::remove_file(daemon.root().join("niri-reload-failure"))?;
     assert_eq!(fs::read(&desktop_path)?, before_desktop);
     assert_eq!(fs::read(&host_path)?, before_host);
     assert_eq!(client.state(topic)["rev"], before_state["rev"]);
