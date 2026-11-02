@@ -1009,25 +1009,25 @@ printf '%s\n' "$*" >> "$FAKE_DIR/niri-validate.log"
     let set = |key: &str, value: Value, rev: &Value| json!({"store":"desktop","key":[key],"value":value,"rev":rev});
     let written = client.ok(
         "settings.set",
-        set("mouseScrollSpeed", json!(2.25), &state["rev"]),
+        set("mouseScrollSpeed", json!(2.2), &state["rev"]),
     )?;
     assert_eq!(written["data"]["scrollSpeed"], json!(0.8));
-    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.25));
+    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.2));
     state = client.until(topic, "mouse scroll applied", |value| {
-        value["data"]["mouseScrollSpeed"] == 2.25
+        value["data"]["mouseScrollSpeed"] == 2.2
     })?;
     let desktop = fs::read_to_string(&desktop_path)?;
     let host = fs::read_to_string(&host_path)?;
     assert!(desktop.contains("scroll-factor 0.8"));
-    assert!(desktop.contains("scroll-factor 2.25"));
+    assert!(desktop.contains("scroll-factor 2.2"));
     assert!(host.contains("scroll-factor 0.8"));
-    assert!(host.contains("scroll-factor 2.25"));
+    assert!(host.contains("scroll-factor 2.2"));
 
     let written = client.ok(
         "settings.set",
         set("scrollSpeed", json!(0.55), &state["rev"]),
     )?;
-    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.25));
+    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.2));
     state = client.until(topic, "second touchpad scroll applied", |value| {
         value["data"]["scrollSpeed"] == 0.55
     })?;
