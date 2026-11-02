@@ -96,13 +96,11 @@ impl Configuration {
         paths: &crate::paths::Paths,
         env: &std::collections::BTreeMap<String, String>,
     ) -> Self {
-        let explicit_loader = ["NACRE_NIRI_CONFIG", "NIRI_CONFIG"]
-            .iter()
-            .find_map(|key| {
-                env.get(*key)
-                    .filter(|value| !value.is_empty())
-                    .map(|value| PathBuf::from(value.as_str()))
-            });
+        let explicit_loader = ["NACRE_NIRI_CONFIG", "NIRI_CONFIG"].iter().find_map(|key| {
+            env.get(*key)
+                .filter(|value| !value.is_empty())
+                .map(|value| PathBuf::from(value.as_str()))
+        });
         let mut loader = explicit_loader
             .clone()
             .unwrap_or_else(|| super::niri_bindings::loader(paths, env));
