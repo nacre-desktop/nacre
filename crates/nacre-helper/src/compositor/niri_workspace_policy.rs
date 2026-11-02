@@ -214,7 +214,9 @@ pub struct Session {
 }
 impl Session {
     fn native_collections(&mut self) -> bool {
-        let socket = env::var("NIRI_SOCKET").ok().filter(|socket| !socket.is_empty());
+        let socket = env::var("NIRI_SOCKET")
+            .ok()
+            .filter(|socket| !socket.is_empty());
         if socket != self.capability_socket {
             self.capability_socket = socket.clone();
             self.native_collections = None;
@@ -569,11 +571,8 @@ impl Session {
                             continue;
                         }
                         for (index, name) in names.iter().enumerate() {
-                            if let Some(row) = now["workspaces"]
-                                .as_array()
-                                .unwrap()
-                                .iter()
-                                .find(|r| {
+                            if let Some(row) =
+                                now["workspaces"].as_array().unwrap().iter().find(|r| {
                                     r["name"] == *name
                                         && (!native_collections || r["outputId"].as_str().is_some())
                                 })
@@ -877,7 +876,8 @@ mod tests {
     }
     #[test]
     fn hidden_workspace_visitor_semantics_change_only_with_native_collections() {
-        let desktop = json!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"A":["a1"],"B":["b1"]}});
+        let desktop =
+            json!({"niriWorkspaceMode":"fixed-all","niriWorkspaceSets":{"A":["a1"],"B":["b1"]}});
         let mut stock = Session::default();
         let mut value = json!({"monitors":[{"name":"A"}],"workspaces":[
             {"id":"niri-workspace:1","index":1,"name":"b1","outputId":null,"active":false}

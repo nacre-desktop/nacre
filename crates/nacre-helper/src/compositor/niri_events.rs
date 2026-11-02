@@ -417,8 +417,14 @@ mod tests {
         hover_server.read_to_end(&mut hover_request)?;
         let mut stock_request = Vec::new();
         stock_server.read_to_end(&mut stock_request)?;
-        assert_eq!(serde_json::from_slice::<Value>(&hover_request)?, json!("NacreOverviewHoverStream"));
-        assert_eq!(serde_json::from_slice::<Value>(&stock_request)?, json!("EventStream"));
+        assert_eq!(
+            serde_json::from_slice::<Value>(&hover_request)?,
+            json!("NacreOverviewHoverStream")
+        );
+        assert_eq!(
+            serde_json::from_slice::<Value>(&stock_request)?,
+            json!("EventStream")
+        );
         Ok(())
     }
     fn bytes(hex: &str) -> crate::Result<Vec<u8>> {

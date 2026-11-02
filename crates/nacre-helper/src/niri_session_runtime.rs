@@ -116,20 +116,21 @@ pub fn command(
     ] {
         environment.insert(name.into(), value);
     }
-    let native_binary = !root.join("stock-niri").is_file()
-        && installed_nacre_niri(&mut NativeVersions);
-    let hover = if needs_hover_companion(
-        action,
-        root.join("stock-niri").is_file(),
-        native_binary,
-    ) {
+    let native_binary =
+        !root.join("stock-niri").is_file() && installed_nacre_niri(&mut NativeVersions);
+    let hover = if needs_hover_companion(action, root.join("stock-niri").is_file(), native_binary) {
         companion(paths)
     } else {
         None
     };
     environment.insert(
         "NACRE_NIRI_HOVER_STREAM".into(),
-        if hover.is_some() || native_binary { "1" } else { "0" }.into(),
+        if hover.is_some() || native_binary {
+            "1"
+        } else {
+            "0"
+        }
+        .into(),
     );
     match action {
         "compositor" => args.extend([
@@ -1054,8 +1055,14 @@ mod tests {
             fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/source"))?;
             fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/tools"))?;
             fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/bin"))?;
-            fs::write(root.join("home-view/.local/share/nacre/shell/source/shell.qml"), "")?;
-            fs::write(root.join("home-view/.local/share/nacre/shell/tools/nacre_native_compositor.py"), "")?;
+            fs::write(
+                root.join("home-view/.local/share/nacre/shell/source/shell.qml"),
+                "",
+            )?;
+            fs::write(
+                root.join("home-view/.local/share/nacre/shell/tools/nacre_native_compositor.py"),
+                "",
+            )?;
             fs::write(root.join("home-view/.local/share/nacre/shell/bin/qs"), "")?;
             fs::write(root.join("stock-niri"), "stock\n")?;
             let socket = home.path().join("niri.sock");
@@ -1065,7 +1072,10 @@ mod tests {
                 let mut stream = BufReader::new(stream);
                 let mut line = String::new();
                 stream.read_line(&mut line)?;
-                assert_eq!(serde_json::from_str::<Value>(&line).unwrap(), value!("NacreCapabilities"));
+                assert_eq!(
+                    serde_json::from_str::<Value>(&line).unwrap(),
+                    value!("NacreCapabilities")
+                );
                 let mut stream = stream.into_inner();
                 let widths = enabled;
                 let response = value!({"Ok":{"NacreCapabilities":{
