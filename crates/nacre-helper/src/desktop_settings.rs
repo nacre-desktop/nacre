@@ -87,7 +87,10 @@ fn validate_with(defaults: &Value, key: &str, value: &Value, developer: bool) ->
             }
         }
         "mouseScrollSpeed" => {
-            if !value.as_f64().is_some_and(|number| (0.5..=3.0).contains(&number)) {
+            if !value
+                .as_f64()
+                .is_some_and(|number| (0.5..=3.0).contains(&number))
+            {
                 return Err("Mouse scroll speed must be from 0.5 to 3.0".into());
             }
         }

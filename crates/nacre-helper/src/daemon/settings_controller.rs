@@ -83,7 +83,9 @@ pub async fn execute(
                     &[serde_json::json!(paths.home), serde_json::json!("desktop")],
                     &serde_json::json!({}),
                 )?;
-                Some(PathBuf::from(path.as_str().ok_or("Invalid desktop configuration path")?))
+                Some(PathBuf::from(
+                    path.as_str().ok_or("Invalid desktop configuration path")?,
+                ))
             } else {
                 None
             };

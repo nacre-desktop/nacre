@@ -240,7 +240,8 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 fields.push(format!("accel-profile {}", text(value)?));
             }
         }
-        let mut specified = device == "touchpad" || device == "mouse"
+        let mut specified = device == "touchpad"
+            || device == "mouse"
             || preferences.contains_key(speed)
             || (device == "mouse" && preferences.contains_key("mouseAcceleration"));
         for (key, field) in flags {
