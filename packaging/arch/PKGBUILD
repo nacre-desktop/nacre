@@ -3,7 +3,7 @@
 # Maintainer: siverteh <92440237+Siverteh@users.noreply.github.com>
 pkgbase=nacre
 pkgname=('nacre' 'nacre-ai' 'nacre-brain' 'nacre-session-hyprland' 'nacre-session-niri')
-pkgver=0.1.0dev2.r459.g380715856f94
+pkgver=0.1.0dev2.r2523.g6470796b0f5c
 pkgrel=1
 pkgdesc='Desktop shell and guided per-user setup'
 arch=('x86_64')
@@ -12,10 +12,10 @@ license=('GPL-3.0-only')
 # The Rust decoder links C archives; GCC LTO objects cannot be read by Rust's lld.
 # Cargo's own release optimization and normal strip/debug processing remain enabled.
 options=('!lto')
-depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml' 'hyprland>=0.56.2' 'xdg-desktop-portal-hyprland' 'niri>=26.04' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
-makedepends=('git' 'nodejs' 'rust' 'cargo' 'cmake' 'clang')
-checkdepends=('ruff' 'npm' 'lua' 'xorg-server-xvfb' 'xorg-xauth' 'mesa' 'dbus' 'ttf-dejavu' 'python-dbus-next' 'python-jsonschema' 'bubblewrap')
-source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit=380715856f94071e63df725ff5ebbbfde95c6578' 'orient::git+https://github.com/nacre-desktop/orient.git#commit=3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8' 'IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf' 'IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt' 'MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf' 'MaterialSymbols-LICENSE.txt::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE')
+depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv' 'python-dbus' 'libsecret' 'openssh' 'tmux' 'python-yaml' 'hyprland>=0.56.2' 'xdg-desktop-portal-hyprland' 'niri>=26.04' 'xwayland-satellite' 'xdg-desktop-portal-gnome')
+makedepends=('git' 'nodejs' 'rust' 'cargo' 'cmake' 'clang' 'pkgconf')
+checkdepends=('ruff' 'npm' 'lua' 'xorg-server-xvfb' 'xorg-xauth' 'mesa' 'dbus' 'ttf-dejavu' 'python-dbus-next' 'python-jsonschema' 'bubblewrap' 'curl' 'unzip')
+source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit=6470796b0f5c3f1e428a7bdcb26cf2e58f78451b' 'orient::git+https://github.com/nacre-desktop/orient.git#commit=3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8' 'IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf' 'IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt' 'MaterialSymbolsRounded.ttf::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/variablefont/MaterialSymbolsRounded%5BFILL%2CGRAD%2Copsz%2Cwght%5D.ttf' 'MaterialSymbols-LICENSE.txt::https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE')
 sha256sums=('SKIP' 'SKIP' '3b031aa4216174205bd8471f88a49b91f093169e9e87bd5262242bc5967fe2e3' '7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da' '95b24392bb49efd1bc3e92cff4e2452ad094461bab7c97e7d8723fab97e330ca' '58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd')
 
 prepare() {
@@ -32,18 +32,26 @@ build() {
 
 check() {
   cd "$srcdir/nacre"
-  cargo test --locked --quiet
-  cargo build --locked --examples
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets --locked -j2 -- -D warnings
+  cargo test --workspace --locked -j2
+  cargo test -p nacre-shell --features trace --locked -j2 memory_policy::tests::
+  cargo check -p nacre-shell --no-default-features --locked -j2
+  cargo check --workspace --all-features --locked -j2
+  cargo build -p nacre-shell --no-default-features --locked -j2
+  cargo build --locked --examples -j2
+  python tools/check_product_shell.py --download-analyzer "$srcdir/luau/luau-analyze"
+  python tools/check_product_shell.py --native-only --analyzer "$srcdir/luau/luau-analyze"
   npm ci --ignore-scripts --no-audit --no-fund
   python -m venv --system-site-packages "$srcdir/check-env"
   export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
   export NACRE_ORIENT_BINARY=/usr/bin/orient
-  python packaging/arch/check.py "$srcdir/check-env/bin/python"
+  python packaging/arch/check.py "$srcdir/check-env/bin/python" "$srcdir/artifacts/ui-shell"
 }
 
 package_nacre() {
   license=('GPL-3.0-only' 'MIT' 'MIT-CMU' 'BSD-3-Clause' 'IJG' 'Zlib' 'OFL-1.1' 'Apache-2.0' 'Unicode-3.0')
-  depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2')
+  depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'quickshell' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'qt6-multimedia' 'qt6-multimedia-ffmpeg' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv')
   optdepends=('nacre-session-niri: Nacre session and dependencies for Niri' 'nacre-session-hyprland: Nacre session and dependencies for Hyprland' 'nacre-niri: Niri companion with native overview hover titles' 'nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
