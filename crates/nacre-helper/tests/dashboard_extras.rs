@@ -39,11 +39,8 @@ impl Fake {
                 if done.load(Ordering::Relaxed) {
                     break;
                 }
-                let (workspaces, outputs, reload_failure) = (
-                    workspaces.clone(),
-                    outputs.clone(),
-                    reload_failure.clone(),
-                );
+                let (workspaces, outputs, reload_failure) =
+                    (workspaces.clone(), outputs.clone(), reload_failure.clone());
                 thread::spawn(move || {
                     let mut reader = BufReader::new(stream);
                     let mut line = String::new();
@@ -78,10 +75,10 @@ impl Fake {
                             }
                         } else {
                             match request.as_str() {
-                            Some("Outputs") => json!({"Ok":{"Outputs":outputs}}),
-                            Some("Workspaces") => json!({"Ok":{"Workspaces":workspaces}}),
-                            Some("Windows") => json!({"Ok":{"Windows":[]}}),
-                            _ => json!({"Err":"Unsupported fixture request"}),
+                                Some("Outputs") => json!({"Ok":{"Outputs":outputs}}),
+                                Some("Workspaces") => json!({"Ok":{"Workspaces":workspaces}}),
+                                Some("Windows") => json!({"Ok":{"Windows":[]}}),
+                                _ => json!({"Err":"Unsupported fixture request"}),
                             }
                         };
                         if writeln!(reader.get_mut(), "{response}").is_err() {
@@ -1009,9 +1006,7 @@ printf '%s\n' "$*" >> "$FAKE_DIR/niri-validate.log"
     assert!(host.contains("output") && host.contains("scale 1"));
     assert!(host.contains("Super+Q"));
 
-    let set = |key: &str, value: Value, rev: &Value| {
-        json!({"store":"desktop","key":[key],"value":value,"rev":rev})
-    };
+    let set = |key: &str, value: Value, rev: &Value| json!({"store":"desktop","key":[key],"value":value,"rev":rev});
     let written = client.ok(
         "settings.set",
         set("mouseScrollSpeed", json!(2.25), &state["rev"]),

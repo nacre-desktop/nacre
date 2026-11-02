@@ -47,10 +47,13 @@ class SettingsRegistryTests(unittest.TestCase):
         }
         scrolling = sections["keyboard-mouse.scrolling"]
         self.assertEqual(scrolling["order"], 15)
-        self.assertEqual(scrolling["visibleWhen"]["all"], [
-            {"capability": "input.controls"},
-            {"capability": "input.touchpadSpeed"},
-        ])
+        self.assertEqual(
+            scrolling["visibleWhen"]["all"],
+            [
+                {"capability": "input.controls"},
+                {"capability": "input.touchpadSpeed"},
+            ],
+        )
         touchpad = settings["keyboard-mouse.touchpad.scrollSpeed"]
         mouse = settings["keyboard-mouse.mouse.mouseScrollSpeed"]
         english = json.loads((ROOT / "nacre/shell/i18n/en.json").read_text())
@@ -63,7 +66,9 @@ class SettingsRegistryTests(unittest.TestCase):
         self.assertEqual(mouse["range"], {"min": 0.5, "max": 3.0, "step": 0.1})
         self.assertEqual(mouse["visibleWhen"], {"capability": "input.controls"})
         self.assertNotIn("dependsOn", mouse)
-        self.assertNotIn({"capability": "touchpad"}, mouse.get("visibleWhen", {}).get("all", []))
+        self.assertNotIn(
+            {"capability": "touchpad"}, mouse.get("visibleWhen", {}).get("all", [])
+        )
         self.assertEqual(
             english["settings.registry.keyboard-mouse.touchpad.scrollSpeed.label"],
             "Touchpad scroll speed",
