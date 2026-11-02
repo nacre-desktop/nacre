@@ -119,8 +119,7 @@ impl Configuration {
         let explicit_desktop = env
             .get("NACRE_NIRI_DESKTOP_CONFIG")
             .filter(|value| !value.is_empty())
-            .map(PathBuf::from)
-            .filter(|path| files.iter().any(|file| file == path));
+            .map(|value| PathBuf::from(value.as_str()));
         let desktop = explicit_desktop
             .or_else(|| included("desktop.kdl"))
             .or_else(|| {
@@ -579,6 +578,40 @@ mod tests {
         assert_eq!(config.desktop, desktop);
         assert_eq!(config.host, Some(host));
         config.ensure_loader().unwrap();
+        let original_desktop = fs::read(&desktop)?;
+        let original_host = fs::read(&host)?;
+        let invalid_target = session.join("custom.kdl");
+        let invalid = Configuration::active(
+            &paths,
+            &std::collections::BTreeMap::from([
+                (
+                    "NACRE_NIRI_CONFIG".into(),
+                    loader.to_string_lossy().into_owned(),
+                ),
+                (
+                    "NACRE_NIRI_DESKTOP_CONFIG".into(),
+                    invalid_target.to_string_lossy().into_owned(),
+                ),
+            ]),
+        );
+        assert_eq!(invalid.desktop, invalid_target);
+        let mut runtime = Fixture {
+            monitors: serde_json::json!([]),
+            input: serde_json::json!({}),
+            target: desktop.clone(),
+            calls: vec![],
+        };
+        assert!(invalid
+            .set(
+                &serde_json::json!({"scrollSpeed":0.55}),
+                Duration::from_secs(3),
+                &mut runtime,
+            )
+            .is_err());
+        assert_eq!(fs::read(&desktop)?, original_desktop);
+        assert_eq!(fs::read(&host)?, original_host);
+        assert!(!invalid_target.exists());
+        assert!(runtime.calls.is_empty());
         Ok(())
     }
     #[test]

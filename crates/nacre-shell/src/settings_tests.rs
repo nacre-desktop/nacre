@@ -113,14 +113,46 @@ fn appearance_rows_follow_the_registry_types_and_the_store_with_nacre_defaults()
 
 #[test]
 fn shared_scroll_setting_defaults_and_preserves_a_saved_value() {
-    for (data, expected) in [(json!({}), 0.75), (json!({"scrollSpeed": 1.25}), 1.25)] {
+    for (data, expected) in [(json!({}), 0.35), (json!({"scrollSpeed": 1.25}), 1.25)] {
         let (settings, _) = fixture(data);
         let rows = items(&settings.project(&stores("keyboard-mouse", "")));
         let speed = row(&rows, "keyboard-mouse.touchpad.scrollSpeed");
         assert_eq!(speed["kind"], "number");
         assert_eq!(speed["number"], expected);
-        assert_eq!(speed["label"], "Scroll speed");
+        assert_eq!(speed["label"], "Touchpad scroll speed");
     }
+    for (data, expected) in [
+        (json!({}), 1.5),
+        (json!({"mouseScrollSpeed": 2.25}), 2.25),
+    ] {
+        let (settings, _) = fixture(data);
+        let rows = items(&settings.project(&stores("keyboard-mouse", "")));
+        let speed = row(&rows, "keyboard-mouse.mouse.mouseScrollSpeed");
+        assert_eq!(speed["kind"], "number");
+        assert_eq!(speed["number"], expected);
+        assert_eq!(speed["label"], "Mouse wheel scroll speed");
+    }
+}
+
+#[test]
+fn mouse_scroll_control_is_visible_without_a_touchpad() {
+    let (settings, _) = fixture_with(
+        json!({}),
+        &[(
+            "capabilities",
+            json!({"flags":{"input.controls":true,"input.touchpadSpeed":true}}),
+        )],
+    );
+    let rows = items(&settings.project(&stores("keyboard-mouse", "")));
+    assert!(rows
+        .iter()
+        .any(|row| row["id"] == "keyboard-mouse.scrolling"));
+    assert!(rows
+        .iter()
+        .any(|row| row["id"] == "keyboard-mouse.mouse.mouseScrollSpeed"));
+    assert!(!rows
+        .iter()
+        .any(|row| row["id"] == "keyboard-mouse.touchpad.scrollSpeed"));
 }
 
 #[test]
