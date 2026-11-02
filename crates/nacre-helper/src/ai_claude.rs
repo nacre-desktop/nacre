@@ -847,6 +847,13 @@ fn prepare_environment(
     config: &Path,
 ) -> std::collections::HashMap<std::ffi::OsString, std::ffi::OsString> {
     inherited.remove(std::ffi::OsStr::new("NACRE_AI_CLAUDE_TMUX_CHILD"));
+    // Under Wayland, avoid stale Xwayland clipboard data from Claude's xclip-first paste.
+    if inherited
+        .get(std::ffi::OsStr::new("WAYLAND_DISPLAY"))
+        .is_some_and(|display| !display.is_empty())
+    {
+        inherited.remove(std::ffi::OsStr::new("DISPLAY"));
+    }
     inherited.insert("CLAUDE_CONFIG_DIR".into(), config.as_os_str().into());
     inherited
 }
@@ -1555,6 +1562,26 @@ mod tests {
                 .as_ref(),
             "/codex-profile"
         );
+
+        let mut wayland = HashMap::new();
+        wayland.insert("WAYLAND_DISPLAY".into(), "wayland-1".into());
+        wayland.insert("DISPLAY".into(), ":0".into());
+        assert!(!prepare_environment(wayland, Path::new("/profile"))
+            .contains_key(std::ffi::OsStr::new("DISPLAY")));
+
+        for wayland_display in [None, Some("")] {
+            let mut x11 = HashMap::new();
+            x11.insert("DISPLAY".into(), ":0".into());
+            if let Some(value) = wayland_display {
+                x11.insert("WAYLAND_DISPLAY".into(), value.into());
+            }
+            assert_eq!(
+                prepare_environment(x11, Path::new("/profile"))
+                    .get(std::ffi::OsStr::new("DISPLAY"))
+                    .map(|value| value.to_string_lossy().into_owned()),
+                Some(":0".into())
+            );
+        }
 
         let status = merged_status_line(&[
             json!({"statusLine":{"command":"custom","padding":1}}),
