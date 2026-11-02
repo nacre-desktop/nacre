@@ -1717,8 +1717,8 @@ class ArchPackageLayoutTests(unittest.TestCase):
             fork_entry = (
                 base / "core/usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"
             ).read_text()
-            self.assertIn("nacre session nacre-niri", fork_entry)
-            self.assertIn("TryExec=nacre-niri", fork_entry)
+            self.assertIn("Exec=nacre-niri-session", fork_entry)
+            self.assertIn("TryExec=nacre-niri-session", fork_entry)
             self.assertEqual(
                 (base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper")
                 .stat()
