@@ -36,6 +36,42 @@ pub struct Connection {
     path: PathBuf,
     stream: Option<BufReader<UnixStream>>,
 }
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct NacreCapabilities {
+    pub workspace_collections: bool,
+    pub proportional_x11_widths: bool,
+    pub overview_hover: bool,
+}
+impl NacreCapabilities {
+    fn parse(response: &Value) -> Option<Self> {
+        let object = response.as_object()?;
+        if object.len() != 1 {
+            return None;
+        }
+        let features = object.get("NacreCapabilities")?.as_object()?;
+        if features.len() != 3 {
+            return None;
+        }
+        Some(Self {
+            workspace_collections: features.get("workspace_collections")?.as_bool()?,
+            proportional_x11_widths: features.get("proportional_x11_widths")?.as_bool()?,
+            overview_hover: features.get("overview_hover")?.as_bool()?,
+        })
+    }
+}
+pub fn nacre_capabilities(socket: &Path) -> NacreCapabilities {
+    let mut connection = Connection::new(socket);
+    connection
+        .request_value(
+            &Value::String("NacreCapabilities".into()),
+            Duration::from_millis(500),
+            4096,
+        )
+        .ok()
+        .and_then(|response| NacreCapabilities::parse(&response))
+        .unwrap_or_default()
+}
 impl Connection {
     pub fn new(path: impl AsRef<Path>) -> Self {
         Self {
@@ -244,6 +280,67 @@ fn duration(seconds: f64) -> Result<Duration> {
 mod tests {
     use super::*;
     use std::{fs, io::Read, os::unix::net::UnixListener, thread};
+
+    #[test]
+    fn nacre_capabilities_require_complete_known_boolean_fields() {
+        let active = json!({"NacreCapabilities": {
+            "workspace_collections": true,
+            "proportional_x11_widths": false,
+            "overview_hover": true
+        }});
+        assert_eq!(
+            NacreCapabilities::parse(&active),
+            Some(NacreCapabilities {
+                workspace_collections: true,
+                proportional_x11_widths: false,
+                overview_hover: true,
+            })
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": false,
+                "proportional_x11_widths": false,
+                "overview_hover": false
+            }})),
+            Some(NacreCapabilities::default())
+        );
+        assert_eq!(NacreCapabilities::parse(&json!({"Future":{}})), None);
+        assert_eq!(NacreCapabilities::parse(&json!({"Err":"unsupported"})), None);
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "overview_hover": true
+            }})),
+            None
+        );
+    }
+
+    #[test]
+    fn unsupported_nacre_capability_request_is_an_error() -> crate::Result<()> {
+        let (client, server) = UnixStream::pair()?;
+        let worker = thread::spawn(move || -> std::io::Result<Vec<u8>> {
+            let mut server = BufReader::new(server);
+            let mut wire = Vec::new();
+            server.read_until(b'\n', &mut wire)?;
+            assert_eq!(
+                serde_json::from_slice::<Value>(&wire).map_err(std::io::Error::other)?,
+                json!("NacreCapabilities")
+            );
+            server.get_mut().write_all(b"{\"Err\":\"unknown request\"}\n")?;
+            Ok(wire)
+        });
+        let mut connection = Connection::from_stream(client);
+        assert!(connection
+            .request_value(
+                &Value::String("NacreCapabilities".into()),
+                Duration::from_secs(1),
+                4096,
+            )
+            .is_err());
+        worker.join().map_err(|_| "Peer panicked")??;
+        Ok(())
+    }
+
     #[test]
     fn frozen_request_bytes_and_reply_contracts() -> crate::Result<()> {
         let reference: Value = serde_json::from_str(include_str!(
