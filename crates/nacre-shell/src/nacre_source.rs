@@ -130,6 +130,9 @@ struct Pending {
     deadline: Instant,
     trace_menu: bool,
 }
+// Nacre’s preserve_order JSON values make Call 216 bytes; keep its inline queue
+// payload instead of adding an allocation to every dispatched command.
+#[allow(clippy::large_enum_variant)]
 enum Command {
     Call {
         id: Option<Id>,

@@ -3,6 +3,8 @@
 use bead::services::ipc::{Call, Reply};
 use serde::Deserialize;
 use serde_json::Value;
+// Nacre unifies serde_json/preserve_order, which enlarges the shared IPC Reply.
+// Keep the existing inline reply contract rather than allocating every error.
 #[derive(Deserialize)]
 pub struct Catalog {
     pub routes: Vec<Route>,
@@ -45,6 +47,7 @@ impl Catalog {
                 })
         })
     }
+    #[allow(clippy::result_large_err)]
     pub fn validate(&self, call: &Call) -> Result<&Route, String> {
         call.validate()?;
         let route = self
@@ -150,6 +153,7 @@ pub fn from_strings(target: String, method: String, values: &[String]) -> Result
     Ok(call)
 }
 
+#[allow(clippy::result_large_err)]
 pub fn validate(call: &Call) -> Result<(), Reply> {
     let catalog = catalog().map_err(|e| Reply::error(call.id, "catalog", e))?;
     let route = catalog
@@ -184,6 +188,7 @@ pub fn helper_client(args: &[String]) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
+#[allow(clippy::result_large_err)]
 pub fn map_views(mut call: Call) -> Result<Call, Reply> {
     // Owner-only child/app bridge for the Widgets drag lifecycle; never exposed through the daemon.
     if call.target == "bead.widgets" {
@@ -455,6 +460,7 @@ pub fn map_views(mut call: Call) -> Result<Call, Reply> {
     }
     map(call)
 }
+#[allow(clippy::result_large_err)]
 pub fn map_launcher(call: Call) -> Result<Call, Reply> {
     let call = map(call)?;
     if call.target == "bead.panel"
@@ -469,6 +475,7 @@ pub fn map_launcher(call: Call) -> Result<Call, Reply> {
     }
     Ok(call)
 }
+#[allow(clippy::result_large_err)]
 pub fn map(mut call: Call) -> Result<Call, Reply> {
     if ["bead", "bead.panel", "bead.osd"].contains(&call.target.as_str()) {
         return Ok(call);
@@ -508,6 +515,7 @@ pub fn map(mut call: Call) -> Result<Call, Reply> {
 }
 /// B0048: Nacre's `pearls` routes onto the panel layer. A QML pearl kind names the
 /// view that fills it; pearls are numbered, and `dock`/`close` take that number.
+#[allow(clippy::result_large_err)]
 fn map_pearls(mut call: Call) -> Result<Call, Reply> {
     let id = call.id;
     let (method, args) = match call.method.as_str() {

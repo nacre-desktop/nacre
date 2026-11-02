@@ -54,3 +54,8 @@ the product crate. Product tests that need Bead's IBM Plex fixture font,
 neutral UI fixture, or hello plugin use that root directly. This keeps those
 tests runnable from Nacre alone without copying framework fixtures into the
 product tree or setting a developer-specific environment variable.
+
+Nacre retains `serde_json/preserve_order`. Feature unification makes Bead IPC
+replies and the shell’s command payload larger than in Bead’s standalone graph.
+The existing inline reply and queue contracts are retained with narrowly scoped
+Clippy size allowances; no protocol pin, ordering contract or golden is changed.
