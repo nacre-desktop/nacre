@@ -592,7 +592,7 @@ mod input_settings_tests {
     fn input_choices_are_optional_and_rendered_once() {
         let baseline = desktop(&json!({"gapsIn":12,"naturalScroll":true})).unwrap();
         assert!(!baseline.contains("keyboard"));
-        assert!(!baseline.contains("mouse {"));
+        assert!(baseline.contains("mouse { scroll-factor 1.5; }"));
         let text = desktop(&json!({"naturalScroll":true,"keyRepeatDelay":450,"keyRepeatRate":30,"mouseSpeed":0.25,"mouseAcceleration":"flat","mouseLeftHanded":true,"touchpadSpeed":-0.2,"touchpadTap":true,"touchpadTypingGuard":false})).unwrap();
         assert_eq!(text.matches("touchpad {").count(), 1);
         assert!(text.contains("repeat-delay 450"));
