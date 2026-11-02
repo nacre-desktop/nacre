@@ -23,7 +23,7 @@ class SettingsRegistryTests(unittest.TestCase):
             for fragment in catalog()
             for row in fragment.get("settings", [])
         }
-        setting = settings["keyboard-mouse.touchpad.scrollSpeed"]
+        setting = settings["keyboard-mouse.scrolling.scrollSpeed"]
         self.assertEqual(setting["store"], {"id": "desktop", "key": ["scrollSpeed"]})
         self.assertEqual(setting["default"], 0.35)
         self.assertEqual(setting["range"], {"min": 0.25, "max": 2.0, "step": 0.05})
@@ -54,8 +54,8 @@ class SettingsRegistryTests(unittest.TestCase):
                 {"capability": "input.touchpadSpeed"},
             ],
         )
-        touchpad = settings["keyboard-mouse.touchpad.scrollSpeed"]
-        mouse = settings["keyboard-mouse.mouse.mouseScrollSpeed"]
+        touchpad = settings["keyboard-mouse.scrolling.scrollSpeed"]
+        mouse = settings["keyboard-mouse.scrolling.mouseScrollSpeed"]
         english = json.loads((ROOT / "nacre/shell/i18n/en.json").read_text())
         self.assertEqual(touchpad["section"], scrolling["id"])
         self.assertEqual(touchpad["default"], 0.35)
