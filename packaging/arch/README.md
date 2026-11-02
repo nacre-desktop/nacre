@@ -136,8 +136,10 @@ for dependency development; that run cannot publish to the binary repository.
 The Niri fork remains a separately built compositor package. The optional
 `nacre-session-nacre-niri` split is a dependency bundle for Nacre's setup/launch
 support; the compositor package owns the sole public Wayland entry. Core also
-ships the Nacre-managed UWSM desktop template under `/usr/share/nacre/uwsm`;
-this split does not create a duplicate login chooser entry.
+ships a managed UWSM desktop template under `/usr/share/nacre/uwsm` that launches
+the compositor package's session wrapper, so it works with source-installed Nacre.
+Packaged installs can also launch via `nacre session nacre-niri`; this split does
+not create a duplicate login chooser entry.
 
 `Publish tested Arch repository` admits only successful package runs from this
 repository's main branch and requires passing Source CI for the exact compiled
