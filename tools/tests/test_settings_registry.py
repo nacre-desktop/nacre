@@ -28,10 +28,10 @@ class SettingsRegistryTests(unittest.TestCase):
         self.assertEqual(setting["default"], 0.75)
         self.assertEqual(setting["range"], {"min": 0.25, "max": 2.0, "step": 0.05})
         self.assertEqual(setting["apply"], "instant")
-        self.assertEqual(setting["dependsOn"], "keyboard-mouse.touchpad.touchpadEnabled")
-        self.assertIn(
-            {"capability": "touchpad"}, setting["visibleWhen"]["all"]
+        self.assertEqual(
+            setting["dependsOn"], "keyboard-mouse.touchpad.touchpadEnabled"
         )
+        self.assertIn({"capability": "touchpad"}, setting["visibleWhen"]["all"])
 
     def test_dolphin_theme_switch_matches_the_native_style_reader(self):
         import re
