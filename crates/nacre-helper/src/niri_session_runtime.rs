@@ -43,7 +43,8 @@ pub fn command(
     if context != "niri" {
         return Err("Niri runtime requires an explicit niri session".into());
     }
-    let (selected_binary, selected_native) = selected_niri_binary(&environment, &mut NativeVersions)?;
+    let (selected_binary, selected_native) =
+        selected_niri_binary(&environment, &mut NativeVersions)?;
     if ["widths", "widths-check"].contains(&action)
         && active_capabilities(&environment).proportional_x11_widths
     {
@@ -173,7 +174,10 @@ fn selected_niri_binary(
     environment: &BTreeMap<String, String>,
     versions: &mut impl Versions,
 ) -> Result<(PathBuf, bool)> {
-    if environment.get("NACRE_NIRI_FORK").is_some_and(|value| value == "1") {
+    if environment
+        .get("NACRE_NIRI_FORK")
+        .is_some_and(|value| value == "1")
+    {
         let binary = PathBuf::from("/usr/bin/nacre-niri");
         let version = versions.version(&binary)?;
         if !is_nacre_niri_version(&version) {
@@ -202,16 +206,13 @@ fn active_capabilities(
         .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(socket)))
         .unwrap_or_default()
 }
-pub(crate) fn prepare_shell(
-    paths: &Paths,
-    environment: &BTreeMap<String, String>,
-) -> Result<()> {
+pub(crate) fn prepare_shell(paths: &Paths, environment: &BTreeMap<String, String>) -> Result<()> {
     if crate::niri_session_gate::compositor(environment) != "niri" {
         return Ok(());
     }
     let (binary, native_identity) = selected_niri_binary(environment, &mut NativeVersions)?;
-    let workspace_collections = native_identity
-        && active_capabilities(environment).workspace_collections;
+    let workspace_collections =
+        native_identity && active_capabilities(environment).workspace_collections;
     refresh_collection_bindings_if_supported(
         paths,
         environment,
@@ -247,13 +248,10 @@ fn refresh_collection_bindings_if_supported(
             fs::canonicalize(source).unwrap_or_else(|_| source.to_owned()) == candidate
         })
     };
-    let target = [session, standard]
-        .into_iter()
-        .find(|candidate| {
-            included(candidate)
-                && fs::symlink_metadata(candidate)
-                    .is_ok_and(|metadata| metadata.file_type().is_file())
-        });
+    let target = [session, standard].into_iter().find(|candidate| {
+        included(candidate)
+            && fs::symlink_metadata(candidate).is_ok_and(|metadata| metadata.file_type().is_file())
+    });
     let Some(target) = target else {
         return Ok(());
     };
@@ -267,9 +265,8 @@ fn refresh_collection_bindings_if_supported(
         return Ok(());
     }
     let permissions = fs::metadata(&target)?.permissions();
-    let mut candidate = tempfile::NamedTempFile::new_in(
-        target.parent().ok_or("Invalid generated bindings path")?,
-    )?;
+    let mut candidate =
+        tempfile::NamedTempFile::new_in(target.parent().ok_or("Invalid generated bindings path")?)?;
     use std::io::Write;
     candidate.write_all(updated.as_bytes())?;
     candidate.as_file().set_permissions(permissions.clone())?;
@@ -299,10 +296,7 @@ fn validate_collection_config(binary: &Path, loader: &Path) -> Result<()> {
     )?;
     Ok(())
 }
-fn reload_collection_config(
-    _binary: &Path,
-    environment: &BTreeMap<String, String>,
-) -> Result<()> {
+fn reload_collection_config(_binary: &Path, environment: &BTreeMap<String, String>) -> Result<()> {
     let socket = environment
         .get("NIRI_SOCKET")
         .filter(|socket| !socket.is_empty())
@@ -319,10 +313,13 @@ fn reload_collection_config(
     Ok(())
 }
 
-fn restore_generated_bindings(path: &Path, bytes: &[u8], permissions: &fs::Permissions) -> Result<()> {
-    let mut candidate = tempfile::NamedTempFile::new_in(
-        path.parent().ok_or("Invalid generated bindings path")?,
-    )?;
+fn restore_generated_bindings(
+    path: &Path,
+    bytes: &[u8],
+    permissions: &fs::Permissions,
+) -> Result<()> {
+    let mut candidate =
+        tempfile::NamedTempFile::new_in(path.parent().ok_or("Invalid generated bindings path")?)?;
     use std::io::Write;
     candidate.write_all(bytes)?;
     candidate.as_file().set_permissions(permissions.clone())?;
@@ -1227,16 +1224,13 @@ mod tests {
         )?;
         assert_eq!(binary, Path::new("/usr/bin/nacre-niri"));
         assert!(native);
-        assert!(selected_niri_binary(
-            &fork,
-            &mut Version("niri 26.12.0\n", "/usr/bin/nacre-niri")
-        )
-        .is_err());
+        assert!(
+            selected_niri_binary(&fork, &mut Version("niri 26.12.0\n", "/usr/bin/nacre-niri"))
+                .is_err()
+        );
         let stock = BTreeMap::from([("NACRE_NIRI_FORK".into(), "0".into())]);
-        let (binary, native) = selected_niri_binary(
-            &stock,
-            &mut Version("niri 26.12.0\n", "/usr/bin/niri"),
-        )?;
+        let (binary, native) =
+            selected_niri_binary(&stock, &mut Version("niri 26.12.0\n", "/usr/bin/niri"))?;
         assert_eq!(binary, Path::new("/usr/bin/niri"));
         assert!(!native);
         Ok(())
@@ -1263,7 +1257,10 @@ mod tests {
         let custom_before = fs::read(&custom)?;
         let environment = BTreeMap::from([
             ("NACRE_COMPOSITOR".into(), "niri".into()),
-            ("NACRE_NIRI_CONFIG".into(), loader.to_string_lossy().into_owned()),
+            (
+                "NACRE_NIRI_CONFIG".into(),
+                loader.to_string_lossy().into_owned(),
+            ),
         ]);
         let validate_count = Cell::new(0);
         let reload_count = Cell::new(0);
