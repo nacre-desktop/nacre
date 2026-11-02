@@ -1583,7 +1583,9 @@ mod tests {
         let migrated = host_preferences(&value!({}))?;
         assert_eq!(migrated.matches("scroll-factor 0.35").count(), 1);
         assert_eq!(migrated.matches("scroll-factor 1.5").count(), 1);
-        assert!(host_preferences(&value!({"mouseScrollSpeed":2.25}))?.contains("scroll-factor 2.25"));
+        assert!(
+            host_preferences(&value!({"mouseScrollSpeed":2.25}))?.contains("scroll-factor 2.25")
+        );
         for speed in [0.49, 3.01] {
             assert!(host_preferences(&value!({"mouseScrollSpeed":speed})).is_err());
         }
