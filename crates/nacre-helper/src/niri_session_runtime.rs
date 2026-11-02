@@ -305,8 +305,7 @@ pub fn host_preferences(desktop: &Value) -> Result<String> {
         text.push_str("        natural-scroll\n");
     }
     text.push_str(&format!(
-        "        scroll-factor {}\n    }}\n    mouse {{ scroll-factor {}; }}\n}}\n",
-        json::encode(&scroll_speed)?,
+        "        scroll-factor {}\n    }}\n}}\n",
         json::encode(&scroll_speed)?
     ));
     if let Some(displays) = desktop.get("displays") {
@@ -1560,17 +1559,18 @@ mod tests {
     }
 
     #[test]
-    fn host_scroll_speed_defaults_and_applies_to_both_pointer_devices() -> Result<()> {
+    fn host_scroll_speed_defaults_and_applies_to_touchpad_only() -> Result<()> {
         for speed in [0.25, 0.75, 1.25, 2.0] {
             let rendered = host_preferences(&value!({"scrollSpeed":speed}))?;
             let factor = format!("scroll-factor {}", serde_json::to_string(&value!(speed))?);
-            assert_eq!(rendered.matches(&factor).count(), 2);
+            assert_eq!(rendered.matches(&factor).count(), 1);
+            assert!(!rendered.contains("mouse {"));
         }
         for speed in [value!(0.2), value!(2.1), value!(true)] {
             assert!(host_preferences(&value!({"scrollSpeed":speed})).is_err());
         }
         let migrated = host_preferences(&value!({}))?;
-        assert_eq!(migrated.matches("scroll-factor 0.75").count(), 2);
+        assert_eq!(migrated.matches("scroll-factor 0.75").count(), 1);
         Ok(())
     }
 

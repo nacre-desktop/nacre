@@ -8,7 +8,7 @@
         "desktop": {}
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -26,7 +26,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        scroll-factor 0.75\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -66,7 +66,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 0\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -85,7 +85,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 1.5\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 2.0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 1.5\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 2.0; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -171,7 +171,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\noutput \"eDP-1\" {\n    scale 1.5\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\noutput \"eDP-1\" {\n    scale 1.5\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -198,7 +198,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\noutput \"DP-1\" {\n    scale 2\n}\noutput \"DP-2\" {\n    scale 1.25\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\noutput \"DP-1\" {\n    scale 2\n}\noutput \"DP-2\" {\n    scale 1.25\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -221,7 +221,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\noutput \"DP-\\\"\\\\\\u00f8\" {\n    scale 1\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\noutput \"DP-\\\"\\\\\\u00f8\" {\n    scale 1\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
@@ -322,7 +322,7 @@
         }
       },
       "observed": {
-        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n    mouse { scroll-factor 0.75; }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
+        "value": "prefer-no-csd\nlayout {\n    gaps 12\n    default-column-width { proportion 0.5; }\n    preset-column-widths {\n        proportion 0.33333\n        proportion 0.5\n        proportion 0.66667\n        proportion 1.0\n    }\n    focus-ring { width 1; }\n}\ninput {\n    touchpad {\n        natural-scroll\n        scroll-factor 0.75\n    }\n}\nwindow-rule {\n    match app-id=\"^nacre-ai-(dashboard|task)$\"\n    default-column-width { proportion 0.5; }\n}\nbinds {\n    Super+Ctrl+Tab { toggle-overview; }\n    Super+M { maximize-column; }\n    Super+R { switch-preset-column-width; }\n    Super+Shift+WheelScrollUp cooldown-ms=150 { focus-column-left; }\n    Super+Shift+WheelScrollDown cooldown-ms=150 { focus-column-right; }\n}\n",
         "error": null,
         "calls": [],
         "stdout": "",
