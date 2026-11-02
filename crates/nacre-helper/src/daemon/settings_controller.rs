@@ -331,6 +331,7 @@ mod tests {
             data: json!({"interfaceGradients":false}),
             exists: true,
             written: true,
+            skip_generated_path: None,
         };
         cached.effect(Effect::Gradients)?;
         peer.join().unwrap()?;

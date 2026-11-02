@@ -94,8 +94,9 @@ ceiling. Full Bead CI passes. See [B0157](specs/0157-picker-errors.md).
 ## 2026-11-02 — B0217 shared Bead scroll speed
 
 Bead retains its shared 100 px wheel notch across views; touchpad finger pixels remain 1:1 and immediate.
-Nacre's separate 0.75 default accelerates touchpad input only; the mouse scroll factor stays at niri's 1.0 default. The per-source
-wheel override is removed, and Bead's bundled Settings registry matches Nacre's touchpad-only metadata.
+Nacre's separate touchpad default is 0.35 and mouse-wheel default is 1.5. Both update the active generated
+niri desktop and host files through validation and reload. Bead's fixed gesture mapping remains unchanged,
+and the per-source wheel override stays removed.
 Real-view tests cover launcher, Widgets, Settings, chat and notification history stores at 23.5 px and 100 px.
 All steps of the full Bead CI passed with exit 0 on implementation commit `45b547f`; a following docs-only
 commit clarifies the niri mouse-factor wording. No local build/test or live run was made; the desktop test

@@ -29,6 +29,7 @@ impl Fake {
     /// Just enough niri IPC for the daemon's compositor, session and settings paths.
     fn niri(path: PathBuf) -> Result<Self> {
         let listener = UnixListener::bind(&path)?;
+        let reload_failure = path.with_file_name("niri-reload-failure");
         let stop = Arc::new(AtomicBool::new(false));
         let done = stop.clone();
         let workspaces = json!([{"id":1,"idx":1,"name":"Fixture","output":"fixture","is_active":true,"is_focused":true,"is_urgent":false,"active_window_id":null}]);
@@ -38,7 +39,11 @@ impl Fake {
                 if done.load(Ordering::Relaxed) {
                     break;
                 }
-                let (workspaces, outputs) = (workspaces.clone(), outputs.clone());
+                let (workspaces, outputs, reload_failure) = (
+                    workspaces.clone(),
+                    outputs.clone(),
+                    reload_failure.clone(),
+                );
                 thread::spawn(move || {
                     let mut reader = BufReader::new(stream);
                     let mut line = String::new();
@@ -61,11 +66,19 @@ impl Fake {
                             let _ = reader.read(&mut byte);
                             break;
                         }
-                        let response = match request.as_str() {
+                        let response = if request.to_string().contains("LoadConfigFile") {
+                            if reload_failure.exists() {
+                                json!({"Err":"Fixture reload rejected"})
+                            } else {
+                                json!({"Ok":"Handled"})
+                            }
+                        } else {
+                            match request.as_str() {
                             Some("Outputs") => json!({"Ok":{"Outputs":outputs}}),
                             Some("Workspaces") => json!({"Ok":{"Workspaces":workspaces}}),
                             Some("Windows") => json!({"Ok":{"Windows":[]}}),
                             _ => json!({"Err":"Unsupported fixture request"}),
+                            }
                         };
                         if writeln!(reader.get_mut(), "{response}").is_err() {
                             break;
@@ -918,5 +931,148 @@ fn dashboard_extras_settings_writes_use_the_registered_revision_fenced_writer() 
     client.until(topic, "mirrored", |s| {
         s["data"]["weatherPhotos"] == false && s["data"]["enabled"] == json!(["focus", "ai-usage"])
     })?;
+    Ok(())
+}
+
+#[test]
+fn daemon_desktop_and_set_scroll_writes_apply_to_private_niri_session() -> Result {
+    let daemon = Daemon::start(home(), |root| {
+        let session = root.join(".local/share/nacre/niri-on-pc/session/config");
+        fs::create_dir_all(&session).unwrap();
+        fs::write(
+            session.join("config.kdl"),
+            "include \"host.kdl\"\ninclude \"desktop.kdl\"\n",
+        )
+        .unwrap();
+        fs::write(
+            session.join("desktop.kdl"),
+            "input {\n    mouse { scroll-factor 1.5; }\n    touchpad { scroll-factor 0.35; }\n}\n",
+        )
+        .unwrap();
+        fs::write(
+            session.join("host.kdl"),
+            "layout { gaps 14; }\ninput {\n    mouse { scroll-factor 1.5; natural-scroll; }\n    touchpad { scroll-factor 0.35; tap; }\n}\noutput \"fixture\" { scale 1; }\nbinds { Super+Q { close-window; }; }\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("config/nacre/desktop.json"),
+            r#"{"version":3,"scrollSpeed":0.35,"mouseScrollSpeed":1.5}"#,
+        )
+        .unwrap();
+        fs::write(
+            root.join("fake/bin/niri"),
+            r#"#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_DIR/niri-validate.log"
+[ "$1" = validate ] && [ "$2" = -c ] && [ -s "$3" ] || exit 2
+[ ! -e "$FAKE_DIR/niri-validation-failure" ]
+"#,
+        )
+        .unwrap();
+        fs::set_permissions(
+            root.join("fake/bin/niri"),
+            fs::Permissions::from_mode(0o700),
+        )
+        .unwrap();
+    })?;
+    let session = daemon
+        .root()
+        .join(".local/share/nacre/niri-on-pc/session/config");
+    let desktop_path = session.join("desktop.kdl");
+    let host_path = session.join("host.kdl");
+    let mut client = daemon.client(&["settings.store.desktop", "settings.desktop"])?;
+    let topic = "settings.store.desktop";
+    let mut state = client.until(topic, "desktop defaults", |value| {
+        value["store"] == "desktop" && value["data"].is_object()
+    })?;
+    assert_eq!(state["data"]["scrollSpeed"], json!(0.35));
+    assert_eq!(state["data"]["mouseScrollSpeed"], json!(1.5));
+
+    let result = client.ok(
+        "settings.desktop",
+        json!({"arguments":["set","scrollSpeed","0.8"],"rev":state["rev"]}),
+    )?;
+    assert_eq!(result["data"]["scrollSpeed"], json!(0.8));
+    state = client.until(topic, "touchpad scroll applied", |value| {
+        value["data"]["scrollSpeed"] == 0.8
+    })?;
+    let desktop = fs::read_to_string(&desktop_path)?;
+    let host = fs::read_to_string(&host_path)?;
+    assert!(desktop.contains("scroll-factor 0.8"));
+    assert!(desktop.contains("scroll-factor 1.5"));
+    assert!(host.contains("scroll-factor 0.8"));
+    assert!(host.contains("scroll-factor 1.5"));
+    assert!(host.contains("natural-scroll") && host.contains("tap"));
+    assert!(host.contains("output") && host.contains("scale 1"));
+    assert!(host.contains("Super+Q"));
+
+    let set = |key: &str, value: Value, rev: &Value| {
+        json!({"store":"desktop","key":[key],"value":value,"rev":rev})
+    };
+    let written = client.ok(
+        "settings.set",
+        set("mouseScrollSpeed", json!(2.25), &state["rev"]),
+    )?;
+    assert_eq!(written["data"]["scrollSpeed"], json!(0.8));
+    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.25));
+    state = client.until(topic, "mouse scroll applied", |value| {
+        value["data"]["mouseScrollSpeed"] == 2.25
+    })?;
+    let desktop = fs::read_to_string(&desktop_path)?;
+    let host = fs::read_to_string(&host_path)?;
+    assert!(desktop.contains("scroll-factor 0.8"));
+    assert!(desktop.contains("scroll-factor 2.25"));
+    assert!(host.contains("scroll-factor 0.8"));
+    assert!(host.contains("scroll-factor 2.25"));
+
+    let written = client.ok(
+        "settings.set",
+        set("scrollSpeed", json!(0.55), &state["rev"]),
+    )?;
+    assert_eq!(written["data"]["mouseScrollSpeed"], json!(2.25));
+    state = client.until(topic, "second touchpad scroll applied", |value| {
+        value["data"]["scrollSpeed"] == 0.55
+    })?;
+    let before_desktop = fs::read(&desktop_path)?;
+    let before_host = fs::read(&host_path)?;
+    let before_state = state.clone();
+
+    assert_eq!(
+        client.err(
+            "settings.set",
+            set("mouseScrollSpeed", json!(0.49), &state["rev"]),
+        )?,
+        "permission_denied"
+    );
+    let invalid = client.ok(
+        "settings.desktop",
+        json!({"arguments":["set","scrollSpeed","0.2"],"rev":state["rev"]}),
+    )?;
+    assert!(invalid["error"].is_string());
+    assert_eq!(fs::read(&desktop_path)?, before_desktop);
+    assert_eq!(fs::read(&host_path)?, before_host);
+    assert_eq!(client.state(topic)["rev"], before_state["rev"]);
+
+    fs::write(daemon.root().join("fake/niri-validation-failure"), b"")?;
+    let invalid = client.ok(
+        "settings.desktop",
+        json!({"arguments":["set","mouseScrollSpeed","2.75"],"rev":state["rev"]}),
+    )?;
+    assert!(invalid["error"].is_string());
+    fs::remove_file(daemon.root().join("fake/niri-validation-failure"))?;
+    assert_eq!(fs::read(&desktop_path)?, before_desktop);
+    assert_eq!(fs::read(&host_path)?, before_host);
+
+    fs::write(daemon.root().join("fake/niri-reload-failure"), b"")?;
+    let rejected = client.ok(
+        "settings.desktop",
+        json!({"arguments":["set","mouseScrollSpeed","2.75"],"rev":state["rev"]}),
+    )?;
+    assert!(rejected["error"].is_string());
+    fs::remove_file(daemon.root().join("fake/niri-reload-failure"))?;
+    assert_eq!(fs::read(&desktop_path)?, before_desktop);
+    assert_eq!(fs::read(&host_path)?, before_host);
+    assert_eq!(client.state(topic)["rev"], before_state["rev"]);
+    let validations = fs::read_to_string(daemon.root().join("fake/niri-validate.log"))?;
+    assert!(validations.lines().count() >= 8);
     Ok(())
 }
