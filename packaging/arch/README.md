@@ -224,14 +224,14 @@ to publish.
 
 ## Niri companion
 
-`nacre-niri` is a separate package base, so building or installing core Nacre
+`nacre-niri-hover` is a separate package base, so building or installing core Nacre
 does not require Rust. Its recipe pins both the Nacre patch revision and official
 Niri26.04 commit. Runtime/build dependency names remain in `packages.json`.
 Generate it from a reviewed, published Nacre commit:
 
 ```sh
-python packaging/arch/niri/recipe.py --revision HEAD --output /tmp/nacre-niri-build/PKGBUILD
-cd /tmp/nacre-niri-build
+python packaging/arch/niri/recipe.py --revision HEAD --output /tmp/nacre-niri-hover-build/PKGBUILD
+cd /tmp/nacre-niri-hover-build
 makepkg --printsrcinfo > .SRCINFO
 makepkg
 namcap PKGBUILD ./*.pkg.tar.zst
@@ -250,7 +250,7 @@ The recipe disables makepkg's C/C++ LTO injection: GCC LTO objects in PipeWire's
 C shims cannot be linked by Rust's `lld`. Niri's own Rust thin-LTO, default
 features and ordinary strip/debug processing stay enabled.
 
-The package owns only `/usr/lib/nacre/niri`, `/usr/bin/nacre-niri` and its license/
+The package owns only `/usr/lib/nacre/niri`, `/usr/bin/nacre-niri-hover` and its license/
 patch notices. It depends on distribution Niri for its existing resources and
 session support. No system Niri binary, session entry or per-user configuration
 is overwritten. The source-prepared Nacre Niri session selects this companion first; package setup

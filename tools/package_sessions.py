@@ -49,4 +49,7 @@ def start(root, name):
         or not hasattr(backend, "session")
     ):
         raise RuntimeError("Packaged session launcher unavailable: " + name)
-    backend.session()
+    if name == "nacre-niri":
+        backend.session(compositor="nacre-niri")
+    else:
+        backend.session()

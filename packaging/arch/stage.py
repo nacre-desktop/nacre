@@ -282,9 +282,16 @@ def stage(root, destination, component, build):
             )
     elif component.startswith("session-"):
         name = component.removeprefix("session-")
+        desktop_name = (
+            "nacre-session-niri.desktop"
+            if name == "niri"
+            else "nacre-session-nacre-niri.desktop"
+            if name == "nacre-niri"
+            else "nacre-" + name + ".desktop"
+        )
         copy(
             root / sessions[name]["desktop"],
-            destination / "usr/share/wayland-sessions" / ("nacre-" + name + ".desktop"),
+            destination / "usr/share/wayland-sessions" / desktop_name,
         )
     elif component == "ai":
         # Brain templates belong to nacre-brain, avoiding split-package conflicts.
