@@ -2,6 +2,6 @@
 Name=Nacre (nacre-niri)
 Comment=Nacre workspace collections on the separate nacre-niri compositor
 Exec=nacre session nacre-niri
-TryExec=nacre
+TryExec=nacre-niri
 Type=Application
 DesktopNames=niri;nacre-niri

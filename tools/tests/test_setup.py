@@ -1706,13 +1706,12 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     / "session-niri/usr/share/wayland-sessions/nacre-session-niri.desktop"
                 ).read_text(),
             )
-            self.assertIn(
-                "nacre session nacre-niri",
-                (
-                    base
-                    / "session-nacre-niri/usr/share/wayland-sessions/nacre-session-nacre-niri.desktop"
-                ).read_text(),
-            )
+            fork_entry = (
+                base
+                / "session-nacre-niri/usr/share/wayland-sessions/nacre-session-nacre-niri.desktop"
+            ).read_text()
+            self.assertIn("nacre session nacre-niri", fork_entry)
+            self.assertIn("TryExec=nacre-niri", fork_entry)
             self.assertEqual(
                 (base / "core/usr/share/nacre/nacre/shell-tools/nacre-helper")
                 .stat()
