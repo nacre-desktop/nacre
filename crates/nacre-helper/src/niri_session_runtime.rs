@@ -1437,6 +1437,31 @@ mod tests {
         assert!(overlay.contains("Super+Ctrl+N"));
         assert!(overlay.contains("Super+Ctrl+Shift+Page_Down"));
         assert!(overlay.contains("Super+Ctrl+Shift+Page_Up"));
+
+        let home_path = home.path();
+        let config = home_path.join("stage/config/config.kdl");
+        let stock = std::process::Command::new("/usr/bin/niri")
+            .args(["validate", "-c"])
+            .arg(&config)
+            .env("HOME", home_path)
+            .output()?;
+        assert!(
+            stock.status.success(),
+            "stock Niri rejected prepared config: {}",
+            String::from_utf8_lossy(&stock.stderr)
+        );
+        if let Some(binary) = std::env::var_os("NACRE_NIRI_BINARY") {
+            let fork = std::process::Command::new(binary)
+                .args(["validate", "-c"])
+                .arg(home_path.join("stage/config/nacre-niri.kdl"))
+                .env("HOME", home_path)
+                .output()?;
+            assert!(
+                fork.status.success(),
+                "nacre-niri rejected prepared overlay: {}",
+                String::from_utf8_lossy(&fork.stderr)
+            );
+        }
         Ok(())
     }
 
