@@ -282,21 +282,16 @@ def stage(root, destination, component, build):
             )
     elif component.startswith("session-"):
         name = component.removeprefix("session-")
-        if name == "nacre-niri":
-            # The fork package owns the one public Wayland login entry. This
-            # Nacre split package exists to opt into its dependencies only.
-            return
-        desktop_name = (
-            "nacre-session-niri.desktop"
-            if name == "niri"
-            else "nacre-session-nacre-niri.desktop"
-            if name == "nacre-niri"
-            else "nacre-" + name + ".desktop"
-        )
-        copy(
-            root / sessions[name]["desktop"],
-            destination / "usr/share/wayland-sessions" / desktop_name,
-        )
+        if name != "nacre-niri":
+            desktop_name = (
+                "nacre-session-niri.desktop"
+                if name == "niri"
+                else "nacre-" + name + ".desktop"
+            )
+            copy(
+                root / sessions[name]["desktop"],
+                destination / "usr/share/wayland-sessions" / desktop_name,
+            )
     elif component == "ai":
         # Brain templates belong to nacre-brain, avoiding split-package conflicts.
         copy(root / "ai", shared / "ai")

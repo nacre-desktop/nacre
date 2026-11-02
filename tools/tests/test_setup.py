@@ -1715,8 +1715,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 ).read_text(),
             )
             fork_entry = (
-                base
-                / "session-nacre-niri/usr/share/wayland-sessions/nacre-session-nacre-niri.desktop"
+                base / "core/usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"
             ).read_text()
             self.assertIn("nacre session nacre-niri", fork_entry)
             self.assertIn("TryExec=nacre-niri", fork_entry)
