@@ -1,6 +1,6 @@
 pkgbase = nacre
 	pkgdesc = Desktop shell and guided per-user setup
-	pkgver = 0.1.0dev2.r459.g380715856f94
+	pkgver = 0.1.0dev2.r2539.g17626ccf4c4f
 	pkgrel = 1
 	url = https://github.com/nacre-desktop/nacre
 	arch = x86_64
@@ -16,11 +16,17 @@ pkgbase = nacre
 	checkdepends = python-dbus-next
 	checkdepends = python-jsonschema
 	checkdepends = bubblewrap
+	checkdepends = curl
+	checkdepends = unzip
+	checkdepends = sway
+	checkdepends = swaybg
 	makedepends = git
 	makedepends = nodejs
 	makedepends = rust
 	makedepends = cargo
 	makedepends = cmake
+	makedepends = clang
+	makedepends = pkgconf
 	depends = python
 	depends = python-pillow
 	depends = orient=0.1.0dev6
@@ -77,6 +83,11 @@ pkgbase = nacre
 	depends = libgcc
 	depends = libstdc++
 	depends = glib2
+	depends = gcc-libs
+	depends = libxkbcommon
+	depends = gdk-pixbuf2
+	depends = libpipewire
+	depends = mpv
 	depends = python-dbus
 	depends = libsecret
 	depends = openssh
@@ -87,8 +98,9 @@ pkgbase = nacre
 	depends = niri>=26.04
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
+	depends = nacre-niri
 	options = !lto
-	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=380715856f94071e63df725ff5ebbbfde95c6578
+	source = nacre::git+https://github.com/nacre-desktop/nacre.git#commit=17626ccf4c4f36406a6b9d25e8093c8d37ad9ed3
 	source = orient::git+https://github.com/nacre-desktop/orient.git#commit=3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8
 	source = IBMPlexSans.ttf::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/IBMPlexSans%5Bwdth%2Cwght%5D.ttf
 	source = IBMPlexSans-OFL.txt::https://raw.githubusercontent.com/google/fonts/bd8f81ddb5c74d5c8897b36ad88b440266245103/ofl/ibmplexsans/OFL.txt
@@ -167,16 +179,22 @@ pkgname = nacre
 	depends = libgcc
 	depends = libstdc++
 	depends = glib2
+	depends = gcc-libs
+	depends = libxkbcommon
+	depends = gdk-pixbuf2
+	depends = libpipewire
+	depends = mpv
 	optdepends = nacre-session-niri: Nacre session and dependencies for Niri
 	optdepends = nacre-session-hyprland: Nacre session and dependencies for Hyprland
-	optdepends = nacre-niri: Niri companion with native overview hover titles
+	optdepends = nacre-session-nacre-niri: Nacre login session using nacre-niri
+	optdepends = nacre-niri-hover: optional Niri overview hover titles
 	optdepends = nacre-ai: optional assistant workspace
 	optdepends = nacre-brain: optional private Markdown knowledge library
 
 pkgname = nacre-ai
 	pkgdesc = Optional assistant workspace (no bundled providers or accounts)
 	arch = any
-	depends = nacre=0.1.0dev2.r459.g380715856f94
+	depends = nacre=0.1.0dev2.r2539.g17626ccf4c4f
 	depends = python
 	depends = python-gobject
 	depends = python-dbus
@@ -190,7 +208,7 @@ pkgname = nacre-ai
 pkgname = nacre-brain
 	pkgdesc = Optional private Markdown knowledge library
 	arch = any
-	depends = nacre=0.1.0dev2.r459.g380715856f94
+	depends = nacre=0.1.0dev2.r2539.g17626ccf4c4f
 	depends = python
 	depends = python-pillow
 	depends = python-yaml
@@ -204,14 +222,22 @@ pkgname = nacre-brain
 pkgname = nacre-session-hyprland
 	pkgdesc = Nacre session integration for Hyprland
 	arch = any
-	depends = nacre=0.1.0dev2.r459.g380715856f94
+	depends = nacre=0.1.0dev2.r2539.g17626ccf4c4f
 	depends = hyprland>=0.56.2
 	depends = xdg-desktop-portal-hyprland
 
 pkgname = nacre-session-niri
 	pkgdesc = Nacre session integration for Niri
 	arch = any
-	depends = nacre=0.1.0dev2.r459.g380715856f94
+	depends = nacre=0.1.0dev2.r2539.g17626ccf4c4f
 	depends = niri>=26.04
+	depends = xwayland-satellite
+	depends = xdg-desktop-portal-gnome
+
+pkgname = nacre-session-nacre-niri
+	pkgdesc = Nacre session integration for nacre-niri
+	arch = any
+	depends = nacre=0.1.0dev2.r2539.g17626ccf4c4f
+	depends = nacre-niri
 	depends = xwayland-satellite
 	depends = xdg-desktop-portal-gnome
