@@ -171,8 +171,10 @@ class B0002ArmLauncherTests(unittest.TestCase):
             for name, path in artifacts.items():
                 path.write_bytes(("dry-run-" + name).encode())
             hashes = {name: arm.sha256(path) for name, path in artifacts.items()}
+            home = root / "home"
+            home.mkdir()
             env = {
-                "PATH": os.environ["PATH"], "HOME": os.environ["HOME"], "USER": "tester",
+                "PATH": os.environ["PATH"], "HOME": str(home), "USER": "tester",
                 "XDG_RUNTIME_DIR": str(root / "runtime"), "WAYLAND_DISPLAY": "wayland-test",
                 "GTK_THEME": "test-theme",
                 "HYPRLAND_INSTANCE_SIGNATURE": "nested-test", "BEAD_MENU_ENGINE_BINARY": "/wrong/helper",

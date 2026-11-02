@@ -255,7 +255,7 @@ def relevant_environment(env: dict[str, str]) -> dict[str, str]:
 
 def launcher_revision() -> str:
     """Git HEAD of the harness, or the REVISION file of an rsync'd (git-less) copy."""
-    result = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
+    result = subprocess.run(["git", "-c", f"safe.directory={WORKSPACE_ROOT}", "-C", str(WORKSPACE_ROOT), "rev-parse", "HEAD"], capture_output=True, text=True)
     if result.returncode == 0 and result.stdout.strip():
         return result.stdout.strip()
     revision = ROOT / "REVISION"
