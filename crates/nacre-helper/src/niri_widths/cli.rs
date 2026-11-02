@@ -109,9 +109,6 @@ pub fn run(args: &[String]) -> Result<i32> {
         return Ok(0);
     };
     let environment: BTreeMap<String, String> = std::env::vars().collect();
-    if super::native_widths_enabled(&environment) {
-        return Ok(i32::from(check));
-    }
     let supported = super::runtime::check_session(&environment)?;
     if check {
         return Ok(i32::from(!supported));

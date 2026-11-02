@@ -2,10 +2,7 @@
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    path::Path,
-};
+use std::collections::{BTreeMap, BTreeSet};
 use unicode_casefold::UnicodeCaseFold;
 pub mod cli;
 pub mod runtime;
@@ -14,16 +11,6 @@ pub mod x11;
 pub const MIN_SIZE: u64 = 1 << 4;
 pub const MAX_SIZE: u64 = 1 << 5;
 pub const MAX_BYTES: usize = 4 * 1024 * 1024;
-
-pub fn native_widths_enabled(environment: &BTreeMap<String, String>) -> bool {
-    environment
-        .get("NIRI_SOCKET")
-        .filter(|socket| !socket.is_empty())
-        .is_some_and(|socket| {
-            crate::compositor::niri_transport::nacre_capabilities(Path::new(socket))
-                .proportional_x11_widths
-        })
-}
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
 pub struct Pair {
@@ -254,45 +241,6 @@ impl Policy {
 mod tests {
     use super::*;
     use serde_json::json;
-    #[test]
-    fn native_width_gate_requires_a_live_true_capability() -> Result<()> {
-        use std::{
-            io::{BufRead, BufReader, Write},
-            os::unix::net::UnixListener,
-            thread,
-        };
-        fn query(enabled: bool) -> Result<bool> {
-            let home = tempfile::tempdir()?;
-            let socket = home.path().join("niri.sock");
-            let listener = UnixListener::bind(&socket)?;
-            let peer = thread::spawn(move || -> std::io::Result<()> {
-                let (stream, _) = listener.accept()?;
-                let mut stream = BufReader::new(stream);
-                let mut line = String::new();
-                stream.read_line(&mut line)?;
-                assert_eq!(
-                    serde_json::from_str::<Value>(&line).unwrap(),
-                    json!("NacreCapabilities")
-                );
-                let mut stream = stream.into_inner();
-                let response = json!({"Ok":{"NacreCapabilities":{
-                    "workspace_collections":false,
-                    "proportional_x11_widths":enabled,
-                    "overview_hover":false
-                }}});
-                writeln!(stream, "{}", serde_json::to_string(&response).unwrap())
-            });
-            let environment =
-                BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
-            let result = native_widths_enabled(&environment);
-            peer.join().map_err(|_| "Capability peer panicked")??;
-            Ok(result)
-        }
-        assert!(query(true)?);
-        assert!(!query(false)?);
-        assert!(!native_widths_enabled(&BTreeMap::new()));
-        Ok(())
-    }
     struct Fixture {
         value: SizeHints,
         present: Vec<u32>,
