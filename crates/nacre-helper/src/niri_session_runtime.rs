@@ -43,6 +43,13 @@ pub fn command(
     if context != "niri" {
         return Err("Niri runtime requires an explicit niri session".into());
     }
+    let capabilities = active_capabilities(&environment);
+    if capabilities.proportional_x11_widths && action == "widths-check" {
+        return Ok((vec!["/usr/bin/false".into()], environment));
+    }
+    if capabilities.proportional_x11_widths && action == "widths" {
+        return Ok((vec!["/usr/bin/true".into()], environment));
+    }
     let root = paths.share.join("niri-on-pc/session");
     let shell = root.join("home-view/.local/share/nacre/shell");
     if [
@@ -109,15 +116,20 @@ pub fn command(
     ] {
         environment.insert(name.into(), value);
     }
-    let hover = if ["widths", "widths-check"].contains(&action) || root.join("stock-niri").is_file()
-    {
-        None
-    } else {
+    let native_binary = !root.join("stock-niri").is_file()
+        && installed_nacre_niri(&mut NativeVersions);
+    let hover = if needs_hover_companion(
+        action,
+        root.join("stock-niri").is_file(),
+        native_binary,
+    ) {
         companion(paths)
+    } else {
+        None
     };
     environment.insert(
         "NACRE_NIRI_HOVER_STREAM".into(),
-        if hover.is_some() { "1" } else { "0" }.into(),
+        if hover.is_some() || native_binary { "1" } else { "0" }.into(),
     );
     match action {
         "compositor" => args.extend([
@@ -151,6 +163,26 @@ pub fn command(
         ]),
     }
     Ok((args, environment))
+}
+fn installed_nacre_niri(versions: &mut impl Versions) -> bool {
+    versions
+        .version(Path::new("/usr/bin/niri"))
+        .is_ok_and(|version| is_nacre_niri_version(&version))
+}
+fn is_nacre_niri_version(version: &str) -> bool {
+    version.trim_end().ends_with("(nacre-niri)")
+}
+fn needs_hover_companion(action: &str, stock: bool, native_binary: bool) -> bool {
+    !["widths", "widths-check"].contains(&action) && !stock && !native_binary
+}
+fn active_capabilities(
+    environment: &BTreeMap<String, String>,
+) -> crate::compositor::niri_transport::NacreCapabilities {
+    environment
+        .get("NIRI_SOCKET")
+        .filter(|socket| !socket.is_empty())
+        .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(socket)))
+        .unwrap_or_default()
 }
 pub const HOVER_SOURCE: &str = "8ed0da44d974c32c6877d2f4630c314da0717ecb";
 pub fn hover_patch_digest() -> String {
@@ -489,6 +521,8 @@ pub fn prepare_configuration(
     ));
     let workspaces = workspace_declarations(&names, &desktop)?;
     fs::write(config.join("workspaces.kdl"), workspaces)?;
+    // Native collections are a separate compositor feature; they do not replace
+    // Nacre's visitor workflows, monitor actions, or original-output ledger.
     let shortcuts = if desktop["monitorWorkspaceActions"] == true
         && desktop["niriWorkspaceMode"] == "fixed-all"
     {
@@ -942,7 +976,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             .backend
             .ok_or("prepare requires --backend")?
             .canonicalize()?;
-        if !parsed.stock {
+        if !parsed.stock && !installed_nacre_niri(&mut NativeVersions) {
             crate::niri_hover_install::ensure(&backend, &paths, &environment)?;
         }
         prepare(
@@ -991,6 +1025,20 @@ mod tests {
             6
         );
         Ok(())
+    }
+    #[test]
+    fn native_fork_identity_is_independent_of_feature_capabilities() {
+        assert!(is_nacre_niri_version("niri 26.12.0 (nacre-niri)\n"));
+        assert!(!is_nacre_niri_version("niri 26.12.0 (git abc123)\n"));
+        assert!(!is_nacre_niri_version("niri 26.12.0"));
+        assert_eq!(
+            active_capabilities(&BTreeMap::new()),
+            crate::compositor::niri_transport::NacreCapabilities::default()
+        );
+        assert!(needs_hover_companion("compositor", false, false));
+        assert!(!needs_hover_companion("compositor", true, false));
+        assert!(!needs_hover_companion("compositor", false, true));
+        assert!(!needs_hover_companion("widths", false, false));
     }
     #[test]
     fn frozen_original_argument_parser_help_errors_and_exit_codes() -> Result<()> {
