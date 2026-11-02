@@ -206,126 +206,6 @@ fn active_capabilities(
         .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(socket)))
         .unwrap_or_default()
 }
-pub(crate) fn prepare_shell(paths: &Paths, environment: &BTreeMap<String, String>) -> Result<()> {
-    if crate::niri_session_gate::compositor(environment) != "niri" {
-        return Ok(());
-    }
-    let (binary, native_identity) = selected_niri_binary(environment, &mut NativeVersions)?;
-    let workspace_collections =
-        native_identity && active_capabilities(environment).workspace_collections;
-    refresh_collection_bindings_if_supported(
-        paths,
-        environment,
-        &binary,
-        native_identity,
-        workspace_collections,
-        validate_collection_config,
-        |binary| reload_collection_config(binary, environment),
-    )
-}
-
-fn refresh_collection_bindings_if_supported(
-    paths: &Paths,
-    environment: &BTreeMap<String, String>,
-    binary: &Path,
-    native_identity: bool,
-    workspace_collections: bool,
-    mut validate: impl FnMut(&Path, &Path) -> Result<()>,
-    mut reload: impl FnMut(&Path) -> Result<()>,
-) -> Result<()> {
-    if !native_identity || !workspace_collections {
-        return Ok(());
-    }
-    const HEADER: &str = "// Generated from compositor-contract.json; edit the neutral source.\n";
-    let backend = crate::compositor::niri::Backend::new(paths.clone(), environment.clone());
-    let loader = backend.configuration().loader;
-    let sources = backend.binding_source_files()?;
-    let session = paths.share.join("niri-on-pc/session/config/bindings.kdl");
-    let standard = paths.config.join("niri/bindings.kdl");
-    let included = |candidate: &Path| {
-        let candidate = fs::canonicalize(candidate).unwrap_or_else(|_| candidate.to_owned());
-        sources.iter().any(|source| {
-            fs::canonicalize(source).unwrap_or_else(|_| source.to_owned()) == candidate
-        })
-    };
-    let target = [session, standard].into_iter().find(|candidate| {
-        included(candidate)
-            && fs::symlink_metadata(candidate).is_ok_and(|metadata| metadata.file_type().is_file())
-    });
-    let Some(target) = target else {
-        return Ok(());
-    };
-    let previous = fs::read(&target)?;
-    let source = std::str::from_utf8(&previous)?;
-    if !source.starts_with(HEADER) {
-        return Ok(());
-    }
-    let updated = crate::compositor_config::ensure_collection_bindings(source)?;
-    if updated == source {
-        return Ok(());
-    }
-    let permissions = fs::metadata(&target)?.permissions();
-    let mut candidate =
-        tempfile::NamedTempFile::new_in(target.parent().ok_or("Invalid generated bindings path")?)?;
-    use std::io::Write;
-    candidate.write_all(updated.as_bytes())?;
-    candidate.as_file().set_permissions(permissions.clone())?;
-    candidate.persist(&target).map_err(|error| error.error)?;
-    if let Err(error) = validate(binary, &loader) {
-        restore_generated_bindings(&target, &previous, &permissions)?;
-        return Err(error);
-    }
-    if let Err(error) = reload(binary) {
-        restore_generated_bindings(&target, &previous, &permissions)?;
-        let _ = reload(binary);
-        return Err(error);
-    }
-    Ok(())
-}
-
-fn validate_collection_config(binary: &Path, loader: &Path) -> Result<()> {
-    crate::process::checked(
-        binary.to_str().ok_or("Invalid Niri binary path")?,
-        &[
-            "validate".into(),
-            "-c".into(),
-            loader.to_string_lossy().into_owned(),
-        ],
-        None,
-        Duration::from_secs(15),
-    )?;
-    Ok(())
-}
-fn reload_collection_config(_binary: &Path, environment: &BTreeMap<String, String>) -> Result<()> {
-    let socket = environment
-        .get("NIRI_SOCKET")
-        .filter(|socket| !socket.is_empty())
-        .ok_or("NIRI_SOCKET is unavailable for generated binding reload")?;
-    let mut connection = crate::compositor::niri_transport::Connection::new(socket);
-    let reply = connection.request_value(
-        &value!({"Action":{"LoadConfigFile":{"path":null}}}),
-        Duration::from_secs(8),
-        4 * 1024 * 1024,
-    )?;
-    if reply != "Handled" {
-        return Err("Niri did not reload generated collection bindings".into());
-    }
-    Ok(())
-}
-
-fn restore_generated_bindings(
-    path: &Path,
-    bytes: &[u8],
-    permissions: &fs::Permissions,
-) -> Result<()> {
-    let mut candidate =
-        tempfile::NamedTempFile::new_in(path.parent().ok_or("Invalid generated bindings path")?)?;
-    use std::io::Write;
-    candidate.write_all(bytes)?;
-    candidate.as_file().set_permissions(permissions.clone())?;
-    candidate.persist(path).map_err(|error| error.error)?;
-    Ok(())
-}
 pub const HOVER_SOURCE: &str = "8ed0da44d974c32c6877d2f4630c314da0717ecb";
 pub fn hover_patch_digest() -> String {
     format!(
@@ -546,6 +426,30 @@ pub fn prepare_configuration(
     profile: &Value,
     keyboard: &Value,
     stock: bool,
+    validate: impl FnMut(&Path) -> Result<()>,
+) -> Result<()> {
+    prepare_configuration_with_collections(
+        backend,
+        destination,
+        paths,
+        profile,
+        keyboard,
+        stock,
+        true,
+        false,
+        validate,
+    )
+}
+
+fn prepare_configuration_with_collections(
+    backend: &Path,
+    destination: &Path,
+    paths: &Paths,
+    profile: &Value,
+    keyboard: &Value,
+    stock: bool,
+    workspace_collections: bool,
+    validate_overlay: bool,
     mut validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let directory = backend.join("nacre/shell-tools");
@@ -567,13 +471,7 @@ pub fn prepare_configuration(
     let config = destination.join("config");
     fs::create_dir_all(&config)?;
     fs::set_permissions(&config, fs::Permissions::from_mode(0o700))?;
-    let native_collections = active_capabilities(&std::env::vars().collect()).workspace_collections;
-    let generated = crate::compositor_config::render_with_capabilities(
-        &contract,
-        &directory,
-        "niri",
-        !stock && native_collections,
-    )?;
+    let generated = crate::compositor_config::render(&contract, &directory, "niri")?;
     for (name, text) in generated
         .as_object()
         .ok_or("Invalid generated configuration")?
@@ -771,6 +669,14 @@ pub fn prepare_configuration(
         ));
     }
     fs::write(config.join("config.kdl"), &text)?;
+    if workspace_collections {
+        fs::write(
+            config.join("nacre-niri.kdl"),
+            crate::compositor_config::collection_overlay(),
+        )?;
+    } else {
+        let _ = fs::remove_file(config.join("nacre-niri.kdl"));
+    }
     for file in fs::read_dir(&config)? {
         fs::set_permissions(file?.path(), fs::Permissions::from_mode(0o600))?;
     }
@@ -786,6 +692,9 @@ pub fn prepare_configuration(
         }
         fs::write(config.join("config.kdl"), plain)?;
         validate(&config.join("config.kdl"))?;
+    }
+    if workspace_collections && validate_overlay {
+        validate(&config.join("nacre-niri.kdl"))?;
     }
     if stock {
         let marker = destination.join("stock-niri");
@@ -915,6 +824,9 @@ pub fn prepare(
         &profile,
         &keyboard,
         stock,
+        compositor
+            .file_name()
+            .is_some_and(|name| name == std::ffi::OsStr::new("nacre-niri")),
         |config| {
             let status = std::process::Command::new(compositor)
                 .args(["validate", "-c"])
@@ -959,16 +871,19 @@ fn prepare_staged_configuration(
     profile: &Value,
     keyboard: &Value,
     stock: bool,
+    validate_overlay: bool,
     validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let candidate = tempfile::tempdir_in(destination)?;
-    prepare_configuration(
+    prepare_configuration_with_collections(
         backend,
         candidate.path(),
         paths,
         profile,
         keyboard,
         stock,
+        true,
+        validate_overlay,
         validate,
     )?;
     // Validation finishes against the complete candidate tree before any live
@@ -1236,116 +1151,6 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn first_native_shell_start_updates_only_included_generated_bindings() -> Result<()> {
-        use std::cell::Cell;
-        let home = tempfile::tempdir()?;
-        let paths = Paths::new(home.path());
-        let directory = paths.config.join("niri");
-        fs::create_dir_all(&directory)?;
-        let loader = directory.join("config.kdl");
-        let bindings = directory.join("bindings.kdl");
-        let custom = directory.join("custom.kdl");
-        fs::write(
-            &loader,
-            "include \"bindings.kdl\"\ninclude \"custom.kdl\"\n",
-        )?;
-        fs::write(
-            &bindings,
-            "// Generated from compositor-contract.json; edit the neutral source.\n// Include before user bindings/rules so user-owned choices take precedence.\nbinds {\n    Super+Q { close-window; }\n}\n",
-        )?;
-        fs::write(&custom, "binds { Super+F12 { close-window; } }\n")?;
-        let custom_before = fs::read(&custom)?;
-        let environment = BTreeMap::from([
-            ("NACRE_COMPOSITOR".into(), "niri".into()),
-            (
-                "NACRE_NIRI_CONFIG".into(),
-                loader.to_string_lossy().into_owned(),
-            ),
-        ]);
-        let validate_count = Cell::new(0);
-        let reload_count = Cell::new(0);
-        let binary = Path::new("/usr/bin/nacre-niri");
-        refresh_collection_bindings_if_supported(
-            &paths,
-            &environment,
-            binary,
-            true,
-            true,
-            |selected, config| {
-                assert_eq!(selected, binary);
-                assert_eq!(config, loader.as_path());
-                validate_count.set(validate_count.get() + 1);
-                Ok(())
-            },
-            |selected| {
-                assert_eq!(selected, binary);
-                reload_count.set(reload_count.get() + 1);
-                Ok(())
-            },
-        )?;
-        let updated = fs::read_to_string(&bindings)?;
-        assert!(updated.contains("// N0110 native collection bindings begin"));
-        for action in [
-            "focus-collection-next",
-            "focus-collection-previous",
-            "create-collection",
-            "move-window-to-collection-next",
-            "move-window-to-collection-previous",
-        ] {
-            assert!(updated.contains(action), "missing {action}");
-        }
-        assert_eq!(fs::read(&custom)?, custom_before);
-        assert_eq!((validate_count.get(), reload_count.get()), (1, 1));
-        refresh_collection_bindings_if_supported(
-            &paths,
-            &environment,
-            binary,
-            true,
-            true,
-            |_, _| {
-                validate_count.set(validate_count.get() + 1);
-                Ok(())
-            },
-            |_| {
-                reload_count.set(reload_count.get() + 1);
-                Ok(())
-            },
-        )?;
-        assert_eq!((validate_count.get(), reload_count.get()), (1, 1));
-        let before_stock = fs::read(&bindings)?;
-        refresh_collection_bindings_if_supported(
-            &paths,
-            &environment,
-            Path::new("/usr/bin/niri"),
-            false,
-            false,
-            |_, _| Err("stock must not validate".into()),
-            |_| Err("stock must not reload".into()),
-        )?;
-        assert_eq!(fs::read(&bindings)?, before_stock);
-        let stripped = crate::compositor_config::strip_collection_bindings(&updated)?;
-        assert!(!stripped.contains("focus-collection-next"));
-        fs::write(&bindings, &stripped)?;
-        let before_failure = fs::read(&bindings)?;
-        let reload_attempted = Cell::new(false);
-        assert!(refresh_collection_bindings_if_supported(
-            &paths,
-            &environment,
-            binary,
-            true,
-            true,
-            |_, _| Err("fixture validation failure".into()),
-            |_| {
-                reload_attempted.set(true);
-                Ok(())
-            },
-        )
-        .is_err());
-        assert_eq!(fs::read(&bindings)?, before_failure);
-        assert!(!reload_attempted.get());
-        Ok(())
-    }
-    #[test]
     fn width_service_command_uses_live_capability_and_keeps_stock_fallback() -> Result<()> {
         fn command_with_caps(enabled: bool) -> Result<Vec<String>> {
             use std::{
@@ -1500,6 +1305,7 @@ mod tests {
     fn prepare_with_custom(
         custom: Option<&str>,
         fail_with_custom: bool,
+        workspace_collections: bool,
     ) -> Result<(tempfile::TempDir, usize)> {
         let reference: Value = serde_json::from_str(include_str!(
             "../tests/fixtures/niri-session-preparation-reference.json"
@@ -1521,13 +1327,21 @@ mod tests {
         }
         let destination = home.path().join("stage");
         fs::create_dir_all(destination.join("home-view"))?;
+        let old_config = destination.join("config");
+        fs::create_dir_all(&old_config)?;
+        fs::write(
+            old_config.join("bindings.kdl"),
+            "// Generated from compositor-contract.json; edit the neutral source.\nbinds {\n    // N0110 native collection bindings begin\n    Super+Ctrl+Alt+Tab { focus-collection-next; }\n    // N0110 native collection bindings end\n}\n",
+        )?;
         let mut calls = 0;
-        prepare_configuration(
+        prepare_configuration_with_collections(
             &backend,
             &destination,
             &paths,
             &case["profile"],
             &case["keyboard"],
+            false,
+            workspace_collections,
             false,
             |config| {
                 calls += 1;
@@ -1549,12 +1363,13 @@ mod tests {
     fn custom_binds_override_generated_ones_and_are_included_last() -> Result<()> {
         let user =
             "binds {\n    Super+Shift+S { close-window; }\n    Super+Tab { toggle-overview; }\n}\n";
-        let (home, calls) = prepare_with_custom(Some(user), false)?;
+        let (home, calls) = prepare_with_custom(Some(user), false, false)?;
         assert_eq!(calls, 1);
         let root = staged(&home, "config.kdl")?;
         let custom = home.path().join(".config/nacre/niri/custom.kdl");
         assert!(root.contains(&format!("include \"{}\"\n", custom.display())));
         let bindings = staged(&home, "bindings.kdl")?;
+        assert!(!bindings.contains("N0110 native collection bindings"));
         assert!(!bindings.contains("    Super+Shift+S "));
         assert!(bindings.contains("    Print "));
         assert!(bindings.contains("// Overridden by custom.kdl: Super+Shift+S"));
@@ -1564,9 +1379,12 @@ mod tests {
     }
     #[test]
     fn custom_with_only_new_binds_keeps_generated_bindings_untouched() -> Result<()> {
-        let (home, _) =
-            prepare_with_custom(Some("binds {\n    Super+F9 { close-window; }\n}\n"), false)?;
-        let (plain, _) = prepare_with_custom(None, false)?;
+        let (home, _) = prepare_with_custom(
+            Some("binds {\n    Super+F9 { close-window; }\n}\n"),
+            false,
+            false,
+        )?;
+        let (plain, _) = prepare_with_custom(None, false, false)?;
         assert_eq!(
             staged(&home, "bindings.kdl")?,
             staged(&plain, "bindings.kdl")?
@@ -1577,10 +1395,10 @@ mod tests {
     #[test]
     fn invalid_custom_falls_back_to_the_plain_session() -> Result<()> {
         let user = "binds {\n    Super+Shift+S { close-window; }\n}\n";
-        let (home, calls) = prepare_with_custom(Some(user), true)?;
-        assert_eq!(calls, 2);
+        let (home, calls) = prepare_with_custom(Some(user), true, false)?;
+        assert_eq!(calls, 1);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
-        let (plain, _) = prepare_with_custom(None, false)?;
+        let (plain, _) = prepare_with_custom(None, false, false)?;
         assert_eq!(
             staged(&home, "bindings.kdl")?,
             staged(&plain, "bindings.kdl")?
@@ -1589,9 +1407,36 @@ mod tests {
     }
     #[test]
     fn missing_custom_adds_no_include() -> Result<()> {
-        let (home, calls) = prepare_with_custom(None, true)?;
+        let (home, calls) = prepare_with_custom(None, true, false)?;
         assert_eq!(calls, 1);
         assert!(!staged(&home, "config.kdl")?.contains("custom.kdl"));
+        Ok(())
+    }
+
+    #[test]
+    fn fork_overlay_keeps_collection_actions_out_of_stock_config() -> Result<()> {
+        let (home, calls) = prepare_with_custom(None, false, true)?;
+        assert_eq!(calls, 2);
+        let shared = staged(&home, "config.kdl")?;
+        let bindings = staged(&home, "bindings.kdl")?;
+        let overlay = staged(&home, "nacre-niri.kdl")?;
+        for action in [
+            "focus-collection-next",
+            "focus-collection-previous",
+            "create-collection",
+            "move-window-to-collection-next",
+            "move-window-to-collection-previous",
+        ] {
+            assert!(!shared.contains(action), "stock config includes {action}");
+            assert!(!bindings.contains(action), "shared bindings include {action}");
+            assert!(overlay.contains(action), "fork overlay lacks {action}");
+        }
+        assert!(overlay.starts_with("include \"config.kdl\""));
+        assert!(overlay.contains("Super+Ctrl+Tab"));
+        assert!(overlay.contains("Super+Ctrl+Shift+Tab"));
+        assert!(overlay.contains("Super+Ctrl+N"));
+        assert!(overlay.contains("Super+Ctrl+Shift+Page_Down"));
+        assert!(overlay.contains("Super+Ctrl+Shift+Page_Up"));
         Ok(())
     }
 
@@ -1623,6 +1468,7 @@ mod tests {
             &case["profile"],
             &case["keyboard"],
             false,
+            false,
             |_| Err("invalid candidate".into()),
         );
         assert!(rejected.is_err());
@@ -1634,6 +1480,7 @@ mod tests {
             &paths,
             &case["profile"],
             &case["keyboard"],
+            false,
             false,
             |candidate| {
                 assert!(fs::read_to_string(&root)?.contains("previous config"));

@@ -7,7 +7,6 @@ from pathlib import Path
 import shlex
 import subprocess
 import sys
-import tempfile
 
 # Shared state is independent of the palette Python environment.
 for _state_directory in (
@@ -27,62 +26,6 @@ TOOLKIT_ENVIRONMENT = {
     "XCURSOR_THEME": "breeze_cursors",
     "XCURSOR_SIZE": "24",
 }
-
-COLLECTION_BEGIN = "    // N0110 native collection bindings begin\n"
-COLLECTION_END = "    // N0110 native collection bindings end\n"
-COLLECTION_BLOCK = (
-    COLLECTION_BEGIN
-    + '    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title="Nacre:collection-next" { focus-collection-next; }\n'
-    + '    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title="Nacre:collection-previous" { focus-collection-previous; }\n'
-    + '    Super+Ctrl+N repeat=false hotkey-overlay-title="Nacre:collection-create" { create-collection; }\n'
-    + '    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title="Nacre:collection-move-next" { move-window-to-collection-next; }\n'
-    + '    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title="Nacre:collection-move-previous" { move-window-to-collection-previous; }\n'
-    + COLLECTION_END
-)
-GENERATED_BINDINGS_HEADER = (
-    "// Generated from compositor-contract.json; edit the neutral source.\n"
-)
-
-
-def strip_native_collection_bindings(path):
-    """Remove only N0110's marked block from a generated Nacre bindings file."""
-    path = Path(path)
-    if not path.is_file() or path.is_symlink():
-        return False
-    source = path.read_text()
-    if not source.startswith(GENERATED_BINDINGS_HEADER):
-        return False
-    begin_count = source.count(COLLECTION_BEGIN)
-    end_count = source.count(COLLECTION_END)
-    if not begin_count and not end_count:
-        return False
-    begin = source.find(COLLECTION_BEGIN)
-    end = source.find(COLLECTION_END)
-    if begin_count != 1 or end_count != 1 or begin >= end:
-        raise RuntimeError("Malformed N0110 collection bindings in " + str(path))
-    after_end = source.find("\n", end)
-    after_end = len(source) if after_end < 0 else after_end + 1
-    if source[begin:after_end] != COLLECTION_BLOCK:
-        raise RuntimeError("Modified N0110 collection bindings in " + str(path))
-    updated = source[:begin] + source[after_end:]
-    mode = path.stat().st_mode & 0o777
-    handle = tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", dir=path.parent, delete=False
-    )
-    try:
-        with handle:
-            handle.write(updated)
-            handle.flush()
-            os.fchmod(handle.fileno(), mode)
-        os.replace(handle.name, path)
-    except BaseException:
-        try:
-            os.unlink(handle.name)
-        except FileNotFoundError:
-            pass
-        raise
-    return True
-
 
 def module(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -339,13 +282,14 @@ def session(home=None, compositor="niri"):
     prepared = home / ".local/share/nacre/niri-on-pc/session"
     if compositor == "nacre-niri" and (prepared / "source-revision").is_file():
         config = prepared / "config/config.kdl"
+    if compositor == "nacre-niri":
+        overlay = config.with_name("nacre-niri.kdl")
+        if overlay.is_file():
+            config = overlay
     if not config.is_file():
         raise RuntimeError(
             "Run nacre setup --compositor niri before choosing Nacre (niri)"
         )
-    if compositor == "niri":
-        strip_native_collection_bindings(home / ".config/nacre/niri/bindings.kdl")
-        strip_native_collection_bindings(prepared / "config/bindings.kdl")
     validate(config, compositor)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
     # Let UWSM own export and logout cleanup of the static session variables.

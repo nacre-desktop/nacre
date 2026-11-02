@@ -315,7 +315,6 @@ pub fn run(stamp: Option<&str>) -> Result<i32> {
         Some((&signals, &mut stopping)),
     )?;
     let paths = Paths::environment()?;
-    crate::niri_session_runtime::prepare_shell(&paths, &environment)?;
     let root = paths.share.join("shell");
     let mut recovered = false;
     while !stopping {

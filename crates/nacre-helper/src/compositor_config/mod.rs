@@ -106,6 +106,9 @@ pub fn lua_value(value: &Value) -> Result<String> {
 pub fn runtime_lua_value(value: &Value) -> Result<String> {
     lua(value, false)
 }
+pub(crate) fn collection_overlay() -> String {
+    niri::collection_overlay()
+}
 fn lua(value: &Value, named_fields: bool) -> Result<String> {
     Ok(match value {
         Value::Null => "nil".into(),
@@ -303,20 +306,10 @@ pub fn execute(
             })
         }
         ("neutral", "render") => {
-            let native_collections =
-                backend == "niri" && active_niri_capabilities().workspace_collections;
-            render_with_capabilities(
-                argument(0, "contract")?,
-                &directory,
-                backend,
-                native_collections,
-            )
+            render(argument(0, "contract")?, &directory, backend)
         }
         ("hyprland", "render") => render_hyprland(argument(0, "contract")?, &directory),
-        ("niri", "render") => augment_niri_render(
-            niri::render(argument(0, "contract")?)?,
-            active_niri_capabilities().workspace_collections,
-        ),
+        ("niri", "render") => niri::render(argument(0, "contract")?),
         ("neutral", "profile_rules") => profile_rules(argument(0, "profile")?),
         ("neutral", "render_keyboard") => {
             render_keyboard(argument(0, "values")?, backend).map(Value::String)
@@ -375,47 +368,6 @@ pub fn render(contract: &Value, directory: &Path, backend: &str) -> Result<Value
     }
 }
 
-/// Runtime render entry point. The plain `render` function remains deterministic
-/// for static generation and preview fixtures.
-pub fn render_with_capabilities(
-    contract: &Value,
-    directory: &Path,
-    backend: &str,
-    workspace_collections: bool,
-) -> Result<Value> {
-    let generated = render(contract, directory, backend)?;
-    if backend == "niri" {
-        augment_niri_render(generated, workspace_collections)
-    } else {
-        Ok(generated)
-    }
-}
-
-fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Result<Value> {
-    let bindings = generated["niri/bindings.kdl"]
-        .as_str()
-        .ok_or_else(|| invalid("Invalid generated bindings"))?;
-    generated["niri/bindings.kdl"] = json!(if workspace_collections {
-        niri::with_collection_bindings(bindings)?
-    } else {
-        niri::strip_collection_bindings(bindings)?
-    });
-    Ok(generated)
-}
-
-fn active_niri_capabilities() -> crate::compositor::niri_transport::NacreCapabilities {
-    std::env::var_os("NIRI_SOCKET")
-        .filter(|socket| !socket.is_empty())
-        .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(&socket)))
-        .unwrap_or_default()
-}
-pub(crate) fn ensure_collection_bindings(bindings: &str) -> Result<String> {
-    niri::with_collection_bindings(bindings)
-}
-#[cfg(test)]
-pub(crate) fn strip_collection_bindings(bindings: &str) -> Result<String> {
-    niri::strip_collection_bindings(bindings)
-}
 pub fn render_profile(
     profile: &Value,
     backend: &str,
@@ -523,16 +475,13 @@ pub fn render_keyboard(values: &Value, backend: &str) -> Result<String> {
 mod tests {
     use super::*;
     #[test]
-    fn collection_bindings_are_in_full_native_render_only() -> crate::Result<()> {
+    fn collection_bindings_are_emitted_only_in_the_fork_overlay() -> crate::Result<()> {
         let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
         let contract: Value =
             serde_json::from_slice(&std::fs::read(directory.join("compositor-contract.json"))?)?;
         let hyprland = render(&contract, &directory, "hyprland")?;
-        assert_eq!(
-            render_with_capabilities(&contract, &directory, "hyprland", true)?,
-            hyprland
-        );
-        let stock = render_with_capabilities(&contract, &directory, "niri", false)?;
+        assert_eq!(render(&contract, &directory, "hyprland")?, hyprland);
+        let stock = render(&contract, &directory, "niri")?;
         let stock_bindings = stock["niri/bindings.kdl"]
             .as_str()
             .ok_or("Missing bindings")?;
@@ -545,13 +494,10 @@ mod tests {
         ] {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
-        let native = render_with_capabilities(&contract, &directory, "niri", true)?;
-        let native_bindings = native["niri/bindings.kdl"]
-            .as_str()
-            .ok_or("Missing bindings")?;
+        let native = niri::collection_overlay();
         let expected = [
-            ("Super+Ctrl+Alt+Tab", "focus-collection-next"),
-            ("Super+Ctrl+Alt+Shift+Tab", "focus-collection-previous"),
+            ("Super+Ctrl+Tab", "focus-collection-next"),
+            ("Super+Ctrl+Shift+Tab", "focus-collection-previous"),
             ("Super+Ctrl+N", "create-collection"),
             (
                 "Super+Ctrl+Shift+Page_Down",
@@ -562,7 +508,8 @@ mod tests {
                 "move-window-to-collection-previous",
             ),
         ];
-        let document: kdl::KdlDocument = native_bindings.parse()?;
+        assert!(native.starts_with("include \"config.kdl\""));
+        let document: kdl::KdlDocument = native.parse()?;
         let block = document
             .nodes()
             .iter()
@@ -584,8 +531,15 @@ mod tests {
                 .ok_or("Missing native collection action")?;
             assert_eq!(action_node.name().value(), action);
         }
-        let alias_collision = "binds {\n    Mod+Ctrl+N { spawn \"custom\"; }\n}\n";
-        assert!(niri::with_collection_bindings(alias_collision).is_err());
+        for action in [
+            "focus-collection-next",
+            "focus-collection-previous",
+            "create-collection",
+            "move-window-to-collection-next",
+            "move-window-to-collection-previous",
+        ] {
+            assert!(!stock_bindings.contains(action), "stock emitted {action}");
+        }
         Ok(())
     }
 
