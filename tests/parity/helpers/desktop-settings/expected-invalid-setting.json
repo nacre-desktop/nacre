@@ -6,6 +6,7 @@
       "shadow": true,
       "followMouse": true,
       "naturalScroll": true,
+      "scrollSpeed": 0.75,
       "gapsIn": 6,
       "gapsOut": 12,
       "borderSize": 3,
