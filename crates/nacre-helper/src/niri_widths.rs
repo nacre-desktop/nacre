@@ -2,7 +2,10 @@
 use crate::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{collections::{BTreeMap, BTreeSet}, path::Path};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    path::Path,
+};
 use unicode_casefold::UnicodeCaseFold;
 pub mod cli;
 pub mod runtime;
@@ -253,12 +256,12 @@ mod tests {
     use serde_json::json;
     #[test]
     fn native_width_gate_requires_a_live_true_capability() -> Result<()> {
+        use std::{
+            io::{BufRead, BufReader, Write},
+            os::unix::net::UnixListener,
+            thread,
+        };
         fn query(enabled: bool) -> Result<bool> {
-            use std::{
-                io::{BufRead, BufReader, Write},
-                os::unix::net::UnixListener,
-                thread,
-            };
             let home = tempfile::tempdir()?;
             let socket = home.path().join("niri.sock");
             let listener = UnixListener::bind(&socket)?;
@@ -267,7 +270,10 @@ mod tests {
                 let mut stream = BufReader::new(stream);
                 let mut line = String::new();
                 stream.read_line(&mut line)?;
-                assert_eq!(serde_json::from_str::<Value>(&line).unwrap(), json!("NacreCapabilities"));
+                assert_eq!(
+                    serde_json::from_str::<Value>(&line).unwrap(),
+                    json!("NacreCapabilities")
+                );
                 let mut stream = stream.into_inner();
                 let response = json!({"Ok":{"NacreCapabilities":{
                     "workspace_collections":false,
@@ -276,10 +282,8 @@ mod tests {
                 }}});
                 writeln!(stream, "{}", serde_json::to_string(&response).unwrap())
             });
-            let environment = BTreeMap::from([(
-                "NIRI_SOCKET".into(),
-                socket.to_string_lossy().into_owned(),
-            )]);
+            let environment =
+                BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
             let result = native_widths_enabled(&environment);
             peer.join().map_err(|_| "Capability peer panicked")??;
             Ok(result)

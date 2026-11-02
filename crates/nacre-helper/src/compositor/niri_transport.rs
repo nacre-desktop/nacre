@@ -305,7 +305,10 @@ mod tests {
             Some(NacreCapabilities::default())
         );
         assert_eq!(NacreCapabilities::parse(&json!({"Future":{}})), None);
-        assert_eq!(NacreCapabilities::parse(&json!({"Err":"unsupported"})), None);
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"Err":"unsupported"})),
+            None
+        );
         assert_eq!(
             NacreCapabilities::parse(&json!({"NacreCapabilities": {
                 "workspace_collections": true,
@@ -326,7 +329,9 @@ mod tests {
                 serde_json::from_slice::<Value>(&wire).map_err(std::io::Error::other)?,
                 json!("NacreCapabilities")
             );
-            server.get_mut().write_all(b"{\"Err\":\"unknown request\"}\n")?;
+            server
+                .get_mut()
+                .write_all(b"{\"Err\":\"unknown request\"}\n")?;
             Ok(wire)
         });
         let mut connection = Connection::from_stream(client);
