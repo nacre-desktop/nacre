@@ -36,6 +36,7 @@ COLLECTION_BINDINGS = (
     "}\n"
 )
 
+
 def module(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
     value = importlib.util.module_from_spec(spec)
