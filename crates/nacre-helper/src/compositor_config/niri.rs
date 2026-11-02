@@ -96,8 +96,7 @@ pub(super) fn with_collection_bindings(bindings: &str) -> Result<String> {
     };
     for key in additions {
         if bindings.lines().any(|line| {
-            line.trim_start()
-                .split_whitespace()
+            line.split_whitespace()
                 .next()
                 .is_some_and(|candidate| canonical(candidate) == canonical(key))
         }) {
