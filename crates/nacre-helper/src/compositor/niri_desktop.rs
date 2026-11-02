@@ -583,7 +583,7 @@ mod tests {
         );
         assert_eq!(config.loader, loader);
         assert_eq!(config.desktop, desktop);
-        assert_eq!(config.host, Some(host));
+        assert_eq!(config.host.as_deref(), Some(host.as_path()));
         config.ensure_loader().unwrap();
         let original_desktop = fs::read(&desktop)?;
         let original_host = fs::read(&host)?;
