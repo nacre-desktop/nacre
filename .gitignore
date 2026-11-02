@@ -65,3 +65,9 @@ node_modules/
 
 # Original palette-generated CC0 theme bundle art; see per-asset provenance.
 !nacre/shell-tools/theme-bundles/*.png
+
+# Product fixtures, goldens and licensed art imported with their source history.
+!/shell/**/*.png
+!/shell/**/*.jpg
+!/shell/**/*.webp
+!/bead-shell/examples/*.png
