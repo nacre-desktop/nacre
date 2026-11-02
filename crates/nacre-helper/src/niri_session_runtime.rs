@@ -1573,5 +1573,4 @@ mod tests {
         assert_eq!(migrated.matches("scroll-factor 0.75").count(), 1);
         Ok(())
     }
-
 }
