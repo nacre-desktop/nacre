@@ -5,13 +5,19 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location("package_niri_session", ROOT / "tools/package_niri.py")
 package_niri = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_niri)
+session_spec = importlib.util.spec_from_file_location(
+    "package_sessions_under_test", ROOT / "tools/package_sessions.py"
+)
+package_sessions = importlib.util.module_from_spec(session_spec)
+session_spec.loader.exec_module(package_sessions)
 
 
 class NacreNiriSessionTests(unittest.TestCase):
@@ -30,6 +36,15 @@ class NacreNiriSessionTests(unittest.TestCase):
             run.call_args.args[0],
             ["/usr/bin/nacre-niri", "validate", "-c", "/fixture/config.kdl"],
         )
+
+    def test_nacre_session_dispatch_selects_fork_launcher(self):
+        backend = SimpleNamespace(supported=lambda root: True, session=Mock())
+        with (
+            patch.object(package_sessions, "registry", return_value={"nacre-niri": {}}),
+            patch.object(package_sessions, "integration", return_value=backend),
+        ):
+            package_sessions.start(Path("/fixture/nacre"), "nacre-niri")
+        backend.session.assert_called_once_with(compositor="nacre-niri")
 
     def test_stock_session_clears_fork_selector_and_keeps_standard_niri_path(self):
         with tempfile.TemporaryDirectory() as directory:
