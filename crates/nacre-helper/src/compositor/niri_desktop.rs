@@ -96,12 +96,21 @@ impl Configuration {
         paths: &crate::paths::Paths,
         env: &std::collections::BTreeMap<String, String>,
     ) -> Self {
-        let mut loader = super::niri_bindings::loader(paths, env);
-        let explicit = ["NACRE_NIRI_CONFIG", "NIRI_CONFIG"]
+        let explicit_loader = ["NACRE_NIRI_CONFIG", "NIRI_CONFIG"]
             .iter()
-            .any(|key| env.get(*key).is_some_and(|value| !value.is_empty()));
+            .find_map(|key| {
+                env.get(*key)
+                    .filter(|value| !value.is_empty())
+                    .map(|value| PathBuf::from(value.as_str()))
+            });
+        let mut loader = explicit_loader
+            .clone()
+            .unwrap_or_else(|| super::niri_bindings::loader(paths, env));
         let scoped_config = paths.config.parent().unwrap_or(&paths.config);
-        if !explicit && !loader.starts_with(&paths.home) && !loader.starts_with(scoped_config) {
+        if explicit_loader.is_none()
+            && !loader.starts_with(&paths.home)
+            && !loader.starts_with(scoped_config)
+        {
             let mut scoped = env.clone();
             scoped.remove("NIRI_SOCKET");
             loader = super::niri_bindings::loader(paths, &scoped);
