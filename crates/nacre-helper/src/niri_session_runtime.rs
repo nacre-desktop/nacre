@@ -290,6 +290,11 @@ pub fn host_preferences(desktop: &Value) -> Result<String> {
     let natural = natural
         .as_bool()
         .ok_or("Invalid natural scrolling preference")?;
+    let scroll_speed = desktop
+        .get("scrollSpeed")
+        .cloned()
+        .unwrap_or(value!(crate::desktop_settings::scroll_speed_default()));
+    numeric(&scroll_speed, "Invalid scroll speed", 0.25, 2.0, false)?;
     let gap = desktop.get("gapsOut").cloned().unwrap_or(value!(12));
     let border = desktop.get("borderSize").cloned().unwrap_or(value!(1));
     for value in [&gap, &border] {
@@ -299,7 +304,11 @@ pub fn host_preferences(desktop: &Value) -> Result<String> {
     if natural {
         text.push_str("        natural-scroll\n");
     }
-    text.push_str("        scroll-factor 0.25\n    }\n}\n");
+    text.push_str(&format!(
+        "        scroll-factor {}\n    }}\n    mouse {{ scroll-factor {}; }}\n}}\n",
+        json::encode(&scroll_speed)?,
+        json::encode(&scroll_speed)?
+    ));
     if let Some(displays) = desktop.get("displays") {
         for display in displays.as_array().ok_or("Invalid saved display scale")? {
             if display.get("disabled").is_some_and(truthy) {
@@ -1549,4 +1558,5 @@ mod tests {
         }
         Ok(())
     }
+
 }

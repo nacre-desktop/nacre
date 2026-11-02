@@ -152,18 +152,22 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 .ok_or_else(|| invalid("Invalid touchpad preference"))
         })
         .transpose()?;
-    let touchpad_extra = ["touchpadSpeed", "touchpadTap", "touchpadTypingGuard"]
-        .iter()
-        .any(|key| preferences.contains_key(*key));
-    if let Some(value) = preferences.get("naturalScroll").filter(|_| !touchpad_extra) {
-        let off = if enabled == Some(false) { "off; " } else { "" };
-        input.push(if value == true {
-            format!("touchpad {{ {off}natural-scroll; scroll-factor 0.25; }}")
-        } else {
-            format!("touchpad {{ {off}scroll-factor 0.25; }}")
-        });
-    } else if enabled == Some(false) && !touchpad_extra {
-        input.push("touchpad { off; }".into());
+    let natural_scroll = preferences
+        .get("naturalScroll")
+        .map(|value| {
+            value
+                .as_bool()
+                .ok_or_else(|| invalid("Invalid natural scrolling preference"))
+        })
+        .transpose()?
+        .unwrap_or(false);
+    let scroll_speed = preferences
+        .get("scrollSpeed")
+        .map(|value| number(value, "Invalid scroll speed"))
+        .transpose()?
+        .unwrap_or_else(crate::desktop_settings::scroll_speed_default);
+    if !(0.25..=2.0).contains(&scroll_speed) {
+        return Err(invalid("Invalid scroll speed"));
     }
     let mut keyboard = Vec::new();
     if let Some(layout) = preferences.get("keyboardLayouts") {
@@ -206,10 +210,10 @@ pub fn desktop(preferences: &Value) -> Result<String> {
             if enabled == Some(false) {
                 fields.push("off".into());
             }
-            if preferences.get("naturalScroll") == Some(&Value::Bool(true)) {
+            if natural_scroll {
                 fields.push("natural-scroll".into());
             }
-            fields.push("scroll-factor 0.25".into());
+            fields.push(format!("scroll-factor {scroll_speed}"));
         }
         if let Some(value) = preferences.get(speed) {
             if !(-1.0..=1.0).contains(&number(value, "Invalid pointer speed")?) {
@@ -225,11 +229,11 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 fields.push(format!("accel-profile {}", text(value)?));
             }
         }
-        let mut specified = preferences.contains_key(speed)
-            || (device == "mouse" && preferences.contains_key("mouseAcceleration"));
+        if device == "mouse" {
+            fields.push(format!("scroll-factor {scroll_speed}"));
+        }
         for (key, field) in flags {
             if let Some(value) = preferences.get(key) {
-                specified = true;
                 if !value.is_boolean() {
                     return Err(invalid("Invalid input toggle"));
                 }
@@ -238,13 +242,7 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 }
             }
         }
-        if specified {
-            input.push(if fields.is_empty() {
-                format!("{device} {{ }}")
-            } else {
-                format!("{device} {{ {}; }}", fields.join("; "))
-            });
-        }
+        input.push(format!("{device} {{ {}; }}", fields.join("; ")));
     }
     if !input.is_empty() || preferences.contains_key("followMouse") {
         lines.push(format!("input {{\n    {}\n}}", input.join("\n    ")));
@@ -394,14 +392,17 @@ pub(super) fn frozen_rendering_output(case: &Value) -> crate::Result<String> {
     let expected = case["observed"]["stdout"]
         .as_str()
         .ok_or("Missing frozen rendering")?;
-    if input["method"] == "render_desktop_options" && input["args"][0]["followMouse"] == true {
-        let legacy: String = serde_json::from_str(expected)?;
-        assert_eq!(legacy.matches("    focus-follows-mouse\n").count(), 1);
-        let bounded = legacy.replace(
-            "    focus-follows-mouse\n",
-            "    focus-follows-mouse max-scroll-amount=\"0%\"\n",
-        );
-        return Ok(crate::json::encode(&Value::from(bounded))? + "\n");
+    if input["method"] == "render_desktop_options" {
+        let args = &input["args"][0];
+        let mut legacy: String = serde_json::from_str(expected)?;
+        if args["followMouse"] == true {
+            assert_eq!(legacy.matches("    focus-follows-mouse\n").count(), 1);
+            legacy = legacy.replace(
+                "    focus-follows-mouse\n",
+                "    focus-follows-mouse max-scroll-amount=\"0%\"\n",
+            );
+        }
+        return Ok(crate::json::encode(&Value::from(legacy))? + "\n");
     }
     Ok(expected.to_string())
 }
@@ -611,8 +612,19 @@ mod input_settings_tests {
             json!({"touchpadTap":1}),
             json!({"keyRepeatRate":0}),
             json!({"mouseAcceleration":"shell"}),
+            json!({"scrollSpeed":0.2}),
+            json!({"scrollSpeed":2.1}),
         ] {
             assert!(desktop(&value).is_err(), "{value}");
+        }
+    }
+
+    #[test]
+    fn one_scroll_factor_drives_touchpad_and_mouse_and_defaults_for_old_settings() {
+        for (preferences, speed) in [(json!({}), "0.75"), (json!({"scrollSpeed":1.25}), "1.25")] {
+            let rendered = desktop(&preferences).unwrap();
+            assert!(rendered.contains(&format!("touchpad {{ scroll-factor {speed}; }}")));
+            assert!(rendered.contains(&format!("mouse {{ scroll-factor {speed}; }}")));
         }
     }
 }
@@ -624,6 +636,6 @@ mod input_node_regression {
         let output = super::desktop(&serde_json::json!({"keyboardLayouts":"no","naturalScroll":true,"touchpadEnabled":false})).unwrap();
         assert_eq!(output.matches("input {").count(), 1);
         assert!(output.contains("layout \"no\""));
-        assert!(output.contains("touchpad { off; natural-scroll;"));
+        assert!(output.contains("touchpad { off; natural-scroll; scroll-factor 0.75;"));
     }
 }
