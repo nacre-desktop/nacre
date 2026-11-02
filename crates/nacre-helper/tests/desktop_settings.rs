@@ -124,10 +124,10 @@ fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Res
     assert_eq!(migrated["scrollSpeed"], json!(0.75));
     assert_eq!(migrated["gapsIn"], json!(9));
     settings.action("set", &["scrollSpeed".into(), "1.25".into()])?;
-    assert_eq!(
-        calls.borrow().as_slice(),
-        [("set_desktop_options".into(), json!({"scrollSpeed":1.25}))]
-    );
+    let calls = calls.borrow();
+    assert_eq!(calls.len(), 1);
+    assert_eq!(calls[0].0, "set_desktop_options");
+    assert_eq!(calls[0].1, json!({"scrollSpeed":1.25}));
     let saved: Value = serde_json::from_slice(&fs::read(&settings.state)?)?;
     assert_eq!(saved["scrollSpeed"], json!(1.25));
     Ok(())
