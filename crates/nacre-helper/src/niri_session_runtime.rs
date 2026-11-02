@@ -43,12 +43,15 @@ pub fn command(
     if context != "niri" {
         return Err("Niri runtime requires an explicit niri session".into());
     }
-    let capabilities = active_capabilities(&environment);
-    if capabilities.proportional_x11_widths && action == "widths-check" {
-        return Ok((vec!["/usr/bin/false".into()], environment));
-    }
-    if capabilities.proportional_x11_widths && action == "widths" {
-        return Ok((vec!["/usr/bin/true".into()], environment));
+    if ["widths", "widths-check"].contains(&action)
+        && active_capabilities(&environment).proportional_x11_widths
+    {
+        let program = if action == "widths-check" {
+            "/usr/bin/false"
+        } else {
+            "/usr/bin/true"
+        };
+        return Ok((vec![program.into()], environment));
     }
     let root = paths.share.join("niri-on-pc/session");
     let shell = root.join("home-view/.local/share/nacre/shell");
