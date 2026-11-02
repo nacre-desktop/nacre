@@ -253,12 +253,12 @@ mod tests {
     use serde_json::json;
     #[test]
     fn native_width_gate_requires_a_live_true_capability() -> Result<()> {
-        use std::{
-            io::{BufRead, BufReader, Write},
-            os::unix::net::UnixListener,
-            thread,
-        };
         fn query(enabled: bool) -> Result<bool> {
+            use std::{
+                io::{BufRead, BufReader, Write},
+                os::unix::net::UnixListener,
+                thread,
+            };
             let home = tempfile::tempdir()?;
             let socket = home.path().join("niri.sock");
             let listener = UnixListener::bind(&socket)?;
