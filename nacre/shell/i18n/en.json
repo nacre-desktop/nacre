@@ -4127,6 +4127,8 @@
   "settings.registry.keyboard-mouse.mouse.mouseNaturalScroll.description": "Move content in the same direction as your wheel.",
   "settings.registry.keyboard-mouse.touchpad.touchpadSpeed.label": "Touchpad speed",
   "settings.registry.keyboard-mouse.touchpad.touchpadSpeed.description": "Adjust how far the pointer moves with your finger.",
+  "settings.registry.keyboard-mouse.touchpad.scrollSpeed.label": "Scroll speed",
+  "settings.registry.keyboard-mouse.touchpad.scrollSpeed.description": "Set one scrolling speed for the touchpad and mouse wheel.",
   "settings.registry.keyboard-mouse.touchpad.touchpadTap.label": "Tap to click",
   "settings.registry.keyboard-mouse.touchpad.touchpadTap.description": "Tap the touchpad without pressing it.",
   "settings.registry.keyboard-mouse.touchpad.touchpadTypingGuard.label": "Typing protection",

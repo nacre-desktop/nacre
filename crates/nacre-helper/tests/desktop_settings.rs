@@ -50,6 +50,88 @@ fn frozen_additive_niri_preferences() {
         assert_eq!(actual, expected, "{}: {}", case["key"], case["value"]);
     }
 }
+
+#[test]
+fn scroll_speed_default_range_and_preset_exclusion() {
+    assert_eq!(settings::defaults()["scrollSpeed"], json!(0.75));
+    assert!(!settings::preset_keys().contains(&"scrollSpeed".to_owned()));
+    for value in [0.25, 0.75, 2.0] {
+        assert_eq!(
+            settings::validate("scrollSpeed", &json!(value), false).unwrap(),
+            json!(value)
+        );
+    }
+    for value in [json!(0.249), json!(2.001), json!(true)] {
+        assert!(settings::validate("scrollSpeed", &value, false).is_err());
+    }
+}
+
+#[test]
+fn old_desktop_state_gets_scroll_default_and_setting_write_reloads_niri() -> Result<()> {
+    use std::{cell::RefCell, fs, rc::Rc};
+
+    struct RuntimeFixture {
+        calls: Rc<RefCell<Vec<(String, Value)>>>,
+        config_path: String,
+    }
+    impl Runtime for RuntimeFixture {
+        fn compositor(&mut self, operation: &str, args: &[Value], _kwargs: &Value) -> Result<Value> {
+            match operation {
+                "backend_name" => Ok(json!("niri")),
+                "capabilities" => Ok(json!({
+                    "monitorConfiguration":false,
+                    "perOutputWorkspaces":false
+                })),
+                "desktop_option_keys" => Ok(json!([
+                    "animations", "blur", "shadow", "followMouse", "naturalScroll",
+                    "gapsIn", "borderSize", "rounding"
+                ])),
+                "config_path" => Ok(json!(self.config_path)),
+                "set_desktop_options" => {
+                    self.calls
+                        .borrow_mut()
+                        .push((operation.to_owned(), args[0].clone()));
+                    Ok(Value::Null)
+                }
+                "render_desktop_options" => Ok(json!("")),
+                "render_monitors" => Ok(json!("")),
+                _ => Err(format!("Unexpected runtime operation {operation}").into()),
+            }
+        }
+        fn effect(&mut self, _effect: Effect<'_>) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    let home = tempfile::tempdir()?;
+    let paths = Paths::new(home.path());
+    fs::create_dir_all(&paths.config)?;
+    fs::write(paths.config.join("desktop.json"), r#"{"gapsIn":9}"#)?;
+    let calls = Rc::new(RefCell::new(Vec::new()));
+    let config_path = paths
+        .config
+        .join("niri/desktop.kdl")
+        .to_string_lossy()
+        .into_owned();
+    let mut settings = Settings::new(
+        paths,
+        RuntimeFixture {
+            calls: calls.clone(),
+            config_path,
+        },
+    )?;
+    let migrated = settings.load()?;
+    assert_eq!(migrated["scrollSpeed"], json!(0.75));
+    assert_eq!(migrated["gapsIn"], json!(9));
+    settings.action("set", &["scrollSpeed".into(), "1.25".into()])?;
+    assert_eq!(
+        calls.borrow().as_slice(),
+        [("set_desktop_options".into(), json!({"scrollSpeed":1.25}))]
+    );
+    let saved: Value = serde_json::from_slice(&fs::read(&settings.state)?)?;
+    assert_eq!(saved["scrollSpeed"], json!(1.25));
+    Ok(())
+}
 #[test]
 fn frozen_scaled_rotated_and_mirrored_geometry() {
     let reference: Value = serde_json::from_str(include_str!(

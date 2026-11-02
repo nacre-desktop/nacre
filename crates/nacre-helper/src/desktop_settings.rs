@@ -23,6 +23,11 @@ pub fn defaults() -> &'static Value {
         .expect("checked desktop defaults")
     })
 }
+pub fn scroll_speed_default() -> f64 {
+    defaults()["scrollSpeed"]
+        .as_f64()
+        .expect("checked scroll speed default")
+}
 pub fn preset_keys() -> Vec<String> {
     defaults()
         .as_object()
@@ -33,6 +38,7 @@ pub fn preset_keys() -> Vec<String> {
                 && ![
                     "language",
                     "monoFont",
+                    "scrollSpeed",
                     "niriWorkspaceMode",
                     "workspacePrimaryOutput",
                     "monitorWorkspaceActions",
@@ -66,6 +72,14 @@ fn validate_with(defaults: &Value, key: &str, value: &Value, developer: bool) ->
         _ => (0, 0),
     };
     match key {
+        "scrollSpeed" => {
+            if !value
+                .as_f64()
+                .is_some_and(|number| (0.25..=2.0).contains(&number))
+            {
+                return Err("Scroll speed must be from 0.25 to 2.0".into());
+            }
+        }
         "mouseSpeed" | "touchpadSpeed" => {
             if !value
                 .as_f64()
@@ -433,9 +447,10 @@ impl<R: Runtime> Settings<R> {
             .filter(|key| {
                 !INPUT_KEYS.contains(&key.as_str())
                     && ![
-                        "language",
-                        "monoFont",
-                        "niriWorkspaceMode",
+                    "language",
+                    "monoFont",
+                    "scrollSpeed",
+                    "niriWorkspaceMode",
                         "workspacePrimaryOutput",
                         "monitorWorkspaceActions",
                     ]
@@ -515,7 +530,10 @@ impl<R: Runtime> Settings<R> {
                 )?;
                 let mut data = self.load()?;
                 data[key] = value.clone();
-                if self.options.iter().any(|option| option == key) || INPUT_KEYS.contains(&key) {
+                if self.options.iter().any(|option| option == key)
+                    || INPUT_KEYS.contains(&key)
+                    || key == "scrollSpeed"
+                {
                     self.runtime.compositor(
                         "set_desktop_options",
                         &[json!({key:value})],

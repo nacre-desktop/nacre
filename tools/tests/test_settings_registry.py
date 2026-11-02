@@ -17,6 +17,18 @@ def catalog():
 
 
 class SettingsRegistryTests(unittest.TestCase):
+    def test_scroll_speed_writes_shared_desktop_preference(self):
+        settings = {
+            row["id"]: row
+            for fragment in catalog()
+            for row in fragment.get("settings", [])
+        }
+        setting = settings["keyboard-mouse.touchpad.scrollSpeed"]
+        self.assertEqual(setting["store"], {"id": "desktop", "key": ["scrollSpeed"]})
+        self.assertEqual(setting["default"], 0.75)
+        self.assertEqual(setting["range"], {"min": 0.25, "max": 2.0, "step": 0.05})
+        self.assertEqual(setting["apply"], "instant")
+
     def test_dolphin_theme_switch_matches_the_native_style_reader(self):
         import re
 
