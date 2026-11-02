@@ -444,7 +444,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -471,7 +471,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"animations {  }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    shadow { on; }\\n    background-effect { blur true; }\\n}\\ninput {\\n    focus-follows-mouse\\n    mouse { scroll-factor 0.75; }\\n    touchpad { natural-scroll; scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"animations {  }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    shadow { on; }\\n    background-effect { blur true; }\\n}\\ninput {\\n    focus-follows-mouse\\n    touchpad { natural-scroll; scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -498,7 +498,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"animations { off; }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    shadow { off; }\\n    background-effect { blur false; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"animations { off; }\\nlayout {\\n    gaps 6\\n    border { width 2; }\\n    focus-ring { width 2; }\\n}\\nwindow-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 12\\n    clip-to-geometry true\\n}\\nlayer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    shadow { off; }\\n    background-effect { blur false; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -518,7 +518,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"animations {  }\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"animations {  }\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -538,7 +538,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"animations { off; }\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"animations { off; }\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -618,7 +618,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    background-effect { blur true; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur true; }\\n}\\nwindow-rule {\\n    background-effect { blur true; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -638,7 +638,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    background-effect { blur false; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layer-rule {\\n    match namespace=\\\"^nacre-(topbar|lock-preview|left-menu-handle|right-menu-handle)$\\\"\\n    background-effect { blur false; }\\n}\\nwindow-rule {\\n    background-effect { blur false; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -718,7 +718,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"window-rule {\\n    shadow { on; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"window-rule {\\n    shadow { on; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -738,7 +738,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"window-rule {\\n    shadow { off; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"window-rule {\\n    shadow { off; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -818,7 +818,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    focus-follows-mouse\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    focus-follows-mouse\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -838,7 +838,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -918,7 +918,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { natural-scroll; scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    touchpad { natural-scroll; scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -938,7 +938,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1018,7 +1018,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    gaps 0\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    gaps 0\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1038,7 +1038,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    gaps 100\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    gaps 100\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1058,7 +1058,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    gaps 1.5\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    gaps 1.5\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1178,7 +1178,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    border { width 0; }\\n    focus-ring { width 0; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    border { width 0; }\\n    focus-ring { width 0; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1198,7 +1198,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    border { width 100; }\\n    focus-ring { width 100; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    border { width 100; }\\n    focus-ring { width 100; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1218,7 +1218,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"layout {\\n    border { width 1.5; }\\n    focus-ring { width 1.5; }\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"layout {\\n    border { width 1.5; }\\n    focus-ring { width 1.5; }\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1338,7 +1338,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 0\\n    clip-to-geometry true\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 0\\n    clip-to-geometry true\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1358,7 +1358,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 100\\n    clip-to-geometry true\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 100\\n    clip-to-geometry true\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1378,7 +1378,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 1.5\\n    clip-to-geometry true\\n}\\ninput {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"window-rule {\\n    exclude app-id=\\\"^org[.]quickshell$\\\" title=\\\"^Nacre Pearl \\\"\\n    geometry-corner-radius 1.5\\n    clip-to-geometry true\\n}\\ninput {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []
@@ -1498,7 +1498,7 @@
         "kwargs": {}
       },
       "observed": {
-        "stdout": "\"input {\\n    mouse { scroll-factor 0.75; }\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
+        "stdout": "\"input {\\n    touchpad { scroll-factor 0.75; }\\n}\\n\"\n",
         "exit": 0,
         "probes": [],
         "requests": []

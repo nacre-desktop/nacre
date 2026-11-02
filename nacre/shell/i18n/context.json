@@ -4161,7 +4161,7 @@
   "settings.registry.input.adaptive": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",
   "settings.registry.keyboard-mouse.touchpad.touchpadSpeed.description": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",
   "settings.registry.keyboard-mouse.touchpad.scrollSpeed.label": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",
-  "settings.registry.keyboard-mouse.touchpad.scrollSpeed.description": "Settings page explanation for the shared touchpad and mouse wheel scroll factor.",
+  "settings.registry.keyboard-mouse.touchpad.scrollSpeed.description": "Settings page explanation for touchpad scrolling speed.",
   "settings.registry.keyboard-mouse.mouse.mouseAcceleration.description": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",
   "settings.registry.keyboard-mouse.mouse.mouseLeftHanded.label": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",
   "settings.registry.keyboard-mouse.mouse.mouseLeftHanded.description": "Settings page, graphical selector or launcher sidebar preference. Keep the task-based label concise; raw setting IDs remain unchanged.",

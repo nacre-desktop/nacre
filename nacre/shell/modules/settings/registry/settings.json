@@ -2603,10 +2603,12 @@
       "visibleWhen": {
         "all": [
           {"capability": "input.controls"},
-          {"capability": "input.touchpadSpeed"}
+          {"capability": "input.touchpadSpeed"},
+          {"capability": "touchpad"}
         ]
       },
-      "range": {"min": 0.25, "max": 2.0, "step": 0.05}
+      "range": {"min": 0.25, "max": 2.0, "step": 0.05},
+      "dependsOn": "keyboard-mouse.touchpad.touchpadEnabled"
     },
     {
       "id": "lock-login.widgets.lockMedia",

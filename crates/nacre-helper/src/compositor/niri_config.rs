@@ -229,11 +229,12 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 fields.push(format!("accel-profile {}", text(value)?));
             }
         }
-        if device == "mouse" {
-            fields.push(format!("scroll-factor {scroll_speed}"));
-        }
+        let mut specified = device == "touchpad"
+            || preferences.contains_key(speed)
+            || (device == "mouse" && preferences.contains_key("mouseAcceleration"));
         for (key, field) in flags {
             if let Some(value) = preferences.get(key) {
+                specified = true;
                 if !value.is_boolean() {
                     return Err(invalid("Invalid input toggle"));
                 }
@@ -242,7 +243,13 @@ pub fn desktop(preferences: &Value) -> Result<String> {
                 }
             }
         }
-        input.push(format!("{device} {{ {}; }}", fields.join("; ")));
+        if specified {
+            input.push(if fields.is_empty() {
+                format!("{device} {{ }}")
+            } else {
+                format!("{device} {{ {}; }}", fields.join("; "))
+            });
+        }
     }
     if !input.is_empty() || preferences.contains_key("followMouse") {
         lines.push(format!("input {{\n    {}\n}}", input.join("\n    ")));
@@ -617,12 +624,16 @@ mod input_settings_tests {
     }
 
     #[test]
-    fn one_scroll_factor_drives_touchpad_and_mouse_and_defaults_for_old_settings() {
+    fn touchpad_scroll_factor_defaults_and_respects_saved_preference() {
         for (preferences, speed) in [(json!({}), "0.75"), (json!({"scrollSpeed":1.25}), "1.25")] {
             let rendered = desktop(&preferences).unwrap();
             assert!(rendered.contains(&format!("touchpad {{ scroll-factor {speed}; }}")));
-            assert!(rendered.contains(&format!("mouse {{ scroll-factor {speed}; }}")));
+            assert!(!rendered.contains("mouse {"));
         }
+        let rendered = desktop(&json!({"scrollSpeed":1.25,"mouseNaturalScroll":true})).unwrap();
+        assert!(rendered.contains("mouse { natural-scroll; }"));
+        assert!(!rendered.contains("mouse { scroll-factor"));
+        assert!(!desktop(&json!({})).unwrap().contains("mouse {"));
     }
 }
 
