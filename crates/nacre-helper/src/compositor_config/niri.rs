@@ -74,13 +74,15 @@ pub(super) fn keys(value: &Value) -> Result<String> {
 }
 const COLLECTION_BEGIN: &str = "    // N0110 native collection bindings begin\n";
 const COLLECTION_END: &str = "    // N0110 native collection bindings end\n";
-const COLLECTION_BINDINGS: &str = "    // N0110 native collection bindings begin\n\
-    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-next\" { focus-collection-next; }\n\
-    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-previous\" { focus-collection-previous; }\n\
-    Super+Ctrl+N repeat=false hotkey-overlay-title=\"Nacre:collection-create\" { create-collection; }\n\
-    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title=\"Nacre:collection-move-next\" { move-window-to-collection-next; }\n\
-    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n\
-    // N0110 native collection bindings end\n";
+const COLLECTION_BINDINGS: &str = concat!(
+    "    // N0110 native collection bindings begin\n",
+    "    Super+Ctrl+Alt+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-next\" { focus-collection-next; }\n",
+    "    Super+Ctrl+Alt+Shift+Tab repeat=false hotkey-overlay-title=\"Nacre:collection-previous\" { focus-collection-previous; }\n",
+    "    Super+Ctrl+N repeat=false hotkey-overlay-title=\"Nacre:collection-create\" { create-collection; }\n",
+    "    Super+Ctrl+Shift+Page_Down repeat=false hotkey-overlay-title=\"Nacre:collection-move-next\" { move-window-to-collection-next; }\n",
+    "    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n",
+    "    // N0110 native collection bindings end\n",
+);
 pub(crate) fn with_collection_bindings(bindings: &str) -> Result<String> {
     if bindings.contains(COLLECTION_BEGIN) || bindings.contains(COLLECTION_END) {
         if bindings.contains(COLLECTION_BINDINGS) {
