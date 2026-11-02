@@ -384,7 +384,11 @@ pub fn render_with_capabilities(
     workspace_collections: bool,
 ) -> Result<Value> {
     let generated = render(contract, directory, backend)?;
-    augment_niri_render(generated, backend == "niri" && workspace_collections)
+    if backend == "niri" {
+        augment_niri_render(generated, workspace_collections)
+    } else {
+        Ok(generated)
+    }
 }
 
 fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Result<Value> {
@@ -408,6 +412,7 @@ fn active_niri_capabilities() -> crate::compositor::niri_transport::NacreCapabil
 pub(crate) fn ensure_collection_bindings(bindings: &str) -> Result<String> {
     niri::with_collection_bindings(bindings)
 }
+#[cfg(test)]
 pub(crate) fn strip_collection_bindings(bindings: &str) -> Result<String> {
     niri::strip_collection_bindings(bindings)
 }
@@ -522,6 +527,11 @@ mod tests {
         let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
         let contract: Value =
             serde_json::from_slice(&std::fs::read(directory.join("compositor-contract.json"))?)?;
+        let hyprland = render(&contract, &directory, "hyprland")?;
+        assert_eq!(
+            render_with_capabilities(&contract, &directory, "hyprland", true)?,
+            hyprland
+        );
         let stock = render_with_capabilities(&contract, &directory, "niri", false)?;
         let stock_bindings = stock["niri/bindings.kdl"]
             .as_str()
