@@ -1165,6 +1165,30 @@ mod tests {
             .unwrap();
         (home, paths, hub, service)
     }
+    #[tokio::test(flavor = "current_thread")]
+    async fn invalid_scroll_values_through_settings_set_leave_desktop_store_unchanged() {
+        let (_home, paths, _hub, service) = fixture().await;
+        let before = service.get(SettingsGet { store: "desktop".into() }).await.unwrap();
+        for (key, value) in [
+            ("scrollSpeed", json!(0.2)),
+            ("scrollSpeed", json!(2.1)),
+            ("mouseScrollSpeed", json!(0.49)),
+            ("mouseScrollSpeed", json!(3.01)),
+            ("mouseScrollSpeed", json!(true)),
+        ] {
+            let error = service.set(SettingsSet {
+                store: "desktop".into(),
+                key: vec![key.into()],
+                value,
+                rev: before["rev"].as_u64().unwrap(),
+            }).await.unwrap_err();
+            assert_eq!(error.code, ErrorCode::PermissionDenied);
+        }
+        let after = service.get(SettingsGet { store: "desktop".into() }).await.unwrap();
+        assert_eq!(after["rev"], before["rev"]);
+        assert_eq!(after["data"], before["data"]);
+        assert!(!paths.config.join("desktop.json").exists());
+    }
     fn replace_config_root_with_foreign_link(home: &std::path::Path, paths: &Paths) {
         let foreign = home.join("foreign-config");
         std::fs::create_dir(&foreign).unwrap();
