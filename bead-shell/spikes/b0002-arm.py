@@ -15,6 +15,8 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
+WORKSPACE_ROOT = ROOT.parent
 ARTIFACTS = pathlib.Path.home() / ".local/share/nacre/ai/lead/b0002-artifacts-20261020"
 UI_WORKTREE = pathlib.Path.home() / ".local/share/nacre/ai/worktrees/luna-b0002-gc-fix-20261020"
 HELPER = ARTIFACTS / "nacre-helper-4a65f4ec"
@@ -110,7 +112,7 @@ def inherited_capture_environment(base: dict[str, str], side: str, compositor: s
         env.pop("BEAD_MENU_ENGINE_BINARY", None)
         if CONTROL_BUNDLE_ROOT is None:
             raise RuntimeError("reference profile requires the frozen control UI bundle")
-        bundle_root = CONTROL_BUNDLE_ROOT if side == "A" else ROOT
+        bundle_root = CONTROL_BUNDLE_ROOT if side == "A" else WORKSPACE_ROOT
         env["BEAD_HARDENING_BUNDLE_ROOT"] = str(bundle_root)
         env["BEAD_DASHBOARD_FIXTURES"] = str(bundle_root / "shell/tests/fixtures/dashboard")
     env.pop("BEAD_DASHBOARD_OPENED_ONCE_ONLY", None)
@@ -395,13 +397,13 @@ def main() -> int:
             "BEAD_HARDENING": "launcher",
             "BEAD_CORE_VIEWS_PROOF": "1", "BEAD_CORE_STATUS_PROOF": "1",
             "BEAD_DASHBOARD_VIEWS_PROOF": "1",
-            "BEAD_DASHBOARD_FIXTURES": str(ROOT / "shell/tests/fixtures/dashboard"),
+            "BEAD_DASHBOARD_FIXTURES": str(PRODUCT_SHELL / "tests/fixtures/dashboard"),
             "BEAD_PANEL_IDLE_STATE": "release", "BEAD_DASHBOARD_RESIDENCY": "1",
             "BEAD_DASHBOARD_PAGES": "today,weather,media,system",
             "BEAD_DASHBOARD_RESIDENCY_SLOTS": "4", "BEAD_DASHBOARD_RESIDENCY_LEGACY": "1",
             "BEAD_DASHBOARD_ACCEPTANCE": "1", "BEAD_DASHBOARD_BATCH_MEDIANS": "1",
             "BEAD_DASHBOARD_WARMUP_SECONDS": "0",
-            "CARGO_TARGET_DIR": str(ROOT / "target")}
+            "CARGO_TARGET_DIR": str(ROOT.parent / "target")}
         if args.profile == "laptop-reference":
             CAPTURE_CONFIG["BEAD_REQUIRE_DRM"] = "1"
             CAPTURE_CONFIG["BEAD_REFERENCE_ABSOLUTE_GATE"] = "1"
@@ -414,8 +416,8 @@ def main() -> int:
     if args.profile in ("laptop-reference", "rehearsal"):
         CAPTURE_CONFIG.update({
             "BEAD_RESEARCH_TOOLS": str(args.research_tools),
-            "CARGO_TARGET_DIR": str(ROOT / "target"),
-            "BEAD_DASHBOARD_FIXTURES": str(ROOT / "shell/tests/fixtures/dashboard"),
+            "CARGO_TARGET_DIR": str(ROOT.parent / "target"),
+            "BEAD_DASHBOARD_FIXTURES": str(PRODUCT_SHELL / "tests/fixtures/dashboard"),
         })
         CAPTURE_CONFIG.pop("BEAD_MENU_ENGINE_BINARY", None)
         CAPTURE_CONFIG.pop("BEAD_MENU_ENGINE_BUNDLE", None)

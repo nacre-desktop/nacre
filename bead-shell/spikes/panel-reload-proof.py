@@ -3,12 +3,13 @@
 """Transactional reload and durable state for the actual lazy sound view."""
 import importlib.util,json,os,pathlib,re,shutil,signal,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py');matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 def sample(env,raw,compositor,stop):
     env={**env,'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],'PIPEWIRE_REMOTE':'bead-private-unavailable'}
     binary=pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release/nacre-shell';socket=pathlib.Path(env['XDG_RUNTIME_DIR'])/'reload.sock';log=raw/'panel-reload.log'
     with tempfile.TemporaryDirectory(prefix='bead-panel-reload-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         source=bundle/'shell/sound/main.luau';behavior=source.with_name('behavior.luau');original=source.read_text()
         command=[str(binary),'--bar','--audio-panel','--command-socket',str(socket),'--trace-state']
         if compositor=='hyprland':command+=['--output','bead-bench']

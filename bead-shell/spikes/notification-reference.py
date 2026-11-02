@@ -11,6 +11,7 @@ import tempfile
 import time
 
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('reference',ROOT/'spikes/bar-reference.py')
 reference=importlib.util.module_from_spec(spec);spec.loader.exec_module(reference)
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
@@ -50,7 +51,7 @@ def sample(env,raw,compositor,stop):
             }'''
         else:
             content='''NacreLevelNotice {output:Quickshell.screens[0];shown:true;channel:"volume"}'''
-        content=content.replace('Quickshell.iconPath("dialog-information")',json.dumps((ROOT/'shell/tests/icon.svg').as_uri()))
+        content=content.replace('Quickshell.iconPath("dialog-information")',json.dumps((PRODUCT_SHELL/'tests/icon.svg').as_uri()))
         (root/'shell.qml').write_text('''import QtQuick
 import Quickshell
 import Quickshell.Wayland

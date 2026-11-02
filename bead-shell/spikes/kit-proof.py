@@ -3,13 +3,14 @@
 """Shared kit capture proof; containment is owned by measure.py."""
 import importlib.util,os,pathlib,shutil,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 def sample(env,raw,compositor,stop):
     env={**env,'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],'PIPEWIRE_REMOTE':'bead-private-unavailable'}
     binary=pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release/nacre-shell'
     with tempfile.TemporaryDirectory(prefix='bead-kit-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         source=bundle/'shell/kit/main.luau';original=source.read_text()
         for edge in ['left','right','top']:
             source.write_text(original.replace('edge="left"',f'edge="{edge}"'))

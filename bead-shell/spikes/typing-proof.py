@@ -6,6 +6,7 @@ all application threads and idle callback overhead, but excludes injector CPU.
 """
 import importlib.util,json,os,pathlib,re,shutil,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 spec=importlib.util.spec_from_file_location('menu_fixtures',ROOT/'spikes/menu-fixtures.py')
@@ -20,9 +21,9 @@ def sample(env,raw,compositor,stop):
     if wire_debug:env['WAYLAND_DEBUG']='1'
     rows=[]
     with tempfile.TemporaryDirectory(prefix='bead-type-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(pathlib.Path(os.environ.get('BEAD_TYPING_BUNDLE',str(ROOT/'shell'))),bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(pathlib.Path(os.environ.get('BEAD_TYPING_BUNDLE',str(PRODUCT_SHELL))),bundle/'shell')
         env['BEAD_ICON_PATH']=str(bundle/'shell/sample.svg')
-        rows_fixture=[{'id':f'proof-{i:04}','name':f'Application {i:04}','label':f'Application {i:04}','icon':str(ROOT/'shell/sample.svg'),'kind':'app','description':'Application fixture','breadcrumb':'All apps','operation':'app','disabled':False} for i in range(320)]
+        rows_fixture=[{'id':f'proof-{i:04}','name':f'Application {i:04}','label':f'Application {i:04}','icon':str(PRODUCT_SHELL/'sample.svg'),'kind':'app','description':'Application fixture','breadcrumb':'All apps','operation':'app','disabled':False} for i in range(320)]
         legacy=os.environ.get('BEAD_TYPING_LEGACY')=='1'
         replies={'':{'rows':rows_fixture},'a':{'rows':rows_fixture},'ap':{'rows':rows_fixture}}
         changed=os.environ.get('BEAD_TYPING_CHANGED_RESULTS')=='1'

@@ -27,6 +27,7 @@ capture_safety = importlib.util.module_from_spec(_capture_safety_spec)
 _capture_safety_spec.loader.exec_module(capture_safety)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 
 def validate_dashboard_output_geometry(compositor, outputs):
@@ -165,7 +166,7 @@ def sample_retained(env,raw,target,mode,layout,run,seconds,virtual120):
     qml=mode.startswith('qml')
     ui=mode.startswith(('ui-','anim-')) or mode=='qml-ui'
     animated=mode.startswith('anim-') or os.environ.get('BEAD_ANIMATION')=='1'
-    env.update({'BEAD_IDLE':'1' if ui and not animated else '0','BEAD_START_OPEN':'1','BEAD_CONTENT_SIZE':'1' if layout=='content' else '0','BEAD_LAYER':'1','BEAD_PALETTE_PATH':str(ROOT/'spikes/palette-stress.json'),'BEAD_SHELL_DIR':str(ROOT/'shell'),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
+    env.update({'BEAD_IDLE':'1' if ui and not animated else '0','BEAD_START_OPEN':'1','BEAD_CONTENT_SIZE':'1' if layout=='content' else '0','BEAD_LAYER':'1','BEAD_PALETTE_PATH':str(ROOT/'spikes/palette-stress.json'),'BEAD_SHELL_DIR':str(PRODUCT_SHELL),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
     # Primary variants use their own callback statistics with tracing disabled.
     # Qt is a startup control: trace is required for the same first-frame marker.
     env['WAYLAND_DEBUG']='1' if qml and not os.environ.get('BEAD_QML_PROBE') else '0'
@@ -234,7 +235,7 @@ def sample_retained(env,raw,target,mode,layout,run,seconds,virtual120):
 def sample_reload(env,raw,target,renderer):
     # Only the temporary bundle is edited; reference repos and checkout UI stay intact.
     with tempfile.TemporaryDirectory(prefix='bead-ui-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         behavior=bundle/'shell/legacy-ui/behavior.luau'
         behavior.write_text(behavior.read_text().replace('["launcher.search.text"] = ""','["launcher.search.text"] = "saved 😀"').replace('["launcher.scroll.y"] = 0','["launcher.scroll.y"] = 42'))
         command=[os.environ.get('BEAD_NATIVE_BINARY',str(target/'nacre-shell')),'--ui','legacy-ui/main.json','--renderer',renderer,'--trace-state','--namespace','bead-dev-reload']
@@ -388,7 +389,7 @@ def sample_backend(env,raw,target,compositor):
 
 def sample_input(env,raw,target):
     with tempfile.TemporaryDirectory(prefix='bead-input-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         command=[str(target/'nacre-shell'),'--ui','ui/main.luau','--catalog',str(ROOT/'spikes/launcher-fixture.json'),'--renderer','auto','--namespace','bead-dev-input','--test-keyboard','--trace-state','--palette',str(ROOT/'spikes/palette-stress.json')]
         if env.get('HYPRLAND_INSTANCE_SIGNATURE'):command+=['--output','bead-bench']
         log=[];condition=threading.Condition();path=raw/'input-proof.log'
@@ -433,7 +434,7 @@ def sample_input(env,raw,target):
 
 def sample_gate_b(env, raw, target, renderer):
     with tempfile.TemporaryDirectory(prefix='bead-gate-b-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         source=bundle/'shell/ui/main.luau';original=source.read_text()
         catalog=ROOT/'spikes/launcher-fixture.json'
         command=[str(target/'nacre-shell'),'--ui','ui/main.luau','--catalog',str(catalog),'--renderer',renderer,'--namespace','bead-dev-gate-b','--palette',str(ROOT/'spikes/palette-stress.json')]
@@ -492,7 +493,7 @@ def sample_qml_reload(env,raw):
         fixture=pathlib.Path(directory)/'shell.qml'
         source=(ROOT/'spikes/panel-reload.qml').read_text().replace('property string searchText: ""','property string searchText: "saved 😀"').replace('property real scrollY: 0','property real scrollY: 42')
         fixture.write_text(source)
-        env.update({'LD_PRELOAD':os.environ['BEAD_QML_PROBE'],'WAYLAND_DEBUG':'0','BEAD_IDLE':'1','BEAD_CONTENT_SIZE':'1','BEAD_LAYER':'1','BEAD_PALETTE_PATH':str(ROOT/'spikes/palette-stress.json'),'BEAD_SHELL_DIR':str(ROOT/'shell'),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
+        env.update({'LD_PRELOAD':os.environ['BEAD_QML_PROBE'],'WAYLAND_DEBUG':'0','BEAD_IDLE':'1','BEAD_CONTENT_SIZE':'1','BEAD_LAYER':'1','BEAD_PALETTE_PATH':str(ROOT/'spikes/palette-stress.json'),'BEAD_SHELL_DIR':str(PRODUCT_SHELL),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
         client=subprocess.Popen(['quickshell','--path',str(fixture)],env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,start_new_session=True,text=True,bufsize=1)
         log=[];condition=threading.Condition()
         def drain():
@@ -789,7 +790,7 @@ def main():
                 reference.sample(env,raw,args.compositor,stop)
                 return 0
             if args.demo_test:
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 env['PATH']=str(target)+os.pathsep+env['PATH']
                 env.pop('NIRI_SOCKET',None);env.pop('HYPRLAND_INSTANCE_SIGNATURE',None)
                 with (raw/('demo-'+args.compositor+'.log')).open('w') as demo_log:
@@ -806,7 +807,7 @@ def main():
             if args.qml_reload_test:
                 sample_qml_reload(env,raw);return 0
             if args.reload_test and os.environ.get('BEAD_BACKEND_TEST'):
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 sample_backend(env,raw,target,args.compositor)
                 import importlib.util
                 spec=importlib.util.spec_from_file_location('backend_restart',ROOT/'spikes/backend-restart.py')
@@ -814,16 +815,16 @@ def main():
                 compositor=restart.sample(env,compositor_launch_env,command,compositor,target,raw,stop)
                 return 0
             if args.reload_test and os.environ.get('BEAD_INPUT_TEST'):
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 sample_input(env,raw,target);return 0
             if args.reload_test and os.environ.get('BEAD_GATE_B'):
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 sample_gate_b(env,raw,target,args.renderer);return 0
             if args.reload_test:
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 sample_reload(env,raw,target,args.renderer);return 0
             if args.retained:
-                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                 for run in range(args.runs):
                     for layout in args.layouts:
                         for mode in args.modes:
@@ -832,12 +833,12 @@ def main():
                 return 0
             for run in range(args.runs):
                 for mode in args.modes:
-                    target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+                    target=pathlib.Path(os.environ.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
                     fixture='panel.qml' if args.panel else ('blank-outputs.qml' if 'bead' in args.modes else 'blank.qml')
                     command = ['quickshell', '--log-rules', 'qml.debug=true', '--path', str(ROOT/'spikes'/fixture)] if mode == 'qml' else ([str(target/'nacre-shell')] if mode=='bead' else [str(target/'bead-spike-blank-layer'), mode])
                     if args.panel:
                         palette_path=(args.palette or ROOT/'spikes/palette-stress.json').resolve()
-                        env.update({'BEAD_IDLE':'0' if args.animate else '1','BEAD_PALETTE_PATH':str(palette_path),'BEAD_SHELL_DIR':str(ROOT/'shell'),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
+                        env.update({'BEAD_IDLE':'0' if args.animate else '1','BEAD_PALETTE_PATH':str(palette_path),'BEAD_SHELL_DIR':str(PRODUCT_SHELL),'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'})
                         if mode=='bead':
                             command+=['--animate' if args.animate else '--panel','--palette',str(palette_path),'--renderer',args.renderer]
                             if args.virtual120:command+=['--output','bead-bench']

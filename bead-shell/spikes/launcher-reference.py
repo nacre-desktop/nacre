@@ -3,6 +3,7 @@
 """Unchanged NacreAppBrowser with exact fixture replies, no provider engine."""
 import importlib.util,json,os,pathlib,re,shutil,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 spec=importlib.util.spec_from_file_location('menu_fixtures',ROOT/'spikes/menu-fixtures.py')
@@ -15,7 +16,7 @@ def sample(env,raw,compositor,stop):
         root=pathlib.Path(directory);original=matrix.reference.fixture(root)
         shutil.copytree(original/'modules/launcher',root/'modules/launcher')
         shutil.copytree(original/'modules/extras',root/'modules/extras')
-        data=[{'id':f'proof-{i:04}','name':f'Application {i:04}','label':f'Application {i:04}','icon':str(ROOT/'shell/sample.svg'),'kind':'app','description':'Application fixture','breadcrumb':'All apps','operation':'app','disabled':False}for i in range(320)]
+        data=[{'id':f'proof-{i:04}','name':f'Application {i:04}','label':f'Application {i:04}','icon':str(PRODUCT_SHELL/'sample.svg'),'kind':'app','description':'Application fixture','breadcrumb':'All apps','operation':'app','disabled':False}for i in range(320)]
         menu="""pragma Singleton
 import QtQuick
 QtObject {

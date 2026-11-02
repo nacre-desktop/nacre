@@ -21,6 +21,7 @@ import threading
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+PRODUCT_SHELL = ROOT.parent / "shell"
 HERE = pathlib.Path(__file__).resolve().parent
 
 
@@ -122,7 +123,7 @@ def niri_config(path: pathlib.Path, ctl_path: pathlib.Path, route_log: pathlib.P
         command = ctl + arguments + f" >> {shlex.quote(str(route_log))} 2>&1"
         lines.append(f"    {key} repeat=false {{ spawn-sh {json.dumps(command)}; }}")
     lines.append("}")
-    pearls = ROOT / "shell/niri-pearls.kdl"
+    pearls = PRODUCT_SHELL / "niri-pearls.kdl"
     if pearls.is_file():
         lines.append(pearls.read_text())
     path.write_text("\n".join(lines) + "\n")
@@ -1962,7 +1963,7 @@ class Runner:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bead", type=pathlib.Path,
-                        default=ROOT / "target/release/nacre-shell")
+                        default=ROOT.parent / "target/release/nacre-shell")
     parser.add_argument("--shell", type=pathlib.Path, default=ROOT,
                         help="project root containing the arm's shell/ directory")
     parser.add_argument("--daemon", type=pathlib.Path,

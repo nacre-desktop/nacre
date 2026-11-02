@@ -14,6 +14,7 @@ import tempfile
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 
 def main():
@@ -29,7 +30,7 @@ def main():
     signal.signal(signal.SIGTERM, interrupt)
     with tempfile.TemporaryDirectory(prefix='bead-reload-demo-') as directory:
         root = pathlib.Path(directory)
-        shutil.copytree(ROOT/'shell', root/'shell')
+        shutil.copytree(PRODUCT_SHELL, root/'shell')
         env = os.environ.copy()
         preview_log = root/'preview.log'
         preview_log.touch()

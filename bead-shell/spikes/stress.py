@@ -18,6 +18,7 @@ import signal
 from measure import memory, ticks, stop, drm_memory
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 def percentile(values, p):
     if not values:
@@ -58,12 +59,12 @@ def sample(mode, seconds, traced, idle):
     env['WAYLAND_DEBUG']='1' if traced else '0'
     env['BEAD_IDLE']='1' if idle else '0'
     env['BEAD_PALETTE_PATH']=str(ROOT/'spikes/palette-stress.json')
-    env['BEAD_SHELL_DIR']=str(ROOT/'shell')
+    env['BEAD_SHELL_DIR']=str(PRODUCT_SHELL)
     # Select the same installed SVG icon for both clients without copying its asset.
     icon=pathlib.Path('/usr/share/icons/Adwaita/scalable/places/folder.svg')
     if icon.exists():
         env['BEAD_ICON_PATH']=str(icon)
-    target=pathlib.Path(env.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release'
+    target=pathlib.Path(env.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release'
     if mode=='qml':
         command=['quickshell','--path',str(ROOT/'spikes/panel.qml')]
         if traced:
@@ -143,9 +144,9 @@ def paired(seconds, arm_file):
         env = {**os.environ, 'WAYLAND_DEBUG':'0', 'BEAD_IDLE':'0', 'BEAD_START_OPEN':'1',
                'BEAD_CONTENT_SIZE':'1', 'BEAD_LAYER':'1',
                'BEAD_PALETTE_PATH':str(ROOT/'spikes/palette-stress.json'),
-               'BEAD_SHELL_DIR':str(ROOT/'shell'),
+               'BEAD_SHELL_DIR':str(PRODUCT_SHELL),
                'BEAD_ICON_PATH':'/usr/share/icons/Adwaita/scalable/places/folder.svg'}
-        target = pathlib.Path(env.get('CARGO_TARGET_DIR',str(ROOT/'target')))/'release/nacre-shell'
+        target = pathlib.Path(env.get('CARGO_TARGET_DIR',str(ROOT.parent/'target')))/'release/nacre-shell'
         commands = {'bead-gl':[str(target),'--animate','--start-open','--content-size',
                     '--renderer','femtovg-gl','--namespace','bead-dev-f3-live',
                     '--palette',env['BEAD_PALETTE_PATH']],

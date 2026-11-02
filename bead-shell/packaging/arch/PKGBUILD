@@ -15,11 +15,11 @@ makedepends=('rust' 'cargo' 'clang' 'pkgconf')
 optdepends=('nacre: daemon, QML Settings/Colors/Welcome windows and the ui-shell switch')
 
 build() {
-  cd "$startdir/../.."
+  cd "$startdir/../../.."
   cargo build --release --locked -p nacre-shell --target-dir "$srcdir/target"
 }
 
 package() {
-  cd "$startdir/../.."
-  packaging/stage.sh "$pkgdir" /usr "$srcdir/target/release"
+  cd "$startdir/../../.."
+  bead-shell/packaging/stage.sh "$pkgdir" /usr "$srcdir/target/release"
 }

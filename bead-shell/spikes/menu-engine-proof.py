@@ -4,6 +4,7 @@
 import hashlib, importlib.util, json, os, pathlib, re, shutil, signal, subprocess, sys, tempfile, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 
 def load(name, path):
@@ -108,7 +109,7 @@ def sample(env, raw, compositor, stop):
     try:
         with tempfile.TemporaryDirectory(prefix='bead-menu-engine-') as directory:
             root = pathlib.Path(directory)
-            shutil.copytree(pathlib.Path(os.environ.get('BEAD_MENU_ENGINE_BUNDLE', str(ROOT / 'shell'))), root / 'shell')
+            shutil.copytree(pathlib.Path(os.environ.get('BEAD_MENU_ENGINE_BUNDLE', str(PRODUCT_SHELL))), root / 'shell')
             for name in ['home', 'config', 'state', 'cache', 'data/applications', 'system/applications', 'empty', 'bin', 'runtime']:
                 (root / name).mkdir(parents=True, exist_ok=True)
             (root / 'runtime').chmod(0o700)
@@ -263,7 +264,7 @@ def sample(env, raw, compositor, stop):
                             'worker_cpu_ms': sum(value - before_workers.get(pid, 0) for pid, value in after_workers.items()) / 1e6})
                 client_env = dict(env, BEAD_PRIVATE_INPUT_PROOF='1', BEAD_PROFILE_INPUT=profile_mode,
                                   BEAD_PROFILE_MENU_IDENTITY='1',
-                                  BEAD_MATCHED_ICONS='1', BEAD_ICON_PATH=str(ROOT / 'shell/sample.svg'),
+                                  BEAD_MATCHED_ICONS='1', BEAD_ICON_PATH=str(PRODUCT_SHELL / 'sample.svg'),
                                   DBUS_SYSTEM_BUS_ADDRESS=env['DBUS_SESSION_BUS_ADDRESS'],
                                   PIPEWIRE_REMOTE='bead-private-unavailable')
                 keeper = subprocess.Popen(['wtype', '-s', '600000', ''], env=client_env,

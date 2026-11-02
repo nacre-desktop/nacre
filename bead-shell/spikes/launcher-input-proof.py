@@ -3,6 +3,7 @@
 """Core launcher view-state keyboard proof; exact fixture replies, nested only."""
 import importlib.util,json,os,pathlib,re,shutil,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 def load(name,path):
     spec=importlib.util.spec_from_file_location(name,path)
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
@@ -12,7 +13,7 @@ fixtures=load('menu_fixtures',ROOT/'spikes/menu-fixtures.py')
 def sample(env,raw,compositor,stop):
     binary=os.environ.get('BEAD_HARDENING_BINARY',str(pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release/nacre-shell'))
     env={**env,'BEAD_PRIVATE_INPUT_PROOF':'1','BEAD_PROFILE_INPUT':'clocks','BEAD_MATCHED_ICONS':'1',
-         'BEAD_ICON_PATH':str(ROOT/'shell/sample.svg'),'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],
+         'BEAD_ICON_PATH':str(PRODUCT_SHELL/'sample.svg'),'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],
          'PIPEWIRE_REMOTE':'bead-private-unavailable'}
     client=pointer=keeper=None;log=raw/'launcher-input.log';states=[]
     def presented_state(text,query,selection=None):
@@ -38,7 +39,7 @@ def sample(env,raw,compositor,stop):
         return state
     try:
         with tempfile.TemporaryDirectory(prefix='bead-launcher-input-')as directory:
-            root=pathlib.Path(directory);shutil.copytree(ROOT/'shell',root/'shell')
+            root=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,root/'shell')
             rows=[{'id':f'app-{i:04}','name':f'Application {i:04}','kind':'app',
                    'description':'Fixture','icon':'fixture','disabled':i==0}for i in range(320)]
             fixture=root/'menu.json';fixture.write_text(json.dumps({'queries':{q:fixtures.reply(q,rows if not q else rows[:160])for q in['','a','ab']}}))

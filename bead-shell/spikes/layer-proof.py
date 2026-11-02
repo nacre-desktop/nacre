@@ -13,13 +13,14 @@ import tempfile
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec = importlib.util.spec_from_file_location('matrix', ROOT/'spikes/bar-matrix.py')
 matrix = importlib.util.module_from_spec(spec); spec.loader.exec_module(matrix)
 
 
 def sample(env, raw, compositor, stop):
     env = {**env, 'BEAD_PRIVATE_INPUT_PROOF': '1', 'BEAD_MATCHED_ICONS': '1',
-           'BEAD_ICON_PATH': str(ROOT/'shell/sample.svg')}
+           'BEAD_ICON_PATH': str(PRODUCT_SHELL/'sample.svg')}
     if os.environ.get('BEAD_POINTER_TRACE'): env['WAYLAND_DEBUG'] = '1'
     target = pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release'
     binary = pathlib.Path(os.environ.get('BEAD_HARDENING_BINARY', str(target/'nacre-shell')))
@@ -29,7 +30,7 @@ def sample(env, raw, compositor, stop):
     rows = []
     cases = ['stall'] if os.environ.get('BEAD_HARDENING') == 'stall' else os.environ.get('BEAD_LAYER_CASES', 'typing,scroll,progress').split(',')
     with tempfile.TemporaryDirectory(prefix='bead-layers-') as directory:
-        bundle = pathlib.Path(directory); shutil.copytree(ROOT/'shell', bundle/'shell')
+        bundle = pathlib.Path(directory); shutil.copytree(PRODUCT_SHELL, bundle/'shell')
         grid = bundle/'shell/ui/components/app-grid.luau'
         grid.write_text(grid.read_text().replace('ui.Grid{min_cell_width=110,', 'ui.Grid{shrink=0,min_cell_width=110,'))
         catalog = bundle/'catalog.json'

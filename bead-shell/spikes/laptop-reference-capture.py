@@ -20,6 +20,8 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
+WORKSPACE_ROOT = ROOT.parent
 ARM = ROOT / "spikes/b0002-arm.py"
 PHASES = {
     "never-opened": "never",
@@ -75,7 +77,9 @@ def canonical_tree_hash(root: pathlib.Path) -> str:
 SOURCE_TREE_PATHS = ("shell", "crates", "vendor", "Cargo.lock")
 
 
-def source_git_trees(revision: str = "HEAD", root: pathlib.Path = ROOT) -> dict[str, str]:
+def source_git_trees(
+    revision: str = "HEAD", root: pathlib.Path = WORKSPACE_ROOT
+) -> dict[str, str]:
     """Git object ids of everything the candidate binary and its UI bundle are built from."""
     return {path: subprocess.check_output(
         ["git", "-C", str(root), "rev-parse", f"{revision}:{path}"], text=True).strip()
@@ -90,7 +94,9 @@ def check_candidate_shell_tree(candidate: dict) -> None:
     (crates/, vendor/, Cargo.lock) must match too, and the checkout must be clean there.
     """
     expected = candidate.get("shell_git_tree")
-    actual = subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "HEAD:shell"], text=True).strip()
+    actual = subprocess.check_output(
+        ["git", "-C", str(WORKSPACE_ROOT), "rev-parse", "HEAD:shell"], text=True
+    ).strip()
     if not expected or expected != actual:
         raise RuntimeError(
             f"candidate was built from shell/ tree {expected} (revision {candidate.get('source_revision')}) "
@@ -102,7 +108,17 @@ def check_candidate_shell_tree(candidate: dict) -> None:
             f"candidate source trees {built} (revision {candidate.get('source_revision')}) differ from "
             f"this checkout's {current}; rebuild the candidate from this checkout")
     dirty = subprocess.check_output(
-        ["git", "-C", str(ROOT), "status", "--porcelain", "--", *SOURCE_TREE_PATHS], text=True).strip()
+        [
+            "git",
+            "-C",
+            str(WORKSPACE_ROOT),
+            "status",
+            "--porcelain",
+            "--",
+            *SOURCE_TREE_PATHS,
+        ],
+        text=True,
+    ).strip()
     if dirty:
         raise RuntimeError(f"checkout has uncommitted changes in the built sources:\n{dirty}")
 
@@ -126,12 +142,20 @@ def load_manifest(path: pathlib.Path) -> dict:
     if value["control"].get("sha256") != FROZEN_CONTROL_SHA256 or not value["control"].get("exact_original_binary_identity"):
         raise RuntimeError("control is not the exact B0002 frozen binary; no reference capture may start")
     check_candidate_shell_tree(value["candidate"])
-    fixture_root = pathlib.Path(value.get("dashboard_fixtures", ROOT / "shell/tests/fixtures/dashboard")).resolve(strict=True)
+    fixture_root = pathlib.Path(value.get("dashboard_fixtures", PRODUCT_SHELL / "tests/fixtures/dashboard")).resolve(strict=True)
     fixture_hash = canonical_tree_hash(fixture_root)
     if fixture_hash != value.get("dashboard_fixtures_sha256"):
         raise RuntimeError(f"dashboard fixture tree hash mismatch: {fixture_hash}")
     fixture_tree = subprocess.check_output(
-        ["git", "-C", str(ROOT), "rev-parse", "HEAD:shell/tests/fixtures/dashboard"], text=True).strip()
+        [
+            "git",
+            "-C",
+            str(WORKSPACE_ROOT),
+            "rev-parse",
+            "HEAD:shell/tests/fixtures/dashboard",
+        ],
+        text=True,
+    ).strip()
     if (value.get("dashboard_fixtures_git_tree") != FROZEN_FIXTURE_GIT_TREE
             or fixture_tree != FROZEN_FIXTURE_GIT_TREE):
         raise RuntimeError("dashboard fixtures do not match the frozen B0002 control tree")

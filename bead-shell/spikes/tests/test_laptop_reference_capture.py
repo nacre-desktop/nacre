@@ -9,6 +9,7 @@ from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 
 def load(name, path):
@@ -57,7 +58,7 @@ class LaptopReferenceCaptureTests(unittest.TestCase):
             (bundle / "shell/palette.json").write_text("{}\n")
             (bundle / "shell/ui/main.luau").write_text("return {}\n")
             (bundle / "shell/tests/icon.svg").write_text("<svg/>\n")
-            fixture_root = ROOT / "shell/tests/fixtures/dashboard"
+            fixture_root = PRODUCT_SHELL / "tests/fixtures/dashboard"
             shutil.copytree(fixture_root, bundle / "shell/tests/fixtures/dashboard")
             expected_control = capture.sha256(control)
             value = {
@@ -166,7 +167,7 @@ class LaptopReferenceCaptureTests(unittest.TestCase):
                              str(control_bundle / "shell/tests/fixtures/dashboard"))
             self.assertEqual(candidate_env["BEAD_HARDENING_BUNDLE_ROOT"], str(ROOT))
             self.assertEqual(candidate_env["BEAD_DASHBOARD_FIXTURES"],
-                             str(ROOT / "shell/tests/fixtures/dashboard"))
+                             str(PRODUCT_SHELL / "tests/fixtures/dashboard"))
 
     def make_batch(self, root, drm=True, candidate_anon=5.0):
         for compositor in ("niri",):

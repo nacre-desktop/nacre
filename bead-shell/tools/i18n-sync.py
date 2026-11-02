@@ -7,9 +7,10 @@ daemon-less preview reads correctly. `--check` fails on drift, `--write` copies 
 entries into Nacre (the Bead tables are the authoring source for bead.* ids)."""
 import argparse,json,pathlib,sys
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 p=argparse.ArgumentParser();p.add_argument('nacre',type=pathlib.Path);p.add_argument('--write',action='store_true');a=p.parse_args()
 for name in ('en.json','context.json'):
-    own=json.loads((ROOT/'shell/i18n'/name).read_text())
+    own=json.loads((PRODUCT_SHELL/'i18n'/name).read_text())
     path=a.nacre/'nacre/shell/i18n'/name
     theirs=json.loads(path.read_text())
     mirrored={k:v for k,v in theirs.items() if k.startswith('bead.')}

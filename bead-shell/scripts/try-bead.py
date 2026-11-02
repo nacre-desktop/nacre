@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 CTL = 'NACRE_DAEMON_SOCKET="$XDG_RUNTIME_DIR/nacre/daemon.sock" exec {bin}/nacrectl ui '
 # Alt is the nested niri's Mod key; the outer compositor keeps Super.
@@ -52,8 +53,8 @@ def write_niri_config(private, shell):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--daemon', type=Path, required=True, help='built nacre-helper; never an installed control script')
-    parser.add_argument('--bead', type=Path, default=Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')) / 'release/nacre-shell')
-    parser.add_argument('--shell', type=Path, default=ROOT / 'shell', help='matching shell source bundle for the selected Bead binary')
+    parser.add_argument('--bead', type=Path, default=Path(os.environ.get('CARGO_TARGET_DIR', ROOT.parent / 'target')) / 'release/nacre-shell')
+    parser.add_argument('--shell', type=Path, default=PRODUCT_SHELL, help='matching shell source bundle for the selected Bead binary')
     parser.add_argument('--compositor', choices=['niri', 'hyprland'], default='niri')
     parser.add_argument('--tools', type=Path, help='Nacre nacre/shell-tools directory matching --daemon (notification policy, menus)')
     parser.add_argument('--real-wallpaper', action='store_true', help='read-only: copy your presentation.json record so your wallpaper and palette show; the image is only read')

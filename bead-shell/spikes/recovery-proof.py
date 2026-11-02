@@ -3,13 +3,14 @@
 """Private nested proof: first-frame bundle, startup fallback, watchdog, safe mode."""
 import importlib.util,json,os,pathlib,re,shutil,signal,subprocess,tempfile,time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 def sample(env,raw,compositor,stop):
     env={**env,'BEAD_PRIVATE_INPUT_PROOF':'1'}
     binary=pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release/nacre-shell'
     with tempfile.TemporaryDirectory(prefix='bead-recovery-') as directory:
-        root=pathlib.Path(directory);shutil.copytree(ROOT/'shell',root/'shell')
+        root=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,root/'shell')
         ui=root/'shell/recovery';ui.mkdir()
         (ui/'behavior.luau').write_text('return {stores={},actions={},computed={}}')
         original='local ui=require("bead.ui");return ui.Panel{id="recovery",width=320,height=100,ui.Text{text="Recovery ready"}}'

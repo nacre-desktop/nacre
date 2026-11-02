@@ -11,6 +11,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 
 
 def main():
@@ -96,7 +97,7 @@ ShellRoot {
 def screenshots(root, cases, env, destination, scale):
     """Placement masks: actual QML contour and FrameRim, no content-parity claim."""
     destination.mkdir(parents=True, exist_ok=True)
-    palette = json.loads((ROOT / "shell/palette.json").read_text())["colours"]
+    palette = json.loads((PRODUCT_SHELL / "palette.json").read_text())["colours"]
     for module in ["widgets", "services"]:
         (root / module).mkdir()
     (root / "widgets/qmldir").write_text("singleton NacreTokens 1.0 NacreTokens.qml\n")

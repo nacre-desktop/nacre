@@ -3,17 +3,18 @@
 """Analyze actual views against Rust-generated SDK declarations in a private mirror."""
 import argparse,json,os,pathlib,re,shutil,signal,subprocess,sys,tempfile
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 p=argparse.ArgumentParser();p.add_argument('--analyzer',required=True);p.add_argument('--binary',required=True);p.add_argument('--check-generated',action='store_true');p.add_argument('--framework-root',type=pathlib.Path,default=ROOT);a=p.parse_args()
 with tempfile.TemporaryDirectory(prefix='bead-luau-') as directory:
-    base=pathlib.Path(directory);bundle=base/'shell';shutil.copytree(ROOT/'shell',bundle)
+    base=pathlib.Path(directory);bundle=base/'shell';shutil.copytree(PRODUCT_SHELL,bundle)
     types=bundle/'types';types.mkdir(exist_ok=True)
-    subprocess.run([a.binary,'--generate-types',str(types/'bead_ui.luau')],check=True,cwd=ROOT)
-    generated=types/'bead_ui.luau';tracked=ROOT/'shell/types/bead_ui.luau'
+    subprocess.run([a.binary,'--generate-types',str(types/'bead_ui.luau')],check=True,cwd=ROOT.parent)
+    generated=types/'bead_ui.luau';tracked=PRODUCT_SHELL/'types/bead_ui.luau'
     if a.check_generated:
         if not tracked.exists() or tracked.read_bytes()!=generated.read_bytes():raise SystemExit('Rust/Luau SDK declarations differ; regenerate')
     else:shutil.copyfile(generated,tracked)
     shutil.copyfile(a.framework_root/'crates/bead-kit/assets/kit.luau',types/'kit_impl.luau')
-    tokens=json.loads((ROOT/'shell/size-scale.json').read_text())
+    tokens=json.loads((PRODUCT_SHELL/'size-scale.json').read_text())
     tokens['fonts']={'sans':'IBM Plex Sans','mono':'JetBrainsMono Nerd Font','icon':'Material Symbols Rounded'}
     tokens['gradients']=True  # the host adds it when it builds the kit (the interfaceGradients setting)
     def literal(v):

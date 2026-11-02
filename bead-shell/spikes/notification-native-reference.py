@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import time
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 
@@ -26,7 +27,7 @@ def sample(env,raw,compositor,stop):
     else:
         snapshot['osd']={'channel':'volume','value':.75,'muted':False}
     path=raw/'fixture.json';path.write_text(json.dumps(snapshot));path.chmod(0o600)
-    env={**env,'BEAD_PRIVATE_INPUT_PROOF':'1','BEAD_MATCHED_ICONS':'1','BEAD_ICON_PATH':str(ROOT/'shell/tests/icon.svg'),'BEAD_PRIVATE_NOTIFICATION_FIXTURE':str(path),'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],'PIPEWIRE_REMOTE':'bead-private-unavailable'}
+    env={**env,'BEAD_PRIVATE_INPUT_PROOF':'1','BEAD_MATCHED_ICONS':'1','BEAD_ICON_PATH':str(PRODUCT_SHELL/'tests/icon.svg'),'BEAD_PRIVATE_NOTIFICATION_FIXTURE':str(path),'DBUS_SYSTEM_BUS_ADDRESS':env['DBUS_SESSION_BUS_ADDRESS'],'PIPEWIRE_REMOTE':'bead-private-unavailable'}
     target=pathlib.Path(os.environ['CARGO_TARGET_DIR'])/'release/nacre-shell'
     client=None
     with tempfile.TemporaryDirectory(prefix='bead-notice-ui-')as directory:

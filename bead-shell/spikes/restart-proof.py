@@ -3,6 +3,7 @@
 """Kill/restart an owned client while preserving only its private panel state."""
 import importlib.util,json,os,pathlib,shutil,signal,subprocess,tempfile
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+PRODUCT_SHELL = ROOT.parent / "shell"
 spec=importlib.util.spec_from_file_location('matrix',ROOT/'spikes/bar-matrix.py')
 matrix=importlib.util.module_from_spec(spec);spec.loader.exec_module(matrix)
 def sample(env,raw,compositor,stop):
@@ -12,7 +13,7 @@ def sample(env,raw,compositor,stop):
     assert panic.returncode!=0 and 'PANIC thread=' in panic.stderr and 'private panic hook proof' in panic.stderr
     (raw/'panic.log').write_text(panic.stderr)
     with tempfile.TemporaryDirectory(prefix='bead-restart-') as directory:
-        bundle=pathlib.Path(directory);shutil.copytree(ROOT/'shell',bundle/'shell')
+        bundle=pathlib.Path(directory);shutil.copytree(PRODUCT_SHELL,bundle/'shell')
         ui=bundle/'shell/restart';ui.mkdir()
         (ui/'behavior.luau').write_text('return {stores={["panel.open"]=true,["panel.page"]="home"},actions={close=function(s) s["panel.open"]=false;s["panel.page"]="sound" end},computed={}}')
         (ui/'main.luau').write_text('local ui=require("bead.ui");local kit=require("bead.kit");return kit.Panel{id="panel",edge="left",width=320,height=200,open=ui.bind("panel.open"),kit.Button{id="close",text="Close",on_activate=ui.action("close")}}')

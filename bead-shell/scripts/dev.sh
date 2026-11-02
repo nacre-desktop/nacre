@@ -2,14 +2,15 @@
 # SPDX-License-Identifier: MIT
 set -euo pipefail
 bead_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$bead_root"
+workspace_root="$(cd -- "$bead_root/.." && pwd)"
+cd "$workspace_root"
 # Prefer normal installed tools; use the already prepared checkout's tools if needed.
 if ! command -v cargo >/dev/null && [[ -x .tools/cargo/bin/cargo ]]; then
     export CARGO_HOME="$bead_root/.tools/cargo" RUSTUP_HOME="$bead_root/.tools/rustup"
     export PATH="$CARGO_HOME/bin:$PATH"
 fi
 nice -n 10 cargo build -p nacre-shell --release --locked -j2 --quiet
-export PATH="${CARGO_TARGET_DIR:-$bead_root/target}/release:$PATH"
+export PATH="${CARGO_TARGET_DIR:-$workspace_root/target}/release:$PATH"
 if [[ -z ${WAYLAND_DISPLAY:-} ]]; then
     printf '%s\n' 'Run from a Wayland desktop terminal; this command starts a nested window.' >&2
     exit 1
