@@ -393,6 +393,34 @@ mod tests {
         }
         Ok(())
     }
+    #[test]
+    fn disabled_native_hover_rejects_extension_then_uses_stock_event_stream() -> crate::Result<()> {
+        let (hover_client, mut hover_server) = UnixStream::pair()?;
+        hover_server.write_all(b"{\"Err\":\"hover disabled\"}\n")?;
+        hover_server.shutdown(std::net::Shutdown::Write)?;
+        let (stock_client, mut stock_server) = UnixStream::pair()?;
+        stock_server.write_all(b"{\"Ok\":\"Handled\"}\n")?;
+        stock_server.shutdown(std::net::Shutdown::Write)?;
+        let mut clients = VecDeque::from([hover_client, stock_client]);
+        let mut socket = EventSocket::connect_with(
+            || {
+                clients
+                    .pop_front()
+                    .ok_or_else(|| invalid("Unexpected event connection"))
+            },
+            true,
+            MAX_BYTES,
+        )?;
+        assert!(socket.next_event().is_err());
+        drop(socket);
+        let mut hover_request = Vec::new();
+        hover_server.read_to_end(&mut hover_request)?;
+        let mut stock_request = Vec::new();
+        stock_server.read_to_end(&mut stock_request)?;
+        assert_eq!(serde_json::from_slice::<Value>(&hover_request)?, json!("NacreOverviewHoverStream"));
+        assert_eq!(serde_json::from_slice::<Value>(&stock_request)?, json!("EventStream"));
+        Ok(())
+    }
     fn bytes(hex: &str) -> crate::Result<Vec<u8>> {
         hex.as_bytes()
             .as_chunks::<2>()
