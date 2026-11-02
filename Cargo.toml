@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/nacre-helper", "crates/nacre-protocol", "crates/nacre-menu", "crates/nacre-i18n"]
+members = ["crates/nacre-helper", "crates/nacre-protocol", "crates/nacre-menu", "crates/nacre-i18n", "crates/nacre-shell"]
 exclude = ["deps/orient", "fuzz"]
 resolver = "2"
 
@@ -20,6 +20,88 @@ lto = "thin"
 codegen-units = 1
 strip = true
 
+# Bead's product profile size-optimizes dependencies, while keeping its
+# workspace crates and rendering/text/image hot paths at full optimization.
+# They are git dependencies in Nacre, so reproduce those choices explicitly.
+[profile.release.package."*"]
+opt-level = "s"
+
+[profile.release.package."bead"]
+opt-level = 3
+
+[profile.release.package."bead-backends"]
+opt-level = 3
+
+[profile.release.package."bead-core"]
+opt-level = 3
+
+[profile.release.package."bead-kit"]
+opt-level = 3
+
+[profile.release.package."bead-render"]
+opt-level = 3
+
+[profile.release.package."bead-services"]
+opt-level = 3
+
+[profile.release.package."bead-test"]
+opt-level = 3
+
+[profile.release.package."bead-ui"]
+opt-level = 3
+
+[profile.release.package."bead-wallpaper"]
+opt-level = 3
+
+[profile.release.package."bead-wayland"]
+opt-level = 3
+
+[profile.release.package."bead-widgets"]
+opt-level = 3
+
+[profile.release.package.tiny-skia]
+opt-level = 3
+
+[profile.release.package.tiny-skia-path]
+opt-level = 3
+
+[profile.release.package.skrifa]
+opt-level = 3
+
+[profile.release.package.read-fonts]
+opt-level = 3
+
+[profile.release.package.harfrust]
+opt-level = 3
+
+[profile.release.package.zeno]
+opt-level = 3
+
+[profile.release.package.taffy]
+opt-level = 3
+
+[profile.release.package.usvg]
+opt-level = 3
+
+[profile.release.package.cosmic-text]
+opt-level = 3
+
+[profile.release.package.zune-jpeg]
+opt-level = 3
+
+[profile.release.package.zune-core]
+opt-level = 3
+
+[profile.release.package.png]
+opt-level = 3
+
+[profile.release.package.fdeflate]
+opt-level = 3
+
+[profile.release.package.fast_image_resize]
+opt-level = 3
+
 # Match the Bead services pin: its task accounting requires this upstream fix.
 [patch.crates-io]
-system-tray = { git = "https://github.com/nacre-desktop/bead.git", rev = "a6d423382b0fb322419646d1fbb70b543e2780cd" }
+fontconfig = { path = "vendor/fontconfig" }
+system-tray = { path = "vendor/system-tray" }

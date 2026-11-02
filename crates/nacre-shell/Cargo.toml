@@ -2,14 +2,14 @@
 name = "nacre-shell"
 default-run = "nacre-shell"
 version = "0.1.0"
-edition.workspace = true
-rust-version.workspace = true
+edition = "2024"
+rust-version = "1.99"
 license = "GPL-3.0-only"
 publish = false
 
 [dependencies]
-bead-test = { path = "../bead-test" }
-bead={path="../bead",default-features=false}
+bead-test = { git = "https://github.com/nacre-desktop/bead", rev = "f19eacaf7b3dedfbb54202358d88e699444366b1" }
+bead = { git = "https://github.com/nacre-desktop/bead", rev = "f19eacaf7b3dedfbb54202358d88e699444366b1", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 zstd = "0.14.3"
 gdk-pixbuf = "0.22"
@@ -18,36 +18,33 @@ libc = "0.2"
 glow = "=0.18.0"
 notify = { version = "=8.2.0", default-features = false }
 niri-ipc = "=26.4.0"
-nix = {version="0.31",features=["signal","user","inotify"]}
+nix = { version = "0.31", features = ["signal", "user", "inotify"] }
 serde_json = "1"
-serde = {version="1",features=["derive"]}
+serde = { version = "1", features = ["derive"] }
 accesskit = "=0.25.1"
-bead-wallpaper = { path = "../bead-wallpaper" }
-bead-widgets = { path = "../bead-widgets" }
+bead-wallpaper = { git = "https://github.com/nacre-desktop/bead", rev = "f19eacaf7b3dedfbb54202358d88e699444366b1" }
+bead-widgets = { git = "https://github.com/nacre-desktop/bead", rev = "f19eacaf7b3dedfbb54202358d88e699444366b1" }
 smithay-client-toolkit = { version = "=0.21.1", default-features = false, features = ["calloop", "system"] }
 wayland-client = { version = "=0.31.15", features = ["system"] }
 wayland-protocols = { version = "=0.32.13", features = ["client"] }
 calloop = "=0.14.5"
 glutin = { version = "0.32", default-features = false, features = ["egl", "wayland"] }
 raw-window-handle = "=0.6.2"
-
 freedesktop-icons = "0.4"
-
 fontconfig = "=0.11.0"
 fontdb = "=0.23.0"
 skrifa = "=0.44.0"
-
 nacre-protocol = { git = "https://github.com/nacre-desktop/nacre", rev = "6abe2498a86fc5ce93662f98849c6fc24f06207f" }
 tokio = { version = "1", features = ["rt", "sync", "net", "io-util", "time", "macros"] }
 zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 
 [features]
-default=["native-gl"]
-native-gl=["bead/native-gl"]
-wgpu=["bead/wgpu"]
-vello=["wgpu"]
-gpu=["native-gl","wgpu"]
-trace=[]
+default = ["native-gl"]
+native-gl = ["bead/native-gl"]
+wgpu = ["bead/wgpu"]
+vello = ["wgpu"]
+gpu = ["native-gl", "wgpu"]
+trace = []
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread"] }
