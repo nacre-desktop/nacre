@@ -1633,9 +1633,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 base / "core/usr/share/nacre/nacre/shell-tools/control.sh",
             )
             self.assertNotEqual(wrapper_target, private_shell / "bin/nacre-shell")
-            self.assertIn(
-                Path("usr/share/nacre/nacre/shell-tools/control.sh"), owned
-            )
+            self.assertIn(Path("usr/share/nacre/nacre/shell-tools/control.sh"), owned)
             for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
                 notice = Path("usr/share/licenses/nacre/bead-shell") / name
                 self.assertIn(notice, owned)

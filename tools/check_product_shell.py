@@ -124,9 +124,7 @@ def framework_checkout():
         ).stdout
     )
     packages = [
-        package
-        for package in metadata["packages"]
-        if package["name"] in BEAD_PACKAGES
+        package for package in metadata["packages"] if package["name"] in BEAD_PACKAGES
     ]
     found = {package["name"]: package for package in packages}
     if set(found) != BEAD_PACKAGES:
@@ -203,9 +201,7 @@ def suite(directory, pattern="test*.py"):
         print(output, end="")
         raise RuntimeError("Could not read unittest count for " + pattern)
     count = int(match.group(1))
-    print(
-        f"Bead product suite {directory}/{pattern}: {count} tests OK", flush=True
-    )
+    print(f"Bead product suite {directory}/{pattern}: {count} tests OK", flush=True)
     return count
 
 
@@ -238,7 +234,10 @@ def native_checks(binary, analyzer):
             "shm",
         ]
     )
-    print("Bead shell, generated Luau schema and wallpaper renderer checks passed.", flush=True)
+    print(
+        "Bead shell, generated Luau schema and wallpaper renderer checks passed.",
+        flush=True,
+    )
 
 
 def python_checks():
@@ -268,9 +267,7 @@ def main():
     target_dir = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
     if not target_dir.is_absolute():
         target_dir = ROOT / target_dir
-    parser.add_argument(
-        "--binary", type=Path, default=target_dir / "debug/nacre-shell"
-    )
+    parser.add_argument("--binary", type=Path, default=target_dir / "debug/nacre-shell")
     args = parser.parse_args()
     if args.download_analyzer is not None:
         download_analyzer(args.download_analyzer)
