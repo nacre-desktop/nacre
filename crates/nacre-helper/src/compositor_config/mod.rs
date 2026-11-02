@@ -303,8 +303,8 @@ pub fn execute(
             })
         }
         ("neutral", "render") => {
-            let native_collections = backend == "niri"
-                && active_niri_capabilities().workspace_collections;
+            let native_collections =
+                backend == "niri" && active_niri_capabilities().workspace_collections;
             render_with_capabilities(
                 argument(0, "contract")?,
                 &directory,
@@ -400,9 +400,7 @@ fn augment_niri_render(mut generated: Value, workspace_collections: bool) -> Res
 fn active_niri_capabilities() -> crate::compositor::niri_transport::NacreCapabilities {
     std::env::var_os("NIRI_SOCKET")
         .filter(|socket| !socket.is_empty())
-        .map(|socket| {
-            crate::compositor::niri_transport::nacre_capabilities(Path::new(&socket))
-        })
+        .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(&socket)))
         .unwrap_or_default()
 }
 pub fn render_profile(
@@ -514,11 +512,12 @@ mod tests {
     #[test]
     fn collection_bindings_are_in_full_native_render_only() -> crate::Result<()> {
         let directory = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools");
-        let contract: Value = serde_json::from_slice(&std::fs::read(
-            directory.join("compositor-contract.json"),
-        )?)?;
+        let contract: Value =
+            serde_json::from_slice(&std::fs::read(directory.join("compositor-contract.json"))?)?;
         let stock = render_with_capabilities(&contract, &directory, "niri", false)?;
-        let stock_bindings = stock["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
+        let stock_bindings = stock["niri/bindings.kdl"]
+            .as_str()
+            .ok_or("Missing bindings")?;
         for action in [
             "focus-collection-next",
             "focus-collection-previous",
@@ -529,13 +528,21 @@ mod tests {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
         let native = render_with_capabilities(&contract, &directory, "niri", true)?;
-        let native_bindings = native["niri/bindings.kdl"].as_str().ok_or("Missing bindings")?;
+        let native_bindings = native["niri/bindings.kdl"]
+            .as_str()
+            .ok_or("Missing bindings")?;
         let expected = [
             ("Super+Ctrl+Alt+Tab", "focus-collection-next"),
             ("Super+Ctrl+Alt+Shift+Tab", "focus-collection-previous"),
             ("Super+Ctrl+N", "create-collection"),
-            ("Super+Ctrl+Shift+Page_Down", "move-window-to-collection-next"),
-            ("Super+Ctrl+Shift+Page_Up", "move-window-to-collection-previous"),
+            (
+                "Super+Ctrl+Shift+Page_Down",
+                "move-window-to-collection-next",
+            ),
+            (
+                "Super+Ctrl+Shift+Page_Up",
+                "move-window-to-collection-previous",
+            ),
         ];
         let document: kdl::KdlDocument = native_bindings.parse()?;
         let block = document
