@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 19 | [N0107 Nacre niri-native capability awareness](0107-nacre-niri-aware.md) | Implemented; dev-1 full desktop CI pending | Capability query gates only equivalent helpers; stock niri falls back to the current behavior. |
+| 19 | [N0107 Nacre niri-native capability awareness](0107-nacre-niri-aware.md) | Complete; dev-1 desktop checks passed, task branch only | Capability query gates only equivalent helpers; stock niri falls back to the current behavior. |
 | B0214 | Bead framework split step 3 | Implemented on task branch; lead acceptance pending | Review the CI/import report and preview recipe in `.lead/`; Bead removal remains step 4. No live switch. |
 | 24 | N0140 Claude Wayland clipboard | Done once checks pass | launcher drops DISPLAY under Wayland so Claude Code's xclip-first paste uses wl-paste |
 | 23 | N0104 Claude chat Remote Control names and tmux persistence | Done; lead-reviewed, deployed 2026-10-30 to the pinned Python runtime (backup ~/.local/state/nacre/ai/backups/20261030-n0104); native helper ships with the next shell install | Local tmux persistence and scoped mouse/status options, exact resume attachment and promotion of Claude AI titles; Python, Arch helper checks and laptop smoke passed. |

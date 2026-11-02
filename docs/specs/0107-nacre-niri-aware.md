@@ -1,6 +1,6 @@
 # N0107: Nacre niri-native capability awareness
 
-Status: Implemented; pending lead review and exact-head dev-1 desktop CI.
+Status: Complete; reviewed and validated on dev-1, task branch only.
 
 When Nacre runs with nacre-niri, it should stop installing or generating only
 the workarounds whose behavior the running compositor reports as native. Stock
@@ -39,9 +39,32 @@ No workspace-generation or width-helper policy is suppressed because the
 reported native features do not replace those behaviors. Tests cover native
 feature maps, disabled/unknown responses, capability-backed width service
 decisions, workspace reconnect fallback, the version suffix identity, and
-disabled hover-stream fallback. Validation is delegated to the lead's dev-1
-full desktop CI run. This worktree does not run local builds or tests.
+disabled hover-stream fallback. Validation used the lead's dev-1 full desktop
+CI run. No local builds or tests ran in this worktree.
 
 ## Completion record
 
-Pending exact-head CI evidence.
+Checked code revision `b190f6d8a` in a disposable Arch container on dev-1,
+limited to 8 CPUs and 16 GiB, with nice 10 and Cargo jobs 2. All 7,283 tracked
+files and symlinks, including the pinned Orient checkout, matched the committed
+source. The completion record is a documentation-only follow-up.
+
+All 30 command stages from the desktop CI job passed: workspace tests, strict
+Clippy, formatting, examples, release helper and other binaries, feature
+combinations, product/Luau checks, dependency policy, sandbox tests, translations,
+Source checks, galleries, AUR review capture, and raster-memory checks. Source
+includes 524 tool tests (2 skipped), 135 AI tests, 52 Brain tests, 491 shell tests,
+185 Bead product Python tests, and 534 helper parity cases with zero failures.
+
+The first run exposed extra width-client capability connections; the implementation
+was corrected while preserving the strict socket-count assertions. The final
+desktop run passed 29 stages and Source rejected uncommitted files in its
+temporary archive-based Git checkout. After committing that exact byte-matched
+snapshot, the entire Source stage passed again. This is a completed desktop
+validation with a Source rerun, not an uninterrupted all-green run.
+
+Evidence is retained in the paired NN0002 worktree's `.lead/ci/nacre` and
+`.lead/report.md`. The GitHub workflow only executes desktop checks for `main`;
+it was not dispatched against main or changed for this task. Nested visual/hover
+acceptance remains unverified because the desktop TEST host was unreachable.
+No installed runtime, live configuration, service, shared branch, or release changed.
