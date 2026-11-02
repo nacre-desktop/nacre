@@ -52,21 +52,50 @@ class NacreNiriSessionTests(unittest.TestCase):
 
     def test_stock_and_fork_validate_separate_private_home_configs(self):
         fork = os.environ.get("NACRE_NIRI_BINARY")
-        if not fork:
-            self.skipTest("set NACRE_NIRI_BINARY to the task-built fork for this check")
         with tempfile.TemporaryDirectory() as directory:
-            config = Path(directory) / ".local/share/nacre/niri-on-pc/session/config"
-            config.mkdir(parents=True)
-            shared = config / "config.kdl"
-            overlay = config / "nacre-niri.kdl"
-            shared.write_text('binds { Super+Ctrl+Tab { toggle-overview; } }\n')
-            overlay.write_text(
-                'include "config.kdl"\n'
-                'binds { Super+Ctrl+Tab { focus-collection-next; } }\n'
+            home = Path(directory) / "home"
+            home.mkdir()
+            output = Path(directory) / "generated"
+            generated = package_niri.files(
+                ROOT,
+                home,
+                {
+                    "workspaceCount": 1,
+                    "workspaceNames": ["one"],
+                    "routes": [],
+                    "brainWorkspace": None,
+                    "windowTrashBindings": False,
+                },
+                {"layout": "us", "model": "", "variant": "", "options": ""},
+                output,
+                {},
+                validate_config=False,
             )
-            self.assertNotIn("focus-collection-next", shared.read_text())
-            subprocess.run(["/usr/bin/niri", "validate", "-c", str(shared)], check=True)
-            subprocess.run([fork, "validate", "-c", str(overlay)], check=True)
+            config = generated[Path(".config/nacre/niri/config.kdl")]
+            overlay = generated[Path(".config/nacre/niri/nacre-niri.kdl")]
+            bindings = generated[Path(".config/nacre/niri/bindings.kdl")]
+            for action in (
+                "focus-collection-next",
+                "focus-collection-previous",
+                "create-collection",
+                "move-window-to-collection-next",
+                "move-window-to-collection-previous",
+            ):
+                self.assertNotIn(action, config.read_text())
+                self.assertNotIn(action, bindings.read_text())
+                self.assertIn(action, overlay.read_text())
+            env = {**os.environ, "HOME": str(home)}
+            subprocess.run(
+                ["/usr/bin/niri", "validate", "-c", str(config)],
+                check=True,
+                env=env,
+            )
+            if fork:
+                subprocess.run(
+                    [fork, "validate", "-c", str(overlay)],
+                    check=True,
+                    env=env,
+                )
 
     def test_nacre_session_dispatch_selects_fork_launcher(self):
         backend = SimpleNamespace(supported=lambda root: True, session=Mock())
