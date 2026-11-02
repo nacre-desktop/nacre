@@ -54,6 +54,10 @@ def run(command, env=None, stdout_only=False):
 def test_environment():
     """Exercise checkout fixtures independently of the running desktop session."""
     environment = dict(os.environ)
+    # Runtime HOME is isolated below; retain the compiler cache for source-build
+    # fixtures instead of refetching the pinned Bead graph into every fake HOME.
+    environment.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
+    environment.setdefault("CARGO_BUILD_JOBS", "2")
     for key in (
         "NACRE_COMPOSITOR",
         "NACRE_COMPOSITOR_TOOLS",

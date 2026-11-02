@@ -35,3 +35,14 @@ class CheckEnvironmentTests(unittest.TestCase):
                     str(check.ROOT / "nacre/shell-cli/src")
                 )
             )
+
+    def test_compiler_cache_survives_runtime_home_isolation(self):
+        with patch.dict(os.environ, {}, clear=True):
+            environment = check.test_environment()
+            cache = environment["CARGO_HOME"]
+            self.assertEqual(cache, str(Path.home() / ".cargo"))
+            self.assertEqual(environment["CARGO_BUILD_JOBS"], "2")
+            self.assertNotIn("CARGO_HOME", os.environ)
+            with patch.dict(os.environ, environment, clear=True):
+                os.environ["HOME"] = "/isolated-runtime-home"
+                self.assertEqual(check.test_environment()["CARGO_HOME"], cache)

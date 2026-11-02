@@ -10,6 +10,6 @@ if ! command -v cargo >/dev/null; then
     printf 'Building Nacre from source requires Rust and Cargo build tools.\n' >&2
     exit 1
 fi
-cargo build --locked --release --manifest-path "$repo_dir/Cargo.toml" \
+cargo build --locked --release -j2 --manifest-path "$repo_dir/Cargo.toml" \
     --target-dir "$repo_dir/target" -p nacre-helper --bin nacre-helper >&2
 printf '%s\n' "$repo_dir/target/release/nacre-helper"
