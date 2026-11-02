@@ -104,7 +104,9 @@
       "python-jsonschema",
       "bubblewrap",
       "curl",
-      "unzip"
+      "unzip",
+      "sway",
+      "swaybg"
     ],
     "core_optional": [
       "nacre-session-niri: Nacre session and dependencies for Niri",

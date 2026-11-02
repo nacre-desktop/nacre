@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| B0214 | Bead framework split step 3 | In progress on task branch; no live switch | Import product history, pin framework dependencies and validate full desktop CI before lead acceptance. Bead removal is step 4. |
+| B0214 | Bead framework split step 3 | Implemented on task branch; lead acceptance pending | Review the CI/import report and preview recipe in `.lead/`; Bead removal remains step 4. No live switch. |
 | 24 | N0140 Claude Wayland clipboard | Done once checks pass | launcher drops DISPLAY under Wayland so Claude Code's xclip-first paste uses wl-paste |
 | 23 | N0104 Claude chat Remote Control names and tmux persistence | Done; lead-reviewed, deployed 2026-10-30 to the pinned Python runtime (backup ~/.local/state/nacre/ai/backups/20261030-n0104); native helper ships with the next shell install | Local tmux persistence and scoped mouse/status options, exact resume attachment and promotion of Claude AI titles; Python, Arch helper checks and laptop smoke passed. |
 | 22 | N0097 widgets entry fix | Done; full Arch desktop CI replica passed on dev-2 | Super+Shift+W and the launcher entry now run `nacrectl ui widgets open`, Super+Ctrl+D runs `nacrectl ui pearls detach`, the Widgets window floats (was a nonexistent `nacre-shell --app`); StartupWMClass is `nacre-widgets`. |

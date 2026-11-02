@@ -59,3 +59,15 @@ Nacre retains `serde_json/preserve_order`. Feature unification makes Bead IPC
 replies and the shell’s command payload larger than in Bead’s standalone graph.
 The existing inline reply and queue contracts are retained with narrowly scoped
 Clippy size allowances; no protocol pin, ordering contract or golden is changed.
+
+Desktop CI keeps Nacre’s existing checks and runs the imported product workspace
+and trace tests, renderer feature checks, generated Luau 0.742 declarations,
+video smoke, product license graph, and all 13 historical Python proof suites
+(179 test methods) plus six staging tests. The full `shell/` tree, including
+304 golden files, is unchanged from the frozen export. Framework-only minimal
+hosts, service/private-bus checks and independent MIT graphs remain in Bead CI.
+
+The Bead checkout temporarily retains its product copy during this unit. Step 4
+removes it only after lead acceptance of the Nacre producer and checks; delete
+that duplicate seven days after the replacement is trusted. This unit does not
+switch an installed desktop or update the lead’s preview tooling.

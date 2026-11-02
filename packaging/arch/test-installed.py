@@ -109,7 +109,14 @@ for name in (
 ):
     notice = Path("/usr/share/licenses/nacre") / name
     assert notice.is_file() and notice.stat().st_uid == 0
-for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0", "Outfit-OFL.txt"):
+for name in (
+    "LICENSE.md",
+    "LICENSE-MIT",
+    "LICENSE-GPL-3.0",
+    "Outfit-OFL.txt",
+    "fontconfig-LICENSE",
+    "system-tray-LICENSE",
+):
     notice = Path("/usr/share/licenses/nacre/bead-shell") / name
     assert notice.is_file() and notice.stat().st_uid == 0, notice
     assert run("pacman", "-Qoq", str(notice)).stdout.strip() == "nacre"

@@ -61,6 +61,13 @@ def stage(root, destination, component, build):
             root / "bead-shell",
             root / "crates/nacre-shell/assets/fonts/Outfit-OFL.txt",
         )
+        for vendor in ("fontconfig", "system-tray"):
+            copy(
+                root / "vendor" / vendor / "LICENSE",
+                destination
+                / "usr/share/licenses/nacre/bead-shell"
+                / (vendor + "-LICENSE"),
+            )
         copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
             "hypr",
