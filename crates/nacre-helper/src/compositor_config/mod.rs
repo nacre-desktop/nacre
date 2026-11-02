@@ -305,9 +305,7 @@ pub fn execute(
                 message: e.to_string(),
             })
         }
-        ("neutral", "render") => {
-            render(argument(0, "contract")?, &directory, backend)
-        }
+        ("neutral", "render") => render(argument(0, "contract")?, &directory, backend),
         ("hyprland", "render") => render_hyprland(argument(0, "contract")?, &directory),
         ("niri", "render") => niri::render(argument(0, "contract")?),
         ("neutral", "profile_rules") => profile_rules(argument(0, "profile")?),

@@ -1428,7 +1428,10 @@ mod tests {
             "move-window-to-collection-previous",
         ] {
             assert!(!shared.contains(action), "stock config includes {action}");
-            assert!(!bindings.contains(action), "shared bindings include {action}");
+            assert!(
+                !bindings.contains(action),
+                "shared bindings include {action}"
+            );
             assert!(overlay.contains(action), "fork overlay lacks {action}");
         }
         assert!(overlay.starts_with("include \"config.kdl\""));
