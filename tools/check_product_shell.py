@@ -53,7 +53,7 @@ PY_COMPILE = (
 )
 LUAU_URL = "https://github.com/luau-lang/luau/releases/download/0.742/luau-ubuntu.zip"
 LUAU_SHA256 = "152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d"
-BEAD_REVISION = "f19eacaf7b3dedfbb54202358d88e699444366b1"
+BEAD_REVISION = "41d1cc6b74a6aaaae2320ec531b6e49df3797a04"
 BEAD_PACKAGES = {
     "bead",
     "bead-test",
@@ -126,13 +126,10 @@ def framework_checkout():
     packages = [
         package for package in metadata["packages"] if package["name"] in BEAD_PACKAGES
     ]
-    found = {package["name"]: package for package in packages}
-    if set(found) != BEAD_PACKAGES:
-        raise RuntimeError(
-            "Cargo metadata omitted pinned Bead packages: "
-            + repr(BEAD_PACKAGES - set(found))
-        )
-    source = found["bead"]["source"]
+    facades = [package for package in packages if package["name"] == "bead"]
+    if len(facades) != 1:
+        raise RuntimeError("Cargo metadata must contain one pinned Bead facade")
+    source = facades[0]["source"]
     if not isinstance(source, str):
         raise RuntimeError("The Bead facade did not resolve from its pinned Git source")
     prefix, separator, revision = source.partition("#")
@@ -144,6 +141,15 @@ def framework_checkout():
         raise RuntimeError(
             "Cargo metadata did not resolve the frozen Bead revision " + BEAD_REVISION
         )
+    framework_packages = [
+        package for package in packages if package["source"] == source
+    ]
+    found = {package["name"]: package for package in framework_packages}
+    if set(found) != BEAD_PACKAGES:
+        raise RuntimeError(
+            "Cargo metadata omitted pinned Bead framework packages: "
+            + repr(BEAD_PACKAGES - set(found))
+        )
     bead_root = Path(found["bead"]["manifest_path"]).resolve().parents[2]
     for name in ("bead-test", "bead-wallpaper", "bead-widgets"):
         package_source = found[name]["source"]
@@ -153,7 +159,7 @@ def framework_checkout():
             raise RuntimeError(
                 f"{name} did not resolve from frozen Bead revision {BEAD_REVISION}"
             )
-    for package in packages:
+    for package in framework_packages:
         manifest_path = Path(package["manifest_path"]).resolve()
         if not manifest_path.is_relative_to(bead_root):
             raise RuntimeError(
