@@ -53,7 +53,7 @@ PY_COMPILE = (
 )
 LUAU_URL = "https://github.com/luau-lang/luau/releases/download/0.742/luau-ubuntu.zip"
 LUAU_SHA256 = "152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d"
-BEAD_REVISION = "5f6f51b201eb39d8134090997873e14bf933c5bf"
+BEAD_REVISION = "98793e404b0cfa83e6dec64aace343eb4e6968f3"
 BEAD_PACKAGES = {
     "bead",
     "bead-test",

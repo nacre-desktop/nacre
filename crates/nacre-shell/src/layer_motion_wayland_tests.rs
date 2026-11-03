@@ -464,6 +464,13 @@ fn run_wire_case(
                 counts.panel_attaches > attaches_at_done,
                 "a replacement prompt buffer follows the viewport resize"
             );
+            // The output resize permits one paint after its manual Configure, one
+            // after the worker applies Relayout, and one after the final requested
+            // allocation Configure. More commits would be animation-tick redraws.
+            assert!(
+                counts.panel_attaches <= attaches_at_done + 3,
+                "output resize paints only its allocation, layout, and final-size updates"
+            );
             assert!(
                 counts.prompt_buffer_sizes.len() > buffers_at_done,
                 "output resize commits a new prompt buffer"
