@@ -16,6 +16,11 @@ fn supports_wallpaper_v1(status: &crate::nacre_source::Status) -> bool {
             .get("wallpaper.activate")
             .is_some_and(|method| method.v == 1)
 }
+fn supports_output_activation(status: &crate::nacre_source::Status) -> bool {
+    status.methods.get("wallpaper.activate")
+        .filter(|method| method.v == 1)
+        .is_some_and(|method| method.params["properties"].get("output").is_some())
+}
 
 fn activation_reply_matches(
     output: &str,
@@ -1017,6 +1022,11 @@ impl Consumer {
         if !state.available || state.stale {
             return Err("wallpaper is stale".into());
         }
+        let output_pair = state.outputs.get(&output).ok_or("output has no wallpaper")?;
+        let output_specific_activation = supports_output_activation(&status);
+        if !output_specific_activation && Some(output_pair) != state.current.as_ref() {
+            return Err("output-specific wallpaper confirmation is unavailable".into());
+        }
         let boot = status
             .boot
             .clone()
@@ -1160,7 +1170,11 @@ impl Consumer {
         {
             return Ok(frame);
         }
-        let request = serde_json::json!({"revision": decoded_pair.revision,"output":output.as_str()});
+        let request = if output_specific_activation {
+            serde_json::json!({"revision":decoded_pair.revision,"output":output.as_str()})
+        } else {
+            serde_json::json!({"revision":decoded_pair.revision})
+        };
         bead::core::profile::mark("wallpaper_activation_requested");
         if let Some(selection) = selection.as_ref().filter(|selection| {
             selection.boot == boot && pair_matches_id(&decoded_pair, &selection.id)

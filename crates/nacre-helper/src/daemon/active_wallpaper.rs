@@ -38,7 +38,18 @@ fn collection_profile(value: &Value) -> Option<CollectionWallpaperProfile> {
             accent: None,
         }
     };
+    let poster = private_file(Path::new(&profile.wallpaper.path), IMAGE_BYTES).ok();
+    let poster_valid = poster.as_ref().is_some_and(|file| {
+        file.metadata().is_ok_and(|metadata| profile.wallpaper.file_identity.matches(&metadata))
+    });
+    let motion_valid = profile.wallpaper.motion.as_ref().is_none_or(|motion| {
+        private_file(Path::new(&motion.path), MOTION_BYTES).ok().is_some_and(|file| {
+            file.metadata().is_ok_and(|metadata| motion.file_identity.matches(&metadata))
+        })
+    });
     (profile.wallpaper.validate().is_ok()
+        && poster_valid
+        && motion_valid
         && profile.accent.as_ref().is_none_or(|accent| {
             accent.len() == 7
                 && accent.starts_with('#')
@@ -2028,6 +2039,11 @@ mod tests {
         Producer::default().refresh(&hub, &paths)?;
         let accent_again: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(accent_again.focused_accent.as_deref(), Some("#00AA55"));
+        fs::remove_file(&other)?;
+        Producer::default().refresh(&hub, &paths)?;
+        let missing_profile: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert_eq!(missing_profile.outputs["DP-1"].path, base.current.as_ref().unwrap().path);
+        assert_eq!(missing_profile.focused_accent, None);
         fs::write(paths.config.join("desktop.json"), json!({"collectionWallpapers":false}).to_string())?;
         Producer::default().refresh(&hub, &paths)?;
         let disabled: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
