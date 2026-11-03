@@ -173,18 +173,19 @@ Item {
             if (value.type !== "edge-triggered" && value.type !== "edge-left")
                 return;
             const position = value.position;
-            if (!Array.isArray(position) || position.length !== 2 || !position.every(Number.isFinite))
+            if (!position || typeof position.length !== "number" || position.length !== 2 || !Number.isFinite(position[0]) || !Number.isFinite(position[1]))
                 return;
+            const edge = String(value.edge || "").toLowerCase();
             NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
             if (value.type === "edge-left") {
-                const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
+                const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
                 if (name)
                     root.leave(name);
                 return;
             }
             if (!root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
                 return;
-            const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
+            const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
             const point = NacreHoverIntent.positions[root.screen.name];
             if (name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point))
                 NacrePanelState.hoverEdge(name, root.screen.name);
