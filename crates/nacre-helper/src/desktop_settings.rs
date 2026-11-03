@@ -1047,10 +1047,11 @@ pub fn run(arguments: &[String]) -> Result<i32> {
 }
 
 fn legacy_status_output(mut result: Value) -> Value {
-    if let Some(data) = result.get_mut("data").and_then(Value::as_object_mut) {
-        if data.get("collectionWallpapers") == Some(&Value::Bool(false)) {
+    match result.get_mut("data").and_then(Value::as_object_mut) {
+        Some(data) if data.get("collectionWallpapers") == Some(&Value::Bool(false)) => {
             data.remove("collectionWallpapers");
         }
+        _ => {}
     }
     result
 }
@@ -1063,7 +1064,10 @@ mod legacy_status_output_tests {
     #[test]
     fn legacy_output_hides_only_the_off_default_new_native_setting() {
         let off = json!({"data":{"animations":true,"collectionWallpapers":false}});
-        assert_eq!(legacy_status_output(off), json!({"data":{"animations":true}}));
+        assert_eq!(
+            legacy_status_output(off),
+            json!({"data":{"animations":true}})
+        );
         let on = json!({"data":{"collectionWallpapers":true}});
         assert_eq!(legacy_status_output(on), json!({"data":{"collectionWallpapers":true}}));
     }
