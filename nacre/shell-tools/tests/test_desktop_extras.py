@@ -20,7 +20,9 @@ class DesktopExtrasTests(unittest.TestCase):
             dict(
                 keys="SUPER + SHIFT + H",
                 submap="",
-                action=dict(method="exec_cmd", args=["window-minimize.sh restore-last"]),
+                action=dict(
+                    method="exec_cmd", args=["window-minimize.sh restore-last"]
+                ),
                 flags=dict(description="Nacre:unhide"),
             )
         ]

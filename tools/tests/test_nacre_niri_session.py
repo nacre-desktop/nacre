@@ -104,7 +104,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertIn(action, overlay_text)
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
-            self.assertIn('hotkey-overlay-title="Nacre:scratchpad-windows"', overlay_text)
+            self.assertIn(
+                'hotkey-overlay-title="Nacre:scratchpad-windows"', overlay_text
+            )
             self.assertEqual(overlay_text.count("open-pinned true"), 3)
             self.assertNotIn("open-pinned true", generated_stock)
             for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
@@ -122,8 +124,12 @@ class NacreNiriSessionTests(unittest.TestCase):
                 "nacre-share-picker",
                 "nacre-picture-in-picture",
             ):
-                self.assertTrue(any(row.get("id") == rule_id for row in stock_unsupported))
-                self.assertFalse(any(row.get("id") == rule_id for row in native_unsupported))
+                self.assertTrue(
+                    any(row.get("id") == rule_id for row in stock_unsupported)
+                )
+                self.assertFalse(
+                    any(row.get("id") == rule_id for row in native_unsupported)
+                )
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
                 ["/usr/bin/niri", "validate", "-c", str(config)],

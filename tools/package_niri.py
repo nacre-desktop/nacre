@@ -42,11 +42,11 @@ SCRATCHPAD_PIN_BINDINGS = (
 )
 PINNED_WINDOW_RULES = (
     '\nwindow-rule {\n    match app-id="^org[.]pulseaudio[.]pavucontrol$"\n'
-    '    open-pinned true\n}\n'
+    "    open-pinned true\n}\n"
     'window-rule {\n    match app-id="^hyprland-share-picker$"\n'
-    '    open-pinned true\n}\n'
+    "    open-pinned true\n}\n"
     'window-rule {\n    match title="^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$"\n'
-    '    open-pinned true\n}\n'
+    "    open-pinned true\n}\n"
 )
 
 
@@ -73,7 +73,8 @@ def nacre_niri_unsupported(text):
             row.get("source") == "hypr/conf/keybinding.lua"
             and row.get("kind") == "binding"
             and row.get("id") in supported
-        ) and not (
+        )
+        and not (
             row.get("source") == "hypr/conf/nacre.lua"
             and row.get("kind") == "window-rule"
             and row.get("id") in native_rules
@@ -254,8 +255,8 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     source = add(config / "config.kdl", entry)
     add(
         config / "nacre-niri.kdl",
-        '// Generated offline for the nacre-niri session; native feature flags default on.\n'
-        '// Native actions and rules are inactive when their runtime capability is disabled.\n'
+        "// Generated offline for the nacre-niri session; native feature flags default on.\n"
+        "// Native actions and rules are inactive when their runtime capability is disabled.\n"
         'include "config.kdl"\n\nbinds {\n'
         + COLLECTION_BINDINGS.removeprefix("binds {\n").removesuffix("}\n")
         + SCRATCHPAD_PIN_BINDINGS

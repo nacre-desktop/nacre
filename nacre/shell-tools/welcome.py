@@ -173,9 +173,7 @@ SHORTCUT_IDS = {
     "next-workspace": {"titleId": "welcome.shortcut.next-workspace.title"},
     "previous-workspace": {"titleId": "welcome.shortcut.previous-workspace.title"},
     "scratchpad": {"titleId": "welcome.shortcut.scratchpad.title"},
-    "scratchpad-windows": {
-        "titleId": "welcome.shortcut.scratchpad-windows.title"
-    },
+    "scratchpad-windows": {"titleId": "welcome.shortcut.scratchpad-windows.title"},
     "move-scratchpad": {"titleId": "welcome.shortcut.move-scratchpad.title"},
     "power": {"titleId": "welcome.shortcut.power.title"},
     "launcher": {"titleId": "welcome.shortcut.launcher.title"},
