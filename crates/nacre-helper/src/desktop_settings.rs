@@ -1041,7 +1041,10 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     let mut settings = Settings::new(paths.clone(), Native::new(paths, &mut backend))?;
     println!(
         "{}",
-        wire::dumps(&legacy_status_output(settings.execute(action, &args)?), false)?
+        wire::dumps(
+            &legacy_status_output(settings.execute(action, &args)?),
+            false
+        )?
     );
     Ok(0)
 }
@@ -1054,23 +1057,6 @@ fn legacy_status_output(mut result: Value) -> Value {
         _ => {}
     }
     result
-}
-
-#[cfg(test)]
-mod legacy_status_output_tests {
-    use super::legacy_status_output;
-    use serde_json::json;
-
-    #[test]
-    fn legacy_output_hides_only_the_off_default_new_native_setting() {
-        let off = json!({"data":{"animations":true,"collectionWallpapers":false}});
-        assert_eq!(
-            legacy_status_output(off),
-            json!({"data":{"animations":true}})
-        );
-        let on = json!({"data":{"collectionWallpapers":true}});
-        assert_eq!(legacy_status_output(on), json!({"data":{"collectionWallpapers":true}}));
-    }
 }
 
 pub fn monitor_records(all: &Value) -> Result<Value> {
@@ -1098,4 +1084,24 @@ pub fn monitor_records(all: &Value) -> Result<Value> {
         result.push(Value::Object(row));
     }
     Ok(json!(result))
+}
+
+#[cfg(test)]
+mod legacy_status_output_tests {
+    use super::legacy_status_output;
+    use serde_json::json;
+
+    #[test]
+    fn legacy_output_hides_only_the_off_default_new_native_setting() {
+        let off = json!({"data":{"animations":true,"collectionWallpapers":false}});
+        assert_eq!(
+            legacy_status_output(off),
+            json!({"data":{"animations":true}})
+        );
+        let on = json!({"data":{"collectionWallpapers":true}});
+        assert_eq!(
+            legacy_status_output(on),
+            json!({"data":{"collectionWallpapers":true}})
+        );
+    }
 }
