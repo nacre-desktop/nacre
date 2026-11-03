@@ -234,6 +234,8 @@ TestCase {
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
   NacreHoverIntent.blocked={};
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(view.flags.left);
+  NacreHoverIntent.setHeaderHover("test","lip",true);
+  NacreCompositor.event({type:"edge-left",output:"test",edge:"Top",position:[500,50]});verify(!NacreHoverIntent.headers.test);
   view.flags.left=false;NacreCompositor.overviewOpen=true;
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
   NacreCompositor.overviewOpen=false;NacreCompositor.externalEdgeSource=false;

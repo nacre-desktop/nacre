@@ -153,22 +153,35 @@ Item {
             if (NacreCompositor.externalEdgeSource) {
                 root.cancelDashboard();
                 root.cancelSides();
-            } else if (root.available) {
-                if (top.hovered)
-                    root.approach("dashboard", top, Qt.NoButton);
-                if (left.hovered)
-                    root.approach("left", left, Qt.NoButton);
-                if (right.hovered)
-                    root.approach("osd", right, Qt.NoButton);
+            } else {
+                root.leave("dashboard");
+                root.leave("left");
+                root.leave("osd");
+                if (root.available) {
+                    if (top.hovered)
+                        root.approach("dashboard", top, Qt.NoButton);
+                    if (left.hovered)
+                        root.approach("left", left, Qt.NoButton);
+                    if (right.hovered)
+                        root.approach("osd", right, Qt.NoButton);
+                }
             }
         }
         function onEvent(value) {
-            if (!NacreCompositor.externalEdgeSource || value?.type !== "edge-triggered" || value.output !== root.screen.name || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
+            if (!NacreCompositor.externalEdgeSource || value?.output !== root.screen.name || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
                 return;
             const position = value.position;
             if (!Array.isArray(position) || position.length !== 2 || !position.every(Number.isFinite))
                 return;
             NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
+            if (value.type === "edge-left") {
+                const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
+                if (name)
+                    root.leave(name);
+                return;
+            }
+            if (value.type !== "edge-triggered")
+                return;
             const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
             const point = NacreHoverIntent.positions[root.screen.name];
             if (name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point))

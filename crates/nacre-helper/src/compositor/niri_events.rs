@@ -175,11 +175,15 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
         .as_object()
         .filter(|object| object.len() == 1)
         .ok_or_else(|| invalid("Malformed niri edge event"))?;
-    if !object.contains_key("EdgeTriggered") {
+    let (variant, event_type) = if object.contains_key("EdgeTriggered") {
+        ("EdgeTriggered", "edge-triggered")
+    } else if object.contains_key("EdgeLeft") {
+        ("EdgeLeft", "edge-left")
+    } else {
         return Ok(None);
-    }
+    };
     let payload = object
-        .get("EdgeTriggered")
+        .get(variant)
         .and_then(Value::as_object)
         .filter(|payload| payload.len() == 3)
         .ok_or_else(|| invalid("Malformed niri edge event"))?;
@@ -209,7 +213,7 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
         })
         .ok_or_else(|| invalid("Malformed niri edge position"))?;
     Ok(Some(json!({
-        "type":"edge-triggered",
+        "type":event_type,
         "output":output,
         "edge":edge,
         "position":position
@@ -362,7 +366,8 @@ mod tests {
                 server,
                 "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}"
             )?;
-            writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")
+            writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")?;
+            writeln!(server, "{{\"EdgeLeft\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[8.0,720.0]}}}}")
         });
         let mut socket = EventSocket::connect_requests(
             || client.try_clone().map_err(io_error),
@@ -378,6 +383,13 @@ mod tests {
             edge_trigger(&wire)?,
             Some(
                 json!({"type":"edge-triggered","output":"DP-1","edge":"left","position":[4.0,720.0]})
+            )
+        );
+        let wire = socket.next_event()?;
+        assert_eq!(
+            edge_trigger(&wire)?,
+            Some(
+                json!({"type":"edge-left","output":"DP-1","edge":"left","position":[8.0,720.0]})
             )
         );
         assert!(edge_trigger(&json!({"EdgeTriggered": {

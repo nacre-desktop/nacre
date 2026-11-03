@@ -10,10 +10,13 @@ event for each edge using Nacre's saved hover delay (350 ms by default). The
 generated stock `config.kdl` is unchanged. The Nacre helper daemon owns the
 `NacreEdgeTriggerStream` after the capability reply and publishes its accepted
 state plus events on `compositor.events`. QML daemon mode and Bead apps consume
-that event lane. Without a daemon source, the QML helper tries the daemon lane
+that event lane. The matching `EdgeLeft` event clears the hover opened by an
+edge trigger. Without a daemon source, the QML helper tries the daemon lane
 first, then uses the direct native stream as the one-release compatibility path.
-Rejected or lost streams set active false and restore QML/Bead hover fallback.
-Frame clicks remain available. Bead commit
+Rejected, disabled, or lost streams clear active hover routes and restore
+QML/Bead fallback. Bead routes dashboard/control `hover-open` and `hover-leave`
+through its owner-only command socket with the triggering output; the assistant
+uses its existing app route. Frame clicks remain available. Bead commit
 `def7eaa530573143d492e2e8a9dcd29d2132919c` adds the generic `external_source`
 policy only while the daemon publishes an acknowledged stream, retaining
 reserved geometry while omitting interactive lip surfaces.

@@ -82,18 +82,32 @@ struct EdgeSnapshots {
 pub(crate) struct EdgeEventState {
     gate: std::sync::Arc<Gate>,
     snapshots: Mutex<EdgeSnapshots>,
+    command_socket: Option<std::path::PathBuf>,
+    next_panel_call: AtomicU64,
+    active_lips: Mutex<BTreeMap<(String, String), String>>,
+    panel_sender: Mutex<Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>>>,
 }
 impl EdgeEventState {
-    pub(crate) fn new(gate: std::sync::Arc<Gate>) -> std::sync::Arc<Self> {
+    pub(crate) fn new(
+        gate: std::sync::Arc<Gate>,
+        command_socket: Option<std::path::PathBuf>,
+    ) -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
             gate,
             snapshots: Mutex::new(EdgeSnapshots::default()),
+            command_socket,
+            next_panel_call: AtomicU64::new(1),
+            active_lips: Mutex::new(BTreeMap::new()),
+            panel_sender: Mutex::new(None),
         })
     }
     fn publish_active(&self, snapshots: &EdgeSnapshots) {
-        self.gate.set_native_edge_source(
-            snapshots.compositor_connected && snapshots.event_connected && snapshots.acknowledged,
-        );
+        let active =
+            snapshots.compositor_connected && snapshots.event_connected && snapshots.acknowledged;
+        self.gate.set_native_edge_source(active);
+        if !active {
+            self.clear_native_hovers();
+        }
     }
     fn update_compositor(&self, snapshot: &Snapshot) {
         let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
@@ -132,9 +146,10 @@ impl EdgeEventState {
         else {
             return;
         };
-        if topic != "compositor.events" || name != "niri" || data["type"] != "edge-triggered" {
+        if topic != "compositor.events" || name != "niri" {
             return;
         }
+        let event_type = data["type"].as_str();
         let output = match data["output"].as_str().filter(|name| !name.is_empty()) {
             Some(output) => output,
             None => return,
@@ -154,9 +169,108 @@ impl EdgeEventState {
             }
             state.outputs.get(output).copied()
         };
-        if let (Some(edge), Some(size)) = (edge, output_size) {
-            self.gate.trigger_native_edge(output, edge, position, size);
+        if let Some(edge) = edge {
+            if event_type == Some("edge-left") {
+                let view = self
+                    .active_lips
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .remove(&(output.to_owned(), edge.to_owned()));
+                if let Some(view) = view {
+                    self.request_native_panel(&view, output, false);
+                }
+                return;
+            }
+            if event_type != Some("edge-triggered") {
+                return;
+            }
         }
+        if let (Some(edge), Some(size)) = (edge, output_size) {
+            let Some(lip) = self.gate.native_lip_at(edge, position, size) else {
+                return;
+            };
+            let key = (output.to_owned(), edge.to_owned());
+            let previous = self
+                .active_lips
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .insert(key, lip.opens.clone());
+            if let Some(previous) = previous.filter(|previous| *previous != lip.opens) {
+                self.request_native_panel(&previous, output, false);
+            }
+            self.request_native_panel(&lip.opens, output, true);
+        }
+    }
+    fn clear_native_hovers(&self) {
+        let active = std::mem::take(
+            &mut *self.active_lips.lock().unwrap_or_else(|p| p.into_inner()),
+        );
+        for ((output, _edge), view) in active {
+            self.request_native_panel(&view, &output, false);
+        }
+    }
+    fn request_native_panel(&self, view: &str, output: &str, hover_open: bool) {
+        if view == "assistant" {
+            crate::app::panel_request(
+                "chat",
+                if hover_open { "hover-open" } else { "hover-leave" },
+                output,
+            );
+        } else {
+            self.open_internal_panel(view, output, hover_open);
+        }
+    }
+    fn open_internal_panel(&self, view: &str, output: &str, hover_open: bool) {
+        let (Some(socket), Some(sender)) = (self.command_socket.clone(), self.panel_sender()) else {
+            return;
+        };
+        let call = bead::services::ipc::Call {
+            version: bead::services::ipc::VERSION,
+            id: self.next_panel_call.fetch_add(1, SeqCst).max(1),
+            target: "bead.panel".into(),
+            method: if hover_open { "hover-open" } else { "hover-leave" }.into(),
+            args: vec![serde_json::json!(view)],
+            output: Some(output.into()),
+        };
+        if sender.try_send(call).is_err() {
+            tracing::warn!("Native edge panel request queue is full");
+        }
+    }
+    fn panel_sender(
+        &self,
+    ) -> Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>> {
+        let socket = self.command_socket.as_ref()?.clone();
+        let mut sender = self.panel_sender.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some(sender) = &*sender {
+            return Some(sender.clone());
+        }
+        let runtime = tokio::runtime::Handle::try_current().ok()?;
+        let (tx, mut rx) = tokio::sync::mpsc::channel(16);
+        runtime.spawn(async move {
+            while let Some(call) = rx.recv().await {
+                let socket = socket.clone();
+                let result = tokio::task::spawn_blocking(move || {
+                    bead::services::ipc::call(
+                        &socket,
+                        &call,
+                        std::time::Duration::from_secs(2),
+                    )
+                })
+                .await;
+                match result {
+                    Ok(Ok(reply)) if reply.error.is_none() => {}
+                    Ok(Ok(reply)) => {
+                        tracing::warn!(message=?reply.error, "Native edge panel request failed")
+                    }
+                    Ok(Err(error)) => {
+                        tracing::warn!(%error, "Native edge panel transport failed")
+                    }
+                    Err(error) => tracing::warn!(%error, "Native edge panel worker failed"),
+                }
+            }
+        });
+        *sender = Some(tx.clone());
+        Some(tx)
     }
 }
 pub(crate) struct EdgeSourceSubscriptions {
@@ -223,18 +337,6 @@ impl Gate {
         if self.native_edge_source.swap(active, SeqCst) != active {
             self.notify();
         }
-    }
-    pub fn trigger_native_edge(
-        &self,
-        output: &str,
-        edge: &str,
-        position: (f32, f32),
-        output_size: (i32, i32),
-    ) {
-        let Some(lip) = self.native_lip_at(edge, position, output_size) else {
-            return;
-        };
-        self.external_panel_request(&lip.opens, output, false);
     }
     fn native_lip_at(
         &self,
