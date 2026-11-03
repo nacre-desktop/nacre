@@ -775,7 +775,7 @@ fn takeover_scenario() {
     let empty = home.join("data/empty-tools");
     fs::create_dir_all(&empty).unwrap();
     let mut broken = daemon_with_tools(&home, &endpoint, true, false, &empty);
-    thread::sleep(Duration::from_millis(1000));
+    wait_for_notification_status(&home, "unavailable");
     let status = broken.stop();
     assert!(
         status.code().is_some(),
