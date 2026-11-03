@@ -392,7 +392,7 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
     let session = bead::ui::Session::new(palette.parent().unwrap().into(), "popouts/collections.luau".into(), palette, colors, cold);
-    let mut runtime = Runtime::new(session).with_origins_topic(publisher.clone()).unwrap();
+    let mut runtime = Runtime::new(session).with_popout_trigger().unwrap().with_origins_topic(publisher.clone()).unwrap();
     runtime.state_file = None;
     let (sender, events) = std::sync::mpsc::channel();
     runtime.services(Box::new(move |event| { let _ = sender.send(event); }));
