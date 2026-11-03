@@ -12,6 +12,9 @@ use std::{
     time::Duration,
 };
 type Result<T> = std::result::Result<T, Error>;
+fn is_edge_event(value: &Value) -> bool {
+    value["type"] == "edge-triggered" || value["type"] == "edge-left"
+}
 fn failure(kind: &'static str, message: impl Into<String>) -> Error {
     Error {
         kind,
@@ -184,7 +187,7 @@ impl Backend {
                     if !next {
                         return Ok(());
                     }
-                } else if value["type"] == "edge-triggered" {
+                } else if is_edge_event(&value) {
                     println!(
                         "{}",
                         crate::json::encode(&value)
@@ -267,6 +270,12 @@ impl Backend {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn daemon_edge_lane_forwards_trigger_and_matching_exit_events() {
+        assert!(is_edge_event(&json!({"type":"edge-triggered"})));
+        assert!(is_edge_event(&json!({"type":"edge-left"})));
+        assert!(!is_edge_event(&json!({"type":"windows-changed"})));
+    }
     #[test]
     fn session_loader_fallback_keeps_explicit_override() {
         let mut environment =
