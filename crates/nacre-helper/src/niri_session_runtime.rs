@@ -180,7 +180,7 @@ fn selected_niri_binary(
     {
         let binary = PathBuf::from("/usr/bin/nacre-niri");
         let version = versions.version(&binary)?;
-        if !is_nacre_niri_version(&version) {
+        if !crate::niri_identity::is_nacre_niri_version(&version) {
             return Err("Selected nacre-niri binary failed version identity verification".into());
         }
         return Ok((binary, true));
@@ -188,11 +188,8 @@ fn selected_niri_binary(
     let binary = PathBuf::from("/usr/bin/niri");
     let native = versions
         .version(&binary)
-        .is_ok_and(|version| is_nacre_niri_version(&version));
+        .is_ok_and(|version| crate::niri_identity::is_nacre_niri_version(&version));
     Ok((binary, native))
-}
-fn is_nacre_niri_version(version: &str) -> bool {
-    version.trim_end().ends_with("(nacre-niri)")
 }
 fn needs_hover_companion(action: &str, stock: bool, native_binary: bool) -> bool {
     !["widths", "widths-check"].contains(&action) && !stock && !native_binary
@@ -1119,9 +1116,13 @@ mod tests {
     }
     #[test]
     fn native_fork_identity_is_independent_of_feature_capabilities() {
-        assert!(is_nacre_niri_version("niri 26.12.0 (nacre-niri)\n"));
-        assert!(!is_nacre_niri_version("niri 26.12.0 (git abc123)\n"));
-        assert!(!is_nacre_niri_version("niri 26.12.0"));
+        assert!(crate::niri_identity::is_nacre_niri_version(
+            "niri 26.12.0 (nacre-niri)\n"
+        ));
+        assert!(!crate::niri_identity::is_nacre_niri_version(
+            "niri 26.12.0 (git abc123)\n"
+        ));
+        assert!(!crate::niri_identity::is_nacre_niri_version("niri 26.12.0"));
         assert_eq!(
             active_capabilities(&BTreeMap::new()),
             crate::compositor::niri_transport::NacreCapabilities::default()

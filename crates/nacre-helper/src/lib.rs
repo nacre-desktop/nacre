@@ -54,6 +54,7 @@ pub mod niri_custom_binds;
 pub mod niri_hover_install;
 mod niri_hover_pointer;
 pub mod niri_hover_probe;
+pub mod niri_identity;
 pub mod niri_preview;
 pub mod niri_session_gate;
 pub mod niri_session_runtime;
