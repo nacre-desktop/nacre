@@ -340,7 +340,8 @@ fn flush_niri(
     }
     publish(hub, &snapshot, "niri", keyboard, ready)?;
     let mut hub = hub.borrow_mut();
-    let mut event_metadata = json!({"backend":"niri","available":true,"connectionId":metadata.connection});
+    let mut event_metadata =
+        json!({"backend":"niri","available":true,"connectionId":metadata.connection});
     if let Some(active) = metadata.edge_triggers_active {
         event_metadata["edgeTriggersActive"] = json!(active);
     }
