@@ -131,6 +131,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
-            show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),width=92,height=28,switcher_label="Collection",on_toggle="collection.switcher.open"} or nil,
+            show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),width=92,height=28,switcher_label="Collection",on_toggle=c.popouts and "collection.switcher.open" or nil} or nil,
         }
     end}}}}}

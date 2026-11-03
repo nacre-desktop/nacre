@@ -2,7 +2,7 @@
 local ui=require("bead.ui")
 local kit=require("bead.kit")
 local operation=ui.resolve_for_check(ui.bind("collection.operation")) or ""
-local editing=operation~="" and {value="collection.draft",label=ui.tr("nacre.collection-switcher.desk-name")} or nil
+local editing=operation~="" and {value="collection.draft",label=ui.tr("bead.bar.collection-desk-name")} or nil
 local groups=ui.resolve_for_check(ui.bind("bar.collections")) or {}
 local current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
 local height_limit=ui.resolve_for_check(ui.bind("bar.collection.height")) or 260
@@ -12,15 +12,15 @@ local actions={}
 local note=nil
 if selected and selected.name then
     if ui.resolve_for_check(ui.bind("bar.collection.wallpapers.enabled"))~=true then
-        note=ui.Text{id="wallpaper-setting-note",text=ui.tr("nacre.collection-switcher.enable-wallpapers"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
+        note=ui.Text{id="wallpaper-setting-note",text=ui.tr("bead.bar.collection-wallpapers-disabled"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
     end
     actions={
-        {id="wallpaper",label=ui.tr("nacre.collection-switcher.set-wallpaper"),action="collection.wallpaper.set",arg=current},
-        {id="accent",label=ui.tr("nacre.collection-switcher.use-wallpaper-accent"),action="collection.accent.use",arg=current},
-        {id="base-accent",label=ui.tr("nacre.collection-switcher.use-base-accent"),action="collection.accent.clear",arg=current},
+        {id="wallpaper",label=ui.tr("bead.bar.collection-set-wallpaper"),action="collection.wallpaper.set",arg=current},
+        {id="accent",label=ui.tr("bead.bar.collection-wallpaper-accent"),action="collection.accent.use",arg=current},
+        {id="base-accent",label=ui.tr("bead.bar.collection-base-accent"),action="collection.accent.clear",arg=current},
     }
 else
-    note=ui.Text{id="name-required",text=ui.tr("nacre.collection-switcher.name-to-save-wallpaper"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
+    note=ui.Text{id="name-required",text=ui.tr("bead.bar.collection-name-required"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
 end
 local edit_height=editing and 80 or 36
 local rows_height=#groups*76+edit_height+#actions*42+12
@@ -36,8 +36,8 @@ return kit.Panel{id="collection-switcher",edge=ui.resolve_for_check(ui.bind("vie
         groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),
         on_switch="collection.switch",on_create="collection.begin-create",on_rename="collection.begin-rename",
         on_commit="collection.commit",on_cancel="collection.cancel",editing=editing,
-        create_label=ui.tr("nacre.collection-switcher.create"),rename_label=ui.tr("nacre.collection-switcher.rename"),
-        save_label=ui.tr("nacre.collection-switcher.save"),cancel_label=ui.tr("nacre.collection-switcher.cancel"),
+        create_label=ui.tr("bead.bar.collection-create"),rename_label=ui.tr("bead.bar.collection-rename"),
+        save_label=ui.tr("bead.bar.collection-save"),cancel_label=ui.tr("bead.bar.collection-cancel"),
         actions=actions,
     },
 }
