@@ -8422,7 +8422,7 @@ impl SceneSource for Runtime {
                     values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
                     values
                 } else {
-                    BTreeMap::from([("bead.output.name".into(), bead::core::Value::Text(name))])
+                    BTreeMap::from([("bead.output.name".into(), bead::core::Value::Text(name.clone()))])
                 };
                 let mut values = values;
                 if let Some(topic) = &self.origins_topic {
