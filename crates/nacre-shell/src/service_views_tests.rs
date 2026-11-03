@@ -1192,6 +1192,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         &root(), Path::new("popouts/collections.luau"), &root().join("palette.json"), initial,
         Config { width: 360, height: 250, scale: 1. },
     )?;
+    settle_harness_animations(&mut menu)?;
     let menu_frame = menu.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
         menu_frame.save(&dir.join("collections-rename-popout.png"))?;
@@ -1222,6 +1223,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         &root(), Path::new("popouts/collections.luau"), &root().join("palette.json"), initial,
         Config { width: 360, height: 320, scale: 1. },
     )?;
+    settle_harness_animations(&mut create)?;
     let create_frame = create.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
         create_frame.save(&dir.join("collections-create-popout.png"))?;
