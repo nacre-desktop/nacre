@@ -224,8 +224,7 @@ impl EdgeEventState {
         }
     }
     fn open_internal_panel(&self, view: &str, output: &str, hover_open: bool) {
-        let (Some(socket), Some(sender)) = (self.command_socket.clone(), self.panel_sender())
-        else {
+        let Some(sender) = self.panel_sender() else {
             return;
         };
         let call = bead::services::ipc::Call {
