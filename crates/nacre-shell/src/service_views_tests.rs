@@ -1149,6 +1149,10 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut bar_models = super::initial_models()?;
     bar_models.insert("bar.collections".into(), groups.clone());
     bar_models.insert("bar.collection.current".into(), Value::Text("niri-collection:17".into()));
+    bar_models.insert("bar.popouts".into(), Value::Bool(true));
+    bar_models.insert("bead.workspaces".into(), Value::list(vec![serde_json::json!({
+        "id":"niri-workspace:1","index":1,"label":"1","active":true,"icon_mode":false
+    })]));
     let mut bar = Harness::load(
         &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
         Config { width: 420, height: 54, scale: 1. },
@@ -1159,7 +1163,9 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         bar_frame.save(&dir.join("collections-bar.png"))?;
     }
     assert!(bar_frame.width > 0 && bar_frame.height > 0);
-    assert!(bar.session.view_nodes().iter().any(|node| node.id.contains("collection-switcher")));
+    assert!(bar.scene().primitives.iter().any(|primitive| matches!(primitive,
+        bead::render::Primitive::Text { text, .. } if text.contains("Very long personal")
+    )), "the bar badge must show the current desk label");
 
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
