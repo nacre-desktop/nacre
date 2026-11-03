@@ -240,10 +240,12 @@ impl Inner {
                         || matches!(update,Update::Changed(ref name) if name=="compositor"))
                 {
                     let mut projected = snapshot(data)?;
-                    if let Some((_, metadata)) = self.mirror.topics.get(TOPIC)
-                        && let Some(active) = metadata.get("edgeTriggersActive").and_then(Value::as_bool)
-                    {
-                        projected["edgeTriggersActive"] = json!(active);
+                    if let Some((_, metadata)) = self.mirror.topics.get(TOPIC) {
+                        if let Some(active) =
+                            metadata.get("edgeTriggersActive").and_then(Value::as_bool)
+                        {
+                            projected["edgeTriggersActive"] = json!(active);
+                        }
                     }
                     return Ok(projected);
                 }
