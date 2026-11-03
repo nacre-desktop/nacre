@@ -2015,7 +2015,7 @@ mod tests {
             "available":true,
             "outputs":{"DP-1":{},"DP-2":{}},
             "focus":{"outputId":"DP-1"},
-            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
+            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1","active":true}]
         }))?;
         set_collection_wallpaper(&hub, &paths, "work", &profile)?;
         set_collection_accent(&hub, &paths, "work", true)?;
@@ -2122,7 +2122,7 @@ mod tests {
         hub.borrow_mut().publish("compositor", json!({
             "available":true,"outputs":{"DP-1":{},"DP-2":{}},
             "focus":{"outputId":"DP-1"},
-            "collections":[{"id":"niri-collection:1","name":"research","output":"DP-1"}]
+            "collections":[{"id":"niri-collection:1","name":"research","output":"DP-1","active":true}]
         }))?;
         refresh_collection_wallpapers(&hub, &paths)?;
         let renamed: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
