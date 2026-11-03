@@ -34,18 +34,20 @@ local edit_height=editing and 80 or 36
 local rows_height=#menu_groups*(editing and 40 or 76)+edit_height+#actions*42+12
 local menu_height=math.min(height_limit,rows_height)
 local panel_height=menu_height+(note and 58 or 28)
+local body={}
+if note then body[#body+1]=note end
+body[#body+1]=kit.CollectionSwitcherMenu{
+    id="collection-switcher-menu",width=272,height=menu_height,scroll=ui.bind("collection.scroll"),
+    groups=menu_groups,current=current,
+    on_switch=not editing and "collection.switch" or nil,on_create=not editing and "collection.begin-create" or nil,on_rename=not editing and "collection.begin-rename" or nil,
+    on_commit="collection.commit",on_cancel="collection.cancel",editing=editing,
+    create_label=ui.tr("bead.bar.collection-create"),rename_label=ui.tr("bead.bar.collection-rename"),
+    save_label=ui.tr("bead.bar.collection-save"),cancel_label=ui.tr("bead.bar.collection-cancel"),
+    actions=not editing and actions or {},
+}
 return kit.Panel{id="collection-switcher",edge=ui.resolve_for_check(ui.bind("view.edge")),
     open=ui.bind("panel.open"),duration=.23,transition="ease-in-out",fade=false,reveal=true,
     width=300,height=panel_height,
     padding=14,radius=kit.tokens.radii.medium,fill="surface",
-    note,
-    kit.CollectionSwitcherMenu{
-        id="collection-switcher-menu",width=272,height=menu_height,scroll=ui.bind("collection.scroll"),
-        groups=menu_groups,current=current,
-        on_switch=not editing and "collection.switch" or nil,on_create=not editing and "collection.begin-create" or nil,on_rename=not editing and "collection.begin-rename" or nil,
-        on_commit="collection.commit",on_cancel="collection.cancel",editing=editing,
-        create_label=ui.tr("bead.bar.collection-create"),rename_label=ui.tr("bead.bar.collection-rename"),
-        save_label=ui.tr("bead.bar.collection-save"),cancel_label=ui.tr("bead.bar.collection-cancel"),
-        actions=not editing and actions or {},
-    },
+    table.unpack(body),
 }
