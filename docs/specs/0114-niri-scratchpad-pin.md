@@ -10,7 +10,7 @@ is validated against the selected native binary before launch.
 Nacre keeps the stock niri session compatible and selects native actions only in
 the `nacre-niri` session. The generated `nacre-niri.kdl` overlay contains:
 
-- Super+H: move the focused window to the hidden scratchpad collection.
+- Super+H: move the focused window to the hidden scratchpad store.
 - Super+Shift+H: toggle the most recent scratchpad window; repeated presses cycle.
 - Super+P: toggle pinning for the focused window.
 
@@ -31,6 +31,16 @@ Fork-only window rules carry `open-pinned` for Nacre windows previously pinned
 by Hyprland rules. These rules and bindings must not enter stock `config.kdl` or
 other files read by stock niri. Both the setup generator and session refresh
 must produce the same overlay and audit metadata.
+
+Bead taskbar/window state is a follow-up because the existing path is typed, not
+an unknown-field pass-through. `bead-backends/src/lib.rs::Window` has no
+`hidden`/`pinned` members, and Nacre's `crates/nacre-shell/src/backends/niri.rs`
+rebuilds that struct field by field. The direct Niri QML state path also fixes
+both flags to false in `crates/nacre-helper/src/compositor/niri_state.rs` and
+`nacre/shell/services/compositor/NiriWindow.qml`. No taskbar/window-list view
+consuming those records is present in this checkout. A complete follow-up must
+extend the Bead window schema and update those adapters before the bar can show
+native hidden/pinned state.
 
 Validation is the dev-1 Nacre desktop CI job in a task-named Arch container,
 limited to 8 CPUs and 16 GiB; this worktree does not run local tests or builds.
