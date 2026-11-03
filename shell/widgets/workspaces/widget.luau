@@ -2,6 +2,7 @@
 local c=require("../context")
 local ui=c.ui
 local kit=c.kit
+local measure=require("bead.widgets.measure")
 local t=c.t
 local centered_text=c.centered_text
 local ws_on=c.ws_on
@@ -21,10 +22,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 local badge=table.clone(collection)
                 local full_label=collection.name or collection.label or tostring(collection.index or i)
                 if collection.id==collection_current then current_collection_label=ui.tr("bead.bar.collection-open",{desk=full_label}) end
-                if utf8.len(badge.label or "")>9 then
-                    local boundary=utf8.offset(badge.label,9)
-                    badge.label=string.sub(badge.label,1,boundary-1).."…"
-                end
+                badge.label=measure.ellipsize(full_label,76,"IBM Plex Sans",kit.tokens.text.body*4/3)
                 badge_collections[i]=badge
             end
             local active_left,active_width,active_accent,active_icon_mode

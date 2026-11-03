@@ -667,7 +667,7 @@ mod tests {
                     &Message::Call {
                         id: Id::Integer(91),
                         m: "collection.action".into(),
-                        p: json!({"output":"DP-1","action":{"Create":{"name":null}}}),
+                        p: json!({"output":"DP-1","action":{"operation":"create","name":null}}),
                         timeout: Some(1000),
                     },
                 )
