@@ -221,7 +221,27 @@ class WelcomeTests(unittest.TestCase):
                     else:
                         self.assertTrue(caption.startswith("["), caption)
                 results.append(rows)
-        self.assertEqual(results[0], results[1])
+        for english_row, pseudo_row in zip(results[0], results[1], strict=True):
+            self.assertEqual(
+                {key: value for key, value in english_row.items() if key != "detail"},
+                {key: value for key, value in pseudo_row.items() if key != "detail"},
+            )
+        english_scratchpad = next(
+            row for row in results[0] if row["id"] == "scratchpad-windows"
+        )
+        pseudo_scratchpad = next(
+            row for row in results[1] if row["id"] == "scratchpad-windows"
+        )
+        with patch.dict(welcome.os.environ, {"NACRE_LANGUAGE": "pseudo"}):
+            pseudo_scratchpad_detail = welcome.tr(
+                "welcome.shortcut.scratchpad-windows.detail",
+                "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+            )
+        self.assertEqual(
+            english_scratchpad["detail"],
+            "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+        )
+        self.assertEqual(pseudo_scratchpad["detail"], pseudo_scratchpad_detail)
         self.assertEqual(canonical_titles["put-away"], "Close with undo")
 
     def test_live_shortcut_ranges_aliases_and_related_keys(self):

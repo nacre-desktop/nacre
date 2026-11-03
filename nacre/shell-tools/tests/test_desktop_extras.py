@@ -47,9 +47,10 @@ class DesktopExtrasTests(unittest.TestCase):
             patch.object(extras.compositor, "query", return_value=bindings),
         ):
             row = extras.bindings()[0]
-        expected = extras.tr(
-            "welcome.shortcut.scratchpad-windows.title", "Show scratchpad windows"
-        )
+            expected = extras.tr(
+                "welcome.shortcut.scratchpad-windows.title",
+                "Show scratchpad windows",
+            )
         self.assertEqual(row["description"], expected)
         self.assertIn("[", row["description"])
 
