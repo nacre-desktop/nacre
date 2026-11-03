@@ -1171,6 +1171,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
         _ => None,
     }).collect();
+    assert!(matches!(bar.session.stores.get("bar.collections"), Some(Value::List(rows)) if rows.len() == 3), "collection snapshot store missing: {:?}", bar.session.stores.get("bar.collections"));
     assert!(bar_text.iter().any(|text| text.contains("Very long personal")), "the bar badge must show the current desk label: {bar_text:?}");
 
     let mut menu_models = BTreeMap::from([
