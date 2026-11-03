@@ -1221,7 +1221,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut create_models = BTreeMap::from([
         ("bar.collections".into(), Value::list(group_rows.iter().take(2).cloned().collect())),
         ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
-        ("bar.collection.height".into(), Value::Number(188.into())),
+        ("bar.collection.height".into(), Value::Number(210.into())),
         ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
         ("collection.scroll".into(), Value::Number(0.into())),
         ("collection.operation".into(), Value::Text(String::new())),
@@ -1242,6 +1242,10 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     assert!(create.scene().primitives.iter().any(|primitive| matches!(primitive,
         bead::render::Primitive::Text { text, .. } if text.contains("Create desk")
     )), "create action must render localized label");
+    let create_button = create.session.view_nodes().iter().find(|node| node.id.ends_with("create")).expect("create desk button");
+    assert_eq!(create_button.action.as_deref(), Some("collection.begin-create"));
+    let create_bounds = bead::ui::rect(&create_button.draw);
+    assert!(create_bounds.x >= 0. && create_bounds.y >= 0. && create_bounds.x + create_bounds.w <= 360. && create_bounds.y + create_bounds.h <= 320., "create button is outside the small popout: {create_bounds:?}");
     let nodes = menu.session.view_nodes();
     let input = nodes.iter().find(|node| node.id.ends_with("group-name")).expect("rename input node");
     assert_eq!(input.action.as_deref(), Some("collection.commit"), "rename input semantic action");
