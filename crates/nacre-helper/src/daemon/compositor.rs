@@ -381,10 +381,17 @@ async fn niri(
     let stream = reader.into_inner();
     stream.set_nonblocking(true)?;
     let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
-    let capability_path = path.clone();
-    let capabilities =
-        tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path))
-            .await?;
+    let capabilities = control
+        .with(|backend| {
+            let backend::Backend::Niri(backend) = backend else {
+                return Err("Expected niri request transport".into());
+            };
+            Ok(backend
+                .actions
+                .transport
+                .nacre_capabilities(Duration::from_millis(500)))
+        })
+        .await?;
     let mut proportional_x11_widths = capabilities.proportional_x11_widths;
     let edge_enabled = capabilities.edge_triggers;
     let edge_socket = if edge_enabled {
@@ -431,8 +438,10 @@ async fn niri(
                 let mut outputs_changed=false;
                 if refresh {let updated=outputs(&control).await?;outputs_changed=state.outputs!=updated;state.outputs=updated;}
                 if event.get("ConfigLoaded").is_some() {
-                    let capability_path=path.clone();
-                            let capabilities=tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path)).await?;
+                            let capabilities=control.with(|backend| {
+                                let backend::Backend::Niri(backend)=backend else {return Err("Expected niri request transport".into());};
+                                Ok(backend.actions.transport.nacre_capabilities(Duration::from_millis(500)))
+                            }).await?;
                             proportional_x11_widths=capabilities.proportional_x11_widths;
                             let enabled=capabilities.edge_triggers;
                     let next=if enabled {

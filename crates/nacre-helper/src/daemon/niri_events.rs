@@ -214,6 +214,8 @@ impl Inner {
                 self.awaiting.remove(topic);
             }
             let was_identified = self.identified;
+            let edge_metadata_changed =
+                matches!(&update, Update::Changed(topic) if topic.as_str() == TOPIC);
             if let Some((_, metadata)) = self.mirror.topics.get(TOPIC) {
                 if metadata["available"] == true {
                     if metadata["backend"] != "niri" || metadata["connectionId"] != self.identity {
@@ -234,9 +236,16 @@ impl Inner {
                     && data["available"] == true
                     && (!was_identified
                         || was_resyncing
+                        || edge_metadata_changed
                         || matches!(update,Update::Changed(ref name) if name=="compositor"))
                 {
-                    return snapshot(data);
+                    let mut projected = snapshot(data)?;
+                    if let Some((_, metadata)) = self.mirror.topics.get(TOPIC)
+                        && let Some(active) = metadata.get("edgeTriggersActive").and_then(Value::as_bool)
+                    {
+                        projected["edgeTriggersActive"] = json!(active);
+                    }
+                    return Ok(projected);
                 }
             }
         }
@@ -301,6 +310,55 @@ mod tests {
             stream,
             json!({"t":"snap","topic":TOPIC,"seq":0,"data":{"backend":"niri","available":true,"connectionId":identity}}),
         );
+    }
+    fn snap_with_edge_state(
+        stream: &mut UnixStream,
+        seq: u64,
+        data: Value,
+        identity: &str,
+        active: bool,
+    ) {
+        write(
+            stream,
+            json!({"t":"snap","topic":"compositor","seq":seq,"data":data}),
+        );
+        write(
+            stream,
+            json!({"t":"snap","topic":TOPIC,"seq":0,"data":{"backend":"niri","available":true,"connectionId":identity,"edgeTriggersActive":active}}),
+        );
+    }
+
+    #[test]
+    fn edge_metadata_updates_proxy_snapshots_and_edge_left_events() -> Result<()> {
+        let root = tempfile::Builder::new().prefix("np-").tempdir()?;
+        let (_niri, server, environment) = fixture(root.path())?;
+        let identity = identity(&root.path().join("niri.sock"))?;
+        let worker = thread::spawn(move || {
+            let mut stream = accept(server);
+            snap_with_edge_state(stream.get_mut(), 0, model(), &identity, true);
+            write(
+                stream.get_mut(),
+                json!({"t":"ev","topic":TOPIC,"name":"niri","seq":1,"data":{"type":"edge-left","output":"DP-1","edge":"left","position":[-10.0,50.0]}}),
+            );
+            write(
+                stream.get_mut(),
+                json!({"t":"patch","topic":TOPIC,"base":0,"seq":1,"data":{"edgeTriggersActive":false}}),
+            );
+        });
+        let mut source = Source::connect(&environment, &root.path().join("niri.sock"))?
+            .ok_or("Missing proxy")?;
+        let initial = source.next_value()?;
+        assert_eq!(initial["type"], "snapshot");
+        assert_eq!(initial["edgeTriggersActive"], true);
+        assert_eq!(
+            source.next_value()?,
+            json!({"type":"edge-left","output":"DP-1","edge":"left","position":[-10.0,50.0]})
+        );
+        let disabled = source.next_value()?;
+        assert_eq!(disabled["type"], "snapshot");
+        assert_eq!(disabled["edgeTriggersActive"], false);
+        worker.join().map_err(|_| "Edge metadata fixture failed")?;
+        Ok(())
     }
 
     #[test]

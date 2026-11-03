@@ -76,15 +76,7 @@ impl NacreCapabilities {
 }
 pub fn nacre_capabilities(socket: &Path) -> NacreCapabilities {
     let mut connection = Connection::new(socket);
-    connection
-        .request_value(
-            &Value::String("NacreCapabilities".into()),
-            Duration::from_millis(500),
-            4096,
-        )
-        .ok()
-        .and_then(|response| NacreCapabilities::parse(&response))
-        .unwrap_or_default()
+    connection.nacre_capabilities(Duration::from_millis(500))
 }
 impl Connection {
     pub fn new(path: impl AsRef<Path>) -> Self {
@@ -136,6 +128,15 @@ impl Connection {
         timeout: Duration,
         max_bytes: usize,
     ) -> Result<Value> {
+        self.request_value_with_rejection(request, timeout, max_bytes, false)
+    }
+    fn request_value_with_rejection(
+        &mut self,
+        request: &Value,
+        timeout: Duration,
+        max_bytes: usize,
+        preserve_rejection: bool,
+    ) -> Result<Value> {
         if timeout.is_zero() || max_bytes == 0 || max_bytes > 4 * 1024 * 1024 {
             return Err(invalid("Invalid niri IPC bounds"));
         }
@@ -143,6 +144,7 @@ impl Connection {
             .checked_add(timeout)
             .ok_or_else(|| invalid("Invalid niri IPC deadline"))?;
         let wire = crate::json::encode(request).map_err(|e| invalid(e.to_string()))? + "\n";
+        let mut preserve_stream = false;
         let result = (|| {
             let stream = self.stream()?;
             stream
@@ -181,6 +183,7 @@ impl Connection {
                 .filter(|v| v.len() == 1)
                 .ok_or_else(|| invalid("Malformed niri reply"))?;
             if let Some(error) = object.get("Err") {
+                preserve_stream = preserve_rejection;
                 return Err(Error {
                     kind: "RuntimeError",
                     message: format!(
@@ -197,10 +200,23 @@ impl Connection {
                 .cloned()
                 .ok_or_else(|| invalid("Missing niri reply status"))
         })();
-        if result.is_err() {
+        if result.is_err() && !preserve_stream {
             self.invalidate();
         }
         result
+    }
+    /// Query Nacre's optional extension without throwing away this caller's persistent
+    /// request socket when stock niri replies with a valid `Err` for the unknown method.
+    pub fn nacre_capabilities(&mut self, timeout: Duration) -> NacreCapabilities {
+        self.request_value_with_rejection(
+            &Value::String("NacreCapabilities".into()),
+            timeout,
+            4096,
+            true,
+        )
+        .ok()
+        .and_then(|response| NacreCapabilities::parse(&response))
+        .unwrap_or_default()
     }
     pub fn response(&mut self, name: &str, timeout: Duration, max_bytes: usize) -> Result<Value> {
         let request = match name {
@@ -371,6 +387,33 @@ mod tests {
             }})),
             None
         );
+    }
+    #[test]
+    fn rejected_optional_capability_keeps_the_persistent_request_socket() -> crate::Result<()> {
+        let (client, mut server) = UnixStream::pair()?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let mut server = BufReader::new(server);
+            let mut request = String::new();
+            server.read_line(&mut request)?;
+            assert_eq!(request, "\"NacreCapabilities\"\n");
+            server.get_mut().write_all(b"{\"Err\":\"unsupported\"}\n")?;
+            request.clear();
+            server.read_line(&mut request)?;
+            assert_eq!(request, "\"Version\"\n");
+            server.get_mut().write_all(b"{\"Ok\":\"26.04\"}\n")
+        });
+        let mut connection = Connection::from_stream(client);
+        assert_eq!(
+            connection.nacre_capabilities(Duration::from_secs(1)),
+            NacreCapabilities::default()
+        );
+        assert!(connection.connected());
+        assert_eq!(
+            connection.request_value(&json!("Version"), Duration::from_secs(1), 128)?,
+            "26.04"
+        );
+        peer.join().map_err(|_| "Capability peer panicked")??;
+        Ok(())
     }
 
     #[test]
