@@ -203,7 +203,7 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                 CollectionOperation::SetWallpaper { collection } => {
                     let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
                     let name = row["name"].as_str().ok_or_else(invalid)?;
-                    let wallpaper = hub.snapshot(super::active_wallpaper::TOPIC)
+                    let wallpaper = hub.borrow().snapshot(super::active_wallpaper::TOPIC)
                         .and_then(|data| serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok())
                         .filter(|state| state.available && !state.stale)
                         .and_then(|state| state.outputs.get(&request.output).cloned())
