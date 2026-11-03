@@ -420,10 +420,18 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 "{name}: stage produced no prepared scene"
             );
             if action == "open" {
+                if scene.motion.is_some() {
+                    // Panel surfaces draw from the padded resting origin. The
+                    // production presenter uses the same 32px inset before it
+                    // applies the edge-relative motion offset.
+                    scene.offset = (32., 32.);
+                }
                 if compositor_closes.contains(&name) {
                     use bead::render::{
                         PixelFormat, layer_motion::LayerMotionPlan, tree::TreeCpuRenderer,
                     };
+                    // These padded bounds are the logical layer-surface viewport
+                    // used by the route's production panel configuration.
                     let (width, height) =
                         (scene.bounds.w.ceil() as u32, scene.bounds.h.ceil() as u32);
                     // The real runtime can still be waiting for its async CPU cache
