@@ -6,6 +6,7 @@
   "bead.bar.collection-create": "Collection switcher: button that starts creating a named desk.",
   "bead.bar.collection-desk-name": "Collection switcher: placeholder and accessible label for the desk name input.",
   "bead.bar.collection-name-required": "Collection switcher: explanation shown when the desk has no name and cannot save a wallpaper profile.",
+  "bead.bar.collection-open": "Collection switcher: accessible name of the control that opens the desk list and its create and rename actions.",
   "bead.bar.collection-rename": "Collection switcher: button that begins editing the selected desk name.",
   "bead.bar.collection-save": "Collection switcher: button that saves a newly entered or edited desk name.",
   "bead.bar.collection-set-wallpaper": "Collection switcher: action label that saves the current output wallpaper for this desk.",

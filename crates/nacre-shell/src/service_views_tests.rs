@@ -1157,6 +1157,10 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     })]));
     let default_layout: serde_json::Value = serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
     bar_models.insert("widgets.layout".into(), Value::list(vec![default_layout]));
+    let mut single_models = bar_models.clone();
+    single_models.insert("bar.collections".into(), Value::list(vec![serde_json::json!({
+        "id":"niri-collection:17","label":"work","name":"work","index":1,"output":"DP-1","active":true
+    })]));
     let mut bar = Harness::load(
         &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
         Config { width: 1920, height: 70, scale: 1. },
@@ -1173,6 +1177,13 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         _ => None,
     }).collect();
     assert!(matches!(bar.session.stores.get("bar.collections"), Some(Value::List(rows)) if rows.len() == 3), "collection snapshot store missing: {:?}", bar.session.stores.get("bar.collections"));
+
+    let mut single = Harness::load(
+        &root(), Path::new("bar/main.luau"), &root().join("palette.json"), single_models,
+        Config { width: 1920, height: 70, scale: 1. },
+    )?;
+    settle_harness_animations(&mut single)?;
+    assert!(single.session.view_nodes().iter().any(|node| node.id.contains("collection-menu") && node.action.as_deref() == Some("collection.switcher.open")), "single-desk bar affordance must open the collection popout");
 
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
@@ -1239,7 +1250,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         let rect = bead::ui::rect(&node.draw);
         assert!(rect.x >= 0. && rect.y >= 0. && rect.x + rect.w <= 360. && rect.y + rect.h <= 250., "{suffix} falls outside the popout viewport: {rect:?}");
     }
-    assert!(bar_text.iter().any(|text| text.contains("Very long personal")), "the bar badge must show the current desk label: {bar_text:?}");
+    assert!(bar_text.iter().any(|text| text.contains("Very lon…")), "the compact bar badge must truncate to one line with an ellipsis: {bar_text:?}");
     Ok(())
 }
 

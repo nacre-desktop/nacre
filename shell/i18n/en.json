@@ -6,6 +6,7 @@
   "bead.bar.collection-create": "Create desk",
   "bead.bar.collection-desk-name": "Desk name",
   "bead.bar.collection-name-required": "Name this desk to save a wallpaper",
+  "bead.bar.collection-open": "Open desk switcher for {desk}",
   "bead.bar.collection-rename": "Rename",
   "bead.bar.collection-save": "Save",
   "bead.bar.collection-set-wallpaper": "Set current wallpaper for this desk",
