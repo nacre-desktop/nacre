@@ -89,7 +89,7 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertNotIn(action, bindings.read_text())
                 self.assertIn(action, overlay.read_text())
             self.assertNotIn("edge-triggers", config.read_text())
-            self.assertIn("nacre { edge-triggers; }", overlay.read_text())
+            self.assertNotIn("nacre { edge-triggers; }", overlay.read_text())
             self.assertIn("left { action { event; }; dwell-time-ms 800; }", overlay.read_text())
             self.assertIn("bottom { action { event; }; dwell-time-ms 800; }", overlay.read_text())
             env = {**os.environ, "HOME": str(home)}

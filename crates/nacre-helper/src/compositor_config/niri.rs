@@ -94,7 +94,7 @@ pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
 }
 fn edge_trigger_config(delay_ms: u64) -> String {
     format!(
-        "nacre {{ edge-triggers; }}\nedge-triggers {{\n    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
+        "edge-triggers {{\n    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
     )
 }
 fn shell_quote(text: &str) -> String {

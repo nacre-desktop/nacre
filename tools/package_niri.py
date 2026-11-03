@@ -43,7 +43,6 @@ def edge_trigger_config(delay_ms):
     ):
         delay_ms = 350
     return (
-        "nacre { edge-triggers; }\n"
         "edge-triggers {\n"
         f"    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
         f"    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
