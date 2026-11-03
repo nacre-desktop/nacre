@@ -2,6 +2,11 @@
 
 Status: Implemented across Nacre and nacre-niri; CI pending.
 
+This contract depends on NN0008 providing the actions, rules and `scratchpad`
+and `window_pinning` capability fields, and on N0113's `(nacre-niri)` version
+identity check. Older capability replies remain readable, but the fork overlay
+is validated against the selected native binary before launch.
+
 Nacre keeps the stock niri session compatible and selects native actions only in
 the `nacre-niri` session. The generated `nacre-niri.kdl` overlay contains:
 

@@ -16,6 +16,14 @@ spec.loader.exec_module(extras)
 
 class DesktopExtrasTests(unittest.TestCase):
     def test_native_scratchpad_description_uses_localized_help_title(self):
+        source = [
+            dict(
+                keys="SUPER + SHIFT + H",
+                submap="",
+                action=dict(method="exec_cmd", args=["window-minimize.sh restore-last"]),
+                flags=dict(description="Nacre:unhide"),
+            )
+        ]
         bindings = [
             dict(
                 key="H",
@@ -28,7 +36,12 @@ class DesktopExtrasTests(unittest.TestCase):
         ]
         with (
             patch.dict("os.environ", {"NACRE_LANGUAGE": "pseudo"}),
-            patch.object(extras.compositor, "binding_source_files", return_value=[]),
+            patch.object(
+                extras.compositor,
+                "binding_source_files",
+                return_value=[Path("hypr/conf/keybinding.lua")],
+            ),
+            patch.object(extras.compositor, "capture_bindings", return_value=source),
             patch.object(extras.compositor, "query", return_value=bindings),
         ):
             row = extras.bindings()[0]

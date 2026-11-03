@@ -530,8 +530,8 @@ def bindings():
         combo = "+".join([*parts, key])
         semantic = descriptions.get(b.get("description"))
         desc = (
-            source.get((b.get("submap", ""), combo))
-            or semantic
+            semantic
+            or source.get((b.get("submap", ""), combo))
             or binding_description(combo)
             or b.get("description")
             or b.get("dispatcher", "")
