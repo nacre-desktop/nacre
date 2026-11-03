@@ -513,7 +513,15 @@ mod tests {
             )));
         }
         assert!(!native.contains("nacre { edge-triggers; }"));
-        assert!(!stock.contains("edge-triggers"));
+        for path in NIRI_OUTPUTS {
+            assert!(
+                !stock[*path]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("edge-triggers"),
+                "stock emitted edge triggers in {path}"
+            );
+        }
         let delayed = collection_overlay_with_delay(800);
         assert!(delayed.contains("left { action { event; }; dwell-time-ms 800; }"));
         assert!(collection_overlay_with_delay(0)
