@@ -1149,7 +1149,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut bar_models = super::initial_models()?;
     bar_models.insert("bar.collections".into(), groups.clone());
     bar_models.insert("bar.collection.current".into(), Value::Text("niri-collection:17".into()));
-    bar_models.insert("bar.popouts".into(), Value::Bool(false));
+    bar_models.insert("bar.popouts".into(), Value::Bool(true));
     bar_models.insert("bar.workspace.enabled".into(), Value::Bool(false));
     bar_models.insert("widgets.preview".into(), Value::list(Vec::new()));
     bar_models.insert("bead.workspaces".into(), Value::list(vec![serde_json::json!({
