@@ -679,7 +679,12 @@ mod tests {
                 assert_eq!(id, Id::Integer(91));
                 assert_eq!(err.code, ErrorCode::Unavailable, "must reach compositor action service, not UnknownMethod");
                 assert_ne!(err.code, ErrorCode::UnknownMethod);
-                caller_task.abort();
+                caller.shutdown().await.unwrap();
+                tokio::time::timeout(Duration::from_secs(2), caller_task)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .unwrap();
             })
             .await;
     }
