@@ -1139,6 +1139,63 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
 }
 
 #[test]
+fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
+    let groups = Value::list(vec![
+        serde_json::json!({"id":"niri-collection:17","label":"Very long personal research and writing desk","name":"Very long personal research and writing desk","index":1,"output":"DP-1","active":true}),
+        serde_json::json!({"id":"niri-collection:28","label":"2","name":null,"index":2,"output":"DP-2","active":false}),
+        serde_json::json!({"id":"niri-collection:39","label":"studio","name":"studio","index":3,"output":"DP-2","active":false}),
+    ]);
+    let capture = std::env::var_os("N0117_CAPTURE_DIR").map(PathBuf::from);
+    let mut bar_models = super::initial_models()?;
+    bar_models.insert("bar.collections".into(), groups.clone());
+    bar_models.insert("bar.collection.current".into(), Value::Text("niri-collection:17".into()));
+    let bar = Harness::load(
+        &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
+        Config { width: 420, height: 54, scale: 1. },
+    )?;
+    let bar_frame = bar.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        std::fs::create_dir_all(dir)?;
+        bar_frame.save(dir.join("collections-bar.png"))?;
+    }
+    assert!(bar_frame.width > 0 && bar_frame.height > 0);
+    assert!(bar.session.view_nodes().iter().any(|node| node.id.contains("collection-switcher")));
+
+    let mut menu_models = BTreeMap::from([
+        ("bar.collections".into(), groups),
+        ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
+        ("bar.collection.height".into(), Value::Number(112.into())),
+        ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
+        ("collection.operation".into(), Value::Text("rename".into())),
+        ("collection.target".into(), Value::Text("niri-collection:17".into())),
+        ("collection.draft".into(), Value::Text("Very long personal research and writing desk".into())),
+        ("collection.scroll".into(), Value::Number(0.into())),
+        ("panel.open".into(), Value::Bool(true)),
+        ("view.edge".into(), Value::Text("top".into())),
+    ]);
+    let mut initial = super::initial_models()?;
+    initial.append(&mut menu_models);
+    let menu = Harness::load(
+        &root(), Path::new("popouts/collections.luau"), &root().join("palette.json"), initial,
+        Config { width: 360, height: 250, scale: 1. },
+    )?;
+    let menu_frame = menu.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        menu_frame.save(dir.join("collections-rename-popout.png"))?;
+    }
+    let text: Vec<_> = menu.scene().primitives.iter().filter_map(|primitive| match primitive {
+        bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
+        _ => None,
+    }).collect();
+    assert!(text.iter().any(|text| text.contains("Desk name")), "rename input must render localized placeholder: {text:?}");
+    assert!(text.iter().any(|text| text.contains("Create desk")), "create action must render localized label: {text:?}");
+    assert!(menu.scene().primitives.iter().any(|primitive| matches!(primitive,
+        bead::render::Primitive::Text { text, .. } if text.contains("Very long personal research")
+    )), "the selected long collection label must be present in the bounded popout");
+    Ok(())
+}
+
+#[test]
 fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
     use std::sync::{Arc, Mutex};
