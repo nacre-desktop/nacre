@@ -158,6 +158,16 @@ fn run() -> Result<i32> {
                     print(&events.next_value()?)?;
                 }
             }
+            cli::Command::EdgeEvents => {
+                let mut events = niri_events::EventSocket::connect_edge_triggers(Path::new(
+                    &std::env::var("NIRI_SOCKET")?,
+                ))?;
+                loop {
+                    if let Some(event) = niri_events::edge_trigger(&events.next_event()?)? {
+                        print(&event)?;
+                    }
+                }
+            }
         }
     }
     Ok(0)
