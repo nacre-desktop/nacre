@@ -1430,10 +1430,8 @@ mod tests {
         let bindings = staged(&home, "bindings.kdl")?;
         let shared_rules = staged(&home, "window-rules.kdl")?;
         let overlay = staged(&home, "nacre-niri.kdl")?;
-        let native_report: Value = serde_json::from_str(&staged(
-            &home,
-            "nacre-niri-unsupported.json",
-        )?)?;
+        let native_report: Value =
+            serde_json::from_str(&staged(&home, "nacre-niri-unsupported.json")?)?;
         let native_rows = native_report["unsupported"]
             .as_array()
             .ok_or("Missing native unsupported rows")?;
