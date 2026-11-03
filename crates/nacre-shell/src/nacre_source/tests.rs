@@ -873,6 +873,43 @@ async fn accepted(
     framing::write(&mut w, &welcome()).await.unwrap();
     (r, w)
 }
+async fn next_after_registry_refresh(
+    reader: &mut framing::Reader<BufReader<tokio::net::unix::OwnedReadHalf>>,
+    writer: &mut tokio::net::unix::OwnedWriteHalf,
+) -> Message {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            match next(reader).await {
+                Message::Call { id, m, .. } if m == "daemon.status" => {
+                    let Message::Welcome {
+                        boot,
+                        methods,
+                        topics,
+                        ..
+                    } = welcome()
+                    else {
+                        unreachable!()
+                    };
+                    let topics = topics.into_keys().collect::<Vec<_>>();
+                    framing::write(
+                        writer,
+                        &Message::Ret {
+                            id,
+                            reply: Reply::Ok {
+                                ok: serde_json::json!({"boot":boot,"methods":methods,"topics":topics}),
+                            },
+                        },
+                    )
+                    .await
+                    .unwrap();
+                }
+                request => return request,
+            }
+        }
+    })
+    .await
+    .expect("request after registry refresh")
+}
 async fn fresh(topic: &Topic, predicate: impl Fn(&Value) -> bool) {
     tokio::time::timeout(Duration::from_secs(5), async {
         loop {
@@ -2502,8 +2539,11 @@ async fn actual_provider_with_pending_menu(golden: &str) {
         let ui = fixture("ui");
         let (mut reader, mut writer) = accepted(&listener).await;
         // The product provider registers both published methods.
-        assert_eq!(next(&mut reader).await, fixture("menu-ui-actions")[0]);
-        let observed = next(&mut reader).await;
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            fixture("menu-ui-actions")[0]
+        );
+        let observed = next_after_registry_refresh(&mut reader, &mut writer).await;
         let Message::Call { id, m, p, .. } = observed else {
             panic!("outbound menu call expected")
         };
@@ -2521,7 +2561,10 @@ async fn actual_provider_with_pending_menu(golden: &str) {
         // the incoming UI call. Waiting synchronously on the menu here would
         // deadlock. Use the published string provider ID and exact ACK.
         framing::write(&mut writer, &ui[2]).await.unwrap();
-        assert_eq!(next(&mut reader).await, ui[3]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            ui[3]
+        );
         framing::write(&mut writer, &menu[1]).await.unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
     });
@@ -2564,9 +2607,15 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
     let golden = fixture("menu-ui-actions");
     let server = tokio::spawn(async move {
         let (mut reader, mut writer) = accepted(&listener).await;
-        assert_eq!(next(&mut reader).await, golden[0]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            golden[0]
+        );
         framing::write(&mut writer, &golden[15]).await.unwrap();
-        assert_eq!(next(&mut reader).await, golden[16]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            golden[16]
+        );
         framing::write(&mut writer, &golden[17]).await.unwrap();
         // The handler adds its dispatch state to every refusal; the published
         // code, message and retry flag must match.
@@ -2579,7 +2628,10 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
                 reply: Reply::Err { err },
                 ..
             },
-        ) = (&golden[18], next(&mut reader).await)
+        ) = (
+            &golden[18],
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+        )
         else {
             panic!("refusal expected")
         };
