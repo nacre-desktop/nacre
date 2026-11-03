@@ -21,6 +21,13 @@ uses its existing app route. Frame clicks remain available. Bead commit
 policy only while the daemon publishes an acknowledged stream, retaining
 reserved geometry while omitting interactive lip surfaces.
 
+The compositor advertises edge-trigger availability only when at least one
+enabled edge has an `Event` action. The generated fork overlay configures all
+four edges this way; configurations without an enabled event action, including
+stale or manually launched stock-like configurations, keep the invisible-surface
+fallback. Nacre regenerates the overlay during setup/preparation, while session
+launch reuses an existing overlay rather than silently rewriting user files.
+
 The event position is output-local logical coordinates. QML maps left, right,
 and top events to assistant, control center, and dashboard openings after
 hit-testing the actual configured lip at the event position; it ignores
