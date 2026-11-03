@@ -15,9 +15,9 @@ if selected and selected.name then
         note=ui.Text{id="wallpaper-setting-note",text=ui.tr("nacre.collection-switcher.enable-wallpapers"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
     end
     actions={
-        {id="wallpaper",label=ui.tr("nacre.collection-switcher.set-wallpaper"),action="collection.wallpaper.set",arg=ui.bind("bar.collection.current")},
-        {id="accent",label=ui.tr("nacre.collection-switcher.use-wallpaper-accent"),action="collection.accent.use",arg=ui.bind("bar.collection.current")},
-        {id="base-accent",label=ui.tr("nacre.collection-switcher.use-base-accent"),action="collection.accent.clear",arg=ui.bind("bar.collection.current")},
+        {id="wallpaper",label=ui.tr("nacre.collection-switcher.set-wallpaper"),action="collection.wallpaper.set",arg=current},
+        {id="accent",label=ui.tr("nacre.collection-switcher.use-wallpaper-accent"),action="collection.accent.use",arg=current},
+        {id="base-accent",label=ui.tr("nacre.collection-switcher.use-base-accent"),action="collection.accent.clear",arg=current},
     }
 else
     note=ui.Text{id="name-required",text=ui.tr("nacre.collection-switcher.name-to-save-wallpaper"),width=272,height=38,font_size=kit.tokens.text.body,color="onSurfaceVariant"}
