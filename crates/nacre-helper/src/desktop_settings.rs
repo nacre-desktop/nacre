@@ -47,8 +47,8 @@ pub fn preset_keys() -> Vec<String> {
                     "mouseScrollSpeed",
                     "niriWorkspaceMode",
                     "workspacePrimaryOutput",
-                    "monitorWorkspaceActions",
-                    "collectionWallpapers",
+                        "monitorWorkspaceActions",
+                        "collectionWallpapers",
                 ]
                 .contains(&key.as_str())
                 && !["lock", "weather", "interface"]
