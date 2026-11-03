@@ -1626,7 +1626,10 @@ mod tests {
                 let name = file.file_name().unwrap().to_string_lossy();
                 // Session-only generated files are covered by focused tests;
                 // keep this legacy Nacre snapshot focused on its existing tree.
-                if name == "bead-pearls.kdl" || name == "nacre-niri.kdl" {
+                if name == "bead-pearls.kdl"
+                    || name == "nacre-niri.kdl"
+                    || name == "nacre-niri-unsupported.json"
+                {
                     continue;
                 }
                 let text = fs::read_to_string(&file)?
