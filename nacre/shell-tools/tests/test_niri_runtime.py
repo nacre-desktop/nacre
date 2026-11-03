@@ -47,6 +47,8 @@ def run_fixture_smoke(repo, binary):
                             for event in fixture["events"][:2]:
                                 connection.sendall((json.dumps(event) + "\n").encode())
                             streams.append(connection)
+                        elif request == "NacreCapabilities":
+                            connection.sendall(b'{"Err":"unknown request"}\n')
                         elif request == "NacreOverviewHoverStream":
                             connection.sendall(b'{"Err":"unknown request"}\n')
                         elif request == "Outputs":
