@@ -187,6 +187,13 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     );
     let window_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
     let pearls = fs::read_to_string(destination.join("config/bead-pearls.kdl"))?;
+    assert_eq!(
+        pearls,
+        format!(
+            "// Source: Bead shell/niri-pearls.kdl (origin/main).\n{}",
+            include_str!("../../../shell/niri-pearls.kdl")
+        )
+    );
     let pearl_match = "match app-id=\"^bead[.]pearl([.]pending)?$\"";
     assert_eq!(pearls.matches(pearl_match).count(), 1);
     assert_eq!(

@@ -1355,13 +1355,9 @@ mod tests {
         assert!(!pearl_policy.contains("border { off; }"));
         assert!(!pearl_policy.contains("focus-ring { off; }"));
         assert!(!pearl_policy.contains("shadow { off; }"));
-        assert!(!pearl_policy.contains("background-effect { blur false; }"));
         assert!(pearl_policy.contains("match app-id=\"^nacre-widgets$\""));
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
         assert!(root.contains("include \"bead-pearls.kdl\""));
-        // The generated native include graph contains no pearl prewarm policy.
-        assert!(!root.contains("bead[.]pearl"));
-        assert!(!root.contains("opacity 0.0"));
         assert!(root.contains("include \"workspaces.kdl\""));
         assert!(root.contains(
             "spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\""
