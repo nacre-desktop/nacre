@@ -369,7 +369,7 @@ fn wait_for_notification_status(home: &Path, expected: &str) {
             .env("XDG_DATA_HOME", home.join("data"))
             .env("XDG_RUNTIME_DIR", home.join("runtime"))
             .env("NACRE_DAEMON_SOCKET", home.join("runtime/nacre/daemon.sock"))
-            .arg("status");
+            .args(["ctl", "status"]);
         if let Ok(output) = command.output() {
             if output.status.success() {
                 if let Ok(status) = serde_json::from_slice::<Value>(&output.stdout) {
