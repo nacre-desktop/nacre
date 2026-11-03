@@ -212,6 +212,7 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
                 result: json!({}),
             },
         );
+        let status_methods = methods.clone();
         let welcome = Message::Welcome {
             proto: 1,
             min: 1,
@@ -236,6 +237,19 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
                     }
                 }
                 Message::Call { id, m, p, .. } => {
+                    if m == "daemon.status" {
+                        let reply = Reply::Ok {
+                            ok: json!({
+                                "boot":"settings-boot",
+                                "topics":[DESKTOP, APPS],
+                                "methods":status_methods,
+                            }),
+                        };
+                        framing::write(&mut writer, &Message::Ret { id, reply })
+                            .await
+                            .unwrap();
+                        continue;
+                    }
                     assert_eq!(m, METHOD);
                     calls_tx.send(p.clone()).unwrap();
                     let reply = Reply::Ok {
