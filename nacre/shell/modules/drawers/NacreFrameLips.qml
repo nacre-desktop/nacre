@@ -45,6 +45,10 @@ Item {
             cancelDashboard();
     }
     function requestDashboard(buttons) {
+        if (NacreCompositor.externalEdgeSource) {
+            cancelDashboard();
+            return;
+        }
         if (buttons !== Qt.NoButton) {
             cancelDashboard();
             return;
@@ -119,13 +123,15 @@ Item {
     function approach(name, lip, buttons) {
         const point = lip.mapToItem(root, lip.pointerX, lip.pointerY);
         NacreHoverIntent.observe(screen, point.x, point.y);
-        if (NacreCompositor.externalEdgeSource)
-            return;
         if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", true);
+            if (NacreCompositor.externalEdgeSource)
+                return;
             requestDashboard(buttons);
             return;
         }
+        if (NacreCompositor.externalEdgeSource)
+            return;
         if (DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen(name, screen, buttons))
             return;
         if ((!visibilities[name] || name === "osd" && visibilities.controlsMode === "dropdown") && !sideDwell(name).waiting)
@@ -160,13 +166,12 @@ Item {
             if (!NacreCompositor.externalEdgeSource || value?.type !== "edge-triggered" || value.output !== root.screen.name || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
                 return;
             const position = value.position;
-            if (Array.isArray(position) && position.length === 2)
-                NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
-            if (!NacreHoverIntent.canAuto(root.screen, Qt.NoButton))
+            if (!Array.isArray(position) || position.length !== 2 || !position.every(Number.isFinite))
                 return;
+            NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
             const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
             const point = NacreHoverIntent.positions[root.screen.name];
-            if (name && NacreHoverIntent.markedContains(name, point))
+            if (name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point))
                 NacrePanelState.hoverEdge(name, root.screen.name);
         }
     }

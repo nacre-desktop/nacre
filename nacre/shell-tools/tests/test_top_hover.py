@@ -221,9 +221,18 @@ TestCase {
  }
  function test_native_edge_source_suppresses_qml_dwell_and_routes_events_with_fallback(){
   const view=createTemporaryObject(scene,this);wait(30);NacreCompositor.externalEdgeSource=true;
+  const top=findChild(view,"frameTopLip");
+  NacreHoverIntent.setHeaderHover("test","bar",true);
+  view.lips.approach("dashboard",top,Qt.NoButton);verify(NacreHoverIntent.headers.test);verify(!view.lips.dashboardWaiting);
+  view.lips.requestDashboard(Qt.NoButton);verify(!view.lips.dashboardWaiting);
+  view.lips.leave("dashboard");verify(NacreHoverIntent.headers.test);
+  NacreHoverIntent.setHeaderHover("test","bar",false);verify(!NacreHoverIntent.headers.test);
   mouseMove(view,8,350);wait(400);verify(!view.flags.left);
   NacreCompositor.event({type:"edge-triggered",output:"other",edge:"Left",position:[0,350]});verify(!view.flags.left);
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"left",position:[4,100]});verify(!view.flags.left);
+  NacreHoverIntent.blocked={test:{left:true}};
+  NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
+  NacreHoverIntent.blocked={};
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(view.flags.left);
   view.flags.left=false;NacreCompositor.overviewOpen=true;
   NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
@@ -242,3 +251,10 @@ TestCase {
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)
+
+    def test_header_edge_approach_skips_local_trigger_with_native_source(self):
+        header = (SHELL / "modules/topbar/NacreHeader.qml").read_text()
+        self.assertIn(
+            "!NacreCompositor.externalEdgeSource && !root.clickMenus",
+            header,
+        )
