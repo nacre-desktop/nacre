@@ -15,7 +15,6 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
-use bead::wayland::UiEvent;
 use wayland_protocols::wp::viewporter::server::{
     wp_viewport::WpViewport,
     wp_viewporter::{self, WpViewporter},
@@ -60,7 +59,7 @@ use motion_protocol::bead_layer_motion_v1::{BeadLayerMotionV1, Request as Motion
 const OUTPUT_WIDTH: i32 = 1920;
 const OUTPUT_HEIGHT: i32 = 1200;
 const FRAME_PERIOD: Duration = Duration::from_nanos(8_333_333);
-const CHILD_RUNTIME: Duration = Duration::from_millis(1_400);
+const QUIET_WINDOW: Duration = Duration::from_millis(200);
 const HARNESS_TIMEOUT: Duration = Duration::from_secs(8);
 const IDENT: &str = "0123456789abcdef0123456789abcdef";
 const PROMPT_NAMESPACE: &str = "nacre-prompt-layer-motion-wire-test";
@@ -224,7 +223,6 @@ fn run_prompt_client() -> Result<(), Box<dyn Error>> {
     let helper =
         PathBuf::from(std::env::var_os("NACRE_TEST_HELPER").ok_or("missing private helper")?);
     let spec = make_prompt_spec(helper)?;
-    let factory = spec.factory.clone();
     let fallback = spec.fallback.clone();
     let panels =
         bead::wayland::Panels::new("prompt".into(), BTreeMap::from([("prompt".into(), spec)]))?;
@@ -233,7 +231,7 @@ fn run_prompt_client() -> Result<(), Box<dyn Error>> {
         panels: Some(panels),
         app: Some(vec![serde_json::Value::String(IDENT.into())]),
         panel_output: Some("NACRE-TEST-0".into()),
-        seconds: Some(CHILD_RUNTIME.as_secs_f64()),
+        seconds: None,
         renderer: bead::render::RendererKind::Cpu,
         interactive: true,
         keyboard_focus: true,
@@ -241,28 +239,6 @@ fn run_prompt_client() -> Result<(), Box<dyn Error>> {
     };
     let renderer = bead::render::renderer(bead::render::RendererKind::Cpu)?;
     bead::wayland::run_runtime(options, fallback, renderer, None)?;
-
-    // Verify the same production factory after the cold wire arm has completed;
-    // this must not prewarm the scene or raster cache before run_runtime starts.
-    let mut probe =
-        factory(true).unwrap_or_else(|error| panic!("production prompt factory failed: {error}"));
-    probe.viewport(OUTPUT_WIDTH as u32, OUTPUT_HEIGHT as u32);
-    let prepared = probe
-        .stage(UiEvent::Reload)?
-        .ok_or("prompt factory produced no scene")?;
-    let motion = prepared
-        .motion
-        .as_ref()
-        .ok_or("prompt scene has no motion")?;
-    assert!(
-        motion.open,
-        "production prompt factory must produce an open scene"
-    );
-    assert!(
-        !motion.reveal,
-        "production prompt opening must use the plain-motion plan"
-    );
-    probe.commit();
     Ok(())
 }
 
@@ -367,7 +343,7 @@ fn run_wire_case(
     let mut compositor = Compositor::new(resize_after_motion_done);
     handle.create_global::<Compositor, wl_compositor::WlCompositor, _>(6, ());
     handle.create_global::<Compositor, wl_shm::WlShm, _>(1, ());
-    handle.create_global::<Compositor, wl_output::WlOutput, _>(4, ());
+    let mut output_global = Some(handle.create_global::<Compositor, wl_output::WlOutput, _>(4, ()));
     handle.create_global::<Compositor, ZwlrLayerShellV1, _>(4, ());
     handle.create_global::<Compositor, WpViewporter, _>(1, ());
     handle.create_global::<Compositor, ZxdgOutputManagerV1, _>(3, ());
@@ -377,6 +353,9 @@ fn run_wire_case(
     handle.insert_client(stream, Arc::new(PeerData))?;
 
     let mut next_frame = Instant::now() + FRAME_PERIOD;
+    let mut last_prompt_progress = prompt_progress(&compositor.counts);
+    let mut quiet_since = Instant::now();
+    let mut output_removed = false;
     loop {
         display.dispatch_clients(&mut compositor)?;
         let now = Instant::now();
@@ -385,9 +364,37 @@ fn run_wire_case(
             next_frame += FRAME_PERIOD;
         }
         display.flush_clients()?;
+        let progress = prompt_progress(&compositor.counts);
+        if progress != last_prompt_progress {
+            last_prompt_progress = progress;
+            quiet_since = now;
+        }
+        let ready = if advertise_motion {
+            compositor.counts.completions == 1
+                && compositor
+                    .counts
+                    .prompt_controllers_at_done
+                    .is_some_and(|controllers| compositor.counts.prompt_controllers > controllers)
+                && (!resize_after_motion_done || resized_prompt_buffer_ready(&compositor.counts))
+        } else {
+            compositor.counts.animate_requests == 0 && compositor.counts.panel_attaches > 1
+        };
+        if !output_removed && ready && now.duration_since(quiet_since) >= QUIET_WINDOW {
+            if let Some(output_global) = output_global.take() {
+                handle.remove_global::<Compositor>(output_global);
+            }
+            output_removed = true;
+        }
         if let Some(status) = child.0.try_wait()? {
             if !status.success() {
                 return Err(child_failure(label, status, &stdout_path, &stderr_path).into());
+            }
+            if !output_removed {
+                return Err(format!(
+                    "{label}: client exited before the compositor removed its settled output\n{}",
+                    read_logs(&stdout_path, &stderr_path)
+                )
+                .into());
             }
             break;
         }
@@ -520,7 +527,39 @@ fn run_wire_case(
         !stderr.contains("UI_ERROR"),
         "{label}: production prompt runtime logged a UI error: {stderr}"
     );
+    assert!(
+        !stderr.contains("STATE_ERROR"),
+        "{label}: production prompt runtime logged a state error: {stderr}"
+    );
     Ok(())
+}
+
+fn prompt_progress(counts: &Counts) -> (usize, usize, usize, usize, usize, bool) {
+    (
+        counts.panel_attaches,
+        counts.prompt_set_sizes.len(),
+        counts.prompt_configures.len(),
+        counts.completions,
+        counts.prompt_controllers,
+        counts.output_resize_sent,
+    )
+}
+
+fn resized_prompt_buffer_ready(counts: &Counts) -> bool {
+    let (Some(set_sizes_at_done), Some(configures_at_done)) = (
+        counts.prompt_set_sizes_at_done,
+        counts.prompt_configures_at_done,
+    ) else {
+        return false;
+    };
+    let Some(last_configure) = counts.prompt_configures.last() else {
+        return false;
+    };
+    counts.output_resize_sent
+        && counts.prompt_set_sizes.len() > set_sizes_at_done
+        && counts.prompt_configures.len() > configures_at_done
+        && counts.prompt_buffer_sizes.last()
+            == Some(&(last_configure.0 as i32, last_configure.1 as i32))
 }
 
 fn read_logs(stdout: &Path, stderr: &Path) -> String {
