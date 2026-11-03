@@ -1149,12 +1149,14 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut bar_models = super::initial_models()?;
     bar_models.insert("bar.collections".into(), groups.clone());
     bar_models.insert("bar.collection.current".into(), Value::Text("niri-collection:17".into()));
-    bar_models.insert("bar.popouts".into(), Value::Bool(true));
+    bar_models.insert("bar.popouts".into(), Value::Bool(false));
+    bar_models.insert("bar.workspace.enabled".into(), Value::Bool(false));
+    bar_models.insert("widgets.preview".into(), Value::list(Vec::new()));
     bar_models.insert("bead.workspaces".into(), Value::list(vec![serde_json::json!({
         "id":"niri-workspace:1","index":1,"label":"1","active":true,"icon_mode":false
     })]));
     let mut bar = Harness::load(
-        &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
+        &root(), Path::new("tests/fixtures/collection-switcher-badge.luau"), &root().join("palette.json"), bar_models,
         Config { width: 420, height: 54, scale: 1. },
     )?;
     let bar_frame = bar.pose((0., 0.), 1.)?;
