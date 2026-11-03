@@ -1183,6 +1183,10 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         Config { width: 1920, height: 70, scale: 1. },
     )?;
     settle_harness_animations(&mut single)?;
+    let single_frame = single.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        single_frame.save(&dir.join("collections-single-entry.png"))?;
+    }
     assert!(single.session.view_nodes().iter().any(|node| node.id.contains("collection-menu") && node.action.as_deref() == Some("collection.switcher.open")), "single-desk bar affordance must open the collection popout");
 
     let mut menu_models = BTreeMap::from([
