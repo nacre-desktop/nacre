@@ -28,6 +28,17 @@ fn frozen_validation_defaults_and_preset_scope() {
         reference["developerPseudo"]
     );
 }
+
+#[test]
+fn collection_wallpapers_is_an_off_by_default_independent_toggle() {
+    assert_eq!(settings::defaults()["collectionWallpapers"], json!(false));
+    assert!(!settings::preset_keys().contains(&"collectionWallpapers".to_owned()));
+    assert_eq!(
+        settings::validate("collectionWallpapers", &json!(true), false).unwrap(),
+        json!(true)
+    );
+    assert!(settings::validate("collectionWallpapers", &json!("yes"), false).is_err());
+}
 #[test]
 fn frozen_additive_niri_preferences() {
     let reference: Value = serde_json::from_str(include_str!(

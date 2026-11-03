@@ -48,6 +48,7 @@ pub fn preset_keys() -> Vec<String> {
                     "niriWorkspaceMode",
                     "workspacePrimaryOutput",
                     "monitorWorkspaceActions",
+                    "collectionWallpapers",
                 ]
                 .contains(&key.as_str())
                 && !["lock", "weather", "interface"]
@@ -466,7 +467,8 @@ impl<R: Runtime> Settings<R> {
                         "scrollSpeed",
                         "niriWorkspaceMode",
                         "workspacePrimaryOutput",
-                        "monitorWorkspaceActions",
+                    "monitorWorkspaceActions",
+                    "collectionWallpapers",
                     ]
                     .contains(&key.as_str())
                     && !["lock", "weather", "interface"]
