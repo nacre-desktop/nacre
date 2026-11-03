@@ -31,6 +31,8 @@ mod launcher_form;
 mod launcher_panel;
 mod launcher_quick;
 #[cfg(test)]
+mod layer_motion_wayland_tests;
+#[cfg(test)]
 mod markup_bench;
 mod memory_policy;
 mod nacre_source;
