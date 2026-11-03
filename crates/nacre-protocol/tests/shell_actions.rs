@@ -72,7 +72,7 @@ fn published_action_schemas_refuse_additional_fields() {
     let mut methods = nacre_protocol::shell_actions::methods();
     methods.extend(nacre_protocol::bar_services::methods());
     methods.extend(nacre_protocol::pill_controls::methods());
-    assert_eq!(methods.len(), 15);
+    assert_eq!(methods.len(), 16);
     for (name, method) in methods {
         assert_eq!(
             method.params["additionalProperties"],

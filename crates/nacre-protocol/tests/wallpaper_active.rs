@@ -78,9 +78,13 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
     state.revision = 1;
     let mut mismatched = state.current.clone().unwrap();
     mismatched.path = "/home/user/other.png".into();
-    state.outputs.insert("bad".into(), mismatched);
+    state.outputs.insert("DP-1".into(), mismatched.clone());
+    assert!(state.validate().is_ok());
+    mismatched.revision = 2;
+    mismatched.palette_revision = 2;
+    state.outputs.insert("DP-1".into(), mismatched);
     assert!(state.validate().is_err());
-    state.outputs.remove("bad");
+    state.outputs.remove("DP-1");
     state
         .current
         .as_mut()

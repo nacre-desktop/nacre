@@ -12,8 +12,12 @@ local pearl_accent=c.pearl_accent
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
-            local collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
-            local collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
+            local collections={}
+            local collection_current=""
+            if c.popouts then
+                collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
+                collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
+            end
             local show_collections=#collections>1
             local show_single_collection_menu=#collections==1 and c.popouts
             local badge_collections={}

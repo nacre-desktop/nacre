@@ -1998,7 +1998,13 @@ mod tests {
                     v: 1,
                     class: Capability::Desktop,
                     timeout: 1000,
-                    params: serde_json::json!({"type":"object"}),
+                    params: serde_json::json!({
+                        "type":"object",
+                        "properties":{
+                            "revision":{"type":"integer"},
+                            "output":{"type":"string"}
+                        }
+                    }),
                     result: serde_json::json!({}),
                 },
             );
