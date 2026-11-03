@@ -35,5 +35,7 @@ establish cue or rendered behavior parity.
 Tests cover old and new capability replies, malformed edge payloads, stream
 handshake, fork-only overlay generation, stock configuration preservation,
 QML fallback/activation, and Bead source fallback on actual daemon socket EOF.
-Full Bead and Nacre desktop CI on dev-1 is pending.
+The complete generated include tree validated with the final native Niri binary:
+stock `config.kdl` and fork `nacre-niri.kdl` both exited 0. Full Bead and Nacre
+desktop CI results are recorded in the unit report.
 This branch depends on N0113's version identity fix and NN0010's IPC contract.
