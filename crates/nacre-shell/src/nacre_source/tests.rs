@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::*;
+use bead::wayland::ShellControl;
 use std::os::unix::fs::PermissionsExt;
 use tokio::net::UnixListener;
 struct Lab(PathBuf);

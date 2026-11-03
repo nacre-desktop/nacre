@@ -9,7 +9,6 @@ use crate::{
 };
 use bead::core::source::{Snapshot, Source, Subscription};
 use bead::wayland::{EdgeChrome, ShellControl, intent::Lip};
-use serde_json::Value;
 use std::collections::BTreeMap;
 use std::sync::{
     Mutex,
@@ -682,8 +681,8 @@ mod tests {
         gate.set_native_edge_source(true);
         assert_eq!(
             gate.native_lip_at("left", (4., 310.), (1000, 800))
-                .map(|lip| lip.id.as_str()),
-            Some("status")
+                .map(|lip| lip.id),
+            Some("status".into())
         );
         assert_eq!(gate.native_lip_at("left", (4., 250.), (1000, 800)), None);
         gate.apply(&Prefs::decode(
