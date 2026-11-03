@@ -1,5 +1,16 @@
 # Detachable panel implementation
 
+## Nacre pearls on nacre-niri
+
+When Bead detects `bead_layer_promote_manager_v1`, nacre-niri promotes the
+existing layer surface in place and owns its floating placement, move grab,
+focus, decorations and transition. Nacre does not create or prewarm a second
+window on that path. The generated nacre-niri policy therefore omits the
+`bead.pearl.pending` opacity rule and pearl-specific blur, shadow, border and
+focus-ring exclusions. The Widgets blur rule remains because Widgets is still
+an ordinary toplevel. Stock niri keeps the full prepared-window policy for
+Bead's existing fallback path.
+
 The [user guide](../detachable-panels.md) describes gestures, shortcuts and view
 behavior. This contract covers surface ownership, compositor integration,
 handoff timing and regression acceptance for the existing Nacre components.

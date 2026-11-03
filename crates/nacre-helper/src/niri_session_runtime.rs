@@ -500,9 +500,55 @@ fn prepare_configuration_inner(
     )?;
     // Keep Bead's pearl window policy in the generated session so refreshes do
     // not depend on user-owned custom.kdl or an installed Bead checkout.
+    let bead_pearls = if options.stock {
+        // Stock niri still needs Bead's invisible prepared-toplevel policy.
+        r#"// Source: Bead shell/niri-pearls.kdl (origin/main).
+// Native pearl chrome is client-rendered, including its transparent bootstrap.
+window-rule {
+    match app-id="^bead[.]pearl([.]pending)?$"
+    open-floating true
+    // A transparent prewarm must not take focus from the open panel.
+    open-focused false
+    // Keep the hidden bootstrap pose integral for exact commit-time offsets.
+    default-floating-position x=0 y=0 relative-to="top-left"
+    border { off; }
+    focus-ring { off; }
+    shadow { off; }
+    // B0210: a session-wide window blur would draw the blurred wallpaper (xray) behind the
+    // invisible prewarm and the client-rendered pearl: a ghost block at the docked spot.
+    background-effect { blur false; }
+}
+
+// B0200: a prepared target is invisible until release renames it to bead.pearl,
+// including niri's open and move animations while it is placed under the panel.
+window-rule {
+    match app-id="^bead[.]pearl[.]pending$"
+    opacity 0.0
+}
+
+// B0210: the Widgets app is an ordinary window (niri's border and focus ring light on focus).
+// Its background is opaque, so a session-wide xray blur adds nothing but the blurred
+// wallpaper showing through while the window animates open.
+window-rule {
+    match app-id="^nacre-widgets$"
+    background-effect { blur false; }
+}
+"#
+    } else {
+        // Native promotion keeps the layer surface and its compositor-owned policy;
+        // no pending xdg window or pearl-specific decoration exclusions are needed.
+        r#"// Native nacre-niri promotes the existing layer surface in place.
+// B0200/B0209 prewarm opacity and blur workarounds are unnecessary on nacre-niri.
+// B0210's Widgets rule remains because Widgets is still an ordinary toplevel.
+window-rule {
+    match app-id="^nacre-widgets$"
+    background-effect { blur false; }
+}
+"#
+    };
     fs::write(
         config.join("bead-pearls.kdl"),
-        "// Source: Bead shell/niri-pearls.kdl (origin/main).\n// Native pearl chrome is client-rendered, including its transparent bootstrap.\nwindow-rule {\n    match app-id=\"^bead[.]pearl([.]pending)?$\"\n    open-floating true\n    // A transparent prewarm must not take focus from the open panel.\n    open-focused false\n    // Keep the hidden bootstrap pose integral for exact commit-time offsets.\n    default-floating-position x=0 y=0 relative-to=\"top-left\"\n    border { off; }\n    focus-ring { off; }\n    shadow { off; }\n    // B0210: a session-wide window blur would draw the blurred wallpaper (xray) behind the\n    // invisible prewarm and the client-rendered pearl: a ghost block at the docked spot.\n    background-effect { blur false; }\n}\n\n// B0200: a prepared target is invisible until release renames it to bead.pearl,\n// including niri's open and move animations while it is placed under the panel.\nwindow-rule {\n    match app-id=\"^bead[.]pearl[.]pending$\"\n    opacity 0.0\n}\n\n// B0210: the Widgets app is an ordinary window (niri's border and focus ring light on focus).\n// Its background is opaque, so a session-wide xray blur adds nothing but the blurred\n// wallpaper showing through while the window animates open.\nwindow-rule {\n    match app-id=\"^nacre-widgets$\"\n    background-effect { blur false; }\n}\n",
+        bead_pearls,
     )?;
     fs::write(
         config.join("keyboard.kdl"),
@@ -1303,7 +1349,19 @@ mod tests {
             false,
             |_| Ok(()),
         )?;
+        let pearl_policy = fs::read_to_string(destination.join("config/bead-pearls.kdl"))?;
+        assert!(!pearl_policy.contains("bead[.]pearl"));
+        assert!(!pearl_policy.contains("opacity 0.0"));
+        assert!(!pearl_policy.contains("border { off; }"));
+        assert!(!pearl_policy.contains("focus-ring { off; }"));
+        assert!(!pearl_policy.contains("shadow { off; }"));
+        assert!(!pearl_policy.contains("background-effect { blur false; }"));
+        assert!(pearl_policy.contains("match app-id=\"^nacre-widgets$\""));
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
+        assert!(root.contains("include \"bead-pearls.kdl\""));
+        // The generated native include graph contains no pearl prewarm policy.
+        assert!(!root.contains("bead[.]pearl"));
+        assert!(!root.contains("opacity 0.0"));
         assert!(root.contains("include \"workspaces.kdl\""));
         assert!(root.contains(
             "spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\""
