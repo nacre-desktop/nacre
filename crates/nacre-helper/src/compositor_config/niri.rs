@@ -81,9 +81,52 @@ pub(crate) const COLLECTION_ACTIONS: &str = concat!(
     "    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title=\"Nacre:collection-move-previous\" { move-window-to-collection-previous; }\n",
     "}\n",
 );
+const SCRATCHPAD_PIN_ACTIONS: &str = concat!(
+    "    Super+h repeat=false hotkey-overlay-title=\"Nacre:hide\" { move-window-to-scratchpad; }\n",
+    "    Super+Shift+h repeat=false hotkey-overlay-title=\"Nacre:scratchpad-windows\" { toggle-scratchpad; }\n",
+    "    Super+p repeat=false hotkey-overlay-title=\"Nacre:pin\" { toggle-window-pinned; }\n",
+);
+const PINNED_WINDOW_RULES: &str = concat!(
+    "\nwindow-rule {\n    match app-id=\"^org[.]pulseaudio[.]pavucontrol$\"\n    open-pinned true\n}\n",
+    "window-rule {\n    match app-id=\"^hyprland-share-picker$\"\n    open-pinned true\n}\n",
+    "window-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-pinned true\n}\n",
+);
 
 pub(crate) fn collection_overlay() -> String {
-    format!("include \"config.kdl\"\n\n{COLLECTION_ACTIONS}")
+    let collection_actions = COLLECTION_ACTIONS
+        .strip_prefix("binds {\n")
+        .and_then(|text| text.strip_suffix("}\n"))
+        .unwrap_or(COLLECTION_ACTIONS);
+    format!(
+        "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\n// Native actions and rules are inactive when their runtime capability is disabled.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}}}\n{PINNED_WINDOW_RULES}"
+    )
+}
+
+pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
+    let mut document: Value = serde_json::from_str(text)
+        .map_err(|error| invalid(format!("Invalid niri unsupported report: {error}")))?;
+    let rows = document["unsupported"]
+        .as_array_mut()
+        .ok_or_else(|| invalid("Invalid niri unsupported report rows"))?;
+    rows.retain(|row| {
+        !((row["source"] == "hypr/conf/keybinding.lua"
+            && row["kind"] == "binding"
+            && ["SUPER + H", "SUPER + SHIFT + H", "SUPER + P"]
+                .iter()
+                .any(|key| row["id"] == *key))
+            || (row["source"] == "hypr/conf/nacre.lua"
+                && row["kind"] == "window-rule"
+                && [
+                    "nacre-audio-mixer",
+                    "nacre-share-picker",
+                    "nacre-picture-in-picture",
+                ]
+                .iter()
+                .any(|id| row["id"] == *id)))
+    });
+    serde_json::to_string_pretty(&document)
+        .map(|value| value + "\n")
+        .map_err(|error| invalid(error.to_string()))
 }
 fn shell_quote(text: &str) -> String {
     if !text.is_empty()

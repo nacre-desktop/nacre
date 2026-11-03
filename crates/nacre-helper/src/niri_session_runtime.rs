@@ -487,6 +487,14 @@ fn prepare_configuration_inner(
         )?;
     }
     fs::write(
+        config.join("nacre-niri-unsupported.json"),
+        crate::compositor_config::native_unsupported_report(
+            generated["niri/unsupported.json"]
+                .as_str()
+                .ok_or("Missing generated unsupported report")?,
+        )?,
+    )?;
+    fs::write(
         config.join("wallpaper.kdl"),
         fs::read(backend.join("niri/wallpaper.kdl"))?,
     )?;
@@ -1191,7 +1199,9 @@ mod tests {
                 let response = value!({"Ok":{"NacreCapabilities":{
                     "workspace_collections":false,
                     "proportional_x11_widths":widths,
-                    "overview_hover":false
+                    "overview_hover":false,
+                    "scratchpad":true,
+                    "window_pinning":true
                 }}});
                 writeln!(stream, "{}", json::encode(&response).unwrap())
             });
@@ -1419,7 +1429,13 @@ mod tests {
         assert_eq!(calls, 1);
         let shared = staged(&home, "config.kdl")?;
         let bindings = staged(&home, "bindings.kdl")?;
+        let shared_rules = staged(&home, "window-rules.kdl")?;
         let overlay = staged(&home, "nacre-niri.kdl")?;
+        let native_report: Value =
+            serde_json::from_str(&staged(&home, "nacre-niri-unsupported.json")?)?;
+        let native_rows = native_report["unsupported"]
+            .as_array()
+            .ok_or("Missing native unsupported rows")?;
         for action in [
             "focus-collection-next",
             "focus-collection-previous",
@@ -1434,6 +1450,24 @@ mod tests {
             );
             assert!(overlay.contains(action), "fork overlay lacks {action}");
         }
+        for (key, action) in [
+            ("Super+h", "move-window-to-scratchpad"),
+            ("Super+Shift+h", "toggle-scratchpad"),
+            ("Super+p", "toggle-window-pinned"),
+        ] {
+            assert!(!shared.contains(action), "stock config includes {action}");
+            assert!(!bindings.contains(action), "stock binds include {action}");
+            assert!(overlay.contains(key), "fork overlay lacks {key}");
+            assert!(overlay.contains(action), "fork overlay lacks {action}");
+        }
+        assert!(overlay.contains("hotkey-overlay-title=\"Nacre:scratchpad-windows\""));
+        assert!(!overlay.contains("Super+Alt+h"));
+        assert_eq!(overlay.matches("open-pinned true").count(), 3);
+        assert!(!shared_rules.contains("open-pinned true"));
+        for key in ["SUPER + H", "SUPER + SHIFT + H", "SUPER + P"] {
+            assert!(native_rows.iter().all(|row| row["id"] != key));
+        }
+        assert!(native_rows.iter().any(|row| row["id"] == "SUPER + ALT + H"));
         assert!(overlay.starts_with("include \"config.kdl\""));
         assert!(overlay.contains("Super+Ctrl+Tab"));
         assert!(overlay.contains("Super+Ctrl+Shift+Tab"));
@@ -1593,7 +1627,10 @@ mod tests {
                 let name = file.file_name().unwrap().to_string_lossy();
                 // Session-only generated files are covered by focused tests;
                 // keep this legacy Nacre snapshot focused on its existing tree.
-                if name == "bead-pearls.kdl" || name == "nacre-niri.kdl" {
+                if name == "bead-pearls.kdl"
+                    || name == "nacre-niri.kdl"
+                    || name == "nacre-niri-unsupported.json"
+                {
                     continue;
                 }
                 let text = fs::read_to_string(&file)?
