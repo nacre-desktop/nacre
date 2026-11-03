@@ -160,7 +160,9 @@ impl Control {
             let crate::compositor::backend::Backend::Niri(niri) = backend else {
                 return Err("Workspace collections require Nacre-Niri".into());
             };
-            if !niri.actions.transport
+            if !niri
+                .actions
+                .transport
                 .nacre_capabilities(std::time::Duration::from_millis(500))
                 .workspace_collections
             {
@@ -171,50 +173,85 @@ impl Control {
                 std::time::Duration::from_secs(5),
                 4 * 1024 * 1024,
             )?;
-            if !outputs.as_object().is_some_and(|outputs| outputs.contains_key(&output)) {
+            if !outputs
+                .as_object()
+                .is_some_and(|outputs| outputs.contains_key(&output))
+            {
                 return Err("Output disappeared".into());
             }
             let before_collections = niri.collections()?;
             use nacre_protocol::shell_actions::CollectionOperation;
             match action {
                 CollectionOperation::Activate { collection } => {
-                    let id = collection.strip_prefix("niri-collection:")
-                        .and_then(|id| id.parse::<u64>().ok()).ok_or("Invalid collection ID")?;
-                    if !before_collections.iter().any(|row| row["id"].as_u64() == Some(id)) {
+                    let id = collection
+                        .strip_prefix("niri-collection:")
+                        .and_then(|id| id.parse::<u64>().ok())
+                        .ok_or("Invalid collection ID")?;
+                    if !before_collections
+                        .iter()
+                        .any(|row| row["id"].as_u64() == Some(id))
+                    {
                         return Err("Collection disappeared".into());
                     }
                     niri.collection_action("FocusMonitor", serde_json::json!({"output":output}))?;
-                    niri.collection_action("FocusCollection", serde_json::json!({"reference":{"Id":id}}))?;
+                    niri.collection_action(
+                        "FocusCollection",
+                        serde_json::json!({"reference":{"Id":id}}),
+                    )?;
                     let after = niri.collections()?;
-                    if !after.iter().any(|row| row["id"].as_u64() == Some(id) && row["output"].as_str() == Some(output.as_str())) {
-                        return Err("Collection switch was not applied to the selected output".into());
+                    if !after.iter().any(|row| {
+                        row["id"].as_u64() == Some(id)
+                            && row["output"].as_str() == Some(output.as_str())
+                    }) {
+                        return Err(
+                            "Collection switch was not applied to the selected output".into()
+                        );
                     }
                 }
                 CollectionOperation::Create { name } => {
                     let name = name.map(|name| name.trim().to_owned());
                     ensure_collection_name_available(&before_collections, name.as_deref())?;
-                    let previous_ids: std::collections::BTreeSet<u64> = before_collections.iter().filter_map(|row| row["id"].as_u64()).collect();
+                    let previous_ids: std::collections::BTreeSet<u64> = before_collections
+                        .iter()
+                        .filter_map(|row| row["id"].as_u64())
+                        .collect();
                     niri.collection_action("FocusMonitor", serde_json::json!({"output":output}))?;
                     niri.collection_action("CreateCollection", serde_json::json!({"name":name}))?;
                     let after = niri.collections()?;
                     if !after.iter().any(|row| {
-                        row["id"].as_u64().is_some_and(|id| !previous_ids.contains(&id))
+                        row["id"]
+                            .as_u64()
+                            .is_some_and(|id| !previous_ids.contains(&id))
                             && row["output"].as_str() == Some(output.as_str())
-                            && name.as_ref().is_none_or(|name| row["name"].as_str() == Some(name.as_str()))
+                            && name
+                                .as_ref()
+                                .is_none_or(|name| row["name"].as_str() == Some(name.as_str()))
                     }) {
-                        return Err("Collection creation was not applied to the selected output".into());
+                        return Err(
+                            "Collection creation was not applied to the selected output".into()
+                        );
                     }
                 }
                 CollectionOperation::Rename { collection, name } => {
-                    let id = collection.strip_prefix("niri-collection:")
-                        .and_then(|id| id.parse::<u64>().ok()).ok_or("Invalid collection ID")?;
+                    let id = collection
+                        .strip_prefix("niri-collection:")
+                        .and_then(|id| id.parse::<u64>().ok())
+                        .ok_or("Invalid collection ID")?;
                     let name = name.map(|name| name.trim().to_owned());
-                    if !before_collections.iter().any(|row| row["id"].as_u64() == Some(id)) {
+                    if !before_collections
+                        .iter()
+                        .any(|row| row["id"].as_u64() == Some(id))
+                    {
                         return Err("Collection disappeared".into());
                     }
-                    niri.collection_action("SetCollectionName", serde_json::json!({"reference":{"Id":id},"name":name}))?;
+                    niri.collection_action(
+                        "SetCollectionName",
+                        serde_json::json!({"reference":{"Id":id},"name":name}),
+                    )?;
                     let after = niri.collections()?;
-                    if !after.iter().any(|row| row["id"].as_u64() == Some(id) && row["name"].as_str() == name.as_deref()) {
+                    if !after.iter().any(|row| {
+                        row["id"].as_u64() == Some(id) && row["name"].as_str() == name.as_deref()
+                    }) {
                         return Err("Collection rename was not applied".into());
                     }
                 }
@@ -226,7 +263,8 @@ impl Control {
                 }
             }
             Ok(())
-        }).await
+        })
+        .await
     }
     pub async fn scoped_action(
         &self,
@@ -432,7 +470,10 @@ mod shell_action_tests {
 
     #[test]
     fn duplicate_collection_create_is_rejected_before_output_focus() {
-        let rows = vec![json!({"id":1,"name":"work"}), json!({"id":2,"name":"studio"})];
+        let rows = vec![
+            json!({"id":1,"name":"work"}),
+            json!({"id":2,"name":"studio"}),
+        ];
         assert!(ensure_collection_name_available(&rows, Some("work")).is_err());
         assert!(ensure_collection_name_available(&rows, Some("new desk")).is_ok());
         assert!(ensure_collection_name_available(&rows, None).is_ok());

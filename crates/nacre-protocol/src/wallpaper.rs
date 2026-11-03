@@ -404,9 +404,10 @@ impl WallpaperActive {
                     current.validate().is_ok()
                         && current.revision == self.revision
                         && self.stale == !self.available
-                        && self.outputs.values().all(|o| {
-                            o.validate().is_ok() && o.revision == self.revision
-                        })
+                        && self
+                            .outputs
+                            .values()
+                            .all(|o| o.validate().is_ok() && o.revision == self.revision)
                 }
                 None => {
                     self.outputs.is_empty() && self.revision == 0 && !self.stale && !self.available

@@ -73,14 +73,20 @@ impl Route {
     fn exclusive(&self) -> bool {
         !matches!(
             self,
-            Self::CollectionAction { .. } | Self::WorkspaceActivate { .. } | Self::WindowFocus { .. } | Self::Tray { .. }
+            Self::CollectionAction { .. }
+                | Self::WorkspaceActivate { .. }
+                | Self::WindowFocus { .. }
+                | Self::Tray { .. }
         )
     }
     /// `None` when the route needs an output and none is known yet.
     fn params(&self, output: Option<&str>) -> Option<serde_json::Value> {
         use serde_json::json;
         Some(match self {
-            Self::CollectionAction { output: collection_output, action } => json!({"output":collection_output,"action":action}),
+            Self::CollectionAction {
+                output: collection_output,
+                action,
+            } => json!({"output":collection_output,"action":action}),
             Self::WorkspaceActivate { slot } => {
                 json!({"output": output?, "workspace": slot})
             }

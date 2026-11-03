@@ -275,7 +275,10 @@ impl Prefs {
                 bead::core::Value::list(icons.collect()),
             ),
             ("bar.workspace.hints".into(), Bool(self.window_hints)),
-            ("bar.collection.wallpapers.enabled".into(), Bool(self.collection_wallpapers_enabled)),
+            (
+                "bar.collection.wallpapers.enabled".into(),
+                Bool(self.collection_wallpapers_enabled),
+            ),
             ("bar.clock.twelve".into(), Bool(self.clock_12h)),
         ]
         .into()

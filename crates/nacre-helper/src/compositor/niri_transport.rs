@@ -247,18 +247,17 @@ impl Connection {
     /// Nacre-Niri collection actions are additive IPC variants unknown to the
     /// stock `niri-ipc` crate pinned by Nacre. Keep the raw wire boundary narrow.
     pub fn collection_action(&mut self, action: &str, arguments: Value) -> Result<()> {
-        if !matches!(action, "FocusMonitor" | "FocusCollection" | "CreateCollection" | "SetCollectionName")
-            || !arguments.is_object()
+        if !matches!(
+            action,
+            "FocusMonitor" | "FocusCollection" | "CreateCollection" | "SetCollectionName"
+        ) || !arguments.is_object()
         {
             return Err(invalid("Invalid collection action"));
         }
         let mut actions = serde_json::Map::new();
         actions.insert(action.to_owned(), arguments);
-        let response = self.request_value(
-            &json!({"Action":actions}),
-            Duration::from_secs(5),
-            4096,
-        )?;
+        let response =
+            self.request_value(&json!({"Action":actions}), Duration::from_secs(5), 4096)?;
         if response == "Handled" {
             Ok(())
         } else {

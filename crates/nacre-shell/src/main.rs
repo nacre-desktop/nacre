@@ -861,7 +861,12 @@ fn start(
             );
             views.insert(
                 "collections".into(),
-                popouts::collection_switcher(client.clone(), palette.clone(), colors.clone(), panel_trace)?,
+                popouts::collection_switcher(
+                    client.clone(),
+                    palette.clone(),
+                    colors.clone(),
+                    panel_trace,
+                )?,
             );
         }
         let status_colors = std::sync::Arc::new(colors.clone());

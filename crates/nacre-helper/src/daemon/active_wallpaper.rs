@@ -8,7 +8,7 @@ use nacre_protocol::{
     },
     Capability, ErrorCode, Failure, Method, MAX_SAFE_INTEGER,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::os::unix::fs::{FileExt, MetadataExt};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -40,12 +40,16 @@ fn collection_profile(value: &Value) -> Option<CollectionWallpaperProfile> {
     };
     let poster = private_file(Path::new(&profile.wallpaper.path), IMAGE_BYTES).ok();
     let poster_valid = poster.as_ref().is_some_and(|file| {
-        file.metadata().is_ok_and(|metadata| profile.wallpaper.file_identity.matches(&metadata))
+        file.metadata()
+            .is_ok_and(|metadata| profile.wallpaper.file_identity.matches(&metadata))
     });
     let motion_valid = profile.wallpaper.motion.as_ref().is_none_or(|motion| {
-        private_file(Path::new(&motion.path), MOTION_BYTES).ok().is_some_and(|file| {
-            file.metadata().is_ok_and(|metadata| motion.file_identity.matches(&metadata))
-        })
+        private_file(Path::new(&motion.path), MOTION_BYTES)
+            .ok()
+            .is_some_and(|file| {
+                file.metadata()
+                    .is_ok_and(|metadata| motion.file_identity.matches(&metadata))
+            })
     });
     (profile.wallpaper.validate().is_ok()
         && poster_valid
@@ -73,7 +77,8 @@ pub fn set_collection_wallpaper(
     if name.trim().is_empty() || name.len() > 64 || name.chars().any(char::is_control) {
         return Err("Invalid collection wallpaper key".into());
     }
-    pair.validate().map_err(|_| "Invalid collection wallpaper")?;
+    pair.validate()
+        .map_err(|_| "Invalid collection wallpaper")?;
     let path = crate::state::settings_path_in(paths, "collection-wallpapers")?;
     let mut document = crate::state::read(&path, json!({"wallpapers":{}}))?;
     let wallpapers = document["wallpapers"]
@@ -83,10 +88,13 @@ pub fn set_collection_wallpaper(
         .get(name.trim())
         .and_then(collection_profile)
         .and_then(|profile| profile.accent);
-    wallpapers.insert(name.trim().to_owned(), serde_json::to_value(CollectionWallpaperProfile {
-        wallpaper: pair.clone(),
-        accent,
-    })?);
+    wallpapers.insert(
+        name.trim().to_owned(),
+        serde_json::to_value(CollectionWallpaperProfile {
+            wallpaper: pair.clone(),
+            accent,
+        })?,
+    );
     crate::state::write(&path, &document)?;
     Producer::default().refresh(hub, paths)
 }
@@ -98,11 +106,23 @@ pub fn set_collection_accent(hub: &Shared, paths: &Paths, name: &str, enabled: b
         .as_object_mut()
         .ok_or("Invalid collection wallpaper settings")?;
     let Some(value) = profiles.get(name).cloned() else {
-        return if enabled { Err("No wallpaper is saved for this desk".into()) } else { Ok(()) };
+        return if enabled {
+            Err("No wallpaper is saved for this desk".into())
+        } else {
+            Ok(())
+        };
     };
     let mut profile = collection_profile(&value).ok_or("Invalid collection wallpaper profile")?;
     profile.accent = if enabled {
-        Some(profile.wallpaper.palette.colours.get("primary").cloned().ok_or("Saved wallpaper has no accent")?)
+        Some(
+            profile
+                .wallpaper
+                .palette
+                .colours
+                .get("primary")
+                .cloned()
+                .ok_or("Saved wallpaper has no accent")?,
+        )
     } else {
         None
     };
@@ -872,7 +892,9 @@ fn output_wallpapers_changed(
         return true;
     }
     next.iter().any(|(key, next)| {
-        let Some(previous) = previous.get(key) else { return true; };
+        let Some(previous) = previous.get(key) else {
+            return true;
+        };
         let mut next = next.clone();
         let mut previous = previous.clone();
         next.revision = 1;
@@ -969,22 +991,32 @@ impl Producer {
                 let desktop = crate::state::read(&paths.config.join("desktop.json"), json!({}))?;
                 let enabled = desktop["collectionWallpapers"] == true;
                 let profiles = if enabled {
-                    collection_wallpapers(paths).ok()
+                    collection_wallpapers(paths)
+                        .ok()
                         .and_then(|document| document["wallpapers"].as_object().cloned())
                         .unwrap_or_default()
                 } else {
                     serde_json::Map::new()
                 };
-                state.focused_accent = compositor_state["focus"]["outputId"].as_str()
-                    .and_then(|focused| compositor_state["collections"].as_array()
-                        .and_then(|rows| rows.iter().find(|row| row["output"].as_str() == Some(focused))))
+                state.focused_accent = compositor_state["focus"]["outputId"]
+                    .as_str()
+                    .and_then(|focused| {
+                        compositor_state["collections"].as_array().and_then(|rows| {
+                            rows.iter()
+                                .find(|row| row["output"].as_str() == Some(focused))
+                        })
+                    })
                     .and_then(|row| row["name"].as_str())
                     .and_then(|name| profiles.get(name))
                     .and_then(collection_profile)
                     .and_then(|profile| profile.accent);
                 for output in outputs.keys() {
-                    let collection = compositor_state["collections"].as_array()
-                        .and_then(|rows| rows.iter().find(|row| row["output"].as_str() == Some(output.as_str())))
+                    let collection = compositor_state["collections"]
+                        .as_array()
+                        .and_then(|rows| {
+                            rows.iter()
+                                .find(|row| row["output"].as_str() == Some(output.as_str()))
+                        })
                         .and_then(|row| row["name"].as_str())
                         .and_then(|name| profiles.get(name))
                         .and_then(collection_profile)
@@ -996,7 +1028,9 @@ impl Producer {
                 || state.focused_accent != previous_accent)
                 && state.current == previous_current
             {
-                state.revision = state.revision.checked_add(1)
+                state.revision = state
+                    .revision
+                    .checked_add(1)
                     .filter(|revision| *revision <= MAX_SAFE_INTEGER)
                     .ok_or("Wallpaper revision exhausted")?;
             }
@@ -1061,7 +1095,9 @@ pub async fn outputs(
     let mut events = hub.borrow().observe();
     loop {
         match events.recv().await {
-            Ok(Notice::Changed { topic, .. }) if topic == "compositor" || topic == "settings.store.desktop" => {
+            Ok(Notice::Changed { topic, .. })
+                if topic == "compositor" || topic == "settings.store.desktop" =>
+            {
                 producer.borrow_mut().refresh(&hub, &paths)?
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
@@ -1208,11 +1244,15 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
     }
     let activated = match request.output {
         Some(output) => state.outputs.get(&output).cloned().ok_or_else(|| {
-            failure(ErrorCode::Unavailable, "Wallpaper output is unavailable", true)
+            failure(
+                ErrorCode::Unavailable,
+                "Wallpaper output is unavailable",
+                true,
+            )
         })?,
-        None => state.current.ok_or_else(|| {
-            failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true)
-        })?,
+        None => state
+            .current
+            .ok_or_else(|| failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true))?,
     };
     Ok(serde_json::to_value(activated).expect("finite wallpaper pair"))
 }
@@ -2007,10 +2047,16 @@ mod tests {
         let file = private_file(&other, IMAGE_BYTES)?;
         profile.path = other.to_string_lossy().into_owned();
         profile.file_identity = WallpaperFileIdentity::from_metadata(&file.metadata()?);
-        profile.palette.colours.insert("primary".into(), "#00AA55".into());
+        profile
+            .palette
+            .colours
+            .insert("primary".into(), "#00AA55".into());
         assert!(profile.validate().is_ok());
 
-        fs::write(paths.config.join("desktop.json"), json!({"collectionWallpapers":true}).to_string())?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            json!({"collectionWallpapers":true}).to_string(),
+        )?;
         hub.borrow_mut().publish("compositor", json!({
             "available":true,
             "outputs":{"DP-1":{},"DP-2":{}},
@@ -2026,46 +2072,75 @@ mod tests {
         )?;
         assert_eq!(saved["wallpapers"]["work"]["accent"], "#00AA55");
         let state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
-        assert_eq!(state.current.as_ref().unwrap().path, base.current.as_ref().unwrap().path);
+        assert_eq!(
+            state.current.as_ref().unwrap().path,
+            base.current.as_ref().unwrap().path
+        );
         assert_eq!(state.outputs["DP-1"].path, profile.path);
-        assert_eq!(state.outputs["DP-2"].path, base.current.as_ref().unwrap().path);
+        assert_eq!(
+            state.outputs["DP-2"].path,
+            base.current.as_ref().unwrap().path
+        );
         assert_eq!(state.focused_accent.as_deref(), Some("#00AA55"));
         assert!(state.validate().is_ok());
         let revision = state.revision;
         producer.refresh(&hub, &paths)?;
-        let repeated: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let repeated: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(repeated.revision, revision);
         assert_eq!(repeated.outputs["DP-1"].path, profile.path);
-        assert_eq!(repeated.outputs["DP-2"].path, base.current.as_ref().unwrap().path);
+        assert_eq!(
+            repeated.outputs["DP-2"].path,
+            base.current.as_ref().unwrap().path
+        );
 
-        hub.borrow_mut().publish("compositor", json!({
-            "available":true,
-            "outputs":{"DP-1":{},"DP-2":{}},
-            "focus":{"outputId":"DP-2"},
-            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
-        }))?;
+        hub.borrow_mut().publish(
+            "compositor",
+            json!({
+                "available":true,
+                "outputs":{"DP-1":{},"DP-2":{}},
+                "focus":{"outputId":"DP-2"},
+                "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
+            }),
+        )?;
         Producer::default().refresh(&hub, &paths)?;
-        let other_focus: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let other_focus: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(other_focus.focused_accent, None);
 
-        hub.borrow_mut().publish("compositor", json!({
-            "available":true,
-            "outputs":{"DP-1":{},"DP-2":{}},
-            "focus":{"outputId":"DP-1"},
-            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
-        }))?;
+        hub.borrow_mut().publish(
+            "compositor",
+            json!({
+                "available":true,
+                "outputs":{"DP-1":{},"DP-2":{}},
+                "focus":{"outputId":"DP-1"},
+                "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
+            }),
+        )?;
         Producer::default().refresh(&hub, &paths)?;
-        let accent_again: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let accent_again: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(accent_again.focused_accent.as_deref(), Some("#00AA55"));
         fs::remove_file(&other)?;
         Producer::default().refresh(&hub, &paths)?;
-        let missing_profile: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
-        assert_eq!(missing_profile.outputs["DP-1"].path, base.current.as_ref().unwrap().path);
+        let missing_profile: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert_eq!(
+            missing_profile.outputs["DP-1"].path,
+            base.current.as_ref().unwrap().path
+        );
         assert_eq!(missing_profile.focused_accent, None);
-        fs::write(paths.config.join("desktop.json"), json!({"collectionWallpapers":false}).to_string())?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            json!({"collectionWallpapers":false}).to_string(),
+        )?;
         Producer::default().refresh(&hub, &paths)?;
-        let disabled: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
-        assert!(disabled.outputs.values().all(|pair| pair.path == base.current.as_ref().unwrap().path));
+        let disabled: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert!(disabled
+            .outputs
+            .values()
+            .all(|pair| pair.path == base.current.as_ref().unwrap().path));
         assert_eq!(disabled.focused_accent, None);
         let _ = home;
         Ok(())
@@ -2075,7 +2150,8 @@ mod tests {
     fn activation_confirmation_returns_the_requested_output_pair() -> Result<()> {
         let (home, paths, hub) = fixture()?;
         Producer::default().refresh(&hub, &paths)?;
-        let mut state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let mut state: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         let mut profile = state.current.clone().unwrap();
         let other = paths.home.join("desk-confirm.png");
         image::DynamicImage::new_rgb8(4, 2).save(&other)?;
@@ -2084,8 +2160,12 @@ mod tests {
         profile.file_identity = WallpaperFileIdentity::from_metadata(&file.metadata()?);
         state.outputs.insert("DP-1".into(), profile.clone());
         state.validate().map_err(|error| error.to_string())?;
-        hub.borrow_mut().publish(TOPIC, serde_json::to_value(&state)?)?;
-        let targeted = activate(hub.clone(), json!({"revision":state.revision,"output":"DP-1"}))?;
+        hub.borrow_mut()
+            .publish(TOPIC, serde_json::to_value(&state)?)?;
+        let targeted = activate(
+            hub.clone(),
+            json!({"revision":state.revision,"output":"DP-1"}),
+        )?;
         assert_eq!(targeted["path"], profile.path);
         let legacy = activate(hub, json!({"revision":state.revision}))?;
         assert_eq!(legacy["path"], state.current.unwrap().path);
@@ -2097,12 +2177,18 @@ mod tests {
     fn renaming_moves_profiles_and_duplicate_names_keep_existing_entries() -> Result<()> {
         let (_home, paths, hub) = fixture()?;
         fs::create_dir_all(&paths.config)?;
-        fs::write(paths.config.join("desktop.json"), json!({"collectionWallpapers":true}).to_string())?;
-        hub.borrow_mut().publish("compositor", json!({
-            "available":true,"outputs":{"DP-1":{},"DP-2":{}},
-            "focus":{"outputId":"DP-1"},
-            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
-        }))?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            json!({"collectionWallpapers":true}).to_string(),
+        )?;
+        hub.borrow_mut().publish(
+            "compositor",
+            json!({
+                "available":true,"outputs":{"DP-1":{},"DP-2":{}},
+                "focus":{"outputId":"DP-1"},
+                "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
+            }),
+        )?;
         Producer::default().refresh(&hub, &paths)?;
         let state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         let pair = state.outputs["DP-1"].clone();
@@ -2112,13 +2198,23 @@ mod tests {
         let before = collection_wallpapers(&paths)?;
         assert!(rename_collection_wallpaper(&paths, "work", Some("studio")).is_err());
         assert!(rename_collection_wallpaper(&paths, "missing-profile", Some("studio")).is_err());
-        assert_eq!(collection_wallpapers(&paths)?["wallpapers"], before["wallpapers"]);
+        assert_eq!(
+            collection_wallpapers(&paths)?["wallpapers"],
+            before["wallpapers"]
+        );
         let failed_rename_snapshot = rename_collection_wallpaper(&paths, "work", Some("research"))?;
         rollback_collection_wallpapers(&hub, &paths, &failed_rename_snapshot)?;
-        let rolled_back: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let rolled_back: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(rolled_back.outputs["DP-1"].path, pair.path);
-        assert_eq!(rolled_back.focused_accent.as_deref(), pair.palette.colours.get("primary").map(String::as_str));
-        assert_eq!(collection_wallpapers(&paths)?["wallpapers"], before["wallpapers"]);
+        assert_eq!(
+            rolled_back.focused_accent.as_deref(),
+            pair.palette.colours.get("primary").map(String::as_str)
+        );
+        assert_eq!(
+            collection_wallpapers(&paths)?["wallpapers"],
+            before["wallpapers"]
+        );
 
         rename_collection_wallpaper(&paths, "work", Some("research"))?;
         hub.borrow_mut().publish("compositor", json!({
@@ -2127,15 +2223,21 @@ mod tests {
             "collections":[{"id":"niri-collection:1","name":"research","output":"DP-1","active":true}]
         }))?;
         refresh_collection_wallpapers(&hub, &paths)?;
-        let renamed: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        let renamed: WallpaperActive =
+            serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(renamed.outputs["DP-1"].path, pair.path);
-        assert_eq!(renamed.focused_accent.as_deref(), pair.palette.colours.get("primary").map(String::as_str));
+        assert_eq!(
+            renamed.focused_accent.as_deref(),
+            pair.palette.colours.get("primary").map(String::as_str)
+        );
         let after = collection_wallpapers(&paths)?;
         assert!(after["wallpapers"].get("work").is_none());
         assert!(after["wallpapers"].get("research").is_some());
         assert!(after["wallpapers"].get("studio").is_some());
         rename_collection_wallpaper(&paths, "research", None)?;
-        assert!(collection_wallpapers(&paths)?["wallpapers"].get("research").is_none());
+        assert!(collection_wallpapers(&paths)?["wallpapers"]
+            .get("research")
+            .is_none());
         Ok(())
     }
 

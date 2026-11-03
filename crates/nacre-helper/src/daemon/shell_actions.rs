@@ -115,9 +115,15 @@ fn native(value: &Value) -> Value {
 }
 
 pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Value, Failure> {
-    static COLLECTION_ACTIONS: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    static COLLECTION_ACTIONS: std::sync::OnceLock<tokio::sync::Mutex<()>> =
+        std::sync::OnceLock::new();
     let _collection_action_guard = if method == "collection.action" {
-        Some(COLLECTION_ACTIONS.get_or_init(|| tokio::sync::Mutex::new(())).lock().await)
+        Some(
+            COLLECTION_ACTIONS
+                .get_or_init(|| tokio::sync::Mutex::new(()))
+                .lock()
+                .await,
+        )
     } else {
         None
     };
@@ -181,25 +187,46 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                 .map_err(|_| action_error())?
         }
         "collection.action" => {
-            let request: CollectionAction = serde_json::from_value(params).map_err(|_| invalid())?;
+            let request: CollectionAction =
+                serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            if snapshot["backend"] != "niri" || snapshot["capabilities"]["workspaceCollections"] != true {
+            if snapshot["backend"] != "niri"
+                || snapshot["capabilities"]["workspaceCollections"] != true
+            {
                 return Err(invalid());
             }
             let _ = output(&snapshot, &request.output)?;
             match &request.action {
-                CollectionOperation::Activate { collection } | CollectionOperation::Rename { collection, .. } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()))) {
+                CollectionOperation::Activate { collection }
+                | CollectionOperation::Rename { collection, .. } => {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| {
+                        rows.iter()
+                            .any(|row| row["id"].as_str() == Some(collection.as_str()))
+                    }) {
                         return Err(invalid());
                     }
                 }
                 CollectionOperation::SetWallpaper { collection } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()) && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| {
+                        rows.iter().any(|row| {
+                            row["id"].as_str() == Some(collection.as_str())
+                                && row["name"]
+                                    .as_str()
+                                    .is_some_and(|name| !name.trim().is_empty())
+                        })
+                    }) {
                         return Err(invalid());
                     }
                 }
                 CollectionOperation::SetAccent { collection, .. } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()) && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| {
+                        rows.iter().any(|row| {
+                            row["id"].as_str() == Some(collection.as_str())
+                                && row["name"]
+                                    .as_str()
+                                    .is_some_and(|name| !name.trim().is_empty())
+                        })
+                    }) {
                         return Err(invalid());
                     }
                 }
@@ -207,44 +234,89 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
             }
             match request.action {
                 CollectionOperation::SetWallpaper { collection } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
+                    let row = snapshot["collections"]
+                        .as_array()
+                        .and_then(|rows| {
+                            rows.iter()
+                                .find(|row| row["id"].as_str() == Some(collection.as_str()))
+                        })
+                        .ok_or_else(invalid)?;
                     let name = row["name"].as_str().ok_or_else(invalid)?;
-                    let wallpaper = hub.borrow().snapshot(super::active_wallpaper::TOPIC)
-                        .and_then(|data| serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok())
+                    let wallpaper = hub
+                        .borrow()
+                        .snapshot(super::active_wallpaper::TOPIC)
+                        .and_then(|data| {
+                            serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(
+                                data,
+                            )
+                            .ok()
+                        })
                         .filter(|state| state.available && !state.stale)
                         .and_then(|state| state.outputs.get(&request.output).cloned())
                         .ok_or_else(unavailable)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
-                    super::active_wallpaper::set_collection_wallpaper(&hub, &paths, name, &wallpaper)
-                        .map_err(|_| action_error())?;
+                    super::active_wallpaper::set_collection_wallpaper(
+                        &hub, &paths, name, &wallpaper,
+                    )
+                    .map_err(|_| action_error())?;
                 }
-                CollectionOperation::SetAccent { collection, enabled } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
+                CollectionOperation::SetAccent {
+                    collection,
+                    enabled,
+                } => {
+                    let row = snapshot["collections"]
+                        .as_array()
+                        .and_then(|rows| {
+                            rows.iter()
+                                .find(|row| row["id"].as_str() == Some(collection.as_str()))
+                        })
+                        .ok_or_else(invalid)?;
                     let name = row["name"].as_str().ok_or_else(invalid)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
                     super::active_wallpaper::set_collection_accent(&hub, &paths, name, enabled)
                         .map_err(|_| action_error())?;
                 }
                 CollectionOperation::Rename { collection, name } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
+                    let row = snapshot["collections"]
+                        .as_array()
+                        .and_then(|rows| {
+                            rows.iter()
+                                .find(|row| row["id"].as_str() == Some(collection.as_str()))
+                        })
+                        .ok_or_else(invalid)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
-                    let old_name = row["name"].as_str().filter(|name| !name.trim().is_empty()).map(str::to_owned);
+                    let old_name = row["name"]
+                        .as_str()
+                        .filter(|name| !name.trim().is_empty())
+                        .map(str::to_owned);
                     let previous_profiles = if let Some(old_name) = old_name.as_deref() {
-                        Some(super::active_wallpaper::rename_collection_wallpaper(
-                            &paths,
-                            old_name,
-                            name.as_deref(),
-                        ).map_err(|_| action_error())?)
+                        Some(
+                            super::active_wallpaper::rename_collection_wallpaper(
+                                &paths,
+                                old_name,
+                                name.as_deref(),
+                            )
+                            .map_err(|_| action_error())?,
+                        )
                     } else {
                         None
                     };
-                    if control.collection_action(
-                        request.output,
-                        CollectionOperation::Rename { collection, name: name.clone() },
-                    ).await.is_err() {
+                    if control
+                        .collection_action(
+                            request.output,
+                            CollectionOperation::Rename {
+                                collection,
+                                name: name.clone(),
+                            },
+                        )
+                        .await
+                        .is_err()
+                    {
                         if let Some(previous) = previous_profiles.as_ref() {
-                            super::active_wallpaper::rollback_collection_wallpapers(&hub, &paths, previous)
-                                .map_err(|_| action_error())?;
+                            super::active_wallpaper::rollback_collection_wallpapers(
+                                &hub, &paths, previous,
+                            )
+                            .map_err(|_| action_error())?;
                         }
                         return Err(action_error());
                     }
@@ -254,7 +326,10 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                     }
                 }
                 action => {
-                    control.collection_action(request.output, action).await.map_err(|_| action_error())?;
+                    control
+                        .collection_action(request.output, action)
+                        .await
+                        .map_err(|_| action_error())?;
                 }
             }
             Value::Null

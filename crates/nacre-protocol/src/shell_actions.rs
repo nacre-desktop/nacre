@@ -120,18 +120,24 @@ impl CollectionAction {
     pub fn validate(&self) -> Result<(), Failure> {
         let valid_collection = |value: &str| {
             value.strip_prefix("niri-collection:").is_some_and(|id| {
-                !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()) && id.parse::<u64>().is_ok()
+                !id.is_empty()
+                    && id.bytes().all(|byte| byte.is_ascii_digit())
+                    && id.parse::<u64>().is_ok()
             })
         };
-        let valid_name = |name: &Option<String>| name.as_ref().is_none_or(|name| {
-            let trimmed = name.trim();
-            !trimmed.is_empty() && trimmed.len() <= 64 && !trimmed.chars().any(char::is_control)
-        });
+        let valid_name = |name: &Option<String>| {
+            name.as_ref().is_none_or(|name| {
+                let trimmed = name.trim();
+                !trimmed.is_empty() && trimmed.len() <= 64 && !trimmed.chars().any(char::is_control)
+            })
+        };
         if !valid_id(&self.output)
             || match &self.action {
                 CollectionOperation::Activate { collection } => !valid_collection(collection),
                 CollectionOperation::Create { name } => !valid_name(name),
-                CollectionOperation::Rename { collection, name } => !valid_collection(collection) || !valid_name(name),
+                CollectionOperation::Rename { collection, name } => {
+                    !valid_collection(collection) || !valid_name(name)
+                }
                 CollectionOperation::SetWallpaper { collection } => !valid_collection(collection),
                 CollectionOperation::SetAccent { collection, .. } => !valid_collection(collection),
             }
@@ -306,14 +312,18 @@ mod tests {
             action: CollectionOperation::Activate {
                 collection: "niri-collection:42".into(),
             },
-        }.validate().is_ok());
+        }
+        .validate()
+        .is_ok());
         assert!(CollectionAction {
             output: "DP-1".into(),
             action: CollectionOperation::Rename {
                 collection: "niri-collection:42".into(),
                 name: Some("  ".into()),
             },
-        }.validate().is_err());
+        }
+        .validate()
+        .is_err());
         assert_eq!(methods().len(), 5);
         assert!(serde_json::from_value::<WorkspaceActivate>(
             json!({"output":"DP-1","workspace":"1","command":"exec"})

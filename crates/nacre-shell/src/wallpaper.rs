@@ -17,7 +17,9 @@ fn supports_wallpaper_v1(status: &crate::nacre_source::Status) -> bool {
             .is_some_and(|method| method.v == 1)
 }
 fn supports_output_activation(status: &crate::nacre_source::Status) -> bool {
-    status.methods.get("wallpaper.activate")
+    status
+        .methods
+        .get("wallpaper.activate")
         .filter(|method| method.v == 1)
         .is_some_and(|method| method.params["properties"].get("output").is_some())
 }
@@ -1022,7 +1024,10 @@ impl Consumer {
         if !state.available || state.stale {
             return Err("wallpaper is stale".into());
         }
-        let output_pair = state.outputs.get(&output).ok_or("output has no wallpaper")?;
+        let output_pair = state
+            .outputs
+            .get(&output)
+            .ok_or("output has no wallpaper")?;
         let output_specific_activation = supports_output_activation(&status);
         if !output_specific_activation && Some(output_pair) != state.current.as_ref() {
             return Err("output-specific wallpaper confirmation is unavailable".into());
@@ -1660,7 +1665,10 @@ fn live(snapshot: &bead::core::source::Snapshot) -> Option<BTreeMap<String, [u8;
         .iter()
         .map(|(key, value)| (key.clone(), *value))
         .collect();
-    if let Some(hex) = state.focused_accent.as_deref().and_then(|accent| accent.strip_prefix('#'))
+    if let Some(hex) = state
+        .focused_accent
+        .as_deref()
+        .and_then(|accent| accent.strip_prefix('#'))
         && hex.len() == 6
         && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
         && let (Ok(red), Ok(green), Ok(blue)) = (
@@ -1851,7 +1859,12 @@ mod tests {
         let mut wrong_output = latest.clone();
         wrong_output.outputs.insert("DP-1".into(), pair(2));
         assert!(!activation_reply_matches(
-            "DP-1", "boot-a", &expected, &expected, &wrong_output, &status
+            "DP-1",
+            "boot-a",
+            &expected,
+            &expected,
+            &wrong_output,
+            &status
         ));
     }
 

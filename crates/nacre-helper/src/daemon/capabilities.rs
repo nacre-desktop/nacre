@@ -149,7 +149,10 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
         ("panelDragging".into(), capability("nativePanelDrag")),
         ("windowCapture".into(), capability("windowCapture")),
         ("niriWorkspaces".into(), niri),
-        ("workspaceCollections".into(), capability("workspaceCollections")),
+        (
+            "workspaceCollections".into(),
+            capability("workspaceCollections"),
+        ),
         (
             "niriFixedWorkspaces".into(),
             niri && store("desktop")["niriWorkspaceMode"] == "fixed-all",

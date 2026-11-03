@@ -3100,7 +3100,9 @@ impl Runtime {
             self.actions.register(name, "collection.switcher")?;
         }
         self.actions.grant("collection.switcher");
-        self.routes = Some(std::rc::Rc::new(crate::bar_routes::Routes::new(client.clone())));
+        self.routes = Some(std::rc::Rc::new(crate::bar_routes::Routes::new(
+            client.clone(),
+        )));
         let prefs: std::sync::Arc<dyn bead::core::source::Source> =
             std::sync::Arc::new(client.lease_topic(crate::prefs::DESKTOP)?);
         self = self.with_prefs(prefs)?;
@@ -3121,7 +3123,10 @@ impl Runtime {
         mut self,
         topic: std::sync::Arc<dyn bead::core::source::Source>,
     ) -> Result<Self, Box<dyn Error>> {
-        *self.collection_output.lock().unwrap_or_else(|error| error.into_inner()) = self.output.clone();
+        *self
+            .collection_output
+            .lock()
+            .unwrap_or_else(|error| error.into_inner()) = self.output.clone();
         let stores = BTreeMap::from([(
             "bar.workspace.origins".into(),
             bead::core::Value::list(crate::workspace_rows::origin_rows(&topic.snapshot().data)),
@@ -4023,7 +4028,9 @@ impl Runtime {
                 {
                     return None;
                 }
-                let Some(bead::core::Value::List(rows)) = self.session.stores.get("bar.collections") else {
+                let Some(bead::core::Value::List(rows)) =
+                    self.session.stores.get("bar.collections")
+                else {
                     return None;
                 };
                 let _collection = rows.iter().find(|row| row["id"] == text)?;
@@ -4056,11 +4063,21 @@ impl Runtime {
                     return None;
                 }
                 let action = match self.session.stores.get("collection.operation") {
-                    Some(bead::core::Value::Text(operation)) if operation == "create" =>
-                        nacre_protocol::shell_actions::CollectionOperation::Create { name: Some(name) },
+                    Some(bead::core::Value::Text(operation)) if operation == "create" => {
+                        nacre_protocol::shell_actions::CollectionOperation::Create {
+                            name: Some(name),
+                        }
+                    }
                     Some(bead::core::Value::Text(operation)) if operation == "rename" => {
-                        let Some(bead::core::Value::Text(target)) = self.session.stores.get("collection.target") else { return None; };
-                        nacre_protocol::shell_actions::CollectionOperation::Rename { collection: target.clone(), name: Some(name) }
+                        let Some(bead::core::Value::Text(target)) =
+                            self.session.stores.get("collection.target")
+                        else {
+                            return None;
+                        };
+                        nacre_protocol::shell_actions::CollectionOperation::Rename {
+                            collection: target.clone(),
+                            name: Some(name),
+                        }
                     }
                     _ => return None,
                 };
@@ -4073,13 +4090,22 @@ impl Runtime {
                     return None;
                 }
                 let collection = match self.session.stores.get("bar.collection.current") {
-                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => collection.clone(),
+                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => {
+                        collection.clone()
+                    }
                     _ => return None,
                 };
-                let Some(bead::core::Value::List(rows)) = self.session.stores.get("bar.collections") else {
+                let Some(bead::core::Value::List(rows)) =
+                    self.session.stores.get("bar.collections")
+                else {
                     return None;
                 };
-                if !rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty())) {
+                if !rows.iter().any(|row| {
+                    row["id"] == collection
+                        && row["name"]
+                            .as_str()
+                            .is_some_and(|name| !name.trim().is_empty())
+                }) {
                     return None;
                 }
                 let output = match self.session.stores.get("bar.collection.output") {
@@ -4088,7 +4114,9 @@ impl Runtime {
                 };
                 Some(Route::CollectionAction {
                     output,
-                    action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper { collection },
+                    action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper {
+                        collection,
+                    },
                 })
             }
             ("collection.accent.use" | "collection.accent.clear", _) if press => {
@@ -4098,7 +4126,9 @@ impl Runtime {
                     return None;
                 }
                 let collection = match self.session.stores.get("bar.collection.current") {
-                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => collection.clone(),
+                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => {
+                        collection.clone()
+                    }
                     _ => return None,
                 };
                 let output = match self.session.stores.get("bar.collection.output") {
@@ -8104,23 +8134,41 @@ impl SceneSource for Runtime {
             return self.finish_scene(None);
         }
         if let Some((_, name, arg)) = host_action.as_ref()
-            && matches!(name.as_str(), "collection.begin-create" | "collection.begin-rename" | "collection.cancel")
+            && matches!(
+                name.as_str(),
+                "collection.begin-create" | "collection.begin-rename" | "collection.cancel"
+            )
             && (matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
                 || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
         {
             self.actions.authorize(name)?;
             let changes = match name.as_str() {
                 "collection.begin-create" => BTreeMap::from([
-                    ("collection.operation".into(), bead::core::Value::Text("create".into())),
-                    ("collection.target".into(), bead::core::Value::Text(String::new())),
-                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                    (
+                        "collection.operation".into(),
+                        bead::core::Value::Text("create".into()),
+                    ),
+                    (
+                        "collection.target".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "collection.draft".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
                     ("collection.scroll".into(), bead::core::Value::Number(0.)),
-                    ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
+                    (
+                        "bead.focused".into(),
+                        bead::core::Value::Text("collection-switcher-menu.group-name".into()),
+                    ),
                 ]),
                 "collection.begin-rename" => {
-                    let bead::core::Value::Text(target) = arg else { return self.finish_scene(None); };
+                    let bead::core::Value::Text(target) = arg else {
+                        return self.finish_scene(None);
+                    };
                     let existing_name = match self.session.stores.get("bar.collections") {
-                        Some(bead::core::Value::List(rows)) => rows.iter()
+                        Some(bead::core::Value::List(rows)) => rows
+                            .iter()
                             .find(|row| row["id"].as_str() == Some(target.as_str()))
                             .and_then(|row| row["name"].as_str())
                             .unwrap_or("")
@@ -8128,12 +8176,27 @@ impl SceneSource for Runtime {
                         _ => String::new(),
                     };
                     BTreeMap::from([
-                        ("collection.operation".into(), bead::core::Value::Text("rename".into())),
-                        ("collection.target".into(), bead::core::Value::Text(target.clone())),
-                        ("collection.draft".into(), bead::core::Value::Text(existing_name)),
+                        (
+                            "collection.operation".into(),
+                            bead::core::Value::Text("rename".into()),
+                        ),
+                        (
+                            "collection.target".into(),
+                            bead::core::Value::Text(target.clone()),
+                        ),
+                        (
+                            "collection.draft".into(),
+                            bead::core::Value::Text(existing_name),
+                        ),
                         ("collection.scroll".into(), {
-                            let count = self.session.stores.get("bar.collections")
-                                .and_then(|value| match value { bead::core::Value::List(rows) => Some(rows.len()), _ => None })
+                            let count = self
+                                .session
+                                .stores
+                                .get("bar.collections")
+                                .and_then(|value| match value {
+                                    bead::core::Value::List(rows) => Some(rows.len()),
+                                    _ => None,
+                                })
                                 .unwrap_or(0);
                             let viewport = match self.session.stores.get("bar.collection.height") {
                                 Some(bead::core::Value::Number(height)) => *height,
@@ -8141,14 +8204,29 @@ impl SceneSource for Runtime {
                             };
                             bead::core::Value::Number((count as f64 * 40. + 92. - viewport).max(0.))
                         }),
-                        ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
+                        (
+                            "bead.focused".into(),
+                            bead::core::Value::Text("collection-switcher-menu.group-name".into()),
+                        ),
                     ])
                 }
                 _ => BTreeMap::from([
-                    ("collection.operation".into(), bead::core::Value::Text(String::new())),
-                    ("collection.target".into(), bead::core::Value::Text(String::new())),
-                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
-                    ("bead.focused".into(), bead::core::Value::Text(String::new())),
+                    (
+                        "collection.operation".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "collection.target".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "collection.draft".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "bead.focused".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
                 ]),
             };
             let scene = self.session.update(changes)?;
@@ -8188,9 +8266,18 @@ impl SceneSource for Runtime {
             let mut route_scene = None;
             if routed && name == "collection.commit" {
                 route_scene = self.session.update(BTreeMap::from([
-                    ("collection.operation".into(), bead::core::Value::Text(String::new())),
-                    ("collection.target".into(), bead::core::Value::Text(String::new())),
-                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                    (
+                        "collection.operation".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "collection.target".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
+                    (
+                        "collection.draft".into(),
+                        bead::core::Value::Text(String::new()),
+                    ),
                 ]))?;
             }
             if self.session.has_preview(id)
@@ -8422,7 +8509,10 @@ impl SceneSource for Runtime {
             }
             UiEvent::OutputName(name) => {
                 self.output = Some(name.clone());
-                *self.collection_output.lock().unwrap_or_else(|error| error.into_inner()) = Some(name.clone());
+                *self
+                    .collection_output
+                    .lock()
+                    .unwrap_or_else(|error| error.into_inner()) = Some(name.clone());
                 let luma = crate::wallpaper_luma::values(Some(&name));
                 scope_recovery(&mut self.session, Some(&name));
                 let values = if let Some(backend) = &self.backend {
@@ -8434,7 +8524,10 @@ impl SceneSource for Runtime {
                     values.insert("bead.focused_title".into(), bead::core::Value::Text(title));
                     values
                 } else {
-                    BTreeMap::from([("bead.output.name".into(), bead::core::Value::Text(name.clone()))])
+                    BTreeMap::from([(
+                        "bead.output.name".into(),
+                        bead::core::Value::Text(name.clone()),
+                    )])
                 };
                 let mut values = values;
                 if let Some(topic) = &self.origins_topic {

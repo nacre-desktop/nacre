@@ -89,7 +89,8 @@ pub fn collection_rows(topic: &Json) -> Vec<Json> {
 
 pub fn collection_stores(topic: &Json, output: Option<&str>) -> BTreeMap<String, Value> {
     let rows = collection_rows(topic);
-    let selected_output = output.unwrap_or_else(|| topic["focus"]["outputId"].as_str().unwrap_or_default());
+    let selected_output =
+        output.unwrap_or_else(|| topic["focus"]["outputId"].as_str().unwrap_or_default());
     let logical_height = topic["outputs"][selected_output]["logicalHeight"]
         .as_f64()
         .or_else(|| topic["outputs"][selected_output]["height"].as_f64())
@@ -724,9 +725,18 @@ mod tests {
             ]
         });
         let stores = collection_stores(&topic, Some("DP-1"));
-        assert_eq!(stores["bar.collections"], Value::list(collection_rows(&topic)));
-        assert_eq!(stores["bar.collection.current"], Value::Text("niri-collection:17".into()));
-        assert_eq!(stores["bar.collection.connection"], Value::Text("8:9".into()));
+        assert_eq!(
+            stores["bar.collections"],
+            Value::list(collection_rows(&topic))
+        );
+        assert_eq!(
+            stores["bar.collection.current"],
+            Value::Text("niri-collection:17".into())
+        );
+        assert_eq!(
+            stores["bar.collection.connection"],
+            Value::Text("8:9".into())
+        );
         let other = collection_stores(&topic, Some("DP-2"));
         assert_eq!(other["bar.collection.current"], Value::Text(String::new()));
     }

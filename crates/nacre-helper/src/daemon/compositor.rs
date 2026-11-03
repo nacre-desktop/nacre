@@ -397,8 +397,7 @@ async fn niri(
         } else {
             niri_events::EventSocket::connect(&event_path, hover)
         };
-        socket
-            .map(niri_events::EventSocket::into_stream)
+        socket.map(niri_events::EventSocket::into_stream)
     })
     .await??;
     let prefix = reader.buffer().to_vec();
@@ -677,7 +676,11 @@ mod tests {
         assert_eq!(projected["capabilities"]["workspaceCollections"], true);
         assert_eq!(projected["collections"][0]["name"], "work");
         assert_eq!(projected["activeCollection"], "niri-collection:17");
-        let stock = project(&json!({"monitors":[],"workspaces":[],"windows":[]}), "niri", &json!({}))?;
+        let stock = project(
+            &json!({"monitors":[],"workspaces":[],"windows":[]}),
+            "niri",
+            &json!({}),
+        )?;
         assert_eq!(stock["capabilities"]["workspaceCollections"], false);
         assert_eq!(stock["collections"], json!([]));
         Ok(())

@@ -123,9 +123,8 @@ async fn dispatch(
                     })
                 })
         }
-        method @ ("workspace.activate" | "workspace.scroll" | "window.focus" | "collection.action") => {
-            super::shell_actions::compositor(hub, method, params).await
-        }
+        method @ ("workspace.activate" | "workspace.scroll" | "window.focus"
+        | "collection.action") => super::shell_actions::compositor(hub, method, params).await,
         "session.request" => super::shell_actions::session(hub, params).await,
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect"
         | "network.forget" | "network.scan" | "vpn.connect" | "vpn.disconnect") => {
@@ -673,11 +672,19 @@ mod tests {
                 )
                 .await
                 .unwrap();
-                let Message::Ret { id, reply: Reply::Err { err } } = receive(&mut reader).await else {
+                let Message::Ret {
+                    id,
+                    reply: Reply::Err { err },
+                } = receive(&mut reader).await
+                else {
                     panic!("collection action did not return a method result");
                 };
                 assert_eq!(id, Id::Integer(91));
-                assert_eq!(err.code, ErrorCode::Unavailable, "must reach compositor action service, not UnknownMethod");
+                assert_eq!(
+                    err.code,
+                    ErrorCode::Unavailable,
+                    "must reach compositor action service, not UnknownMethod"
+                );
                 assert_ne!(err.code, ErrorCode::UnknownMethod);
                 caller.shutdown().await.unwrap();
                 tokio::time::timeout(Duration::from_secs(2), caller_task)

@@ -140,9 +140,14 @@ impl State {
                 for row in rows {
                     if !row.get("id").is_some_and(Value::is_u64)
                         || !row.get("idx").is_some_and(Value::is_u64)
-                        || !row.get("workspace_ids").and_then(Value::as_array).is_some_and(|ids| ids.iter().all(Value::is_u64))
-                        || !(row.get("name").is_some_and(Value::is_null) || row.get("name").and_then(Value::as_str).is_some())
-                        || !(row.get("output").is_some_and(Value::is_null) || row.get("output").and_then(Value::as_str).is_some())
+                        || !row
+                            .get("workspace_ids")
+                            .and_then(Value::as_array)
+                            .is_some_and(|ids| ids.iter().all(Value::is_u64))
+                        || !(row.get("name").is_some_and(Value::is_null)
+                            || row.get("name").and_then(Value::as_str).is_some())
+                        || !(row.get("output").is_some_and(Value::is_null)
+                            || row.get("output").and_then(Value::as_str).is_some())
                         || !row.get("is_active").is_some_and(Value::is_boolean)
                     {
                         return Err(invalid("Malformed niri collection record"));
@@ -158,9 +163,13 @@ impl State {
                 Ok(json!({"type":"collections-changed"}))
             }
             "CollectionActivated" => {
-                let id = get(payload, "id")?.as_u64().ok_or_else(|| invalid("Malformed collection ID"))?;
+                let id = get(payload, "id")?
+                    .as_u64()
+                    .ok_or_else(|| invalid("Malformed collection ID"))?;
                 self.active_collection = Some(id);
-                Ok(json!({"type":"collection-activated","collectionId":format!("niri-collection:{id}")}))
+                Ok(
+                    json!({"type":"collection-activated","collectionId":format!("niri-collection:{id}")}),
+                )
             }
             "WorkspacesChanged" | "WindowsChanged" => {
                 let (kind, key) = if name == "WorkspacesChanged" {
@@ -583,9 +592,14 @@ mod tests {
         assert_eq!(snapshot["collections"][0]["id"], "niri-collection:17");
         assert_eq!(snapshot["collections"][0]["label"], "work");
         assert_eq!(snapshot["collections"][0]["name"], "work");
-        assert_eq!(snapshot["collections"][0]["workspaceIds"], json!(["niri-workspace:4", "niri-workspace:5"]));
+        assert_eq!(
+            snapshot["collections"][0]["workspaceIds"],
+            json!(["niri-workspace:4", "niri-workspace:5"])
+        );
         assert_eq!(snapshot["activeCollection"], "niri-collection:28");
-        assert!(state.apply(&json!({"CollectionsChanged":{"collections":[{"id":1}]}})).is_err());
+        assert!(state
+            .apply(&json!({"CollectionsChanged":{"collections":[{"id":1}]}}))
+            .is_err());
         Ok(())
     }
 }

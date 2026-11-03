@@ -258,10 +258,16 @@ fn node(runtime: &Runtime, action: &str, arg: Option<&str>) -> Option<(f32, f32)
 }
 fn settle_runtime_animations(runtime: &mut Runtime) {
     for _ in 0..64 {
-        let Some(deadline) = runtime.session.preview_deadline() else { return; };
+        let Some(deadline) = runtime.session.preview_deadline() else {
+            return;
+        };
         let now = std::time::Instant::now();
-        if deadline > now { std::thread::sleep(deadline.duration_since(now)); }
-        runtime.stage(UiEvent::Model(std::collections::BTreeMap::new())).unwrap();
+        if deadline > now {
+            std::thread::sleep(deadline.duration_since(now));
+        }
+        runtime
+            .stage(UiEvent::Model(std::collections::BTreeMap::new()))
+            .unwrap();
         runtime.commit();
     }
     panic!("runtime bar animations did not settle");
@@ -399,88 +405,204 @@ async fn workspace_title_pill_and_tray_actions_are_scoped_published_calls() {
 
 #[test]
 fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
-    let data = |second_name: &str| serde_json::json!({
-        "available":true,
-        "connectionId":"8:9",
-        "capabilities":{"workspaceCollections":true},
-        "focus":{"outputId":"DP-1"},
-        "outputs":{"DP-1":{"name":"DP-1","logicalHeight":900},"DP-2":{"name":"DP-2","logicalHeight":700}},
-        "workspaces":{},"windows":{},
-        "collections":[
-            {"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"DP-1","active":true},
-            {"id":"niri-collection:28","index":2,"name":second_name,"label":second_name,"output":"DP-2","active":false}
-        ]
-    });
-    let publisher = std::sync::Arc::new(bead_test::source::FakeSource::new(data("personal")).unwrap());
-    let palette = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
+    let data = |second_name: &str| {
+        serde_json::json!({
+            "available":true,
+            "connectionId":"8:9",
+            "capabilities":{"workspaceCollections":true},
+            "focus":{"outputId":"DP-1"},
+            "outputs":{"DP-1":{"name":"DP-1","logicalHeight":900},"DP-2":{"name":"DP-2","logicalHeight":700}},
+            "workspaces":{},"windows":{},
+            "collections":[
+                {"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"DP-1","active":true},
+                {"id":"niri-collection:28","index":2,"name":second_name,"label":second_name,"output":"DP-2","active":false}
+            ]
+        })
+    };
+    let publisher =
+        std::sync::Arc::new(bead_test::source::FakeSource::new(data("personal")).unwrap());
+    let palette =
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
-    let session = bead::ui::Session::new(palette.parent().unwrap().into(), "popouts/collections.luau".into(), palette, colors, cold);
-    let mut runtime = Runtime::new(session).with_popout_trigger().unwrap().with_origins_topic(publisher.clone()).unwrap();
+    let session = bead::ui::Session::new(
+        palette.parent().unwrap().into(),
+        "popouts/collections.luau".into(),
+        palette,
+        colors,
+        cold,
+    );
+    let mut runtime = Runtime::new(session)
+        .with_popout_trigger()
+        .unwrap()
+        .with_origins_topic(publisher.clone())
+        .unwrap();
     runtime.state_file = None;
     let (sender, events) = std::sync::mpsc::channel();
-    runtime.services(Box::new(move |event| { let _ = sender.send(event); }));
+    runtime.services(Box::new(move |event| {
+        let _ = sender.send(event);
+    }));
     runtime.stage(UiEvent::Reload).unwrap();
     runtime.commit();
     while let Ok(event) = events.try_recv() {
         runtime.stage(event).unwrap();
         runtime.commit();
     }
-    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:17".into())));
+    assert_eq!(
+        runtime.session.stores.get("bar.collection.current"),
+        Some(&bead::core::Value::Text("niri-collection:17".into()))
+    );
 
     runtime.stage(UiEvent::OutputName("DP-2".into())).unwrap();
     runtime.commit();
-    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:28".into())));
-    assert_eq!(runtime.session.stores.get("bar.collection.output"), Some(&bead::core::Value::Text("DP-2".into())));
-    let route = runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "desk", "collection.switch", &bead::core::Value::Text("niri-collection:28".into())).unwrap();
-    assert_eq!(route, crate::bar_routes::Route::CollectionAction {
-        output: "DP-2".into(),
-        action: nacre_protocol::shell_actions::CollectionOperation::Activate { collection: "niri-collection:28".into() },
-    });
+    assert_eq!(
+        runtime.session.stores.get("bar.collection.current"),
+        Some(&bead::core::Value::Text("niri-collection:28".into()))
+    );
+    assert_eq!(
+        runtime.session.stores.get("bar.collection.output"),
+        Some(&bead::core::Value::Text("DP-2".into()))
+    );
+    let route = runtime
+        .bar_route(
+            &UiEvent::Click { x: 0., y: 0. },
+            "desk",
+            "collection.switch",
+            &bead::core::Value::Text("niri-collection:28".into()),
+        )
+        .unwrap();
+    assert_eq!(
+        route,
+        crate::bar_routes::Route::CollectionAction {
+            output: "DP-2".into(),
+            action: nacre_protocol::shell_actions::CollectionOperation::Activate {
+                collection: "niri-collection:28".into()
+            },
+        }
+    );
 
     let install_editor = |runtime: &mut Runtime, operation: &str, target: &str, draft: &str| {
-        runtime.session.stores.commit(std::collections::BTreeMap::from([
-            ("collection.operation".into(), bead::core::Value::Text(operation.into())),
-            ("collection.target".into(), bead::core::Value::Text(target.into())),
-            ("collection.draft".into(), bead::core::Value::Text(draft.into())),
-        ])).unwrap();
+        runtime
+            .session
+            .stores
+            .commit(std::collections::BTreeMap::from([
+                (
+                    "collection.operation".into(),
+                    bead::core::Value::Text(operation.into()),
+                ),
+                (
+                    "collection.target".into(),
+                    bead::core::Value::Text(target.into()),
+                ),
+                (
+                    "collection.draft".into(),
+                    bead::core::Value::Text(draft.into()),
+                ),
+            ]))
+            .unwrap();
     };
     install_editor(&mut runtime, "create", "", "new desk");
-    assert_eq!(runtime.session.stores.get("collection.operation"), Some(&bead::core::Value::Text("create".into())));
-    assert_eq!(runtime.session.stores.get("collection.draft"), Some(&bead::core::Value::Text("new desk".into())));
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Text(String::new())),
+    assert_eq!(
+        runtime.session.stores.get("collection.operation"),
+        Some(&bead::core::Value::Text("create".into()))
+    );
+    assert_eq!(
+        runtime.session.stores.get("collection.draft"),
+        Some(&bead::core::Value::Text("new desk".into()))
+    );
+    assert_eq!(
+        runtime.bar_route(
+            &UiEvent::Click { x: 0., y: 0. },
+            "collection-switcher-menu",
+            "collection.commit",
+            &bead::core::Value::Text(String::new())
+        ),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
-            action: nacre_protocol::shell_actions::CollectionOperation::Create { name: Some("new desk".into()) },
-        }));
-    install_editor(&mut runtime, "rename", "niri-collection:28", "studio renamed");
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Text(String::new())),
+            action: nacre_protocol::shell_actions::CollectionOperation::Create {
+                name: Some("new desk".into())
+            },
+        })
+    );
+    install_editor(
+        &mut runtime,
+        "rename",
+        "niri-collection:28",
+        "studio renamed",
+    );
+    assert_eq!(
+        runtime.bar_route(
+            &UiEvent::Click { x: 0., y: 0. },
+            "collection-switcher-menu",
+            "collection.commit",
+            &bead::core::Value::Text(String::new())
+        ),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
-            action: nacre_protocol::shell_actions::CollectionOperation::Rename { collection: "niri-collection:28".into(), name: Some("studio renamed".into()) },
-        }));
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.cancel", &bead::core::Value::Text(String::new())), None);
-    for (action_name, enabled) in [("collection.accent.use", true), ("collection.accent.clear", false)] {
-        assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", action_name, &bead::core::Value::Text(String::new())),
+            action: nacre_protocol::shell_actions::CollectionOperation::Rename {
+                collection: "niri-collection:28".into(),
+                name: Some("studio renamed".into())
+            },
+        })
+    );
+    assert_eq!(
+        runtime.bar_route(
+            &UiEvent::Click { x: 0., y: 0. },
+            "collection-switcher-menu",
+            "collection.cancel",
+            &bead::core::Value::Text(String::new())
+        ),
+        None
+    );
+    for (action_name, enabled) in [
+        ("collection.accent.use", true),
+        ("collection.accent.clear", false),
+    ] {
+        assert_eq!(
+            runtime.bar_route(
+                &UiEvent::Click { x: 0., y: 0. },
+                "collection-switcher-menu",
+                action_name,
+                &bead::core::Value::Text(String::new())
+            ),
             Some(crate::bar_routes::Route::CollectionAction {
                 output: "DP-2".into(),
-                action: nacre_protocol::shell_actions::CollectionOperation::SetAccent { collection: "niri-collection:28".into(), enabled },
-            }));
+                action: nacre_protocol::shell_actions::CollectionOperation::SetAccent {
+                    collection: "niri-collection:28".into(),
+                    enabled
+                },
+            })
+        );
     }
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.wallpaper.set", &bead::core::Value::Text(String::new())),
+    assert_eq!(
+        runtime.bar_route(
+            &UiEvent::Click { x: 0., y: 0. },
+            "collection-switcher-menu",
+            "collection.wallpaper.set",
+            &bead::core::Value::Text(String::new())
+        ),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
-            action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper { collection: "niri-collection:28".into() },
-        }));
+            action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper {
+                collection: "niri-collection:28".into()
+            },
+        })
+    );
 
     publisher.publish(data("studio")).unwrap();
     while let Ok(event) = events.try_recv() {
         runtime.stage(event).unwrap();
         runtime.commit();
     }
-    let bead::core::Value::List(groups) = runtime.session.stores.get("bar.collections").unwrap() else { panic!("collection list missing") };
+    let bead::core::Value::List(groups) = runtime.session.stores.get("bar.collections").unwrap()
+    else {
+        panic!("collection list missing")
+    };
     assert_eq!(groups[1]["label"], "studio");
-    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:28".into())));
+    assert_eq!(
+        runtime.session.stores.get("bar.collection.current"),
+        Some(&bead::core::Value::Text("niri-collection:28".into()))
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -490,21 +612,30 @@ async fn single_collection_bar_entry_opens_the_switcher_popout() {
     let live = client.clone();
     until(&mut runtime, &events, |runtime| {
         live.snapshot().connected
-            && runtime.session.stores.get("bar.collection.enabled") == Some(&bead::core::Value::Bool(true))
+            && runtime.session.stores.get("bar.collection.enabled")
+                == Some(&bead::core::Value::Bool(true))
             && node(runtime, "collection.switcher.open", None).is_some()
-    }).await;
+    })
+    .await;
     settle_runtime_animations(&mut runtime);
     let (x, y) = node(&runtime, "collection.switcher.open", None).expect("single desk menu button");
-    assert_eq!(runtime.session.action_at(x, y).map(|(_, name, _)| name), Some("collection.switcher.open".into()), "the rendered single-desk entry must be hit-testable");
+    assert_eq!(
+        runtime.session.action_at(x, y).map(|(_, name, _)| name),
+        Some("collection.switcher.open".into()),
+        "the rendered single-desk entry must be hit-testable"
+    );
     while events.try_recv().is_ok() {}
     runtime.stage(UiEvent::Click { x, y }).unwrap();
     runtime.commit();
     runtime.stage(UiEvent::Release).unwrap();
     runtime.commit();
     let dispatched: Vec<_> = std::iter::from_fn(|| events.try_recv().ok()).collect();
-    assert!(dispatched.iter().any(|event| matches!(event,
-        UiEvent::CompanionSelect { view, toggle:true, .. } if view == "collections"
-    )), "single desk control must open the collection switcher; received {dispatched:?}");
+    assert!(
+        dispatched.iter().any(|event| matches!(event,
+            UiEvent::CompanionSelect { view, toggle:true, .. } if view == "collections"
+        )),
+        "single desk control must open the collection switcher; received {dispatched:?}"
+    );
     std::fs::remove_dir_all(dir).ok();
 }
 
