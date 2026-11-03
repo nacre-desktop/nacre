@@ -436,6 +436,8 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
         ])).unwrap();
     };
     install_editor(&mut runtime, "create", "", "new desk");
+    assert_eq!(runtime.session.stores.get("collection.operation"), Some(&bead::core::Value::Text("create".into())));
+    assert_eq!(runtime.session.stores.get("collection.draft"), Some(&bead::core::Value::Text("new desk".into())));
     assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Text(String::new())),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
@@ -481,7 +483,11 @@ async fn single_collection_bar_entry_opens_the_switcher_popout() {
             && runtime.session.stores.get("bar.collection.enabled") == Some(&bead::core::Value::Bool(true))
             && node(runtime, "collection.switcher.open", None).is_some()
     }).await;
-    at(&mut runtime, "collection.switcher.open", None, |x, y| UiEvent::Click { x, y });
+    let (x, y) = node(&runtime, "collection.switcher.open", None).expect("single desk menu button");
+    runtime.stage(UiEvent::Click { x, y }).unwrap();
+    runtime.commit();
+    runtime.stage(UiEvent::Release).unwrap();
+    runtime.commit();
     let dispatched: Vec<_> = std::iter::from_fn(|| events.try_recv().ok()).collect();
     assert!(dispatched.iter().any(|event| matches!(event,
         UiEvent::CompanionSelect { view, toggle:true, .. } if view == "collections"
