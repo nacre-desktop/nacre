@@ -15,6 +15,29 @@ spec.loader.exec_module(extras)
 
 
 class DesktopExtrasTests(unittest.TestCase):
+    def test_native_scratchpad_description_uses_localized_help_title(self):
+        bindings = [
+            dict(
+                key="H",
+                modmask=65,
+                dispatcher="toggle-scratchpad",
+                arg="",
+                submap="",
+                description="Nacre:scratchpad-windows",
+            )
+        ]
+        with (
+            patch.dict("os.environ", {"NACRE_LANGUAGE": "pseudo"}),
+            patch.object(extras.compositor, "binding_source_files", return_value=[]),
+            patch.object(extras.compositor, "query", return_value=bindings),
+        ):
+            row = extras.bindings()[0]
+        expected = extras.tr(
+            "welcome.shortcut.scratchpad-windows.title", "Show scratchpad windows"
+        )
+        self.assertEqual(row["description"], expected)
+        self.assertIn("[", row["description"])
+
     def test_actual_english_and_pseudo_bindings_preserve_dispatch_and_external_labels(
         self,
     ):

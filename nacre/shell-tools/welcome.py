@@ -110,6 +110,11 @@ SHORTCUTS += (
     ("next-workspace", "Next workspace", "Switch on the current monitor."),
     ("previous-workspace", "Previous workspace", "Switch on the current monitor."),
     ("scratchpad", "Toggle scratchpad", "Show or hide the scratchpad workspace."),
+    (
+        "scratchpad-windows",
+        "Show scratchpad windows",
+        "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+    ),
     ("move-scratchpad", "Move to scratchpad", "Send the focused window there."),
     ("power", "Power menu", "Open session and power controls."),
     ("restore", "Restore the last window", "Bring back a window you put away."),
@@ -120,7 +125,7 @@ SHORTCUTS += (
         "Force close a window",
         "Use only if an application is unresponsive.",
     ),
-    ("hide", "Minimize a window", "Hide it without closing the application."),
+    ("hide", "Hide a window", "Hide it without closing the application."),
     ("unhide", "Restore a minimized window", "Bring the last minimized window back."),
     ("move-workspace", "Move a window to a workspace", "Move the focused window."),
     (
@@ -130,7 +135,11 @@ SHORTCUTS += (
     ),
     ("fullscreen", "Full screen", "Fill the display; press again to restore."),
     ("float", "Toggle floating", "Switch between a tiled and floating window."),
-    ("pin", "Pin a window", "Keep a floating window on every workspace."),
+    (
+        "pin",
+        "Pin a window",
+        "Keep the floating window above workspaces while switching workspaces or collections.",
+    ),
     ("cycle-window", "Cycle windows", "Focus the next or previous window."),
     ("group", "Group windows", "Toggle a group of windows."),
     (
@@ -164,6 +173,9 @@ SHORTCUT_IDS = {
     "next-workspace": {"titleId": "welcome.shortcut.next-workspace.title"},
     "previous-workspace": {"titleId": "welcome.shortcut.previous-workspace.title"},
     "scratchpad": {"titleId": "welcome.shortcut.scratchpad.title"},
+    "scratchpad-windows": {
+        "titleId": "welcome.shortcut.scratchpad-windows.title"
+    },
     "move-scratchpad": {"titleId": "welcome.shortcut.move-scratchpad.title"},
     "power": {"titleId": "welcome.shortcut.power.title"},
     "launcher": {"titleId": "welcome.shortcut.launcher.title"},
@@ -331,6 +343,16 @@ def shortcut_rows(bindings):
                         verb + " with " + labels[other].replace("\n", " or ") + "."
                     )
             detail = " ".join(parts) or "Put away the current window."
+        elif action == "scratchpad-windows":
+            detail = tr(
+                "welcome.shortcut.scratchpad-windows.detail",
+                "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+            )
+        elif action == "pin":
+            detail = tr(
+                "welcome.shortcut.pin.detail",
+                "Keep the floating window above workspaces while switching workspaces or collections.",
+            )
         elif action == "workspace" and "move-workspace" in labels:
             detail += (
                 " Move the current window with "

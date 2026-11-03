@@ -109,6 +109,9 @@ pub fn runtime_lua_value(value: &Value) -> Result<String> {
 pub(crate) fn collection_overlay() -> String {
     niri::collection_overlay()
 }
+pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
+    niri::native_unsupported_report(text)
+}
 fn lua(value: &Value, named_fields: bool) -> Result<String> {
     Ok(match value {
         Value::Null => "nil".into(),
@@ -506,6 +509,11 @@ mod tests {
                 "move-window-to-collection-previous",
             ),
         ];
+        let native_actions = [
+            ("Super+h", "move-window-to-scratchpad"),
+            ("Super+Shift+h", "toggle-scratchpad"),
+            ("Super+p", "toggle-window-pinned"),
+        ];
         assert!(native.starts_with("include \"config.kdl\""));
         let document: kdl::KdlDocument = native.parse()?;
         let block = document
@@ -529,6 +537,19 @@ mod tests {
                 .ok_or("Missing native collection action")?;
             assert_eq!(action_node.name().value(), action);
         }
+        for (combo, action) in native_actions {
+            let binding = binds
+                .iter()
+                .find(|node| node.name().value() == combo)
+                .ok_or("Missing native scratchpad or pin binding")?;
+            let action_node = binding
+                .children()
+                .and_then(|children| children.nodes().first())
+                .ok_or("Missing native scratchpad or pin action")?;
+            assert_eq!(action_node.name().value(), action);
+        }
+        assert!(native.contains("open-pinned true"));
+        assert!(!native.contains("Super+Alt+h"));
         for action in [
             "focus-collection-next",
             "focus-collection-previous",
@@ -538,6 +559,30 @@ mod tests {
         ] {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
+        Ok(())
+    }
+
+    #[test]
+    fn fork_unsupported_report_filters_only_native_scratchpad_and_pin_rows() -> crate::Result<()> {
+        let stock = json!({"backend":"niri","unsupported":[
+            {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + H"},
+            {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + SHIFT + H"},
+            {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + P"},
+            {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + ALT + H"},
+            {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-audio-mixer"},
+            {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-share-picker"},
+            {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-picture-in-picture"},
+            {"source":"other.lua","kind":"binding","id":"SUPER + H"}
+        ]});
+        let filtered: Value = serde_json::from_str(&native_unsupported_report(
+            &serde_json::to_string(&stock)?,
+        )?)?;
+        let rows = filtered["unsupported"]
+            .as_array()
+            .ok_or("Missing filtered report")?;
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().any(|row| row["id"] == "SUPER + ALT + H"));
+        assert!(rows.iter().any(|row| row["source"] == "other.lua"));
         Ok(())
     }
 

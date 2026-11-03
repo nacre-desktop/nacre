@@ -528,8 +528,10 @@ def bindings():
         key = b["key"]
         key = "SPACE" if key.lower() == "space" else key
         combo = "+".join([*parts, key])
+        semantic = descriptions.get(b.get("description"))
         desc = (
             source.get((b.get("submap", ""), combo))
+            or semantic
             or binding_description(combo)
             or b.get("description")
             or b.get("dispatcher", "")

@@ -755,6 +755,11 @@ const WELCOME_SHORTCUTS: &[(&str, &str, &str)] = &[
         "Show or hide the scratchpad workspace.",
     ),
     (
+        "scratchpad-windows",
+        "Show scratchpad windows",
+        "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+    ),
+    (
         "move-scratchpad",
         "Move to scratchpad",
         "Send the focused window there.",
@@ -1055,6 +1060,10 @@ fn welcome_shortcut_title(action: &str, fallback: &str) -> String {
             "Previous workspace",
         ),
         "scratchpad" => crate::i18n::tr("welcome.shortcut.scratchpad.title", "Toggle scratchpad"),
+        "scratchpad-windows" => crate::i18n::tr(
+            "welcome.shortcut.scratchpad-windows.title",
+            "Show scratchpad windows",
+        ),
         "move-scratchpad" => crate::i18n::tr(
             "welcome.shortcut.move-scratchpad.title",
             "Move to scratchpad",
@@ -1068,7 +1077,7 @@ fn welcome_shortcut_title(action: &str, fallback: &str) -> String {
         "force-close" => {
             crate::i18n::tr("welcome.shortcut.force-close.title", "Force close a window")
         }
-        "hide" => crate::i18n::tr("welcome.shortcut.hide.title", "Minimize a window"),
+        "hide" => crate::i18n::tr("welcome.shortcut.hide.title", "Hide a window"),
         "unhide" => crate::i18n::tr(
             "welcome.shortcut.unhide.title",
             "Restore a minimized window",
@@ -1125,7 +1134,17 @@ fn welcome_shortcut_rows(bindings: &Value) -> Result<Vec<Value>> {
         };
         let key = key.clone();
         let mut detail = (*default_detail).to_owned();
-        if *action == "put-away" {
+        if *action == "scratchpad-windows" {
+            detail = crate::i18n::tr(
+                "welcome.shortcut.scratchpad-windows.detail",
+                "Show or hide the most recent hidden window; repeat to cycle through scratchpad windows.",
+            );
+        } else if *action == "pin" {
+            detail = crate::i18n::tr(
+                "welcome.shortcut.pin.detail",
+                "Keep the floating window above workspaces while switching workspaces or collections.",
+            );
+        } else if *action == "put-away" {
             let mut parts =
                 vec!["Restore within 30 seconds before the application closes.".to_owned()];
             for (other, verb) in [("restore", "Restore"), ("close", "Close")] {
@@ -1767,6 +1786,32 @@ mod tests {
             .as_str()
             .unwrap()
             .contains("Move the current window with"));
+        Ok(())
+    }
+    #[test]
+    fn fork_scratchpad_and_pin_bindings_use_localized_shortcut_titles() -> Result<()> {
+        let bindings = json!([
+            {"description":"Nacre:hide","modmask":64,"key":"H"},
+            {"description":"Nacre:scratchpad-windows","modmask":65,"key":"H"},
+            {"description":"Nacre:pin","modmask":64,"key":"P"}
+        ]);
+        let rows = welcome_shortcut_rows(&bindings)?;
+        let scratchpad = rows
+            .iter()
+            .find(|row| row["id"] == "scratchpad-windows")
+            .unwrap();
+        assert_eq!(scratchpad["key"], "Super + Shift + H");
+        assert_eq!(
+            scratchpad["titleId"],
+            "welcome.shortcut.scratchpad-windows.title"
+        );
+        assert!(scratchpad["detail"]
+            .as_str()
+            .unwrap()
+            .contains("most recent hidden window"));
+        let pin = rows.iter().find(|row| row["id"] == "pin").unwrap();
+        assert_eq!(pin["key"], "Super + P");
+        assert_eq!(pin["titleId"], "welcome.shortcut.pin.title");
         Ok(())
     }
     #[test]

@@ -74,7 +74,7 @@ class NacreNiriSessionTests(unittest.TestCase):
             config = generated[Path(".config/nacre/niri/config.kdl")]
             overlay = generated[Path(".config/nacre/niri/nacre-niri.kdl")]
             native_unsupported_path = Path(
-                ".config/nacre/niri/nacre-niri/unsupported.json"
+                ".config/nacre/niri/nacre-niri-unsupported.json"
             )
             native_unsupported = json.loads(
                 generated[native_unsupported_path].read_text()
@@ -104,6 +104,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertIn(action, overlay_text)
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
+            self.assertIn('hotkey-overlay-title="Nacre:scratchpad-windows"', overlay_text)
+            self.assertEqual(overlay_text.count("open-pinned true"), 3)
+            self.assertNotIn("open-pinned true", generated_stock)
             for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
                 self.assertTrue(
                     any(row.get("id") == supported_key for row in stock_unsupported)
@@ -114,6 +117,13 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertTrue(
                 any(row.get("id") == "SUPER + ALT + H" for row in native_unsupported)
             )
+            for rule_id in (
+                "nacre-audio-mixer",
+                "nacre-share-picker",
+                "nacre-picture-in-picture",
+            ):
+                self.assertTrue(any(row.get("id") == rule_id for row in stock_unsupported))
+                self.assertFalse(any(row.get("id") == rule_id for row in native_unsupported))
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
                 ["/usr/bin/niri", "validate", "-c", str(config)],
