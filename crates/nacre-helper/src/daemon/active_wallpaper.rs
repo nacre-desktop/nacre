@@ -2096,6 +2096,7 @@ mod tests {
     #[test]
     fn renaming_moves_profiles_and_duplicate_names_keep_existing_entries() -> Result<()> {
         let (_home, paths, hub) = fixture()?;
+        fs::create_dir_all(&paths.config)?;
         fs::write(paths.config.join("desktop.json"), json!({"collectionWallpapers":true}).to_string())?;
         hub.borrow_mut().publish("compositor", json!({
             "available":true,"outputs":{"DP-1":{},"DP-2":{}},
