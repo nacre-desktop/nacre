@@ -65,13 +65,8 @@ use crate::{paths::Paths, Result};
 use serde_json::json;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-fn width_service_should_start(
-    safe: bool,
-    niri: bool,
-    has_x11_display: bool,
-    proportional_widths_native: bool,
-) -> bool {
-    !safe && niri && has_x11_display && !proportional_widths_native
+fn width_service_should_start(safe: bool, niri: bool, has_x11_display: bool) -> bool {
+    !safe && niri && has_x11_display
 }
 
 async fn serve(
@@ -460,19 +455,7 @@ async fn serve(
     let has_x11_display = width_environment
         .get("DISPLAY")
         .is_some_and(|value| !value.is_empty());
-    let proportional_widths_native = width_environment
-        .get("NIRI_SOCKET")
-        .filter(|socket| !socket.is_empty())
-        .is_some_and(|socket| {
-            crate::compositor::niri_transport::nacre_capabilities(std::path::Path::new(socket))
-                .proportional_x11_widths
-        });
-    let width_service = if width_service_should_start(
-        counter.safe,
-        niri_backend,
-        has_x11_display,
-        proportional_widths_native,
-    ) {
+    let width_service = if width_service_should_start(counter.safe, niri_backend, has_x11_display) {
         hub.borrow_mut().service("niri-widths", "starting", 0)?;
         hub.borrow_mut().publish(
             widths::TOPIC,
@@ -925,11 +908,10 @@ mod width_service_tests {
     use super::width_service_should_start;
 
     #[test]
-    fn native_width_capability_prevents_x11_observer_service_resources() {
-        assert!(!width_service_should_start(false, true, true, true));
-        assert!(width_service_should_start(false, true, true, false));
-        assert!(!width_service_should_start(true, true, true, false));
-        assert!(!width_service_should_start(false, false, true, false));
-        assert!(!width_service_should_start(false, true, false, false));
+    fn observer_actor_starts_only_for_niri_x11_sessions() {
+        assert!(width_service_should_start(false, true, true));
+        assert!(!width_service_should_start(true, true, true));
+        assert!(!width_service_should_start(false, false, true));
+        assert!(!width_service_should_start(false, true, false));
     }
 }

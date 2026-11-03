@@ -382,10 +382,18 @@ fn native_windows(hub: &Shared) -> Result<Option<(u64, Value)>> {
         Ok(None)
     }
 }
+fn native_width_policy(hub: &Shared) -> bool {
+    hub.borrow()
+        .snapshot_ref(super::niri_events::TOPIC)
+        .is_some_and(|metadata| metadata["proportionalX11Widths"] == true)
+}
 fn connected(hub: &Shared, identity: Option<&Value>) -> bool {
     let hub = hub.borrow();
     hub.snapshot_ref("compositor")
         .is_some_and(|v| v["available"] == true && v["backend"] == "niri")
+        && !hub
+            .snapshot_ref(super::niri_events::TOPIC)
+            .is_some_and(|metadata| metadata["proportionalX11Widths"] == true)
         && hub.niri_width_source.snapshot.is_some()
         && identity.is_none_or(|id| {
             hub.snapshot_ref(super::niri_events::TOPIC)
@@ -413,6 +421,7 @@ pub async fn run(
     let _registered = Registered(hub.clone());
     let mut changes = hub.borrow().observe();
     let mut window_events = hub.borrow().niri_width_source.events.subscribe();
+    loop {
     loop {
         if shutdown.stop.get() {
             shutdown.restored.notify_one();
@@ -499,11 +508,12 @@ pub async fn run(
                 },
                 change=changes.recv()=>{
                     match change {
-                        Ok(Notice::Changed{topic,..}) if topic=="compositor"=>{},
+                        Ok(Notice::Changed{topic,..}) if topic=="compositor" || topic==super::niri_events::TOPIC=>{},
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>{tracing::warn!("Width observer resynchronizing compositor state");},
                         Err(tokio::sync::broadcast::error::RecvError::Closed)=>return Err("Compositor state observer ended".into()),
                         _=>continue,
                     }
+                    if native_width_policy(&hub) {return Err("Native proportional X11 width policy is active".into());}
                     if !connected(&hub,Some(&connection)) {return Err("Width observer compositor disconnected".into());}
                 },
             }
@@ -529,7 +539,11 @@ pub async fn run(
         shutdown.restored.notify_one();
         std::future::pending::<()>().await;
     }
-    result
+    if native_width_policy(&hub) {
+        continue;
+    }
+    return result;
+    }
 }
 
 #[cfg(test)]
@@ -612,6 +626,46 @@ mod tests {
         }
         assert_eq!(old.0.min_width, hints.min_width);
         assert!(projected.opening.is_empty() && projected.new.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn driver_gate_tracks_native_capability_transitions_after_compositor_ready() -> Result<()> {
+        let hub = super::super::hub::Hub::new(
+            "fixture".into(),
+            false,
+            Duration::from_millis(16),
+        )
+        .shared();
+        assert!(!connected(&hub, None), "waits while compositor is unavailable");
+        {
+            let mut state = hub.borrow_mut();
+            state.publish(
+                "compositor",
+                json!({"backend":"niri","available":true}),
+            )?;
+            state.publish(
+                super::super::niri_events::TOPIC,
+                json!({"backend":"niri","available":true,"connectionId":"fixture"}),
+            )?;
+            state.niri_width_source.update(
+                &serde_json::Map::new(),
+                &json!({"WindowsChanged":{"windows":[]}}),
+            )?;
+        }
+        assert!(connected(&hub, None), "stock niri starts the helper driver");
+        hub.borrow_mut().publish(
+            super::super::niri_events::TOPIC,
+            json!({"backend":"niri","available":true,"connectionId":"fixture","proportionalX11Widths":true}),
+        )?;
+        assert!(native_width_policy(&hub));
+        assert!(!connected(&hub, None), "native policy never opens X11 driver");
+        hub.borrow_mut().publish(
+            super::super::niri_events::TOPIC,
+            json!({"backend":"niri","available":true,"connectionId":"fixture"}),
+        )?;
+        assert!(!native_width_policy(&hub));
+        assert!(connected(&hub, None), "ConfigLoaded fallback retires native mode");
         Ok(())
     }
     #[test]

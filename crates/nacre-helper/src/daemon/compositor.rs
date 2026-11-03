@@ -324,6 +324,7 @@ fn flush_niri(
     socket: &str,
     events: &mut Vec<Value>,
     edge_triggers_active: Option<bool>,
+    proportional_x11_widths: bool,
 ) -> Result<()> {
     let mut snapshot = state.snapshot()?;
     if let Some(ledger) = crate::paths::Paths::environment()
@@ -335,14 +336,14 @@ fn flush_niri(
     }
     publish(hub, &snapshot, "niri", keyboard, ready)?;
     let mut hub = hub.borrow_mut();
-    hub.publish(
-        super::niri_events::TOPIC,
-        if let Some(active) = edge_triggers_active {
-            json!({"backend":"niri","available":true,"connectionId":connection,"edgeTriggersActive":active})
-        } else {
-            json!({"backend":"niri","available":true,"connectionId":connection})
-        },
-    )?;
+    let mut metadata = json!({"backend":"niri","available":true,"connectionId":connection});
+    if let Some(active) = edge_triggers_active {
+        metadata["edgeTriggersActive"] = json!(active);
+    }
+    if proportional_x11_widths {
+        metadata["proportionalX11Widths"] = json!(true);
+    }
+    hub.publish(super::niri_events::TOPIC, metadata)?;
     for event in events.drain(..) {
         hub.event_after(super::niri_events::TOPIC, "niri", event, Some("compositor"))?;
     }
@@ -376,10 +377,12 @@ async fn niri(
     stream.set_nonblocking(true)?;
     let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
     let capability_path = path.clone();
-    let edge_enabled = tokio::task::spawn_blocking(move || {
-        niri_transport::nacre_capabilities(&capability_path).edge_triggers
+    let capabilities = tokio::task::spawn_blocking(move || {
+        niri_transport::nacre_capabilities(&capability_path)
     })
     .await?;
+    let mut proportional_x11_widths = capabilities.proportional_x11_widths;
+    let edge_enabled = capabilities.edge_triggers;
     let edge_socket = if edge_enabled {
         let edge_path = path.clone();
         tokio::task::spawn_blocking(move || niri_events::EventSocket::connect_edge_triggers(&edge_path))
@@ -423,7 +426,9 @@ async fn niri(
                 if refresh {let updated=outputs(&control).await?;outputs_changed=state.outputs!=updated;state.outputs=updated;}
                 if event.get("ConfigLoaded").is_some() {
                     let capability_path=path.clone();
-                    let enabled=tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path).edge_triggers).await?;
+                            let capabilities=tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path)).await?;
+                            proportional_x11_widths=capabilities.proportional_x11_widths;
+                            let enabled=capabilities.edge_triggers;
                     let next=if enabled {
                         let edge_path=path.clone();
                         tokio::task::spawn_blocking(move || niri_events::EventSocket::connect_edge_triggers(&edge_path)).await.ok().and_then(std::result::Result::ok)
@@ -439,7 +444,7 @@ async fn niri(
                     if next_active!=edge_triggers_active {
                         edge_triggers_active=next_active;
                         if state.ready.contains("window")&&state.ready.contains("workspace") {
-                            flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                            flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                             last=tokio::time::Instant::now();due=None;
                         }
                     }
@@ -457,7 +462,7 @@ async fn niri(
                         if outputs_changed {next.push(json!({"type":"outputs-changed"}));}
                         for event in next {
                             if !queue_event(&mut events,event.clone())? {
-                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                                 last=tokio::time::Instant::now();
                                 if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                             }
@@ -485,7 +490,7 @@ async fn niri(
                             Some(Ok(Some(event)))=>{
                                 if state.ready.contains("window")&&state.ready.contains("workspace") {
                                     if !queue_event(&mut events,event.clone())? {
-                                        flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                        flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                                         last=tokio::time::Instant::now();
                                         if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                                     }
@@ -496,7 +501,7 @@ async fn niri(
                                 edge_reader=None;
                                 edge_triggers_active=Some(false);
                                 if state.ready.contains("window")&&state.ready.contains("workspace") {
-                                    flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                    flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                                     last=tokio::time::Instant::now();due=None;
                                 }
                             }
@@ -507,7 +512,7 @@ async fn niri(
                         if edge_triggers_active==Some(true) {
                             edge_triggers_active=Some(false);
                             if state.ready.contains("window")&&state.ready.contains("workspace") {
-                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                                 last=tokio::time::Instant::now();due=None;
                             }
                         }
@@ -515,7 +520,7 @@ async fn niri(
                 }
             },
             _=wait_due(due)=>{
-                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active,proportional_x11_widths)?;
                 last=tokio::time::Instant::now();due=None;
             },
         }
