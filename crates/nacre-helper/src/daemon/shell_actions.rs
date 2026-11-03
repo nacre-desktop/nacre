@@ -183,17 +183,17 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
             let _ = output(&snapshot, &request.output)?;
             match &request.action {
                 CollectionOperation::Activate { collection } | CollectionOperation::Rename { collection, .. } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection)) {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()))) {
                         return Err(invalid());
                     }
                 }
                 CollectionOperation::SetWallpaper { collection } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()) && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
                         return Err(invalid());
                     }
                 }
                 CollectionOperation::SetAccent { collection, .. } => {
-                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"].as_str() == Some(collection.as_str()) && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
                         return Err(invalid());
                     }
                 }
@@ -201,7 +201,7 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
             }
             match request.action {
                 CollectionOperation::SetWallpaper { collection } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
                     let name = row["name"].as_str().ok_or_else(invalid)?;
                     let wallpaper = hub.snapshot(super::active_wallpaper::TOPIC)
                         .and_then(|data| serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok())
@@ -213,14 +213,14 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                         .map_err(|_| action_error())?;
                 }
                 CollectionOperation::SetAccent { collection, enabled } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
                     let name = row["name"].as_str().ok_or_else(invalid)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
                     super::active_wallpaper::set_collection_accent(&hub, &paths, name, enabled)
                         .map_err(|_| action_error())?;
                 }
                 CollectionOperation::Rename { collection, name } => {
-                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
                     let old_name = row["name"].as_str().filter(|name| !name.trim().is_empty()).map(str::to_owned);
                     if let (Some(old_name), Some(new_name)) = (old_name.as_deref(), name.as_deref()) {

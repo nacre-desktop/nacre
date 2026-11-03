@@ -150,9 +150,9 @@ impl State {
                 }
                 self.collections = rows.clone();
                 self.collections_supported = true;
-                if let Some(active) = self.active_collection
-                    && !rows.iter().any(|row| row["id"] == active)
-                {
+                if self.active_collection.is_some_and(|active| {
+                    !rows.iter().any(|row| row["id"].as_u64() == Some(active))
+                }) {
                     self.active_collection = None;
                 }
                 Ok(json!({"type":"collections-changed"}))

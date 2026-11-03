@@ -79,9 +79,13 @@ pub fn set_collection_wallpaper(
     let wallpapers = document["wallpapers"]
         .as_object_mut()
         .ok_or("Invalid collection wallpaper settings")?;
+    let accent = wallpapers
+        .get(name.trim())
+        .and_then(collection_profile)
+        .and_then(|profile| profile.accent);
     wallpapers.insert(name.trim().to_owned(), serde_json::to_value(CollectionWallpaperProfile {
         wallpaper: pair.clone(),
-        accent: None,
+        accent,
     })?);
     crate::state::write(&path, &document)?;
     Producer::default().refresh(hub, paths)
@@ -1200,7 +1204,9 @@ pub fn activate(hub: Shared, params: Value) -> std::result::Result<Value, Failur
         Some(output) => state.outputs.get(&output).cloned().ok_or_else(|| {
             failure(ErrorCode::Unavailable, "Wallpaper output is unavailable", true)
         })?,
-        None => state.current,
+        None => state.current.ok_or_else(|| {
+            failure(ErrorCode::Unavailable, "Wallpaper is unavailable", true)
+        })?,
     };
     Ok(serde_json::to_value(activated).expect("finite wallpaper pair"))
 }
@@ -2007,6 +2013,12 @@ mod tests {
         }))?;
         set_collection_wallpaper(&hub, &paths, "work", &profile)?;
         set_collection_accent(&hub, &paths, "work", true)?;
+        set_collection_wallpaper(&hub, &paths, "work", &profile)?;
+        let saved: Value = crate::state::read(
+            &crate::state::settings_path_in(&paths, "collection-wallpapers")?,
+            json!({"wallpapers":{}}),
+        )?;
+        assert_eq!(saved["wallpapers"]["work"]["accent"], "#00AA55");
         let state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         assert_eq!(state.current.as_ref().unwrap().path, base.current.as_ref().unwrap().path);
         assert_eq!(state.outputs["DP-1"].path, profile.path);
