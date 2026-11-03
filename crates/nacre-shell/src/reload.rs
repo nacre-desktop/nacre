@@ -771,6 +771,7 @@ pub struct Runtime {
     pointer_at: (f32, f32),
     origins_topic: Option<std::sync::Arc<dyn bead::core::source::Source>>,
     origins_subscription: Option<bead::core::source::Subscription>,
+    collection_output: std::sync::Arc<std::sync::Mutex<Option<String>>>,
     backend: Option<std::sync::Arc<crate::backends::Native>>,
     subscription: Option<bead::backends::Subscription>,
     last_focused_window: Option<bead::backends::Id>,
@@ -2582,7 +2583,7 @@ impl Runtime {
         };
         Self {
             session,
-            output,
+            output: output.clone(),
             pending: None,
             chrome: None,
             spare_chrome: None,
@@ -2697,6 +2698,7 @@ impl Runtime {
             bar_daemon_subscriptions: Vec::new(),
             origins_topic: None,
             origins_subscription: None,
+            collection_output: std::sync::Arc::new(std::sync::Mutex::new(output.clone())),
             backend: None,
             subscription: None,
             last_focused_window: None,
@@ -3079,6 +3081,32 @@ impl Runtime {
             }
         }
     }
+    /// The collection switcher panel shares the compositor topic and the same
+    /// session-guarded, typed action route as the bar.
+    pub fn with_collection_switcher(
+        mut self,
+        client: &crate::nacre_source::Client,
+    ) -> Result<Self, Box<dyn Error>> {
+        for name in [
+            "collection.switch",
+            "collection.begin-create",
+            "collection.begin-rename",
+            "collection.commit",
+            "collection.cancel",
+            "collection.wallpaper.set",
+            "collection.accent.use",
+            "collection.accent.clear",
+        ] {
+            self.actions.register(name, "collection.switcher")?;
+        }
+        self.actions.grant("collection.switcher");
+        self.routes = Some(crate::bar_routes::Routes::new(client.clone()));
+        let prefs: std::sync::Arc<dyn bead::core::source::Source> =
+            std::sync::Arc::new(client.lease_topic(crate::prefs::DESKTOP)?);
+        self = self.with_prefs(prefs)?;
+        let topic = client.view_topic("compositor")?;
+        self.with_origins_topic(topic)
+    }
     /// Bar status icons use the same reconnecting daemon topics as the popouts.
     pub fn with_bar_daemon(
         mut self,
@@ -3093,10 +3121,17 @@ impl Runtime {
         mut self,
         topic: std::sync::Arc<dyn bead::core::source::Source>,
     ) -> Result<Self, Box<dyn Error>> {
+        *self.collection_output.lock().unwrap_or_else(|error| error.into_inner()) = self.output.clone();
         let stores = BTreeMap::from([(
             "bar.workspace.origins".into(),
             bead::core::Value::list(crate::workspace_rows::origin_rows(&topic.snapshot().data)),
-        )]);
+        )])
+        .into_iter()
+        .chain(crate::workspace_rows::collection_stores(
+            &topic.snapshot().data,
+            self.output.as_deref(),
+        ))
+        .collect::<BTreeMap<_, _>>();
         self.session.stores = self.session.stores.reconcile(&stores)?;
         if self.workspaces.view.follow(&stores) {
             self.refresh_workspaces()?;
@@ -3982,6 +4017,102 @@ impl Runtime {
             }
         };
         match (name, event) {
+            ("collection.switch", _) if press => {
+                if self.session.stores.get("bar.collection.enabled")
+                    != Some(&bead::core::Value::Bool(true))
+                {
+                    return None;
+                }
+                let Some(bead::core::Value::List(rows)) = self.session.stores.get("bar.collections") else {
+                    return None;
+                };
+                let _collection = rows.iter().find(|row| row["id"] == text)?;
+                let output = match self.session.stores.get("bar.collection.output") {
+                    Some(bead::core::Value::Text(output)) if !output.is_empty() => output.clone(),
+                    _ => return None,
+                };
+                Some(Route::CollectionAction {
+                    output,
+                    action: nacre_protocol::shell_actions::CollectionOperation::Activate {
+                        collection: text.into(),
+                    },
+                })
+            }
+            ("collection.commit", _) if press => {
+                if self.session.stores.get("bar.collection.enabled")
+                    != Some(&bead::core::Value::Bool(true))
+                {
+                    return None;
+                }
+                let output = match self.session.stores.get("bar.collection.output") {
+                    Some(bead::core::Value::Text(output)) if !output.is_empty() => output.clone(),
+                    _ => return None,
+                };
+                let name = match self.session.stores.get("collection.draft") {
+                    Some(bead::core::Value::Text(name)) => name.trim().to_owned(),
+                    _ => return None,
+                };
+                if name.is_empty() || name.len() > 64 || name.chars().any(char::is_control) {
+                    return None;
+                }
+                let action = match self.session.stores.get("collection.operation") {
+                    Some(bead::core::Value::Text(operation)) if operation == "create" =>
+                        nacre_protocol::shell_actions::CollectionOperation::Create { name: Some(name) },
+                    Some(bead::core::Value::Text(operation)) if operation == "rename" => {
+                        let Some(bead::core::Value::Text(target)) = self.session.stores.get("collection.target") else { return None; };
+                        nacre_protocol::shell_actions::CollectionOperation::Rename { collection: target.clone(), name: Some(name) }
+                    }
+                    _ => return None,
+                };
+                Some(Route::CollectionAction { output, action })
+            }
+            ("collection.wallpaper.set", _) if press => {
+                if self.session.stores.get("bar.collection.enabled")
+                    != Some(&bead::core::Value::Bool(true))
+                {
+                    return None;
+                }
+                let collection = match self.session.stores.get("bar.collection.current") {
+                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => collection.clone(),
+                    _ => return None,
+                };
+                let Some(bead::core::Value::List(rows)) = self.session.stores.get("bar.collections") else {
+                    return None;
+                };
+                if !rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty())) {
+                    return None;
+                }
+                let output = match self.session.stores.get("bar.collection.output") {
+                    Some(bead::core::Value::Text(output)) if !output.is_empty() => output.clone(),
+                    _ => return None,
+                };
+                Some(Route::CollectionAction {
+                    output,
+                    action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper { collection },
+                })
+            }
+            ("collection.accent.use" | "collection.accent.clear", _) if press => {
+                if self.session.stores.get("bar.collection.enabled")
+                    != Some(&bead::core::Value::Bool(true))
+                {
+                    return None;
+                }
+                let collection = match self.session.stores.get("bar.collection.current") {
+                    Some(bead::core::Value::Text(collection)) if !collection.is_empty() => collection.clone(),
+                    _ => return None,
+                };
+                let output = match self.session.stores.get("bar.collection.output") {
+                    Some(bead::core::Value::Text(output)) if !output.is_empty() => output.clone(),
+                    _ => return None,
+                };
+                Some(Route::CollectionAction {
+                    output,
+                    action: nacre_protocol::shell_actions::CollectionOperation::SetAccent {
+                        collection,
+                        enabled: name == "collection.accent.use",
+                    },
+                })
+            }
             ("backend.workspace.switch", _) if press => {
                 // This output's own row model (B0025), never another output's.
                 let Some(bead::core::Value::List(rows)) =
@@ -4072,9 +4203,22 @@ impl Runtime {
         Ok(self)
     }
     pub fn with_popout_trigger(mut self) -> Result<Self, Box<dyn Error>> {
-        self.actions.register("view.open", "ui.popouts")?;
-        self.actions.register("status.pill.open", "ui.popouts")?;
-        self.actions.register("widgets.edit", "ui.popouts")?;
+        for name in [
+            "view.open",
+            "status.pill.open",
+            "collection.switcher.open",
+            "collection.switch",
+            "collection.begin-create",
+            "collection.begin-rename",
+            "collection.commit",
+            "collection.cancel",
+            "collection.wallpaper.set",
+            "collection.accent.use",
+            "collection.accent.clear",
+            "widgets.edit",
+        ] {
+            self.actions.register(name, "ui.popouts")?;
+        }
         self.actions.grant("ui.popouts");
         self.session.stores = self
             .session
@@ -4090,7 +4234,7 @@ impl Runtime {
         ((self.bar
             && matches!(
                 view,
-                "calendar" | "network" | "bluetooth" | "battery" | "sound" | "tray"
+                "calendar" | "network" | "bluetooth" | "battery" | "sound" | "tray" | "collections"
             ))
             || (self.bar && view.starts_with("peek-")))
         .then(|| {
@@ -5419,17 +5563,30 @@ impl SceneSource for Runtime {
         }
         if let Some(topic) = &self.origins_topic {
             let wakeup = wakeup.clone();
-            // Titles and focus churn the topic constantly; only origin changes reach the bar.
-            let last = std::sync::Mutex::new(Vec::<serde_json::Value>::new());
+            // Titles and focus churn the topic constantly; only desk/origin changes reach the bar.
+            let output = self.collection_output.clone();
+            let last = std::sync::Mutex::new(serde_json::Value::Null);
             match topic.subscribe(std::sync::Arc::new(move |snapshot| {
                 let rows = crate::workspace_rows::origin_rows(&snapshot.data);
+                let selected_output = output.lock().unwrap_or_else(|error| error.into_inner()).clone();
+                let collections = crate::workspace_rows::collection_stores(&snapshot.data, selected_output.as_deref());
+                let signature = serde_json::json!({
+                    "origins": rows,
+                    "collections": crate::workspace_rows::collection_rows(&snapshot.data),
+                    "current": match collections.get("bar.collection.current") { Some(bead::core::Value::Text(value)) => value.as_str(), _ => "" },
+                    "connection": match collections.get("bar.collection.connection") { Some(bead::core::Value::Text(value)) => value.as_str(), _ => "" },
+                    "enabled": match collections.get("bar.collection.enabled") { Some(bead::core::Value::Bool(value)) => *value, _ => false },
+                    "output": match collections.get("bar.collection.output") { Some(bead::core::Value::Text(value)) => value.as_str(), _ => "" },
+                });
                 let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
-                if *last != rows {
-                    last.clone_from(&rows);
-                    wakeup(UiEvent::Model(BTreeMap::from([(
+                if *last != signature {
+                    *last = signature;
+                    let mut values = BTreeMap::from([(
                         "bar.workspace.origins".into(),
                         bead::core::Value::list(rows),
-                    )])));
+                    )]);
+                    values.extend(collections);
+                    wakeup(UiEvent::Model(values));
                 }
             })) {
                 Ok(subscription) => self.origins_subscription = Some(subscription),
@@ -7202,6 +7359,15 @@ impl SceneSource for Runtime {
             status.bluetooth_pair_leave();
         }
         if let Some((_, name, arg)) = &mut host_action
+            && name == "collection.switcher.open"
+            && (matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
+                || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
+        {
+            self.actions.authorize(name)?;
+            *name = "view.open".into();
+            *arg = bead::core::Value::Text("collections".into());
+        }
+        if let Some((_, name, arg)) = &mut host_action
             && name == "view.open"
             && *arg == bead::core::Value::Text("sound".into())
             && matches!(&event, UiEvent::Scroll { .. })
@@ -7936,12 +8102,57 @@ impl SceneSource for Runtime {
                 .action(name, arg)?;
             return self.finish_scene(None);
         }
+        if let Some((_, name, arg)) = host_action.as_ref()
+            && matches!(name.as_str(), "collection.begin-create" | "collection.begin-rename" | "collection.cancel")
+            && (matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
+                || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
+        {
+            self.actions.authorize(name)?;
+            let changes = match name.as_str() {
+                "collection.begin-create" => BTreeMap::from([
+                    ("collection.operation".into(), bead::core::Value::Text("create".into())),
+                    ("collection.target".into(), bead::core::Value::Text(String::new())),
+                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                    ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
+                ]),
+                "collection.begin-rename" => {
+                    let bead::core::Value::Text(target) = arg else { return self.finish_scene(None); };
+                    let existing_name = match self.session.stores.get("bar.collections") {
+                        Some(bead::core::Value::List(rows)) => rows.iter()
+                            .find(|row| row["id"] == target)
+                            .and_then(|row| row["name"].as_str())
+                            .unwrap_or("")
+                            .to_owned(),
+                        _ => String::new(),
+                    };
+                    BTreeMap::from([
+                        ("collection.operation".into(), bead::core::Value::Text("rename".into())),
+                        ("collection.target".into(), bead::core::Value::Text(target.clone())),
+                        ("collection.draft".into(), bead::core::Value::Text(existing_name)),
+                        ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
+                    ])
+                }
+                _ => BTreeMap::from([
+                    ("collection.operation".into(), bead::core::Value::Text(String::new())),
+                    ("collection.target".into(), bead::core::Value::Text(String::new())),
+                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                    ("bead.focused".into(), bead::core::Value::Text(String::new())),
+                ]),
+            };
+            let scene = self.session.update(changes)?;
+            return self.finish_scene(scene);
+        }
         if let Some(routes) = &self.routes
             && let Some((id, name, arg)) = host_action.as_ref()
             && (name.starts_with("services.")
                 || name == "bar.title"
                 || name == "backend.workspace.switch"
                 || name == "backend.window.focus"
+                || name == "collection.switch"
+                || name == "collection.commit"
+                || name == "collection.wallpaper.set"
+                || name == "collection.accent.use"
+                || name == "collection.accent.clear"
                 || (name == "status.pill.open"
                     && matches!(
                         event,
@@ -7952,14 +8163,23 @@ impl SceneSource for Runtime {
             // (and controls the daemon does not advertise) never fall back to
             // the local compositor, audio or tray paths.
             self.actions.authorize(name)?;
-            if let Some(route) = self.bar_route(&event, id, name, arg)
-                && let Err(reason) =
-                    routes.send(&route, self.output.as_deref(), std::sync::Arc::new(|| {}))
-            {
-                eprintln!(
-                    "BAR_ACTION_REFUSED method={} reason={reason}",
-                    route.method()
-                );
+            let mut routed = false;
+            if let Some(route) = self.bar_route(&event, id, name, arg) {
+                match routes.send(&route, self.output.as_deref(), std::sync::Arc::new(|| {})) {
+                    Ok(()) => routed = true,
+                    Err(reason) => eprintln!(
+                        "BAR_ACTION_REFUSED method={} reason={reason}",
+                        route.method()
+                    ),
+                }
+            }
+            let mut route_scene = None;
+            if routed && name == "collection.commit" {
+                route_scene = self.session.update(BTreeMap::from([
+                    ("collection.operation".into(), bead::core::Value::Text(String::new())),
+                    ("collection.target".into(), bead::core::Value::Text(String::new())),
+                    ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                ]))?;
             }
             if self.session.has_preview(id)
                 && matches!(&event, UiEvent::Click { .. } | UiEvent::Drag { .. })
@@ -7968,9 +8188,9 @@ impl SceneSource for Runtime {
                     || self.pointer_feedback(id, &event, true),
                     |scene| Ok(Some(scene)),
                 )?;
-                return self.finish_scene(scene);
+                return self.finish_scene(scene.or(route_scene));
             }
-            return self.finish_scene(None);
+            return self.finish_scene(route_scene);
         }
         if let Some((id, name, arg)) = host_action.as_ref()
             && name.starts_with("services.")
@@ -8190,6 +8410,7 @@ impl SceneSource for Runtime {
             }
             UiEvent::OutputName(name) => {
                 self.output = Some(name.clone());
+                *self.collection_output.lock().unwrap_or_else(|error| error.into_inner()) = Some(name.clone());
                 let luma = crate::wallpaper_luma::values(Some(&name));
                 scope_recovery(&mut self.session, Some(&name));
                 let values = if let Some(backend) = &self.backend {
@@ -8204,6 +8425,12 @@ impl SceneSource for Runtime {
                     BTreeMap::from([("bead.output.name".into(), bead::core::Value::Text(name))])
                 };
                 let mut values = values;
+                if let Some(topic) = &self.origins_topic {
+                    values.extend(crate::workspace_rows::collection_stores(
+                        &topic.snapshot().data,
+                        Some(&name),
+                    ));
+                }
                 if self.bar {
                     values.extend(luma);
                 }

@@ -14,6 +14,7 @@
   "frameRounding": 25,
   "frameSheen": true,
   "workspaceWindowHints": true,
+  "collectionWallpapers": false,
   "detachablePanels": true,
   "dragPanels": true,
   "clickEdgeMenus": false,

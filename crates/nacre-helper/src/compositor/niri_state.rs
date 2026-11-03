@@ -72,10 +72,14 @@ pub fn capabilities() -> Value {
 }
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
 pub struct State {
     pub outputs: Map<String, Value>,
     pub workspaces: Map<String, Value>,
     pub windows: Map<String, Value>,
+    pub collections: Vec<Value>,
+    pub active_collection: Option<u64>,
+    pub collections_supported: bool,
     pub ready: BTreeSet<String>,
     pub config_failed: Value,
     pub overview_open: Value,
@@ -105,6 +109,8 @@ impl State {
             .ok_or_else(|| invalid("Malformed niri event"))?;
         const KNOWN: &[&str] = &[
             "WorkspacesChanged",
+            "CollectionsChanged",
+            "CollectionActivated",
             "WindowsChanged",
             "WorkspaceActivated",
             "WorkspaceUrgencyChanged",
@@ -126,6 +132,36 @@ impl State {
             return Err(invalid("Malformed niri event payload"));
         }
         match name.as_str() {
+            "CollectionsChanged" => {
+                let rows = get(payload, "collections")?
+                    .as_array()
+                    .filter(|rows| rows.iter().all(Value::is_object))
+                    .ok_or_else(|| invalid("Malformed niri collection records"))?;
+                for row in rows {
+                    if !row.get("id").is_some_and(Value::is_u64)
+                        || !row.get("idx").is_some_and(Value::is_u64)
+                        || !row.get("workspace_ids").and_then(Value::as_array).is_some_and(|ids| ids.iter().all(Value::is_u64))
+                        || !(row.get("name").is_some_and(Value::is_null) || row.get("name").and_then(Value::as_str).is_some())
+                        || !(row.get("output").is_some_and(Value::is_null) || row.get("output").and_then(Value::as_str).is_some())
+                        || !row.get("is_active").is_some_and(Value::is_boolean)
+                    {
+                        return Err(invalid("Malformed niri collection record"));
+                    }
+                }
+                self.collections = rows.clone();
+                self.collections_supported = true;
+                if let Some(active) = self.active_collection
+                    && !rows.iter().any(|row| row["id"] == active)
+                {
+                    self.active_collection = None;
+                }
+                Ok(json!({"type":"collections-changed"}))
+            }
+            "CollectionActivated" => {
+                let id = get(payload, "id")?.as_u64().ok_or_else(|| invalid("Malformed collection ID"))?;
+                self.active_collection = Some(id);
+                Ok(json!({"type":"collection-activated","collectionId":format!("niri-collection:{id}")}))
+            }
             "WorkspacesChanged" | "WindowsChanged" => {
                 let (kind, key) = if name == "WorkspacesChanged" {
                     ("workspace", "workspaces")
@@ -286,6 +322,8 @@ impl State {
         }
     }
     pub fn snapshot(&self) -> Result<Value> {
+        let mut caps = capabilities();
+        caps["workspaceCollections"] = json!(self.collections_supported);
         let mut workspaces = Vec::new();
         for (key, row) in &self.workspaces {
             let index = get(row, "idx")?;
@@ -422,8 +460,22 @@ impl State {
             };
             windows.push(json!({"id":key,"windowId":key,"address":key,"appId":app,"class":app,"title":title,"pid":pid,"workspaceId":workspace_id,"workspace":workspace_value,"outputId":output,"monitor":output,"geometry":geometry,"geometryKnown":known,"moving":row["workspace_id"].is_null()&&position.is_none(),"at":[x,y],"size":size,"floating":truthy(&row["is_floating"]),"focused":truthy(&row["is_focused"]),"urgent":urgent,"hidden":false,"pinned":false,"fullscreen":0,"fullscreenMode":0,"fullscreenKnown":false}));
         }
+        let collections: Vec<Value> = self.collections.iter().map(|row| {
+            let id = row["id"].as_u64().unwrap_or_default();
+            let label = row["name"].as_str().map(str::to_owned)
+                .unwrap_or_else(|| row["idx"].to_string());
+            json!({
+                "id": format!("niri-collection:{id}"),
+                "index": row["idx"],
+                "name": row["name"],
+                "label": label,
+                "output": row["output"],
+                "active": row["is_active"],
+                "workspaceIds": row["workspace_ids"].as_array().into_iter().flatten().filter_map(Value::as_u64).map(|id| format!("niri-workspace:{id}")).collect::<Vec<_>>()
+            })
+        }).collect();
         Ok(
-            json!({"type":"snapshot","backend":"niri","capabilities":capabilities(),"monitors":monitors,"workspaces":workspaces,"windows":windows,"activeWindow":windows.iter().find(|row|row["focused"]==true),"activeWorkspace":focused,"focusedMonitor":monitors.iter().find(|row|row["focused"]==true),"overviewOpen":self.overview_open,"overviewHoverSupported":self.overview_hover_supported,"overviewHoveredWindowId":self.overview_hover_id,"configFailed":self.config_failed}),
+            json!({"type":"snapshot","backend":"niri","capabilities":caps,"monitors":monitors,"workspaces":workspaces,"windows":windows,"collections":collections,"activeCollection":self.active_collection.map(|id|format!("niri-collection:{id}")),"activeWindow":windows.iter().find(|row|row["focused"]==true),"activeWorkspace":focused,"focusedMonitor":monitors.iter().find(|row|row["focused"]==true),"overviewOpen":self.overview_open,"overviewHoverSupported":self.overview_hover_supported,"overviewHoveredWindowId":self.overview_hover_id,"configFailed":self.config_failed}),
         )
     }
 }
@@ -512,6 +564,28 @@ mod tests {
             }
         }
         assert_eq!(count, 79);
+        Ok(())
+    }
+
+    #[test]
+    fn collection_events_replace_named_snapshot_and_report_activation() -> crate::Result<()> {
+        let mut state = State::new(Default::default());
+        let changed = json!({"CollectionsChanged":{"collections":[
+            {"id":17,"idx":1,"name":"work","output":"DP-1","is_active":true,"workspace_ids":[4,5]},
+            {"id":28,"idx":2,"name":null,"output":null,"is_active":false,"workspace_ids":[7]}
+        ]}});
+        assert_eq!(state.apply(&changed)?["type"], "collections-changed");
+        assert_eq!(state.collections.len(), 2);
+        let activated = state.apply(&json!({"CollectionActivated":{"id":28}}))?;
+        assert_eq!(activated["type"], "collection-activated");
+        assert_eq!(activated["collectionId"], "niri-collection:28");
+        let snapshot = state.snapshot()?;
+        assert_eq!(snapshot["collections"][0]["id"], "niri-collection:17");
+        assert_eq!(snapshot["collections"][0]["label"], "work");
+        assert_eq!(snapshot["collections"][0]["name"], "work");
+        assert_eq!(snapshot["collections"][0]["workspaceIds"], json!(["niri-workspace:4", "niri-workspace:5"]));
+        assert_eq!(snapshot["activeCollection"], "niri-collection:28");
+        assert!(state.apply(&json!({"CollectionsChanged":{"collections":[{"id":1}]}})).is_err());
         Ok(())
     }
 }

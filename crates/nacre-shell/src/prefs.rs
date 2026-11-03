@@ -70,6 +70,8 @@ pub struct Prefs {
     pub workspace_count: u32,
     pub workspace_icons: Vec<String>,
     pub window_hints: bool,
+    /// `desktop.collectionWallpapers`: restore saved wallpaper profiles by desk name.
+    pub collection_wallpapers_enabled: bool,
     /// `launcher-layout` `order` / `hidden` category ids (strings only, bounded).
     pub rail_order: Vec<String>,
     pub rail_hidden: Vec<String>,
@@ -198,6 +200,7 @@ impl Prefs {
                 .map_or(6, |v| v.round().clamp(1., MAX_LIST as f64) as u32),
             workspace_icons: strings(profile.get("workspaceIcons"), true),
             window_hints: on("workspaceWindowHints"),
+            collection_wallpapers_enabled: flag("collectionWallpapers") == Some(true),
             rail_order: strings(layout.get("order"), false),
             rail_hidden: strings(layout.get("hidden"), false),
             detachable_panels: on("detachablePanels"),
@@ -272,6 +275,7 @@ impl Prefs {
                 bead::core::Value::list(icons.collect()),
             ),
             ("bar.workspace.hints".into(), Bool(self.window_hints)),
+            ("bar.collection.wallpapers.enabled".into(), Bool(self.collection_wallpapers_enabled)),
             ("bar.clock.twelve".into(), Bool(self.clock_12h)),
         ]
         .into()

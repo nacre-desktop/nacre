@@ -2,8 +2,8 @@
 use super::hub::{failure, Shared};
 use nacre_protocol::{
     shell_actions::{
-        SessionAction, SessionRequest, WindowFocus, WorkspaceActivate, WorkspaceDirection,
-        WorkspaceScroll, WorkspaceTarget,
+        CollectionAction, CollectionOperation, SessionAction, SessionRequest, WindowFocus,
+        WorkspaceActivate, WorkspaceDirection, WorkspaceScroll, WorkspaceTarget,
     },
     ErrorCode, Failure, Method,
 };
@@ -53,7 +53,13 @@ pub fn available_methods(hub: &super::hub::Hub) -> BTreeMap<String, Method> {
     {
         BTreeMap::new()
     } else {
-        methods()
+        let mut methods = methods();
+        if hub.snapshot("compositor").is_none_or(|topic| {
+            topic["backend"] != "niri" || topic["capabilities"]["workspaceCollections"] != true
+        }) {
+            methods.remove("collection.action");
+        }
+        methods
     }
 }
 
@@ -167,6 +173,81 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                 .scoped_action("window", window_output, target)
                 .await
                 .map_err(|_| action_error())?
+        }
+        "collection.action" => {
+            let request: CollectionAction = serde_json::from_value(params).map_err(|_| invalid())?;
+            request.validate()?;
+            if snapshot["backend"] != "niri" || snapshot["capabilities"]["workspaceCollections"] != true {
+                return Err(invalid());
+            }
+            let _ = output(&snapshot, &request.output)?;
+            match &request.action {
+                CollectionOperation::Activate { collection } | CollectionOperation::Rename { collection, .. } => {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection)) {
+                        return Err(invalid());
+                    }
+                }
+                CollectionOperation::SetWallpaper { collection } => {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                        return Err(invalid());
+                    }
+                }
+                CollectionOperation::SetAccent { collection, .. } => {
+                    if !snapshot["collections"].as_array().is_some_and(|rows| rows.iter().any(|row| row["id"] == collection && row["name"].as_str().is_some_and(|name| !name.trim().is_empty()))) {
+                        return Err(invalid());
+                    }
+                }
+                CollectionOperation::Create { .. } => {}
+            }
+            match request.action {
+                CollectionOperation::SetWallpaper { collection } => {
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let name = row["name"].as_str().ok_or_else(invalid)?;
+                    let wallpaper = hub.snapshot(super::active_wallpaper::TOPIC)
+                        .and_then(|data| serde_json::from_value::<nacre_protocol::wallpaper::WallpaperActive>(data).ok())
+                        .filter(|state| state.available && !state.stale)
+                        .and_then(|state| state.outputs.get(&request.output).cloned())
+                        .ok_or_else(unavailable)?;
+                    let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
+                    super::active_wallpaper::set_collection_wallpaper(&hub, &paths, name, &wallpaper)
+                        .map_err(|_| action_error())?;
+                }
+                CollectionOperation::SetAccent { collection, enabled } => {
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let name = row["name"].as_str().ok_or_else(invalid)?;
+                    let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
+                    super::active_wallpaper::set_collection_accent(&hub, &paths, name, enabled)
+                        .map_err(|_| action_error())?;
+                }
+                CollectionOperation::Rename { collection, name } => {
+                    let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"] == collection)).ok_or_else(invalid)?;
+                    let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
+                    let old_name = row["name"].as_str().filter(|name| !name.trim().is_empty()).map(str::to_owned);
+                    if let (Some(old_name), Some(new_name)) = (old_name.as_deref(), name.as_deref()) {
+                        let profiles = super::active_wallpaper::collection_wallpapers(&paths).map_err(|_| action_error())?;
+                        if old_name != new_name.trim()
+                            && profiles["wallpapers"].get(new_name.trim()).is_some()
+                            && profiles["wallpapers"].get(old_name).is_some()
+                        {
+                            return Err(invalid());
+                        }
+                    }
+                    if control.collection_action(
+                        request.output,
+                        CollectionOperation::Rename { collection, name: name.clone() },
+                    ).await.is_err() {
+                        return Err(action_error());
+                    }
+                    if let Some(old_name) = old_name {
+                        super::active_wallpaper::rename_collection_wallpaper(&paths, &old_name, name.as_deref())
+                            .map_err(|_| action_error())?;
+                    }
+                }
+                action => {
+                    control.collection_action(request.output, action).await.map_err(|_| action_error())?;
+                }
+            }
+            Value::Null
         }
         _ => return Err(invalid()),
     };

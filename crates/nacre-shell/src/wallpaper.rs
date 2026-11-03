@@ -1160,7 +1160,7 @@ impl Consumer {
         {
             return Ok(frame);
         }
-        let request = serde_json::json!({"revision": decoded_pair.revision});
+        let request = serde_json::json!({"revision": decoded_pair.revision,"output":output.as_str()});
         bead::core::profile::mark("wallpaper_activation_requested");
         if let Some(selection) = selection.as_ref().filter(|selection| {
             selection.boot == boot && pair_matches_id(&decoded_pair, &selection.id)
@@ -1641,13 +1641,23 @@ fn live(snapshot: &bead::core::source::Snapshot) -> Option<BTreeMap<String, [u8;
     let pair = state
         .current
         .or_else(|| state.outputs.into_values().next())?;
-    Some(
-        palette(&pair)
-            .0
-            .iter()
-            .map(|(k, v)| (k.clone(), *v))
-            .collect(),
-    )
+    let mut colours: BTreeMap<String, [u8; 4]> = palette(&pair)
+        .0
+        .iter()
+        .map(|(key, value)| (key.clone(), *value))
+        .collect();
+    if let Some(hex) = state.focused_accent.as_deref().and_then(|accent| accent.strip_prefix('#'))
+        && hex.len() == 6
+        && hex.bytes().all(|byte| byte.is_ascii_hexdigit())
+        && let (Ok(red), Ok(green), Ok(blue)) = (
+            u8::from_str_radix(&hex[0..2], 16),
+            u8::from_str_radix(&hex[2..4], 16),
+            u8::from_str_radix(&hex[4..6], 16),
+        )
+    {
+        colours.insert("primary".into(), [red, green, blue, 255]);
+    }
+    Some(colours)
 }
 impl bead::wayland::PaletteFeed for Feed {
     fn current(&self) -> Option<BTreeMap<String, [u8; 4]>> {
@@ -1727,6 +1737,7 @@ mod tests {
             revision: 2,
             current: Some(second.clone()),
             outputs: BTreeMap::from([("DP-1".into(), second.clone())]),
+            focused_accent: None,
             error: None,
         };
         assert_eq!(state.observe(&active), Some(2));
@@ -1743,6 +1754,7 @@ mod tests {
                     revision: 1,
                     current: None,
                     outputs: Default::default(),
+                    focused_accent: None,
                     error: None
                 })
                 .is_none()
@@ -1822,6 +1834,11 @@ mod tests {
             &latest,
             &status
         ));
+        let mut wrong_output = latest.clone();
+        wrong_output.outputs.insert("DP-1".into(), pair(2));
+        assert!(!activation_reply_matches(
+            "DP-1", "boot-a", &expected, &expected, &wrong_output, &status
+        ));
     }
 
     #[test]
@@ -1897,16 +1914,29 @@ mod tests {
                 ]),
             },
         };
+        let desk_path = root.join("desk-poster.png");
+        let mut desk_png = Vec::new();
+        image::codecs::png::PngEncoder::new(&mut desk_png)
+            .write_image(&[180, 40, 20, 255], 1, 1, image::ExtendedColorType::Rgba8)
+            .unwrap();
+        std::fs::write(&desk_path, desk_png).unwrap();
+        std::fs::set_permissions(&desk_path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let mut profile = pair.clone();
+        profile.path = desk_path.to_string_lossy().into_owned();
+        profile.file_identity = nacre_protocol::wallpaper::WallpaperFileIdentity::from_metadata(
+            &std::fs::metadata(&desk_path).unwrap(),
+        );
         let state = WallpaperActive {
             available: true,
             stale: false,
             previous_available: false,
             revision: 1,
             current: Some(pair.clone()),
-            outputs: BTreeMap::from([("DP-1".into(), pair.clone())]),
+            outputs: BTreeMap::from([("DP-1".into(), profile.clone())]),
+            focused_accent: None,
             error: None,
         };
-        let expected_pair = pair.clone();
+        let expected_pair = profile.clone();
         let socket = root.join("daemon.sock");
         let socket_for_client = socket.clone();
         let preview = Arc::new(Preview::default());
@@ -1981,18 +2011,18 @@ mod tests {
                     panic!("wallpaper.activate call expected");
                 };
                 assert_eq!(m, "wallpaper.activate");
-                assert_eq!(p, serde_json::json!({"revision":1}));
+                assert_eq!(p, serde_json::json!({"revision":1,"output":"DP-1"}));
                 if call_index == 1 {
                     let _ = staged_call_tx.take().unwrap().send(());
                     let _ = staged_release_rx.take().unwrap().await;
                 }
                 let reply_pair = if call_index == 2 {
-                    let mut pair = pair.clone();
+                    let mut pair = profile.clone();
                     pair.revision = 2;
                     pair.palette_revision = 2;
                     pair
                 } else {
-                    pair.clone()
+                    profile.clone()
                 };
                 framing::write(
                     &mut write,
@@ -2183,6 +2213,7 @@ mod tests {
             revision: 4,
             current: Some(pair(4)),
             outputs: BTreeMap::from([("DP-1".into(), pair(4))]),
+            focused_accent: None,
             error: None,
         };
         let publisher = Publisher::new(
@@ -2671,6 +2702,7 @@ mod tests {
             revision: pair.revision,
             current: Some(pair.clone()),
             outputs: BTreeMap::from([("DP-1".into(), pair)]),
+            focused_accent: None,
             error: None,
         }
     }

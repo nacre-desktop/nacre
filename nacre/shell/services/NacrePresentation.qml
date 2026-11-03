@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.utils
+import qs.services
 import "colour-data.js" as Colours
 
 Singleton {
@@ -13,6 +14,17 @@ Singleton {
         })
     readonly property var pending: state.pending
     readonly property var active: state.active
+    readonly property var wallpaperActiveTopic: NacreDaemon.topic("wallpaper.active")
+    property string focusedAccent: ""
+    readonly property var effectiveActive: {
+        if (!active?.colours || !focusedAccent)
+            return active;
+        return Object.assign({}, active, {
+            colours: Object.assign({}, active.colours, {
+                primary: focusedAccent
+            })
+        });
+    }
     readonly property bool available: !!pending.colours
     property string error: ""
     property int revision: 0
@@ -84,6 +96,21 @@ Singleton {
         }
         error = "";
         return true;
+    }
+    function refreshFocusedAccent() {
+        const topic = wallpaperActiveTopic;
+        const accent = topic?.fresh && topic.data?.available === true && topic.data?.stale !== true ? topic.data.focused_accent : "";
+        focusedAccent = typeof accent === "string" && /^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "";
+    }
+    Component.onCompleted: refreshFocusedAccent()
+    Connections {
+        target: root.wallpaperActiveTopic
+        function onDataChanged() {
+            root.refreshFocusedAccent();
+        }
+        function onFreshChanged() {
+            root.refreshFocusedAccent();
+        }
     }
     function load(text) {
         try {

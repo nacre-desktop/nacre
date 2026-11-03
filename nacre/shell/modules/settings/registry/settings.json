@@ -2449,6 +2449,28 @@
       "unavailableId": "settings.registry.ui.unavailable"
     },
     {
+      "id": "windows-workspaces.workspaces.collectionWallpapers",
+      "page": "windows-workspaces",
+      "section": "windows-workspaces.workspaces",
+      "key": "collectionWallpapers",
+      "labelId": "settings.registry.windows-workspaces.workspaces.collectionWallpapers.label",
+      "descriptionId": "settings.registry.windows-workspaces.workspaces.collectionWallpapers.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "collectionWallpapers"
+        ]
+      },
+      "default": false,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "workspaceCollections"
+      }
+    },
+    {
       "id": "windows-workspaces.overview.nativeOverview",
       "page": "windows-workspaces",
       "section": "windows-workspaces.overview",

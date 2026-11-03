@@ -129,13 +129,20 @@ pub fn project(snapshot: &Value, backend: &str, keyboard: &Value) -> Result<Valu
                 .find(|(_, row)| row["focused"] == true)
                 .map(|(id, _)| id.clone())
         });
-    let capabilities = if backend == "hyprland" {
+    let mut capabilities = if backend == "hyprland" {
         hyprland::capabilities()
     } else {
         niri_state::capabilities()
     };
+    if backend == "niri" {
+        capabilities["workspaceCollections"] = snapshot
+            .get("capabilities")
+            .and_then(|features| features.get("workspaceCollections"))
+            .cloned()
+            .unwrap_or(json!(false));
+    }
     Ok(
-        json!({"backend":backend,"available":true,"error":"","outputs":outputs,"outputOrder":output_order,"workspaces":workspaces,"workspaceOrder":workspace_order,"windows":windows,"windowOrder":window_order,"focus":{"windowId":window,"workspaceId":workspace,"outputId":output},"keyboard":keyboard,"capabilities":capabilities,"overviewOpen":snapshot.get("overviewOpen").cloned().unwrap_or(json!(false)),"overviewHoverSupported":snapshot.get("overviewHoverSupported").cloned().unwrap_or(json!(false)),"overviewHoveredWindowId":snapshot.get("overviewHoveredWindowId").cloned().unwrap_or(Value::Null),"configFailed":snapshot.get("configFailed").cloned().unwrap_or(json!(false))}),
+        json!({"backend":backend,"available":true,"error":"","connectionId":snapshot.get("connectionId").cloned().unwrap_or(Value::Null),"outputs":outputs,"outputOrder":output_order,"workspaces":workspaces,"workspaceOrder":workspace_order,"windows":windows,"windowOrder":window_order,"focus":{"windowId":window,"workspaceId":workspace,"outputId":output},"keyboard":keyboard,"capabilities":capabilities,"collections":snapshot.get("collections").cloned().unwrap_or_else(||json!([])),"activeCollection":snapshot.get("activeCollection").cloned().unwrap_or(Value::Null),"overviewOpen":snapshot.get("overviewOpen").cloned().unwrap_or(json!(false)),"overviewHoverSupported":snapshot.get("overviewHoverSupported").cloned().unwrap_or(json!(false)),"overviewHoveredWindowId":snapshot.get("overviewHoveredWindowId").cloned().unwrap_or(Value::Null),"configFailed":snapshot.get("configFailed").cloned().unwrap_or(json!(false))}),
     )
 }
 fn publish(
@@ -331,6 +338,7 @@ fn flush_niri(
     events: &mut Vec<Value>,
 ) -> Result<()> {
     let mut snapshot = state.snapshot()?;
+    snapshot["connectionId"] = json!(metadata.connection);
     if let Some(ledger) = crate::paths::Paths::environment()
         .ok()
         .and_then(|paths| std::fs::read(paths.state.join("workspace-session.json")).ok())
@@ -371,16 +379,6 @@ async fn niri(
     let hover = environment
         .get("NACRE_NIRI_HOVER_STREAM")
         .is_none_or(|value| value != "0");
-    let event_path = path.clone();
-    let reader = tokio::task::spawn_blocking(move || {
-        niri_events::EventSocket::connect(&event_path, hover)
-            .map(niri_events::EventSocket::into_stream)
-    })
-    .await??;
-    let prefix = reader.buffer().to_vec();
-    let stream = reader.into_inner();
-    stream.set_nonblocking(true)?;
-    let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
     let capabilities = control
         .with(|backend| {
             let backend::Backend::Niri(backend) = backend else {
@@ -392,6 +390,21 @@ async fn niri(
                 .nacre_capabilities(Duration::from_millis(500)))
         })
         .await?;
+    let event_path = path.clone();
+    let reader = tokio::task::spawn_blocking(move || {
+        let socket = if capabilities.workspace_collections {
+            niri_events::EventSocket::connect_collections(&event_path, hover)
+        } else {
+            niri_events::EventSocket::connect(&event_path, hover)
+        };
+        socket
+            .map(niri_events::EventSocket::into_stream)
+    })
+    .await??;
+    let prefix = reader.buffer().to_vec();
+    let stream = reader.into_inner();
+    stream.set_nonblocking(true)?;
+    let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
     let mut proportional_x11_widths = capabilities.proportional_x11_widths;
     let edge_enabled = capabilities.edge_triggers;
     let edge_socket = if edge_enabled {
@@ -652,6 +665,23 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn niri_collection_state_survives_compositor_topic_projection() -> Result<()> {
+        let snapshot = json!({
+            "monitors":[], "workspaces":[], "windows":[],
+            "capabilities":{"workspaceCollections":true},
+            "collections":[{"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"DP-1","active":true,"workspaceIds":["niri-workspace:4"]}],
+            "activeCollection":"niri-collection:17"
+        });
+        let projected = project(&snapshot, "niri", &json!({}))?;
+        assert_eq!(projected["capabilities"]["workspaceCollections"], true);
+        assert_eq!(projected["collections"][0]["name"], "work");
+        assert_eq!(projected["activeCollection"], "niri-collection:17");
+        let stock = project(&json!({"monitors":[],"workspaces":[],"windows":[]}), "niri", &json!({}))?;
+        assert_eq!(stock["capabilities"]["workspaceCollections"], false);
+        assert_eq!(stock["collections"], json!([]));
+        Ok(())
+    }
     #[test]
     fn niri_origins_come_from_the_ledger_for_this_socket_only() {
         let ledger = json!({"socket":"/run/niri.sock","origins":{"niri-workspace:1":["A",2],"niri-workspace:2":["B",1]}});

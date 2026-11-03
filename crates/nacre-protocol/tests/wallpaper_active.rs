@@ -103,19 +103,29 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
 fn activation_revision_is_positive_and_safe() {
     assert!(WallpaperActivate {
         revision: 1,
-        id: None
+        id: None,
+        output: Some("DP-1".into()),
     }
     .validate()
     .is_ok());
     assert!(WallpaperActivate {
         revision: 0,
-        id: None
+        id: None,
+        output: None,
+    }
+    .validate()
+    .is_err());
+    assert!(WallpaperActivate {
+        revision: 1,
+        id: None,
+        output: Some("DP-1\n".into()),
     }
     .validate()
     .is_err());
     assert!(WallpaperActivate {
         revision: MAX_SAFE_INTEGER + 1,
         id: None,
+        output: None,
     }
     .validate()
     .is_err());

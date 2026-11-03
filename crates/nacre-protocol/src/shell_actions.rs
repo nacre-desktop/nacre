@@ -32,6 +32,42 @@ pub struct WorkspaceScroll {
     pub direction: WorkspaceDirection,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(tag = "operation", rename_all = "snake_case", deny_unknown_fields)]
+pub enum CollectionOperation {
+    Activate {
+        #[schemars(length(min = 17, max = 40))]
+        collection: String,
+    },
+    Create {
+        #[serde(default)]
+        #[schemars(length(max = 64))]
+        name: Option<String>,
+    },
+    Rename {
+        #[schemars(length(min = 17, max = 40))]
+        collection: String,
+        #[serde(default)]
+        #[schemars(length(max = 64))]
+        name: Option<String>,
+    },
+    SetWallpaper {
+        #[schemars(length(min = 17, max = 40))]
+        collection: String,
+    },
+    SetAccent {
+        #[schemars(length(min = 17, max = 40))]
+        collection: String,
+        enabled: bool,
+    },
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct CollectionAction {
+    #[schemars(length(min = 1, max = 128))]
+    pub output: String,
+    pub action: CollectionOperation,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WindowFocus {
     /// Optional guard: when present the window must be on this output. Absent
@@ -80,6 +116,31 @@ impl WorkspaceScroll {
         Ok(())
     }
 }
+impl CollectionAction {
+    pub fn validate(&self) -> Result<(), Failure> {
+        let valid_collection = |value: &str| {
+            value.strip_prefix("niri-collection:").is_some_and(|id| {
+                !id.is_empty() && id.bytes().all(|byte| byte.is_ascii_digit()) && id.parse::<u64>().is_ok()
+            })
+        };
+        let valid_name = |name: &Option<String>| name.as_ref().is_none_or(|name| {
+            let trimmed = name.trim();
+            !trimmed.is_empty() && trimmed.len() <= 64 && !trimmed.chars().any(char::is_control)
+        });
+        if !valid_id(&self.output)
+            || match &self.action {
+                CollectionOperation::Activate { collection } => !valid_collection(collection),
+                CollectionOperation::Create { name } => !valid_name(name),
+                CollectionOperation::Rename { collection, name } => !valid_collection(collection) || !valid_name(name),
+                CollectionOperation::SetWallpaper { collection } => !valid_collection(collection),
+                CollectionOperation::SetAccent { collection, .. } => !valid_collection(collection),
+            }
+        {
+            return Err(invalid());
+        }
+        Ok(())
+    }
+}
 impl WindowFocus {
     pub fn validate(&self) -> Result<(), Failure> {
         if self
@@ -109,6 +170,7 @@ pub fn methods() -> BTreeMap<String, Method> {
     [
         ("workspace.activate", schemars::schema_for!(WorkspaceActivate)),
         ("workspace.scroll", schemars::schema_for!(WorkspaceScroll)),
+        ("collection.action", schemars::schema_for!(CollectionAction)),
         ("window.focus", schemars::schema_for!(WindowFocus)),
         ("session.request", schemars::schema_for!(SessionRequest)),
     ].into_iter().map(|(name, schema)| {
@@ -140,6 +202,11 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
             "WorkspaceScroll",
             "workspace-scroll",
             schemars::schema_for!(WorkspaceScroll),
+        ),
+        (
+            "CollectionAction",
+            "collection-action",
+            schemars::schema_for!(CollectionAction),
         ),
         (
             "WindowFocus",
@@ -234,7 +301,20 @@ mod tests {
         let agnostic =
             serde_json::from_value::<WindowFocus>(json!({"window":"niri-window:7"})).unwrap();
         assert!(agnostic.output.is_none() && agnostic.validate().is_ok());
-        assert_eq!(methods().len(), 4);
+        assert!(CollectionAction {
+            output: "DP-1".into(),
+            action: CollectionOperation::Activate {
+                collection: "niri-collection:42".into(),
+            },
+        }.validate().is_ok());
+        assert!(CollectionAction {
+            output: "DP-1".into(),
+            action: CollectionOperation::Rename {
+                collection: "niri-collection:42".into(),
+                name: Some("  ".into()),
+            },
+        }.validate().is_err());
+        assert_eq!(methods().len(), 5);
         assert!(serde_json::from_value::<WorkspaceActivate>(
             json!({"output":"DP-1","workspace":"1","command":"exec"})
         )
@@ -248,5 +328,6 @@ mod tests {
         assert!(types.contains("export type WorkspaceDirection ="));
         assert!(types.contains("export type SessionAction ="));
         assert!(types.contains("export type WorkspaceTarget ="));
+        assert!(types.contains("export type CollectionOperation ="));
     }
 }

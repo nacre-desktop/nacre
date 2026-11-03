@@ -75,6 +75,21 @@ impl EventSocket {
             MAX_BYTES,
         )
     }
+    pub fn connect_collections(path: &Path, hover: bool) -> Result<Self> {
+        Self::connect_collections_with(|| UnixStream::connect(path).map_err(io_error), hover)
+    }
+    fn connect_collections_with(
+        open: impl FnMut() -> Result<UnixStream>,
+        hover: bool,
+    ) -> Result<Self> {
+        let mut requests = Vec::new();
+        if hover {
+            requests.push("NacreOverviewHoverStreamWithCollections");
+        }
+        requests.push("EventStreamWithCollections");
+        requests.push("EventStream");
+        Self::connect_requests(open, &requests, MAX_BYTES)
+    }
     pub fn connect_edge_triggers(path: &Path) -> Result<Self> {
         Self::connect_requests(
             || UnixStream::connect(path).map_err(io_error),
@@ -541,6 +556,35 @@ mod tests {
             serde_json::from_slice::<Value>(&stock_request)?,
             json!("EventStream")
         );
+        Ok(())
+    }
+    #[test]
+    fn collection_stream_negotiates_combined_hover_and_reads_collection_events() -> crate::Result<()> {
+        let mut clients = VecDeque::new();
+        let mut peers = Vec::new();
+        for reply in [
+            "{\"Err\":\"combined stream unavailable\"}\n",
+            "{\"Ok\":\"Handled\"}\n{\"CollectionsChanged\":{\"collections\":[{\"id\":17,\"idx\":1,\"name\":\"work\",\"output\":\"DP-1\",\"is_active\":true,\"workspace_ids\":[4]}]}}\n",
+        ] {
+            let (client, mut server) = UnixStream::pair()?;
+            server.write_all(reply.as_bytes())?;
+            clients.push_back(client);
+            peers.push(server);
+        }
+        let mut socket = EventSocket::connect_collections_with(
+            || clients.pop_front().ok_or_else(|| invalid("Unexpected stream open")),
+            true,
+        )?;
+        let first = socket.next_event()?;
+        assert_eq!(first["CollectionsChanged"]["collections"][0]["name"], "work");
+        let mut wires = Vec::new();
+        for mut peer in peers {
+            let mut bytes = Vec::new();
+            peer.read_to_end(&mut bytes)?;
+            wires.push(String::from_utf8(bytes)?);
+        }
+        assert_eq!(serde_json::from_str::<Value>(wires[0].trim())?, json!("NacreOverviewHoverStreamWithCollections"));
+        assert_eq!(serde_json::from_str::<Value>(wires[1].lines().next().ok_or("missing request")?)?, json!("EventStreamWithCollections"));
         Ok(())
     }
     fn bytes(hex: &str) -> crate::Result<Vec<u8>> {

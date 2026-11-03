@@ -373,6 +373,57 @@ async fn workspace_title_pill_and_tray_actions_are_scoped_published_calls() {
     std::fs::remove_dir_all(dir).ok();
 }
 
+#[test]
+fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
+    let data = |second_name: &str| serde_json::json!({
+        "available":true,
+        "connectionId":"8:9",
+        "capabilities":{"workspaceCollections":true},
+        "focus":{"outputId":"DP-1"},
+        "outputs":{"DP-1":{"name":"DP-1","logicalHeight":900},"DP-2":{"name":"DP-2","logicalHeight":700}},
+        "workspaces":{},"windows":{},
+        "collections":[
+            {"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"DP-1","active":true},
+            {"id":"niri-collection:28","index":2,"name":second_name,"label":second_name,"output":"DP-2","active":false}
+        ]
+    });
+    let publisher = bead::core::source::Publisher::new("collections-fixture".into(), data("personal")).unwrap();
+    let palette = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
+    let colors = bead::render::Palette::read(&palette).unwrap();
+    let cold = crate::sound::fallback(colors.get("surface").unwrap());
+    let session = bead::ui::Session::new(palette.parent().unwrap().into(), "popouts/collections.luau".into(), palette, colors, cold);
+    let mut runtime = Runtime::new(session).with_origins_topic(Arc::new(publisher.clone())).unwrap();
+    runtime.state_file = None;
+    let (sender, events) = std::sync::mpsc::channel();
+    runtime.services(Box::new(move |event| { let _ = sender.send(event); }));
+    runtime.stage(UiEvent::Reload).unwrap();
+    runtime.commit();
+    while let Ok(event) = events.try_recv() {
+        runtime.stage(event).unwrap();
+        runtime.commit();
+    }
+    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:17".into())));
+
+    runtime.stage(UiEvent::OutputName("DP-2".into())).unwrap();
+    runtime.commit();
+    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:28".into())));
+    assert_eq!(runtime.session.stores.get("bar.collection.output"), Some(&bead::core::Value::Text("DP-2".into())));
+    let route = runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "desk", "collection.switch", &bead::core::Value::Text("niri-collection:28".into())).unwrap();
+    assert_eq!(route, crate::bar_routes::Route::CollectionAction {
+        output: "DP-2".into(),
+        action: nacre_protocol::shell_actions::CollectionOperation::Activate { collection: "niri-collection:28".into() },
+    });
+
+    publisher.publish(data("studio")).unwrap();
+    while let Ok(event) = events.try_recv() {
+        runtime.stage(event).unwrap();
+        runtime.commit();
+    }
+    let bead::core::Value::List(groups) = runtime.session.stores.get("bar.collections").unwrap() else { panic!("collection list missing") };
+    assert_eq!(groups[1]["label"], "studio");
+    assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:28".into())));
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn unadvertised_methods_disable_controls_and_send_nothing() {
     let (dir, client, mut calls, _kick) = daemon(&["audio.adjust_volume"]).await;

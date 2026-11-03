@@ -143,6 +143,82 @@ pub struct Control {
     environment: BTreeMap<String, String>,
 }
 impl Control {
+    pub async fn collection_action(
+        &self,
+        output: String,
+        action: nacre_protocol::shell_actions::CollectionOperation,
+    ) -> Result<()> {
+        self.with(move |backend| {
+            let crate::compositor::backend::Backend::Niri(niri) = backend else {
+                return Err("Workspace collections require Nacre-Niri".into());
+            };
+            if !niri.actions.transport
+                .nacre_capabilities(std::time::Duration::from_millis(500))
+                .workspace_collections
+            {
+                return Err("Workspace collections are unavailable".into());
+            }
+            let outputs = niri.actions.transport.response(
+                "Outputs",
+                std::time::Duration::from_secs(5),
+                4 * 1024 * 1024,
+            )?;
+            if !outputs.as_object().is_some_and(|outputs| outputs.contains_key(&output)) {
+                return Err("Output disappeared".into());
+            }
+            let before_collections = niri.collections()?;
+            use nacre_protocol::shell_actions::CollectionOperation;
+            match action {
+                CollectionOperation::Activate { collection } => {
+                    let id = collection.strip_prefix("niri-collection:")
+                        .and_then(|id| id.parse::<u64>().ok()).ok_or("Invalid collection ID")?;
+                    if !before_collections.iter().any(|row| row["id"].as_u64() == Some(id)) {
+                        return Err("Collection disappeared".into());
+                    }
+                    niri.collection_action("FocusMonitor", serde_json::json!({"output":output}))?;
+                    niri.collection_action("FocusCollection", serde_json::json!({"reference":{"Id":id}}))?;
+                    let after = niri.collections()?;
+                    if !after.iter().any(|row| row["id"].as_u64() == Some(id) && row["output"].as_str() == Some(output.as_str())) {
+                        return Err("Collection switch was not applied to the selected output".into());
+                    }
+                }
+                CollectionOperation::Create { name } => {
+                    let name = name.map(|name| name.trim().to_owned());
+                    let previous_ids: std::collections::BTreeSet<u64> = before_collections.iter().filter_map(|row| row["id"].as_u64()).collect();
+                    niri.collection_action("FocusMonitor", serde_json::json!({"output":output}))?;
+                    niri.collection_action("CreateCollection", serde_json::json!({"name":name}))?;
+                    let after = niri.collections()?;
+                    if !after.iter().any(|row| {
+                        row["id"].as_u64().is_some_and(|id| !previous_ids.contains(&id))
+                            && row["output"].as_str() == Some(output.as_str())
+                            && name.as_ref().is_none_or(|name| row["name"].as_str() == Some(name.as_str()))
+                    }) {
+                        return Err("Collection creation was not applied to the selected output".into());
+                    }
+                }
+                CollectionOperation::Rename { collection, name } => {
+                    let id = collection.strip_prefix("niri-collection:")
+                        .and_then(|id| id.parse::<u64>().ok()).ok_or("Invalid collection ID")?;
+                    let name = name.map(|name| name.trim().to_owned());
+                    if !before_collections.iter().any(|row| row["id"].as_u64() == Some(id)) {
+                        return Err("Collection disappeared".into());
+                    }
+                    niri.collection_action("SetCollectionName", serde_json::json!({"reference":{"Id":id},"name":name}))?;
+                    let after = niri.collections()?;
+                    if !after.iter().any(|row| row["id"].as_u64() == Some(id) && row["name"].as_str() == name.as_deref()) {
+                        return Err("Collection rename was not applied".into());
+                    }
+                }
+                CollectionOperation::SetWallpaper { .. } => {
+                    return Err("Wallpaper profiles are handled by the wallpaper service".into());
+                }
+                CollectionOperation::SetAccent { .. } => {
+                    return Err("Collection accents are handled by the wallpaper service".into());
+                }
+            }
+            Ok(())
+        }).await
+    }
     pub async fn scoped_action(
         &self,
         kind: &'static str,

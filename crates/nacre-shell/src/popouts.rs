@@ -67,6 +67,65 @@ pub fn calendar(
     })
 }
 
+/// Native Bead collection switcher panel. Its list comes from the opt-in
+/// Nacre-Niri extension fields on the daemon compositor topic.
+pub fn collection_switcher(
+    client: crate::nacre_source::Client,
+    palette: PathBuf,
+    colors: Palette,
+    trace: bool,
+) -> Result<PanelSpec, Box<dyn std::error::Error>> {
+    let fill = colors.get("surface")?;
+    let mut fallback = crate::sound::fallback(fill);
+    fallback.width = 300.;
+    fallback.bounds = Rect::new(-32., -32., 364., 500.);
+    fallback.primitives = vec![Primitive::Rounded {
+        rect: Rect::new(0., 0., 300., 390.),
+        radius: 12.,
+        fill,
+        border: None,
+    }];
+    if let Some(motion) = &mut fallback.motion {
+        motion.id = "collection-switcher".into();
+        motion.edge = bead::core::Edge::Top;
+        motion.duration = 0.23;
+        motion.curve = Some(bead::core::animation::Curve::EaseInOut);
+        motion.fade = false;
+        motion.reveal = true;
+    }
+    let cold = fallback.clone();
+    Ok(PanelSpec {
+        position: Some(
+            crate::placement::Frame::default().positioner(crate::placement::Attachment::Popout),
+        ),
+        engages_decorations: true,
+        overlay: false,
+        retain_when_closed: false,
+        passive: false,
+        keyboard_focus: true,
+        text_focus_only: false,
+        initial_open: false,
+        fallback,
+        fallback_factory: None,
+        renderer: RendererKind::Cpu,
+        factory: Arc::new(move |open| {
+            let session = bead::ui::Session::new(
+                "shell".into(),
+                "popouts/collections.luau".into(),
+                palette.clone(),
+                colors.clone(),
+                cold.clone(),
+            );
+            crate::reload::Runtime::panel_session(session, open)
+                .with_trace(trace)
+                .with_frame(crate::placement::Attachment::Popout, &colors)
+                .and_then(|runtime| runtime.with_collection_switcher(&client))
+                .map(|runtime| Box::new(runtime) as Box<dyn bead::wayland::SceneSource>)
+                .map_err(|error| error.to_string())
+        }),
+    })
+}
+
 /// Logical content width used by status dropdown placement and its pointer zone.
 pub(crate) fn status_panel_width(view: &str) -> f32 {
     match view {

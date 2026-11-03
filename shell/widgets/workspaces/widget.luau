@@ -11,6 +11,8 @@ local pearl_accent=c.pearl_accent
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
+            local collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
+            local show_collections=#collections>1
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -31,7 +33,8 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 cursor+=gs+width+2
             end
-            local natural_width=10+cursor-(#workspaces>0 and 2 or 0)
+            local collection_width=show_collections and 96 or 0
+            local natural_width=10+cursor-(#workspaces>0 and 2 or 0)+(show_collections and collection_width+4 or 0)
             local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
             local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
             local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
@@ -128,5 +131,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
+            show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),width=92,height=28,switcher_label="Collection",on_toggle="collection.switcher.open"} or nil,
         }
     end}}}}}

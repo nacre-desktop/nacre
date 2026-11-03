@@ -859,6 +859,10 @@ fn start(
                 "session".into(),
                 popouts::session(client.clone(), palette.clone(), colors.clone(), panel_trace)?,
             );
+            views.insert(
+                "collections".into(),
+                popouts::collection_switcher(client.clone(), palette.clone(), colors.clone(), panel_trace)?,
+            );
         }
         let status_colors = std::sync::Arc::new(colors.clone());
         let status_palette = std::sync::Arc::new(palette.clone());

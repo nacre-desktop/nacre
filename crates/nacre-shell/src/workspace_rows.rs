@@ -58,6 +58,66 @@ pub fn origin_rows(topic: &Json) -> Vec<Json> {
         .take(MAX_ORIGINS)
         .collect()
 }
+
+/// Current and available Nacre-Niri collections for the collection switcher.
+/// The wire snapshot includes detached collections; those remain selectable.
+pub fn collection_rows(topic: &Json) -> Vec<Json> {
+    topic["collections"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|row| {
+            let id = row["id"].as_str()?.to_owned();
+            let index = row["index"].as_u64()?;
+            let name = row["name"].as_str().filter(|name| !name.trim().is_empty());
+            Some(serde_json::json!({
+                "id": id,
+                "label": name.map(str::to_owned).unwrap_or_else(|| index.to_string()),
+                "index": index,
+                "name": name,
+                "output": row["output"],
+                "active": row["active"] == true,
+            }))
+        })
+        .collect()
+}
+
+pub fn collection_stores(topic: &Json, output: Option<&str>) -> BTreeMap<String, Value> {
+    let rows = collection_rows(topic);
+    let selected_output = output.unwrap_or_else(|| topic["focus"]["outputId"].as_str().unwrap_or_default());
+    let logical_height = topic["outputs"][selected_output]["logicalHeight"]
+        .as_f64()
+        .or_else(|| topic["outputs"][selected_output]["height"].as_f64())
+        .unwrap_or(360.);
+    let current = rows
+        .iter()
+        .find(|row| match output {
+            Some(output) => row["output"].as_str() == Some(output),
+            None => row["active"] == true,
+        })
+        .and_then(|row| row["id"].as_str())
+        .unwrap_or_default();
+    BTreeMap::from([
+        ("bar.collections".into(), Value::list(rows)),
+        ("bar.collection.current".into(), Value::Text(current.into())),
+        (
+            "bar.collection.connection".into(),
+            Value::Text(topic["connectionId"].as_str().unwrap_or_default().into()),
+        ),
+        (
+            "bar.collection.enabled".into(),
+            Value::Bool(topic["capabilities"]["workspaceCollections"] == true),
+        ),
+        (
+            "bar.collection.output".into(),
+            Value::Text(selected_output.into()),
+        ),
+        (
+            "bar.collection.height".into(),
+            Value::Number((logical_height - 110.).clamp(120., 360.)),
+        ),
+    ])
+}
 /// `niri-workspace:<n>`, the daemon's id for a local niri workspace id; other backends have none.
 fn topic_id(id: &bead::backends::Id) -> Option<String> {
     let mut parts = id.0.split(':');
@@ -646,6 +706,23 @@ mod tests {
             Value::list(origin_rows(&json!({"workspaces":{"x":{"originOutput":1}}}))),
         )]));
         assert!(bare.view.origins.is_empty());
+    }
+
+    #[test]
+    fn collection_topic_projection_uses_name_or_index_and_scopes_current_output() {
+        let topic = json!({
+            "connectionId":"8:9",
+            "collections":[
+                {"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"DP-1","active":true},
+                {"id":"niri-collection:28","index":2,"name":null,"label":"2","output":null,"active":false}
+            ]
+        });
+        let stores = collection_stores(&topic, Some("DP-1"));
+        assert_eq!(stores["bar.collections"], Value::list(collection_rows(&topic)));
+        assert_eq!(stores["bar.collection.current"], Value::Text("niri-collection:17".into()));
+        assert_eq!(stores["bar.collection.connection"], Value::Text("8:9".into()));
+        let other = collection_stores(&topic, Some("DP-2"));
+        assert_eq!(other["bar.collection.current"], Value::Text(String::new()));
     }
 
     #[test]

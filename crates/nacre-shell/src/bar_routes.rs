@@ -22,6 +22,10 @@ const TRAY_NOTCH: i16 = 120;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Route {
+    CollectionAction {
+        output: String,
+        action: nacre_protocol::shell_actions::CollectionOperation,
+    },
     WorkspaceActivate {
         slot: u16,
     },
@@ -54,6 +58,7 @@ pub enum Route {
 impl Route {
     pub fn method(&self) -> &'static str {
         match self {
+            Self::CollectionAction { .. } => "collection.action",
             Self::WorkspaceActivate { .. } => "workspace.activate",
             Self::WorkspaceScroll { .. } => "workspace.scroll",
             Self::WindowFocus { .. } => "window.focus",
@@ -68,13 +73,14 @@ impl Route {
     fn exclusive(&self) -> bool {
         !matches!(
             self,
-            Self::WorkspaceActivate { .. } | Self::WindowFocus { .. } | Self::Tray { .. }
+            Self::CollectionAction { .. } | Self::WorkspaceActivate { .. } | Self::WindowFocus { .. } | Self::Tray { .. }
         )
     }
     /// `None` when the route needs an output and none is known yet.
     fn params(&self, output: Option<&str>) -> Option<serde_json::Value> {
         use serde_json::json;
         Some(match self {
+            Self::CollectionAction { output: collection_output, action } => json!({"output":collection_output,"action":action}),
             Self::WorkspaceActivate { slot } => {
                 json!({"output": output?, "workspace": slot})
             }

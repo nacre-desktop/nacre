@@ -160,6 +160,23 @@
       }
     },
     {
+      "id": "collection-wallpapers",
+      "paths": [
+        "nacre/collection-wallpapers.json"
+      ],
+      "owner": "Nacre-Niri collections / wallpaper provider",
+      "shape": "object",
+      "version": 1,
+      "keepVersion": true,
+      "defaults": {
+        "wallpapers": {}
+      },
+      "settings": {
+        "root": "config",
+        "access": "write"
+      }
+    },
+    {
       "id": "colors",
       "paths": [
         "nacre/colors.json"
