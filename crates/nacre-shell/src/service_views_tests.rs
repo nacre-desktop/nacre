@@ -1167,9 +1167,11 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         bar_frame.save(&dir.join("collections-bar.png"))?;
     }
     assert!(bar_frame.width > 0 && bar_frame.height > 0);
-    assert!(bar.scene().primitives.iter().any(|primitive| matches!(primitive,
-        bead::render::Primitive::Text { text, .. } if text.contains("Very long personal")
-    )), "the bar badge must show the current desk label");
+    let bar_text: Vec<_> = bar.scene().primitives.iter().filter_map(|primitive| match primitive {
+        bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
+        _ => None,
+    }).collect();
+    assert!(bar_text.iter().any(|text| text.contains("Very long personal")), "the bar badge must show the current desk label: {bar_text:?}");
 
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
