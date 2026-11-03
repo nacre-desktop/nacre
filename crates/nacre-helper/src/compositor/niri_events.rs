@@ -577,8 +577,10 @@ mod tests {
         )?;
         let first = socket.next_event()?;
         assert_eq!(first["CollectionsChanged"]["collections"][0]["name"], "work");
+        drop(socket);
         let mut wires = Vec::new();
         for mut peer in peers {
+            peer.set_read_timeout(Some(Duration::from_secs(2)))?;
             let mut bytes = Vec::new();
             peer.read_to_end(&mut bytes)?;
             wires.push(String::from_utf8(bytes)?);
