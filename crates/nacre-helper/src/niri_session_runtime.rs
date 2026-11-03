@@ -1358,6 +1358,12 @@ mod tests {
         assert!(pearl_policy.contains("match app-id=\"^nacre-widgets$\""));
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
         assert!(root.contains("include \"bead-pearls.kdl\""));
+        let native_overlay = fs::read_to_string(destination.join("config/nacre-niri.kdl"))?;
+        let generated_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
+        for generated in [&root, &native_overlay, &generated_rules] {
+            assert!(!generated.contains("bead[.]pearl"));
+            assert!(!generated.contains("opacity 0.0"));
+        }
         assert!(root.contains("include \"workspaces.kdl\""));
         assert!(root.contains(
             "spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\""
