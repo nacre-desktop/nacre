@@ -130,10 +130,10 @@ fn run() -> Result<i32> {
                 }
             }
             cli::Command::EdgeEvents => {
-                return Err(Error {
+                return Err(Box::new(Error {
                     kind: "RuntimeError",
                     message: "Edge triggers are unavailable on Hyprland".into(),
-                });
+                }));
             }
         }
     } else {
