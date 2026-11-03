@@ -1,6 +1,7 @@
 """Nacre's fork session uses the existing generated configuration safely."""
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
