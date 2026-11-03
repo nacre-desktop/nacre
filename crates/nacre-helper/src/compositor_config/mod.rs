@@ -574,9 +574,8 @@ mod tests {
             {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-picture-in-picture"},
             {"source":"other.lua","kind":"binding","id":"SUPER + H"}
         ]});
-        let filtered: Value = serde_json::from_str(&native_unsupported_report(
-            &serde_json::to_string(&stock)?,
-        )?)?;
+        let filtered: Value =
+            serde_json::from_str(&native_unsupported_report(&serde_json::to_string(&stock)?)?)?;
         let rows = filtered["unsupported"]
             .as_array()
             .ok_or("Missing filtered report")?;
