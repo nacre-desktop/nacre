@@ -42,6 +42,16 @@
         "$ref": "#/$defs/ActiveWallpaper"
       }
     },
+    "focused_accent": {
+      "description": "Optional Nacre collection accent for the focused output. The base\npresentation remains in `current`; absent means keep the base palette.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 7,
+      "maxLength": 7,
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
     "error": {
       "type": [
         "string",

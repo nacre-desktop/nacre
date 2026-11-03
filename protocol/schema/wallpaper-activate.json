@@ -17,6 +17,15 @@
       ],
       "minLength": 1,
       "maxLength": 4096
+    },
+    "output": {
+      "description": "Output whose active pair a wallpaper provider is confirming. Omitted by\nolder global picker callers, which receive the base `current` pair.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 256
     }
   },
   "required": [

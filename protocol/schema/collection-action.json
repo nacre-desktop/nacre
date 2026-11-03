@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CollectionAction",
+  "type": "object",
+  "properties": {
+    "output": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "action": {
+      "$ref": "#/$defs/CollectionOperation"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "output",
+    "action"
+  ],
+  "$defs": {
+    "CollectionOperation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "const": "activate"
+            },
+            "collection": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 40
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "collection"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "const": "create"
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "default": null
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "const": "rename"
+            },
+            "collection": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 40
+            },
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 64,
+              "default": null
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "collection"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "const": "set_wallpaper"
+            },
+            "collection": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 40
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "collection"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "operation": {
+              "type": "string",
+              "const": "set_accent"
+            },
+            "collection": {
+              "type": "string",
+              "minLength": 17,
+              "maxLength": 40
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "operation",
+            "collection",
+            "enabled"
+          ]
+        }
+      ]
+    }
+  }
+}
