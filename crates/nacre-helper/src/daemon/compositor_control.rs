@@ -88,6 +88,14 @@ enum WorkspaceIndexPlan {
     Create,
 }
 
+fn ensure_collection_name_available(rows: &[Value], name: Option<&str>) -> Result<()> {
+    if name.is_some_and(|name| rows.iter().any(|row| row["name"].as_str() == Some(name))) {
+        Err("A collection with that name already exists".into())
+    } else {
+        Ok(())
+    }
+}
+
 fn workspace_index_plan(
     rows: &[Value],
     output: &str,
@@ -184,6 +192,7 @@ impl Control {
                 }
                 CollectionOperation::Create { name } => {
                     let name = name.map(|name| name.trim().to_owned());
+                    ensure_collection_name_available(&before_collections, name.as_deref())?;
                     let previous_ids: std::collections::BTreeSet<u64> = before_collections.iter().filter_map(|row| row["id"].as_u64()).collect();
                     niri.collection_action("FocusMonitor", serde_json::json!({"output":output}))?;
                     niri.collection_action("CreateCollection", serde_json::json!({"name":name}))?;
@@ -419,6 +428,14 @@ mod shell_action_tests {
         assert!(scroll_target(&rows, "DP-1", &json!(0), &json!(5), true).is_err());
         assert!(scroll_target(&rows, "DP-1", &json!(0), &json!(1), false).is_err());
         assert!(scroll_target(&rows, "DP-1", &json!(0), &Value::Null, true).is_err());
+    }
+
+    #[test]
+    fn duplicate_collection_create_is_rejected_before_output_focus() {
+        let rows = vec![json!({"id":1,"name":"work"}), json!({"id":2,"name":"studio"})];
+        assert!(ensure_collection_name_available(&rows, Some("work")).is_err());
+        assert!(ensure_collection_name_available(&rows, Some("new desk")).is_ok());
+        assert!(ensure_collection_name_available(&rows, None).is_ok());
     }
 
     #[test]

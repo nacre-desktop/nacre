@@ -46,6 +46,18 @@ fn compositor() -> serde_json::Value {
     }})
 }
 
+fn compositor_with_collections() -> serde_json::Value {
+    serde_json::json!({
+        "available":true,"backend":"niri","connectionId":"fixture:1",
+        "capabilities":{"workspaceCollections":true},
+        "outputs":{"left":{"name":"left","logicalHeight":700}},
+        "focus":{"outputId":"left"},
+        "workspaces":{"niri-workspace:3":{"originOutput":"B","originIndex":1,"visiting":true},"niri-workspace:4":{"outputId":"left"}},
+        "windows":{},
+        "collections":[{"id":"niri-collection:17","index":1,"name":"work","label":"work","output":"left","active":true}]
+    })
+}
+
 /// Fake daemon that accepts reconnects. `kick` drops the current link.
 async fn daemon(
     methods: &'static [&'static str],
@@ -64,6 +76,7 @@ async fn daemon(
     let (calls, received) = mpsc::unbounded_channel();
     let kick = Arc::new(Notify::new());
     let kicked = kick.clone();
+    let collection_fixture = methods.contains(&"collection.action");
     tokio::spawn(async move {
         let mut generation = 0;
         loop {
@@ -116,7 +129,8 @@ async fn daemon(
                         }
                         Ok(Some(Message::Sub { topics })) => {
                             for topic in topics {
-                                let data = if topic == "compositor" { compositor() } else { tray() };
+                                let data = if topic == "compositor" && collection_fixture { compositor_with_collections() }
+                                    else if topic == "compositor" { compositor() } else { tray() };
                                 let snap = Message::Snap { topic, seq: 0, data };
                                 framing::write(&mut writer, &snap).await.unwrap();
                             }
@@ -455,6 +469,23 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
     let bead::core::Value::List(groups) = runtime.session.stores.get("bar.collections").unwrap() else { panic!("collection list missing") };
     assert_eq!(groups[1]["label"], "studio");
     assert_eq!(runtime.session.stores.get("bar.collection.current"), Some(&bead::core::Value::Text("niri-collection:28".into())));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn single_collection_bar_entry_opens_the_switcher_popout() {
+    let (dir, client, _calls, _kick) = daemon(&["collection.action"]).await;
+    let (mut runtime, events) = bar_with(&client, "left", true);
+    let live = client.clone();
+    until(&mut runtime, &events, |runtime| {
+        live.snapshot().connected
+            && runtime.session.stores.get("bar.collection.enabled") == Some(&bead::core::Value::Bool(true))
+            && node(runtime, "collection.switcher.open", None).is_some()
+    }).await;
+    at(&mut runtime, "collection.switcher.open", None, |x, y| UiEvent::Click { x, y });
+    assert!(std::iter::from_fn(|| events.try_recv().ok()).any(|event| matches!(event,
+        UiEvent::CompanionSelect { ref view, toggle:true, .. } if view == "collections"
+    )), "single desk control must open the collection switcher");
+    std::fs::remove_dir_all(dir).ok();
 }
 
 #[tokio::test(flavor = "current_thread")]

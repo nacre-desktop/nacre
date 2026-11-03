@@ -115,6 +115,12 @@ fn native(value: &Value) -> Value {
 }
 
 pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Value, Failure> {
+    static COLLECTION_ACTIONS: std::sync::OnceLock<tokio::sync::Mutex<()>> = std::sync::OnceLock::new();
+    let _collection_action_guard = if method == "collection.action" {
+        Some(COLLECTION_ACTIONS.get_or_init(|| tokio::sync::Mutex::new(())).lock().await)
+    } else {
+        None
+    };
     if hub.borrow().safe {
         return Err(failure(
             ErrorCode::PermissionDenied,
