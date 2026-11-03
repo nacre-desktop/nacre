@@ -35,6 +35,8 @@ COLLECTION_BINDINGS = (
     '    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title="Nacre:collection-move-previous" { move-window-to-collection-previous; }\n'
     "}\n"
 )
+
+
 def edge_trigger_config(delay_ms):
     if (
         isinstance(delay_ms, bool)
@@ -57,7 +59,11 @@ def edge_trigger_delay(home):
     if settings.is_file():
         try:
             value = _state.read_json_file(settings).get("lipHoverDelay", 350)
-            if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 800:
+            if (
+                isinstance(value, int)
+                and not isinstance(value, bool)
+                and 0 <= value <= 800
+            ):
                 return value
         except (OSError, ValueError):
             pass
