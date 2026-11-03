@@ -93,12 +93,17 @@ const PINNED_WINDOW_RULES: &str = concat!(
 );
 
 pub(crate) fn collection_overlay() -> String {
+    collection_overlay_with_delay(350)
+}
+pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
+    let delay_ms = delay_ms.min(800);
     let collection_actions = COLLECTION_ACTIONS
         .strip_prefix("binds {\n")
         .and_then(|text| text.strip_suffix("}\n"))
         .unwrap_or(COLLECTION_ACTIONS);
     format!(
-        "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\n// Native actions and rules are inactive when their runtime capability is disabled.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}}}\n{PINNED_WINDOW_RULES}"
+        "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\n// Native actions and rules are inactive when their runtime capability is disabled.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}}}\n{PINNED_WINDOW_RULES}{}",
+        edge_trigger_config(delay_ms)
     )
 }
 
@@ -127,6 +132,11 @@ pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
     serde_json::to_string_pretty(&document)
         .map(|value| value + "\n")
         .map_err(|error| invalid(error.to_string()))
+}
+fn edge_trigger_config(delay_ms: u64) -> String {
+    format!(
+        "edge-triggers {{\n    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
+    )
 }
 fn shell_quote(text: &str) -> String {
     if !text.is_empty()

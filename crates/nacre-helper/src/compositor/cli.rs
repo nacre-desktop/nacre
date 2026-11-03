@@ -4,6 +4,7 @@ use serde_json::{json, Map, Value};
 use std::io::{BufRead, Read, Write};
 pub enum Command {
     Events,
+    EdgeEvents,
     Capabilities,
     Query(String),
     Action {
@@ -59,6 +60,7 @@ pub fn parse(argv: &[String]) -> std::result::Result<Command, Error> {
         .ok_or_else(|| invalid("A compositor command is required"))?;
     match command.as_str() {
         "events" if argv.len() == 1 => return Ok(Command::Events),
+        "edge-events" if argv.len() == 1 => return Ok(Command::EdgeEvents),
         "capabilities" if argv.len() == 1 => return Ok(Command::Capabilities),
         "query" if argv.len() == 2 => {
             return if QUERIES.contains(&argv[1].as_str()) {
@@ -68,7 +70,11 @@ pub fn parse(argv: &[String]) -> std::result::Result<Command, Error> {
             }
         }
         "action" => {}
-        _ => return Err(invalid("Expected events, capabilities, query or action")),
+        _ => {
+            return Err(invalid(
+                "Expected events, edge-events, capabilities, query or action",
+            ))
+        }
     }
     let method = argv
         .get(1)
@@ -259,6 +265,13 @@ pub fn run(argv: &[String]) -> crate::Result<i32> {
                     println!("{}", crate::json::encode(&value)?);
                     std::io::stdout().flush()?;
                 }
+            }
+        },
+        Command::EdgeEvents => match backend {
+            super::backend::Backend::Niri(backend) => backend.edge_events()?,
+            super::backend::Backend::Hyprland(_) => {
+                println!("{{\"type\":\"edge-source\",\"active\":false}}");
+                std::io::stdout().flush()?;
             }
         },
     }
@@ -514,6 +527,7 @@ mod tests {
                 Command::Query(name) => json!([{"method":"query","args":[name],"kwargs":{}}]),
                 Command::Capabilities => json!([]),
                 Command::Events => return Err("Unexpected CLI fixture".into()),
+                Command::EdgeEvents => return Err("Unexpected CLI fixture".into()),
             };
             assert_eq!(
                 calls, case["observed"]["calls"],
@@ -522,5 +536,13 @@ mod tests {
             );
         }
         Ok(())
+    }
+    #[test]
+    fn edge_trigger_stream_has_an_explicit_compositor_command() {
+        assert!(matches!(
+            parse(&["edge-events".into()]),
+            Ok(Command::EdgeEvents)
+        ));
+        assert!(parse(&["edge-events".into(), "extra".into()]).is_err());
     }
 }

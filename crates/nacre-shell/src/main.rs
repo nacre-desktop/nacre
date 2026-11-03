@@ -641,7 +641,20 @@ fn start(
     if ui_notification_socket.is_some() && !register_ui_provider {
         return Err("--ui-notification-socket requires --ui-provider".into());
     }
+    let gate = shell_control::Gate::new();
+    let niri_session = std::env::var("NACRE_COMPOSITOR").as_deref() == Ok("niri")
+        || std::env::var_os("NIRI_SOCKET").is_some();
+    let edge_route = niri_session
+        .then(|| shell_control::EdgeEventState::new(gate.clone(), options.command_socket.clone()));
     let _ui_provider = if register_ui_provider {
+        let mut provider_topics: Vec<&str> = if notices {
+            notice_service::TOPICS.to_vec()
+        } else {
+            Vec::new()
+        };
+        if niri_session {
+            provider_topics.extend(["compositor", "compositor.events"]);
+        }
         Some(
             ui_provider::start(
                 daemon_socket
@@ -652,17 +665,20 @@ fn start(
                     .clone()
                     .ok_or("--ui-provider requires --command-socket")?,
                 ui_notification_socket.clone(),
-                if notices {
-                    &notice_service::TOPICS
-                } else {
-                    &[]
-                },
+                &provider_topics,
+                edge_route.clone(),
             )
             .map_err(|e| e.to_string())?,
         )
     } else {
         None
     };
+    let _edge_source = _ui_provider.as_ref().and_then(|client| {
+        let route = edge_route.clone()?;
+        let compositor = std::sync::Arc::new(client.topic("compositor").ok()?);
+        let events = std::sync::Arc::new(client.topic("compositor.events").ok()?);
+        shell_control::EdgeSourceSubscriptions::attach(route, compositor, events).ok()
+    });
     // N0035 catalog for the `bead` namespace; without the topic the built-in English stays.
     i18n::init();
     let _i18n_service = _ui_provider.as_ref().and_then(|client| {
@@ -672,7 +688,6 @@ fn start(
     });
     // B0035: the owner's Nacre settings, read-only and live. Without the topics (no
     // daemon, older daemon) every default is Nacre's, so nothing changes.
-    let gate = shell_control::Gate::new();
     let frame_gate = gate.clone();
     let frame_config = frame_config::load(Path::new("shell"));
     {

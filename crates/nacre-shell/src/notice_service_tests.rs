@@ -979,8 +979,14 @@ mod daemon {
     }
     fn start(socket: std::path::PathBuf, provider: bool, action_on_click: bool) -> Arc<Service> {
         let client = if provider {
-            crate::ui_provider::start(socket, "/tmp/bead-test-shell.sock".into(), None, &TOPICS)
-                .unwrap()
+            crate::ui_provider::start(
+                socket,
+                "/tmp/bead-test-shell.sock".into(),
+                None,
+                &TOPICS,
+                None,
+            )
+            .unwrap()
         } else {
             let topics = TOPICS.iter().map(|t| t.to_string()).collect();
             Client::start(crate::nacre_source::Config::new(socket, topics)).unwrap()

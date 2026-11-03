@@ -50,6 +50,39 @@ PINNED_WINDOW_RULES = (
 )
 
 
+def edge_trigger_config(delay_ms):
+    if (
+        isinstance(delay_ms, bool)
+        or not isinstance(delay_ms, int)
+        or not 0 <= delay_ms <= 800
+    ):
+        delay_ms = 350
+    return (
+        "edge-triggers {\n"
+        f"    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        "}\n"
+    )
+
+
+def edge_trigger_delay(home):
+    settings = home / ".config/nacre/desktop.json"
+    if settings.is_file():
+        try:
+            value = _state.read_json_file(settings).get("lipHoverDelay", 350)
+            if (
+                isinstance(value, int)
+                and not isinstance(value, bool)
+                and 0 <= value <= 800
+            ):
+                return value
+        except (OSError, ValueError):
+            pass
+    return 350
+
+
 def module(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
     value = importlib.util.module_from_spec(spec)
@@ -261,7 +294,8 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         + COLLECTION_BINDINGS.removeprefix("binds {\n").removesuffix("}\n")
         + SCRATCHPAD_PIN_BINDINGS
         + "}\n"
-        + PINNED_WINDOW_RULES,
+        + PINNED_WINDOW_RULES
+        + edge_trigger_config(edge_trigger_delay(home)),
     )
     add(
         config / "nacre-niri-unsupported.json",

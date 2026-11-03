@@ -106,8 +106,8 @@ pub fn lua_value(value: &Value) -> Result<String> {
 pub fn runtime_lua_value(value: &Value) -> Result<String> {
     lua(value, false)
 }
-pub(crate) fn collection_overlay() -> String {
-    niri::collection_overlay()
+pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
+    niri::collection_overlay_with_delay(delay_ms)
 }
 pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
     niri::native_unsupported_report(text)
@@ -495,7 +495,7 @@ mod tests {
         ] {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
-        let native = niri::collection_overlay();
+        let native = niri::collection_overlay_with_delay(350);
         let expected = [
             ("Super+Ctrl+Tab", "focus-collection-next"),
             ("Super+Ctrl+Shift+Tab", "focus-collection-previous"),
@@ -515,6 +515,25 @@ mod tests {
             ("Super+p", "toggle-window-pinned"),
         ];
         assert!(native.starts_with("include \"config.kdl\""));
+        for edge in ["left", "right", "top", "bottom"] {
+            assert!(native.contains(&format!(
+                "{edge} {{ action {{ event; }}; dwell-time-ms 350; }}"
+            )));
+        }
+        assert!(!native.contains("nacre { edge-triggers; }"));
+        for path in NIRI_OUTPUTS {
+            assert!(
+                !stock[*path]
+                    .as_str()
+                    .unwrap_or_default()
+                    .contains("edge-triggers"),
+                "stock emitted edge triggers in {path}"
+            );
+        }
+        let delayed = collection_overlay_with_delay(800);
+        assert!(delayed.contains("left { action { event; }; dwell-time-ms 800; }"));
+        assert!(collection_overlay_with_delay(0)
+            .contains("bottom { action { event; }; dwell-time-ms 0; }"));
         let document: kdl::KdlDocument = native.parse()?;
         let block = document
             .nodes()

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use super::*;
+use bead::wayland::ShellControl;
 use std::os::unix::fs::PermissionsExt;
 use tokio::net::UnixListener;
 struct Lab(PathBuf);
@@ -360,6 +361,202 @@ async fn registry_timeout_closes_the_remote_call_before_retrying() {
     server.await.unwrap();
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn native_edge_source_falls_back_when_daemon_socket_closes() {
+    let lab = Lab::new();
+    let command_socket = lab.0.join("bead-command.sock");
+    let (calls_tx, calls_rx) = std::sync::mpsc::channel();
+    let _command_server = bead::services::ipc::Server::bind(command_socket.clone(), move |call| {
+        calls_tx.send(call.clone()).unwrap();
+        bead::services::ipc::Reply::ok(call.id, serde_json::Value::Null)
+    })
+    .unwrap();
+    let (close_tx, close_rx) = tokio::sync::oneshot::channel();
+    let listener = lab.bind();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let (read, mut writer) = stream.into_split();
+        let mut reader = framing::Reader::new(BufReader::new(read));
+        assert!(matches!(next(&mut reader).await, Message::Hello { .. }));
+        let mut greeting = welcome();
+        if let Message::Welcome { topics, .. } = &mut greeting {
+            topics.insert("compositor.events".into(), 1);
+        }
+        framing::write(&mut writer, &greeting).await.unwrap();
+        assert_eq!(
+            next(&mut reader).await,
+            Message::Sub {
+                topics: vec!["compositor".into(), "compositor.events".into()]
+            }
+        );
+        for (topic, data) in [
+            (
+                "compositor",
+                serde_json::json!({"outputs":{"DP-1":{"logicalWidth":1920,"logicalHeight":1080}}}),
+            ),
+            (
+                "compositor.events",
+                serde_json::json!({"edgeTriggersActive":true}),
+            ),
+        ] {
+            framing::write(
+                &mut writer,
+                &Message::Snap {
+                    topic: topic.into(),
+                    seq: 0,
+                    data,
+                },
+            )
+            .await
+            .unwrap();
+        }
+        let _ = close_rx.await;
+        // Returning closes the actual Unix stream and exercises Source's disconnect
+        // notification path rather than synthesizing a Lost protocol message.
+    });
+    let client = Client::start(Config::new(
+        lab.socket(),
+        vec!["compositor".into(), "compositor.events".into()],
+    ))
+    .unwrap();
+    let gate = crate::shell_control::Gate::new();
+    gate.configure_frame(
+        crate::frame_config::FrameConfig {
+            lips: vec![
+                crate::frame_config::LipConfig {
+                    id: "dashboard".into(),
+                    edge: bead::core::Edge::Top,
+                    length: 208.,
+                    opens: "dashboard-today".into(),
+                },
+                crate::frame_config::LipConfig {
+                    id: "controls".into(),
+                    edge: bead::core::Edge::Right,
+                    length: 144.,
+                    opens: "sound".into(),
+                },
+            ],
+            ..Default::default()
+        },
+        ["dashboard-today".into(), "sound".into()],
+    );
+    let state = crate::shell_control::EdgeEventState::new(gate.clone(), Some(command_socket));
+    let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(
+        state.clone(),
+        Arc::new(client.topic("compositor").unwrap()),
+        Arc::new(client.topic("compositor.events").unwrap()),
+    )
+    .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while !gate.edge_chrome().external_source {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("native source is enabled only after both snapshots acknowledge it");
+    let calls_rx = Arc::new(std::sync::Mutex::new(calls_rx));
+    let edge_message = |seq, event_type, edge, position| nacre_protocol::Message::Ev {
+        topic: "compositor.events".into(),
+        name: "niri".into(),
+        seq,
+        data: serde_json::json!({
+            "type":event_type,
+            "output":"DP-1",
+            "edge":edge,
+            "position":position,
+        }),
+    };
+    state.route_event(&edge_message(1, "edge-triggered", "top", [960.0, 4.0]));
+    state.route_event(&edge_message(2, "edge-left", "top", [960.0, 10.0]));
+    let received = calls_rx.clone();
+    let dashboard_call = tokio::task::spawn_blocking(move || {
+        received
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap()
+    })
+    .await
+    .unwrap();
+    assert_eq!(dashboard_call.target, "bead.panel");
+    assert_eq!(dashboard_call.method, "hover-open");
+    assert_eq!(
+        dashboard_call.args,
+        vec![serde_json::json!("dashboard-today")]
+    );
+    assert_eq!(dashboard_call.output.as_deref(), Some("DP-1"));
+    let received = calls_rx.clone();
+    let dashboard_leave = tokio::task::spawn_blocking(move || {
+        received
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap()
+    })
+    .await
+    .unwrap();
+    assert_eq!(dashboard_leave.target, "bead.panel");
+    assert_eq!(dashboard_leave.method, "hover-leave");
+    assert_eq!(
+        dashboard_leave.args,
+        vec![serde_json::json!("dashboard-today")]
+    );
+    assert_eq!(dashboard_leave.output.as_deref(), Some("DP-1"));
+    state.route_event(&edge_message(3, "edge-triggered", "right", [1916.0, 540.0]));
+    let received = calls_rx.clone();
+    let controls_call = tokio::task::spawn_blocking(move || {
+        received
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap()
+    })
+    .await
+    .unwrap();
+    assert_eq!(controls_call.target, "bead.panel");
+    assert_eq!(controls_call.method, "hover-open");
+    assert_eq!(controls_call.args, vec![serde_json::json!("sound")]);
+    assert_eq!(controls_call.output.as_deref(), Some("DP-1"));
+    close_tx.send(()).unwrap();
+    server.await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while gate.edge_chrome().external_source {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("socket EOF restores Bead's fallback edge surfaces");
+    let received = calls_rx.clone();
+    let controls_leave = tokio::task::spawn_blocking(move || {
+        received
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap()
+    })
+    .await
+    .unwrap();
+    assert_eq!(controls_leave.target, "bead.panel");
+    assert_eq!(controls_leave.method, "hover-leave");
+    assert_eq!(controls_leave.args, vec![serde_json::json!("sound")]);
+    assert_eq!(controls_leave.output.as_deref(), Some("DP-1"));
+    let received = calls_rx.clone();
+    let extra = tokio::task::spawn_blocking(move || {
+        received
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_millis(100))
+    })
+    .await
+    .unwrap();
+    assert!(
+        extra.is_err(),
+        "EdgeLeft must clear the dashboard hover anchor"
+    );
+    drop(subscriptions);
+    client.stop().await.unwrap();
+}
+
 #[test]
 fn committed_menu_transcripts_match_the_pinned_exports() {
     for (path, generated) in nacre_protocol::artifacts::menu_transcripts() {
@@ -675,6 +872,43 @@ async fn accepted(
     ));
     framing::write(&mut w, &welcome()).await.unwrap();
     (r, w)
+}
+async fn next_after_registry_refresh(
+    reader: &mut framing::Reader<BufReader<tokio::net::unix::OwnedReadHalf>>,
+    writer: &mut tokio::net::unix::OwnedWriteHalf,
+) -> Message {
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            match next(reader).await {
+                Message::Call { id, m, .. } if m == "daemon.status" => {
+                    let Message::Welcome {
+                        boot,
+                        methods,
+                        topics,
+                        ..
+                    } = welcome()
+                    else {
+                        unreachable!()
+                    };
+                    let topics = topics.into_keys().collect::<Vec<_>>();
+                    framing::write(
+                        writer,
+                        &Message::Ret {
+                            id,
+                            reply: Reply::Ok {
+                                ok: serde_json::json!({"boot":boot,"methods":methods,"topics":topics}),
+                            },
+                        },
+                    )
+                    .await
+                    .unwrap();
+                }
+                request => return request,
+            }
+        }
+    })
+    .await
+    .expect("request after registry refresh")
 }
 async fn fresh(topic: &Topic, predicate: impl Fn(&Value) -> bool) {
     tokio::time::timeout(Duration::from_secs(5), async {
@@ -2305,8 +2539,11 @@ async fn actual_provider_with_pending_menu(golden: &str) {
         let ui = fixture("ui");
         let (mut reader, mut writer) = accepted(&listener).await;
         // The product provider registers both published methods.
-        assert_eq!(next(&mut reader).await, fixture("menu-ui-actions")[0]);
-        let observed = next(&mut reader).await;
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            fixture("menu-ui-actions")[0]
+        );
+        let observed = next_after_registry_refresh(&mut reader, &mut writer).await;
         let Message::Call { id, m, p, .. } = observed else {
             panic!("outbound menu call expected")
         };
@@ -2324,11 +2561,15 @@ async fn actual_provider_with_pending_menu(golden: &str) {
         // the incoming UI call. Waiting synchronously on the menu here would
         // deadlock. Use the published string provider ID and exact ACK.
         framing::write(&mut writer, &ui[2]).await.unwrap();
-        assert_eq!(next(&mut reader).await, ui[3]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            ui[3]
+        );
         framing::write(&mut writer, &menu[1]).await.unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
     });
-    let provider = Arc::new(crate::ui_provider::start(lab.socket(), ui_path, None, &[]).unwrap());
+    let provider =
+        Arc::new(crate::ui_provider::start(lab.socket(), ui_path, None, &[], None).unwrap());
     tokio::time::timeout(Duration::from_secs(5), async {
         while provider.status().boot.is_none() {
             tokio::time::sleep(Duration::from_millis(2)).await;
@@ -2366,9 +2607,15 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
     let golden = fixture("menu-ui-actions");
     let server = tokio::spawn(async move {
         let (mut reader, mut writer) = accepted(&listener).await;
-        assert_eq!(next(&mut reader).await, golden[0]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            golden[0]
+        );
         framing::write(&mut writer, &golden[15]).await.unwrap();
-        assert_eq!(next(&mut reader).await, golden[16]);
+        assert_eq!(
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+            golden[16]
+        );
         framing::write(&mut writer, &golden[17]).await.unwrap();
         // The handler adds its dispatch state to every refusal; the published
         // code, message and retry flag must match.
@@ -2381,7 +2628,10 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
                 reply: Reply::Err { err },
                 ..
             },
-        ) = (&golden[18], next(&mut reader).await)
+        ) = (
+            &golden[18],
+            next_after_registry_refresh(&mut reader, &mut writer).await,
+        )
         else {
             panic!("refusal expected")
         };
@@ -2392,7 +2642,7 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     });
     let ui_path = lab.0.join("ui.sock");
-    let provider = crate::ui_provider::start(lab.socket(), ui_path, None, &[]).unwrap();
+    let provider = crate::ui_provider::start(lab.socket(), ui_path, None, &[], None).unwrap();
     server.await.unwrap();
     provider.control(true).await.unwrap();
 }

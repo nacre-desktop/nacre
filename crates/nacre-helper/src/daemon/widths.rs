@@ -118,6 +118,13 @@ pub async fn dispatch(hub: Shared, params: Value) -> Response {
         )
     })?;
     params.validate()?;
+    if native_width_policy(&hub) {
+        return Err(failure(
+            ErrorCode::Unavailable,
+            "Native proportional X11 width policy is active",
+            true,
+        ));
+    }
     let requests = hub.borrow().widths.clone().ok_or_else(|| {
         failure(
             ErrorCode::Unavailable,
@@ -382,10 +389,18 @@ fn native_windows(hub: &Shared) -> Result<Option<(u64, Value)>> {
         Ok(None)
     }
 }
+fn native_width_policy(hub: &Shared) -> bool {
+    hub.borrow()
+        .snapshot_ref(super::niri_events::TOPIC)
+        .is_some_and(|metadata| metadata["proportionalX11Widths"] == true)
+}
 fn connected(hub: &Shared, identity: Option<&Value>) -> bool {
     let hub = hub.borrow();
     hub.snapshot_ref("compositor")
         .is_some_and(|v| v["available"] == true && v["backend"] == "niri")
+        && !hub
+            .snapshot_ref(super::niri_events::TOPIC)
+            .is_some_and(|metadata| metadata["proportionalX11Widths"] == true)
         && hub.niri_width_source.snapshot.is_some()
         && identity.is_none_or(|id| {
             hub.snapshot_ref(super::niri_events::TOPIC)
@@ -414,25 +429,47 @@ pub async fn run(
     let mut changes = hub.borrow().observe();
     let mut window_events = hub.borrow().niri_width_source.events.subscribe();
     loop {
-        if shutdown.stop.get() {
-            shutdown.restored.notify_one();
-            std::future::pending::<()>().await;
+        loop {
+            if shutdown.stop.get() {
+                shutdown.restored.notify_one();
+                std::future::pending::<()>().await;
+            }
+            if connected(&hub, None) {
+                break;
+            }
+            if native_width_policy(&hub) {
+                let status = json!({"available":false,"opening_width":opening.get(),"relaxed":0});
+                if hub.borrow().snapshot(TOPIC).as_ref() != Some(&status) {
+                    hub.borrow_mut().publish(TOPIC, status)?;
+                }
+                if !hub
+                    .borrow()
+                    .services
+                    .get("niri-widths")
+                    .is_some_and(|service| service["status"] == "idle")
+                {
+                    hub.borrow_mut().service("niri-widths", "idle", 0)?;
+                }
+            } else if !hub
+                .borrow()
+                .services
+                .get("niri-widths")
+                .is_some_and(|service| service["status"] == "starting")
+            {
+                hub.borrow_mut().service("niri-widths", "starting", 0)?;
+            }
+            tokio::select! {_=shutdown.changed.notified()=>{},change=changes.recv()=>{change.map_err(|_| "Compositor state observer ended")?;}}
         }
-        if connected(&hub, None) {
-            break;
-        }
-        tokio::select! {_=shutdown.changed.notified()=>{},change=changes.recv()=>{change.map_err(|_| "Compositor state observer ended")?;}}
-    }
-    let driver = Driver::connect().await?;
-    // Windows present when X11 connects are initial state, never newly opened.
-    let (mut sequence, initial) =
-        native_windows(&hub)?.ok_or("Width observer compositor disconnected")?;
-    let connection = hub
-        .borrow()
-        .snapshot(super::niri_events::TOPIC)
-        .ok_or("Missing compositor identity")?["connectionId"]
-        .clone();
-    let result=async {
+        let driver = Driver::connect().await?;
+        // Windows present when X11 connects are initial state, never newly opened.
+        let (mut sequence, initial) =
+            native_windows(&hub)?.ok_or("Width observer compositor disconnected")?;
+        let connection = hub
+            .borrow()
+            .snapshot(super::niri_events::TOPIC)
+            .ok_or("Missing compositor identity")?["connectionId"]
+            .clone();
+        let result=async {
         driver.with(move|state| {
             state.resync(initial)
         }).await?;
@@ -499,37 +536,42 @@ pub async fn run(
                 },
                 change=changes.recv()=>{
                     match change {
-                        Ok(Notice::Changed{topic,..}) if topic=="compositor"=>{},
+                        Ok(Notice::Changed{topic,..}) if topic=="compositor" || topic==super::niri_events::TOPIC=>{},
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>{tracing::warn!("Width observer resynchronizing compositor state");},
                         Err(tokio::sync::broadcast::error::RecvError::Closed)=>return Err("Compositor state observer ended".into()),
                         _=>continue,
                     }
+                    if native_width_policy(&hub) {return Err("Native proportional X11 width policy is active".into());}
                     if !connected(&hub,Some(&connection)) {return Err("Width observer compositor disconnected".into());}
                 },
             }
         }
         Ok::<(),crate::Error>(())
     }.await;
-    let restored = driver
-        .with(|state| {
-            let windows = state.policy.saved.keys().copied().collect::<Vec<_>>();
-            for window in windows {
-                state.policy.restore(window, &mut state.x11)?;
+        let restored = driver
+            .with(|state| {
+                let windows = state.policy.saved.keys().copied().collect::<Vec<_>>();
+                for window in windows {
+                    state.policy.restore(window, &mut state.x11)?;
+                }
+                Ok(())
+            })
+            .await;
+        if let Err(error) = restored {
+            tracing::warn!("Width observer hint restoration failed");
+            if result.is_ok() {
+                return Err(error);
             }
-            Ok(())
-        })
-        .await;
-    if let Err(error) = restored {
-        tracing::warn!("Width observer hint restoration failed");
-        if result.is_ok() {
-            return Err(error);
         }
+        if shutdown.stop.get() {
+            shutdown.restored.notify_one();
+            std::future::pending::<()>().await;
+        }
+        if native_width_policy(&hub) {
+            continue;
+        }
+        return result;
     }
-    if shutdown.stop.get() {
-        shutdown.restored.notify_one();
-        std::future::pending::<()>().await;
-    }
-    result
 }
 
 #[cfg(test)]
@@ -612,6 +654,48 @@ mod tests {
         }
         assert_eq!(old.0.min_width, hints.min_width);
         assert!(projected.opening.is_empty() && projected.new.is_empty());
+        Ok(())
+    }
+
+    #[test]
+    fn driver_gate_tracks_native_capability_transitions_after_compositor_ready() -> Result<()> {
+        let hub = super::super::hub::Hub::new("fixture".into(), false, Duration::from_millis(16))
+            .shared();
+        assert!(
+            !connected(&hub, None),
+            "waits while compositor is unavailable"
+        );
+        {
+            let mut state = hub.borrow_mut();
+            state.publish("compositor", json!({"backend":"niri","available":true}))?;
+            state.publish(
+                super::super::niri_events::TOPIC,
+                json!({"backend":"niri","available":true,"connectionId":"fixture"}),
+            )?;
+            state.niri_width_source.update(
+                &serde_json::Map::new(),
+                &json!({"WindowsChanged":{"windows":[]}}),
+            )?;
+        }
+        assert!(connected(&hub, None), "stock niri starts the helper driver");
+        hub.borrow_mut().publish(
+            super::super::niri_events::TOPIC,
+            json!({"backend":"niri","available":true,"connectionId":"fixture","proportionalX11Widths":true}),
+        )?;
+        assert!(native_width_policy(&hub));
+        assert!(
+            !connected(&hub, None),
+            "native policy never opens X11 driver"
+        );
+        hub.borrow_mut().publish(
+            super::super::niri_events::TOPIC,
+            json!({"backend":"niri","available":true,"connectionId":"fixture"}),
+        )?;
+        assert!(!native_width_policy(&hub));
+        assert!(
+            connected(&hub, None),
+            "ConfigLoaded fallback retires native mode"
+        );
         Ok(())
     }
     #[test]
@@ -837,6 +921,45 @@ mod tests {
             let mut updated = current;
             updated.max_width = 1200;
             x11.set_hints(window, &updated)?;
+            hub.borrow_mut().publish(
+                super::super::niri_events::TOPIC,
+                json!({"available":true,"backend":"niri","connectionId":"fixture","proportionalX11Widths":true}),
+            )?;
+            tokio::time::timeout(Duration::from_secs(3), async {
+                while hub.borrow().services["niri-widths"]["status"] != "idle" {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await?;
+            let restored = x11.hints(window)?.unwrap();
+            assert_eq!(restored.min_width, 1200, "native takeover restores X11 hints");
+            let started = Instant::now();
+            let failure = dispatch(
+                hub.clone(),
+                serde_json::to_value(WidthsConfigure {
+                    connection_id: "fixture".into(),
+                    display: environment["DISPLAY"].clone(),
+                    opening_width: 50.0,
+                })?,
+            )
+            .await
+            .expect_err("native mode rejects legacy observer configuration");
+            assert_eq!(failure.code, ErrorCode::Unavailable);
+            assert!(started.elapsed() < Duration::from_millis(100));
+            hub.borrow_mut().publish(
+                super::super::niri_events::TOPIC,
+                json!({"available":true,"backend":"niri","connectionId":"fixture"}),
+            )?;
+            tokio::time::timeout(Duration::from_secs(3), async {
+                while !hub
+                    .borrow()
+                    .snapshot(TOPIC)
+                    .is_some_and(|v| v["available"] == true)
+                {
+                    tokio::time::sleep(Duration::from_millis(5)).await;
+                }
+            })
+            .await?;
             stop.finish().await?;
             service.abort();
             let _cancelled = service.await;

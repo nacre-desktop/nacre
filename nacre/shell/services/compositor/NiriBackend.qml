@@ -54,6 +54,8 @@ Singleton {
     property bool overviewOpen: false
     property bool overviewHoverSupported: false
     property string overviewHoveredWindowId: ""
+    property bool edgeTriggersActive: false
+    property bool edgeTriggersUnsupported: false
     readonly property var overviewHoverWindow: overviewOpen && overviewHoverSupported ? byId[overviewHoveredWindowId] || null : null
     readonly property var overviewSelectedWindow: overviewOpen ? byId[activeWorkspace?.activeWindowId] || null : null
     readonly property var activeClient: byId[activeWindowId] || null
@@ -81,6 +83,7 @@ Singleton {
         const source = daemonEvents.data;
         if (!NacreDaemon.connected || !daemonState.fresh || !daemonEvents.fresh || !state.available || state.backend !== "niri" || !source.available) {
             connected = false;
+            edgeTriggersActive = false;
             daemonConnection = "";
             daemonCheck = "";
             return;
@@ -119,6 +122,7 @@ Singleton {
             overviewOpen: state.overviewOpen,
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
+            edgeTriggersActive: source.edgeTriggersActive === true,
             configFailed: state.configFailed
         });
     }
@@ -139,6 +143,7 @@ Singleton {
             activeAction = null;
             worker.running = false;
         }
+        edgeTriggersActive = false;
         connected = false;
         daemonConnection = "";
         daemonCheck = "";
@@ -192,6 +197,9 @@ Singleton {
             return false;
         if (value.type !== "snapshot") {
             if (value.type === "configuration-reloaded") {
+                root.edgeTriggersUnsupported = false;
+                if (!root.daemonMode && !edgeStream.running)
+                    edgeRetry.restart();
                 if (value.failed)
                     error = NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.");
                 else
@@ -249,6 +257,7 @@ Singleton {
         overviewOpen = value.overviewOpen === true;
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
+        edgeTriggersActive = value.edgeTriggersActive === true;
         connected = true;
         error = value.configFailed ? NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.") : "";
         reconnectAttempt = 0;
@@ -346,6 +355,44 @@ Singleton {
             root.overviewHoveredWindowId = "";
             reconnect.restart();
         }
+    }
+    Process {
+        id: edgeStream
+        objectName: "niriEdgeTriggerStream"
+        running: !root.daemonMode
+        environment: ({
+                NACRE_COMPOSITOR: "niri"
+            })
+        command: [NacrePaths.helperBinary, "compositor", "edge-events"]
+        stdout: SplitParser {
+            onRead: data => {
+                try {
+                    const value = JSON.parse(data);
+                    if (value.type === "edge-source") {
+                        root.edgeTriggersUnsupported = value.active !== true;
+                        root.edgeTriggersActive = value.active === true;
+                    } else if (!root.accept(value)) {
+                        root.error = NacreI18n.tr("ui.niri.error.invalid-event", "Invalid compositor event.");
+                    }
+                } catch (failure) {
+                    root.error = NacreI18n.tr("ui.niri.error.invalid-event", "Invalid compositor event.");
+                }
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (root.daemonMode)
+                return;
+            const wasActive = root.edgeTriggersActive;
+            root.edgeTriggersActive = false;
+            if ((wasActive || !root.edgeTriggersUnsupported) && !edgeRetry.running)
+                edgeRetry.start();
+        }
+    }
+    Timer {
+        id: edgeRetry
+        interval: 5000
+        repeat: false
+        onTriggered: edgeStream.running = true
     }
     Timer {
         id: reconnect

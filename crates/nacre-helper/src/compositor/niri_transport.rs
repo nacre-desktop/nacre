@@ -44,6 +44,7 @@ pub struct NacreCapabilities {
     pub overview_hover: bool,
     pub scratchpad: bool,
     pub window_pinning: bool,
+    pub edge_triggers: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -54,34 +55,58 @@ impl NacreCapabilities {
         let features = object.get("NacreCapabilities")?.as_object()?;
         // Nacre capabilities are additive across concurrent native features.
         // Older N0107 peers omit the two fields introduced by N0114.
-        let scratchpad = match features.get("scratchpad") {
-            Some(value) => value.as_bool()?,
-            None => false,
-        };
-        let window_pinning = match features.get("window_pinning") {
-            Some(value) => value.as_bool()?,
-            None => false,
-        };
+        const KNOWN_FEATURES: &[&str] = &[
+            "workspace_collections",
+            "proportional_x11_widths",
+            "overview_hover",
+            "scratchpad",
+            "window_pinning",
+            "edge_triggers",
+        ];
+        if features
+            .iter()
+            .any(|(key, value)| KNOWN_FEATURES.contains(&key.as_str()) && !value.is_boolean())
+        {
+            return None;
+        }
+        if features.iter().any(|(key, value)| {
+            ![
+                "workspace_collections",
+                "proportional_x11_widths",
+                "overview_hover",
+                "scratchpad",
+                "window_pinning",
+                "edge_triggers",
+            ]
+            .contains(&key.as_str())
+                && !value.is_boolean()
+        }) {
+            return None;
+        }
+        let scratchpad = features
+            .get("scratchpad")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let window_pinning = features
+            .get("window_pinning")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
         Some(Self {
             workspace_collections: features.get("workspace_collections")?.as_bool()?,
             proportional_x11_widths: features.get("proportional_x11_widths")?.as_bool()?,
             overview_hover: features.get("overview_hover")?.as_bool()?,
             scratchpad,
             window_pinning,
+            edge_triggers: features
+                .get("edge_triggers")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
         })
     }
 }
 pub fn nacre_capabilities(socket: &Path) -> NacreCapabilities {
     let mut connection = Connection::new(socket);
-    connection
-        .request_value(
-            &Value::String("NacreCapabilities".into()),
-            Duration::from_millis(500),
-            4096,
-        )
-        .ok()
-        .and_then(|response| NacreCapabilities::parse(&response))
-        .unwrap_or_default()
+    connection.nacre_capabilities(Duration::from_millis(500))
 }
 impl Connection {
     pub fn new(path: impl AsRef<Path>) -> Self {
@@ -133,6 +158,15 @@ impl Connection {
         timeout: Duration,
         max_bytes: usize,
     ) -> Result<Value> {
+        self.request_value_with_rejection(request, timeout, max_bytes, false)
+    }
+    fn request_value_with_rejection(
+        &mut self,
+        request: &Value,
+        timeout: Duration,
+        max_bytes: usize,
+        preserve_rejection: bool,
+    ) -> Result<Value> {
         if timeout.is_zero() || max_bytes == 0 || max_bytes > 4 * 1024 * 1024 {
             return Err(invalid("Invalid niri IPC bounds"));
         }
@@ -140,6 +174,7 @@ impl Connection {
             .checked_add(timeout)
             .ok_or_else(|| invalid("Invalid niri IPC deadline"))?;
         let wire = crate::json::encode(request).map_err(|e| invalid(e.to_string()))? + "\n";
+        let mut preserve_stream = false;
         let result = (|| {
             let stream = self.stream()?;
             stream
@@ -178,6 +213,7 @@ impl Connection {
                 .filter(|v| v.len() == 1)
                 .ok_or_else(|| invalid("Malformed niri reply"))?;
             if let Some(error) = object.get("Err") {
+                preserve_stream = preserve_rejection;
                 return Err(Error {
                     kind: "RuntimeError",
                     message: format!(
@@ -194,10 +230,23 @@ impl Connection {
                 .cloned()
                 .ok_or_else(|| invalid("Missing niri reply status"))
         })();
-        if result.is_err() {
+        if result.is_err() && !preserve_stream {
             self.invalidate();
         }
         result
+    }
+    /// Query Nacre's optional extension without throwing away this caller's persistent
+    /// request socket when stock niri replies with a valid `Err` for the unknown method.
+    pub fn nacre_capabilities(&mut self, timeout: Duration) -> NacreCapabilities {
+        self.request_value_with_rejection(
+            &Value::String("NacreCapabilities".into()),
+            timeout,
+            4096,
+            true,
+        )
+        .ok()
+        .and_then(|response| NacreCapabilities::parse(&response))
+        .unwrap_or_default()
     }
     pub fn response(&mut self, name: &str, timeout: Duration, max_bytes: usize) -> Result<Value> {
         let request = match name {
@@ -299,7 +348,8 @@ mod tests {
             "proportional_x11_widths": false,
             "overview_hover": true,
             "scratchpad": true,
-            "window_pinning": true
+            "window_pinning": true,
+            "edge_triggers": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -309,6 +359,7 @@ mod tests {
                 overview_hover: true,
                 scratchpad: true,
                 window_pinning: true,
+                edge_triggers: true,
             })
         );
         assert_eq!(
@@ -343,6 +394,27 @@ mod tests {
             }})),
             None
         );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "proportional_x11_widths": true,
+                "overview_hover": true,
+                "edge_triggers": "true"
+            }})),
+            None
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "proportional_x11_widths": true,
+                "overview_hover": true,
+                "edge_triggers": true,
+                "scratchpad": true,
+                "window_pin": false
+            }}))
+            .map(|capabilities| capabilities.edge_triggers),
+            Some(true)
+        );
         assert_eq!(NacreCapabilities::parse(&json!({"Future":{}})), None);
         assert_eq!(
             NacreCapabilities::parse(&json!({"Err":"unsupported"})),
@@ -355,6 +427,33 @@ mod tests {
             }})),
             None
         );
+    }
+    #[test]
+    fn rejected_optional_capability_keeps_the_persistent_request_socket() -> crate::Result<()> {
+        let (client, server) = UnixStream::pair()?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let mut server = BufReader::new(server);
+            let mut request = String::new();
+            server.read_line(&mut request)?;
+            assert_eq!(request, "\"NacreCapabilities\"\n");
+            server.get_mut().write_all(b"{\"Err\":\"unsupported\"}\n")?;
+            request.clear();
+            server.read_line(&mut request)?;
+            assert_eq!(request, "\"Version\"\n");
+            server.get_mut().write_all(b"{\"Ok\":\"26.04\"}\n")
+        });
+        let mut connection = Connection::from_stream(client);
+        assert_eq!(
+            connection.nacre_capabilities(Duration::from_secs(1)),
+            NacreCapabilities::default()
+        );
+        assert!(connection.connected());
+        assert_eq!(
+            connection.request_value(&json!("Version"), Duration::from_secs(1), 128)?,
+            "26.04"
+        );
+        peer.join().map_err(|_| "Capability peer panicked")??;
+        Ok(())
     }
 
     #[test]

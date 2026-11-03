@@ -45,6 +45,10 @@ Item {
             cancelDashboard();
     }
     function requestDashboard(buttons) {
+        if (NacreCompositor.externalEdgeSource) {
+            cancelDashboard();
+            return;
+        }
         if (buttons !== Qt.NoButton) {
             cancelDashboard();
             return;
@@ -121,9 +125,13 @@ Item {
         NacreHoverIntent.observe(screen, point.x, point.y);
         if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", true);
+            if (NacreCompositor.externalEdgeSource)
+                return;
             requestDashboard(buttons);
             return;
         }
+        if (NacreCompositor.externalEdgeSource)
+            return;
         if (DesktopSettings.data.clickEdgeMenus === true || !available || !NacreHoverIntent.canOpen(name, screen, buttons))
             return;
         if ((!visibilities[name] || name === "osd" && visibilities.controlsMode === "dropdown") && !sideDwell(name).waiting)
@@ -138,6 +146,50 @@ Item {
             sideDwell(name).cancel();
         NacreHoverIntent.rearm(name, screen);
         controller.settleHover();
+    }
+    Connections {
+        target: NacreCompositor
+        function onExternalEdgeSourceChanged() {
+            if (NacreCompositor.externalEdgeSource) {
+                root.cancelDashboard();
+                root.cancelSides();
+            } else {
+                root.leave("dashboard");
+                root.leave("left");
+                root.leave("osd");
+                if (root.available) {
+                    if (top.hovered)
+                        root.approach("dashboard", top, Qt.NoButton);
+                    if (left.hovered)
+                        root.approach("left", left, Qt.NoButton);
+                    if (right.hovered)
+                        root.approach("osd", right, Qt.NoButton);
+                }
+            }
+        }
+        function onEvent(value) {
+            if (!NacreCompositor.externalEdgeSource || value?.output !== root.screen.name)
+                return;
+            if (value.type !== "edge-triggered" && value.type !== "edge-left")
+                return;
+            const position = value.position;
+            if (!position || typeof position.length !== "number" || position.length !== 2 || !Number.isFinite(position[0]) || !Number.isFinite(position[1]))
+                return;
+            const edge = String(value.edge || "").toLowerCase();
+            NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
+            if (value.type === "edge-left") {
+                const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
+                if (name)
+                    root.leave(name);
+                return;
+            }
+            if (!root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
+                return;
+            const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
+            const point = NacreHoverIntent.positions[root.screen.name];
+            if (name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point))
+                NacrePanelState.hoverEdge(name, root.screen.name);
+        }
     }
     NacreFrameLip {
         id: top

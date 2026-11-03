@@ -64,9 +64,21 @@ impl EventSocket {
         }
     }
     pub fn connect(path: &Path, hover: bool) -> Result<Self> {
-        Self::connect_with(
+        let requests: &[&str] = if hover {
+            &["NacreOverviewHoverStream", "EventStream"]
+        } else {
+            &["EventStream"]
+        };
+        Self::connect_requests(
             || UnixStream::connect(path).map_err(io_error),
-            hover,
+            requests,
+            MAX_BYTES,
+        )
+    }
+    pub fn connect_edge_triggers(path: &Path) -> Result<Self> {
+        Self::connect_requests(
+            || UnixStream::connect(path).map_err(io_error),
+            &["NacreEdgeTriggerStream"],
             MAX_BYTES,
         )
     }
@@ -80,6 +92,13 @@ impl EventSocket {
         } else {
             &["EventStream"]
         };
+        Self::connect_requests(&mut open, requests, maximum)
+    }
+    fn connect_requests(
+        mut open: impl FnMut() -> Result<UnixStream>,
+        requests: &[&str],
+        maximum: usize,
+    ) -> Result<Self> {
         for request in requests {
             let mut stream = BufReader::new(open()?);
             stream
@@ -149,6 +168,58 @@ impl EventSocket {
         parse(&line)
     }
 }
+
+/// Validate and normalize the fork's independent edge event stream.
+pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
+    let object = value
+        .as_object()
+        .filter(|object| object.len() == 1)
+        .ok_or_else(|| invalid("Malformed niri edge event"))?;
+    let (variant, event_type) = if object.contains_key("EdgeTriggered") {
+        ("EdgeTriggered", "edge-triggered")
+    } else if object.contains_key("EdgeLeft") {
+        ("EdgeLeft", "edge-left")
+    } else {
+        return Ok(None);
+    };
+    let payload = object
+        .get(variant)
+        .and_then(Value::as_object)
+        .filter(|payload| payload.len() == 3)
+        .ok_or_else(|| invalid("Malformed niri edge event"))?;
+    let output = payload
+        .get("output")
+        .and_then(Value::as_str)
+        .filter(|output| {
+            !output.is_empty() && output.len() <= 256 && !output.chars().any(char::is_control)
+        })
+        .ok_or_else(|| invalid("Malformed niri edge output"))?;
+    let edge = match payload.get("edge").and_then(Value::as_str) {
+        Some("Left") => "left",
+        Some("Right") => "right",
+        Some("Top") => "top",
+        Some("Bottom") => "bottom",
+        _ => return Err(invalid("Malformed niri edge name")),
+    };
+    let position = payload
+        .get("position")
+        .and_then(Value::as_array)
+        .filter(|position| position.len() == 2)
+        .and_then(|position| {
+            Some([
+                position[0].as_f64().filter(|value| value.is_finite())?,
+                position[1].as_f64().filter(|value| value.is_finite())?,
+            ])
+        })
+        .ok_or_else(|| invalid("Malformed niri edge position"))?;
+    Ok(Some(json!({
+        "type":event_type,
+        "output":output,
+        "edge":edge,
+        "position":position
+    })))
+}
+
 pub trait Outputs {
     fn outputs(&mut self) -> Result<Value>;
 }
@@ -280,6 +351,51 @@ mod tests {
             self.queries.push(json!({"name":"Outputs","kwargs":{}}));
             Ok(self.values[index].clone())
         }
+    }
+    #[test]
+    fn native_edge_stream_handshake_and_event_shape_are_validated() -> crate::Result<()> {
+        let (client, mut server) = UnixStream::pair()?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let mut reader = BufReader::new(server.try_clone()?);
+            let mut request = String::new();
+            reader.read_line(&mut request)?;
+            assert_eq!(request, "\"NacreEdgeTriggerStream\"\n");
+            writeln!(server, "{{\"Ok\":\"Handled\"}}")?;
+            writeln!(server, "{{\"WorkspacesChanged\":{{\"workspaces\":[]}}}}")?;
+            writeln!(
+                server,
+                "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}"
+            )?;
+            writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")?;
+            writeln!(server, "{{\"EdgeLeft\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[8.0,720.0]}}}}")
+        });
+        let mut socket = EventSocket::connect_requests(
+            || client.try_clone().map_err(io_error),
+            &["NacreEdgeTriggerStream"],
+            MAX_BYTES,
+        )?;
+        let standard = socket.next_event()?;
+        assert_eq!(edge_trigger(&standard)?, None);
+        let standard = socket.next_event()?;
+        assert_eq!(edge_trigger(&standard)?, None);
+        let wire = socket.next_event()?;
+        assert_eq!(
+            edge_trigger(&wire)?,
+            Some(
+                json!({"type":"edge-triggered","output":"DP-1","edge":"left","position":[4.0,720.0]})
+            )
+        );
+        let wire = socket.next_event()?;
+        assert_eq!(
+            edge_trigger(&wire)?,
+            Some(json!({"type":"edge-left","output":"DP-1","edge":"left","position":[8.0,720.0]}))
+        );
+        assert!(edge_trigger(&json!({"EdgeTriggered": {
+            "output":"DP-1", "edge":"Left", "position":[0.0,"bad"]
+        }}))
+        .is_err());
+        peer.join().map_err(|_| "Edge event fixture panicked")??;
+        Ok(())
     }
     #[test]
     fn all_frozen_event_emissions_output_refreshes_and_disconnects() -> crate::Result<()> {

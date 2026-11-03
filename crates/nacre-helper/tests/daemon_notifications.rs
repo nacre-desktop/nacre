@@ -350,6 +350,52 @@ fn advertised_methods(home: &Path) -> Value {
     serde_json::from_slice(&output.stdout).expect("method list JSON")
 }
 
+fn wait_for_notification_status(home: &Path, expected: &str) {
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let mut last_status = "daemon status unavailable".to_owned();
+    loop {
+        let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+        command
+            .env_clear()
+            .env("PATH", std::env::var_os("PATH").unwrap_or_default())
+            .env("HOME", home)
+            .env(
+                "NACRE_HELPER_TOOLS",
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre/shell-tools"),
+            )
+            .env("XDG_CONFIG_HOME", home.join("config"))
+            .env("XDG_STATE_HOME", home.join("state"))
+            .env("XDG_CACHE_HOME", home.join("cache"))
+            .env("XDG_DATA_HOME", home.join("data"))
+            .env("XDG_RUNTIME_DIR", home.join("runtime"))
+            .env(
+                "NACRE_DAEMON_SOCKET",
+                home.join("runtime/nacre/daemon.sock"),
+            )
+            .args(["ctl", "status"]);
+        if let Ok(output) = command.output() {
+            if output.status.success() {
+                if let Ok(status) = serde_json::from_slice::<Value>(&output.stdout) {
+                    last_status = status["services"]["notifications"]["status"]
+                        .as_str()
+                        .unwrap_or("missing")
+                        .to_owned();
+                    if last_status == expected {
+                        return;
+                    }
+                }
+            } else {
+                last_status = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            }
+        }
+        assert!(
+            Instant::now() < deadline,
+            "notification service did not reach {expected:?}; last observed status: {last_status}"
+        );
+        thread::sleep(Duration::from_millis(20));
+    }
+}
+
 fn legacy_history_save(home: &Path) {
     let mut child = Command::new(env!("CARGO_BIN_EXE_nacre-helper"))
         .env_clear()
@@ -460,7 +506,7 @@ fn private_bus_scenario() {
         .expect("claim private notification name");
     assert_eq!(acquired, 1, "fixture must become the primary owner");
     let mut refused = daemon(&home, &endpoint, true, false);
-    thread::sleep(Duration::from_millis(500));
+    wait_for_notification_status(&home, "refused");
     assert!(
         has_owner(&connection),
         "managed daemon replaced fixture owner"
@@ -729,7 +775,7 @@ fn takeover_scenario() {
     let empty = home.join("data/empty-tools");
     fs::create_dir_all(&empty).unwrap();
     let mut broken = daemon_with_tools(&home, &endpoint, true, false, &empty);
-    thread::sleep(Duration::from_millis(1000));
+    wait_for_notification_status(&home, "unavailable");
     let status = broken.stop();
     assert!(
         status.code().is_some(),

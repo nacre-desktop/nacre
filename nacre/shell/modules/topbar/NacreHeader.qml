@@ -142,7 +142,7 @@ Item {
         function approach(buttons) {
             NacreHoverIntent.observe(root.screen, x + mouseX, mouseY);
             NacreHoverIntent.setHeaderHover(root.screen.name, "bar", containsMouse);
-            if (!root.clickMenus && root.visibility && !root.panel?.input?.modal && NacreHoverIntent.canOpen("dashboard", root.screen, buttons))
+            if (!NacreCompositor.externalEdgeSource && !root.clickMenus && root.visibility && !root.panel?.input?.modal && NacreHoverIntent.canOpen("dashboard", root.screen, buttons))
                 root.panel?.input?.lips?.requestDashboard(buttons);
         }
         onPressed: event => approach(event.buttons)
