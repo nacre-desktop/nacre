@@ -1176,12 +1176,12 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
         ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
-        ("bar.collection.height".into(), Value::Number(112.into())),
+        ("bar.collection.height".into(), Value::Number(180.into())),
         ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
         ("collection.operation".into(), Value::Text("rename".into())),
         ("collection.target".into(), Value::Text("niri-collection:17".into())),
         ("collection.draft".into(), Value::Text("Very long personal research and writing desk".into())),
-        ("collection.scroll".into(), Value::Number(0.into())),
+        ("collection.scroll".into(), Value::Number(180.into())),
         ("panel.open".into(), Value::Bool(true)),
         ("view.edge".into(), Value::Text("top".into())),
     ]);
@@ -1199,16 +1199,18 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
         _ => None,
     }).collect();
-    assert!(text.iter().any(|text| text.contains("Desk name")), "rename input must render localized placeholder: {text:?}");
     assert!(text.iter().any(|text| text.contains("Save")) && text.iter().any(|text| text.contains("Cancel")), "rename editor actions must render localized labels: {text:?}");
     assert!(menu.scene().primitives.iter().any(|primitive| matches!(primitive,
         bead::render::Primitive::Text { text, .. } if text.contains("Very long personal research")
     )), "the selected long collection label must be present in the bounded popout");
 
+    let Value::List(group_rows) = &groups else { unreachable!() };
     let mut create_models = BTreeMap::from([
-        ("bar.collections".into(), groups),
+        ("bar.collections".into(), Value::list(group_rows.iter().take(2).cloned().collect())),
         ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
-        ("bar.collection.height".into(), Value::Number(112.into())),
+        ("bar.collection.height".into(), Value::Number(180.into())),
+        ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
+        ("collection.scroll".into(), Value::Number(8.into())),
         ("collection.operation".into(), Value::Text(String::new())),
         ("panel.open".into(), Value::Bool(true)),
         ("view.edge".into(), Value::Text("top".into())),
@@ -1217,7 +1219,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     initial.append(&mut create_models);
     let mut create = Harness::load(
         &root(), Path::new("popouts/collections.luau"), &root().join("palette.json"), initial,
-        Config { width: 360, height: 250, scale: 1. },
+        Config { width: 360, height: 320, scale: 1. },
     )?;
     let create_frame = create.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
@@ -1226,6 +1228,14 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     assert!(create.scene().primitives.iter().any(|primitive| matches!(primitive,
         bead::render::Primitive::Text { text, .. } if text.contains("Create desk")
     )), "create action must render localized label");
+    let nodes = menu.session.view_nodes();
+    let input = nodes.iter().find(|node| node.id.ends_with("group-name")).expect("rename input node");
+    assert_eq!(input.bind.get("text").map(String::as_str), Some("collection.draft"), "semantic rename field binding");
+    for suffix in ["group-name", "save-name", "cancel-name"] {
+        let node = nodes.iter().find(|node| node.id.ends_with(suffix)).expect("visible editor control");
+        let rect = bead::ui::rect(&node.draw);
+        assert!(rect.x >= 0. && rect.y >= 0. && rect.x + rect.w <= 360. && rect.y + rect.h <= 250., "{suffix} falls outside the popout viewport: {rect:?}");
+    }
     assert!(bar_text.iter().any(|text| text.contains("Very long personal")), "the bar badge must show the current desk label: {bar_text:?}");
     Ok(())
 }

@@ -12,6 +12,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
             local collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
+            local collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
             local show_collections=#collections>1
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
@@ -131,6 +132,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
-            show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),width=92,height=28,switcher_label="Collection",on_toggle=c.popouts and "collection.switcher.open" or nil} or nil,
+            show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=collections,current=collection_current,width=92,height=28,switcher_label="Collection",on_toggle=c.popouts and "collection.switcher.open" or nil} or nil,
         }
     end}}}}}
