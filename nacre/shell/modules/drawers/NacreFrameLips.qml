@@ -168,7 +168,9 @@ Item {
             }
         }
         function onEvent(value) {
-            if (!NacreCompositor.externalEdgeSource || value?.output !== root.screen.name || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
+            if (!NacreCompositor.externalEdgeSource || value?.output !== root.screen.name)
+                return;
+            if (value.type !== "edge-triggered" && value.type !== "edge-left")
                 return;
             const position = value.position;
             if (!Array.isArray(position) || position.length !== 2 || !position.every(Number.isFinite))
@@ -180,7 +182,7 @@ Item {
                     root.leave(name);
                 return;
             }
-            if (value.type !== "edge-triggered")
+            if (!root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
                 return;
             const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
             const point = NacreHoverIntent.positions[root.screen.name];
