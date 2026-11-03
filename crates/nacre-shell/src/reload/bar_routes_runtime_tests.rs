@@ -387,12 +387,12 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
             {"id":"niri-collection:28","index":2,"name":second_name,"label":second_name,"output":"DP-2","active":false}
         ]
     });
-    let publisher = bead_test::source::FakeSource::new(data("personal")).unwrap();
+    let publisher = std::sync::Arc::new(bead_test::source::FakeSource::new(data("personal")).unwrap());
     let palette = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json");
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
     let session = bead::ui::Session::new(palette.parent().unwrap().into(), "popouts/collections.luau".into(), palette, colors, cold);
-    let mut runtime = Runtime::new(session).with_origins_topic(Arc::new(publisher.clone())).unwrap();
+    let mut runtime = Runtime::new(session).with_origins_topic(publisher.clone()).unwrap();
     runtime.state_file = None;
     let (sender, events) = std::sync::mpsc::channel();
     runtime.services(Box::new(move |event| { let _ = sender.send(event); }));
