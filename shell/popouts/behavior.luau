@@ -22,7 +22,6 @@ end
 return {
     stores={
         ["panel.open"]=true,["view.edge"]="top",
-        ["bead.focused"]="",
         ["calendar.ready"]=false,["calendar.initialized"]=false,["calendar.follow_today"]=false,["calendar.year"]=1970,["calendar.month"]=1,
         ["calendar.first_weekday"]=1,["calendar.today"]="",
         ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.connection"]="",["bar.collection.enabled"]=false,["bar.collection.output"]="",
