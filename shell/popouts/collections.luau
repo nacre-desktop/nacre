@@ -32,7 +32,7 @@ local body={}
 if note then body[#body+1]=note end
 body[#body+1]=kit.CollectionSwitcherMenu{
     id="collection-switcher-menu",width=272,height=menu_height,scroll=ui.bind("collection.scroll"),
-    groups=ui.bind("bar.collections"),current=ui.bind("bar.collection.current"),
+    groups=groups,current=current,
     on_switch=not editing and "collection.switch" or nil,on_create=not editing and "collection.begin-create" or nil,on_rename=not editing and "collection.begin-rename" or nil,
     on_commit="collection.commit",on_cancel="collection.cancel",editing=editing,
     create_label=ui.tr("bead.bar.collection-create"),rename_label=ui.tr("bead.bar.collection-rename"),
