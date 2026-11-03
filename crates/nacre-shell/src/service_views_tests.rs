@@ -1142,7 +1142,7 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
 fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let groups = Value::list(vec![
         serde_json::json!({"id":"niri-collection:17","label":"Very long personal research and writing desk","name":"Very long personal research and writing desk","index":1,"output":"DP-1","active":true}),
-        serde_json::json!({"id":"niri-collection:28","label":"2","name":null,"index":2,"output":"DP-2","active":false}),
+        serde_json::json!({"id":"niri-collection:28","label":"2","index":2,"output":"DP-2","active":false}),
         serde_json::json!({"id":"niri-collection:39","label":"studio","name":"studio","index":3,"output":"DP-2","active":false}),
     ]);
     let capture = std::env::var_os("N0117_CAPTURE_DIR").map(PathBuf::from);

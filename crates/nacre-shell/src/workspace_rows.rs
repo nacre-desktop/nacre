@@ -70,14 +70,19 @@ pub fn collection_rows(topic: &Json) -> Vec<Json> {
             let id = row["id"].as_str()?.to_owned();
             let index = row["index"].as_u64()?;
             let name = row["name"].as_str().filter(|name| !name.trim().is_empty());
-            Some(serde_json::json!({
+            let mut group = serde_json::json!({
                 "id": id,
                 "label": name.map(str::to_owned).unwrap_or_else(|| index.to_string()),
                 "index": index,
-                "name": name,
-                "output": row["output"],
                 "active": row["active"] == true,
-            }))
+            });
+            if let Some(name) = name {
+                group["name"] = json!(name);
+            }
+            if let Some(output) = row["output"].as_str() {
+                group["output"] = json!(output);
+            }
+            Some(group)
         })
         .collect()
 }
