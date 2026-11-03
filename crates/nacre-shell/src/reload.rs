@@ -3100,7 +3100,7 @@ impl Runtime {
             self.actions.register(name, "collection.switcher")?;
         }
         self.actions.grant("collection.switcher");
-        self.routes = Some(crate::bar_routes::Routes::new(client.clone()));
+        self.routes = Some(std::rc::Rc::new(crate::bar_routes::Routes::new(client.clone())));
         let prefs: std::sync::Arc<dyn bead::core::source::Source> =
             std::sync::Arc::new(client.lease_topic(crate::prefs::DESKTOP)?);
         self = self.with_prefs(prefs)?;
@@ -8119,7 +8119,7 @@ impl SceneSource for Runtime {
                     let bead::core::Value::Text(target) = arg else { return self.finish_scene(None); };
                     let existing_name = match self.session.stores.get("bar.collections") {
                         Some(bead::core::Value::List(rows)) => rows.iter()
-                            .find(|row| row["id"] == target)
+                            .find(|row| row["id"].as_str() == Some(target.as_str()))
                             .and_then(|row| row["name"].as_str())
                             .unwrap_or("")
                             .to_owned(),

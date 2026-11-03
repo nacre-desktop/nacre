@@ -96,10 +96,11 @@ pub fn collection_stores(topic: &Json, output: Option<&str>) -> BTreeMap<String,
             None => row["active"] == true,
         })
         .and_then(|row| row["id"].as_str())
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .to_owned();
     BTreeMap::from([
         ("bar.collections".into(), Value::list(rows)),
-        ("bar.collection.current".into(), Value::Text(current.into())),
+        ("bar.collection.current".into(), Value::Text(current)),
         (
             "bar.collection.connection".into(),
             Value::Text(topic["connectionId"].as_str().unwrap_or_default().into()),
