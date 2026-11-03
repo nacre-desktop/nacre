@@ -390,7 +390,7 @@ mod tests {
     }
     #[test]
     fn rejected_optional_capability_keeps_the_persistent_request_socket() -> crate::Result<()> {
-        let (client, mut server) = UnixStream::pair()?;
+        let (client, server) = UnixStream::pair()?;
         let peer = thread::spawn(move || -> std::io::Result<()> {
             let mut server = BufReader::new(server);
             let mut request = String::new();
