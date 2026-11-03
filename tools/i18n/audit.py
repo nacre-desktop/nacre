@@ -513,6 +513,10 @@ for current in args.surfaces or [*suites, "dashboard", "extras"]:
 
                 def audit_runner(command, **kwargs):
                     kwargs["isolate"] = False
+                    if current == "launcher" and args.text_family:
+                        # The alternate-font launcher capture renders every route
+                        # twice, then captures each state at desktop and narrow widths.
+                        kwargs["timeout"] = 90
                     return run_qml(command, **kwargs)
 
                 with patch.object(mod, "run_qml", audit_runner):
