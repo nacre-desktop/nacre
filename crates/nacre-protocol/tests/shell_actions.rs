@@ -18,6 +18,9 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
                     "workspace.scroll" => serde_json::from_value::<WorkspaceScroll>(p)
                         .unwrap()
                         .validate(),
+                    "collection.action" => serde_json::from_value::<CollectionAction>(p)
+                        .unwrap()
+                        .validate(),
                     "window.focus" => serde_json::from_value::<WindowFocus>(p).unwrap().validate(),
                     "session.request" => serde_json::from_value::<SessionRequest>(p)
                         .unwrap()
@@ -62,7 +65,7 @@ fn bar_action_goldens_decode_into_the_published_request_types() {
     }
     assert_eq!(
         calls.len(),
-        15,
+        16,
         "Every new method needs a typed golden call"
     );
 }

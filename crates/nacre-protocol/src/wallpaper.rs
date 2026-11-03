@@ -46,9 +46,9 @@ impl WallpaperWatch {
     }
 }
 
-/// Published static wallpaper state. `current` is the global default
-/// value; `outputs` repeats that same value under its output name for stable
-/// consumers that address outputs explicitly.
+/// Published static wallpaper state. `current` is the global default value;
+/// `outputs` holds each output's effective wallpaper and may contain a
+/// per-output override.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperActive {
     pub available: bool,
