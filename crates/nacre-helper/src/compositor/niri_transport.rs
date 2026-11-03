@@ -54,33 +54,8 @@ impl NacreCapabilities {
         }
         let features = object.get("NacreCapabilities")?.as_object()?;
         // Nacre capabilities are additive across concurrent native features.
-        // Older N0107 peers omit the two fields introduced by N0114.
-        const KNOWN_FEATURES: &[&str] = &[
-            "workspace_collections",
-            "proportional_x11_widths",
-            "overview_hover",
-            "scratchpad",
-            "window_pinning",
-            "edge_triggers",
-        ];
-        if features
-            .iter()
-            .any(|(key, value)| KNOWN_FEATURES.contains(&key.as_str()) && !value.is_boolean())
-        {
-            return None;
-        }
-        if features.iter().any(|(key, value)| {
-            ![
-                "workspace_collections",
-                "proportional_x11_widths",
-                "overview_hover",
-                "scratchpad",
-                "window_pinning",
-                "edge_triggers",
-            ]
-            .contains(&key.as_str())
-                && !value.is_boolean()
-        }) {
+        // Older peers omit the three new optional fields, which default false.
+        if features.values().any(|value| !value.is_boolean()) {
             return None;
         }
         let scratchpad = features

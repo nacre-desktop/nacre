@@ -92,9 +92,6 @@ const PINNED_WINDOW_RULES: &str = concat!(
     "window-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-pinned true\n}\n",
 );
 
-pub(crate) fn collection_overlay() -> String {
-    collection_overlay_with_delay(350)
-}
 pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
     let delay_ms = delay_ms.min(800);
     let collection_actions = COLLECTION_ACTIONS
