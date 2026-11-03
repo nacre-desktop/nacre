@@ -242,7 +242,7 @@ impl EdgeEventState {
             output: Some(output.into()),
         };
         if sender.try_send(call).is_err() {
-            tracing::warn!("Native edge panel request queue is full");
+            eprintln!("EDGE_OPEN_ERROR native panel request queue is full");
         }
     }
     fn panel_sender(&self) -> Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>> {
@@ -262,13 +262,18 @@ impl EdgeEventState {
                 .await;
                 match result {
                     Ok(Ok(reply)) if reply.error.is_none() => {}
-                    Ok(Ok(reply)) => {
-                        tracing::warn!(message=?reply.error, "Native edge panel request failed")
-                    }
+                    Ok(Ok(reply)) => eprintln!(
+                        "EDGE_OPEN_ERROR native panel request failed: {}",
+                        reply
+                            .error
+                            .map_or_else(|| "unknown error".into(), |error| error.message)
+                    ),
                     Ok(Err(error)) => {
-                        tracing::warn!(%error, "Native edge panel transport failed")
+                        eprintln!("EDGE_OPEN_ERROR native panel transport failed: {error}")
                     }
-                    Err(error) => tracing::warn!(%error, "Native edge panel worker failed"),
+                    Err(error) => {
+                        eprintln!("EDGE_OPEN_ERROR native panel worker failed: {error}")
+                    }
                 }
             }
         });

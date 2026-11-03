@@ -1,7 +1,7 @@
 //! Read-only topic adapter. The existing compositor reducers and transports own semantics.
 use super::{compositor_control::Control, hub::Shared};
 use crate::{
-    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state, niri_transport},
+    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state},
     Result,
 };
 use serde_json::{json, Map, Value};
