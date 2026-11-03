@@ -429,37 +429,47 @@ pub async fn run(
     let mut changes = hub.borrow().observe();
     let mut window_events = hub.borrow().niri_width_source.events.subscribe();
     loop {
-    loop {
-        if shutdown.stop.get() {
-            shutdown.restored.notify_one();
-            std::future::pending::<()>().await;
-        }
-        if connected(&hub, None) {
-            break;
-        }
-        if native_width_policy(&hub) {
-            let status = json!({"available":false,"opening_width":opening.get(),"relaxed":0});
-            if hub.borrow().snapshot(TOPIC).as_ref() != Some(&status) {
-                hub.borrow_mut().publish(TOPIC, status)?;
+        loop {
+            if shutdown.stop.get() {
+                shutdown.restored.notify_one();
+                std::future::pending::<()>().await;
             }
-            if !hub.borrow().services.get("niri-widths").is_some_and(|service| service["status"] == "idle") {
-                hub.borrow_mut().service("niri-widths", "idle", 0)?;
+            if connected(&hub, None) {
+                break;
             }
-        } else if !hub.borrow().services.get("niri-widths").is_some_and(|service| service["status"] == "starting") {
-            hub.borrow_mut().service("niri-widths", "starting", 0)?;
+            if native_width_policy(&hub) {
+                let status = json!({"available":false,"opening_width":opening.get(),"relaxed":0});
+                if hub.borrow().snapshot(TOPIC).as_ref() != Some(&status) {
+                    hub.borrow_mut().publish(TOPIC, status)?;
+                }
+                if !hub
+                    .borrow()
+                    .services
+                    .get("niri-widths")
+                    .is_some_and(|service| service["status"] == "idle")
+                {
+                    hub.borrow_mut().service("niri-widths", "idle", 0)?;
+                }
+            } else if !hub
+                .borrow()
+                .services
+                .get("niri-widths")
+                .is_some_and(|service| service["status"] == "starting")
+            {
+                hub.borrow_mut().service("niri-widths", "starting", 0)?;
+            }
+            tokio::select! {_=shutdown.changed.notified()=>{},change=changes.recv()=>{change.map_err(|_| "Compositor state observer ended")?;}}
         }
-        tokio::select! {_=shutdown.changed.notified()=>{},change=changes.recv()=>{change.map_err(|_| "Compositor state observer ended")?;}}
-    }
-    let driver = Driver::connect().await?;
-    // Windows present when X11 connects are initial state, never newly opened.
-    let (mut sequence, initial) =
-        native_windows(&hub)?.ok_or("Width observer compositor disconnected")?;
-    let connection = hub
-        .borrow()
-        .snapshot(super::niri_events::TOPIC)
-        .ok_or("Missing compositor identity")?["connectionId"]
-        .clone();
-    let result=async {
+        let driver = Driver::connect().await?;
+        // Windows present when X11 connects are initial state, never newly opened.
+        let (mut sequence, initial) =
+            native_windows(&hub)?.ok_or("Width observer compositor disconnected")?;
+        let connection = hub
+            .borrow()
+            .snapshot(super::niri_events::TOPIC)
+            .ok_or("Missing compositor identity")?["connectionId"]
+            .clone();
+        let result=async {
         driver.with(move|state| {
             state.resync(initial)
         }).await?;
@@ -538,29 +548,29 @@ pub async fn run(
         }
         Ok::<(),crate::Error>(())
     }.await;
-    let restored = driver
-        .with(|state| {
-            let windows = state.policy.saved.keys().copied().collect::<Vec<_>>();
-            for window in windows {
-                state.policy.restore(window, &mut state.x11)?;
+        let restored = driver
+            .with(|state| {
+                let windows = state.policy.saved.keys().copied().collect::<Vec<_>>();
+                for window in windows {
+                    state.policy.restore(window, &mut state.x11)?;
+                }
+                Ok(())
+            })
+            .await;
+        if let Err(error) = restored {
+            tracing::warn!("Width observer hint restoration failed");
+            if result.is_ok() {
+                return Err(error);
             }
-            Ok(())
-        })
-        .await;
-    if let Err(error) = restored {
-        tracing::warn!("Width observer hint restoration failed");
-        if result.is_ok() {
-            return Err(error);
         }
-    }
-    if shutdown.stop.get() {
-        shutdown.restored.notify_one();
-        std::future::pending::<()>().await;
-    }
-    if native_width_policy(&hub) {
-        continue;
-    }
-    return result;
+        if shutdown.stop.get() {
+            shutdown.restored.notify_one();
+            std::future::pending::<()>().await;
+        }
+        if native_width_policy(&hub) {
+            continue;
+        }
+        return result;
     }
 }
 
@@ -649,19 +659,15 @@ mod tests {
 
     #[test]
     fn driver_gate_tracks_native_capability_transitions_after_compositor_ready() -> Result<()> {
-        let hub = super::super::hub::Hub::new(
-            "fixture".into(),
-            false,
-            Duration::from_millis(16),
-        )
-        .shared();
-        assert!(!connected(&hub, None), "waits while compositor is unavailable");
+        let hub = super::super::hub::Hub::new("fixture".into(), false, Duration::from_millis(16))
+            .shared();
+        assert!(
+            !connected(&hub, None),
+            "waits while compositor is unavailable"
+        );
         {
             let mut state = hub.borrow_mut();
-            state.publish(
-                "compositor",
-                json!({"backend":"niri","available":true}),
-            )?;
+            state.publish("compositor", json!({"backend":"niri","available":true}))?;
             state.publish(
                 super::super::niri_events::TOPIC,
                 json!({"backend":"niri","available":true,"connectionId":"fixture"}),
@@ -677,13 +683,19 @@ mod tests {
             json!({"backend":"niri","available":true,"connectionId":"fixture","proportionalX11Widths":true}),
         )?;
         assert!(native_width_policy(&hub));
-        assert!(!connected(&hub, None), "native policy never opens X11 driver");
+        assert!(
+            !connected(&hub, None),
+            "native policy never opens X11 driver"
+        );
         hub.borrow_mut().publish(
             super::super::niri_events::TOPIC,
             json!({"backend":"niri","available":true,"connectionId":"fixture"}),
         )?;
         assert!(!native_width_policy(&hub));
-        assert!(connected(&hub, None), "ConfigLoaded fallback retires native mode");
+        assert!(
+            connected(&hub, None),
+            "ConfigLoaded fallback retires native mode"
+        );
         Ok(())
     }
     #[test]

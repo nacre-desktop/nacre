@@ -7,14 +7,14 @@ use crate::{
     placement::{Frame, FrameSettings},
     prefs::Prefs,
 };
-use bead::wayland::{EdgeChrome, ShellControl, intent::Lip};
 use bead::core::source::{Snapshot, Source, Subscription};
+use bead::wayland::{EdgeChrome, ShellControl, intent::Lip};
+use serde_json::Value;
+use std::collections::BTreeMap;
 use std::sync::{
     Mutex,
     atomic::{AtomicBool, AtomicU64, Ordering::SeqCst},
 };
-use serde_json::Value;
-use std::collections::BTreeMap;
 
 /// The frame-related answers (B0047): decoded settings plus the lip configuration.
 #[derive(Default)]
@@ -111,7 +111,7 @@ impl EdgeEventState {
                         && height.is_finite()
                         && (1.0..=32768.0).contains(&width)
                         && (1.0..=32768.0).contains(&height))
-                        .then(|| (name.clone(), (width.round() as i32, height.round() as i32)))
+                    .then(|| (name.clone(), (width.round() as i32, height.round() as i32)))
                 })
                 .collect()
         } else {
@@ -122,8 +122,8 @@ impl EdgeEventState {
     fn update_event_source(&self, snapshot: &Snapshot) {
         let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
         state.event_connected = snapshot.connected;
-        state.acknowledged = snapshot.connected
-            && snapshot.data["edgeTriggersActive"].as_bool() == Some(true);
+        state.acknowledged =
+            snapshot.connected && snapshot.data["edgeTriggersActive"].as_bool() == Some(true);
         self.publish_active(&state);
     }
     pub(crate) fn route_event(&self, message: &nacre_protocol::Message) {
@@ -686,7 +686,10 @@ mod tests {
             Some("status")
         );
         assert_eq!(gate.native_lip_at("left", (4., 250.), (1000, 800)), None);
-        gate.apply(&Prefs::decode(&json!({"clickEdgeMenus":true}), &json!(null)));
+        gate.apply(&Prefs::decode(
+            &json!({"clickEdgeMenus":true}),
+            &json!(null),
+        ));
         assert_eq!(gate.native_lip_at("left", (4., 310.), (1000, 800)), None);
     }
 }

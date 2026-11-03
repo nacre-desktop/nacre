@@ -511,7 +511,9 @@ mod tests {
         ];
         assert!(native.starts_with("include \"config.kdl\""));
         for edge in ["left", "right", "top", "bottom"] {
-            assert!(native.contains(&format!("{edge} {{ action {{ event; }}; dwell-time-ms 350; }}")));
+            assert!(native.contains(&format!(
+                "{edge} {{ action {{ event; }}; dwell-time-ms 350; }}"
+            )));
         }
         assert!(native.contains("nacre { edge-triggers; }"));
         assert!(!stock.contains("edge-triggers"));

@@ -377,18 +377,19 @@ async fn niri(
     stream.set_nonblocking(true)?;
     let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
     let capability_path = path.clone();
-    let capabilities = tokio::task::spawn_blocking(move || {
-        niri_transport::nacre_capabilities(&capability_path)
-    })
-    .await?;
+    let capabilities =
+        tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path))
+            .await?;
     let mut proportional_x11_widths = capabilities.proportional_x11_widths;
     let edge_enabled = capabilities.edge_triggers;
     let edge_socket = if edge_enabled {
         let edge_path = path.clone();
-        tokio::task::spawn_blocking(move || niri_events::EventSocket::connect_edge_triggers(&edge_path))
-            .await
-            .ok()
-            .and_then(std::result::Result::ok)
+        tokio::task::spawn_blocking(move || {
+            niri_events::EventSocket::connect_edge_triggers(&edge_path)
+        })
+        .await
+        .ok()
+        .and_then(std::result::Result::ok)
     } else {
         None
     };

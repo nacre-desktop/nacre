@@ -185,9 +185,11 @@ impl Backend {
                         return Ok(());
                     }
                 } else if value["type"] == "edge-triggered" {
-                    println!("{}", crate::json::encode(&value).map_err(|error| {
-                        failure("ValueError", error.to_string())
-                    })?);
+                    println!(
+                        "{}",
+                        crate::json::encode(&value)
+                            .map_err(|error| { failure("ValueError", error.to_string()) })?
+                    );
                     std::io::Write::flush(&mut std::io::stdout())
                         .map_err(|error| failure("OSError", error.to_string()))?;
                 }

@@ -69,7 +69,11 @@ impl EventSocket {
         } else {
             &["EventStream"]
         };
-        Self::connect_requests(|| UnixStream::connect(path).map_err(io_error), requests, MAX_BYTES)
+        Self::connect_requests(
+            || UnixStream::connect(path).map_err(io_error),
+            requests,
+            MAX_BYTES,
+        )
     }
     pub fn connect_edge_triggers(path: &Path) -> Result<Self> {
         Self::connect_requests(
@@ -354,7 +358,10 @@ mod tests {
             assert_eq!(request, "\"NacreEdgeTriggerStream\"\n");
             writeln!(server, "{{\"Ok\":\"Handled\"}}")?;
             writeln!(server, "{{\"WorkspacesChanged\":{{\"workspaces\":[]}}}}")?;
-            writeln!(server, "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}")?;
+            writeln!(
+                server,
+                "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}"
+            )?;
             writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")
         });
         let mut socket = EventSocket::connect_requests(
@@ -369,11 +376,14 @@ mod tests {
         let wire = socket.next_event()?;
         assert_eq!(
             edge_trigger(&wire)?,
-            Some(json!({"type":"edge-triggered","output":"DP-1","edge":"left","position":[4.0,720.0]}))
+            Some(
+                json!({"type":"edge-triggered","output":"DP-1","edge":"left","position":[4.0,720.0]})
+            )
         );
         assert!(edge_trigger(&json!({"EdgeTriggered": {
             "output":"DP-1", "edge":"Left", "position":[0.0,"bad"]
-        }})).is_err());
+        }}))
+        .is_err());
         peer.join().map_err(|_| "Edge event fixture panicked")??;
         Ok(())
     }

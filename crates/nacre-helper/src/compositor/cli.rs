@@ -70,7 +70,11 @@ pub fn parse(argv: &[String]) -> std::result::Result<Command, Error> {
             }
         }
         "action" => {}
-        _ => return Err(invalid("Expected events, edge-events, capabilities, query or action")),
+        _ => {
+            return Err(invalid(
+                "Expected events, edge-events, capabilities, query or action",
+            ))
+        }
     }
     let method = argv
         .get(1)
@@ -535,7 +539,10 @@ mod tests {
     }
     #[test]
     fn edge_trigger_stream_has_an_explicit_compositor_command() {
-        assert!(matches!(parse(&["edge-events".into()]), Ok(Command::EdgeEvents)));
+        assert!(matches!(
+            parse(&["edge-events".into()]),
+            Ok(Command::EdgeEvents)
+        ));
         assert!(parse(&["edge-events".into(), "extra".into()]).is_err());
     }
 }
