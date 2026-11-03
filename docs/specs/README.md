@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 15 | [N0115 native Nacre niri widths and edge triggers](0115-nacre-niri-native-widths-edge-triggers.md) | Implemented; full dev-1 desktop CI pending | Native X11 width capability gates the observer; edge event streams replace invisible surfaces only after acknowledgement. Stock niri keeps the helper and surface paths. |
+| 15 | [N0115 native Nacre niri widths and edge triggers](0115-nacre-niri-native-widths-edge-triggers.md) | Implemented; full dev-1 desktop CI passed on task branch | Native X11 width capability gates the observer; edge event streams replace invisible surfaces only after acknowledgement. Stock niri keeps the helper and surface paths. |
 | 19 | [N0107 Nacre niri-native capability awareness](0107-nacre-niri-aware.md) | Complete; dev-1 desktop checks passed, task branch only | Capability query gates only equivalent helpers; stock niri falls back to the current behavior. |
 | B0214 | Bead framework split step 3 | Implemented on task branch; lead acceptance pending | Review the CI/import report and preview recipe in `.lead/`; Bead removal remains step 4. No live switch. |
 | 24 | N0140 Claude Wayland clipboard | Done once checks pass | launcher drops DISPLAY under Wayland so Claude Code's xclip-first paste uses wl-paste |
