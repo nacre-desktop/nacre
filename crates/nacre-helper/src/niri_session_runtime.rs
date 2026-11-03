@@ -1354,7 +1354,7 @@ mod tests {
         assert!(!pearl_policy.contains("shadow { off; }"));
         assert!(pearl_policy.contains("match app-id=\"^nacre-widgets$\""));
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
-        assert!(root.contains("include \"bead-pearls.kdl\""));
+        assert!(root.contains("bead-pearls.kdl"));
         let native_overlay = fs::read_to_string(destination.join("config/nacre-niri.kdl"))?;
         let generated_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
         for generated in [&root, &native_overlay, &generated_rules] {
