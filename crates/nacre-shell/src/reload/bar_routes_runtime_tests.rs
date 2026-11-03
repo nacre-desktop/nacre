@@ -484,7 +484,7 @@ async fn single_collection_bar_entry_opens_the_switcher_popout() {
     at(&mut runtime, "collection.switcher.open", None, |x, y| UiEvent::Click { x, y });
     let dispatched: Vec<_> = std::iter::from_fn(|| events.try_recv().ok()).collect();
     assert!(dispatched.iter().any(|event| matches!(event,
-        UiEvent::CompanionSelect { ref view, toggle:true, .. } if view == "collections"
+        UiEvent::CompanionSelect { view, toggle:true, .. } if view == "collections"
     )), "single desk control must open the collection switcher; received {dispatched:?}");
     std::fs::remove_dir_all(dir).ok();
 }
