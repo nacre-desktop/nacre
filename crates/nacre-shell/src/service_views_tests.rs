@@ -1156,7 +1156,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let bar_frame = bar.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
         std::fs::create_dir_all(dir)?;
-        bar_frame.save(dir.join("collections-bar.png"))?;
+        bar_frame.save(&dir.join("collections-bar.png"))?;
     }
     assert!(bar_frame.width > 0 && bar_frame.height > 0);
     assert!(bar.session.view_nodes().iter().any(|node| node.id.contains("collection-switcher")));
@@ -1181,7 +1181,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     )?;
     let menu_frame = menu.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
-        menu_frame.save(dir.join("collections-rename-popout.png"))?;
+        menu_frame.save(&dir.join("collections-rename-popout.png"))?;
     }
     let text: Vec<_> = menu.scene().primitives.iter().filter_map(|primitive| match primitive {
         bead::render::Primitive::Text { text, .. } => Some(text.as_str()),

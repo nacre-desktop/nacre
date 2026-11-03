@@ -422,26 +422,26 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
         ])).unwrap();
     };
     install_editor(&mut runtime, "create", "", "new desk");
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Null),
+    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Text(String::new())),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
             action: nacre_protocol::shell_actions::CollectionOperation::Create { name: Some("new desk".into()) },
         }));
     install_editor(&mut runtime, "rename", "niri-collection:28", "studio renamed");
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Null),
+    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.commit", &bead::core::Value::Text(String::new())),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
             action: nacre_protocol::shell_actions::CollectionOperation::Rename { collection: "niri-collection:28".into(), name: Some("studio renamed".into()) },
         }));
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.cancel", &bead::core::Value::Null), None);
+    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.cancel", &bead::core::Value::Text(String::new())), None);
     for (action_name, enabled) in [("collection.accent.use", true), ("collection.accent.clear", false)] {
-        assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", action_name, &bead::core::Value::Null),
+        assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", action_name, &bead::core::Value::Text(String::new())),
             Some(crate::bar_routes::Route::CollectionAction {
                 output: "DP-2".into(),
                 action: nacre_protocol::shell_actions::CollectionOperation::SetAccent { collection: "niri-collection:28".into(), enabled },
             }));
     }
-    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.wallpaper.set", &bead::core::Value::Null),
+    assert_eq!(runtime.bar_route(&UiEvent::Click { x: 0., y: 0. }, "collection-switcher-menu", "collection.wallpaper.set", &bead::core::Value::Text(String::new())),
         Some(crate::bar_routes::Route::CollectionAction {
             output: "DP-2".into(),
             action: nacre_protocol::shell_actions::CollectionOperation::SetWallpaper { collection: "niri-collection:28".into() },
