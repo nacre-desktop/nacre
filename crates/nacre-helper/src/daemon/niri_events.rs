@@ -63,7 +63,7 @@ pub fn snapshot(data: &Value) -> Result<Value> {
             .cloned()
             .unwrap_or(Value::Null)
     };
-    Ok(json!({
+    let mut snapshot = json!({
         "type":"snapshot", "backend":"niri", "capabilities":data["capabilities"],
         "monitors":rows(data,"outputs","outputOrder")?,
         "workspaces":rows(data,"workspaces","workspaceOrder")?,
@@ -75,7 +75,11 @@ pub fn snapshot(data: &Value) -> Result<Value> {
         "overviewHoverSupported":data["overviewHoverSupported"],
         "overviewHoveredWindowId":data["overviewHoveredWindowId"],
         "configFailed":data["configFailed"]
-    }))
+    });
+    if let Some(active) = data.get("edgeTriggersActive").and_then(Value::as_bool) {
+        snapshot["edgeTriggersActive"] = json!(active);
+    }
+    Ok(snapshot)
 }
 
 pub struct Source {

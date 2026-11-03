@@ -50,6 +50,7 @@ pub fn start(
     shell: PathBuf,
     notifications: Option<PathBuf>,
     extra: &[&str],
+    edge_route: Option<Arc<crate::shell_control::EdgeEventState>>,
 ) -> source::Result<crate::nacre_source::Client> {
     if !shell.is_absolute() || notifications.as_ref().is_some_and(|p| !p.is_absolute()) {
         return Err(Error::new(
@@ -79,7 +80,10 @@ pub fn start(
     );
     // `ai.chat` `send_failed` events restore the sidebar composer (B0043); `osd`
     // events drive the on-screen display (B0051).
-    config.event = Some(Arc::new(|message| {
+    config.event = Some(Arc::new(move |message| {
+        if let Some(edge_route) = &edge_route {
+            edge_route.route_event(message);
+        }
         crate::chat::route_event(message);
         crate::notice_service::route_event(message);
     }));

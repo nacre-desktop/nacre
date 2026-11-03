@@ -35,6 +35,34 @@ COLLECTION_BINDINGS = (
     '    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title="Nacre:collection-move-previous" { move-window-to-collection-previous; }\n'
     "}\n"
 )
+def edge_trigger_config(delay_ms):
+    if (
+        isinstance(delay_ms, bool)
+        or not isinstance(delay_ms, int)
+        or not 0 <= delay_ms <= 800
+    ):
+        delay_ms = 350
+    return (
+        "nacre { edge-triggers; }\n"
+        "edge-triggers {\n"
+        f"    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        f"    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
+        "}\n"
+    )
+
+
+def edge_trigger_delay(home):
+    settings = home / ".config/nacre/desktop.json"
+    if settings.is_file():
+        try:
+            value = _state.read_json_file(settings).get("lipHoverDelay", 350)
+            if isinstance(value, int) and not isinstance(value, bool) and 0 <= value <= 800:
+                return value
+        except (OSError, ValueError):
+            pass
+    return 350
 
 
 def module(path, name):
@@ -213,7 +241,13 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     entry += "".join("workspace " + json.dumps(name) + "\n" for name in names.values())
     entry += '\ninclude "custom.kdl"\n'
     source = add(config / "config.kdl", entry)
-    add(config / "nacre-niri.kdl", 'include "config.kdl"\n\n' + COLLECTION_BINDINGS)
+    add(
+        config / "nacre-niri.kdl",
+        'include "config.kdl"\n\n'
+        + COLLECTION_BINDINGS
+        + "\n"
+        + edge_trigger_config(edge_trigger_delay(home)),
+    )
     # Validation is offline; never query, reload or restart the running compositor.
     if validate_config:
         validate(source)

@@ -27,7 +27,7 @@ class TopHoverTests(unittest.TestCase):
             install_foundation_interaction(fixtures, SHELL / "widgets")
             definitions = {
                 "NacreFrame": "property int left:10;property int right:10;property int headerHeight:50",
-                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var activeWindow:null',
+                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var activeWindow:null;property bool externalEdgeSource:false;property bool overviewOpen:false;signal event(var value)',
                 "Environment": 'property var screens:[{name:"test"}]',
             }
             for name, text in definitions.items():
@@ -218,6 +218,17 @@ TestCase {
   verify(!view.lips.available);
   view.lips.approach("left",left,Qt.NoButton);verify(!view.flags.left);
   NacreCompositor.activeWindow=null;
+ }
+ function test_native_edge_source_suppresses_qml_dwell_and_routes_events_with_fallback(){
+  const view=createTemporaryObject(scene,this);wait(30);NacreCompositor.externalEdgeSource=true;
+  mouseMove(view,8,350);wait(400);verify(!view.flags.left);
+  NacreCompositor.event({type:"edge-triggered",output:"other",edge:"Left",position:[0,350]});verify(!view.flags.left);
+  NacreCompositor.event({type:"edge-triggered",output:"test",edge:"left",position:[4,100]});verify(!view.flags.left);
+  NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(view.flags.left);
+  view.flags.left=false;NacreCompositor.overviewOpen=true;
+  NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
+  NacreCompositor.overviewOpen=false;NacreCompositor.externalEdgeSource=false;
+  mouseMove(view,500,180);mouseMove(view,8,350);wait(400);verify(view.flags.left);
  }
 }
 """)

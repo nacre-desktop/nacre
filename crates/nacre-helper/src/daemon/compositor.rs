@@ -1,7 +1,7 @@
 //! Read-only topic adapter. The existing compositor reducers and transports own semantics.
 use super::{compositor_control::Control, hub::Shared};
 use crate::{
-    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state},
+    compositor::{backend, hyprland, hyprland_runtime, niri_events, niri_state, niri_transport},
     Result,
 };
 use serde_json::{json, Map, Value};
@@ -323,6 +323,7 @@ fn flush_niri(
     connection: &str,
     socket: &str,
     events: &mut Vec<Value>,
+    edge_triggers_active: Option<bool>,
 ) -> Result<()> {
     let mut snapshot = state.snapshot()?;
     if let Some(ledger) = crate::paths::Paths::environment()
@@ -336,7 +337,11 @@ fn flush_niri(
     let mut hub = hub.borrow_mut();
     hub.publish(
         super::niri_events::TOPIC,
-        json!({"backend":"niri","available":true,"connectionId":connection}),
+        if let Some(active) = edge_triggers_active {
+            json!({"backend":"niri","available":true,"connectionId":connection,"edgeTriggersActive":active})
+        } else {
+            json!({"backend":"niri","available":true,"connectionId":connection})
+        },
     )?;
     for event in events.drain(..) {
         hub.event_after(super::niri_events::TOPIC, "niri", event, Some("compositor"))?;
@@ -370,9 +375,36 @@ async fn niri(
     let stream = reader.into_inner();
     stream.set_nonblocking(true)?;
     let mut reader = BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?));
+    let capability_path = path.clone();
+    let edge_enabled = tokio::task::spawn_blocking(move || {
+        niri_transport::nacre_capabilities(&capability_path).edge_triggers
+    })
+    .await?;
+    let edge_socket = if edge_enabled {
+        let edge_path = path.clone();
+        tokio::task::spawn_blocking(move || niri_events::EventSocket::connect_edge_triggers(&edge_path))
+            .await
+            .ok()
+            .and_then(std::result::Result::ok)
+    } else {
+        None
+    };
+    let mut edge_reader = if let Some(edge_socket) = edge_socket {
+        let edge_socket = edge_socket.into_stream();
+        let prefix = edge_socket.buffer().to_vec();
+        let stream = edge_socket.into_inner();
+        stream.set_nonblocking(true)?;
+        Some(BufReader::new(
+            Cursor::new(prefix).chain(UnixStream::from_std(stream)?),
+        ))
+    } else {
+        None
+    };
     let initial = outputs(&control).await?;
     let mut state = niri_state::State::new(initial);
+    let mut edge_triggers_active = edge_enabled.then_some(edge_reader.is_some());
     let mut partial = Vec::new();
+    let mut edge_partial = Vec::new();
     let mut keyboard = json!({"names":[],"currentIndex":null,"activeName":""});
     let mut events = Vec::new();
     let mut due = None;
@@ -389,6 +421,31 @@ async fn niri(
                 let refresh=event.get("WorkspacesChanged").is_some()||event.get("ConfigLoaded").is_some();
                 let mut outputs_changed=false;
                 if refresh {let updated=outputs(&control).await?;outputs_changed=state.outputs!=updated;state.outputs=updated;}
+                if event.get("ConfigLoaded").is_some() {
+                    let capability_path=path.clone();
+                    let enabled=tokio::task::spawn_blocking(move || niri_transport::nacre_capabilities(&capability_path).edge_triggers).await?;
+                    let next=if enabled {
+                        let edge_path=path.clone();
+                        tokio::task::spawn_blocking(move || niri_events::EventSocket::connect_edge_triggers(&edge_path)).await.ok().and_then(std::result::Result::ok)
+                    } else {None};
+                    let next_reader=if let Some(socket)=next {
+                        let socket=socket.into_stream();
+                        let prefix=socket.buffer().to_vec();
+                        let stream=socket.into_inner();
+                        stream.set_nonblocking(true)?;
+                        Some(BufReader::new(Cursor::new(prefix).chain(UnixStream::from_std(stream)?)))
+                    } else {None};
+                    let next_active=enabled.then_some(next_reader.is_some());
+                    if next_active!=edge_triggers_active {
+                        edge_triggers_active=next_active;
+                        if state.ready.contains("window")&&state.ready.contains("workspace") {
+                            flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                            last=tokio::time::Instant::now();due=None;
+                        }
+                    }
+                    edge_reader=next_reader;
+                    edge_partial.clear();
+                }
                 if state.ready.contains("window") && state.ready.contains("workspace") && (normalized["type"]!="other" || keyboard_changed || refresh) {
                     if normalized["type"]!="other" {
                         let mut next=vec![normalized.clone()];
@@ -400,7 +457,7 @@ async fn niri(
                         if outputs_changed {next.push(json!({"type":"outputs-changed"}));}
                         for event in next {
                             if !queue_event(&mut events,event.clone())? {
-                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events)?;
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
                                 last=tokio::time::Instant::now();
                                 if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                             }
@@ -410,8 +467,55 @@ async fn niri(
                     schedule(&mut due,last,title_only);
                 }
             },
+            edge=async {
+                if let Some(reader)=edge_reader.as_mut() {
+                    line(reader,&mut edge_partial).await
+                } else {
+                    std::future::pending::<Result<Option<Vec<u8>>>>().await
+                }
+            }=>{
+                match edge {
+                    Ok(Some(bytes))=>{
+                        let event=std::str::from_utf8(&bytes)
+                            .ok()
+                            .and_then(|text|serde_json::from_str::<Value>(text).ok())
+                            .map(|value|niri_events::edge_trigger(&value));
+                        match event {
+                            Some(Ok(None))=>{},
+                            Some(Ok(Some(event)))=>{
+                                if state.ready.contains("window")&&state.ready.contains("workspace") {
+                                    if !queue_event(&mut events,event.clone())? {
+                                        flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                        last=tokio::time::Instant::now();
+                                        if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
+                                    }
+                                    schedule(&mut due,last,false);
+                                }
+                            }
+                            _=>{
+                                edge_reader=None;
+                                edge_triggers_active=Some(false);
+                                if state.ready.contains("window")&&state.ready.contains("workspace") {
+                                    flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                    last=tokio::time::Instant::now();due=None;
+                                }
+                            }
+                        }
+                    }
+                    _=>{
+                        edge_reader=None;
+                        if edge_triggers_active==Some(true) {
+                            edge_triggers_active=Some(false);
+                            if state.ready.contains("window")&&state.ready.contains("workspace") {
+                                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
+                                last=tokio::time::Instant::now();due=None;
+                            }
+                        }
+                    }
+                }
+            },
             _=wait_due(due)=>{
-                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events)?;
+                flush_niri(&hub,&state,&keyboard,&ready,&connection_id,&socket,&mut events,edge_triggers_active)?;
                 last=tokio::time::Instant::now();due=None;
             },
         }

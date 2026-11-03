@@ -1,6 +1,7 @@
 """Nacre's fork session uses the existing generated configuration safely."""
 
 import importlib.util
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -55,6 +56,9 @@ class NacreNiriSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory) / "home"
             home.mkdir()
+            settings = home / ".config/nacre/desktop.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text(json.dumps({"lipHoverDelay": 800}))
             output = Path(directory) / "generated"
             generated = package_niri.files(
                 ROOT,
@@ -84,6 +88,10 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertNotIn(action, config.read_text())
                 self.assertNotIn(action, bindings.read_text())
                 self.assertIn(action, overlay.read_text())
+            self.assertNotIn("edge-triggers", config.read_text())
+            self.assertIn("nacre { edge-triggers; }", overlay.read_text())
+            self.assertIn("left { action { event; }; dwell-time-ms 800; }", overlay.read_text())
+            self.assertIn("bottom { action { event; }; dwell-time-ms 800; }", overlay.read_text())
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
                 ["/usr/bin/niri", "validate", "-c", str(config)],
@@ -96,6 +104,18 @@ class NacreNiriSessionTests(unittest.TestCase):
                     check=True,
                     env=env,
                 )
+
+    def test_edge_trigger_delay_defaults_and_rejects_invalid_saved_values(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            self.assertEqual(package_niri.edge_trigger_delay(home), 350)
+            settings = home / ".config/nacre/desktop.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text(json.dumps({"lipHoverDelay": 0}))
+            self.assertEqual(package_niri.edge_trigger_delay(home), 0)
+            settings.write_text(json.dumps({"lipHoverDelay": 801}))
+            self.assertEqual(package_niri.edge_trigger_delay(home), 350)
+        self.assertIn("dwell-time-ms 800", package_niri.edge_trigger_config(800))
 
     def test_nacre_session_dispatch_selects_fork_launcher(self):
         backend = SimpleNamespace(supported=lambda root: True, session=Mock())

@@ -83,7 +83,19 @@ pub(crate) const COLLECTION_ACTIONS: &str = concat!(
 );
 
 pub(crate) fn collection_overlay() -> String {
-    format!("include \"config.kdl\"\n\n{COLLECTION_ACTIONS}")
+    collection_overlay_with_delay(350)
+}
+pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
+    let delay_ms = delay_ms.min(800);
+    format!(
+        "include \"config.kdl\"\n\n{COLLECTION_ACTIONS}\n{}",
+        edge_trigger_config(delay_ms)
+    )
+}
+fn edge_trigger_config(delay_ms: u64) -> String {
+    format!(
+        "nacre {{ edge-triggers; }}\nedge-triggers {{\n    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
+    )
 }
 fn shell_quote(text: &str) -> String {
     if !text.is_empty()

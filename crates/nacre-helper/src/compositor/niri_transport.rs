@@ -42,6 +42,7 @@ pub struct NacreCapabilities {
     pub workspace_collections: bool,
     pub proportional_x11_widths: bool,
     pub overview_hover: bool,
+    pub edge_triggers: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -50,13 +51,26 @@ impl NacreCapabilities {
             return None;
         }
         let features = object.get("NacreCapabilities")?.as_object()?;
-        if features.len() != 3 {
+        if features.iter().any(|(key, value)| {
+            ![
+                "workspace_collections",
+                "proportional_x11_widths",
+                "overview_hover",
+                "edge_triggers",
+            ]
+            .contains(&key.as_str())
+                && !value.is_boolean()
+        }) {
             return None;
         }
         Some(Self {
             workspace_collections: features.get("workspace_collections")?.as_bool()?,
             proportional_x11_widths: features.get("proportional_x11_widths")?.as_bool()?,
             overview_hover: features.get("overview_hover")?.as_bool()?,
+            edge_triggers: features
+                .get("edge_triggers")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
         })
     }
 }
@@ -286,7 +300,8 @@ mod tests {
         let active = json!({"NacreCapabilities": {
             "workspace_collections": true,
             "proportional_x11_widths": false,
-            "overview_hover": true
+            "overview_hover": true,
+            "edge_triggers": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -294,6 +309,7 @@ mod tests {
                 workspace_collections: true,
                 proportional_x11_widths: false,
                 overview_hover: true,
+                edge_triggers: true,
             })
         );
         assert_eq!(
@@ -303,6 +319,45 @@ mod tests {
                 "overview_hover": false
             }})),
             Some(NacreCapabilities::default())
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "proportional_x11_widths": false,
+                "overview_hover": true
+            }})),
+            Some(NacreCapabilities {
+                workspace_collections: true,
+                proportional_x11_widths: false,
+                overview_hover: true,
+                edge_triggers: false,
+            })
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "proportional_x11_widths": true,
+                "overview_hover": true,
+                "edge_triggers": "true"
+            }})),
+            Some(NacreCapabilities {
+                workspace_collections: true,
+                proportional_x11_widths: true,
+                overview_hover: true,
+                edge_triggers: false,
+            })
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": true,
+                "proportional_x11_widths": true,
+                "overview_hover": true,
+                "edge_triggers": true,
+                "scratchpad": true,
+                "window_pin": false
+            }}))
+            .map(|capabilities| capabilities.edge_triggers),
+            Some(true)
         );
         assert_eq!(NacreCapabilities::parse(&json!({"Future":{}})), None);
         assert_eq!(

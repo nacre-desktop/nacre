@@ -119,6 +119,8 @@ Item {
     function approach(name, lip, buttons) {
         const point = lip.mapToItem(root, lip.pointerX, lip.pointerY);
         NacreHoverIntent.observe(screen, point.x, point.y);
+        if (NacreCompositor.externalEdgeSource)
+            return;
         if (name === "dashboard") {
             NacreHoverIntent.setHeaderHover(screen.name, "lip", true);
             requestDashboard(buttons);
@@ -138,6 +140,35 @@ Item {
             sideDwell(name).cancel();
         NacreHoverIntent.rearm(name, screen);
         controller.settleHover();
+    }
+    Connections {
+        target: NacreCompositor
+        function onExternalEdgeSourceChanged() {
+            if (NacreCompositor.externalEdgeSource) {
+                root.cancelDashboard();
+                root.cancelSides();
+            } else if (root.available) {
+                if (top.hovered)
+                    root.approach("dashboard", top, Qt.NoButton);
+                if (left.hovered)
+                    root.approach("left", left, Qt.NoButton);
+                if (right.hovered)
+                    root.approach("osd", right, Qt.NoButton);
+            }
+        }
+        function onEvent(value) {
+            if (!NacreCompositor.externalEdgeSource || value?.type !== "edge-triggered" || value.output !== root.screen.name || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
+                return;
+            const position = value.position;
+            if (Array.isArray(position) && position.length === 2)
+                NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
+            if (!NacreHoverIntent.canAuto(root.screen, Qt.NoButton))
+                return;
+            const name = value.edge === "top" ? "dashboard" : value.edge === "left" ? "left" : value.edge === "right" ? "osd" : "";
+            const point = NacreHoverIntent.positions[root.screen.name];
+            if (name && NacreHoverIntent.markedContains(name, point))
+                NacrePanelState.hoverEdge(name, root.screen.name);
+        }
     }
     NacreFrameLip {
         id: top

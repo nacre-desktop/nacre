@@ -676,7 +676,7 @@ fn prepare_configuration_inner(
     fs::write(config.join("config.kdl"), &text)?;
     fs::write(
         config.join("nacre-niri.kdl"),
-        crate::compositor_config::collection_overlay(),
+        crate::compositor_config::collection_overlay_with_delay(lip_hover_delay(&desktop)),
     )?;
     for file in fs::read_dir(&config)? {
         fs::set_permissions(file?.path(), fs::Permissions::from_mode(0o600))?;
@@ -707,6 +707,14 @@ fn prepare_configuration_inner(
 
 pub(crate) fn workspace_declarations(names: &[String], desktop: &Value) -> Result<String> {
     crate::compositor::niri_workspace_policy::declarations(names, desktop, None)
+}
+
+fn lip_hover_delay(desktop: &Value) -> u64 {
+    desktop
+        .get("lipHoverDelay")
+        .and_then(Value::as_f64)
+        .filter(|delay| delay.is_finite() && (0.0..=800.0).contains(delay) && delay.fract() == 0.0)
+        .map_or(350, |delay| delay as u64)
 }
 
 fn append_scales(preferences: &mut String, desktop: &Value) -> Result<()> {
@@ -1122,6 +1130,14 @@ mod tests {
         assert!(!needs_hover_companion("compositor", true, false));
         assert!(!needs_hover_companion("compositor", false, true));
         assert!(!needs_hover_companion("widths", false, false));
+    }
+    #[test]
+    fn generated_edge_delay_uses_valid_saved_setting_and_safe_default() {
+        assert_eq!(lip_hover_delay(&value!({"lipHoverDelay":0})), 0);
+        assert_eq!(lip_hover_delay(&value!({"lipHoverDelay":800})), 800);
+        assert_eq!(lip_hover_delay(&value!({"lipHoverDelay":801})), 350);
+        assert_eq!(lip_hover_delay(&value!({"lipHoverDelay":350.5})), 350);
+        assert_eq!(lip_hover_delay(&value!({})), 350);
     }
     #[test]
     fn selected_fork_binary_requires_verified_identity() -> Result<()> {

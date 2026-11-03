@@ -360,6 +360,82 @@ async fn registry_timeout_closes_the_remote_call_before_retrying() {
     server.await.unwrap();
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn native_edge_source_falls_back_when_daemon_socket_closes() {
+    let lab = Lab::new();
+    let listener = lab.bind();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let (read, mut writer) = stream.into_split();
+        let mut reader = framing::Reader::new(BufReader::new(read));
+        assert!(matches!(next(&mut reader).await, Message::Hello { .. }));
+        let mut greeting = welcome();
+        if let Message::Welcome { topics, .. } = &mut greeting {
+            topics.insert("compositor.events".into(), 1);
+        }
+        framing::write(&mut writer, &greeting).await.unwrap();
+        assert_eq!(
+            next(&mut reader).await,
+            Message::Sub {
+                topics: vec!["compositor".into(), "compositor.events".into()]
+            }
+        );
+        for (topic, data) in [
+            (
+                "compositor",
+                serde_json::json!({"outputs":{"DP-1":{"logicalWidth":1920,"logicalHeight":1080}}}),
+            ),
+            (
+                "compositor.events",
+                serde_json::json!({"edgeTriggersActive":true}),
+            ),
+        ] {
+            framing::write(
+                &mut writer,
+                &Message::Snap {
+                    topic: topic.into(),
+                    seq: 0,
+                    data,
+                },
+            )
+            .await
+            .unwrap();
+        }
+        // Returning closes the actual Unix stream and exercises Source's disconnect
+        // notification path rather than synthesizing a Lost protocol message.
+    });
+    let client = Client::start(Config::new(
+        lab.socket(),
+        vec!["compositor".into(), "compositor.events".into()],
+    ))
+    .unwrap();
+    let gate = crate::shell_control::Gate::new();
+    let state = crate::shell_control::EdgeEventState::new(gate.clone());
+    let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(
+        state,
+        Arc::new(client.topic("compositor").unwrap()),
+        Arc::new(client.topic("compositor.events").unwrap()),
+    )
+    .unwrap();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while !gate.edge_chrome().external_source {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("native source is enabled only after both snapshots acknowledge it");
+    server.await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while gate.edge_chrome().external_source {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("socket EOF restores Bead's fallback edge surfaces");
+    drop(subscriptions);
+    client.stop().await.unwrap();
+}
+
 #[test]
 fn committed_menu_transcripts_match_the_pinned_exports() {
     for (path, generated) in nacre_protocol::artifacts::menu_transcripts() {
@@ -2328,7 +2404,7 @@ async fn actual_provider_with_pending_menu(golden: &str) {
         framing::write(&mut writer, &menu[1]).await.unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
     });
-    let provider = Arc::new(crate::ui_provider::start(lab.socket(), ui_path, None, &[]).unwrap());
+    let provider = Arc::new(crate::ui_provider::start(lab.socket(), ui_path, None, &[], None).unwrap());
     tokio::time::timeout(Duration::from_secs(5), async {
         while provider.status().boot.is_none() {
             tokio::time::sleep(Duration::from_millis(2)).await;
@@ -2392,7 +2468,7 @@ async fn actual_provider_acks_published_rows_and_refuses_unknown_operations() {
         tokio::time::sleep(Duration::from_millis(50)).await;
     });
     let ui_path = lab.0.join("ui.sock");
-    let provider = crate::ui_provider::start(lab.socket(), ui_path, None, &[]).unwrap();
+    let provider = crate::ui_provider::start(lab.socket(), ui_path, None, &[], None).unwrap();
     server.await.unwrap();
     provider.control(true).await.unwrap();
 }

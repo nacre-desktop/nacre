@@ -8,10 +8,13 @@ use crate::{
     prefs::Prefs,
 };
 use bead::wayland::{EdgeChrome, ShellControl, intent::Lip};
+use bead::core::source::{Snapshot, Source, Subscription};
 use std::sync::{
     Mutex,
     atomic::{AtomicBool, AtomicU64, Ordering::SeqCst},
 };
+use serde_json::Value;
+use std::collections::BTreeMap;
 
 /// The frame-related answers (B0047): decoded settings plus the lip configuration.
 #[derive(Default)]
@@ -66,8 +69,124 @@ pub struct Gate {
     pearl_drag: AtomicBool,
     pearl_views: Mutex<crate::pearls::Policy>,
     variant: AtomicU64,
+    native_edge_source: AtomicBool,
     frame: Mutex<FrameState>,
     watchers: Mutex<Vec<Box<dyn Fn() + Send + Sync>>>,
+}
+#[derive(Default)]
+struct EdgeSnapshots {
+    compositor_connected: bool,
+    event_connected: bool,
+    acknowledged: bool,
+    outputs: BTreeMap<String, (i32, i32)>,
+}
+pub(crate) struct EdgeEventState {
+    gate: std::sync::Arc<Gate>,
+    snapshots: Mutex<EdgeSnapshots>,
+}
+impl EdgeEventState {
+    pub(crate) fn new(gate: std::sync::Arc<Gate>) -> std::sync::Arc<Self> {
+        std::sync::Arc::new(Self {
+            gate,
+            snapshots: Mutex::new(EdgeSnapshots::default()),
+        })
+    }
+    fn publish_active(&self, snapshots: &EdgeSnapshots) {
+        self.gate.set_native_edge_source(
+            snapshots.compositor_connected && snapshots.event_connected && snapshots.acknowledged,
+        );
+    }
+    fn update_compositor(&self, snapshot: &Snapshot) {
+        let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
+        state.compositor_connected = snapshot.connected;
+        state.outputs = if snapshot.connected {
+            snapshot.data["outputs"]
+                .as_object()
+                .into_iter()
+                .flat_map(|outputs| outputs.iter())
+                .filter_map(|(name, row)| {
+                    let width = row["logicalWidth"].as_f64()?;
+                    let height = row["logicalHeight"].as_f64()?;
+                    (width.is_finite()
+                        && height.is_finite()
+                        && (1.0..=32768.0).contains(&width)
+                        && (1.0..=32768.0).contains(&height))
+                        .then(|| (name.clone(), (width.round() as i32, height.round() as i32)))
+                })
+                .collect()
+        } else {
+            BTreeMap::new()
+        };
+        self.publish_active(&state);
+    }
+    fn update_event_source(&self, snapshot: &Snapshot) {
+        let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
+        state.event_connected = snapshot.connected;
+        state.acknowledged = snapshot.connected
+            && snapshot.data["edgeTriggersActive"].as_bool() == Some(true);
+        self.publish_active(&state);
+    }
+    pub(crate) fn route_event(&self, message: &nacre_protocol::Message) {
+        let nacre_protocol::Message::Ev {
+            topic, name, data, ..
+        } = message
+        else {
+            return;
+        };
+        if topic != "compositor.events" || name != "niri" || data["type"] != "edge-triggered" {
+            return;
+        }
+        let output = match data["output"].as_str().filter(|name| !name.is_empty()) {
+            Some(output) => output,
+            None => return,
+        };
+        let position = match data["position"].as_array().filter(|pair| pair.len() == 2) {
+            Some(pair) => match (pair[0].as_f64(), pair[1].as_f64()) {
+                (Some(x), Some(y)) if x.is_finite() && y.is_finite() => (x as f32, y as f32),
+                _ => return,
+            },
+            None => return,
+        };
+        let edge = data["edge"].as_str();
+        let output_size = {
+            let state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
+            if !(state.compositor_connected && state.event_connected && state.acknowledged) {
+                return;
+            }
+            state.outputs.get(output).copied()
+        };
+        if let (Some(edge), Some(size)) = (edge, output_size) {
+            self.gate.trigger_native_edge(output, edge, position, size);
+        }
+    }
+}
+pub(crate) struct EdgeSourceSubscriptions {
+    _subscriptions: [Subscription; 2],
+}
+impl EdgeSourceSubscriptions {
+    pub(crate) fn attach(
+        state: std::sync::Arc<EdgeEventState>,
+        compositor: std::sync::Arc<dyn Source>,
+        events: std::sync::Arc<dyn Source>,
+    ) -> Result<Self, String> {
+        let compositor_state = state.clone();
+        let compositor_subscription = compositor
+            .subscribe(std::sync::Arc::new(move |snapshot| {
+                compositor_state.update_compositor(&snapshot);
+            }))
+            .map_err(|error| error.to_string())?;
+        let event_state = state.clone();
+        let event_subscription = events
+            .subscribe(std::sync::Arc::new(move |snapshot| {
+                event_state.update_event_source(&snapshot);
+            }))
+            .map_err(|error| error.to_string())?;
+        state.update_compositor(&compositor.snapshot());
+        state.update_event_source(&events.snapshot());
+        Ok(Self {
+            _subscriptions: [compositor_subscription, event_subscription],
+        })
+    }
 }
 impl Gate {
     /// Run the watchers (something the tiles depend on changed outside the settings).
@@ -92,6 +211,7 @@ impl Gate {
             pearl_drag: AtomicBool::new(true),
             pearl_views: Mutex::new(Default::default()),
             variant: AtomicU64::new(0),
+            native_edge_source: AtomicBool::new(false),
             frame: Mutex::new(FrameState {
                 ai: true,
                 delay: 350,
@@ -99,6 +219,48 @@ impl Gate {
             }),
             watchers: Mutex::new(Vec::new()),
         })
+    }
+    pub fn set_native_edge_source(&self, active: bool) {
+        if self.native_edge_source.swap(active, SeqCst) != active {
+            self.notify();
+        }
+    }
+    pub fn trigger_native_edge(
+        &self,
+        output: &str,
+        edge: &str,
+        position: (f32, f32),
+        output_size: (i32, i32),
+    ) {
+        let Some(lip) = self.native_lip_at(edge, position, output_size) else {
+            return;
+        };
+        self.external_panel_request(&lip.opens, output, false);
+    }
+    fn native_lip_at(
+        &self,
+        edge: &str,
+        position: (f32, f32),
+        output_size: (i32, i32),
+    ) -> Option<Lip> {
+        if !self.native_edge_source.load(SeqCst) {
+            return None;
+        }
+        let edge = match edge {
+            "left" => bead::core::Edge::Left,
+            "right" => bead::core::Edge::Right,
+            "top" => bead::core::Edge::Top,
+            "bottom" => bead::core::Edge::Bottom,
+            _ => return None,
+        };
+        let chrome = <Self as ShellControl>::edge_chrome(self);
+        if chrome.click_to_open || !self.edge_hover_allowed(None) {
+            return None;
+        }
+        chrome
+            .lip_at(edge, output_size, position)
+            .filter(|lip| self.panel_allowed(&lip.opens))
+            .cloned()
     }
     /// The lips the frame declares and the panel views that exist (call once at start).
     pub fn configure_frame(&self, config: FrameConfig, views: impl IntoIterator<Item = String>) {
@@ -279,6 +441,7 @@ impl ShellControl for Gate {
             lips,
             hover_delay_ms: frame.delay,
             click_to_open: frame.click,
+            external_source: self.native_edge_source.load(SeqCst),
         }
     }
     fn edge_input_regions(&self, output: (i32, i32)) -> Vec<bead::render::Rect> {
@@ -291,6 +454,7 @@ impl ShellControl for Gate {
                     .filter(|l| self.panel_allowed(&l.opens))
                     .filter_map(|l| configured_lip(l, geometry))
                     .collect(),
+                external_source: self.native_edge_source.load(SeqCst),
                 ..Default::default()
             }
             .input_regions(output)
@@ -491,5 +655,38 @@ mod tests {
                 .iter()
                 .any(|r| r.x == 0.)
         );
+    }
+    #[test]
+    fn native_edge_position_routes_to_the_configured_lip_and_honors_click_only() {
+        let gate = Gate::new();
+        gate.configure_frame(
+            FrameConfig {
+                lips: vec![
+                    LipConfig {
+                        id: "assistant".into(),
+                        edge: bead::core::Edge::Left,
+                        length: 100.,
+                        opens: "assistant".into(),
+                    },
+                    LipConfig {
+                        id: "status".into(),
+                        edge: bead::core::Edge::Left,
+                        length: 200.,
+                        opens: "status".into(),
+                    },
+                ],
+                ..Default::default()
+            },
+            ["assistant".into(), "status".into()],
+        );
+        gate.set_native_edge_source(true);
+        assert_eq!(
+            gate.native_lip_at("left", (4., 310.), (1000, 800))
+                .map(|lip| lip.id.as_str()),
+            Some("status")
+        );
+        assert_eq!(gate.native_lip_at("left", (4., 250.), (1000, 800)), None);
+        gate.apply(&Prefs::decode(&json!({"clickEdgeMenus":true}), &json!(null)));
+        assert_eq!(gate.native_lip_at("left", (4., 310.), (1000, 800)), None);
     }
 }

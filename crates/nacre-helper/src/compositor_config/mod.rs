@@ -109,6 +109,9 @@ pub fn runtime_lua_value(value: &Value) -> Result<String> {
 pub(crate) fn collection_overlay() -> String {
     niri::collection_overlay()
 }
+pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
+    niri::collection_overlay_with_delay(delay_ms)
+}
 fn lua(value: &Value, named_fields: bool) -> Result<String> {
     Ok(match value {
         Value::Null => "nil".into(),
@@ -507,6 +510,15 @@ mod tests {
             ),
         ];
         assert!(native.starts_with("include \"config.kdl\""));
+        for edge in ["left", "right", "top", "bottom"] {
+            assert!(native.contains(&format!("{edge} {{ action {{ event; }}; dwell-time-ms 350; }}")));
+        }
+        assert!(native.contains("nacre { edge-triggers; }"));
+        assert!(!stock.contains("edge-triggers"));
+        let delayed = collection_overlay_with_delay(800);
+        assert!(delayed.contains("left { action { event; }; dwell-time-ms 800; }"));
+        assert!(collection_overlay_with_delay(0)
+            .contains("bottom { action { event; }; dwell-time-ms 0; }"));
         let document: kdl::KdlDocument = native.parse()?;
         let block = document
             .nodes()

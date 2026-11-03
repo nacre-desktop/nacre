@@ -160,6 +160,62 @@ impl Backend {
         let socket = niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?;
         niri_events::Events::new(socket, niri_transport::Connection::new(self.session_id()))
     }
+    pub fn edge_events(&self) -> Result<()> {
+        let path = Path::new(self.session_id());
+        if self.session_id().is_empty() {
+            return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
+        }
+        let environment = self.environment.clone();
+        if let Some(mut daemon) = crate::daemon::niri_events::Source::connect(&environment, path)
+            .map_err(|error| failure("ConnectionError", error.to_string()))?
+        {
+            loop {
+                let value = daemon
+                    .next_value()
+                    .map_err(|error| failure("ConnectionError", error.to_string()))?;
+                if value["type"] == "snapshot" {
+                    let next = value
+                        .get("edgeTriggersActive")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                    println!("{{\"type\":\"edge-source\",\"active\":{next}}}");
+                    std::io::Write::flush(&mut std::io::stdout())
+                        .map_err(|error| failure("OSError", error.to_string()))?;
+                    if !next {
+                        return Ok(());
+                    }
+                } else if value["type"] == "edge-triggered" {
+                    println!("{}", crate::json::encode(&value).map_err(|error| {
+                        failure("ValueError", error.to_string())
+                    })?);
+                    std::io::Write::flush(&mut std::io::stdout())
+                        .map_err(|error| failure("OSError", error.to_string()))?;
+                }
+            }
+        }
+        if !niri_transport::nacre_capabilities(path).edge_triggers {
+            println!("{{\"type\":\"edge-source\",\"active\":false}}");
+            std::io::Write::flush(&mut std::io::stdout())
+                .map_err(|error| failure("OSError", error.to_string()))?;
+            return Ok(());
+        }
+        let mut events = niri_events::EventSocket::connect_edge_triggers(path)?;
+        println!("{{\"type\":\"edge-source\",\"active\":true}}");
+        std::io::Write::flush(&mut std::io::stdout())
+            .map_err(|error| failure("OSError", error.to_string()))?;
+        loop {
+            let Some(event) = niri_events::edge_trigger(&events.next_event()?)? else {
+                continue;
+            };
+            println!(
+                "{}",
+                crate::json::encode(&event)
+                    .map_err(|error| failure("ValueError", error.to_string()))?
+            );
+            std::io::Write::flush(&mut std::io::stdout())
+                .map_err(|error| failure("OSError", error.to_string()))?;
+        }
+    }
     pub fn set_desktop_options(&mut self, preferences: &Value, timeout: Duration) -> Result<Value> {
         self.configuration().set(
             preferences,
