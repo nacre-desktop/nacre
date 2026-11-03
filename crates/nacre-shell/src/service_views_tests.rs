@@ -1161,6 +1161,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
         Config { width: 420, height: 54, scale: 1. },
     )?;
+    settle_harness_animations(&mut bar)?;
     let bar_frame = bar.pose((0., 0.), 1.)?;
     if let Some(dir) = &capture {
         std::fs::create_dir_all(dir)?;
