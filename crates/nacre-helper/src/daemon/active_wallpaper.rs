@@ -1792,11 +1792,11 @@ mod tests {
             .publish("compositor", json!({"available":true,"outputs":{}}))?;
         producer.refresh(&hub, &paths)?;
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["outputs"], json!({}));
-        assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 2);
+        assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 3);
         unavailable(&hub)?;
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["stale"], true);
         Producer::default().refresh(&hub, &paths)?;
-        assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 2);
+        assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["revision"], 3);
         assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["stale"], false);
         Ok(())
     }
@@ -2053,6 +2053,7 @@ mod tests {
             .insert("primary".into(), "#00AA55".into());
         assert!(profile.validate().is_ok());
 
+        fs::create_dir_all(&paths.config)?;
         fs::write(
             paths.config.join("desktop.json"),
             json!({"collectionWallpapers":true}).to_string(),

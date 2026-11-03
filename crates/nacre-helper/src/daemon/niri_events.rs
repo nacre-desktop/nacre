@@ -76,6 +76,12 @@ pub fn snapshot(data: &Value) -> Result<Value> {
         "overviewHoveredWindowId":data["overviewHoveredWindowId"],
         "configFailed":data["configFailed"]
     });
+    if snapshot["capabilities"]["workspaceCollections"] == false {
+        snapshot["capabilities"]
+            .as_object_mut()
+            .ok_or("Invalid Niri daemon capabilities")?
+            .remove("workspaceCollections");
+    }
     if let Some(active) = data.get("edgeTriggersActive").and_then(Value::as_bool) {
         snapshot["edgeTriggersActive"] = json!(active);
     }

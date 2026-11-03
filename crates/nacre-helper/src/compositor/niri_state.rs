@@ -331,8 +331,7 @@ impl State {
         }
     }
     pub fn snapshot(&self) -> Result<Value> {
-        let mut caps = capabilities();
-        caps["workspaceCollections"] = json!(self.collections_supported);
+        let caps = capabilities();
         let mut workspaces = Vec::new();
         for (key, row) in &self.workspaces {
             let index = get(row, "idx")?;
@@ -483,9 +482,16 @@ impl State {
                 "workspaceIds": row["workspace_ids"].as_array().into_iter().flatten().filter_map(Value::as_u64).map(|id| format!("niri-workspace:{id}")).collect::<Vec<_>>()
             })
         }).collect();
-        Ok(
-            json!({"type":"snapshot","backend":"niri","capabilities":caps,"monitors":monitors,"workspaces":workspaces,"windows":windows,"collections":collections,"activeCollection":self.active_collection.map(|id|format!("niri-collection:{id}")),"activeWindow":windows.iter().find(|row|row["focused"]==true),"activeWorkspace":focused,"focusedMonitor":monitors.iter().find(|row|row["focused"]==true),"overviewOpen":self.overview_open,"overviewHoverSupported":self.overview_hover_supported,"overviewHoveredWindowId":self.overview_hover_id,"configFailed":self.config_failed}),
-        )
+        let mut snapshot = json!({"type":"snapshot","backend":"niri","capabilities":caps,"monitors":monitors,"workspaces":workspaces,"windows":windows,"activeWindow":windows.iter().find(|row|row["focused"]==true),"activeWorkspace":focused,"focusedMonitor":monitors.iter().find(|row|row["focused"]==true),"overviewOpen":self.overview_open,"overviewHoverSupported":self.overview_hover_supported,"overviewHoveredWindowId":self.overview_hover_id,"configFailed":self.config_failed});
+        if self.collections_supported {
+            snapshot["capabilities"]["workspaceCollections"] = json!(true);
+            snapshot["collections"] = json!(collections);
+            snapshot["activeCollection"] = self
+                .active_collection
+                .map(|id| json!(format!("niri-collection:{id}")))
+                .unwrap_or(Value::Null);
+        }
+        Ok(snapshot)
     }
 }
 fn text(value: &Value) -> String {
@@ -579,6 +585,12 @@ mod tests {
     #[test]
     fn collection_events_replace_named_snapshot_and_report_activation() -> crate::Result<()> {
         let mut state = State::new(Default::default());
+        let stock_snapshot = state.snapshot()?;
+        assert!(stock_snapshot.get("collections").is_none());
+        assert!(stock_snapshot.get("activeCollection").is_none());
+        assert!(stock_snapshot["capabilities"]
+            .get("workspaceCollections")
+            .is_none());
         let changed = json!({"CollectionsChanged":{"collections":[
             {"id":17,"idx":1,"name":"work","output":"DP-1","is_active":true,"workspace_ids":[4,5]},
             {"id":28,"idx":2,"name":null,"output":null,"is_active":false,"workspace_ids":[7]}
@@ -589,6 +601,7 @@ mod tests {
         assert_eq!(activated["type"], "collection-activated");
         assert_eq!(activated["collectionId"], "niri-collection:28");
         let snapshot = state.snapshot()?;
+        assert_eq!(snapshot["capabilities"]["workspaceCollections"], true);
         assert_eq!(snapshot["collections"][0]["id"], "niri-collection:17");
         assert_eq!(snapshot["collections"][0]["label"], "work");
         assert_eq!(snapshot["collections"][0]["name"], "work");
