@@ -223,23 +223,27 @@ pub async fn compositor(hub: Shared, method: &str, params: Value) -> Result<Valu
                     let row = snapshot["collections"].as_array().and_then(|rows| rows.iter().find(|row| row["id"].as_str() == Some(collection.as_str()))).ok_or_else(invalid)?;
                     let paths = crate::paths::Paths::environment().map_err(|_| unavailable())?;
                     let old_name = row["name"].as_str().filter(|name| !name.trim().is_empty()).map(str::to_owned);
-                    if let (Some(old_name), Some(new_name)) = (old_name.as_deref(), name.as_deref()) {
-                        let profiles = super::active_wallpaper::collection_wallpapers(&paths).map_err(|_| action_error())?;
-                        if old_name != new_name.trim()
-                            && profiles["wallpapers"].get(new_name.trim()).is_some()
-                            && profiles["wallpapers"].get(old_name).is_some()
-                        {
-                            return Err(invalid());
-                        }
-                    }
+                    let previous_profiles = if let Some(old_name) = old_name.as_deref() {
+                        Some(super::active_wallpaper::rename_collection_wallpaper(
+                            &paths,
+                            old_name,
+                            name.as_deref(),
+                        ).map_err(|_| action_error())?)
+                    } else {
+                        None
+                    };
                     if control.collection_action(
                         request.output,
                         CollectionOperation::Rename { collection, name: name.clone() },
                     ).await.is_err() {
+                        if let Some(previous) = previous_profiles.as_ref() {
+                            super::active_wallpaper::rollback_collection_wallpapers(&hub, &paths, previous)
+                                .map_err(|_| action_error())?;
+                        }
                         return Err(action_error());
                     }
-                    if let Some(old_name) = old_name {
-                        super::active_wallpaper::rename_collection_wallpaper(&paths, &old_name, name.as_deref())
+                    if previous_profiles.is_some() {
+                        super::active_wallpaper::refresh_collection_wallpapers(&hub, &paths)
                             .map_err(|_| action_error())?;
                     }
                 }

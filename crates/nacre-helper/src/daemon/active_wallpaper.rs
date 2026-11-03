@@ -127,10 +127,7 @@ pub fn rename_collection_wallpaper(
         if next.is_empty() || next.len() > 64 || next.chars().any(char::is_control) {
             return Err("Invalid collection wallpaper key".into());
         }
-        if next != previous
-            && wallpapers.contains_key(previous)
-            && wallpapers.contains_key(next)
-        {
+        if next != previous && wallpapers.contains_key(next) {
             return Err("A wallpaper profile already exists for that desk name".into());
         }
         if let Some(profile) = wallpapers.remove(previous) {
@@ -146,6 +143,15 @@ pub fn rename_collection_wallpaper(
 pub fn restore_collection_wallpapers(paths: &Paths, previous: &Value) -> Result<()> {
     let path = crate::state::settings_path_in(paths, "collection-wallpapers")?;
     crate::state::write(&path, previous)
+}
+
+pub fn rollback_collection_wallpapers(hub: &Shared, paths: &Paths, previous: &Value) -> Result<()> {
+    restore_collection_wallpapers(paths, previous)?;
+    Producer::default().refresh(hub, paths)
+}
+
+pub fn refresh_collection_wallpapers(hub: &Shared, paths: &Paths) -> Result<()> {
+    Producer::default().refresh(hub, paths)
 }
 const PALETTE_PREWARM_BATCH: usize = 32;
 const PALETTE_PREWARM_QUEUE: usize = 128;
@@ -2090,15 +2096,38 @@ mod tests {
     #[test]
     fn renaming_moves_profiles_and_duplicate_names_keep_existing_entries() -> Result<()> {
         let (_home, paths, hub) = fixture()?;
+        hub.borrow_mut().publish("compositor", json!({
+            "available":true,"outputs":{"DP-1":{},"DP-2":{}},
+            "focus":{"outputId":"DP-1"},
+            "collections":[{"id":"niri-collection:1","name":"work","output":"DP-1"}]
+        }))?;
         Producer::default().refresh(&hub, &paths)?;
         let state: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
         let pair = state.outputs["DP-1"].clone();
         set_collection_wallpaper(&hub, &paths, "work", &pair)?;
+        set_collection_accent(&hub, &paths, "work", true)?;
         set_collection_wallpaper(&hub, &paths, "studio", &pair)?;
         let before = collection_wallpapers(&paths)?;
         assert!(rename_collection_wallpaper(&paths, "work", Some("studio")).is_err());
+        assert!(rename_collection_wallpaper(&paths, "missing-profile", Some("studio")).is_err());
         assert_eq!(collection_wallpapers(&paths)?["wallpapers"], before["wallpapers"]);
+        let failed_rename_snapshot = rename_collection_wallpaper(&paths, "work", Some("research"))?;
+        rollback_collection_wallpapers(&hub, &paths, &failed_rename_snapshot)?;
+        let rolled_back: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert_eq!(rolled_back.outputs["DP-1"].path, pair.path);
+        assert_eq!(rolled_back.focused_accent.as_deref(), pair.palette.colours.get("primary").map(String::as_str));
+        assert_eq!(collection_wallpapers(&paths)?["wallpapers"], before["wallpapers"]);
+
         rename_collection_wallpaper(&paths, "work", Some("research"))?;
+        hub.borrow_mut().publish("compositor", json!({
+            "available":true,"outputs":{"DP-1":{},"DP-2":{}},
+            "focus":{"outputId":"DP-1"},
+            "collections":[{"id":"niri-collection:1","name":"research","output":"DP-1"}]
+        }))?;
+        refresh_collection_wallpapers(&hub, &paths)?;
+        let renamed: WallpaperActive = serde_json::from_value(hub.borrow().snapshot(TOPIC).unwrap())?;
+        assert_eq!(renamed.outputs["DP-1"].path, pair.path);
+        assert_eq!(renamed.focused_accent.as_deref(), pair.palette.colours.get("primary").map(String::as_str));
         let after = collection_wallpapers(&paths)?;
         assert!(after["wallpapers"].get("work").is_none());
         assert!(after["wallpapers"].get("research").is_some());
