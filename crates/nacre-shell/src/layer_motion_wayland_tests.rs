@@ -38,7 +38,8 @@ use wayland_server::{
 };
 
 mod motion_protocol {
-    use wayland_server;
+    // Generated child modules refer to `super::wayland_server`.
+    extern crate wayland_server;
     use wayland_server::protocol::*;
     pub mod __interfaces {
         use wayland_server::backend as wayland_backend;
