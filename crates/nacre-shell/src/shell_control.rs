@@ -202,9 +202,8 @@ impl EdgeEventState {
         }
     }
     fn clear_native_hovers(&self) {
-        let active = std::mem::take(
-            &mut *self.active_lips.lock().unwrap_or_else(|p| p.into_inner()),
-        );
+        let active =
+            std::mem::take(&mut *self.active_lips.lock().unwrap_or_else(|p| p.into_inner()));
         for ((output, _edge), view) in active {
             self.request_native_panel(&view, &output, false);
         }
@@ -213,7 +212,11 @@ impl EdgeEventState {
         if view == "assistant" {
             crate::app::panel_request(
                 "chat",
-                if hover_open { "hover-open" } else { "hover-leave" },
+                if hover_open {
+                    "hover-open"
+                } else {
+                    "hover-leave"
+                },
                 output,
             );
         } else {
@@ -221,14 +224,20 @@ impl EdgeEventState {
         }
     }
     fn open_internal_panel(&self, view: &str, output: &str, hover_open: bool) {
-        let (Some(socket), Some(sender)) = (self.command_socket.clone(), self.panel_sender()) else {
+        let (Some(socket), Some(sender)) = (self.command_socket.clone(), self.panel_sender())
+        else {
             return;
         };
         let call = bead::services::ipc::Call {
             version: bead::services::ipc::VERSION,
             id: self.next_panel_call.fetch_add(1, SeqCst).max(1),
             target: "bead.panel".into(),
-            method: if hover_open { "hover-open" } else { "hover-leave" }.into(),
+            method: if hover_open {
+                "hover-open"
+            } else {
+                "hover-leave"
+            }
+            .into(),
             args: vec![serde_json::json!(view)],
             output: Some(output.into()),
         };
@@ -236,9 +245,7 @@ impl EdgeEventState {
             tracing::warn!("Native edge panel request queue is full");
         }
     }
-    fn panel_sender(
-        &self,
-    ) -> Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>> {
+    fn panel_sender(&self) -> Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>> {
         let socket = self.command_socket.as_ref()?.clone();
         let mut sender = self.panel_sender.lock().unwrap_or_else(|p| p.into_inner());
         if let Some(sender) = &*sender {
@@ -250,11 +257,7 @@ impl EdgeEventState {
             while let Some(call) = rx.recv().await {
                 let socket = socket.clone();
                 let result = tokio::task::spawn_blocking(move || {
-                    bead::services::ipc::call(
-                        &socket,
-                        &call,
-                        std::time::Duration::from_secs(2),
-                    )
+                    bead::services::ipc::call(&socket, &call, std::time::Duration::from_secs(2))
                 })
                 .await;
                 match result {

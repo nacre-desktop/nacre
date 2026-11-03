@@ -644,9 +644,8 @@ fn start(
     let gate = shell_control::Gate::new();
     let niri_session = std::env::var("NACRE_COMPOSITOR").as_deref() == Ok("niri")
         || std::env::var_os("NIRI_SOCKET").is_some();
-    let edge_route = niri_session.then(|| {
-        shell_control::EdgeEventState::new(gate.clone(), options.command_socket.clone())
-    });
+    let edge_route = niri_session
+        .then(|| shell_control::EdgeEventState::new(gate.clone(), options.command_socket.clone()));
     let _ui_provider = if register_ui_provider {
         let mut provider_topics: Vec<&str> = if notices {
             notice_service::TOPICS.to_vec()

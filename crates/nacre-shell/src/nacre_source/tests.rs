@@ -440,10 +440,7 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         },
         ["dashboard-today".into(), "sound".into()],
     );
-    let state = crate::shell_control::EdgeEventState::new(
-        gate.clone(),
-        Some(command_socket),
-    );
+    let state = crate::shell_control::EdgeEventState::new(gate.clone(), Some(command_socket));
     let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(
         state.clone(),
         Arc::new(client.topic("compositor").unwrap()),
@@ -483,7 +480,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     .unwrap();
     assert_eq!(dashboard_call.target, "bead.panel");
     assert_eq!(dashboard_call.method, "hover-open");
-    assert_eq!(dashboard_call.args, vec![serde_json::json!("dashboard-today")]);
+    assert_eq!(
+        dashboard_call.args,
+        vec![serde_json::json!("dashboard-today")]
+    );
     assert_eq!(dashboard_call.output.as_deref(), Some("DP-1"));
     let received = calls_rx.clone();
     let dashboard_leave = tokio::task::spawn_blocking(move || {
@@ -497,7 +497,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     .unwrap();
     assert_eq!(dashboard_leave.target, "bead.panel");
     assert_eq!(dashboard_leave.method, "hover-leave");
-    assert_eq!(dashboard_leave.args, vec![serde_json::json!("dashboard-today")]);
+    assert_eq!(
+        dashboard_leave.args,
+        vec![serde_json::json!("dashboard-today")]
+    );
     assert_eq!(dashboard_leave.output.as_deref(), Some("DP-1"));
     state.route_event(&edge_message(3, "edge-triggered", "right", [1916.0, 540.0]));
     let received = calls_rx.clone();
@@ -546,7 +549,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     })
     .await
     .unwrap();
-    assert!(extra.is_err(), "EdgeLeft must clear the dashboard hover anchor");
+    assert!(
+        extra.is_err(),
+        "EdgeLeft must clear the dashboard hover anchor"
+    );
     drop(subscriptions);
     client.stop().await.unwrap();
 }

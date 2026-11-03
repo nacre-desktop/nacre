@@ -388,9 +388,7 @@ mod tests {
         let wire = socket.next_event()?;
         assert_eq!(
             edge_trigger(&wire)?,
-            Some(
-                json!({"type":"edge-left","output":"DP-1","edge":"left","position":[8.0,720.0]})
-            )
+            Some(json!({"type":"edge-left","output":"DP-1","edge":"left","position":[8.0,720.0]}))
         );
         assert!(edge_trigger(&json!({"EdgeTriggered": {
             "output":"DP-1", "edge":"Left", "position":[0.0,"bad"]
