@@ -82,9 +82,6 @@ pub(crate) const COLLECTION_ACTIONS: &str = concat!(
     "}\n",
 );
 
-pub(crate) fn collection_overlay() -> String {
-    collection_overlay_with_delay(350)
-}
 pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
     let delay_ms = delay_ms.min(800);
     format!(

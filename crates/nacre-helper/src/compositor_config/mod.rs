@@ -106,9 +106,6 @@ pub fn lua_value(value: &Value) -> Result<String> {
 pub fn runtime_lua_value(value: &Value) -> Result<String> {
     lua(value, false)
 }
-pub(crate) fn collection_overlay() -> String {
-    niri::collection_overlay()
-}
 pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
     niri::collection_overlay_with_delay(delay_ms)
 }
@@ -495,7 +492,7 @@ mod tests {
         ] {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
-        let native = niri::collection_overlay();
+        let native = niri::collection_overlay_with_delay(350);
         let expected = [
             ("Super+Ctrl+Tab", "focus-collection-next"),
             ("Super+Ctrl+Shift+Tab", "focus-collection-previous"),
@@ -515,7 +512,7 @@ mod tests {
                 "{edge} {{ action {{ event; }}; dwell-time-ms 350; }}"
             )));
         }
-        assert!(native.contains("nacre { edge-triggers; }"));
+        assert!(!native.contains("nacre { edge-triggers; }"));
         assert!(!stock.contains("edge-triggers"));
         let delayed = collection_overlay_with_delay(800);
         assert!(delayed.contains("left { action { event; }; dwell-time-ms 800; }"));
