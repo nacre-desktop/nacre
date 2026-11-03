@@ -14,7 +14,7 @@ that event lane. Without a daemon source, the QML helper tries the daemon lane
 first, then uses the direct native stream as the one-release compatibility path.
 Rejected or lost streams set active false and restore QML/Bead hover fallback.
 Frame clicks remain available. Bead commit
-`0dbb1536bfb3b50579f8c72cf5fc5454d66e8499` adds the generic `external_source`
+`def7eaa530573143d492e2e8a9dcd29d2132919c` adds the generic `external_source`
 policy only while the daemon publishes an acknowledged stream, retaining
 reserved geometry while omitting interactive lip surfaces.
 
