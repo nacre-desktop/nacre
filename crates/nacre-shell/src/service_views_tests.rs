@@ -1176,7 +1176,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
         ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
-        ("bar.collection.height".into(), Value::Number(180.into())),
+        ("bar.collection.height".into(), Value::Number(140.into())),
         ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
         ("collection.operation".into(), Value::Text("rename".into())),
         ("collection.target".into(), Value::Text("niri-collection:17".into())),
@@ -1208,9 +1208,9 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut create_models = BTreeMap::from([
         ("bar.collections".into(), Value::list(group_rows.iter().take(2).cloned().collect())),
         ("bar.collection.current".into(), Value::Text("niri-collection:17".into())),
-        ("bar.collection.height".into(), Value::Number(180.into())),
+        ("bar.collection.height".into(), Value::Number(188.into())),
         ("bar.collection.wallpapers.enabled".into(), Value::Bool(false)),
-        ("collection.scroll".into(), Value::Number(8.into())),
+        ("collection.scroll".into(), Value::Number(0.into())),
         ("collection.operation".into(), Value::Text(String::new())),
         ("panel.open".into(), Value::Bool(true)),
         ("view.edge".into(), Value::Text("top".into())),
@@ -1230,7 +1230,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     )), "create action must render localized label");
     let nodes = menu.session.view_nodes();
     let input = nodes.iter().find(|node| node.id.ends_with("group-name")).expect("rename input node");
-    assert_eq!(input.bind.get("text").map(String::as_str), Some("collection.draft"), "semantic rename field binding");
+    assert_eq!(input.action.as_deref(), Some("collection.commit"), "rename input semantic action");
     for suffix in ["group-name", "save-name", "cancel-name"] {
         let node = nodes.iter().find(|node| node.id.ends_with(suffix)).expect("visible editor control");
         let rect = bead::ui::rect(&node.draw);
