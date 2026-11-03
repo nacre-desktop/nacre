@@ -1193,7 +1193,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         ("collection.operation".into(), Value::Text("rename".into())),
         ("collection.target".into(), Value::Text("niri-collection:17".into())),
         ("collection.draft".into(), Value::Text("Very long personal research and writing desk".into())),
-        ("collection.scroll".into(), Value::Number(0.into())),
+        ("collection.scroll".into(), Value::Number(100.into())),
         ("panel.open".into(), Value::Bool(true)),
         ("view.edge".into(), Value::Text("top".into())),
     ]);

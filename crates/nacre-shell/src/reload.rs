@@ -8114,6 +8114,7 @@ impl SceneSource for Runtime {
                     ("collection.operation".into(), bead::core::Value::Text("create".into())),
                     ("collection.target".into(), bead::core::Value::Text(String::new())),
                     ("collection.draft".into(), bead::core::Value::Text(String::new())),
+                    ("collection.scroll".into(), bead::core::Value::Number(0.)),
                     ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
                 ]),
                 "collection.begin-rename" => {
@@ -8130,6 +8131,16 @@ impl SceneSource for Runtime {
                         ("collection.operation".into(), bead::core::Value::Text("rename".into())),
                         ("collection.target".into(), bead::core::Value::Text(target.clone())),
                         ("collection.draft".into(), bead::core::Value::Text(existing_name)),
+                        ("collection.scroll".into(), {
+                            let count = self.session.stores.get("bar.collections")
+                                .and_then(|value| match value { bead::core::Value::List(rows) => Some(rows.len()), _ => None })
+                                .unwrap_or(0);
+                            let viewport = match self.session.stores.get("bar.collection.height") {
+                                Some(bead::core::Value::Number(height)) => *height,
+                                _ => 260.,
+                            };
+                            bead::core::Value::Number((count as f64 * 40. + 92. - viewport).max(0.))
+                        }),
                         ("bead.focused".into(), bead::core::Value::Text("collection-switcher-menu.group-name".into())),
                     ])
                 }
