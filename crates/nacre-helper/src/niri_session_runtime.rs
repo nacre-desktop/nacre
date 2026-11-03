@@ -546,10 +546,7 @@ window-rule {
 }
 "#
     };
-    fs::write(
-        config.join("bead-pearls.kdl"),
-        bead_pearls,
-    )?;
+    fs::write(config.join("bead-pearls.kdl"), bead_pearls)?;
     fs::write(
         config.join("keyboard.kdl"),
         crate::compositor_config::render_keyboard(keyboard, "niri")?,
