@@ -6412,6 +6412,7 @@ impl SceneSource for Runtime {
                     || name.starts_with("network.")
                     || name.starts_with("bluetooth.")
                     || name.starts_with("session.")
+                    || name.starts_with("collection.")
             });
         }
         if let Some((_, name, argument)) = &host_action

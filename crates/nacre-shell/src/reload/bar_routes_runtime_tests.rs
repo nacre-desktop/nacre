@@ -256,6 +256,16 @@ fn node(runtime: &Runtime, action: &str, arg: Option<&str>) -> Option<(f32, f32)
             (rect.x + rect.w / 2., rect.y + rect.h / 2.)
         })
 }
+fn settle_runtime_animations(runtime: &mut Runtime) {
+    for _ in 0..64 {
+        let Some(deadline) = runtime.session.preview_deadline() else { return; };
+        let now = std::time::Instant::now();
+        if deadline > now { std::thread::sleep(deadline.duration_since(now)); }
+        runtime.stage(UiEvent::Model(std::collections::BTreeMap::new())).unwrap();
+        runtime.commit();
+    }
+    panic!("runtime bar animations did not settle");
+}
 fn at(runtime: &mut Runtime, action: &str, arg: Option<&str>, make: impl Fn(f32, f32) -> UiEvent) {
     let (x, y) = node(runtime, action, arg).unwrap_or_else(|| panic!("{action} {arg:?} missing"));
     let event = make(x, y);
@@ -429,7 +439,7 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
     });
 
     let install_editor = |runtime: &mut Runtime, operation: &str, target: &str, draft: &str| {
-        runtime.session.stores = runtime.session.stores.reconcile(&std::collections::BTreeMap::from([
+        runtime.session.stores.commit(std::collections::BTreeMap::from([
             ("collection.operation".into(), bead::core::Value::Text(operation.into())),
             ("collection.target".into(), bead::core::Value::Text(target.into())),
             ("collection.draft".into(), bead::core::Value::Text(draft.into())),
@@ -483,7 +493,10 @@ async fn single_collection_bar_entry_opens_the_switcher_popout() {
             && runtime.session.stores.get("bar.collection.enabled") == Some(&bead::core::Value::Bool(true))
             && node(runtime, "collection.switcher.open", None).is_some()
     }).await;
+    settle_runtime_animations(&mut runtime);
     let (x, y) = node(&runtime, "collection.switcher.open", None).expect("single desk menu button");
+    assert_eq!(runtime.session.action_at(x, y).map(|(_, name, _)| name), Some("collection.switcher.open".into()), "the rendered single-desk entry must be hit-testable");
+    while events.try_recv().is_ok() {}
     runtime.stage(UiEvent::Click { x, y }).unwrap();
     runtime.commit();
     runtime.stage(UiEvent::Release).unwrap();
