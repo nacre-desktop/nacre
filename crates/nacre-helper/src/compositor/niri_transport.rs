@@ -42,6 +42,8 @@ pub struct NacreCapabilities {
     pub workspace_collections: bool,
     pub proportional_x11_widths: bool,
     pub overview_hover: bool,
+    pub scratchpad: bool,
+    pub window_pinning: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -50,13 +52,22 @@ impl NacreCapabilities {
             return None;
         }
         let features = object.get("NacreCapabilities")?.as_object()?;
-        if features.len() != 3 {
-            return None;
-        }
+        // Nacre capabilities are additive across concurrent native features.
+        // Older N0107 peers omit the two fields introduced by N0114.
+        let scratchpad = match features.get("scratchpad") {
+            Some(value) => value.as_bool()?,
+            None => false,
+        };
+        let window_pinning = match features.get("window_pinning") {
+            Some(value) => value.as_bool()?,
+            None => false,
+        };
         Some(Self {
             workspace_collections: features.get("workspace_collections")?.as_bool()?,
             proportional_x11_widths: features.get("proportional_x11_widths")?.as_bool()?,
             overview_hover: features.get("overview_hover")?.as_bool()?,
+            scratchpad,
+            window_pinning,
         })
     }
 }
@@ -286,7 +297,9 @@ mod tests {
         let active = json!({"NacreCapabilities": {
             "workspace_collections": true,
             "proportional_x11_widths": false,
-            "overview_hover": true
+            "overview_hover": true,
+            "scratchpad": true,
+            "window_pinning": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -294,6 +307,8 @@ mod tests {
                 workspace_collections: true,
                 proportional_x11_widths: false,
                 overview_hover: true,
+                scratchpad: true,
+                window_pinning: true,
             })
         );
         assert_eq!(
@@ -303,6 +318,30 @@ mod tests {
                 "overview_hover": false
             }})),
             Some(NacreCapabilities::default())
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": false,
+                "proportional_x11_widths": true,
+                "overview_hover": false,
+                "scratchpad": true,
+                "window_pinning": false,
+                "future_feature": true
+            }})),
+            Some(NacreCapabilities {
+                proportional_x11_widths: true,
+                scratchpad: true,
+                ..NacreCapabilities::default()
+            })
+        );
+        assert_eq!(
+            NacreCapabilities::parse(&json!({"NacreCapabilities": {
+                "workspace_collections": false,
+                "proportional_x11_widths": false,
+                "overview_hover": false,
+                "scratchpad": "yes"
+            }})),
+            None
         );
         assert_eq!(NacreCapabilities::parse(&json!({"Future":{}})), None);
         assert_eq!(

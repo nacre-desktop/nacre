@@ -35,6 +35,11 @@ COLLECTION_BINDINGS = (
     '    Super+Ctrl+Shift+Page_Up repeat=false hotkey-overlay-title="Nacre:collection-move-previous" { move-window-to-collection-previous; }\n'
     "}\n"
 )
+SCRATCHPAD_PIN_BINDINGS = (
+    '    Super+h repeat=false hotkey-overlay-title="Nacre:hide" { move-window-to-scratchpad; }\n'
+    '    Super+Shift+h repeat=false hotkey-overlay-title="Nacre:unhide" { toggle-scratchpad; }\n'
+    '    Super+p repeat=false hotkey-overlay-title="Nacre:pin" { toggle-window-pinned; }\n'
+)
 
 
 def module(path, name):
@@ -42,6 +47,22 @@ def module(path, name):
     value = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(value)
     return value
+
+
+def nacre_niri_unsupported(text):
+    """Return fork-specific audit metadata while preserving stock Niri's report."""
+    document = json.loads(text)
+    supported = {"SUPER + H", "SUPER + SHIFT + H", "SUPER + P"}
+    document["unsupported"] = [
+        row
+        for row in document.get("unsupported", [])
+        if not (
+            row.get("source") == "hypr/conf/keybinding.lua"
+            and row.get("kind") == "binding"
+            and row.get("id") in supported
+        )
+    ]
+    return json.dumps(document, indent=2) + "\n"
 
 
 def supported(root):
@@ -98,7 +119,8 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     )
     config = Path(".config/nacre/niri")
     includes = []
-    for name, text in compiler.niri.render(compiler.load()).items():
+    generated = compiler.niri.render(compiler.load())
+    for name, text in generated.items():
         add(config / Path(name).name, text)
         if name.endswith(".kdl"):
             includes.append(Path(name).name)
@@ -213,7 +235,19 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
     entry += "".join("workspace " + json.dumps(name) + "\n" for name in names.values())
     entry += '\ninclude "custom.kdl"\n'
     source = add(config / "config.kdl", entry)
-    add(config / "nacre-niri.kdl", 'include "config.kdl"\n\n' + COLLECTION_BINDINGS)
+    add(
+        config / "nacre-niri.kdl",
+        '// Generated offline for the nacre-niri session; native feature flags default on.\n'
+        '// Native actions are no-ops when their runtime capability is disabled.\n'
+        'include "config.kdl"\n\nbinds {\n'
+        + COLLECTION_BINDINGS.removeprefix("binds {\n").removesuffix("}\n")
+        + SCRATCHPAD_PIN_BINDINGS
+        + "}\n",
+    )
+    add(
+        config / "nacre-niri/unsupported.json",
+        nacre_niri_unsupported(generated["niri/unsupported.json"]),
+    )
     # Validation is offline; never query, reload or restart the running compositor.
     if validate_config:
         validate(source)

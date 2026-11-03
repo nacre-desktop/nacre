@@ -73,6 +73,15 @@ class NacreNiriSessionTests(unittest.TestCase):
             )
             config = generated[Path(".config/nacre/niri/config.kdl")]
             overlay = generated[Path(".config/nacre/niri/nacre-niri.kdl")]
+            native_unsupported_path = Path(
+                ".config/nacre/niri/nacre-niri/unsupported.json"
+            )
+            native_unsupported = json.loads(
+                generated[native_unsupported_path].read_text()
+            )["unsupported"]
+            stock_unsupported = json.loads(
+                generated[Path(".config/nacre/niri/unsupported.json")].read_text()
+            )["unsupported"]
             bindings = generated[Path(".config/nacre/niri/bindings.kdl")]
             for action in (
                 "focus-collection-next",
@@ -84,6 +93,27 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertNotIn(action, config.read_text())
                 self.assertNotIn(action, bindings.read_text())
                 self.assertIn(action, overlay.read_text())
+            overlay_text = overlay.read_text()
+            generated_stock = config.read_text() + bindings.read_text()
+            for key, action in (
+                ("Super+h", "move-window-to-scratchpad"),
+                ("Super+Shift+h", "toggle-scratchpad"),
+                ("Super+p", "toggle-window-pinned"),
+            ):
+                self.assertIn(key, overlay_text)
+                self.assertIn(action, overlay_text)
+                self.assertNotIn(action, generated_stock)
+            self.assertNotIn("Super+Alt+h", overlay_text)
+            for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
+                self.assertTrue(
+                    any(row.get("id") == supported_key for row in stock_unsupported)
+                )
+                self.assertFalse(
+                    any(row.get("id") == supported_key for row in native_unsupported)
+                )
+            self.assertTrue(
+                any(row.get("id") == "SUPER + ALT + H" for row in native_unsupported)
+            )
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
                 ["/usr/bin/niri", "validate", "-c", str(config)],

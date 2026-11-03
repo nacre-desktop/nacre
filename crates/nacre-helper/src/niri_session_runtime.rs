@@ -1190,7 +1190,9 @@ mod tests {
                 let response = value!({"Ok":{"NacreCapabilities":{
                     "workspace_collections":false,
                     "proportional_x11_widths":widths,
-                    "overview_hover":false
+                    "overview_hover":false,
+                    "scratchpad":true,
+                    "window_pinning":true
                 }}});
                 writeln!(stream, "{}", json::encode(&response).unwrap())
             });
