@@ -76,6 +76,112 @@ fn slide_layer_builds(open_scene: &bead::render::Scene, opening: bool) -> usize 
     renderer.slide_layer_builds
 }
 
+/// Model Niri's single atlas plane at integer physical-pixel translations. This is a
+/// deterministic planner-vs-legacy pixel check; the compositor's GL wrapper is tested in
+/// nacre-niri, so this deliberately doesn't claim to exercise that renderer.
+fn compose_motion_plane(
+    plan: &bead::render::layer_motion::LayerMotionPlan,
+    progress: f32,
+) -> Vec<u8> {
+    assert_eq!(plan.planes.len(), 1, "test compositor uses one plane");
+    let plane = &plan.planes[0];
+    let pose = plane
+        .from
+        .interpolate(plane.to, progress, plane.opacity_mode);
+    let width = plan.atlas.width as i32;
+    let height = plan.atlas.height as i32;
+    let scale = plan.atlas.scale;
+    let dest_x = (pose.destination.x * scale).round() as i32;
+    let dest_y = (pose.destination.y * scale).round() as i32;
+    let clip_left = (pose.clip.x * scale).round() as i32;
+    let clip_top = (pose.clip.y * scale).round() as i32;
+    let clip_right = ((pose.clip.x + pose.clip.w) * scale).round() as i32;
+    let clip_bottom = ((pose.clip.y + pose.clip.h) * scale).round() as i32;
+    assert_eq!(
+        (pose.destination.w * scale).round() as i32,
+        width,
+        "this planner path preserves atlas width"
+    );
+    assert_eq!(
+        (pose.destination.h * scale).round() as i32,
+        height,
+        "this planner path preserves atlas height"
+    );
+    let mut output = vec![0; plan.atlas.pixels.len()];
+    for y in 0..height {
+        if y < clip_top || y >= clip_bottom {
+            continue;
+        }
+        let source_y = y - dest_y;
+        if !(0..height).contains(&source_y) {
+            continue;
+        }
+        for x in 0..width {
+            if x < clip_left || x >= clip_right {
+                continue;
+            }
+            let source_x = x - dest_x;
+            if !(0..width).contains(&source_x) {
+                continue;
+            }
+            let source = ((source_y * width + source_x) * 4) as usize;
+            let destination = ((y * width + x) * 4) as usize;
+            for channel in 0..4 {
+                output[destination + channel] = (f32::from(plan.atlas.pixels[source + channel])
+                    * pose.opacity)
+                    .round()
+                    .clamp(0., 255.) as u8;
+            }
+        }
+    }
+    output
+}
+
+fn render_legacy_close(
+    scene: &bead::render::Scene,
+    progress: f32,
+    width: u32,
+    height: u32,
+) -> Vec<u8> {
+    use bead::render::{Damage, PixelFormat, Renderer, ShmTarget, tree::TreeCpuRenderer};
+    let mut posed = scene.clone();
+    let (dx, dy) = posed.panel_offset(progress, false);
+    posed.offset = (posed.offset.0 + dx, posed.offset.1 + dy);
+    posed.opacity = posed
+        .motion
+        .as_ref()
+        .expect("route motion")
+        .opacity(progress);
+    let mut pixels = vec![0; width as usize * height as usize * 4];
+    let mut renderer = TreeCpuRenderer::default();
+    renderer
+        .prepare_on_ui(&posed, 1.5)
+        .expect("legacy pose prepares");
+    renderer
+        .render(
+            &posed,
+            ShmTarget {
+                bytes: &mut pixels,
+                width,
+                height,
+                scale: 1.5,
+                format: PixelFormat::Rgba,
+            },
+            Damage::full(width, height),
+        )
+        .expect("legacy close frame paints");
+    pixels
+}
+
+fn worst_pixel_difference(left: &[u8], right: &[u8]) -> u8 {
+    assert_eq!(left.len(), right.len());
+    left.iter()
+        .zip(right)
+        .map(|(a, b)| a.abs_diff(*b))
+        .max()
+        .unwrap_or_default()
+}
+
 #[test]
 fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
     let mut layered = Vec::new();
@@ -94,9 +200,27 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
         ("sound-core", "sound/core.luau"),
         ("calendar", "popouts/main.luau"),
         ("chat", "chat/main.luau"),
+        ("prompt", "prompt/main.luau"),
         ("control", "control/main.luau"),
         ("wallpaper", "extras/main.luau"),
     ];
+    let compositor_closes = [
+        "dashboard",
+        "session",
+        "launcher",
+        "network",
+        "bluetooth",
+        "battery",
+        "sound",
+        "sound-core",
+        "calendar",
+        "chat",
+        "prompt",
+        "control",
+    ];
+    let mut compositor_close_routes = Vec::new();
+    let mut reveal_open_fallback_routes = Vec::new();
+    let mut flat_open_routes = Vec::new();
     for (name, entry) in routes {
         let session = bead::ui::Session::new(
             root.clone(),
@@ -296,6 +420,93 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 "{name}: stage produced no prepared scene"
             );
             if action == "open" {
+                if scene.motion.is_some() {
+                    // Panel surfaces draw from the padded resting origin. The
+                    // production presenter uses the same 32px inset before it
+                    // applies the edge-relative motion offset.
+                    scene.offset = (32., 32.);
+                }
+                if compositor_closes.contains(&name) {
+                    use bead::render::{
+                        PixelFormat, layer_motion::LayerMotionPlan, tree::TreeCpuRenderer,
+                    };
+                    // These padded bounds are the logical layer-surface viewport
+                    // used by the route's production panel configuration.
+                    let (width, height) =
+                        (scene.bounds.w.ceil() as u32, scene.bounds.h.ceil() as u32);
+                    // The real runtime can still be waiting for its async CPU cache
+                    // request. Bake and attach the same worker resource the production
+                    // planner requires before asking it to paint the one-shot atlas.
+                    let mut prepared = scene.clone();
+                    prepared.reveal(1.);
+                    let mut worker = bead::render::tree::TreeCache::default();
+                    worker
+                        .prepare(&prepared, 1.5)
+                        .unwrap_or_else(|error| panic!("{name}: worker bake failed: {error}"));
+                    scene.prepared.insert(
+                        1.5f32.to_bits(),
+                        worker.frame.clone().expect("worker bake produces frame"),
+                    );
+                    let reveal = scene.motion.as_ref().is_some_and(|motion| motion.reveal);
+
+                    let mut renderer = TreeCpuRenderer::default();
+                    let opening = LayerMotionPlan::for_slide(
+                        &scene,
+                        true,
+                        width,
+                        height,
+                        1.5,
+                        PixelFormat::Rgba,
+                        &mut renderer,
+                    )
+                    .unwrap_or_else(|error| panic!("{name}: open plan failed: {error}"));
+                    if reveal {
+                        assert!(
+                            opening.is_none(),
+                            "{name}: a growing-body reveal must stay on the current CPU path until its exact shape is representable"
+                        );
+                        reveal_open_fallback_routes.push(name);
+                    } else {
+                        let opening = opening.unwrap_or_else(|| {
+                            panic!("{name}: flat opening should produce a compositor plan")
+                        });
+                        assert_eq!(opening.planes.len(), 1, "{name}: one motion plane");
+                        flat_open_routes.push(name);
+                    }
+
+                    let mut renderer = TreeCpuRenderer::default();
+                    let closing = LayerMotionPlan::for_slide(
+                        &scene,
+                        false,
+                        width,
+                        height,
+                        1.5,
+                        PixelFormat::Rgba,
+                        &mut renderer,
+                    )
+                    .unwrap_or_else(|error| panic!("{name}: close plan failed: {error}"))
+                    .unwrap_or_else(|| panic!("{name}: closing should produce a compositor plan"));
+                    assert_eq!(closing.planes.len(), 1, "{name}: one close motion plane");
+                    assert!(
+                        !closing.atlas.pixels.is_empty(),
+                        "{name}: closing atlas contains the complete surface"
+                    );
+                    for close_progress in [1., 0.75, 0.5, 0.25, 0.] {
+                        let legacy = render_legacy_close(
+                            &scene,
+                            close_progress,
+                            closing.atlas.width,
+                            closing.atlas.height,
+                        );
+                        let compositor = compose_motion_plane(&closing, 1. - close_progress);
+                        let worst = worst_pixel_difference(&legacy, &compositor);
+                        assert!(
+                            worst <= 2,
+                            "{name}: close p={close_progress} atlas-vs-legacy channel diff {worst}"
+                        );
+                    }
+                    compositor_close_routes.push(name);
+                }
                 if scene.motion.as_ref().is_some_and(|m| m.reveal) {
                     for opening in [true, false] {
                         let builds = slide_layer_builds(&scene, opening);
@@ -330,4 +541,25 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
             );
         }
     }
+    for route in [
+        "dashboard",
+        "launcher",
+        "control",
+        "calendar",
+        "session",
+        "chat",
+    ] {
+        assert!(
+            compositor_close_routes.contains(&route),
+            "{route}: real shell route produces a compositor-driven close plan"
+        );
+        assert!(
+            reveal_open_fallback_routes.contains(&route),
+            "{route}: reveal opening is explicitly known to use the CPU fallback until exact growing-body geometry is supported"
+        );
+    }
+    assert!(
+        flat_open_routes.contains(&"prompt"),
+        "prompt: flat opening is compositor-eligible"
+    );
 }
