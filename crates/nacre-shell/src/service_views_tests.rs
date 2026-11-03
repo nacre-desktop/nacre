@@ -1159,7 +1159,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     bar_models.insert("widgets.layout".into(), Value::list(vec![default_layout]));
     let mut bar = Harness::load(
         &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
-        Config { width: 420, height: 54, scale: 1. },
+        Config { width: 1920, height: 70, scale: 1. },
     )?;
     settle_harness_animations(&mut bar)?;
     let bar_frame = bar.pose((0., 0.), 1.)?;
@@ -1182,7 +1182,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
         ("collection.operation".into(), Value::Text("rename".into())),
         ("collection.target".into(), Value::Text("niri-collection:17".into())),
         ("collection.draft".into(), Value::Text("Very long personal research and writing desk".into())),
-        ("collection.scroll".into(), Value::Number(180.into())),
+        ("collection.scroll".into(), Value::Number(0.into())),
         ("panel.open".into(), Value::Bool(true)),
         ("view.edge".into(), Value::Text("top".into())),
     ]);
