@@ -31,6 +31,15 @@ return {
     },
     actions={
         close=function(s) s["panel.open"]=false end,
+        ["collection.switcher.open"]=function(_) end,
+        ["collection.switch"]=function(_) end,
+        ["collection.begin-create"]=function(_) end,
+        ["collection.begin-rename"]=function(_) end,
+        ["collection.commit"]=function(_) end,
+        ["collection.cancel"]=function(_) end,
+        ["collection.wallpaper.set"]=function(_) end,
+        ["collection.accent.use"]=function(_) end,
+        ["collection.accent.clear"]=function(_) end,
         calendar_month=function(s,delta)
             if type(delta)~="number" or delta%1~=0 or math.abs(delta)>1200 then return end
             local y,m=displayed(s)
