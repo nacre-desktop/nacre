@@ -1149,7 +1149,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     let mut bar_models = super::initial_models()?;
     bar_models.insert("bar.collections".into(), groups.clone());
     bar_models.insert("bar.collection.current".into(), Value::Text("niri-collection:17".into()));
-    let bar = Harness::load(
+    let mut bar = Harness::load(
         &root(), Path::new("bar/main.luau"), &root().join("palette.json"), bar_models,
         Config { width: 420, height: 54, scale: 1. },
     )?;
@@ -1175,7 +1175,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     ]);
     let mut initial = super::initial_models()?;
     initial.append(&mut menu_models);
-    let menu = Harness::load(
+    let mut menu = Harness::load(
         &root(), Path::new("popouts/collections.luau"), &root().join("palette.json"), initial,
         Config { width: 360, height: 250, scale: 1. },
     )?;
