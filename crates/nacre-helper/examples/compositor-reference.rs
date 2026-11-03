@@ -129,6 +129,12 @@ fn run() -> Result<i32> {
                     print(&event)?;
                 }
             }
+            cli::Command::EdgeEvents => {
+                return Err(Error {
+                    kind: "RuntimeError",
+                    message: "Edge triggers are unavailable on Hyprland".into(),
+                });
+            }
         }
     } else {
         let mut backend = niri_actions::Backend {
