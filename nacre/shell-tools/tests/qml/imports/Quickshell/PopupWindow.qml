@@ -10,7 +10,6 @@ Window {
         property var item: null
         property var window: null
         property int edges: 0
-        property int gravity: 0
         function updateAnchor() {}
     }
     onVisibleChanged: visible ? windowConnected() : closed()

@@ -426,7 +426,6 @@ Item {
         objectName: "collectionDeskMenu"
         anchor.item: deskBadge
         anchor.edges: Edges.Bottom | Edges.Left
-        anchor.gravity: Edges.Bottom | Edges.Left
         width: 252
         height: Math.min(300, menuColumn.implicitHeight + 20)
         color: "transparent"
