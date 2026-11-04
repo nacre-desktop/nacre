@@ -14,6 +14,16 @@ the body size, corner radii, content clip, rim, and shadow with the same eased
 progress as the content plane. Unsupported protocol/effect combinations retain the
 existing stock Niri path and frame-renderer fallback.
 
+At setup Bead also captures the full-open endpoint once. The compositor selects
+that immutable snapshot when the opening completes. This preserves the legacy
+renderer’s per-primitive 8-bit blending: flattening translucent content over
+transparency first changes some control-centre endpoint pixels by two channel
+values. The animated contour, rim and shadow remain compositor-owned throughout
+the opening. Two setup paints replace refresh-driven paints; both snapshots share
+Bead’s 64 MiB limit. The route test independently requires the endpoint snapshot
+to match the legacy renderer byte-for-byte, and its fixture metadata refers to the
+existing `t1.00.png` without changing any reference image or pixel tolerance.
+
 Coordinates are layer-buffer local for content planes and output-root local for the
 reveal descriptor. The layer-surface global origin is applied once by the protocol
 presenter. Dashboard content stays at (0,0) for its opening; its body grows down
@@ -55,7 +65,7 @@ resolution, the container temporarily resolved a patched lock and restored the
 task's checked-in Cargo.lock on exit. The five Nacre dependency declarations,
 eleven Cargo.lock Bead package sources, product revision guard, XML fixture, and
 fixture provenance now point to reviewed Bead commit
-`0eb9a9a8afdbd8e8a2f6770e1a3b05818af198b0`; exact-pin desktop CI remains pending.
+`9b7ae08a588a4f27ba30e5e0aee20f15c8138d21`; exact-pin desktop CI remains pending.
 The generated dashboard s1.0 plan has content
 destination y=0→0; the shape still grows from the bar edge. The generated set
 contains 30 frame PNGs, six content atlases, 36 JSON manifests/plans, and one

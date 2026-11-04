@@ -207,5 +207,13 @@
     ]
   },
   "schema": "nacre-bead-layer-motion-reveal-fixture-v1",
-  "source": "Nacre Runtime::stage PanelVisibility(true), with_frame production attachment, Bead LayerMotionPlan::for_slide"
+  "source": "Nacre Runtime::stage PanelVisibility(true), with_frame production attachment, Bead LayerMotionPlan::for_slide",
+  "terminal": {
+    "filename": "launcher-s1.5-t1.00.png",
+    "format": "RGBA",
+    "height": 981,
+    "scale": 1.5,
+    "stride": 6984,
+    "width": 1746
+  }
 }

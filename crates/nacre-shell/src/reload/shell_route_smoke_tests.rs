@@ -349,20 +349,28 @@ fn motion_plan_json(
             "format": match plan.atlas.format { PixelFormat::Rgba => "RGBA", PixelFormat::Bgra => "BGRA" },
             "filename": "ROUTE-SCALE-atlas.png"
         },
+        "terminal": plan.terminal.as_ref().map(|buffer| serde_json::json!({
+            "width": buffer.width,
+            "height": buffer.height,
+            "stride": buffer.stride,
+            "scale": buffer.scale,
+            "format": match buffer.format { PixelFormat::Rgba => "RGBA", PixelFormat::Bgra => "BGRA" },
+            "filename": "ROUTE-SCALE-t1.00.png"
+        })),
         "planes": planes,
         "reveal": reveal,
         "source": "Nacre Runtime::stage PanelVisibility(true), with_frame production attachment, Bead LayerMotionPlan::for_slide"
     })
 }
 
-fn tight_plan_atlas(plan: &bead::render::layer_motion::LayerMotionPlan) -> Vec<u8> {
-    let row_bytes = plan.atlas.width as usize * 4;
-    let stride = plan.atlas.stride as usize;
+fn tight_motion_pixels(buffer: &bead::render::layer_motion::PixelBuffer) -> Vec<u8> {
+    let row_bytes = buffer.width as usize * 4;
+    let stride = buffer.stride as usize;
     assert!(stride >= row_bytes);
-    let mut pixels = Vec::with_capacity(row_bytes * plan.atlas.height as usize);
-    for row in 0..plan.atlas.height as usize {
+    let mut pixels = Vec::with_capacity(row_bytes * buffer.height as usize);
+    for row in 0..buffer.height as usize {
         let start = row * stride;
-        pixels.extend_from_slice(&plan.atlas.pixels[start..start + row_bytes]);
+        pixels.extend_from_slice(&buffer.pixels[start..start + row_bytes]);
     }
     pixels
 }
@@ -383,7 +391,22 @@ fn verify_or_export_motion_plan(
     let metadata_name = format!("{stem}-plan.json");
     let mut metadata = motion_plan_json(route, scene, plan);
     metadata["atlas"]["filename"] = serde_json::Value::String(atlas_name.clone());
-    let atlas_bytes = tight_plan_atlas(plan);
+    metadata["terminal"]["filename"] = serde_json::Value::String(format!("{stem}-t1.00.png"));
+    let terminal = plan
+        .terminal
+        .as_ref()
+        .expect("visible reveal terminal snapshot");
+    let (terminal_width, terminal_height, legacy_terminal) = render_legacy_reveal(scene, 1., scale);
+    assert_eq!(
+        (terminal.width, terminal.height),
+        (terminal_width, terminal_height)
+    );
+    assert_eq!(
+        tight_motion_pixels(terminal),
+        legacy_terminal,
+        "{stem}: terminal snapshot must preserve legacy primitive blending exactly"
+    );
+    let atlas_bytes = tight_motion_pixels(&plan.atlas);
     let mut png = Vec::new();
     image::codecs::png::PngEncoder::new(&mut png)
         .write_image(
