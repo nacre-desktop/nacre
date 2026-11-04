@@ -47,10 +47,12 @@ impl Transport for Native {
         let timeout = Duration::from_secs_f64(timeout);
         let outputs = self.connection.response("Outputs", timeout, max_bytes)?;
         let windows = self.connection.response("Windows", timeout, max_bytes)?;
-        let windows = windows.as_array().ok_or_else(|| crate::compositor::niri_state::Error {
-            kind: "ValueError",
-            message: "Malformed native window state".into(),
-        })?;
+        let windows = windows
+            .as_array()
+            .ok_or_else(|| crate::compositor::niri_state::Error {
+                kind: "ValueError",
+                message: "Malformed native window state".into(),
+            })?;
         let rows = self.connection.response("Workspaces", timeout, max_bytes)?;
         let bad = || crate::compositor::niri_state::Error {
             kind: "ValueError",
@@ -249,10 +251,14 @@ pub fn rotation_eligible(snapshot: &Value, count: usize) -> bool {
         }
         if !outputs.contains(output) {
             return name.is_empty()
-                && row["windowCount"].as_u64().is_some_and(|window_count| window_count == 0);
+                && row["windowCount"]
+                    .as_u64()
+                    .is_some_and(|window_count| window_count == 0);
         }
         if name.is_empty() {
-            return row["windowCount"].as_u64().is_some_and(|window_count| window_count == 0);
+            return row["windowCount"]
+                .as_u64()
+                .is_some_and(|window_count| window_count == 0);
         }
         id(&row["id"])
             .ok()
@@ -1119,8 +1125,7 @@ mod tests {
         );
         assert!(!rotation_eligible(&populated_spare.state, 6));
         let mut unknown_spare = Fixture::new(2);
-        unknown_spare
-            .state["workspaces"]
+        unknown_spare.state["workspaces"]
             .as_array_mut()
             .unwrap()
             .push(json!({
