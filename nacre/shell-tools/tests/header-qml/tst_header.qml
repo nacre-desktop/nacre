@@ -156,7 +156,7 @@ TestCase {
         compare(NacreDaemon.calls[2].params.action.collection, "niri-collection:17");
         compare(NacreDaemon.calls[2].params.action.name, "home renamed");
     }
-    function test_collection_badge_pixels_at_scale_one_and_one_point_five() {
+    function test_collection_badge_ink_pixels_at_screen_scale() {
         NacreCompositor.capabilities = {workspaceCollections: true};
         NacreCompositor.collections = [
             {id: "niri-collection:17", index: 1, name: "home", output: "test"},
@@ -169,9 +169,17 @@ TestCase {
         verify(!!badge && badge.visible);
         const image = grabImage(view);
         verify(image.width > 0 && image.height > 0);
-        const x = Math.round(badge.x + badge.width / 2);
-        const y = Math.round(badge.y + badge.height / 2);
-        verify(image.pixel(x, y).a > 0, "badge background paints at the configured screen scale");
+        const sx = image.width / view.width, sy = image.height / view.height;
+        const left = Math.floor(badge.x * sx), right = Math.ceil((badge.x + badge.width) * sx);
+        const top = Math.floor(badge.y * sy), bottom = Math.ceil((badge.y + badge.height) * sy);
+        let ink = 0;
+        for (let y = top; y < bottom; y++)
+            for (let x = left; x < right; x++) {
+                const pixel = image.pixel(x, y);
+                if (pixel.g > pixel.r + .2 && pixel.b > pixel.r + .2)
+                    ink++;
+            }
+        verify(ink > 0, "badge label paints colored ink at the configured screen scale");
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
