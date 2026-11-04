@@ -438,7 +438,10 @@ pub fn apply_with_native_action(
                 {
                     Ok(())
                 } else {
-                    Err("Native workspace exchange rollback did not restore the original layout".into())
+                    Err(
+                        "Native workspace exchange rollback did not restore the original layout"
+                            .into(),
+                    )
                 }
             });
             return match recovered {
