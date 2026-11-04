@@ -622,7 +622,10 @@ mod tests {
     #[test]
     fn native_hidden_and_pinned_window_fields_default_for_stock_rows() -> crate::Result<()> {
         let mut state = State::new(
-            json!({"DP-1":{"logical":{"x":0,"y":0,"width":100,"height":100},"focused":true}}),
+            json!({"DP-1":{"logical":{"x":0,"y":0,"width":100,"height":100},"focused":true}})
+                .as_object()
+                .unwrap()
+                .clone(),
         );
         state.apply(&json!({"WorkspacesChanged":{"workspaces":[{"id":1,"idx":1,"name":"one","output":"DP-1","is_active":true,"is_focused":true}]}}))?;
         state.apply(&json!({"WindowsChanged":{"windows":[{"id":2,"workspace_id":null,"layout":null,"is_floating":false,"is_focused":false}]}}))?;
