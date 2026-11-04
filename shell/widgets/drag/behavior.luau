@@ -22,6 +22,8 @@ return {stores={
     ["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,
     ["bar.notifications.count"]=0,["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
     ["bead.windows"]={},["bead.workspaces"]={},["bead.focused_title"]="",
+    ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
+    ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",
     ["bead.output.name"]="",
     ["bead.desktop.audio.percent"]=0,["bead.desktop.audio.device"]="Output unavailable",
     ["bead.desktop.audio.label"]="Unavailable",["bead.desktop.titlevisible"]=true,
@@ -51,7 +53,9 @@ return {stores={
     ["bar.notifications.detail.width"]=function(s) return 1+8*#s["bar.notifications.text"] end,
     ["bar.battery.detail.width"]=function(s) return 1+8*#s["bead.desktop.battery.value"] end,
     ["bar.title"]=function(s)
-        local title=s["bead.focused_title"]
+        local title=s["bead.overview.open"] and s["bead.overview.title"] or ""
+        if title=="" and s["bead.overview.open"] and s["bead.overview.has_window"] then title=tr("bead.bar.active-window") end
+        if title=="" then title=s["bead.focused_title"] end
         return title~="" and title or tr("bead.bar.desktop-title")
     end,
     ["bar.title.cue.visible"]=function(s) return s["bead.edge.fade"]>0 end,
