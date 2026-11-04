@@ -243,6 +243,9 @@ Item {
                 timeout=40,
             )
             self.assertEqual(result.returncode, 0, (result.stdout + result.stderr))
+            for line in result.stdout.splitlines():
+                if line.startswith("Totals:"):
+                    print(line, flush=True)
 
 
 if __name__ == "__main__":
