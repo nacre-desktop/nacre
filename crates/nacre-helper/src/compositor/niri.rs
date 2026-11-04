@@ -330,7 +330,7 @@ mod tests {
         assert_eq!(capabilities["windowRestore"], true);
         assert_eq!(capabilities["pinWindow"], true);
         assert_eq!(capabilities["windowHide"], true);
-        assert_eq!(capabilities["monitorWorkspaceActions"], false);
+        assert!(capabilities.get("monitorWorkspaceActions").is_none());
         peer.join()
             .map_err(|_| "Niri capability fixture panicked")??;
         Ok(())
