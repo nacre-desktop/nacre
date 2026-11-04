@@ -155,6 +155,9 @@ Singleton {
             activeAction = null;
             worker.running = false;
         }
+        collectionsSupported = false;
+        collections = [];
+        activeCollectionId = "";
         edgeTriggersActive = false;
         connected = false;
         daemonConnection = "";
@@ -355,6 +358,9 @@ Singleton {
             if (root.daemonMode)
                 return;
             root.connected = false;
+            root.collectionsSupported = false;
+            root.collections = [];
+            root.activeCollectionId = "";
             root.movingWindows = {};
             root.event({
                 type: "window-move",
