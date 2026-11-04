@@ -23,6 +23,8 @@ Singleton {
     readonly property var monitors: backend?.monitors ?? ({
             values: []
         })
+    readonly property var collections: backend?.collections ?? []
+    readonly property string activeCollectionId: backend?.activeCollectionId ?? ""
     readonly property var activeWindow: backend?.activeClient ?? null
     readonly property var activeClient: activeWindow
     readonly property var overviewHoverWindow: backend?.overviewHoverWindow ?? null

@@ -4,6 +4,7 @@ import qs.utils
 import qs.services
 import Quickshell
 import Quickshell.Io
+import "collections.js" as Collections
 
 Singleton {
     id: root
@@ -48,6 +49,10 @@ Singleton {
     property var workspaceValues: []
     property var monitorValues: []
     property var clients: []
+    // Nacre-Niri collection rows from the compositor snapshot. Stock niri
+    // omits these and leaves the capability false.
+    property var collections: []
+    property string activeCollectionId: ""
     property var byId: ({})
     property var activeWorkspace: null
     property var focusedMonitor: null
@@ -85,6 +90,9 @@ Singleton {
         const source = daemonEvents.data;
         if (!NacreDaemon.connected || !daemonState.fresh || !daemonEvents.fresh || !state.available || state.backend !== "niri" || !source.available) {
             connected = false;
+            collectionsSupported = false;
+            collections = [];
+            activeCollectionId = "";
             edgeTriggersActive = false;
             daemonConnection = "";
             daemonCheck = "";
@@ -113,6 +121,7 @@ Singleton {
         if (!daemonConnection)
             return;
         const ordered = (name, order) => (state[order] || []).map(id => state[name]?.[id]).filter(value => value);
+        const desks = Collections.fromDaemonState(state);
         accept({
             type: "snapshot",
             windows: ordered("windows", "windowOrder"),
@@ -123,6 +132,8 @@ Singleton {
             focusedMonitor: state.outputs?.[state.focus?.outputId],
             overviewOpen: state.overviewOpen,
             capabilities: state.capabilities,
+            collections: desks.rows,
+            activeCollection: desks.activeId,
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
             edgeTriggersActive: source.edgeTriggersActive === true,
@@ -258,7 +269,7 @@ Singleton {
         clients = ordered;
         activeWindowId = value.activeWindow?.windowId || "";
         overviewOpen = value.overviewOpen === true;
-        collectionsSupported = value.capabilities?.workspaceCollections === true;
+        Collections.acceptSnapshot(root, value);
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
         edgeTriggersActive = value.edgeTriggersActive === true;

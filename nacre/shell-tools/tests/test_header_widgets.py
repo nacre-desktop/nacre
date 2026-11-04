@@ -71,7 +71,8 @@ Item {
                 "ChatWindowTitle": "property var titles:({})",
                 "NacrePresentation": "property var active:({workspaceColors:false})",
                 "NacreIcons": 'function getDesktopEntry(name){return {categories:name==="kitty"?["System","TerminalEmulator"]:name==="firefox"?["Network","WebBrowser"]:name==="discord"?["Network","InstantMessaging"]:[]}}function getAppCategoryIcon(name,fallback){return name==="editor"?"code":fallback}',
-                "NacreCompositor": 'property int activeWsId:2;property var capabilities:({});property var monitors:({values:[]});property var workspaces:({values:[]});property var windows:[];property var focusedMonitor:({name:"test"});property var activeWindow:null;property var requests:[];function switchWorkspace(value){requests=[...requests,"workspace "+value];return true}function focusWindow(address){requests=[...requests,"focus "+address];return true}',
+                "NacreCompositor": 'property int activeWsId:2;property var capabilities:({});property var monitors:({values:[]});property var workspaces:({values:[]});property var windows:[];property var collections:[];property string activeCollectionId:"";property var focusedMonitor:({name:"test"});property var activeWindow:null;property var requests:[];function switchWorkspace(value){requests=[...requests,"workspace "+value];return true}function focusWindow(address){requests=[...requests,"focus "+address];return true}',
+                "NacreDaemon": 'property bool connected:true;property var calls:[];function call(method,params,callback){calls=[...calls,{method:method,params:params}];if(callback)callback({changed:true},null);return calls.length}',
                 "NacreBar": "property int workspaceCount:5;property var workspaceNames:[];property var workspaceIcons:[]",
                 "NacreBrightness": "function getMonitorForScreen(screen){return null}",
                 "NacreTime": 'function format(value){return "12:34"}',
@@ -120,13 +121,17 @@ Item {
             shutil.copy2(
                 ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
             )
-            install_i18n(fixtures)
-            result = run_qml(
-                [str(runner), "-input", str(target), "-o", "-,txt"],
-                env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
-                capture_output=True,
-                text=True,
-                timeout=20,
+            shutil.copy2(
+                SHELL / "services/compositor/collections.js", target / "collections.js"
             )
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertNotIn("QWARN", result.stdout + result.stderr)
+            install_i18n(fixtures)
+            for scale in ("1", "1.5"):
+                result = run_qml(
+                    [str(runner), "-input", str(target), "-o", "-,txt"],
+                    env={**os.environ, "QT_QPA_PLATFORM": "offscreen", "QT_SCALE_FACTOR": scale},
+                    capture_output=True,
+                    text=True,
+                    timeout=20,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertNotIn("QWARN", result.stdout + result.stderr)
