@@ -138,6 +138,7 @@ Item {
    stateTopic.data=state(rows,true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===3)
    Services.NacreCompositor.syncCollectionState(backend)
    const badge=findChild(view,"collectionDeskBadge")
+   console.log("badge-debug",view.visible,backend.collectionsSupported,Services.NacreCompositor.capabilities.workspaceCollections,Services.NacreCompositor.collections.length,view.deskRows.length,view.outputName,view.showDeskBadge,!!badge,badge?.visible,badge?.parent?.visible)
    tryVerify(()=>badge.visible)
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
