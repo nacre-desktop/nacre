@@ -65,6 +65,7 @@ QtObject {
 property Component topicFactory:Component{QtObject{property string name:"";property var data:({available:false});property bool fresh:false;property int users:0}}
 function topic(name){if(!topics[name])topics[name]=topicFactory.createObject(root,{name:name});return topics[name]}
 function subscribe(name){topic(name).users++}function unsubscribe(name){topic(name).users=Math.max(0,topic(name).users-1)}
+function resync(value){if(value)value.fresh=false}function registerIpc(name,handler,signatures){return true}function unregisterIpc(name,handler){}
 function call(method,params,callback){if(method==="niri.source")Qt.callLater(()=>callback({connection_id:"fixture-connection"},null));return 1}''',
                 "NacrePanelState": 'property string settingsPage:"appearance";property var screens:({});function closeTransient(view){}function getForActive(){return null}',
                 "NacreColours": 'property bool light:false;property bool publishing:false;property var palette:({m3surface:"#202124",m3surfaceContainer:"#292a2d",m3surfaceContainerHigh:"#343539",m3surfaceContainerHighest:"#414247",m3primary:"#8ab4f8",m3secondary:"#c58af9",m3tertiary:"#f28b82",m3onSurface:"#f1f3f4",m3onSurfaceVariant:"#bdc1c6",m3outline:"#8a8d91",m3outlineVariant:"#5f6368",m3frame:"#202124"})',
@@ -122,7 +123,7 @@ Item {
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
   function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
-  function cleanup(){backend=null}
+  function cleanup(){NacreDaemon.enabled=false;NacreDaemon.connected=false;NacreDaemon.boot="fixture-boot";for(const name of Object.keys(NacreDaemon.topics)){const topic=NacreDaemon.topics[name];topic.fresh=false;topic.data={available:false};topic.users=0}backend=null}
   function test_daemon_snapshot_events_reach_visible_topbar_badge(){
    NacreCompositor.capabilities={perOutputWorkspaces:true,workspaceCollections:false}
    const stateTopic=NacreDaemon.topic("compositor"),eventTopic=NacreDaemon.topic("compositor.events")
