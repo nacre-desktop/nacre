@@ -427,7 +427,6 @@ Item {
         anchor.item: deskBadge
         anchor.edges: Edges.Bottom | Edges.Left
         anchor.gravity: Edges.Bottom | Edges.Left
-        anchor.rect.y: deskBadge.height
         width: 252
         height: Math.min(300, menuColumn.implicitHeight + 20)
         color: "transparent"
