@@ -75,6 +75,7 @@ TestCase {
             });
         NacreCompositor.requests = [];
         NacreDaemon.calls = [];
+        NacreDaemon.connected = true;
         NacrePanelState.calls = [];
         NacrePanelState.popupRequests = [];
         AppLaunch.calls = [];
@@ -187,7 +188,9 @@ TestCase {
             }
         verify(ink > 0, "badge label paints colored ink at the configured screen scale");
         const capturePath = Qt.resolvedUrl("desk-badge.png").toString().slice(7);
-        verify(image.saveToFile(capturePath), "desk badge pixel capture saves");
+        let saved = false;
+        verify(view.grabToImage(result => saved = result.saveToFile(capturePath)));
+        tryVerify(() => saved, 1000);
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
