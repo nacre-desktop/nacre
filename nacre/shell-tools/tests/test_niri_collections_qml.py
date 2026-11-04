@@ -151,7 +151,6 @@ import qs.services as Services
    Services.NacreDaemon.boot="fixture-reconnected";Services.NacreDaemon.connected=true;stateTopic.data=state(rows,true);tryVerify(()=>backend.collections.length===3);tryVerify(()=>badge.visible)
    stateTopic.data=state([],false);tryVerify(()=>backend.collections.length===0);tryVerify(()=>!badge.visible)
    Services.NacreDaemon.enabled=false
-  }
  }
 }'''
             )
