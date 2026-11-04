@@ -4,7 +4,6 @@ import qs.utils
 import qs.services
 import Quickshell
 import Quickshell.Io
-import "collections.js" as Collections
 
 Singleton {
     id: root
@@ -121,7 +120,6 @@ Singleton {
         if (!daemonConnection)
             return;
         const ordered = (name, order) => (state[order] || []).map(id => state[name]?.[id]).filter(value => value);
-        const desks = Collections.fromDaemonState(state);
         accept({
             type: "snapshot",
             windows: ordered("windows", "windowOrder"),
@@ -132,8 +130,8 @@ Singleton {
             focusedMonitor: state.outputs?.[state.focus?.outputId],
             overviewOpen: state.overviewOpen,
             capabilities: state.capabilities,
-            collections: desks.rows,
-            activeCollection: desks.activeId,
+            collections: state.collections || [],
+            activeCollection: state.activeCollection || "",
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
             edgeTriggersActive: source.edgeTriggersActive === true,
@@ -269,7 +267,9 @@ Singleton {
         clients = ordered;
         activeWindowId = value.activeWindow?.windowId || "";
         overviewOpen = value.overviewOpen === true;
-        Collections.acceptSnapshot(root, value);
+        collectionsSupported = value.capabilities?.workspaceCollections === true;
+        collections = collectionsSupported && Array.isArray(value.collections) ? value.collections : [];
+        activeCollectionId = collectionsSupported && typeof value.activeCollection === "string" ? value.activeCollection : "";
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
         edgeTriggersActive = value.edgeTriggersActive === true;

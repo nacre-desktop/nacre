@@ -121,9 +121,6 @@ Item {
             shutil.copy2(
                 ROOT / "tests/header-qml/tst_header.qml", target / "tst_header.qml"
             )
-            shutil.copy2(
-                SHELL / "services/compositor/collections.js", target / "collections.js"
-            )
             install_i18n(fixtures)
             for scale in ("1", "1.5"):
                 result = run_qml(

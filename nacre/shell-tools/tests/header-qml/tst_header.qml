@@ -1,7 +1,6 @@
 import QtQuick
 import QtTest
 import "fixtures"
-import "collections.js" as CollectionProjection
 
 TestCase {
     id: test
@@ -33,18 +32,6 @@ TestCase {
                     height: 1200
                 })
         }
-    }
-    function acceptFakeDaemonSnapshot(state) {
-        const daemon = CollectionProjection.fromDaemonState(state);
-        const adapter = {collectionsSupported: false, collections: [], activeCollectionId: ""};
-        CollectionProjection.acceptSnapshot(adapter, {
-            capabilities: state.capabilities,
-            collections: daemon.rows,
-            activeCollection: daemon.activeId
-        });
-        NacreCompositor.capabilities = {workspaceCollections: adapter.collectionsSupported};
-        NacreCompositor.collections = adapter.collections;
-        NacreCompositor.activeCollectionId = adapter.activeCollectionId;
     }
     Component {
         id: dashboardFill
@@ -100,46 +87,38 @@ TestCase {
             animations: true
         };
     }
-    function test_fake_compositor_ipc_snapshot_projects_visible_collection_badge() {
-        const state = {
-            backend: "niri",
-            capabilities: {workspaceCollections: true},
-            activeCollection: "niri-collection:28",
-            collections: [
+    function test_collection_badge_visibility_tracks_capability_and_rows() {
+        const rows = [
                 {id: "niri-collection:17", index: 1, name: "home", output: "eDP-1", active: false},
                 {id: "niri-collection:28", index: 2, name: "studio", output: "test", active: true},
                 {id: "niri-collection:39", index: 3, name: null, output: null, active: false}
-            ]
-        };
-        acceptFakeDaemonSnapshot({...state, capabilities: {workspaceCollections: false}});
+            ];
+        NacreCompositor.capabilities = {workspaceCollections: false};
+        NacreCompositor.collections = [];
         const view = createTemporaryObject(row, test);
         const badge = findChild(view, "collectionDeskBadge");
         verify(!!badge && !badge.visible, "capability-pending state remains hidden");
-        acceptFakeDaemonSnapshot(state);
+        NacreCompositor.capabilities = {workspaceCollections: true};
+        NacreCompositor.collections = rows;
+        NacreCompositor.activeCollectionId = "niri-collection:28";
         verify(badge.visible, "late advertised capability reveals live rows");
         compare(view.deskBadgeText, "2/3");
         compare(view.deskLabel, "studio");
-        acceptFakeDaemonSnapshot({...state, collections: state.collections.map(row => row.id === "niri-collection:28" ? {...row, name: "music"} : row)});
+        NacreCompositor.collections = rows.map(row => row.id === "niri-collection:28" ? {...row, name: "music"} : row);
         compare(view.deskLabel, "music");
-        acceptFakeDaemonSnapshot({...state, collections: [state.collections[1]]});
+        NacreCompositor.collections = [rows[1]];
         verify(!findChild(view, "collectionDeskBadge").visible, "one desk hides the indicator");
-        acceptFakeDaemonSnapshot(state);
+        NacreCompositor.collections = rows;
         verify(findChild(view, "collectionDeskBadge").visible, "fresh snapshot after reconnect restores the indicator");
-        const stockState = {...state, capabilities: {workspaceCollections: false}, collections: []};
-        acceptFakeDaemonSnapshot(stockState);
+        NacreCompositor.capabilities = {workspaceCollections: false};
         verify(!findChild(view, "collectionDeskBadge").visible);
     }
     function test_collection_menu_switch_create_rename_calls_are_output_scoped() {
-        const projection = CollectionProjection.fromDaemonState({
-            backend: "niri",
-            capabilities: {workspaceCollections: true},
-            collections: [
-                {id: "niri-collection:17", index: 1, name: "home", output: "test"},
-                {id: "niri-collection:28", index: 2, name: "studio", output: "DP-1"}
-            ]
-        });
         NacreCompositor.capabilities = {workspaceCollections: true};
-        NacreCompositor.collections = projection.rows;
+        NacreCompositor.collections = [
+            {id: "niri-collection:17", index: 1, name: "home", output: "test"},
+            {id: "niri-collection:28", index: 2, name: "studio", output: "DP-1"}
+        ];
         const view = createTemporaryObject(row, test);
         verify(view.collectionAction({operation: "activate", collection: "niri-collection:28"}));
         compare(NacreDaemon.calls[0].method, "collection.action");

@@ -43,14 +43,33 @@ class NiriQmlTests(unittest.TestCase):
             (fixtures / "IpcHandler.qml").write_text(
                 'import QtQuick\nQtObject {property string target:""}'
             )
-            (fixtures / "NacreCompositor.qml").write_text(
-                "pragma Singleton\nimport QtQuick\nQtObject {property var capabilities:({perOutputWorkspaces:true});property var windows:[];property int activeWsId:1}"
-            )
+            (fixtures / "NacreCompositor.qml").write_text('''pragma Singleton
+import QtQuick
+import "../production/services/compositor" as Niri
+QtObject {
+ id:root
+ property var capabilities:({perOutputWorkspaces:true,workspaceCollections:false})
+ property var windows:[]
+ property int activeWsId:1
+ property var workspaces:({values:[]})
+ property var monitors:({values:[]})
+ property var focusedMonitor:({name:"DP-1"})
+ readonly property var collections:Niri.NiriBackend.collections
+ readonly property string activeCollectionId:Niri.NiriBackend.activeCollectionId
+ Connections {target:Niri.NiriBackend;function onCollectionsSupportedChanged(){root.capabilities=Object.assign({},root.capabilities,{workspaceCollections:Niri.NiriBackend.collectionsSupported})}}
+}''')
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
             providers = {
+                "NacreDaemon": '''id:root;property bool enabled:false;property bool connected:false;property string boot:"fixture-boot";property var topics:({})
+Component{id:topicFactory;QtObject{property string name:"";property var data:({available:false});property bool fresh:false;property int users:0}}
+function topic(name){if(!topics[name])topics[name]=topicFactory.createObject(root,{name:name});return topics[name]}
+function subscribe(name){topic(name).users++}function unsubscribe(name){topic(name).users=Math.max(0,topic(name).users-1)}
+function call(method,params,callback){if(method==="niri.source")Qt.callLater(()=>callback({connection_id:"fixture-connection"},null));return 1}''',
                 "NacrePanelState": 'property string settingsPage:"appearance";property var screens:({});function closeTransient(view){}function getForActive(){return null}',
-                "NacreColours": "property bool light:false;property var palette:({})",
+                "NacreColours": 'property bool light:false;property bool publishing:false;property var palette:({m3surface:"#202124",m3surfaceContainer:"#292a2d",m3surfaceContainerHigh:"#343539",m3surfaceContainerHighest:"#414247",m3primary:"#8ab4f8",m3secondary:"#c58af9",m3tertiary:"#f28b82",m3onSurface:"#f1f3f4",m3onSurfaceVariant:"#bdc1c6",m3outline:"#8a8d91",m3outlineVariant:"#5f6368",m3frame:"#202124"})',
+                "DesktopSettings": 'property var data:({animations:true,workspaceWindowHints:true,interfaceFont:"Arial",monoFont:"monospace"})',
+                "NacreBar": "property int workspaceCount:6;property var workspaceIcons:[]",
                 "NacreTime": "property int hours:12",
                 "NacreWallpapers": 'property string current:"";property string actualCurrent:"";property string pendingPoster:"";property bool displayDynamic:false;property bool displayAnimated:false;property string displayPath:"";property var appearancePreferences:({});property var preferences:({});function refresh(){}',
                 "NacrePresentation": 'property int revision:0;property var active:({poster:"",mode:"dark"});function canonicalPoster(value){return value}function activate(path){return true}',
@@ -78,6 +97,10 @@ class NiriQmlTests(unittest.TestCase):
                 ROOT.parent / "shell/modules/background/NacreWallpaperScene.qml",
                 target / "WallpaperCoverage.qml",
             )
+            stage_qml(
+                ROOT.parent / "shell/modules/topbar/NacreWorkspaceRow.qml",
+                target / "NacreWorkspaceRow.qml",
+            )
             stage_qml(BACKENDS / "NiriBackend.qml", target / "NiriBackend.qml")
             install_i18n(fixtures)
             for name in ("NiriWindow.qml", "NiriShortcut.qml", "session.js"):
@@ -93,12 +116,42 @@ import "snapshots.js" as Snapshots
 import "fixtures"
 Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
+ Component {id: deskRow; NacreWorkspaceRow {outputName:"DP-1";width:420}}
  TestCase {
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
   function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend=null}
+  function test_daemon_snapshot_events_reach_visible_topbar_badge(){
+   const stateTopic=NacreDaemon.topic("compositor"),eventTopic=NacreDaemon.topic("compositor.events")
+   const source={available:true,connectionId:"fixture-connection",edgeTriggersActive:false}
+   const rows=[
+    {id:"niri-collection:17",index:1,name:"home",output:"eDP-1",active:false},
+    {id:"niri-collection:28",index:2,name:"studio",output:"DP-1",active:true},
+    {id:"niri-collection:39",index:3,name:null,output:null,active:false}
+   ]
+   function state(collections,capability=true){return {available:true,backend:"niri",capabilities:{workspaceCollections:capability,perOutputWorkspaces:true},outputs:{"DP-1":{name:"DP-1",focused:true}},outputOrder:["DP-1"],workspaces:{},workspaceOrder:[],windows:{},windowOrder:[],focus:{outputId:"DP-1",workspaceId:""},collections:collections,activeCollection:"niri-collection:28"}}
+   stateTopic.data=state(rows,false);stateTopic.fresh=true;eventTopic.data=source;eventTopic.fresh=true
+   NacreDaemon.connected=true;NacreDaemon.enabled=true;backend.daemonRefresh()
+   tryVerify(()=>backend.connected&&backend.collections.length===0)
+   const view=deskRow.createObject(test);verify(view)
+   verify(!findChild(view,"collectionDeskBadge").visible,"badge waits for advertised collection capability")
+   stateTopic.data=state(rows,true);backend.daemonRefresh()
+   tryVerify(()=>backend.collections.length===3)
+   tryVerify(()=>NacreCompositor.capabilities.workspaceCollections===true)
+   verify(findChild(view,"collectionDeskBadge").visible)
+   compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
+   const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
+   stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="music")
+   const single=[renamed[1]]
+   stateTopic.data=state(single,true);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
+   NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0)
+   NacreDaemon.boot="fixture-reconnected";NacreDaemon.connected=true;stateTopic.data=state(rows,true);backend.daemonRefresh()
+   tryVerify(()=>backend.collections.length===3&&findChild(view,"collectionDeskBadge").visible)
+   stateTopic.data=state([],false);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
+   view.destroy();NacreDaemon.enabled=false
+  }
   function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
    const active=backend.activeClient
    const next=JSON.parse(JSON.stringify(Snapshots.initial))
