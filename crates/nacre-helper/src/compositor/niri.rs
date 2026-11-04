@@ -186,14 +186,17 @@ impl Backend {
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")
             .is_none_or(|value| value != "0");
-        let collections =
-            niri_transport::nacre_capabilities(Path::new(self.session_id())).workspace_collections;
-        let socket = if collections {
+        let native_capabilities = niri_transport::nacre_capabilities(Path::new(self.session_id()));
+        let socket = if native_capabilities.workspace_collections {
             niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
         } else {
             niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?
         };
-        niri_events::Events::new(socket, niri_transport::Connection::new(self.session_id()))
+        niri_events::Events::new_with_capabilities(
+            socket,
+            niri_transport::Connection::new(self.session_id()),
+            native_capabilities,
+        )
     }
     pub fn edge_events(&self) -> Result<()> {
         let path = Path::new(self.session_id());

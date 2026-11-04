@@ -5,7 +5,9 @@ IPC actions, explicit hidden-window restore actions, force-close for the owning
 Wayland client, and pin state/actions. Nacre queries `NacreCapabilities` and only
 advertises or dispatches fork additions when the corresponding live feature is
 enabled. Missing fields from older forks default off. Stock Niri retains its
-existing configuration and helper paths.
+existing configuration and helper paths. Standalone event snapshots reuse the
+capability reply fetched for stream selection and refresh it on `ConfigLoaded`;
+they do not poll capabilities on a timer.
 
 Nacre's generated `nacre-niri.kdl` owns the fork-only force-close and restore
 bindings. The stock `config.kdl` contains no fork action names. Hide, last-hidden

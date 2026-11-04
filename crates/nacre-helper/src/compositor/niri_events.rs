@@ -237,10 +237,16 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
 
 pub trait Outputs {
     fn outputs(&mut self) -> Result<Value>;
+    fn nacre_capabilities(&mut self) -> niri_transport::NacreCapabilities {
+        niri_transport::NacreCapabilities::default()
+    }
 }
 impl Outputs for Connection {
     fn outputs(&mut self) -> Result<Value> {
         self.response("Outputs", Duration::from_secs(10), MAX_BYTES)
+    }
+    fn nacre_capabilities(&mut self) -> niri_transport::NacreCapabilities {
+        self.nacre_capabilities(Duration::from_millis(500))
     }
 }
 pub struct Events<T: Outputs> {
@@ -248,6 +254,7 @@ pub struct Events<T: Outputs> {
     daemon: Option<crate::daemon::niri_events::Source>,
     pub state: State,
     outputs: T,
+    native_capabilities: niri_transport::NacreCapabilities,
     pending: VecDeque<Value>,
     failed: bool,
 }
@@ -266,6 +273,14 @@ impl<T: Outputs> Events<T> {
             .map_err(io_error)
     }
     pub fn new(socket: EventSocket, mut outputs: T) -> Result<Self> {
+        let native_capabilities = outputs.nacre_capabilities();
+        Self::new_with_capabilities(socket, outputs, native_capabilities)
+    }
+    pub fn new_with_capabilities(
+        socket: EventSocket,
+        mut outputs: T,
+        native_capabilities: niri_transport::NacreCapabilities,
+    ) -> Result<Self> {
         let initial = outputs
             .outputs()?
             .as_object()
@@ -276,6 +291,7 @@ impl<T: Outputs> Events<T> {
             daemon: None,
             state: State::new(initial),
             outputs,
+            native_capabilities,
             pending: VecDeque::new(),
             failed: false,
         })
@@ -286,6 +302,7 @@ impl<T: Outputs> Events<T> {
             daemon: Some(daemon),
             state: State::new(serde_json::Map::new()),
             outputs,
+            native_capabilities: niri_transport::NacreCapabilities::default(),
             pending: VecDeque::new(),
             failed: false,
         }
@@ -331,12 +348,27 @@ impl<T: Outputs> Events<T> {
                 outputs_changed = outputs != self.state.outputs;
                 self.state.outputs = outputs;
             }
+            if event.get("ConfigLoaded").is_some() {
+                self.native_capabilities = self.outputs.nacre_capabilities();
+                if !self.native_capabilities.workspace_collections {
+                    self.state.collections.clear();
+                    self.state.active_collection = None;
+                    self.state.collections_supported = false;
+                }
+            }
             if self.state.ready.len() == 2
                 && self.state.ready.contains("window")
                 && self.state.ready.contains("workspace")
                 && normalized["type"] != "other"
             {
-                self.pending.push_back(self.state.snapshot()?);
+                let mut snapshot = self.state.snapshot()?;
+                let collections = snapshot["capabilities"]["workspaceCollections"].clone();
+                snapshot["capabilities"] =
+                    super::niri::capabilities_with_native(self.native_capabilities);
+                if !collections.is_null() {
+                    snapshot["capabilities"]["workspaceCollections"] = collections;
+                }
+                self.pending.push_back(snapshot);
                 self.pending.push_back(normalized.clone());
                 if let Some(changes) = normalized.get("changes").and_then(Value::as_array) {
                     for kind in changes.iter().skip(1) {
@@ -463,6 +495,68 @@ mod tests {
             reference["cases"].as_array().ok_or("Missing cases")?.len(),
             11
         );
+        Ok(())
+    }
+    #[test]
+    fn standalone_event_snapshots_project_live_native_capabilities() -> crate::Result<()> {
+        let (client, mut server) = UnixStream::pair()?;
+        server.write_all(
+            (crate::json::encode(&json!({"CollectionsChanged":{"collections":[]}}))? + "\n")
+                .as_bytes(),
+        )?;
+        server.write_all(
+            (crate::json::encode(&json!({"WorkspacesChanged":{"workspaces":[
+                {"id":1,"idx":1,"name":"one","output":"DP-1","is_active":true,"is_focused":true}
+            ]}}))?
+                + "\n")
+                .as_bytes(),
+        )?;
+        server.write_all(
+            (crate::json::encode(&json!({"WindowsChanged":{"windows":[
+                {"id":2,"workspace_id":1,"layout":null,"is_floating":false,"is_focused":true,"is_hidden":false,"is_pinned":true}
+            ]}}))? + "\n")
+                .as_bytes(),
+        )?;
+        server.write_all(
+            (crate::json::encode(&json!({"ConfigLoaded":{"failed":false}}))? + "\n").as_bytes(),
+        )?;
+        let outputs = FixtureOutputs {
+            values: vec![
+                json!({"DP-1":{"logical":{"x":0,"y":0,"width":100,"height":100},"focused":true}}),
+            ],
+            queries: vec![],
+        };
+        let capabilities = niri_transport::NacreCapabilities {
+            workspace_collections: true,
+            scratchpad: true,
+            window_pinning: true,
+            force_close: true,
+            window_restore: true,
+            ..Default::default()
+        };
+        let mut events =
+            Events::new_with_capabilities(EventSocket::from_stream(client), outputs, capabilities)?;
+        let snapshot = events.next_value()?;
+        assert_eq!(snapshot["type"], "snapshot");
+        assert_eq!(snapshot["capabilities"]["pinWindow"], true);
+        assert_eq!(snapshot["capabilities"]["windowHide"], true);
+        assert_eq!(snapshot["capabilities"]["windowForceKill"], false);
+        assert_eq!(snapshot["capabilities"]["windowForceCloseWayland"], true);
+        assert_eq!(snapshot["capabilities"]["windowRestore"], true);
+        assert_eq!(snapshot["capabilities"]["workspaceCollections"], true);
+        let _window_event = events.next_value()?;
+        let after_reload = events.next_value()?;
+        assert_eq!(after_reload["type"], "snapshot");
+        for key in [
+            "windowForceCloseWayland",
+            "windowRestore",
+            "monitorWorkspaceActions",
+            "workspaceCollections",
+        ] {
+            assert!(after_reload["capabilities"].get(key).is_none());
+        }
+        assert!(after_reload.get("collections").is_none());
+        drop(server);
         Ok(())
     }
     #[test]

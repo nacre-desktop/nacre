@@ -351,8 +351,11 @@ fn flush_niri(
     let mut snapshot = state.snapshot()?;
     let collections = snapshot["capabilities"]["workspaceCollections"].clone();
     snapshot["capabilities"] = crate::compositor::niri::capabilities_with_native(metadata.native);
-    if !collections.is_null() {
+    if metadata.native.workspace_collections && !collections.is_null() {
         snapshot["capabilities"]["workspaceCollections"] = collections;
+    } else {
+        snapshot["collections"] = json!([]);
+        snapshot["activeCollection"] = Value::Null;
     }
     snapshot["connectionId"] = json!(metadata.connection);
     if let Some(ledger) = crate::paths::Paths::environment()
@@ -476,6 +479,11 @@ async fn niri(
                                 Ok(backend.actions.transport.nacre_capabilities(Duration::from_millis(500)))
                             }).await?;
                             native_capabilities=capabilities;
+                            if !capabilities.workspace_collections {
+                                state.collections.clear();
+                                state.active_collection=None;
+                                state.collections_supported=false;
+                            }
                             proportional_x11_widths=capabilities.proportional_x11_widths;
                             let enabled=capabilities.edge_triggers;
                     let next=if enabled {
