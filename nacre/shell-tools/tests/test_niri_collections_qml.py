@@ -116,6 +116,10 @@ import QtTest
 import Quickshell
 import qs.services as Services
 Item {
+ id:root
+ width:960
+ height:720
+ visible:true
  TestCase {
   id:test
   name:"NiriCollectionBadge"
@@ -133,7 +137,7 @@ Item {
    tryVerify(()=>backend.connected&&backend.collections.length===0)
    const component=Qt.createComponent("production/modules/topbar/NacreWorkspaceRow.qml")
    tryVerify(()=>component.status===Component.Ready)
-   const view=component.createObject(test,{outputName:"DP-1",width:420,visible:true});verify(view)
+   const view=component.createObject(root,{outputName:"DP-1",width:420,visible:true});verify(view)
    verify(!findChild(view,"collectionDeskBadge").visible)
    stateTopic.data=state(rows,true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===3)
    Services.NacreCompositor.syncCollectionState(backend)
