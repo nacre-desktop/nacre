@@ -83,12 +83,6 @@ function call(method,params,callback){if(method==="niri.source")Qt.callLater(()=
                         "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
                     )
                     manifest.write(f"singleton {name} 1.0 {name}.qml\n")
-            compositor = fixtures / "NacreCompositor.qml"
-            compositor.write_text(
-                compositor.read_text().replace(
-                    "QtObject {", "QtObject {property var monitors:({values:[]});"
-                )
-            )
             for app in ("NacreSettingsApp", "NacreColorsApp", "NacreWelcomeApp"):
                 stage_qml(
                     ROOT.parent / "shell/services" / (app + ".qml"),

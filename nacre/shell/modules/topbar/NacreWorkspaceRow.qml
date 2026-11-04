@@ -458,7 +458,6 @@ Item {
                     objectName: "collectionDeskSwitch"
                     required property var modelData
                     width: 228
-                    height: 32
                     height: Math.max(32, implicitHeight)
                     text: root.deskTitle(modelData) + (modelData.output ? " · " + modelData.output : " · " + NacreI18n.tr("ui.collection.detached", "detached"))
                     selected: modelData.id === root.deskForOutput?.id
