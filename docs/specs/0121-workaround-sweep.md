@@ -38,3 +38,13 @@ Validation includes capability parsing for old, disabled, and enabled responses;
 native/stock snapshot and dispatch behavior; fork-overlay versus stock config
 checks; group action lowering; swap/rotation eligibility, inverse recovery, and
 fallback paths; and the repository's Arch desktop CI replica on dev-1.
+
+Full desktop CI was restarted on dev-1 at
+`ebb640f3c3fc0b0cbcd96d21703797d6072b825c`. Setup stages exited 0 and
+formatting/Clippy completed successfully; the combined helper stage was still
+building examples when SSH and Tailscale reachability to dev-1 failed. The
+workspace tests, paired fork/stock config validator and remaining desktop
+stages have no verified final exit yet. Full CI remains pending; the job runs in
+the task's durable tmux session and records per-stage exit codes. The preceding
+`2c9b45d78` run exited 101 for a JSON-map type error in the new hidden/pinned
+state test fixture; `ebb640f3c` corrects that fixture.
