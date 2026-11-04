@@ -10281,28 +10281,12 @@ pub(crate) fn overview_title_values(
 ) -> BTreeMap<String, bead::core::Value> {
     let available = topic["available"] != false;
     let overview_open = available && topic["overviewOpen"] == true;
-    let windows = available.then(|| topic["windows"].as_object()).flatten();
-    let hovered_id = topic["overviewHoveredWindowId"]
+    let windows = topic["windows"].as_object().filter(|_| overview_open);
+    let hovered = topic["overviewHoveredWindowId"]
         .as_str()
-        .map(str::to_owned)
-        .or_else(|| {
-            topic["overviewHoveredWindowId"]
-                .as_u64()
-                .map(|id| id.to_string())
-        });
-    let hovered = overview_open
-        .then_some(hovered_id.as_deref())
-        .flatten()
         .and_then(|id| windows.and_then(|windows| windows.get(id)));
-    let focused = overview_open
-        .then(|| {
-            windows
-                .into_iter()
-                .flatten()
-                .find(|(_, window)| window["focused"] == true)
-                .map(|(_, window)| window)
-        })
-        .flatten();
+    let focused =
+        windows.and_then(|windows| windows.values().find(|window| window["focused"] == true));
     let chosen = hovered.or(focused);
     let app_id = chosen
         .and_then(|window| window["appId"].as_str())
