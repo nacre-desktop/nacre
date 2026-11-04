@@ -45,7 +45,6 @@ class NiriQmlTests(unittest.TestCase):
             )
             (fixtures / "NacreCompositor.qml").write_text('''pragma Singleton
 import QtQuick
-import "../production/services/compositor" as Niri
 QtObject {
  id:root
  property var capabilities:({perOutputWorkspaces:true,workspaceCollections:false})
@@ -54,9 +53,9 @@ QtObject {
  property var workspaces:({values:[]})
  property var monitors:({values:[]})
  property var focusedMonitor:({name:"DP-1"})
- readonly property var collections:Niri.NiriBackend.collections
- readonly property string activeCollectionId:Niri.NiriBackend.activeCollectionId
- property Connections backendConnection:Connections {target:Niri.NiriBackend;function onCollectionsSupportedChanged(){root.capabilities=Object.assign({},root.capabilities,{workspaceCollections:Niri.NiriBackend.collectionsSupported})}}
+ property var collections:[]
+ property string activeCollectionId:""
+ function syncCollectionState(backend){collections=backend.collections;activeCollectionId=backend.activeCollectionId;capabilities=Object.assign({},capabilities,{workspaceCollections:backend.collectionsSupported})}
 }''')
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
@@ -113,6 +112,7 @@ Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
  Component {id: deskRow; NacreWorkspaceRow {outputName:"DP-1";width:420}}
  TestCase {
+  id:test
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
@@ -135,19 +135,20 @@ Item {
    verify(!findChild(view,"collectionDeskBadge").visible,"badge waits for advertised collection capability")
    stateTopic.data=state(rows,true);backend.daemonRefresh()
    tryVerify(()=>backend.collections.length===3)
+   NacreCompositor.syncCollectionState(backend)
    tryVerify(()=>NacreCompositor.capabilities.workspaceCollections===true)
    verify(findChild(view,"collectionDeskBadge").visible)
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
-   stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="music")
+   stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>backend.collections[1].name==="music");NacreCompositor.syncCollectionState(backend);tryVerify(()=>view.deskLabel==="music")
    const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.id==="niri-collection:28"?"eDP-1":row.output}))
-   stateTopic.data=state(focused,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
+   stateTopic.data=state(focused,true);backend.daemonRefresh();tryVerify(()=>backend.collections[2].output==="DP-1");NacreCompositor.syncCollectionState(backend);tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
    const single=[renamed[1]]
-   stateTopic.data=state(single,true);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
-   NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0)
+   stateTopic.data=state(single,true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===1);NacreCompositor.syncCollectionState(backend);tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
+   NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0);NacreCompositor.syncCollectionState(backend)
    NacreDaemon.boot="fixture-reconnected";NacreDaemon.connected=true;stateTopic.data=state(rows,true);backend.daemonRefresh()
-   tryVerify(()=>backend.collections.length===3&&findChild(view,"collectionDeskBadge").visible)
-   stateTopic.data=state([],false);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
+   tryVerify(()=>backend.collections.length===3);NacreCompositor.syncCollectionState(backend);tryVerify(()=>findChild(view,"collectionDeskBadge").visible)
+   stateTopic.data=state([],false);backend.daemonRefresh();tryVerify(()=>backend.collections.length===0);NacreCompositor.syncCollectionState(backend);tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
    view.destroy();NacreDaemon.enabled=false
   }
   function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
