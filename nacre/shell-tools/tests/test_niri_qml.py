@@ -61,7 +61,7 @@ QtObject {
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
             providers = {
-                "NacreDaemon": '''id:root;property bool enabled:false;property bool connected:false;property string boot:"fixture-boot";property var topics:({})
+                "NacreDaemon": '''id:root;property bool enabled:false;property bool connected:false;property string boot:"fixture-boot";property var topics:({});signal event(string topic,string name,var data,double sequence);signal lost(string topic);signal newBoot(string id)
 Component{id:topicFactory;QtObject{property string name:"";property var data:({available:false});property bool fresh:false;property int users:0}}
 function topic(name){if(!topics[name])topics[name]=topicFactory.createObject(root,{name:name});return topics[name]}
 function subscribe(name){topic(name).users++}function unsubscribe(name){topic(name).users=Math.max(0,topic(name).users-1)}
@@ -124,6 +124,7 @@ Item {
   function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend=null}
   function test_daemon_snapshot_events_reach_visible_topbar_badge(){
+   NacreCompositor.capabilities={perOutputWorkspaces:true,workspaceCollections:false}
    const stateTopic=NacreDaemon.topic("compositor"),eventTopic=NacreDaemon.topic("compositor.events")
    const source={available:true,connectionId:"fixture-connection",edgeTriggersActive:false}
    const rows=[
@@ -131,7 +132,7 @@ Item {
     {id:"niri-collection:28",index:2,name:"studio",output:"DP-1",active:true},
     {id:"niri-collection:39",index:3,name:null,output:null,active:false}
    ]
-   function state(collections,capability=true){return {available:true,backend:"niri",capabilities:{workspaceCollections:capability,perOutputWorkspaces:true},outputs:{"DP-1":{name:"DP-1",focused:true}},outputOrder:["DP-1"],workspaces:{},workspaceOrder:[],windows:{},windowOrder:[],focus:{outputId:"DP-1",workspaceId:""},collections:collections,activeCollection:"niri-collection:28"}}
+   function state(collections,capability=true){return {available:true,backend:"niri",capabilities:{workspaceCollections:capability,perOutputWorkspaces:true},outputs:{"DP-1":{name:"DP-1",focused:true}},outputOrder:["DP-1"],workspaces:{},workspaceOrder:[],windows:{},windowOrder:[],focus:{outputId:"DP-1",workspaceId:""},collections:collections,activeCollection:collections.find(row=>row.active)?.id||""}}
    stateTopic.data=state(rows,false);stateTopic.fresh=true;eventTopic.data=source;eventTopic.fresh=true
    NacreDaemon.connected=true;NacreDaemon.enabled=true;backend.daemonRefresh()
    tryVerify(()=>backend.connected&&backend.collections.length===0)
@@ -144,6 +145,8 @@ Item {
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
    stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="music")
+   const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.output}))
+   stateTopic.data=state(focused,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
    const single=[renamed[1]]
    stateTopic.data=state(single,true);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
    NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0)
