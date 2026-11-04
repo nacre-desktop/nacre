@@ -9,7 +9,12 @@ Window {
     property QtObject anchor: QtObject {
         property var item: null
         property var window: null
-        property rect rect: Qt.rect(0, 0, 1, 1)
+        property QtObject rect: QtObject {
+            property real x: 0
+            property real y: 0
+            property real width: 1
+            property real height: 1
+        }
         property int edges: 0
         property int gravity: 0
         function updateAnchor() {}
