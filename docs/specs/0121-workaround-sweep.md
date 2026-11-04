@@ -34,17 +34,20 @@ false because X11 clients are not supported and sibling windows on one Wayland
 connection may close together. Unsupported rows are kept and annotated with the
 fork capability required, preserving the stock-Niri gap report.
 
-Validation includes capability parsing for old, disabled, and enabled responses;
-native/stock snapshot and dispatch behavior; fork-overlay versus stock config
-checks; group action lowering; swap/rotation eligibility, inverse recovery, and
-fallback paths; and the repository's Arch desktop CI replica on dev-1.
+Regression coverage is supplied for capability parsing of old, disabled, and
+enabled responses; native/stock snapshot and dispatch behavior; fork-overlay
+versus stock config; group action lowering; swap/rotation eligibility, inverse
+recovery, and fallback paths. Full execution is deferred to the owner's desktop
+PC under the revised validation plan. Earlier dev-1 setup and Clippy checks
+succeeded at `ebb640f3c3fc0b0cbcd96d21703797d6072b825c`, but a host reboot
+interrupted the combined helper stage; no complete Nacre CI pass is claimed.
+The preceding `2c9b45d78` run exited 101 for a JSON-map type error in the new
+hidden/pinned state test fixture, corrected by `ebb640f3c`.
 
-Full desktop CI was restarted on dev-1 at
-`ebb640f3c3fc0b0cbcd96d21703797d6072b825c`. Setup stages exited 0 and
-formatting/Clippy completed successfully; the combined helper stage was still
-building examples when SSH and Tailscale reachability to dev-1 failed. The
-workspace tests, paired fork/stock config validator and remaining desktop
-stages have no verified final exit yet. Full CI remains pending; the job runs in
-the task's durable tmux session and records per-stage exit codes. The preceding
-`2c9b45d78` run exited 101 for a JSON-map type error in the new hidden/pinned
-state test fixture; `ebb640f3c` corrects that fixture.
+Desktop acceptance must run the complete `.github/workflows/check.yml` desktop
+job in a prepared disposable Arch container, plus the paired config test with
+`NACRE_NIRI_BINARY` pointing at the new fork release binary. This covers both
+compositor paths, disabled features, helper parity, product proofs, source/UI
+checks, galleries and daemon memory. The task's ignored `.lead/` contains a
+runner and the cross-repository report with exact commands. No further dev-1 or
+production use is authorized in this phase.

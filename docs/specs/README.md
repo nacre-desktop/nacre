@@ -10,7 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| 25 | [N0121 final Niri workaround sweep](0121-workaround-sweep.md) | Implemented; full dev-1 desktop CI replica pending | Stock Niri keeps helper fallbacks; fork capability gates use native group, hide/restore, force-close, pin, and workspace swap/set-rotation operations where semantics match. |
+| 25 | [N0121 final Niri workaround sweep](0121-workaround-sweep.md) | Implemented; desktop validation deferred by owner | Stock Niri keeps helper fallbacks; fork capability gates use native group, hide/restore, force-close, pin, and workspace swap/set-rotation operations where semantics match. |
 | 15 | [N0115 native Nacre niri widths and edge triggers](0115-nacre-niri-native-widths-edge-triggers.md) | Implemented; full dev-1 desktop CI passed on task branch | Native X11 width capability gates the observer; edge event streams replace invisible surfaces only after acknowledgement. Stock niri keeps the helper and surface paths. |
 | 19 | [N0107 Nacre niri-native capability awareness](0107-nacre-niri-aware.md) | Complete; dev-1 desktop checks passed, task branch only | Capability query gates only equivalent helpers; stock niri falls back to the current behavior. |
 | B0214 | Bead framework split step 3 | Implemented on task branch; lead acceptance pending | Review the CI/import report and preview recipe in `.lead/`; Bead removal remains step 4. No live switch. |
