@@ -132,6 +132,9 @@ Item {
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertNotIn("QWARN", result.stdout + result.stderr)
+                totals = [line for line in result.stdout.splitlines() if line.startswith("Totals:")]
+                self.assertTrue(totals, result.stdout + result.stderr)
+                print(f"QT_SCALE_FACTOR={scale} {totals[-1]}", flush=True)
                 capture_directory = os.environ.get("N0122_CAPTURE_DIR")
                 if capture_directory:
                     capture_directory = Path(capture_directory)
