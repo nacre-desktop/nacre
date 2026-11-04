@@ -68,7 +68,7 @@ pub fn native_id(value: &str, kind: &str) -> Result<u64> {
         .map_err(|_| invalid("Invalid native ID range"))
 }
 pub fn capabilities() -> Value {
-    json!({"stableWorkspaceIndices":false,"globalWorkspaces":false,"perOutputWorkspaces":true,"scrollingLayout":true,"floatingPlacement":true,"pinWindow":false,"windowCapture":false,"nativeWindowScreenshot":true,"shapedBackgroundBlur":false,"cursorPosition":false,"nativePanelDrag":false,"windowHide":false,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":false,"pseudoTiling":false,"layoutSplit":false,"keymaps":false,"nonConsumingShortcuts":false,"bindingIntrospection":false,"fullscreenState":false,"shortcutRelease":false,"desktopOptions":["animations","blur","shadow","followMouse","naturalScroll","gapsIn","borderSize","rounding"],"monitorConfiguration":true,"monitorMirroring":false,"nightLightController":true})
+    json!({"stableWorkspaceIndices":false,"globalWorkspaces":false,"perOutputWorkspaces":true,"scrollingLayout":true,"floatingPlacement":true,"pinWindow":false,"windowCapture":false,"nativeWindowScreenshot":true,"shapedBackgroundBlur":false,"cursorPosition":false,"nativePanelDrag":false,"windowHide":false,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":false,"pseudoTiling":false,"layoutSplit":false,"keymaps":false,"nonConsumingShortcuts":false,"bindingIntrospection":false,"fullscreenState":false,"shortcutRelease":false,"edge_trigger_cues":false,"desktopOptions":["animations","blur","shadow","followMouse","naturalScroll","gapsIn","borderSize","rounding"],"monitorConfiguration":true,"monitorMirroring":false,"nightLightController":true})
 }
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]

@@ -13,7 +13,10 @@ use std::{
 };
 type Result<T> = std::result::Result<T, Error>;
 fn is_edge_event(value: &Value) -> bool {
-    value["type"] == "edge-triggered" || value["type"] == "edge-left"
+    matches!(
+        value["type"].as_str(),
+        Some("edge-approach" | "edge-hover" | "edge-triggered" | "edge-left")
+    )
 }
 fn failure(kind: &'static str, message: impl Into<String>) -> Error {
     Error {
@@ -166,14 +169,15 @@ impl Backend {
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")
             .is_none_or(|value| value != "0");
-        let collections =
-            niri_transport::nacre_capabilities(Path::new(self.session_id())).workspace_collections;
+        let capabilities = niri_transport::nacre_capabilities(Path::new(self.session_id()));
+        let collections = capabilities.workspace_collections;
         let socket = if collections {
             niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
         } else {
             niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?
         };
         niri_events::Events::new(socket, niri_transport::Connection::new(self.session_id()))
+            .map(|events| events.with_edge_trigger_cues(capabilities.edge_trigger_cues))
     }
     pub fn edge_events(&self) -> Result<()> {
         let path = Path::new(self.session_id());
@@ -210,7 +214,8 @@ impl Backend {
                 }
             }
         }
-        if !niri_transport::nacre_capabilities(path).edge_triggers {
+        let capabilities = niri_transport::nacre_capabilities(path);
+        if !capabilities.edge_triggers || !capabilities.edge_trigger_cues {
             println!("{{\"type\":\"edge-source\",\"active\":false}}");
             std::io::Write::flush(&mut std::io::stdout())
                 .map_err(|error| failure("OSError", error.to_string()))?;
@@ -286,6 +291,8 @@ mod tests {
     fn daemon_edge_lane_forwards_trigger_and_matching_exit_events() {
         assert!(is_edge_event(&json!({"type":"edge-triggered"})));
         assert!(is_edge_event(&json!({"type":"edge-left"})));
+        assert!(is_edge_event(&json!({"type":"edge-approach"})));
+        assert!(is_edge_event(&json!({"type":"edge-hover"})));
         assert!(!is_edge_event(&json!({"type":"windows-changed"})));
     }
     #[test]

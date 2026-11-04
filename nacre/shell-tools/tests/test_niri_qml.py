@@ -99,6 +99,13 @@ Item {
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
   function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend=null}
+  function test_native_edge_takeover_requires_cue_capability_and_stream_ack(){
+   const old=JSON.parse(JSON.stringify(Snapshots.initial));old.capabilities=Object.assign({},old.capabilities,{edge_trigger_cues:false});old.edgeTriggersActive=true;
+   verify(backend.accept(old));verify(!backend.edgeTriggerCuesSupported);verify(!backend.edgeTriggersActive);
+   const current=JSON.parse(JSON.stringify(Snapshots.initial));current.capabilities=Object.assign({},current.capabilities,{edge_trigger_cues:true});current.edgeTriggersActive=true;
+   verify(backend.accept(current));verify(backend.edgeTriggerCuesSupported);verify(backend.edgeTriggersActive);
+   current.edgeTriggersActive=false;verify(backend.accept(current));verify(!backend.edgeTriggersActive);
+  }
   function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
    const active=backend.activeClient
    const next=JSON.parse(JSON.stringify(Snapshots.initial))
