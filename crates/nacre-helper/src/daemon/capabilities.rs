@@ -159,6 +159,9 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
         ),
         ("input.touchpadSpeed".into(), niri),
     ]);
+    if capability("workspaceCollections") {
+        flags.insert("workspaceCollections".into(), true);
+    }
     // A compositor that lists no options (or none yet) offers all of them, as QML did.
     let options = compositor["capabilities"]["desktopOptions"].as_array();
     for key in DESKTOP_OPTIONS {

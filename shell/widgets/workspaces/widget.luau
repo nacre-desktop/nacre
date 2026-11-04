@@ -2,6 +2,7 @@
 local c=require("../context")
 local ui=c.ui
 local kit=c.kit
+local measure=require("bead.widgets.measure")
 local t=c.t
 local centered_text=c.centered_text
 local ws_on=c.ws_on
@@ -11,6 +12,23 @@ local pearl_accent=c.pearl_accent
 return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="pearls",styles={pearls={title="Workspaces",min_span=1,max_span=60,preferred_span=1,render=function(props,settings,data)
             local workspaces=ui.resolve_for_check(ui.bind("bead.workspaces")) or {}
+            local collections={}
+            local collection_current=""
+            if c.popouts then
+                collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
+                collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
+            end
+            local show_collections=#collections>1
+            local show_single_collection_menu=#collections==1 and c.popouts
+            local badge_collections={}
+            local current_collection_label="Collection"
+            for i,collection in ipairs(collections) do
+                local badge=table.clone(collection)
+                local full_label=collection.name or collection.label or tostring(collection.index or i)
+                if collection.id==collection_current then current_collection_label=ui.tr("bead.bar.collection-open",{desk=full_label}) end
+                badge.label=measure.ellipsize(full_label,76,"IBM Plex Sans",kit.tokens.text.body*4/3)
+                badge_collections[i]=badge
+            end
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -31,8 +49,12 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 cursor+=gs+width+2
             end
-            local natural_width=10+cursor-(#workspaces>0 and 2 or 0)
+            local collection_width=show_collections and 96 or show_single_collection_menu and 32 or 0
+            local natural_width=10+cursor-(#workspaces>0 and 2 or 0)+(collection_width>0 and collection_width+4 or 0)
             local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
+            local collection_control=show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=badge_collections,current=collection_current,width=92,height=28,switcher_label=current_collection_label,on_toggle=c.popouts and "collection.switcher.open" or nil}
+                or show_single_collection_menu and kit.IconButton{id="collection-menu",text="more_horiz",width=28,height=28,aria_label=current_collection_label,on_activate=ui.action("collection.switcher.open")}
+                or nil
             local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
             local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
             return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=2,radius=t.pill_radius,fill="surfaceContainer",clip_children=true,align="center",
@@ -128,5 +150,6 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
+            collection_control,
         }
     end}}}}}

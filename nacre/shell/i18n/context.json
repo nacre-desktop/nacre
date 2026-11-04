@@ -3020,6 +3020,8 @@
   "settings.registry.windows-workspaces.workspaces.workspaceCount.label": "Settings registry; page, row, section or action.",
   "settings.registry.windows-workspaces.workspaces.workspaceIcons.description": "Settings registry; page, row, section or action.",
   "settings.registry.windows-workspaces.workspaces.workspaceIcons.label": "Settings registry; page, row, section or action.",
+  "settings.registry.wallpaper.collection.collectionWallpapers.description": "Nacre Settings registry; explains saved wallpaper restore for each named desk.",
+  "settings.registry.wallpaper.collection.collectionWallpapers.label": "Nacre Settings registry; toggle for per-desk wallpaper profiles.",
   "settings.registry.windows-workspaces.workspaces.workspaceNames.description": "Settings registry; page, row, section or action.",
   "settings.registry.windows-workspaces.workspaces.workspaceNames.label": "Settings registry; page, row, section or action.",
   "settings.registry.windows.blur.unavailable": "Settings registry; page, row, section or action.",

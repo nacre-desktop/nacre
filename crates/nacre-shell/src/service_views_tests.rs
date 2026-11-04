@@ -1139,6 +1139,251 @@ fn workspace_icon_cells_share_one_bar_pill_at_both_scales() -> Result<()> {
 }
 
 #[test]
+fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
+    let groups = Value::list(vec![
+        serde_json::json!({"id":"niri-collection:17","label":"Very long personal research and writing desk","name":"Very long personal research and writing desk","index":1,"output":"DP-1","active":true}),
+        serde_json::json!({"id":"niri-collection:28","label":"2","index":2,"output":"DP-2","active":false}),
+        serde_json::json!({"id":"niri-collection:39","label":"studio","name":"studio","index":3,"output":"DP-2","active":false}),
+    ]);
+    let capture = std::env::var_os("N0117_CAPTURE_DIR").map(PathBuf::from);
+    let mut bar_models = super::initial_models()?;
+    bar_models.insert("bar.collections".into(), groups.clone());
+    bar_models.insert(
+        "bar.collection.current".into(),
+        Value::Text("niri-collection:17".into()),
+    );
+    bar_models.insert("bar.popouts".into(), Value::Bool(true));
+    bar_models.insert("bar.workspace.enabled".into(), Value::Bool(false));
+    bar_models.insert("widgets.preview".into(), Value::list(Vec::new()));
+    bar_models.insert(
+        "bead.workspaces".into(),
+        Value::list(vec![serde_json::json!({
+            "id":"niri-workspace:1","index":1,"label":"1","active":true,"icon_mode":false
+        })]),
+    );
+    let default_layout: serde_json::Value =
+        serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
+    bar_models.insert("widgets.layout".into(), Value::list(vec![default_layout]));
+    let mut single_models = bar_models.clone();
+    single_models.insert("bar.collections".into(), Value::list(vec![serde_json::json!({
+        "id":"niri-collection:17","label":"work","name":"work","index":1,"output":"DP-1","active":true
+    })]));
+    let mut bar = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        bar_models,
+        Config {
+            width: 1920,
+            height: 70,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut bar)?;
+    let bar_frame = bar.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        std::fs::create_dir_all(dir)?;
+        bar_frame.save(&dir.join("collections-bar.png"))?;
+    }
+    assert!(bar_frame.width > 0 && bar_frame.height > 0);
+    let bar_text: Vec<_> = bar
+        .scene()
+        .primitives
+        .iter()
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        matches!(bar.session.stores.get("bar.collections"), Some(Value::List(rows)) if rows.len() == 3),
+        "collection snapshot store missing: {:?}",
+        bar.session.stores.get("bar.collections")
+    );
+
+    let mut single = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        single_models,
+        Config {
+            width: 1920,
+            height: 70,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut single)?;
+    let single_frame = single.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        single_frame.save(&dir.join("collections-single-entry.png"))?;
+    }
+    assert!(
+        single
+            .session
+            .view_nodes()
+            .iter()
+            .any(|node| node.id.contains("collection-menu")
+                && node.action.as_deref() == Some("collection.switcher.open")),
+        "single-desk bar affordance must open the collection popout"
+    );
+
+    let mut menu_models = BTreeMap::from([
+        ("bar.collections".into(), groups.clone()),
+        (
+            "bar.collection.current".into(),
+            Value::Text("niri-collection:17".into()),
+        ),
+        ("bar.collection.height".into(), Value::Number(140.into())),
+        (
+            "bar.collection.wallpapers.enabled".into(),
+            Value::Bool(false),
+        ),
+        ("collection.operation".into(), Value::Text("rename".into())),
+        (
+            "collection.target".into(),
+            Value::Text("niri-collection:17".into()),
+        ),
+        (
+            "collection.draft".into(),
+            Value::Text("Very long personal research and writing desk".into()),
+        ),
+        ("collection.scroll".into(), Value::Number(100.into())),
+        ("panel.open".into(), Value::Bool(true)),
+        ("view.edge".into(), Value::Text("top".into())),
+    ]);
+    let mut initial = super::initial_models()?;
+    initial.append(&mut menu_models);
+    let mut menu = Harness::load(
+        &root(),
+        Path::new("popouts/collections.luau"),
+        &root().join("palette.json"),
+        initial,
+        Config {
+            width: 360,
+            height: 250,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut menu)?;
+    let menu_frame = menu.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        menu_frame.save(&dir.join("collections-rename-popout.png"))?;
+    }
+    let text: Vec<_> = menu
+        .scene()
+        .primitives
+        .iter()
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert!(
+        text.iter().any(|text| text.contains("Save"))
+            && text.iter().any(|text| text.contains("Cancel")),
+        "rename editor actions must render localized labels: {text:?}"
+    );
+    assert!(menu.scene().primitives.iter().any(|primitive| matches!(primitive,
+        bead::render::Primitive::Text { text, .. } if text.contains("Very long personal research")
+    )), "the selected long collection label must be present in the bounded popout");
+
+    let Value::List(group_rows) = &groups else {
+        unreachable!()
+    };
+    let mut create_models = BTreeMap::from([
+        (
+            "bar.collections".into(),
+            Value::list(group_rows.iter().take(2).cloned().collect()),
+        ),
+        (
+            "bar.collection.current".into(),
+            Value::Text("niri-collection:17".into()),
+        ),
+        ("bar.collection.height".into(), Value::Number(210.into())),
+        (
+            "bar.collection.wallpapers.enabled".into(),
+            Value::Bool(false),
+        ),
+        ("collection.scroll".into(), Value::Number(0.into())),
+        ("collection.operation".into(), Value::Text(String::new())),
+        ("panel.open".into(), Value::Bool(true)),
+        ("view.edge".into(), Value::Text("top".into())),
+    ]);
+    let mut initial = super::initial_models()?;
+    initial.append(&mut create_models);
+    let mut create = Harness::load(
+        &root(),
+        Path::new("popouts/collections.luau"),
+        &root().join("palette.json"),
+        initial,
+        Config {
+            width: 360,
+            height: 320,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut create)?;
+    let create_frame = create.pose((0., 0.), 1.)?;
+    if let Some(dir) = &capture {
+        create_frame.save(&dir.join("collections-create-popout.png"))?;
+    }
+    assert!(
+        create
+            .scene()
+            .primitives
+            .iter()
+            .any(|primitive| matches!(primitive,
+                bead::render::Primitive::Text { text, .. } if text.contains("Create desk")
+            )),
+        "create action must render localized label"
+    );
+    let create_button = create
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.id.ends_with("create"))
+        .expect("create desk button");
+    assert_eq!(
+        create_button.action.as_deref(),
+        Some("collection.begin-create")
+    );
+    let create_bounds = bead::ui::rect(&create_button.draw);
+    assert!(
+        create_bounds.x >= 0.
+            && create_bounds.y >= 0.
+            && create_bounds.x + create_bounds.w <= 360.
+            && create_bounds.y + create_bounds.h <= 320.,
+        "create button is outside the small popout: {create_bounds:?}"
+    );
+    let nodes = menu.session.view_nodes();
+    let input = nodes
+        .iter()
+        .find(|node| node.id.ends_with("group-name"))
+        .expect("rename input node");
+    assert_eq!(
+        input.action.as_deref(),
+        Some("collection.commit"),
+        "rename input semantic action"
+    );
+    for suffix in ["group-name", "save-name", "cancel-name"] {
+        let node = nodes
+            .iter()
+            .find(|node| node.id.ends_with(suffix))
+            .expect("visible editor control");
+        let rect = bead::ui::rect(&node.draw);
+        assert!(
+            rect.x >= 0. && rect.y >= 0. && rect.x + rect.w <= 360. && rect.y + rect.h <= 250.,
+            "{suffix} falls outside the popout viewport: {rect:?}"
+        );
+    }
+    assert!(
+        bar_text.iter().any(|text| text.contains("Very lon…")),
+        "the compact bar badge must truncate to one line with an ellipsis: {bar_text:?}"
+    );
+    Ok(())
+}
+
+#[test]
 fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
     use std::sync::{Arc, Mutex};

@@ -123,9 +123,8 @@ async fn dispatch(
                     })
                 })
         }
-        method @ ("workspace.activate" | "workspace.scroll" | "window.focus") => {
-            super::shell_actions::compositor(hub, method, params).await
-        }
+        method @ ("workspace.activate" | "workspace.scroll" | "window.focus"
+        | "collection.action") => super::shell_actions::compositor(hub, method, params).await,
         "session.request" => super::shell_actions::session(hub, params).await,
         method @ ("network.set_wifi" | "network.connect" | "network.disconnect"
         | "network.forget" | "network.scan" | "vpn.connect" | "vpn.disconnect") => {
@@ -652,6 +651,47 @@ mod tests {
                 assert!(matches!(reply.await.unwrap(), Reply::Ok { .. }));
                 caller.shutdown().await.unwrap();
                 caller_task.abort();
+            })
+            .await;
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn collection_action_reaches_the_registered_daemon_rpc_dispatcher() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let hub = fixture();
+                let (mut caller, mut reader, caller_task) = connect(hub).await;
+                framing::write(
+                    &mut caller,
+                    &Message::Call {
+                        id: Id::Integer(91),
+                        m: "collection.action".into(),
+                        p: json!({"output":"DP-1","action":{"operation":"create","name":null}}),
+                        timeout: Some(1000),
+                    },
+                )
+                .await
+                .unwrap();
+                let Message::Ret {
+                    id,
+                    reply: Reply::Err { err },
+                } = receive(&mut reader).await
+                else {
+                    panic!("collection action did not return a method result");
+                };
+                assert_eq!(id, Id::Integer(91));
+                assert_eq!(
+                    err.code,
+                    ErrorCode::Unavailable,
+                    "must reach compositor action service, not UnknownMethod"
+                );
+                assert_ne!(err.code, ErrorCode::UnknownMethod);
+                caller.shutdown().await.unwrap();
+                tokio::time::timeout(Duration::from_secs(2), caller_task)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .unwrap();
             })
             .await;
     }

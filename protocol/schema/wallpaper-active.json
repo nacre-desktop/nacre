@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "WallpaperActive",
-  "description": "Published static wallpaper state. `current` is the global default\nvalue; `outputs` repeats that same value under its output name for stable\nconsumers that address outputs explicitly.",
+  "description": "Published static wallpaper state. `current` is the global default value;\n`outputs` holds each output's effective wallpaper and may contain a\nper-output override.",
   "type": "object",
   "properties": {
     "available": {
@@ -41,6 +41,16 @@
       "additionalProperties": {
         "$ref": "#/$defs/ActiveWallpaper"
       }
+    },
+    "focused_accent": {
+      "description": "Optional Nacre collection accent for the focused output. The base\npresentation remains in `current`; absent means keep the base palette.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 7,
+      "maxLength": 7,
+      "pattern": "^#[0-9A-Fa-f]{6}$"
     },
     "error": {
       "type": [

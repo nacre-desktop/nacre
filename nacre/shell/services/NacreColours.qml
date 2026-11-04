@@ -46,7 +46,7 @@ Singleton {
         return apply(Data.textPayload(text));
     }
     function present() {
-        const active = NacrePresentation.active;
+        const active = NacrePresentation.effectiveActive;
         if (active?.colours)
             return apply({
                 mode: active.mode,
@@ -77,7 +77,7 @@ Singleton {
     Component.onCompleted: present()
     Connections {
         target: NacrePresentation
-        function onActiveChanged() {
+        function onEffectiveActiveChanged() {
             root.present();
         }
     }

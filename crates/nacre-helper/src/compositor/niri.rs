@@ -105,6 +105,12 @@ impl Backend {
         let root = niri_bindings::loader(&self.paths, &self.environment);
         Ok(niri_bindings::source_files(&root, &self.paths.home))
     }
+    pub fn collection_action(&mut self, action: &str, arguments: Value) -> Result<()> {
+        self.actions.transport.collection_action(action, arguments)
+    }
+    pub fn collections(&mut self) -> Result<Vec<Value>> {
+        self.actions.transport.collections()
+    }
 
     pub fn capture_bindings(&self, path: &Path, kind: &str) -> Result<Value> {
         niri_config::bindings(
@@ -160,7 +166,13 @@ impl Backend {
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")
             .is_none_or(|value| value != "0");
-        let socket = niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?;
+        let collections =
+            niri_transport::nacre_capabilities(Path::new(self.session_id())).workspace_collections;
+        let socket = if collections {
+            niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
+        } else {
+            niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?
+        };
         niri_events::Events::new(socket, niri_transport::Connection::new(self.session_id()))
     }
     pub fn edge_events(&self) -> Result<()> {

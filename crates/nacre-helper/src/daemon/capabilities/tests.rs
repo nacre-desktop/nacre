@@ -133,10 +133,16 @@ fn flags_follow_the_compositor_and_the_stores() {
         )
         .unwrap();
     let niri = flags(&probe, &hub.borrow());
+    assert!(!niri.contains_key("workspaceCollections"));
     assert!(niri["niriWorkspaces"] && niri["niriFixedWorkspaces"] && niri["input.touchpadSpeed"]);
     assert!(niri["input.controls"] && niri["ai"] && !niri["brain"]);
     assert!(niri["desktop.gapsIn"] && niri["desktop.blur"] && !niri["desktop.shadow"]);
     assert!(!niri["windowCapture"] && !niri["panelDragging"]);
+
+    let mut fork_niri = compositor("niri", json!(["gapsIn", "blur"]));
+    fork_niri["capabilities"]["workspaceCollections"] = json!(true);
+    hub.borrow_mut().publish("compositor", fork_niri).unwrap();
+    assert!(flags(&probe, &hub.borrow())["workspaceCollections"]);
 
     hub.borrow_mut()
         .publish("compositor", compositor("hyprland", json!(["shadow"])))

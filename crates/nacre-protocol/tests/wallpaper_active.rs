@@ -78,9 +78,13 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
     state.revision = 1;
     let mut mismatched = state.current.clone().unwrap();
     mismatched.path = "/home/user/other.png".into();
-    state.outputs.insert("bad".into(), mismatched);
+    state.outputs.insert("DP-1".into(), mismatched.clone());
+    assert!(state.validate().is_ok());
+    mismatched.revision = 2;
+    mismatched.palette_revision = 2;
+    state.outputs.insert("DP-1".into(), mismatched);
     assert!(state.validate().is_err());
-    state.outputs.remove("bad");
+    state.outputs.remove("DP-1");
     state
         .current
         .as_mut()
@@ -103,19 +107,29 @@ fn active_wallpaper_bounds_and_pairing_are_enforced() {
 fn activation_revision_is_positive_and_safe() {
     assert!(WallpaperActivate {
         revision: 1,
-        id: None
+        id: None,
+        output: Some("DP-1".into()),
     }
     .validate()
     .is_ok());
     assert!(WallpaperActivate {
         revision: 0,
-        id: None
+        id: None,
+        output: None,
+    }
+    .validate()
+    .is_err());
+    assert!(WallpaperActivate {
+        revision: 1,
+        id: None,
+        output: Some("DP-1\n".into()),
     }
     .validate()
     .is_err());
     assert!(WallpaperActivate {
         revision: MAX_SAFE_INTEGER + 1,
         id: None,
+        output: None,
     }
     .validate()
     .is_err());

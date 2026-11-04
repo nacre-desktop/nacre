@@ -929,6 +929,7 @@ return {
         ["settings.noticed"]=false,["settings.writable"]=false,["settings.readonly"]=true,
         ["settings.searching"]=false,["settings.empty"]=true,
         ["bar.height"]=50,["bar.launcher"]=true,["bar.popouts"]=true,["bar.reconnecting"]=false,
+        ["bar.collections"]={},["bar.collection.current"]="",
         ["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,
         ["bar.workspace.origins"]={},["bar.dashboard.enabled"]=true,["bar.tray.visible"]=false,
         ["bar.workspace.count"]=6,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,

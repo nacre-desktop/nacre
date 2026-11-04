@@ -46,9 +46,9 @@ impl WallpaperWatch {
     }
 }
 
-/// Published static wallpaper state. `current` is the global default
-/// value; `outputs` repeats that same value under its output name for stable
-/// consumers that address outputs explicitly.
+/// Published static wallpaper state. `current` is the global default value;
+/// `outputs` holds each output's effective wallpaper and may contain a
+/// per-output override.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct WallpaperActive {
     pub available: bool,
@@ -62,6 +62,11 @@ pub struct WallpaperActive {
     pub current: Option<ActiveWallpaper>,
     #[schemars(schema_with = "outputs_schema")]
     pub outputs: BTreeMap<String, ActiveWallpaper>,
+    /// Optional Nacre collection accent for the focused output. The base
+    /// presentation remains in `current`; absent means keep the base palette.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 7, max = 7), regex(pattern = "^#[0-9A-Fa-f]{6}$"))]
+    pub focused_accent: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(max = 256))]
     pub error: Option<String>,
@@ -213,12 +218,21 @@ pub struct WallpaperActivate {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 4096))]
     pub id: Option<String>,
+    /// Output whose active pair a wallpaper provider is confirming. Omitted by
+    /// older global picker callers, which receive the base `current` pair.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 256))]
+    pub output: Option<String>,
 }
 impl WallpaperActivate {
     pub fn validate(&self) -> Result<(), Failure> {
         if (self.revision == 0 && self.id.is_none())
             || self.revision > MAX_SAFE_INTEGER
             || self.id.as_ref().is_some_and(|id| !valid_path(id))
+            || (self.id.is_some() && self.output.is_some())
+            || self.output.as_ref().is_some_and(|output| {
+                output.is_empty() || output.len() > 256 || output.chars().any(char::is_control)
+            })
         {
             Err(Failure::new(
                 ErrorCode::Validation,
@@ -370,6 +384,11 @@ impl WallpaperActive {
             && self.outputs.iter().all(|(name, value)| {
                 !name.is_empty() && name.len() <= 256 && value.validate().is_ok()
             })
+            && self.focused_accent.as_ref().is_none_or(|accent| {
+                accent.len() == 7
+                    && accent.starts_with('#')
+                    && accent[1..].bytes().all(|byte| byte.is_ascii_hexdigit())
+            })
             && self.error.as_ref().is_none_or(|e| e.len() <= 256)
             && if self.available {
                 !self.stale && self.current.is_some()
@@ -385,7 +404,10 @@ impl WallpaperActive {
                     current.validate().is_ok()
                         && current.revision == self.revision
                         && self.stale == !self.available
-                        && self.outputs.values().all(|o| o == current)
+                        && self
+                            .outputs
+                            .values()
+                            .all(|o| o.validate().is_ok() && o.revision == self.revision)
                 }
                 None => {
                     self.outputs.is_empty() && self.revision == 0 && !self.stale && !self.available

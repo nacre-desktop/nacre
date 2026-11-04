@@ -27,6 +27,7 @@ Singleton {
         };
         result.niriFixedWorkspaces = NacreCompositor.backendName === "niri" && DesktopSettings.data.niriWorkspaceMode === "fixed-all";
         result.niriWorkspaces = NacreCompositor.backendName === "niri";
+        result.workspaceCollections = NacreCompositor.capabilities?.workspaceCollections === true;
         result["input.controls"] = ["hyprland", "niri"].includes(NacreCompositor.backendName);
         result["input.touchpadSpeed"] = NacreCompositor.backendName === "niri";
         result.touchpad = /touchpad|trackpad/i.test(inputDevices.text());

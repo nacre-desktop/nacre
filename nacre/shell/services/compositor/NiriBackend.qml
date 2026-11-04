@@ -35,7 +35,8 @@ Singleton {
             monitorConfiguration: true,
             monitorMirroring: false,
             nativeWindowScreenshot: true,
-            nightLightController: true
+            nightLightController: true,
+            workspaceCollections: root.collectionsSupported
         })
     readonly property string toolsPath: NacrePaths.compositorTools
     readonly property var workspaces: ({
@@ -62,6 +63,7 @@ Singleton {
     readonly property int activeWsId: activeWorkspace?.index ?? 1
     readonly property point cursorPos: Qt.point(0, 0)
     property bool connected: false
+    property bool collectionsSupported: false
     property string error: ""
     property int reconnectAttempt: 0
     property var registrations: []
@@ -120,6 +122,7 @@ Singleton {
             activeWorkspace: state.workspaces?.[state.focus?.workspaceId],
             focusedMonitor: state.outputs?.[state.focus?.outputId],
             overviewOpen: state.overviewOpen,
+            capabilities: state.capabilities,
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
             edgeTriggersActive: source.edgeTriggersActive === true,
@@ -255,6 +258,7 @@ Singleton {
         clients = ordered;
         activeWindowId = value.activeWindow?.windowId || "";
         overviewOpen = value.overviewOpen === true;
+        collectionsSupported = value.capabilities?.workspaceCollections === true;
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
         edgeTriggersActive = value.edgeTriggersActive === true;

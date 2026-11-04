@@ -24,9 +24,22 @@ return {
         ["panel.open"]=true,["view.edge"]="top",
         ["calendar.ready"]=false,["calendar.initialized"]=false,["calendar.follow_today"]=false,["calendar.year"]=1970,["calendar.month"]=1,
         ["calendar.first_weekday"]=1,["calendar.today"]="",
+        ["bar.collections"]={},["bar.collection.current"]="",["bar.collection.connection"]="",["bar.collection.enabled"]=false,["bar.collection.output"]="",["bead.output.name"]="",
+        ["bar.collection.wallpapers.enabled"]=false,
+        ["bar.collection.height"]=260,["collection.scroll"]=0,
+        ["collection.draft"]="",["collection.operation"]="",["collection.target"]="",
     },
     actions={
         close=function(s) s["panel.open"]=false end,
+        ["collection.switcher.open"]=function(_) end,
+        ["collection.switch"]=function(_) end,
+        ["collection.begin-create"]=function(_) end,
+        ["collection.begin-rename"]=function(_) end,
+        ["collection.commit"]=function(_) end,
+        ["collection.cancel"]=function(_) end,
+        ["collection.wallpaper.set"]=function(_) end,
+        ["collection.accent.use"]=function(_) end,
+        ["collection.accent.clear"]=function(_) end,
         calendar_month=function(s,delta)
             if type(delta)~="number" or delta%1~=0 or math.abs(delta)>1200 then return end
             local y,m=displayed(s)
