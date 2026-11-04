@@ -430,11 +430,7 @@ pub fn apply_with_native_action(
         if let Err(error) = persist(&plan.after) {
             let recovered = action(io, inverse, json!({})).and_then(|_| {
                 let current = snapshot(io)?;
-                let current = layout(&current, plan.before.slots[&plan.before.focused].len())
-                    .map_err(|error| crate::compositor::niri_state::Error {
-                        kind: "RuntimeError",
-                        message: error.to_string(),
-                    })?;
+                let current = layout(&current, plan.before.slots[&plan.before.focused].len())?;
                 if current.slots == plan.before.slots
                     && current.active == plan.before.active
                     && current.focused == plan.before.focused
@@ -442,12 +438,7 @@ pub fn apply_with_native_action(
                 {
                     Ok(())
                 } else {
-                    Err(crate::compositor::niri_state::Error {
-                        kind: "RuntimeError",
-                        message:
-                            "Native workspace exchange rollback did not restore the original layout"
-                                .into(),
-                    })
+                    Err("Native workspace exchange rollback did not restore the original layout".into())
                 }
             });
             return match recovered {

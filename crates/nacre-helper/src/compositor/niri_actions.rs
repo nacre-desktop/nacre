@@ -494,7 +494,12 @@ impl<T: Transport> Backend<T> {
                 if !toggle {
                     return Ok(json!({"code":0,"stdout":"ok","stderr":""}));
                 }
-                let id = native_id(&row["windowId"], "window")?;
+                let id = native_id(
+                    row["windowId"]
+                        .as_str()
+                        .ok_or_else(|| invalid("Malformed window identity"))?,
+                    "window",
+                )?;
                 self.action("ToggleWindowPinned", json!({"id":id}), timeout)
             }
             "kill_window" | "fullscreen_state" | "set_cursor" | "notify" | "set_animations"
