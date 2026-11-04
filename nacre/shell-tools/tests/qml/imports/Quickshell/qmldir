@@ -15,3 +15,5 @@ LazyLoader 1.0 LazyLoader.qml
 Variants 1.0 Variants.qml
 Region 1.0 Region.qml
 ScreencopyView 1.0 ScreencopyView.qml
+PopupWindow 1.0 PopupWindow.qml
+singleton Edges 1.0 Edges.qml
