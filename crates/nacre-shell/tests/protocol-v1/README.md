@@ -1,9 +1,11 @@
 # Nacre protocol v1 fixtures
 
 GPL-3.0-only; generated Nacre contract data retained in the GPL application.
-The Rust contract crate is pinned in `crates/nacre-shell/Cargo.toml` to published
-Nacre `6abe2498a86fc5ce93662f98849c6fc24f06207f`. B0134 copies its
+These protocol-v1 fixtures were originally copied from published Nacre
+`6abe2498a86fc5ce93662f98849c6fc24f06207f`. B0134 copies its
 `wallpaper-catalogue.jsonl` (optional identity-pinned video poster predecode).
+The current workspace dependency is tracked by `crates/nacre-shell/Cargo.toml`
+and `Cargo.lock`; refresh the fixtures when their producer contracts change.
 B0136 copies its
 `wallpaper-active.jsonl` (manual-navigation readiness) and
 `core-dashboard-updates.jsonl` (the published bounded package list).
