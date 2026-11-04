@@ -144,7 +144,7 @@ import qs.services as Services
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
    stateTopic.data=state(renamed,true);tryVerify(()=>backend.collections[1].name==="music");tryVerify(()=>view.deskLabel==="music")
-   const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.id==="niri-collection:28"?"eDP-1":row.output}))
+   const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.id==="niri-collection:28"?null:row.output}))
    stateTopic.data=state(focused,true);tryVerify(()=>backend.collections[2].output==="DP-1");tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
    stateTopic.data=state([renamed[1]],true);tryVerify(()=>backend.collections.length===1);tryVerify(()=>!badge.visible)
    Services.NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0);tryVerify(()=>!badge.visible)
