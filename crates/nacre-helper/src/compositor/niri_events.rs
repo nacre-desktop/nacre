@@ -381,8 +381,14 @@ mod tests {
                 server,
                 "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}"
             )?;
-            writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")?;
-            writeln!(server, "{{\"EdgeLeft\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[8.0,720.0]}}}}")
+            writeln!(
+                server,
+                "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}"
+            )?;
+            writeln!(
+                server,
+                "{{\"EdgeLeft\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[8.0,720.0]}}}}"
+            )
         });
         let mut socket = EventSocket::connect_requests(
             || client.try_clone().map_err(io_error),
@@ -524,6 +530,65 @@ mod tests {
         }
         Ok(())
     }
+    #[test]
+    fn stock_stream_and_companion_hover_share_the_same_reducer() -> crate::Result<()> {
+        let (hover_client, mut hover_server) = UnixStream::pair()?;
+        hover_server.write_all(b"{\"Err\":\"unsupported request\"}\n")?;
+        hover_server.shutdown(std::net::Shutdown::Write)?;
+        let (stock_client, mut stock_server) = UnixStream::pair()?;
+        stock_server.write_all(b"{\"Ok\":\"Handled\"}\n")?;
+        for event in [
+            json!({"WindowsChanged":{"windows":[{"id":7,"title":"Stock window","app_id":"terminal","workspace_id":null,"is_focused":true}]}}),
+            json!({"OverviewOpenedOrClosed":{"is_open":true}}),
+        ] {
+            writeln!(stock_server, "{}", serde_json::to_string(&event)?)?;
+        }
+        stock_server.shutdown(std::net::Shutdown::Write)?;
+        let mut clients = VecDeque::from([hover_client, stock_client]);
+        let mut socket = EventSocket::connect_with(
+            || {
+                clients
+                    .pop_front()
+                    .ok_or_else(|| invalid("Unexpected connection"))
+            },
+            true,
+            MAX_BYTES,
+        )?;
+        let mut state = State::new(Default::default());
+        state.apply(&socket.next_event()?)?;
+        state.apply(&socket.next_event()?)?;
+        assert_eq!(state.snapshot()?["overviewHoverSupported"], false);
+        // When the optional companion is selected it accepts the opt-in stream
+        // and provides the same native event shape over the socket.
+        let (companion_client, mut companion_server) = UnixStream::pair()?;
+        companion_server.write_all(b"{\"Ok\":\"Handled\"}\n")?;
+        for id in [Some(7), None] {
+            writeln!(
+                companion_server,
+                "{}",
+                json!({"NacreOverviewHoverChanged":{"id":id}})
+            )?;
+        }
+        companion_server.shutdown(std::net::Shutdown::Write)?;
+        let mut companion = Some(companion_client);
+        let mut companion = EventSocket::connect_with(
+            || {
+                companion
+                    .take()
+                    .ok_or_else(|| invalid("Unexpected companion connection"))
+            },
+            true,
+            MAX_BYTES,
+        )?;
+        state.apply(&companion.next_event()?)?;
+        let snapshot = state.snapshot()?;
+        assert_eq!(snapshot["overviewHoveredWindowId"], "niri-window:7");
+        assert_eq!(snapshot["activeWindow"]["title"], "Stock window");
+        state.apply(&companion.next_event()?)?;
+        assert_eq!(state.snapshot()?["overviewHoveredWindowId"], Value::Null);
+        Ok(())
+    }
+
     #[test]
     fn disabled_native_hover_rejects_extension_then_uses_stock_event_stream() -> crate::Result<()> {
         let (hover_client, mut hover_server) = UnixStream::pair()?;

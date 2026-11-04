@@ -221,6 +221,33 @@ fn schedule(due: &mut Option<tokio::time::Instant>, last: tokio::time::Instant, 
     };
     *due = Some(due.map_or(target, |old| old.min(target)));
 }
+/// Hover and overview captions publish at most once per display frame. A close,
+/// focus change, or window removal still uses the immediate semantic schedule.
+fn schedule_overview(
+    due: &mut Option<tokio::time::Instant>,
+    last: tokio::time::Instant,
+    state: &niri_state::State,
+    event: &Value,
+) {
+    if event["type"] == "overview-hover" || (state.overview_open == true && title_event(event)) {
+        let refresh = state
+            .outputs
+            .values()
+            .filter_map(|output| {
+                let mode = output["current_mode"].as_u64()? as usize;
+                output["modes"][mode]["refresh_rate"]
+                    .as_u64()
+                    .filter(|rate| *rate > 0)
+            })
+            .max()
+            .unwrap_or(60_000);
+        let frame = Duration::from_nanos(1_000_000_000_000 / refresh);
+        let target = (last + frame).max(tokio::time::Instant::now());
+        *due = Some(due.map_or(target, |old| old.min(target)));
+    } else {
+        schedule(due, last, title_event(event));
+    }
+}
 async fn wait_due(due: Option<tokio::time::Instant>) {
     if let Some(due) = due {
         tokio::time::sleep_until(due).await;
@@ -275,6 +302,17 @@ fn queue_event(events: &mut Vec<Value>, event: Value) -> Result<bool> {
     // bounds the pre-publication batch to 256 KiB even for malformed IPC input.
     if serde_json::to_vec(&event)?.len() > 1024 {
         return Err("Niri semantic event exceeds its bound".into());
+    }
+    if event["type"] == "overview-hover" {
+        // The current State holds the latest pointer target; intermediate targets
+        // have no semantic side effect and must not fill the bounded event batch.
+        if let Some(previous) = events
+            .iter_mut()
+            .find(|row| row["type"] == "overview-hover")
+        {
+            *previous = event;
+            return Ok(true);
+        }
     }
     if title_event(&event) {
         if let Some(previous) = events
@@ -495,8 +533,7 @@ async fn niri(
                             }
                         }
                     }
-                    let title_only=title_event(&normalized);
-                    schedule(&mut due,last,title_only);
+                    schedule_overview(&mut due,last,&state,&normalized);
                 }
             },
             edge=async {
@@ -664,6 +701,76 @@ pub async fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn overview_hover_events_keep_live_window_data_in_the_topic() -> Result<()> {
+        let mut state = niri_state::State::new(Default::default());
+        let window = |id, title: &str, focused| {
+            json!({
+                "id":id,"title":title,"app_id":format!("app-{id}"),
+                "workspace_id":null,"is_focused":focused
+            })
+        };
+        state.apply(&json!({"WindowsChanged":{"windows":[
+            window(1,"Alpha",true),window(2,"Beta",false)
+        ]}}))?;
+        state.apply(&json!({"OverviewOpenedOrClosed":{"is_open":true}}))?;
+        for id in [Some(1), Some(2), None] {
+            state.apply(&json!({"NacreOverviewHoverChanged":{"id":id}}))?;
+            let topic = project(&state.snapshot()?, "niri", &json!({}))?;
+            assert_eq!(topic["overviewOpen"], true);
+            assert_eq!(topic["overviewHoverSupported"], true);
+            assert_eq!(
+                topic["overviewHoveredWindowId"],
+                id.map(|id| json!(format!("niri-window:{id}")))
+                    .unwrap_or(Value::Null)
+            );
+            assert_eq!(topic["focus"]["windowId"], "niri-window:1");
+        }
+        state.apply(&json!({"NacreOverviewHoverChanged":{"id":2}}))?;
+        state.apply(&json!({"WindowOpenedOrChanged":{"window":window(2,"Renamed Beta",false)}}))?;
+        let topic = project(&state.snapshot()?, "niri", &json!({}))?;
+        assert_eq!(topic["windows"]["niri-window:2"]["title"], "Renamed Beta");
+        state.apply(&json!({"WindowClosed":{"id":2}}))?;
+        let topic = project(&state.snapshot()?, "niri", &json!({}))?;
+        assert!(topic["windows"].get("niri-window:2").is_none());
+        assert_eq!(topic["focus"]["windowId"], "niri-window:1");
+        state.apply(&json!({"OverviewOpenedOrClosed":{"is_open":false}}))?;
+        // A late hover event cannot resurrect a caption after leaving overview.
+        state.apply(&json!({"NacreOverviewHoverChanged":{"id":1}}))?;
+        let topic = project(&state.snapshot()?, "niri", &json!({}))?;
+        assert_eq!(topic["overviewOpen"], false);
+        assert_eq!(topic["overviewHoveredWindowId"], Value::Null);
+        Ok(())
+    }
+
+    #[test]
+    fn overview_hover_is_coalesced_at_refresh_rate_and_close_is_immediate() -> Result<()> {
+        let mut state = niri_state::State::new(serde_json::from_value(json!({
+            "DP-1":{"current_mode":0,"modes":[{"refresh_rate":120000}]}
+        }))?);
+        state.overview_open = json!(true);
+        let hover = json!({"type":"overview-hover"});
+        let last = tokio::time::Instant::now() + Duration::from_secs(1);
+        let mut due = None;
+        let mut events = Vec::new();
+        for _ in 0..1000 {
+            schedule_overview(&mut due, last, &state, &hover);
+            assert!(queue_event(&mut events, hover.clone())?);
+        }
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            due,
+            Some(last + Duration::from_nanos(1_000_000_000_000 / 120000))
+        );
+        let title = json!({"type":"window-title","windowId":"niri-window:2"});
+        schedule_overview(&mut due, last, &state, &title);
+        assert!(due.unwrap() < last + Duration::from_millis(10));
+        state.overview_open = json!(false);
+        schedule_overview(&mut due, last, &state, &json!({"type":"overview-changed"}));
+        assert!(due.unwrap() < last);
+        Ok(())
+    }
+
     #[test]
     fn niri_collection_state_survives_compositor_topic_projection() -> Result<()> {
         let snapshot = json!({
