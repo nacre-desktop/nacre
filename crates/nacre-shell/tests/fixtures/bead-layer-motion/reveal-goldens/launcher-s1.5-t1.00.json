@@ -1,0 +1,37 @@
+{
+  "content_atlas": "launcher-s1.5-atlas.png",
+  "crop": {
+    "height": 654.0,
+    "width": 1164.0,
+    "x": -32.0,
+    "y": -32.0
+  },
+  "curve": "EaseOut",
+  "duration_ms": 300.00001199999997,
+  "eased_progress": 1.0,
+  "format": "RGBA8",
+  "height": 981,
+  "logical_height": 654.0,
+  "logical_width": 1164.0,
+  "plan_metadata": "launcher-s1.5-plan.json",
+  "route": "launcher",
+  "sample_time_ms": 300.00001199999997,
+  "scale": 1.5,
+  "scene_bounds": {
+    "h": 654.0,
+    "w": 1164.0,
+    "x": -32.0,
+    "y": -32.0
+  },
+  "scene_offset": [
+    32.0,
+    32.0
+  ],
+  "source": "bead-render TreeCpuRenderer with Nacre RevealArt draw callback",
+  "surface_global_origin": [
+    378,
+    568
+  ],
+  "timeline_t": 1.0,
+  "width": 1746
+}

@@ -1,0 +1,37 @@
+{
+  "content_atlas": "dashboard-s1.5-atlas.png",
+  "crop": {
+    "height": 684.0,
+    "width": 1048.0,
+    "x": -32.0,
+    "y": -2.0
+  },
+  "curve": "EaseInOut",
+  "duration_ms": 360.00001399999996,
+  "eased_progress": 0.0,
+  "format": "RGBA8",
+  "height": 1071,
+  "logical_height": 714.0,
+  "logical_width": 1048.0,
+  "plan_metadata": "dashboard-s1.5-plan.json",
+  "route": "dashboard",
+  "sample_time_ms": 0.0,
+  "scale": 1.5,
+  "scene_bounds": {
+    "h": 714.0,
+    "w": 1048.0,
+    "x": -32.0,
+    "y": -32.0
+  },
+  "scene_offset": [
+    32.0,
+    32.0
+  ],
+  "source": "bead-render TreeCpuRenderer with Nacre RevealArt draw callback",
+  "surface_global_origin": [
+    436,
+    18
+  ],
+  "timeline_t": 0.0,
+  "width": 1572
+}

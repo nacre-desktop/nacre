@@ -433,6 +433,185 @@ impl Chrome {
             rim
         ))
     }
+    /// Exact compositor-side description of the same compound silhouette drawn by `svg`.
+    /// The SVG remains installed as the frame-renderer fallback; this immutable descriptor
+    /// lets a reveal advertise its changing contour without rebuilding SVG on each frame.
+    fn reveal_contour(
+        &self,
+        frame: Frame,
+        output: (f32, f32),
+        panel: Rect,
+        body: Rect,
+        top_inset: f32,
+        engaged: bool,
+        edge: Edge,
+    ) -> bead::render::layer_motion::RevealContour {
+        use bead::render::layer_motion::{RevealContour, RevealCornerMode, RevealMode, RevealRim};
+
+        // RevealArt coordinates live in the panel's scene space. Translate output-space
+        // frame geometry using the same transform used by `Chrome::svg`'s reveal callback.
+        let local = |rect: Rect| {
+            Rect::new(
+                body.x + rect.x - panel.x,
+                body.y + rect.y - panel.y,
+                rect.w,
+                rect.h,
+            )
+        };
+        let output_bounds = local(Rect::new(0., 0., output.0, output.1));
+        let crop = local(Rect::new(
+            panel.x - 32.,
+            panel.y - top_inset,
+            body.w + 64.,
+            body.h + 32. + top_inset,
+        ));
+        let animated_to = local(panel);
+        let animated_from = match edge {
+            Edge::Top => Rect::new(animated_to.x, animated_to.y, animated_to.w, 0.),
+            Edge::Bottom => Rect::new(
+                animated_to.x,
+                animated_to.y + animated_to.h,
+                animated_to.w,
+                0.,
+            ),
+            Edge::Left => Rect::new(animated_to.x, animated_to.y, 0., animated_to.h),
+            Edge::Right => Rect::new(
+                animated_to.x + animated_to.w,
+                animated_to.y,
+                0.,
+                animated_to.h,
+            ),
+        };
+        const REVEAL_MARGIN: f32 = 4096.;
+        let (content_clip_from, content_clip_to) = match edge {
+            Edge::Top => (
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y - REVEAL_MARGIN,
+                    body.w + 2. * REVEAL_MARGIN,
+                    REVEAL_MARGIN,
+                ),
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y - REVEAL_MARGIN,
+                    body.w + 2. * REVEAL_MARGIN,
+                    REVEAL_MARGIN + body.h,
+                ),
+            ),
+            Edge::Bottom => (
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y + body.h,
+                    body.w + 2. * REVEAL_MARGIN,
+                    REVEAL_MARGIN,
+                ),
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y,
+                    body.w + 2. * REVEAL_MARGIN,
+                    body.h + REVEAL_MARGIN,
+                ),
+            ),
+            Edge::Left => (
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y - REVEAL_MARGIN,
+                    REVEAL_MARGIN,
+                    body.h + 2. * REVEAL_MARGIN,
+                ),
+                Rect::new(
+                    body.x - REVEAL_MARGIN,
+                    body.y - REVEAL_MARGIN,
+                    body.w + REVEAL_MARGIN,
+                    body.h + 2. * REVEAL_MARGIN,
+                ),
+            ),
+            Edge::Right => (
+                Rect::new(
+                    body.x + body.w,
+                    body.y - REVEAL_MARGIN,
+                    REVEAL_MARGIN,
+                    body.h + 2. * REVEAL_MARGIN,
+                ),
+                Rect::new(
+                    body.x,
+                    body.y - REVEAL_MARGIN,
+                    body.w + REVEAL_MARGIN,
+                    body.h + 2. * REVEAL_MARGIN,
+                ),
+            ),
+        };
+
+        let [fill, primary, secondary] = LIVE_COLORS
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .unwrap_or([self.fill, self.primary, self.secondary]);
+        let highlight = std::array::from_fn::<_, 4, _>(|i| {
+            if i == 3 {
+                255
+            } else {
+                (primary[i] as f32 * 0.78 + [255., 249., 241.][i] * 0.22).round() as u8
+            }
+        });
+        let colors = [
+            highlight,
+            [primary[0], primary[1], primary[2], 255],
+            [secondary[0], secondary[1], secondary[2], 255],
+        ];
+        let gradient_start = (output_bounds.x, output_bounds.y);
+        let gradient_end = (
+            output_bounds.x + output_bounds.w,
+            output_bounds.y + output_bounds.h,
+        );
+        let rim = sheen().then_some(RevealRim {
+            colors,
+            stops: [0., 0.38, 1.],
+            start: gradient_start,
+            end: gradient_end,
+            width: 1.,
+            opacity: if engaged { 0.25 } else { 0.16 },
+        });
+
+        let holes = if crate::app::configured() {
+            bead::wayland::EdgeChrome {
+                lips: FRAME_LIPS
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .iter()
+                    .filter_map(|lip| crate::shell_control::configured_lip(lip, frame))
+                    .collect(),
+                ..Default::default()
+            }
+            .input_regions((output.0 as i32, output.1 as i32))
+            .into_iter()
+            .map(local)
+            .collect()
+        } else {
+            Vec::new()
+        };
+
+        RevealContour {
+            output_bounds,
+            crop,
+            static_rects: frame.material(output).into_iter().map(local).collect(),
+            holes,
+            animated_from,
+            animated_to,
+            content_clip_from,
+            content_clip_to,
+            radii_from: [frame.radius(output); 4],
+            radii_to: [frame.radius(output); 4],
+            corner_mode: RevealCornerMode::QuadraticCut,
+            square_edges: 0b1111,
+            fill: [fill[0], fill[1], fill[2], 255],
+            rim,
+            mode: RevealMode::Visible,
+            // `decorate_with` removes the body shadow from joined-frame reveals; any
+            // separate compositor decoration remains owned by the compositor.
+            shadow: None,
+            opacity_plane: 0,
+        }
+    }
     /// The static frame tiles. The factory reads [`Frame::current`] on every call, so a
     /// settings change (and a decoration variant bump) redraws them with the new frame.
     pub fn decorations(self) -> bead::wayland::DecorationFactory {
@@ -669,9 +848,12 @@ impl Chrome {
             );
             let motion = scene.motion.as_mut().unwrap();
             motion.parts = vec![(index, scene.primitives[index].clone())];
+            let edge = motion.edge;
+            let contour = self.reveal_contour(frame, output, panel, body, top_inset, engaged, edge);
             motion.art = Some(bead::render::RevealArt {
                 body,
                 index,
+                contour: Some(contour),
                 draw: Arc::new(move |revealed, exact| {
                     let mut rectangles = frame.material(output);
                     rectangles.push(Rect::new(
@@ -847,12 +1029,10 @@ mod tests {
         );
         let chrome = Chrome::new(Attachment::SceneEdge(Edge::Top), &colors).unwrap();
         chrome.decorate(&mut scene).unwrap();
-        assert!(
-            scene
-                .asset_data
-                .keys()
-                .any(|p| p.to_string_lossy().starts_with("@joined-frame-32-"))
-        );
+        assert!(scene
+            .asset_data
+            .keys()
+            .any(|p| p.to_string_lossy().starts_with("@joined-frame-32-")));
         scene.motion.as_mut().unwrap().edge = Edge::Top;
         let top_origin = token(&scene, None, (1920, 1200));
         scene.motion.as_mut().unwrap().edge = Edge::Bottom;
@@ -926,7 +1106,33 @@ mod tests {
         motion.edge = Edge::Top;
         chrome.decorate(&mut scene).unwrap();
         let full_body = body(&scene);
-        let index = scene.motion.as_ref().unwrap().art.as_ref().unwrap().index;
+        let art = scene.motion.as_ref().unwrap().art.as_ref().unwrap();
+        let contour = art.contour.as_ref().expect("exact compositor contour");
+        assert!(contour.valid());
+        assert_eq!(
+            contour.static_rects.len(),
+            Frame::DEFAULT.material((1920., 1200.)).len()
+        );
+        assert_eq!(contour.animated_from.w, contour.animated_to.w);
+        assert_eq!(contour.animated_from.h, 0.);
+        assert_eq!(contour.animated_to.w, full_body.w);
+        assert_eq!(contour.animated_to.h, full_body.h);
+        assert_eq!(contour.content_clip_from.h, 4096.);
+        assert_eq!(contour.content_clip_to.h, 4096. + full_body.h);
+        assert_eq!(contour.square_edges, 0b1111);
+        assert!(contour.rim.is_some());
+        assert!(contour.shadow.is_none());
+        // The compositor samples geometry from the same shared eased progress used by
+        // `Scene::reveal`; checking intermediate sizes catches endpoint/origin mistakes.
+        for progress in [0., 0.25, 0.5, 0.75, 1.] {
+            let height = contour.animated_from.h
+                + (contour.animated_to.h - contour.animated_from.h) * progress;
+            assert_eq!(height, full_body.h * progress);
+            let clip_height = contour.content_clip_from.h
+                + (contour.content_clip_to.h - contour.content_clip_from.h) * progress;
+            assert_eq!(clip_height, 4096. + full_body.h * progress);
+        }
+        let index = art.index;
         let (full_rect, full_svg) = match &scene.primitives[index] {
             bead::render::Primitive::Image { rect, path, .. } => {
                 (*rect, scene.asset_data[path].clone())
@@ -1009,11 +1215,9 @@ mod tests {
                 assert!(cropped.height() < full.height());
                 assert_eq!(cropped.width(), full.width());
                 assert_eq!(cropped.data(), &full.data()[..cropped.data().len()]);
-                assert!(
-                    full.data()[cropped.data().len()..]
-                        .iter()
-                        .all(|byte| *byte == 0)
-                );
+                assert!(full.data()[cropped.data().len()..]
+                    .iter()
+                    .all(|byte| *byte == 0));
             }
             assert_eq!(body(&scene), full_body);
             assert_eq!(origin(&scene, None, (1920, 1200)), before);
@@ -1111,17 +1315,13 @@ mod tests {
             "Never allocate an output-sized frame raster"
         );
         assert!(tiles.iter().all(|t| t.svg.len() < 16384));
-        assert!(
-            tiles
-                .iter()
-                .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.16\""))
-        );
+        assert!(tiles
+            .iter()
+            .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.16\"")));
         let active = factory((1920, 1200), true, None).unwrap();
-        assert!(
-            active
-                .iter()
-                .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.25\""))
-        );
+        assert!(active
+            .iter()
+            .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.25\"")));
     }
     fn settings() -> FrameSettings {
         FrameSettings {
@@ -1335,7 +1535,7 @@ mod tests {
     }
     #[test]
     fn panel_film_keeps_lip_art_visible_without_cutting_the_body() {
-        use bead::render::{PixelFormat, ShmTarget, svg_into};
+        use bead::render::{svg_into, PixelFormat, ShmTarget};
         let cuts = crate::contour::geometry(
             20.,
             20.,

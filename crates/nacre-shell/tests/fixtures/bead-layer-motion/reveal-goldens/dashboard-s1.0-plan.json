@@ -1,0 +1,211 @@
+{
+  "atlas": {
+    "filename": "dashboard-s1.0-atlas.png",
+    "format": "RGBA",
+    "height": 714,
+    "scale": 1.0,
+    "stride": 4192,
+    "width": 1048
+  },
+  "canvas": {
+    "atlas_is_surface_local": true,
+    "buffer_pixel_origin": [
+      0,
+      0
+    ],
+    "output_logical_size": [
+      1920,
+      1200
+    ],
+    "scene_bounds": {
+      "h": 714.0,
+      "w": 1048.0,
+      "x": -32.0,
+      "y": -32.0
+    },
+    "scene_offset": [
+      32.0,
+      32.0
+    ],
+    "surface_global_origin": [
+      436,
+      18
+    ],
+    "surface_position_is_applied_by_layer_surface": true
+  },
+  "curve": "EaseInOut",
+  "duration_ms": 360.00001399999996,
+  "planes": [
+    {
+      "from": {
+        "clip": {
+          "h": 714.0,
+          "w": 1048.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        "destination": {
+          "h": 714.0,
+          "w": 1048.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        "opacity": 0.0
+      },
+      "id": 0,
+      "opacity_mode": {
+        "kind": "opaque_above",
+        "threshold": 0.0010000000474974513
+      },
+      "source": {
+        "h": 714.0,
+        "w": 1048.0,
+        "x": 0.0,
+        "y": 0.0
+      },
+      "to": {
+        "clip": {
+          "h": 714.0,
+          "w": 1048.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        "destination": {
+          "h": 714.0,
+          "w": 1048.0,
+          "x": 0.0,
+          "y": 0.0
+        },
+        "opacity": 1.0
+      }
+    }
+  ],
+  "retarget": false,
+  "reveal": {
+    "animated_from": {
+      "h": 0.0,
+      "w": 984.0,
+      "x": 32.0,
+      "y": 32.0
+    },
+    "animated_to": {
+      "h": 650.0,
+      "w": 984.0,
+      "x": 32.0,
+      "y": 32.0
+    },
+    "content_clip_from": {
+      "h": 4096.0,
+      "w": 9176.0,
+      "x": -4064.0,
+      "y": -4064.0
+    },
+    "content_clip_to": {
+      "h": 4746.0,
+      "w": 9176.0,
+      "x": -4064.0,
+      "y": -4064.0
+    },
+    "corner_mode": "QuadraticCut",
+    "crop": {
+      "h": 684.0,
+      "w": 1048.0,
+      "x": 0.0,
+      "y": 30.0
+    },
+    "fill": [
+      18,
+      18,
+      15,
+      255
+    ],
+    "holes": [],
+    "mode": "Visible",
+    "opacity_plane": 0,
+    "output_bounds": {
+      "h": 1200.0,
+      "w": 1920.0,
+      "x": -436.0,
+      "y": -18.0
+    },
+    "radii_from": [
+      25.0,
+      25.0,
+      25.0,
+      25.0
+    ],
+    "radii_to": [
+      25.0,
+      25.0,
+      25.0,
+      25.0
+    ],
+    "rim": {
+      "colors": [
+        [
+          239,
+          232,
+          191,
+          255
+        ],
+        [
+          235,
+          227,
+          177,
+          255
+        ],
+        [
+          179,
+          144,
+          115,
+          255
+        ]
+      ],
+      "end": [
+        1484.0,
+        1182.0
+      ],
+      "opacity": 0.1599999964237213,
+      "start": [
+        -436.0,
+        -18.0
+      ],
+      "stops": [
+        0.0,
+        0.3799999952316284,
+        1.0
+      ],
+      "width": 1.0
+    },
+    "shadow": null,
+    "square_edges": 15,
+    "static_rects": [
+      {
+        "h": 50.0,
+        "w": 1920.0,
+        "x": -436.0,
+        "y": -18.0
+      },
+      {
+        "h": 1200.0,
+        "w": 10.0,
+        "x": -436.0,
+        "y": -18.0
+      },
+      {
+        "h": 1200.0,
+        "w": 10.0,
+        "x": 1474.0,
+        "y": -18.0
+      },
+      {
+        "h": 10.0,
+        "w": 1920.0,
+        "x": -436.0,
+        "y": 1172.0
+      }
+    ]
+  },
+  "schema": "nacre-bead-layer-motion-reveal-fixture-v1",
+  "source": "Nacre Runtime::stage PanelVisibility(true), with_frame production attachment, Bead LayerMotionPlan::for_slide"
+}
