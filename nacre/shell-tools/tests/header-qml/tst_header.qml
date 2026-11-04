@@ -104,7 +104,13 @@ TestCase {
         verify(badge.visible, "late advertised capability reveals live rows");
         compare(view.deskBadgeText, "2/3");
         compare(view.deskLabel, "studio");
-        NacreCompositor.collections = rows.map(row => row.id === "niri-collection:28" ? {...row, name: "music"} : row);
+        NacreCompositor.collections = rows.map(row => {
+            if (row.id !== "niri-collection:28")
+                return row;
+            const renamed = Object.assign({}, row);
+            renamed.name = "music";
+            return renamed;
+        });
         compare(view.deskLabel, "music");
         NacreCompositor.collections = [rows[1]];
         verify(!findChild(view, "collectionDeskBadge").visible, "one desk hides the indicator");
