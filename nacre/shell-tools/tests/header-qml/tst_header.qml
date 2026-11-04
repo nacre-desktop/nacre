@@ -186,6 +186,8 @@ TestCase {
                     ink++;
             }
         verify(ink > 0, "badge label paints colored ink at the configured screen scale");
+        const capturePath = Qt.resolvedUrl("desk-badge.png").toString().slice(7);
+        verify(image.saveToFile(capturePath), "desk badge pixel capture saves");
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);

@@ -132,3 +132,11 @@ Item {
                 )
                 self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertNotIn("QWARN", result.stdout + result.stderr)
+                capture_directory = os.environ.get("N0122_CAPTURE_DIR")
+                if capture_directory:
+                    capture_directory = Path(capture_directory)
+                    capture_directory.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(
+                        target / "desk-badge.png",
+                        capture_directory / f"desk-badge-scale-{scale}.png",
+                    )
