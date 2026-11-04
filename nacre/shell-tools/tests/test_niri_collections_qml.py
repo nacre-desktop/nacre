@@ -76,15 +76,15 @@ QtObject {
                 '''pragma Singleton
 import QtQuick
 QtObject {
- property var capabilities:({perOutputWorkspaces:true,workspaceCollections:false})
+ property var sourceBackend:null
+ readonly property var capabilities:({perOutputWorkspaces:true,workspaceCollections:sourceBackend?sourceBackend.collectionsSupported:false})
  property var windows:[]
  property int activeWsId:1
  property var workspaces:({values:[]})
  property var monitors:({values:[]})
  property var focusedMonitor:({name:"DP-1"})
- property var collections:[]
- property string activeCollectionId:""
- function syncCollectionState(source){collections=source.collections;activeCollectionId=source.activeCollectionId;capabilities=Object.assign({},capabilities,{workspaceCollections:source.collectionsSupported})}
+ readonly property var collections:sourceBackend?sourceBackend.collections:[]
+ readonly property string activeCollectionId:sourceBackend?sourceBackend.activeCollectionId:""
 }'''
             )
             providers = {
@@ -115,45 +115,42 @@ QtObject {
 import QtTest
 import Quickshell
 import qs.services as Services
-Item {
- id:root
- width:960
- height:720
- visible:true
  TestCase {
   id:test
   name:"NiriCollectionBadge"
+  width:960
+  height:720
+  visible:true
   when:windowShown
   property var backend: null
   function init(){backend=NiriBackend;verify(backend.accept({type:"snapshot",windows:[],workspaces:[],monitors:[],capabilities:{workspaceCollections:false,perOutputWorkspaces:true}}))}
-  function cleanup(){Services.NacreDaemon.enabled=false;Services.NacreDaemon.connected=false;Services.NacreDaemon.boot="fixture-boot";for(const name of Object.keys(Services.NacreDaemon.topics)){const topic=Services.NacreDaemon.topics[name];topic.fresh=false;topic.data={available:false};topic.users=0}backend=null}
+  function cleanup(){Services.NacreDaemon.enabled=false;Services.NacreDaemon.connected=false;Services.NacreDaemon.boot="fixture-boot";Services.NacreCompositor.sourceBackend=null;for(const name of Object.keys(Services.NacreDaemon.topics)){const topic=Services.NacreDaemon.topics[name];topic.fresh=false;topic.data={available:false};topic.users=0}backend=null}
   function test_daemon_refresh_rename_focus_remove_reconnect_and_stock(){
    const stateTopic=Services.NacreDaemon.topic("compositor"),eventTopic=Services.NacreDaemon.topic("compositor.events")
    const source={available:true,connectionId:"fixture-connection",edgeTriggersActive:false}
    const rows=[{id:"niri-collection:17",index:1,name:"home",output:"eDP-1",active:false},{id:"niri-collection:28",index:2,name:"studio",output:"DP-1",active:true},{id:"niri-collection:39",index:3,name:null,output:null,active:false}]
    function state(collections,capability=true){return {available:true,backend:"niri",capabilities:{workspaceCollections:capability,perOutputWorkspaces:true},outputs:{"DP-1":{name:"DP-1",focused:true}},outputOrder:["DP-1"],workspaces:{},workspaceOrder:[],windows:{},windowOrder:[],focus:{outputId:"DP-1",workspaceId:""},collections:collections,activeCollection:collections.find(row=>row.active)?.id||""}}
    stateTopic.data=state(rows,false);stateTopic.fresh=true;eventTopic.data=source;eventTopic.fresh=true
-   Services.NacreDaemon.connected=true;Services.NacreDaemon.enabled=true;backend.daemonRefresh()
+   Services.NacreDaemon.enabled=true;Services.NacreDaemon.connected=true
    tryVerify(()=>backend.connected&&backend.collections.length===0)
+   Services.NacreCompositor.sourceBackend=backend
    const component=Qt.createComponent("production/modules/topbar/NacreWorkspaceRow.qml")
    tryVerify(()=>component.status===Component.Ready)
-   const view=component.createObject(root,{outputName:"DP-1",width:420,visible:true});verify(view)
+   const view=createTemporaryObject(component,test,{outputName:"DP-1",width:420});verify(view)
    verify(!findChild(view,"collectionDeskBadge").visible)
-   stateTopic.data=state(rows,true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===3)
-   Services.NacreCompositor.syncCollectionState(backend)
+   stateTopic.data=state(rows,true);tryVerify(()=>backend.collections.length===3)
    const badge=findChild(view,"collectionDeskBadge")
-   console.log("badge-debug",view.visible,backend.collectionsSupported,Services.NacreCompositor.capabilities.workspaceCollections,Services.NacreCompositor.collections.length,view.deskRows.length,view.outputName,view.showDeskBadge,!!badge,badge?.visible,badge?.parent?.visible)
    tryVerify(()=>badge.visible)
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
-   stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>backend.collections[1].name==="music");Services.NacreCompositor.syncCollectionState(backend);tryVerify(()=>view.deskLabel==="music")
+   stateTopic.data=state(renamed,true);tryVerify(()=>backend.collections[1].name==="music");tryVerify(()=>view.deskLabel==="music")
    const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.id==="niri-collection:28"?"eDP-1":row.output}))
-   stateTopic.data=state(focused,true);backend.daemonRefresh();tryVerify(()=>backend.collections[2].output==="DP-1");Services.NacreCompositor.syncCollectionState(backend);tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
-   stateTopic.data=state([renamed[1]],true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===1);Services.NacreCompositor.syncCollectionState(backend);tryVerify(()=>!badge.visible)
-   Services.NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0);Services.NacreCompositor.syncCollectionState(backend)
-   Services.NacreDaemon.boot="fixture-reconnected";Services.NacreDaemon.connected=true;stateTopic.data=state(rows,true);backend.daemonRefresh();tryVerify(()=>backend.collections.length===3);Services.NacreCompositor.syncCollectionState(backend);tryVerify(()=>badge.visible)
-   stateTopic.data=state([],false);backend.daemonRefresh();tryVerify(()=>backend.collections.length===0);Services.NacreCompositor.syncCollectionState(backend);tryVerify(()=>!badge.visible)
-   view.destroy();Services.NacreDaemon.enabled=false
+   stateTopic.data=state(focused,true);tryVerify(()=>backend.collections[2].output==="DP-1");tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
+   stateTopic.data=state([renamed[1]],true);tryVerify(()=>backend.collections.length===1);tryVerify(()=>!badge.visible)
+   Services.NacreDaemon.connected=false;tryVerify(()=>backend.collections.length===0);tryVerify(()=>!badge.visible)
+   Services.NacreDaemon.boot="fixture-reconnected";Services.NacreDaemon.connected=true;stateTopic.data=state(rows,true);tryVerify(()=>backend.collections.length===3);tryVerify(()=>badge.visible)
+   stateTopic.data=state([],false);tryVerify(()=>backend.collections.length===0);tryVerify(()=>!badge.visible)
+   Services.NacreDaemon.enabled=false
   }
  }
 }'''

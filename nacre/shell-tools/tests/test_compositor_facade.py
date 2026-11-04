@@ -54,6 +54,8 @@ QtObject {
     property var activeWorkspace: ({id:2})
     property var focusedMonitor: null
     property point cursorPos: Qt.point(2,3)
+    property var collections: [{id:"desk-1",name:"work",output:"DP-1"}]
+    property string activeCollectionId: "desk-1"
     property string error: ""
     property var calls: []
     signal event(var value)
@@ -109,6 +111,8 @@ TestCase {
         compare(facade.backendName, "fixture");
         compare(Backend.Registry.niriCreated,0);
         compare(facade.activeWsId, 2);
+        compare(facade.collections[0].name, "work");
+        compare(facade.activeCollectionId, "desk-1");
         Backend.HyprlandBackend.clients = [{windowId:"opaque-window",captureHandle:null}];
         compare(facade.windows[0].windowId, "opaque-window");
         Backend.HyprlandBackend.activeWorkspace = {id:4};
