@@ -135,11 +135,21 @@ pub fn project(snapshot: &Value, backend: &str, keyboard: &Value) -> Result<Valu
         niri_state::capabilities()
     };
     if backend == "niri" {
-        capabilities["workspaceCollections"] = snapshot
-            .get("capabilities")
-            .and_then(|features| features.get("workspaceCollections"))
-            .cloned()
-            .unwrap_or(json!(false));
+        if let Some(snapshot_capabilities) = snapshot.get("capabilities") {
+            for key in [
+                "workspaceCollections",
+                "pinWindow",
+                "windowHide",
+                "windowForceKill",
+                "windowForceCloseWayland",
+                "windowRestore",
+                "monitorWorkspaceActions",
+            ] {
+                if let Some(value) = snapshot_capabilities.get(key) {
+                    capabilities[key] = value.clone();
+                }
+            }
+        }
     }
     Ok(
         json!({"backend":backend,"available":true,"error":"","connectionId":snapshot.get("connectionId").cloned().unwrap_or(Value::Null),"outputs":outputs,"outputOrder":output_order,"workspaces":workspaces,"workspaceOrder":workspace_order,"windows":windows,"windowOrder":window_order,"focus":{"windowId":window,"workspaceId":workspace,"outputId":output},"keyboard":keyboard,"capabilities":capabilities,"collections":snapshot.get("collections").cloned().unwrap_or_else(||json!([])),"activeCollection":snapshot.get("activeCollection").cloned().unwrap_or(Value::Null),"overviewOpen":snapshot.get("overviewOpen").cloned().unwrap_or(json!(false)),"overviewHoverSupported":snapshot.get("overviewHoverSupported").cloned().unwrap_or(json!(false)),"overviewHoveredWindowId":snapshot.get("overviewHoveredWindowId").cloned().unwrap_or(Value::Null),"configFailed":snapshot.get("configFailed").cloned().unwrap_or(json!(false))}),
@@ -328,6 +338,7 @@ struct NiriMetadata<'a> {
     socket: &'a str,
     edge_triggers_active: Option<bool>,
     proportional_x11_widths: bool,
+    native: crate::compositor::niri_transport::NacreCapabilities,
 }
 fn flush_niri(
     hub: &Shared,
@@ -338,6 +349,11 @@ fn flush_niri(
     events: &mut Vec<Value>,
 ) -> Result<()> {
     let mut snapshot = state.snapshot()?;
+    let collections = snapshot["capabilities"]["workspaceCollections"].clone();
+    snapshot["capabilities"] = crate::compositor::niri::capabilities_with_native(metadata.native);
+    if !collections.is_null() {
+        snapshot["capabilities"]["workspaceCollections"] = collections;
+    }
     snapshot["connectionId"] = json!(metadata.connection);
     if let Some(ledger) = crate::paths::Paths::environment()
         .ok()
@@ -348,8 +364,12 @@ fn flush_niri(
     }
     publish(hub, &snapshot, "niri", keyboard, ready)?;
     let mut hub = hub.borrow_mut();
-    let mut event_metadata =
-        json!({"backend":"niri","available":true,"connectionId":metadata.connection});
+    let mut event_metadata = json!({
+        "backend":"niri",
+        "available":true,
+        "connectionId":metadata.connection,
+        "capabilities":snapshot["capabilities"]
+    });
     if let Some(active) = metadata.edge_triggers_active {
         event_metadata["edgeTriggersActive"] = json!(active);
     }
@@ -390,6 +410,7 @@ async fn niri(
                 .nacre_capabilities(Duration::from_millis(500)))
         })
         .await?;
+    let mut native_capabilities = capabilities;
     let event_path = path.clone();
     let reader = tokio::task::spawn_blocking(move || {
         let socket = if capabilities.workspace_collections {
@@ -454,6 +475,7 @@ async fn niri(
                                 let backend::Backend::Niri(backend)=backend else {return Err("Expected niri request transport".into());};
                                 Ok(backend.actions.transport.nacre_capabilities(Duration::from_millis(500)))
                             }).await?;
+                            native_capabilities=capabilities;
                             proportional_x11_widths=capabilities.proportional_x11_widths;
                             let enabled=capabilities.edge_triggers;
                     let next=if enabled {
@@ -471,7 +493,7 @@ async fn niri(
                     if next_active!=edge_triggers_active {
                         edge_triggers_active=next_active;
                         if state.ready.contains("window")&&state.ready.contains("workspace") {
-                            flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                            flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                             last=tokio::time::Instant::now();due=None;
                         }
                     }
@@ -489,7 +511,7 @@ async fn niri(
                         if outputs_changed {next.push(json!({"type":"outputs-changed"}));}
                         for event in next {
                             if !queue_event(&mut events,event.clone())? {
-                                flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                                flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                                 last=tokio::time::Instant::now();
                                 if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                             }
@@ -517,7 +539,7 @@ async fn niri(
                             Some(Ok(Some(event)))=>{
                                 if state.ready.contains("window")&&state.ready.contains("workspace") {
                                     if !queue_event(&mut events,event.clone())? {
-                                        flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                                        flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                                         last=tokio::time::Instant::now();
                                         if !queue_event(&mut events,event)? {return Err("Compositor event batch exceeded its bound".into());}
                                     }
@@ -528,7 +550,7 @@ async fn niri(
                                 edge_reader=None;
                                 edge_triggers_active=Some(false);
                                 if state.ready.contains("window")&&state.ready.contains("workspace") {
-                                    flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                                    flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                                     last=tokio::time::Instant::now();due=None;
                                 }
                             }
@@ -539,7 +561,7 @@ async fn niri(
                         if edge_triggers_active==Some(true) {
                             edge_triggers_active=Some(false);
                             if state.ready.contains("window")&&state.ready.contains("workspace") {
-                                flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                            flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                                 last=tokio::time::Instant::now();due=None;
                             }
                         }
@@ -547,7 +569,7 @@ async fn niri(
                 }
             },
             _=wait_due(due)=>{
-                flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths},&mut events)?;
+                flush_niri(&hub,&state,&keyboard,&ready,NiriMetadata{connection:&connection_id,socket:&socket,edge_triggers_active,proportional_x11_widths,native:native_capabilities},&mut events)?;
                 last=tokio::time::Instant::now();due=None;
             },
         }

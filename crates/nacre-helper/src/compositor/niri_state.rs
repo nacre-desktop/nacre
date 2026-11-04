@@ -236,6 +236,8 @@ impl State {
                     ("title", "window-title"),
                     ("workspace_id", "window-workspace"),
                     ("is_floating", "window-floating"),
+                    ("is_hidden", "window-state"),
+                    ("is_pinned", "window-state"),
                 ] {
                     if previous.is_some_and(|previous| previous.get(field) != row.get(field)) {
                         changes.push(name);
@@ -466,7 +468,9 @@ impl State {
             } else {
                 json!(false)
             };
-            windows.push(json!({"id":key,"windowId":key,"address":key,"appId":app,"class":app,"title":title,"pid":pid,"workspaceId":workspace_id,"workspace":workspace_value,"outputId":output,"monitor":output,"geometry":geometry,"geometryKnown":known,"moving":row["workspace_id"].is_null()&&position.is_none(),"at":[x,y],"size":size,"floating":truthy(&row["is_floating"]),"focused":truthy(&row["is_focused"]),"urgent":urgent,"hidden":false,"pinned":false,"fullscreen":0,"fullscreenMode":0,"fullscreenKnown":false}));
+            let hidden = truthy(&row["is_hidden"]);
+            let pinned = truthy(&row["is_pinned"]);
+            windows.push(json!({"id":key,"windowId":key,"address":key,"appId":app,"class":app,"title":title,"pid":pid,"workspaceId":workspace_id,"workspace":workspace_value,"outputId":output,"monitor":output,"geometry":geometry,"geometryKnown":known,"moving":row["workspace_id"].is_null()&&position.is_none()&&!hidden,"at":[x,y],"size":size,"floating":truthy(&row["is_floating"]),"focused":truthy(&row["is_focused"]),"urgent":urgent,"hidden":hidden,"pinned":pinned,"fullscreen":0,"fullscreenMode":0,"fullscreenKnown":false}));
         }
         let collections: Vec<Value> = self.collections.iter().map(|row| {
             let id = row["id"].as_u64().unwrap_or_default();
@@ -613,6 +617,24 @@ mod tests {
         assert!(state
             .apply(&json!({"CollectionsChanged":{"collections":[{"id":1}]}}))
             .is_err());
+        Ok(())
+    }
+    #[test]
+    fn native_hidden_and_pinned_window_fields_default_for_stock_rows() -> crate::Result<()> {
+        let mut state = State::new(
+            json!({"DP-1":{"logical":{"x":0,"y":0,"width":100,"height":100},"focused":true}}),
+        );
+        state.apply(&json!({"WorkspacesChanged":{"workspaces":[{"id":1,"idx":1,"name":"one","output":"DP-1","is_active":true,"is_focused":true}]}}))?;
+        state.apply(&json!({"WindowsChanged":{"windows":[{"id":2,"workspace_id":null,"layout":null,"is_floating":false,"is_focused":false}]}}))?;
+        let stock = state.snapshot()?;
+        assert_eq!(stock["windows"][0]["hidden"], false);
+        assert_eq!(stock["windows"][0]["pinned"], false);
+        assert_eq!(stock["windows"][0]["moving"], true);
+        state.apply(&json!({"WindowsChanged":{"windows":[{"id":2,"workspace_id":null,"layout":null,"is_floating":false,"is_focused":false,"is_hidden":true,"is_pinned":true}]}}))?;
+        let native = state.snapshot()?;
+        assert_eq!(native["windows"][0]["hidden"], true);
+        assert_eq!(native["windows"][0]["pinned"], true);
+        assert_eq!(native["windows"][0]["moving"], false);
         Ok(())
     }
 }

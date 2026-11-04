@@ -511,10 +511,25 @@ mod tests {
         ];
         let native_actions = [
             ("Super+h", "move-window-to-scratchpad"),
-            ("Super+Shift+h", "toggle-scratchpad"),
+            ("Super+Shift+H", "restore-last-hidden-window"),
             ("Super+p", "toggle-window-pinned"),
         ];
         assert!(native.starts_with("include \"config.kdl\""));
+        assert!(!native.contains("nacre {"));
+        for action in [
+            "force-close-window",
+            "restore-last-hidden-window",
+            "restore-current-workspace-hidden-windows",
+        ] {
+            assert!(
+                native.contains(action),
+                "missing fork overlay action {action}"
+            );
+            assert!(!stock_bindings.contains(action), "stock emitted {action}");
+        }
+        assert!(!stock_bindings.contains("nacre {"));
+        assert!(!native.contains("swap-workspace-with-monitor-next"));
+        assert!(!native.contains("rotate-collections-next"));
         for edge in ["left", "right", "top", "bottom"] {
             assert!(native.contains(&format!(
                 "{edge} {{ action {{ event; }}; dwell-time-ms 350; }}"
@@ -568,7 +583,7 @@ mod tests {
             assert_eq!(action_node.name().value(), action);
         }
         assert!(native.contains("open-pinned true"));
-        assert!(!native.contains("Super+Alt+h"));
+        assert!(native.contains("Super+Alt+H"));
         for action in [
             "focus-collection-next",
             "focus-collection-previous",
@@ -582,12 +597,14 @@ mod tests {
     }
 
     #[test]
-    fn fork_unsupported_report_filters_only_native_scratchpad_and_pin_rows() -> crate::Result<()> {
+    fn fork_unsupported_report_marks_capability_scoped_rows_without_erasing_stock_gaps(
+    ) -> crate::Result<()> {
         let stock = json!({"backend":"niri","unsupported":[
             {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + H"},
             {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + SHIFT + H"},
             {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + P"},
             {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + ALT + H"},
+            {"source":"hypr/conf/keybinding.lua","kind":"binding","id":"SUPER + CTRL + SHIFT + Q"},
             {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-audio-mixer"},
             {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-share-picker"},
             {"source":"hypr/conf/nacre.lua","kind":"window-rule","id":"nacre-picture-in-picture"},
@@ -598,8 +615,15 @@ mod tests {
         let rows = filtered["unsupported"]
             .as_array()
             .ok_or("Missing filtered report")?;
-        assert_eq!(rows.len(), 2);
-        assert!(rows.iter().any(|row| row["id"] == "SUPER + ALT + H"));
+        assert_eq!(rows.len(), 9);
+        assert!(rows.iter().any(|row| row["id"] == "SUPER + ALT + H"
+            && row["nacreNiriCapability"] == "window_restore"
+            && row["stockNiriUnsupported"] == true));
+        assert!(rows
+            .iter()
+            .any(|row| row["id"] == "SUPER + CTRL + SHIFT + Q"
+                && row["nacreNiriCapability"] == "force_close"
+                && row["nacreNiriLimitation"].as_str().is_some()));
         assert!(rows.iter().any(|row| row["source"] == "other.lua"));
         Ok(())
     }
@@ -696,8 +720,8 @@ mod tests {
                 serde_json::from_str(case["stdout"].as_str().ok_or("Missing stdout")?)?;
             fn native_commands(value: Value) -> Value {
                 match value {
-                    Value::String(value) => Value::String(
-                        value
+                    Value::String(value) => {
+                        let mut value = value
                             .replace("NACRE_COMPOSITOR=niri python3 ", "NACRE_COMPOSITOR=niri ")
                             .replace(
                                 "/compositor.py\" action ",
@@ -706,8 +730,52 @@ mod tests {
                             .replace(
                                 "/compositor.py\\\" action ",
                                 "/nacre-helper\\\" compositor action ",
+                            )
+                            .replace(
+                                "spawn-sh \\\"niri msg action toggle-column-tabbed-display\\\"",
+                                "toggle-column-tabbed-display",
+                            )
+                            .replace(
+                                "spawn-sh \\\"niri msg action focus-window-up-or-bottom\\\"",
+                                "focus-window-up-or-bottom",
+                            )
+                            .replace(
+                                "spawn-sh \\\"niri msg action focus-window-down-or-top\\\"",
+                                "focus-window-down-or-top",
+                            );
+                        for (generated, action) in [
+                            (niri::action_command("close_window", &[]), "close-window"),
+                            (
+                                niri::action_command(
+                                    "fullscreen_window",
+                                    &["--mode".into(), "fullscreen".into()],
+                                ),
+                                "fullscreen-window",
                             ),
-                    ),
+                            (
+                                niri::action_command(
+                                    "fullscreen_window",
+                                    &["--mode".into(), "maximized".into()],
+                                ),
+                                "maximize-window-to-edges",
+                            ),
+                            (
+                                niri::action_command(
+                                    "float_window",
+                                    &["--action".into(), "toggle".into()],
+                                ),
+                                "toggle-window-floating",
+                            ),
+                        ] {
+                            let wrapped = format!(
+                                "spawn-sh {}",
+                                niri::quoted(&json!(generated))
+                                    .expect("compiler command is a valid KDL string")
+                            );
+                            value = value.replace(&wrapped, action);
+                        }
+                        Value::String(value)
+                    }
                     Value::Array(values) => {
                         Value::Array(values.into_iter().map(native_commands).collect())
                     }

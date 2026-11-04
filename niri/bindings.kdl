@@ -15,13 +15,13 @@ binds {
     Print repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
     Super+Shift+S repeat=false hotkey-overlay-title="Nacre:screenshot" { spawn-sh "g=$(slurp) || exit 0; grim -g \"$g\" - | wl-copy --type image/png && notify-send -a \"Nacre Capture\" -i nacre-notifications \"Screenshot\" \"Copied to clipboard\""; }
     Super+Print repeat=false hotkey-overlay-title="Nacre:save-screenshot" { spawn-sh "mkdir -p \"$HOME/Pictures/Screenshots\" && niri msg action screenshot-screen --show-pointer false --path \"$HOME/Pictures/Screenshots/screenshot_$(date +%Y%m%d_%H%M%S_%N).png\""; }
-    Super+Q repeat=false hotkey-overlay-title="Nacre:close" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action close_window"; }
-    Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action fullscreen_window --mode fullscreen"; }
-    Super+M repeat=false hotkey-overlay-title="Nacre:maximize" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action fullscreen_window --mode maximized"; }
-    Super+T repeat=false hotkey-overlay-title="Nacre:float" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action float_window --action toggle"; }
-    Super+G repeat=false hotkey-overlay-title="Nacre:group" { spawn-sh "niri msg action toggle-column-tabbed-display"; }
-    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title="Nacre:group-cycle" { spawn-sh "niri msg action focus-window-up-or-bottom"; }
-    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title="Nacre:group-cycle" { spawn-sh "niri msg action focus-window-down-or-top"; }
+    Super+Q repeat=false hotkey-overlay-title="Nacre:close" { close-window; }
+    Super+F repeat=false hotkey-overlay-title="Nacre:fullscreen" { fullscreen-window; }
+    Super+M repeat=false hotkey-overlay-title="Nacre:maximize" { maximize-window-to-edges; }
+    Super+T repeat=false hotkey-overlay-title="Nacre:float" { toggle-window-floating; }
+    Super+G repeat=false hotkey-overlay-title="Nacre:group" { toggle-column-tabbed-display; }
+    Super+Ctrl+Page_Up repeat=false hotkey-overlay-title="Nacre:group-cycle" { focus-window-up-or-bottom; }
+    Super+Ctrl+Page_Down repeat=false hotkey-overlay-title="Nacre:group-cycle" { focus-window-down-or-top; }
     Alt+TAB repeat=false hotkey-overlay-title="Nacre:cycle-window" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action cycle_window --direction next"; }
     Alt+Shift+TAB repeat=false hotkey-overlay-title="Nacre:cycle-window" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action cycle_window --direction previous"; }
     Super+1 repeat=false hotkey-overlay-title="Nacre:workspace" { spawn-sh "exec env NACRE_COMPOSITOR=niri \"${NACRE_COMPOSITOR_TOOLS:-$HOME/.local/share/nacre/shell/tools}/nacre-helper\" compositor action switch_workspace --workspace 1"; }

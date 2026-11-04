@@ -1140,6 +1140,7 @@ pub fn run(args: &[String]) -> Result<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn persistent_workspace_sets_have_equal_counts_and_distinct_names() -> Result<()> {
         let names: Vec<String> = (1..=6).map(|i| format!("nacre-{i}")).collect();
@@ -1356,6 +1357,21 @@ mod tests {
         let root = fs::read_to_string(destination.join("config/config.kdl"))?;
         assert!(root.contains("bead-pearls.kdl"));
         let native_overlay = fs::read_to_string(destination.join("config/nacre-niri.kdl"))?;
+        for fork_only in [
+            "force-close-window",
+            "restore-last-hidden-window",
+            "restore-current-workspace-hidden-windows",
+        ] {
+            assert!(
+                native_overlay.contains(fork_only),
+                "overlay missing {fork_only}"
+            );
+            assert!(
+                !root.contains(fork_only),
+                "stock config contains {fork_only}"
+            );
+        }
+        assert!(!root.contains("window-restore true"));
         let generated_rules = fs::read_to_string(destination.join("config/window-rules.kdl"))?;
         for generated in [&root, &native_overlay, &generated_rules] {
             assert!(!generated.contains("bead[.]pearl"));
@@ -1525,7 +1541,7 @@ mod tests {
         }
         for (key, action) in [
             ("Super+h", "move-window-to-scratchpad"),
-            ("Super+Shift+h", "toggle-scratchpad"),
+            ("Super+Shift+H", "restore-last-hidden-window"),
             ("Super+p", "toggle-window-pinned"),
         ] {
             assert!(!shared.contains(action), "stock config includes {action}");
@@ -1533,14 +1549,21 @@ mod tests {
             assert!(overlay.contains(key), "fork overlay lacks {key}");
             assert!(overlay.contains(action), "fork overlay lacks {action}");
         }
-        assert!(overlay.contains("hotkey-overlay-title=\"Nacre:scratchpad-windows\""));
-        assert!(!overlay.contains("Super+Alt+h"));
+        assert!(overlay.contains("hotkey-overlay-title=\"Nacre:restore\""));
+        assert!(overlay.contains("Super+Alt+H"));
+        assert!(overlay.contains("restore-current-workspace-hidden-windows"));
         assert_eq!(overlay.matches("open-pinned true").count(), 3);
         assert!(!shared_rules.contains("open-pinned true"));
-        for key in ["SUPER + H", "SUPER + SHIFT + H", "SUPER + P"] {
-            assert!(native_rows.iter().all(|row| row["id"] != key));
+        for (key, capability) in [
+            ("SUPER + H", "scratchpad"),
+            ("SUPER + SHIFT + H", "window_restore"),
+            ("SUPER + ALT + H", "window_restore"),
+            ("SUPER + P", "window_pinning"),
+        ] {
+            assert!(native_rows.iter().any(|row| row["id"] == key
+                && row["nacreNiriCapability"] == capability
+                && row["stockNiriUnsupported"] == true));
         }
-        assert!(native_rows.iter().any(|row| row["id"] == "SUPER + ALT + H"));
         assert!(overlay.starts_with("include \"config.kdl\""));
         assert!(overlay.contains("Super+Ctrl+Tab"));
         assert!(overlay.contains("Super+Ctrl+Shift+Tab"));
