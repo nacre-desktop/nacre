@@ -365,8 +365,11 @@ impl<T: Outputs> Events<T> {
                 let collections = snapshot["capabilities"]["workspaceCollections"].clone();
                 snapshot["capabilities"] =
                     super::niri::capabilities_with_native(self.native_capabilities);
-                if !collections.is_null() {
+                if self.native_capabilities.workspace_collections && !collections.is_null() {
                     snapshot["capabilities"]["workspaceCollections"] = collections;
+                } else if let Some(snapshot) = snapshot.as_object_mut() {
+                    snapshot.remove("collections");
+                    snapshot.remove("activeCollection");
                 }
                 self.pending.push_back(snapshot);
                 self.pending.push_back(normalized.clone());
@@ -520,6 +523,12 @@ mod tests {
         server.write_all(
             (crate::json::encode(&json!({"ConfigLoaded":{"failed":false}}))? + "\n").as_bytes(),
         )?;
+        // An already queued topology notification must not advertise a capability disabled
+        // by the preceding reload.
+        server.write_all(
+            (crate::json::encode(&json!({"CollectionsChanged":{"collections":[]}}))? + "\n")
+                .as_bytes(),
+        )?;
         let outputs = FixtureOutputs {
             values: vec![
                 json!({"DP-1":{"logical":{"x":0,"y":0,"width":100,"height":100},"focused":true}}),
@@ -556,6 +565,13 @@ mod tests {
             assert!(after_reload["capabilities"].get(key).is_none());
         }
         assert!(after_reload.get("collections").is_none());
+        let _configuration_event = events.next_value()?;
+        let after_queued_notification = events.next_value()?;
+        assert_eq!(after_queued_notification["type"], "snapshot");
+        assert!(after_queued_notification["capabilities"]
+            .get("workspaceCollections")
+            .is_none());
+        assert!(after_queued_notification.get("collections").is_none());
         drop(server);
         Ok(())
     }
