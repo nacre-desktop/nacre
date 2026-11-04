@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from qml_fixtures import install_i18n, stage_qml, run_qml
+from qml_fixtures import install_foundation_interaction, install_i18n, stage_qml, run_qml
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = ROOT.parent / "shell/services/compositor"
@@ -82,6 +82,7 @@ function call(method,params,callback){if(method==="niri.source")Qt.callLater(()=
                         "pragma Singleton\nimport QtQuick\nQtObject {" + body + "}"
                     )
                     manifest.write(f"singleton {name} 1.0 {name}.qml\n")
+            install_foundation_interaction(fixtures, ROOT.parent / "shell/widgets")
             for app in ("NacreSettingsApp", "NacreColorsApp", "NacreWelcomeApp"):
                 stage_qml(
                     ROOT.parent / "shell/services" / (app + ".qml"),
@@ -110,7 +111,6 @@ import "snapshots.js" as Snapshots
 import "fixtures"
 Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
- Component {id: deskRow; NacreWorkspaceRow {outputName:"DP-1";width:420}}
  TestCase {
   id:test
   name:"NiriBackendContract"; when:windowShown
@@ -131,7 +131,9 @@ Item {
    stateTopic.data=state(rows,false);stateTopic.fresh=true;eventTopic.data=source;eventTopic.fresh=true
    NacreDaemon.connected=true;NacreDaemon.enabled=true;backend.daemonRefresh()
    tryVerify(()=>backend.connected&&backend.collections.length===0)
-   const view=deskRow.createObject(test);verify(view)
+   const rowComponent=Qt.createComponent("production/modules/topbar/NacreWorkspaceRow.qml")
+   tryVerify(()=>rowComponent.status===Component.Ready)
+   const view=rowComponent.createObject(test,{outputName:"DP-1",width:420});verify(view)
    verify(!findChild(view,"collectionDeskBadge").visible,"badge waits for advertised collection capability")
    stateTopic.data=state(rows,true);backend.daemonRefresh()
    tryVerify(()=>backend.collections.length===3)
