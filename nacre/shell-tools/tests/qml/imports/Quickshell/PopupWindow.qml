@@ -6,7 +6,9 @@ Window {
     signal windowConnected
     signal closed
     property bool grabFocus: false
-    property QtObject anchor: QtObject {
+    property alias anchor: anchorObject
+    QtObject {
+        id: anchorObject
         property var item: null
         property var window: null
         property int edges: 0
