@@ -192,10 +192,10 @@ mod tests {
           for scale in [1.0, 1.5] {
             let (width, height) = ((10.0 * scale) as u32, (144.0 * scale) as u32);
             let raster = |state| {
-                let svg = edge_tab(&lip, (10., 144.), state, A, S).unwrap();
+            let svg = edge_tab(&lip, (10., 144.), state, A, S).unwrap();
                 let mut bytes = vec![0; (width * height * 4) as usize];
                 svg_into(
-                    &svg,
+                    svg.as_bytes(),
                     ShmTarget {
                         bytes: &mut bytes,
                         width,

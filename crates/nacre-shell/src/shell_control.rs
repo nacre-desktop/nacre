@@ -10,6 +10,7 @@ use crate::{
 use bead::core::source::{Snapshot, Source, Subscription};
 use bead::wayland::{
     EdgeChrome, ExternalEdgeCue, ExternalEdgeCueSender, ExternalEdgePhase, ShellControl,
+    intent::Lip,
 };
 use std::collections::BTreeMap;
 use std::sync::{
@@ -224,11 +225,12 @@ impl EdgeEventState {
             let mut active = self.active_cues.lock().unwrap_or_else(|p| p.into_inner());
             let removed_keys: Vec<_> = active
                 .iter()
-                .filter_map(|(key, cue)| (!outputs.contains_key(&cue.output)).then(|| key.clone()))
+                .filter(|&(_, cue)| !outputs.contains_key(&cue.output))
+                .map(|(key, _)| key.clone())
                 .collect();
             removed_keys.into_iter().filter_map(|key| active.remove(&key)).collect::<Vec<_>>()
         };
-        self.send_left_cues(removed.into_iter());
+        self.send_left_cues(removed);
     }
     fn send_left_cues(&self, cues: impl IntoIterator<Item = ExternalEdgeCue>) {
         for cue in cues {

@@ -340,7 +340,9 @@ fn flush_niri(
 ) -> Result<()> {
     let mut snapshot = state.snapshot()?;
     snapshot["connectionId"] = json!(metadata.connection);
-    snapshot["capabilities"]["edge_trigger_cues"] = json!(metadata.edge_trigger_cues);
+    if metadata.edge_trigger_cues {
+        snapshot["capabilities"]["edge_trigger_cues"] = json!(true);
+    }
     if let Some(ledger) = crate::paths::Paths::environment()
         .ok()
         .and_then(|paths| std::fs::read(paths.state.join("workspace-session.json")).ok())

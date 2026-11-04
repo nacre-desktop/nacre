@@ -136,11 +136,22 @@ class NacreNiriSessionTests(unittest.TestCase):
                 )
             self.assertNotIn("edge-triggers", config.read_text())
             self.assertNotIn("nacre { edge-triggers; }", overlay.read_text())
+            self.assertIn("cue;", overlay.read_text())
             self.assertIn(
-                "left { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "left { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
             )
             self.assertIn(
-                "bottom { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "right { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "top { action { event; }; dwell-time-ms 800; trigger-distance 50; trigger-length 208; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "bottom { action { event; }; dwell-time-ms 800; trigger-distance 10; }",
+                overlay.read_text(),
             )
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(

@@ -446,7 +446,7 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         },
         ["dashboard-today".into(), "sound".into()],
     );
-    let (cue_sender, cue_channel) = bead::wayland::ExternalEdgeCueChannel::new();
+    let (cue_sender, cue_channel) = bead::wayland::ExternalEdgeCueChannel::channel();
     let cue_receiver = cue_channel.take_receiver().expect("test owns the cue receiver");
     let state = crate::shell_control::EdgeEventState::new(gate.clone(), cue_sender);
     let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(

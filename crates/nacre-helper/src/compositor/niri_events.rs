@@ -250,10 +250,16 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
 
 pub trait Outputs {
     fn outputs(&mut self) -> Result<Value>;
+    fn edge_trigger_cues(&mut self) -> Option<bool> {
+        None
+    }
 }
 impl Outputs for Connection {
     fn outputs(&mut self) -> Result<Value> {
         self.response("Outputs", Duration::from_secs(10), MAX_BYTES)
+    }
+    fn edge_trigger_cues(&mut self) -> Option<bool> {
+        Some(self.nacre_capabilities(Duration::from_millis(500)).edge_trigger_cues)
     }
 }
 pub struct Events<T: Outputs> {
@@ -341,6 +347,11 @@ impl<T: Outputs> Events<T> {
                 .next_event()?;
             let normalized = self.state.apply(&event)?;
             let mut outputs_changed = false;
+            if event.get("ConfigLoaded").is_some() {
+                if let Some(supported) = self.outputs.edge_trigger_cues() {
+                    self.edge_trigger_cues = Some(supported);
+                }
+            }
             if event.get("WorkspacesChanged").is_some() || event.get("ConfigLoaded").is_some() {
                 let outputs = self
                     .outputs
@@ -357,8 +368,8 @@ impl<T: Outputs> Events<T> {
                 && normalized["type"] != "other"
             {
                 let mut snapshot = self.state.snapshot()?;
-                if let Some(supported) = self.edge_trigger_cues {
-                    snapshot["capabilities"]["edge_trigger_cues"] = json!(supported);
+                if self.edge_trigger_cues == Some(true) {
+                    snapshot["capabilities"]["edge_trigger_cues"] = json!(true);
                 }
                 self.pending.push_back(snapshot);
                 self.pending.push_back(normalized.clone());
@@ -383,6 +394,7 @@ mod tests {
     struct FixtureOutputs {
         values: Vec<Value>,
         queries: Vec<Value>,
+        cue_capabilities: Vec<bool>,
     }
     impl Outputs for FixtureOutputs {
         fn outputs(&mut self) -> Result<Value> {
@@ -390,6 +402,37 @@ mod tests {
             self.queries.push(json!({"name":"Outputs","kwargs":{}}));
             Ok(self.values[index].clone())
         }
+        fn edge_trigger_cues(&mut self) -> Option<bool> {
+            (!self.cue_capabilities.is_empty()).then(|| self.cue_capabilities.remove(0))
+        }
+    }
+    #[test]
+    fn direct_event_snapshots_refresh_edge_cue_capability_on_config_reload() -> crate::Result<()> {
+        let (client, mut server) = UnixStream::pair()?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            writeln!(server, "{{\"WorkspacesChanged\":{{\"workspaces\":[]}}}}")?;
+            writeln!(server, "{{\"WindowsChanged\":{{\"windows\":[]}}}}")?;
+            writeln!(server, "{{\"ConfigLoaded\":{{\"failed\":false}}}}")?;
+            writeln!(server, "{{\"ConfigLoaded\":{{\"failed\":false}}}}")
+        });
+        let outputs = FixtureOutputs {
+            values: vec![json!({})],
+            queries: vec![],
+            cue_capabilities: vec![true, false],
+        };
+        let mut events = Events::new(EventSocket::from_stream(client), outputs)?
+            .with_edge_trigger_cues(false);
+        let initial = events.next_value()?;
+        assert!(initial["capabilities"].get("edge_trigger_cues").is_none());
+        assert_eq!(events.next_value()?["type"], "windows-changed");
+        let enabled = events.next_value()?;
+        assert_eq!(enabled["capabilities"]["edge_trigger_cues"], true);
+        assert_eq!(events.next_value()?["type"], "configuration-reloaded");
+        let disabled = events.next_value()?;
+        assert!(disabled["capabilities"].get("edge_trigger_cues").is_none());
+        assert_eq!(events.next_value()?["type"], "configuration-reloaded");
+        peer.join().map_err(|_| "Niri reload fixture panicked")??;
+        Ok(())
     }
     #[test]
     fn native_edge_stream_handshake_and_event_shape_are_validated() -> crate::Result<()> {
@@ -479,6 +522,7 @@ mod tests {
                     .ok_or("Missing outputs")?
                     .clone(),
                 queries: vec![],
+                cue_capabilities: vec![],
             };
             let mut events = Events::new(EventSocket::from_stream(client), outputs)?;
             let mut emitted = Vec::new();
