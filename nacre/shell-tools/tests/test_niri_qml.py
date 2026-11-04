@@ -56,13 +56,13 @@ QtObject {
  property var focusedMonitor:({name:"DP-1"})
  readonly property var collections:Niri.NiriBackend.collections
  readonly property string activeCollectionId:Niri.NiriBackend.activeCollectionId
- Connections {target:Niri.NiriBackend;function onCollectionsSupportedChanged(){root.capabilities=Object.assign({},root.capabilities,{workspaceCollections:Niri.NiriBackend.collectionsSupported})}}
+ property Connections backendConnection:Connections {target:Niri.NiriBackend;function onCollectionsSupportedChanged(){root.capabilities=Object.assign({},root.capabilities,{workspaceCollections:Niri.NiriBackend.collectionsSupported})}}
 }''')
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest.write("singleton NacreCompositor 1.0 NacreCompositor.qml\n")
             providers = {
                 "NacreDaemon": '''id:root;property bool enabled:false;property bool connected:false;property string boot:"fixture-boot";property var topics:({});signal event(string topic,string name,var data,double sequence);signal lost(string topic);signal newBoot(string id)
-Component{id:topicFactory;QtObject{property string name:"";property var data:({available:false});property bool fresh:false;property int users:0}}
+property Component topicFactory:Component{QtObject{property string name:"";property var data:({available:false});property bool fresh:false;property int users:0}}
 function topic(name){if(!topics[name])topics[name]=topicFactory.createObject(root,{name:name});return topics[name]}
 function subscribe(name){topic(name).users++}function unsubscribe(name){topic(name).users=Math.max(0,topic(name).users-1)}
 function call(method,params,callback){if(method==="niri.source")Qt.callLater(()=>callback({connection_id:"fixture-connection"},null));return 1}''',
@@ -145,7 +145,7 @@ Item {
    compare(view.deskBadgeText,"2/3");compare(view.deskLabel,"studio")
    const renamed=rows.map(row=>row.id==="niri-collection:28"?Object.assign({},row,{name:"music"}):row)
    stateTopic.data=state(renamed,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="music")
-   const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.output}))
+   const focused=renamed.map(row=>Object.assign({},row,{active:row.id==="niri-collection:39",output:row.id==="niri-collection:39"?"DP-1":row.id==="niri-collection:28"?"eDP-1":row.output}))
    stateTopic.data=state(focused,true);backend.daemonRefresh();tryVerify(()=>view.deskLabel==="3"&&view.deskBadgeText==="3/3")
    const single=[renamed[1]]
    stateTopic.data=state(single,true);backend.daemonRefresh();tryVerify(()=>!findChild(view,"collectionDeskBadge").visible)
