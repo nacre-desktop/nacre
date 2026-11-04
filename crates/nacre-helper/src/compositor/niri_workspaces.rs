@@ -47,6 +47,10 @@ impl Transport for Native {
         let timeout = Duration::from_secs_f64(timeout);
         let outputs = self.connection.response("Outputs", timeout, max_bytes)?;
         let windows = self.connection.response("Windows", timeout, max_bytes)?;
+        let windows = windows.as_array().ok_or_else(|| crate::compositor::niri_state::Error {
+            kind: "ValueError",
+            message: "Malformed native window state".into(),
+        })?;
         let rows = self.connection.response("Workspaces", timeout, max_bytes)?;
         let bad = || crate::compositor::niri_state::Error {
             kind: "ValueError",
@@ -57,9 +61,7 @@ impl Transport for Native {
         for row in rows.as_array().ok_or_else(bad)? {
             let id = row["id"].as_u64().ok_or_else(bad)?;
             let window_count = windows
-                .as_array()
-                .into_iter()
-                .flatten()
+                .iter()
                 .filter(|window| window["workspace_id"].as_u64() == Some(id))
                 .count();
             workspaces.push(json!({"id":format!("niri-workspace:{id}"),"index":row["idx"],"name":row["name"],"outputId":row["output"],"active":row["is_active"],"focused":row["is_focused"],"windowCount":window_count,"activeWindowId":row["active_window_id"].as_u64().map(|id|format!("niri-window:{id}"))}));
@@ -242,15 +244,15 @@ pub fn rotation_eligible(snapshot: &Value, count: usize) -> bool {
     rows.iter().all(|row| {
         let output = row["outputId"].as_str().unwrap_or("");
         let name = row["name"].as_str().unwrap_or("");
-        let populated = row["windowCount"].as_u64().unwrap_or(0) > 0;
         if output.is_empty() {
             return true;
         }
         if !outputs.contains(output) {
-            return name.is_empty() && !populated;
+            return name.is_empty()
+                && row["windowCount"].as_u64().is_some_and(|window_count| window_count == 0);
         }
         if name.is_empty() {
-            return !populated;
+            return row["windowCount"].as_u64().is_some_and(|window_count| window_count == 0);
         }
         id(&row["id"])
             .ok()
@@ -1116,6 +1118,16 @@ mod tests {
             json!({"id":"niri-workspace:999","index":7,"name":"","outputId":"screen-0","active":false,"windowCount":1}),
         );
         assert!(!rotation_eligible(&populated_spare.state, 6));
+        let mut unknown_spare = Fixture::new(2);
+        unknown_spare
+            .state["workspaces"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({
+                "id":"niri-workspace:997","index":7,"name":"",
+                "outputId":"screen-0","active":false
+            }));
+        assert!(!rotation_eligible(&unknown_spare.state, 6));
         Ok(())
     }
     #[test]
