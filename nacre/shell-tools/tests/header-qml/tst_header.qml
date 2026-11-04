@@ -11,7 +11,7 @@ TestCase {
     name: "NacreHeader"
     Component {
         id: row
-        NacreWorkspaceRow {}
+        NacreWorkspaceRow { outputName: "test" }
     }
     Component {
         id: pearlView
@@ -143,22 +143,22 @@ TestCase {
         mouseClick(badge, badge.width / 2, badge.height / 2);
         const menu = findChild(view, "collectionDeskMenu");
         tryCompare(menu, "visible", true);
-        const switchButton = findChild(menu, "collectionDeskSwitch");
+        const switchButton = findChild(test, "collectionDeskSwitch");
         verify(!!switchButton);
         switchButton.clicked();
         compare(NacreDaemon.calls[0].params.action.operation, "activate");
         compare(NacreDaemon.calls[0].params.action.collection, "niri-collection:17");
         mouseClick(badge, badge.width / 2, badge.height / 2);
-        findChild(menu, "collectionDeskCreate").clicked();
-        const name = findChild(menu, "collectionDeskName");
+        findChild(test, "collectionDeskCreate").clicked();
+        const name = findChild(test, "collectionDeskName");
         name.text = "notes";
-        findChild(menu, "collectionDeskSave").clicked();
+        findChild(test, "collectionDeskSave").clicked();
         compare(NacreDaemon.calls[1].params.action.operation, "create");
         compare(NacreDaemon.calls[1].params.action.name, "notes");
         mouseClick(badge, badge.width / 2, badge.height / 2);
-        findChild(menu, "collectionDeskRename").clicked();
+        findChild(test, "collectionDeskRename").clicked();
         name.text = "home renamed";
-        findChild(menu, "collectionDeskSave").clicked();
+        findChild(test, "collectionDeskSave").clicked();
         compare(NacreDaemon.calls[2].params.action.operation, "rename");
         compare(NacreDaemon.calls[2].params.action.collection, "niri-collection:17");
         compare(NacreDaemon.calls[2].params.action.name, "home renamed");
