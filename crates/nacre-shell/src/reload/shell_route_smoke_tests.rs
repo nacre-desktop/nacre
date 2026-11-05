@@ -2,6 +2,54 @@
 //! Exercise the actual Luau shell entries through the panel Runtime.
 use super::*;
 
+fn plan_with_cpu_preparation(
+    name: &str,
+    scene: &bead::render::Scene,
+    opening: bool,
+    width: u32,
+    height: u32,
+    scale: f32,
+    format: bead::render::PixelFormat,
+    renderer: &mut bead::render::tree::TreeCpuRenderer,
+) -> std::result::Result<Option<bead::render::layer_motion::LayerMotionPlan>, String> {
+    use bead::render::tree::CpuResourcesPending;
+
+    for attempt in 0..3 {
+        match bead::render::layer_motion::LayerMotionPlan::for_slide(
+            scene, opening, width, height, scale, format, renderer,
+        ) {
+            Ok(plan) => return Ok(plan),
+            Err(error) => {
+                let Some(pending) = error.downcast_ref::<CpuResourcesPending>() else {
+                    return Err(format!("{name}: layer-motion planning failed: {error}"));
+                };
+                if attempt == 2 {
+                    return Err(format!(
+                        "{name}: CPU preparation remained pending after two worker requests"
+                    ));
+                }
+                let request = pending.request.clone();
+                if !request.mark_requested() {
+                    return Err(format!(
+                        "{name}: CPU preparation request was already queued"
+                    ));
+                }
+                let worker = std::thread::scope(|scope| {
+                    scope.spawn(move || request.prepare()).join()
+                });
+                match worker {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => {
+                        return Err(format!("{name}: CPU worker preparation failed: {error}"));
+                    }
+                    Err(_) => return Err(format!("{name}: CPU worker preparation panicked")),
+                }
+            }
+        }
+    }
+    unreachable!("bounded preparation loop returns or errors on every iteration")
+}
+
 fn fake_source(data: serde_json::Value) -> std::sync::Arc<dyn bead::core::source::Source> {
     std::sync::Arc::new(bead_test::source::FakeSource::new(data).expect("fixture source"))
 }
@@ -881,7 +929,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 let mut reveal_timing = None;
                 if compositor_closes.contains(&name) {
                     use bead::render::{
-                        PixelFormat, layer_motion::LayerMotionPlan, tree::TreeCpuRenderer,
+                        PixelFormat, tree::TreeCpuRenderer,
                     };
                     // These padded bounds are the logical layer-surface viewport
                     // used by the route's production panel configuration.
@@ -906,7 +954,8 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     let reveal = scene.motion.as_ref().is_some_and(|motion| motion.reveal);
 
                     let mut renderer = TreeCpuRenderer::default();
-                    let opening = LayerMotionPlan::for_slide(
+                    let opening = plan_with_cpu_preparation(
+                        name,
                         &scene,
                         true,
                         width,
@@ -989,7 +1038,8 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                                 .expect("scale-1 worker bake produces frame"),
                         );
                         let mut scale_one_renderer = TreeCpuRenderer::default();
-                        let scale_one_plan = LayerMotionPlan::for_slide(
+                        let scale_one_plan = plan_with_cpu_preparation(
+                            name,
                             &scale_one,
                             true,
                             width,
@@ -1022,7 +1072,8 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     }
 
                     let mut renderer = TreeCpuRenderer::default();
-                    let closing = LayerMotionPlan::for_slide(
+                    let closing = plan_with_cpu_preparation(
+                        name,
                         &scene,
                         false,
                         width,
