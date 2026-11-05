@@ -835,6 +835,39 @@ fn unavailable_launcher_does_not_claim_empty_history() {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn launching_a_window_releases_attached_keyboard_but_keeps_pinned_and_detached_launchers() {
+    let _guard = serial();
+    for (pinned, detached) in [(false, false), (true, false), (false, true)] {
+        let mut lab = lab(topic(&[], state(false, "", None))).await;
+        let chat = chat_for(&lab).await;
+        let stores = launcher_stores(&[
+            ("chat.pinned", Value::Bool(pinned)),
+            ("view.detached", Value::Bool(detached)),
+        ]);
+        chat.project(&stores);
+        assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
+        until(
+            &chat,
+            &stores,
+            "history",
+            |out| matches!(&out["launcher.chats"], Value::List(rows) if !rows.is_empty()),
+        )
+        .await;
+        chat.act("launcher:open:k1", &stores);
+        assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.open");
+        let out = until(&chat, &stores, "window handoff", |out| {
+            out.get("bead.focused") == Some(&Value::Text(String::new()))
+        })
+        .await;
+        assert_eq!(
+            out.get("panel.open") == Some(&Value::Bool(false)),
+            !pinned && !detached
+        );
+        assert_eq!(out["chat.section"], Value::Text("launcher".into()));
+    }
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn launcher_load_error_is_visible_and_does_not_retry_each_projection() {
     let _guard = serial();
     let mut lab = lab(topic(&[], state(false, "", None))).await;

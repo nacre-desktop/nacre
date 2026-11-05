@@ -103,6 +103,7 @@ struct Parsed {
 }
 #[derive(Default)]
 struct St {
+    launcher_handoff: bool,
     pending: Vec<Pending>,
     opened_at: Option<Instant>,
     message: String,
@@ -384,7 +385,10 @@ impl Chat {
                     st.launcher_asked = Some(Instant::now());
                     st.message = "bead.common.request-failed".into();
                 }
-                (Call::LauncherAction, Ok(_)) => st.launcher_asked = None,
+                (Call::LauncherAction, Ok(_)) => {
+                    st.launcher_asked = None;
+                    st.launcher_handoff = true;
+                }
                 (Call::LauncherAction, Err(_)) => {
                     st.launcher_asked = None;
                     st.message = "bead.common.request-failed".into();
@@ -439,6 +443,7 @@ impl Chat {
             return BTreeMap::new();
         }
         self.poll();
+        let handoff = std::mem::take(&mut self.st.borrow_mut().launcher_handoff);
         let section = match stores.get("chat.section") {
             Some(Value::Text(s)) => s.clone(),
             _ => "launcher".into(),
@@ -449,6 +454,14 @@ impl Chat {
         };
         let wake = self.waker();
         let mut out = BTreeMap::new();
+        if handoff {
+            out.insert("bead.focused".into(), text(""));
+            if stores.get("view.detached") != Some(&Value::Bool(true))
+                && stores.get("chat.pinned") != Some(&Value::Bool(true))
+            {
+                out.insert("panel.open".into(), Value::Bool(false));
+            }
+        }
         out.insert("chat.section".into(), text(section.clone()));
         self.remember("chat.section", &section);
         let labels = ["bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
@@ -671,7 +684,7 @@ impl Chat {
             out.insert("chat.button".into(), number(self.metrics.button));
             out.insert("chat.top".into(), number(self.metrics.top));
             out.insert("chat.inner".into(), number(f64::from(self.metrics.inner)));
-            if stores.get("bead.focused").is_none() {
+            if !handoff && stores.get("bead.focused").is_none() {
                 out.insert("bead.focused".into(), text("chat.search"));
             }
             return out;
