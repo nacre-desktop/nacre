@@ -34,9 +34,8 @@ fn plan_with_cpu_preparation(
                         "{name}: CPU preparation request was already queued"
                     ));
                 }
-                let worker = std::thread::scope(|scope| {
-                    scope.spawn(move || request.prepare()).join()
-                });
+                let worker =
+                    std::thread::scope(|scope| scope.spawn(move || request.prepare()).join());
                 match worker {
                     Ok(Ok(())) => {}
                     Ok(Err(error)) => {
@@ -928,9 +927,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 }
                 let mut reveal_timing = None;
                 if compositor_closes.contains(&name) {
-                    use bead::render::{
-                        PixelFormat, tree::TreeCpuRenderer,
-                    };
+                    use bead::render::{PixelFormat, tree::TreeCpuRenderer};
                     // These padded bounds are the logical layer-surface viewport
                     // used by the route's production panel configuration.
                     let (width, height) =
