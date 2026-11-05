@@ -97,6 +97,7 @@ else
     local list_bottom=H-E-footer_h-T.spacing.md
     local warning=get("launcher.warning")
     local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
+    local focused=ui.resolve_for_check(ui.bind("bead.focused")) or ""
     local warning_h=warning~="" and CAPTION+T.spacing.xs or 0
     local rows_top=list_top+warning_h
     local list_h=math.max(0,list_bottom-rows_top)
@@ -117,7 +118,7 @@ else
     add(button("refresh",E+INNER-BTN,search_top,BTN,BTN,"","refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION,refresh_label))
     add(kit.Tooltip{id="refresh-tooltip",position="absolute",edge="top",bar_size=-T.spacing.sm,
         left=E+INNER-BTN,width=ui.text_width(refresh_label,"IBM Plex Sans",CAPTION)+2*T.spacing.sm,height=CAPTION+2*T.spacing.sm,
-        padding=T.spacing.xs,visible=string.find(hovered,"refresh",1,true)~=nil,
+        padding=T.spacing.xs,visible=string.find(hovered,"refresh",1,true)~=nil or string.find(focused,"refresh",1,true)~=nil,
         ui.Text{text=refresh_label,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
     if warning~="" then
         add(ui.Text{id="launcher-warning",position="absolute",left=E,top=list_top,width=INNER,height=warning_h,
@@ -157,7 +158,7 @@ else
     local footer_tooltip=""
     for _,item in footer_actions do
         table.insert(footer_buttons,button(item.id,nil,nil,nil,BTN,item.label,item.glyph,ui.action("chat.do",item.action),false,CAPTION,item.label))
-        if string.find(hovered,item.id,1,true)~=nil then footer_tooltip=item.label end
+        if string.find(hovered,item.id,1,true)~=nil or string.find(focused,item.id,1,true)~=nil then footer_tooltip=item.label end
     end
     add(ui.Row(footer_buttons))
     if footer_tooltip~="" then
