@@ -113,10 +113,10 @@ class Conversation(unittest.TestCase):
                 json.loads(first.stdout)["path"], json.loads(second.stdout)["path"]
             )
             root = Path(tmp) / "brain"
-            self.assertEqual(len(list((root / "wiki").glob("*.md"))), 2)
+            self.assertEqual(list((root / "wiki").glob("*.md")), [])
             body = Path(json.loads(first.stdout)["path"]).read_text()
-            self.assertIn("Worlds: Climbing, Personal", body)
-            self.assertIn("Topics: Training", body)
+            self.assertIn("Worlds: Climbing, Siverteh", body)
+            self.assertIn("Topics: training", body)
             refused = subprocess.run(
                 command,
                 input="password: hunter2",
@@ -126,7 +126,7 @@ class Conversation(unittest.TestCase):
             )
             self.assertNotEqual(refused.returncode, 0)
 
-    def test_memory_subject_creation_is_independent_of_coding_registry(self):
+    def test_memory_taxonomy_growth_is_independent_of_coding_registry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "brain"
             registry = Path(tmp) / "projects.json"
@@ -164,7 +164,14 @@ class Conversation(unittest.TestCase):
                 ),
                 check=True,
             )
-            self.assertTrue((root / "wiki/entity-gardensense.md").exists())
+            self.assertFalse((root / "wiki/entity-gardensense.md").exists())
+            taxonomy = json.loads((root / "registry.json").read_text())
+            self.assertTrue(
+                any(
+                    world["name"] == "Gardensense" and world["status"] == "auto"
+                    for world in taxonomy["worlds"]
+                )
+            )
 
     def test_memory_existing_alias_preserves_curated_page(self):
         with tempfile.TemporaryDirectory() as tmp:
