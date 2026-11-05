@@ -627,7 +627,7 @@ mod tests {
             os::unix::net::UnixListener,
             thread,
         };
-        fn probe(enabled: bool) -> Result<Option<i32>> {
+        fn probe(enabled: bool) -> Result<bool> {
             let directory = tempfile::tempdir()?;
             let socket = directory.path().join("niri.sock");
             let listener = UnixListener::bind(&socket)?;

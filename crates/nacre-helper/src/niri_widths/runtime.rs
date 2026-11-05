@@ -188,10 +188,16 @@ mod tests {
                 serde_json::from_str::<Value>(&request).unwrap(),
                 Value::String("NacreCapabilities".into())
             );
-            writeln!(
-                reader.get_mut(),
-                r#"{"Ok":{"NacreCapabilities":{"workspace_collections":false,"proportional_x11_widths":true,"overview_hover":false}}}"#
-            )?;
+            let reply = serde_json::json!({
+                "Ok": {
+                    "NacreCapabilities": {
+                        "workspace_collections": false,
+                        "proportional_x11_widths": true,
+                        "overview_hover": false
+                    }
+                }
+            });
+            writeln!(reader.get_mut(), "{reply}")?;
             request.clear();
             assert_eq!(reader.read_line(&mut request)?, 0);
             listener.set_nonblocking(true)?;
