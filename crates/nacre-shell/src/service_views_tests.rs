@@ -84,29 +84,23 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
             &crate::workspace_rows::Rows::default(),
         ))?;
         settle_harness_animations(&mut h)?;
-        let title_node = h
-            .session
-            .view_nodes()
-            .iter()
-            .find(|node| node.id.ends_with("title"))
-            .ok_or("title text node missing")?;
-        assert!(
-            bead::ui::rect(&title_node.draw).w <= 550.,
-            "hovered title exceeded the configured max width"
-        );
-        let shown = h
+        let (shown, title_rect) = h
             .scene()
             .primitives
             .iter()
             .find_map(|primitive| match primitive {
-                bead::render::Primitive::Text { text, .. }
+                bead::render::Primitive::Text { text, rect, .. }
                     if text.starts_with("A very long hovered") =>
                 {
-                    Some(text)
+                    Some((text.clone(), *rect))
                 }
                 _ => None,
             })
             .ok_or("long hovered title primitive missing")?;
+        assert!(
+            title_rect.w <= 550.,
+            "hovered title exceeded the configured max width"
+        );
         assert_ne!(shown, long_title, "long hovered title should be ellipsized");
         assert!(
             shown.ends_with('…'),
@@ -172,15 +166,20 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
             band(&h).ok_or("bar title band missing after hover")?,
             before_band
         );
-        let title_node = h
-            .session
-            .view_nodes()
+        let title_rect = h
+            .scene()
+            .primitives
             .iter()
-            .find(|node| node.id.ends_with("title"))
-            .ok_or("title text node missing")?;
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Text { text, rect, .. } if text == "Renamed focus" => {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .ok_or("focused title primitive missing")?;
         assert!(
-            bead::ui::rect(&title_node.draw).w <= 550.,
-            "title exceeded the configured max width"
+            title_rect.w <= 550.,
+            "focused title exceeded the configured max width"
         );
 
         topic["overviewOpen"] = serde_json::Value::Bool(true);
