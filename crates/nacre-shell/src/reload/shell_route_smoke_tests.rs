@@ -925,6 +925,26 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     // applies the edge-relative motion offset.
                     scene.offset = (32., 32.);
                 }
+                // Route goldens must not depend on the build host's Fontconfig
+                // choices. Match bead-test's deterministic renderer fonts before
+                // the scene is copied to its CPU preparation worker.
+                let test_fonts = std::path::PathBuf::from(env!("BEAD_FRAMEWORK_ROOT"))
+                    .join("crates/bead-test/fonts");
+                scene.font_files = vec![
+                    test_fonts.join("IBMPlexSans.ttf"),
+                    test_fonts.join("FixtureSymbols.ttf"),
+                ];
+                for primitive in &mut scene.primitives {
+                    if let bead::render::Primitive::Text { family, .. } = primitive {
+                        *family = if family.contains("Symbols") {
+                            "Bead Test Symbols"
+                        } else {
+                            "IBM Plex Sans"
+                        }
+                        .into();
+                    }
+                }
+                scene.prepared.clear();
                 let mut reveal_timing = None;
                 if compositor_closes.contains(&name) {
                     use bead::render::{PixelFormat, tree::TreeCpuRenderer};

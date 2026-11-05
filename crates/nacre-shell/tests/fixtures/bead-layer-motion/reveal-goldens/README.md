@@ -21,3 +21,9 @@ independently compares Bead's setup-time terminal snapshot with a fresh legacy
 endpoint render byte-for-byte. Niri uses those immutable pixels at completion,
 preserving legacy per-primitive blending without a client refresh paint. The
 reference images and one-channel-value compositor tolerance are unchanged.
+
+The route smoke pins text rendering to Bead's `bead-test/fonts/IBMPlexSans.ttf`
+and `FixtureSymbols.ttf`, mapping Symbols families to `Bead Test Symbols` and
+other text to `IBM Plex Sans`. This keeps the CPU references independent of the
+build host's Fontconfig choices, including the asynchronous worker preparation
+used by the compositor planner.
