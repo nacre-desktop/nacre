@@ -24,8 +24,9 @@ bare remote recovery and conflict handling; installer unit retirement. Run helpe
 checks, touched Python suites and the complete desktop CI job in an isolated Arch
 container. No live vault, live units, viewer changes or remote Brain pushes.
 
-Temporary duplicates: retained Python `.py.rollback` tools support existing
-compatibility/parity consumers; delete 7 days after the native replacement is
+Temporary duplicates: retained Python `.py.rollback` tools and their
+`nacre-brain-queue.py` bridge support existing compatibility/parity consumers;
+delete 7 days after the native replacement is
 trusted and those consumers have migrated. The legacy sync binary remains while
 `brain_data::api` and the helper dispatcher expose it, and the Python maintenance
 compatibility tool imports its rollback implementation; delete 7 days after
