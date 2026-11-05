@@ -11,7 +11,9 @@ TestCase {
     name: "NacreHeader"
     Component {
         id: row
-        NacreWorkspaceRow { outputName: "test" }
+        NacreWorkspaceRow {
+            outputName: "test"
+        }
     }
     Component {
         id: pearlView
@@ -90,16 +92,38 @@ TestCase {
     }
     function test_collection_badge_visibility_tracks_capability_and_rows() {
         const rows = [
-                {id: "niri-collection:17", index: 1, name: "home", output: "eDP-1", active: false},
-                {id: "niri-collection:28", index: 2, name: "studio", output: "test", active: true},
-                {id: "niri-collection:39", index: 3, name: null, output: null, active: false}
-            ];
-        NacreCompositor.capabilities = {workspaceCollections: false};
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "eDP-1",
+                active: false
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "test",
+                active: true
+            },
+            {
+                id: "niri-collection:39",
+                index: 3,
+                name: null,
+                output: null,
+                active: false
+            }
+        ];
+        NacreCompositor.capabilities = {
+            workspaceCollections: false
+        };
         NacreCompositor.collections = [];
         const view = createTemporaryObject(row, test);
         const badge = findChild(view, "collectionDeskBadge");
         verify(!!badge && !badge.visible, "capability-pending state remains hidden");
-        NacreCompositor.capabilities = {workspaceCollections: true};
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
         NacreCompositor.collections = rows;
         NacreCompositor.activeCollectionId = "niri-collection:28";
         verify(badge.visible, "late advertised capability reveals live rows");
@@ -117,26 +141,55 @@ TestCase {
         verify(!findChild(view, "collectionDeskBadge").visible, "one desk hides the indicator");
         NacreCompositor.collections = rows;
         verify(findChild(view, "collectionDeskBadge").visible, "fresh snapshot after reconnect restores the indicator");
-        NacreCompositor.capabilities = {workspaceCollections: false};
+        NacreCompositor.capabilities = {
+            workspaceCollections: false
+        };
         verify(!findChild(view, "collectionDeskBadge").visible);
     }
     function test_collection_menu_switch_create_rename_calls_are_output_scoped() {
-        NacreCompositor.capabilities = {workspaceCollections: true};
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
         NacreCompositor.collections = [
-            {id: "niri-collection:17", index: 1, name: "home", output: "test"},
-            {id: "niri-collection:28", index: 2, name: "studio", output: "DP-1"}
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
         ];
         const view = createTemporaryObject(row, test);
-        verify(view.collectionAction({operation: "activate", collection: "niri-collection:28"}));
+        verify(view.collectionAction({
+            operation: "activate",
+            collection: "niri-collection:28"
+        }));
         compare(NacreDaemon.calls[0].method, "collection.action");
         compare(NacreDaemon.calls[0].params.output, "test");
         compare(NacreDaemon.calls[0].params.action.collection, "niri-collection:28");
     }
     function test_collection_menu_switch_create_and_rename_actions() {
-        NacreCompositor.capabilities = {workspaceCollections: true};
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
         NacreCompositor.collections = [
-            {id: "niri-collection:17", index: 1, name: "home", output: "test"},
-            {id: "niri-collection:28", index: 2, name: "studio", output: "DP-1"}
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
         ];
         const view = createTemporaryObject(row, test);
         const badge = findChild(view, "collectionDeskBadge");
@@ -164,10 +217,22 @@ TestCase {
         compare(NacreDaemon.calls[2].params.action.name, "home renamed");
     }
     function test_collection_badge_ink_pixels_at_screen_scale() {
-        NacreCompositor.capabilities = {workspaceCollections: true};
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
         NacreCompositor.collections = [
-            {id: "niri-collection:17", index: 1, name: "home", output: "test"},
-            {id: "niri-collection:28", index: 2, name: "studio", output: "DP-1"}
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
         ];
         const view = createTemporaryObject(row, test);
         view.width = 400;

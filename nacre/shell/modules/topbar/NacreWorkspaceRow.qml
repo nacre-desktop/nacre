@@ -138,7 +138,10 @@ Item {
     function collectionAction(action) {
         if (!showDeskBadge || !outputName || !NacreDaemon.connected)
             return false;
-        NacreDaemon.call("collection.action", {output: outputName, action: action}, (value, failure) => {
+        NacreDaemon.call("collection.action", {
+            output: outputName,
+            action: action
+        }, (value, failure) => {
             if (failure)
                 console.warn("NacreWorkspaceRow: desk action failed: " + failure.code);
         });
@@ -411,7 +414,11 @@ Item {
         }
         NacreInteraction {
             id: deskPointer
-            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {value0: root.deskForOutput?.index ?? "?", value1: root.deskRows.length, value2: root.deskLabel})
+            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {
+                value0: root.deskForOutput?.index ?? "?",
+                value1: root.deskRows.length,
+                value2: root.deskLabel
+            })
             activeFocusOnTab: true
             function onClicked() {
                 root.toggleDeskMenu();
@@ -462,7 +469,10 @@ Item {
                     text: root.deskTitle(modelData) + (modelData.output ? " · " + modelData.output : " · " + NacreI18n.tr("ui.collection.detached", "detached"))
                     selected: modelData.id === root.deskForOutput?.id
                     onClicked: {
-                        root.collectionAction({operation: "activate", collection: modelData.id});
+                        root.collectionAction({
+                            operation: "activate",
+                            collection: modelData.id
+                        });
                         root.closeDeskMenu();
                     }
                 }
@@ -507,7 +517,14 @@ Item {
                     text: NacreI18n.tr("ui.collection.save", "Save")
                     enabled: deskName.text.trim().length > 0
                     onClicked: {
-                        const action = root.deskEditOperation === "create" ? {operation: "create", name: deskName.text.trim()} : {operation: "rename", collection: root.deskEditCollection, name: deskName.text.trim()};
+                        const action = root.deskEditOperation === "create" ? {
+                            operation: "create",
+                            name: deskName.text.trim()
+                        } : {
+                            operation: "rename",
+                            collection: root.deskEditCollection,
+                            name: deskName.text.trim()
+                        };
                         root.collectionAction(action);
                         root.closeDeskMenu();
                     }
