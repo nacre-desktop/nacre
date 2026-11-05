@@ -171,28 +171,6 @@ fn percent_encode(value: &str) -> String {
     result
 }
 
-fn file_uri(path: &Path) -> Result<String> {
-    if !path.is_absolute() {
-        return Err("Browser handoff path must be absolute".into());
-    }
-    Ok(format!(
-        "file://{}",
-        percent_encode_path(&path.to_string_lossy())
-    ))
-}
-
-fn percent_encode_path(value: &str) -> String {
-    let mut result = String::new();
-    for byte in value.bytes() {
-        if byte == b'/' || byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
-            result.push(byte as char);
-        } else {
-            result.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    result
-}
-
 fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bool {
     let class = window
         .get("class")
@@ -204,6 +182,7 @@ fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bo
             .and_then(Value::as_u64)
             .is_some_and(|pid| pids.contains(&(pid as u32)))
             && (class == "chrome-127.0.0.1__-Default"
+                || class == "nacre-brain-auth"
                 || [
                     "chrome-",
                     "chromium-",
@@ -214,7 +193,7 @@ fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bo
                 ]
                 .iter()
                 .any(|prefix| class.starts_with(prefix))
-                || class.contains("nacre_brain_auth_open.html")))
+                ))
 }
 
 fn preferred_window(candidates: &[Value], workspace: Option<i64>) -> Option<Value> {
@@ -407,7 +386,7 @@ fn mime_default(content: &str) -> Option<String> {
     None
 }
 
-fn browser_command(path: &Path, handoff: bool) -> Result<Vec<String>> {
+fn browser_command(url: &str, handoff: bool) -> Result<Vec<String>> {
     let home = home()?;
     let mut preferred = Vec::new();
     if let Ok(output) = run_output(
@@ -448,7 +427,7 @@ fn browser_command(path: &Path, handoff: bool) -> Result<Vec<String>> {
     Ok(browser_arguments(
         &browser,
         &profile_path()?,
-        &file_uri(path)?,
+        url,
         handoff,
     ))
 }
@@ -1046,9 +1025,8 @@ mod tests {
 
     #[test]
     fn browser_open_url_uses_dedicated_profile_and_private_handoff_class() {
-        let open_uri =
-            file_uri(Path::new("/tmp/Brain Home/open page.html")).expect("absolute app file URI");
-        let handoff_uri = file_uri(Path::new("/tmp/handoff.html")).expect("absolute handoff URI");
+        let open_uri = "http://127.0.0.1:17843/#nacre-bootstrap=token";
+        let handoff_uri = "http://127.0.0.1:17843/auth-complete#nacre-bootstrap=token";
         let open = browser_arguments(
             Path::new("/browser/chrome"),
             Path::new("/home/test/nacre/brain-browser"),
@@ -1068,10 +1046,10 @@ mod tests {
             .any(|arg| arg == "--user-data-dir=/home/test/nacre/brain-browser"));
         assert!(open
             .iter()
-            .any(|arg| arg == "--app=file:///tmp/Brain%20Home/open%20page.html"));
+            .any(|arg| arg == "--app=http://127.0.0.1:17843/#nacre-bootstrap=token"));
         assert!(handoff
             .iter()
-            .any(|arg| arg == "--app=file:///tmp/handoff.html"));
+            .any(|arg| arg == "--app=http://127.0.0.1:17843/auth-complete#nacre-bootstrap=token"));
     }
 
     #[test]

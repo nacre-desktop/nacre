@@ -196,38 +196,27 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
     let origin = request.headers.get("origin");
     let referer = request.headers.get("referer");
     let canonical = format!("http://127.0.0.1:{port}");
-    if request.method == "GET" && request.path == "/" {
-        if let Some(token) = query_value(&request.query, "token") {
-            if !auth.consume_bootstrap(&token) {
-                return Err(Response::error(403));
-            }
-            let handoff = query_value(&request.query, "handoff").as_deref() == Some("1");
-            let mut response = Response::new(303, "text/plain", Vec::new());
-            response.headers.push((
-                "Set-Cookie".into(),
-                format!(
-                    "{}={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}",
-                    auth.cookie_name(),
-                    auth.cookie_value(),
-                    auth.cookie_max_age()
-                ),
-            ));
-            response.headers.push((
-                "Location".into(),
-                format!(
-                    "{}#nacre-auth={}",
-                    if handoff { "/auth-complete" } else { "/" },
-                    auth.bearer_value()
-                ),
-            ));
-            response
-                .headers
-                .push(("Referrer-Policy".into(), "no-referrer".into()));
-            response
-                .headers
-                .push(("Cache-Control".into(), "no-store".into()));
-            return Err(response);
+    if request.method == "POST" && request.path == "/api/bootstrap" {
+        let bootstrap: Value = serde_json::from_slice(&request.body)
+            .map_err(|_| Response::error(400))?;
+        let token = bootstrap.get("token").and_then(Value::as_str).unwrap_or("");
+        if origin.map(String::as_str) != Some(canonical.as_str())
+            || request.headers.get("content-type").map(String::as_str) != Some("application/json")
+            || request.headers.get("sec-fetch-site").map(String::as_str) != Some("same-origin")
+            || !auth.consume_bootstrap(token)
+        {
+            return Err(Response::error(403));
         }
+        let mut response = Response::new(200, "application/json", serde_json::to_vec(
+            &serde_json::json!({"authorization": auth.bearer_value()}),
+        ).map_err(|_| Response::error(500))?);
+        response.headers.push(("Set-Cookie".into(), format!(
+            "{}={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}",
+            auth.cookie_name(), auth.cookie_value(), auth.cookie_max_age()
+        )));
+        response.headers.push(("Cache-Control".into(), "no-store".into()));
+        response.headers.push(("Referrer-Policy".into(), "no-referrer".into()));
+        return Err(response);
     }
     if request.method == "POST" {
         let cookie_ok = request.headers.get("cookie").is_some_and(|value| {
@@ -293,45 +282,6 @@ fn cookie_from<'a>(header: &'a str, name: &str) -> Option<&'a str> {
         }
     }
     found
-}
-
-fn query_value(query: &str, wanted: &str) -> Option<String> {
-    let mut result = None;
-    for pair in query.split('&') {
-        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-        if decode_component(key)? == wanted {
-            if result.is_some() {
-                return None;
-            }
-            result = Some(decode_component(value)?);
-        }
-    }
-    result
-}
-
-fn decode_component(value: &str) -> Option<String> {
-    let bytes = value.as_bytes();
-    let mut output = Vec::with_capacity(bytes.len());
-    let mut index = 0;
-    while index < bytes.len() {
-        match bytes[index] {
-            b'+' => {
-                output.push(b' ');
-                index += 1;
-            }
-            b'%' if index + 2 < bytes.len() => {
-                let hex = std::str::from_utf8(&bytes[index + 1..index + 3]).ok()?;
-                output.push(u8::from_str_radix(hex, 16).ok()?);
-                index += 3;
-            }
-            b'%' => return None,
-            value => {
-                output.push(value);
-                index += 1;
-            }
-        }
-    }
-    String::from_utf8(output).ok()
 }
 
 fn read_request(stream: &mut TcpStream) -> io::Result<Option<Request>> {
@@ -738,36 +688,31 @@ mod tests {
     }
 
     #[test]
-    fn bootstrap_redirect_delivers_bearer_only_in_origin_fragment() {
+    fn bootstrap_post_is_origin_checked_one_time_and_returns_private_credentials() {
         let dir = tempfile::tempdir().unwrap();
         let port = 17843;
         let mut auth = BrowserAuth::open(dir.path(), port).unwrap();
         let token = auth.bootstrap_token().unwrap().to_owned();
-        let bearer = auth.bearer_value().to_owned();
         let mut headers = BTreeMap::new();
         headers.insert("host".into(), format!("127.0.0.1:{port}"));
-        let result = authorize(
-            Request {
-                method: "GET".into(),
-                path: "/".into(),
-                query: format!("token={token}&handoff=1"),
-                headers,
-                body: Vec::new(),
-            },
-            port,
-            &mut auth,
-        );
-        let response = result.unwrap_err();
-        assert_eq!(response.status, 303);
-        assert!(response
-            .headers
-            .iter()
-            .any(|(name, value)| name == "Location"
-                && value == &format!("/auth-complete#nacre-auth={bearer}")));
-        assert!(response
-            .headers
-            .iter()
-            .any(|(name, value)| name == "Set-Cookie" && value.contains("HttpOnly")));
+        headers.insert("origin".into(), format!("http://127.0.0.1:{port}"));
+        headers.insert("content-type".into(), "application/json".into());
+        headers.insert("sec-fetch-site".into(), "same-origin".into());
+        let request = |token: &str, headers: BTreeMap<String, String>| Request {
+            method: "POST".into(), path: "/api/bootstrap".into(), query: String::new(),
+            headers, body: serde_json::to_vec(&serde_json::json!({"token":token})).unwrap(),
+        };
+        let mut wrong_origin = headers.clone();
+        wrong_origin.insert("origin".into(), "http://evil.example".into());
+        assert_eq!(authorize(request(&token, wrong_origin), port, &mut auth).unwrap_err().status, 403);
+        assert!(auth.bootstrap.is_some(), "wrong origin must not consume the token");
+        assert_eq!(authorize(request(&"0".repeat(64), headers.clone()), port, &mut auth).unwrap_err().status, 403);
+        assert!(auth.bootstrap.is_some(), "wrong token must not consume the valid token");
+        let response = authorize(request(&token, headers.clone()), port, &mut auth).unwrap_err();
+        assert_eq!(response.status, 200);
+        assert!(String::from_utf8(response.body).unwrap().contains(auth.bearer_value()));
+        assert!(response.headers.iter().any(|(name, value)| name == "Set-Cookie" && value.contains("HttpOnly")));
+        assert_eq!(authorize(request(&token, headers), port, &mut auth).unwrap_err().status, 403);
     }
 
     #[test]
