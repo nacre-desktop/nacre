@@ -365,7 +365,7 @@ checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
 [[package]]
 name = "bead"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "bead-backends",
  "bead-core",
@@ -382,7 +382,7 @@ dependencies = [
 [[package]]
 name = "bead-backends"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "serde",
 ]
@@ -390,7 +390,7 @@ dependencies = [
 [[package]]
 name = "bead-core"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "libc",
  "serde",
@@ -401,12 +401,12 @@ dependencies = [
 [[package]]
 name = "bead-kit"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 
 [[package]]
 name = "bead-render"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "bead-core",
  "cosmic-text",
@@ -429,7 +429,7 @@ dependencies = [
 [[package]]
 name = "bead-services"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "futures-util",
  "libc",
@@ -445,7 +445,7 @@ dependencies = [
 [[package]]
 name = "bead-test"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "accesskit",
  "bead-core",
@@ -460,7 +460,7 @@ dependencies = [
 [[package]]
 name = "bead-ui"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "accesskit",
  "bead-core",
@@ -479,7 +479,7 @@ dependencies = [
 [[package]]
 name = "bead-wallpaper"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "serde",
  "serde_json",
@@ -488,7 +488,7 @@ dependencies = [
 [[package]]
 name = "bead-wayland"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -510,7 +510,7 @@ dependencies = [
 [[package]]
 name = "bead-widgets"
 version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=09082b179be890b8f1cec9075f82b9005a6d3ce7#09082b179be890b8f1cec9075f82b9005a6d3ce7"
+source = "git+https://github.com/nacre-desktop/bead?rev=d5e2744d7a959e87cd8ff0bdf0909996537c1911#d5e2744d7a959e87cd8ff0bdf0909996537c1911"
 dependencies = [
  "libc",
  "serde_json",
