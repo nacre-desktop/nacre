@@ -31,17 +31,12 @@ const MAX_RETRY_MS: u64 = 2000;
 const NATIVE_WIDTH_POLICY_MESSAGE: &str = "Native proportional X11 width policy is active";
 
 fn native_width_policy_failure() -> Failure {
-    failure(
-        ErrorCode::Unavailable,
-        NATIVE_WIDTH_POLICY_MESSAGE,
-        true,
-    )
+    failure(ErrorCode::Unavailable, NATIVE_WIDTH_POLICY_MESSAGE, true)
 }
 
 fn is_native_width_policy_failure(error: &crate::Error) -> bool {
     error.downcast_ref::<Failure>().is_some_and(|failure| {
-        failure.code == ErrorCode::Unavailable
-            && failure.message == NATIVE_WIDTH_POLICY_MESSAGE
+        failure.code == ErrorCode::Unavailable && failure.message == NATIVE_WIDTH_POLICY_MESSAGE
     })
 }
 
@@ -186,7 +181,7 @@ pub fn observe_if_daemon(
             .get("XDG_RUNTIME_DIR")
             .is_none_or(|value| !std::path::Path::new(value).is_absolute())
     {
-        return Ok(native_width_policy_available(environment).then_some(0));
+        return Ok(None);
     }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -196,11 +191,11 @@ pub fn observe_if_daemon(
         let mut client=match client::connect().await {
             Ok(client)=>client,
             Err(ConnectError::Absent) => {
-                if native_width_policy_available(environment) {
-                    return Ok(Some(0));
-                }
                 if !explicit {
                     return Ok(None);
+                }
+                if native_width_policy_available(environment) {
+                    return Ok(Some(0));
                 }
                 return Err(ConnectError::Absent.into());
             }
@@ -626,7 +621,7 @@ mod tests {
     use crate::niri_widths::{Identity, SizeHints, MAX_SIZE, MIN_SIZE, X11};
     use std::collections::BTreeSet;
     #[test]
-    fn native_capability_probe_selects_only_native_policy() -> Result<()> {
+    fn native_capability_probe_reads_only_the_advertised_policy() -> Result<()> {
         use std::{
             io::{BufRead, BufReader, Write},
             os::unix::net::UnixListener,
@@ -650,20 +645,24 @@ mod tests {
             });
             let environment =
                 BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
-            let selected = observe_if_daemon(50.0, &environment)?;
+            let selected = native_width_policy_available(&environment);
             peer.join().map_err(|_| "Capability peer panicked")??;
             Ok(selected)
         }
-        assert_eq!(probe(true)?, Some(0));
-        assert_eq!(probe(false)?, None);
+        assert!(probe(true)?);
+        assert!(!probe(false)?);
         Ok(())
     }
     #[test]
     fn only_the_native_policy_unavailable_reply_is_a_successful_noop() {
         let native: crate::Error = native_width_policy_failure().into();
         assert!(is_native_width_policy_failure(&native));
-        let other_unavailable: crate::Error =
-            failure(ErrorCode::Unavailable, "Width observer is unavailable", true).into();
+        let other_unavailable: crate::Error = failure(
+            ErrorCode::Unavailable,
+            "Width observer is unavailable",
+            true,
+        )
+        .into();
         assert!(!is_native_width_policy_failure(&other_unavailable));
         let other_native_message: crate::Error =
             failure(ErrorCode::Internal, NATIVE_WIDTH_POLICY_MESSAGE, false).into();

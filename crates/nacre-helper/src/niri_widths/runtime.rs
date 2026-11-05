@@ -50,9 +50,24 @@ fn shutdown_socket() -> Result<(UnixStream, SignalMask)> {
     Ok((read, guard))
 }
 pub fn observe(path: &Path, opening_width: f64) -> Result<()> {
-    let mut x11 = x11::Native::connect()?;
     let mut events = UnixStream::connect(path)?;
+    let mut capabilities = niri_transport::Connection::from_stream(events.try_clone()?);
+    if capabilities
+        .nacre_capabilities(Duration::from_millis(500))
+        .proportional_x11_widths
+    {
+        return Ok(());
+    }
+    let event_socket_is_clean = capabilities.connected();
+    drop(capabilities);
+    if !event_socket_is_clean {
+        let _ = events.shutdown(std::net::Shutdown::Both);
+        drop(events);
+        events = UnixStream::connect(path)?;
+    }
+    events.set_read_timeout(None)?;
     events.set_write_timeout(Some(Duration::from_secs(2)))?;
+    let mut x11 = x11::Native::connect()?;
     let request =
         crate::json::encode(&serde_json::to_value(niri_ipc::Request::EventStream)?)? + "\n";
     events.write_all(request.as_bytes())?;
@@ -146,5 +161,50 @@ pub fn observe(path: &Path, opening_width: f64) -> Result<()> {
         (Err(error), Err(restore)) => {
             Err(format!("{error}; constraint restoration failed: {restore}").into())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{
+        io::{BufRead, BufReader, Write},
+        os::unix::net::UnixListener,
+        thread,
+    };
+
+    #[test]
+    fn native_width_policy_uses_the_standalone_stream_and_skips_x11() -> Result<()> {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("niri.sock");
+        let listener = UnixListener::bind(&path)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut reader = BufReader::new(stream);
+            let mut request = String::new();
+            reader.read_line(&mut request)?;
+            assert_eq!(
+                serde_json::from_str::<Value>(&request).unwrap(),
+                Value::String("NacreCapabilities".into())
+            );
+            writeln!(
+                reader.get_mut(),
+                r#"{"Ok":{"NacreCapabilities":{"workspace_collections":false,"proportional_x11_widths":true,"overview_hover":false}}}"#
+            )?;
+            request.clear();
+            assert_eq!(reader.read_line(&mut request)?, 0);
+            listener.set_nonblocking(true)?;
+            assert!(matches!(
+                listener.accept(),
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock
+            ));
+            Ok(())
+        });
+
+        observe(&path, 50.0)?;
+        peer.join()
+            .map_err(|_| "Native capability peer panicked")??;
+        Ok(())
     }
 }

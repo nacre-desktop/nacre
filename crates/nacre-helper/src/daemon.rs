@@ -65,11 +65,7 @@ use crate::{paths::Paths, Result};
 use serde_json::json;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
-fn width_service_should_start(
-    safe: bool,
-    niri: bool,
-    has_x11_display: bool,
-) -> bool {
+fn width_service_should_start(safe: bool, niri: bool, has_x11_display: bool) -> bool {
     !safe && niri && has_x11_display
 }
 
@@ -459,11 +455,7 @@ async fn serve(
     let has_x11_display = width_environment
         .get("DISPLAY")
         .is_some_and(|value| !value.is_empty());
-    let width_service = if width_service_should_start(
-        counter.safe,
-        niri_backend,
-        has_x11_display,
-    ) {
+    let width_service = if width_service_should_start(counter.safe, niri_backend, has_x11_display) {
         hub.borrow_mut().service("niri-widths", "starting", 0)?;
         hub.borrow_mut().publish(
             widths::TOPIC,
