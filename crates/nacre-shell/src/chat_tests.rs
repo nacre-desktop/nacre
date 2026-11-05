@@ -1183,7 +1183,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
         let mut utility_projection = projected.clone();
         utility_projection.insert(
             "launcher.warning".into(),
-            text(&tr("bead.common.request-failed", &[])),
+            text(tr("bead.common.request-failed", &[])),
         );
         utility_projection.insert("bead.hovered".into(), text("chat.secondary.quick-chat"));
         utility.update(utility_projection)?;
@@ -1311,7 +1311,7 @@ fn golden(name: &str, h: &mut Harness, scale: f32) -> bead_test::Result<()> {
         },
         Damage::full(width, height),
     )?;
-    for pixel in frame.pixels.chunks_exact_mut(4) {
+    for pixel in frame.pixels.as_chunks_mut::<4>().0 {
         let alpha = u32::from(pixel[3]);
         if alpha > 0 && alpha < 255 {
             for channel in &mut pixel[..3] {
