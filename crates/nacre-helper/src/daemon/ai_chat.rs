@@ -782,8 +782,13 @@ async fn open_launcher_record(
 }
 
 fn launcher_key(item: &Value) -> String {
+    let identity = item["id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+        .map(|id| json!({"id":id}))
+        .unwrap_or_else(|| json!({"session":item["session"]}));
     let identity = json!({
-        "id":item["id"], "agent":item["agent"], "account":item["account"],
+        "chat":identity, "agent":item["agent"], "account":item["account"],
         "project":item["project"]["id"], "host":item["project"]["host"],
         "path":item["project"]["path"],
     })
@@ -854,9 +859,30 @@ fn existing_chat_window(
     key: &str,
     unique_title: bool,
 ) -> Option<String> {
+    let paths = crate::paths::Paths::environment().ok();
+    existing_chat_window_with_proc(
+        snapshot,
+        item,
+        key,
+        unique_title,
+        std::path::Path::new("/proc"),
+        paths.as_ref(),
+        nix::unistd::getuid().as_raw(),
+    )
+}
+
+fn existing_chat_window_with_proc(
+    snapshot: &Value,
+    item: &Value,
+    key: &str,
+    unique_title: bool,
+    proc: &std::path::Path,
+    paths: Option<&crate::paths::Paths>,
+    uid: u32,
+) -> Option<String> {
     let windows = snapshot["windows"].as_object()?;
     let class = format!("nacre-ai-chat-{key}");
-    let chat_id = item["id"].as_str()?;
+    let chat_id = item["id"].as_str().filter(|id| !id.is_empty());
     if let Some((id, _)) = windows
         .iter()
         .find(|(_, window)| window["appId"].as_str() == Some(class.as_str()))
@@ -876,8 +902,6 @@ fn existing_chat_window(
         && item["session"]
             .as_str()
             .is_some_and(|session| !session.is_empty());
-    let mut paths = None;
-    let uid = nix::unistd::getuid().as_raw();
     for (id, window) in windows
         .iter()
         .filter(|(_, window)| {
@@ -886,16 +910,22 @@ fn existing_chat_window(
         })
         .take(64)
     {
-        if paths.is_none() {
-            paths = Some(crate::paths::Paths::environment().ok()?);
-        }
-        let paths = paths.as_ref()?;
         let Some(pid) = window["pid"].as_i64() else {
             continue;
         };
-        let info =
-            crate::window_chat_title::resolve_info(pid, std::path::Path::new("/proc"), paths, uid);
-        if info.thread_id == chat_id {
+        if let Some(paths) = paths {
+            let info = crate::window_chat_title::resolve_info(pid, proc, paths, uid);
+            if chat_id.is_some_and(|chat_id| info.thread_id == chat_id) {
+                return Some(id.clone());
+            }
+        }
+        if item["project"]["host"].as_str().is_none()
+            && item["state"] == "running"
+            && item["agent"] == "claude"
+            && item["session"].as_str().is_some_and(|session| {
+                crate::window_chat_title::has_tmux_session(pid, proc, uid, session)
+            })
+        {
             return Some(id.clone());
         }
     }
@@ -915,6 +945,15 @@ mod tests {
         let mut other = row.clone();
         other["account"] = json!("personal");
         assert_ne!(launcher_key(&row), launcher_key(&other));
+        let mut session_row = row.clone();
+        session_row["id"] = Value::Null;
+        session_row["session"] = json!("tmux-session");
+        let mut changed_session = session_row.clone();
+        changed_session["session"] = json!("another-session");
+        assert_ne!(launcher_key(&session_row), launcher_key(&changed_session));
+        let mut saved_row = row.clone();
+        saved_row["session"] = json!("tmux-session");
+        assert_eq!(launcher_key(&row), launcher_key(&saved_row));
     }
 
     #[test]
@@ -968,6 +1007,40 @@ mod tests {
         let snapshot =
             json!({"windows":{"niri-window:45":{"appId":"nacre-ai-task","title":"Camera work"}}});
         assert_eq!(existing_chat_window(&snapshot, &row, "unused", true), None);
+    }
+
+    #[test]
+    fn launcher_focus_finds_local_claude_tmux_client_in_synthetic_proc_tree() -> crate::Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let proc = fixture.path().join("proc");
+        let parent = proc.join("100");
+        std::fs::create_dir_all(parent.join("task/100"))?;
+        std::fs::write(parent.join("task/100/children"), "101")?;
+        std::fs::write(parent.join("cmdline"), b"/usr/bin/kitty\0")?;
+        let client = proc.join("101");
+        std::fs::create_dir_all(client.join("task/101"))?;
+        std::fs::write(client.join("task/101/children"), "")?;
+        std::fs::write(
+            client.join("cmdline"),
+            b"/usr/bin/tmux\0attach-session\0-t\0=nacre-chat-claude-1\0",
+        )?;
+        let item = json!({"id":"thread-claude","title":"Claude chat","state":"running","session":"nacre-chat-claude-1","agent":"claude","project":{"id":"demo","path":"/repo"}});
+        let snapshot = json!({"windows":{"niri-window:46":{"appId":"nacre-ai-task","title":"Claude chat","pid":100}}});
+        let paths = crate::paths::Paths::new(fixture.path());
+        assert_eq!(
+            existing_chat_window_with_proc(
+                &snapshot,
+                &item,
+                "unused",
+                true,
+                &proc,
+                Some(&paths),
+                nix::unistd::getuid().as_raw(),
+            )
+            .as_deref(),
+            Some("niri-window:46")
+        );
+        Ok(())
     }
 
     #[test]

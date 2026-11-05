@@ -2,7 +2,13 @@
 use crate::{json, paths::Paths, unicode, Result};
 use serde::Serialize;
 use serde_json::Value;
-use std::{collections::HashSet, fs, io, os::unix::fs::MetadataExt, path::Path};
+use std::{
+    collections::HashSet,
+    fs,
+    io::{self, Read},
+    os::unix::fs::MetadataExt,
+    path::Path,
+};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize)]
 pub struct Info {
@@ -149,18 +155,19 @@ pub fn cached_info(paths: &Paths, thread: &str, cwd: &str) -> Info {
     }
 }
 
-pub fn resolve_info(pid: i64, proc: &Path, paths: &Paths, uid: u32) -> Info {
+fn process_tree_args(pid: i64, proc: &Path, uid: u32) -> Vec<Vec<String>> {
     let mut todo = vec![pid];
     let mut seen = HashSet::new();
+    let mut rows = Vec::new();
     while !todo.is_empty() && seen.len() < 64 {
         let current = todo.pop().expect("Checked nonempty process queue");
         if !seen.insert(current) {
             continue;
         }
         let process = proc.join(current.to_string());
-        let result = (|| -> Result<Info> {
+        let result = (|| -> Result<Vec<String>> {
             if fs::metadata(&process)?.uid() != uid {
-                return Ok(Info::default());
+                return Ok(Vec::new());
             }
             for child in fs::read_to_string(
                 process
@@ -170,37 +177,77 @@ pub fn resolve_info(pid: i64, proc: &Path, paths: &Paths, uid: u32) -> Info {
             )?
             .split_whitespace()
             {
-                todo.push(child.parse()?);
+                if seen.len() + todo.len() < 64 {
+                    todo.push(child.parse()?);
+                }
             }
             // Preserve the second ownership check before reading arguments.
             if fs::metadata(&process)?.uid() != uid {
-                return Ok(Info::default());
+                return Ok(Vec::new());
             }
-            let bytes = fs::read(process.join("cmdline"))?;
-            let args: Vec<String> = String::from_utf8_lossy(&bytes)
+            let mut bytes = Vec::new();
+            fs::File::open(process.join("cmdline"))?
+                .take(128 * 1024 + 1)
+                .read_to_end(&mut bytes)?;
+            if bytes.len() > 128 * 1024 {
+                return Err("Process arguments exceed inspection limit".into());
+            }
+            let mut args: Vec<String> = String::from_utf8_lossy(&bytes)
                 .split('\0')
                 .map(str::to_owned)
                 .collect();
-            let (thread, cwd) = chat_identity(&args)?;
-            if thread.is_empty() && cwd.is_empty() {
-                return Ok(Info::default());
+            while args.last().is_some_and(String::is_empty) {
+                args.pop();
             }
-            let info = cached_info(paths, thread, cwd);
-            if !info.title.is_empty() {
-                return Ok(info);
-            }
-            Ok(Info {
-                title: String::new(),
-                thread_id: thread.to_owned(),
-            })
+            args.truncate(512);
+            Ok(args)
         })();
         match result {
-            Ok(info) if !info.title.is_empty() || !info.thread_id.is_empty() => return info,
-            Ok(_) => {}
+            Ok(args) => rows.push(args),
             Err(error) => optional_failure("Chat process metadata", error.as_ref()),
         }
     }
+    rows
+}
+
+/// Resolve the chat process descended from an owned terminal window.
+pub fn resolve_info(pid: i64, proc: &Path, paths: &Paths, uid: u32) -> Info {
+    for args in process_tree_args(pid, proc, uid) {
+        let (thread, cwd) = match chat_identity(&args) {
+            Ok(identity) => identity,
+            Err(error) => {
+                optional_failure("Chat process metadata", error.as_ref());
+                continue;
+            }
+        };
+        if thread.is_empty() && cwd.is_empty() {
+            continue;
+        }
+        let info = cached_info(paths, thread, cwd);
+        if !info.title.is_empty() {
+            return info;
+        }
+        if !thread.is_empty() {
+            return Info {
+                title: String::new(),
+                thread_id: thread.to_owned(),
+            };
+        }
+    }
     Info::default()
+}
+
+/// Check a terminal's bounded, same-user process tree for its tmux attach client.
+pub fn has_tmux_session(pid: i64, proc: &Path, uid: u32, session: &str) -> bool {
+    let target = format!("={session}");
+    process_tree_args(pid, proc, uid).iter().any(|args| {
+        Path::new(args.first().map(String::as_str).unwrap_or(""))
+            .file_name()
+            .is_some_and(|name| name == "tmux")
+            && args.windows(3).any(|window| {
+                window[0] == "attach-session" && window[1] == "-t" && window[2] == target
+            })
+    })
 }
 
 pub fn execute(arguments: &[String], _request: Option<Value>) -> Result<Option<Value>> {
@@ -223,6 +270,16 @@ mod tests {
     use serde_json::json;
 
     const THREAD: &str = "11111111-1111-1111-1111-111111111111";
+
+    fn proc_fixture(root: &Path, pid: i64, children: &str, args: &[&str]) -> Result<()> {
+        let process = root.join(pid.to_string());
+        fs::create_dir_all(process.join("task").join(pid.to_string()))?;
+        fs::write(process.join("task").join(pid.to_string()).join("children"), children)?;
+        let mut command = args.join("\0").into_bytes();
+        command.push(0);
+        fs::write(process.join("cmdline"), command)?;
+        Ok(())
+    }
 
     #[test]
     fn title_sanitization_preserves_python_categories_and_character_limit() {
@@ -289,6 +346,24 @@ mod tests {
             "Fix Niri Titles"
         );
         assert_eq!(fs::read_dir(&cache)?.count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn tmux_attach_session_is_found_only_in_the_owned_bounded_tree() -> Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let proc = fixture.path().join("proc");
+        proc_fixture(&proc, 100, "101", &["/usr/bin/kitty"])?;
+        proc_fixture(
+            &proc,
+            101,
+            "",
+            &["/usr/bin/tmux", "attach-session", "-t", "=nacre-chat-1"],
+        )?;
+        let uid = nix::unistd::getuid().as_raw();
+        assert!(has_tmux_session(100, &proc, uid, "nacre-chat-1"));
+        assert!(!has_tmux_session(100, &proc, uid, "nacre-chat-2"));
+        assert!(!has_tmux_session(100, &proc, uid + 1, "nacre-chat-1"));
         Ok(())
     }
 }

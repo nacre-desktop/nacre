@@ -487,8 +487,12 @@ fn projects_path() -> PathBuf {
 }
 
 pub(crate) fn configured_projects() -> Result<Vec<serde_json::Value>> {
+    configured_projects_at(&projects_path())
+}
+
+fn configured_projects_at(path: &std::path::Path) -> Result<Vec<serde_json::Value>> {
     let document: serde_json::Value = crate::state::read_as(
-        &projects_path(),
+        path,
         Some(crate::state::by_id("ai-projects")?),
         serde_json::json!({}),
     )?;
@@ -973,31 +977,39 @@ fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
     args
 }
 
+fn running_session(item: &serde_json::Value) -> Option<(&str, Option<&str>, bool)> {
+    let session = item["session"].as_str().filter(|session| valid_session(session))?;
+    let host = item["project"]["host"].as_str().filter(|host| !host.is_empty());
+    Some((session, host, item["agent"] == "claude"))
+}
+
+fn valid_session(session: &str) -> bool {
+    !session.is_empty() && session.len() <= 128 && !session.chars().any(char::is_control)
+}
+
 pub(crate) fn resume_record(item: &serde_json::Value) -> Result<()> {
+    resume_record_with_tmux(item, std::path::Path::new("tmux"))
+}
+
+fn resume_record_with_tmux(item: &serde_json::Value, tmux: &std::path::Path) -> Result<()> {
     let project = &item["project"];
     let agent = item["agent"].as_str().unwrap_or("codex");
     let account = item["account"].as_str().unwrap_or("");
-    let id = item["id"].as_str().ok_or("History record has no id")?;
-    if let (Some(host), Some(session)) = (project["host"].as_str(), item["session"].as_str()) {
-        let mut args = vec!["tmux".into()];
-        args.extend(tmux_attach_args(session, agent == "claude"));
-        let output = run_remote(host, &args, false)?;
-        if !output.status.success() {
+    if let Some((session, host, claude)) = running_session(item) {
+        let args = tmux_attach_args(session, claude);
+        let status = if let Some(host) = host {
+            let mut remote_args = vec!["tmux".into()];
+            remote_args.extend(args);
+            run_remote(host, &remote_args, false)?.status
+        } else {
+            Command::new(tmux).args(args).status()?
+        };
+        if !status.success() {
             return Err("Could not attach to the running task".into());
         }
         return Ok(());
     }
-    if agent == "claude" && project["host"].as_str().is_none() {
-        if let Some(session) = item["session"].as_str() {
-            let status = Command::new("tmux")
-                .args(tmux_attach_args(session, true))
-                .status()?;
-            if !status.success() {
-                return Err("Could not attach to the running Claude chat".into());
-            }
-            return Ok(());
-        }
-    }
+    let id = item["id"].as_str().filter(|id| !id.is_empty()).ok_or("History record has no id or running session")?;
     if agent == "claude" {
         let mut args = vec![
             "nacre-ai-claude".into(),
@@ -1090,6 +1102,62 @@ pub(crate) fn resume_record(item: &serde_json::Value) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn validate_resume_record(item: &serde_json::Value, configured: &[serde_json::Value]) -> Result<()> {
+    let project_id = item["project"]["id"].as_str().ok_or("Invalid chat project")?;
+    let allowed = configured.iter().any(|project| {
+        if project["id"].as_str() == Some(project_id) && project == &item["project"] {
+            return true;
+        }
+        project["task_sources"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|source| {
+                let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) else {
+                    return false;
+                };
+                let mut merged = base.clone();
+                merged.extend(extra.clone());
+                merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
+                    && serde_json::Value::Object(merged) == item["project"]
+            })
+    });
+    let agent = item["agent"].as_str().unwrap_or("");
+    let has_id = item["id"].as_str().is_some_and(|id| !id.is_empty());
+    if !allowed
+        || !matches!(agent, "codex" | "claude")
+        || (!has_id && running_session(item).is_none())
+        || (!item["id"].is_null() && !item["id"].is_string())
+        || item["id"].as_str().is_some_and(|id| {
+            id.len() > 256 || id.chars().any(char::is_control)
+        })
+        || item["session"].as_str().is_some_and(|session| !valid_session(session))
+        || item["account"]
+            .as_str()
+            .is_none_or(|account| !account.is_empty() && !valid_account(account))
+    {
+        return Err("Chat project or identifier is no longer registered".into());
+    }
+    Ok(())
+}
+
+fn resume_record_request(
+    encoded: &str,
+    configured: &[serde_json::Value],
+    tmux: &std::path::Path,
+) -> Result<()> {
+    if encoded.len() > 48 * 1024 {
+        return Err("Invalid chat record".into());
+    }
+    let bytes = BASE64.decode(encoded)?;
+    if bytes.len() > 32 * 1024 {
+        return Err("Invalid chat record".into());
+    }
+    let item: serde_json::Value = serde_json::from_slice(&bytes)?;
+    validate_resume_record(&item, configured)?;
+    resume_record_with_tmux(&item, tmux)
 }
 
 fn argument(args: &[String], option: &str) -> Option<String> {
@@ -2037,50 +2105,14 @@ pub fn run(args: &[String]) -> Result<i32> {
         "project-settings" => projects()?,
         "resume-record" => {
             let encoded = args.get(index).ok_or("Missing chat record")?;
-            if args.len() != index + 1 || encoded.len() > 48 * 1024 {
+            if args.len() != index + 1 {
                 return Err("Invalid chat record".into());
             }
-            let bytes = BASE64.decode(encoded)?;
-            if bytes.len() > 32 * 1024 {
-                return Err("Invalid chat record".into());
-            }
-            let item: serde_json::Value = serde_json::from_slice(&bytes)?;
-            let project_id = item["project"]["id"]
-                .as_str()
-                .ok_or("Invalid chat project")?;
-            let configured = configured_projects()?;
-            let allowed = configured.iter().any(|project| {
-                if project["id"].as_str() == Some(project_id) && project == &item["project"] {
-                    return true;
-                }
-                project["task_sources"]
-                    .as_array()
-                    .into_iter()
-                    .flatten()
-                    .any(|source| {
-                        let (Some(base), Some(extra)) = (project.as_object(), source.as_object())
-                        else {
-                            return false;
-                        };
-                        let mut merged = base.clone();
-                        merged.extend(extra.clone());
-                        merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
-                            && serde_json::Value::Object(merged) == item["project"]
-                    })
-            });
-            let agent = item["agent"].as_str().unwrap_or("");
-            if !allowed
-                || !matches!(agent, "codex" | "claude")
-                || item["id"].as_str().is_none_or(|id| {
-                    id.is_empty() || id.len() > 256 || id.chars().any(char::is_control)
-                })
-                || item["account"]
-                    .as_str()
-                    .is_none_or(|account| !account.is_empty() && !valid_account(account))
-            {
-                return Err("Chat project or identifier is no longer registered".into());
-            }
-            resume_record(&item)?;
+            resume_record_request(
+                encoded,
+                &configured_projects()?,
+                std::path::Path::new("tmux"),
+            )?;
         }
         "latest" | "sessions" => {
             history(command, argument(&args[index..], "--account").as_deref())?
@@ -2206,6 +2238,54 @@ mod tests {
                 "=ai-project-codex-default-session".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn running_session_is_a_resume_target_even_without_provider_thread_id() {
+        let row = serde_json::json!({
+            "id":null,"state":"running","session":"nacre-task-123",
+            "agent":"codex","project":{"id":"demo"}
+        });
+        assert_eq!(running_session(&row), Some(("nacre-task-123", None, false)));
+        assert!(running_session(&serde_json::json!({"session":"","agent":"codex"})).is_none());
+    }
+
+    #[test]
+    fn resume_record_route_attaches_registered_null_id_session() -> Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let project_file = fixture.path().join("projects.json");
+        fs::write(
+            &project_file,
+            r#"{"projects":[{"id":"demo","label":"Demo","path":"/repo"}]}"#,
+        )?;
+        let configured = configured_projects_at(&project_file)?;
+        let project = configured
+            .iter()
+            .find(|row| row["id"] == "demo")
+            .cloned()
+            .ok_or("Fixture project missing")?;
+        let record = serde_json::json!({
+            "id":null,"title":"Running chat","state":"running","session":"nacre-chat-123",
+            "agent":"codex","account":"Default","project":project
+        });
+        let encoded = BASE64.encode(serde_json::to_vec(&record)?);
+        let capture = fixture.path().join("tmux-argv.txt");
+        let fake_tmux = fixture.path().join("tmux");
+        fs::write(
+            &fake_tmux,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > {}\n",
+                shell_quote(&capture.display().to_string())
+            ),
+        )?;
+        fs::set_permissions(&fake_tmux, fs::Permissions::from_mode(0o755))?;
+
+        resume_record_request(&encoded, &configured, &fake_tmux)?;
+        assert_eq!(
+            fs::read_to_string(capture)?,
+            "attach-session\n-t\n=nacre-chat-123\n"
+        );
+        Ok(())
     }
 
     #[test]
