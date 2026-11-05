@@ -46,14 +46,12 @@ fn approval() -> Json {
     json!({"id":"approval-1","kind":"approval","questions":[{"id":"approval","question":"Run the build command?","options":[{"label":"Allow once"},{"label":"Decline"}]}]})
 }
 fn stores(pairs: &[(&str, Value)]) -> Stores {
-    Stores::default()
-        .reconcile(
-            &pairs
-                .iter()
-                .map(|(k, v)| (k.to_string(), v.clone()))
-                .collect(),
-        )
-        .unwrap()
+    let mut values: BTreeMap<String, Value> = pairs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.clone()))
+        .collect();
+    values.entry("chat.section".into()).or_insert(Value::Text("chat".into()));
+    Stores::default().reconcile(&values).unwrap()
 }
 pub(crate) fn offline(data: Json) -> (Arc<FakeSource>, Chat) {
     let source = Arc::new(FakeSource::new(data).unwrap());
@@ -86,7 +84,7 @@ fn streaming_text_keeps_earlier_cells_and_follows_the_bottom() {
         &[("u1", "user", "hello")],
         state(true, "Working", None),
     ));
-    let first = chat.project(&Stores::default());
+    let first = chat.project(&stores(&[]));
     assert!(num(&first, "chat.extent") > 0.);
     let mut previous = cells(&first);
     let mut text = String::new();
@@ -143,7 +141,7 @@ fn reading_away_stops_following_until_the_bottom_is_reached_again() {
     let channel = serde_json::from_value(data["channels"][""].clone()).unwrap();
     let (source, chat) = offline(data);
     chat.set_test_channel(channel);
-    let out = chat.project(&Stores::default());
+    let out = chat.project(&stores(&[]));
     let bottom = num(&out, "chat.scroll");
     assert!(bottom > 500.);
     // The reader scrolls to the top: the next update keeps that position.
@@ -173,7 +171,7 @@ fn reading_away_stops_following_until_the_bottom_is_reached_again() {
     let away_from_bottom = current_bottom - 10.;
     let out = chat.project(&stores(&[("chat.scroll", Value::Number(away_from_bottom))]));
     assert_eq!(num(&out, "chat.scroll"), away_from_bottom);
-    chat.act("latest", &Stores::default());
+    chat.act("latest", &stores(&[]));
     let out = chat.project(&stores(&[("chat.scroll", Value::Number(away_from_bottom))]));
     assert!(
         (num(&out, "chat.scroll")
@@ -194,7 +192,7 @@ fn small_reader_scroll_stops_following_until_actual_bottom() {
         .map(|(id, text)| (id.as_str(), "assistant", text.as_str()))
         .collect();
     let (source, chat) = offline(topic(&rows, state(true, "Working", None)));
-    let initial = chat.project(&Stores::default());
+    let initial = chat.project(&stores(&[]));
     let bottom = num(&initial, "chat.scroll");
     assert!(bottom > 500.);
 
@@ -258,7 +256,7 @@ fn assistant_markdown_blocks_and_copy_actions() {
         &[("u", "user", "**not** markdown"), ("a", "assistant", md)],
         state(false, "", None),
     ));
-    let out = chat.project(&Stores::default());
+    let out = chat.project(&stores(&[]));
     let all = cells(&out);
     let texts: Vec<String> = all
         .iter()
@@ -285,18 +283,18 @@ fn assistant_markdown_blocks_and_copy_actions() {
         ]
     );
     assert_eq!(
-        chat.act("copy:0000000002", &Stores::default())
+        chat.act("copy:0000000002", &stores(&[]))
             .copy
             .as_deref(),
         Some(md)
     );
     assert_eq!(
-        chat.act("code:0000000002:1", &Stores::default())
+        chat.act("code:0000000002:1", &stores(&[]))
             .copy
             .as_deref(),
         Some("ls")
     );
-    assert_eq!(chat.act("code:0000000002:9", &Stores::default()).copy, None);
+    assert_eq!(chat.act("code:0000000002:9", &stores(&[])).copy, None);
     // Code blocks are monospace text over a filled box.
     assert!(
         all.iter()
@@ -311,7 +309,7 @@ fn approval_card_needs_every_answer_and_option_fills_it() {
         &[("u", "user", "run it")],
         state(true, "Waiting", Some(approval())),
     ));
-    let out = chat.project(&Stores::default());
+    let out = chat.project(&stores(&[]));
     assert_eq!(out["chat.has_question"], Value::Bool(true));
     assert_eq!(out["chat.can_reply"], Value::Bool(false));
     let Value::List(rows) = &out["chat.question_rows"] else {
@@ -319,7 +317,7 @@ fn approval_card_needs_every_answer_and_option_fills_it() {
     };
     let kinds: Vec<_> = rows.iter().map(|r| r["k"].as_str().unwrap()).collect();
     assert_eq!(kinds, ["text", "option", "option", "input", "reply"]);
-    let pick = chat.act("option:0:1", &Stores::default());
+    let pick = chat.act("option:0:1", &stores(&[]));
     assert_eq!(pick.stores["chat.answer.0"], Value::Text("Decline".into()));
     let out = chat.project(&stores(&[("chat.answer.0", Value::Text("Decline".into()))]));
     assert_eq!(
@@ -328,8 +326,8 @@ fn approval_card_needs_every_answer_and_option_fills_it() {
         "no client: calls unavailable"
     );
     // Out-of-range choices change nothing.
-    assert!(chat.act("option:0:7", &Stores::default()).stores.is_empty());
-    assert!(chat.act("option:5:0", &Stores::default()).stores.is_empty());
+    assert!(chat.act("option:0:7", &stores(&[])).stores.is_empty());
+    assert!(chat.act("option:5:0", &stores(&[])).stores.is_empty());
 }
 
 #[test]
@@ -354,7 +352,7 @@ fn error_status_and_hidden_panel() {
     let mut st = state(false, "", None);
     st["error"] = json!("Provider failed");
     let (_s, chat) = offline(topic(&[("u", "user", "x")], st));
-    let out = chat.project(&Stores::default());
+    let out = chat.project(&stores(&[]));
     assert_eq!(string(&out, "chat.status"), "Provider failed");
     assert_eq!(out["chat.status_error"], Value::Bool(true));
     // A hidden panel projects nothing and holds no layout.
@@ -382,20 +380,17 @@ impl Drop for Lab {
         let _ = std::fs::remove_dir_all(&self.dir);
     }
 }
-fn welcome(boot: u32, saved: bool) -> Message {
+fn welcome(boot: u32) -> Message {
     let mut methods = nacre_protocol::core_methods();
     methods.extend(nacre_protocol::ai_chat::methods());
-    if saved {
-        methods.insert(
-            SAVED.into(),
-            nacre_protocol::Method {
-                v: 1,
-                class: Capability::Desktop,
-                timeout: 3000,
-                params: json!({"type":"object"}),
-                result: json!({}),
-            },
-        );
+    for name in ["ai.launcher.list", "ai.launcher.open", "ai.launcher.new", "ai.launcher.latest", "ai.launcher.action"] {
+        methods.insert(name.into(), nacre_protocol::Method {
+            v: 1,
+            class: Capability::Desktop,
+            timeout: 3000,
+            params: json!({"type":"object"}),
+            result: json!({}),
+        });
     }
     Message::Welcome {
         proto: 1,
@@ -406,7 +401,7 @@ fn welcome(boot: u32, saved: bool) -> Message {
         frame_ms: None,
     }
 }
-pub(crate) async fn lab(saved: bool, initial: Json) -> Lab {
+pub(crate) async fn lab(initial: Json) -> Lab {
     use std::os::unix::fs::PermissionsExt;
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let dir = std::env::temp_dir().join(format!(
@@ -443,7 +438,7 @@ pub(crate) async fn lab(saved: bool, initial: Json) -> Lab {
             let Some(Message::Hello { .. }) = incoming.recv().await else {
                 continue;
             };
-            framing::write(&mut writer, &welcome(boot, saved))
+            framing::write(&mut writer, &welcome(boot))
                 .await
                 .unwrap();
             let mut seq = 0;
@@ -455,10 +450,21 @@ pub(crate) async fn lab(saved: bool, initial: Json) -> Lab {
                         }
                         Some(Message::Call { id, m, p, .. }) => {
                             let _ = calls_tx.send((m.clone(), p));
+                            let chats: Vec<Json> = (1..=12).map(|index| {
+                                let key = format!("k{index}");
+                                let (title, project, provider, state) = if index == 2 {
+                                    ("Notes", "brain", "claude", "idle")
+                                } else {
+                                    ("Build fixes", "nacre", "codex", if index == 1 { "running" } else { "idle" })
+                                };
+                                json!({"key":key,"title":format!("{title} {index}"),"project":project,"provider":provider,"state":state,"lastActivity":1794000000.0-(index as f64*600.0)})
+                            }).collect();
                             let reply = if failing.lock().unwrap().contains(&m) {
                                 Reply::Err { err: Failure::new(ErrorCode::Unavailable, "no worker", false) }
-                            } else if m == SAVED {
-                                Reply::Ok { ok: json!({"chats":[{"key":"abc123","id":"t9","title":"Old chat","agent":"codex","account":"Default","state":"saved"}]}) }
+                            } else if m == "ai.launcher.list" {
+                                Reply::Ok { ok: json!({"chats":chats,"projects":[{"id":"nacre","label":"Nacre"}],"defaultProvider":"codex","warning":""}) }
+                            } else if m == "ai.launcher.open" {
+                                Reply::Ok { ok: json!({"opened":true,"focusedExisting":true}) }
                             } else {
                                 Reply::Ok { ok: json!({"channel":""}) }
                             };
@@ -531,14 +537,13 @@ fn opened(chat: &Chat) -> bool {
 async fn open_heartbeat_send_stop_and_approve_use_the_published_calls() {
     let _guard = serial();
     let mut lab = lab(
-        false,
         topic(&[("u1", "user", "hi")], state(false, "", None)),
     )
     .await;
     let chat = chat_for(&lab)
         .await
         .with_heartbeat(Duration::from_millis(80));
-    let none = Stores::default();
+    let none = stores(&[]);
     let out = until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
     assert_eq!(out["chat.can_send"], Value::Bool(false), "empty draft");
     assert_eq!(
@@ -635,9 +640,9 @@ async fn open_heartbeat_send_stop_and_approve_use_the_published_calls() {
 #[tokio::test(flavor = "current_thread")]
 async fn a_failed_call_shows_an_error_and_a_refused_send_restores_the_text() {
     let _guard = serial();
-    let mut lab = lab(false, topic(&[], state(false, "", None))).await;
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
     let chat = chat_for(&lab).await;
-    let none = Stores::default();
+    let none = stores(&[]);
     until(&chat, &none, "state", |o| {
         string(o, "chat.heading").starts_with("Claude")
     })
@@ -678,12 +683,11 @@ async fn a_failed_call_shows_an_error_and_a_refused_send_restores_the_text() {
 async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
     let _guard = serial();
     let mut lab = lab(
-        false,
         topic(&[("u1", "user", "before")], state(false, "", None)),
     )
     .await;
     let chat = chat_for(&lab).await;
-    let none = Stores::default();
+    let none = stores(&[]);
     until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
     assert_eq!(lab.calls.recv().await.unwrap().0, "ai.chat.open");
     lab.push.send(Frame::Drop).unwrap();
@@ -705,36 +709,108 @@ async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn saved_chats_are_listed_only_when_published_and_resume_by_key() {
+async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand() {
     let _guard = serial();
-    let mut lab = lab(true, topic(&[], state(false, "", None))).await;
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
     let chat = chat_for(&lab).await;
-    let chats = stores(&[("chat.section", Value::Text("chats".into()))]);
-    let out = until(
-        &chat,
-        &chats,
-        "saved rows",
-        |o| matches!(&o["chat.saved"], Value::List(r) if !r.is_empty()),
-    )
-    .await;
-    let Value::List(rows) = &out["chat.saved"] else {
-        panic!()
-    };
-    assert_eq!(rows[0]["a"], "resume:abc123");
-    assert_eq!(rows[0]["t"], "Old chat");
-    let resumed = chat.act("resume:abc123", &chats);
-    assert_eq!(resumed.stores["chat.section"], Value::Text("chat".into()));
-    loop {
-        let call = lab.calls.recv().await.unwrap();
-        if call.0 == "ai.chat.resume" {
-            assert_eq!(call.1, json!({"channel":"","key":"abc123"}));
+    let launcher = Stores::default();
+    let first = chat.project(&launcher);
+    assert_eq!(first["launcher.can_new"], Value::Bool(true));
+    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    let listed = until(&chat, &launcher, "launcher list", |out| {
+        matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
+    }).await;
+    let Value::List(rows) = &listed["launcher.chats"] else { panic!("launcher rows") };
+    assert_eq!(rows[0]["provider"], "Codex");
+    assert_eq!(rows[0]["state"], "running");
+    assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
+
+    let search = stores(&[("launcher.search", Value::Text("brain".into()))]);
+    let filtered = chat.project(&search);
+    let Value::List(rows) = &filtered["launcher.chats"] else { panic!("filtered rows") };
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["key"], "k2");
+    let move_down = chat.act("launcher:move:1", &search);
+    assert_eq!(move_down.stores["launcher.selected"], Value::Text("k2".into()));
+
+    let selected = stores(&[("launcher.selected", Value::Text("k2".into()))]);
+    chat.act("launcher:open-selected", &selected);
+    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k2"})));
+    for _ in 0..100 {
+        chat.project(&launcher);
+        if !chat.st.borrow().pending.iter().any(|pending| pending.call == Call::LauncherAction) {
             break;
         }
+        tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    // Without the method the tab says so.
-    let (_s, plain) = offline(topic(&[], state(false, "", None)));
-    let out = plain.project(&chats);
-    assert!(string(&out, "chat.saved_state").contains("not available"));
+    assert!(!chat.st.borrow().pending.iter().any(|pending| pending.call == Call::LauncherAction), "focus-existing acknowledgement is consumed");
+    // The shared service reports focusedExisting when it reuses an open chat window.
+    chat.act("launcher:open:k1", &launcher);
+    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k1"})));
+
+    let configured = stores(&[
+        ("launcher.provider", Value::Text("claude".into())),
+        ("launcher.project", Value::Text("nacre".into())),
+    ]);
+    chat.act("launcher:new", &configured);
+    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.new".into(), json!({"provider":"claude","project":"nacre"})));
+    let quick = chat.act("launcher:quick-chat", &launcher);
+    assert_eq!(quick.stores["chat.section"], Value::Text("chat".into()));
+    assert_eq!(quick.stores["launcher.quick_chat"], Value::Bool(true));
+    let back = chat.act("launcher:back", &launcher);
+    assert_eq!(back.stores["chat.section"], Value::Text("launcher".into()));
+    assert_eq!(back.stores["launcher.quick_chat"], Value::Bool(false));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn launcher_load_error_is_visible_and_does_not_retry_each_projection() {
+    let _guard = serial();
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
+    lab.fail.lock().unwrap().push("ai.launcher.list".into());
+    let chat = chat_for(&lab).await;
+    let launcher = Stores::default();
+    let initial = chat.project(&launcher);
+    assert!(!string(&initial, "launcher.empty_state").is_empty());
+    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    let mut failed = BTreeMap::new();
+    for _ in 0..100 {
+        failed = chat.project(&launcher);
+        if !string(&failed, "launcher.warning").is_empty() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(!string(&failed, "launcher.warning").is_empty());
+    assert_eq!(string(&failed, "launcher.empty_state"), "");
+    for _ in 0..20 {
+        chat.project(&launcher);
+    }
+    assert!(lab.calls.try_recv().is_err(), "a failed list is throttled instead of retried every frame");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> {
+    let _guard = serial();
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
+    let chat = chat_for(&lab).await;
+    let launcher = Stores::default();
+    chat.project(&launcher);
+    let _ = lab.calls.recv().await;
+    let projected = until(&chat, &launcher, "launcher golden data", |out| {
+        matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
+    }).await;
+    for scale in [1., 1.5] {
+        let mut regular = harness(projected.clone(), scale)?;
+        assert!(regular.session.view_nodes().iter().any(|node| node.id == "chat.search"));
+        assert!(regular.session.view_nodes().iter().any(|node| node.id == "chat.recent-chats"));
+        golden("launcher", &mut regular, scale)?;
+        let mut detached_projection = projected.clone();
+        detached_projection.insert("view.detached".into(), Value::Bool(true));
+        let mut detached = harness(detached_projection, scale)?;
+        assert!(!detached.session.view_nodes().iter().any(|node| node.id == "chat.pin"));
+        golden("launcher-detached", &mut detached, scale)?;
+    }
+    Ok(())
 }
 
 // ---- goldens and the streaming frame budget ----------------------------------
@@ -770,7 +846,7 @@ fn transcript_scroll_preserves_touchpad_pixels_and_shared_wheel_distance() {
         .map(|(id, role, body)| (id.as_str(), role.as_str(), body.as_str()))
         .collect();
     let (_source, chat) = offline(topic(&borrowed, state(false, "", None)));
-    let mut projected = chat.project(&Stores::default());
+    let mut projected = chat.project(&stores(&[]));
     projected.insert("chat.scroll".into(), Value::Number(0.));
     let mut h = harness(projected, 1.).unwrap();
     let region = h
@@ -885,7 +961,7 @@ fn chat_states_match_goldens() -> bead_test::Result<()> {
 fn streaming_at_fifty_tokens_per_second_stays_inside_the_frame_budget() -> bead_test::Result<()> {
     let _guard = serial();
     let (source, chat) = offline(topic(&[("u1", "user", "Explain")], state(true, "", None)));
-    let out = chat.project(&Stores::default());
+    let out = chat.project(&stores(&[]));
     let mut h = harness(out, 1.)?;
     let mut text = String::from("Streaming answer. ");
     let mut times = Vec::new();

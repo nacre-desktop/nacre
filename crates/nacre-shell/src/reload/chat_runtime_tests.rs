@@ -8,13 +8,19 @@ use serde_json::json;
 use std::time::Duration;
 
 fn runtime(chat: crate::chat::Chat) -> Runtime {
+    runtime_section(chat, "chat")
+}
+fn runtime_section(chat: crate::chat::Chat, section: &str) -> Runtime {
     let palette = root().join("palette.json");
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
     let session = bead::ui::Session::new(root(), "chat/main.luau".into(), palette, colors, cold);
     let mut runtime = Runtime::new(session).with_chat(chat).unwrap();
     runtime.state_file = None;
-    runtime.session.restore_on_start(BTreeMap::new());
+    runtime.session.restore_on_start(BTreeMap::from([(
+        "chat.section".into(),
+        bead::core::Value::Text(section.into()),
+    )]));
     runtime.services(Box::new(|_| {}));
     runtime
         .stage(UiEvent::Reload)
@@ -35,10 +41,36 @@ fn draft(runtime: &Runtime) -> String {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inline_worker() {
+    let _guard = serial();
+    let mut lab = lab(json!({"available":true,"channels":{}})).await;
+    let chat = chat_for(&lab).await;
+    let mut runtime = runtime_section(chat, "launcher");
+    runtime.viewport(420, 300);
+    step(&mut runtime, UiEvent::PanelDetached(true));
+    assert_eq!(runtime.session.stores.get("view.detached"), Some(&bead::core::Value::Bool(true)));
+    assert!(matches!(runtime.session.stores.get("chat.height"), Some(bead::core::Value::Number(height)) if *height <= 268.));
+    assert_eq!(runtime.session.stores.get("bead.focused"), Some(&bead::core::Value::Text("chat.search".into())));
+    for _ in 0..300 {
+        step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+        if matches!(runtime.session.stores.get("launcher.chats"), Some(bead::core::Value::List(rows)) if rows.len() == 12) { break; }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(runtime.session.view_nodes().iter().find(|node| node.id == "chat.recent-chats").and_then(|node| node.scroll_limit).is_some_and(|limit| limit > 0.));
+    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    step(&mut runtime, UiEvent::Key { text: "brain".into(), backspace: false });
+    step(&mut runtime, UiEvent::Command { command: "down".into(), shift: false });
+    assert_eq!(runtime.session.stores.get("launcher.selected"), Some(&bead::core::Value::Text("k2".into())));
+    step(&mut runtime, UiEvent::Command { command: "enter".into(), shift: false });
+    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k2"})));
+    assert_eq!(runtime.session.stores.get("chat.section"), Some(&bead::core::Value::Text("launcher".into())));
+    assert!(lab.calls.try_recv().is_err(), "launcher interaction does not start ai.chat.open");
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn typing_shift_enter_and_enter_send_the_exact_text_once() {
     let _guard = serial();
     let mut lab = lab(
-        false,
         json!({"available":true,"channels":{"":{"state":{"defaultProvider":"claude","inWorkspace":false,"provider":"claude","account":"A","title":"T","threadId":"t","model":"","features":[],"composerKey":"k","busy":false,"status":"","error":""},"messages":{}}}}),
     )
     .await;
@@ -381,7 +413,7 @@ fn lip_and_body_hover_are_a_union_even_when_startup_delays_lip_events() {
 #[tokio::test(flavor = "current_thread")]
 async fn panel_hover_lifecycle_preserves_sidebar_warm_policy() {
     let _guard = serial();
-    let lab = lab(false, json!({"available":true,"channels":{}})).await;
+    let lab = lab(json!({"available":true,"channels":{}})).await;
     let mut runtime = runtime(chat_for(&lab).await);
     for (opened, anchor, want_opened) in [
         (Some(true), true, true),

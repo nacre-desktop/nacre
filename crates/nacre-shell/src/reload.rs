@@ -3561,9 +3561,16 @@ impl Runtime {
             bead::core::Value::Text(String::new()),
         )]))?;
         if self.session.stores.get("panel.hover_opened") != Some(&bead::core::Value::Bool(true)) {
+            let focus = if self.session.stores.get("chat.section")
+                == Some(&bead::core::Value::Text("chat".into()))
+            {
+                "chat.composer"
+            } else {
+                "chat.search"
+            };
             self.session.stores.commit(BTreeMap::from([(
                 "bead.focused".into(),
-                bead::core::Value::Text("chat.composer".into()),
+                bead::core::Value::Text(focus.into()),
             )]))?;
         }
         let chat = std::rc::Rc::new(chat);
@@ -8662,7 +8669,16 @@ impl SceneSource for Runtime {
                         values.insert(
                             "bead.focused".into(),
                             bead::core::Value::Text(
-                                if opened { "" } else { "chat.composer" }.into(),
+                                if opened {
+                                    ""
+                                } else if self.session.stores.get("chat.section")
+                                    == Some(&bead::core::Value::Text("chat".into()))
+                                {
+                                    "chat.composer"
+                                } else {
+                                    "chat.search"
+                                }
+                                .into(),
                             ),
                         );
                     } else if opened && self.session.stores.get("bead.focused").is_some() {
@@ -9693,12 +9709,21 @@ impl SceneSource for Runtime {
                     self.publish_status_pill()?
                 }
                 "tab" => self.session.focus_next(shift)?,
+                "enter" if self.chat.as_ref().is_some_and(|chat| chat.launcher_search_focused(&self.session.stores)) => {
+                    let changes = self.chat.as_ref().map(|chat| chat.act("launcher:open-selected", &self.session.stores).stores).unwrap_or_default();
+                    self.session.update(changes)?
+                }
                 "enter" if shift && self.session.focused_multiline() => {
                     self.session.input_newline()?
                 }
                 "enter" => self.session.activate_focused()?,
                 "up" | "down" if self.session.focused_multiline() => {
                     self.session.input_vertical(command == "up", shift)?
+                }
+                "up" | "down" if self.chat.as_ref().is_some_and(|chat| chat.launcher_search_focused(&self.session.stores)) => {
+                    let arg = if command == "up" { "launcher:move:up" } else { "launcher:move:down" };
+                    let changes = self.chat.as_ref().map(|chat| chat.act(arg, &self.session.stores).stores).unwrap_or_default();
+                    self.session.update(changes)?
                 }
                 "up" | "down" => self.session.focus_next(command == "up")?,
                 "left" | "right" if self.session.focused_range() => {
