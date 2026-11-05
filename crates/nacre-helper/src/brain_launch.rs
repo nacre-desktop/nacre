@@ -21,7 +21,7 @@ fn state() -> Result<PathBuf> {
 
 fn launch(argv: &[String]) -> Result<()> {
     let (program, args) = argv.split_first().ok_or("Empty Brain launch command")?;
-    let child = crate::process::spawn_detached_quiet(program, args)
+    let mut child = crate::process::spawn_detached_quiet(program, args)
         .map_err(|error| launch_error_message(program, &error))?;
     thread::spawn(move || {
         let _ = child.wait();
@@ -204,9 +204,16 @@ fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bo
             .and_then(Value::as_u64)
             .is_some_and(|pid| pids.contains(&(pid as u32)))
             && (class == "chrome-127.0.0.1__-Default"
-                || ["chrome-", "chromium-", "brave-", "vivaldi-", "microsoft-edge-", "msedge-"]
-                    .iter()
-                    .any(|prefix| class.starts_with(prefix))
+                || [
+                    "chrome-",
+                    "chromium-",
+                    "brave-",
+                    "vivaldi-",
+                    "microsoft-edge-",
+                    "msedge-",
+                ]
+                .iter()
+                .any(|prefix| class.starts_with(prefix))
                 || class.contains("nacre_brain_auth_open.html")))
 }
 
@@ -285,9 +292,27 @@ fn browser_arguments(browser: &Path, profile: &Path, app_uri: &str, handoff: boo
 }
 
 fn known_browser(path: &Path) -> bool {
-    let name = path.file_name().and_then(|name| name.to_str()).unwrap_or_default();
-    (["brave-origin", "brave", "brave-browser", "chromium", "google-chrome-stable", "google-chrome", "vivaldi", "vivaldi-stable", "microsoft-edge", "brave-browser-stable"].contains(&name)
-        || matches!(name, "chrome" | "chromium-browser" | "microsoft-edge-stable"))
+    let name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or_default();
+    ([
+        "brave-origin",
+        "brave",
+        "brave-browser",
+        "chromium",
+        "google-chrome-stable",
+        "google-chrome",
+        "vivaldi",
+        "vivaldi-stable",
+        "microsoft-edge",
+        "brave-browser-stable",
+    ]
+    .contains(&name)
+        || matches!(
+            name,
+            "chrome" | "chromium-browser" | "microsoft-edge-stable"
+        ))
         && fs::metadata(path).is_ok_and(|metadata| metadata.permissions().mode() & 0o111 != 0)
 }
 
@@ -296,29 +321,73 @@ fn in_path(program: &str, path: &str) -> Option<PathBuf> {
         let candidate = PathBuf::from(program);
         return (candidate.is_file() && known_browser(&candidate)).then_some(candidate);
     }
-    path.split(':').map(|part| Path::new(part).join(program))
+    path.split(':')
+        .map(|part| Path::new(part).join(program))
         .find(|candidate| candidate.is_file() && known_browser(candidate))
 }
 
 fn select_browser(preferred: &[String], path: &str, chrome_path: &Path) -> Option<PathBuf> {
-    preferred.iter().find_map(|candidate| in_path(candidate, path))
-        .or_else(|| ["brave-origin", "brave", "brave-browser", "chromium", "google-chrome-stable"].into_iter().find_map(|name| in_path(name, path)))
-        .or_else(|| (chrome_path.is_file() && known_browser(chrome_path)).then(|| chrome_path.to_path_buf()))
-        .or_else(|| ["vivaldi", "microsoft-edge"].into_iter().find_map(|name| in_path(name, path)))
+    preferred
+        .iter()
+        .find_map(|candidate| in_path(candidate, path))
+        .or_else(|| {
+            [
+                "brave-origin",
+                "brave",
+                "brave-browser",
+                "chromium",
+                "google-chrome-stable",
+            ]
+            .into_iter()
+            .find_map(|name| in_path(name, path))
+        })
+        .or_else(|| {
+            (chrome_path.is_file() && known_browser(chrome_path)).then(|| chrome_path.to_path_buf())
+        })
+        .or_else(|| {
+            ["vivaldi", "microsoft-edge"]
+                .into_iter()
+                .find_map(|name| in_path(name, path))
+        })
 }
 
 fn desktop_exec(desktop_id: &str, home: &Path) -> Option<String> {
-    let data_home = env::var_os("XDG_DATA_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".local/share"));
+    let data_home = env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".local/share"));
     let mut roots = vec![data_home.join("applications")];
-    roots.extend(env::var_os("XDG_DATA_DIRS").map(|dirs| dirs.to_string_lossy().split(':').filter(|s| !s.is_empty()).map(PathBuf::from).map(|p| p.join("applications")).collect::<Vec<_>>()).unwrap_or_else(|| vec![PathBuf::from("/usr/local/share/applications"), PathBuf::from("/usr/share/applications")]));
+    roots.extend(
+        env::var_os("XDG_DATA_DIRS")
+            .map(|dirs| {
+                dirs.to_string_lossy()
+                    .split(':')
+                    .filter(|s| !s.is_empty())
+                    .map(PathBuf::from)
+                    .map(|p| p.join("applications"))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_else(|| {
+                vec![
+                    PathBuf::from("/usr/local/share/applications"),
+                    PathBuf::from("/usr/share/applications"),
+                ]
+            }),
+    );
     desktop_exec_in_roots(desktop_id, &roots)
 }
 
 fn desktop_exec_in_roots(desktop_id: &str, roots: &[PathBuf]) -> Option<String> {
-    let file = roots.iter().map(|root| root.join(desktop_id)).find(|path| path.is_file())?;
+    let file = roots
+        .iter()
+        .map(|root| root.join(desktop_id))
+        .find(|path| path.is_file())?;
     let content = fs::read_to_string(file).ok()?;
-    let exec = content.lines().find_map(|line| line.strip_prefix("Exec="))?;
-    exec.split_whitespace().next().map(|s| s.trim_matches('"').to_owned())
+    let exec = content
+        .lines()
+        .find_map(|line| line.strip_prefix("Exec="))?;
+    exec.split_whitespace()
+        .next()
+        .map(|s| s.trim_matches('"').to_owned())
 }
 
 fn mime_default(content: &str) -> Option<String> {
@@ -328,7 +397,10 @@ fn mime_default(content: &str) -> Option<String> {
             in_defaults = line == "[Default Applications]";
         } else if in_defaults {
             if let Some(value) = line.strip_prefix("x-scheme-handler/http=") {
-                return value.split(';').find(|entry| !entry.is_empty()).map(str::to_owned);
+                return value
+                    .split(';')
+                    .find(|entry| !entry.is_empty())
+                    .map(str::to_owned);
             }
         }
     }
@@ -338,21 +410,38 @@ fn mime_default(content: &str) -> Option<String> {
 fn browser_command(path: &Path, handoff: bool) -> Result<Vec<String>> {
     let home = home()?;
     let mut preferred = Vec::new();
-    if let Ok(output) = run_output(&["xdg-settings".into(), "get".into(), "default-web-browser".into()], None, Duration::from_secs(2)) {
+    if let Ok(output) = run_output(
+        &[
+            "xdg-settings".into(),
+            "get".into(),
+            "default-web-browser".into(),
+        ],
+        None,
+        Duration::from_secs(2),
+    ) {
         if output.status.success() {
             let desktop_id = String::from_utf8_lossy(&output.stdout).trim().to_owned();
-            if let Some(exec) = desktop_exec(&desktop_id, &home) { preferred.push(exec); }
+            if let Some(exec) = desktop_exec(&desktop_id, &home) {
+                preferred.push(exec);
+            }
         }
     }
-    if let Some(browser) = env::var("BROWSER").ok().and_then(|s| s.split_whitespace().next().map(str::to_owned)) {
+    if let Some(browser) = env::var("BROWSER")
+        .ok()
+        .and_then(|s| s.split_whitespace().next().map(str::to_owned))
+    {
         preferred.push(browser);
     }
-    let config_home = env::var_os("XDG_CONFIG_HOME").map(PathBuf::from).unwrap_or_else(|| home.join(".config"));
+    let config_home = env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| home.join(".config"));
     let mimeapps = fs::read_to_string(config_home.join("mimeapps.list"))
         .or_else(|_| fs::read_to_string(home.join(".local/share/applications/mimeapps.list")))
         .unwrap_or_default();
     if let Some(desktop_id) = mime_default(&mimeapps) {
-        if let Some(exec) = desktop_exec(&desktop_id, &home) { preferred.push(exec); }
+        if let Some(exec) = desktop_exec(&desktop_id, &home) {
+            preferred.push(exec);
+        }
     }
     let browser = select_browser(&preferred, &env::var("PATH").unwrap_or_default(), Path::new("/opt/google/chrome/chrome"))
         .ok_or_else(|| "No supported Chromium-based browser is installed (tried the default browser, Brave, Chromium, Chrome, Vivaldi, and Edge)".to_owned())?;
@@ -365,7 +454,11 @@ fn browser_command(path: &Path, handoff: bool) -> Result<Vec<String>> {
 }
 
 fn notify_launch_failure(message: &str) {
-    let args = ["--app-name=Nacre Brain".to_owned(), "Nacre Brain".to_owned(), message.to_owned()];
+    let args = [
+        "--app-name=Nacre Brain".to_owned(),
+        "Nacre Brain".to_owned(),
+        message.to_owned(),
+    ];
     if let Err(error) = crate::process::run("notify-send", &args, None, Duration::from_secs(3)) {
         eprintln!("nacre-brain: notification failed: {error}");
     }
@@ -800,7 +893,11 @@ mod tests {
             fs::write(&executable, "").unwrap();
             fs::set_permissions(&executable, fs::Permissions::from_mode(0o755)).unwrap();
         }
-        fs::write(apps.join("brave-origin.desktop"), "[Desktop Entry]\nExec=brave-origin %U\n").unwrap();
+        fs::write(
+            apps.join("brave-origin.desktop"),
+            "[Desktop Entry]\nExec=brave-origin %U\n",
+        )
+        .unwrap();
         assert_eq!(
             desktop_exec_in_roots("brave-origin.desktop", &[apps.clone()]).as_deref(),
             Some("brave-origin")
@@ -808,22 +905,104 @@ mod tests {
         let mimeapps = "[Default Applications]\nx-scheme-handler/http=brave-origin.desktop;";
         let mime_id = mime_default(mimeapps).unwrap();
         let preferred = desktop_exec_in_roots(&mime_id, &[apps.clone()]).unwrap();
-        assert_eq!(select_browser(std::slice::from_ref(&preferred), bin.to_str().unwrap(), Path::new("/missing/chrome")).unwrap(), bin.join("brave-origin"));
-        assert_eq!(select_browser(&[], bin.to_str().unwrap(), Path::new("/missing/chrome")).unwrap(), bin.join("brave-origin"));
-        assert_eq!(select_browser(&["chromium".into()], bin.to_str().unwrap(), Path::new("/missing/chrome")).unwrap(), bin.join("chromium"));
+        assert_eq!(
+            select_browser(
+                std::slice::from_ref(&preferred),
+                bin.to_str().unwrap(),
+                Path::new("/missing/chrome")
+            )
+            .unwrap(),
+            bin.join("brave-origin")
+        );
+        assert_eq!(
+            select_browser(&[], bin.to_str().unwrap(), Path::new("/missing/chrome")).unwrap(),
+            bin.join("brave-origin")
+        );
+        assert_eq!(
+            select_browser(
+                &["chromium".into()],
+                bin.to_str().unwrap(),
+                Path::new("/missing/chrome")
+            )
+            .unwrap(),
+            bin.join("chromium")
+        );
         let not_executable = bin.join("brave-origin");
         fs::set_permissions(&not_executable, fs::Permissions::from_mode(0o644)).unwrap();
         fs::set_permissions(bin.join("chromium"), fs::Permissions::from_mode(0o644)).unwrap();
-        assert!(select_browser(&[preferred], bin.to_str().unwrap(), Path::new("/missing/chrome")).is_none());
-        assert!(launch_error_message("/missing/brave-origin", &std::io::Error::from(std::io::ErrorKind::NotFound)).contains("/missing/brave-origin: No such file or directory"));
+        assert!(select_browser(
+            &[preferred],
+            bin.to_str().unwrap(),
+            Path::new("/missing/chrome")
+        )
+        .is_none());
+        let missing = fixture
+            .path()
+            .join("missing-brave-origin")
+            .to_string_lossy()
+            .into_owned();
+        let error = launch(std::slice::from_ref(&missing))
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains(&missing), "{error}");
+        assert!(error.contains("os error 2"), "{error}");
+    }
+
+    #[test]
+    fn browser_fallback_order_skips_non_chromium_defaults() {
+        let fixture = tempfile::tempdir().unwrap();
+        let bin = fixture.path().join("bin");
+        fs::create_dir(&bin).unwrap();
+        let chrome = fixture.path().join("chrome");
+        let candidates = [
+            bin.join("brave-origin"),
+            bin.join("brave"),
+            bin.join("brave-browser"),
+            bin.join("chromium"),
+            bin.join("google-chrome-stable"),
+            chrome.clone(),
+            bin.join("vivaldi"),
+            bin.join("microsoft-edge"),
+        ];
+        let firefox = bin.join("firefox");
+        for path in candidates.iter().chain(std::iter::once(&firefox)) {
+            fs::write(path, "").unwrap();
+            fs::set_permissions(path, fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        for candidate in &candidates {
+            assert_eq!(
+                select_browser(
+                    &["firefox".into(), "missing-browser".into()],
+                    bin.to_str().unwrap(),
+                    &chrome
+                ),
+                Some(candidate.clone())
+            );
+            fs::remove_file(candidate).unwrap();
+        }
+        assert!(select_browser(&[], bin.to_str().unwrap(), &chrome).is_none());
     }
 
     #[test]
     fn browser_app_classes_are_scoped_to_profile_processes() {
         let pids = [123].into_iter().collect();
-        for class in ["brave-127.0.0.1__-Default", "brave-origin-127.0.0.1__-Default", "chromium-127.0.0.1__-Default", "vivaldi-127.0.0.1__-Default", "microsoft-edge-127.0.0.1__-Default", "msedge-127.0.0.1__-Default", "chrome-127.0.0.1__-Default"] {
-            assert!(is_brain_window(&json!({"pid":123,"class":class}), &pids), "{class}");
-            assert!(!is_brain_window(&json!({"pid":456,"class":class}), &pids), "unrelated {class}");
+        for class in [
+            "brave-127.0.0.1__-Default",
+            "brave-origin-127.0.0.1__-Default",
+            "chromium-127.0.0.1__-Default",
+            "vivaldi-127.0.0.1__-Default",
+            "microsoft-edge-127.0.0.1__-Default",
+            "msedge-127.0.0.1__-Default",
+            "chrome-127.0.0.1__-Default",
+        ] {
+            assert!(
+                is_brain_window(&json!({"pid":123,"class":class}), &pids),
+                "{class}"
+            );
+            assert!(
+                !is_brain_window(&json!({"pid":456,"class":class}), &pids),
+                "unrelated {class}"
+            );
         }
         assert!(select_browser(&[], "/empty", Path::new("/missing/chrome")).is_none());
     }

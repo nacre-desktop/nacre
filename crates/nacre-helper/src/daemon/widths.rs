@@ -612,11 +612,15 @@ mod tests {
                 let mut stream = BufReader::new(stream);
                 let mut request = String::new();
                 stream.read_line(&mut request)?;
-                assert_eq!(serde_json::from_str::<Value>(&request).unwrap(), json!("NacreCapabilities"));
+                assert_eq!(
+                    serde_json::from_str::<Value>(&request).unwrap(),
+                    json!("NacreCapabilities")
+                );
                 let mut stream = stream.into_inner();
                 writeln!(stream, "{{\"Ok\":{{\"NacreCapabilities\":{{\"workspace_collections\":false,\"proportional_x11_widths\":{enabled},\"overview_hover\":false}}}}}}")
             });
-            let environment = BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
+            let environment =
+                BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
             let selected = observe_if_daemon(50.0, &environment)?;
             peer.join().map_err(|_| "Capability peer panicked")??;
             Ok(selected)
@@ -635,7 +639,10 @@ mod tests {
             let _ = take_retry_delay(&mut retry);
         }
         assert_eq!(retry, MAX_RETRY_MS);
-        assert_eq!(take_retry_delay(&mut retry), Duration::from_millis(MAX_RETRY_MS));
+        assert_eq!(
+            take_retry_delay(&mut retry),
+            Duration::from_millis(MAX_RETRY_MS)
+        );
     }
     #[derive(Clone)]
     struct Fixture(SizeHints);
