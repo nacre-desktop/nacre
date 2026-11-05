@@ -35,8 +35,12 @@ Item {
     onTopRectChanged: publishRegions()
     onLeftRectChanged: publishRegions()
     onRightRectChanged: publishRegions()
-    readonly property real dashboardProgress: dashboardDwell.progress
-    readonly property bool dashboardWaiting: dashboardDwell.waiting
+    property real nativeLeftProgress: 0
+    property real nativeRightProgress: 0
+    property real nativeDashboardProgress: 0
+    property var nativeTriggeredEdges: ({})
+    readonly property real dashboardProgress: NacreCompositor.externalEdgeSource ? nativeDashboardProgress : dashboardDwell.progress
+    readonly property bool dashboardWaiting: NacreCompositor.externalEdgeSource ? nativeDashboardProgress > 0 : dashboardDwell.waiting
     function cancelDashboard() {
         dashboardDwell.cancel();
     }
@@ -86,6 +90,10 @@ Item {
     onAvailableChanged: if (!available) {
         cancelDashboard();
         cancelSides();
+        clearNativeCue("top");
+        clearNativeCue("left");
+        clearNativeCue("right");
+        nativeTriggeredEdges = ({});
     }
     NacreHoverDwell {
         id: dashboardDwell
@@ -147,13 +155,35 @@ Item {
         NacreHoverIntent.rearm(name, screen);
         controller.settleHover();
     }
+    function nativeEdgeName(edge) {
+        return edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
+    }
+    function clearNativeCue(edge) {
+        if (edge === "top") {
+            nativeDashboardProgress = 0;
+            NacreHoverIntent.setHeaderHover(screen.name, "lip", false);
+        } else if (edge === "left") {
+            nativeLeftProgress = 0;
+        } else if (edge === "right") {
+            nativeRightProgress = 0;
+        }
+    }
     Connections {
         target: NacreCompositor
         function onExternalEdgeSourceChanged() {
             if (NacreCompositor.externalEdgeSource) {
                 root.cancelDashboard();
                 root.cancelSides();
+                root.nativeDashboardProgress = 0;
+                root.nativeLeftProgress = 0;
+                root.nativeRightProgress = 0;
+                root.nativeTriggeredEdges = ({});
+                NacreHoverIntent.setHeaderHover(root.screen.name, "lip", false);
             } else {
+                root.nativeTriggeredEdges = ({});
+                root.clearNativeCue("top");
+                root.clearNativeCue("left");
+                root.clearNativeCue("right");
                 root.leave("dashboard");
                 root.leave("left");
                 root.leave("osd");
@@ -170,31 +200,69 @@ Item {
         function onEvent(value) {
             if (!NacreCompositor.externalEdgeSource || value?.output !== root.screen.name)
                 return;
-            if (value.type !== "edge-triggered" && value.type !== "edge-left")
+            if (value.type !== "edge-approach" && value.type !== "edge-hover" && value.type !== "edge-triggered" && value.type !== "edge-left")
                 return;
             const position = value.position;
             if (!position || typeof position.length !== "number" || position.length !== 2 || !Number.isFinite(position[0]) || !Number.isFinite(position[1]))
                 return;
             const edge = String(value.edge || "").toLowerCase();
             NacreHoverIntent.observe(root.screen, Number(position[0]), Number(position[1]));
-            if (value.type === "edge-left") {
-                const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
-                if (name)
+            const name = root.nativeEdgeName(edge);
+            if (!name)
+                return;
+            if (value.type === "edge-approach" || value.type === "edge-hover") {
+                if (value.type === "edge-approach") {
+                    const next = Object.assign({}, root.nativeTriggeredEdges);
+                    delete next[edge];
+                    root.nativeTriggeredEdges = next;
+                }
+                const progress = value.progress;
+                const point = NacreHoverIntent.positions[root.screen.name];
+                if (typeof progress !== "number" || !Number.isFinite(progress) || progress < 0 || progress > 1 || !root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true || !NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) || !NacreHoverIntent.markedContains(name, point)) {
+                    root.clearNativeCue(edge);
                     root.leave(name);
+                    return;
+                }
+                if (value.type === "edge-hover" && root.nativeTriggeredEdges[edge] === true) {
+                    root.clearNativeCue(edge);
+                    if (edge === "top")
+                        NacreHoverIntent.setHeaderHover(root.screen.name, "lip", true);
+                    if (root.nativeTriggeredEdges[edge] === true && !root.visibilities[name])
+                        NacrePanelState.hoverEdge(name, root.screen.name);
+                    return;
+                }
+                if (edge === "top") {
+                    root.nativeDashboardProgress = progress;
+                    NacreHoverIntent.setHeaderHover(root.screen.name, "lip", true);
+                } else if (edge === "left") {
+                    root.nativeLeftProgress = progress;
+                } else {
+                    root.nativeRightProgress = progress;
+                }
                 return;
             }
-            if (!root.available || NacreCompositor.overviewOpen || DesktopSettings.data.clickEdgeMenus === true)
+            if (value.type === "edge-left") {
+                const next = Object.assign({}, root.nativeTriggeredEdges);
+                delete next[edge];
+                root.nativeTriggeredEdges = next;
+                root.clearNativeCue(edge);
+                root.leave(name);
                 return;
-            const name = edge === "top" ? "dashboard" : edge === "left" ? "left" : edge === "right" ? "osd" : "";
+            }
+            root.clearNativeCue(edge);
             const point = NacreHoverIntent.positions[root.screen.name];
-            if (name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point))
+            const canFire = root.available && !NacreCompositor.overviewOpen && DesktopSettings.data.clickEdgeMenus !== true && name && NacreHoverIntent.canOpen(name, root.screen, Qt.NoButton) && NacreHoverIntent.markedContains(name, point);
+            const next = Object.assign({}, root.nativeTriggeredEdges);
+            next[edge] = !!canFire;
+            root.nativeTriggeredEdges = next;
+            if (canFire)
                 NacrePanelState.hoverEdge(name, root.screen.name);
         }
     }
     NacreFrameLip {
         id: top
         decorationEnabled: false
-        progress: root.focusProgress
+        progress: Math.max(root.focusProgress, root.nativeDashboardProgress)
         objectName: "frameTopLip"
         active: root.visibilities.dashboard
         edge: "top"
@@ -203,6 +271,7 @@ Item {
         width: root.topRect.width
         height: root.topRect.height
         visible: NacrePearls.drag?.kind !== "dashboard" && !NacrePanelState.hidden && width > 0 && DesktopSettings.data.dashboardEnabled !== false
+        enabled: !NacreCompositor.externalEdgeSource
         onEntered: buttons => root.approach("dashboard", this, buttons)
         onMoved: buttons => root.approach("dashboard", this, buttons)
         onExited: root.leave("dashboard")
@@ -223,6 +292,7 @@ Item {
         width: root.leftRect.width
         height: root.leftRect.height
         visible: NacrePearls.drag?.kind !== "ai" && !NacrePanelState.hidden && width > 0 && DesktopSettings.data.aiSidebarEnabled !== false
+        enabled: !NacreCompositor.externalEdgeSource
         onEntered: buttons => root.approach("left", this, buttons)
         onMoved: buttons => root.approach("left", this, buttons)
         onExited: root.leave("left")
@@ -232,7 +302,7 @@ Item {
             anchors.fill: parent
             edge: "left"
             base: NacreFrame.left
-            progress: leftDwell.progress
+            progress: Math.max(leftDwell.progress, root.nativeLeftProgress)
             active: left.active
             keyboardFocused: left.activeFocus
         }
@@ -249,6 +319,7 @@ Item {
         width: root.rightRect.width
         height: root.rightRect.height
         visible: NacrePearls.drag?.kind !== "controls" && !NacrePanelState.hidden && width > 0 && DesktopSettings.data.controlCenterEnabled !== false
+        enabled: !NacreCompositor.externalEdgeSource
         onEntered: buttons => root.approach("osd", this, buttons)
         onMoved: buttons => root.approach("osd", this, buttons)
         onExited: root.leave("osd")
@@ -258,7 +329,7 @@ Item {
             anchors.fill: parent
             edge: "right"
             base: NacreFrame.right
-            progress: rightDwell.progress
+            progress: Math.max(rightDwell.progress, root.nativeRightProgress)
             active: right.active
             keyboardFocused: right.activeFocus
         }

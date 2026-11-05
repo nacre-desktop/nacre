@@ -214,6 +214,21 @@ stock overview captions explain the missing extension. Normal frame/bar surfaces
 excludes full-output drawer blur until Nacre can request a client blur shape through
 ext-background-effect. Bar and floating-window blur use compositor rules.
 
+Nacre's generated `nacre-niri.kdl` overlay enables fork-only restore and
+force-close actions. Stock Niri keeps the capability report and helper behavior.
+The fork restores the last hidden window to its recorded origin (`Super+Shift+H`),
+restores all hidden windows originating on the current workspace (`Super+Alt+H`),
+and force-closes the focused Wayland client (`Super+Ctrl+Shift+Q`). Force-close
+disconnects the owning Wayland client, may close sibling windows sharing that
+connection, and is a no-op for X11 clients. Group toggle and
+cycling use stock Niri KDL actions on both compositor paths. With the native
+monitor capability, Nacre's fixed-slot helper uses one atomic selected-workspace
+swap and one workspace-set rotation, then persists the same ownership map; a
+failed preference write applies the inverse action and verifies restoration.
+Rotation uses the native action only when configured named sets are complete and
+all unnamed spare workspaces are empty. Numbered sends retain Nacre's helper.
+Stock Niri keeps the legacy multi-IPC transaction.
+
 Supported effects/input settings are emitted into the managed `desktop.kdl` include.
 Output scale/mode/position use native temporary output IPC with rollback; saved
 niri layouts and pending transactions do not overwrite Hyprland's display records.

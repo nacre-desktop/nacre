@@ -1,6 +1,7 @@
 import QtQuick
 import "../../utils/scripts/window-title.js" as WindowTitle
 import QtQuick.Controls.Basic
+import Quickshell
 import qs.widgets
 import qs.services
 import qs.config
@@ -9,10 +10,19 @@ Item {
     id: root
     property string outputName: ""
     readonly property bool perOutput: NacreCompositor.capabilities?.perOutputWorkspaces === true
+    readonly property var deskRows: NacreCompositor.capabilities?.workspaceCollections === true && Array.isArray(NacreCompositor.collections) ? NacreCompositor.collections : []
+    readonly property bool showDeskBadge: NacreCompositor.capabilities?.workspaceCollections === true && deskRows.length > 1
+    readonly property var deskForOutput: deskRows.find(value => value.output === outputName) || deskRows.find(value => value.id === NacreCompositor.activeCollectionId) || null
+    readonly property string deskLabel: deskForOutput?.name || String(deskForOutput?.index ?? "")
+    readonly property string deskBadgeText: deskForOutput ? String(deskForOutput.index) + "/" + deskRows.length : String(deskRows.length)
     readonly property var outputWorkspaces: perOutput ? NacreCompositor.workspaces.values.filter(value => value.outputId === outputName) : []
     readonly property string topology: NacreCompositor.monitors.values.map(value => value.name).sort().join("\n")
     property var rowWorkspaces: []
     property string displayedTopology: ""
+    property bool deskMenuOpen: false
+    property string deskEditOperation: ""
+    property string deskEditCollection: ""
+    property string deskEditName: ""
     readonly property var candidateWorkspaces: {
         const occupied = value => NacreCompositor.windows.some(client => client.workspaceId === value.id);
         const own = outputWorkspaces.filter(value => !value.visiting).sort((a, b) => a.index - b.index);
@@ -36,6 +46,10 @@ Item {
     }
     onTopologyChanged: if (ready)
         hotplug.restart()
+    onShowDeskBadgeChanged: if (!showDeskBadge)
+        closeDeskMenu()
+    onDeskRowsChanged: if (deskEditCollection && !deskRows.some(row => row.id === deskEditCollection))
+        closeDeskMenu()
     Timer {
         id: hotplug
         interval: 3000
@@ -86,7 +100,7 @@ Item {
         }
         return [...ids].sort((a, b) => a - b);
     }
-    implicitWidth: beads.implicitWidth
+    implicitWidth: beads.implicitWidth + (showDeskBadge ? 42 : 0)
     implicitHeight: 30
     function synchronize() {
         activeCell = repeater.itemAt(displayIds.indexOf(activeWorkspaceIndex));
@@ -120,6 +134,43 @@ Item {
         // Display numbers repeat on different outputs and can be reindexed.
         const reference = perOutput ? workspace(id)?.id : id;
         return reference !== undefined ? NacreCompositor.switchWorkspace(reference) : false;
+    }
+    function collectionAction(action) {
+        if (!showDeskBadge || !outputName || !NacreDaemon.connected)
+            return false;
+        NacreDaemon.call("collection.action", {
+            output: outputName,
+            action: action
+        }, (value, failure) => {
+            if (failure)
+                console.warn("NacreWorkspaceRow: desk action failed: " + failure.code);
+        });
+        return true;
+    }
+    function deskTitle(row) {
+        return row?.name || String(row?.index ?? "Desk");
+    }
+    function closeDeskMenu() {
+        deskMenuOpen = false;
+        deskEditOperation = "";
+        deskEditCollection = "";
+        deskEditName = "";
+    }
+    function toggleDeskMenu() {
+        if (deskMenuOpen) {
+            closeDeskMenu();
+            return;
+        }
+        deskEditOperation = "";
+        deskEditCollection = "";
+        deskMenuOpen = true;
+        deskMenu.anchor.updateAnchor();
+    }
+    function beginDeskEdit(operation) {
+        deskEditOperation = operation;
+        deskEditCollection = operation === "rename" ? (deskForOutput?.id || "") : "";
+        deskEditName = operation === "rename" ? (deskRows.find(row => row.id === deskEditCollection)?.name || "") : "";
+        Qt.callLater(() => deskName.forceActiveFocus());
     }
     function step(direction) {
         if (!Number.isFinite(direction) || direction === 0)
@@ -338,6 +389,154 @@ Item {
                         radius: 8
                         border.width: 1
                         border.color: NacreColours.palette.m3outlineVariant
+                    }
+                }
+            }
+        }
+    }
+    NacreSurface {
+        id: deskBadge
+        objectName: "collectionDeskBadge"
+        visible: root.showDeskBadge
+        x: beads.width + 8
+        y: 1
+        width: 34
+        height: 28
+        radius: 14
+        color: deskPointer.hovered ? NacreColours.palette.m3surfaceContainerHigh : NacreColours.palette.m3surfaceContainer
+        border.width: 1
+        border.color: Qt.alpha(NacreColours.palette.m3primary, .28)
+        NacreText {
+            anchors.centerIn: parent
+            text: root.deskBadgeText
+            font.pointSize: 8
+            color: NacreColours.palette.m3primary
+        }
+        NacreInteraction {
+            id: deskPointer
+            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {
+                value0: root.deskForOutput?.index ?? "?",
+                value1: root.deskRows.length,
+                value2: root.deskLabel
+            })
+            activeFocusOnTab: true
+            function onClicked() {
+                root.toggleDeskMenu();
+            }
+        }
+        ToolTip.visible: deskPointer.hovered
+        ToolTip.delay: 450
+        ToolTip.text: root.deskLabel
+    }
+    PopupWindow {
+        id: deskMenu
+        objectName: "collectionDeskMenu"
+        Component.onCompleted: {
+            anchor.item = deskBadge;
+            anchor.edges = Edges.Bottom | Edges.Left;
+        }
+        implicitWidth: 252
+        implicitHeight: Math.min(300, menuColumn.implicitHeight + 20)
+        color: "transparent"
+        visible: root.showDeskBadge && root.deskMenuOpen
+        grabFocus: true
+        onVisibleChanged: if (!visible && root.deskMenuOpen)
+            root.closeDeskMenu()
+        NacreSurface {
+            anchors.fill: parent
+            color: NacreColours.palette.m3surface
+            radius: 12
+            border.width: 1
+            border.color: NacreColours.palette.m3outlineVariant
+        }
+        Column {
+            id: menuColumn
+            x: 10
+            y: 10
+            width: 232
+            spacing: 5
+            ListView {
+                width: 232
+                height: Math.min(172, root.deskRows.length * 36)
+                model: root.deskRows
+                clip: true
+                spacing: 4
+                delegate: ActionButton {
+                    objectName: "collectionDeskSwitch"
+                    required property var modelData
+                    width: 228
+                    height: Math.max(32, implicitHeight)
+                    text: root.deskTitle(modelData) + (modelData.output ? " · " + modelData.output : " · " + NacreI18n.tr("ui.collection.detached", "detached"))
+                    selected: modelData.id === root.deskForOutput?.id
+                    onClicked: {
+                        root.collectionAction({
+                            operation: "activate",
+                            collection: modelData.id
+                        });
+                        root.closeDeskMenu();
+                    }
+                }
+            }
+            NacreTextField {
+                id: deskName
+                objectName: "collectionDeskName"
+                width: 228
+                height: 34
+                visible: root.deskEditOperation !== ""
+                accessibleName: NacreI18n.tr("ui.collection.name.accessible", "Desk name")
+                placeholderText: NacreI18n.tr("ui.collection.name.accessible", "Desk name")
+                text: root.deskEditName
+                onTextEdited: root.deskEditName = text
+                maximumLength: 64
+                Keys.onEscapePressed: root.closeDeskMenu()
+            }
+            ActionButton {
+                objectName: "collectionDeskCreate"
+                width: 228
+                height: 32
+                visible: root.deskEditOperation === ""
+                text: NacreI18n.tr("ui.collection.create", "Create desk")
+                onClicked: root.beginDeskEdit("create")
+            }
+            ActionButton {
+                objectName: "collectionDeskRename"
+                width: 228
+                height: 32
+                visible: root.deskEditOperation === ""
+                text: NacreI18n.tr("ui.collection.rename", "Rename")
+                enabled: !!root.deskForOutput
+                onClicked: root.beginDeskEdit("rename")
+            }
+            Row {
+                spacing: 8
+                visible: root.deskEditOperation !== ""
+                ActionButton {
+                    objectName: "collectionDeskSave"
+                    width: 110
+                    height: 32
+                    text: NacreI18n.tr("ui.collection.save", "Save")
+                    enabled: deskName.text.trim().length > 0
+                    onClicked: {
+                        const action = root.deskEditOperation === "create" ? {
+                            operation: "create",
+                            name: deskName.text.trim()
+                        } : {
+                            operation: "rename",
+                            collection: root.deskEditCollection,
+                            name: deskName.text.trim()
+                        };
+                        root.collectionAction(action);
+                        root.closeDeskMenu();
+                    }
+                }
+                ActionButton {
+                    objectName: "collectionDeskCancel"
+                    width: 110
+                    height: 32
+                    text: NacreI18n.tr("ui.collection.cancel", "Cancel")
+                    onClicked: {
+                        root.deskEditOperation = "";
+                        root.deskEditCollection = "";
                     }
                 }
             }

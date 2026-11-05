@@ -1,0 +1,29 @@
+# Nacre reveal CPU references
+
+These are the current Nacre CPU-rendered frames for the dashboard, launcher,
+and control-centre openings. The route smoke test compares each frame byte for
+byte with `TreeCpuRenderer` output and exports the same set when
+`NACRE_REVEAL_REFERENCE_DIR` is set.
+
+Each route has samples at elapsed progress 0, 0.25, 0.5, 0.75, and 1 at scales 1 and
+1.5. PNG files contain the full layer-surface buffer canvas (origin 0,0) as
+premultiplied RGBA8 channel bytes. Each per-frame JSON also records scene bounds,
+scene offset, the layer surface's output-global origin, contour crop coordinates,
+elapsed sample time, and eased progress. Each route/scale also has
+a `-plan.json` file containing the exact `LayerMotionPlan` plane tuples and
+root-local reveal descriptor sent toward Bead, plus a `-atlas.png` image of the
+plan's content atlas. Nacre-Niri uses those files and the full-root PNGs to
+compare compositor output against the existing `RevealArt.draw` result; these
+are not screenshots from a live compositor.
+
+The plan's `terminal` entry refers to its existing `t1.00.png`. The route test
+independently compares Bead's setup-time terminal snapshot with a fresh legacy
+endpoint render byte-for-byte. Niri uses those immutable pixels at completion,
+preserving legacy per-primitive blending without a client refresh paint.
+The one-channel-value compositor tolerance is retained.
+
+The route smoke pins text rendering to Bead's `bead-test/fonts/IBMPlexSans.ttf`
+and `FixtureSymbols.ttf`, mapping Symbols families to `Bead Test Symbols` and
+other text to `IBM Plex Sans`. This keeps the CPU references independent of the
+build host's Fontconfig choices, including the asynchronous worker preparation
+used by the compositor planner.

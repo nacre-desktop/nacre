@@ -94,11 +94,19 @@ import "fixtures"
 Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
  TestCase {
+  id:testCase
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
   function init(){NacreI18n.language="en";backend=NiriBackend;verify(backend.accept(JSON.parse(JSON.stringify(Snapshots.initial))));moveEvents.target=backend;verify(moveEvents.valid);moveEvents.clear()}
   function cleanup(){backend=null}
+  function test_native_edge_takeover_requires_cue_capability_and_stream_ack(){
+   const old=JSON.parse(JSON.stringify(Snapshots.initial));old.capabilities=Object.assign({},old.capabilities,{edge_trigger_cues:false});old.edgeTriggersActive=true;
+   verify(backend.accept(old));verify(!backend.edgeTriggerCuesSupported);verify(!backend.edgeTriggersActive);
+   const current=JSON.parse(JSON.stringify(Snapshots.initial));current.capabilities=Object.assign({},current.capabilities,{edge_trigger_cues:true});current.edgeTriggersActive=true;
+   verify(backend.accept(current));verify(backend.edgeTriggerCuesSupported);verify(backend.edgeTriggersActive);
+   current.edgeTriggersActive=false;verify(backend.accept(current));verify(!backend.edgeTriggersActive);
+  }
   function test_overview_hover_does_not_replace_focus_and_rejects_stale_targets(){
    const active=backend.activeClient
    const next=JSON.parse(JSON.stringify(Snapshots.initial))
@@ -193,13 +201,14 @@ Item {
    verify(backend.accept(Snapshots.initial));verify(backend.connected)
   }
   function test_shortcut_registration_pulse_rename_and_retirement(){
-   const shortcut=backend.createShortcut(backend,{appid:"nacre_shell",name:"test"})
+   const owner=Qt.createQmlObject("import QtQuick; QtObject {}",testCase)
+   const shortcut=backend.createShortcut(owner,{appid:"nacre_shell",name:"test"})
    verify(shortcut);compare(backend.registrations.length,1)
    verify(backend.triggerShortcut("nacre_shell:test"));verify(shortcut.held)
    tryCompare(shortcut,"held",false)
    shortcut.params={appid:"nacre_shell",name:"other"}
    verify(!backend.triggerShortcut("nacre_shell:test"));verify(backend.triggerShortcut("nacre_shell:other"))
-   tryCompare(shortcut,"held",false);shortcut.destroy();tryCompare(backend,"registrations",[])
+   tryCompare(shortcut,"held",false);owner.destroy();tryCompare(backend,"registrations",[])
   }
   function test_opaque_workspace_ids_do_not_pause_actual_app_activity_predicates(){
    for (const activity of [NacreSettingsAppActivity,NacreColorsAppActivity,NacreWelcomeAppActivity]) {
@@ -243,6 +252,9 @@ Item {
                 timeout=40,
             )
             self.assertEqual(result.returncode, 0, (result.stdout + result.stderr))
+            for line in result.stdout.splitlines():
+                if line.startswith(("NiriBackendContract::", "Totals:")):
+                    print(line, flush=True)
 
 
 if __name__ == "__main__":

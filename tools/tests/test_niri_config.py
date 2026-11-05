@@ -38,6 +38,18 @@ class NiriConfigTests(unittest.TestCase):
             "screenshot-screen --show-pointer false --path",
         ):
             self.assertIn(action, binds)
+        for key, action in (
+            ("Super+G", "toggle-column-tabbed-display"),
+            ("Super+Ctrl+Page_Up", "focus-window-up-or-bottom"),
+            ("Super+Ctrl+Page_Down", "focus-window-down-or-top"),
+        ):
+            self.assertIn(f"{key} repeat=false", binds)
+            self.assertIn(f"{{ {action}; }}", binds)
+        self.assertNotIn(
+            'spawn-sh "niri msg action toggle-column-tabbed-display"', binds
+        )
+        self.assertNotIn('spawn-sh "niri msg action focus-window-up-or-bottom"', binds)
+        self.assertNotIn('spawn-sh "niri msg action focus-window-down-or-top"', binds)
         rules = generated["niri/window-rules.kdl"]
         self.assertIn("default-column-width { fixed 700; }", rules)
         self.assertIn("default-window-height { proportion 0.75; }", rules)
@@ -72,7 +84,12 @@ class NiriConfigTests(unittest.TestCase):
             )
             self.assertNotIn("focus_direction --direction " + direction, text)
         self.assertNotIn("hyprctl", text)
-        self.assertIn("action close_window", text)
+        self.assertIn("{ close-window; }", text)
+        self.assertIn("{ fullscreen-window; }", text)
+        self.assertIn("{ maximize-window-to-edges; }", text)
+        self.assertIn("{ toggle-window-floating; }", text)
+        for action in ("close_window", "fullscreen_window", "float_window"):
+            self.assertNotIn(f'nacre-helper\\" compositor action {action}', text)
         self.assertIn('Super+Q repeat=false hotkey-overlay-title="Nacre:close"', text)
         self.assertNotIn("Super+Ctrl+Q ", text)
         self.assertNotIn("window-close.sh", text)

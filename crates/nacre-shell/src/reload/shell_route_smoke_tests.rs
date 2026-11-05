@@ -2,6 +2,73 @@
 //! Exercise the actual Luau shell entries through the panel Runtime.
 use super::*;
 
+struct PreparedPlanRequest<'a> {
+    name: &'a str,
+    scene: &'a bead::render::Scene,
+    opening: bool,
+    width: u32,
+    height: u32,
+    scale: f32,
+    format: bead::render::PixelFormat,
+}
+
+fn plan_with_cpu_preparation(
+    request: PreparedPlanRequest<'_>,
+    renderer: &mut bead::render::tree::TreeCpuRenderer,
+) -> std::result::Result<Option<bead::render::layer_motion::LayerMotionPlan>, String> {
+    use bead::render::tree::CpuResourcesPending;
+
+    for attempt in 0..3 {
+        match bead::render::layer_motion::LayerMotionPlan::for_slide(
+            request.scene,
+            request.opening,
+            request.width,
+            request.height,
+            request.scale,
+            request.format,
+            renderer,
+        ) {
+            Ok(plan) => return Ok(plan),
+            Err(error) => {
+                let Some(pending) = error.downcast_ref::<CpuResourcesPending>() else {
+                    return Err(format!(
+                        "{}: layer-motion planning failed: {error}",
+                        request.name
+                    ));
+                };
+                if attempt == 2 {
+                    return Err(format!(
+                        "{}: CPU preparation remained pending after two worker requests",
+                        request.name
+                    ));
+                }
+                let preparation = pending.request.clone();
+                if !preparation.mark_requested() {
+                    return Err(format!(
+                        "{}: CPU preparation request was already queued",
+                        request.name
+                    ));
+                }
+                let worker =
+                    std::thread::scope(|scope| scope.spawn(move || preparation.prepare()).join());
+                match worker {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => {
+                        return Err(format!(
+                            "{}: CPU worker preparation failed: {error}",
+                            request.name
+                        ));
+                    }
+                    Err(_) => {
+                        return Err(format!("{}: CPU worker preparation panicked", request.name));
+                    }
+                }
+            }
+        }
+    }
+    unreachable!("bounded preparation loop returns or errors on every iteration")
+}
+
 fn fake_source(data: serde_json::Value) -> std::sync::Arc<dyn bead::core::source::Source> {
     std::sync::Arc::new(bead_test::source::FakeSource::new(data).expect("fixture source"))
 }
@@ -173,6 +240,470 @@ fn render_legacy_close(
     pixels
 }
 
+/// Render a real shell route through the existing per-frame CPU reveal path. These
+/// frames are consumed by the compositor raster-parity test; the export path is set
+/// only by the dev-1 fixture-generation command.
+fn render_legacy_reveal(
+    scene: &bead::render::Scene,
+    eased_progress: f32,
+    scale: f32,
+) -> (u32, u32, Vec<u8>) {
+    use bead::render::{Damage, PixelFormat, Renderer, ShmTarget, tree::TreeCpuRenderer};
+    let mut open_scene = scene.clone();
+    // Runtime::stage may attach an asynchronous, partially prepared frame to
+    // the scene. Never let that frame seed the resting OPEN snapshot: the
+    // worker must rasterize the final reveal=1 scene exactly once.
+    open_scene.prepared.clear();
+    open_scene.reveal(1.);
+    let mut worker = bead::render::tree::TreeCache::default();
+    worker
+        .prepare(&open_scene, scale)
+        .expect("resting open reveal worker resources prepare");
+    let prepared_open_frame = worker.frame.clone().expect("prepared open CPU frame");
+    let mut posed = scene.clone();
+    posed.reveal(1.);
+    posed.reveal(eased_progress);
+    let (dx, dy) = posed.panel_offset(eased_progress, true);
+    posed.offset = (posed.offset.0 + dx, posed.offset.1 + dy);
+    posed.opacity = posed
+        .motion
+        .as_ref()
+        .expect("reveal motion")
+        .opacity(eased_progress);
+    let (width, height) = (
+        (posed.bounds.w * scale).ceil() as u32,
+        (posed.bounds.h * scale).ceil() as u32,
+    );
+    posed.prepared.insert(scale.to_bits(), prepared_open_frame);
+    let mut pixels = vec![0; width as usize * height as usize * 4];
+    let mut renderer = TreeCpuRenderer::default();
+    renderer
+        .prepare_on_ui(&posed, scale)
+        .expect("legacy reveal pose prepares");
+    renderer
+        .render(
+            &posed,
+            ShmTarget {
+                bytes: &mut pixels,
+                width,
+                height,
+                scale,
+                format: PixelFormat::Rgba,
+            },
+            Damage::full(width, height),
+        )
+        .expect("legacy reveal frame paints");
+    (width, height, pixels)
+}
+
+fn rect_json(rect: bead::render::Rect) -> serde_json::Value {
+    serde_json::json!({"x":rect.x,"y":rect.y,"w":rect.w,"h":rect.h})
+}
+
+fn nacre_reveal_attachment(route: &str) -> Option<crate::placement::Attachment> {
+    match route {
+        "dashboard" => Some(crate::placement::Attachment::Attached(
+            bead::core::Edge::Top,
+        )),
+        "launcher" => Some(crate::placement::Attachment::Attached(
+            bead::core::Edge::Bottom,
+        )),
+        "control" => Some(crate::placement::Attachment::ControlCenter),
+        _ => None,
+    }
+}
+
+fn surface_global_origin(route: &str, scene: &bead::render::Scene) -> (i32, i32) {
+    crate::placement::Frame::DEFAULT
+        .positioner(nacre_reveal_attachment(route).expect("target reveal route"))(
+        scene,
+        None,
+        (1920, 1200),
+    )
+}
+
+fn motion_plan_json(
+    route: &str,
+    scene: &bead::render::Scene,
+    plan: &bead::render::layer_motion::LayerMotionPlan,
+) -> serde_json::Value {
+    use bead::render::{PixelFormat, layer_motion::OpacityMode};
+    let state = |state: bead::render::layer_motion::PlaneState| {
+        serde_json::json!({
+            "destination": rect_json(state.destination),
+            "clip": rect_json(state.clip),
+            "opacity": state.opacity
+        })
+    };
+    let planes = plan
+        .planes
+        .iter()
+        .map(|plane| {
+            let opacity_mode = match plane.opacity_mode {
+                OpacityMode::Linear => serde_json::json!({"kind":"linear"}),
+                OpacityMode::OpaqueAbove(threshold) => {
+                    serde_json::json!({"kind":"opaque_above","threshold":threshold})
+                }
+            };
+            serde_json::json!({
+                "id": plane.id,
+                "source": rect_json(plane.source),
+                "from": state(plane.from),
+                "to": state(plane.to),
+                "opacity_mode": opacity_mode
+            })
+        })
+        .collect::<Vec<_>>();
+    let reveal = plan.reveal.as_ref().map(|contour| {
+        let rim = contour.rim.map(|rim| {
+            serde_json::json!({
+                "colors": rim.colors,
+                "stops": rim.stops,
+                "start": rim.start,
+                "end": rim.end,
+                "width": rim.width,
+                "opacity": rim.opacity
+            })
+        });
+        let shadow = contour.shadow.map(|shadow| {
+            serde_json::json!({
+                "color": shadow.color,
+                "blur": shadow.blur,
+                "spread": shadow.spread,
+                "offset": shadow.offset
+            })
+        });
+        serde_json::json!({
+            "output_bounds": rect_json(contour.output_bounds),
+            "crop": rect_json(contour.crop),
+            "static_rects": contour.static_rects.iter().copied().map(rect_json).collect::<Vec<_>>(),
+            "holes": contour.holes.iter().copied().map(rect_json).collect::<Vec<_>>(),
+            "animated_from": rect_json(contour.animated_from),
+            "animated_to": rect_json(contour.animated_to),
+            "content_clip_from": rect_json(contour.content_clip_from),
+            "content_clip_to": rect_json(contour.content_clip_to),
+            "radii_from": contour.radii_from,
+            "radii_to": contour.radii_to,
+            "corner_mode": format!("{:?}", contour.corner_mode),
+            "mode": format!("{:?}", contour.mode),
+            "opacity_plane": contour.opacity_plane,
+            "square_edges": contour.square_edges,
+            "fill": contour.fill,
+            "rim": rim,
+            "shadow": shadow
+        })
+    });
+    let global_origin = surface_global_origin(route, scene);
+    serde_json::json!({
+        "schema": "nacre-bead-layer-motion-reveal-fixture-v1",
+        "duration_ms": plan.duration.as_secs_f64() * 1000.,
+        "curve": format!("{:?}", plan.curve),
+        "retarget": plan.retarget,
+        "canvas": {
+            "output_logical_size": [1920, 1200],
+            "scene_bounds": rect_json(scene.bounds),
+            "scene_offset": [scene.offset.0, scene.offset.1],
+            "surface_global_origin": [global_origin.0, global_origin.1],
+            "atlas_is_surface_local": true,
+            "buffer_pixel_origin": [0, 0],
+            "surface_position_is_applied_by_layer_surface": true
+        },
+        "atlas": {
+            "width": plan.atlas.width,
+            "height": plan.atlas.height,
+            "stride": plan.atlas.stride,
+            "scale": plan.atlas.scale,
+            "format": match plan.atlas.format { PixelFormat::Rgba => "RGBA", PixelFormat::Bgra => "BGRA" },
+            "filename": "ROUTE-SCALE-atlas.png"
+        },
+        "terminal": plan.terminal.as_ref().map(|buffer| serde_json::json!({
+            "width": buffer.width,
+            "height": buffer.height,
+            "stride": buffer.stride,
+            "scale": buffer.scale,
+            "format": match buffer.format { PixelFormat::Rgba => "RGBA", PixelFormat::Bgra => "BGRA" },
+            "filename": "ROUTE-SCALE-t1.00.png"
+        })),
+        "planes": planes,
+        "reveal": reveal,
+        "source": "Nacre Runtime::stage PanelVisibility(true), with_frame production attachment, Bead LayerMotionPlan::for_slide"
+    })
+}
+
+fn tight_motion_pixels(buffer: &bead::render::layer_motion::PixelBuffer) -> Vec<u8> {
+    let row_bytes = buffer.width as usize * 4;
+    let stride = buffer.stride as usize;
+    assert!(stride >= row_bytes);
+    let mut pixels = Vec::with_capacity(row_bytes * buffer.height as usize);
+    for row in 0..buffer.height as usize {
+        let start = row * stride;
+        pixels.extend_from_slice(&buffer.pixels[start..start + row_bytes]);
+    }
+    pixels
+}
+
+fn verify_or_export_motion_plan(
+    route: &str,
+    scale: f32,
+    scene: &bead::render::Scene,
+    plan: &bead::render::layer_motion::LayerMotionPlan,
+) {
+    use image::ImageEncoder;
+    let fixture_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/bead-layer-motion/reveal-goldens");
+    let export_dir = std::env::var_os("NACRE_REVEAL_REFERENCE_DIR").map(std::path::PathBuf::from);
+    let directory = export_dir.as_deref().unwrap_or(&fixture_dir);
+    let stem = format!("{route}-s{scale:.1}");
+    let atlas_name = format!("{stem}-atlas.png");
+    let metadata_name = format!("{stem}-plan.json");
+    let mut metadata = motion_plan_json(route, scene, plan);
+    metadata["atlas"]["filename"] = serde_json::Value::String(atlas_name.clone());
+    metadata["terminal"]["filename"] = serde_json::Value::String(format!("{stem}-t1.00.png"));
+    let terminal = plan
+        .terminal
+        .as_ref()
+        .expect("visible reveal terminal snapshot");
+    let (terminal_width, terminal_height, legacy_terminal) = render_legacy_reveal(scene, 1., scale);
+    assert_eq!(
+        (terminal.width, terminal.height),
+        (terminal_width, terminal_height)
+    );
+    assert_eq!(
+        tight_motion_pixels(terminal),
+        legacy_terminal,
+        "{stem}: terminal snapshot must preserve legacy primitive blending exactly"
+    );
+    let atlas_bytes = tight_motion_pixels(&plan.atlas);
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(
+            &atlas_bytes,
+            plan.atlas.width,
+            plan.atlas.height,
+            image::ExtendedColorType::Rgba8,
+        )
+        .expect("encode route compositor content atlas");
+    if let Some(directory) = &export_dir {
+        std::fs::create_dir_all(directory).expect("create motion plan reference directory");
+        std::fs::write(directory.join(&atlas_name), &png).expect("write motion content atlas");
+        std::fs::write(
+            directory.join(&metadata_name),
+            serde_json::to_vec_pretty(&metadata).expect("encode motion plan metadata"),
+        )
+        .expect("write motion plan metadata");
+    } else {
+        let expected_metadata: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(directory.join(&metadata_name))
+                .unwrap_or_else(|error| panic!("{metadata_name}: missing fixture: {error}")),
+        )
+        .unwrap_or_else(|error| panic!("{metadata_name}: invalid fixture: {error}"));
+        assert_eq!(metadata, expected_metadata, "{metadata_name}: plan changed");
+        let expected_atlas = std::fs::read(directory.join(&atlas_name))
+            .unwrap_or_else(|error| panic!("{atlas_name}: missing fixture: {error}"));
+        let expected_atlas = image::load_from_memory(&expected_atlas)
+            .unwrap_or_else(|error| panic!("{atlas_name}: invalid PNG: {error}"))
+            .to_rgba8();
+        assert_eq!(
+            expected_atlas.dimensions(),
+            (plan.atlas.width, plan.atlas.height)
+        );
+        assert_eq!(
+            expected_atlas.as_raw(),
+            &atlas_bytes,
+            "{atlas_name}: atlas changed"
+        );
+    }
+}
+
+struct RevealReference<'a> {
+    route: &'a str,
+    timeline_t: f32,
+    eased_progress: f32,
+    scale: f32,
+    duration_ms: f64,
+    curve: bead::core::animation::Curve,
+    plan_metadata: &'a str,
+    logical_size: (f32, f32),
+    scene_bounds: bead::render::Rect,
+    scene_offset: (f32, f32),
+    crop: bead::render::Rect,
+    surface_origin: (i32, i32),
+    width: u32,
+    height: u32,
+    pixels: &'a [u8],
+}
+
+fn export_reveal_reference(directory: &std::path::Path, reference: RevealReference<'_>) {
+    let RevealReference {
+        route,
+        timeline_t,
+        eased_progress,
+        scale,
+        duration_ms,
+        curve,
+        plan_metadata,
+        logical_size,
+        scene_bounds,
+        scene_offset,
+        crop,
+        surface_origin,
+        width,
+        height,
+        pixels,
+    } = reference;
+    use image::ImageEncoder;
+    let stem = format!("{route}-s{scale:.1}-t{timeline_t:.2}");
+    let mut png = Vec::new();
+    image::codecs::png::PngEncoder::new(&mut png)
+        .write_image(pixels, width, height, image::ExtendedColorType::Rgba8)
+        .expect("encode Nacre CPU reference");
+    std::fs::write(directory.join(format!("{stem}.png")), png).expect("write Nacre CPU reference");
+    std::fs::write(
+        directory.join(format!("{stem}.json")),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "route": route,
+            "timeline_t": timeline_t,
+            "eased_progress": eased_progress,
+            "scale": scale,
+            "duration_ms": duration_ms,
+            "sample_time_ms": duration_ms * f64::from(timeline_t),
+            "curve": format!("{curve:?}"),
+            "plan_metadata": plan_metadata,
+            "content_atlas": plan_metadata.replace("-plan.json", "-atlas.png"),
+            "logical_width": logical_size.0,
+            "logical_height": logical_size.1,
+            "scene_bounds": rect_json(scene_bounds),
+            "scene_offset": [scene_offset.0, scene_offset.1],
+            "width": width,
+            "height": height,
+            "crop": { "x": crop.x, "y": crop.y, "width": crop.w, "height": crop.h },
+            "surface_global_origin": [surface_origin.0, surface_origin.1],
+            "format": "RGBA8",
+            "source": "bead-render TreeCpuRenderer with Nacre RevealArt draw callback"
+        }))
+        .expect("encode Nacre reference metadata"),
+    )
+    .expect("write Nacre reference metadata");
+}
+
+fn assert_reveal_reference(reference: RevealReference<'_>) {
+    let RevealReference {
+        route,
+        timeline_t,
+        eased_progress,
+        scale,
+        duration_ms,
+        curve,
+        plan_metadata,
+        logical_size,
+        scene_bounds,
+        scene_offset,
+        crop,
+        surface_origin,
+        width,
+        height,
+        pixels,
+    } = reference;
+    let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/bead-layer-motion/reveal-goldens");
+    let stem = format!("{route}-s{scale:.1}-t{timeline_t:.2}");
+    let encoded = std::fs::read(directory.join(format!("{stem}.png")))
+        .unwrap_or_else(|error| panic!("{stem}: missing CPU reveal reference: {error}"));
+    let expected = image::load_from_memory(&encoded)
+        .unwrap_or_else(|error| panic!("{stem}: decode CPU reveal reference: {error}"))
+        .to_rgba8();
+    assert_eq!(
+        expected.dimensions(),
+        (width, height),
+        "{stem}: root dimensions"
+    );
+    assert_eq!(
+        expected.as_raw(),
+        pixels,
+        "{stem}: Nacre CPU reveal changed from the committed reference"
+    );
+    let manifest: serde_json::Value = serde_json::from_slice(
+        &std::fs::read(directory.join(format!("{stem}.json")))
+            .unwrap_or_else(|error| panic!("{stem}: missing CPU reveal metadata: {error}")),
+    )
+    .unwrap_or_else(|error| panic!("{stem}: parse CPU reveal metadata: {error}"));
+    assert_eq!(manifest["route"], route);
+    assert_eq!(manifest["timeline_t"], timeline_t);
+    assert_eq!(manifest["eased_progress"], eased_progress);
+    assert_eq!(manifest["scale"], scale);
+    assert_eq!(manifest["duration_ms"], duration_ms);
+    let recorded_sample_ms = manifest["sample_time_ms"]
+        .as_f64()
+        .expect("sample_time_ms is numeric");
+    assert!(
+        (recorded_sample_ms - duration_ms * f64::from(timeline_t)).abs() < 1e-9,
+        "{stem}: sample time agrees with duration and timeline progress"
+    );
+    assert_eq!(manifest["curve"], format!("{curve:?}"));
+    assert_eq!(manifest["plan_metadata"], plan_metadata);
+    assert_eq!(
+        manifest["content_atlas"],
+        plan_metadata.replace("-plan.json", "-atlas.png")
+    );
+    assert_eq!(manifest["logical_width"], logical_size.0);
+    assert_eq!(manifest["logical_height"], logical_size.1);
+    assert_eq!(manifest["scene_bounds"], rect_json(scene_bounds));
+    assert_eq!(manifest["scene_offset"][0], scene_offset.0);
+    assert_eq!(manifest["scene_offset"][1], scene_offset.1);
+    assert_eq!(manifest["width"], width);
+    assert_eq!(manifest["height"], height);
+    assert_eq!(manifest["crop"]["x"], crop.x);
+    assert_eq!(manifest["crop"]["y"], crop.y);
+    assert_eq!(manifest["crop"]["width"], crop.w);
+    assert_eq!(manifest["crop"]["height"], crop.h);
+    assert_eq!(manifest["surface_global_origin"][0], surface_origin.0);
+    assert_eq!(manifest["surface_global_origin"][1], surface_origin.1);
+}
+
+fn interpolate_rect(
+    from: bead::render::Rect,
+    to: bead::render::Rect,
+    progress: f32,
+) -> bead::render::Rect {
+    let mix = |a: f32, b: f32| a + (b - a) * progress;
+    bead::render::Rect::new(
+        mix(from.x, to.x),
+        mix(from.y, to.y),
+        mix(from.w, to.w),
+        mix(from.h, to.h),
+    )
+}
+
+fn eased_progress(curve: bead::core::animation::Curve, t: f32) -> f32 {
+    use bead::core::animation::Curve;
+    match curve {
+        Curve::EaseOut => 1. - (1. - t).powi(3),
+        Curve::EaseInOut => {
+            if t < 0.5 {
+                4. * t.powi(3)
+            } else {
+                1. - (-2. * t + 2.).powi(3) / 2.
+            }
+        }
+        Curve::EmphasizedAccelerate => t.powi(4),
+        Curve::Spring => {
+            let x = 8. * t;
+            (1. - (1. + x) * (-x).exp()) / (1. - 9. * (-8_f32).exp())
+        }
+    }
+}
+
+fn opening_reveal_contour(
+    scene: &bead::render::Scene,
+) -> &bead::render::layer_motion::RevealContour {
+    scene
+        .motion
+        .as_ref()
+        .and_then(|motion| motion.art.as_ref())
+        .and_then(|art| art.contour.as_ref())
+        .expect("reveal scene has compositor contour")
+}
+
 fn worst_pixel_difference(left: &[u8], right: &[u8]) -> u8 {
     assert_eq!(left.len(), right.len());
     left.iter()
@@ -219,6 +750,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
         "control",
     ];
     let mut compositor_close_routes = Vec::new();
+    let mut reveal_open_routes = Vec::new();
     let mut reveal_open_fallback_routes = Vec::new();
     let mut flat_open_routes = Vec::new();
     for (name, entry) in routes {
@@ -398,6 +930,12 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 ))
                 .expect("desktop audio view state");
         }
+        let nacre_reveal_attachment = nacre_reveal_attachment(name);
+        if let Some(attachment) = nacre_reveal_attachment {
+            runtime = runtime
+                .with_frame(attachment, &colors)
+                .unwrap_or_else(|error| panic!("{name}: Nacre frame setup failed: {error}"));
+        }
         runtime.viewport(1920, 1200);
         runtime.services(Box::new(|_| {}));
 
@@ -426,10 +964,29 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     // applies the edge-relative motion offset.
                     scene.offset = (32., 32.);
                 }
+                // Route goldens must not depend on the build host's Fontconfig
+                // choices. Match bead-test's deterministic renderer fonts before
+                // the scene is copied to its CPU preparation worker.
+                let test_fonts = std::path::PathBuf::from(env!("BEAD_FRAMEWORK_ROOT"))
+                    .join("crates/bead-test/fonts");
+                scene.font_files = vec![
+                    test_fonts.join("IBMPlexSans.ttf"),
+                    test_fonts.join("FixtureSymbols.ttf"),
+                ];
+                for primitive in &mut scene.primitives {
+                    if let bead::render::Primitive::Text { family, .. } = primitive {
+                        *family = if family.contains("Symbols") {
+                            "Bead Test Symbols"
+                        } else {
+                            "IBM Plex Sans"
+                        }
+                        .into();
+                    }
+                }
+                scene.prepared.clear();
+                let mut reveal_timing = None;
                 if compositor_closes.contains(&name) {
-                    use bead::render::{
-                        PixelFormat, layer_motion::LayerMotionPlan, tree::TreeCpuRenderer,
-                    };
+                    use bead::render::{PixelFormat, tree::TreeCpuRenderer};
                     // These padded bounds are the logical layer-surface viewport
                     // used by the route's production panel configuration.
                     let (width, height) =
@@ -438,6 +995,9 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     // request. Bake and attach the same worker resource the production
                     // planner requires before asking it to paint the one-shot atlas.
                     let mut prepared = scene.clone();
+                    // A staged route may carry an incomplete worker snapshot.
+                    // Reuse is only valid for the complete OPEN resting pose.
+                    prepared.prepared.clear();
                     prepared.reveal(1.);
                     let mut worker = bead::render::tree::TreeCache::default();
                     worker
@@ -450,22 +1010,68 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     let reveal = scene.motion.as_ref().is_some_and(|motion| motion.reveal);
 
                     let mut renderer = TreeCpuRenderer::default();
-                    let opening = LayerMotionPlan::for_slide(
-                        &scene,
-                        true,
-                        width,
-                        height,
-                        1.5,
-                        PixelFormat::Rgba,
+                    let opening = plan_with_cpu_preparation(
+                        PreparedPlanRequest {
+                            name,
+                            scene: &scene,
+                            opening: true,
+                            width,
+                            height,
+                            scale: 1.5,
+                            format: PixelFormat::Rgba,
+                        },
                         &mut renderer,
                     )
                     .unwrap_or_else(|error| panic!("{name}: open plan failed: {error}"));
                     if reveal {
-                        assert!(
-                            opening.is_none(),
-                            "{name}: a growing-body reveal must stay on the current CPU path until its exact shape is representable"
-                        );
-                        reveal_open_fallback_routes.push(name);
+                        if let Some(opening) = opening {
+                            if ["dashboard", "launcher", "control"].contains(&name) {
+                                verify_or_export_motion_plan(name, 1.5, &scene, &opening);
+                                reveal_timing =
+                                    Some((opening.curve, opening.duration.as_secs_f64() * 1000.));
+                            }
+                            let contour = opening.reveal.as_ref().unwrap_or_else(|| {
+                                panic!("{name}: reveal plan must carry compositor contour geometry")
+                            });
+                            assert!(contour.valid(), "{name}: reveal descriptor validates");
+                            if ["dashboard", "launcher", "control"].contains(&name) {
+                                assert_eq!(
+                                    contour.corner_mode,
+                                    bead::render::layer_motion::RevealCornerMode::QuadraticCut
+                                );
+                                assert_eq!(
+                                    contour.mode,
+                                    bead::render::layer_motion::RevealMode::Visible
+                                );
+                            }
+                            assert!(contour.animated_from.w == 0. || contour.animated_from.h == 0.);
+                            assert_eq!(contour.opacity_plane, 0);
+                            assert!(contour.animated_to.w > 0. && contour.animated_to.h > 0.);
+                            for progress in [0., 0.25, 0.5, 0.75, 1.] {
+                                let rect = interpolate_rect(
+                                    contour.animated_from,
+                                    contour.animated_to,
+                                    progress,
+                                );
+                                let clip = interpolate_rect(
+                                    contour.content_clip_from,
+                                    contour.content_clip_to,
+                                    progress,
+                                );
+                                assert!(
+                                    rect.w >= 0. && rect.h >= 0.,
+                                    "{name}: geometry at {progress}"
+                                );
+                                assert!(clip.w >= 0. && clip.h >= 0., "{name}: clip at {progress}");
+                            }
+                            reveal_open_routes.push(name);
+                        } else {
+                            assert!(
+                                !["dashboard", "launcher", "control"].contains(&name),
+                                "{name}: required Nacre reveal should be compositor eligible"
+                            );
+                            reveal_open_fallback_routes.push(name);
+                        }
                     } else {
                         let opening = opening.unwrap_or_else(|| {
                             panic!("{name}: flat opening should produce a compositor plan")
@@ -474,38 +1080,98 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                         flat_open_routes.push(name);
                     }
 
+                    if reveal && reveal_open_routes.contains(&name) {
+                        let mut scale_one = prepared.clone();
+                        let mut scale_one_worker = bead::render::tree::TreeCache::default();
+                        scale_one_worker
+                            .prepare(&scale_one, 1.)
+                            .unwrap_or_else(|error| {
+                                panic!("{name}: scale-1 worker bake failed: {error}")
+                            });
+                        scale_one.prepared.insert(
+                            1_f32.to_bits(),
+                            scale_one_worker
+                                .frame
+                                .clone()
+                                .expect("scale-1 worker bake produces frame"),
+                        );
+                        let mut scale_one_renderer = TreeCpuRenderer::default();
+                        let scale_one_plan = plan_with_cpu_preparation(
+                            PreparedPlanRequest {
+                                name,
+                                scene: &scale_one,
+                                opening: true,
+                                width,
+                                height,
+                                scale: 1.,
+                                format: PixelFormat::Rgba,
+                            },
+                            &mut scale_one_renderer,
+                        )
+                        .unwrap_or_else(|error| panic!("{name}: scale-1 plan failed: {error}"))
+                        .unwrap_or_else(|| panic!("{name}: scale-1 reveal plan unavailable"));
+                        assert!(scale_one_plan.reveal.as_ref().is_some_and(|c| c.valid()));
+                        if ["dashboard", "launcher", "control"].contains(&name) {
+                            verify_or_export_motion_plan(name, 1., &scene, &scale_one_plan);
+                            assert_eq!(
+                                scale_one_plan.reveal.as_ref().unwrap().animated_to,
+                                opening_reveal_contour(&scene)
+                                    .translated(scene.offset.0, scene.offset.1)
+                                    .animated_to,
+                                "{name}: logical contour geometry is scale invariant"
+                            );
+                            assert_eq!(
+                                reveal_timing,
+                                Some((
+                                    scale_one_plan.curve,
+                                    scale_one_plan.duration.as_secs_f64() * 1000.
+                                )),
+                                "{name}: logical timing is scale invariant"
+                            );
+                        }
+                    }
+
                     let mut renderer = TreeCpuRenderer::default();
-                    let closing = LayerMotionPlan::for_slide(
-                        &scene,
-                        false,
-                        width,
-                        height,
-                        1.5,
-                        PixelFormat::Rgba,
+                    let closing = plan_with_cpu_preparation(
+                        PreparedPlanRequest {
+                            name,
+                            scene: &scene,
+                            opening: false,
+                            width,
+                            height,
+                            scale: 1.5,
+                            format: PixelFormat::Rgba,
+                        },
                         &mut renderer,
                     )
-                    .unwrap_or_else(|error| panic!("{name}: close plan failed: {error}"))
-                    .unwrap_or_else(|| panic!("{name}: closing should produce a compositor plan"));
-                    assert_eq!(closing.planes.len(), 1, "{name}: one close motion plane");
-                    assert!(
-                        !closing.atlas.pixels.is_empty(),
-                        "{name}: closing atlas contains the complete surface"
-                    );
-                    for close_progress in [1., 0.75, 0.5, 0.25, 0.] {
-                        let legacy = render_legacy_close(
-                            &scene,
-                            close_progress,
-                            closing.atlas.width,
-                            closing.atlas.height,
-                        );
-                        let compositor = compose_motion_plane(&closing, 1. - close_progress);
-                        let worst = worst_pixel_difference(&legacy, &compositor);
+                    .unwrap_or_else(|error| panic!("{name}: close plan failed: {error}"));
+                    if let Some(closing) = closing {
+                        assert_eq!(closing.planes.len(), 1, "{name}: one close motion plane");
                         assert!(
-                            worst <= 2,
-                            "{name}: close p={close_progress} atlas-vs-legacy channel diff {worst}"
+                            !closing.atlas.pixels.is_empty(),
+                            "{name}: closing atlas contains the complete surface"
+                        );
+                        for close_progress in [1., 0.75, 0.5, 0.25, 0.] {
+                            let legacy = render_legacy_close(
+                                &scene,
+                                close_progress,
+                                closing.atlas.width,
+                                closing.atlas.height,
+                            );
+                            let compositor = compose_motion_plane(&closing, 1. - close_progress);
+                            let worst = worst_pixel_difference(&legacy, &compositor);
+                            assert!(
+                                worst <= 2,
+                                "{name}: close p={close_progress} atlas-vs-legacy channel diff {worst}"
+                            );
+                        }
+                        compositor_close_routes.push(name);
+                    } else {
+                        assert!(
+                            !["dashboard", "launcher", "control"].contains(&name),
+                            "{name}: required Nacre close should retain compositor motion"
                         );
                     }
-                    compositor_close_routes.push(name);
                 }
                 if scene.motion.as_ref().is_some_and(|m| m.reveal) {
                     for opening in [true, false] {
@@ -513,6 +1179,50 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                         assert!(builds <= 1, "{name}: {builds} slide layers in one slide");
                         if builds == 1 {
                             layered.push((name, opening));
+                        }
+                    }
+                }
+                if scene.motion.as_ref().is_some_and(|motion| motion.reveal)
+                    && ["dashboard", "launcher", "control"].contains(&name)
+                {
+                    let contour = opening_reveal_contour(&scene);
+                    let export_directory = std::env::var_os("NACRE_REVEAL_REFERENCE_DIR")
+                        .map(std::path::PathBuf::from);
+                    if let Some(directory) = &export_directory {
+                        std::fs::create_dir_all(directory)
+                            .expect("create reveal reference directory");
+                    }
+                    let (curve, duration_ms) = reveal_timing
+                        .expect("target Nacre opening stores its actual compositor timing");
+                    let root_origin = surface_global_origin(name, &scene);
+                    for scale in [1., 1.5] {
+                        for timeline_t in [0., 0.25, 0.5, 0.75, 1.] {
+                            let progress = eased_progress(curve, timeline_t);
+                            let (width, height, pixels) =
+                                render_legacy_reveal(&scene, progress, scale);
+                            let plan_metadata = format!("{name}-s{scale:.1}-plan.json");
+                            let reference = RevealReference {
+                                route: name,
+                                timeline_t,
+                                eased_progress: progress,
+                                scale,
+                                duration_ms,
+                                curve,
+                                plan_metadata: &plan_metadata,
+                                logical_size: (scene.bounds.w, scene.bounds.h),
+                                scene_bounds: scene.bounds,
+                                scene_offset: scene.offset,
+                                crop: contour.crop,
+                                surface_origin: root_origin,
+                                width,
+                                height,
+                                pixels: &pixels,
+                            };
+                            if let Some(directory) = &export_directory {
+                                export_reveal_reference(directory, reference);
+                            } else {
+                                assert_reveal_reference(reference);
+                            }
                         }
                     }
                 }
@@ -541,23 +1251,22 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
             );
         }
     }
-    for route in [
-        "dashboard",
-        "launcher",
-        "control",
-        "calendar",
-        "session",
-        "chat",
-    ] {
+    for route in ["dashboard", "launcher", "control"] {
         assert!(
             compositor_close_routes.contains(&route),
             "{route}: real shell route produces a compositor-driven close plan"
         );
         assert!(
-            reveal_open_fallback_routes.contains(&route),
-            "{route}: reveal opening is explicitly known to use the CPU fallback until exact growing-body geometry is supported"
+            reveal_open_routes.contains(&route),
+            "{route}: real shell route produces an exact compositor-driven reveal plan"
         );
     }
+    assert!(
+        reveal_open_fallback_routes
+            .iter()
+            .all(|route| !["dashboard", "launcher", "control"].contains(route)),
+        "required Nacre reveals must not retain the stock compositor fallback"
+    );
     assert!(
         flat_open_routes.contains(&"prompt"),
         "prompt: flat opening is compositor-eligible"

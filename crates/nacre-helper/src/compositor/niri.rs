@@ -13,7 +13,10 @@ use std::{
 };
 type Result<T> = std::result::Result<T, Error>;
 fn is_edge_event(value: &Value) -> bool {
-    value["type"] == "edge-triggered" || value["type"] == "edge-left"
+    matches!(
+        value["type"].as_str(),
+        Some("edge-approach" | "edge-hover" | "edge-triggered" | "edge-left")
+    )
 }
 fn failure(kind: &'static str, message: impl Into<String>) -> Error {
     Error {
@@ -23,6 +26,26 @@ fn failure(kind: &'static str, message: impl Into<String>) -> Error {
 }
 pub fn capabilities() -> Value {
     json!({"stableWorkspaceIndices":false,"globalWorkspaces":false,"perOutputWorkspaces":true,"scrollingLayout":true,"floatingPlacement":true,"pinWindow":false,"windowCapture":false,"nativeWindowScreenshot":true,"shapedBackgroundBlur":false,"cursorPosition":false,"nativePanelDrag":false,"windowHide":false,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":false,"pseudoTiling":false,"layoutSplit":false,"keymaps":false,"nonConsumingShortcuts":false,"bindingIntrospection":false,"fullscreenState":false,"shortcutRelease":false,"desktopOptions":["animations","blur","shadow","followMouse","naturalScroll","gapsIn","borderSize","rounding"],"monitorConfiguration":true,"monitorMirroring":false,"nightLightController":true})
+}
+pub fn capabilities_with_native(native: niri_transport::NacreCapabilities) -> Value {
+    let mut result = capabilities();
+    result["pinWindow"] = json!(native.window_pinning);
+    result["windowHide"] = json!(native.scratchpad);
+    result["windowForceKill"] = json!(false);
+    if native.force_close {
+        // This scoped feature does not imply generic per-window process kill.
+        result["windowForceCloseWayland"] = json!(true);
+    }
+    if native.window_restore {
+        result["windowRestore"] = json!(true);
+    }
+    if native.monitor_workspace_actions {
+        result["monitorWorkspaceActions"] = json!(true);
+    }
+    result
+}
+pub fn capabilities_for_socket(socket: &Path) -> Value {
+    capabilities_with_native(niri_transport::nacre_capabilities(socket))
 }
 pub struct Backend {
     pub actions: niri_actions::Backend<niri_transport::Connection>,
@@ -147,7 +170,7 @@ impl Backend {
             Err(error) => Err(error),
         }
     }
-    pub fn events(&self) -> Result<niri_events::Events<niri_transport::Connection>> {
+    pub fn events(&mut self) -> Result<niri_events::Events<niri_transport::Connection>> {
         if self.session_id().is_empty() {
             return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
         }
@@ -166,22 +189,29 @@ impl Backend {
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")
             .is_none_or(|value| value != "0");
-        let collections =
-            niri_transport::nacre_capabilities(Path::new(self.session_id())).workspace_collections;
-        let socket = if collections {
+        let native_capabilities = self
+            .actions
+            .transport
+            .nacre_capabilities(Duration::from_millis(500));
+        let socket = if native_capabilities.workspace_collections {
             niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
         } else {
             niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?
         };
-        niri_events::Events::new(socket, niri_transport::Connection::new(self.session_id()))
+        niri_events::Events::new_with_capabilities(
+            socket,
+            niri_transport::Connection::new(self.session_id()),
+            native_capabilities,
+        )
+        .map(|events| events.with_edge_trigger_cues(native_capabilities.edge_trigger_cues))
     }
-    pub fn edge_events(&self) -> Result<()> {
-        let path = Path::new(self.session_id());
+    pub fn edge_events(&mut self) -> Result<()> {
+        let path = PathBuf::from(self.session_id());
         if self.session_id().is_empty() {
             return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
         }
         let environment = self.environment.clone();
-        if let Some(mut daemon) = crate::daemon::niri_events::Source::connect(&environment, path)
+        if let Some(mut daemon) = crate::daemon::niri_events::Source::connect(&environment, &path)
             .map_err(|error| failure("ConnectionError", error.to_string()))?
         {
             loop {
@@ -210,13 +240,17 @@ impl Backend {
                 }
             }
         }
-        if !niri_transport::nacre_capabilities(path).edge_triggers {
+        let capabilities = self
+            .actions
+            .transport
+            .nacre_capabilities(Duration::from_millis(500));
+        if !capabilities.edge_triggers || !capabilities.edge_trigger_cues {
             println!("{{\"type\":\"edge-source\",\"active\":false}}");
             std::io::Write::flush(&mut std::io::stdout())
                 .map_err(|error| failure("OSError", error.to_string()))?;
             return Ok(());
         }
-        let mut events = niri_events::EventSocket::connect_edge_triggers(path)?;
+        let mut events = niri_events::EventSocket::connect_edge_triggers(&path)?;
         println!("{{\"type\":\"edge-source\",\"active\":true}}");
         std::io::Write::flush(&mut std::io::stdout())
             .map_err(|error| failure("OSError", error.to_string()))?;
@@ -277,15 +311,61 @@ impl Backend {
                 .unwrap_or(""),
         )
     }
+    pub fn capabilities(&mut self) -> Value {
+        capabilities_with_native(
+            self.actions
+                .transport
+                .nacre_capabilities(Duration::from_millis(500)),
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn native_runtime_capabilities_follow_optional_ipc_features() -> crate::Result<()> {
+        use std::{
+            io::{BufRead, BufReader, Write},
+            os::unix::net::UnixListener,
+            thread,
+        };
+        let directory = tempfile::tempdir()?;
+        let socket = directory.path().join("niri.sock");
+        let listener = UnixListener::bind(&socket)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            let mut stream = BufReader::new(stream);
+            let mut request = String::new();
+            stream.read_line(&mut request)?;
+            assert_eq!(request, "\"NacreCapabilities\"\n");
+            writeln!(stream.get_mut(), "{{\"Ok\":{{\"NacreCapabilities\":{{\"workspace_collections\":false,\"proportional_x11_widths\":false,\"overview_hover\":false,\"scratchpad\":true,\"window_pinning\":true,\"edge_triggers\":false,\"force_close\":true,\"monitor_workspace_actions\":false,\"window_restore\":true}}}}}}")
+        });
+        let capabilities = capabilities_for_socket(&socket);
+        assert_eq!(capabilities["windowForceKill"], false);
+        assert_eq!(capabilities["windowForceCloseWayland"], true);
+        assert_eq!(capabilities["windowRestore"], true);
+        assert_eq!(capabilities["pinWindow"], true);
+        assert_eq!(capabilities["windowHide"], true);
+        assert!(capabilities.get("monitorWorkspaceActions").is_none());
+        peer.join()
+            .map_err(|_| "Niri capability fixture panicked")??;
+        Ok(())
+    }
+    #[test]
+    fn stock_capabilities_keep_the_existing_schema() {
+        assert_eq!(
+            capabilities_with_native(niri_transport::NacreCapabilities::default()),
+            capabilities()
+        );
+    }
     #[test]
     fn daemon_edge_lane_forwards_trigger_and_matching_exit_events() {
         assert!(is_edge_event(&json!({"type":"edge-triggered"})));
         assert!(is_edge_event(&json!({"type":"edge-left"})));
+        assert!(is_edge_event(&json!({"type":"edge-approach"})));
+        assert!(is_edge_event(&json!({"type":"edge-hover"})));
         assert!(!is_edge_event(&json!({"type":"windows-changed"})));
     }
     #[test]

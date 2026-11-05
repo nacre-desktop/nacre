@@ -101,28 +101,69 @@ class NacreNiriSessionTests(unittest.TestCase):
             generated_stock = config.read_text() + bindings.read_text()
             for key, action in (
                 ("Super+h", "move-window-to-scratchpad"),
-                ("Super+Shift+h", "toggle-scratchpad"),
+                ("Super+Shift+H", "restore-last-hidden-window"),
                 ("Super+p", "toggle-window-pinned"),
+                ("Super+Ctrl+Shift+Q", "force-close-window"),
+                (
+                    "Super+Alt+H",
+                    "restore-current-workspace-hidden-windows",
+                ),
             ):
                 self.assertIn(key, overlay_text)
                 self.assertIn(action, overlay_text)
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
-            self.assertIn(
-                'hotkey-overlay-title="Nacre:scratchpad-windows"', overlay_text
-            )
+            self.assertIn('hotkey-overlay-title="Nacre:restore"', overlay_text)
+            self.assertIn('hotkey-overlay-title="Nacre:force-close"', overlay_text)
+            self.assertIn('hotkey-overlay-title="Nacre:restore-current"', overlay_text)
             self.assertEqual(overlay_text.count("open-pinned true"), 3)
             self.assertNotIn("open-pinned true", generated_stock)
-            for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
-                self.assertTrue(
-                    any(row.get("id") == supported_key for row in stock_unsupported)
-                )
-                self.assertFalse(
-                    any(row.get("id") == supported_key for row in native_unsupported)
-                )
-            self.assertTrue(
-                any(row.get("id") == "SUPER + ALT + H" for row in native_unsupported)
+            expected_capabilities = {
+                "SUPER + H": "scratchpad",
+                "SUPER + SHIFT + H": "window_restore",
+                "SUPER + ALT + H": "window_restore",
+                "SUPER + P": "window_pinning",
+                "SUPER + CTRL + SHIFT + Q": "force_close",
+            }
+            stock_keys = {row.get("id") for row in stock_unsupported}
+            self.assertLessEqual(
+                {
+                    "SUPER + H",
+                    "SUPER + SHIFT + H",
+                    "SUPER + ALT + H",
+                    "SUPER + P",
+                },
+                stock_keys,
             )
+            for supported_key, capability in expected_capabilities.items():
+                if not any(row.get("id") == supported_key for row in stock_unsupported):
+                    continue
+                native_row = next(
+                    row for row in native_unsupported if row.get("id") == supported_key
+                )
+                stock_row = next(
+                    row for row in stock_unsupported if row.get("id") == supported_key
+                )
+                self.assertIs(native_row.get("stockNiriUnsupported"), True)
+                self.assertEqual(native_row.get("nacreNiriCapability"), capability)
+                self.assertEqual(
+                    {
+                        key: value
+                        for key, value in native_row.items()
+                        if key
+                        not in {
+                            "stockNiriUnsupported",
+                            "nacreNiriCapability",
+                            "nacreNiriLimitation",
+                        }
+                    },
+                    stock_row,
+                )
+                if capability == "force_close":
+                    self.assertEqual(
+                        native_row.get("nacreNiriLimitation"),
+                        "Disconnects the owning Wayland client and its sibling windows; X11 clients are unsupported",
+                    )
             for rule_id in (
                 "nacre-audio-mixer",
                 "nacre-share-picker",
@@ -131,16 +172,47 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertTrue(
                     any(row.get("id") == rule_id for row in stock_unsupported)
                 )
-                self.assertFalse(
-                    any(row.get("id") == rule_id for row in native_unsupported)
+                native_row = next(
+                    row for row in native_unsupported if row.get("id") == rule_id
+                )
+                stock_row = next(
+                    row for row in stock_unsupported if row.get("id") == rule_id
+                )
+                self.assertIs(native_row.get("stockNiriUnsupported"), True)
+                self.assertEqual(
+                    native_row.get("nacreNiriCapability"), "window_pinning"
+                )
+                self.assertEqual(
+                    {
+                        key: value
+                        for key, value in native_row.items()
+                        if key
+                        not in {
+                            "stockNiriUnsupported",
+                            "nacreNiriCapability",
+                            "nacreNiriLimitation",
+                        }
+                    },
+                    stock_row,
                 )
             self.assertNotIn("edge-triggers", config.read_text())
             self.assertNotIn("nacre { edge-triggers; }", overlay.read_text())
+            self.assertIn("cue;", overlay.read_text())
             self.assertIn(
-                "left { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "left { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
             )
             self.assertIn(
-                "bottom { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "right { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "top { action { event; }; dwell-time-ms 800; trigger-distance 50; trigger-length 208; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "bottom { action { event; }; dwell-time-ms 800; trigger-distance 10; }",
+                overlay.read_text(),
             )
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
@@ -155,6 +227,68 @@ class NacreNiriSessionTests(unittest.TestCase):
                     env=env,
                 )
 
+    def test_offline_unsupported_report_annotates_all_native_capabilities(self):
+        rows = [
+            {
+                "source": "hypr/conf/keybinding.lua",
+                "kind": "binding",
+                "id": key,
+                "reason": "stock reason",
+            }
+            for key in (
+                "SUPER + H",
+                "SUPER + SHIFT + H",
+                "SUPER + ALT + H",
+                "SUPER + P",
+                "SUPER + CTRL + SHIFT + Q",
+            )
+        ]
+        rows.extend(
+            {
+                "source": "hypr/conf/nacre.lua",
+                "kind": "window-rule",
+                "id": rule_id,
+                "reason": "stock rule reason",
+            }
+            for rule_id in (
+                "nacre-audio-mixer",
+                "nacre-share-picker",
+                "nacre-picture-in-picture",
+            )
+        )
+        result = json.loads(
+            package_niri.nacre_niri_unsupported(
+                json.dumps({"backend": "niri", "unsupported": rows})
+            )
+        )
+        self.assertEqual(len(result["unsupported"]), len(rows))
+        annotations = {row["id"]: row for row in result["unsupported"]}
+        for key, capability in {
+            "SUPER + H": "scratchpad",
+            "SUPER + SHIFT + H": "window_restore",
+            "SUPER + ALT + H": "window_restore",
+            "SUPER + P": "window_pinning",
+            "SUPER + CTRL + SHIFT + Q": "force_close",
+        }.items():
+            row = annotations[key]
+            self.assertIs(row["stockNiriUnsupported"], True)
+            self.assertEqual(row["nacreNiriCapability"], capability)
+            self.assertEqual(row["reason"], "stock reason")
+        self.assertEqual(
+            annotations["SUPER + CTRL + SHIFT + Q"]["nacreNiriLimitation"],
+            "Disconnects the owning Wayland client and its sibling windows; "
+            "X11 clients are unsupported",
+        )
+        for rule_id in (
+            "nacre-audio-mixer",
+            "nacre-share-picker",
+            "nacre-picture-in-picture",
+        ):
+            row = annotations[rule_id]
+            self.assertIs(row["stockNiriUnsupported"], True)
+            self.assertEqual(row["nacreNiriCapability"], "window_pinning")
+            self.assertEqual(row["reason"], "stock rule reason")
+
     def test_edge_trigger_delay_defaults_and_rejects_invalid_saved_values(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -164,8 +298,46 @@ class NacreNiriSessionTests(unittest.TestCase):
             settings.write_text(json.dumps({"lipHoverDelay": 0}))
             self.assertEqual(package_niri.edge_trigger_delay(home), 0)
             settings.write_text(json.dumps({"lipHoverDelay": 801}))
-            self.assertEqual(package_niri.edge_trigger_delay(home), 350)
+        self.assertEqual(package_niri.edge_trigger_delay(home), 350)
         self.assertIn("dwell-time-ms 800", package_niri.edge_trigger_config(800))
+
+    def test_nacre_niri_generated_edge_cues_match_configured_handle_depths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            settings = home / ".config/nacre/desktop.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text(
+                json.dumps(
+                    {
+                        "frameWidth": 14,
+                        "topBarEnabled": True,
+                        "frameTopEnabled": False,
+                    }
+                )
+            )
+            self.assertEqual(
+                package_niri.edge_trigger_distances(home), (14, 14, 40, 14)
+            )
+            config = package_niri.edge_trigger_config(
+                350, package_niri.edge_trigger_distances(home)
+            )
+            self.assertIn("cue;", config)
+            self.assertIn(
+                "left { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }",
+                config,
+            )
+            self.assertIn(
+                "right { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }",
+                config,
+            )
+            self.assertIn(
+                "top { action { event; }; dwell-time-ms 350; trigger-distance 40; trigger-length 208; }",
+                config,
+            )
+            self.assertIn(
+                "bottom { action { event; }; dwell-time-ms 350; trigger-distance 14; }",
+                config,
+            )
 
     def test_nacre_session_dispatch_selects_fork_launcher(self):
         backend = SimpleNamespace(supported=lambda root: True, session=Mock())

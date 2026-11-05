@@ -11,7 +11,9 @@ TestCase {
     name: "NacreHeader"
     Component {
         id: row
-        NacreWorkspaceRow {}
+        NacreWorkspaceRow {
+            outputName: "test"
+        }
     }
     Component {
         id: pearlView
@@ -62,6 +64,8 @@ TestCase {
     }
     function init() {
         NacreCompositor.capabilities = ({});
+        NacreCompositor.collections = [];
+        NacreCompositor.activeCollectionId = "";
         NacreCompositor.monitors = ({
                 values: []
             });
@@ -72,6 +76,8 @@ TestCase {
                 name: "test"
             });
         NacreCompositor.requests = [];
+        NacreDaemon.calls = [];
+        NacreDaemon.connected = true;
         NacrePanelState.calls = [];
         NacrePanelState.popupRequests = [];
         AppLaunch.calls = [];
@@ -83,6 +89,173 @@ TestCase {
         DesktopSettings.data = {
             animations: true
         };
+    }
+    function test_collection_badge_visibility_tracks_capability_and_rows() {
+        const rows = [
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "eDP-1",
+                active: false
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "test",
+                active: true
+            },
+            {
+                id: "niri-collection:39",
+                index: 3,
+                name: null,
+                output: null,
+                active: false
+            }
+        ];
+        NacreCompositor.capabilities = {
+            workspaceCollections: false
+        };
+        NacreCompositor.collections = [];
+        const view = createTemporaryObject(row, test);
+        const badge = findChild(view, "collectionDeskBadge");
+        verify(!!badge && !badge.visible, "capability-pending state remains hidden");
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
+        NacreCompositor.collections = rows;
+        NacreCompositor.activeCollectionId = "niri-collection:28";
+        verify(badge.visible, "late advertised capability reveals live rows");
+        compare(view.deskBadgeText, "2/3");
+        compare(view.deskLabel, "studio");
+        NacreCompositor.collections = rows.map(row => {
+            if (row.id !== "niri-collection:28")
+                return row;
+            const renamed = Object.assign({}, row);
+            renamed.name = "music";
+            return renamed;
+        });
+        compare(view.deskLabel, "music");
+        NacreCompositor.collections = [rows[1]];
+        verify(!findChild(view, "collectionDeskBadge").visible, "one desk hides the indicator");
+        NacreCompositor.collections = rows;
+        verify(findChild(view, "collectionDeskBadge").visible, "fresh snapshot after reconnect restores the indicator");
+        NacreCompositor.capabilities = {
+            workspaceCollections: false
+        };
+        verify(!findChild(view, "collectionDeskBadge").visible);
+    }
+    function test_collection_menu_switch_create_rename_calls_are_output_scoped() {
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
+        NacreCompositor.collections = [
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
+        ];
+        const view = createTemporaryObject(row, test);
+        verify(view.collectionAction({
+            operation: "activate",
+            collection: "niri-collection:28"
+        }));
+        compare(NacreDaemon.calls[0].method, "collection.action");
+        compare(NacreDaemon.calls[0].params.output, "test");
+        compare(NacreDaemon.calls[0].params.action.collection, "niri-collection:28");
+    }
+    function test_collection_menu_switch_create_and_rename_actions() {
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
+        NacreCompositor.collections = [
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
+        ];
+        const view = createTemporaryObject(row, test);
+        const badge = findChild(view, "collectionDeskBadge");
+        mouseClick(badge, badge.width / 2, badge.height / 2);
+        const menu = findChild(view, "collectionDeskMenu");
+        tryCompare(menu, "visible", true);
+        const switchButton = findChild(menu.contentItem, "collectionDeskSwitch");
+        verify(!!switchButton);
+        switchButton.clicked();
+        compare(NacreDaemon.calls[0].params.action.operation, "activate");
+        compare(NacreDaemon.calls[0].params.action.collection, "niri-collection:17");
+        mouseClick(badge, badge.width / 2, badge.height / 2);
+        findChild(menu.contentItem, "collectionDeskCreate").clicked();
+        const name = findChild(menu.contentItem, "collectionDeskName");
+        name.text = "notes";
+        findChild(menu.contentItem, "collectionDeskSave").clicked();
+        compare(NacreDaemon.calls[1].params.action.operation, "create");
+        compare(NacreDaemon.calls[1].params.action.name, "notes");
+        mouseClick(badge, badge.width / 2, badge.height / 2);
+        findChild(menu.contentItem, "collectionDeskRename").clicked();
+        name.text = "home renamed";
+        findChild(menu.contentItem, "collectionDeskSave").clicked();
+        compare(NacreDaemon.calls[2].params.action.operation, "rename");
+        compare(NacreDaemon.calls[2].params.action.collection, "niri-collection:17");
+        compare(NacreDaemon.calls[2].params.action.name, "home renamed");
+    }
+    function test_collection_badge_ink_pixels_at_screen_scale() {
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
+        NacreCompositor.collections = [
+            {
+                id: "niri-collection:17",
+                index: 1,
+                name: "home",
+                output: "test"
+            },
+            {
+                id: "niri-collection:28",
+                index: 2,
+                name: "studio",
+                output: "DP-1"
+            }
+        ];
+        const view = createTemporaryObject(row, test);
+        view.width = 400;
+        wait(30);
+        const badge = findChild(view, "collectionDeskBadge");
+        verify(!!badge && badge.visible);
+        const image = grabImage(view);
+        verify(image.width > 0 && image.height > 0);
+        const sx = image.width / view.width, sy = image.height / view.height;
+        const left = Math.floor(badge.x * sx), right = Math.ceil((badge.x + badge.width) * sx);
+        const top = Math.floor(badge.y * sy), bottom = Math.ceil((badge.y + badge.height) * sy);
+        let ink = 0;
+        for (let y = top; y < bottom; y++)
+            for (let x = left; x < right; x++) {
+                const pixel = image.pixel(x, y);
+                if (pixel.g > pixel.r + .2 && pixel.b > pixel.r + .2)
+                    ink++;
+            }
+        verify(ink > 0, "badge label paints colored ink at the configured screen scale");
+        const capturePath = Qt.resolvedUrl("desk-badge.png").toString().slice(7);
+        let saved = false;
+        verify(view.grabToImage(result => saved = result.saveToFile(capturePath)));
+        tryVerify(() => saved, 1000);
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);

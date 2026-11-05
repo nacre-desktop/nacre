@@ -5,6 +5,7 @@ Rectangle {
     property string accessibleLabel: ""
     property string icon: ""
     property bool selected: false
+    property bool compact: false
 
     signal clicked
 

@@ -393,6 +393,11 @@ fn is_bar_widget_context(key: &str) -> bool {
             "bead.workspaces"
                 | "bead.windows"
                 | "bead.focused_title"
+                | "bead.overview.open"
+                | "bead.overview.title"
+                | "bead.overview.has_window"
+                | "bead.title.app_id"
+                | "bead.title.app_glyph"
                 | "bead.viewport.width"
                 | "bead.viewport.height"
         )
@@ -1243,6 +1248,11 @@ impl Runtime {
                         "bead.workspaces"
                             | "bead.windows"
                             | "bead.focused_title"
+                            | "bead.overview.open"
+                            | "bead.overview.title"
+                            | "bead.overview.has_window"
+                            | "bead.title.app_id"
+                            | "bead.title.app_glyph"
                             | "bead.viewport.width"
                             | "bead.viewport.height"
                     )
@@ -3132,6 +3142,10 @@ impl Runtime {
             bead::core::Value::list(crate::workspace_rows::origin_rows(&topic.snapshot().data)),
         )])
         .into_iter()
+        .chain(overview_title_values(
+            &topic.snapshot().data,
+            &self.workspaces,
+        ))
         .chain(crate::workspace_rows::collection_stores(
             &topic.snapshot().data,
             self.output.as_deref(),
@@ -5596,10 +5610,22 @@ impl SceneSource for Runtime {
             // Titles and focus churn the topic constantly; only desk/origin changes reach the bar.
             let output = self.collection_output.clone();
             let last = std::sync::Mutex::new(serde_json::Value::Null);
+            let title_rows = std::sync::Mutex::new(crate::workspace_rows::Rows::default());
             match topic.subscribe(std::sync::Arc::new(move |snapshot| {
                 let rows = crate::workspace_rows::origin_rows(&snapshot.data);
                 let selected_output = output.lock().unwrap_or_else(|error| error.into_inner()).clone();
                 let collections = crate::workspace_rows::collection_stores(&snapshot.data, selected_output.as_deref());
+                let title_values = overview_title_values(
+                    &snapshot.data,
+                    &title_rows.lock().unwrap_or_else(|e| e.into_inner()),
+                );
+                let title_text = |key: &str| match title_values.get(key) {
+                    Some(bead::core::Value::Text(value)) => value.as_str(),
+                    _ => "",
+                };
+                let title_bool = |key: &str| {
+                    matches!(title_values.get(key), Some(bead::core::Value::Bool(true)))
+                };
                 let signature = serde_json::json!({
                     "origins": rows,
                     "collections": crate::workspace_rows::collection_rows(&snapshot.data),
@@ -5607,6 +5633,11 @@ impl SceneSource for Runtime {
                     "connection": match collections.get("bar.collection.connection") { Some(bead::core::Value::Text(value)) => value.as_str(), _ => "" },
                     "enabled": match collections.get("bar.collection.enabled") { Some(bead::core::Value::Bool(value)) => *value, _ => false },
                     "output": match collections.get("bar.collection.output") { Some(bead::core::Value::Text(value)) => value.as_str(), _ => "" },
+                    "overview_open": title_bool("bead.overview.open"),
+                    "overview_title": title_text("bead.overview.title"),
+                    "overview_has_window": title_bool("bead.overview.has_window"),
+                    "title_app_id": title_text("bead.title.app_id"),
+                    "title_app_glyph": title_text("bead.title.app_glyph"),
                 });
                 let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
                 if *last != signature {
@@ -5616,6 +5647,7 @@ impl SceneSource for Runtime {
                         bead::core::Value::list(rows),
                     )]);
                     values.extend(collections);
+                    values.extend(title_values);
                     wakeup(UiEvent::Model(values));
                 }
             })) {
@@ -8535,6 +8567,10 @@ impl SceneSource for Runtime {
                         &topic.snapshot().data,
                         Some(&name),
                     ));
+                    values.extend(overview_title_values(
+                        &topic.snapshot().data,
+                        &self.workspaces,
+                    ));
                 }
                 if self.bar {
                     values.extend(luma);
@@ -10234,6 +10270,144 @@ fn backend_title_only(
         }
         old == *value
     })
+}
+
+/// Project the compositor topic's overview hover into the bar's existing title
+/// stores. The topic contains every desk's windows, unlike the output-filtered
+/// backend model, so a hovered tile remains addressable wherever it lives.
+pub(crate) fn overview_title_values(
+    topic: &serde_json::Value,
+    workspaces: &crate::workspace_rows::Rows,
+) -> BTreeMap<String, bead::core::Value> {
+    let available = topic["available"] != false;
+    let overview_open = available && topic["overviewOpen"] == true;
+    let windows = topic["windows"].as_object().filter(|_| overview_open);
+    let hovered = topic["overviewHoveredWindowId"]
+        .as_str()
+        .and_then(|id| windows.and_then(|windows| windows.get(id)));
+    let focused =
+        windows.and_then(|windows| windows.values().find(|window| window["focused"] == true));
+    let chosen = hovered.or(focused);
+    let app_id = chosen
+        .and_then(|window| window["appId"].as_str())
+        .unwrap_or_default();
+    let title = chosen
+        .and_then(|window| window["title"].as_str())
+        .filter(|title| !title.is_empty())
+        .or_else(|| chosen.and_then(|window| window["appId"].as_str()))
+        .unwrap_or_default();
+    BTreeMap::from([
+        (
+            "bead.overview.open".into(),
+            bead::core::Value::Bool(overview_open),
+        ),
+        (
+            "bead.overview.title".into(),
+            bead::core::Value::Text(title.to_owned()),
+        ),
+        (
+            "bead.overview.has_window".into(),
+            bead::core::Value::Bool(chosen.is_some()),
+        ),
+        (
+            "bead.title.app_id".into(),
+            bead::core::Value::Text(app_id.to_owned()),
+        ),
+        (
+            "bead.title.app_glyph".into(),
+            bead::core::Value::Text(
+                if app_id.is_empty() {
+                    "desktop_windows"
+                } else {
+                    workspaces.app_glyph(app_id)
+                }
+                .to_owned(),
+            ),
+        ),
+    ])
+}
+
+#[cfg(test)]
+mod overview_title_projection_tests {
+    use super::*;
+
+    fn values(topic: &serde_json::Value) -> BTreeMap<String, bead::core::Value> {
+        overview_title_values(topic, &crate::workspace_rows::Rows::default())
+    }
+
+    fn title<'a>(values: &'a BTreeMap<String, bead::core::Value>, key: &str) -> &'a str {
+        match values.get(key) {
+            Some(bead::core::Value::Text(value)) => value,
+            _ => "",
+        }
+    }
+
+    #[test]
+    fn overview_hover_projects_latest_window_and_falls_back_safely() {
+        let mut topic = serde_json::json!({
+            "overviewOpen": true,
+            "overviewHoveredWindowId": "niri-window:desk-b-window",
+            "focus": {"windowId": "niri-window:focused-window"},
+            "windows": {
+                "niri-window:focused-window": {"id":"niri-window:focused-window", "title":"Focused", "appId":"nacre-ai", "focused":true, "workspaceId":"desk-a"},
+                "niri-window:desk-b-window": {"id":"niri-window:desk-b-window", "title":"Other desk A", "appId":"nacre-control", "focused":false, "workspaceId":"desk-b"}
+            }
+        });
+        let hovered_a = values(&topic);
+        assert_eq!(title(&hovered_a, "bead.overview.title"), "Other desk A");
+        assert_eq!(title(&hovered_a, "bead.title.app_id"), "nacre-control");
+        assert_eq!(title(&hovered_a, "bead.title.app_glyph"), "tune");
+
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:focused-window");
+        let hovered_b = values(&topic);
+        assert_eq!(title(&hovered_b, "bead.overview.title"), "Focused");
+
+        topic["overviewHoveredWindowId"] = serde_json::Value::Null;
+        let empty = values(&topic);
+        assert_eq!(title(&empty, "bead.overview.title"), "Focused");
+        assert_eq!(title(&empty, "bead.title.app_id"), "nacre-ai");
+
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:desk-b-window");
+        topic["windows"]
+            .as_object_mut()
+            .unwrap()
+            .remove("niri-window:desk-b-window");
+        let closed = values(&topic);
+        assert_eq!(title(&closed, "bead.overview.title"), "Focused");
+        assert_eq!(title(&closed, "bead.title.app_id"), "nacre-ai");
+
+        topic["windows"]["niri-window:focused-window"]["title"] =
+            serde_json::json!("Focused renamed");
+        topic["overviewHoveredWindowId"] = serde_json::Value::Null;
+        let renamed_fallback = values(&topic);
+        assert_eq!(
+            title(&renamed_fallback, "bead.overview.title"),
+            "Focused renamed"
+        );
+        assert_eq!(title(&renamed_fallback, "bead.title.app_id"), "nacre-ai");
+
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:focused-window");
+        let renamed_hover = values(&topic);
+        assert_eq!(
+            title(&renamed_hover, "bead.overview.title"),
+            "Focused renamed"
+        );
+
+        topic["overviewOpen"] = serde_json::Value::Bool(false);
+        let exited = values(&topic);
+        assert_eq!(title(&exited, "bead.overview.title"), "");
+        assert_eq!(title(&exited, "bead.title.app_id"), "");
+        assert_eq!(exited["bead.overview.open"], bead::core::Value::Bool(false));
+        topic["available"] = serde_json::Value::Bool(false);
+        topic["overviewOpen"] = serde_json::Value::Bool(true);
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:focused-window");
+        let disconnected = values(&topic);
+        assert_eq!(
+            disconnected["bead.overview.open"],
+            bead::core::Value::Bool(false)
+        );
+        assert_eq!(title(&disconnected, "bead.overview.title"), "");
+    }
 }
 
 fn same_windows_except_titles(new: &bead::core::Value, old: &bead::core::Value) -> bool {

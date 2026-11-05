@@ -36,7 +36,8 @@ Singleton {
             monitorMirroring: false,
             nativeWindowScreenshot: true,
             nightLightController: true,
-            workspaceCollections: root.collectionsSupported
+            workspaceCollections: root.collectionsSupported,
+            edge_trigger_cues: root.edgeTriggerCuesSupported
         })
     readonly property string toolsPath: NacrePaths.compositorTools
     readonly property var workspaces: ({
@@ -48,6 +49,10 @@ Singleton {
     property var workspaceValues: []
     property var monitorValues: []
     property var clients: []
+    // Nacre-Niri collection rows from the compositor snapshot. Stock niri
+    // omits these and leaves the capability false.
+    property var collections: []
+    property string activeCollectionId: ""
     property var byId: ({})
     property var activeWorkspace: null
     property var focusedMonitor: null
@@ -56,6 +61,8 @@ Singleton {
     property bool overviewHoverSupported: false
     property string overviewHoveredWindowId: ""
     property bool edgeTriggersActive: false
+    property bool edgeTriggerStreamActive: false
+    property bool edgeTriggerCuesSupported: false
     property bool edgeTriggersUnsupported: false
     readonly property var overviewHoverWindow: overviewOpen && overviewHoverSupported ? byId[overviewHoveredWindowId] || null : null
     readonly property var overviewSelectedWindow: overviewOpen ? byId[activeWorkspace?.activeWindowId] || null : null
@@ -85,7 +92,12 @@ Singleton {
         const source = daemonEvents.data;
         if (!NacreDaemon.connected || !daemonState.fresh || !daemonEvents.fresh || !state.available || state.backend !== "niri" || !source.available) {
             connected = false;
+            collectionsSupported = false;
+            collections = [];
+            activeCollectionId = "";
             edgeTriggersActive = false;
+            edgeTriggerStreamActive = false;
+            edgeTriggerCuesSupported = false;
             daemonConnection = "";
             daemonCheck = "";
             return;
@@ -123,6 +135,8 @@ Singleton {
             focusedMonitor: state.outputs?.[state.focus?.outputId],
             overviewOpen: state.overviewOpen,
             capabilities: state.capabilities,
+            collections: state.collections || [],
+            activeCollection: state.activeCollection || "",
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
             edgeTriggersActive: source.edgeTriggersActive === true,
@@ -146,7 +160,12 @@ Singleton {
             activeAction = null;
             worker.running = false;
         }
+        collectionsSupported = false;
+        collections = [];
+        activeCollectionId = "";
         edgeTriggersActive = false;
+        edgeTriggerStreamActive = false;
+        edgeTriggerCuesSupported = false;
         connected = false;
         daemonConnection = "";
         daemonCheck = "";
@@ -259,9 +278,14 @@ Singleton {
         activeWindowId = value.activeWindow?.windowId || "";
         overviewOpen = value.overviewOpen === true;
         collectionsSupported = value.capabilities?.workspaceCollections === true;
+        collections = collectionsSupported && Array.isArray(value.collections) ? value.collections : [];
+        activeCollectionId = collectionsSupported && typeof value.activeCollection === "string" ? value.activeCollection : "";
+        edgeTriggerCuesSupported = value.capabilities?.edge_trigger_cues === true;
+        if (root.daemonMode || Object.prototype.hasOwnProperty.call(value, "edgeTriggersActive"))
+            edgeTriggerStreamActive = value.edgeTriggersActive === true;
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
-        edgeTriggersActive = value.edgeTriggersActive === true;
+        edgeTriggersActive = edgeTriggerStreamActive && edgeTriggerCuesSupported;
         connected = true;
         error = value.configFailed ? NacreI18n.tr("ui.niri.error.config-reload-failed", "Niri configuration failed to reload.") : "";
         reconnectAttempt = 0;
@@ -344,6 +368,9 @@ Singleton {
             if (root.daemonMode)
                 return;
             root.connected = false;
+            root.collectionsSupported = false;
+            root.collections = [];
+            root.activeCollectionId = "";
             root.movingWindows = {};
             root.event({
                 type: "window-move",
@@ -374,7 +401,8 @@ Singleton {
                     const value = JSON.parse(data);
                     if (value.type === "edge-source") {
                         root.edgeTriggersUnsupported = value.active !== true;
-                        root.edgeTriggersActive = value.active === true;
+                        root.edgeTriggerStreamActive = value.active === true;
+                        root.edgeTriggersActive = root.edgeTriggerStreamActive && root.edgeTriggerCuesSupported;
                     } else if (!root.accept(value)) {
                         root.error = NacreI18n.tr("ui.niri.error.invalid-event", "Invalid compositor event.");
                     }
@@ -388,6 +416,8 @@ Singleton {
                 return;
             const wasActive = root.edgeTriggersActive;
             root.edgeTriggersActive = false;
+            root.edgeTriggerStreamActive = false;
+            root.edgeTriggerCuesSupported = false;
             if ((wasActive || !root.edgeTriggersUnsupported) && !edgeRetry.running)
                 edgeRetry.start();
         }

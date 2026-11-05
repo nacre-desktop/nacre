@@ -646,8 +646,15 @@ fn start(
     let gate = shell_control::Gate::new();
     let niri_session = std::env::var("NACRE_COMPOSITOR").as_deref() == Ok("niri")
         || std::env::var_os("NIRI_SOCKET").is_some();
-    let edge_route = niri_session
-        .then(|| shell_control::EdgeEventState::new(gate.clone(), options.command_socket.clone()));
+    let (edge_cue_sender, edge_cue_channel) = if niri_session && register_ui_provider {
+        let (sender, receiver) = bead::wayland::ExternalEdgeCueChannel::channel();
+        (Some(sender), Some(receiver))
+    } else {
+        (None, None)
+    };
+    options.external_edge_cues = edge_cue_channel;
+    let edge_route = edge_cue_sender
+        .map(|edge_cue_sender| shell_control::EdgeEventState::new(gate.clone(), edge_cue_sender));
     let _ui_provider = if register_ui_provider {
         let mut provider_topics: Vec<&str> = if notices {
             notice_service::TOPICS.to_vec()
@@ -710,6 +717,7 @@ fn start(
             topic(prefs::LAUNCHER_LAYOUT),
             {
                 let gate = gate.clone();
+                let edge_route = edge_route.clone();
                 std::sync::Arc::new(move |p: &prefs::Prefs| {
                     bead::core::animation::set_reduced_motion(p.reduce_motion);
                     theme::apply(p);
@@ -719,6 +727,9 @@ fn start(
                         &p.frame_settings(),
                     ));
                     gate.apply(p);
+                    if let Some(edge_route) = &edge_route {
+                        edge_route.refresh_source();
+                    }
                 })
             },
         )

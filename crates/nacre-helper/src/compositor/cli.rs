@@ -250,7 +250,7 @@ pub fn run(argv: &[String]) -> crate::Result<i32> {
                     std::io::stdout().flush()?;
                 }
             }
-            super::backend::Backend::Niri(backend) => {
+            super::backend::Backend::Niri(mut backend) => {
                 let mut events = backend.events()?;
                 let mut workspaces = super::niri_workspace_policy::Session::default();
                 let manage_workspaces =
@@ -268,7 +268,7 @@ pub fn run(argv: &[String]) -> crate::Result<i32> {
             }
         },
         Command::EdgeEvents => match backend {
-            super::backend::Backend::Niri(backend) => backend.edge_events()?,
+            super::backend::Backend::Niri(mut backend) => backend.edge_events()?,
             super::backend::Backend::Hyprland(_) => {
                 println!("{{\"type\":\"edge-source\",\"active\":false}}");
                 std::io::stdout().flush()?;

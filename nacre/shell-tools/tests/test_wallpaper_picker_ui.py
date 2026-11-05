@@ -69,14 +69,6 @@ class WallpaperPickerUITests(unittest.TestCase):
                 + str(target / "poster.png")
                 + '",dynamic:true}];function browse(path){browsed=path;current=path} function setWallpaper(path){browse(path)} function commitSelection(){} function pickFiles(){} function addFiles(paths){} function preference(value){preferences=Object.assign({},preferences,value)}}'
             )
-            (target / "fixtures/ActionButton.qml").write_text(
-                (target / "fixtures/ActionButton.qml")
-                .read_text()
-                .replace(
-                    "property bool selected:",
-                    "property bool compact:false;property bool selected:",
-                )
-            )
             with (target / "fixtures/qmldir").open("a") as manifest:
                 manifest.write(
                     "\nNacreIcon 1.0 NacreIcon.qml\nsingleton NacreWallpapers 1.0 NacreWallpapers.qml\n"

@@ -30,6 +30,37 @@ pub(super) fn quoted(value: &Value) -> Result<String> {
     Ok(text)
 }
 fn launch(command: &str) -> Result<String> {
+    for (generated, action) in [
+        (action_command("close_window", &[]), "close-window"),
+        (
+            action_command("fullscreen_window", &["--mode".into(), "fullscreen".into()]),
+            "fullscreen-window",
+        ),
+        (
+            action_command("fullscreen_window", &["--mode".into(), "maximized".into()]),
+            "maximize-window-to-edges",
+        ),
+        (
+            action_command("float_window", &["--action".into(), "toggle".into()]),
+            "toggle-window-floating",
+        ),
+    ] {
+        if command == generated {
+            return Ok(action.into());
+        }
+    }
+    // These are Niri's built-in actions. Emit them as KDL actions directly so
+    // key presses do not fork a shell and run `niri msg` back into the compositor.
+    if let Some(action) = command.strip_prefix("niri msg action ") {
+        if matches!(
+            action,
+            "toggle-column-tabbed-display"
+                | "focus-window-up-or-bottom"
+                | "focus-window-down-or-top"
+        ) {
+            return Ok(action.to_owned());
+        }
+    }
     if !command.starts_with("nacrectl ui ") {
         return Ok(format!("spawn-sh {}", quoted(&json!(command))?));
     }
@@ -83,7 +114,7 @@ pub(crate) const COLLECTION_ACTIONS: &str = concat!(
 );
 const SCRATCHPAD_PIN_ACTIONS: &str = concat!(
     "    Super+h repeat=false hotkey-overlay-title=\"Nacre:hide\" { move-window-to-scratchpad; }\n",
-    "    Super+Shift+h repeat=false hotkey-overlay-title=\"Nacre:scratchpad-windows\" { toggle-scratchpad; }\n",
+    "    Super+Shift+H repeat=false hotkey-overlay-title=\"Nacre:restore\" { restore-last-hidden-window; }\n",
     "    Super+p repeat=false hotkey-overlay-title=\"Nacre:pin\" { toggle-window-pinned; }\n",
 );
 const PINNED_WINDOW_RULES: &str = concat!(
@@ -99,7 +130,7 @@ pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
         .and_then(|text| text.strip_suffix("}\n"))
         .unwrap_or(COLLECTION_ACTIONS);
     format!(
-        "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\n// Native actions and rules are inactive when their runtime capability is disabled.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}}}\n{PINNED_WINDOW_RULES}{}",
+        "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}    Super+Ctrl+Shift+Q repeat=false hotkey-overlay-title=\"Nacre:force-close\" {{ force-close-window; }}\n    Super+Alt+H repeat=false hotkey-overlay-title=\"Nacre:restore-current\" {{ restore-current-workspace-hidden-windows; }}\n}}\n{PINNED_WINDOW_RULES}{}",
         edge_trigger_config(delay_ms)
     )
 }
@@ -110,22 +141,37 @@ pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
     let rows = document["unsupported"]
         .as_array_mut()
         .ok_or_else(|| invalid("Invalid niri unsupported report rows"))?;
-    rows.retain(|row| {
-        !((row["source"] == "hypr/conf/keybinding.lua"
-            && row["kind"] == "binding"
-            && ["SUPER + H", "SUPER + SHIFT + H", "SUPER + P"]
-                .iter()
-                .any(|key| row["id"] == *key))
-            || (row["source"] == "hypr/conf/nacre.lua"
-                && row["kind"] == "window-rule"
-                && [
-                    "nacre-audio-mixer",
-                    "nacre-share-picker",
-                    "nacre-picture-in-picture",
-                ]
-                .iter()
-                .any(|id| row["id"] == *id)))
-    });
+    for row in rows {
+        let id = row["id"].as_str().unwrap_or("");
+        let capability = if row["source"] == "hypr/conf/keybinding.lua" {
+            match id {
+                "SUPER + H" => Some("scratchpad"),
+                "SUPER + SHIFT + H" | "SUPER + ALT + H" => Some("window_restore"),
+                "SUPER + P" => Some("window_pinning"),
+                "SUPER + CTRL + SHIFT + Q" => Some("force_close"),
+                _ => None,
+            }
+        } else if row["source"] == "hypr/conf/nacre.lua"
+            && row["kind"] == "window-rule"
+            && [
+                "nacre-audio-mixer",
+                "nacre-share-picker",
+                "nacre-picture-in-picture",
+            ]
+            .contains(&id)
+        {
+            Some("window_pinning")
+        } else {
+            None
+        };
+        if let Some(capability) = capability {
+            row["stockNiriUnsupported"] = json!(true);
+            row["nacreNiriCapability"] = json!(capability);
+            if capability == "force_close" {
+                row["nacreNiriLimitation"] = json!("Disconnects the owning Wayland client and its sibling windows; X11 clients are unsupported");
+            }
+        }
+    }
     serde_json::to_string_pretty(&document)
         .map(|value| value + "\n")
         .map_err(|error| invalid(error.to_string()))
@@ -146,7 +192,7 @@ fn shell_quote(text: &str) -> String {
         format!("'{}'", text.replace('\'', "'\"'\"'"))
     }
 }
-fn action_command(name: &str, arguments: &[String]) -> String {
+pub(super) fn action_command(name: &str, arguments: &[String]) -> String {
     let args = std::iter::once(name.to_owned())
         .chain(arguments.iter().map(|s| shell_quote(s)))
         .collect::<Vec<_>>()
@@ -618,6 +664,33 @@ mod tests {
             r#"spawn "nacrectl" "ui" "nacre" "launcher" "$(touch forbidden);$HOME""#
         );
         assert_eq!(launch("printf fixture")?, r#"spawn-sh "printf fixture""#);
+        for action in [
+            "toggle-column-tabbed-display",
+            "focus-window-up-or-bottom",
+            "focus-window-down-or-top",
+        ] {
+            assert_eq!(
+                launch(&format!("niri msg action {action}"))?,
+                action.to_owned()
+            );
+        }
+        for (command, action) in [
+            (action_command("close_window", &[]), "close-window"),
+            (
+                action_command("fullscreen_window", &["--mode".into(), "fullscreen".into()]),
+                "fullscreen-window",
+            ),
+            (
+                action_command("fullscreen_window", &["--mode".into(), "maximized".into()]),
+                "maximize-window-to-edges",
+            ),
+            (
+                action_command("float_window", &["--action".into(), "toggle".into()]),
+                "toggle-window-floating",
+            ),
+        ] {
+            assert_eq!(launch(&command)?, action);
+        }
         assert!(launch("nacrectl ui nacre").is_err());
         assert!(launch("nacrectl ui nacre launcher '").is_err());
         Ok(())

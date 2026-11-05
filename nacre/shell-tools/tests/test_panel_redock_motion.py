@@ -118,13 +118,6 @@ class RedockMotionTests(unittest.TestCase):
             scroll.write_text(
                 scroll.read_text().replace("Item {", "Item {function cancel(){}", 1)
             )
-            button = target / "ActionButton.qml"
-            button.write_text(
-                button.read_text().replace(
-                    "property bool selected:",
-                    "property bool compact:false;property bool selected:",
-                )
-            )
             (target / "tst_motion.qml").write_text("""import QtQuick
 import QtTest
 import Quickshell

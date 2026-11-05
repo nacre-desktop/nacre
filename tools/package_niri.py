@@ -37,8 +37,10 @@ COLLECTION_BINDINGS = (
 )
 SCRATCHPAD_PIN_BINDINGS = (
     '    Super+h repeat=false hotkey-overlay-title="Nacre:hide" { move-window-to-scratchpad; }\n'
-    '    Super+Shift+h repeat=false hotkey-overlay-title="Nacre:scratchpad-windows" { toggle-scratchpad; }\n'
+    '    Super+Shift+H repeat=false hotkey-overlay-title="Nacre:restore" { restore-last-hidden-window; }\n'
     '    Super+p repeat=false hotkey-overlay-title="Nacre:pin" { toggle-window-pinned; }\n'
+    '    Super+Ctrl+Shift+Q repeat=false hotkey-overlay-title="Nacre:force-close" { force-close-window; }\n'
+    '    Super+Alt+H repeat=false hotkey-overlay-title="Nacre:restore-current" { restore-current-workspace-hidden-windows; }\n'
 )
 PINNED_WINDOW_RULES = (
     '\nwindow-rule {\n    match app-id="^org[.]pulseaudio[.]pavucontrol$"\n'
@@ -50,21 +52,68 @@ PINNED_WINDOW_RULES = (
 )
 
 
-def edge_trigger_config(delay_ms):
+def edge_trigger_config(
+    delay_ms,
+    distances=(10, 10, 50, 10),
+    lengths=(144, 144, 208, None),
+):
     if (
         isinstance(delay_ms, bool)
         or not isinstance(delay_ms, int)
         or not 0 <= delay_ms <= 800
     ):
         delay_ms = 350
+    if len(distances) != 4 or any(
+        isinstance(value, bool) or not isinstance(value, int) or value < 1
+        for value in distances
+    ):
+        distances = (10, 10, 50, 10)
+    if len(lengths) != 4 or any(
+        value is not None
+        and (isinstance(value, bool) or not isinstance(value, int) or value < 1)
+        for value in lengths
+    ):
+        lengths = (144, 144, 208, None)
+    left, right, top, bottom = distances
+    left_length, right_length, top_length, bottom_length = lengths
+
+    def edge(name, distance, length):
+        span = f" trigger-length {length};" if length is not None else ""
+        return (
+            f"    {name} {{ action {{ event; }}; dwell-time-ms {delay_ms};"
+            f" trigger-distance {distance};{span} }}\n"
+        )
+
     return (
         "edge-triggers {\n"
-        f"    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
-        f"    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
-        f"    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
-        f"    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n"
-        "}\n"
+        "    cue;\n"
+        + edge("left", left, left_length)
+        + edge("right", right, right_length)
+        + edge("top", top, top_length)
+        + edge("bottom", bottom, bottom_length)
+        + "}\n"
     )
+
+
+def edge_trigger_distances(home):
+    settings = home / ".config/nacre/desktop.json"
+    try:
+        value = _state.read_json_file(settings) if settings.is_file() else {}
+        width = value.get("frameWidth", 10)
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or not 0 <= width <= 100
+        ):
+            width = 10
+        top = (40 if value.get("topBarEnabled", True) is not False else 0) + (
+            width if value.get("frameTopEnabled", True) is not False else 0
+        )
+        # The native schema requires at least one logical pixel; disabled edges have no
+        # matching Nacre lip and are ignored by the shell adapter.
+        return tuple(max(1, item) for item in (width, width, top, width))
+    except (OSError, ValueError, TypeError):
+        return (10, 10, 50, 10)
 
 
 def edge_trigger_delay(home):
@@ -93,26 +142,39 @@ def module(path, name):
 def nacre_niri_unsupported(text):
     """Return fork-specific audit metadata while preserving stock Niri's report."""
     document = json.loads(text)
-    supported = {"SUPER + H", "SUPER + SHIFT + H", "SUPER + P"}
+    capabilities = {
+        "SUPER + H": "scratchpad",
+        "SUPER + SHIFT + H": "window_restore",
+        "SUPER + ALT + H": "window_restore",
+        "SUPER + P": "window_pinning",
+        "SUPER + CTRL + SHIFT + Q": "force_close",
+    }
     native_rules = {
         "nacre-audio-mixer",
         "nacre-share-picker",
         "nacre-picture-in-picture",
     }
-    document["unsupported"] = [
-        row
-        for row in document.get("unsupported", [])
-        if not (
+    for row in document.get("unsupported", []):
+        capability = None
+        if (
             row.get("source") == "hypr/conf/keybinding.lua"
             and row.get("kind") == "binding"
-            and row.get("id") in supported
-        )
-        and not (
+        ):
+            capability = capabilities.get(row.get("id"))
+        elif (
             row.get("source") == "hypr/conf/nacre.lua"
             and row.get("kind") == "window-rule"
             and row.get("id") in native_rules
-        )
-    ]
+        ):
+            capability = "window_pinning"
+        if capability is not None:
+            row["stockNiriUnsupported"] = True
+            row["nacreNiriCapability"] = capability
+            if capability == "force_close":
+                row["nacreNiriLimitation"] = (
+                    "Disconnects the owning Wayland client and its sibling windows; "
+                    "X11 clients are unsupported"
+                )
     return json.dumps(document, indent=2) + "\n"
 
 
@@ -295,7 +357,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         + SCRATCHPAD_PIN_BINDINGS
         + "}\n"
         + PINNED_WINDOW_RULES
-        + edge_trigger_config(edge_trigger_delay(home)),
+        + edge_trigger_config(edge_trigger_delay(home), edge_trigger_distances(home)),
     )
     add(
         config / "nacre-niri-unsupported.json",

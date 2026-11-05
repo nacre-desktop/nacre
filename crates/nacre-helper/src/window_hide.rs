@@ -12,6 +12,29 @@ use std::{
 pub const HIDDEN: &str = "special:hidden";
 pub const QUERY_TIMEOUT_SECONDS: u64 = 5;
 pub const MAX_QUERY_BYTES: usize = 4 * 1024 * 1024;
+fn niri_native_action(
+    name: &str,
+    capabilities: crate::compositor::niri_transport::NacreCapabilities,
+) -> Option<&'static str> {
+    match name {
+        "hide" if capabilities.scratchpad => Some("MoveWindowToScratchpad"),
+        "restore-last" if capabilities.window_restore => Some("RestoreLastHiddenWindow"),
+        "restore-current" if capabilities.window_restore => {
+            Some("RestoreCurrentWorkspaceHiddenWindows")
+        }
+        _ => None,
+    }
+}
+fn niri_native_arguments(name: &str, window: Option<&str>) -> Result<Value> {
+    if name == "MoveWindowToScratchpad" {
+        if let Some(window) = window {
+            return Ok(json!({
+                "id": crate::compositor::niri_state::native_id(window, "window")?
+            }));
+        }
+    }
+    Ok(json!({}))
+}
 pub fn address(value: &Value) -> bool {
     crate::compositor::hyprland::valid_window_id(value)
 }
@@ -135,7 +158,42 @@ pub fn run(args: &[String]) -> Result<i32> {
             .ok_or("Invalid cache root")?
             .join("hypr-minimize");
         let backend = crate::compositor::backend::Backend::new(paths, std::env::vars().collect())?;
-        action(name, &folder, window, quiet, &mut Native { backend })
+        match backend {
+            crate::compositor::backend::Backend::Niri(mut backend) => {
+                let capabilities = backend
+                    .actions
+                    .transport
+                    .nacre_capabilities(std::time::Duration::from_millis(500));
+                let native_action = niri_native_action(name, capabilities);
+                if let Some(native_action) = native_action {
+                    let mut actions = serde_json::Map::new();
+                    actions.insert(
+                        native_action.into(),
+                        niri_native_arguments(native_action, window)?,
+                    );
+                    let response = backend.actions.transport.request_value(
+                        &json!({"Action":actions}),
+                        std::time::Duration::from_secs(5),
+                        4096,
+                    )?;
+                    if response != "Handled" {
+                        return Err("Nacre-Niri did not accept the window action".into());
+                    }
+                    Ok(())
+                } else {
+                    action(
+                        name,
+                        &folder,
+                        window,
+                        quiet,
+                        &mut Native {
+                            backend: crate::compositor::backend::Backend::Niri(backend),
+                        },
+                    )
+                }
+            }
+            backend => action(name, &folder, window, quiet, &mut Native { backend }),
+        }
     })();
     match result {
         Ok(()) => Ok(0),
@@ -354,6 +412,44 @@ pub fn action(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn niri_native_hide_restore_actions_are_capability_gated() {
+        use crate::compositor::niri_transport::NacreCapabilities;
+        let stock = NacreCapabilities::default();
+        assert_eq!(niri_native_action("hide", stock), None);
+        assert_eq!(niri_native_action("restore-last", stock), None);
+        let native = NacreCapabilities {
+            scratchpad: true,
+            window_restore: true,
+            ..NacreCapabilities::default()
+        };
+        assert_eq!(
+            niri_native_action("hide", native),
+            Some("MoveWindowToScratchpad")
+        );
+        assert_eq!(
+            niri_native_action("restore-last", native),
+            Some("RestoreLastHiddenWindow")
+        );
+        assert_eq!(
+            niri_native_action("restore-current", native),
+            Some("RestoreCurrentWorkspaceHiddenWindows")
+        );
+    }
+    #[test]
+    fn native_scratchpad_hide_preserves_explicit_window_identity() -> Result<()> {
+        assert_eq!(
+            niri_native_arguments("MoveWindowToScratchpad", Some("niri-window:41"))?,
+            json!({"id":41})
+        );
+        assert_eq!(
+            niri_native_arguments("RestoreLastHiddenWindow", Some("niri-window:41"))?,
+            json!({})
+        );
+        assert!(niri_native_arguments("MoveWindowToScratchpad", Some("bad-id")).is_err());
+        Ok(())
+    }
     struct Fixture {
         input: Value,
         calls: Vec<Value>,

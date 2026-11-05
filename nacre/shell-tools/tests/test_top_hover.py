@@ -26,24 +26,38 @@ class TopHoverTests(unittest.TestCase):
             shutil.copytree(ROOT / "tests/qml/fixtures", fixtures)
             install_foundation_interaction(fixtures, SHELL / "widgets")
             definitions = {
-                "NacreFrame": "property int left:10;property int right:10;property int headerHeight:50",
-                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var activeWindow:null;property bool externalEdgeSource:false;property bool overviewOpen:false;signal event(var value)',
+                "NacreFrame": "property int left:10;property int right:10;property int headerHeight:50;property int rounding:25",
+                "NacreCompositor": 'property var focusedMonitor:({name:"test"});property var activeWindow:null;property bool edgeSourceAcknowledged:false;readonly property bool externalEdgeSource:edgeSourceAcknowledged&&DesktopSettings.data.clickEdgeMenus!==true;property bool overviewOpen:false;signal event(var value);signal panelGesture(string data)',
                 "Environment": 'property var screens:[{name:"test"}]',
+                "NacreProfile": "property bool ready:false;property bool ai:false;property bool brain:false",
             }
             for name, text in definitions.items():
                 (fixtures / (name + ".qml")).write_text(
                     "pragma Singleton\nimport QtQuick\nQtObject {" + text + "}"
                 )
-            for name in ("NacreHoverIntent", "NacrePanelState"):
+            (fixtures / "NacrePearls.qml").write_text(
+                "pragma Singleton\nimport QtQuick\nQtObject {property var drag:null;property var pendingDocks:[];signal dragChanged}"
+            )
+            for name in ("NacreHoverIntent", "NacrePanelState", "NacrePearls"):
                 stage_qml(
                     SHELL / "services" / (name + ".qml"), fixtures / (name + ".qml")
                 )
             with (fixtures / "qmldir").open("a") as manifest:
-                for name in (*definitions, "NacreHoverIntent", "NacrePanelState"):
-                    manifest.write(f"\nsingleton {name} 1.0 {name}.qml\n")
+                manifest_text = (fixtures / "qmldir").read_text()
+                for name in (
+                    *definitions,
+                    "NacreHoverIntent",
+                    "NacrePanelState",
+                    "NacrePearls",
+                ):
+                    entry = f"singleton {name} 1.0 {name}.qml"
+                    if entry not in manifest_text:
+                        manifest.write(f"\n{entry}\n")
+                        manifest_text += f"\n{entry}\n"
             for name, path in (
                 ("NacreFrameLip", SHELL / "widgets/NacreFrameLip.qml"),
                 ("NacreFrameLips", SHELL / "modules/drawers/NacreFrameLips.qml"),
+                ("NacrePanelInput", SHELL / "modules/drawers/NacrePanelInput.qml"),
             ):
                 stage_qml(path, target / (name + ".qml"))
             (target / "tst_lips.qml").write_text("""import QtQuick
@@ -61,11 +75,12 @@ TestCase {
   property alias controller: controller
   property var screen:({name:"test",width:1000,height:700})
   QtObject {id:flags;property bool launcher:false;property bool session:false;property bool dashboard:false;property bool dashboardPinned:false;property bool left:false;property bool leftPinned:false;property bool osd:false;property bool controlsPointerOwned:false;property string controlsMode:"sidebar";property bool previewOnly:false;property bool hoverDocked:false;property string controlSection:"home";property string edgeMenu:""}
-  QtObject {id:controller;property bool modal:false;property var panels:({dashboard:{height:0},leftDrawer:{width:0},osd:{width:0}});function settleHover(){}}
+  Item {id:panels;property alias launcher:emptyPanel;property alias dashboard:emptyPanel;property alias leftDrawer:emptyPanel;property alias osd:emptyPanel;property alias session:emptyPanel;property alias popouts:popup;property alias notifications:notices;Item{id:emptyPanel} Item{id:popup;property bool pinned:false;property bool hasCurrent:false;property bool headerHovered:false} Item{id:notices;visible:false}}
+  NacrePanelInput {id:controller;anchors.fill:parent;screen:parent.screen;visibilities:flags;panels:panels;lips:lips}
   NacreFrameLips {id:lips;anchors.fill:parent;screen:parent.screen;visibilities:flags;controller:controller}
   Component.onCompleted: {NacrePanelState.screens={test:flags};NacrePanelState.panels={test:{popouts:{hasCurrent:false,pinned:false}}}}
  }}
- function init(){NacrePanelState.hidden=false;DesktopSettings.data={animations:false,clickEdgeMenus:false};Services.NacreCompositor.activeWindow=null;Services.NacreCompositor.externalEdgeSource=false;Services.NacreCompositor.overviewOpen=false;NacreHoverIntent.blocked=({});NacreHoverIntent.lipRegions=({});}
+ function init(){NacrePanelState.hidden=false;DesktopSettings.data={animations:false,clickEdgeMenus:false};Services.NacreCompositor.activeWindow=null;Services.NacreCompositor.edgeSourceAcknowledged=false;Services.NacreCompositor.overviewOpen=false;NacreHoverIntent.blocked=({});NacreHoverIntent.lipRegions=({});}
  function test_dashboard_delay_cancels_transit_and_keeps_reduced_motion_static(){
   const view=createTemporaryObject(scene,this);mouseMove(view,100,180);wait(30);
   mouseMove(view,500,25);wait(220);verify(!view.flags.dashboard);verify(view.lips.dashboardWaiting);compare(view.lips.dashboardProgress,1);
@@ -105,7 +120,7 @@ TestCase {
   const left=findChild(view,"frameLeftLip");
   const right=findChild(view,"frameRightLip");
   const topY=top.y;const leftX=left.x;const rightX=right.x;
-  view.controller.panels={dashboard:{height:240},leftDrawer:{width:320},osd:{width:424}};
+  view.controller.panels={launcher:{width:0,height:0},dashboard:{height:240},leftDrawer:{width:320},osd:{width:424},session:{width:0,height:0},popouts:{pinned:false,hasCurrent:false},notifications:{visible:false}};
   view.flags.dashboard=true;view.flags.left=true;view.flags.osd=true;
   compare(top.y,topY);compare(left.x,leftX);compare(right.x,rightX);
   compare(top.height,NacreFrame.headerHeight);compare(left.width,NacreFrame.left);compare(left.height,144);
@@ -119,9 +134,9 @@ TestCase {
   mouseMove(this,800,500);
   const view=createTemporaryObject(scene,this);wait(30);
   const top=findChild(view,"frameTopLip"),left=findChild(view,"frameLeftLip"),right=findChild(view,"frameRightLip");
-  view.controller.modal=true;
-  view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:0},launcher:{fullScreenGallery:true}};
+  view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:0},launcher:{fullScreenGallery:true},session:{width:0,height:0},popouts:{pinned:false,hasCurrent:false},notifications:{visible:false}};
   view.flags.launcher=true;
+  verify(view.controller.modal);
   verify(top.visible);verify(left.visible);verify(right.visible);
   compare(view.lips.rimHandles.length,0);
   mouseMove(view,8,350);verify(view.flags.launcher);verify(!view.flags.left);
@@ -141,13 +156,13 @@ TestCase {
  }
  function test_moving_handle_dismissal_blocks_return_under_stationary_pointer(){
   const view=createTemporaryObject(scene,this);wait(30);
-  view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:424}};
+  view.controller.panels={launcher:{width:0,height:0},dashboard:{height:0},leftDrawer:{width:0},osd:{width:424},session:{width:0,height:0},popouts:{pinned:false,hasCurrent:false},notifications:{visible:false}};
   NacreHoverIntent.observe(view.screen,990,350);
   NacreHoverIntent.dismiss(view.screen,true);
   verify(NacreHoverIntent.blocked.test.osd);
   NacreHoverIntent.rearm("osd",view.screen);
   verify(NacreHoverIntent.blocked.test.osd);
-  view.controller.panels={dashboard:{height:0},leftDrawer:{width:0},osd:{width:0}};
+  view.controller.panels={launcher:{width:0,height:0},dashboard:{height:0},leftDrawer:{width:0},osd:{width:0},session:{width:0,height:0},popouts:{pinned:false,hasCurrent:false},notifications:{visible:false}};
   NacreHoverIntent.observe(view.screen,990,350);
   verify(!NacreHoverIntent.canOpen("osd",view.screen,Qt.NoButton));
   NacreHoverIntent.observe(view.screen,800,350);
@@ -223,7 +238,7 @@ TestCase {
   NacreCompositor.activeWindow=null;
  }
  function test_native_edge_source_suppresses_qml_dwell_and_routes_events_with_fallback(){
-  const view=createTemporaryObject(scene,this);wait(30);Services.NacreCompositor.externalEdgeSource=true;
+  const view=createTemporaryObject(scene,this);wait(30);Services.NacreCompositor.edgeSourceAcknowledged=true;
   const top=findChild(view,"frameTopLip");
   NacreHoverIntent.setHeaderHover("test","bar",true);
   view.lips.approach("dashboard",top,Qt.NoButton);verify(NacreHoverIntent.headers.test);verify(!view.lips.dashboardWaiting);
@@ -231,12 +246,55 @@ TestCase {
   view.lips.leave("dashboard");verify(NacreHoverIntent.headers.test);
   NacreHoverIntent.setHeaderHover("test","bar",false);verify(!NacreHoverIntent.headers.test);
   mouseMove(view,8,350);wait(400);verify(!view.flags.left);
-  Services.NacreCompositor.event({type:"edge-triggered",output:"other",edge:"Left",position:[0,350]});verify(!view.flags.left);
+  Services.NacreCompositor.event({type:"edge-approach",output:"other",edge:"Left",position:[0,350],progress:.5});verify(!view.flags.left);
   Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"left",position:[4,100]});verify(!view.flags.left);
   Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:{length:2,0:4,1:"350"}});verify(!view.flags.left);
   NacreHoverIntent.blocked={test:{left:true}};
   Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
   NacreHoverIntent.blocked={};
+  Services.NacreCompositor.event({type:"edge-approach",output:"test",edge:"Left",position:[4,350],progress:.4});
+  compare(findChild(view,"frameLeftArrow").amount,.4);verify(!view.flags.left);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Left",position:[4,350],progress:.75});
+  compare(findChild(view,"frameLeftArrow").amount,.75);verify(!view.flags.left);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Left",position:[400,350],progress:.9});
+  compare(findChild(view,"frameLeftArrow").amount,0);verify(!view.flags.left);
+  Services.NacreCompositor.event({type:"edge-approach",output:"test",edge:"Top",position:[500,25],progress:.2});
+  compare(view.lips.nativeDashboardProgress,.2);verify(NacreHoverIntent.headers.test);verify(!view.flags.dashboard);
+  verify(!view.controller.leftEdgeAvailable);verify(!view.controller.rightEdgeAvailable);verify(!view.controller.topEdgeAvailable);
+  const hasRect=(regions,rect)=>regions.some(r=>r.x===rect.x&&r.y===rect.y&&r.width===rect.width&&r.height===rect.height);
+  verify(!hasRect(view.controller.regions,view.controller.leftEdgeRect));verify(!hasRect(view.controller.regions,view.controller.rightEdgeRect));verify(!hasRect(view.controller.regions,view.controller.topEdgeRect));
+  verify(hasRect(view.controller.regions,view.controller.headerRect));
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[500,25],progress:.7});
+  compare(view.lips.nativeDashboardProgress,.7);verify(NacreHoverIntent.headers.test);verify(!view.flags.dashboard);
+  Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Top",position:[50,25]});
+  verify(!view.flags.dashboard);compare(view.lips.nativeDashboardProgress,0);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[500,25],progress:1});
+  verify(!view.flags.dashboard);verify(NacreHoverIntent.headers.test);
+  Services.NacreCompositor.event({type:"edge-left",output:"test",edge:"Top",position:[500,50]});
+  verify(!NacreHoverIntent.headers.test);
+  Services.NacreCompositor.event({type:"edge-approach",output:"test",edge:"Top",position:[500,25],progress:.2});
+  Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Top",position:[500,25]});
+  verify(view.flags.dashboard);compare(view.lips.nativeDashboardProgress,0);verify(!NacreHoverIntent.headers.test);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[500,25],progress:1});
+  compare(view.lips.nativeDashboardProgress,0);verify(NacreHoverIntent.headers.test);verify(view.flags.dashboard);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[50,25],progress:1});
+  compare(view.lips.nativeDashboardProgress,0);verify(!NacreHoverIntent.headers.test);
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[500,25],progress:1});
+  compare(view.lips.nativeDashboardProgress,0);verify(NacreHoverIntent.headers.test);
+  view.flags.dashboard=false;
+  Services.NacreCompositor.event({type:"edge-hover",output:"test",edge:"Top",position:[50,25],progress:.9});
+  compare(view.lips.nativeDashboardProgress,0);verify(!NacreHoverIntent.headers.test);
+  Services.NacreCompositor.event({type:"edge-approach",output:"test",edge:"Top",position:[500,25],progress:.45});
+  compare(view.lips.nativeDashboardProgress,.45);compare(view.lips.nativeLeftProgress,0);verify(NacreHoverIntent.headers.test);verify(!view.flags.dashboard);
+  DesktopSettings.data={animations:false,clickEdgeMenus:true};
+  verify(view.controller.leftEdgeAvailable);verify(view.controller.rightEdgeAvailable);verify(view.controller.topEdgeAvailable);
+  verify(findChild(view,"frameLeftLip").enabled);verify(findChild(view,"frameRightLip").enabled);
+  DesktopSettings.data={animations:false,clickEdgeMenus:false};
+  verify(Services.NacreCompositor.externalEdgeSource);
+  verify(!findChild(view,"frameLeftLip").enabled);verify(!findChild(view,"frameRightLip").enabled);
+  Services.NacreCompositor.event({type:"edge-left",output:"test",edge:"Left",position:[4,350]});
+  compare(findChild(view,"frameLeftArrow").amount,0);
+  Services.NacreCompositor.event({type:"edge-left",output:"test",edge:"Top",position:[500,50]});verify(!NacreHoverIntent.headers.test);
   const beforeNativeEvent=eventProbe.count;Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});compare(eventProbe.count,beforeNativeEvent+1);verify(view.flags.left);
   NacreHoverIntent.setHeaderHover("test","lip",true);
   view.flags.launcher=true;
@@ -244,7 +302,7 @@ TestCase {
   view.flags.launcher=false;
   view.flags.left=false;Services.NacreCompositor.overviewOpen=true;
   Services.NacreCompositor.event({type:"edge-triggered",output:"test",edge:"Left",position:[4,350]});verify(!view.flags.left);
-  Services.NacreCompositor.overviewOpen=false;Services.NacreCompositor.externalEdgeSource=false;
+  Services.NacreCompositor.overviewOpen=false;Services.NacreCompositor.edgeSourceAcknowledged=false;
   mouseMove(view,500,180);mouseMove(view,8,350);wait(400);verify(view.flags.left);
  }
 }

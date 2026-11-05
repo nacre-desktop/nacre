@@ -46,8 +46,14 @@ impl Transport for Native {
     ) -> std::result::Result<Value, crate::compositor::niri_state::Error> {
         let timeout = Duration::from_secs_f64(timeout);
         let outputs = self.connection.response("Outputs", timeout, max_bytes)?;
-        let rows = self.connection.response("Workspaces", timeout, max_bytes)?;
         let windows = self.connection.response("Windows", timeout, max_bytes)?;
+        let windows = windows
+            .as_array()
+            .ok_or_else(|| crate::compositor::niri_state::Error {
+                kind: "ValueError",
+                message: "Malformed native window state".into(),
+            })?;
+        let rows = self.connection.response("Workspaces", timeout, max_bytes)?;
         let bad = || crate::compositor::niri_state::Error {
             kind: "ValueError",
             message: "Malformed native monitor/workspace state".into(),
@@ -56,7 +62,11 @@ impl Transport for Native {
         let mut workspaces = Vec::new();
         for row in rows.as_array().ok_or_else(bad)? {
             let id = row["id"].as_u64().ok_or_else(bad)?;
-            workspaces.push(json!({"id":format!("niri-workspace:{id}"),"index":row["idx"],"name":row["name"],"outputId":row["output"],"active":row["is_active"],"focused":row["is_focused"],"activeWindowId":row["active_window_id"].as_u64().map(|id|format!("niri-window:{id}"))}));
+            let window_count = windows
+                .iter()
+                .filter(|window| window["workspace_id"].as_u64() == Some(id))
+                .count();
+            workspaces.push(json!({"id":format!("niri-workspace:{id}"),"index":row["idx"],"name":row["name"],"outputId":row["output"],"active":row["is_active"],"focused":row["is_focused"],"windowCount":window_count,"activeWindowId":row["active_window_id"].as_u64().map(|id|format!("niri-window:{id}"))}));
         }
         let selected = workspaces
             .iter()
@@ -225,6 +235,61 @@ pub fn plan(snapshot: &Value, count: usize, mode: Mode, direction: i32) -> Resul
         send,
     })
 }
+pub fn rotation_eligible(snapshot: &Value, count: usize) -> bool {
+    let Ok(layout) = layout(snapshot, count) else {
+        return false;
+    };
+    let Some(rows) = snapshot["workspaces"].as_array() else {
+        return false;
+    };
+    let outputs: BTreeSet<_> = layout.outputs.iter().map(String::as_str).collect();
+    rows.iter().all(|row| {
+        let output = row["outputId"].as_str().unwrap_or("");
+        let name = row["name"].as_str().unwrap_or("");
+        if output.is_empty() {
+            return true;
+        }
+        if !outputs.contains(output) {
+            return name.is_empty()
+                && row["windowCount"]
+                    .as_u64()
+                    .is_some_and(|window_count| window_count == 0);
+        }
+        if name.is_empty() {
+            return row["windowCount"]
+                .as_u64()
+                .is_some_and(|window_count| window_count == 0);
+        }
+        id(&row["id"])
+            .ok()
+            .is_some_and(|workspace| layout.names.contains_key(&workspace))
+    })
+}
+fn native_monitor_action(
+    mode: Mode,
+    direction: i32,
+    capabilities: crate::compositor::niri_transport::NacreCapabilities,
+    rotation_is_eligible: bool,
+) -> Option<&'static str> {
+    if !capabilities.monitor_workspace_actions {
+        return None;
+    }
+    match mode {
+        Mode::Swap => Some(if direction > 0 {
+            "SwapWorkspaceWithMonitorNext"
+        } else {
+            "SwapWorkspaceWithMonitorPrevious"
+        }),
+        Mode::Rotate if capabilities.workspace_collections && rotation_is_eligible => {
+            Some(if direction > 0 {
+                "RotateWorkspaceSetsNext"
+            } else {
+                "RotateWorkspaceSetsPrevious"
+            })
+        }
+        _ => None,
+    }
+}
 pub(crate) fn action(io: &mut impl Transport, name: &str, params: Value) -> Result<()> {
     let response = io.request(json!({"Action":{name:params}}), TIMEOUT, MAX_BYTES)?;
     if response != "Handled" {
@@ -304,6 +369,14 @@ fn assign(io: &mut impl Transport, wanted: &Layout) -> Result<()> {
 pub fn apply(
     io: &mut impl Transport,
     plan: &Plan,
+    persist: impl FnMut(&Layout) -> Result<()>,
+) -> Result<()> {
+    apply_with_native_action(io, plan, None, persist)
+}
+pub fn apply_with_native_action(
+    io: &mut impl Transport,
+    plan: &Plan,
+    native_action: Option<&str>,
     mut persist: impl FnMut(&Layout) -> Result<()>,
 ) -> Result<()> {
     if let Some(target) = plan.send {
@@ -312,6 +385,74 @@ pub fn apply(
             "MoveWindowToWorkspace",
             json!({"window_id":null,"reference":{"Id":target},"focus":false}),
         );
+    }
+    if let Some(name) = native_action {
+        if !matches!(
+            name,
+            "SwapWorkspaceWithMonitorNext"
+                | "SwapWorkspaceWithMonitorPrevious"
+                | "RotateWorkspaceSetsNext"
+                | "RotateWorkspaceSetsPrevious"
+        ) {
+            return Err("Invalid native workspace exchange action".into());
+        }
+        let inverse = match name {
+            "SwapWorkspaceWithMonitorNext" | "SwapWorkspaceWithMonitorPrevious" => name,
+            "RotateWorkspaceSetsNext" => "RotateWorkspaceSetsPrevious",
+            "RotateWorkspaceSetsPrevious" => "RotateWorkspaceSetsNext",
+            _ => unreachable!(),
+        };
+        let request = action(io, name, json!({}));
+        let observed = snapshot(io)
+            .and_then(|state| layout(&state, plan.before.slots[&plan.before.focused].len()));
+        match observed {
+            Ok(observed)
+                if observed.slots == plan.after.slots
+                    && observed.active == plan.after.active
+                    && observed.focused == plan.after.focused
+                    && observed.outputs == plan.after.outputs => {}
+            Ok(observed)
+                if observed.slots == plan.before.slots
+                    && observed.active == plan.before.active
+                    && observed.focused == plan.before.focused
+                    && observed.outputs == plan.before.outputs =>
+            {
+                return Err(request
+                    .err()
+                    .unwrap_or_else(|| "Native workspace exchange made no change".into()));
+            }
+            Ok(_) | Err(_) => {
+                return Err(request.err().unwrap_or_else(|| {
+                    "Native workspace exchange produced an unexpected layout".into()
+                }));
+            }
+        }
+        if let Err(error) = persist(&plan.after) {
+            let recovered = action(io, inverse, json!({})).and_then(|_| {
+                let current = snapshot(io)?;
+                let current = layout(&current, plan.before.slots[&plan.before.focused].len())?;
+                if current.slots == plan.before.slots
+                    && current.active == plan.before.active
+                    && current.focused == plan.before.focused
+                    && current.outputs == plan.before.outputs
+                {
+                    Ok(())
+                } else {
+                    Err(
+                        "Native workspace exchange rollback did not restore the original layout"
+                            .into(),
+                    )
+                }
+            });
+            return match recovered {
+                Ok(()) => Err(format!("Workspace exchange cancelled and restored: {error}").into()),
+                Err(recovery) => Err(format!(
+                    "Workspace exchange failed: {error}; recovery could not complete: {recovery}"
+                )
+                .into()),
+            };
+        }
+        return Ok(());
     }
     let result = assign(io, &plan.after).and_then(|_| persist(&plan.after));
     if let Err(error) = result {
@@ -539,7 +680,20 @@ pub fn run(args: &[String]) -> Result<i32> {
     if selected.send.is_none() {
         preferences.check()?;
     }
-    apply(&mut io, &selected, |wanted| preferences.save(wanted))?;
+    let native_action = if matches!(mode, Mode::Swap | Mode::Rotate) {
+        let capabilities = io.connection.nacre_capabilities(Duration::from_millis(500));
+        native_monitor_action(
+            mode,
+            direction,
+            capabilities,
+            mode != Mode::Rotate || rotation_eligible(&current, count),
+        )
+    } else {
+        None
+    };
+    apply_with_native_action(&mut io, &selected, native_action, |wanted| {
+        preferences.save(wanted)
+    })?;
     println!(
         "{}",
         json!({"ok":true,"source":selected.before.focused,"outputs":selected.before.outputs})
@@ -603,6 +757,125 @@ mod tests {
                 .next()
                 .unwrap();
             if name == "MoveWindowToWorkspace" {
+                return;
+            }
+            if ["RotateWorkspaceSetsNext", "RotateWorkspaceSetsPrevious"].contains(&name.as_str()) {
+                let mut monitors = self.state["monitors"].as_array().unwrap().clone();
+                monitors.sort_by(|a, b| {
+                    a["x"]
+                        .as_i64()
+                        .cmp(&b["x"].as_i64())
+                        .then(a["y"].as_i64().cmp(&b["y"].as_i64()))
+                        .then(a["name"].as_str().cmp(&b["name"].as_str()))
+                });
+                let outputs: Vec<_> = monitors
+                    .iter()
+                    .map(|row| row["name"].as_str().unwrap().to_owned())
+                    .collect();
+                let direction = if name.ends_with("Next") { 1i32 } else { -1i32 };
+                let previous: Vec<_> = self.state["workspaces"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter_map(|row| {
+                        row["outputId"]
+                            .as_str()
+                            .map(|output| (id(&row["id"]).unwrap(), output.to_owned()))
+                    })
+                    .collect();
+                for (workspace, output) in previous {
+                    let at = outputs
+                        .iter()
+                        .position(|candidate| candidate == &output)
+                        .unwrap();
+                    let target = outputs
+                        [(at as i32 + direction).rem_euclid(outputs.len() as i32) as usize]
+                        .clone();
+                    let row = self.state["workspaces"]
+                        .as_array_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .find(|row| id(&row["id"]).ok() == Some(workspace))
+                        .unwrap();
+                    row["outputId"] = json!(target);
+                }
+                self.selected();
+                return;
+            }
+            if [
+                "SwapWorkspaceWithMonitorNext",
+                "SwapWorkspaceWithMonitorPrevious",
+            ]
+            .contains(&name.as_str())
+            {
+                let focused = self.state["focusedMonitor"]["name"]
+                    .as_str()
+                    .unwrap()
+                    .to_owned();
+                let mut monitors: Vec<_> = self.state["monitors"].as_array().unwrap().clone();
+                monitors.sort_by(|a, b| {
+                    a["x"]
+                        .as_i64()
+                        .cmp(&b["x"].as_i64())
+                        .then(a["y"].as_i64().cmp(&b["y"].as_i64()))
+                        .then(a["name"].as_str().cmp(&b["name"].as_str()))
+                });
+                let outputs: Vec<_> = monitors
+                    .iter()
+                    .map(|row| row["name"].as_str().unwrap().to_owned())
+                    .collect();
+                let at = outputs
+                    .iter()
+                    .position(|output| output == &focused)
+                    .unwrap();
+                let direction = if name.ends_with("Next") { 1i32 } else { -1i32 };
+                let target = outputs
+                    [(at as i32 + direction).rem_euclid(outputs.len() as i32) as usize]
+                    .clone();
+                let active = self.state["workspaces"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .filter(|row| {
+                        row["active"] == true
+                            && (row["outputId"] == focused || row["outputId"] == target)
+                    })
+                    .map(|row| {
+                        (
+                            id(&row["id"]).unwrap(),
+                            row["outputId"].as_str().unwrap().to_owned(),
+                            row["index"].clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                let source_index = active
+                    .iter()
+                    .find(|(_, output, _)| output == &focused)
+                    .unwrap()
+                    .2
+                    .clone();
+                let target_index = active
+                    .iter()
+                    .find(|(_, output, _)| output == &target)
+                    .unwrap()
+                    .2
+                    .clone();
+                for (workspace, output, _) in active {
+                    let (new_output, new_index) = if output == focused {
+                        (target.clone(), target_index.clone())
+                    } else {
+                        (focused.clone(), source_index.clone())
+                    };
+                    let row = self.state["workspaces"]
+                        .as_array_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .find(|row| id(&row["id"]).ok() == Some(workspace))
+                        .unwrap();
+                    row["outputId"] = json!(new_output);
+                    row["index"] = new_index;
+                }
+                self.selected();
                 return;
             }
             let key = args["reference"]["Id"].as_u64().unwrap();
@@ -729,6 +1002,65 @@ mod tests {
         Ok(())
     }
     #[test]
+    fn native_swap_uses_one_action_and_reverts_if_ownership_persistence_fails() -> Result<()> {
+        let mut io = Fixture::new(3);
+        for row in io.state["workspaces"].as_array_mut().unwrap() {
+            if row["outputId"] == "screen-0" {
+                row["active"] = json!(row["index"] == 3);
+            }
+            if row["outputId"] == "screen-1" {
+                row["active"] = json!(row["index"] == 5);
+            }
+        }
+        io.selected();
+        let selected = plan(&io.state, 6, Mode::Swap, 1)?;
+        let mut persisted = false;
+        apply_with_native_action(
+            &mut io,
+            &selected,
+            Some("SwapWorkspaceWithMonitorNext"),
+            |wanted| {
+                persisted = true;
+                assert_eq!(wanted.slots, selected.after.slots);
+                Ok(())
+            },
+        )?;
+        assert!(persisted);
+        assert_eq!(io.calls.len(), 1);
+        assert_eq!(
+            io.calls[0],
+            json!({"Action":{"SwapWorkspaceWithMonitorNext":{}}})
+        );
+        assert_eq!(layout(&io.state, 6)?.slots, selected.after.slots);
+
+        let mut io = Fixture::new(3);
+        for row in io.state["workspaces"].as_array_mut().unwrap() {
+            if row["outputId"] == "screen-0" {
+                row["active"] = json!(row["index"] == 3);
+            }
+            if row["outputId"] == "screen-1" {
+                row["active"] = json!(row["index"] == 5);
+            }
+        }
+        io.selected();
+        let original = layout(&io.state, 6)?;
+        let selected = plan(&io.state, 6, Mode::Swap, 1)?;
+        assert!(apply_with_native_action(
+            &mut io,
+            &selected,
+            Some("SwapWorkspaceWithMonitorNext"),
+            |_| Err("injected preference write failure".into()),
+        )
+        .is_err());
+        assert_eq!(io.calls.len(), 2);
+        assert_eq!(
+            io.calls[1],
+            json!({"Action":{"SwapWorkspaceWithMonitorNext":{}}})
+        );
+        assert_eq!(layout(&io.state, 6)?.slots, original.slots);
+        Ok(())
+    }
+    #[test]
     fn rotates_all_sets_in_layout_order_with_a_reverse_operation() -> Result<()> {
         let mut io = Fixture::new(3);
         let original = layout(&io.state, 6)?;
@@ -743,6 +1075,58 @@ mod tests {
         assert_eq!(after.slots, original.slots);
         assert_eq!(after.active, original.active);
         assert_eq!(after.focused, original.focused);
+        Ok(())
+    }
+    #[test]
+    fn native_rotation_requires_exact_named_sets_and_only_moves_empty_spares() -> Result<()> {
+        let mut io = Fixture::new(3);
+        assert!(rotation_eligible(&io.state, 6));
+        let selected = plan(&io.state, 6, Mode::Rotate, 1)?;
+        apply_with_native_action(&mut io, &selected, Some("RotateWorkspaceSetsNext"), |_| {
+            Ok(())
+        })?;
+        assert_eq!(io.calls.len(), 1);
+        assert_eq!(
+            io.calls[0],
+            json!({"Action":{"RotateWorkspaceSetsNext":{}}})
+        );
+        assert_eq!(layout(&io.state, 6)?.slots, selected.after.slots);
+
+        let mut hidden = Fixture::new(3);
+        hidden.state["workspaces"].as_array_mut().unwrap().push(
+            json!({"id":"niri-workspace:998","index":1,"name":"hidden desk","outputId":null,"active":false,"windowCount":2}),
+        );
+        assert!(rotation_eligible(&hidden.state, 6));
+        let selected = plan(&hidden.state, 6, Mode::Rotate, 1)?;
+        apply_with_native_action(
+            &mut hidden,
+            &selected,
+            Some("RotateWorkspaceSetsNext"),
+            |_| Ok(()),
+        )?;
+        let hidden_desk = hidden.state["workspaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|row| row["id"] == "niri-workspace:998")
+            .unwrap();
+        assert_eq!(hidden_desk["outputId"], Value::Null);
+        assert_eq!(hidden_desk["name"], "hidden desk");
+
+        let mut populated_spare = Fixture::new(2);
+        populated_spare.state["workspaces"].as_array_mut().unwrap().push(
+            json!({"id":"niri-workspace:999","index":7,"name":"","outputId":"screen-0","active":false,"windowCount":1}),
+        );
+        assert!(!rotation_eligible(&populated_spare.state, 6));
+        let mut unknown_spare = Fixture::new(2);
+        unknown_spare.state["workspaces"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({
+                "id":"niri-workspace:997","index":7,"name":"",
+                "outputId":"screen-0","active":false
+            }));
+        assert!(!rotation_eligible(&unknown_spare.state, 6));
         Ok(())
     }
     #[test]

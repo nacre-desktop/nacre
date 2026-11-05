@@ -12,6 +12,209 @@ fn root() -> PathBuf {
 }
 
 #[test]
+fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_scales() -> Result<()>
+{
+    for scale in [1., 1.5] {
+        let mut topic = serde_json::json!({
+            "overviewOpen":true,
+            "overviewHoveredWindowId":"niri-window:window-a",
+            "windows":{
+                "niri-window:window-focused":{"id":"niri-window:window-focused","title":"Focused title","appId":"nacre-ai","focused":true,"workspaceId":"desk-a"},
+                "niri-window:window-a":{"id":"niri-window:window-a","title":"Tile A","appId":"nacre-control","focused":false,"workspaceId":"desk-b"},
+                "niri-window:window-b":{"id":"niri-window:window-b","title":"Tile B","appId":"nacre-brain","focused":false,"workspaceId":"desk-c"}
+            }
+        });
+        let mut values = super::initial_models()?;
+        values.extend(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ));
+        values.insert(
+            "bead.focused_title".into(),
+            Value::Text("Focused title".into()),
+        );
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join("palette.json"),
+            values,
+            Config {
+                width: 1920,
+                height: 70,
+                scale,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        let band = |h: &Harness| {
+            h.session
+                .view_nodes()
+                .iter()
+                .find(|node| node.id.ends_with("title-band"))
+                .map(|node| bead::ui::rect(&node.draw))
+        };
+        let title_is = |h: &Harness, text: &str| {
+            h.scene().primitives.iter().any(|primitive| {
+                matches!(primitive,
+            bead::render::Primitive::Text { text: actual, .. } if actual == text)
+            })
+        };
+        let before_band = band(&h).ok_or("bar title band missing")?;
+        assert!(title_is(&h, "Tile A"));
+        assert!(title_is(&h, "tune"));
+        let before_pixels = h.render()?.pixels;
+
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:window-b");
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        assert!(title_is(&h, "Tile B"));
+        assert!(title_is(&h, "psychology"));
+        assert_ne!(
+            h.render()?.pixels,
+            before_pixels,
+            "hovered title/icon must change painted pixels"
+        );
+        let long_title =
+            "A very long hovered window title that must remain within the established title width";
+        topic["windows"]["niri-window:window-b"]["title"] = serde_json::json!(long_title);
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        let (shown, title_rect) = h
+            .scene()
+            .primitives
+            .iter()
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Text { text, rect, .. }
+                    if text.starts_with("A very long hovered") =>
+                {
+                    Some((text.clone(), *rect))
+                }
+                _ => None,
+            })
+            .ok_or("long hovered title primitive missing")?;
+        assert!(
+            title_rect.w <= 550.,
+            "hovered title exceeded the configured max width"
+        );
+        assert_ne!(shown, long_title, "long hovered title should be ellipsized");
+        assert!(
+            shown.ends_with('…'),
+            "long hovered title should end with an ellipsis: {shown}"
+        );
+        assert_eq!(
+            band(&h).ok_or("bar title band missing after long title")?,
+            before_band
+        );
+
+        topic["overviewHoveredWindowId"] = serde_json::Value::Null;
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        assert!(
+            title_is(&h, "Focused title"),
+            "empty overview space falls back to focused title"
+        );
+        assert!(title_is(&h, "neurology"));
+
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:window-b");
+        topic["windows"]
+            .as_object_mut()
+            .unwrap()
+            .remove("niri-window:window-b");
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        assert!(
+            title_is(&h, "Focused title"),
+            "closing hovered window falls back to focus"
+        );
+
+        topic["overviewHoveredWindowId"] = serde_json::Value::Null;
+        topic["windows"]["niri-window:window-focused"]["title"] =
+            serde_json::json!("Renamed focus");
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        h.update(BTreeMap::from([(
+            "bead.focused_title".into(),
+            Value::Text("Renamed focus".into()),
+        )]))?;
+        settle_harness_animations(&mut h)?;
+        assert!(title_is(&h, "Renamed focus"));
+
+        topic["overviewOpen"] = serde_json::Value::Bool(false);
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        assert!(
+            title_is(&h, "Renamed focus"),
+            "leaving overview restores the focused title"
+        );
+        assert_eq!(
+            band(&h).ok_or("bar title band missing after hover")?,
+            before_band
+        );
+        let title_rect = h
+            .scene()
+            .primitives
+            .iter()
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Text { text, rect, .. } if text == "Renamed focus" => {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .ok_or("focused title primitive missing")?;
+        assert!(
+            title_rect.w <= 550.,
+            "focused title exceeded the configured max width"
+        );
+
+        topic["overviewOpen"] = serde_json::Value::Bool(true);
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:window-a");
+        topic["windows"]["niri-window:window-a"]["title"] = serde_json::json!("");
+        topic["windows"]["niri-window:window-a"]["appId"] = serde_json::json!("");
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        settle_harness_animations(&mut h)?;
+        assert!(
+            title_is(&h, "Active window"),
+            "a titleless existing window must not become Desktop"
+        );
+        topic["windows"] = serde_json::json!({});
+        topic["overviewHoveredWindowId"] = serde_json::Value::Null;
+        h.update(crate::reload::overview_title_values(
+            &topic,
+            &crate::workspace_rows::Rows::default(),
+        ))?;
+        h.update(BTreeMap::from([(
+            "bead.focused_title".into(),
+            Value::Text(String::new()),
+        )]))?;
+        settle_harness_animations(&mut h)?;
+        assert!(
+            title_is(&h, "Desktop"),
+            "Desktop is reserved for no-window state"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn idle_bar_minute_model_changes_damage_the_real_clock_widget() -> Result<()> {
     use bead::render::{damage::FrameDamage, tree::TreeCache};
     for scale in [1., 1.5] {

@@ -1205,7 +1205,7 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
     }
     let mut first = nacre_helper::daemon::niri_events::Source::connect(&environment, &source_path)?
         .ok_or("Missing event proxy")?;
-    let backend = nacre_helper::compositor::niri::Backend::new(
+    let mut backend = nacre_helper::compositor::niri::Backend::new(
         nacre_helper::paths::Paths::new(home.path()),
         environment.clone(),
     );
