@@ -10,6 +10,7 @@ local px=function(pt) return pt*4/3 end
 local BODY,CAPTION=px(T.text.body),px(T.text.caption)
 local H=get("chat.height")
 local section=get("chat.section")
+local launcher=require("bead.widgets.kit.virtual-list")
 local E,BTN,INNER,TABS,TOP=get("chat.edge"),get("chat.button"),get("chat.inner"),get("chat.tabs"),get("chat.top")
 local W=INNER+2*E
 local ICON=px(T.icons.medium)
@@ -30,17 +31,11 @@ local PIN_W=T.spacing.huge+ICON+T.spacing.xs+T.spacing.hairline/2
 if not get("view.detached") then
     add(button("pin",W-E-PIN_W,E,PIN_W,BTN,"","push_pin",ui.action("chat.do","pin"),get("chat.pinned"),BODY,ui.tr("bead.panel.chat-pin")))
 end
-local tabs={}
-for _,item in {{"chat",ui.tr("bead.panel.chat-tab-chat"),"forum"},{"chats",ui.tr("bead.panel.chat-tab-chats"),"history"},
-    {"brain",ui.tr("bead.panel.chat-tab-brain"),"neurology"},{"settings","","settings"}} do
-    table.insert(tabs,button("tab-"..item[1],nil,nil,nil,BTN,item[2],item[3],item[1]~="brain" and ui.action("chat.do","section:"..item[1]) or nil,section==item[1],BODY,item[2]~="" and item[2] or ui.tr("bead.panel.chat-tab-settings")))
-end
-add(ui.Row{id="tabs",position="absolute",left=E,top=TABS,width=INNER,height=BTN,gap=T.spacing.xs+T.spacing.hairline,table.unpack(tabs)})
-
-if section=="chat" then
+if section=="chat" and get("launcher.quick_chat") then
     add(ui.Row{id="tools",position="absolute",left=E,top=TOP,width=INNER,height=BTN,gap=T.spacing.sm,
         button("new",nil,nil,nil,BTN,ui.tr("bead.panel.chat-new"),"add_comment",get("chat.can_new") and ui.action("chat.do","new") or nil,false,BODY),
-        button("workspace",nil,nil,nil,BTN,ui.tr("bead.panel.chat-workspace"),"open_in_new",get("chat.can_workspace") and ui.action("chat.do","workspace") or nil,false,BODY)})
+        button("workspace",nil,nil,nil,BTN,ui.tr("bead.panel.chat-workspace"),"open_in_new",get("chat.can_workspace") and ui.action("chat.do","workspace") or nil,false,BODY),
+        button("launcher",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-back"),"arrow_back",ui.action("chat.do","launcher:back"),false,CAPTION)})
     add(ui.Text{id="heading",position="absolute",left=E,top=TOP+BTN+T.spacing.sm-1,width=INNER,height=CAPTION*1.5,text=ui.bind("chat.heading"),
         font_size=CAPTION,color="onSurfaceVariant"})
     local TT,TH=get("chat.transcript_top"),get("chat.transcript_height")
@@ -90,33 +85,66 @@ if section=="chat" then
     if busy then table.insert(actions,button("stop",nil,nil,nil,BTN,"","stop",get("chat.can_stop") and ui.action("chat.do","stop") or nil,false,CAPTION,ui.tr("bead.panel.chat-stop"))) end
     table.insert(actions,button("latest",nil,nil,nil,BTN,ui.tr("bead.panel.chat-latest"),"arrow_downward",ui.action("chat.do","latest"),false,CAPTION))
     add(ui.Row{id="actions",position="absolute",left=E,top=AT,width=INNER,height=BTN,gap=T.spacing.xs+T.spacing.hairline,table.unpack(actions)})
-elseif section=="chats" then
-    add(ui.Text{id="recent",position="absolute",left=E,top=TOP+T.spacing.xs+2,width=INNER*.7,height=24,text=ui.tr("bead.panel.chat-recent"),font_size=BODY,color="primary"})
-    add(button("refresh",E+INNER*.73,TOP,INNER*.27,BTN,ui.tr("bead.panel.chat-refresh"),"refresh",ui.action("chat.do","refresh"),false,CAPTION+1))
-    local LT=TOP+BTN+T.spacing.md+T.spacing.xs+2
-    local note=get("chat.saved_state")
-    if note~="" then
-        add(ui.Text{id="note",position="absolute",left=E,top=LT,width=INNER,height=3*T.spacing.xxl,text=note,font_size=T.text.title*4/3-4,color="onSurfaceVariant"})
-    end
-    local RH=BTN+T.spacing.xxl-5
-    add(require("bead.widgets.kit.virtual-list"){id="saved",scroll=ui.bind("chat.qscroll"),position="absolute",left=E,top=LT,
-        width=INNER,height=H-LT-E,model=ui.bind("chat.saved"),key="id",row_height=RH,gap=T.spacing.xs+2,repeat_id="rows",
-        render=function(item)
-            return kit.Button{id="row",width=INNER,height=RH,padding=T.spacing.sm+1,radius=T.spacing.md,fill="surfaceContainer",aria_label=item.t,
-                on_activate=ui.action("chat.do",item.a),
-                ui.Column{id="saved-text",width=INNER-2*T.spacing.sm-2,height=RH-2*T.spacing.sm-2,gap=0,
-                    ui.Text{id="saved-title",text=item.t,width=INNER-2*T.spacing.sm-2,height=22,font_size=BODY-1,color="onSurface"},
-                    ui.Text{id="saved-detail",text=item.d,width=INNER-2*T.spacing.sm-2,height=16,font_size=CAPTION-1,color="onSurfaceVariant"}}}
-        end})
 else
-    local provider=get("chat.provider")
-    add(ui.Column{id="preferences",position="absolute",left=E,top=TOP,width=INNER,gap=T.spacing.md,
-        ui.Text{id="default",text=ui.tr("bead.panel.chat-default-assistant"),width=INNER,height=BODY*1.4,font_size=BODY,color="primary"},
-        ui.Row{id="providers",width=INNER,height=BTN,gap=T.spacing.sm,
-            button("codex",nil,nil,nil,BTN,ui.tr("bead.panel.chat-codex"),"",ui.action("chat.do","provider:codex"),provider=="codex",BODY),
-            button("claude",nil,nil,nil,BTN,ui.tr("bead.panel.chat-claude"),"",ui.action("chat.do","provider:claude"),provider=="claude",BODY)},
-        ui.Text{id="hint",text=ui.tr("bead.panel.chat-default-hint"),width=INNER,height=3*T.spacing.md+T.spacing.xs,font_size=CAPTION+T.spacing.xs/3,color="onSurfaceVariant"},
-        button("new",nil,nil,nil,BTN,ui.tr("bead.panel.chat-new"),"add_comment",get("chat.can_new") and ui.action("chat.do","new") or nil,false,BODY)})
+    local LTOP=E+T.icons.hero+T.spacing.sm
+    local LT=LTOP+BTN+T.spacing.xs
+    local PROJECT_TOP=LT+BTN+T.spacing.xs
+    local ROW=BODY+2*CAPTION+T.spacing.md
+    local search_top=PROJECT_TOP+BTN+T.spacing.xs
+    local recent_top=search_top+BTN+T.spacing.sm
+    local list_top=recent_top+CAPTION+T.spacing.xs
+    local footer_h=BTN+T.spacing.xs
+    local list_bottom=H-E-footer_h-T.spacing.md
+    local list_h=math.max(72,list_bottom-list_top)
+    local project=get("launcher.project")
+    local provider=get("launcher.provider")
+    add(ui.Row{id="launcher-actions",position="absolute",left=E,top=LTOP,width=INNER,height=BTN,gap=T.spacing.xs,
+        button("new-chat",nil,nil,nil,BTN,ui.tr("bead.panel.chat-new"),"add_comment",get("launcher.can_new") and ui.action("chat.do","launcher:new") or nil,true,BODY),
+        button("resume",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-resume"),"history",ui.action("chat.do","launcher:latest"),false,BODY)})
+    add(ui.Row{id="provider",position="absolute",left=E,top=LT,width=INNER,height=BTN,gap=T.spacing.xs,
+        button("codex",nil,nil,nil,BTN,ui.tr("bead.panel.chat-codex"),"",ui.action("chat.do","launcher:provider:codex"),provider=="codex",CAPTION),
+        button("claude",nil,nil,nil,BTN,ui.tr("bead.panel.chat-claude"),"",ui.action("chat.do","launcher:provider:claude"),provider=="claude",CAPTION)})
+    add(ui.Row{id="project-picker",position="absolute",left=E,top=PROJECT_TOP,width=INNER,height=BTN,gap=T.spacing.xs,align="center",
+        ui.Text{id="project-label",text=ui.tr("bead.panel.launcher-project"),width=CAPTION*4,height=BTN,font_size=CAPTION,color="onSurfaceVariant"},
+        ui.Repeat{id="projects",model=ui.bind("launcher.projects"),key="id",render=function(item)
+            return kit.PillButton{id="project",label=item.label,compact=true,selected=project==item.id,
+                on_activate=ui.action("chat.do","launcher:project:"..item.id),aria_label=item.label}
+        end})})
+    add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
+        text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,
+        radius=T.radii.small,font_size=BODY,fill="surfaceContainerHigh",focus_ring=true})
+    add(ui.Text{id="recent",position="absolute",left=E,top=recent_top,width=INNER*.7,height=CAPTION+T.spacing.xs,
+        text=ui.tr("bead.panel.launcher-recent"),font_size=CAPTION,color="onSurfaceVariant"})
+    add(button("refresh",E+INNER-T.spacing.huge-T.spacing.xl, recent_top-T.spacing.xs, T.spacing.huge+T.spacing.xl,BTN,
+        ui.tr("bead.panel.chat-refresh"),"refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION))
+    add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=list_top,
+        width=INNER,height=list_h,gap=T.spacing.xs,row_height=ROW,model=ui.bind("launcher.chats"),key="key",
+        render=function(item)
+            local meta_width=INNER-2*T.spacing.sm
+            local active=item.state=="running"
+            return kit.Button{id="chat-row",width=INNER,height=ROW,padding=T.spacing.xs+1,radius=T.radii.small,
+                fill="surfaceContainer",selected=item.key==get("launcher.selected"),aria_label=item.title,
+                on_activate=get("launcher.can_open") and ui.action("chat.do","launcher:open:"..item.key) or nil,
+                ui.Box{position="absolute",left=0,top=0,width=T.spacing.hairline+1,height=ROW,
+                    radius=T.spacing.hairline,fill="primary",visible=item.key==get("launcher.selected")},
+                ui.Column{id="chat-detail",position="absolute",left=T.spacing.sm+T.spacing.xs,top=T.spacing.xs,
+                    width=meta_width,height=ROW-2*T.spacing.xs,gap=0,
+                    ui.Text{id="title",text=item.title,width=meta_width,height=BODY+2,font_size=BODY-1,color="onSurface"},
+                    ui.Text{id="project-provider",text=item.project.."  /  "..item.provider,width=meta_width,height=CAPTION+1,font_size=CAPTION,color="onSurfaceVariant"},
+                    ui.Text{id="activity",text=(active and ui.tr("bead.panel.launcher-running") or ui.tr("bead.panel.launcher-idle")).."  "..item.lastActivityLabel,
+                        width=meta_width,height=CAPTION+1,font_size=CAPTION-1,color=active and "primary" or "onSurfaceVariant"}}}
+        end})
+    local warning=get("launcher.warning")
+    local empty=get("launcher.empty_state")
+    if warning~="" or empty~="" then
+        add(ui.Text{id="launcher-message",position="absolute",left=E,top=list_top+list_h/2-CAPTION,width=INNER,height=2*CAPTION,
+            text=warning~="" and warning or empty,font_size=CAPTION,text_align="center",color=warning~="" and "error" or "onSurfaceVariant"})
+    end
+    add(ui.Row{id="secondary",position="absolute",left=E,top=H-E-footer_h,width=INNER,height=BTN,gap=T.spacing.xs,
+        button("brain",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-brain"),"neurology",ui.action("chat.do","launcher:brain"),false,CAPTION),
+        button("settings",nil,nil,nil,BTN,ui.tr("bead.panel.chat-tab-settings"),"settings",ui.action("chat.do","launcher:settings"),false,CAPTION),
+        button("projects",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-projects"),"folder_open",ui.action("chat.do","launcher:projects"),false,CAPTION),
+        button("quick-chat",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)))
 end
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=kit.motion.text,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
     width=W,height=H,padding=0,radius=T.radii.medium+2,fill="surface",table.unpack(kids)}
