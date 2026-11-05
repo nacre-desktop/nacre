@@ -3,6 +3,10 @@ import QtQuick.Window
 
 Window {
     id: root
+    property real implicitWidth: 0
+    property real implicitHeight: 0
+    width: implicitWidth
+    height: implicitHeight
     signal windowConnected
     signal closed
     property bool grabFocus: false
