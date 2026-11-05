@@ -3,7 +3,7 @@
 //! detached (at rest and under the pointer), at scale 1 and 1.5.
 use super::*;
 use crate::{
-    chat::tests::{offline, root, serial, state, topic},
+    chat::tests::{offline, root, serial},
     placement::{Attachment, Chrome},
 };
 use bead::{
@@ -22,18 +22,26 @@ fn chat_scene(scale: f32) -> Result<Scene> {
     chat_scene_state(scale, false)
 }
 fn chat_scene_state(scale: f32, detached: bool) -> Result<Scene> {
-    let (_source, chat) = offline(topic(
-        &[
-            ("u1", "user", "Why does the release build fail on CI?"),
-            (
-                "a1",
-                "assistant",
-                "The linker runs out of memory because the job builds with too many parallel jobs. Limit it to two.",
-            ),
-        ],
-        state(false, "", None),
-    ));
+    let (_source, chat) = offline(serde_json::json!({"available":true,"channels":{}}));
     let mut out = chat.project(&Stores::default());
+    use bead::core::Value;
+    out.insert("launcher.warning".into(), Value::Text(String::new()));
+    out.insert("launcher.empty_state".into(), Value::Text(String::new()));
+    out.insert("launcher.provider".into(), Value::Text("codex".into()));
+    out.insert("launcher.project".into(), Value::Text("demo".into()));
+    out.insert(
+        "launcher.projects".into(),
+        Value::list(vec![serde_json::json!({"id":"demo","label":"Nacre"})]),
+    );
+    out.insert("launcher.chats".into(), Value::list(vec![serde_json::json!({"key":"demo","title":"Fix the build","project":"Nacre","provider":"Codex","state":"idle","lastActivityLabel":"2 hr ago"})]));
+    out.insert("launcher.selected".into(), Value::Text("demo".into()));
+    for key in [
+        "launcher.can_new",
+        "launcher.can_latest",
+        "launcher.can_open",
+    ] {
+        out.insert(key.into(), Value::Bool(true));
+    }
     out.insert("view.detached".into(), bead::core::Value::Bool(detached));
     let h = crate::chat::tests::harness(out, scale)?;
     Ok(h.scene().clone())
