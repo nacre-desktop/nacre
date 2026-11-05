@@ -531,11 +531,15 @@ static SUMMARY_CACHE: LazyLock<Mutex<Option<(String, Value)>>> = LazyLock::new(|
 fn summary() -> Result<Value> {
     let root = vault()?;
     let current = vault_metadata_fingerprint(&root)?;
-    if let Some((key, cached)) = SUMMARY_CACHE.lock().map_err(|_| "Summary cache lock failed")?.as_ref() {
+    if let Some((key, cached)) = SUMMARY_CACHE
+        .lock()
+        .map_err(|_| "Summary cache lock failed")?
+        .as_ref()
+    {
         if key == &current {
             let mut value = cached.clone();
             decorate(&mut value)?;
-            decorate_summary_connections(&mut value);
+            decorate_connections(&mut value);
             return Ok(value);
         }
     }
@@ -544,8 +548,10 @@ fn summary() -> Result<Value> {
     let (nodes, links) = summary_projection(&all);
     let mut value = json!({"nodes":nodes,"links":links,"noteCount":all.len(),"activityModel":ACTIVITY_MODEL,"discovery":{},"connections":{"state":"building"}});
     decorate(&mut value)?;
-    decorate_summary_connections(&mut value);
-    *SUMMARY_CACHE.lock().map_err(|_| "Summary cache lock failed")? = Some((current, value.clone()));
+    decorate_connections(&mut value);
+    *SUMMARY_CACHE
+        .lock()
+        .map_err(|_| "Summary cache lock failed")? = Some((current, value.clone()));
     Ok(value)
 }
 
@@ -554,17 +560,33 @@ fn summary_projection(all: &[Value]) -> (Vec<Value>, Vec<Value>) {
         let meta = &n["meta"];
         let worlds = text(&meta["worlds"]).split(',').next().unwrap_or("").trim();
         let entity = text(&meta["entity"]);
-        let label = if !worlds.is_empty() { worlds }
-            else if entity.eq_ignore_ascii_case("world") && !text(&meta["name"]).is_empty() { text(&meta["name"]) }
-            else { theme(text(&n["category"])).0 };
-        (format!("summary:{}", &digest(casefold(label))[..16]), label.to_owned(), text(&n["category"]).to_owned())
+        let label = if !worlds.is_empty() {
+            worlds
+        } else if entity.eq_ignore_ascii_case("world") && !text(&meta["name"]).is_empty() {
+            text(&meta["name"])
+        } else {
+            theme(text(&n["category"])).0
+        };
+        (
+            format!("summary:{}", &digest(casefold(label))[..16]),
+            label.to_owned(),
+            text(&n["category"]).to_owned(),
+        )
     };
     let mut counts: BTreeMap<String, (String, String, usize)> = BTreeMap::new();
-    for n in all { let (id, label, category) = group(n); let entry = counts.entry(id).or_insert((label, category, 0)); entry.2 += 1; }
+    for n in all {
+        let (id, label, category) = group(n);
+        let entry = counts.entry(id).or_insert((label, category, 0));
+        entry.2 += 1;
+    }
     let mut nodes = Vec::new();
     for (id, (actual_label, category, count)) in &counts {
         let (label, color) = theme(category);
-        let display_label = if actual_label.as_str() == label { label } else { actual_label.as_str() };
+        let display_label = if actual_label.as_str() == label {
+            label
+        } else {
+            actual_label.as_str()
+        };
         nodes.push(json!({"id":id,"label":display_label,"kind":"hub","count":count,"category":category,"color":color}));
     }
     let mut links = Vec::new();
@@ -572,29 +594,50 @@ fn summary_projection(all: &[Value]) -> (Vec<Value>, Vec<Value>) {
         let (id, _, _) = group(n);
         links.push(json!({"source":id,"target":n["id"],"kind":"group"}));
         let mut node = n.clone();
-        if let Some(object) = node.as_object_mut() { for field in ["text", "meta", "references", "featureText"] { object.remove(field); } }
+        if let Some(object) = node.as_object_mut() {
+            for field in ["text", "meta", "references", "featureText"] {
+                object.remove(field);
+            }
+        }
         nodes.push(node);
     }
     (nodes, links)
 }
 
-fn decorate_summary_connections(value: &mut Value) {
+fn decorate_connections(value: &mut Value) {
     let error = GRAPH_ERROR.lock().ok().and_then(|e| e.clone());
-    let state = if GRAPH_BUILDING.load(std::sync::atomic::Ordering::Acquire) { "building" }
-        else if error.is_some() { "error" }
-        else if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) { "ready" }
-        else { "building" };
+    let state = if GRAPH_BUILDING.load(std::sync::atomic::Ordering::Acquire) {
+        "building"
+    } else if error.is_some() {
+        "error"
+    } else if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
+        "ready"
+    } else {
+        "building"
+    };
     value["connections"] = json!({"state":state});
-    if let Some(error) = error { value["connections"]["error"] = json!(error); }
+    if let Some(error) = error {
+        value["connections"]["error"] = json!(error);
+    }
 }
 
 fn schedule_graph_build(retry: bool) {
-    if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) { return; }
-    if !retry && GRAPH_ERROR.lock().ok().and_then(|e| e.clone()).is_some() { return; }
-    if GRAPH_BUILDING.swap(true, std::sync::atomic::Ordering::AcqRel) { return; }
+    if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
+        return;
+    }
+    if !retry && GRAPH_ERROR.lock().ok().and_then(|e| e.clone()).is_some() {
+        return;
+    }
+    if GRAPH_BUILDING.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        return;
+    }
     *GRAPH_ERROR.lock().unwrap_or_else(|e| e.into_inner()) = None;
-    let revision = vault().and_then(|root| vault_metadata_fingerprint(&root)).ok();
-    *GRAPH_BUILD_REVISION.lock().unwrap_or_else(|e| e.into_inner()) = revision;
+    let revision = vault()
+        .and_then(|root| vault_metadata_fingerprint(&root))
+        .ok();
+    *GRAPH_BUILD_REVISION
+        .lock()
+        .unwrap_or_else(|e| e.into_inner()) = revision;
     std::thread::spawn(|| {
         let result = std::panic::catch_unwind(graph)
             .unwrap_or_else(|_| Err("Brain discovery worker failed".into()));
@@ -613,15 +656,29 @@ fn vault_metadata_fingerprint(root: &Path) -> Result<String> {
     let mut stamp = Sha256::new();
     stamp.update(root.to_string_lossy().as_bytes());
     stamp.update(Utc::now().date_naive().to_string().as_bytes());
-    let mut files = walkdir::WalkDir::new(root).follow_links(false)
-        .into_iter().filter_entry(|e| e.depth() == 0 || !e.file_name().to_string_lossy().starts_with('.'))
-        .filter_map(|e| e.ok()).filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|x| x == "md")).collect::<Vec<_>>();
+    let mut files = walkdir::WalkDir::new(root)
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| e.depth() == 0 || !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|x| x == "md"))
+        .collect::<Vec<_>>();
     files.sort_by(|a, b| a.path().cmp(b.path()));
     for entry in files {
         let meta = entry.metadata()?;
-        stamp.update(entry.path().strip_prefix(root)?.to_string_lossy().as_bytes());
+        stamp.update(
+            entry
+                .path()
+                .strip_prefix(root)?
+                .to_string_lossy()
+                .as_bytes(),
+        );
         stamp.update(meta.len().to_le_bytes());
-        if let Some(time) = meta.modified().ok().and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok()) {
+        if let Some(time) = meta
+            .modified()
+            .ok()
+            .and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok())
+        {
             stamp.update(time.as_nanos().to_le_bytes());
         }
     }
@@ -629,7 +686,11 @@ fn vault_metadata_fingerprint(root: &Path) -> Result<String> {
     reject_links(&override_path)?;
     if let Ok(meta) = fs::metadata(override_path) {
         stamp.update(meta.len().to_le_bytes());
-        if let Some(time) = meta.modified().ok().and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok()) {
+        if let Some(time) = meta
+            .modified()
+            .ok()
+            .and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok())
+        {
             stamp.update(time.as_nanos().to_le_bytes());
         }
     }
@@ -642,7 +703,9 @@ fn start_vault_watch() {
         while GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {
             std::thread::sleep(Duration::from_secs(5));
             let Ok(root) = vault() else { continue };
-            let Ok(current) = vault_metadata_fingerprint(&root) else { continue };
+            let Ok(current) = vault_metadata_fingerprint(&root) else {
+                continue;
+            };
             let built = GRAPH_BUILD_REVISION.lock().ok().and_then(|v| v.clone());
             if built.as_ref().is_some_and(|old| old != &current) {
                 GRAPH_READY.store(false, std::sync::atomic::Ordering::Release);
@@ -673,7 +736,10 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
     let persisted = root.join(".brain-state/index/graph.json");
     reject_links(&persisted)?;
     let disk = read_json(&persisted);
-    if disk["schema"] == GRAPH_SCHEMA && disk["fingerprint"] == fingerprint && disk["graph"].is_object() {
+    if disk["schema"] == GRAPH_SCHEMA
+        && disk["fingerprint"] == fingerprint
+        && disk["graph"].is_object()
+    {
         let mut value = disk["graph"].clone();
         decorate(&mut value)?;
         *GRAPH.lock().map_err(|_| "Graph lock failed")? = Some((fingerprint, value.clone()));
@@ -709,7 +775,10 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
     report["embedding"] = json!(health);
     let mut value = json!({"nodes":nodes,"links":links,"noteCount":input.as_array().unwrap().len(),"activityModel":ACTIVITY_MODEL,"discovery":report});
     decorate(&mut value)?;
-    write_json(&persisted, &json!({"schema":GRAPH_SCHEMA,"fingerprint":fingerprint,"graph":value}))?;
+    write_json(
+        &persisted,
+        &json!({"schema":GRAPH_SCHEMA,"fingerprint":fingerprint,"graph":value}),
+    )?;
     *GRAPH.lock().map_err(|_| "Graph lock failed")? = Some((fingerprint.clone(), value.clone()));
     Ok(value)
 }
@@ -1087,14 +1156,21 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
     }
     match request.path.as_str() {
         "/api/health" => return json_response(json!({"ready":true,"authVersion":1})),
-        "/api/summary" => { schedule_graph_build(query(&request.query, "retry") == "1"); return json_response(summary()?); }
+        "/api/summary" => {
+            schedule_graph_build(query(&request.query, "retry") == "1");
+            return json_response(summary()?);
+        }
         "/api/brain" => {
             let retry = query(&request.query, "retry") == "1";
             schedule_graph_build(retry);
-            if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
-                let mut value = GRAPH.lock().map_err(|_| "Graph lock failed")?.as_ref().map(|(_, v)| v.clone()).ok_or("Graph cache missing")?;
+            let cached = GRAPH
+                .lock()
+                .map_err(|_| "Graph lock failed")?
+                .as_ref()
+                .map(|(_, value)| value.clone());
+            if let Some(mut value) = cached {
                 decorate(&mut value)?;
-                value["connections"] = json!({"state":"ready"});
+                decorate_connections(&mut value);
                 return json_response(value);
             }
             return json_response(summary()?);
@@ -1301,12 +1377,21 @@ mod tests {
     }
     #[test]
     fn first_paint_summary_links_named_worlds_to_present_note_nodes() {
-        let all = vec![json!({"id":"note:one","label":"Camera","kind":"note","path":"camera.md","recorded":"2026-11-05T00:00:00Z","category":"electronics","meta":{"worlds":"Photography","entity":"topic"},"text":"body"})];
+        let all = vec![
+            json!({"id":"note:one","label":"Camera","kind":"note","path":"camera.md","recorded":"2026-11-05T00:00:00Z","category":"electronics","meta":{"worlds":"Photography","entity":"topic"},"text":"body"}),
+        ];
         let (nodes, links) = summary_projection(&all);
         let ids: BTreeSet<String> = nodes.iter().map(|n| text(&n["id"]).to_owned()).collect();
-        assert!(nodes.iter().any(|n| n["kind"] == "hub" && n["label"] == "Photography"));
-        for link in links { assert!(ids.contains(text(&link["source"]))); assert!(ids.contains(text(&link["target"]))); }
-        assert!(nodes.iter().any(|n| n["id"] == "note:one" && n.get("text").is_none()));
+        assert!(nodes
+            .iter()
+            .any(|n| n["kind"] == "hub" && n["label"] == "Photography"));
+        for link in links {
+            assert!(ids.contains(text(&link["source"])));
+            assert!(ids.contains(text(&link["target"])));
+        }
+        assert!(nodes
+            .iter()
+            .any(|n| n["id"] == "note:one" && n.get("text").is_none()));
     }
     fn day() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, 22).unwrap()

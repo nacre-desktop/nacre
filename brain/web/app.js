@@ -50,24 +50,33 @@ async function boundedRequest(url, init = {}, decode = "response") {
         response = await fetch(url, { ...init, signal: controller.signal });
       }
       firstApiCall = false;
-      if (!response.ok) throw Error(response.statusText || "HTTP " + response.status);
+      if (!response.ok)
+        throw Error(response.statusText || "HTTP " + response.status);
       return decode === "json" ? response.json() : response;
     })();
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => {
         controller.abort();
-        reject(Error(tr("brain.ui.error.request-timed-out", "The request timed out. Try again.")));
+        reject(
+          Error(
+            tr(
+              "brain.ui.error.request-timed-out",
+              "The request timed out. Try again.",
+            ),
+          ),
+        );
       }, 8000);
     });
     return await Promise.race([operation, timeout]);
   } catch (error) {
-    if (externalSignal?.aborted) {
-      const canceled = Error("Aborted");
-      canceled.name = "AbortError";
-      throw canceled;
-    }
+    if (externalSignal?.aborted) throw externalSignal.reason;
     if (error.name === "AbortError")
-      throw Error(tr("brain.ui.error.request-timed-out", "The request timed out. Try again."));
+      throw Error(
+        tr(
+          "brain.ui.error.request-timed-out",
+          "The request timed out. Try again.",
+        ),
+      );
     throw error;
   } finally {
     clearTimeout(timer);
@@ -210,8 +219,7 @@ async function load(force = false) {
   try {
     let summaryOnly = !ready;
     let payload = await requestJson(
-      (summaryOnly ? "/api/summary" : "/api/brain") +
-        (force ? "?retry=1" : ""),
+      (summaryOnly ? "/api/summary" : "/api/brain") + (force ? "?retry=1" : ""),
     );
     loadFailed = false;
     applyGraph(payload, force);
@@ -227,11 +235,19 @@ async function load(force = false) {
       applyGraph(payload);
     }
     if (payload.connections?.state === "error")
-      throw Error(payload.connections.error || tr("brain.ui.error.connections", "Connections could not be loaded."));
+      throw Error(
+        payload.connections.error ||
+          tr("brain.ui.error.connections", "Connections could not be loaded."),
+      );
     setConnectionState(payload.connections?.state || "ready");
   } catch (error) {
     loadFailed = true;
-    const message = error.message || tr("brain.ui.error.unavailable", "Could not load your knowledge. Try again.");
+    const message =
+      error.message ||
+      tr(
+        "brain.ui.error.unavailable",
+        "Could not load your knowledge. Try again.",
+      );
     $("index-status").textContent = message;
     $("loading").hidden = true;
     showLoadError(message);
@@ -247,19 +263,27 @@ async function requestJson(url) {
   } catch (error) {
     throw Error(
       error.message === "Failed to fetch"
-        ? tr("brain.ui.error.unavailable", "Could not load your knowledge. Try again.")
-        : error.message || tr("brain.ui.error.unavailable", "Could not load your knowledge. Try again."),
+        ? tr(
+            "brain.ui.error.unavailable",
+            "Could not load your knowledge. Try again.",
+          )
+        : error.message ||
+            tr(
+              "brain.ui.error.unavailable",
+              "Could not load your knowledge. Try again.",
+            ),
     );
   }
 }
 function setConnectionState(value) {
   const element = $("connections-status");
   element.dataset.state = value;
-  element.textContent = value === "building"
-    ? tr("brain.ui.status.building-connections", "Building connections…")
-    : value === "error"
-      ? tr("brain.ui.error.connections", "Connections could not be loaded.")
-      : tr("brain.ui.status.connections-ready", "Connections ready");
+  element.textContent =
+    value === "building"
+      ? tr("brain.ui.status.building-connections", "Building connections…")
+      : value === "error"
+        ? tr("brain.ui.error.connections", "Connections could not be loaded.")
+        : tr("brain.ui.status.connections-ready", "Connections ready");
 }
 function applyGraph(payload, force = false) {
   const previous = byId.get(state.selected);
@@ -763,9 +787,13 @@ async function search() {
   const query = state.query;
   searchController = new AbortController();
   try {
-    const result = await boundedRequest("/api/search?q=" + encodeURIComponent(query), {
-      signal: searchController.signal,
-    }, "json");
+    const result = await boundedRequest(
+      "/api/search?q=" + encodeURIComponent(query),
+      {
+        signal: searchController.signal,
+      },
+      "json",
+    );
     if (state.query === query) {
       searchIds = new Set(result.ids);
       renderMain();

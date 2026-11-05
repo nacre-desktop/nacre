@@ -182,6 +182,7 @@ try {
   const started = Date.now();
   brain = startBrain();
   await health();
+  await cdp('Page.navigate', { url: 'about:blank' });
   await cdp('Page.navigate', { url: await launchUrl() });
   await until(() => evaluate('document.querySelector("#loading")?.hidden'), 'initial summary');
   if (!injectedAuth403) throw new Error('first-launch API request did not exercise the one-shot 403 auth-ready retry');
@@ -222,6 +223,7 @@ try {
   const restartStart = Date.now();
   brain = startBrain();
   await health();
+  await cdp('Page.navigate', { url: 'about:blank' });
   await cdp('Page.navigate', { url: await launchUrl() });
   await until(() => evaluate('document.querySelector("#loading")?.hidden && graph.noteCount === 2000 && document.querySelector("#connections-status")?.dataset.state === "ready"'), 'persisted summary after restart', 10000);
   const restartMs = Date.now() - restartStart;

@@ -1,6 +1,6 @@
 # N0134 — Brain viewer load robustness (U12)
 
-Status: source implementation complete; remote validation blocked.
+Status: source implementation complete; remote validation in progress.
 
 The viewer previously waited for `/api/brain` to run discovery synchronously.
 The overhaul audit measured cold discovery at 145 seconds with vectors and
@@ -37,13 +37,13 @@ introduced; synchronous CLI graph generation remains a supported CLI path.
   container, including formatting, clippy, Rust/Brain tests, catalog checks,
   product proofs, tools checks and native gallery/memory checks.
 
-The container is named `n0134`; builds run under tmux, nice 10, Cargo `-j2`.
-The task's conflicting dev-1/dev-2 host requirements must be resolved before
-heavy work. Raw command output is kept in task-private `.lead/` evidence.
+The dev-1 container is named `n0134`, with 8 CPUs and 16 GiB; builds run under
+tmux, nice 10, Cargo `-j2`. The lead confirmed that the dev-2-only rule was stale
+and authorized dev-1. `/root` is mode 711 for private parity sandboxes.
+Raw command output is kept in task-private `.lead/` evidence.
 The task branch alone is pushed; installation and main integration are lead-owned.
 
-Source changes and the synthetic browser harness are committed, but none of
-the runtime or timing acceptance checks has run for this revision. The later
-standing rule restricts builds to dev-2, which is unreachable; using reachable
-dev-1 requires the owner's resolution of that conflict. There are no accepted
-performance measurements, and this unit is not ready for installation.
+Workspace Rust, clippy, product proofs, and catalog checks passed in the first
+desktop job run. Source/UI checks require a committed candidate checkout; the
+first run correctly rejected an uncommitted source overlay. Remaining acceptance
+checks and Chromium timings are pending. This unit is not ready for installation.
