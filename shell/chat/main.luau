@@ -96,6 +96,7 @@ else
     local footer_h=BTN+T.spacing.xs
     local list_bottom=H-E-footer_h-T.spacing.md
     local warning=get("launcher.warning")
+    local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
     local warning_h=warning~="" and CAPTION+T.spacing.xs or 0
     local rows_top=list_top+warning_h
     local list_h=math.max(0,list_bottom-rows_top)
@@ -104,10 +105,20 @@ else
     add(ui.Row{id="provider",position="absolute",left=E,top=provider_top,width=INNER,height=PROVIDER_H,gap=T.spacing.xs,
         button("claude",nil,nil,INNER/2-T.spacing.xs/2,PROVIDER_H,ui.tr("bead.panel.chat-claude"),"",ui.action("chat.do","launcher:provider:claude"),provider=="claude",CAPTION),
         button("codex",nil,nil,INNER/2-T.spacing.xs/2,PROVIDER_H,ui.tr("bead.panel.chat-codex"),"",ui.action("chat.do","launcher:provider:codex"),provider=="codex",CAPTION)})
-    add(button("resume",E,resume_top,INNER,BTN,ui.tr("bead.panel.launcher-resume"),"",get("launcher.can_latest") and ui.action("chat.do","launcher:latest") or nil,false,BODY))
-    add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
+    local resume_label=ui.tr("bead.panel.launcher-resume")
+    add(kit.Button{id="resume",position="absolute",left=E,top=resume_top,width=INNER,height=BTN,padding=0,
+        fill="transparent",hover_fill="surfaceContainerHigh",focus_ring=true,aria_label=resume_label,
+        on_activate=get("launcher.can_latest") and ui.action("chat.do","launcher:latest") or nil,
+        ui.Text{id="resume-label",text=resume_label,width=INNER,height=BTN,font_size=BODY,color="primary"}})
+    add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER-BTN-T.spacing.xs,height=BTN,
         text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,
         radius=T.radii.small,font_size=BODY,fill="surfaceContainerHigh",focus_ring=true})
+    local refresh_label=ui.tr("bead.panel.chat-refresh")
+    add(button("refresh",E+INNER-BTN,search_top,BTN,BTN,"","refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION,refresh_label))
+    add(kit.Tooltip{id="refresh-tooltip",position="absolute",edge="top",bar_size=-T.spacing.sm,
+        left=E+INNER-BTN,width=ui.text_width(refresh_label,"IBM Plex Sans",CAPTION)+2*T.spacing.sm,height=CAPTION+2*T.spacing.sm,
+        padding=T.spacing.xs,visible=string.find(hovered,"refresh",1,true)~=nil,
+        ui.Text{text=refresh_label,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
     if warning~="" then
         add(ui.Text{id="launcher-warning",position="absolute",left=E,top=list_top,width=INNER,height=warning_h,
             text=warning,font_size=CAPTION,color="onSurfaceVariant"})
@@ -136,10 +147,25 @@ else
         add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-CAPTION)/2),width=INNER,height=CAPTION,
             text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"})
     end
-    add(ui.Row{id="secondary",position="absolute",left=E,top=H-E-footer_h,width=INNER,height=BTN,gap=T.spacing.xs,
-        button("brain",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-brain"),"neurology",ui.action("chat.do","launcher:brain"),false,CAPTION),
-        button("settings",nil,nil,nil,BTN,ui.tr("bead.panel.chat-tab-settings"),"settings",ui.action("chat.do","launcher:settings"),false,CAPTION),
-        button("quick-chat",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)})
+    local footer_top=H-E-footer_h
+    local footer_actions={
+        {id="brain",label=ui.tr("bead.panel.launcher-brain"),glyph="neurology",action="launcher:brain"},
+        {id="settings",label=ui.tr("bead.panel.chat-tab-settings"),glyph="settings",action="launcher:settings"},
+        {id="quick-chat",label=ui.tr("bead.panel.launcher-quick-chat"),glyph="forum",action="launcher:quick-chat"},
+    }
+    local footer_buttons={id="secondary",position="absolute",left=E,top=footer_top,width=INNER,height=BTN,gap=T.spacing.xs}
+    local footer_tooltip=""
+    for _,item in footer_actions do
+        table.insert(footer_buttons,button(item.id,nil,nil,nil,BTN,item.label,item.glyph,ui.action("chat.do",item.action),false,CAPTION,item.label))
+        if string.find(hovered,item.id,1,true)~=nil then footer_tooltip=item.label end
+    end
+    add(ui.Row(footer_buttons))
+    if footer_tooltip~="" then
+        local tooltip_width=ui.text_width(footer_tooltip,"IBM Plex Sans",CAPTION)+2*T.spacing.sm
+        add(kit.Tooltip{id="footer-tooltip",position="absolute",edge="top",bar_size=-T.spacing.sm,
+            left=E+(INNER-tooltip_width)/2,width=tooltip_width,height=CAPTION+2*T.spacing.sm,padding=T.spacing.xs,
+            visible=true,ui.Text{text=footer_tooltip,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
+    end
 end
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=kit.motion.text,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
     width=W,height=H,padding=0,radius=T.radii.medium+2,fill="surface",table.unpack(kids)}
