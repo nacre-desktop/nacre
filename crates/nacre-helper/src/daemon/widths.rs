@@ -206,8 +206,7 @@ pub fn observe_if_daemon(
             }
             Err(error)=>return Err(error.into()),
         };
-        let has_width_method = client.methods.contains_key("niri.widths.configure");
-        if !has_width_method {
+        if !client.methods.contains_key("niri.widths.configure") {
             if native_width_policy_available(environment) {
                 return Ok(Some(0));
             }
@@ -228,6 +227,7 @@ pub fn observe_if_daemon(
         let mut retry_ms=INITIAL_RETRY_MS;
         loop {
             let result=async {
+                let has_width_method = client.methods.contains_key("niri.widths.configure");
                 let topic=if has_width_method {
                     match client.call("niri.widths.configure",serde_json::to_value(&params)?,Some(2000)).await {
                         Ok(_) => {},
