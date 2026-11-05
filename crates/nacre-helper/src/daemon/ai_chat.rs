@@ -661,7 +661,11 @@ async fn dispatch_launcher(
             let request = checked(parse::<launcher::Open>(params), launcher::Open::validate)?;
             let cached = host.launcher_records.borrow().clone();
             let (item, unique_title) = if let Some(item) = cached.get(&request.key).cloned() {
-                let unique = cached.values().filter(|row| row["title"] == item["title"]).count() == 1;
+                let unique = cached
+                    .values()
+                    .filter(|row| row["title"] == item["title"])
+                    .count()
+                    == 1;
                 (item, unique)
             } else {
                 // A cached UI row can outlive this daemon's in-memory map.
@@ -713,9 +717,7 @@ async fn dispatch_launcher(
                     _ => return Err(unavailable("Could not read latest AI chat")),
                 };
             if rows.is_empty() {
-                return Err(unavailable(
-                    "Latest chat is unavailable",
-                ));
+                return Err(unavailable("Latest chat is unavailable"));
             }
             let unique_title = rows
                 .iter()
@@ -822,7 +824,7 @@ fn append_launcher_row(
     else {
         return;
     };
-    if item["project"]["host"].as_str().is_some() {
+    if !launcher_record_is_local(&item) {
         return;
     }
     let key = launcher_key(&item);

@@ -11,6 +11,8 @@ use tokio::{io::BufReader, net::UnixListener, sync::mpsc};
 
 /// `route_event` feeds one process-wide queue, so tests that project run one by one.
 pub(crate) static SERIAL: Mutex<()> = Mutex::new(());
+const FRAME_WIDTH: u32 = 534;
+const FRAME_HEIGHT: u32 = 714;
 pub(crate) fn serial() -> std::sync::MutexGuard<'static, ()> {
     SERIAL.lock().unwrap_or_else(|p| p.into_inner())
 }
@@ -800,7 +802,10 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     };
     assert_eq!(rows[0]["provider"], "Codex");
     assert_eq!(rows[0]["state"], "running");
-    assert!(rows[0].get("project").is_none(), "project labels stay out of rows");
+    assert!(
+        rows[0].get("project").is_none(),
+        "project labels stay out of rows"
+    );
     assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
 
     let search = launcher_stores(&[("launcher.search", Value::Text("brain".into()))]);
@@ -846,7 +851,8 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
 async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_available() {
     let _guard = serial();
     let mut lab = lab(topic(&[], state(false, "", None))).await;
-    lab.list_delay_ms.store(150, std::sync::atomic::Ordering::Relaxed);
+    lab.list_delay_ms
+        .store(150, std::sync::atomic::Ordering::Relaxed);
     let cache = lab.dir.join("cache/chats.json");
     let launcher = launcher_stores(&[]);
     let cold_source = lab_source(&lab).await;
@@ -861,24 +867,35 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
         if matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12) {
             break cold_started.elapsed().as_millis();
         }
-        assert!(std::time::Instant::now() < cold_deadline, "cold list did not arrive within 2 seconds");
+        assert!(
+            std::time::Instant::now() < cold_deadline,
+            "cold list did not arrive within 2 seconds"
+        );
         tokio::time::sleep(Duration::from_millis(2)).await;
     };
-    assert!(cold_ms >= 100, "delayed cold fetch returned implausibly early: {cold_ms} ms");
+    assert!(
+        cold_ms >= 100,
+        "delayed cold fetch returned implausibly early: {cold_ms} ms"
+    );
 
     let mut cached = Chat::load_launcher_cache(&cache).expect("cold fetch wrote cache");
     cached["chats"][0]["title"] = json!("Saved cache title");
     Chat::save_launcher_cache(&cache, &cached);
     let warm_source = lab_source(&lab).await;
     let warm_started = std::time::Instant::now();
-    let warm_chat = Chat::new(Some(lab.client.clone()), warm_source, meter())
-        .with_launcher_cache_path(cache);
+    let warm_chat =
+        Chat::new(Some(lab.client.clone()), warm_source, meter()).with_launcher_cache_path(cache);
     let first = warm_chat.project(&launcher);
     let first_frame_ms = warm_started.elapsed().as_millis();
-    let Value::List(rows) = &first["launcher.chats"] else { panic!("cached chats") };
+    let Value::List(rows) = &first["launcher.chats"] else {
+        panic!("cached chats")
+    };
     assert_eq!(rows.len(), 12);
     assert_eq!(rows[0]["title"], "Saved cache title");
-    assert!(first_frame_ms < 30, "cache load and first projection exceeded 30 ms: {first_frame_ms} ms");
+    assert!(
+        first_frame_ms < 30,
+        "cache load and first projection exceeded 30 ms: {first_frame_ms} ms"
+    );
     assert_eq!(first["launcher.can_new"], Value::Bool(true));
     assert_eq!(first["launcher.can_latest"], Value::Bool(true));
     warm_chat.act("launcher:new", &launcher);
@@ -892,19 +909,31 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
             saw_new = true;
         }
     }
-    assert!(saw_list && saw_new, "new action is sent while the refresh is pending");
+    assert!(
+        saw_list && saw_new,
+        "new action is sent while the refresh is pending"
+    );
     let fresh_deadline = warm_started + Duration::from_secs(2);
     loop {
         let out = warm_chat.project(&launcher);
-        if matches!(&out["launcher.chats"], Value::List(rows) if rows.first().is_some_and(|row| row["title"] == "Build fixes 1")) {
+        if matches!(&out["launcher.chats"], Value::List(rows) if rows.first().is_some_and(|row| row["title"] == "Build fixes 1"))
+        {
             break;
         }
-        assert!(std::time::Instant::now() < fresh_deadline, "fresh list did not arrive within 2 seconds");
+        assert!(
+            std::time::Instant::now() < fresh_deadline,
+            "fresh list did not arrive within 2 seconds"
+        );
         tokio::time::sleep(Duration::from_millis(2)).await;
     }
     let fresh_ms = warm_started.elapsed().as_millis();
-    assert!(fresh_ms < 300, "fresh local fake service exceeded 300 ms: {fresh_ms} ms");
-    eprintln!("launcher timing: cold open-to-list={cold_ms} ms; cached first-frame={first_frame_ms} ms; fresh refresh={fresh_ms} ms");
+    assert!(
+        fresh_ms < 300,
+        "fresh local fake service exceeded 300 ms: {fresh_ms} ms"
+    );
+    eprintln!(
+        "launcher timing: cold open-to-list={cold_ms} ms; cached first-frame={first_frame_ms} ms; fresh refresh={fresh_ms} ms"
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -916,10 +945,17 @@ async fn launcher_partial_warning_keeps_valid_rows_and_hides_raw_stderr() {
     let launcher = launcher_stores(&[]);
     chat.project(&launcher);
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
-    let out = until(&chat, &launcher, "partial launcher list", |out| {
-        matches!(&out["launcher.chats"], Value::List(rows) if !rows.is_empty())
-    }).await;
-    assert_eq!(string(&out, "launcher.warning"), tr("bead.common.request-failed", &[]));
+    let out = until(
+        &chat,
+        &launcher,
+        "partial launcher list",
+        |out| matches!(&out["launcher.chats"], Value::List(rows) if !rows.is_empty()),
+    )
+    .await;
+    assert_eq!(
+        string(&out, "launcher.warning"),
+        tr("bead.common.request-failed", &[])
+    );
     assert!(!string(&out, "launcher.warning").contains("/secret/path"));
     let cached = std::fs::read_to_string(lab.dir.join("cache/chats.json")).unwrap();
     assert!(!cached.contains("permission denied"));
@@ -960,7 +996,10 @@ fn session_without_provider_timestamp_does_not_claim_old_activity() {
     let Value::List(rows) = &projected["launcher.chats"] else {
         panic!("chat list")
     };
-    assert!(rows[0].get("project").is_none(), "legacy project metadata is hidden");
+    assert!(
+        rows[0].get("project").is_none(),
+        "legacy project metadata is hidden"
+    );
     assert_eq!(
         rows[0]["lastActivityLabel"],
         tr("bead.panel.launcher-activity-unknown", &[])
@@ -1052,36 +1091,85 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
         row["lastActivityLabel"] = json!("2 hr ago");
     }
     projected.insert("launcher.chats".into(), Value::list(rows));
+    projected.insert("panel.open".into(), Value::Bool(true));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
         let nodes = regular.session.view_nodes();
+        let layers = &regular.scene().layers;
         for id in [
-            "chat.logo", "chat.title", "chat.pin", "chat.new-chat", "chat.claude",
-            "chat.codex", "chat.resume", "chat.search", "chat.refresh", "chat.recent-chats",
-            "chat.brain", "chat.settings", "chat.quick-chat",
+            "chat.logo",
+            "chat.title",
+            "chat.pin",
+            "chat.new-chat",
+            "chat.provider.claude",
+            "chat.provider.codex",
+            "chat.resume",
+            "chat.search",
+            "chat.refresh",
+            "chat.recent-chats",
+            "chat.secondary.brain",
+            "chat.secondary.settings",
+            "chat.secondary.quick-chat",
         ] {
-            assert!(nodes.iter().any(|node| node.id == id), "missing launcher node {id}");
+            assert!(
+                layers.iter().any(|layer| layer.id == id),
+                "missing launcher node {id}"
+            );
         }
-        assert!(nodes.iter().any(|node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:new")));
-        assert!(nodes.iter().any(|node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:latest")));
-        assert!(!nodes.iter().any(|node| node.id.to_lowercase().contains("project")));
+        assert!(nodes.iter().any(
+            |node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:new")
+        ));
+        assert!(nodes.iter().any(
+            |node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:latest")
+        ));
+        assert!(
+            !nodes
+                .iter()
+                .any(|node| node.id.to_lowercase().contains("project"))
+        );
         assert!(!projected.contains_key("launcher.project"));
         assert!(!projected.contains_key("launcher.projects"));
-        let row = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with("chat-row")).expect("chat row");
-        let title = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with(".title")).expect("row title");
-        let meta = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with(".meta")).expect("row metadata");
+        let row = nodes
+            .iter()
+            .find(|node| node.id.contains("recent-chats") && node.id.ends_with("chat-row"))
+            .expect("chat row");
+        let title = layers
+            .iter()
+            .find(|layer| layer.id.starts_with(&row.id) && layer.id.ends_with(".title"))
+            .expect("row title");
+        let meta = layers
+            .iter()
+            .find(|layer| layer.id.starts_with(&row.id) && layer.id.ends_with(".meta"))
+            .expect("row metadata");
         let row_rect = bead::ui::rect(&row.draw);
         for child in [title, meta] {
-            let rect = bead::ui::rect(&child.draw);
-            assert!(rect.x >= row_rect.x && rect.y >= row_rect.y
-                && rect.x + rect.w <= row_rect.x + row_rect.w
-                && rect.y + rect.h <= row_rect.y + row_rect.h,
-                "row content is clipped: row={row_rect:?}, child={rect:?}");
+            let rect = child.bounds;
+            assert!(
+                rect.x >= row_rect.x
+                    && rect.y >= row_rect.y
+                    && rect.x + rect.w <= row_rect.x + row_rect.w
+                    && rect.y + rect.h <= row_rect.y + row_rect.h,
+                "row content is clipped: row={row_rect:?}, child={rect:?}"
+            );
+        }
+        for layer in layers.iter().filter(|layer| {
+            layer.id.starts_with(&row.id)
+                && (layer.id.ends_with(".title") || layer.id.ends_with(".details"))
+        }) {
+            for primitive in &regular.scene().primitives[layer.own.clone()] {
+                if let bead::render::Primitive::Text { rect, size, .. } = primitive {
+                    assert!(
+                        rect.h + 0.1 >= size * 1.4,
+                        "chat text line is clipped: {rect:?}, font={size}"
+                    );
+                }
+            }
         }
         golden("launcher", &mut regular, scale)?;
         let mut detached_projection = projected.clone();
         detached_projection.insert("view.detached".into(), Value::Bool(true));
         let mut detached = harness(detached_projection, scale)?;
+        assert_eq!(detached.scene().opacity, 1., "detached panel stays visible");
         assert!(
             !detached
                 .session
@@ -1090,6 +1178,38 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
                 .any(|node| node.id == "chat.pin")
         );
         golden("launcher-detached", &mut detached, scale)?;
+        regular.presented()?;
+        let mut utility = regular;
+        let mut utility_projection = projected.clone();
+        utility_projection.insert(
+            "launcher.warning".into(),
+            text(&tr("bead.common.request-failed", &[])),
+        );
+        utility_projection.insert("bead.hovered".into(), text("chat.secondary.quick-chat"));
+        utility.update(utility_projection)?;
+        assert_eq!(
+            utility.scene().opacity,
+            1.,
+            "open launcher stays visible on hover"
+        );
+        let tooltip = utility
+            .scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id == "chat.footer-tooltip")
+            .expect("footer tooltip");
+        let footer = utility
+            .scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id == "chat.secondary")
+            .expect("footer");
+        assert!(tooltip.bounds.y > 0. && tooltip.bounds.y + tooltip.bounds.h < footer.bounds.y);
+        assert!(
+            tooltip.bounds.x >= footer.bounds.x
+                && tooltip.bounds.x + tooltip.bounds.w <= footer.bounds.x + footer.bounds.w
+        );
+        golden("launcher-warning-tooltip", &mut utility, scale)?;
     }
     Ok(())
 }
@@ -1103,8 +1223,8 @@ pub(crate) fn harness(out: BTreeMap<String, Value>, scale: f32) -> bead_test::Re
         &root().join("palette.json"),
         out,
         bead_test::Config {
-            width: 534,
-            height: 714,
+            width: FRAME_WIDTH,
+            height: FRAME_HEIGHT,
             scale,
         },
     )
@@ -1160,7 +1280,45 @@ fn transcript_scroll_preserves_touchpad_pixels_and_shared_wheel_distance() {
 }
 
 fn golden(name: &str, h: &mut Harness, scale: f32) -> bead_test::Result<()> {
-    let frame = h.render()?;
+    // Stills use the flat CPU oracle: every primitive is painted into a fresh
+    // target, independent of retained-tree repair/preparation between captures.
+    // The harness still supplies the real view, layout, fonts and themed assets.
+    use bead::render::{CpuRenderer, Damage, PixelFormat, Renderer, ShmTarget};
+    let mut scene = h.scene().clone();
+    scene.motion = None;
+    scene.slide = None;
+    scene.prepared.clear();
+    scene.opacity = 1.;
+    let (width, height) = (
+        (FRAME_WIDTH as f32 * scale).ceil() as u32,
+        (FRAME_HEIGHT as f32 * scale).ceil() as u32,
+    );
+    let mut frame = bead_test::Frame {
+        width,
+        height,
+        pixels: vec![0; (width * height * 4) as usize],
+    };
+    let mut renderer = CpuRenderer::default();
+    renderer.prepare(&scene, scale)?;
+    renderer.render(
+        &scene,
+        ShmTarget {
+            bytes: &mut frame.pixels,
+            width,
+            height,
+            scale,
+            format: PixelFormat::Rgba,
+        },
+        Damage::full(width, height),
+    )?;
+    for pixel in frame.pixels.chunks_exact_mut(4) {
+        let alpha = u32::from(pixel[3]);
+        if alpha > 0 && alpha < 255 {
+            for channel in &mut pixel[..3] {
+                *channel = (u32::from(*channel) * 255 / alpha).min(255) as u8;
+            }
+        }
+    }
     let path = root().join(format!("tests/goldens/chat-{name}-{scale}.png"));
     if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
         frame.save(&path)?;

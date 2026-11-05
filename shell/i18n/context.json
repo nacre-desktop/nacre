@@ -963,7 +963,6 @@
   "bead.panel.launcher-loading": "AI launcher: shown in the recent chat list while the chat service is loading.",
   "bead.panel.launcher-minutes-ago": "AI launcher: last activity time; {count} is a number of minutes.",
   "bead.panel.launcher-quick-chat": "AI launcher: button that expands the existing inline chat for a quick question.",
-  "bead.panel.launcher-recent": "AI launcher: heading above the recent chat list.",
   "bead.panel.launcher-resume": "AI launcher: button that resumes the most recent chat.",
   "bead.panel.launcher-running": "AI launcher: status for a chat that is currently running.",
   "bead.panel.launcher-search": "AI launcher: hint inside the field that filters recent chats."

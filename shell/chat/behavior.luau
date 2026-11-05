@@ -14,9 +14,8 @@ return {stores={
     ["chat.busy"]=false,["chat.workspace"]=false,["chat.can_new"]=false,["chat.can_workspace"]=false,
     ["chat.can_send"]=false,["chat.can_reply"]=false,["chat.can_stop"]=false,
     ["chat.provider"]="",
-    ["launcher.chats"]={},["launcher.projects"]={},["launcher.provider"]="",["launcher.project"]="",
+    ["launcher.chats"]={},["launcher.provider"]="",
     ["launcher.search"]="",["launcher.selected"]="",["launcher.warning"]="",["launcher.empty_state"]="",
-    ["launcher.project_picker_open"]=false,["launcher.project-scroll"]=0,
     ["launcher.quick_chat"]=false,["launcher.can_new"]=false,["launcher.can_open"]=false,["launcher.can_latest"]=false,["launcher.scroll"]=0,
 },actions={
     close=function(s) s["panel.open"]=false s["chat.pinned"]=false s["panel.anchor_hovered"]=false end,

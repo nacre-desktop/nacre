@@ -422,11 +422,7 @@ pub(crate) fn launcher_new(provider: &str, _project_id: &str) -> Result<()> {
     if !matches!(provider, "codex" | "claude") {
         return Err("Unknown AI provider".into());
     }
-    let args = vec![
-        "new".into(),
-        "--agent".into(),
-        provider.into(),
-    ];
+    let args = vec!["new".into(), "--agent".into(), provider.into()];
     launch_task("nacre-ai", &args, "New chat")
 }
 
@@ -1421,7 +1417,9 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
     } else {
         println!("AI workspace · {label} · {location}");
     }
-    println!("Type your request when the selected assistant opens. The dashboard stays in its own window.");
+    println!(
+        "Type your request when the selected assistant opens. The dashboard stays in its own window."
+    );
     if project.get("host").is_some() {
         println!(
             "To leave a running task: Ctrl+B, then D. Return with Resume latest chat or Load chat."
@@ -2083,7 +2081,9 @@ fn settings() -> Result<()> {
 
 pub fn run(args: &[String]) -> Result<i32> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        print!("usage: nacre-ai [-h] [--project PROJECT] [--agent {{codex,claude}}]\n                [--account ACCOUNT]\n                [{{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {{codex,claude}}\n  --account ACCOUNT     Account profile override; Codex accounts share chats\n                        and keep separate logins\n");
+        print!(
+            "usage: nacre-ai [-h] [--project PROJECT] [--agent {{codex,claude}}]\n                [--account ACCOUNT]\n                [{{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {{codex,claude}}\n  --account ACCOUNT     Account profile override; Codex accounts share chats\n                        and keep separate logins\n"
+        );
         return Ok(0);
     }
     let mut index = 0;
@@ -2125,7 +2125,7 @@ pub fn run(args: &[String]) -> Result<i32> {
                 index += 2;
             }
             other if other.starts_with('-') => {
-                return Err(format!("Unknown nacre-ai option: {other}").into())
+                return Err(format!("Unknown nacre-ai option: {other}").into());
             }
             _ => return Err(format!("Unexpected nacre-ai argument: {}", args[index]).into()),
         }
@@ -2552,7 +2552,9 @@ mod tests {
         assert_eq!(rows.len(), 1);
         assert_eq!(rows[0]["id"], "claude-local");
         assert_eq!(warnings, ["Codex history is temporarily unavailable"]);
-        assert!(warnings.iter().all(|warning| !warning.contains("raw helper stderr")));
+        assert!(warnings
+            .iter()
+            .all(|warning| !warning.contains("raw helper stderr")));
         Ok(())
     }
 

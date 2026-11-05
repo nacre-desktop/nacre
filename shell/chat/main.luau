@@ -88,7 +88,8 @@ if section=="chat" and get("launcher.quick_chat") then
 else
     local LTOP=E+T.icons.hero+T.spacing.sm
     local PROVIDER_H=BTN-T.spacing.xs
-    local ROW=BODY+CAPTION+T.spacing.md
+    local TITLE_H,META_H=math.ceil(BODY*1.4),math.ceil(CAPTION*1.4)
+    local ROW=TITLE_H+META_H+T.spacing.md
     local provider_top=LTOP+BTN+T.spacing.xs
     local resume_top=provider_top+PROVIDER_H+T.spacing.xs
     local search_top=resume_top+BTN+T.spacing.xs
@@ -98,7 +99,7 @@ else
     local warning=get("launcher.warning")
     local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
     local focused=ui.resolve_for_check(ui.bind("bead.focused")) or ""
-    local warning_h=warning~="" and CAPTION+T.spacing.xs or 0
+    local warning_h=warning~="" and META_H+T.spacing.xs or 0
     local rows_top=list_top+warning_h
     local list_h=math.max(0,list_bottom-rows_top)
     local provider=get("launcher.provider")
@@ -117,12 +118,12 @@ else
     local refresh_label=ui.tr("bead.panel.chat-refresh")
     add(button("refresh",E+INNER-BTN,search_top,BTN,BTN,"","refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION,refresh_label))
     local tooltip_height=CAPTION+2*T.spacing.sm
-    local refresh_tooltip_width=ui.text_width(refresh_label,"IBM Plex Sans",CAPTION)+2*T.spacing.sm
+    local refresh_tooltip_width=ui.text_width(refresh_label,T.fonts.sans,CAPTION)+2*T.spacing.sm
     add(kit.Tooltip{id="refresh-tooltip",position="absolute",edge="top",
         bar_size=search_top-tooltip_height-2*T.spacing.sm,
         left=E+INNER-refresh_tooltip_width,width=refresh_tooltip_width,height=tooltip_height,
         padding=T.spacing.xs,visible=string.find(hovered,"refresh",1,true)~=nil or string.find(focused,"refresh",1,true)~=nil,
-        ui.Text{text=refresh_label,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
+        ui.Text{text=refresh_label,width="fill",height=META_H,font_size=CAPTION,color="onSurface"}})
     if warning~="" then
         add(ui.Text{id="launcher-warning",position="absolute",left=E,top=list_top,width=INNER,height=warning_h,
             text=warning,font_size=CAPTION,color="onSurfaceVariant"})
@@ -140,15 +141,15 @@ else
                     radius=T.radii.full,fill="outlineVariant",visible=item.key~=get("launcher.selected")},
                 ui.Column{id="chat-detail",position="absolute",left=row_inset,top=T.spacing.xs,
                     width=meta_width,height=ROW-2*T.spacing.xs,gap=T.spacing.hairline,
-                    ui.Text{id="title",text=item.title,width=meta_width,height=BODY,font_size=BODY,color="onSurface"},
-                    ui.Row{id="meta",width=meta_width,height=CAPTION,gap=T.spacing.xs,align="center",
+                    ui.Text{id="title",text=item.title,width=meta_width,height=TITLE_H,font_size=BODY,color="onSurface"},
+                    ui.Row{id="meta",width=meta_width,height=META_H,gap=T.spacing.xs,align="center",
                         ui.Box{id="running-dot",width=T.spacing.xs,height=T.spacing.xs,radius=T.radii.full,fill="primary",visible=active},
                         ui.Text{id="details",text=item.provider.." · "..(active and ui.tr("bead.panel.launcher-running") or ui.tr("bead.panel.launcher-idle")).." · "..item.lastActivityLabel,
-                            width=meta_width-T.spacing.sm,height=CAPTION,font_size=CAPTION,color="onSurfaceVariant"}}}}
+                            width=meta_width-T.spacing.sm,height=META_H,font_size=CAPTION,color="onSurfaceVariant"}}}}
         end})
     local empty=get("launcher.empty_state")
     if empty~="" then
-        add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-CAPTION)/2),width=INNER,height=CAPTION,
+        add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-META_H)/2),width=INNER,height=META_H,
             text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"})
     end
     local footer_top=H-E-footer_h
@@ -165,11 +166,11 @@ else
     end
     add(ui.Row(footer_buttons))
     if footer_tooltip~="" then
-        local tooltip_width=ui.text_width(footer_tooltip,"IBM Plex Sans",CAPTION)+2*T.spacing.sm
+        local tooltip_width=ui.text_width(footer_tooltip,T.fonts.sans,CAPTION)+2*T.spacing.sm
         add(kit.Tooltip{id="footer-tooltip",position="absolute",edge="top",
             bar_size=footer_top-tooltip_height-2*T.spacing.sm,
             left=E+(INNER-tooltip_width)/2,width=tooltip_width,height=tooltip_height,padding=T.spacing.xs,
-            visible=true,ui.Text{text=footer_tooltip,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
+            visible=true,ui.Text{text=footer_tooltip,width="fill",height=META_H,font_size=CAPTION,color="onSurface"}})
     end
 end
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=kit.motion.text,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),

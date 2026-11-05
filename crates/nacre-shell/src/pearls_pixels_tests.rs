@@ -28,12 +28,8 @@ fn chat_scene_state(scale: f32, detached: bool) -> Result<Scene> {
     out.insert("launcher.warning".into(), Value::Text(String::new()));
     out.insert("launcher.empty_state".into(), Value::Text(String::new()));
     out.insert("launcher.provider".into(), Value::Text("codex".into()));
-    out.insert("launcher.project".into(), Value::Text("demo".into()));
-    out.insert(
-        "launcher.projects".into(),
-        Value::list(vec![serde_json::json!({"id":"demo","label":"Nacre"})]),
-    );
-    out.insert("launcher.chats".into(), Value::list(vec![serde_json::json!({"key":"demo","title":"Fix the build","project":"Nacre","provider":"Codex","state":"idle","lastActivityLabel":"2 hr ago"})]));
+    out.insert("panel.open".into(), Value::Bool(true));
+    out.insert("launcher.chats".into(), Value::list(vec![serde_json::json!({"key":"demo","title":"Fix the build","provider":"Codex","state":"idle","lastActivityLabel":"2 hr ago"})]));
     out.insert("launcher.selected".into(), Value::Text("demo".into()));
     for key in [
         "launcher.can_new",

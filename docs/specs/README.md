@@ -10,6 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 27 | [N0129 local AI panel polish](0129-ai-panel-polish.md) | Implemented; focused dev-1 checks pass | Local general conversations, cached first frame in 11–12 ms and fake-service refresh in 166–168 ms; reviewed 1×/1.5× goldens; task branch only, no live changes. |
 | 26 | [N0128 AI panel launcher](0128-ai-panel-launcher.md) | Implemented; focused dev-1 checks pass | Launcher shares app history/resume actions, with Quick chat and detach; task branch only. Broader inherited CI gaps recorded in the spec; owner should try search/open/focus, provider/project, pin/detach and Quick chat. |
 | 25 | N0127 compact bar desk indicator | Implemented; scale 1/1.5 pixels reviewed | Trailing pearl-sized desk chip shares workspace tokens, hides with one desk, and retains the menu and full-name tooltip. Shell checks pass apart from two inherited failures reproduced with the original bar; topic branch only, no live apply. |
 | 25 | [N0121 final Niri workaround sweep](0121-workaround-sweep.md) | Implemented; desktop validation deferred by owner | Stock Niri keeps helper fallbacks; fork capability gates use native group, hide/restore, force-close, pin, and workspace swap/set-rotation operations where semantics match. |

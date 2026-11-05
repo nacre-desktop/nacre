@@ -199,17 +199,25 @@ impl Chat {
     fn default_launcher_cache_path() -> Option<std::path::PathBuf> {
         let base = std::env::var_os("XDG_CACHE_HOME")
             .map(std::path::PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache")))?;
+            .or_else(|| {
+                std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache"))
+            })?;
         Some(base.join("nacre/ai-panel/chats.json"))
     }
     fn load_launcher_cache(path: &std::path::Path) -> Option<Json> {
         use std::io::Read;
         let file = std::fs::File::open(path).ok()?;
         let metadata = file.metadata().ok()?;
-        if !metadata.is_file() || metadata.len() > LAUNCHER_CACHE_LIMIT as u64 { return None; }
+        if !metadata.is_file() || metadata.len() > LAUNCHER_CACHE_LIMIT as u64 {
+            return None;
+        }
         let mut bytes = Vec::with_capacity(metadata.len() as usize);
-        file.take((LAUNCHER_CACHE_LIMIT + 1) as u64).read_to_end(&mut bytes).ok()?;
-        if bytes.len() > LAUNCHER_CACHE_LIMIT { return None; }
+        file.take((LAUNCHER_CACHE_LIMIT + 1) as u64)
+            .read_to_end(&mut bytes)
+            .ok()?;
+        if bytes.len() > LAUNCHER_CACHE_LIMIT {
+            return None;
+        }
         let mut data: Json = serde_json::from_slice(&bytes).ok()?;
         if let Some(object) = data.as_object_mut() {
             object.retain(|key, _| matches!(key.as_str(), "defaultProvider" | "chats"));
@@ -219,18 +227,31 @@ impl Chat {
         }
         let chats = data["chats"].as_array_mut()?;
         chats.truncate(LAUNCHER_CACHE_ROWS);
-        chats.retain(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
-            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256));
+        chats.retain(|row| {
+            row["key"]
+                .as_str()
+                .is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                && row["title"]
+                    .as_str()
+                    .is_some_and(|v| !v.is_empty() && v.chars().count() <= 256)
+        });
         for row in chats {
             if let Some(object) = row.as_object_mut() {
                 object.remove("project");
-                object.retain(|key, _| matches!(key.as_str(), "key" | "title" | "provider" | "state" | "lastActivity"));
+                object.retain(|key, _| {
+                    matches!(
+                        key.as_str(),
+                        "key" | "title" | "provider" | "state" | "lastActivity"
+                    )
+                });
             }
         }
         Some(data)
     }
     fn save_launcher_cache(path: &std::path::Path, data: &Json) {
-        let Some(chats) = data["chats"].as_array() else { return; };
+        let Some(chats) = data["chats"].as_array() else {
+            return;
+        };
         let cached = json!({
             "defaultProvider": if data["defaultProvider"].as_str() == Some("claude") { "claude" } else { "codex" },
             "chats": chats.iter().filter(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
@@ -240,21 +261,38 @@ impl Chat {
                     "state": row["state"], "lastActivity": row["lastActivity"]
                 })).collect::<Vec<_>>()
         });
-        let Ok(bytes) = serde_json::to_vec(&cached) else { return; };
-        if bytes.len() > LAUNCHER_CACHE_LIMIT { return; }
-        let Some(parent) = path.parent() else { return; };
+        let Ok(bytes) = serde_json::to_vec(&cached) else {
+            return;
+        };
+        if bytes.len() > LAUNCHER_CACHE_LIMIT {
+            return;
+        }
+        let Some(parent) = path.parent() else {
+            return;
+        };
         use std::os::unix::fs::DirBuilderExt;
-        if std::fs::DirBuilder::new().mode(0o700).recursive(true).create(parent).is_err() && !parent.is_dir() { return; }
+        if std::fs::DirBuilder::new()
+            .mode(0o700)
+            .recursive(true)
+            .create(parent)
+            .is_err()
+            && !parent.is_dir()
+        {
+            return;
+        }
         static NEXT_CACHE_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let suffix = NEXT_CACHE_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let temp = path.with_extension(format!("{}.{}.tmp", std::process::id(), suffix));
         let mut options = std::fs::OpenOptions::new();
         options.write(true).create_new(true);
-        #[cfg(unix)] {
+        #[cfg(unix)]
+        {
             use std::os::unix::fs::OpenOptionsExt;
             options.mode(0o600);
         }
-        let Ok(mut file) = options.open(&temp) else { return; };
+        let Ok(mut file) = options.open(&temp) else {
+            return;
+        };
         use std::io::Write;
         if file.write_all(&bytes).is_ok() {
             drop(file);
@@ -281,7 +319,9 @@ impl Chat {
         } else {
             Self::default_launcher_cache_path()
         };
-        let cached_launcher = launcher_cache_path.as_deref().and_then(Self::load_launcher_cache);
+        let cached_launcher = launcher_cache_path
+            .as_deref()
+            .and_then(Self::load_launcher_cache);
         let style = Style::new(WIDTH as f32 - 32., SANS, MONO);
         let metrics = Metrics::new(WIDTH, &style.scale);
         Self {
@@ -471,13 +511,23 @@ impl Chat {
                     }
                     if let Some(chats) = clean["chats"].as_array_mut() {
                         chats.truncate(LAUNCHER_CACHE_ROWS);
-                        chats.retain(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
-                            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256));
+                        chats.retain(|row| {
+                            row["key"]
+                                .as_str()
+                                .is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                                && row["title"]
+                                    .as_str()
+                                    .is_some_and(|v| !v.is_empty() && v.chars().count() <= 256)
+                        });
                         for row in chats {
-                            if let Some(object) = row.as_object_mut() { object.remove("project"); }
+                            if let Some(object) = row.as_object_mut() {
+                                object.remove("project");
+                            }
                         }
                     }
-                    let has_rows = clean["chats"].as_array().is_some_and(|rows| !rows.is_empty());
+                    let has_rows = clean["chats"]
+                        .as_array()
+                        .is_some_and(|rows| !rows.is_empty());
                     if warning.is_empty() || has_rows {
                         if let Some(path) = &self.launcher_cache_path {
                             Self::save_launcher_cache(path, &clean);
@@ -485,7 +535,11 @@ impl Chat {
                         st.launcher = Some(clean);
                     }
                     st.launcher_asked = Some(Instant::now());
-                    st.message = if warning.is_empty() { String::new() } else { "bead.common.request-failed".into() };
+                    st.message = if warning.is_empty() {
+                        String::new()
+                    } else {
+                        "bead.common.request-failed".into()
+                    };
                 }
                 (Call::LauncherList, Err(_)) => {
                     st.launcher_asked = Some(Instant::now());
@@ -675,7 +729,7 @@ impl Chat {
             out.insert("launcher.chats".into(), Value::list(rows));
             let selected_provider = match stores.get("launcher.provider") {
                 Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
-                        _ => data["defaultProvider"]
+                _ => data["defaultProvider"]
                     .as_str()
                     .filter(|v| matches!(*v, "codex" | "claude"))
                     .unwrap_or("codex")
@@ -740,10 +794,7 @@ impl Chat {
             let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
             out.insert(
                 "launcher.can_latest".into(),
-                Value::Bool(
-                    !action_pending
-                        && self.ready("ai.launcher.latest").is_some(),
-                ),
+                Value::Bool(!action_pending && self.ready("ai.launcher.latest").is_some()),
             );
             out.insert(
                 "launcher.can_new".into(),
@@ -752,10 +803,6 @@ impl Chat {
                         && !selected_provider.is_empty()
                         && self.ready("ai.launcher.new").is_some(),
                 ),
-            );
-            out.insert(
-                "launcher.loading".into(),
-                Value::Bool(st.launcher.is_none() && st.launcher_asked.is_none()),
             );
             out.insert(
                 "launcher.can_open".into(),
@@ -1095,7 +1142,11 @@ impl Chat {
                     let provider = match value("launcher.provider").as_str() {
                         "codex" => "codex".to_owned(),
                         "claude" => "claude".to_owned(),
-                        _ => self.st.borrow().launcher.as_ref()
+                        _ => self
+                            .st
+                            .borrow()
+                            .launcher
+                            .as_ref()
                             .and_then(|data| data["defaultProvider"].as_str())
                             .filter(|value| matches!(*value, "codex" | "claude"))
                             .map(str::to_owned)
