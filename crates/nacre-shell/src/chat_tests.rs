@@ -53,6 +53,14 @@ fn stores(pairs: &[(&str, Value)]) -> Stores {
     values.entry("chat.section".into()).or_insert(Value::Text("chat".into()));
     Stores::default().reconcile(&values).unwrap()
 }
+fn launcher_stores(pairs: &[(&str, Value)]) -> Stores {
+    let mut values: BTreeMap<String, Value> = pairs
+        .iter()
+        .map(|(key, value)| (key.to_string(), value.clone()))
+        .collect();
+    values.insert("chat.section".into(), Value::Text("launcher".into()));
+    Stores::default().reconcile(&values).unwrap()
+}
 pub(crate) fn offline(data: Json) -> (Arc<FakeSource>, Chat) {
     let source = Arc::new(FakeSource::new(data).unwrap());
     (source.clone(), Chat::new(None, source, meter()))
@@ -464,7 +472,7 @@ pub(crate) async fn lab(initial: Json) -> Lab {
                             } else if m == "ai.launcher.list" {
                                 Reply::Ok { ok: json!({"chats":chats,"projects":[{"id":"nacre","label":"Nacre"}],"defaultProvider":"codex","warning":""}) }
                             } else if m == "ai.launcher.open" {
-                                Reply::Ok { ok: json!({"opened":true,"focusedExisting":true}) }
+                                Reply::Ok { ok: json!({"ok":true,"focused":true}) }
                             } else {
                                 Reply::Ok { ok: json!({"channel":""}) }
                             };
@@ -715,17 +723,18 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let chat = chat_for(&lab).await;
     let launcher = Stores::default();
     let first = chat.project(&launcher);
-    assert_eq!(first["launcher.can_new"], Value::Bool(true));
+    assert_eq!(first["launcher.can_new"], Value::Bool(false));
     assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
     let listed = until(&chat, &launcher, "launcher list", |out| {
         matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
     }).await;
+    assert_eq!(listed["launcher.can_new"], Value::Bool(true));
     let Value::List(rows) = &listed["launcher.chats"] else { panic!("launcher rows") };
     assert_eq!(rows[0]["provider"], "Codex");
     assert_eq!(rows[0]["state"], "running");
     assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
 
-    let search = stores(&[("launcher.search", Value::Text("brain".into()))]);
+    let search = launcher_stores(&[("launcher.search", Value::Text("brain".into()))]);
     let filtered = chat.project(&search);
     let Value::List(rows) = &filtered["launcher.chats"] else { panic!("filtered rows") };
     assert_eq!(rows.len(), 1);
@@ -733,7 +742,7 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let move_down = chat.act("launcher:move:1", &search);
     assert_eq!(move_down.stores["launcher.selected"], Value::Text("k2".into()));
 
-    let selected = stores(&[("launcher.selected", Value::Text("k2".into()))]);
+    let selected = launcher_stores(&[("launcher.selected", Value::Text("k2".into()))]);
     chat.act("launcher:open-selected", &selected);
     assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k2"})));
     for _ in 0..100 {
@@ -744,11 +753,11 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert!(!chat.st.borrow().pending.iter().any(|pending| pending.call == Call::LauncherAction), "focus-existing acknowledgement is consumed");
-    // The shared service reports focusedExisting when it reuses an open chat window.
+    // The shared service acknowledges a focused or newly opened chat window.
     chat.act("launcher:open:k1", &launcher);
     assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k1"})));
 
-    let configured = stores(&[
+    let configured = launcher_stores(&[
         ("launcher.provider", Value::Text("claude".into())),
         ("launcher.project", Value::Text("nacre".into())),
     ]);
@@ -796,9 +805,15 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     let launcher = Stores::default();
     chat.project(&launcher);
     let _ = lab.calls.recv().await;
-    let projected = until(&chat, &launcher, "launcher golden data", |out| {
+    let mut projected = until(&chat, &launcher, "launcher golden data", |out| {
         matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
     }).await;
+    let Value::List(rows) = &projected["launcher.chats"] else { panic!("launcher rows") };
+    let mut rows = rows.as_ref().clone();
+    for row in &mut rows {
+        row["lastActivityLabel"] = json!("2 hr ago");
+    }
+    projected.insert("launcher.chats".into(), Value::list(rows));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
         assert!(regular.session.view_nodes().iter().any(|node| node.id == "chat.search"));

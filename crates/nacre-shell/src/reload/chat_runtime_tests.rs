@@ -59,10 +59,25 @@ async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inl
     assert!(runtime.session.view_nodes().iter().find(|node| node.id == "chat.recent-chats").and_then(|node| node.scroll_limit).is_some_and(|limit| limit > 0.));
     assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
     step(&mut runtime, UiEvent::Key { text: "brain".into(), backspace: false });
-    step(&mut runtime, UiEvent::Command { command: "down".into(), shift: false });
-    assert_eq!(runtime.session.stores.get("launcher.selected"), Some(&bead::core::Value::Text("k2".into())));
+    assert_eq!(runtime.session.stores.get("launcher.search"), Some(&bead::core::Value::Text("brain".into())));
+    for _ in 0..5 {
+        step(&mut runtime, UiEvent::Key { text: String::new(), backspace: true });
+    }
+    step(&mut runtime, UiEvent::Command { command: "up".into(), shift: false });
+    assert_eq!(runtime.session.stores.get("launcher.selected"), Some(&bead::core::Value::Text("k1".into())));
+    for _ in 0..8 {
+        step(&mut runtime, UiEvent::Command { command: "down".into(), shift: false });
+    }
+    assert_eq!(runtime.session.stores.get("launcher.selected"), Some(&bead::core::Value::Text("k9".into())));
+    assert!(matches!(runtime.session.stores.get("launcher.scroll"), Some(bead::core::Value::Number(scroll)) if *scroll > 0.));
+    let nodes = runtime.session.view_nodes();
+    let viewport = nodes.iter().find(|node| node.scroll_store.as_deref() == Some("launcher.scroll") && node.scroll_limit.is_some()).expect("launcher list viewport");
+    let viewport_rect = bead::ui::rect(&viewport.draw);
+    let selected_row = nodes.iter().find(|node| matches!(&node.action_arg, Some(bead::core::Value::Text(arg)) if arg == "launcher:open:k9")).expect("selected row remains rendered");
+    let selected_rect = bead::ui::rect(&selected_row.draw);
+    assert!(selected_rect.y >= viewport_rect.y && selected_rect.y + selected_rect.h <= viewport_rect.y + viewport_rect.h, "selected row is scrolled into view");
     step(&mut runtime, UiEvent::Command { command: "enter".into(), shift: false });
-    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k2"})));
+    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k9"})));
     assert_eq!(runtime.session.stores.get("chat.section"), Some(&bead::core::Value::Text("launcher".into())));
     assert!(lab.calls.try_recv().is_err(), "launcher interaction does not start ai.chat.open");
 }

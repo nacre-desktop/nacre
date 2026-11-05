@@ -446,8 +446,9 @@ impl Chat {
         };
         let wake = self.waker();
         let mut out = BTreeMap::new();
+        out.insert("chat.section".into(), text(section.clone()));
         self.remember("chat.section", &section);
-        let labels = ["bead.panel.chat-tab-chat", "bead.panel.chat-tab-chats", "bead.panel.chat-tab-brain", "bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
+        let labels = ["bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
             .into_iter().map(|id| {
                 let label = tr(id, &[]);
                 let transcript = self.transcript.borrow();
@@ -542,7 +543,6 @@ impl Chat {
             out.insert("chat.button".into(), number(self.metrics.button));
             out.insert("chat.top".into(), number(self.metrics.top));
             out.insert("chat.inner".into(), number(f64::from(self.metrics.inner)));
-            out.insert("chat.quick_chat".into(), Value::Bool(false));
             if stores.get("bead.focused").is_none() {
                 out.insert("bead.focused".into(), text("chat.search"));
             }
@@ -975,7 +975,7 @@ impl Chat {
                 });
             }
             "latest" => self.st.borrow_mut().follow = true,
-            "section" if matches!(rest, "launcher" | "chat" | "chats" | "settings") => {
+            "section" if matches!(rest, "launcher" | "chat") => {
                 out.stores.insert("chat.section".into(), text(rest));
                 if rest == "launcher" {
                     out.stores.insert("launcher.quick_chat".into(), Value::Bool(false));

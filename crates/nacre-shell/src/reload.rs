@@ -5217,6 +5217,97 @@ impl Runtime {
     }
 }
 
+impl Runtime {
+    fn scroll_launcher_selection(&mut self) -> Result<Option<Scene>, Box<dyn Error>> {
+        if !self
+            .chat
+            .as_ref()
+            .is_some_and(|chat| chat.launcher_search_focused(&self.session.stores))
+        {
+            return Ok(None);
+        }
+        let selected = match self.session.stores.get("launcher.selected") {
+            Some(bead::core::Value::Text(key)) => key.clone(),
+            _ => return Ok(None),
+        };
+        let rows = match self.session.stores.get("launcher.chats") {
+            Some(bead::core::Value::List(rows)) => rows,
+            _ => return Ok(None),
+        };
+        let Some(index) = rows
+            .iter()
+            .position(|row| row["key"].as_str() == Some(selected.as_str()))
+        else {
+            return Ok(None);
+        };
+        let nodes = self.session.view_nodes();
+        let Some(viewport) = nodes.iter().find(|node| {
+            node.scroll_store.as_deref() == Some("launcher.scroll")
+                && node.scroll_limit.is_some()
+        }) else {
+            return Ok(None);
+        };
+        let viewport_rect = bead::ui::rect(&viewport.draw);
+        let scroll_limit = viewport.scroll_limit.unwrap_or(0.);
+        let mut positions: Vec<(f64, f64, usize)> = nodes
+            .iter()
+            .filter(|node| {
+                node.scroll_store.as_deref() == Some("launcher.scroll")
+                    && matches!(&node.action_arg, Some(bead::core::Value::Text(arg)) if arg.starts_with("launcher:open:"))
+            })
+            .filter_map(|node| {
+                let Some(bead::core::Value::Text(arg)) = &node.action_arg else {
+                    return None;
+                };
+                let key = arg.strip_prefix("launcher:open:")?;
+                let index = rows.iter().position(|row| row["key"].as_str() == Some(key))?;
+                let rect = bead::ui::rect(&node.draw);
+                Some((f64::from(rect.y), f64::from(rect.h), index))
+            })
+            .collect();
+        positions.sort_by(|a, b| a.0.total_cmp(&b.0));
+        let row_height = positions.first().map(|row| row.1).unwrap_or(0.);
+        let pitch = positions
+            .windows(2)
+            .find_map(|pair| {
+                let rows_apart = pair[1].2.saturating_sub(pair[0].2);
+                let delta = pair[1].0 - pair[0].0;
+                (rows_apart > 0 && delta > 0.).then_some(delta / rows_apart as f64)
+            })
+            .or_else(|| {
+                (!rows.is_empty()).then_some(
+                    (scroll_limit + f64::from(viewport_rect.h)) / rows.len() as f64,
+                )
+            })
+            .unwrap_or(0.);
+        if pitch <= 0. || row_height <= 0. {
+            return Ok(None);
+        }
+        let current = match self.session.stores.get("launcher.scroll") {
+            Some(bead::core::Value::Number(value)) => *value,
+            _ => 0.,
+        };
+        let origin = positions.first().map_or(f64::from(viewport_rect.y), |row| {
+            current + row.0 - f64::from(viewport_rect.y) - row.2 as f64 * pitch
+        });
+        let row_top = origin + index as f64 * pitch;
+        let row_bottom = row_top + row_height;
+        let target = if row_top < current {
+            row_top
+        } else if row_bottom > current + f64::from(viewport_rect.h) {
+            row_bottom - f64::from(viewport_rect.h)
+        } else {
+            current
+        }
+        .clamp(0., scroll_limit);
+        if (target - current).abs() < 0.5 {
+            return Ok(None);
+        }
+        self.session
+            .update(BTreeMap::from([("launcher.scroll".into(), bead::core::Value::Number(target))]))
+    }
+}
+
 impl SceneSource for Runtime {
     fn drag_visuals(&self) -> Vec<bead::wayland::DragVisual> {
         use bead::core::Value;
@@ -9723,7 +9814,8 @@ impl SceneSource for Runtime {
                 "up" | "down" if self.chat.as_ref().is_some_and(|chat| chat.launcher_search_focused(&self.session.stores)) => {
                     let arg = if command == "up" { "launcher:move:up" } else { "launcher:move:down" };
                     let changes = self.chat.as_ref().map(|chat| chat.act(arg, &self.session.stores).stores).unwrap_or_default();
-                    self.session.update(changes)?
+                    let selected = self.session.update(changes)?;
+                    self.scroll_launcher_selection()?.or(selected)
                 }
                 "up" | "down" => self.session.focus_next(command == "up")?,
                 "left" | "right" if self.session.focused_range() => {
