@@ -1,6 +1,6 @@
 # N0134 — Brain viewer load robustness (U12)
 
-Status: source implementation complete; remote validation in progress.
+Status: complete; synthetic acceptance and desktop CI validated.
 
 The viewer previously waited for `/api/brain` to run discovery synchronously.
 The overhaul audit measured cold discovery at 145 seconds with vectors and
@@ -43,7 +43,38 @@ and authorized dev-1. `/root` is mode 711 for private parity sandboxes.
 Raw command output is kept in task-private `.lead/` evidence.
 The task branch alone is pushed; installation and main integration are lead-owned.
 
-Workspace Rust, clippy, product proofs, and catalog checks passed in the first
-desktop job run. Source/UI checks require a committed candidate checkout; the
-first run correctly rejected an uncommitted source overlay. Remaining acceptance
-checks and Chromium timings are pending. This unit is not ready for installation.
+## Validation
+
+All 18 shell steps from the desktop CI job passed, including workspace Rust
+tests, clippy with warnings denied, product proofs, cargo-deny, `tools/check.py`,
+534 helper parity cases, English/pseudo galleries, and raster memory regression.
+The gallery covered 244 states per language and 185 per language with a wide font.
+Focused checks passed 89 Rust Brain tests, the Brain CLI integration, 52 Python
+Brain tests, 23 discovery parity runs, public graph parity, and semantic-worker
+cache/protocol/idle checks. Formatting, browser syntax, Prettier, catalog coverage
+(4,199 messages) and generated assets passed.
+
+Headless Chromium through the real launcher with a private mock compositor:
+
+| Synthetic acceptance | Result |
+| --- | --- |
+| Cold 2,000-note vault, no index: useful subjects/recent notes | 1,477 ms (< 5 s) |
+| Stalled summary: visible error and Retry; Retry succeeds | 8,039 ms to error |
+| Connections finish without reloading the page | Pass |
+| Restart: data/connections, persisted index unchanged | 1,460 ms (< 2 s) |
+| Add note 2,001: connections refresh without reloading | Pass |
+| First API 403 retries after auth readiness | Pass |
+| Browser authentication/content boundaries | Pass; zero browser exceptions |
+
+The initial source/UI run rejected an uncommitted source overlay; syncing the
+committed candidate fixed provenance. Chromium, installed for browser acceptance,
+made an optional publisher appear in frozen wallpaper fixtures; hiding its launcher
+while running desktop CI restored the prescribed package environment. No frozen
+expectations were changed. The semantic fallback fixture now removes its synthetic
+persisted graph before testing a malformed worker response, so cache reuse cannot
+mask that protocol check. The older browser security harness uses the current
+same-origin bootstrap in place of the removed file handoff.
+
+Raw CI, focused-check and Chromium results plus gallery artifacts are retained in
+task-private `.lead/evidence/`. Only synthetic notes and private homes were used;
+the laptop failure was not reproduced and no live deployment was performed.

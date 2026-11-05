@@ -16,8 +16,12 @@ credential. Separate credential probes returning 403 do not establish a session
 mismatch. N0132 follow-up validation passed 90 Brain library tests, the CLI test and
 locked helper/shell checks. U12 adds bounded loading/error/retry behavior and
 moves discovery behind the fast summary response. This investigation did not
-access live auth or reproduce the laptop failure. N0134 runtime validation is
-pending; these historical results do not validate the new loading/cache paths.
+access live auth or reproduce the laptop failure. These historical N0132 results
+are separate from the N0134 validation below.
+
+N0134 / U12: [viewer load robustness](0134-brain-viewer-load.md) validated with
+synthetic 2,000-note cold/restart loads in 1.477 s / 1.460 s, timeout/Retry and
+background connection refresh. Full dev-1 desktop CI passed; topic branch only.
 
 Initial N0132 implementation: Brain bootstrap, handoff and app use the API's
 loopback HTTP origin; native file handoff generation is removed and browser focus

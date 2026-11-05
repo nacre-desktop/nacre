@@ -63,6 +63,8 @@ def main():
         graph()
         assert log.read_text().splitlines() == ["started", "started"]
         cache_path.unlink()
+        # Force discovery so the persisted graph cannot mask the bad worker reply.
+        (vault / ".brain-state/index/graph.json").unlink()
         fallback = graph({"FIXTURE_MODEL_BAD": "1"})
         assert fallback["discovery"]["embedding"] == "lexical fallback"
         started = time.monotonic()
