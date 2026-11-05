@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "List",
+  "type": "object",
+  "properties": {
+    "chats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Chat"
+      },
+      "maxItems": 30
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Project"
+      },
+      "maxItems": 64
+    },
+    "defaultProvider": {
+      "$ref": "#/$defs/Provider"
+    },
+    "warning": {
+      "type": "string",
+      "maxLength": 2048
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "chats",
+    "projects",
+    "defaultProvider",
+    "warning"
+  ],
+  "$defs": {
+    "Chat": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "project": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "provider": {
+          "$ref": "#/$defs/Provider"
+        },
+        "state": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "lastActivity": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title",
+        "project",
+        "provider",
+        "state",
+        "lastActivity"
+      ]
+    },
+    "Provider": {
+      "type": "string",
+      "enum": [
+        "codex",
+        "claude"
+      ]
+    },
+    "Project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label"
+      ]
+    }
+  }
+}

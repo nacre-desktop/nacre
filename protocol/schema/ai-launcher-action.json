@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Action",
+  "type": "object",
+  "properties": {
+    "action": {
+      "$ref": "#/$defs/LauncherAction"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "action"
+  ],
+  "$defs": {
+    "LauncherAction": {
+      "type": "string",
+      "enum": [
+        "brain",
+        "settings",
+        "projects"
+      ]
+    }
+  }
+}

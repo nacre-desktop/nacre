@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenAck",
+  "type": "object",
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "focused": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "ok",
+    "focused"
+  ]
+}

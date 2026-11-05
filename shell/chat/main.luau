@@ -11,7 +11,7 @@ local BODY,CAPTION=px(T.text.body),px(T.text.caption)
 local H=get("chat.height")
 local section=get("chat.section")
 local launcher=require("bead.widgets.kit.virtual-list")
-local E,BTN,INNER,TABS,TOP=get("chat.edge"),get("chat.button"),get("chat.inner"),get("chat.tabs"),get("chat.top")
+local E,BTN,INNER,TOP=get("chat.edge"),get("chat.button"),get("chat.inner"),get("chat.top")
 local W=INNER+2*E
 local ICON=px(T.icons.medium)
 local labels={}
@@ -92,7 +92,7 @@ else
     local ROW=BODY+2*CAPTION+T.spacing.md
     local search_top=PROJECT_TOP+BTN+T.spacing.xs
     local recent_top=search_top+BTN+T.spacing.sm
-    local list_top=recent_top+CAPTION+T.spacing.xs
+    local list_top=recent_top+BTN+T.spacing.xs
     local footer_h=BTN+T.spacing.xs
     local list_bottom=H-E-footer_h-T.spacing.md
     local warning=get("launcher.warning")
@@ -119,10 +119,10 @@ else
     add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
         text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,
         radius=T.radii.small,font_size=BODY,fill="surfaceContainerHigh",focus_ring=true})
-    add(ui.Text{id="recent",position="absolute",left=E,top=recent_top,width=INNER*.7,height=CAPTION+T.spacing.xs,
+    add(ui.Text{id="recent",position="absolute",left=E,top=recent_top+(BTN-CAPTION)/2,width=INNER*.7,height=CAPTION+T.spacing.xs,
         text=ui.tr("bead.panel.launcher-recent"),font_size=CAPTION,color="onSurfaceVariant"})
-    add(button("refresh",E+INNER-T.spacing.huge-T.spacing.xl, recent_top-T.spacing.xs, T.spacing.huge+T.spacing.xl,BTN,
-        ui.tr("bead.panel.chat-refresh"),"refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION))
+    add(button("refresh",E+INNER-BTN,recent_top,BTN,BTN,
+        "","refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION,ui.tr("bead.panel.chat-refresh")))
     if warning~="" then
         add(ui.Text{id="launcher-warning",position="absolute",left=E,top=list_top,width=INNER,height=warning_h,
             text=warning,font_size=CAPTION,color="error"})
@@ -150,13 +150,13 @@ else
             text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"})
     end
     add(ui.Row{id="secondary",position="absolute",left=E,top=H-E-footer_h,width=INNER,height=BTN,gap=T.spacing.xs,
-        button("brain",nil,nil,40,BTN,"","neurology",ui.action("chat.do","launcher:brain"),false,CAPTION,ui.tr("bead.panel.launcher-brain")),
-        button("settings",nil,nil,40,BTN,"","settings",ui.action("chat.do","launcher:settings"),false,CAPTION,ui.tr("bead.panel.chat-tab-settings")),
-        button("projects",nil,nil,40,BTN,"","folder_open",ui.action("chat.do","launcher:projects"),false,CAPTION,ui.tr("bead.panel.launcher-projects")),
-        button("quick-chat",nil,nil,112,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)})
+        button("brain",nil,nil,BTN,BTN,"","neurology",ui.action("chat.do","launcher:brain"),false,CAPTION,ui.tr("bead.panel.launcher-brain")),
+        button("settings",nil,nil,BTN,BTN,"","settings",ui.action("chat.do","launcher:settings"),false,CAPTION,ui.tr("bead.panel.chat-tab-settings")),
+        button("projects",nil,nil,BTN,BTN,"","folder_open",ui.action("chat.do","launcher:projects"),false,CAPTION,ui.tr("bead.panel.launcher-projects")),
+        button("quick-chat",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)})
     if project_picker_open and #projects>0 then
         local PICK_TOP=PROJECT_TOP+BTN
-        local PICK_H=math.min(160,H-E-PICK_TOP-T.spacing.sm)
+        local PICK_H=math.min(4*BTN+T.spacing.md,H-E-PICK_TOP-T.spacing.sm)
         add(launcher{id="project-options",scroll=ui.bind("launcher.project-scroll"),position="absolute",left=E+CAPTION*4+T.spacing.xs,
             top=PICK_TOP,width=INNER-CAPTION*4-T.spacing.xs,height=PICK_H,gap=T.spacing.xs,row_height=BTN,
             model=ui.bind("launcher.projects"),key="id",render=function(item)
