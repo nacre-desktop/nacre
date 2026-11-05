@@ -136,11 +136,22 @@ class NacreNiriSessionTests(unittest.TestCase):
                 )
             self.assertNotIn("edge-triggers", config.read_text())
             self.assertNotIn("nacre { edge-triggers; }", overlay.read_text())
+            self.assertIn("cue;", overlay.read_text())
             self.assertIn(
-                "left { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "left { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
             )
             self.assertIn(
-                "bottom { action { event; }; dwell-time-ms 800; }", overlay.read_text()
+                "right { action { event; }; dwell-time-ms 800; trigger-distance 10; trigger-length 144; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "top { action { event; }; dwell-time-ms 800; trigger-distance 50; trigger-length 208; }",
+                overlay.read_text(),
+            )
+            self.assertIn(
+                "bottom { action { event; }; dwell-time-ms 800; trigger-distance 10; }",
+                overlay.read_text(),
             )
             env = {**os.environ, "HOME": str(home)}
             subprocess.run(
@@ -164,8 +175,32 @@ class NacreNiriSessionTests(unittest.TestCase):
             settings.write_text(json.dumps({"lipHoverDelay": 0}))
             self.assertEqual(package_niri.edge_trigger_delay(home), 0)
             settings.write_text(json.dumps({"lipHoverDelay": 801}))
-            self.assertEqual(package_niri.edge_trigger_delay(home), 350)
+        self.assertEqual(package_niri.edge_trigger_delay(home), 350)
         self.assertIn("dwell-time-ms 800", package_niri.edge_trigger_config(800))
+
+    def test_nacre_niri_generated_edge_cues_match_configured_handle_depths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            settings = home / ".config/nacre/desktop.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text(
+                json.dumps(
+                    {
+                        "frameWidth": 14,
+                        "topBarEnabled": True,
+                        "frameTopEnabled": False,
+                    }
+                )
+            )
+            self.assertEqual(package_niri.edge_trigger_distances(home), (14, 14, 40, 14))
+            config = package_niri.edge_trigger_config(
+                350, package_niri.edge_trigger_distances(home)
+            )
+            self.assertIn("cue;", config)
+            self.assertIn("left { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }", config)
+            self.assertIn("right { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }", config)
+            self.assertIn("top { action { event; }; dwell-time-ms 350; trigger-distance 40; trigger-length 208; }", config)
+            self.assertIn("bottom { action { event; }; dwell-time-ms 350; trigger-distance 14; }", config)
 
     def test_nacre_session_dispatch_selects_fork_launcher(self):
         backend = SimpleNamespace(supported=lambda root: True, session=Mock())

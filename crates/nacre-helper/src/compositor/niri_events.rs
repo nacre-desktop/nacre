@@ -190,17 +190,21 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
         .as_object()
         .filter(|object| object.len() == 1)
         .ok_or_else(|| invalid("Malformed niri edge event"))?;
-    let (variant, event_type) = if object.contains_key("EdgeTriggered") {
-        ("EdgeTriggered", "edge-triggered")
+    let (variant, event_type, has_progress) = if object.contains_key("EdgeApproach") {
+        ("EdgeApproach", "edge-approach", true)
+    } else if object.contains_key("EdgeHover") {
+        ("EdgeHover", "edge-hover", true)
+    } else if object.contains_key("EdgeTriggered") {
+        ("EdgeTriggered", "edge-triggered", false)
     } else if object.contains_key("EdgeLeft") {
-        ("EdgeLeft", "edge-left")
+        ("EdgeLeft", "edge-left", false)
     } else {
         return Ok(None);
     };
     let payload = object
         .get(variant)
         .and_then(Value::as_object)
-        .filter(|payload| payload.len() == 3)
+        .filter(|payload| payload.len() == if has_progress { 4 } else { 3 })
         .ok_or_else(|| invalid("Malformed niri edge event"))?;
     let output = payload
         .get("output")
@@ -227,20 +231,35 @@ pub fn edge_trigger(value: &Value) -> Result<Option<Value>> {
             ])
         })
         .ok_or_else(|| invalid("Malformed niri edge position"))?;
-    Ok(Some(json!({
+    let mut event = json!({
         "type":event_type,
         "output":output,
         "edge":edge,
         "position":position
-    })))
+    });
+    if has_progress {
+        let progress = payload
+            .get("progress")
+            .and_then(Value::as_f64)
+            .filter(|progress| progress.is_finite() && (0.0..=1.0).contains(progress))
+            .ok_or_else(|| invalid("Malformed niri edge cue progress"))?;
+        event["progress"] = json!(progress);
+    }
+    Ok(Some(event))
 }
 
 pub trait Outputs {
     fn outputs(&mut self) -> Result<Value>;
+    fn edge_trigger_cues(&mut self) -> Option<bool> {
+        None
+    }
 }
 impl Outputs for Connection {
     fn outputs(&mut self) -> Result<Value> {
         self.response("Outputs", Duration::from_secs(10), MAX_BYTES)
+    }
+    fn edge_trigger_cues(&mut self) -> Option<bool> {
+        Some(self.nacre_capabilities(Duration::from_millis(500)).edge_trigger_cues)
     }
 }
 pub struct Events<T: Outputs> {
@@ -248,6 +267,7 @@ pub struct Events<T: Outputs> {
     daemon: Option<crate::daemon::niri_events::Source>,
     pub state: State,
     outputs: T,
+    edge_trigger_cues: Option<bool>,
     pending: VecDeque<Value>,
     failed: bool,
 }
@@ -276,9 +296,14 @@ impl<T: Outputs> Events<T> {
             daemon: None,
             state: State::new(initial),
             outputs,
+            edge_trigger_cues: None,
             pending: VecDeque::new(),
             failed: false,
         })
+    }
+    pub fn with_edge_trigger_cues(mut self, supported: bool) -> Self {
+        self.edge_trigger_cues = Some(supported);
+        self
     }
     pub(crate) fn from_daemon(daemon: crate::daemon::niri_events::Source, outputs: T) -> Self {
         Self {
@@ -286,6 +311,7 @@ impl<T: Outputs> Events<T> {
             daemon: Some(daemon),
             state: State::new(serde_json::Map::new()),
             outputs,
+            edge_trigger_cues: None,
             pending: VecDeque::new(),
             failed: false,
         }
@@ -321,6 +347,11 @@ impl<T: Outputs> Events<T> {
                 .next_event()?;
             let normalized = self.state.apply(&event)?;
             let mut outputs_changed = false;
+            if event.get("ConfigLoaded").is_some() {
+                if let Some(supported) = self.outputs.edge_trigger_cues() {
+                    self.edge_trigger_cues = Some(supported);
+                }
+            }
             if event.get("WorkspacesChanged").is_some() || event.get("ConfigLoaded").is_some() {
                 let outputs = self
                     .outputs
@@ -336,7 +367,11 @@ impl<T: Outputs> Events<T> {
                 && self.state.ready.contains("workspace")
                 && normalized["type"] != "other"
             {
-                self.pending.push_back(self.state.snapshot()?);
+                let mut snapshot = self.state.snapshot()?;
+                if self.edge_trigger_cues == Some(true) {
+                    snapshot["capabilities"]["edge_trigger_cues"] = json!(true);
+                }
+                self.pending.push_back(snapshot);
                 self.pending.push_back(normalized.clone());
                 if let Some(changes) = normalized.get("changes").and_then(Value::as_array) {
                     for kind in changes.iter().skip(1) {
@@ -359,6 +394,7 @@ mod tests {
     struct FixtureOutputs {
         values: Vec<Value>,
         queries: Vec<Value>,
+        cue_capabilities: Vec<bool>,
     }
     impl Outputs for FixtureOutputs {
         fn outputs(&mut self) -> Result<Value> {
@@ -366,6 +402,37 @@ mod tests {
             self.queries.push(json!({"name":"Outputs","kwargs":{}}));
             Ok(self.values[index].clone())
         }
+        fn edge_trigger_cues(&mut self) -> Option<bool> {
+            (!self.cue_capabilities.is_empty()).then(|| self.cue_capabilities.remove(0))
+        }
+    }
+    #[test]
+    fn direct_event_snapshots_refresh_edge_cue_capability_on_config_reload() -> crate::Result<()> {
+        let (client, mut server) = UnixStream::pair()?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            writeln!(server, "{{\"WorkspacesChanged\":{{\"workspaces\":[]}}}}")?;
+            writeln!(server, "{{\"WindowsChanged\":{{\"windows\":[]}}}}")?;
+            writeln!(server, "{{\"ConfigLoaded\":{{\"failed\":false}}}}")?;
+            writeln!(server, "{{\"ConfigLoaded\":{{\"failed\":false}}}}")
+        });
+        let outputs = FixtureOutputs {
+            values: vec![json!({})],
+            queries: vec![],
+            cue_capabilities: vec![true, false],
+        };
+        let mut events = Events::new(EventSocket::from_stream(client), outputs)?
+            .with_edge_trigger_cues(false);
+        let initial = events.next_value()?;
+        assert!(initial["capabilities"].get("edge_trigger_cues").is_none());
+        assert_eq!(events.next_value()?["type"], "windows-changed");
+        let enabled = events.next_value()?;
+        assert_eq!(enabled["capabilities"]["edge_trigger_cues"], true);
+        assert_eq!(events.next_value()?["type"], "configuration-reloaded");
+        let disabled = events.next_value()?;
+        assert!(disabled["capabilities"].get("edge_trigger_cues").is_none());
+        assert_eq!(events.next_value()?["type"], "configuration-reloaded");
+        peer.join().map_err(|_| "Niri reload fixture panicked")??;
+        Ok(())
     }
     #[test]
     fn native_edge_stream_handshake_and_event_shape_are_validated() -> crate::Result<()> {
@@ -381,6 +448,8 @@ mod tests {
                 server,
                 "{{\"OverviewOpenedOrClosed\":{{\"is_open\":true}}}}"
             )?;
+            writeln!(server, "{{\"EdgeApproach\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[0.0,720.0],\"progress\":0.0}}}}")?;
+            writeln!(server, "{{\"EdgeHover\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[2.0,720.0],\"progress\":0.5}}}}")?;
             writeln!(server, "{{\"EdgeTriggered\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[4.0,720.0]}}}}")?;
             writeln!(server, "{{\"EdgeLeft\":{{\"output\":\"DP-1\",\"edge\":\"Left\",\"position\":[8.0,720.0]}}}}")
         });
@@ -396,6 +465,16 @@ mod tests {
         let wire = socket.next_event()?;
         assert_eq!(
             edge_trigger(&wire)?,
+            Some(json!({"type":"edge-approach","output":"DP-1","edge":"left","position":[0.0,720.0],"progress":0.0}))
+        );
+        let wire = socket.next_event()?;
+        assert_eq!(
+            edge_trigger(&wire)?,
+            Some(json!({"type":"edge-hover","output":"DP-1","edge":"left","position":[2.0,720.0],"progress":0.5}))
+        );
+        let wire = socket.next_event()?;
+        assert_eq!(
+            edge_trigger(&wire)?,
             Some(
                 json!({"type":"edge-triggered","output":"DP-1","edge":"left","position":[4.0,720.0]})
             )
@@ -407,6 +486,10 @@ mod tests {
         );
         assert!(edge_trigger(&json!({"EdgeTriggered": {
             "output":"DP-1", "edge":"Left", "position":[0.0,"bad"]
+        }}))
+        .is_err());
+        assert!(edge_trigger(&json!({"EdgeHover": {
+            "output":"DP-1", "edge":"Left", "position":[1.0,10.0], "progress":1.1
         }}))
         .is_err());
         peer.join().map_err(|_| "Edge event fixture panicked")??;
@@ -439,6 +522,7 @@ mod tests {
                     .ok_or("Missing outputs")?
                     .clone(),
                 queries: vec![],
+                cue_capabilities: vec![],
             };
             let mut events = Events::new(EventSocket::from_stream(client), outputs)?;
             let mut emitted = Vec::new();

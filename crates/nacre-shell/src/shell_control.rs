@@ -8,7 +8,10 @@ use crate::{
     prefs::Prefs,
 };
 use bead::core::source::{Snapshot, Source, Subscription};
-use bead::wayland::{EdgeChrome, ShellControl, intent::Lip};
+use bead::wayland::{
+    EdgeChrome, ExternalEdgeCue, ExternalEdgeCueSender, ExternalEdgePhase, ShellControl,
+    intent::Lip,
+};
 use std::collections::BTreeMap;
 use std::sync::{
     Mutex,
@@ -77,33 +80,33 @@ struct EdgeSnapshots {
     compositor_connected: bool,
     event_connected: bool,
     acknowledged: bool,
+    cue_capable: bool,
     outputs: BTreeMap<String, (i32, i32)>,
 }
 pub(crate) struct EdgeEventState {
     gate: std::sync::Arc<Gate>,
     snapshots: Mutex<EdgeSnapshots>,
-    command_socket: Option<std::path::PathBuf>,
-    next_panel_call: AtomicU64,
-    active_lips: Mutex<BTreeMap<(String, String), String>>,
-    panel_sender: Mutex<Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>>>,
+    cue_sender: ExternalEdgeCueSender,
+    active_cues: Mutex<BTreeMap<(String, &'static str), ExternalEdgeCue>>,
 }
 impl EdgeEventState {
     pub(crate) fn new(
         gate: std::sync::Arc<Gate>,
-        command_socket: Option<std::path::PathBuf>,
+        cue_sender: ExternalEdgeCueSender,
     ) -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
             gate,
             snapshots: Mutex::new(EdgeSnapshots::default()),
-            command_socket,
-            next_panel_call: AtomicU64::new(1),
-            active_lips: Mutex::new(BTreeMap::new()),
-            panel_sender: Mutex::new(None),
+            cue_sender,
+            active_cues: Mutex::new(BTreeMap::new()),
         })
     }
     fn publish_active(&self, snapshots: &EdgeSnapshots) {
-        let active =
-            snapshots.compositor_connected && snapshots.event_connected && snapshots.acknowledged;
+        let active = snapshots.compositor_connected
+            && snapshots.event_connected
+            && snapshots.acknowledged
+            && snapshots.cue_capable
+            && !self.gate.edge_chrome().click_to_open;
         self.gate.set_native_edge_source(active);
         if !active {
             self.clear_native_hovers();
@@ -112,6 +115,8 @@ impl EdgeEventState {
     fn update_compositor(&self, snapshot: &Snapshot) {
         let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
         state.compositor_connected = snapshot.connected;
+        state.cue_capable = snapshot.data["capabilities"]["edge_trigger_cues"].as_bool()
+            == Some(true);
         state.outputs = if snapshot.connected {
             snapshot.data["outputs"]
                 .as_object()
@@ -130,6 +135,7 @@ impl EdgeEventState {
         } else {
             BTreeMap::new()
         };
+        self.clear_removed_outputs(&state.outputs);
         self.publish_active(&state);
     }
     fn update_event_source(&self, snapshot: &Snapshot) {
@@ -155,130 +161,118 @@ impl EdgeEventState {
             None => return,
         };
         let position = match data["position"].as_array().filter(|pair| pair.len() == 2) {
-            Some(pair) => match (pair[0].as_f64(), pair[1].as_f64()) {
-                (Some(x), Some(y)) if x.is_finite() && y.is_finite() => (x as f32, y as f32),
-                _ => return,
-            },
+            Some(pair) => {
+                let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) else { return; };
+                let position = (x as f32, y as f32);
+                if !(x.is_finite() && y.is_finite() && position.0.is_finite() && position.1.is_finite()) {
+                    return;
+                }
+                position
+            }
             None => return,
         };
-        let edge = data["edge"].as_str();
-        let output_size = {
-            let state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
-            if !(state.compositor_connected && state.event_connected && state.acknowledged) {
-                return;
-            }
-            state.outputs.get(output).copied()
+        let (edge, phase, progress) = match event_type {
+            Some("edge-approach") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Approach), cue_progress(data)),
+            Some("edge-hover") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Hover), cue_progress(data)),
+            Some("edge-triggered") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Triggered), Some(1.0)),
+            Some("edge-left") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Left), Some(0.0)),
+            _ => return,
         };
-        if let Some(edge) = edge {
-            if event_type == Some("edge-left") {
-                let view = self
-                    .active_lips
-                    .lock()
-                    .unwrap_or_else(|p| p.into_inner())
-                    .remove(&(output.to_owned(), edge.to_owned()));
-                if let Some(view) = view {
-                    self.request_native_panel(&view, output, false);
-                }
-                return;
-            }
-            if event_type != Some("edge-triggered") {
-                return;
-            }
-        }
-        if let (Some(edge), Some(size)) = (edge, output_size) {
-            let Some(lip) = self.gate.native_lip_at(edge, position, size) else {
-                return;
-            };
-            let key = (output.to_owned(), edge.to_owned());
-            let previous = self
-                .active_lips
-                .lock()
-                .unwrap_or_else(|p| p.into_inner())
-                .insert(key, lip.opens.clone());
-            if let Some(previous) = previous.filter(|previous| *previous != lip.opens) {
-                self.request_native_panel(&previous, output, false);
-            }
-            self.request_native_panel(&lip.opens, output, true);
-        }
-    }
-    fn clear_native_hovers(&self) {
-        let active =
-            std::mem::take(&mut *self.active_lips.lock().unwrap_or_else(|p| p.into_inner()));
-        for ((output, _edge), view) in active {
-            self.request_native_panel(&view, &output, false);
-        }
-    }
-    fn request_native_panel(&self, view: &str, output: &str, hover_open: bool) {
-        if view == "assistant" {
-            crate::app::panel_request(
-                "chat",
-                if hover_open {
-                    "hover-open"
-                } else {
-                    "hover-leave"
-                },
-                output,
-            );
-        } else {
-            self.open_internal_panel(view, output, hover_open);
-        }
-    }
-    fn open_internal_panel(&self, view: &str, output: &str, hover_open: bool) {
-        let Some(sender) = self.panel_sender() else {
+        let (Some(edge), Some(phase), Some(progress)) = (edge, phase, progress) else {
             return;
         };
-        let call = bead::services::ipc::Call {
-            version: bead::services::ipc::VERSION,
-            id: self.next_panel_call.fetch_add(1, SeqCst).max(1),
-            target: "bead.panel".into(),
-            method: if hover_open {
-                "hover-open"
+        {
+            let state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
+            if !(state.compositor_connected
+                && state.event_connected
+                && state.acknowledged
+                && state.cue_capable
+                && state.outputs.contains_key(output))
+                || !self.gate.edge_chrome().external_source
+            {
+                return;
+            }
+        }
+        {
+            let mut cues = self.active_cues.lock().unwrap_or_else(|p| p.into_inner());
+            let key = (output.to_owned(), edge_name(&edge));
+            if phase == ExternalEdgePhase::Left {
+                cues.remove(&key);
             } else {
-                "hover-leave"
+                cues.insert(key, ExternalEdgeCue {
+                    output: output.to_owned(),
+                    edge,
+                    position,
+                    progress,
+                    phase,
+                });
             }
-            .into(),
-            args: vec![serde_json::json!(view)],
-            output: Some(output.into()),
-        };
-        if sender.try_send(call).is_err() {
-            eprintln!("EDGE_OPEN_ERROR native panel request queue is full");
         }
-    }
-    fn panel_sender(&self) -> Option<tokio::sync::mpsc::Sender<bead::services::ipc::Call>> {
-        let socket = self.command_socket.as_ref()?.clone();
-        let mut sender = self.panel_sender.lock().unwrap_or_else(|p| p.into_inner());
-        if let Some(sender) = &*sender {
-            return Some(sender.clone());
-        }
-        let runtime = tokio::runtime::Handle::try_current().ok()?;
-        let (tx, mut rx) = tokio::sync::mpsc::channel(16);
-        runtime.spawn(async move {
-            while let Some(call) = rx.recv().await {
-                let socket = socket.clone();
-                let result = tokio::task::spawn_blocking(move || {
-                    bead::services::ipc::call(&socket, &call, std::time::Duration::from_secs(2))
-                })
-                .await;
-                match result {
-                    Ok(Ok(reply)) if reply.error.is_none() => {}
-                    Ok(Ok(reply)) => eprintln!(
-                        "EDGE_OPEN_ERROR native panel request failed: {}",
-                        reply
-                            .error
-                            .map_or_else(|| "unknown error".into(), |error| error.message)
-                    ),
-                    Ok(Err(error)) => {
-                        eprintln!("EDGE_OPEN_ERROR native panel transport failed: {error}")
-                    }
-                    Err(error) => {
-                        eprintln!("EDGE_OPEN_ERROR native panel worker failed: {error}")
-                    }
-                }
-            }
+        let _ = self.cue_sender.send(ExternalEdgeCue {
+            output: output.to_owned(),
+            edge,
+            position,
+            progress,
+            phase,
         });
-        *sender = Some(tx.clone());
-        Some(tx)
     }
+    fn clear_native_hovers(&self) {
+        let active = std::mem::take(&mut *self.active_cues.lock().unwrap_or_else(|p| p.into_inner()));
+        self.send_left_cues(active.into_values());
+    }
+    fn clear_removed_outputs(&self, outputs: &BTreeMap<String, (i32, i32)>) {
+        let removed = {
+            let mut active = self.active_cues.lock().unwrap_or_else(|p| p.into_inner());
+            let removed_keys: Vec<_> = active
+                .iter()
+                .filter(|&(_, cue)| !outputs.contains_key(&cue.output))
+                .map(|(key, _)| key.clone())
+                .collect();
+            removed_keys.into_iter().filter_map(|key| active.remove(&key)).collect::<Vec<_>>()
+        };
+        self.send_left_cues(removed);
+    }
+    fn send_left_cues(&self, cues: impl IntoIterator<Item = ExternalEdgeCue>) {
+        for cue in cues {
+            let _ = self.cue_sender.send(ExternalEdgeCue {
+                output: cue.output,
+                edge: cue.edge,
+                position: cue.position,
+                progress: 0.,
+                phase: ExternalEdgePhase::Left,
+            });
+        }
+    }
+    #[cfg(test)]
+    pub(crate) fn active_cues(&self) -> Vec<ExternalEdgeCue> {
+        self.active_cues.lock().unwrap_or_else(|p| p.into_inner()).values().cloned().collect()
+    }
+    pub(crate) fn refresh_source(&self) {
+        let snapshots = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
+        self.publish_active(&snapshots);
+    }
+}
+
+fn parse_edge(edge: Option<&str>) -> Option<bead::core::Edge> {
+    match edge? {
+        "left" => Some(bead::core::Edge::Left),
+        "right" => Some(bead::core::Edge::Right),
+        "top" => Some(bead::core::Edge::Top),
+        "bottom" => Some(bead::core::Edge::Bottom),
+        _ => None,
+    }
+}
+fn edge_name(edge: &bead::core::Edge) -> &'static str {
+    match edge {
+        bead::core::Edge::Left => "left",
+        bead::core::Edge::Right => "right",
+        bead::core::Edge::Top => "top",
+        bead::core::Edge::Bottom => "bottom",
+    }
+}
+fn cue_progress(data: &serde_json::Value) -> Option<f32> {
+    let progress = data["progress"].as_f64()?;
+    (progress.is_finite() && (0.0..=1.0).contains(&progress)).then_some(progress as f32)
 }
 pub(crate) struct EdgeSourceSubscriptions {
     _subscriptions: [Subscription; 2],
@@ -344,31 +338,6 @@ impl Gate {
         if self.native_edge_source.swap(active, SeqCst) != active {
             self.notify();
         }
-    }
-    fn native_lip_at(
-        &self,
-        edge: &str,
-        position: (f32, f32),
-        output_size: (i32, i32),
-    ) -> Option<Lip> {
-        if !self.native_edge_source.load(SeqCst) {
-            return None;
-        }
-        let edge = match edge {
-            "left" => bead::core::Edge::Left,
-            "right" => bead::core::Edge::Right,
-            "top" => bead::core::Edge::Top,
-            "bottom" => bead::core::Edge::Bottom,
-            _ => return None,
-        };
-        let chrome = <Self as ShellControl>::edge_chrome(self);
-        if chrome.click_to_open || !self.edge_hover_allowed(None) {
-            return None;
-        }
-        chrome
-            .lip_at(edge, output_size, position)
-            .filter(|lip| self.panel_allowed(&lip.opens))
-            .cloned()
     }
     /// The lips the frame declares and the panel views that exist (call once at start).
     pub fn configure_frame(&self, config: FrameConfig, views: impl IntoIterator<Item = String>) {
@@ -549,7 +518,7 @@ impl ShellControl for Gate {
             lips,
             hover_delay_ms: frame.delay,
             click_to_open: frame.click,
-            external_source: self.native_edge_source.load(SeqCst),
+            external_source: self.native_edge_source.load(SeqCst) && !frame.click,
         }
     }
     fn edge_input_regions(&self, output: (i32, i32)) -> Vec<bead::render::Rect> {
@@ -562,7 +531,7 @@ impl ShellControl for Gate {
                     .filter(|l| self.panel_allowed(&l.opens))
                     .filter_map(|l| configured_lip(l, geometry))
                     .collect(),
-                external_source: self.native_edge_source.load(SeqCst),
+                external_source: self.native_edge_source.load(SeqCst) && !frame.click,
                 ..Default::default()
             }
             .input_regions(output)
@@ -765,7 +734,7 @@ mod tests {
         );
     }
     #[test]
-    fn native_edge_position_routes_to_the_configured_lip_and_honors_click_only() {
+    fn native_cue_takeover_keeps_visual_lips_inputless_and_restores_click_input() {
         let gate = Gate::new();
         gate.configure_frame(
             FrameConfig {
@@ -788,16 +757,13 @@ mod tests {
             ["assistant".into(), "status".into()],
         );
         gate.set_native_edge_source(true);
-        assert_eq!(
-            gate.native_lip_at("left", (4., 310.), (1000, 800))
-                .map(|lip| lip.id),
-            Some("status".into())
-        );
-        assert_eq!(gate.native_lip_at("left", (4., 250.), (1000, 800)), None);
+        assert!(gate.edge_chrome().external_source);
+        assert!(gate.edge_input_regions((1000, 800)).is_empty());
         gate.apply(&Prefs::decode(
             &json!({"clickEdgeMenus":true}),
             &json!(null),
         ));
-        assert_eq!(gate.native_lip_at("left", (4., 310.), (1000, 800)), None);
+        assert!(!gate.edge_chrome().external_source);
+        assert!(!gate.edge_input_regions((1000, 800)).is_empty());
     }
 }

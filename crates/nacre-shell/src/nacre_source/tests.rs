@@ -364,14 +364,8 @@ async fn registry_timeout_closes_the_remote_call_before_retrying() {
 #[tokio::test(flavor = "current_thread")]
 async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     let lab = Lab::new();
-    let command_socket = lab.0.join("bead-command.sock");
-    let (calls_tx, calls_rx) = std::sync::mpsc::channel();
-    let _command_server = bead::services::ipc::Server::bind(command_socket.clone(), move |call| {
-        calls_tx.send(call.clone()).unwrap();
-        bead::services::ipc::Reply::ok(call.id, serde_json::Value::Null)
-    })
-    .unwrap();
     let (close_tx, close_rx) = tokio::sync::oneshot::channel();
+    let (activate_tx, activate_rx) = tokio::sync::oneshot::channel();
     let listener = lab.bind();
     let server = tokio::spawn(async move {
         let (stream, _) = listener.accept().await.unwrap();
@@ -392,7 +386,7 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         for (topic, data) in [
             (
                 "compositor",
-                serde_json::json!({"outputs":{"DP-1":{"logicalWidth":1920,"logicalHeight":1080}}}),
+                serde_json::json!({"outputs":{"DP-1":{"logicalWidth":1920,"logicalHeight":1080}},"capabilities":{"edge_trigger_cues":false}}),
             ),
             (
                 "compositor.events",
@@ -410,6 +404,18 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
             .await
             .unwrap();
         }
+        let _ = activate_rx.await;
+        framing::write(
+            &mut writer,
+            &Message::Patch {
+                topic: "compositor".into(),
+                base: 0,
+                seq: 1,
+                data: serde_json::json!({"capabilities":{"edge_trigger_cues":true}}),
+            },
+        )
+        .await
+        .unwrap();
         let _ = close_rx.await;
         // Returning closes the actual Unix stream and exercises Source's disconnect
         // notification path rather than synthesizing a Lost protocol message.
@@ -440,13 +446,17 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         },
         ["dashboard-today".into(), "sound".into()],
     );
-    let state = crate::shell_control::EdgeEventState::new(gate.clone(), Some(command_socket));
+    let (cue_sender, cue_channel) = bead::wayland::ExternalEdgeCueChannel::channel();
+    let cue_receiver = cue_channel.take_receiver().expect("test owns the cue receiver");
+    let state = crate::shell_control::EdgeEventState::new(gate.clone(), cue_sender);
     let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(
         state.clone(),
         Arc::new(client.topic("compositor").unwrap()),
         Arc::new(client.topic("compositor.events").unwrap()),
     )
     .unwrap();
+    assert!(!gate.edge_chrome().external_source, "old cue capability keeps the stock input surfaces");
+    activate_tx.send(()).unwrap();
     tokio::time::timeout(Duration::from_secs(2), async {
         while !gate.edge_chrome().external_source {
             tokio::time::sleep(Duration::from_millis(5)).await;
@@ -454,7 +464,6 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     })
     .await
     .expect("native source is enabled only after both snapshots acknowledge it");
-    let calls_rx = Arc::new(std::sync::Mutex::new(calls_rx));
     let edge_message = |seq, event_type, edge, position| nacre_protocol::Message::Ev {
         topic: "compositor.events".into(),
         name: "niri".into(),
@@ -464,59 +473,31 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
             "output":"DP-1",
             "edge":edge,
             "position":position,
+            "progress":0.5,
         }),
     };
-    state.route_event(&edge_message(1, "edge-triggered", "top", [960.0, 4.0]));
-    state.route_event(&edge_message(2, "edge-left", "top", [960.0, 10.0]));
-    let received = calls_rx.clone();
-    let dashboard_call = tokio::task::spawn_blocking(move || {
-        received
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(2))
-            .unwrap()
-    })
-    .await
-    .unwrap();
-    assert_eq!(dashboard_call.target, "bead.panel");
-    assert_eq!(dashboard_call.method, "hover-open");
-    assert_eq!(
-        dashboard_call.args,
-        vec![serde_json::json!("dashboard-today")]
-    );
-    assert_eq!(dashboard_call.output.as_deref(), Some("DP-1"));
-    let received = calls_rx.clone();
-    let dashboard_leave = tokio::task::spawn_blocking(move || {
-        received
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(2))
-            .unwrap()
-    })
-    .await
-    .unwrap();
-    assert_eq!(dashboard_leave.target, "bead.panel");
-    assert_eq!(dashboard_leave.method, "hover-leave");
-    assert_eq!(
-        dashboard_leave.args,
-        vec![serde_json::json!("dashboard-today")]
-    );
-    assert_eq!(dashboard_leave.output.as_deref(), Some("DP-1"));
-    state.route_event(&edge_message(3, "edge-triggered", "right", [1916.0, 540.0]));
-    let received = calls_rx.clone();
-    let controls_call = tokio::task::spawn_blocking(move || {
-        received
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(2))
-            .unwrap()
-    })
-    .await
-    .unwrap();
-    assert_eq!(controls_call.target, "bead.panel");
-    assert_eq!(controls_call.method, "hover-open");
-    assert_eq!(controls_call.args, vec![serde_json::json!("sound")]);
-    assert_eq!(controls_call.output.as_deref(), Some("DP-1"));
+    state.route_event(&nacre_protocol::Message::Ev {
+        topic: "compositor.events".into(),
+        name: "niri".into(),
+        seq: 0,
+        data: serde_json::json!({"type":"edge-approach","output":"DP-2","edge":"left","position":[0.0,540.0],"progress":0.1}),
+    });
+    assert!(state.active_cues().is_empty(), "unknown outputs cannot acquire native hover state");
+    state.route_event(&edge_message(1, "edge-approach", "top", [960.0, 4.0]));
+    let cue = state.active_cues().pop().expect("approach is sent to Bead");
+    assert_eq!(cue.output, "DP-1");
+    assert_eq!(cue.edge, bead::core::Edge::Top);
+    assert_eq!(cue.position, (960.0, 4.0));
+    assert_eq!(cue.progress, 0.5);
+    assert_eq!(cue.phase, bead::wayland::ExternalEdgePhase::Approach);
+    state.route_event(&edge_message(2, "edge-hover", "top", [960.0, 4.0]));
+    assert_eq!(state.active_cues()[0].phase, bead::wayland::ExternalEdgePhase::Hover);
+    state.route_event(&edge_message(3, "edge-triggered", "top", [960.0, 4.0]));
+    assert_eq!(state.active_cues()[0].phase, bead::wayland::ExternalEdgePhase::Triggered);
+    state.route_event(&edge_message(4, "edge-left", "top", [960.0, 10.0]));
+    assert!(state.active_cues().is_empty(), "left releases the hover cue");
+    state.route_event(&edge_message(5, "edge-triggered", "right", [1916.0, 540.0]));
+    assert_eq!(state.active_cues()[0].edge, bead::core::Edge::Right);
     close_tx.send(()).unwrap();
     server.await.unwrap();
     tokio::time::timeout(Duration::from_secs(2), async {
@@ -526,35 +507,26 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     })
     .await
     .expect("socket EOF restores Bead's fallback edge surfaces");
-    let received = calls_rx.clone();
-    let controls_leave = tokio::task::spawn_blocking(move || {
-        received
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_secs(2))
-            .unwrap()
-    })
-    .await
-    .unwrap();
-    assert_eq!(controls_leave.target, "bead.panel");
-    assert_eq!(controls_leave.method, "hover-leave");
-    assert_eq!(controls_leave.args, vec![serde_json::json!("sound")]);
-    assert_eq!(controls_leave.output.as_deref(), Some("DP-1"));
-    let received = calls_rx.clone();
-    let extra = tokio::task::spawn_blocking(move || {
-        received
-            .lock()
-            .unwrap()
-            .recv_timeout(Duration::from_millis(100))
-    })
-    .await
-    .unwrap();
-    assert!(
-        extra.is_err(),
-        "EdgeLeft must clear the dashboard hover anchor"
-    );
+    assert!(state.active_cues().is_empty(), "stream loss releases native hover state");
     drop(subscriptions);
     client.stop().await.unwrap();
+    drop(state);
+    let delivered: Vec<_> = std::iter::from_fn(|| cue_receiver.try_recv().ok()).collect();
+    assert_eq!(
+        delivered.iter().map(|cue| cue.phase).collect::<Vec<_>>(),
+        [
+            bead::wayland::ExternalEdgePhase::Approach,
+            bead::wayland::ExternalEdgePhase::Hover,
+            bead::wayland::ExternalEdgePhase::Triggered,
+            bead::wayland::ExternalEdgePhase::Left,
+            bead::wayland::ExternalEdgePhase::Triggered,
+            bead::wayland::ExternalEdgePhase::Left,
+        ],
+        "native cue events, including disconnect release, reach Bead's channel"
+    );
+    assert_eq!(delivered[0].progress, 0.5);
+    assert_eq!(delivered[2].progress, 1.0);
+    assert_eq!(delivered[5].edge, bead::core::Edge::Right);
 }
 
 #[test]

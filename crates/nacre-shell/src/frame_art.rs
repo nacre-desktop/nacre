@@ -185,6 +185,57 @@ mod tests {
         assert!(right.contains(r#"x="9" y="54""#), "{right}");
     }
     #[test]
+    fn edge_arrow_remains_visible_and_native_progress_rasterizes_at_fractional_scales() {
+        use bead::render::{PixelFormat, ShmTarget, svg_into};
+        for edge in [Edge::Left, Edge::Right] {
+          let lip = lip(edge);
+          for scale in [1.0, 1.5] {
+            let (width, height) = ((10.0 * scale) as u32, (144.0 * scale) as u32);
+            let raster = |state| {
+            let svg = edge_tab(&lip, (10., 144.), state, A, S).unwrap();
+                let mut bytes = vec![0; (width * height * 4) as usize];
+                svg_into(
+                    svg.as_bytes(),
+                    ShmTarget {
+                        bytes: &mut bytes,
+                        width,
+                        height,
+                        scale,
+                        format: PixelFormat::Rgba,
+                    },
+                )
+                .unwrap();
+                bytes
+            };
+            let idle_pixels = raster(idle());
+            let cue_pixels = raster(LipState {
+                progress: 0.5,
+                active: false,
+            });
+            let alpha_at = |pixels: &[u8], x: u32, y: u32| {
+                pixels[((y * width + x) * 4 + 3) as usize]
+            };
+            let arrow_pixels = (64..=80).any(|y| {
+                (2..=8).any(|x| alpha_at(&idle_pixels, (x as f32 * scale) as u32, (y as f32 * scale) as u32) > 0)
+            });
+            assert!(arrow_pixels, "idle arrow must rasterize at scale {scale}");
+            let hovered_arrow_pixels = (64..=80).any(|y| {
+                (2..=8).any(|x| alpha_at(&cue_pixels, (x as f32 * scale) as u32, (y as f32 * scale) as u32) > 0)
+            });
+            assert!(hovered_arrow_pixels, "arrow must remain visible during native hover at scale {scale}");
+            let cue_x = if edge == Edge::Left { 0 } else { width - 1 };
+            let cue_pixels_visible = (54..72).any(|y| {
+                alpha_at(&cue_pixels, cue_x, (y as f32 * scale) as u32) > 0
+            });
+            assert!(cue_pixels_visible, "native hover progress must rasterize at scale {scale}");
+            assert!(
+                idle_pixels.iter().zip(&cue_pixels).any(|(before, after)| before != after),
+                "cue pixels should change from idle at scale {scale}"
+            );
+          }
+        }
+    }
+    #[test]
     fn a_thin_frame_drops_the_chevron_like_the_reference() {
         // width < 4 after the 2 px margin: QML hides the arrow.
         let thin = edge_tab(&lip(Edge::Left), (5., 144.), idle(), A, S).unwrap();

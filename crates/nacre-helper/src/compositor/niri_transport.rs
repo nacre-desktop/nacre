@@ -45,6 +45,7 @@ pub struct NacreCapabilities {
     pub scratchpad: bool,
     pub window_pinning: bool,
     pub edge_triggers: bool,
+    pub edge_trigger_cues: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -74,6 +75,10 @@ impl NacreCapabilities {
             window_pinning,
             edge_triggers: features
                 .get("edge_triggers")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            edge_trigger_cues: features
+                .get("edge_trigger_cues")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
         })
@@ -356,7 +361,8 @@ mod tests {
             "overview_hover": true,
             "scratchpad": true,
             "window_pinning": true,
-            "edge_triggers": true
+            "edge_triggers": true,
+            "edge_trigger_cues": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -367,6 +373,7 @@ mod tests {
                 scratchpad: true,
                 window_pinning: true,
                 edge_triggers: true,
+                edge_trigger_cues: true,
             })
         );
         assert_eq!(
