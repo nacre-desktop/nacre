@@ -198,7 +198,6 @@ def deploy(root=ROOT, home=None, systemctl=None, helper_probe=None):
         systemctl(
             "enable",
             "--now",
-            "nacre-brain-sync.timer",
             "nacre-brain-check.timer",
             check=True,
         )
@@ -236,7 +235,7 @@ def main(argv=None):
         print("STOP current state → stopped: " + ", ".join(STOP_UNITS))
         print("KILL matching per-user legacy Brain serve PIDs → none (if any)")
         print(
-            "ENABLE/START current timer states → enabled and active: nacre-brain-sync.timer nacre-brain-check.timer"
+            "ENABLE/START current timer states → enabled and active: nacre-brain-check.timer"
         )
         print(
             "Plan only; pass --apply to deploy. Every replaced path is backed up first."

@@ -527,27 +527,7 @@ fn memory(args: &[String]) -> Result<i32> {
     let signature = format!("{:x}", Sha256::digest(signature_data.as_bytes()));
     let root = crate::brain_data::root_path()?;
     let state = root.join(".brain-state");
-    if fs::symlink_metadata(&state).is_ok_and(|m| m.file_type().is_symlink()) {
-        return Err(error("Symlinked vault paths are not supported"));
-    }
-    fs::create_dir_all(&state)?;
-    fs::set_permissions(&state, fs::Permissions::from_mode(0o700))?;
-    let lock_path = state.join("capture.lock");
-    if fs::symlink_metadata(&lock_path).is_ok_and(|m| m.file_type().is_symlink()) {
-        return Err(error("Symlinked vault paths are not supported"));
-    }
-    let lock = fs::OpenOptions::new()
-        .read(true)
-        .create(true)
-        .append(true)
-        .mode(0o600)
-        .custom_flags(nix::libc::O_NOFOLLOW)
-        .open(&lock_path)?;
-    if !lock.metadata()?.is_file() || lock.metadata()?.nlink() != 1 {
-        return Err(error("Linked or non-regular memory lock"));
-    }
-    lock.set_permissions(fs::Permissions::from_mode(0o600))?;
-    rustix::fs::flock(&lock, rustix::fs::FlockOperation::LockExclusive)?;
+    let _vault_lock = crate::brain_git::acquire_vault_lock(&root)?;
     let record = state.join(format!("capture-{signature}.json"));
     if fs::symlink_metadata(&record).is_ok_and(|metadata| {
         metadata.file_type().is_symlink() || !metadata.is_file() || metadata.nlink() != 1
@@ -576,7 +556,8 @@ fn memory(args: &[String]) -> Result<i32> {
             worlds.join(", "),
             normalized_topics.join(", ")
         );
-        let note = crate::brain_data::write_note(
+        let note = crate::brain_data::write_note_locked(
+            &root,
             &kind,
             &normalized_title,
             &normalized_source,
@@ -660,7 +641,7 @@ fn ensure_world_page(root: &std::path::Path, note: &std::path::Path, world: &str
         .to_string_lossy()
         .replace('\\', "/");
     let content = format!("# {world}\n\nEntity: world\nName: {world}\nAliases: {ident}\nReviewed: {}\nStatus: Evidence-backed subject; initial descriptor\nSource: [[{relative}]]\n\nThis subject was recorded from conversation or work. It does not imply a registered repository.\n\n## Evidence\n\n- [[{relative}]]\n", Local::now().date_naive());
-    crate::brain_data::create_page(&format!("wiki/entity-{ident}.md"), &content)?;
+    crate::brain_data::create_page_locked(&root, &format!("wiki/entity-{ident}.md"), &content)?;
     Ok(())
 }
 

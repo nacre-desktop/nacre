@@ -39,6 +39,7 @@ with tempfile.TemporaryDirectory(prefix="n0020-disposable-") as temporary:
         (reference / (name + ".py.rollback")).write_bytes(
             (ROOT / "bin" / (name + ".py.rollback")).read_bytes()
         )
+    shutil.copy(ROOT / "bin/nacre-brain-queue.py", reference / "nacre-brain-queue.py")
     shutil.copy(ROOT / "nacre/shell-tools/nacre_state.py", reference / "nacre_state.py")
     shutil.copy(
         ROOT / "nacre/shell-tools/nacre-state-files.json",

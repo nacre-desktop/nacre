@@ -441,7 +441,6 @@ pub fn maintenance_state(context: &Context, queries: &mut impl Probe) -> Result<
         "nacre-brain.service",
         "nacre-session-watch.service",
         "hypridle.service",
-        "nacre-brain-sync.timer",
         "xdg-desktop-portal.service",
         context.portal.as_str(),
         "xdg-document-portal.service",
@@ -524,7 +523,7 @@ pub fn maintenance_state(context: &Context, queries: &mut impl Probe) -> Result<
         Value::Null
     };
     Ok(
-        serde_json::json!({"release":current,"services":states,"brainSync":json_file(&state.join("brain-sync.json"),serde_json::json!({"state":"unrecorded","message":"No synchronization attempt recorded"}))?,"serviceDetails":details,"failedServices":failed.lines().collect::<Vec<_>>(),"drift":drift,"configErrors":config,"updatesAgeSeconds":age,"session":json_file(&state.join("session/latest.json"),serde_json::json!({}))?,"performance":json_file(&state.join("performance/latest.json"),serde_json::json!({}))?,"versions":versions,"checked":context.checked}),
+        serde_json::json!({"release":current,"services":states,"serviceDetails":details,"failedServices":failed.lines().collect::<Vec<_>>(),"drift":drift,"configErrors":config,"updatesAgeSeconds":age,"session":json_file(&state.join("session/latest.json"),serde_json::json!({}))?,"performance":json_file(&state.join("performance/latest.json"),serde_json::json!({}))?,"versions":versions,"checked":context.checked}),
     )
 }
 pub fn maintenance_facts(context: &Context, queries: &mut impl Probe) -> Value {

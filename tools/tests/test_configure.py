@@ -431,23 +431,33 @@ class SharedHelperOwnershipTests(unittest.TestCase):
         selected.start()
         self.addCleanup(selected.stop)
 
-    def test_app_routes_do_not_adopt_sync_and_known_local_edits_are_preserved(self):
+    def test_sync_is_not_installed_and_existing_sync_file_is_left_alone(self):
         from unittest.mock import patch
 
         with tempfile.TemporaryDirectory() as folder:
             root, home = Path(folder) / "repo", Path(folder) / "home"
             (root / "bin").mkdir(parents=True)
-            for name in ("nacre-app", "xdg-open", "nacre-brain-sync"):
+            for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("new helper")
             target = home / ".local/bin/nacre-brain-sync"
             target.parent.mkdir(parents=True)
             target.write_text("recognized old helper")
             legacy = {".local/bin/nacre-brain-sync": module.digest(target)}
             with patch.object(module, "LEGACY_SYNC", legacy):
+                self.assertNotIn(
+                    Path(".local/bin/nacre-brain-sync"), module.files(root)
+                )
+                self.assertNotIn(
+                    Path(".config/systemd/user/nacre-brain-sync.timer"),
+                    module.files(root),
+                )
+                self.assertNotIn(
+                    Path(".config/systemd/user/nacre-brain-sync.service"),
+                    module.files(root),
+                )
                 module.apply(home, root, app_routes_only=True)
                 self.assertEqual(target.read_text(), "recognized old helper")
                 module.apply(home, root)
-                self.assertEqual(target.read_text(), "new helper")
+                self.assertEqual(target.read_text(), "recognized old helper")
                 target.write_text("recognized old helper")
-                with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
-                    module.plan(home, root)
+                module.plan(home, root)

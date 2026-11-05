@@ -22,7 +22,6 @@ SERVICES = [
     "nacre-brain.service",
     "nacre-session-watch.service",
     "hypridle.service",
-    "nacre-brain-sync.timer",
     "xdg-desktop-portal.service",
     compositor.portal_service,
     "xdg-document-portal.service",
@@ -118,9 +117,6 @@ def state():
     return dict(
         release=current,
         services=services,
-        brainSync=_state.read_json_file(STATE / "brain-sync.json")
-        if (STATE / "brain-sync.json").exists()
-        else {"state": "unrecorded", "message": "No synchronization attempt recorded"},
         serviceDetails=details,
         failedServices=run(
             ["systemctl", "--user", "--failed", "--no-legend", "--plain"]
@@ -193,7 +189,6 @@ def main():
             "profile",
             "restart",
             "repair-portals",
-            "sync-now",
             "rollback",
             "session",
         ],
@@ -232,12 +227,6 @@ def main():
         ):
             if run(["systemctl", "--user", "is-failed", unit]) == "failed":
                 subprocess.run(["systemctl", "--user", "restart", unit], check=True)
-    elif a.action == "sync-now":
-        subprocess.run(
-            [str(HOME / ".local/bin/nacre-brain-sync"), "--force"],
-            check=False,
-            timeout=75,
-        )
     elif a.action == "restart":
         subprocess.run(["systemctl", "--user", "restart", SERVICES[0]], check=True)
     elif a.action == "rollback":

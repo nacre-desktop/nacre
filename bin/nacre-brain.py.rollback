@@ -4,6 +4,8 @@
 import argparse
 import datetime as dt
 import getpass
+import importlib.machinery
+import importlib.util
 import os
 from pathlib import Path
 import re
@@ -11,6 +13,14 @@ import subprocess
 import sys
 import tempfile
 import uuid
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+_queue_path = Path(__file__).resolve().with_name("nacre-brain-queue.py")
+_queue_loader = importlib.machinery.SourceFileLoader("nacre_brain_queue", str(_queue_path))
+_queue_spec = importlib.util.spec_from_loader(_queue_loader.name, _queue_loader)
+_queue = importlib.util.module_from_spec(_queue_spec)
+_queue_loader.exec_module(_queue)
 
 
 def vault_path():
@@ -172,15 +182,19 @@ def main():
         )
         # Plain Markdown metadata avoids treating arbitrary user strings as YAML.
         text = f"# {args.title.replace(chr(10), ' ')}\n\nRecorded: {now.isoformat()}\nConfidence: {args.confidence}\nSource: {args.source.replace(chr(10), ' ')}\n\n{body.rstrip()}\n"
-        with tempfile.NamedTemporaryFile(
-            mode="w", dir=path.parent, prefix=".note-", delete=False
-        ) as out:
-            pending = Path(out.name)
-            out.write(text)
-        try:
-            os.link(pending, path)
-        finally:
-            pending.unlink()
+        with _queue.vault_lock(root):
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=path.parent, prefix=".note-", delete=False
+            ) as out:
+                pending = Path(out.name)
+                out.write(text)
+                out.flush()
+                os.fsync(out.fileno())
+            try:
+                os.link(pending, path)
+            finally:
+                pending.unlink()
+            _queue.enqueue_locked(root, path)
         print(path)
     elif args.command == "store-credential":
         value = getpass.getpass(f"Secret for {args.name}: ")

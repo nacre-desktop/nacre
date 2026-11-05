@@ -13,13 +13,9 @@
         "nacre-brain.service": "unavailable",
         "nacre-session-watch.service": "unavailable",
         "hypridle.service": "unavailable",
-        "nacre-brain-sync.timer": "unavailable",
         "xdg-desktop-portal.service": "ready on demand",
         "xdg-desktop-portal-hyprland.service": "unavailable",
         "xdg-document-portal.service": "unavailable"
-      },
-      "brainSync": {
-        "privateLabel": "not exported"
       },
       "serviceDetails": {
         "nacre-shell.service": {
@@ -92,7 +88,6 @@
           "nacre-brain.service",
           "nacre-session-watch.service",
           "hypridle.service",
-          "nacre-brain-sync.timer",
           "xdg-desktop-portal.service",
           "xdg-desktop-portal-hyprland.service",
           "xdg-document-portal.service",

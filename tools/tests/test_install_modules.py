@@ -120,9 +120,13 @@ class InstallModuleTests(unittest.TestCase):
             nacre_modules.module_of(".local/share/applications/nacre-ai.desktop"), "ai"
         )
         self.assertEqual(
-            nacre_modules.module_of(".config/systemd/user/nacre-brain-sync.timer"),
+            nacre_modules.module_of(".config/systemd/user/nacre-brain-check.timer"),
             "brain",
         )
+        paths = {path.as_posix() for path in configure.files(configure.ROOT)}
+        self.assertNotIn(".config/systemd/user/nacre-brain-sync.service", paths)
+        self.assertNotIn(".config/systemd/user/nacre-brain-sync.timer", paths)
+        self.assertNotIn(".local/bin/nacre-brain-sync", paths)
 
     def test_fresh_install_touches_only_core_and_session_paths(self):
         for name in ("theming-kitty", "xdg-open"):
