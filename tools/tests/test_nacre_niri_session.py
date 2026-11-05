@@ -101,7 +101,7 @@ class NacreNiriSessionTests(unittest.TestCase):
             generated_stock = config.read_text() + bindings.read_text()
             for key, action in (
                 ("Super+h", "move-window-to-scratchpad"),
-                ("Super+Shift+h", "toggle-scratchpad"),
+                ("Super+Shift+H", "restore-last-hidden-window"),
                 ("Super+p", "toggle-window-pinned"),
             ):
                 self.assertIn(key, overlay_text)
@@ -109,7 +109,7 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
             self.assertIn(
-                'hotkey-overlay-title="Nacre:scratchpad-windows"', overlay_text
+                'hotkey-overlay-title="Nacre:restore"', overlay_text
             )
             self.assertEqual(overlay_text.count("open-pinned true"), 3)
             self.assertNotIn("open-pinned true", generated_stock)

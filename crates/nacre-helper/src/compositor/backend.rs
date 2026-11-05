@@ -440,7 +440,7 @@ impl Backend {
     pub fn capabilities(&self) -> Value {
         match self {
             Self::Hyprland(_) => hyprland::capabilities(),
-            Self::Niri(_) => niri::capabilities(),
+            Self::Niri(backend) => backend.capabilities(),
         }
     }
     pub fn valid_window_id(&self, value: &Value) -> bool {

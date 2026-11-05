@@ -46,6 +46,9 @@ pub struct NacreCapabilities {
     pub window_pinning: bool,
     pub edge_triggers: bool,
     pub edge_trigger_cues: bool,
+    pub force_close: bool,
+    pub monitor_workspace_actions: bool,
+    pub window_restore: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -77,10 +80,10 @@ impl NacreCapabilities {
                 .get("edge_triggers")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
-            edge_trigger_cues: features
-                .get("edge_trigger_cues")
-                .and_then(Value::as_bool)
-                .unwrap_or(false),
+            edge_trigger_cues: features.get("edge_trigger_cues").and_then(Value::as_bool).unwrap_or(false),
+            force_close: features.get("force_close").and_then(Value::as_bool).unwrap_or(false),
+            monitor_workspace_actions: features.get("monitor_workspace_actions").and_then(Value::as_bool).unwrap_or(false),
+            window_restore: features.get("window_restore").and_then(Value::as_bool).unwrap_or(false),
         })
     }
 }
@@ -323,6 +326,9 @@ pub(super) fn read_line(
     }
 }
 impl Transport for Connection {
+    fn nacre_capabilities(&mut self) -> NacreCapabilities {
+        self.nacre_capabilities(Duration::from_millis(500))
+    }
     fn snapshot(&mut self, timeout: f64, max_bytes: usize) -> Result<Value> {
         let timeout = duration(timeout)?;
         let outputs = self
@@ -362,7 +368,10 @@ mod tests {
             "scratchpad": true,
             "window_pinning": true,
             "edge_triggers": true,
-            "edge_trigger_cues": true
+            "edge_trigger_cues": true,
+            "force_close": true,
+            "monitor_workspace_actions": true,
+            "window_restore": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -374,6 +383,9 @@ mod tests {
                 window_pinning: true,
                 edge_triggers: true,
                 edge_trigger_cues: true,
+                force_close: true,
+                monitor_workspace_actions: true,
+                window_restore: true,
             })
         );
         assert_eq!(

@@ -41,6 +41,9 @@ fn finite(value: &Value) -> Result<f64> {
 }
 
 pub trait Transport {
+    fn nacre_capabilities(&mut self) -> super::niri_transport::NacreCapabilities {
+        super::niri_transport::NacreCapabilities::default()
+    }
     fn query_override(
         &mut self,
         _name: &str,
@@ -470,11 +473,41 @@ impl<T: Transport> Backend<T> {
                 }
                 Ok(Value::Null)
             }
-            "pin_window" | "kill_window" | "fullscreen_state" | "set_cursor" | "notify"
-            | "set_animations" | "set_performance" | "set_options" | "render_options"
-            | "apply_config" => Err(failure(
-                "Operation is not supported by the niri backend; check compositor capabilities",
-            )),
+            "pin_window" => {
+                if !self.transport.nacre_capabilities().window_pinning {
+                    return Err(failure(
+                        "Window pinning is unavailable on this niri compositor",
+                    ));
+                }
+                let row = self.transport.window(window, timeout)?;
+                let pinned = truthy(&row["pinned"]);
+                let requested = kwargs
+                    .get("action")
+                    .and_then(Value::as_str)
+                    .unwrap_or("toggle");
+                let toggle = match requested {
+                    "enable" | "pin" => !pinned,
+                    "disable" | "unpin" => pinned,
+                    "toggle" => true,
+                    _ => return Err(invalid("Invalid pin action")),
+                };
+                if !toggle {
+                    return Ok(json!({"code":0,"stdout":"ok","stderr":""}));
+                }
+                let id = native_id(
+                    row["windowId"]
+                        .as_str()
+                        .ok_or_else(|| invalid("Malformed window identity"))?,
+                    "window",
+                )?;
+                self.action("ToggleWindowPinned", json!({"id":id}), timeout)
+            }
+            "kill_window" | "fullscreen_state" | "set_cursor" | "notify" | "set_animations"
+            | "set_performance" | "set_options" | "render_options" | "apply_config" => {
+                Err(failure(
+                    "Operation is not supported by the niri backend; check compositor capabilities",
+                ))
+            }
             _ => Err(invalid(format!("Unknown compositor action: {method}"))),
         }
     }
@@ -813,6 +846,103 @@ mod tests {
             );
             assert_eq!(backend.transport.probes.len(), 1);
         }
+        Ok(())
+    }
+    #[test]
+    fn native_pin_action_is_capability_gated_and_idempotent() -> crate::Result<()> {
+        struct PinTransport {
+            supported: bool,
+            pinned: bool,
+            requests: Vec<Value>,
+        }
+        impl Transport for PinTransport {
+            fn nacre_capabilities(&mut self) -> super::super::niri_transport::NacreCapabilities {
+                super::super::niri_transport::NacreCapabilities {
+                    window_pinning: self.supported,
+                    ..Default::default()
+                }
+            }
+            fn snapshot(&mut self, _: f64, _: usize) -> Result<Value> {
+                Ok(json!({
+                    "activeWindow":{"windowId":"niri-window:7"},
+                    "windows":[{"windowId":"niri-window:7","pinned":self.pinned}]
+                }))
+            }
+            fn request(&mut self, request: Value, _: f64, _: usize) -> Result<Value> {
+                self.requests.push(request);
+                Ok(json!("Handled"))
+            }
+        }
+        let mut stock = Backend {
+            transport: PinTransport {
+                supported: false,
+                pinned: false,
+                requests: vec![],
+            },
+        };
+        assert!(stock
+            .execute(
+                "pin_window",
+                &[json!("niri-window:7")],
+                &json!({"action":"enable"})
+            )
+            .is_err());
+        assert!(stock.transport.requests.is_empty());
+        let mut native = Backend {
+            transport: PinTransport {
+                supported: true,
+                pinned: false,
+                requests: vec![],
+            },
+        };
+        native.execute(
+            "pin_window",
+            &[json!("niri-window:7")],
+            &json!({"action":"enable"}),
+        )?;
+        assert_eq!(
+            native.transport.requests,
+            vec![json!({"Action":{"ToggleWindowPinned":{"id":7}}})]
+        );
+        let mut already_pinned = Backend {
+            transport: PinTransport {
+                supported: true,
+                pinned: true,
+                requests: vec![],
+            },
+        };
+        already_pinned.execute(
+            "pin_window",
+            &[json!("niri-window:7")],
+            &json!({"action":"enable"}),
+        )?;
+        assert!(already_pinned.transport.requests.is_empty());
+        let mut toggle_unpinned = Backend {
+            transport: PinTransport {
+                supported: true,
+                pinned: false,
+                requests: vec![],
+            },
+        };
+        toggle_unpinned.execute(
+            "pin_window",
+            &[json!("niri-window:7")],
+            &json!({"action":"toggle"}),
+        )?;
+        assert_eq!(toggle_unpinned.transport.requests.len(), 1);
+        let mut toggle_pinned = Backend {
+            transport: PinTransport {
+                supported: true,
+                pinned: true,
+                requests: vec![],
+            },
+        };
+        toggle_pinned.execute(
+            "pin_window",
+            &[json!("niri-window:7")],
+            &json!({"action":"toggle"}),
+        )?;
+        assert_eq!(toggle_pinned.transport.requests.len(), 1);
         Ok(())
     }
     #[test]
