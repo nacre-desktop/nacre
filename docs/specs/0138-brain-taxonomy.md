@@ -61,11 +61,12 @@ proposal promotion with an injected date, near duplicates, header boundaries,
 process concurrency and Python/native parity. Full desktop CI is reproduced in
 the task’s bounded Arch container on dev-1. Results are recorded in the report.
 
-## Remaining integration boundaries
+## Viewer integration
 
-The native viewer must delegate `fields()` to the shared header parser. That
-function is in `brain_web.rs`, explicitly excluded from this unit while another
-unit edits it; the parser-only exception is awaiting the owner’s answer. The
-discovery API continues to respect caller-supplied annotations. It must not
-replace them from prose. Optional discovery-vector assistance is not connected;
-writers currently use registry patterns and entity/alias mentions.
+The native viewer delegates `fields()` to the shared header parser, and its
+recorded date, timestamp and confidence readers use the parsed header fields.
+Viewer subject generation is covered by a regression for an empty `Worlds:`
+field, a following `Topics:` field and body text that looks like a project path.
+Discovery continues to respect caller-supplied annotations; it does not replace
+them from prose. Optional discovery-vector assistance is not connected; writers
+currently use registry patterns and entity/alias mentions.

@@ -226,23 +226,7 @@ fn note_path_at(root: &Path, relative: &str) -> Result<PathBuf> {
     Ok(p)
 }
 pub fn fields(body: &str) -> Value {
-    let clean = regex(r"(?ms)^```[^\n]*\n.*?^```[^\n]*$").replace_all(body, "");
-    let clean = regex(r"(?m)^##\s")
-        .split(&clean)
-        .next()
-        .unwrap_or("")
-        .to_owned();
-    let mut result = Map::new();
-    for c in
-        regex(r"(?mi)^(Entity|Name|Parent|Project|Worlds|Topics|Tags|Category|Aliases):\s*([^\n]+)")
-            .captures_iter(&clean)
-    {
-        result.insert(
-            c[1].to_lowercase(),
-            json!(c[2].trim().trim_matches(['\"', '\''])),
-        );
-    }
-    Value::Object(result)
+    brain_discovery::header_fields(body)
 }
 fn category(label: &str, body: &str, declared: &str) -> (&'static str, &'static str) {
     if let Some(t) = THEMES.iter().find(|t| t.0 == declared) {
@@ -270,23 +254,25 @@ fn theme(key: &str) -> (&'static str, &'static str) {
     let t = THEMES.iter().find(|t| t.0 == key).unwrap_or(&THEMES[7]);
     (t.1, t.2)
 }
-fn date(body: &str) -> Option<NaiveDate> {
-    let r = regex(r"(?m)^(?:Recorded|Reviewed):\s*(\d{4}-\d{2}-\d{2})");
-    r.captures(body)
-        .and_then(|c| NaiveDate::parse_from_str(&c[1], "%Y-%m-%d").ok())
+fn date(meta: &Value) -> Option<NaiveDate> {
+    ["recorded", "reviewed"].into_iter().find_map(|key| {
+        meta[key]
+            .as_str()
+            .and_then(|value| value.get(..10))
+            .and_then(|value| NaiveDate::parse_from_str(value, "%Y-%m-%d").ok())
+    })
 }
-fn timestamp(body: &str) -> String {
-    let r = regex(r"(?m)^Recorded:\s*(\S+)");
-    let Some(c) = r.captures(body) else {
+fn timestamp(meta: &Value) -> String {
+    let Some(recorded) = meta["recorded"].as_str() else {
         return String::new();
     };
-    if let Ok(d) = DateTime::parse_from_rfc3339(&c[1]) {
+    if let Ok(d) = DateTime::parse_from_rfc3339(recorded) {
         return d.with_timezone(&Utc).to_rfc3339();
     }
-    if let Ok(d) = chrono::NaiveDateTime::parse_from_str(&c[1], "%Y-%m-%dT%H:%M:%S%.f") {
+    if let Ok(d) = chrono::NaiveDateTime::parse_from_str(recorded, "%Y-%m-%dT%H:%M:%S%.f") {
         return d.and_utc().to_rfc3339();
     }
-    if let Ok(d) = NaiveDate::parse_from_str(&c[1], "%Y-%m-%d") {
+    if let Ok(d) = NaiveDate::parse_from_str(recorded, "%Y-%m-%d") {
         return d.and_hms_opt(0, 0, 0).unwrap().and_utc().to_rfc3339();
     }
     String::new()
@@ -320,16 +306,13 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
             .to_owned();
         let meta = fields(&body);
         let (cat, _) = category(&title, &body, text(&meta["category"]));
-        let day = date(&body);
+        let day = date(&meta);
         let age = day.map(|d| (today - d).num_days().max(0));
         let activity = age
             .map(|a| (-std::f64::consts::LN_2 * a as f64 / 21.0).exp())
             .unwrap_or(0.0);
-        let confidence = regex(r"(?m)^Confidence:\s*(.*)")
-            .captures(&body)
-            .map(|c| c[1].to_owned())
-            .unwrap_or_else(|| "source page".into());
-        notes.push(json!({"id":format!("note:{}",&digest(&rel)[..16]),"label":title,"kind":"note","path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&body),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!(brain_discovery::rounded(activity,4))}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"category":cat,"color":theme(cat).1}));
+        let confidence = meta["confidence"].as_str().unwrap_or("source page");
+        notes.push(json!({"id":format!("note:{}",&digest(&rel)[..16]),"label":title,"kind":"note","path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&meta),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!(brain_discovery::rounded(activity,4))}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"category":cat,"color":theme(cat).1}));
     }
     Ok(notes)
 }
@@ -1598,6 +1581,33 @@ mod tests {
             fields("# Schema\n```\nEntity: world\nName: Imaginary\n```\n## Later\nWorlds: bad"),
             json!({})
         );
+    }
+    #[test]
+    fn viewer_subjects_use_header_only_world_and_project_metadata() {
+        let t = fixture();
+        note(
+            t.path(),
+            "inbox/header-only.md",
+            "# Header metadata regression\n\nRecorded: 2026-10-20\nWorlds: \nTopics: Training\n\nProject: /home/fixture/repo. Main and managed checkout paths.\nRecorded: 1999-01-01\nConfidence: verified\n",
+        );
+        let indexed = notes(t.path(), day()).unwrap();
+        assert!(indexed[0]["meta"].get("worlds").is_none());
+        assert_eq!(indexed[0]["meta"]["topics"], "Training");
+        assert!(indexed[0]["meta"].get("project").is_none());
+        assert_eq!(indexed[0]["date"], "2026-10-20");
+        assert_eq!(indexed[0]["recorded"], "2026-10-20T00:00:00+00:00");
+        assert_eq!(indexed[0]["confidence"], "source page");
+
+        let graph = project(t.path());
+        let hubs = graph["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|node| node["kind"] == "hub")
+            .map(|node| text(&node["label"]).to_lowercase())
+            .collect::<Vec<_>>();
+        assert!(!hubs.iter().any(|label| label.starts_with("topics")));
+        assert!(!hubs.iter().any(|label| label.contains("home/fixture")));
     }
     #[test]
     fn index_excludes_hidden_instructions_and_links() {
