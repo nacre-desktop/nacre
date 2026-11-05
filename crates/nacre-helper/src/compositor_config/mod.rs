@@ -183,6 +183,16 @@ pub(crate) fn native_commands_for_frozen_python(value: Value) -> Value {
         value => value,
     }
 }
+#[cfg(test)]
+pub(crate) fn native_preparation_files_for_frozen_python(mut files: Value) -> Value {
+    if let Some(text) = files
+        .get_mut("config/bindings.kdl")
+        .and_then(|file| file.get_mut("text"))
+    {
+        *text = native_commands_for_frozen_python(text.clone());
+    }
+    files
+}
 fn lua(value: &Value, named_fields: bool) -> Result<String> {
     Ok(match value {
         Value::Null => "nil".into(),

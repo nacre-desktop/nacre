@@ -834,7 +834,7 @@ mod tests {
             let actual: Value = serde_json::from_str(&actual)?;
             assert_eq!(
                 actual["files"],
-                crate::compositor_config::native_commands_for_frozen_python(
+                crate::compositor_config::native_preparation_files_for_frozen_python(
                     case["observed"]["files"].clone(),
                 ),
                 "{}",

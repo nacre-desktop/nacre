@@ -1749,7 +1749,7 @@ mod tests {
             }
             assert_eq!(
                 Value::Object(files),
-                crate::compositor_config::native_commands_for_frozen_python(
+                crate::compositor_config::native_preparation_files_for_frozen_python(
                     expected["files"].clone(),
                 ),
                 "{}",
