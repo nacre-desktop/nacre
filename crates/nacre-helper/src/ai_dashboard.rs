@@ -846,6 +846,20 @@ pub(crate) fn collect_history<F: Fn() -> bool>(
 pub(crate) fn collect_launcher_history<F: Fn() -> bool>(
     cancelled: F,
 ) -> Result<(Vec<serde_json::Value>, Vec<String>)> {
+    collect_local_launcher_history(cancelled, |project, agent| {
+        let account = ai_core::effective_account(agent, None)?;
+        provider_list(project, agent, &account)
+    })
+}
+
+fn collect_local_launcher_history<F, L>(
+    cancelled: F,
+    mut list: L,
+) -> Result<(Vec<serde_json::Value>, Vec<String>)>
+where
+    F: Fn() -> bool,
+    L: FnMut(&serde_json::Value, &str) -> Result<Vec<serde_json::Value>>,
+{
     let general = serde_json::json!({
         "id":"general-chat", "label":"General chat", "chat_directory":true,
         "path":home().join(".local/share/nacre/ai/chats").display().to_string()
@@ -856,8 +870,7 @@ pub(crate) fn collect_launcher_history<F: Fn() -> bool>(
         if cancelled() {
             break;
         }
-        let account = ai_core::effective_account(agent, None)?;
-        match provider_list(&general, agent, &account) {
+        match list(&general, agent) {
             Ok(rows) => records.extend(rows),
             Err(_) => warnings.push(format!(
                 "{} history is temporarily unavailable",
@@ -2497,6 +2510,29 @@ mod tests {
         assert_eq!(records[0]["id"], "newer");
         assert_eq!(records[1]["id"], "middle");
         assert_eq!(records[2]["id"], "older");
+    }
+
+    #[test]
+    fn launcher_history_uses_only_the_injected_local_general_source() -> Result<()> {
+        let mut seen = Vec::new();
+        let (rows, warnings) = collect_local_launcher_history(
+            || false,
+            |project, agent| {
+                assert_eq!(project["id"], "general-chat");
+                assert_eq!(project["chat_directory"], true);
+                assert!(project["host"].is_null());
+                seen.push(agent.to_owned());
+                Ok(vec![serde_json::json!({
+                    "id":format!("{agent}-local"),"agent":agent,"updated_at":1,
+                    "project":project
+                })])
+            },
+        )?;
+        assert_eq!(seen, ["codex", "claude"]);
+        assert!(warnings.is_empty());
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().all(|row| row["project"]["host"].is_null()));
+        Ok(())
     }
 
     #[test]

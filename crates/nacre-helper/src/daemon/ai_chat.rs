@@ -659,26 +659,29 @@ async fn dispatch_launcher(
         }
         "ai.launcher.open" => {
             let request = checked(parse::<launcher::Open>(params), launcher::Open::validate)?;
-            let item = host
-                .launcher_records
-                .borrow()
-                .get(&request.key)
-                .cloned()
-                .ok_or_else(|| {
+            let cached = host.launcher_records.borrow().clone();
+            let (item, unique_title) = if let Some(item) = cached.get(&request.key).cloned() {
+                let unique = cached.values().filter(|row| row["title"] == item["title"]).count() == 1;
+                (item, unique)
+            } else {
+                // A cached UI row can outlive this daemon's in-memory map.
+                // Rediscover only local general chats and match the opaque key.
+                let history = tokio::task::spawn_blocking(|| {
+                    crate::ai_dashboard::collect_launcher_history(|| false)
+                });
+                let (rows, _) = match tokio::time::timeout(Duration::from_secs(45), history).await {
+                    Ok(Ok(Ok(value))) => value,
+                    _ => return Err(unavailable("Could not refresh local chat history")),
+                };
+                find_local_launcher_record(rows, &request.key).ok_or_else(|| {
                     failure(
                         ErrorCode::Validation,
                         "Chat is no longer in the launcher list",
                         false,
                     )
                     .dispatch_state(false)
-                })?;
-            let unique_title = host
-                .launcher_records
-                .borrow()
-                .values()
-                .filter(|row| row["title"] == item["title"])
-                .count()
-                == 1;
+                })?
+            };
             open_launcher_record(hub, item, request.key, unique_title).await
         }
         "ai.launcher.new" => {
@@ -752,6 +755,14 @@ async fn open_launcher_record(
     key: String,
     unique_title: bool,
 ) -> std::result::Result<Value, Failure> {
+    if !launcher_record_is_local(&item) {
+        return Err(failure(
+            ErrorCode::Validation,
+            "Remote chats are unavailable in the launcher",
+            false,
+        )
+        .dispatch_state(false));
+    }
     let snapshot = hub.borrow().snapshot("compositor");
     let existing = snapshot
         .as_ref()
@@ -767,6 +778,19 @@ async fn open_launcher_record(
         Ok(Ok(Ok(()))) => Ok(json!({"ok":true,"focused":false})),
         _ => Err(unavailable("Could not open AI chat window")),
     }
+}
+
+fn launcher_record_is_local(item: &Value) -> bool {
+    item["project"]["host"].as_str().is_none()
+}
+
+fn find_local_launcher_record(rows: Vec<Value>, key: &str) -> Option<(Value, bool)> {
+    let index = rows
+        .iter()
+        .position(|row| launcher_key(row) == key && launcher_record_is_local(row))?;
+    let title = rows[index]["title"].clone();
+    let unique_title = rows.iter().filter(|row| row["title"] == title).count() == 1;
+    Some((rows.into_iter().nth(index)?, unique_title))
 }
 
 fn launcher_key(item: &Value) -> String {
@@ -811,7 +835,7 @@ fn append_launcher_row(
         title: launcher_text(title, 256),
         // The wire type still requires this legacy field; the panel no longer
         // renders it and no project is associated with the chat.
-        project: "general".into(),
+        project: "general-chat".into(),
         provider: if item["agent"] == "claude" {
             Provider::Claude
         } else {
@@ -942,7 +966,7 @@ mod tests {
         append_launcher_row(&mut records, &mut chats, row);
         assert_eq!(chats.len(), 1);
         assert_eq!(records.len(), 1);
-        assert_eq!(chats[0].project, "general");
+        assert_eq!(chats[0].project, "general-chat");
     }
 
     #[test]
@@ -953,6 +977,27 @@ mod tests {
         append_launcher_row(&mut records, &mut chats, row);
         assert!(chats.is_empty());
         assert!(records.is_empty());
+    }
+
+    #[test]
+    fn launcher_reopens_cached_key_after_daemon_map_is_lost() {
+        let row = json!({
+            "id":"local-thread","title":"Fixture","agent":"codex",
+            "project":{"id":"general-chat","path":"/chat"}
+        });
+        let key = launcher_key(&row);
+        let (found, unique) = find_local_launcher_record(vec![row.clone()], &key).unwrap();
+        assert_eq!(found, row);
+        assert!(unique);
+    }
+
+    #[test]
+    fn launcher_relookup_never_accepts_remote_records() {
+        let row = json!({
+            "id":"remote-thread","title":"Fixture","agent":"codex",
+            "project":{"id":"general-chat","host":"builder"}
+        });
+        assert!(find_local_launcher_record(vec![row.clone()], &launcher_key(&row)).is_none());
     }
 
     #[test]
