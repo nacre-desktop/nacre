@@ -302,7 +302,10 @@ impl Chat {
             return false;
         }
         if call == Call::LauncherAction
-            && st.pending.iter().any(|pending| pending.call == Call::LauncherAction)
+            && st
+                .pending
+                .iter()
+                .any(|pending| pending.call == Call::LauncherAction)
         {
             return false;
         }
@@ -472,12 +475,15 @@ impl Chat {
             let should_list = {
                 let st = self.st.borrow();
                 !st.pending.iter().any(|p| p.call == Call::LauncherList)
-                    && st.launcher_asked.is_none_or(|at| at.elapsed() >= LAUNCHER_REFRESH)
+                    && st
+                        .launcher_asked
+                        .is_none_or(|at| at.elapsed() >= LAUNCHER_REFRESH)
             };
-            if should_list && self.ready(LAUNCHER_LIST).is_some() {
-                if self.begin(Call::LauncherList, LAUNCHER_LIST, json!({}), wake.clone()) {
-                    self.st.borrow_mut().launcher_asked = Some(Instant::now());
-                }
+            if should_list
+                && self.ready(LAUNCHER_LIST).is_some()
+                && self.begin(Call::LauncherList, LAUNCHER_LIST, json!({}), wake.clone())
+            {
+                self.st.borrow_mut().launcher_asked = Some(Instant::now());
             }
             let st = self.st.borrow();
             let data = st.launcher.as_ref().cloned().unwrap_or_else(|| json!({}));
@@ -486,58 +492,179 @@ impl Chat {
                 _ => String::new(),
             };
             let chats = data["chats"].as_array().cloned().unwrap_or_default();
-            let filtered: Vec<Json> = chats.into_iter().filter(|row| {
-                query.is_empty() || ["title", "project", "provider"]
-                    .into_iter().filter_map(|k| row[k].as_str())
-                    .any(|value| value.to_lowercase().contains(&query))
-            }).collect();
-            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs_f64();
-            let rows: Vec<Json> = filtered.iter().map(|row| {
-                let provider = match row["provider"].as_str().unwrap_or("").to_lowercase().as_str() { "claude" => "Claude", "codex" => "Codex", _ => "" };
-                let state = match row["state"].as_str().unwrap_or("").to_lowercase().as_str() { "running" => "running", _ => "idle" };
-                let age = (now - row["lastActivity"].as_f64().unwrap_or(now)).max(0.);
-                let count = ((age / 60.).floor() as u64).to_string();
-                let last = if age < 60. { tr("bead.panel.launcher-just-now", &[]) } else if age < 3600. { tr("bead.panel.launcher-minutes-ago", &[("count", &count)]) } else if age < 86400. { tr("bead.panel.launcher-hours-ago", &[("count", &((age / 3600.).floor() as u64).to_string())]) } else { tr("bead.panel.launcher-days-ago", &[("count", &((age / 86400.).floor() as u64).to_string())]) };
-                let mut item = row.clone();
-                if let Some(obj) = item.as_object_mut() {
-                    obj.insert("provider".into(), json!(provider));
-                    obj.insert("state".into(), json!(state));
-                    obj.insert("lastActivityLabel".into(), json!(last));
-                }
-                item
-            }).collect();
+            let filtered: Vec<Json> = chats
+                .into_iter()
+                .filter(|row| {
+                    query.is_empty()
+                        || ["title", "project", "provider"]
+                            .into_iter()
+                            .filter_map(|k| row[k].as_str())
+                            .any(|value| value.to_lowercase().contains(&query))
+                })
+                .collect();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs_f64();
+            let rows: Vec<Json> = filtered
+                .iter()
+                .map(|row| {
+                    let provider = match row["provider"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .as_str()
+                    {
+                        "claude" => "Claude",
+                        "codex" => "Codex",
+                        _ => "",
+                    };
+                    let state = match row["state"].as_str().unwrap_or("").to_lowercase().as_str() {
+                        "running" => "running",
+                        _ => "idle",
+                    };
+                    let age = (now - row["lastActivity"].as_f64().unwrap_or(now)).max(0.);
+                    let count = ((age / 60.).floor() as u64).to_string();
+                    let last = if age < 60. {
+                        tr("bead.panel.launcher-just-now", &[])
+                    } else if age < 3600. {
+                        tr("bead.panel.launcher-minutes-ago", &[("count", &count)])
+                    } else if age < 86400. {
+                        tr(
+                            "bead.panel.launcher-hours-ago",
+                            &[("count", &((age / 3600.).floor() as u64).to_string())],
+                        )
+                    } else {
+                        tr(
+                            "bead.panel.launcher-days-ago",
+                            &[("count", &((age / 86400.).floor() as u64).to_string())],
+                        )
+                    };
+                    let mut item = row.clone();
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.insert("provider".into(), json!(provider));
+                        obj.insert("state".into(), json!(state));
+                        obj.insert("lastActivityLabel".into(), json!(last));
+                    }
+                    item
+                })
+                .collect();
             out.insert("launcher.chats".into(), Value::list(rows));
             let projects = data["projects"].as_array().cloned().unwrap_or_default();
             out.insert("launcher.projects".into(), Value::list(projects.clone()));
             let selected_provider = match stores.get("launcher.provider") {
-                Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") && v != "" => v.clone(),
-                _ => data["defaultProvider"].as_str().filter(|v| matches!(*v, "codex" | "claude")).unwrap_or("").to_owned(),
+                Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
+                _ => data["defaultProvider"]
+                    .as_str()
+                    .filter(|v| matches!(*v, "codex" | "claude"))
+                    .unwrap_or("")
+                    .to_owned(),
             };
             out.insert("launcher.provider".into(), text(selected_provider.clone()));
             let selected_project = match stores.get("launcher.project") {
-                Some(Value::Text(v)) if projects.iter().any(|p| p["id"].as_str() == Some(v)) => v.clone(),
-                _ => projects.first().and_then(|p| p["id"].as_str()).unwrap_or("").to_owned(),
+                Some(Value::Text(v)) if projects.iter().any(|p| p["id"].as_str() == Some(v)) => {
+                    v.clone()
+                }
+                _ => projects
+                    .first()
+                    .and_then(|p| p["id"].as_str())
+                    .unwrap_or("")
+                    .to_owned(),
             };
             out.insert("launcher.project".into(), text(selected_project.clone()));
-            out.insert("launcher.project_picker_open".into(), Value::Bool(stores.get("launcher.project_picker_open") == Some(&Value::Bool(true))));
-            out.insert("launcher.search".into(), text(match stores.get("launcher.search") {
-                Some(Value::Text(v)) => v.clone(), _ => String::new(),
-            }));
+            out.insert(
+                "launcher.project_picker_open".into(),
+                Value::Bool(stores.get("launcher.project_picker_open") == Some(&Value::Bool(true))),
+            );
+            out.insert(
+                "launcher.search".into(),
+                text(match stores.get("launcher.search") {
+                    Some(Value::Text(v)) => v.clone(),
+                    _ => String::new(),
+                }),
+            );
             let selected = match stores.get("launcher.selected") {
-                Some(Value::Text(v)) if filtered.iter().any(|row| row["key"].as_str() == Some(v)) => v.clone(),
-                _ => filtered.first().and_then(|v| v["key"].as_str()).unwrap_or("").to_owned(),
+                Some(Value::Text(v))
+                    if filtered.iter().any(|row| row["key"].as_str() == Some(v)) =>
+                {
+                    v.clone()
+                }
+                _ => filtered
+                    .first()
+                    .and_then(|v| v["key"].as_str())
+                    .unwrap_or("")
+                    .to_owned(),
             };
             out.insert("launcher.selected".into(), text(selected));
             let warning = data["warning"].as_str().unwrap_or("");
-            out.insert("launcher.warning".into(), text(if !warning.is_empty() { warning.to_owned() } else if !st.message.is_empty() { tr(&st.message, &[]) } else if self.ready(LAUNCHER_LIST).is_none() { tr("bead.panel.chat-unavailable", &[]) } else { String::new() }));
-            out.insert("launcher.quick_chat".into(), Value::Bool(stores.get("launcher.quick_chat") == Some(&Value::Bool(true))));
-            out.insert("launcher.empty_state".into(), text(if !filtered.is_empty() || !st.message.is_empty() { String::new() } else if st.launcher.is_none() && self.ready(LAUNCHER_LIST).is_some() { tr("bead.panel.launcher-loading", &[]) } else if !query.is_empty() { tr("bead.panel.launcher-empty-search", &[]) } else { tr("bead.panel.launcher-empty-history", &[]) }));
+            out.insert(
+                "launcher.warning".into(),
+                text(if !warning.is_empty() {
+                    warning.to_owned()
+                } else if !st.message.is_empty() {
+                    tr(&st.message, &[])
+                } else if self.ready(LAUNCHER_LIST).is_none() {
+                    tr("bead.panel.chat-unavailable", &[])
+                } else {
+                    String::new()
+                }),
+            );
+            out.insert(
+                "launcher.quick_chat".into(),
+                Value::Bool(stores.get("launcher.quick_chat") == Some(&Value::Bool(true))),
+            );
+            out.insert(
+                "launcher.empty_state".into(),
+                text(
+                    if !filtered.is_empty()
+                        || !st.message.is_empty()
+                        || !warning.is_empty()
+                        || self.ready(LAUNCHER_LIST).is_none()
+                    {
+                        String::new()
+                    } else if st.launcher.is_none() && self.ready(LAUNCHER_LIST).is_some() {
+                        tr("bead.panel.launcher-loading", &[])
+                    } else if !query.is_empty() {
+                        tr("bead.panel.launcher-empty-search", &[])
+                    } else {
+                        tr("bead.panel.launcher-empty-history", &[])
+                    },
+                ),
+            );
             let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
-            out.insert("launcher.can_latest".into(), Value::Bool(!action_pending && st.launcher.is_some() && !st.pending.iter().any(|p| p.call == Call::LauncherList) && self.ready("ai.launcher.latest").is_some()));
-            out.insert("launcher.can_new".into(), Value::Bool(!action_pending && !selected_project.is_empty() && !selected_provider.is_empty() && self.ready("ai.launcher.new").is_some()));
-            out.insert("launcher.can_open".into(), Value::Bool(!action_pending && self.ready("ai.launcher.open").is_some() && !filtered.is_empty()));
+            out.insert(
+                "launcher.can_latest".into(),
+                Value::Bool(
+                    !action_pending
+                        && st.launcher.is_some()
+                        && data["chats"]
+                            .as_array()
+                            .is_some_and(|chats| !chats.is_empty())
+                        && warning.is_empty()
+                        && !st.pending.iter().any(|p| p.call == Call::LauncherList)
+                        && self.ready("ai.launcher.latest").is_some(),
+                ),
+            );
+            out.insert(
+                "launcher.can_new".into(),
+                Value::Bool(
+                    !action_pending
+                        && !selected_project.is_empty()
+                        && !selected_provider.is_empty()
+                        && self.ready("ai.launcher.new").is_some(),
+                ),
+            );
+            out.insert(
+                "launcher.can_open".into(),
+                Value::Bool(
+                    !action_pending
+                        && self.ready("ai.launcher.open").is_some()
+                        && !filtered.is_empty(),
+                ),
+            );
             let scale = self.transcript.borrow().style().scale.clone();
-            let preferred = (f64::from(st.viewport.1) - 150.).clamp(105. * f64::from(scale.xs), 202.5 * f64::from(scale.xs));
+            let preferred = (f64::from(st.viewport.1) - 150.)
+                .clamp(105. * f64::from(scale.xs), 202.5 * f64::from(scale.xs));
             let height = preferred.min((f64::from(st.viewport.1) - 2. * self.metrics.edge).max(1.));
             out.insert("chat.height".into(), number(height));
             out.insert("chat.edge".into(), number(self.metrics.edge));
@@ -864,37 +991,117 @@ impl Chat {
                 "new" => {
                     let provider = value("launcher.provider");
                     let project = value("launcher.project");
-                    self.begin(Call::LauncherAction, "ai.launcher.new", json!({"provider": provider, "project": project}), self.waker());
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.new",
+                        json!({"provider": provider, "project": project}),
+                        self.waker(),
+                    );
                 }
-                "latest" => { self.begin(Call::LauncherAction, "ai.launcher.latest", json!({}), self.waker()); }
-                "quick-chat" => { out.stores.insert("chat.section".into(), text("chat")); out.stores.insert("launcher.quick_chat".into(), Value::Bool(true)); out.stores.insert("bead.focused".into(), text("chat.composer")); }
-                "back" => { out.stores.insert("chat.section".into(), text("launcher")); out.stores.insert("launcher.quick_chat".into(), Value::Bool(false)); out.stores.insert("bead.focused".into(), text("chat.search")); }
+                "latest" => {
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.latest",
+                        json!({}),
+                        self.waker(),
+                    );
+                }
+                "quick-chat" => {
+                    out.stores.insert("chat.section".into(), text("chat"));
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(true));
+                    out.stores
+                        .insert("bead.focused".into(), text("chat.composer"));
+                }
+                "back" => {
+                    out.stores.insert("chat.section".into(), text("launcher"));
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(false));
+                    out.stores
+                        .insert("bead.focused".into(), text("chat.search"));
+                }
                 "toggle-project-picker" => {
-                    out.stores.insert("launcher.project_picker_open".into(), Value::Bool(stores.get("launcher.project_picker_open") != Some(&Value::Bool(true))));
+                    out.stores.insert(
+                        "launcher.project_picker_open".into(),
+                        Value::Bool(
+                            stores.get("launcher.project_picker_open") != Some(&Value::Bool(true)),
+                        ),
+                    );
                 }
                 "open-selected" => {
                     let key = value("launcher.selected");
                     if !key.is_empty() {
-                        self.begin(Call::LauncherAction, "ai.launcher.open", json!({"key": key}), self.waker());
+                        self.begin(
+                            Call::LauncherAction,
+                            "ai.launcher.open",
+                            json!({"key": key}),
+                            self.waker(),
+                        );
                     }
                 }
                 "move:up" | "move:down" | "move:-1" | "move:1" => {
-                    let launcher = self.st.borrow().launcher.clone().unwrap_or_else(|| json!({}));
+                    let launcher = self
+                        .st
+                        .borrow()
+                        .launcher
+                        .clone()
+                        .unwrap_or_else(|| json!({}));
                     let rows = launcher["chats"].as_array().cloned().unwrap_or_default();
                     let query = value("launcher.search").to_lowercase();
-                    let rows: Vec<Json> = rows.into_iter().filter(|row| query.is_empty() || ["title", "project", "provider"].into_iter().filter_map(|k| row[k].as_str()).any(|s| s.to_lowercase().contains(&query))).collect();
+                    let rows: Vec<Json> = rows
+                        .into_iter()
+                        .filter(|row| {
+                            query.is_empty()
+                                || ["title", "project", "provider"]
+                                    .into_iter()
+                                    .filter_map(|k| row[k].as_str())
+                                    .any(|s| s.to_lowercase().contains(&query))
+                        })
+                        .collect();
                     let selected = value("launcher.selected");
-                    let index = rows.iter().position(|row| row["key"].as_str() == Some(selected.as_str())).unwrap_or(0);
+                    let index = rows
+                        .iter()
+                        .position(|row| row["key"].as_str() == Some(selected.as_str()))
+                        .unwrap_or(0);
                     let up = rest == "move:up" || rest == "move:-1";
-                    let next = if up { index.saturating_sub(1) } else { (index + 1).min(rows.len().saturating_sub(1)) };
+                    let next = if up {
+                        index.saturating_sub(1)
+                    } else {
+                        (index + 1).min(rows.len().saturating_sub(1))
+                    };
                     if let Some(key) = rows.get(next).and_then(|row| row["key"].as_str()) {
                         out.stores.insert("launcher.selected".into(), text(key));
                     }
                 }
-                "brain" | "settings" | "projects" => { self.begin(Call::LauncherAction, "ai.launcher.action", json!({"action": rest}), self.waker()); }
-                _ if rest.starts_with("open:") => { let key = &rest[5..]; if !key.is_empty() { self.begin(Call::LauncherAction, "ai.launcher.open", json!({"key": key}), self.waker()); } }
-                _ if rest.starts_with("provider:") => { out.stores.insert("launcher.provider".into(), text(&rest[9..])); }
-                _ if rest.starts_with("project:") => { out.stores.insert("launcher.project".into(), text(&rest[8..])); out.stores.insert("launcher.project_picker_open".into(), Value::Bool(false)); }
+                "brain" | "settings" | "projects" => {
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.action",
+                        json!({"action": rest}),
+                        self.waker(),
+                    );
+                }
+                _ if rest.starts_with("open:") => {
+                    let key = &rest[5..];
+                    if !key.is_empty() {
+                        self.begin(
+                            Call::LauncherAction,
+                            "ai.launcher.open",
+                            json!({"key": key}),
+                            self.waker(),
+                        );
+                    }
+                }
+                _ if rest.starts_with("provider:") => {
+                    out.stores
+                        .insert("launcher.provider".into(), text(&rest[9..]));
+                }
+                _ if rest.starts_with("project:") => {
+                    out.stores
+                        .insert("launcher.project".into(), text(&rest[8..]));
+                    out.stores
+                        .insert("launcher.project_picker_open".into(), Value::Bool(false));
+                }
                 _ => {}
             },
             "pin" => {
@@ -922,7 +1129,8 @@ impl Chat {
             "new" if !busy => {
                 self.plain("ai.chat.new", json!({}));
                 out.stores.insert("chat.section".into(), text("chat"));
-                out.stores.insert("bead.focused".into(), text("chat.composer"));
+                out.stores
+                    .insert("bead.focused".into(), text("chat.composer"));
             }
             "workspace" if !busy => self.plain("ai.chat.workspace", json!({})),
             "provider" if matches!(rest, "codex" | "claude") => {
@@ -979,7 +1187,8 @@ impl Chat {
             "section" if matches!(rest, "launcher" | "chat") => {
                 out.stores.insert("chat.section".into(), text(rest));
                 if rest == "launcher" {
-                    out.stores.insert("launcher.quick_chat".into(), Value::Bool(false));
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(false));
                 }
             }
             _ => {}

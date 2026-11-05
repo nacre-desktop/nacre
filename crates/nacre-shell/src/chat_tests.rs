@@ -50,7 +50,9 @@ fn stores(pairs: &[(&str, Value)]) -> Stores {
         .iter()
         .map(|(k, v)| (k.to_string(), v.clone()))
         .collect();
-    values.entry("chat.section".into()).or_insert(Value::Text("chat".into()));
+    values
+        .entry("chat.section".into())
+        .or_insert(Value::Text("chat".into()));
     Stores::default().reconcile(&values).unwrap()
 }
 fn launcher_stores(pairs: &[(&str, Value)]) -> Stores {
@@ -291,15 +293,11 @@ fn assistant_markdown_blocks_and_copy_actions() {
         ]
     );
     assert_eq!(
-        chat.act("copy:0000000002", &stores(&[]))
-            .copy
-            .as_deref(),
+        chat.act("copy:0000000002", &stores(&[])).copy.as_deref(),
         Some(md)
     );
     assert_eq!(
-        chat.act("code:0000000002:1", &stores(&[]))
-            .copy
-            .as_deref(),
+        chat.act("code:0000000002:1", &stores(&[])).copy.as_deref(),
         Some("ls")
     );
     assert_eq!(chat.act("code:0000000002:9", &stores(&[])).copy, None);
@@ -391,14 +389,23 @@ impl Drop for Lab {
 fn welcome(boot: u32) -> Message {
     let mut methods = nacre_protocol::core_methods();
     methods.extend(nacre_protocol::ai_chat::methods());
-    for name in ["ai.launcher.list", "ai.launcher.open", "ai.launcher.new", "ai.launcher.latest", "ai.launcher.action"] {
-        methods.insert(name.into(), nacre_protocol::Method {
-            v: 1,
-            class: Capability::Desktop,
-            timeout: 3000,
-            params: json!({"type":"object"}),
-            result: json!({}),
-        });
+    for name in [
+        "ai.launcher.list",
+        "ai.launcher.open",
+        "ai.launcher.new",
+        "ai.launcher.latest",
+        "ai.launcher.action",
+    ] {
+        methods.insert(
+            name.into(),
+            nacre_protocol::Method {
+                v: 1,
+                class: Capability::Desktop,
+                timeout: 3000,
+                params: json!({"type":"object"}),
+                result: json!({}),
+            },
+        );
     }
     Message::Welcome {
         proto: 1,
@@ -446,9 +453,7 @@ pub(crate) async fn lab(initial: Json) -> Lab {
             let Some(Message::Hello { .. }) = incoming.recv().await else {
                 continue;
             };
-            framing::write(&mut writer, &welcome(boot))
-                .await
-                .unwrap();
+            framing::write(&mut writer, &welcome(boot)).await.unwrap();
             let mut seq = 0;
             loop {
                 tokio::select! {
@@ -518,7 +523,10 @@ async fn expect_launcher_call(lab: &mut Lab, method: &str, params: Json) {
             assert_eq!(call.1, params);
             return;
         }
-        assert_eq!(call.0, "ai.launcher.list", "unexpected call before {method}");
+        assert_eq!(
+            call.0, "ai.launcher.list",
+            "unexpected call before {method}"
+        );
     }
 }
 async fn finish_launcher_action(chat: &Chat, stores: &Stores) {
@@ -576,10 +584,7 @@ fn opened(chat: &Chat) -> bool {
 #[tokio::test(flavor = "current_thread")]
 async fn open_heartbeat_send_stop_and_approve_use_the_published_calls() {
     let _guard = serial();
-    let mut lab = lab(
-        topic(&[("u1", "user", "hi")], state(false, "", None)),
-    )
-    .await;
+    let mut lab = lab(topic(&[("u1", "user", "hi")], state(false, "", None))).await;
     let chat = chat_for(&lab)
         .await
         .with_heartbeat(Duration::from_millis(80));
@@ -722,10 +727,7 @@ async fn a_failed_call_shows_an_error_and_a_refused_send_restores_the_text() {
 #[tokio::test(flavor = "current_thread")]
 async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
     let _guard = serial();
-    let mut lab = lab(
-        topic(&[("u1", "user", "before")], state(false, "", None)),
-    )
-    .await;
+    let mut lab = lab(topic(&[("u1", "user", "before")], state(false, "", None))).await;
     let chat = chat_for(&lab).await;
     let none = stores(&[]);
     until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
@@ -758,23 +760,40 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     assert_eq!(first["launcher.can_new"], Value::Bool(false));
     assert_eq!(first["launcher.can_latest"], Value::Bool(false));
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
-    let listed = until(&chat, &launcher, "launcher list", |out| {
-        matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
-    }).await;
+    let listed = until(
+        &chat,
+        &launcher,
+        "launcher list",
+        |out| matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12),
+    )
+    .await;
     assert_eq!(listed["launcher.can_new"], Value::Bool(true));
     assert_eq!(listed["launcher.can_latest"], Value::Bool(true));
-    let Value::List(rows) = &listed["launcher.chats"] else { panic!("launcher rows") };
+    let populated = chat.st.borrow().launcher.clone();
+    chat.st.borrow_mut().launcher.as_mut().unwrap()["chats"] = json!([]);
+    let empty = chat.project(&launcher);
+    assert_eq!(empty["launcher.can_latest"], Value::Bool(false));
+    assert!(!string(&empty, "launcher.empty_state").is_empty());
+    chat.st.borrow_mut().launcher = populated;
+    let Value::List(rows) = &listed["launcher.chats"] else {
+        panic!("launcher rows")
+    };
     assert_eq!(rows[0]["provider"], "Codex");
     assert_eq!(rows[0]["state"], "running");
     assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
 
     let search = launcher_stores(&[("launcher.search", Value::Text("brain".into()))]);
     let filtered = chat.project(&search);
-    let Value::List(rows) = &filtered["launcher.chats"] else { panic!("filtered rows") };
+    let Value::List(rows) = &filtered["launcher.chats"] else {
+        panic!("filtered rows")
+    };
     assert_eq!(rows.len(), 1);
     assert_eq!(rows[0]["key"], "k2");
     let move_down = chat.act("launcher:move:1", &search);
-    assert_eq!(move_down.stores["launcher.selected"], Value::Text("k2".into()));
+    assert_eq!(
+        move_down.stores["launcher.selected"],
+        Value::Text("k2".into())
+    );
 
     let selected = launcher_stores(&[("launcher.selected", Value::Text("k2".into()))]);
     chat.act("launcher:open-selected", &selected);
@@ -790,7 +809,12 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
         ("launcher.project", Value::Text("nacre".into())),
     ]);
     chat.act("launcher:new", &configured);
-    expect_launcher_call(&mut lab, "ai.launcher.new", json!({"provider":"claude","project":"nacre"})).await;
+    expect_launcher_call(
+        &mut lab,
+        "ai.launcher.new",
+        json!({"provider":"claude","project":"nacre"}),
+    )
+    .await;
     finish_launcher_action(&chat, &launcher).await;
     let quick = chat.act("launcher:quick-chat", &launcher);
     assert_eq!(quick.stores["chat.section"], Value::Text("chat".into()));
@@ -798,6 +822,16 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let back = chat.act("launcher:back", &launcher);
     assert_eq!(back.stores["chat.section"], Value::Text("launcher".into()));
     assert_eq!(back.stores["launcher.quick_chat"], Value::Bool(false));
+}
+
+#[test]
+fn unavailable_launcher_does_not_claim_empty_history() {
+    let _guard = serial();
+    let (_, chat) = offline(json!({"available": false, "channels": {}}));
+    let projected = chat.project(&Stores::default());
+    assert!(!string(&projected, "launcher.warning").is_empty());
+    assert_eq!(string(&projected, "launcher.empty_state"), "");
+    assert_eq!(projected["launcher.can_latest"], Value::Bool(false));
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -823,7 +857,10 @@ async fn launcher_load_error_is_visible_and_does_not_retry_each_projection() {
     for _ in 0..20 {
         chat.project(&launcher);
     }
-    assert!(lab.calls.try_recv().is_err(), "a failed list is throttled instead of retried every frame");
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "a failed list is throttled instead of retried every frame"
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -834,10 +871,16 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     let launcher = Stores::default();
     chat.project(&launcher);
     let _ = call_with_timeout(&mut lab).await;
-    let mut projected = until(&chat, &launcher, "launcher golden data", |out| {
-        matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
-    }).await;
-    let Value::List(rows) = &projected["launcher.chats"] else { panic!("launcher rows") };
+    let mut projected = until(
+        &chat,
+        &launcher,
+        "launcher golden data",
+        |out| matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12),
+    )
+    .await;
+    let Value::List(rows) = &projected["launcher.chats"] else {
+        panic!("launcher rows")
+    };
     let mut rows = rows.as_ref().clone();
     for row in &mut rows {
         row["lastActivityLabel"] = json!("2 hr ago");
@@ -845,13 +888,31 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     projected.insert("launcher.chats".into(), Value::list(rows));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
-        assert!(regular.session.view_nodes().iter().any(|node| node.id == "chat.search"));
-        assert!(regular.session.view_nodes().iter().any(|node| node.id == "chat.recent-chats"));
+        assert!(
+            regular
+                .session
+                .view_nodes()
+                .iter()
+                .any(|node| node.id == "chat.search")
+        );
+        assert!(
+            regular
+                .session
+                .view_nodes()
+                .iter()
+                .any(|node| node.id == "chat.recent-chats")
+        );
         golden("launcher", &mut regular, scale)?;
         let mut detached_projection = projected.clone();
         detached_projection.insert("view.detached".into(), Value::Bool(true));
         let mut detached = harness(detached_projection, scale)?;
-        assert!(!detached.session.view_nodes().iter().any(|node| node.id == "chat.pin"));
+        assert!(
+            !detached
+                .session
+                .view_nodes()
+                .iter()
+                .any(|node| node.id == "chat.pin")
+        );
         golden("launcher-detached", &mut detached, scale)?;
     }
     Ok(())

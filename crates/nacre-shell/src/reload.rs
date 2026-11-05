@@ -5218,93 +5218,43 @@ impl Runtime {
 }
 
 impl Runtime {
-    fn scroll_launcher_selection(&mut self) -> Result<Option<Scene>, Box<dyn Error>> {
-        if !self
-            .chat
-            .as_ref()
-            .is_some_and(|chat| chat.launcher_search_focused(&self.session.stores))
-        {
-            return Ok(None);
-        }
-        let selected = match self.session.stores.get("launcher.selected") {
-            Some(bead::core::Value::Text(key)) => key.clone(),
-            _ => return Ok(None),
-        };
-        let rows = match self.session.stores.get("launcher.chats") {
-            Some(bead::core::Value::List(rows)) => rows,
-            _ => return Ok(None),
-        };
-        let Some(index) = rows
-            .iter()
-            .position(|row| row["key"].as_str() == Some(selected.as_str()))
-        else {
-            return Ok(None);
-        };
+    fn scroll_launcher_selection(
+        &mut self,
+        selected: &str,
+    ) -> Result<Option<Scene>, Box<dyn Error>> {
         let nodes = self.session.view_nodes();
         let Some(viewport) = nodes.iter().find(|node| {
-            node.scroll_store.as_deref() == Some("launcher.scroll")
-                && node.scroll_limit.is_some()
+            node.scroll_store.as_deref() == Some("launcher.scroll") && node.scroll_limit.is_some()
         }) else {
             return Ok(None);
         };
-        let viewport_rect = bead::ui::rect(&viewport.draw);
-        let scroll_limit = viewport.scroll_limit.unwrap_or(0.);
-        let mut positions: Vec<(f64, f64, usize)> = nodes
-            .iter()
-            .filter(|node| {
-                node.scroll_store.as_deref() == Some("launcher.scroll")
-                    && matches!(&node.action_arg, Some(bead::core::Value::Text(arg)) if arg.starts_with("launcher:open:"))
-            })
-            .filter_map(|node| {
-                let Some(bead::core::Value::Text(arg)) = &node.action_arg else {
-                    return None;
-                };
-                let key = arg.strip_prefix("launcher:open:")?;
-                let index = rows.iter().position(|row| row["key"].as_str() == Some(key))?;
-                let rect = bead::ui::rect(&node.draw);
-                Some((f64::from(rect.y), f64::from(rect.h), index))
-            })
-            .collect();
-        positions.sort_by(|a, b| a.0.total_cmp(&b.0));
-        let row_height = positions.first().map(|row| row.1).unwrap_or(0.);
-        let pitch = positions
-            .windows(2)
-            .find_map(|pair| {
-                let rows_apart = pair[1].2.saturating_sub(pair[0].2);
-                let delta = pair[1].0 - pair[0].0;
-                (rows_apart > 0 && delta > 0.).then_some(delta / rows_apart as f64)
-            })
-            .or_else(|| {
-                (!rows.is_empty()).then_some(
-                    (scroll_limit + f64::from(viewport_rect.h)) / rows.len() as f64,
-                )
-            })
-            .unwrap_or(0.);
-        if pitch <= 0. || row_height <= 0. {
+        let action = format!("launcher:open:{selected}");
+        // The virtual list retains neighboring rows, so an arrow step's target is
+        // materialized even when it is just outside the viewport.
+        let Some(row) = nodes.iter().find(
+            |node| matches!(&node.action_arg, Some(bead::core::Value::Text(arg)) if arg == &action),
+        ) else {
             return Ok(None);
-        }
+        };
+        let viewport_rect = bead::ui::rect(&viewport.draw);
+        let row_rect = bead::ui::rect(&row.draw);
+        let delta = if row_rect.y < viewport_rect.y {
+            row_rect.y - viewport_rect.y
+        } else {
+            (row_rect.y + row_rect.h - viewport_rect.y - viewport_rect.h).max(0.)
+        };
         let current = match self.session.stores.get("launcher.scroll") {
             Some(bead::core::Value::Number(value)) => *value,
             _ => 0.,
         };
-        let origin = positions.first().map_or(f64::from(viewport_rect.y), |row| {
-            current + row.0 - f64::from(viewport_rect.y) - row.2 as f64 * pitch
-        });
-        let row_top = origin + index as f64 * pitch;
-        let row_bottom = row_top + row_height;
-        let target = if row_top < current {
-            row_top
-        } else if row_bottom > current + f64::from(viewport_rect.h) {
-            row_bottom - f64::from(viewport_rect.h)
-        } else {
-            current
-        }
-        .clamp(0., scroll_limit);
+        let target = (current + f64::from(delta)).clamp(0., viewport.scroll_limit.unwrap_or(0.));
         if (target - current).abs() < 0.5 {
             return Ok(None);
         }
-        self.session
-            .update(BTreeMap::from([("launcher.scroll".into(), bead::core::Value::Number(target))]))
+        Ok(self.session.update(BTreeMap::from([(
+            "launcher.scroll".into(),
+            bead::core::Value::Number(target),
+        )]))?)
     }
 }
 
@@ -9622,221 +9572,250 @@ impl SceneSource for Runtime {
                 before,
                 after,
             } => self.session.ime(preedit, commit, before, after)?,
-            UiEvent::Command { command, shift } => match command.as_str() {
-                "clipboard-copy" | "clipboard-cut" => {
-                    if let Some(text) = self.session.selected_text() {
+            UiEvent::Command { command, shift } => {
+                match command.as_str() {
+                    "clipboard-copy" | "clipboard-cut" => {
+                        if let Some(text) = self.session.selected_text() {
+                            self.wakeup
+                                .as_ref()
+                                .ok_or("clipboard event channel unavailable")?(
+                                UiEvent::ClipboardSet(text),
+                            );
+                        }
+                        if command == "clipboard-cut" {
+                            self.session.key("", false)?
+                        } else {
+                            None
+                        }
+                    }
+                    "clipboard-paste" => {
                         self.wakeup
                             .as_ref()
                             .ok_or("clipboard event channel unavailable")?(
-                            UiEvent::ClipboardSet(text),
+                            UiEvent::ClipboardRead
                         );
-                    }
-                    if command == "clipboard-cut" {
-                        self.session.key("", false)?
-                    } else {
                         None
                     }
-                }
-                "clipboard-paste" => {
-                    self.wakeup
-                        .as_ref()
-                        .ok_or("clipboard event channel unavailable")?(
-                        UiEvent::ClipboardRead
-                    );
-                    None
-                }
-                "escape"
-                    if self
-                        .session_menu
-                        .as_ref()
-                        .is_some_and(|menu| menu.confirming().is_some()) =>
-                {
-                    let key = self.session_menu.as_ref().and_then(|menu| {
-                        let key = menu.confirming();
-                        menu.cancel();
-                        key
-                    });
-                    // Hand focus back to the item that was asking.
-                    self.session.update(key.map_or(BTreeMap::new(), |key| {
-                        BTreeMap::from([(
-                            "bead.focused".into(),
-                            bead::core::Value::Text(format!("session-popout.act-{key}.main")),
-                        )])
-                    }))?
-                }
-                "escape"
-                    if self.active_status().is_some()
-                        && matches!(
-                            self.session.stores.get("network.view"),
-                            Some(bead::core::Value::Text(view)) if view != "list"
-                        ) =>
-                {
-                    // Esc leaves the prompt, hidden form or saved list before it closes the panel.
-                    if let Some(status) = self.active_status() {
-                        status.network_cancel();
-                    }
-                    self.session.update(BTreeMap::from([
-                        (
-                            crate::status_views::SECRET_STORE.to_owned(),
-                            bead::core::Value::Text(String::new()),
-                        ),
-                        (
-                            "network.hidden_ssid".into(),
-                            bead::core::Value::Text(String::new()),
-                        ),
-                        ("network.reveal".into(), bead::core::Value::Bool(false)),
-                    ]))?
-                }
-                "escape"
-                    if self
-                        .active_status()
-                        .as_ref()
-                        .is_some_and(|status| status.bluetooth_pairing_open()) =>
-                {
-                    // Esc cancels the pairing page before it closes the panel.
-                    if let Some(status) = self.active_status() {
-                        status.bluetooth_pair_cancel();
-                    }
-                    self.session.update(BTreeMap::from([
-                        (
-                            crate::status_views::BLUETOOTH_SECRET_STORE.to_owned(),
-                            bead::core::Value::Text(String::new()),
-                        ),
-                        ("bluetooth.reveal".into(), bead::core::Value::Bool(false)),
-                    ]))?
-                }
-                "escape"
-                    if !self.dock_status.is_empty()
-                        && self.session.stores.get("cc.page")
-                            != Some(&bead::core::Value::Text("home".into())) =>
-                {
-                    self.session.update(BTreeMap::from([
-                        ("cc.page".into(), bead::core::Value::Text("home".into())),
-                        ("cc.scroll".into(), bead::core::Value::Number(0.)),
-                        (
-                            "network.secret".into(),
-                            bead::core::Value::Text(String::new()),
-                        ),
-                        (
-                            "bluetooth.secret".into(),
-                            bead::core::Value::Text(String::new()),
-                        ),
-                    ]))?
-                }
-                // Esc closes an open Settings drop-down before anything else.
-                "escape"
-                    if matches!(
-                        self.session.stores.get("settings.select"),
-                        Some(bead::core::Value::Text(open)) if !open.is_empty()
-                    ) =>
-                {
-                    self.session.update(BTreeMap::from([(
-                        "settings.select".into(),
-                        bead::core::Value::Text(String::new()),
-                    )]))?
-                }
-                "escape" if self.prompt.is_some() => {
-                    let changes = self
-                        .prompt
-                        .as_ref()
-                        .map(|prompt| prompt.act("cancel", &self.session.stores))
-                        .unwrap_or_default();
-                    self.session.update(changes)?
-                }
-                "escape" if self.session.stores.get("panel.open").is_some() => {
-                    // A half-typed password never outlives its panel.
-                    let mut values = std::collections::BTreeMap::from([(
-                        "panel.open".into(),
-                        bead::core::Value::Bool(false),
-                    )]);
-                    if self.chat.is_some() {
-                        values.extend(
-                            self.session
-                                .action_values("close", bead::core::Value::Bool(true))?,
-                        );
-                    }
-                    if self
-                        .session
-                        .stores
-                        .get(crate::status_views::BLUETOOTH_SECRET_STORE)
-                        .is_some()
+                    "escape"
+                        if self
+                            .session_menu
+                            .as_ref()
+                            .is_some_and(|menu| menu.confirming().is_some()) =>
                     {
-                        if let Some(status) = self.active_status() {
-                            status.bluetooth_pair_leave();
-                        }
-                        values.insert(
-                            crate::status_views::BLUETOOTH_SECRET_STORE.into(),
-                            bead::core::Value::Text(String::new()),
-                        );
+                        let key = self.session_menu.as_ref().and_then(|menu| {
+                            let key = menu.confirming();
+                            menu.cancel();
+                            key
+                        });
+                        // Hand focus back to the item that was asking.
+                        self.session.update(key.map_or(BTreeMap::new(), |key| {
+                            BTreeMap::from([(
+                                "bead.focused".into(),
+                                bead::core::Value::Text(format!("session-popout.act-{key}.main")),
+                            )])
+                        }))?
                     }
-                    if self
-                        .session
-                        .stores
-                        .get(crate::status_views::SECRET_STORE)
-                        .is_some()
+                    "escape"
+                        if self.active_status().is_some()
+                            && matches!(
+                                self.session.stores.get("network.view"),
+                                Some(bead::core::Value::Text(view)) if view != "list"
+                            ) =>
                     {
+                        // Esc leaves the prompt, hidden form or saved list before it closes the panel.
                         if let Some(status) = self.active_status() {
                             status.network_cancel();
                         }
-                        values.insert(
-                            crate::status_views::SECRET_STORE.into(),
-                            bead::core::Value::Text(String::new()),
-                        );
+                        self.session.update(BTreeMap::from([
+                            (
+                                crate::status_views::SECRET_STORE.to_owned(),
+                                bead::core::Value::Text(String::new()),
+                            ),
+                            (
+                                "network.hidden_ssid".into(),
+                                bead::core::Value::Text(String::new()),
+                            ),
+                            ("network.reveal".into(), bead::core::Value::Bool(false)),
+                        ]))?
                     }
-                    self.session.update(values)?
+                    "escape"
+                        if self
+                            .active_status()
+                            .as_ref()
+                            .is_some_and(|status| status.bluetooth_pairing_open()) =>
+                    {
+                        // Esc cancels the pairing page before it closes the panel.
+                        if let Some(status) = self.active_status() {
+                            status.bluetooth_pair_cancel();
+                        }
+                        self.session.update(BTreeMap::from([
+                            (
+                                crate::status_views::BLUETOOTH_SECRET_STORE.to_owned(),
+                                bead::core::Value::Text(String::new()),
+                            ),
+                            ("bluetooth.reveal".into(), bead::core::Value::Bool(false)),
+                        ]))?
+                    }
+                    "escape"
+                        if !self.dock_status.is_empty()
+                            && self.session.stores.get("cc.page")
+                                != Some(&bead::core::Value::Text("home".into())) =>
+                    {
+                        self.session.update(BTreeMap::from([
+                            ("cc.page".into(), bead::core::Value::Text("home".into())),
+                            ("cc.scroll".into(), bead::core::Value::Number(0.)),
+                            (
+                                "network.secret".into(),
+                                bead::core::Value::Text(String::new()),
+                            ),
+                            (
+                                "bluetooth.secret".into(),
+                                bead::core::Value::Text(String::new()),
+                            ),
+                        ]))?
+                    }
+                    // Esc closes an open Settings drop-down before anything else.
+                    "escape"
+                        if matches!(
+                            self.session.stores.get("settings.select"),
+                            Some(bead::core::Value::Text(open)) if !open.is_empty()
+                        ) =>
+                    {
+                        self.session.update(BTreeMap::from([(
+                            "settings.select".into(),
+                            bead::core::Value::Text(String::new()),
+                        )]))?
+                    }
+                    "escape" if self.prompt.is_some() => {
+                        let changes = self
+                            .prompt
+                            .as_ref()
+                            .map(|prompt| prompt.act("cancel", &self.session.stores))
+                            .unwrap_or_default();
+                        self.session.update(changes)?
+                    }
+                    "escape" if self.session.stores.get("panel.open").is_some() => {
+                        // A half-typed password never outlives its panel.
+                        let mut values = std::collections::BTreeMap::from([(
+                            "panel.open".into(),
+                            bead::core::Value::Bool(false),
+                        )]);
+                        if self.chat.is_some() {
+                            values.extend(
+                                self.session
+                                    .action_values("close", bead::core::Value::Bool(true))?,
+                            );
+                        }
+                        if self
+                            .session
+                            .stores
+                            .get(crate::status_views::BLUETOOTH_SECRET_STORE)
+                            .is_some()
+                        {
+                            if let Some(status) = self.active_status() {
+                                status.bluetooth_pair_leave();
+                            }
+                            values.insert(
+                                crate::status_views::BLUETOOTH_SECRET_STORE.into(),
+                                bead::core::Value::Text(String::new()),
+                            );
+                        }
+                        if self
+                            .session
+                            .stores
+                            .get(crate::status_views::SECRET_STORE)
+                            .is_some()
+                        {
+                            if let Some(status) = self.active_status() {
+                                status.network_cancel();
+                            }
+                            values.insert(
+                                crate::status_views::SECRET_STORE.into(),
+                                bead::core::Value::Text(String::new()),
+                            );
+                        }
+                        self.session.update(values)?
+                    }
+                    "escape" if self.welcome.is_some() => {
+                        self.wakeup
+                            .as_ref()
+                            .ok_or("window close event channel unavailable")?(
+                            UiEvent::CompanionVisibility(false),
+                        );
+                        None
+                    }
+                    "escape" if self.bar => {
+                        self.status_pill.escape();
+                        self.sync_status_peek_route()?;
+                        self.schedule_status_pill();
+                        self.publish_status_pill()?
+                    }
+                    "tab" => self.session.focus_next(shift)?,
+                    "enter"
+                        if self.chat.as_ref().is_some_and(|chat| {
+                            chat.launcher_search_focused(&self.session.stores)
+                        }) =>
+                    {
+                        let changes = self
+                            .chat
+                            .as_ref()
+                            .map(|chat| {
+                                chat.act("launcher:open-selected", &self.session.stores)
+                                    .stores
+                            })
+                            .unwrap_or_default();
+                        self.session.update(changes)?
+                    }
+                    "enter" if shift && self.session.focused_multiline() => {
+                        self.session.input_newline()?
+                    }
+                    "enter" => self.session.activate_focused()?,
+                    "up" | "down" if self.session.focused_multiline() => {
+                        self.session.input_vertical(command == "up", shift)?
+                    }
+                    "up" | "down"
+                        if self.chat.as_ref().is_some_and(|chat| {
+                            chat.launcher_search_focused(&self.session.stores)
+                        }) =>
+                    {
+                        let arg = if command == "up" {
+                            "launcher:move:up"
+                        } else {
+                            "launcher:move:down"
+                        };
+                        let changes = self
+                            .chat
+                            .as_ref()
+                            .map(|chat| chat.act(arg, &self.session.stores).stores)
+                            .unwrap_or_default();
+                        let selected_key = match changes.get("launcher.selected") {
+                            Some(bead::core::Value::Text(key)) => key.clone(),
+                            _ => String::new(),
+                        };
+                        let scene = self.session.update(changes)?;
+                        self.scroll_launcher_selection(&selected_key)?.or(scene)
+                    }
+                    "up" | "down" => self.session.focus_next(command == "up")?,
+                    "left" | "right" if self.session.focused_range() => {
+                        self.session.step_range(command == "left")?
+                    }
+                    "left" | "right" if self.session.surrounding_text().is_none() => {
+                        self.session.focus_next(command == "left")?
+                    }
+                    key => {
+                        let key = match key {
+                            "left" => bead::ui::input::EditKey::Left,
+                            "right" => bead::ui::input::EditKey::Right,
+                            "home" => bead::ui::input::EditKey::Home,
+                            "end" => bead::ui::input::EditKey::End,
+                            "delete" => bead::ui::input::EditKey::Delete,
+                            "select-all" => bead::ui::input::EditKey::SelectAll,
+                            _ => return Err("unsupported input command".into()),
+                        };
+                        self.session.edit_key(key, shift)?
+                    }
                 }
-                "escape" if self.welcome.is_some() => {
-                    self.wakeup
-                        .as_ref()
-                        .ok_or("window close event channel unavailable")?(
-                        UiEvent::CompanionVisibility(false),
-                    );
-                    None
-                }
-                "escape" if self.bar => {
-                    self.status_pill.escape();
-                    self.sync_status_peek_route()?;
-                    self.schedule_status_pill();
-                    self.publish_status_pill()?
-                }
-                "tab" => self.session.focus_next(shift)?,
-                "enter" if self.chat.as_ref().is_some_and(|chat| chat.launcher_search_focused(&self.session.stores)) => {
-                    let changes = self.chat.as_ref().map(|chat| chat.act("launcher:open-selected", &self.session.stores).stores).unwrap_or_default();
-                    self.session.update(changes)?
-                }
-                "enter" if shift && self.session.focused_multiline() => {
-                    self.session.input_newline()?
-                }
-                "enter" => self.session.activate_focused()?,
-                "up" | "down" if self.session.focused_multiline() => {
-                    self.session.input_vertical(command == "up", shift)?
-                }
-                "up" | "down" if self.chat.as_ref().is_some_and(|chat| chat.launcher_search_focused(&self.session.stores)) => {
-                    let arg = if command == "up" { "launcher:move:up" } else { "launcher:move:down" };
-                    let changes = self.chat.as_ref().map(|chat| chat.act(arg, &self.session.stores).stores).unwrap_or_default();
-                    let selected = self.session.update(changes)?;
-                    self.scroll_launcher_selection()?.or(selected)
-                }
-                "up" | "down" => self.session.focus_next(command == "up")?,
-                "left" | "right" if self.session.focused_range() => {
-                    self.session.step_range(command == "left")?
-                }
-                "left" | "right" if self.session.surrounding_text().is_none() => {
-                    self.session.focus_next(command == "left")?
-                }
-                key => {
-                    let key = match key {
-                        "left" => bead::ui::input::EditKey::Left,
-                        "right" => bead::ui::input::EditKey::Right,
-                        "home" => bead::ui::input::EditKey::Home,
-                        "end" => bead::ui::input::EditKey::End,
-                        "delete" => bead::ui::input::EditKey::Delete,
-                        "select-all" => bead::ui::input::EditKey::SelectAll,
-                        _ => return Err("unsupported input command".into()),
-                    };
-                    self.session.edit_key(key, shift)?
-                }
-            },
+            }
             UiEvent::WatchError(error) => return Err(error.into()),
             UiEvent::ContextMenu { .. }
             | UiEvent::SecondaryClick { .. }

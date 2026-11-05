@@ -442,11 +442,7 @@ pub(crate) fn launcher_action(action: &str) -> Result<()> {
         return launch_background(command);
     }
     let (command, args, title): (&str, Vec<String>, &str) = match action {
-        "settings" => (
-            "nacre-ai",
-            vec!["settings".into()],
-            "Nacre AI Settings",
-        ),
+        "settings" => ("nacre-ai", vec!["settings".into()], "Nacre AI Settings"),
         "projects" => (
             "nacre-ai",
             vec!["project-settings".into()],
@@ -567,7 +563,12 @@ fn kitty_task_args(command: &str, args: &[String], title: &str) -> Vec<String> {
     kitty_task_args_for_class(command, args, title, "nacre-ai-task")
 }
 
-fn kitty_task_args_for_class(command: &str, args: &[String], title: &str, class: &str) -> Vec<String> {
+fn kitty_task_args_for_class(
+    command: &str,
+    args: &[String],
+    title: &str,
+    class: &str,
+) -> Vec<String> {
     [
         vec![
             "--class".into(),
@@ -809,7 +810,9 @@ pub(crate) fn collect_history<F: Fn() -> bool>(
     let mut records = Vec::new();
     let mut errors = Vec::new();
     for project in &projects {
-        if cancelled() { break; }
+        if cancelled() {
+            break;
+        }
         let mut sources = vec![project.clone()];
         for source in project["task_sources"].as_array().into_iter().flatten() {
             if let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) {
@@ -819,9 +822,13 @@ pub(crate) fn collect_history<F: Fn() -> bool>(
             }
         }
         for source in sources {
-            if cancelled() { break; }
+            if cancelled() {
+                break;
+            }
             for agent in ["codex", "claude"] {
-                if cancelled() { break; }
+                if cancelled() {
+                    break;
+                }
                 let account = ai_core::effective_account(agent, account_override)?;
                 match provider_list(&source, agent, &account) {
                     Ok(rows) => records.extend(rows),
@@ -2038,24 +2045,38 @@ pub fn run(args: &[String]) -> Result<i32> {
                 return Err("Invalid chat record".into());
             }
             let item: serde_json::Value = serde_json::from_slice(&bytes)?;
-            let project_id = item["project"]["id"].as_str().ok_or("Invalid chat project")?;
+            let project_id = item["project"]["id"]
+                .as_str()
+                .ok_or("Invalid chat project")?;
             let configured = configured_projects()?;
             let allowed = configured.iter().any(|project| {
                 if project["id"].as_str() == Some(project_id) && project == &item["project"] {
                     return true;
                 }
-                project["task_sources"].as_array().into_iter().flatten().any(|source| {
-                    let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) else { return false };
-                    let mut merged = base.clone();
-                    merged.extend(extra.clone());
-                    merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
-                        && serde_json::Value::Object(merged) == item["project"]
-                })
+                project["task_sources"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .any(|source| {
+                        let (Some(base), Some(extra)) = (project.as_object(), source.as_object())
+                        else {
+                            return false;
+                        };
+                        let mut merged = base.clone();
+                        merged.extend(extra.clone());
+                        merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
+                            && serde_json::Value::Object(merged) == item["project"]
+                    })
             });
             let agent = item["agent"].as_str().unwrap_or("");
-            if !allowed || !matches!(agent, "codex" | "claude")
-                || item["id"].as_str().is_none_or(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
-                || item["account"].as_str().is_none_or(|account| !account.is_empty() && !valid_account(account))
+            if !allowed
+                || !matches!(agent, "codex" | "claude")
+                || item["id"].as_str().is_none_or(|id| {
+                    id.is_empty() || id.len() > 256 || id.chars().any(char::is_control)
+                })
+                || item["account"]
+                    .as_str()
+                    .is_none_or(|account| !account.is_empty() && !valid_account(account))
             {
                 return Err("Chat project or identifier is no longer registered".into());
             }
