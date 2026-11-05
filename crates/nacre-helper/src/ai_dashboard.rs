@@ -396,11 +396,65 @@ fn select_with<S: AsRef<str>>(
     }
 }
 
-fn launch_task(command: &str, args: &[String], title: &str) -> Result<()> {
+pub(crate) fn launch_task(command: &str, args: &[String], title: &str) -> Result<()> {
     let mut child = Command::new("kitty");
     child.args(kitty_task_args(command, args, title));
     launch_background(child)?;
     Ok(())
+}
+
+pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Result<()> {
+    let encoded = BASE64.encode(serde_json::to_vec(item)?);
+    let args = vec!["resume-record".into(), encoded];
+    let title = clean(item["title"].as_str().unwrap_or("Nacre AI chat"));
+    let class = format!("nacre-ai-chat-{key}");
+    let mut child = Command::new("kitty");
+    child.args(kitty_task_args_for_class("nacre-ai", &args, &title, &class));
+    launch_background(child)
+}
+
+pub(crate) fn launcher_new(provider: &str, project_id: &str) -> Result<()> {
+    if !matches!(provider, "codex" | "claude") {
+        return Err("Unknown AI provider".into());
+    }
+    let project = configured_projects()?
+        .into_iter()
+        .find(|project| project["id"].as_str() == Some(project_id))
+        .ok_or("Project is not registered")?;
+    if project["path"].as_str().is_none() {
+        return Err("Project path is missing".into());
+    }
+    let args = vec![
+        "new".into(),
+        "--project".into(),
+        project_id.into(),
+        "--agent".into(),
+        provider.into(),
+    ];
+    launch_task("nacre-ai", &args, "New chat")
+}
+
+pub(crate) fn launcher_action(action: &str) -> Result<()> {
+    if action == "brain" {
+        let program = home().join(".local/bin/nacre-brain-ui");
+        let mut command = Command::new(program);
+        command.arg("brain");
+        return launch_background(command);
+    }
+    let (command, args, title): (&str, Vec<String>, &str) = match action {
+        "settings" => (
+            "nacre-ai",
+            vec!["settings".into()],
+            "Nacre AI Settings",
+        ),
+        "projects" => (
+            "nacre-ai",
+            vec!["project-settings".into()],
+            "Nacre AI Projects",
+        ),
+        _ => return Err("Unknown launcher action".into()),
+    };
+    launch_task(command, &args, title)
 }
 
 fn launch_background(mut command: Command) -> Result<()> {
@@ -436,7 +490,7 @@ fn projects_path() -> PathBuf {
         .unwrap_or_else(|| home().join(".config/nacre/ai/projects.json"))
 }
 
-fn configured_projects() -> Result<Vec<serde_json::Value>> {
+pub(crate) fn configured_projects() -> Result<Vec<serde_json::Value>> {
     let document: serde_json::Value = crate::state::read_as(
         &projects_path(),
         Some(crate::state::by_id("ai-projects")?),
@@ -510,10 +564,14 @@ fn codex_general_args(path: &str, brain: &str, full_access: bool) -> Vec<String>
 }
 
 fn kitty_task_args(command: &str, args: &[String], title: &str) -> Vec<String> {
+    kitty_task_args_for_class(command, args, title, "nacre-ai-task")
+}
+
+fn kitty_task_args_for_class(command: &str, args: &[String], title: &str, class: &str) -> Vec<String> {
     [
         vec![
             "--class".into(),
-            "nacre-ai-task".into(),
+            class.into(),
             "--title".into(),
             title.into(),
             "--".into(),
@@ -572,7 +630,7 @@ fn history_row(index: usize, item: &serde_json::Value) -> (String, String) {
     )
 }
 
-fn sort_history(records: &mut [serde_json::Value]) {
+pub(crate) fn sort_history(records: &mut [serde_json::Value]) {
     records.sort_by(|a, b| {
         b["updated_at"]
             .as_f64()
@@ -604,7 +662,15 @@ fn run_remote_with(
         })
         .collect::<Vec<_>>()
         .join(" ");
-    let mut ssh = Command::new(executable);
+    // Provider history can span stale SSH hosts. Bound captured reads while
+    // leaving intentional interactive tmux/session attaches alive.
+    let mut ssh = if capture {
+        let mut command = Command::new("timeout");
+        command.args(["--kill-after=1", "6s"]).arg(executable);
+        command
+    } else {
+        Command::new(executable)
+    };
     if !capture {
         ssh.arg("-t");
     }
@@ -629,7 +695,7 @@ fn run_remote_with(
     }
 }
 
-fn provider_list(
+pub(crate) fn provider_list(
     project: &serde_json::Value,
     agent: &str,
     account: &str,
@@ -675,7 +741,8 @@ fn provider_list(
             .collect::<Vec<_>>();
         run_remote(host, &remote, true)?
     } else {
-        let mut command = Command::new(&args[0]);
+        let mut command = Command::new("timeout");
+        command.args(["--kill-after=1", "6s", &args[0]]);
         command.args(&args[1..]);
         if agent == "codex" {
             let delta = ai_core::environment_delta("codex", Some(account))?;
@@ -734,17 +801,15 @@ fn provider_list(
     Ok(items)
 }
 
-fn history(command: &str, account_override: Option<&str>) -> Result<()> {
-    if let Some(status) = launch_niri_history(command, account_override)? {
-        return if status.success() {
-            Ok(())
-        } else {
-            Err("History worker did not finish successfully".into())
-        };
-    }
+pub(crate) fn collect_history<F: Fn() -> bool>(
+    account_override: Option<&str>,
+    cancelled: F,
+) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<String>)> {
+    let projects = configured_projects()?;
     let mut records = Vec::new();
     let mut errors = Vec::new();
-    for project in configured_projects()? {
+    for project in &projects {
+        if cancelled() { break; }
         let mut sources = vec![project.clone()];
         for source in project["task_sources"].as_array().into_iter().flatten() {
             if let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) {
@@ -754,7 +819,9 @@ fn history(command: &str, account_override: Option<&str>) -> Result<()> {
             }
         }
         for source in sources {
+            if cancelled() { break; }
             for agent in ["codex", "claude"] {
+                if cancelled() { break; }
                 let account = ai_core::effective_account(agent, account_override)?;
                 match provider_list(&source, agent, &account) {
                     Ok(rows) => records.extend(rows),
@@ -764,6 +831,18 @@ fn history(command: &str, account_override: Option<&str>) -> Result<()> {
         }
     }
     sort_history(&mut records);
+    Ok((records, projects, errors))
+}
+
+pub(crate) fn history(command: &str, account_override: Option<&str>) -> Result<()> {
+    if let Some(status) = launch_niri_history(command, account_override)? {
+        return if status.success() {
+            Ok(())
+        } else {
+            Err("History worker did not finish successfully".into())
+        };
+    }
+    let (records, _, errors) = collect_history(account_override, || false)?;
     if command == "latest" && !errors.is_empty() {
         return Err(format!("Cannot establish the latest task while a history source is unavailable; use Load chat. {}", errors.join("; ")).into());
     }
@@ -887,7 +966,7 @@ fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
     args
 }
 
-fn resume_record(item: &serde_json::Value) -> Result<()> {
+pub(crate) fn resume_record(item: &serde_json::Value) -> Result<()> {
     let project = &item["project"];
     let agent = item["agent"].as_str().unwrap_or("codex");
     let account = item["account"].as_str().unwrap_or("");
@@ -1948,6 +2027,40 @@ pub fn run(args: &[String]) -> Result<i32> {
             }
         }
         "settings" => settings()?,
+        "project-settings" => projects()?,
+        "resume-record" => {
+            let encoded = args.get(index).ok_or("Missing chat record")?;
+            if args.len() != index + 1 || encoded.len() > 48 * 1024 {
+                return Err("Invalid chat record".into());
+            }
+            let bytes = BASE64.decode(encoded)?;
+            if bytes.len() > 32 * 1024 {
+                return Err("Invalid chat record".into());
+            }
+            let item: serde_json::Value = serde_json::from_slice(&bytes)?;
+            let project_id = item["project"]["id"].as_str().ok_or("Invalid chat project")?;
+            let configured = configured_projects()?;
+            let allowed = configured.iter().any(|project| {
+                if project["id"].as_str() == Some(project_id) && project == &item["project"] {
+                    return true;
+                }
+                project["task_sources"].as_array().into_iter().flatten().any(|source| {
+                    let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) else { return false };
+                    let mut merged = base.clone();
+                    merged.extend(extra.clone());
+                    merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
+                        && serde_json::Value::Object(merged) == item["project"]
+                })
+            });
+            let agent = item["agent"].as_str().unwrap_or("");
+            if !allowed || !matches!(agent, "codex" | "claude")
+                || item["id"].as_str().is_none_or(|id| id.is_empty() || id.len() > 256 || id.chars().any(char::is_control))
+                || item["account"].as_str().is_none_or(|account| !account.is_empty() && !valid_account(account))
+            {
+                return Err("Chat project or identifier is no longer registered".into());
+            }
+            resume_record(&item)?;
+        }
         "latest" | "sessions" => {
             history(command, argument(&args[index..], "--account").as_deref())?
         }

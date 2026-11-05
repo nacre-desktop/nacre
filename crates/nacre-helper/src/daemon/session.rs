@@ -100,7 +100,7 @@ async fn dispatch(
         | "audio.step"
         | "audio.toggle_mute"
         | "bluetooth.set_enabled") => super::pill_controls::dispatch(hub, method, params).await,
-        method if method.starts_with("ai.chat.") && !hub.borrow().safe => {
+        method if (method.starts_with("ai.chat.") || method.starts_with("ai.launcher.")) && !hub.borrow().safe => {
             super::ai_chat::dispatch(hub, method, params).await
         }
         "i18n.catalog" if !hub.borrow().safe => super::i18n::catalog(&hub, params),
