@@ -744,9 +744,9 @@ fn existing_chat_window(snapshot: &Value, item: &Value, key: &str, unique_title:
         window["appId"].as_str() == Some("nacre-ai-task")
             && window["title"].as_str() == item["title"].as_str()
     }).map(|(id, _)| id.clone()).collect::<Vec<_>>();
-    if unique_title && matching_titles.len() == 1 {
-        return Some(matching_titles[0].clone());
-    }
+    let remote_running = item["project"]["host"].as_str().is_some()
+        && item["state"] == "running"
+        && item["session"].as_str().is_some_and(|session| !session.is_empty());
     let mut paths = None;
     let uid = nix::unistd::getuid().as_raw();
     for (id, window) in windows.iter().filter(|(_, window)| {
@@ -760,12 +760,12 @@ fn existing_chat_window(snapshot: &Value, item: &Value, key: &str, unique_title:
         let paths = paths.as_ref()?;
         let Some(pid) = window["pid"].as_i64() else { continue };
         let info = crate::window_chat_title::resolve_info(pid, std::path::Path::new("/proc"), paths, uid);
-        if info.thread_id == chat_id || (unique_title && matching_titles.is_empty() && info.thread_id.is_empty()
-            && !info.title.is_empty() && info.title == item["title"].as_str().unwrap_or("")) {
+        if info.thread_id == chat_id {
             return Some(id.clone());
         }
     }
-    None
+    (remote_running && unique_title && matching_titles.len() == 1)
+        .then(|| matching_titles[0].clone())
 }
 
 #[cfg(test)]
@@ -808,10 +808,17 @@ mod tests {
 
     #[test]
     fn launcher_focus_uses_unique_exact_task_title_for_remote_sessions() {
-        let row = json!({"id":"remote-thread","title":"Camera work","project":{"id":"demo","host":"builder"}});
+        let row = json!({"id":"remote-thread","title":"Camera work","state":"running","session":"session-1","project":{"id":"demo","host":"builder"}});
         let snapshot = json!({"windows":{"niri-window:43":{"appId":"nacre-ai-task","title":"Camera work"}}});
         assert_eq!(existing_chat_window(&snapshot, &row, "unused", true).as_deref(), Some("niri-window:43"));
         assert_eq!(existing_chat_window(&snapshot, &row, "unused", false), None);
+    }
+
+    #[test]
+    fn launcher_focus_never_uses_local_same_title_without_matching_thread() {
+        let row = json!({"id":"local-thread","title":"Camera work","project":{"id":"demo","path":"/repo"}});
+        let snapshot = json!({"windows":{"niri-window:45":{"appId":"nacre-ai-task","title":"Camera work"}}});
+        assert_eq!(existing_chat_window(&snapshot, &row, "unused", true), None);
     }
 
     #[test]
