@@ -100,7 +100,7 @@ Item {
         }
         return [...ids].sort((a, b) => a - b);
     }
-    implicitWidth: beads.implicitWidth
+    implicitWidth: beads.implicitWidth + (showDeskBadge ? 8 + deskBadge.width : 0)
     implicitHeight: NacreTokens.workspaceCellHeight
     function synchronize() {
         activeCell = repeater.itemAt(displayIds.indexOf(activeWorkspaceIndex));
@@ -399,8 +399,7 @@ Item {
         objectName: "collectionDeskBadge"
         visible: root.showDeskBadge
         x: beads.width + 8
-        width: Math.max(NacreTokens.workspacePearlCurrent,
-            Math.min(NacreTokens.deskBadgeMaxWidth, deskLabelMetrics.advanceWidth + NacreTokens.deskBadgePadding * 2))
+        width: Math.max(NacreTokens.workspacePearlCurrent, Math.min(NacreTokens.deskBadgeMaxWidth, deskLabelMetrics.advanceWidth + NacreTokens.deskBadgePadding * 2))
         y: (NacreTokens.workspaceCellHeight - height) / 2
         height: NacreTokens.workspacePearlCurrent
         radius: NacreTokens.workspacePearlCurrent / 2
@@ -425,7 +424,11 @@ Item {
         }
         NacreInteraction {
             id: deskPointer
-            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {value0: root.deskForOutput?.index ?? "?", value1: root.deskRows.length, value2: root.deskLabel})
+            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {
+                value0: root.deskForOutput?.index ?? "?",
+                value1: root.deskRows.length,
+                value2: root.deskLabel
+            })
             activeFocusOnTab: true
             function onClicked() {
                 root.toggleDeskMenu();

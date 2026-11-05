@@ -253,9 +253,7 @@ TestCase {
         for (let y = top; y < bottom; y++)
             for (let x = left; x < right; x++) {
                 const pixel = image.pixel(x, y);
-                if (Math.abs(pixel.r - background.r) > .1
-                    || Math.abs(pixel.g - background.g) > .1
-                    || Math.abs(pixel.b - background.b) > .1)
+                if (Math.abs(pixel.r - background.r) > .1 || Math.abs(pixel.g - background.g) > .1 || Math.abs(pixel.b - background.b) > .1)
                     ink++;
             }
         verify(ink > 0, "badge paints its muted label at the configured screen scale");
@@ -263,6 +261,32 @@ TestCase {
         let saved = false;
         verify(view.grabToImage(result => saved = result.saveToFile(capturePath)));
         tryVerify(() => saved, 1000);
+    }
+    function test_collection_badge_contributes_to_implicit_width() {
+        NacreCompositor.capabilities = {
+            workspaceCollections: true
+        };
+        NacreCompositor.collections = [
+            {
+                id: "one",
+                index: 1,
+                name: "Home",
+                output: "DP-2"
+            },
+            {
+                id: "two",
+                index: 2,
+                name: "A deliberately long collection label",
+                output: "test"
+            }
+        ];
+        NacreCompositor.activeCollectionId = "two";
+        const view = createTemporaryObject(row, test);
+        wait(30);
+        const badge = findChild(view, "collectionDeskBadge");
+        verify(!!badge && badge.visible);
+        verify(badge.width <= NacreTokens.deskBadgeMaxWidth);
+        verify(view.implicitWidth >= badge.x + badge.width, "workspace allocation includes the complete responsive desk badge");
     }
     function test_workspace_readonly_state_and_explicit_activation() {
         const view = createTemporaryObject(row, test);
