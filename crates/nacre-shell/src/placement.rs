@@ -1029,10 +1029,12 @@ mod tests {
         );
         let chrome = Chrome::new(Attachment::SceneEdge(Edge::Top), &colors).unwrap();
         chrome.decorate(&mut scene).unwrap();
-        assert!(scene
-            .asset_data
-            .keys()
-            .any(|p| p.to_string_lossy().starts_with("@joined-frame-32-")));
+        assert!(
+            scene
+                .asset_data
+                .keys()
+                .any(|p| p.to_string_lossy().starts_with("@joined-frame-32-"))
+        );
         scene.motion.as_mut().unwrap().edge = Edge::Top;
         let top_origin = token(&scene, None, (1920, 1200));
         scene.motion.as_mut().unwrap().edge = Edge::Bottom;
@@ -1215,9 +1217,11 @@ mod tests {
                 assert!(cropped.height() < full.height());
                 assert_eq!(cropped.width(), full.width());
                 assert_eq!(cropped.data(), &full.data()[..cropped.data().len()]);
-                assert!(full.data()[cropped.data().len()..]
-                    .iter()
-                    .all(|byte| *byte == 0));
+                assert!(
+                    full.data()[cropped.data().len()..]
+                        .iter()
+                        .all(|byte| *byte == 0)
+                );
             }
             assert_eq!(body(&scene), full_body);
             assert_eq!(origin(&scene, None, (1920, 1200)), before);
@@ -1315,13 +1319,17 @@ mod tests {
             "Never allocate an output-sized frame raster"
         );
         assert!(tiles.iter().all(|t| t.svg.len() < 16384));
-        assert!(tiles
-            .iter()
-            .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.16\"")));
+        assert!(
+            tiles
+                .iter()
+                .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.16\""))
+        );
         let active = factory((1920, 1200), true, None).unwrap();
-        assert!(active
-            .iter()
-            .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.25\"")));
+        assert!(
+            active
+                .iter()
+                .all(|t| String::from_utf8_lossy(&t.svg).contains("opacity=\"0.25\""))
+        );
     }
     fn settings() -> FrameSettings {
         FrameSettings {
@@ -1535,7 +1543,7 @@ mod tests {
     }
     #[test]
     fn panel_film_keeps_lip_art_visible_without_cutting_the_body() {
-        use bead::render::{svg_into, PixelFormat, ShmTarget};
+        use bead::render::{PixelFormat, ShmTarget, svg_into};
         let cuts = crate::contour::geometry(
             20.,
             20.,

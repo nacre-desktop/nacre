@@ -262,7 +262,10 @@ impl Outputs for Connection {
         self.response("Outputs", Duration::from_secs(10), MAX_BYTES)
     }
     fn edge_trigger_cues(&mut self) -> Option<bool> {
-        Some(self.nacre_capabilities(Duration::from_millis(500)).edge_trigger_cues)
+        Some(
+            self.nacre_capabilities(Duration::from_millis(500))
+                .edge_trigger_cues,
+        )
     }
     fn nacre_capabilities(&mut self) -> niri_transport::NacreCapabilities {
         self.nacre_capabilities(Duration::from_millis(500))
@@ -394,7 +397,8 @@ impl<T: Outputs> Events<T> {
             {
                 let mut snapshot = self.state.snapshot()?;
                 let collections = snapshot["capabilities"]["workspaceCollections"].clone();
-                snapshot["capabilities"] = super::niri::capabilities_with_native(self.native_capabilities);
+                snapshot["capabilities"] =
+                    super::niri::capabilities_with_native(self.native_capabilities);
                 if self.native_capabilities.workspace_collections && !collections.is_null() {
                     snapshot["capabilities"]["workspaceCollections"] = collections;
                 } else if let Some(snapshot) = snapshot.as_object_mut() {
@@ -453,8 +457,8 @@ mod tests {
             queries: vec![],
             cue_capabilities: vec![true, false],
         };
-        let mut events = Events::new(EventSocket::from_stream(client), outputs)?
-            .with_edge_trigger_cues(false);
+        let mut events =
+            Events::new(EventSocket::from_stream(client), outputs)?.with_edge_trigger_cues(false);
         let initial = events.next_value()?;
         assert!(initial["capabilities"].get("edge_trigger_cues").is_none());
         assert_eq!(events.next_value()?["type"], "windows-changed");
@@ -498,12 +502,16 @@ mod tests {
         let wire = socket.next_event()?;
         assert_eq!(
             edge_trigger(&wire)?,
-            Some(json!({"type":"edge-approach","output":"DP-1","edge":"left","position":[0.0,720.0],"progress":0.0}))
+            Some(
+                json!({"type":"edge-approach","output":"DP-1","edge":"left","position":[0.0,720.0],"progress":0.0})
+            )
         );
         let wire = socket.next_event()?;
         assert_eq!(
             edge_trigger(&wire)?,
-            Some(json!({"type":"edge-hover","output":"DP-1","edge":"left","position":[2.0,720.0],"progress":0.5}))
+            Some(
+                json!({"type":"edge-hover","output":"DP-1","edge":"left","position":[2.0,720.0],"progress":0.5})
+            )
         );
         let wire = socket.next_event()?;
         assert_eq!(

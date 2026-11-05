@@ -653,12 +653,8 @@ fn start(
         (None, None)
     };
     options.external_edge_cues = edge_cue_channel;
-    let edge_route = edge_cue_sender.map(|edge_cue_sender| {
-        shell_control::EdgeEventState::new(
-            gate.clone(),
-            edge_cue_sender,
-        )
-    });
+    let edge_route = edge_cue_sender
+        .map(|edge_cue_sender| shell_control::EdgeEventState::new(gate.clone(), edge_cue_sender));
     let _ui_provider = if register_ui_provider {
         let mut provider_topics: Vec<&str> = if notices {
             notice_service::TOPICS.to_vec()

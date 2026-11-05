@@ -447,7 +447,9 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         ["dashboard-today".into(), "sound".into()],
     );
     let (cue_sender, cue_channel) = bead::wayland::ExternalEdgeCueChannel::channel();
-    let cue_receiver = cue_channel.take_receiver().expect("test owns the cue receiver");
+    let cue_receiver = cue_channel
+        .take_receiver()
+        .expect("test owns the cue receiver");
     let state = crate::shell_control::EdgeEventState::new(gate.clone(), cue_sender);
     let subscriptions = crate::shell_control::EdgeSourceSubscriptions::attach(
         state.clone(),
@@ -455,7 +457,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         Arc::new(client.topic("compositor.events").unwrap()),
     )
     .unwrap();
-    assert!(!gate.edge_chrome().external_source, "old cue capability keeps the stock input surfaces");
+    assert!(
+        !gate.edge_chrome().external_source,
+        "old cue capability keeps the stock input surfaces"
+    );
     activate_tx.send(()).unwrap();
     tokio::time::timeout(Duration::from_secs(2), async {
         while !gate.edge_chrome().external_source {
@@ -482,7 +487,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
         seq: 0,
         data: serde_json::json!({"type":"edge-approach","output":"DP-2","edge":"left","position":[0.0,540.0],"progress":0.1}),
     });
-    assert!(state.active_cues().is_empty(), "unknown outputs cannot acquire native hover state");
+    assert!(
+        state.active_cues().is_empty(),
+        "unknown outputs cannot acquire native hover state"
+    );
     state.route_event(&edge_message(1, "edge-approach", "top", [960.0, 4.0]));
     let cue = state.active_cues().pop().expect("approach is sent to Bead");
     assert_eq!(cue.output, "DP-1");
@@ -491,11 +499,20 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     assert_eq!(cue.progress, 0.5);
     assert_eq!(cue.phase, bead::wayland::ExternalEdgePhase::Approach);
     state.route_event(&edge_message(2, "edge-hover", "top", [960.0, 4.0]));
-    assert_eq!(state.active_cues()[0].phase, bead::wayland::ExternalEdgePhase::Hover);
+    assert_eq!(
+        state.active_cues()[0].phase,
+        bead::wayland::ExternalEdgePhase::Hover
+    );
     state.route_event(&edge_message(3, "edge-triggered", "top", [960.0, 4.0]));
-    assert_eq!(state.active_cues()[0].phase, bead::wayland::ExternalEdgePhase::Triggered);
+    assert_eq!(
+        state.active_cues()[0].phase,
+        bead::wayland::ExternalEdgePhase::Triggered
+    );
     state.route_event(&edge_message(4, "edge-left", "top", [960.0, 10.0]));
-    assert!(state.active_cues().is_empty(), "left releases the hover cue");
+    assert!(
+        state.active_cues().is_empty(),
+        "left releases the hover cue"
+    );
     state.route_event(&edge_message(5, "edge-triggered", "right", [1916.0, 540.0]));
     assert_eq!(state.active_cues()[0].edge, bead::core::Edge::Right);
     close_tx.send(()).unwrap();
@@ -507,7 +524,10 @@ async fn native_edge_source_falls_back_when_daemon_socket_closes() {
     })
     .await
     .expect("socket EOF restores Bead's fallback edge surfaces");
-    assert!(state.active_cues().is_empty(), "stream loss releases native hover state");
+    assert!(
+        state.active_cues().is_empty(),
+        "stream loss releases native hover state"
+    );
     drop(subscriptions);
     client.stop().await.unwrap();
     drop(state);

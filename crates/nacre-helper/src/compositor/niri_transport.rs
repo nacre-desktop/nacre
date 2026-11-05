@@ -80,10 +80,22 @@ impl NacreCapabilities {
                 .get("edge_triggers")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
-            edge_trigger_cues: features.get("edge_trigger_cues").and_then(Value::as_bool).unwrap_or(false),
-            force_close: features.get("force_close").and_then(Value::as_bool).unwrap_or(false),
-            monitor_workspace_actions: features.get("monitor_workspace_actions").and_then(Value::as_bool).unwrap_or(false),
-            window_restore: features.get("window_restore").and_then(Value::as_bool).unwrap_or(false),
+            edge_trigger_cues: features
+                .get("edge_trigger_cues")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            force_close: features
+                .get("force_close")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            monitor_workspace_actions: features
+                .get("monitor_workspace_actions")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            window_restore: features
+                .get("window_restore")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
         })
     }
 }

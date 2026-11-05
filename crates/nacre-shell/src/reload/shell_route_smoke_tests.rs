@@ -38,7 +38,7 @@ fn core_audio() -> serde_json::Value {
 /// B0185: a mid-slide frame of a route's open scene, in both directions, composites one
 /// flattened content layer instead of repainting the content per frame.
 fn slide_layer_builds(open_scene: &bead::render::Scene, opening: bool) -> usize {
-    use bead::render::{tree::TreeCpuRenderer, Damage, PixelFormat, Renderer, ShmTarget};
+    use bead::render::{Damage, PixelFormat, Renderer, ShmTarget, tree::TreeCpuRenderer};
     let scale = 1.5;
     let mut base = open_scene.clone();
     base.reveal(1.);
@@ -143,7 +143,7 @@ fn render_legacy_close(
     width: u32,
     height: u32,
 ) -> Vec<u8> {
-    use bead::render::{tree::TreeCpuRenderer, Damage, PixelFormat, Renderer, ShmTarget};
+    use bead::render::{Damage, PixelFormat, Renderer, ShmTarget, tree::TreeCpuRenderer};
     let mut posed = scene.clone();
     let (dx, dy) = posed.panel_offset(progress, false);
     posed.offset = (posed.offset.0 + dx, posed.offset.1 + dy);
@@ -181,7 +181,7 @@ fn render_legacy_reveal(
     eased_progress: f32,
     scale: f32,
 ) -> (u32, u32, Vec<u8>) {
-    use bead::render::{tree::TreeCpuRenderer, Damage, PixelFormat, Renderer, ShmTarget};
+    use bead::render::{Damage, PixelFormat, Renderer, ShmTarget, tree::TreeCpuRenderer};
     let mut open_scene = scene.clone();
     // Runtime::stage may attach an asynchronous, partially prepared frame to
     // the scene. Never let that frame seed the resting OPEN snapshot: the
@@ -260,7 +260,7 @@ fn motion_plan_json(
     scene: &bead::render::Scene,
     plan: &bead::render::layer_motion::LayerMotionPlan,
 ) -> serde_json::Value {
-    use bead::render::{layer_motion::OpacityMode, PixelFormat};
+    use bead::render::{PixelFormat, layer_motion::OpacityMode};
     let state = |state: bead::render::layer_motion::PlaneState| {
         serde_json::json!({
             "destination": rect_json(state.destination),
@@ -881,7 +881,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                 let mut reveal_timing = None;
                 if compositor_closes.contains(&name) {
                     use bead::render::{
-                        layer_motion::LayerMotionPlan, tree::TreeCpuRenderer, PixelFormat,
+                        PixelFormat, layer_motion::LayerMotionPlan, tree::TreeCpuRenderer,
                     };
                     // These padded bounds are the logical layer-surface viewport
                     // used by the route's production panel configuration.

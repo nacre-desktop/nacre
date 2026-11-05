@@ -199,7 +199,8 @@ impl Backend {
             socket,
             niri_transport::Connection::new(self.session_id()),
             native_capabilities,
-        ).map(|events| events.with_edge_trigger_cues(native_capabilities.edge_trigger_cues))
+        )
+        .map(|events| events.with_edge_trigger_cues(native_capabilities.edge_trigger_cues))
     }
     pub fn edge_events(&self) -> Result<()> {
         let path = Path::new(self.session_id());

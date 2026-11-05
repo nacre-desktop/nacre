@@ -115,8 +115,8 @@ impl EdgeEventState {
     fn update_compositor(&self, snapshot: &Snapshot) {
         let mut state = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
         state.compositor_connected = snapshot.connected;
-        state.cue_capable = snapshot.data["capabilities"]["edge_trigger_cues"].as_bool()
-            == Some(true);
+        state.cue_capable =
+            snapshot.data["capabilities"]["edge_trigger_cues"].as_bool() == Some(true);
         state.outputs = if snapshot.connected {
             snapshot.data["outputs"]
                 .as_object()
@@ -162,9 +162,15 @@ impl EdgeEventState {
         };
         let position = match data["position"].as_array().filter(|pair| pair.len() == 2) {
             Some(pair) => {
-                let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) else { return; };
+                let (Some(x), Some(y)) = (pair[0].as_f64(), pair[1].as_f64()) else {
+                    return;
+                };
                 let position = (x as f32, y as f32);
-                if !(x.is_finite() && y.is_finite() && position.0.is_finite() && position.1.is_finite()) {
+                if !(x.is_finite()
+                    && y.is_finite()
+                    && position.0.is_finite()
+                    && position.1.is_finite())
+                {
                     return;
                 }
                 position
@@ -172,10 +178,26 @@ impl EdgeEventState {
             None => return,
         };
         let (edge, phase, progress) = match event_type {
-            Some("edge-approach") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Approach), cue_progress(data)),
-            Some("edge-hover") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Hover), cue_progress(data)),
-            Some("edge-triggered") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Triggered), Some(1.0)),
-            Some("edge-left") => (parse_edge(data["edge"].as_str()), Some(ExternalEdgePhase::Left), Some(0.0)),
+            Some("edge-approach") => (
+                parse_edge(data["edge"].as_str()),
+                Some(ExternalEdgePhase::Approach),
+                cue_progress(data),
+            ),
+            Some("edge-hover") => (
+                parse_edge(data["edge"].as_str()),
+                Some(ExternalEdgePhase::Hover),
+                cue_progress(data),
+            ),
+            Some("edge-triggered") => (
+                parse_edge(data["edge"].as_str()),
+                Some(ExternalEdgePhase::Triggered),
+                Some(1.0),
+            ),
+            Some("edge-left") => (
+                parse_edge(data["edge"].as_str()),
+                Some(ExternalEdgePhase::Left),
+                Some(0.0),
+            ),
             _ => return,
         };
         let (Some(edge), Some(phase), Some(progress)) = (edge, phase, progress) else {
@@ -199,13 +221,16 @@ impl EdgeEventState {
             if phase == ExternalEdgePhase::Left {
                 cues.remove(&key);
             } else {
-                cues.insert(key, ExternalEdgeCue {
-                    output: output.to_owned(),
-                    edge,
-                    position,
-                    progress,
-                    phase,
-                });
+                cues.insert(
+                    key,
+                    ExternalEdgeCue {
+                        output: output.to_owned(),
+                        edge,
+                        position,
+                        progress,
+                        phase,
+                    },
+                );
             }
         }
         let _ = self.cue_sender.send(ExternalEdgeCue {
@@ -217,7 +242,8 @@ impl EdgeEventState {
         });
     }
     fn clear_native_hovers(&self) {
-        let active = std::mem::take(&mut *self.active_cues.lock().unwrap_or_else(|p| p.into_inner()));
+        let active =
+            std::mem::take(&mut *self.active_cues.lock().unwrap_or_else(|p| p.into_inner()));
         self.send_left_cues(active.into_values());
     }
     fn clear_removed_outputs(&self, outputs: &BTreeMap<String, (i32, i32)>) {
@@ -228,7 +254,10 @@ impl EdgeEventState {
                 .filter(|&(_, cue)| !outputs.contains_key(&cue.output))
                 .map(|(key, _)| key.clone())
                 .collect();
-            removed_keys.into_iter().filter_map(|key| active.remove(&key)).collect::<Vec<_>>()
+            removed_keys
+                .into_iter()
+                .filter_map(|key| active.remove(&key))
+                .collect::<Vec<_>>()
         };
         self.send_left_cues(removed);
     }
@@ -245,7 +274,12 @@ impl EdgeEventState {
     }
     #[cfg(test)]
     pub(crate) fn active_cues(&self) -> Vec<ExternalEdgeCue> {
-        self.active_cues.lock().unwrap_or_else(|p| p.into_inner()).values().cloned().collect()
+        self.active_cues
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .values()
+            .cloned()
+            .collect()
     }
     pub(crate) fn refresh_source(&self) {
         let snapshots = self.snapshots.lock().unwrap_or_else(|p| p.into_inner());
