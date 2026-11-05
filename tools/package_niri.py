@@ -68,11 +68,7 @@ def edge_trigger_config(
         distances = (10, 10, 50, 10)
     if len(lengths) != 4 or any(
         value is not None
-        and (
-            isinstance(value, bool)
-            or not isinstance(value, int)
-            or value < 1
-        )
+        and (isinstance(value, bool) or not isinstance(value, int) or value < 1)
         for value in lengths
     ):
         lengths = (144, 144, 208, None)
@@ -85,6 +81,7 @@ def edge_trigger_config(
             f"    {name} {{ action {{ event; }}; dwell-time-ms {delay_ms};"
             f" trigger-distance {distance};{span} }}\n"
         )
+
     return (
         "edge-triggers {\n"
         "    cue;\n"
@@ -101,7 +98,11 @@ def edge_trigger_distances(home):
     try:
         value = _state.read_json_file(settings) if settings.is_file() else {}
         width = value.get("frameWidth", 10)
-        if isinstance(width, bool) or not isinstance(width, int) or not 0 <= width <= 100:
+        if (
+            isinstance(width, bool)
+            or not isinstance(width, int)
+            or not 0 <= width <= 100
+        ):
             width = 10
         top = (40 if value.get("topBarEnabled", True) is not False else 0) + (
             width if value.get("frameTopEnabled", True) is not False else 0

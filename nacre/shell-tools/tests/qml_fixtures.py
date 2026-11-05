@@ -279,9 +279,7 @@ def run_qml(command, *, isolate=False, **kwargs):
                 names.append(case[1] + "::" + name)
     if not names:
         raise RuntimeError("No QML test functions discovered")
-    results = [
-        (name, subprocess.run([*command, name], **kwargs)) for name in names
-    ]
+    results = [(name, subprocess.run([*command, name], **kwargs)) for name in names]
     summary = "\n".join(f"{name}: exit={result.returncode}" for name, result in results)
     failed = [(name, result) for name, result in results if result.returncode != 0]
     reports = results
@@ -290,8 +288,12 @@ def run_qml(command, *, isolate=False, **kwargs):
         failed[0][1].returncode if failed else 0,
         summary
         + "\n"
-        + "".join(f"\n===== {name} =====\n{result.stdout[:8000]}" for name, result in reports),
-        "".join(f"\n===== {name} =====\n{result.stderr[:1500]}" for name, result in reports),
+        + "".join(
+            f"\n===== {name} =====\n{result.stdout[:8000]}" for name, result in reports
+        ),
+        "".join(
+            f"\n===== {name} =====\n{result.stderr[:1500]}" for name, result in reports
+        ),
     )
 
 

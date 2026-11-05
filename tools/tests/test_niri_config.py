@@ -45,7 +45,9 @@ class NiriConfigTests(unittest.TestCase):
         ):
             self.assertIn(f"{key} repeat=false", binds)
             self.assertIn(f"{{ {action}; }}", binds)
-        self.assertNotIn('spawn-sh "niri msg action toggle-column-tabbed-display"', binds)
+        self.assertNotIn(
+            'spawn-sh "niri msg action toggle-column-tabbed-display"', binds
+        )
         self.assertNotIn('spawn-sh "niri msg action focus-window-up-or-bottom"', binds)
         self.assertNotIn('spawn-sh "niri msg action focus-window-down-or-top"', binds)
         rules = generated["niri/window-rules.kdl"]
@@ -87,7 +89,7 @@ class NiriConfigTests(unittest.TestCase):
         self.assertIn("{ maximize-window-to-edges; }", text)
         self.assertIn("{ toggle-window-floating; }", text)
         for action in ("close_window", "fullscreen_window", "float_window"):
-            self.assertNotIn(f"nacre-helper\\\" compositor action {action}", text)
+            self.assertNotIn(f'nacre-helper\\" compositor action {action}', text)
         self.assertIn('Super+Q repeat=false hotkey-overlay-title="Nacre:close"', text)
         self.assertNotIn("Super+Ctrl+Q ", text)
         self.assertNotIn("window-close.sh", text)

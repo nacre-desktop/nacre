@@ -108,9 +108,7 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertIn(action, overlay_text)
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
-            self.assertIn(
-                'hotkey-overlay-title="Nacre:restore"', overlay_text
-            )
+            self.assertIn('hotkey-overlay-title="Nacre:restore"', overlay_text)
             self.assertEqual(overlay_text.count("open-pinned true"), 3)
             self.assertNotIn("open-pinned true", generated_stock)
             for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
@@ -192,15 +190,29 @@ class NacreNiriSessionTests(unittest.TestCase):
                     }
                 )
             )
-            self.assertEqual(package_niri.edge_trigger_distances(home), (14, 14, 40, 14))
+            self.assertEqual(
+                package_niri.edge_trigger_distances(home), (14, 14, 40, 14)
+            )
             config = package_niri.edge_trigger_config(
                 350, package_niri.edge_trigger_distances(home)
             )
             self.assertIn("cue;", config)
-            self.assertIn("left { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }", config)
-            self.assertIn("right { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }", config)
-            self.assertIn("top { action { event; }; dwell-time-ms 350; trigger-distance 40; trigger-length 208; }", config)
-            self.assertIn("bottom { action { event; }; dwell-time-ms 350; trigger-distance 14; }", config)
+            self.assertIn(
+                "left { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }",
+                config,
+            )
+            self.assertIn(
+                "right { action { event; }; dwell-time-ms 350; trigger-distance 14; trigger-length 144; }",
+                config,
+            )
+            self.assertIn(
+                "top { action { event; }; dwell-time-ms 350; trigger-distance 40; trigger-length 208; }",
+                config,
+            )
+            self.assertIn(
+                "bottom { action { event; }; dwell-time-ms 350; trigger-distance 14; }",
+                config,
+            )
 
     def test_nacre_session_dispatch_selects_fork_launcher(self):
         backend = SimpleNamespace(supported=lambda root: True, session=Mock())

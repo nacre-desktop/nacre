@@ -43,7 +43,12 @@ class TopHoverTests(unittest.TestCase):
                 )
             with (fixtures / "qmldir").open("a") as manifest:
                 manifest_text = (fixtures / "qmldir").read_text()
-                for name in (*definitions, "NacreHoverIntent", "NacrePanelState", "NacrePearls"):
+                for name in (
+                    *definitions,
+                    "NacreHoverIntent",
+                    "NacrePanelState",
+                    "NacrePearls",
+                ):
                     entry = f"singleton {name} 1.0 {name}.qml"
                     if entry not in manifest_text:
                         manifest.write(f"\n{entry}\n")
