@@ -25,7 +25,7 @@ const VAULT_LIMIT: usize = 64 * 1024 * 1024;
 const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
-const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const token=new URLSearchParams(location.hash.slice(1)).get('nacre-auth');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/navigation',{headers:{'X-Nacre-Brain-Authorization':token}}).then(response=>{if(response.ok)localStorage.setItem(key,token);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
+const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const params=new URLSearchParams(location.hash.slice(1));const token=params.get('nacre-bootstrap');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(response=>response.ok?response.json():null).then(value=>{if(value&&/^[0-9a-f]{64}$/.test(value.authorization))localStorage.setItem(key,value.authorization);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
 "#;
 const ACTIVITY_MODEL: &str = "Meaningful saved evidence, 21-day half-life, deduplicated captures and diminishing daily returns. Raw message counting is not enabled.";
 const THEMES: &[(&str, &str, &str, &[&str])] = &[
@@ -1132,6 +1132,22 @@ mod tests {
     }
     fn day() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, 22).unwrap()
+    }
+    #[test]
+    fn brain_page_and_bootstrap_use_the_same_loopback_origin_as_api() {
+        let page = route(brain_http::Request {
+            method: "GET".into(),
+            path: "/".into(),
+            query: String::new(),
+            headers: BTreeMap::new(),
+            body: Vec::new(),
+        });
+        let html = String::from_utf8(page.body).unwrap();
+        assert_eq!(page.status, 200);
+        assert!(html.contains("/app.js"));
+        assert!(BROWSER_AUTH_SCRIPT.contains("'/api/bootstrap'"));
+        assert!(BROWSER_AUTH_SCRIPT.contains("location.href"));
+        assert!(!html.contains("file://"));
     }
     #[test]
     fn fields_ignore_fences_sections_and_preserve_annotations() {

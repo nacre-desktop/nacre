@@ -28,9 +28,11 @@ pub const WIDTH: f64 = 470.;
 const SANS: &str = "IBM Plex Sans";
 const MONO: &str = "JetBrainsMono Nerd Font";
 const HEARTBEAT: Duration = Duration::from_secs(10);
-const SAVED_REFRESH: Duration = Duration::from_secs(60);
+const LAUNCHER_REFRESH: Duration = Duration::from_secs(60);
+const LAUNCHER_CACHE_LIMIT: usize = 64 * 1024;
+const LAUNCHER_CACHE_ROWS: usize = 30;
 const OPEN: &str = "ai.chat.open";
-const SAVED: &str = "ai.chat.saved";
+const LAUNCHER_LIST: &str = "ai.launcher.list";
 const MAX_QUESTIONS: usize = 4;
 
 type Notify = Arc<dyn Fn(bead::wayland::UiEvent) + Send + Sync>;
@@ -89,7 +91,8 @@ enum Call {
     Open,
     Send,
     Plain,
-    Saved,
+    LauncherList,
+    LauncherAction,
 }
 struct Pending {
     call: Call,
@@ -102,6 +105,7 @@ struct Parsed {
 }
 #[derive(Default)]
 struct St {
+    launcher_handoff: bool,
     pending: Vec<Pending>,
     opened_at: Option<Instant>,
     message: String,
@@ -111,8 +115,8 @@ struct St {
     parsed: Option<Parsed>,
     thread: String,
     question: String,
-    saved: Option<(Instant, Json)>,
-    saved_asked: Option<Instant>,
+    launcher: Option<Json>,
+    launcher_asked: Option<Instant>,
 }
 struct Ticker {
     _stop: std::sync::mpsc::Sender<()>,
@@ -129,6 +133,7 @@ pub struct Chat {
     /// Message text by ordinal for the copy actions of the projected transcript.
     texts: RefCell<BTreeMap<String, String>>,
     memory: Option<crate::popouts::ChatMemory>,
+    launcher_cache_path: Option<std::path::PathBuf>,
 }
 
 /// What a view action asks the host to do besides updating stores.
@@ -191,7 +196,132 @@ fn provider_name(provider: Provider) -> &'static str {
 }
 
 impl Chat {
+    fn default_launcher_cache_path() -> Option<std::path::PathBuf> {
+        let base = std::env::var_os("XDG_CACHE_HOME")
+            .map(std::path::PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache"))
+            })?;
+        Some(base.join("nacre/ai-panel/chats.json"))
+    }
+    fn load_launcher_cache(path: &std::path::Path) -> Option<Json> {
+        use std::io::Read;
+        let file = std::fs::File::open(path).ok()?;
+        let metadata = file.metadata().ok()?;
+        if !metadata.is_file() || metadata.len() > LAUNCHER_CACHE_LIMIT as u64 {
+            return None;
+        }
+        let mut bytes = Vec::with_capacity(metadata.len() as usize);
+        file.take((LAUNCHER_CACHE_LIMIT + 1) as u64)
+            .read_to_end(&mut bytes)
+            .ok()?;
+        if bytes.len() > LAUNCHER_CACHE_LIMIT {
+            return None;
+        }
+        let mut data: Json = serde_json::from_slice(&bytes).ok()?;
+        if let Some(object) = data.as_object_mut() {
+            object.retain(|key, _| matches!(key.as_str(), "defaultProvider" | "chats"));
+            if object.get("defaultProvider").and_then(Json::as_str) != Some("claude") {
+                object.insert("defaultProvider".into(), json!("codex"));
+            }
+        }
+        let chats = data["chats"].as_array_mut()?;
+        chats.truncate(LAUNCHER_CACHE_ROWS);
+        chats.retain(|row| {
+            row["key"]
+                .as_str()
+                .is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                && row["title"]
+                    .as_str()
+                    .is_some_and(|v| !v.is_empty() && v.chars().count() <= 256)
+        });
+        for row in chats {
+            if let Some(object) = row.as_object_mut() {
+                object.remove("project");
+                object.retain(|key, _| {
+                    matches!(
+                        key.as_str(),
+                        "key" | "title" | "provider" | "state" | "lastActivity"
+                    )
+                });
+            }
+        }
+        Some(data)
+    }
+    fn save_launcher_cache(path: &std::path::Path, data: &Json) {
+        let Some(chats) = data["chats"].as_array() else {
+            return;
+        };
+        let cached = json!({
+            "defaultProvider": if data["defaultProvider"].as_str() == Some("claude") { "claude" } else { "codex" },
+            "chats": chats.iter().filter(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256))
+                .take(LAUNCHER_CACHE_ROWS).map(|row| json!({
+                    "key": row["key"], "title": row["title"], "provider": row["provider"],
+                    "state": row["state"], "lastActivity": row["lastActivity"]
+                })).collect::<Vec<_>>()
+        });
+        let Ok(bytes) = serde_json::to_vec(&cached) else {
+            return;
+        };
+        if bytes.len() > LAUNCHER_CACHE_LIMIT {
+            return;
+        }
+        let Some(parent) = path.parent() else {
+            return;
+        };
+        use std::os::unix::fs::DirBuilderExt;
+        if std::fs::DirBuilder::new()
+            .mode(0o700)
+            .recursive(true)
+            .create(parent)
+            .is_err()
+            && !parent.is_dir()
+        {
+            return;
+        }
+        static NEXT_CACHE_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let suffix = NEXT_CACHE_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let temp = path.with_extension(format!("{}.{}.tmp", std::process::id(), suffix));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let Ok(mut file) = options.open(&temp) else {
+            return;
+        };
+        use std::io::Write;
+        if file.write_all(&bytes).is_ok() {
+            drop(file);
+            if std::fs::rename(&temp, path).is_err() {
+                let _ = std::fs::remove_file(temp);
+            }
+        } else {
+            let _ = std::fs::remove_file(temp);
+        }
+    }
+    pub(crate) fn launcher_active(&self, stores: &Stores) -> bool {
+        stores.get("panel.open") != Some(&Value::Bool(false))
+            && stores.get("chat.section") != Some(&Value::Text("chat".into()))
+    }
+
+    pub(crate) fn launcher_search_focused(&self, stores: &Stores) -> bool {
+        self.launcher_active(stores)
+            && stores.get("bead.focused") == Some(&Value::Text("chat.search".into()))
+    }
+
     pub fn new(client: Option<Client>, source: Arc<dyn Source>, meter: Meter) -> Self {
+        let launcher_cache_path = if cfg!(test) {
+            None
+        } else {
+            Self::default_launcher_cache_path()
+        };
+        let cached_launcher = launcher_cache_path
+            .as_deref()
+            .and_then(Self::load_launcher_cache);
         let style = Style::new(WIDTH as f32 - 32., SANS, MONO);
         let metrics = Metrics::new(WIDTH, &style.scale);
         Self {
@@ -200,6 +330,7 @@ impl Chat {
             transcript: RefCell::new(Transcript::new(style, meter)),
             metrics,
             st: RefCell::new(St {
+                launcher: cached_launcher,
                 follow: true,
                 viewport: (1200., 800.),
                 ..Default::default()
@@ -209,6 +340,7 @@ impl Chat {
             heartbeat: HEARTBEAT,
             texts: Default::default(),
             memory: None,
+            launcher_cache_path,
         }
     }
     /// Feed an unbounded synthetic channel into projection tests without weakening the
@@ -225,6 +357,12 @@ impl Chat {
     /// Process-local keep of the draft and section while the panel is closed.
     pub fn with_memory(mut self, memory: crate::popouts::ChatMemory) -> Self {
         self.memory = Some(memory);
+        self
+    }
+    #[cfg(test)]
+    pub(crate) fn with_launcher_cache_path(mut self, path: std::path::PathBuf) -> Self {
+        self.st.borrow_mut().launcher = Self::load_launcher_cache(&path);
+        self.launcher_cache_path = Some(path);
         self
     }
     pub fn remembered(&self) -> BTreeMap<String, Value> {
@@ -274,7 +412,7 @@ impl Chat {
         }
         Some((
             status.boot.clone()?,
-            Duration::from_millis(u64::from(advertised.timeout).clamp(1, 10_000)),
+            Duration::from_millis(u64::from(advertised.timeout).clamp(1, 45_000)),
         ))
     }
     fn begin(&self, call: Call, method: &str, params: Json, wake: CallWake) -> bool {
@@ -288,6 +426,14 @@ impl Chat {
             return false;
         };
         if st.pending.len() >= 8 {
+            return false;
+        }
+        if call == Call::LauncherAction
+            && st
+                .pending
+                .iter()
+                .any(|pending| pending.call == Call::LauncherAction)
+        {
             return false;
         }
         match client.begin_call(
@@ -356,7 +502,57 @@ impl Chat {
             };
             let call = st.pending.remove(index).call;
             match (call, reply) {
-                (Call::Saved, Ok(value)) => st.saved = Some((Instant::now(), value)),
+                (Call::LauncherList, Ok(value)) => {
+                    let warning = value["warning"].as_str().unwrap_or("");
+                    let mut clean = value.clone();
+                    if let Some(object) = clean.as_object_mut() {
+                        object.remove("projects");
+                        object.remove("warning");
+                    }
+                    if let Some(chats) = clean["chats"].as_array_mut() {
+                        chats.truncate(LAUNCHER_CACHE_ROWS);
+                        chats.retain(|row| {
+                            row["key"]
+                                .as_str()
+                                .is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                                && row["title"]
+                                    .as_str()
+                                    .is_some_and(|v| !v.is_empty() && v.chars().count() <= 256)
+                        });
+                        for row in chats {
+                            if let Some(object) = row.as_object_mut() {
+                                object.remove("project");
+                            }
+                        }
+                    }
+                    let has_rows = clean["chats"]
+                        .as_array()
+                        .is_some_and(|rows| !rows.is_empty());
+                    if warning.is_empty() || has_rows {
+                        if let Some(path) = &self.launcher_cache_path {
+                            Self::save_launcher_cache(path, &clean);
+                        }
+                        st.launcher = Some(clean);
+                    }
+                    st.launcher_asked = Some(Instant::now());
+                    st.message = if warning.is_empty() {
+                        String::new()
+                    } else {
+                        "bead.common.request-failed".into()
+                    };
+                }
+                (Call::LauncherList, Err(_)) => {
+                    st.launcher_asked = Some(Instant::now());
+                    st.message = "bead.common.request-failed".into();
+                }
+                (Call::LauncherAction, Ok(_)) => {
+                    st.launcher_asked = None;
+                    st.launcher_handoff = true;
+                }
+                (Call::LauncherAction, Err(_)) => {
+                    st.launcher_asked = None;
+                    st.message = "bead.common.request-failed".into();
+                }
                 (Call::Open, Ok(_)) => st.opened_at = Some(Instant::now()),
                 (_, Ok(_)) => {}
                 // Retry at the next heartbeat, not in a loop.
@@ -403,14 +599,14 @@ impl Chat {
         if !open {
             let mut st = self.st.borrow_mut();
             st.parsed = None;
-            st.saved = None;
             self.transcript.borrow_mut().release();
             return BTreeMap::new();
         }
         self.poll();
+        let handoff = std::mem::take(&mut self.st.borrow_mut().launcher_handoff);
         let section = match stores.get("chat.section") {
             Some(Value::Text(s)) => s.clone(),
-            _ => "chat".into(),
+            _ => "launcher".into(),
         };
         let draft = match stores.get("chat.draft") {
             Some(Value::Text(s)) => s.clone(),
@@ -418,9 +614,26 @@ impl Chat {
         };
         let wake = self.waker();
         let mut out = BTreeMap::new();
+        if handoff {
+            out.insert("bead.focused".into(), text(""));
+            if stores.get("view.detached") != Some(&Value::Bool(true))
+                && stores.get("chat.pinned") != Some(&Value::Bool(true))
+            {
+                out.insert("panel.open".into(), Value::Bool(false));
+            }
+        }
+        out.insert("chat.section".into(), text(section.clone()));
         self.remember("chat.section", &section);
+        let labels = ["bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
+            .into_iter().map(|id| {
+                let label = tr(id, &[]);
+                let transcript = self.transcript.borrow();
+                let meter = transcript.meter();
+                json!({"text": label,"body": meter.width(&label,SANS,self.metrics.body),"caption": meter.width(&label,SANS,self.metrics.info)})
+            }).collect();
+        out.insert("chat.labels".into(), Value::list(labels));
         // Keep the worker alive and recover after a reconnect (QML: open on start, every 10 s).
-        let stale = {
+        let stale = section == "chat" && {
             let st = self.st.borrow();
             st.opened_at.is_none_or(|at| at.elapsed() >= self.heartbeat)
                 && !st.pending.iter().any(|p| p.call == Call::Open)
@@ -431,14 +644,189 @@ impl Chat {
         if self.ready(OPEN).is_none() {
             self.st.borrow_mut().opened_at = None;
         }
-        let labels = ["bead.panel.chat-tab-chat", "bead.panel.chat-tab-chats", "bead.panel.chat-tab-brain", "bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
-            .into_iter().map(|id| {
-                let label = tr(id, &[]);
-                let transcript = self.transcript.borrow();
-                let meter = transcript.meter();
-                json!({"text": label,"body": meter.width(&label,SANS,self.metrics.body),"caption": meter.width(&label,SANS,self.metrics.info)})
-            }).collect();
-        out.insert("chat.labels".into(), Value::list(labels));
+        if section != "chat" {
+            let should_list = {
+                let st = self.st.borrow();
+                !st.pending.iter().any(|p| p.call == Call::LauncherList)
+                    && st
+                        .launcher_asked
+                        .is_none_or(|at| at.elapsed() >= LAUNCHER_REFRESH)
+            };
+            if should_list
+                && self.ready(LAUNCHER_LIST).is_some()
+                && self.begin(Call::LauncherList, LAUNCHER_LIST, json!({}), wake.clone())
+            {
+                self.st.borrow_mut().launcher_asked = Some(Instant::now());
+            }
+            let st = self.st.borrow();
+            let data = st.launcher.as_ref().cloned().unwrap_or_else(|| json!({}));
+            let query = match stores.get("launcher.search") {
+                Some(Value::Text(s)) => s.to_lowercase(),
+                _ => String::new(),
+            };
+            let chats = data["chats"].as_array().cloned().unwrap_or_default();
+            let filtered: Vec<Json> = chats
+                .into_iter()
+                .filter(|row| {
+                    query.is_empty()
+                        || ["title", "provider"]
+                            .into_iter()
+                            .filter_map(|k| row[k].as_str())
+                            .any(|value| value.to_lowercase().contains(&query))
+                })
+                .collect();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs_f64();
+            let rows: Vec<Json> = filtered
+                .iter()
+                .map(|row| {
+                    let provider = match row["provider"]
+                        .as_str()
+                        .unwrap_or("")
+                        .to_lowercase()
+                        .as_str()
+                    {
+                        "claude" => "Claude",
+                        "codex" => "Codex",
+                        _ => "",
+                    };
+                    let state = match row["state"].as_str().unwrap_or("").to_lowercase().as_str() {
+                        "running" => "running",
+                        _ => "idle",
+                    };
+                    let timestamp = row["lastActivity"].as_f64().unwrap_or(0.);
+                    let age = (now - timestamp).max(0.);
+                    let count = ((age / 60.).floor() as u64).to_string();
+                    let last = if timestamp <= 0. {
+                        tr("bead.panel.launcher-activity-unknown", &[])
+                    } else if age < 60. {
+                        tr("bead.panel.launcher-just-now", &[])
+                    } else if age < 3600. {
+                        tr("bead.panel.launcher-minutes-ago", &[("count", &count)])
+                    } else if age < 86400. {
+                        tr(
+                            "bead.panel.launcher-hours-ago",
+                            &[("count", &((age / 3600.).floor() as u64).to_string())],
+                        )
+                    } else {
+                        tr(
+                            "bead.panel.launcher-days-ago",
+                            &[("count", &((age / 86400.).floor() as u64).to_string())],
+                        )
+                    };
+                    let mut item = row.clone();
+                    if let Some(obj) = item.as_object_mut() {
+                        obj.remove("project");
+                        obj.insert("provider".into(), json!(provider));
+                        obj.insert("state".into(), json!(state));
+                        obj.insert("lastActivityLabel".into(), json!(last));
+                    }
+                    item
+                })
+                .collect();
+            out.insert("launcher.chats".into(), Value::list(rows));
+            let selected_provider = match stores.get("launcher.provider") {
+                Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
+                _ => data["defaultProvider"]
+                    .as_str()
+                    .filter(|v| matches!(*v, "codex" | "claude"))
+                    .unwrap_or("codex")
+                    .to_owned(),
+            };
+            out.insert("launcher.provider".into(), text(selected_provider.clone()));
+            out.insert(
+                "launcher.search".into(),
+                text(match stores.get("launcher.search") {
+                    Some(Value::Text(v)) => v.clone(),
+                    _ => String::new(),
+                }),
+            );
+            let selected = match stores.get("launcher.selected") {
+                Some(Value::Text(v))
+                    if filtered.iter().any(|row| row["key"].as_str() == Some(v)) =>
+                {
+                    v.clone()
+                }
+                _ => filtered
+                    .first()
+                    .and_then(|v| v["key"].as_str())
+                    .unwrap_or("")
+                    .to_owned(),
+            };
+            out.insert("launcher.selected".into(), text(selected));
+            let warning = data["warning"].as_str().unwrap_or("");
+            out.insert(
+                "launcher.warning".into(),
+                text(if !warning.is_empty() {
+                    tr("bead.common.request-failed", &[])
+                } else if !st.message.is_empty() {
+                    tr(&st.message, &[])
+                } else if self.ready(LAUNCHER_LIST).is_none() {
+                    tr("bead.panel.chat-unavailable", &[])
+                } else {
+                    String::new()
+                }),
+            );
+            out.insert(
+                "launcher.quick_chat".into(),
+                Value::Bool(stores.get("launcher.quick_chat") == Some(&Value::Bool(true))),
+            );
+            out.insert(
+                "launcher.empty_state".into(),
+                text(
+                    if !filtered.is_empty()
+                        || !st.message.is_empty()
+                        || !warning.is_empty()
+                        || self.ready(LAUNCHER_LIST).is_none()
+                    {
+                        String::new()
+                    } else if st.launcher.is_none() && self.ready(LAUNCHER_LIST).is_some() {
+                        tr("bead.panel.launcher-loading", &[])
+                    } else if !query.is_empty() {
+                        tr("bead.panel.launcher-empty-search", &[])
+                    } else {
+                        tr("bead.panel.launcher-empty-history", &[])
+                    },
+                ),
+            );
+            let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
+            out.insert(
+                "launcher.can_latest".into(),
+                Value::Bool(!action_pending && self.ready("ai.launcher.latest").is_some()),
+            );
+            out.insert(
+                "launcher.can_new".into(),
+                Value::Bool(
+                    !action_pending
+                        && !selected_provider.is_empty()
+                        && self.ready("ai.launcher.new").is_some(),
+                ),
+            );
+            out.insert(
+                "launcher.can_open".into(),
+                Value::Bool(
+                    !action_pending
+                        && self.ready("ai.launcher.open").is_some()
+                        && !filtered.is_empty(),
+                ),
+            );
+            let scale = self.transcript.borrow().style().scale.clone();
+            let preferred = (f64::from(st.viewport.1) - 150.)
+                .clamp(105. * f64::from(scale.xs), 202.5 * f64::from(scale.xs));
+            let height = preferred.min((f64::from(st.viewport.1) - 2. * self.metrics.edge).max(1.));
+            out.insert("chat.height".into(), number(height));
+            out.insert("chat.edge".into(), number(self.metrics.edge));
+            out.insert("chat.button".into(), number(self.metrics.button));
+            out.insert("chat.top".into(), number(self.metrics.top));
+            out.insert("chat.inner".into(), number(f64::from(self.metrics.inner)));
+            if !handoff && stores.get("bead.focused").is_none() {
+                out.insert("bead.focused".into(), text("chat.search"));
+            }
+            return out;
+        }
+        out.insert("launcher.quick_chat".into(), Value::Bool(true));
         let mut st = self.st.borrow_mut();
         self.parsed(&mut st);
         let connected = st.parsed.as_ref().is_some_and(|p| p.available);
@@ -660,48 +1048,6 @@ impl Chat {
             "bead.panel.chat-placeholder"
         };
         let methods_ok = self.ready("ai.chat.send").is_some();
-        let defaults = state
-            .as_ref()
-            .map(|s| provider_name(s.default_provider))
-            .unwrap_or("");
-        let saved_ok = self.ready(SAVED).is_some();
-        if section == "chats" && saved_ok {
-            let due = st
-                .saved_asked
-                .is_none_or(|at| at.elapsed() >= SAVED_REFRESH);
-            if due && !st.pending.iter().any(|p| p.call == Call::Saved) {
-                st.saved_asked = Some(Instant::now());
-                drop(st);
-                self.begin(Call::Saved, SAVED, json!({"channel": ""}), wake);
-                st = self.st.borrow_mut();
-            }
-        }
-        let saved_rows: Vec<Json> = st
-            .saved
-            .as_ref()
-            .and_then(|(_, value)| value["chats"].as_array())
-            .into_iter()
-            .flatten()
-            .take(30)
-            .filter_map(|chat| {
-                let key = chat["key"].as_str().filter(|k| !k.is_empty() && k.len() <= 128)?;
-                let detail = format!(
-                    "{} · {} · {}",
-                    chat["agent"].as_str().unwrap_or(""),
-                    chat["account"].as_str().unwrap_or(""),
-                    chat["state"].as_str().unwrap_or("")
-                );
-                Some(json!({"id": key, "t": chat["title"].as_str().unwrap_or(""), "d": detail, "a": format!("resume:{key}")}))
-            })
-            .collect();
-        let saved_state = if !saved_ok {
-            "bead.panel.chat-saved-unavailable"
-        } else if saved_rows.is_empty() {
-            "bead.panel.chat-saved-empty"
-        } else {
-            ""
-        };
-        let _ = defaults;
         let mut set = |key: &str, value: Value| {
             out.insert(key.into(), value);
         };
@@ -755,15 +1101,6 @@ impl Chat {
             })),
         );
         set("chat.has_question", Value::Bool(question.is_some()));
-        set("chat.saved", Value::list(saved_rows));
-        set(
-            "chat.saved_state",
-            text(if saved_state.is_empty() {
-                String::new()
-            } else {
-                tr(saved_state, &[])
-            }),
-        );
         drop(st);
         *self.texts.borrow_mut() = texts;
         out
@@ -799,6 +1136,121 @@ impl Chat {
         let busy = state.as_ref().is_some_and(|s| s.busy);
         let (verb, rest) = arg.split_once(':').unwrap_or((arg, ""));
         match verb {
+            "launcher" => match rest {
+                "refresh" => self.st.borrow_mut().launcher_asked = None,
+                "new" => {
+                    let provider = match value("launcher.provider").as_str() {
+                        "codex" => "codex".to_owned(),
+                        "claude" => "claude".to_owned(),
+                        _ => self
+                            .st
+                            .borrow()
+                            .launcher
+                            .as_ref()
+                            .and_then(|data| data["defaultProvider"].as_str())
+                            .filter(|value| matches!(*value, "codex" | "claude"))
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| "codex".to_owned()),
+                    };
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.new",
+                        json!({"provider": provider, "project": "general-chat"}),
+                        self.waker(),
+                    );
+                }
+                "latest" => {
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.latest",
+                        json!({}),
+                        self.waker(),
+                    );
+                }
+                "quick-chat" => {
+                    out.stores.insert("chat.section".into(), text("chat"));
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(true));
+                    out.stores
+                        .insert("bead.focused".into(), text("chat.composer"));
+                }
+                "back" => {
+                    out.stores.insert("chat.section".into(), text("launcher"));
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(false));
+                    out.stores
+                        .insert("bead.focused".into(), text("chat.search"));
+                }
+                "open-selected" => {
+                    let key = value("launcher.selected");
+                    if !key.is_empty() {
+                        self.begin(
+                            Call::LauncherAction,
+                            "ai.launcher.open",
+                            json!({"key": key}),
+                            self.waker(),
+                        );
+                    }
+                }
+                "move:up" | "move:down" | "move:-1" | "move:1" => {
+                    let launcher = self
+                        .st
+                        .borrow()
+                        .launcher
+                        .clone()
+                        .unwrap_or_else(|| json!({}));
+                    let rows = launcher["chats"].as_array().cloned().unwrap_or_default();
+                    let query = value("launcher.search").to_lowercase();
+                    let rows: Vec<Json> = rows
+                        .into_iter()
+                        .filter(|row| {
+                            query.is_empty()
+                                || ["title", "provider"]
+                                    .into_iter()
+                                    .filter_map(|k| row[k].as_str())
+                                    .any(|s| s.to_lowercase().contains(&query))
+                        })
+                        .collect();
+                    let selected = value("launcher.selected");
+                    let index = rows
+                        .iter()
+                        .position(|row| row["key"].as_str() == Some(selected.as_str()))
+                        .unwrap_or(0);
+                    let up = rest == "move:up" || rest == "move:-1";
+                    let next = if up {
+                        index.saturating_sub(1)
+                    } else {
+                        (index + 1).min(rows.len().saturating_sub(1))
+                    };
+                    if let Some(key) = rows.get(next).and_then(|row| row["key"].as_str()) {
+                        out.stores.insert("launcher.selected".into(), text(key));
+                    }
+                }
+                "brain" | "settings" => {
+                    self.begin(
+                        Call::LauncherAction,
+                        "ai.launcher.action",
+                        json!({"action": rest}),
+                        self.waker(),
+                    );
+                }
+                _ if rest.starts_with("open:") => {
+                    let key = &rest[5..];
+                    if !key.is_empty() {
+                        self.begin(
+                            Call::LauncherAction,
+                            "ai.launcher.open",
+                            json!({"key": key}),
+                            self.waker(),
+                        );
+                    }
+                }
+                _ if rest.starts_with("provider:") => {
+                    out.stores
+                        .insert("launcher.provider".into(), text(&rest[9..]));
+                }
+                _ => {}
+            },
             "pin" => {
                 out.stores.insert(
                     "chat.pinned".into(),
@@ -824,6 +1276,8 @@ impl Chat {
             "new" if !busy => {
                 self.plain("ai.chat.new", json!({}));
                 out.stores.insert("chat.section".into(), text("chat"));
+                out.stores
+                    .insert("bead.focused".into(), text("chat.composer"));
             }
             "workspace" if !busy => self.plain("ai.chat.workspace", json!({})),
             "provider" if matches!(rest, "codex" | "claude") => {
@@ -877,10 +1331,13 @@ impl Chat {
                 });
             }
             "latest" => self.st.borrow_mut().follow = true,
-            "section" if matches!(rest, "chat" | "chats" | "settings") => {
+            "section" if matches!(rest, "launcher" | "chat") => {
                 out.stores.insert("chat.section".into(), text(rest));
+                if rest == "launcher" {
+                    out.stores
+                        .insert("launcher.quick_chat".into(), Value::Bool(false));
+                }
             }
-            "refresh" => self.st.borrow_mut().saved_asked = None,
             _ => {}
         }
         out

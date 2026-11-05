@@ -396,11 +396,53 @@ fn select_with<S: AsRef<str>>(
     }
 }
 
-fn launch_task(command: &str, args: &[String], title: &str) -> Result<()> {
+pub(crate) fn launch_task(command: &str, args: &[String], title: &str) -> Result<()> {
     let mut child = Command::new("kitty");
     child.args(kitty_task_args(command, args, title));
     launch_background(child)?;
     Ok(())
+}
+
+pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Result<()> {
+    // The side panel owns only local general chats. Keep this boundary here as
+    // well as in collection so stale or forged launcher records cannot SSH.
+    if !item["project"]["host"].is_null() {
+        return Err("Remote chats are unavailable in the launcher".into());
+    }
+    let encoded = BASE64.encode(serde_json::to_vec(item)?);
+    let args = vec!["resume-record".into(), encoded];
+    let title = clean(item["title"].as_str().unwrap_or("Nacre AI chat"));
+    let class = format!("nacre-ai-chat-{key}");
+    let mut child = Command::new("kitty");
+    child.args(kitty_task_args_for_class("nacre-ai", &args, &title, &class));
+    launch_background(child)
+}
+
+pub(crate) fn launcher_new(provider: &str, _project_id: &str) -> Result<()> {
+    if !matches!(provider, "codex" | "claude") {
+        return Err("Unknown AI provider".into());
+    }
+    let args = vec!["new".into(), "--agent".into(), provider.into()];
+    launch_task("nacre-ai", &args, "New chat")
+}
+
+pub(crate) fn launcher_action(action: &str) -> Result<()> {
+    if action == "brain" {
+        let program = home().join(".local/bin/nacre-brain-ui");
+        let mut command = Command::new(program);
+        command.arg("brain");
+        return launch_background(command);
+    }
+    let (command, args, title): (&str, Vec<String>, &str) = match action {
+        "settings" => ("nacre-ai", vec!["settings".into()], "Nacre AI Settings"),
+        "projects" => (
+            "nacre-ai",
+            vec!["project-settings".into()],
+            "Nacre AI Projects",
+        ),
+        _ => return Err("Unknown launcher action".into()),
+    };
+    launch_task(command, &args, title)
 }
 
 fn launch_background(mut command: Command) -> Result<()> {
@@ -436,9 +478,13 @@ fn projects_path() -> PathBuf {
         .unwrap_or_else(|| home().join(".config/nacre/ai/projects.json"))
 }
 
-fn configured_projects() -> Result<Vec<serde_json::Value>> {
+pub(crate) fn configured_projects() -> Result<Vec<serde_json::Value>> {
+    configured_projects_at(&projects_path())
+}
+
+fn configured_projects_at(path: &std::path::Path) -> Result<Vec<serde_json::Value>> {
     let document: serde_json::Value = crate::state::read_as(
-        &projects_path(),
+        path,
         Some(crate::state::by_id("ai-projects")?),
         serde_json::json!({}),
     )?;
@@ -510,10 +556,19 @@ fn codex_general_args(path: &str, brain: &str, full_access: bool) -> Vec<String>
 }
 
 fn kitty_task_args(command: &str, args: &[String], title: &str) -> Vec<String> {
+    kitty_task_args_for_class(command, args, title, "nacre-ai-task")
+}
+
+fn kitty_task_args_for_class(
+    command: &str,
+    args: &[String],
+    title: &str,
+    class: &str,
+) -> Vec<String> {
     [
         vec![
             "--class".into(),
-            "nacre-ai-task".into(),
+            class.into(),
             "--title".into(),
             title.into(),
             "--".into(),
@@ -572,7 +627,7 @@ fn history_row(index: usize, item: &serde_json::Value) -> (String, String) {
     )
 }
 
-fn sort_history(records: &mut [serde_json::Value]) {
+pub(crate) fn sort_history(records: &mut [serde_json::Value]) {
     records.sort_by(|a, b| {
         b["updated_at"]
             .as_f64()
@@ -604,7 +659,15 @@ fn run_remote_with(
         })
         .collect::<Vec<_>>()
         .join(" ");
-    let mut ssh = Command::new(executable);
+    // Provider history can span stale SSH hosts. Bound captured reads while
+    // leaving intentional interactive tmux/session attaches alive.
+    let mut ssh = if capture {
+        let mut command = Command::new("timeout");
+        command.args(["--kill-after=1", "6s"]).arg(executable);
+        command
+    } else {
+        Command::new(executable)
+    };
     if !capture {
         ssh.arg("-t");
     }
@@ -629,7 +692,7 @@ fn run_remote_with(
     }
 }
 
-fn provider_list(
+pub(crate) fn provider_list(
     project: &serde_json::Value,
     agent: &str,
     account: &str,
@@ -675,7 +738,8 @@ fn provider_list(
             .collect::<Vec<_>>();
         run_remote(host, &remote, true)?
     } else {
-        let mut command = Command::new(&args[0]);
+        let mut command = Command::new("timeout");
+        command.args(["--kill-after=1", "6s", &args[0]]);
         command.args(&args[1..]);
         if agent == "codex" {
             let delta = ai_core::environment_delta("codex", Some(account))?;
@@ -734,17 +798,17 @@ fn provider_list(
     Ok(items)
 }
 
-fn history(command: &str, account_override: Option<&str>) -> Result<()> {
-    if let Some(status) = launch_niri_history(command, account_override)? {
-        return if status.success() {
-            Ok(())
-        } else {
-            Err("History worker did not finish successfully".into())
-        };
-    }
+pub(crate) fn collect_history<F: Fn() -> bool>(
+    account_override: Option<&str>,
+    cancelled: F,
+) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<String>)> {
+    let projects = configured_projects()?;
     let mut records = Vec::new();
     let mut errors = Vec::new();
-    for project in configured_projects()? {
+    for project in &projects {
+        if cancelled() {
+            break;
+        }
         let mut sources = vec![project.clone()];
         for source in project["task_sources"].as_array().into_iter().flatten() {
             if let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) {
@@ -754,7 +818,13 @@ fn history(command: &str, account_override: Option<&str>) -> Result<()> {
             }
         }
         for source in sources {
+            if cancelled() {
+                break;
+            }
             for agent in ["codex", "claude"] {
+                if cancelled() {
+                    break;
+                }
                 let account = ai_core::effective_account(agent, account_override)?;
                 match provider_list(&source, agent, &account) {
                     Ok(rows) => records.extend(rows),
@@ -764,6 +834,60 @@ fn history(command: &str, account_override: Option<&str>) -> Result<()> {
         }
     }
     sort_history(&mut records);
+    Ok((records, projects, errors))
+}
+
+/// History for the compact side panel: general chat only, always local.
+/// The regular AI app continues to use `collect_history` and its project sources.
+pub(crate) fn collect_launcher_history<F: Fn() -> bool>(
+    cancelled: F,
+) -> Result<(Vec<serde_json::Value>, Vec<String>)> {
+    collect_local_launcher_history(cancelled, |project, agent| {
+        let account = ai_core::effective_account(agent, None)?;
+        provider_list(project, agent, &account)
+    })
+}
+
+fn collect_local_launcher_history<F, L>(
+    cancelled: F,
+    mut list: L,
+) -> Result<(Vec<serde_json::Value>, Vec<String>)>
+where
+    F: Fn() -> bool,
+    L: FnMut(&serde_json::Value, &str) -> Result<Vec<serde_json::Value>>,
+{
+    let general = serde_json::json!({
+        "id":"general-chat", "label":"General chat", "chat_directory":true,
+        "path":home().join(".local/share/nacre/ai/chats").display().to_string()
+    });
+    let mut records = Vec::new();
+    let mut warnings = Vec::new();
+    for agent in ["codex", "claude"] {
+        if cancelled() {
+            break;
+        }
+        match list(&general, agent) {
+            Ok(rows) => records.extend(rows),
+            Err(_) => warnings.push(format!(
+                "{} history is temporarily unavailable",
+                if agent == "claude" { "Claude" } else { "Codex" }
+            )),
+        }
+    }
+    records.retain(|item| item["project"]["host"].is_null());
+    sort_history(&mut records);
+    Ok((records, warnings))
+}
+
+pub(crate) fn history(command: &str, account_override: Option<&str>) -> Result<()> {
+    if let Some(status) = launch_niri_history(command, account_override)? {
+        return if status.success() {
+            Ok(())
+        } else {
+            Err("History worker did not finish successfully".into())
+        };
+    }
+    let (records, _, errors) = collect_history(account_override, || false)?;
     if command == "latest" && !errors.is_empty() {
         return Err(format!("Cannot establish the latest task while a history source is unavailable; use Load chat. {}", errors.join("; ")).into());
     }
@@ -887,31 +1011,46 @@ fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
     args
 }
 
-fn resume_record(item: &serde_json::Value) -> Result<()> {
+fn running_session(item: &serde_json::Value) -> Option<(&str, Option<&str>, bool)> {
+    let session = item["session"]
+        .as_str()
+        .filter(|session| valid_session(session))?;
+    let host = item["project"]["host"]
+        .as_str()
+        .filter(|host| !host.is_empty());
+    Some((session, host, item["agent"] == "claude"))
+}
+
+fn valid_session(session: &str) -> bool {
+    !session.is_empty() && session.len() <= 256 && !session.chars().any(char::is_control)
+}
+
+pub(crate) fn resume_record(item: &serde_json::Value) -> Result<()> {
+    resume_record_with_tmux(item, std::path::Path::new("tmux"))
+}
+
+fn resume_record_with_tmux(item: &serde_json::Value, tmux: &std::path::Path) -> Result<()> {
     let project = &item["project"];
     let agent = item["agent"].as_str().unwrap_or("codex");
     let account = item["account"].as_str().unwrap_or("");
-    let id = item["id"].as_str().ok_or("History record has no id")?;
-    if let (Some(host), Some(session)) = (project["host"].as_str(), item["session"].as_str()) {
-        let mut args = vec!["tmux".into()];
-        args.extend(tmux_attach_args(session, agent == "claude"));
-        let output = run_remote(host, &args, false)?;
-        if !output.status.success() {
+    if let Some((session, host, claude)) = running_session(item) {
+        let args = tmux_attach_args(session, claude);
+        let status = if let Some(host) = host {
+            let mut remote_args = vec!["tmux".into()];
+            remote_args.extend(args);
+            run_remote(host, &remote_args, false)?.status
+        } else {
+            Command::new(tmux).args(args).status()?
+        };
+        if !status.success() {
             return Err("Could not attach to the running task".into());
         }
         return Ok(());
     }
-    if agent == "claude" && project["host"].as_str().is_none() {
-        if let Some(session) = item["session"].as_str() {
-            let status = Command::new("tmux")
-                .args(tmux_attach_args(session, true))
-                .status()?;
-            if !status.success() {
-                return Err("Could not attach to the running Claude chat".into());
-            }
-            return Ok(());
-        }
-    }
+    let id = item["id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+        .ok_or("History record has no id or running session")?;
     if agent == "claude" {
         let mut args = vec![
             "nacre-ai-claude".into(),
@@ -1004,6 +1143,69 @@ fn resume_record(item: &serde_json::Value) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn validate_resume_record(
+    item: &serde_json::Value,
+    configured: &[serde_json::Value],
+) -> Result<()> {
+    let project_id = item["project"]["id"]
+        .as_str()
+        .ok_or("Invalid chat project")?;
+    let allowed = configured.iter().any(|project| {
+        if project["id"].as_str() == Some(project_id) && project == &item["project"] {
+            return true;
+        }
+        project["task_sources"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .any(|source| {
+                let (Some(base), Some(extra)) = (project.as_object(), source.as_object()) else {
+                    return false;
+                };
+                let mut merged = base.clone();
+                merged.extend(extra.clone());
+                merged.get("id").and_then(serde_json::Value::as_str) == Some(project_id)
+                    && serde_json::Value::Object(merged) == item["project"]
+            })
+    });
+    let agent = item["agent"].as_str().unwrap_or("");
+    let has_id = item["id"].as_str().is_some_and(|id| !id.is_empty());
+    if !allowed
+        || !matches!(agent, "codex" | "claude")
+        || (!has_id && running_session(item).is_none())
+        || (!item["id"].is_null() && !item["id"].is_string())
+        || item["id"]
+            .as_str()
+            .is_some_and(|id| id.len() > 256 || id.chars().any(char::is_control))
+        || item["session"]
+            .as_str()
+            .is_some_and(|session| !valid_session(session))
+        || item["account"]
+            .as_str()
+            .is_none_or(|account| !account.is_empty() && !valid_account(account))
+    {
+        return Err("Chat project or identifier is no longer registered".into());
+    }
+    Ok(())
+}
+
+fn resume_record_request(
+    encoded: &str,
+    configured: &[serde_json::Value],
+    tmux: &std::path::Path,
+) -> Result<()> {
+    if encoded.len() > 48 * 1024 {
+        return Err("Invalid chat record".into());
+    }
+    let bytes = BASE64.decode(encoded)?;
+    if bytes.len() > 32 * 1024 {
+        return Err("Invalid chat record".into());
+    }
+    let item: serde_json::Value = serde_json::from_slice(&bytes)?;
+    validate_resume_record(&item, configured)?;
+    resume_record_with_tmux(&item, tmux)
 }
 
 fn argument(args: &[String], option: &str) -> Option<String> {
@@ -1215,7 +1417,9 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
     } else {
         println!("AI workspace · {label} · {location}");
     }
-    println!("Type your request when the selected assistant opens. The dashboard stays in its own window.");
+    println!(
+        "Type your request when the selected assistant opens. The dashboard stays in its own window."
+    );
     if project.get("host").is_some() {
         println!(
             "To leave a running task: Ctrl+B, then D. Return with Resume latest chat or Load chat."
@@ -1877,7 +2081,9 @@ fn settings() -> Result<()> {
 
 pub fn run(args: &[String]) -> Result<i32> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
-        print!("usage: nacre-ai [-h] [--project PROJECT] [--agent {{codex,claude}}]\n                [--account ACCOUNT]\n                [{{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {{codex,claude}}\n  --account ACCOUNT     Account profile override; Codex accounts share chats\n                        and keep separate logins\n");
+        print!(
+            "usage: nacre-ai [-h] [--project PROJECT] [--agent {{codex,claude}}]\n                [--account ACCOUNT]\n                [{{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {{codex,claude}}\n  --account ACCOUNT     Account profile override; Codex accounts share chats\n                        and keep separate logins\n"
+        );
         return Ok(0);
     }
     let mut index = 0;
@@ -1919,7 +2125,7 @@ pub fn run(args: &[String]) -> Result<i32> {
                 index += 2;
             }
             other if other.starts_with('-') => {
-                return Err(format!("Unknown nacre-ai option: {other}").into())
+                return Err(format!("Unknown nacre-ai option: {other}").into());
             }
             _ => return Err(format!("Unexpected nacre-ai argument: {}", args[index]).into()),
         }
@@ -1948,6 +2154,18 @@ pub fn run(args: &[String]) -> Result<i32> {
             }
         }
         "settings" => settings()?,
+        "project-settings" => projects()?,
+        "resume-record" => {
+            let encoded = args.get(index).ok_or("Missing chat record")?;
+            if args.len() != index + 1 {
+                return Err("Invalid chat record".into());
+            }
+            resume_record_request(
+                encoded,
+                &configured_projects()?,
+                std::path::Path::new("tmux"),
+            )?;
+        }
         "latest" | "sessions" => {
             history(command, argument(&args[index..], "--account").as_deref())?
         }
@@ -2072,6 +2290,54 @@ mod tests {
                 "=ai-project-codex-default-session".to_owned()
             ]
         );
+    }
+
+    #[test]
+    fn running_session_is_a_resume_target_even_without_provider_thread_id() {
+        let row = serde_json::json!({
+            "id":null,"state":"running","session":"nacre-task-123",
+            "agent":"codex","project":{"id":"demo"}
+        });
+        assert_eq!(running_session(&row), Some(("nacre-task-123", None, false)));
+        assert!(running_session(&serde_json::json!({"session":"","agent":"codex"})).is_none());
+    }
+
+    #[test]
+    fn resume_record_route_attaches_registered_null_id_session() -> Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let project_file = fixture.path().join("projects.json");
+        fs::write(
+            &project_file,
+            r#"{"projects":[{"id":"demo","label":"Demo","path":"/repo"}]}"#,
+        )?;
+        let configured = configured_projects_at(&project_file)?;
+        let project = configured
+            .iter()
+            .find(|row| row["id"] == "demo")
+            .cloned()
+            .ok_or("Fixture project missing")?;
+        let record = serde_json::json!({
+            "id":null,"title":"Running chat","state":"running","session":"nacre-chat-123",
+            "agent":"codex","account":"Default","project":project
+        });
+        let encoded = BASE64.encode(serde_json::to_vec(&record)?);
+        let capture = fixture.path().join("tmux-argv.txt");
+        let fake_tmux = fixture.path().join("tmux");
+        fs::write(
+            &fake_tmux,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > {}\n",
+                shell_quote(&capture.display().to_string())
+            ),
+        )?;
+        fs::set_permissions(&fake_tmux, fs::Permissions::from_mode(0o755))?;
+
+        resume_record_request(&encoded, &configured, &fake_tmux)?;
+        assert_eq!(
+            fs::read_to_string(capture)?,
+            "attach-session\n-t\n=nacre-chat-123\n"
+        );
+        Ok(())
     }
 
     #[test]
@@ -2244,6 +2510,52 @@ mod tests {
         assert_eq!(records[0]["id"], "newer");
         assert_eq!(records[1]["id"], "middle");
         assert_eq!(records[2]["id"], "older");
+    }
+
+    #[test]
+    fn launcher_history_uses_only_the_injected_local_general_source() -> Result<()> {
+        let mut seen = Vec::new();
+        let (rows, warnings) = collect_local_launcher_history(
+            || false,
+            |project, agent| {
+                assert_eq!(project["id"], "general-chat");
+                assert_eq!(project["chat_directory"], true);
+                assert!(project["host"].is_null());
+                seen.push(agent.to_owned());
+                Ok(vec![serde_json::json!({
+                    "id":format!("{agent}-local"),"agent":agent,"updated_at":1,
+                    "project":project
+                })])
+            },
+        )?;
+        assert_eq!(seen, ["codex", "claude"]);
+        assert!(warnings.is_empty());
+        assert_eq!(rows.len(), 2);
+        assert!(rows.iter().all(|row| row["project"]["host"].is_null()));
+        Ok(())
+    }
+
+    #[test]
+    fn launcher_history_keeps_available_rows_and_sanitizes_partial_failure() -> Result<()> {
+        let (rows, warnings) = collect_local_launcher_history(
+            || false,
+            |project, agent| {
+                if agent == "codex" {
+                    return Err("raw helper stderr: missing binary".into());
+                }
+                Ok(vec![serde_json::json!({
+                    "id":"claude-local","agent":"claude","title":"Saved chat",
+                    "updated_at":1,"project":project
+                })])
+            },
+        )?;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "claude-local");
+        assert_eq!(warnings, ["Codex history is temporarily unavailable"]);
+        assert!(warnings
+            .iter()
+            .all(|warning| !warning.contains("raw helper stderr")));
+        Ok(())
     }
 
     #[test]

@@ -3,11 +3,20 @@
 // One test at a time owns the process-wide `send_failed` queue, across awaits.
 #![allow(clippy::await_holding_lock)]
 use super::*;
-use crate::chat::tests::{Frame, chat_for, lab, meter, root, serial};
+use crate::chat::tests::{Frame, call_with_timeout, chat_for, lab, meter, root, serial};
 use serde_json::json;
 use std::time::Duration;
 
 fn runtime(chat: crate::chat::Chat) -> Runtime {
+    runtime_section(chat, "chat")
+}
+fn runtime_section(chat: crate::chat::Chat, section: &str) -> Runtime {
+    let chat = chat.with_memory(std::sync::Arc::new(std::sync::Mutex::new(BTreeMap::from(
+        [(
+            "chat.section".into(),
+            bead::core::Value::Text(section.into()),
+        )],
+    ))));
     let palette = root().join("palette.json");
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
@@ -35,10 +44,131 @@ fn draft(runtime: &Runtime) -> String {
 }
 
 #[tokio::test(flavor = "current_thread")]
+async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inline_worker() {
+    let _guard = serial();
+    let mut lab = lab(json!({"available":true,"channels":{}})).await;
+    let chat = chat_for(&lab).await;
+    let mut runtime = runtime_section(chat, "launcher");
+    runtime.viewport(420, 300);
+    step(&mut runtime, UiEvent::PanelDetached(true));
+    assert_eq!(
+        runtime.session.stores.get("view.detached"),
+        Some(&bead::core::Value::Bool(true))
+    );
+    assert!(
+        matches!(runtime.session.stores.get("chat.height"), Some(bead::core::Value::Number(height)) if *height <= 268.)
+    );
+    assert_eq!(
+        runtime.session.stores.get("bead.focused"),
+        Some(&bead::core::Value::Text("chat.search".into()))
+    );
+    runtime.viewport(534, 600);
+    for _ in 0..300 {
+        step(&mut runtime, UiEvent::Model(BTreeMap::new()));
+        if matches!(runtime.session.stores.get("launcher.chats"), Some(bead::core::Value::List(rows)) if rows.len() == 12)
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(
+        runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.id == "chat.recent-chats")
+            .and_then(|node| node.scroll_limit)
+            .is_some_and(|limit| limit > 0.)
+    );
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
+    step(
+        &mut runtime,
+        UiEvent::Key {
+            text: "brain".into(),
+            backspace: false,
+        },
+    );
+    assert_eq!(
+        runtime.session.stores.get("launcher.search"),
+        Some(&bead::core::Value::Text("brain".into()))
+    );
+    for _ in 0..5 {
+        step(
+            &mut runtime,
+            UiEvent::Key {
+                text: String::new(),
+                backspace: true,
+            },
+        );
+    }
+    step(
+        &mut runtime,
+        UiEvent::Command {
+            command: "up".into(),
+            shift: false,
+        },
+    );
+    assert_eq!(
+        runtime.session.stores.get("launcher.selected"),
+        Some(&bead::core::Value::Text("k1".into()))
+    );
+    for _ in 0..8 {
+        step(
+            &mut runtime,
+            UiEvent::Command {
+                command: "down".into(),
+                shift: false,
+            },
+        );
+    }
+    assert_eq!(
+        runtime.session.stores.get("launcher.selected"),
+        Some(&bead::core::Value::Text("k9".into()))
+    );
+    assert!(
+        matches!(runtime.session.stores.get("launcher.scroll"), Some(bead::core::Value::Number(scroll)) if *scroll > 0.)
+    );
+    let nodes = runtime.session.view_nodes();
+    let viewport = nodes
+        .iter()
+        .find(|node| {
+            node.scroll_store.as_deref() == Some("launcher.scroll") && node.scroll_limit.is_some()
+        })
+        .expect("launcher list viewport");
+    let viewport_rect = bead::ui::rect(&viewport.draw);
+    let selected_row = nodes.iter().find(|node| matches!(&node.action_arg, Some(bead::core::Value::Text(arg)) if arg == "launcher:open:k9")).expect("selected row remains rendered");
+    let selected_rect = bead::ui::rect(&selected_row.draw);
+    assert!(
+        selected_rect.y >= viewport_rect.y
+            && selected_rect.y + selected_rect.h <= viewport_rect.y + viewport_rect.h,
+        "selected row is scrolled into view: selected={selected_rect:?} viewport={viewport_rect:?} scroll={:?}",
+        runtime.session.stores.get("launcher.scroll")
+    );
+    step(
+        &mut runtime,
+        UiEvent::Command {
+            command: "enter".into(),
+            shift: false,
+        },
+    );
+    assert_eq!(
+        call_with_timeout(&mut lab).await,
+        ("ai.launcher.open".into(), json!({"key":"k9"}))
+    );
+    assert_eq!(
+        runtime.session.stores.get("chat.section"),
+        Some(&bead::core::Value::Text("launcher".into()))
+    );
+    assert!(
+        lab.calls.try_recv().is_err(),
+        "launcher interaction does not start ai.chat.open"
+    );
+}
+
+#[tokio::test(flavor = "current_thread")]
 async fn typing_shift_enter_and_enter_send_the_exact_text_once() {
     let _guard = serial();
     let mut lab = lab(
-        false,
         json!({"available":true,"channels":{"":{"state":{"defaultProvider":"claude","inWorkspace":false,"provider":"claude","account":"A","title":"T","threadId":"t","model":"","features":[],"composerKey":"k","busy":false,"status":"","error":""},"messages":{}}}}),
     )
     .await;
@@ -381,7 +511,7 @@ fn lip_and_body_hover_are_a_union_even_when_startup_delays_lip_events() {
 #[tokio::test(flavor = "current_thread")]
 async fn panel_hover_lifecycle_preserves_sidebar_warm_policy() {
     let _guard = serial();
-    let lab = lab(false, json!({"available":true,"channels":{}})).await;
+    let lab = lab(json!({"available":true,"channels":{}})).await;
     let mut runtime = runtime(chat_for(&lab).await);
     for (opened, anchor, want_opened) in [
         (Some(true), true, true),

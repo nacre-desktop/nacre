@@ -74,7 +74,7 @@ pub fn dispatch(hub: Shared, method: &str, params: Value) -> Result<Value, Failu
         .env("NACRE_BRAIN_DIRECT", "1")
         .stdin(Stdio::null())
         .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stderr(Stdio::inherit())
         .process_group(0)
         .kill_on_drop(true);
     for name in [

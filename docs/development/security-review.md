@@ -37,8 +37,14 @@ names. Private API reads require a constant-time checked cookie. Actions require
 the cookie, exact loopback Origin, JSON content type and allowlisted names.
 Resolved note paths stay inside the Markdown vault and exclude hidden paths;
 static assets use a fixed allowlist. CSP, no-store and nosniff headers apply.
-The bootstrap browser command contains a private local HTML path, not a token;
-the token travels in the local HTTP URL. The HTTP logger is disabled. Another
+N0132 serves both the app and authentication handoff on the API's loopback HTTP
+origin. The browser command carries a five-minute, single-use bootstrap token in
+the URL fragment; the page removes it from history and redeems it through a
+same-origin JSON POST. The token never enters the HTTP request URL, and the
+response sets the HttpOnly cookie and returns the origin-scoped bearer. Exact
+Origin and Fetch Metadata checks apply before redemption. Native file handoff
+generation and query-token redemption have been removed. The HTTP logger is
+disabled, and authentication responses are not cached. Another
 process with the same user privileges can read the credential files/browser
 profile; loopback authentication does not protect against that process.
 Cookies also lack port isolation ([RFC 6265, section 8.5](https://datatracker.ietf.org/doc/html/rfc6265#section-8.5)).

@@ -56,8 +56,6 @@ impl BrowserAuth {
             &directory.join(format!("{port}.bootstrap.json")),
             &to_json(&bootstrap)?,
         )?;
-        write_handoff(state, port, &bootstrap.token, false)?;
-        write_handoff(state, port, &bootstrap.token, true)?;
         Ok(Self {
             directory,
             port,
@@ -205,8 +203,8 @@ fn readiness_mac(bearer: &str, port: u16, nonce: &str) -> String {
     output
 }
 
-/// Rotate bootstrap and materialize a handoff page for an explicit browser launch.
-pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<PathBuf> {
+/// Rotate bootstrap and return its loopback URL for an explicit browser launch.
+pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<String> {
     let directory = state.join("auth").join("ports");
     secure_state_dirs(state, &directory)?;
     let _lock = auth_lock(&directory, port)?;
@@ -219,11 +217,11 @@ pub fn refresh_bootstrap(state: &Path, port: u16, handoff: bool) -> io::Result<P
         &directory.join(format!("{port}.bootstrap.json")),
         &to_json(&bootstrap)?,
     )?;
-    write_handoff(state, port, &bootstrap.token, handoff)?;
-    let path = state
-        .join("auth")
-        .join(if handoff { "handoff.html" } else { "open.html" });
-    Ok(path)
+    Ok(format!(
+        "http://127.0.0.1:{port}/{}#nacre-bootstrap={}",
+        if handoff { "auth-complete" } else { "" },
+        bootstrap.token
+    ))
 }
 
 fn active_session(directory: &Path, port: u16) -> io::Result<SessionFile> {
@@ -245,21 +243,6 @@ fn active_session(directory: &Path, port: u16) -> io::Result<SessionFile> {
     };
     write_private(&path, &to_json(&session)?)?;
     Ok(session)
-}
-
-fn write_handoff(state: &Path, port: u16, token: &str, handoff: bool) -> io::Result<()> {
-    let url = format!(
-        "http://127.0.0.1:{port}/?token={token}&handoff={}",
-        u8::from(handoff)
-    );
-    let html = format!(
-        "<!doctype html><meta charset=\"utf-8\"><script>location.replace({})</script>",
-        serde_json::to_string(&url).map_err(io::Error::other)?
-    );
-    let path = state
-        .join("auth")
-        .join(if handoff { "handoff.html" } else { "open.html" });
-    write_private(&path, html.as_bytes())
 }
 
 /// True when a browser has completed bootstrap for the persistent session on port.
@@ -468,15 +451,7 @@ mod tests {
         assert!(browser_ready(dir.path(), 17843).unwrap());
         assert!(!first.consume_bootstrap(&token));
         let page = refresh_bootstrap(dir.path(), 17843, false).unwrap();
-        let content = fs::read_to_string(page).unwrap();
-        let refreshed = content
-            .split("token=")
-            .nth(1)
-            .unwrap()
-            .split('&')
-            .next()
-            .unwrap()
-            .to_owned();
+        let refreshed = page.split("nacre-bootstrap=").nth(1).unwrap().to_owned();
         assert!(first.consume_bootstrap(&refreshed));
         let expired_bootstrap = BootstrapFile {
             token: "stale".into(),
@@ -543,16 +518,8 @@ mod tests {
                 & 0o777,
             0o600
         );
-        for filename in ["open.html", "handoff.html"] {
-            assert_eq!(
-                fs::metadata(dir.path().join("auth").join(filename))
-                    .unwrap()
-                    .permissions()
-                    .mode()
-                    & 0o777,
-                0o600
-            );
-        }
+        assert!(!dir.path().join("auth/open.html").exists());
+        assert!(!dir.path().join("auth/handoff.html").exists());
     }
 
     #[test]
@@ -687,15 +654,9 @@ mod tests {
         for worker in workers {
             worker.join().unwrap();
         }
-        let page = fs::read_to_string(dir.path().join("auth/open.html")).unwrap();
-        let token = page
-            .split("token=")
-            .nth(1)
+        let token = read_bootstrap(&dir.path().join("auth/ports/17843.bootstrap.json"))
             .unwrap()
-            .split('&')
-            .next()
-            .unwrap()
-            .to_owned();
+            .token;
         assert!(auth.consume_bootstrap(&token));
     }
 
@@ -738,14 +699,7 @@ mod tests {
             &auth.readiness_proof(&nonce).unwrap()
         )
         .unwrap());
-        let page = fs::read_to_string(page).unwrap();
-        let token = page
-            .split("token=")
-            .nth(1)
-            .unwrap()
-            .split('&')
-            .next()
-            .unwrap();
+        let token = page.split("nacre-bootstrap=").nth(1).unwrap();
         assert!(auth.consume_bootstrap(token));
         assert!(!auth.cookie_valid(&old_cookie));
         assert!(!auth.bearer_valid(&old_bearer));

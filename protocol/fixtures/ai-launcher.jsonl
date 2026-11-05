@@ -1,0 +1,4 @@
+{"t":"call","id":1,"m":"ai.launcher.list","p":{}}
+{"t":"ret","id":1,"ok":{"chats":[],"projects":[],"defaultProvider":"codex","warning":""}}
+{"t":"call","id":2,"m":"ai.launcher.open","p":{"key":"chat0000000000000001"}}
+{"t":"ret","id":2,"ok":{"ok":true,"focused":false}}

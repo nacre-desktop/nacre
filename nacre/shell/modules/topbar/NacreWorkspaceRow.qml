@@ -12,9 +12,9 @@ Item {
     readonly property bool perOutput: NacreCompositor.capabilities?.perOutputWorkspaces === true
     readonly property var deskRows: NacreCompositor.capabilities?.workspaceCollections === true && Array.isArray(NacreCompositor.collections) ? NacreCompositor.collections : []
     readonly property bool showDeskBadge: NacreCompositor.capabilities?.workspaceCollections === true && deskRows.length > 1
-    readonly property var deskForOutput: deskRows.find(value => value.output === outputName) || deskRows.find(value => value.id === NacreCompositor.activeCollectionId) || null
+    readonly property var deskForOutput: deskRows.find(value => value.output === outputName) || deskRows.find(value => value.id === NacreCompositor.activeCollectionId) || deskRows[0] || null
     readonly property string deskLabel: deskForOutput?.name || String(deskForOutput?.index ?? "")
-    readonly property string deskBadgeText: deskForOutput ? String(deskForOutput.index) + "/" + deskRows.length : String(deskRows.length)
+    readonly property string deskBadgeText: deskLabel
     readonly property var outputWorkspaces: perOutput ? NacreCompositor.workspaces.values.filter(value => value.outputId === outputName) : []
     readonly property string topology: NacreCompositor.monitors.values.map(value => value.name).sort().join("\n")
     property var rowWorkspaces: []
@@ -100,8 +100,8 @@ Item {
         }
         return [...ids].sort((a, b) => a - b);
     }
-    implicitWidth: beads.implicitWidth + (showDeskBadge ? 42 : 0)
-    implicitHeight: 30
+    implicitWidth: beads.implicitWidth
+    implicitHeight: NacreTokens.workspaceCellHeight
     function synchronize() {
         activeCell = repeater.itemAt(displayIds.indexOf(activeWorkspaceIndex));
     }
@@ -226,7 +226,7 @@ Item {
     }
     Row {
         id: beads
-        spacing: 2
+        spacing: NacreTokens.workspaceCellGap
         Repeater {
             id: repeater
             model: root.displayIds
@@ -255,8 +255,8 @@ Item {
                     cellResize.complete();
                 }
                 width: groupSpace + (root.customIcons ? 46 : 32 + shownWindows.length * 18 + (overflow ? 20 : 0) + (selected && windowCount && root.showWindowHints ? 4 : 0))
-                height: 30
-                radius: 15
+                height: NacreTokens.workspaceCellHeight
+                radius: NacreTokens.workspaceCellRadius
                 color: root.customIcons && selected ? accent : pointer.hovered ? Qt.alpha(accent, .10) : "transparent"
                 Behavior on width {
                     enabled: root.motion
@@ -308,7 +308,7 @@ Item {
                     }
                     NacreText {
                         text: cell.labelNumber
-                        font.pointSize: 10
+                        font.pointSize: NacreTokens.workspaceIconNumberFont
                         color: cell.selected ? NacreColours.palette.m3onPrimary : NacreColours.palette.m3onSurfaceVariant
                     }
                 }
@@ -399,26 +399,33 @@ Item {
         objectName: "collectionDeskBadge"
         visible: root.showDeskBadge
         x: beads.width + 8
-        y: 1
-        width: 34
-        height: 28
-        radius: 14
+        width: Math.max(NacreTokens.workspacePearlCurrent,
+            Math.min(NacreTokens.deskBadgeMaxWidth, deskLabelMetrics.advanceWidth + NacreTokens.deskBadgePadding * 2))
+        y: (NacreTokens.workspaceCellHeight - height) / 2
+        height: NacreTokens.workspacePearlCurrent
+        radius: NacreTokens.workspacePearlCurrent / 2
         color: deskPointer.hovered ? NacreColours.palette.m3surfaceContainerHigh : NacreColours.palette.m3surfaceContainer
         border.width: 1
         border.color: Qt.alpha(NacreColours.palette.m3primary, .28)
-        NacreText {
-            anchors.centerIn: parent
+        TextMetrics {
+            id: deskLabelMetrics
             text: root.deskBadgeText
-            font.pointSize: 8
-            color: NacreColours.palette.m3primary
+            font.family: NacreTokens.textFamily
+            font.pointSize: NacreTokens.workspacePearlNumberFont
+        }
+        NacreText {
+            objectName: "collectionDeskBadgeLabel"
+            anchors.centerIn: parent
+            width: parent.width - NacreTokens.deskBadgePadding * 2
+            text: root.deskBadgeText
+            font.pointSize: NacreTokens.workspacePearlNumberFont
+            horizontalAlignment: Text.AlignHCenter
+            elide: Text.ElideRight
+            color: NacreTokens.mutedInk
         }
         NacreInteraction {
             id: deskPointer
-            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {
-                value0: root.deskForOutput?.index ?? "?",
-                value1: root.deskRows.length,
-                value2: root.deskLabel
-            })
+            accessibleName: NacreI18n.tr("ui.collection.badge.accessible", "Desk {value0} of {value1}: {value2}. Open desk menu", {value0: root.deskForOutput?.index ?? "?", value1: root.deskRows.length, value2: root.deskLabel})
             activeFocusOnTab: true
             function onClicked() {
                 root.toggleDeskMenu();

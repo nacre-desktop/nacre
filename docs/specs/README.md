@@ -1,5 +1,14 @@
 # Nacre implementation queue
 
+N0132: implemented and verified — Brain bootstrap, handoff and app use the API's
+loopback HTTP origin; native file handoff generation is removed and browser focus
+behavior is preserved. Isolated container validation passed: 88 Brain library
+tests, Brain CLI test, locked helper/shell checks, helper build and formatting.
+Headless Chromium 156 loaded synthetic vault data and hid the loading screen;
+app assets/API shared one origin, auth handoff succeeded, wrong/replayed tokens
+returned 403, and no page errors or token logging occurred. Topic branch only;
+live browser/desktop and owner data were not accessed.
+
 Current handoff: 2026-10-20 lead transfer. F4 and N9 are Done with green
 exact-head CI. N10 is local-only and incomplete. The owner requested that this
 lead finish the current Bead B2 arm, release the desktop, checkpoint both queues
@@ -10,6 +19,10 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 27 | [N0129 local AI panel polish](0129-ai-panel-polish.md) | Implemented; focused dev-1 checks pass | Local general conversations, cached first frame in 11–12 ms and fake-service refresh in 166–168 ms; reviewed 1×/1.5× goldens; task branch only, no live changes. |
+| 27 | N0130 Brain browser and width observer | Implemented; focused dev-1 checks pass | Prefer supported default Chromium browsers, then Brave/Chromium/Chrome/Vivaldi/Edge; retain profile-scoped focus matching and notify/log launch failures. Native widths skip both daemon actor and foreground observer; reconnects back off to 2 s. Locked helper/shell checks pass; topic branch only, no live apply. |
+| 26 | [N0128 AI panel launcher](0128-ai-panel-launcher.md) | Implemented; focused dev-1 checks pass | Launcher shares app history/resume actions, with Quick chat and detach; task branch only. Broader inherited CI gaps recorded in the spec; owner should try search/open/focus, provider/project, pin/detach and Quick chat. |
+| 25 | N0127 compact bar desk indicator | Implemented; scale 1/1.5 pixels reviewed | Trailing pearl-sized desk chip shares workspace tokens, hides with one desk, and retains the menu and full-name tooltip. Shell checks pass apart from two inherited failures reproduced with the original bar; topic branch only, no live apply. |
 | 25 | [N0121 final Niri workaround sweep](0121-workaround-sweep.md) | Implemented; desktop validation deferred by owner | Stock Niri keeps helper fallbacks; fork capability gates use native group, hide/restore, force-close, pin, and workspace swap/set-rotation operations where semantics match. |
 | 24 | N0124 overview hover title | Implemented; static checks passed, desktop validation pending | Existing compositor topic drives the overview title and app glyph; refresh-rate batching, focus fallback and scale 1/1.5 pixel regression tests added. Task branch only; owner-approved static-only validation. |
 | 15 | [N0115 native Nacre niri widths and edge triggers](0115-nacre-niri-native-widths-edge-triggers.md) | Implemented; full dev-1 desktop CI passed on task branch | Native X11 width capability gates the observer; edge event streams replace invisible surfaces only after acknowledgement. Stock niri keeps the helper and surface paths. |

@@ -1361,74 +1361,135 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
     bar_models.insert(
         "bead.workspaces".into(),
         Value::list(vec![serde_json::json!({
-            "id":"niri-workspace:1","index":1,"label":"1","active":true,"icon_mode":false
-        })]),
+            "id":"niri-workspace:1","index":1,"label":"1","active":true,"icon_mode":false,"shown":3,"app1":"terminal","app2":"code","app3":"public"
+        }), serde_json::json!({"id":"niri-workspace:2","index":2,"label":"2","occupied":true}),
+            serde_json::json!({"id":"niri-workspace:3","index":3,"label":"3"})]),
     );
     let default_layout: serde_json::Value =
         serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
     bar_models.insert("widgets.layout".into(), Value::list(vec![default_layout]));
-    let mut single_models = bar_models.clone();
-    single_models.insert("bar.collections".into(), Value::list(vec![serde_json::json!({
-        "id":"niri-collection:17","label":"work","name":"work","index":1,"output":"DP-1","active":true
-    })]));
-    let mut bar = Harness::load(
-        &root(),
-        Path::new("bar/main.luau"),
-        &root().join("palette.json"),
-        bar_models,
-        Config {
-            width: 1920,
-            height: 70,
-            scale: 1.,
-        },
-    )?;
-    settle_harness_animations(&mut bar)?;
-    let bar_frame = bar.pose((0., 0.), 1.)?;
-    if let Some(dir) = &capture {
-        std::fs::create_dir_all(dir)?;
-        bar_frame.save(&dir.join("collections-bar.png"))?;
+    for scale in [1., 1.5] {
+        for (name, current, single) in [
+            ("long", "niri-collection:17", false),
+            ("number", "niri-collection:28", false),
+            ("single", "niri-collection:17", true),
+        ] {
+            let mut models = bar_models.clone();
+            models.insert("bar.collection.current".into(), Value::Text(current.into()));
+            if single {
+                let Value::List(rows) = &groups else {
+                    unreachable!()
+                };
+                models.insert("bar.collections".into(), Value::list(rows[..1].to_vec()));
+            }
+            let mut bar = Harness::load(
+                &root(),
+                Path::new("bar/main.luau"),
+                &root().join("palette.json"),
+                models,
+                Config {
+                    width: 1920,
+                    height: 70,
+                    scale,
+                },
+            )?;
+            settle_harness_animations(&mut bar)?;
+            let nodes = bar.session.view_nodes();
+            let badge = nodes
+                .iter()
+                .find(|node| node.action.as_deref() == Some("collection.switcher.open"));
+            assert_eq!(
+                badge.is_none(),
+                single,
+                "badge visibility at {scale}: {name}"
+            );
+            if let Some(badge) = badge {
+                let rect = bead::ui::rect(&badge.draw);
+                assert!(
+                    rect.h <= 22. && rect.w <= 66.,
+                    "desk chip must stay pearl-sized: {rect:?}"
+                );
+                assert_eq!(
+                    bar.session
+                        .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
+                        .map(|(_, action, _)| action),
+                    Some("collection.switcher.open".into())
+                );
+                let texts: Vec<_> = bar
+                    .scene()
+                    .primitives
+                    .iter()
+                    .filter_map(|primitive| match primitive {
+                        bead::render::Primitive::Text { text, .. } if text.contains('…') => {
+                            Some(text.as_str())
+                        }
+                        _ => None,
+                    })
+                    .collect();
+                if name == "long" {
+                    assert!(!texts.is_empty(), "long desk name must ellipsize: {scale}");
+                }
+            }
+            let frame = bar.pose((0., 0.), 1.)?;
+            let golden = root().join(format!("tests/goldens/desk-chip-{name}-{scale}.png"));
+            if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+                frame.save(&golden)?;
+            }
+            frame.compare(
+                &golden,
+                bead_test::Tolerance::default(),
+                &std::env::temp_dir().join(format!("nacre-desk-chip-{name}-{scale}")),
+            )?;
+            if let Some(dir) = &capture {
+                std::fs::create_dir_all(dir)?;
+                frame.save(&dir.join(format!("collections-bar-{name}-{scale}.png")))?;
+            }
+            if name == "long" {
+                let nodes = bar.session.view_nodes();
+                let badge = nodes
+                    .iter()
+                    .find(|node| node.action.as_deref() == Some("collection.switcher.open"))
+                    .ok_or("desk badge missing")?;
+                let rect = bead::ui::rect(&badge.draw);
+                bar.script([Input::Pointer {
+                    x: rect.x + rect.w / 2.,
+                    y: rect.y + rect.h / 2.,
+                }])?;
+                let full_name = "Very long personal research and writing desk";
+                assert!(
+                    bar.scene()
+                        .primitives
+                        .iter()
+                        .any(|primitive| matches!(primitive,
+                            bead::render::Primitive::Text { text, .. } if text == full_name
+                        )),
+                    "hover must show the full desk name at {scale}; hovered={:?}",
+                    bar.session.stores.get("bead.hovered")
+                );
+                assert_eq!(
+                    bar.session
+                        .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
+                        .map(|(_, action, _)| action),
+                    Some("collection.switcher.open".into()),
+                    "hover tooltip must preserve menu click"
+                );
+                let hover = bar.pose((0., 0.), 1.)?;
+                assert_ne!(
+                    hover.pixels, frame.pixels,
+                    "tooltip must change painted pixels"
+                );
+                let golden = root().join(format!("tests/goldens/desk-chip-tooltip-{scale}.png"));
+                if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+                    hover.save(&golden)?;
+                }
+                hover.compare(
+                    &golden,
+                    bead_test::Tolerance::default(),
+                    &std::env::temp_dir().join(format!("nacre-desk-chip-tooltip-{scale}")),
+                )?;
+            }
+        }
     }
-    assert!(bar_frame.width > 0 && bar_frame.height > 0);
-    let bar_text: Vec<_> = bar
-        .scene()
-        .primitives
-        .iter()
-        .filter_map(|primitive| match primitive {
-            bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
-            _ => None,
-        })
-        .collect();
-    assert!(
-        matches!(bar.session.stores.get("bar.collections"), Some(Value::List(rows)) if rows.len() == 3),
-        "collection snapshot store missing: {:?}",
-        bar.session.stores.get("bar.collections")
-    );
-
-    let mut single = Harness::load(
-        &root(),
-        Path::new("bar/main.luau"),
-        &root().join("palette.json"),
-        single_models,
-        Config {
-            width: 1920,
-            height: 70,
-            scale: 1.,
-        },
-    )?;
-    settle_harness_animations(&mut single)?;
-    let single_frame = single.pose((0., 0.), 1.)?;
-    if let Some(dir) = &capture {
-        single_frame.save(&dir.join("collections-single-entry.png"))?;
-    }
-    assert!(
-        single
-            .session
-            .view_nodes()
-            .iter()
-            .any(|node| node.id.contains("collection-menu")
-                && node.action.as_deref() == Some("collection.switcher.open")),
-        "single-desk bar affordance must open the collection popout"
-    );
 
     let mut menu_models = BTreeMap::from([
         ("bar.collections".into(), groups.clone()),
@@ -1579,10 +1640,6 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
             "{suffix} falls outside the popout viewport: {rect:?}"
         );
     }
-    assert!(
-        bar_text.iter().any(|text| text.contains("Very lon…")),
-        "the compact bar badge must truncate to one line with an ellipsis: {bar_text:?}"
-    );
     Ok(())
 }
 

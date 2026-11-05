@@ -20,7 +20,10 @@ use std::{
     collections::BTreeMap,
     process::Stdio,
     rc::Rc,
-    sync::Arc,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 use tokio::{
@@ -36,7 +39,9 @@ const WRITE_WAIT: Duration = Duration::from_secs(3);
 const COALESCE: Duration = Duration::from_millis(40);
 
 pub fn methods() -> BTreeMap<String, Method> {
-    nacre_protocol::ai_chat::methods()
+    let mut methods = nacre_protocol::ai_chat::methods();
+    methods.extend(nacre_protocol::ai_launcher::methods());
+    methods
 }
 pub fn initial(hub: &Shared) -> Result<()> {
     publish(hub, &BTreeMap::new())
@@ -273,6 +278,9 @@ pub struct Host {
     /// Reads the saved-chat list (blocking); replaced by tests.
     saved: Arc<dyn Fn() -> std::result::Result<Value, String> + Send + Sync>,
     listing: Cell<bool>,
+    launcher_listing: Arc<AtomicBool>,
+    launcher_cancel: Arc<AtomicBool>,
+    launcher_records: RefCell<BTreeMap<String, Value>>,
 }
 impl Default for Host {
     fn default() -> Self {
@@ -322,6 +330,9 @@ impl Host {
                 crate::desktop_extras::chat_list(&paths).map_err(|e| e.to_string())
             }),
             listing: Cell::new(false),
+            launcher_listing: Arc::new(AtomicBool::new(false)),
+            launcher_cancel: Arc::new(AtomicBool::new(false)),
+            launcher_records: RefCell::new(BTreeMap::new()),
         }
     }
     /// The QML "Recent chats" list: same helpers and key table as `ai.chat.resume`.
@@ -353,6 +364,67 @@ impl Host {
         };
         list.validate().map_err(|f| f.dispatch_state(false))?;
         serde_json::to_value(list).map_err(|_| unavailable("Could not read saved chats"))
+    }
+    async fn launcher_list(&self) -> std::result::Result<Value, Failure> {
+        if self
+            .launcher_listing
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_err()
+        {
+            return Err(
+                failure(ErrorCode::Busy, "Launcher history is being read", true)
+                    .dispatch_state(false),
+            );
+        }
+        self.launcher_cancel.store(false, Ordering::Release);
+        let active = self.launcher_listing.clone();
+        let cancellation = self.launcher_cancel.clone();
+        let read = tokio::task::spawn_blocking(move || {
+            struct Release(Arc<AtomicBool>);
+            impl Drop for Release {
+                fn drop(&mut self) {
+                    self.0.store(false, Ordering::Release);
+                }
+            }
+            let _release = Release(active);
+            crate::ai_dashboard::collect_launcher_history(|| cancellation.load(Ordering::Acquire))
+                .map_err(|e| e.to_string())
+        });
+        let result = tokio::time::timeout(Duration::from_secs(45), read).await;
+        let (records, warnings) = match result {
+            Ok(Ok(Ok(rows))) => rows,
+            _ => {
+                self.launcher_cancel.store(true, Ordering::Release);
+                return Err(unavailable("Could not read AI chat history"));
+            }
+        };
+        let mut saved = BTreeMap::new();
+        let mut chats = Vec::new();
+        for item in records {
+            if chats.len() >= 30 {
+                break;
+            }
+            append_launcher_row(&mut saved, &mut chats, item);
+        }
+        self.launcher_records.replace(saved);
+        let default_provider =
+            crate::ai_core::default_assistant()
+                .ok()
+                .map_or(Provider::Codex, |value| {
+                    if value == "claude" {
+                        Provider::Claude
+                    } else {
+                        Provider::Codex
+                    }
+                });
+        let list = nacre_protocol::ai_launcher::List {
+            chats,
+            projects: Vec::new(),
+            default_provider,
+            warning: launcher_text(&warnings.join("; "), 2048),
+        };
+        list.validate().map_err(|f| f.dispatch_state(false))?;
+        serde_json::to_value(list).map_err(|_| unavailable("Could not encode AI chat history"))
     }
     fn start(&self, hub: &Shared, name: &str) -> std::result::Result<Rc<Channel>, Failure> {
         if self.hosted.channels.borrow().len() >= MAX_CHANNELS {
@@ -522,6 +594,9 @@ pub async fn dispatch(
         .ai_chat
         .clone()
         .ok_or_else(|| unavailable("Assistant service is unavailable"))?;
+    if method.starts_with("ai.launcher.") {
+        return dispatch_launcher(hub, host, method, params).await;
+    }
     let (channel, command) = match method {
         "ai.chat.open" => {
             let request = checked(parse::<AiChannelRef>(params), AiChannelRef::validate)?;
@@ -570,10 +645,452 @@ pub async fn dispatch(
     Ok(json!({"channel": channel}))
 }
 
+async fn dispatch_launcher(
+    hub: Shared,
+    host: Rc<Host>,
+    method: &str,
+    params: Value,
+) -> std::result::Result<Value, Failure> {
+    use nacre_protocol::ai_launcher as launcher;
+    match method {
+        "ai.launcher.list" => {
+            checked(parse::<launcher::Empty>(params), |_| Ok(()))?;
+            host.launcher_list().await
+        }
+        "ai.launcher.open" => {
+            let request = checked(parse::<launcher::Open>(params), launcher::Open::validate)?;
+            let cached = host.launcher_records.borrow().clone();
+            let (item, unique_title) = if let Some(item) = cached.get(&request.key).cloned() {
+                let unique = cached
+                    .values()
+                    .filter(|row| row["title"] == item["title"])
+                    .count()
+                    == 1;
+                (item, unique)
+            } else {
+                // A cached UI row can outlive this daemon's in-memory map.
+                // Rediscover only local general chats and match the opaque key.
+                let history = tokio::task::spawn_blocking(|| {
+                    crate::ai_dashboard::collect_launcher_history(|| false)
+                });
+                let (rows, _) = match tokio::time::timeout(Duration::from_secs(45), history).await {
+                    Ok(Ok(Ok(value))) => value,
+                    _ => return Err(unavailable("Could not refresh local chat history")),
+                };
+                find_local_launcher_record(rows, &request.key).ok_or_else(|| {
+                    failure(
+                        ErrorCode::Validation,
+                        "Chat is no longer in the launcher list",
+                        false,
+                    )
+                    .dispatch_state(false)
+                })?
+            };
+            open_launcher_record(hub, item, request.key, unique_title).await
+        }
+        "ai.launcher.new" => {
+            let request = checked(parse::<launcher::New>(params), launcher::New::validate)?;
+            let project = request.project;
+            let provider = if request.provider == Provider::Claude {
+                "claude"
+            } else {
+                "codex"
+            };
+            let provider = provider.to_owned();
+            let launched = tokio::task::spawn_blocking(move || {
+                crate::ai_dashboard::launcher_new(&provider, &project)
+            });
+            match tokio::time::timeout(Duration::from_secs(5), launched).await {
+                Ok(Ok(Ok(()))) => Ok(json!({"ok":true})),
+                _ => Err(unavailable("Could not start new AI chat")),
+            }
+        }
+        "ai.launcher.latest" => {
+            checked(parse::<launcher::Empty>(params), |_| Ok(()))?;
+            // Resume latest stays independent of an in-flight panel refresh.
+            let history = tokio::task::spawn_blocking(|| {
+                crate::ai_dashboard::collect_launcher_history(|| false)
+            });
+            let (rows, _warnings) =
+                match tokio::time::timeout(Duration::from_secs(45), history).await {
+                    Ok(Ok(Ok(value))) => value,
+                    _ => return Err(unavailable("Could not read latest AI chat")),
+                };
+            if rows.is_empty() {
+                return Err(unavailable("Latest chat is unavailable"));
+            }
+            let unique_title = rows
+                .iter()
+                .filter(|row| row["title"] == rows[0]["title"])
+                .count()
+                == 1;
+            let item = rows
+                .into_iter()
+                .next()
+                .ok_or_else(|| unavailable("Latest chat is no longer available"))?;
+            let key = launcher_key(&item);
+            let _ = open_launcher_record(hub, item, key, unique_title).await?;
+            Ok(json!({"ok":true}))
+        }
+        "ai.launcher.action" => {
+            let request = checked(parse::<launcher::Action>(params), |_| Ok(()))?;
+            let action = match request.action {
+                launcher::LauncherAction::Brain => "brain",
+                launcher::LauncherAction::Settings => "settings",
+                launcher::LauncherAction::Projects => "projects",
+            };
+            let action = action.to_owned();
+            let launched =
+                tokio::task::spawn_blocking(move || crate::ai_dashboard::launcher_action(&action));
+            match tokio::time::timeout(Duration::from_secs(5), launched).await {
+                Ok(Ok(Ok(()))) => Ok(json!({"ok":true})),
+                _ => Err(unavailable("Could not open AI launcher action")),
+            }
+        }
+        _ => Err(failure(ErrorCode::UnknownMethod, "Unknown method", false)),
+    }
+}
+
+async fn open_launcher_record(
+    hub: Shared,
+    item: Value,
+    key: String,
+    unique_title: bool,
+) -> std::result::Result<Value, Failure> {
+    if !launcher_record_is_local(&item) {
+        return Err(failure(
+            ErrorCode::Validation,
+            "Remote chats are unavailable in the launcher",
+            false,
+        )
+        .dispatch_state(false));
+    }
+    let snapshot = hub.borrow().snapshot("compositor");
+    let existing = snapshot
+        .as_ref()
+        .and_then(|snapshot| existing_chat_window(snapshot, &item, &key, unique_title));
+    if let Some(window) = existing {
+        super::shell_actions::compositor(hub.clone(), "window.focus", json!({"window":window}))
+            .await?;
+        return Ok(json!({"ok":true,"focused":true}));
+    }
+    let opened =
+        tokio::task::spawn_blocking(move || crate::ai_dashboard::launcher_open_record(&item, &key));
+    match tokio::time::timeout(Duration::from_secs(5), opened).await {
+        Ok(Ok(Ok(()))) => Ok(json!({"ok":true,"focused":false})),
+        _ => Err(unavailable("Could not open AI chat window")),
+    }
+}
+
+fn launcher_record_is_local(item: &Value) -> bool {
+    item["project"]["host"].is_null()
+}
+
+fn find_local_launcher_record(rows: Vec<Value>, key: &str) -> Option<(Value, bool)> {
+    let index = rows
+        .iter()
+        .position(|row| launcher_key(row) == key && launcher_record_is_local(row))?;
+    let title = rows[index]["title"].clone();
+    let unique_title = rows.iter().filter(|row| row["title"] == title).count() == 1;
+    Some((rows.into_iter().nth(index)?, unique_title))
+}
+
+fn launcher_key(item: &Value) -> String {
+    let identity = item["id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+        .map(|id| json!({"id":id}))
+        .unwrap_or_else(|| json!({"session":item["session"]}));
+    let identity = json!({
+        "chat":identity, "agent":item["agent"], "account":item["account"],
+        "project":item["project"]["id"], "host":item["project"]["host"],
+        "path":item["project"]["path"],
+    })
+    .to_string();
+    let hash = identity.bytes().fold(0xcbf29ce484222325u64, |state, byte| {
+        (state ^ u64::from(byte)).wrapping_mul(0x100000001b3)
+    });
+    format!("chat{hash:016x}")
+}
+
+fn append_launcher_row(
+    records: &mut BTreeMap<String, Value>,
+    chats: &mut Vec<nacre_protocol::ai_launcher::Chat>,
+    item: Value,
+) {
+    let Some(title) = item["title"]
+        .as_str()
+        .filter(|value| !value.trim().is_empty())
+    else {
+        return;
+    };
+    if !launcher_record_is_local(&item) {
+        return;
+    }
+    let key = launcher_key(&item);
+    if records.contains_key(&key) {
+        return;
+    }
+    records.insert(key.clone(), item.clone());
+    chats.push(nacre_protocol::ai_launcher::Chat {
+        key,
+        title: launcher_text(title, 256),
+        // The wire type still requires this legacy field; the panel no longer
+        // renders it and no project is associated with the chat.
+        project: "general-chat".into(),
+        provider: if item["agent"] == "claude" {
+            Provider::Claude
+        } else {
+            Provider::Codex
+        },
+        state: launcher_text(item["state"].as_str().unwrap_or("saved"), 32),
+        last_activity: item["updated_at"].as_f64().unwrap_or(0.0),
+    });
+}
+
+fn launcher_text(value: &str, max: usize) -> String {
+    value
+        .chars()
+        .filter(|ch| !ch.is_control())
+        .take(max)
+        .collect()
+}
+
+fn existing_chat_window(
+    snapshot: &Value,
+    item: &Value,
+    key: &str,
+    unique_title: bool,
+) -> Option<String> {
+    let paths = crate::paths::Paths::environment().ok();
+    existing_chat_window_with_proc(
+        snapshot,
+        item,
+        key,
+        unique_title,
+        std::path::Path::new("/proc"),
+        paths.as_ref(),
+        nix::unistd::getuid().as_raw(),
+    )
+}
+
+fn existing_chat_window_with_proc(
+    snapshot: &Value,
+    item: &Value,
+    key: &str,
+    unique_title: bool,
+    proc: &std::path::Path,
+    paths: Option<&crate::paths::Paths>,
+    uid: u32,
+) -> Option<String> {
+    let windows = snapshot["windows"].as_object()?;
+    let class = format!("nacre-ai-chat-{key}");
+    let chat_id = item["id"].as_str().filter(|id| !id.is_empty());
+    if let Some((id, _)) = windows
+        .iter()
+        .find(|(_, window)| window["appId"].as_str() == Some(class.as_str()))
+    {
+        return Some(id.clone());
+    }
+    let matching_titles = windows
+        .iter()
+        .filter(|(_, window)| {
+            window["appId"].as_str() == Some("nacre-ai-task")
+                && window["title"].as_str() == item["title"].as_str()
+        })
+        .map(|(id, _)| id.clone())
+        .collect::<Vec<_>>();
+    let remote_running = item["project"]["host"].as_str().is_some()
+        && item["state"] == "running"
+        && item["session"]
+            .as_str()
+            .is_some_and(|session| !session.is_empty());
+    for (id, window) in windows
+        .iter()
+        .filter(|(_, window)| {
+            let app_id = window["appId"].as_str().unwrap_or("");
+            app_id == "nacre-ai-task" || app_id.starts_with("nacre-ai-chat-")
+        })
+        .take(64)
+    {
+        let Some(pid) = window["pid"].as_i64() else {
+            continue;
+        };
+        if let Some(paths) = paths {
+            let info = crate::window_chat_title::resolve_info(pid, proc, paths, uid);
+            if chat_id.is_some_and(|chat_id| info.thread_id == chat_id) {
+                return Some(id.clone());
+            }
+        }
+        if item["project"]["host"].as_str().is_none()
+            && item["state"] == "running"
+            && matches!(item["agent"].as_str(), Some("claude" | "codex"))
+            && item["session"].as_str().is_some_and(|session| {
+                crate::window_chat_title::has_tmux_session(pid, proc, uid, session)
+            })
+        {
+            return Some(id.clone());
+        }
+    }
+    (remote_running && unique_title && matching_titles.len() == 1)
+        .then(|| matching_titles[0].clone())
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::hub::{Hub, Notice};
     use super::*;
+
+    #[test]
+    fn launcher_key_is_stable_and_scoped_to_provider_project_and_account() {
+        let row = json!({"id":"thread-1","agent":"codex","account":"work","project":{"id":"demo","host":"builder","path":"/repo"}});
+        assert_eq!(launcher_key(&row), launcher_key(&row));
+        let mut other = row.clone();
+        other["account"] = json!("personal");
+        assert_ne!(launcher_key(&row), launcher_key(&other));
+        let mut session_row = row.clone();
+        session_row["id"] = Value::Null;
+        session_row["session"] = json!("tmux-session");
+        let mut changed_session = session_row.clone();
+        changed_session["session"] = json!("another-session");
+        assert_ne!(launcher_key(&session_row), launcher_key(&changed_session));
+        let mut saved_row = row.clone();
+        saved_row["session"] = json!("tmux-session");
+        assert_eq!(launcher_key(&row), launcher_key(&saved_row));
+    }
+
+    #[test]
+    fn launcher_list_deduplicates_repeated_provider_rows() {
+        let row = json!({"id":"thread-1","agent":"codex","account":"work","title":"Fixture","state":"idle","updated_at":1,"project":{"id":"demo","label":"Demo"}});
+        let mut records = BTreeMap::new();
+        let mut chats = Vec::new();
+        append_launcher_row(&mut records, &mut chats, row.clone());
+        append_launcher_row(&mut records, &mut chats, row);
+        assert_eq!(chats.len(), 1);
+        assert_eq!(records.len(), 1);
+        assert_eq!(chats[0].project, "general-chat");
+    }
+
+    #[test]
+    fn launcher_list_drops_remote_history_rows() {
+        let row = json!({"id":"remote-thread","title":"Fixture","project":{"id":"demo","host":"builder"}});
+        let mut records = BTreeMap::new();
+        let mut chats = Vec::new();
+        append_launcher_row(&mut records, &mut chats, row);
+        assert!(chats.is_empty());
+        assert!(records.is_empty());
+    }
+
+    #[test]
+    fn launcher_reopens_cached_key_after_daemon_map_is_lost() {
+        let row = json!({
+            "id":"local-thread","title":"Fixture","agent":"codex",
+            "project":{"id":"general-chat","path":"/chat"}
+        });
+        let key = launcher_key(&row);
+        let (found, unique) = find_local_launcher_record(vec![row.clone()], &key).unwrap();
+        assert_eq!(found, row);
+        assert!(unique);
+    }
+
+    #[test]
+    fn launcher_relookup_never_accepts_remote_records() {
+        let row = json!({
+            "id":"remote-thread","title":"Fixture","agent":"codex",
+            "project":{"id":"general-chat","host":"builder"}
+        });
+        assert!(find_local_launcher_record(vec![row.clone()], &launcher_key(&row)).is_none());
+    }
+
+    #[test]
+    fn launcher_focus_matches_its_owned_window_class() {
+        let row = json!({"id":"thread-1","title":"Fixture","project":{"id":"demo"}});
+        let key = launcher_key(&row);
+        let mut windows = serde_json::Map::new();
+        for index in 0..96 {
+            windows.insert(
+                format!("unrelated-{index:03}"),
+                json!({"appId":"browser","title":"Other"}),
+            );
+        }
+        windows.insert(
+            "niri-window:42".into(),
+            json!({"appId":format!("nacre-ai-chat-{key}")}),
+        );
+        let snapshot = json!({"windows":windows});
+        assert_eq!(
+            existing_chat_window(&snapshot, &row, &key, true).as_deref(),
+            Some("niri-window:42")
+        );
+    }
+
+    #[test]
+    fn launcher_focus_uses_unique_exact_task_title_for_remote_sessions() {
+        let row = json!({"id":"remote-thread","title":"Camera work","state":"running","session":"session-1","project":{"id":"demo","host":"builder"}});
+        let snapshot =
+            json!({"windows":{"niri-window:43":{"appId":"nacre-ai-task","title":"Camera work"}}});
+        assert_eq!(
+            existing_chat_window(&snapshot, &row, "unused", true).as_deref(),
+            Some("niri-window:43")
+        );
+        assert_eq!(existing_chat_window(&snapshot, &row, "unused", false), None);
+    }
+
+    #[test]
+    fn launcher_focus_never_uses_local_same_title_without_matching_thread() {
+        let row = json!({"id":"local-thread","title":"Camera work","project":{"id":"demo","path":"/repo"}});
+        let snapshot =
+            json!({"windows":{"niri-window:45":{"appId":"nacre-ai-task","title":"Camera work"}}});
+        assert_eq!(existing_chat_window(&snapshot, &row, "unused", true), None);
+    }
+
+    #[test]
+    fn launcher_focus_finds_local_tmux_clients_in_synthetic_proc_tree() -> crate::Result<()> {
+        let fixture = tempfile::tempdir()?;
+        let proc = fixture.path().join("proc");
+        let parent = proc.join("100");
+        std::fs::create_dir_all(parent.join("task/100"))?;
+        std::fs::write(parent.join("task/100/children"), "101")?;
+        std::fs::write(parent.join("cmdline"), b"/usr/bin/kitty\0")?;
+        let client = proc.join("101");
+        std::fs::create_dir_all(client.join("task/101"))?;
+        std::fs::write(client.join("task/101/children"), "")?;
+        std::fs::write(
+            client.join("cmdline"),
+            b"/usr/bin/tmux\0attach-session\0-t\0=nacre-chat-claude-1\0",
+        )?;
+        let item = json!({"id":"thread-claude","title":"Claude chat","state":"running","session":"nacre-chat-claude-1","agent":"claude","project":{"id":"demo","path":"/repo"}});
+        let snapshot = json!({"windows":{"niri-window:46":{"appId":"nacre-ai-task","title":"Claude chat","pid":100}}});
+        let paths = crate::paths::Paths::new(fixture.path());
+        for agent in ["claude", "codex"] {
+            let mut item = item.clone();
+            item["agent"] = json!(agent);
+            assert_eq!(
+                existing_chat_window_with_proc(
+                    &snapshot,
+                    &item,
+                    "unused",
+                    true,
+                    &proc,
+                    Some(&paths),
+                    nix::unistd::getuid().as_raw(),
+                )
+                .as_deref(),
+                Some("niri-window:46")
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn launcher_focus_ignores_ambiguous_generic_titles() {
+        let row = json!({"id":"remote-thread","title":"Camera work","project":{"id":"demo","host":"builder"}});
+        let snapshot = json!({"windows":{
+            "niri-window:43":{"appId":"nacre-ai-task","title":"Camera work"},
+            "niri-window:44":{"appId":"nacre-ai-task","title":"Camera work"}
+        }});
+        assert_eq!(existing_chat_window(&snapshot, &row, "unused", true), None);
+    }
 
     fn texts(view: &View) -> Vec<(String, String)> {
         view.messages

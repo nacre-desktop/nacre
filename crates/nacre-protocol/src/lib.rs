@@ -1,6 +1,7 @@
 //! Private, versioned desktop link. No UI toolkit or global runtime ownership.
 #![deny(unsafe_code)]
 pub mod ai_chat;
+pub mod ai_launcher;
 pub mod artifacts;
 pub mod bar_services;
 pub mod colors;
