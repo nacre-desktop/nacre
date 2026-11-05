@@ -380,6 +380,7 @@ pub(crate) struct Lab {
     pub calls: mpsc::UnboundedReceiver<(String, Json)>,
     pub push: mpsc::UnboundedSender<Frame>,
     pub fail: Arc<Mutex<Vec<String>>>,
+    pub warning: Arc<Mutex<String>>,
     list_delay_ms: Arc<std::sync::atomic::AtomicU64>,
 }
 impl Drop for Lab {
@@ -434,6 +435,8 @@ pub(crate) async fn lab(initial: Json) -> Lab {
     let (push, mut frames) = mpsc::unbounded_channel::<Frame>();
     let fail: Arc<Mutex<Vec<String>>> = Default::default();
     let failing = fail.clone();
+    let warning = Arc::new(Mutex::new(String::new()));
+    let reported_warning = warning.clone();
     let list_delay_ms = Arc::new(std::sync::atomic::AtomicU64::new(0));
     let delayed = list_delay_ms.clone();
     tokio::spawn(async move {
@@ -481,7 +484,8 @@ pub(crate) async fn lab(initial: Json) -> Lab {
                             let reply = if failing.lock().unwrap().contains(&m) {
                                 Reply::Err { err: Failure::new(ErrorCode::Unavailable, "no worker", false) }
                             } else if m == "ai.launcher.list" {
-                                Reply::Ok { ok: json!({"chats":chats,"projects":[{"id":"nacre","label":"Nacre"}],"defaultProvider":"codex","warning":""}) }
+                                let warning = reported_warning.lock().unwrap().clone();
+                                Reply::Ok { ok: json!({"chats":chats,"projects":[{"id":"nacre","label":"Nacre"}],"defaultProvider":"codex","warning":warning}) }
                             } else if m == "ai.launcher.open" {
                                 Reply::Ok { ok: json!({"ok":true,"focused":true}) }
                             } else {
@@ -514,6 +518,7 @@ pub(crate) async fn lab(initial: Json) -> Lab {
         calls,
         push,
         fail,
+        warning,
         list_delay_ms,
     }
 }
@@ -563,7 +568,7 @@ pub(crate) async fn chat_for(lab: &Lab) -> Chat {
     let path = lab.dir.join("cache/chats.json");
     chat_for_cache(lab, path).await
 }
-async fn chat_for_cache(lab: &Lab, cache: std::path::PathBuf) -> Chat {
+async fn lab_source(lab: &Lab) -> Arc<dyn bead::core::source::Source> {
     for _ in 0..500 {
         if lab.client.snapshot().connected && lab.client.status().boot.is_some() {
             break;
@@ -571,7 +576,11 @@ async fn chat_for_cache(lab: &Lab, cache: std::path::PathBuf) -> Chat {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     let topic = lab.client.lease_topic("ai.chat").unwrap();
-    Chat::new(Some(lab.client.clone()), Arc::new(topic), meter()).with_launcher_cache_path(cache)
+    Arc::new(topic)
+}
+async fn chat_for_cache(lab: &Lab, cache: std::path::PathBuf) -> Chat {
+    Chat::new(Some(lab.client.clone()), lab_source(lab).await, meter())
+        .with_launcher_cache_path(cache)
 }
 async fn until(
     chat: &Chat,
@@ -821,7 +830,7 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     expect_launcher_call(
         &mut lab,
         "ai.launcher.new",
-        json!({"provider":"claude","project":"general"}),
+        json!({"provider":"claude","project":"general-chat"}),
     )
     .await;
     finish_launcher_action(&chat, &launcher).await;
@@ -839,16 +848,20 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
     let mut lab = lab(topic(&[], state(false, "", None))).await;
     lab.list_delay_ms.store(150, std::sync::atomic::Ordering::Relaxed);
     let cache = lab.dir.join("cache/chats.json");
-    let cold_chat = chat_for_cache(&lab, cache.clone()).await;
     let launcher = launcher_stores(&[]);
+    let cold_source = lab_source(&lab).await;
     let cold_started = std::time::Instant::now();
+    let cold_chat = Chat::new(Some(lab.client.clone()), cold_source, meter())
+        .with_launcher_cache_path(cache.clone());
     cold_chat.project(&launcher);
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
+    let cold_deadline = std::time::Instant::now() + Duration::from_secs(2);
     let cold_ms = loop {
         let out = cold_chat.project(&launcher);
         if matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12) {
             break cold_started.elapsed().as_millis();
         }
+        assert!(std::time::Instant::now() < cold_deadline, "cold list did not arrive within 2 seconds");
         tokio::time::sleep(Duration::from_millis(2)).await;
     };
     assert!(cold_ms >= 100, "delayed cold fetch returned implausibly early: {cold_ms} ms");
@@ -856,14 +869,16 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
     let mut cached = Chat::load_launcher_cache(&cache).expect("cold fetch wrote cache");
     cached["chats"][0]["title"] = json!("Saved cache title");
     Chat::save_launcher_cache(&cache, &cached);
-    let warm_chat = chat_for_cache(&lab, cache).await;
+    let warm_source = lab_source(&lab).await;
     let warm_started = std::time::Instant::now();
+    let warm_chat = Chat::new(Some(lab.client.clone()), warm_source, meter())
+        .with_launcher_cache_path(cache);
     let first = warm_chat.project(&launcher);
     let first_frame_ms = warm_started.elapsed().as_millis();
     let Value::List(rows) = &first["launcher.chats"] else { panic!("cached chats") };
     assert_eq!(rows.len(), 12);
     assert_eq!(rows[0]["title"], "Saved cache title");
-    assert!(first_frame_ms < 30, "cached list missed first frame: {first_frame_ms} ms");
+    assert!(first_frame_ms < 30, "cache load and first projection exceeded 30 ms: {first_frame_ms} ms");
     assert_eq!(first["launcher.can_new"], Value::Bool(true));
     assert_eq!(first["launcher.can_latest"], Value::Bool(true));
     warm_chat.act("launcher:new", &launcher);
@@ -872,19 +887,56 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
     for _ in 0..2 {
         let call = call_with_timeout(&mut lab).await;
         saw_list |= call.0 == "ai.launcher.list";
-        saw_new |= call.0 == "ai.launcher.new";
+        if call.0 == "ai.launcher.new" {
+            assert_eq!(call.1, json!({"provider":"codex","project":"general-chat"}));
+            saw_new = true;
+        }
     }
     assert!(saw_list && saw_new, "new action is sent while the refresh is pending");
+    let fresh_deadline = warm_started + Duration::from_secs(2);
     loop {
         let out = warm_chat.project(&launcher);
         if matches!(&out["launcher.chats"], Value::List(rows) if rows.first().is_some_and(|row| row["title"] == "Build fixes 1")) {
             break;
         }
+        assert!(std::time::Instant::now() < fresh_deadline, "fresh list did not arrive within 2 seconds");
         tokio::time::sleep(Duration::from_millis(2)).await;
     }
     let fresh_ms = warm_started.elapsed().as_millis();
     assert!(fresh_ms < 300, "fresh local fake service exceeded 300 ms: {fresh_ms} ms");
     eprintln!("launcher timing: cold open-to-list={cold_ms} ms; cached first-frame={first_frame_ms} ms; fresh refresh={fresh_ms} ms");
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn launcher_partial_warning_keeps_valid_rows_and_hides_raw_stderr() {
+    let _guard = serial();
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
+    *lab.warning.lock().unwrap() = "bash: /secret/path: permission denied".into();
+    let chat = chat_for(&lab).await;
+    let launcher = launcher_stores(&[]);
+    chat.project(&launcher);
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
+    let out = until(&chat, &launcher, "partial launcher list", |out| {
+        matches!(&out["launcher.chats"], Value::List(rows) if !rows.is_empty())
+    }).await;
+    assert_eq!(string(&out, "launcher.warning"), tr("bead.common.request-failed", &[]));
+    assert!(!string(&out, "launcher.warning").contains("/secret/path"));
+    let cached = std::fs::read_to_string(lab.dir.join("cache/chats.json")).unwrap();
+    assert!(!cached.contains("permission denied"));
+    assert!(cached.contains("Brain notes"));
+}
+
+#[test]
+fn launcher_cache_rejects_corrupt_and_oversized_files() {
+    let _guard = serial();
+    let dir = std::env::temp_dir().join(format!("launcher-cache-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("chats.json");
+    std::fs::write(&path, b"not json").unwrap();
+    assert!(Chat::load_launcher_cache(&path).is_none());
+    std::fs::write(&path, vec![b'x'; LAUNCHER_CACHE_LIMIT + 1]).unwrap();
+    assert!(Chat::load_launcher_cache(&path).is_none());
+    let _ = std::fs::remove_dir_all(dir);
 }
 
 #[test]
@@ -908,6 +960,7 @@ fn session_without_provider_timestamp_does_not_claim_old_activity() {
     let Value::List(rows) = &projected["launcher.chats"] else {
         panic!("chat list")
     };
+    assert!(rows[0].get("project").is_none(), "legacy project metadata is hidden");
     assert_eq!(
         rows[0]["lastActivityLabel"],
         tr("bead.panel.launcher-activity-unknown", &[])
@@ -1001,20 +1054,30 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     projected.insert("launcher.chats".into(), Value::list(rows));
     for scale in [1., 1.5] {
         let mut regular = harness(projected.clone(), scale)?;
-        assert!(
-            regular
-                .session
-                .view_nodes()
-                .iter()
-                .any(|node| node.id == "chat.search")
-        );
-        assert!(
-            regular
-                .session
-                .view_nodes()
-                .iter()
-                .any(|node| node.id == "chat.recent-chats")
-        );
+        let nodes = regular.session.view_nodes();
+        for id in [
+            "chat.logo", "chat.title", "chat.pin", "chat.new-chat", "chat.claude",
+            "chat.codex", "chat.resume", "chat.search", "chat.refresh", "chat.recent-chats",
+            "chat.brain", "chat.settings", "chat.quick-chat",
+        ] {
+            assert!(nodes.iter().any(|node| node.id == id), "missing launcher node {id}");
+        }
+        assert!(nodes.iter().any(|node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:new")));
+        assert!(nodes.iter().any(|node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:latest")));
+        assert!(!nodes.iter().any(|node| node.id.to_lowercase().contains("project")));
+        assert!(!projected.contains_key("launcher.project"));
+        assert!(!projected.contains_key("launcher.projects"));
+        let row = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with("chat-row")).expect("chat row");
+        let title = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with(".title")).expect("row title");
+        let meta = nodes.iter().find(|node| node.id.contains("recent-chats") && node.id.ends_with(".meta")).expect("row metadata");
+        let row_rect = bead::ui::rect(&row.draw);
+        for child in [title, meta] {
+            let rect = bead::ui::rect(&child.draw);
+            assert!(rect.x >= row_rect.x && rect.y >= row_rect.y
+                && rect.x + rect.w <= row_rect.x + row_rect.w
+                && rect.y + rect.h <= row_rect.y + row_rect.h,
+                "row content is clipped: row={row_rect:?}, child={rect:?}");
+        }
         golden("launcher", &mut regular, scale)?;
         let mut detached_projection = projected.clone();
         detached_projection.insert("view.detached".into(), Value::Bool(true));

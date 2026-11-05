@@ -203,13 +203,24 @@ impl Chat {
         Some(base.join("nacre/ai-panel/chats.json"))
     }
     fn load_launcher_cache(path: &std::path::Path) -> Option<Json> {
-        let bytes = std::fs::read(path).ok()?;
+        use std::io::Read;
+        let file = std::fs::File::open(path).ok()?;
+        let metadata = file.metadata().ok()?;
+        if !metadata.is_file() || metadata.len() > LAUNCHER_CACHE_LIMIT as u64 { return None; }
+        let mut bytes = Vec::with_capacity(metadata.len() as usize);
+        file.take((LAUNCHER_CACHE_LIMIT + 1) as u64).read_to_end(&mut bytes).ok()?;
         if bytes.len() > LAUNCHER_CACHE_LIMIT { return None; }
         let mut data: Json = serde_json::from_slice(&bytes).ok()?;
+        if let Some(object) = data.as_object_mut() {
+            object.retain(|key, _| matches!(key.as_str(), "defaultProvider" | "chats"));
+            if object.get("defaultProvider").and_then(Json::as_str) != Some("claude") {
+                object.insert("defaultProvider".into(), json!("codex"));
+            }
+        }
         let chats = data["chats"].as_array_mut()?;
         chats.truncate(LAUNCHER_CACHE_ROWS);
         chats.retain(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
-            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 240));
+            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256));
         for row in chats {
             if let Some(object) = row.as_object_mut() {
                 object.remove("project");
@@ -223,7 +234,7 @@ impl Chat {
         let cached = json!({
             "defaultProvider": if data["defaultProvider"].as_str() == Some("claude") { "claude" } else { "codex" },
             "chats": chats.iter().filter(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
-                && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 240))
+                && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256))
                 .take(LAUNCHER_CACHE_ROWS).map(|row| json!({
                     "key": row["key"], "title": row["title"], "provider": row["provider"],
                     "state": row["state"], "lastActivity": row["lastActivity"]
@@ -232,18 +243,26 @@ impl Chat {
         let Ok(bytes) = serde_json::to_vec(&cached) else { return; };
         if bytes.len() > LAUNCHER_CACHE_LIMIT { return; }
         let Some(parent) = path.parent() else { return; };
-        if std::fs::create_dir_all(parent).is_err() { return; }
+        use std::os::unix::fs::DirBuilderExt;
+        if std::fs::DirBuilder::new().mode(0o700).recursive(true).create(parent).is_err() && !parent.is_dir() { return; }
+        static NEXT_CACHE_TEMP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let suffix = NEXT_CACHE_TEMP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let temp = path.with_extension(format!("{}.{}.tmp", std::process::id(), suffix));
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
         #[cfg(unix)] {
-            use std::os::unix::fs::PermissionsExt;
-            let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
         }
-        let temp = path.with_extension("json.tmp");
-        if std::fs::write(&temp, bytes).is_ok() {
-            #[cfg(unix)] {
-                use std::os::unix::fs::PermissionsExt;
-                let _ = std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o600));
+        let Ok(mut file) = options.open(&temp) else { return; };
+        use std::io::Write;
+        if file.write_all(&bytes).is_ok() {
+            drop(file);
+            if std::fs::rename(&temp, path).is_err() {
+                let _ = std::fs::remove_file(temp);
             }
-            let _ = std::fs::rename(temp, path);
+        } else {
+            let _ = std::fs::remove_file(temp);
         }
     }
     pub(crate) fn launcher_active(&self, stores: &Stores) -> bool {
@@ -452,11 +471,14 @@ impl Chat {
                     }
                     if let Some(chats) = clean["chats"].as_array_mut() {
                         chats.truncate(LAUNCHER_CACHE_ROWS);
+                        chats.retain(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.chars().count() <= 256));
                         for row in chats {
                             if let Some(object) = row.as_object_mut() { object.remove("project"); }
                         }
                     }
-                    if warning.is_empty() {
+                    let has_rows = clean["chats"].as_array().is_some_and(|rows| !rows.is_empty());
+                    if warning.is_empty() || has_rows {
                         if let Some(path) = &self.launcher_cache_path {
                             Self::save_launcher_cache(path, &clean);
                         }
@@ -583,7 +605,7 @@ impl Chat {
                 self.st.borrow_mut().launcher_asked = Some(Instant::now());
             }
             let st = self.st.borrow();
-            let data = st.launcher.as_ref().cloned().or_else(|| self.launcher_cache_path.as_deref().and_then(Self::load_launcher_cache)).unwrap_or_else(|| json!({}));
+            let data = st.launcher.as_ref().cloned().unwrap_or_else(|| json!({}));
             let query = match stores.get("launcher.search") {
                 Some(Value::Text(s)) => s.to_lowercase(),
                 _ => String::new(),
@@ -642,6 +664,7 @@ impl Chat {
                     };
                     let mut item = row.clone();
                     if let Some(obj) = item.as_object_mut() {
+                        obj.remove("project");
                         obj.insert("provider".into(), json!(provider));
                         obj.insert("state".into(), json!(state));
                         obj.insert("lastActivityLabel".into(), json!(last));
@@ -652,7 +675,7 @@ impl Chat {
             out.insert("launcher.chats".into(), Value::list(rows));
             let selected_provider = match stores.get("launcher.provider") {
                 Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
-                _ => data["defaultProvider"]
+                        _ => data["defaultProvider"]
                     .as_str()
                     .filter(|v| matches!(*v, "codex" | "claude"))
                     .unwrap_or("codex")
@@ -1069,11 +1092,19 @@ impl Chat {
             "launcher" => match rest {
                 "refresh" => self.st.borrow_mut().launcher_asked = None,
                 "new" => {
-                    let provider = value("launcher.provider");
+                    let provider = match value("launcher.provider").as_str() {
+                        "codex" => "codex".to_owned(),
+                        "claude" => "claude".to_owned(),
+                        _ => self.st.borrow().launcher.as_ref()
+                            .and_then(|data| data["defaultProvider"].as_str())
+                            .filter(|value| matches!(*value, "codex" | "claude"))
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| "codex".to_owned()),
+                    };
                     self.begin(
                         Call::LauncherAction,
                         "ai.launcher.new",
-                        json!({"provider": provider, "project": "general"}),
+                        json!({"provider": provider, "project": "general-chat"}),
                         self.waker(),
                     );
                 }
@@ -1144,7 +1175,7 @@ impl Chat {
                         out.stores.insert("launcher.selected".into(), text(key));
                     }
                 }
-                "brain" | "settings" | "projects" => {
+                "brain" | "settings" => {
                     self.begin(
                         Call::LauncherAction,
                         "ai.launcher.action",
