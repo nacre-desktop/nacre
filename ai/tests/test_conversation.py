@@ -115,7 +115,13 @@ class Conversation(unittest.TestCase):
             root = Path(tmp) / "brain"
             self.assertEqual(list((root / "wiki").glob("*.md")), [])
             body = Path(json.loads(first.stdout)["path"]).read_text()
-            self.assertIn("Worlds: Climbing, Siverteh", body)
+            taxonomy = json.loads((root / "registry.json").read_text())
+            personal = next(
+                world["name"]
+                for world in taxonomy["worlds"]
+                if "Personal" in world["aliases"]
+            )
+            self.assertIn(f"Worlds: Climbing, {personal}", body)
             self.assertIn("Topics: training", body)
             refused = subprocess.run(
                 command,
