@@ -15,21 +15,22 @@
     ty = 0,
     drag = null,
     dpr = 1,
-    requestId = 0,
-    cameraMoved = false;
+    requestId = 0;
   let world = "all",
     kind = "all",
     query = "",
+    selected = null,
     active = false,
     palette = {},
     themeSignature = "",
     themeColors = [];
   const color = (name) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const worldSlots = new Map();
   const paletteFor = (value) => {
-    let h = 0;
-    for (const c of value || "Brain") h = (h * 31 + c.charCodeAt(0)) | 0;
-    return themeColors[Math.abs(h ^ (h >>> 16)) % themeColors.length];
+    const world = value || "Brain";
+    if (!worldSlots.has(world)) worldSlots.set(world, worldSlots.size);
+    return themeColors[worldSlots.get(world) % themeColors.length];
   };
   const text = (node, value) => {
     node.textContent = value;
@@ -39,6 +40,7 @@
     dpr = Math.min(2, devicePixelRatio || 1);
     canvas.width = Math.max(1, Math.round(r.width * dpr));
     canvas.height = Math.max(1, Math.round(r.height * dpr));
+    if (nodes.length) fit();
     draw();
   }
   function size(n) {
@@ -69,11 +71,13 @@
       line = color("--muted"),
       foreground = color("--text"),
       font = getComputedStyle(document.body).fontFamily;
+    const base = [color("--accent"), color("--secondary"), color("--tertiary")];
     themeColors = [
-      color("--accent"),
-      color("--secondary"),
-      color("--tertiary"),
-      color("--logo-highlight"),
+      ...base,
+      ...base.flatMap((token, i) => [
+        `color-mix(in srgb, ${token} 65%, ${base[(i + 1) % 3]})`,
+        `color-mix(in srgb, ${token} 35%, ${base[(i + 1) % 3]})`,
+      ]),
     ];
     const signature = themeColors.join("|");
     if (signature !== themeSignature) {
@@ -83,7 +87,6 @@
     ctx.clearRect(0, 0, w, h);
     ctx.save();
     const shown = new Set(nodes.filter(visible).map((n) => n.id));
-    const labels = [];
     for (const l of links) {
       const a =
         typeof l.source === "object"
@@ -128,6 +131,7 @@
         if (neighborLabels.size >= 24) break;
         neighborLabels.add(id);
       }
+    const positioned = [];
     for (const n of nodes) {
       if (!shown.has(n.id)) continue;
       const p = point(n),
@@ -143,35 +147,139 @@
         ctx.strokeStyle = foreground;
         ctx.stroke();
       }
-      const label = r >= 8 * dpr || n === hover || neighborLabels.has(n.id);
+      const label =
+        r >= 8 * dpr ||
+        n === hover ||
+        n === selected ||
+        neighborLabels.has(n.id);
       if (label) {
-        ctx.font = `${Math.max(11, 12 * scale) * dpr}px ${font}`;
-        const box = {
-          x: p.x - Math.min(180 * dpr, ctx.measureText(n.label).width) / 2,
-          y: p.y + r + 3 * dpr,
-          w: Math.min(180 * dpr, ctx.measureText(n.label).width),
-          h: 16 * dpr,
-        };
-        if (
-          n === hover ||
-          !labels.some(
-            (b) =>
-              box.x < b.x + b.w &&
-              box.x + box.w > b.x &&
-              box.y < b.y + b.h &&
-              box.y + box.h > b.y,
-          )
-        ) {
-          labels.push(box);
-          ctx.globalAlpha = n === hover ? 1 : 0.9;
-          ctx.fillStyle = foreground;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "top";
-          ctx.fillText(n.label, p.x, p.y + r + 3 * dpr, 180 * dpr);
-        }
+        positioned.push({
+          n,
+          p,
+          r,
+          rank:
+            n === hover
+              ? 100000
+              : n === selected
+                ? 50000
+                : neighborLabels.has(n.id)
+                  ? 10000
+                  : r,
+        });
       }
     }
+    // Labels are placed after every node so they always sit above their own node.
+    const background = color("--panel") || color("--bg") || "#fff";
+    const nodeDiscs = nodes
+      .filter((n) => shown.has(n.id))
+      .map((n) => ({ n, p: point(n), r: size(n) * dpr * Math.sqrt(scale) }));
+    positioned.sort((a, b) => b.rank - a.rank);
+    const labelBoxes = [];
+    for (const item of positioned) {
+      const { n, p, r } = item;
+      const fontSize = Math.max(11, Math.min(18, 12 * Math.sqrt(scale))) * dpr;
+      ctx.font = `${fontSize}px ${font}`;
+      const labelWidth = Math.min(180 * dpr, ctx.measureText(n.label).width);
+      const box = {
+        x: p.x - labelWidth / 2 - 2 * dpr,
+        y: p.y + r + 4 * dpr,
+        w: labelWidth + 4 * dpr,
+        h: fontSize + 4 * dpr,
+      };
+      const collides = (candidate) => {
+        const labelCollision = labelBoxes.some(
+          (b) =>
+            candidate.x < b.x + b.w &&
+            candidate.x + candidate.w > b.x &&
+            candidate.y < b.y + b.h &&
+            candidate.y + candidate.h > b.y,
+        );
+        const nodeCollision = nodeDiscs.some((d) => {
+          if (d.n === n) return false;
+          const cx = Math.max(
+            candidate.x,
+            Math.min(d.p.x, candidate.x + candidate.w),
+          );
+          const cy = Math.max(
+            candidate.y,
+            Math.min(d.p.y, candidate.y + candidate.h),
+          );
+          return Math.hypot(cx - d.p.x, cy - d.p.y) < d.r + 2 * dpr;
+        });
+        return labelCollision || nodeCollision;
+      };
+      if (n === hover && collides(box)) {
+        for (
+          let offset = 8 * dpr;
+          offset <= 96 * dpr && collides(box);
+          offset += 8 * dpr
+        )
+          box.y += 8 * dpr;
+      }
+      if (
+        box.x < 0 ||
+        box.x + box.w > canvas.width ||
+        box.y < 0 ||
+        box.y + box.h > canvas.height
+      )
+        continue;
+      if (collides(box)) continue;
+      labelBoxes.push(box);
+      ctx.globalAlpha = n === hover ? 1 : 0.94;
+      ctx.font = `${fontSize}px ${font}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+      ctx.lineJoin = "round";
+      ctx.lineWidth = 4 * dpr;
+      ctx.strokeStyle = background;
+      ctx.strokeText(n.label, p.x, box.y + 2 * dpr, 180 * dpr);
+      ctx.fillStyle = foreground;
+      ctx.fillText(n.label, p.x, box.y + 2 * dpr, 180 * dpr);
+    }
+    ctx.globalAlpha = 1;
+    drawLegend();
     ctx.restore();
+  }
+  function drawLegend() {
+    const legend = $("graph-legend");
+    if (!legend) return;
+    const worlds = [
+      ...new Set(nodes.map((n) => n.world || n.category).filter(Boolean)),
+    ].sort();
+    const rows = worlds.map((v) => [
+      v,
+      palette[v] || (palette[v] = paletteFor(v)),
+    ]);
+    const worldText = tr("brain.ui.text.graph-legend-world", "Colour = world");
+    const sizeText = tr("brain.ui.text.graph-legend-size", "Size = note count");
+    const kindText = tr("brain.ui.text.graph-legend-kind", "Entity / note");
+    const signature = JSON.stringify([rows, worldText, sizeText, kindText]);
+    if (legend.dataset.signature === signature) return;
+    legend.dataset.signature = signature;
+    legend.replaceChildren();
+    const addExplanation = (value) => {
+      const item = document.createElement("small");
+      item.className = "graph-legend-explanation";
+      item.textContent = value;
+      legend.append(item);
+    };
+    addExplanation(worldText);
+    for (const [name, swatch] of rows) {
+      const item = document.createElement("span");
+      const dot = document.createElement("i");
+      dot.style.backgroundColor = swatch;
+      const label = document.createElement("span");
+      label.textContent = name;
+      item.append(dot, label);
+      legend.append(item);
+    }
+    addExplanation(sizeText);
+    const kind = document.createElement("small");
+    kind.className = "graph-legend-explanation graph-legend-kind";
+    const dot = document.createElement("i");
+    dot.className = "graph-kind-dot";
+    kind.append(dot, document.createTextNode(kindText));
+    legend.append(kind);
   }
   function hit(x, y) {
     let best = null,
@@ -188,26 +296,47 @@
     return best;
   }
   function fit() {
-    if (!nodes.length) return;
-    const xs = nodes.map((n) => n.x || 0),
-      ys = nodes.map((n) => n.y || 0);
-    const span = Math.max(
-      260,
-      Math.max(...xs) - Math.min(...xs),
-      Math.max(...ys) - Math.min(...ys),
-    );
-    scale = Math.max(
-      0.08,
-      Math.min(
-        1.2,
-        (Math.min(canvas.clientWidth, canvas.clientHeight) * 0.7) / span,
-      ),
-    );
-    tx = ty = 0;
+    const shown = nodes.filter(visible);
+    if (!shown.length) return;
+    const width = Math.max(1, canvas.clientWidth - 96),
+      height = Math.max(1, canvas.clientHeight - 96);
+    scale = Math.min(2.4, Math.max(0.04, scale || 1));
+    let bounds;
+    for (let i = 0; i < 4; i++) {
+      const discs = shown.map((n) => ({
+        x: (n.x || 0) * scale,
+        y: (n.y || 0) * scale,
+        r: size(n) * Math.sqrt(scale),
+      }));
+      bounds = {
+        minX: Math.min(...discs.map((d) => d.x - d.r)),
+        maxX: Math.max(...discs.map((d) => d.x + d.r)),
+        minY: Math.min(...discs.map((d) => d.y - d.r)),
+        maxY: Math.max(...discs.map((d) => d.y + d.r)),
+      };
+      const factor = Math.min(
+        width / Math.max(1, bounds.maxX - bounds.minX),
+        height / Math.max(1, bounds.maxY - bounds.minY),
+      );
+      scale = Math.min(2.4, Math.max(0.04, scale * factor));
+    }
+    const discs = shown.map((n) => ({
+      x: (n.x || 0) * scale,
+      y: (n.y || 0) * scale,
+      r: size(n) * Math.sqrt(scale),
+    }));
+    bounds = {
+      minX: Math.min(...discs.map((d) => d.x - d.r)),
+      maxX: Math.max(...discs.map((d) => d.x + d.r)),
+      minY: Math.min(...discs.map((d) => d.y - d.r)),
+      maxY: Math.max(...discs.map((d) => d.y + d.r)),
+    };
+    tx = -(bounds.minX + bounds.maxX) / 2;
+    ty = -(bounds.minY + bounds.maxY) / 2;
   }
   function loadData(data) {
     if (simulation) simulation.stop();
-    cameraMoved = false;
+    selected = null;
     nodes = data.nodes.map((n) => ({
       ...n,
       kind:
@@ -241,6 +370,10 @@
         valid.has(typeof l.target === "object" ? l.target.id : l.target),
     );
     $("graph-view").dataset.layout = "running";
+    const aspect = Math.max(
+      0.5,
+      Math.min(2.5, canvas.clientWidth / Math.max(1, canvas.clientHeight)),
+    );
     simulation = d3Force
       .forceSimulation(nodes)
       .force(
@@ -254,12 +387,13 @@
           .strength(0.16),
       )
       .force("charge", d3Force.forceManyBody().strength(-95).distanceMax(420))
-      .force("center", d3Force.forceCenter(0, 0))
+      .force("x", d3Force.forceX(0).strength(0.014 / (aspect * aspect)))
+      .force("y", d3Force.forceY(0).strength(0.014 * aspect * aspect))
       .force("collide", d3Force.forceCollide((n) => size(n) + 5).iterations(1))
       .alphaDecay(0.045)
       .on("tick", draw)
       .on("end", () => {
-        if (!cameraMoved) fit();
+        fit();
         draw();
         $("graph-view").dataset.layout = "settled";
       });
@@ -371,6 +505,7 @@
     nodes = [];
     links = [];
     hover = null;
+    selected = null;
     drag = null;
     palette = {};
     canvas.width = canvas.height = 1;
@@ -393,6 +528,7 @@
     canvas.setPointerCapture(e.pointerId);
     const n = hit(e.offsetX, e.offsetY);
     if (n && simulation) {
+      selected = n;
       drag = {
         node: n,
         id: e.pointerId,
@@ -428,7 +564,6 @@
     if (drag.id === e.pointerId) {
       if (Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > 4) {
         drag.moved = true;
-        cameraMoved = true;
       }
       if (drag.node) {
         const r = canvas.getBoundingClientRect();
@@ -471,7 +606,6 @@
     "wheel",
     (e) => {
       e.preventDefault();
-      cameraMoved = true;
       const old = scale;
       scale = Math.max(0.08, Math.min(3, scale * Math.exp(-e.deltaY * 0.001)));
       tx =
@@ -501,25 +635,31 @@
           v.id.toLowerCase().includes(query),
       );
       if (n) {
-        cameraMoved = true;
         tx = -(n.x || 0) * scale;
         ty = -(n.y || 0) * scale;
         hover = n;
+        selected = n;
       }
     }
     draw();
   });
   $("graph-world").addEventListener("change", (e) => {
     world = e.target.value;
+    fit();
     draw();
   });
   $("graph-kind").addEventListener("change", (e) => {
     kind = e.target.value;
+    fit();
+    draw();
+  });
+  $("graph-fit")?.addEventListener("click", () => {
+    fit();
     draw();
   });
   new ResizeObserver(resize).observe($("graph-stage"));
   new MutationObserver(() => {
-    if (active) resize();
+    if (active) draw();
   }).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["class", "style"],
@@ -527,6 +667,10 @@
   window.BrainGraphUI = {
     open,
     close,
+    fit: () => {
+      fit();
+      draw();
+    },
     isActive: () => active,
     isRunning: () => !!simulation && simulation.alpha() > simulation.alphaMin(),
     get nodes() {

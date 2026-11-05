@@ -4313,5 +4313,10 @@
   "brain.ui.text.graph-kind-topic": "Brain graph node kind filter option.",
   "brain.ui.text.graph-kind-entity": "Brain graph node kind filter option.",
   "brain.ui.text.graph-kind-wiki-page": "Brain graph node kind filter option.",
-  "brain.ui.text.graph-kind-note": "Brain graph node kind filter option."
+  "brain.ui.text.graph-kind-note": "Brain graph node kind filter option.",
+  "brain.ui.text.graph-fit": "Brain graph fit control and compact legend explaining world colours, note counts and small node kinds.",
+  "brain.ui.text.graph-legend-world": "Brain graph fit control and compact legend explaining world colours, note counts and small node kinds.",
+  "brain.ui.text.graph-legend-size": "Brain graph fit control and compact legend explaining world colours, note counts and small node kinds.",
+  "brain.ui.text.graph-legend-kind": "Brain graph fit control and compact legend explaining world colours, note counts and small node kinds.",
+  "brain.ui.aria-label.graph-legend": "Brain graph fit control and compact legend explaining world colours, note counts and small node kinds."
 }

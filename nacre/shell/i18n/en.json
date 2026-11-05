@@ -4268,5 +4268,10 @@
   "brain.ui.text.graph-kind-topic": "Topic",
   "brain.ui.text.graph-kind-entity": "Entity",
   "brain.ui.text.graph-kind-wiki-page": "Wiki page",
-  "brain.ui.text.graph-kind-note": "Note"
+  "brain.ui.text.graph-kind-note": "Note",
+  "brain.ui.text.graph-fit": "Fit",
+  "brain.ui.text.graph-legend-world": "Colour = world",
+  "brain.ui.text.graph-legend-size": "Size = note count",
+  "brain.ui.text.graph-legend-kind": "Entity / note",
+  "brain.ui.aria-label.graph-legend": "Graph legend"
 }

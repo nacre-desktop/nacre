@@ -250,7 +250,7 @@ try {
     "Brain summary",
   );
   const summary = await evaluate(
-    '({notes:graph.noteCount, sample:graph.nodes.find(n=>n.kind==="note")?.id})',
+    '({notes:graph.noteCount, sample:graph.nodes.find(n=>n.kind==="note")?.id, error:document.querySelector("#load-error-message").textContent})',
   );
   if (summary.notes !== 2000 + worlds.length || !summary.sample)
     throw new Error(`fixture summary mismatch: ${JSON.stringify(summary)}`);
@@ -291,6 +291,33 @@ try {
     5000,
   );
   const settleMs = Date.now() - readyAt;
+  const fittedBounds = await evaluate(`(()=>{
+    const canvas=document.querySelector("#graph-canvas"),r=canvas.getBoundingClientRect();
+    const points=window.BrainGraphUI.nodes.map(n=>window.BrainGraphUI.screenNode(n.id));
+    const xs=points.map(p=>p.x),ys=points.map(p=>p.y);
+    return {left:Math.min(...xs)-r.left,right:r.right-Math.max(...xs),top:Math.min(...ys)-r.top,bottom:r.bottom-Math.max(...ys),width:Math.max(...xs)-Math.min(...xs),height:Math.max(...ys)-Math.min(...ys),canvasWidth:r.width,canvasHeight:r.height};
+  })()`);
+  if (
+    Math.min(
+      fittedBounds.left,
+      fittedBounds.right,
+      fittedBounds.top,
+      fittedBounds.bottom,
+    ) < 40 ||
+    Math.max(
+      fittedBounds.width / fittedBounds.canvasWidth,
+      fittedBounds.height / fittedBounds.canvasHeight,
+    ) < 0.65
+  )
+    throw new Error(
+      `graph did not fit its viewport: ${JSON.stringify(fittedBounds)}`,
+    );
+  if (
+    !(await evaluate(
+      'document.querySelector("#graph-legend").textContent.includes("Colour = world") && document.querySelector("#graph-legend").textContent.includes("Size = note count")',
+    ))
+  )
+    throw new Error("graph legend is missing");
 
   // Narrow by clicking a structural category on the actual canvas.
   const category = all.nodes.find((n) =>
@@ -334,6 +361,15 @@ try {
       throw new Error(
         `category click did not request a narrowed scope: ${JSON.stringify(graphRequests)}`,
       );
+    await until(
+      () =>
+        evaluate(
+          'document.querySelector("#graph-view").dataset.layout === "settled"',
+        ),
+      "settled narrowed graph",
+      5000,
+    );
+    await screenshot("narrowed");
   }
 
   await evaluate('window.BrainGraphUI.open("all",false)');
@@ -381,6 +417,37 @@ try {
     "window.__graphRafRun=false;window.__graphRafFrames",
   );
   const dragFps = dragFrames / ((Date.now() - rafStart) / 1000);
+  await evaluate('document.querySelector("#graph-fit").click()');
+  const fitButtonCenter = await evaluate(`(()=>{
+    const r=document.querySelector("#graph-canvas").getBoundingClientRect();
+    const p=window.BrainGraphUI.nodes.map(n=>window.BrainGraphUI.screenNode(n.id));
+    return {x:(Math.min(...p.map(n=>n.x))+Math.max(...p.map(n=>n.x)))/2-r.left-r.width/2,y:(Math.min(...p.map(n=>n.y))+Math.max(...p.map(n=>n.y)))/2-r.top-r.height/2};
+  })()`);
+  if (Math.max(Math.abs(fitButtonCenter.x), Math.abs(fitButtonCenter.y)) > 24)
+    throw new Error(
+      `Fit button did not recenter the graph: ${JSON.stringify(fitButtonCenter)}`,
+    );
+  await call("Emulation.setDeviceMetricsOverride", {
+    width: 1400,
+    height: 900,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  const resizePadding = await evaluate(`(()=>{
+    const r=document.querySelector("#graph-canvas").getBoundingClientRect();
+    const p=window.BrainGraphUI.nodes.map(n=>window.BrainGraphUI.screenNode(n.id));
+    return Math.min(Math.min(...p.map(n=>n.x))-r.left,r.right-Math.max(...p.map(n=>n.x)),Math.min(...p.map(n=>n.y))-r.top,r.bottom-Math.max(...p.map(n=>n.y)));
+  })()`);
+  if (resizePadding < 40)
+    throw new Error(`resize did not fit graph: ${resizePadding}px padding`);
+  await call("Emulation.setDeviceMetricsOverride", {
+    width: 1600,
+    height: 1000,
+    deviceScaleFactor: 1,
+    mobile: false,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 150));
 
   const noteScope = `note:${summary.sample}`;
   const directScopeStart = Date.now();
@@ -509,10 +576,15 @@ try {
       layoutSettledMs: settleMs,
       dragFps: Number(dragFps.toFixed(1)),
       simulationStopped,
+      fittedBounds,
+      fitButton: "passed",
+      resizePadding,
+      legend: "passed",
       noteClickReader: "passed",
       screenshots: [
         ".lead/evidence/n0136-graph-light.png",
         ".lead/evidence/n0136-graph-dark.png",
+        ".lead/evidence/n0136-graph-narrowed.png",
       ],
       consoleErrors: 0,
     }),

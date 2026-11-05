@@ -952,9 +952,30 @@ h1 {
   padding: 10px 16px;
   margin: 0 0 8px;
 }
+.content-scroll:has(#graph-view:not([hidden])) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+.content-scroll:has(#graph-view:not([hidden])) .page-heading {
+  min-height: 0;
+}
+.content-scroll:has(#graph-view:not([hidden])) .page-heading h1 {
+  margin-bottom: 0;
+}
+.content-scroll:has(#graph-view:not([hidden])) #breadcrumbs,
+.content-scroll:has(#graph-view:not([hidden])) #subtitle:empty {
+  display: none;
+}
 #graph-view {
-  height: min(74vh, 900px);
-  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 240px;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -994,7 +1015,8 @@ h1 {
 }
 #graph-stage {
   position: relative;
-  height: calc(100% - 55px);
+  flex: 1;
+  min-height: 0;
 }
 #graph-canvas {
   width: 100%;
@@ -1002,6 +1024,45 @@ h1 {
   display: block;
   touch-action: none;
   cursor: grab;
+}
+#graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  flex-shrink: 0;
+  max-height: 96px;
+  overflow: auto;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+}
+#graph-legend > span,
+.graph-legend-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+#graph-legend > span > i,
+.graph-kind-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.graph-kind-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--muted);
+}
+.graph-legend-explanation {
+  font-size: inherit;
+}
+#graph-fit {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
 }
 #graph-tip {
   position: absolute;
@@ -1025,8 +1086,7 @@ h1 {
     flex: 1;
   }
   #graph-view {
-    height: 72vh;
-    min-height: 360px;
+    min-height: 260px;
   }
 }
 @media (max-width: 560px) {

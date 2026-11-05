@@ -2,6 +2,7 @@
 window.NacreEnglish = {
   "brain.ui.aria-label.brain-overview": "Brain overview",
   "brain.ui.aria-label.brain-view": "Brain view",
+  "brain.ui.aria-label.graph-legend": "Graph legend",
   "brain.ui.aria-label.interactive-knowledge-graph":
     "Interactive knowledge graph",
   "brain.ui.aria-label.knowledge-subjects": "Knowledge subjects",
@@ -121,11 +122,15 @@ window.NacreEnglish = {
   "brain.ui.text.connections": "Connections",
   "brain.ui.text.ctrl-k": "Ctrl K",
   "brain.ui.text.graph": "Graph",
+  "brain.ui.text.graph-fit": "Fit",
   "brain.ui.text.graph-kind-category": "Category",
   "brain.ui.text.graph-kind-entity": "Entity",
   "brain.ui.text.graph-kind-note": "Note",
   "brain.ui.text.graph-kind-topic": "Topic",
   "brain.ui.text.graph-kind-wiki-page": "Wiki page",
+  "brain.ui.text.graph-legend-kind": "Entity / note",
+  "brain.ui.text.graph-legend-size": "Size = note count",
+  "brain.ui.text.graph-legend-world": "Colour = world",
   "brain.ui.text.nacre": "Nacre",
   "brain.ui.text.nacre-brain": "Nacre Brain",
   "brain.ui.text.new-chat": "New chat",
