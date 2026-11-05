@@ -8,8 +8,8 @@ license = "GPL-3.0-only"
 publish = false
 
 [dependencies]
-bead-test = { git = "https://github.com/nacre-desktop/bead", rev = "f8cc0c2c870e0d0d5e8f1b1977b7e9803e7d6ea9" }
-bead = { git = "https://github.com/nacre-desktop/bead", rev = "f8cc0c2c870e0d0d5e8f1b1977b7e9803e7d6ea9", default-features = false }
+bead-test = { git = "https://github.com/nacre-desktop/bead", rev = "41471cfba109682fd891313554d8e8a55684b917" }
+bead = { git = "https://github.com/nacre-desktop/bead", rev = "41471cfba109682fd891313554d8e8a55684b917", default-features = false }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 zstd = "0.14.3"
 gdk-pixbuf = "0.22"
@@ -22,8 +22,8 @@ nix = { version = "0.31", features = ["signal", "user", "inotify"] }
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 accesskit = "=0.25.1"
-bead-wallpaper = { git = "https://github.com/nacre-desktop/bead", rev = "f8cc0c2c870e0d0d5e8f1b1977b7e9803e7d6ea9" }
-bead-widgets = { git = "https://github.com/nacre-desktop/bead", rev = "f8cc0c2c870e0d0d5e8f1b1977b7e9803e7d6ea9" }
+bead-wallpaper = { git = "https://github.com/nacre-desktop/bead", rev = "41471cfba109682fd891313554d8e8a55684b917" }
+bead-widgets = { git = "https://github.com/nacre-desktop/bead", rev = "41471cfba109682fd891313554d8e8a55684b917" }
 smithay-client-toolkit = { version = "=0.21.1", default-features = false, features = ["calloop", "system"] }
 wayland-client = { version = "=0.31.15", features = ["system"] }
 wayland-protocols = { version = "=0.32.13", features = ["client"] }
