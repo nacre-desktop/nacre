@@ -170,7 +170,7 @@ impl Backend {
             Err(error) => Err(error),
         }
     }
-    pub fn events(&self) -> Result<niri_events::Events<niri_transport::Connection>> {
+    pub fn events(&mut self) -> Result<niri_events::Events<niri_transport::Connection>> {
         if self.session_id().is_empty() {
             return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
         }
@@ -189,7 +189,10 @@ impl Backend {
             .environment
             .get("NACRE_NIRI_HOVER_STREAM")
             .is_none_or(|value| value != "0");
-        let native_capabilities = niri_transport::nacre_capabilities(Path::new(self.session_id()));
+        let native_capabilities = self
+            .actions
+            .transport
+            .nacre_capabilities(Duration::from_millis(500));
         let socket = if native_capabilities.workspace_collections {
             niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
         } else {
@@ -202,13 +205,13 @@ impl Backend {
         )
         .map(|events| events.with_edge_trigger_cues(native_capabilities.edge_trigger_cues))
     }
-    pub fn edge_events(&self) -> Result<()> {
-        let path = Path::new(self.session_id());
+    pub fn edge_events(&mut self) -> Result<()> {
+        let path = PathBuf::from(self.session_id());
         if self.session_id().is_empty() {
             return Err(failure("RuntimeError", "NIRI_SOCKET is unavailable"));
         }
         let environment = self.environment.clone();
-        if let Some(mut daemon) = crate::daemon::niri_events::Source::connect(&environment, path)
+        if let Some(mut daemon) = crate::daemon::niri_events::Source::connect(&environment, &path)
             .map_err(|error| failure("ConnectionError", error.to_string()))?
         {
             loop {
@@ -237,14 +240,17 @@ impl Backend {
                 }
             }
         }
-        let capabilities = niri_transport::nacre_capabilities(path);
+        let capabilities = self
+            .actions
+            .transport
+            .nacre_capabilities(Duration::from_millis(500));
         if !capabilities.edge_triggers || !capabilities.edge_trigger_cues {
             println!("{{\"type\":\"edge-source\",\"active\":false}}");
             std::io::Write::flush(&mut std::io::stdout())
                 .map_err(|error| failure("OSError", error.to_string()))?;
             return Ok(());
         }
-        let mut events = niri_events::EventSocket::connect_edge_triggers(path)?;
+        let mut events = niri_events::EventSocket::connect_edge_triggers(&path)?;
         println!("{{\"type\":\"edge-source\",\"active\":true}}");
         std::io::Write::flush(&mut std::io::stdout())
             .map_err(|error| failure("OSError", error.to_string()))?;
@@ -305,8 +311,12 @@ impl Backend {
                 .unwrap_or(""),
         )
     }
-    pub fn capabilities(&self) -> Value {
-        capabilities_for_socket(Path::new(self.session_id()))
+    pub fn capabilities(&mut self) -> Value {
+        capabilities_with_native(
+            self.actions
+                .transport
+                .nacre_capabilities(Duration::from_millis(500)),
+        )
     }
 }
 

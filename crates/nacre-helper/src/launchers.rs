@@ -1345,7 +1345,7 @@ impl StartupDriver for StartupRuntime {
     fn per_output_workspaces(&self) -> bool {
         self.backend
             .as_ref()
-            .is_some_and(|backend| backend.capabilities()["perOutputWorkspaces"] == true)
+            .is_some_and(|backend| backend.base_capabilities()["perOutputWorkspaces"] == true)
     }
     fn switch_workspace(&mut self, target: Value) -> Result<()> {
         self.backend()?.action(

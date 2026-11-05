@@ -437,7 +437,14 @@ impl Backend {
             Self::Niri(_) => "niri",
         }
     }
-    pub fn capabilities(&self) -> Value {
+    /// Static policy map only; use `capabilities` for negotiated native extensions.
+    pub fn base_capabilities(&self) -> Value {
+        match self {
+            Self::Hyprland(_) => hyprland::capabilities(),
+            Self::Niri(_) => niri::capabilities(),
+        }
+    }
+    pub fn capabilities(&mut self) -> Value {
         match self {
             Self::Hyprland(_) => hyprland::capabilities(),
             Self::Niri(backend) => backend.capabilities(),

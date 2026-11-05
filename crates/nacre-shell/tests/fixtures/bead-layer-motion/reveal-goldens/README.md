@@ -19,8 +19,8 @@ are not screenshots from a live compositor.
 The plan's `terminal` entry refers to its existing `t1.00.png`. The route test
 independently compares Bead's setup-time terminal snapshot with a fresh legacy
 endpoint render byte-for-byte. Niri uses those immutable pixels at completion,
-preserving legacy per-primitive blending without a client refresh paint. The
-reference images and one-channel-value compositor tolerance are unchanged.
+preserving legacy per-primitive blending without a client refresh paint.
+The one-channel-value compositor tolerance is retained.
 
 The route smoke pins text rendering to Bead's `bead-test/fonts/IBMPlexSans.ttf`
 and `FixtureSymbols.ttf`, mapping Symbols families to `Bead Test Symbols` and

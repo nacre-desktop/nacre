@@ -100,7 +100,7 @@ fn apply_with_retry<T>(
     Err("Night-light controller did not become ready".into())
 }
 fn state(paths: &crate::paths::Paths, backend: &mut Backend) -> Result<Value> {
-    let supported = backend.capabilities()["nightLightController"]
+    let supported = backend.base_capabilities()["nightLightController"]
         .as_bool()
         .unwrap_or(true);
     let night_available = supported_probe(supported, || {
@@ -166,7 +166,7 @@ fn state(paths: &crate::paths::Paths, backend: &mut Backend) -> Result<Value> {
     ))
 }
 fn night_light(paths: &crate::paths::Paths, backend: &mut Backend, enabled: bool) -> Result<Value> {
-    let supported = backend.capabilities()["nightLightController"]
+    let supported = backend.base_capabilities()["nightLightController"]
         .as_bool()
         .unwrap_or(true);
     let available = supported

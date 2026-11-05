@@ -351,7 +351,7 @@ impl Observer for Session {
         Ok(record)
     }
     fn restore(&mut self) -> Result<()> {
-        if self.backend.capabilities()["monitorConfiguration"] == false {
+        if self.backend.base_capabilities()["monitorConfiguration"] == false {
             return Ok(());
         }
         let data = match fs::read(self.paths.config.join("desktop.json")) {
@@ -360,7 +360,7 @@ impl Observer for Session {
             Err(error) => return Err(error.into()),
         };
         let monitors = self.query("monitors");
-        let saved = connected_displays(&self.backend.capabilities(), Some(&data), &monitors)?;
+        let saved = connected_displays(&self.backend.base_capabilities(), Some(&data), &monitors)?;
         if saved.as_array().is_some_and(|saved| !saved.is_empty()) {
             self.backend
                 .action("configure_monitors", &[saved], &value!({"timeout":null}))?;

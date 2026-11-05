@@ -354,7 +354,7 @@ impl Observer {
         let path = self.paths.config.join("desktop.json");
         self.control
             .with(move |backend| {
-                if backend.capabilities()["monitorConfiguration"] == false {
+                if backend.base_capabilities()["monitorConfiguration"] == false {
                     return Ok(());
                 }
                 let data = match fs::read(path) {
@@ -369,7 +369,7 @@ impl Observer {
                         json!([])
                     });
                 let saved = session_watch::connected_displays(
-                    &backend.capabilities(),
+                    &backend.base_capabilities(),
                     Some(&data),
                     &monitors,
                 )?;
