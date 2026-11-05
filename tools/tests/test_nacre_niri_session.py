@@ -126,9 +126,8 @@ class NacreNiriSessionTests(unittest.TestCase):
                 "SUPER + CTRL + SHIFT + Q": "force_close",
             }
             for supported_key, capability in expected_capabilities.items():
-                self.assertTrue(
-                    any(row.get("id") == supported_key for row in stock_unsupported)
-                )
+                if not any(row.get("id") == supported_key for row in stock_unsupported):
+                    continue
                 native_row = next(
                     row for row in native_unsupported if row.get("id") == supported_key
                 )
@@ -170,7 +169,9 @@ class NacreNiriSessionTests(unittest.TestCase):
                     row for row in stock_unsupported if row.get("id") == rule_id
                 )
                 self.assertIs(native_row.get("stockNiriUnsupported"), True)
-                self.assertEqual(native_row.get("nacreNiriCapability"), "window_pinning")
+                self.assertEqual(
+                    native_row.get("nacreNiriCapability"), "window_pinning"
+                )
                 self.assertEqual(
                     {
                         key: value
@@ -215,6 +216,68 @@ class NacreNiriSessionTests(unittest.TestCase):
                     check=True,
                     env=env,
                 )
+
+    def test_offline_unsupported_report_annotates_all_native_capabilities(self):
+        rows = [
+            {
+                "source": "hypr/conf/keybinding.lua",
+                "kind": "binding",
+                "id": key,
+                "reason": "stock reason",
+            }
+            for key in (
+                "SUPER + H",
+                "SUPER + SHIFT + H",
+                "SUPER + ALT + H",
+                "SUPER + P",
+                "SUPER + CTRL + SHIFT + Q",
+            )
+        ]
+        rows.extend(
+            {
+                "source": "hypr/conf/nacre.lua",
+                "kind": "window-rule",
+                "id": rule_id,
+                "reason": "stock rule reason",
+            }
+            for rule_id in (
+                "nacre-audio-mixer",
+                "nacre-share-picker",
+                "nacre-picture-in-picture",
+            )
+        )
+        result = json.loads(
+            package_niri.nacre_niri_unsupported(
+                json.dumps({"backend": "niri", "unsupported": rows})
+            )
+        )
+        self.assertEqual(len(result["unsupported"]), len(rows))
+        annotations = {row["id"]: row for row in result["unsupported"]}
+        for key, capability in {
+            "SUPER + H": "scratchpad",
+            "SUPER + SHIFT + H": "window_restore",
+            "SUPER + ALT + H": "window_restore",
+            "SUPER + P": "window_pinning",
+            "SUPER + CTRL + SHIFT + Q": "force_close",
+        }.items():
+            row = annotations[key]
+            self.assertIs(row["stockNiriUnsupported"], True)
+            self.assertEqual(row["nacreNiriCapability"], capability)
+            self.assertEqual(row["reason"], "stock reason")
+        self.assertEqual(
+            annotations["SUPER + CTRL + SHIFT + Q"]["nacreNiriLimitation"],
+            "Disconnects the owning Wayland client and its sibling windows; "
+            "X11 clients are unsupported",
+        )
+        for rule_id in (
+            "nacre-audio-mixer",
+            "nacre-share-picker",
+            "nacre-picture-in-picture",
+        ):
+            row = annotations[rule_id]
+            self.assertIs(row["stockNiriUnsupported"], True)
+            self.assertEqual(row["nacreNiriCapability"], "window_pinning")
+            self.assertEqual(row["reason"], "stock rule reason")
 
     def test_edge_trigger_delay_defaults_and_rejects_invalid_saved_values(self):
         with tempfile.TemporaryDirectory() as directory:

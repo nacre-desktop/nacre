@@ -156,9 +156,16 @@ def nacre_niri_unsupported(text):
     }
     for row in document.get("unsupported", []):
         capability = None
-        if row.get("source") == "hypr/conf/keybinding.lua" and row.get("kind") == "binding":
+        if (
+            row.get("source") == "hypr/conf/keybinding.lua"
+            and row.get("kind") == "binding"
+        ):
             capability = capabilities.get(row.get("id"))
-        elif row.get("source") == "hypr/conf/nacre.lua" and row.get("kind") == "window-rule" and row.get("id") in native_rules:
+        elif (
+            row.get("source") == "hypr/conf/nacre.lua"
+            and row.get("kind") == "window-rule"
+            and row.get("id") in native_rules
+        ):
             capability = "window_pinning"
         if capability is not None:
             row["stockNiriUnsupported"] = True
