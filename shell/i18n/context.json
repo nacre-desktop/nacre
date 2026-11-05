@@ -951,6 +951,7 @@
   "bead.widgets.on-screen": "Widgets app heading for the placed copies of this widget.",
   "bead.widgets.on-screen-hint": "Widgets app hint: edit mode clicks select a placed copy.",
   "bead.widgets.on-screen-empty": "Widgets app: shown when no copy of the widget is placed.",
+  "bead.panel.launcher-activity-unknown": "AI launcher: last activity when the provider has not recorded a chat timestamp.",
   "bead.panel.launcher-back": "AI launcher: button in the inline Quick chat header that returns to the launcher.",
   "bead.panel.launcher-brain": "AI launcher: accessible name of the icon button that opens Nacre Brain.",
   "bead.panel.launcher-choose-project": "AI launcher: button that opens the project chooser for a new chat.",

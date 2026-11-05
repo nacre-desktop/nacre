@@ -244,9 +244,14 @@ pub fn has_tmux_session(pid: i64, proc: &Path, uid: u32, session: &str) -> bool 
         Path::new(args.first().map(String::as_str).unwrap_or(""))
             .file_name()
             .is_some_and(|name| name == "tmux")
-            && args.windows(3).any(|window| {
+            && (args.windows(3).any(|window| {
                 window[0] == "attach-session" && window[1] == "-t" && window[2] == target
-            })
+            }) || args.windows(4).any(|window| {
+                window[0] == "new-session"
+                    && window[1] == "-A"
+                    && window[2] == "-s"
+                    && window[3] == session
+            }))
     })
 }
 
@@ -274,7 +279,10 @@ mod tests {
     fn proc_fixture(root: &Path, pid: i64, children: &str, args: &[&str]) -> Result<()> {
         let process = root.join(pid.to_string());
         fs::create_dir_all(process.join("task").join(pid.to_string()))?;
-        fs::write(process.join("task").join(pid.to_string()).join("children"), children)?;
+        fs::write(
+            process.join("task").join(pid.to_string()).join("children"),
+            children,
+        )?;
         let mut command = args.join("\0").into_bytes();
         command.push(0);
         fs::write(process.join("cmdline"), command)?;
@@ -364,6 +372,28 @@ mod tests {
         assert!(has_tmux_session(100, &proc, uid, "nacre-chat-1"));
         assert!(!has_tmux_session(100, &proc, uid, "nacre-chat-2"));
         assert!(!has_tmux_session(100, &proc, uid + 1, "nacre-chat-1"));
+        proc_fixture(
+            &proc,
+            101,
+            "",
+            &[
+                "/usr/bin/tmux",
+                "new-session",
+                "-A",
+                "-s",
+                "nacre-chat-1",
+                "worker",
+            ],
+        )?;
+        assert!(has_tmux_session(100, &proc, uid, "nacre-chat-1"));
+        assert!(!has_tmux_session(100, &proc, uid, "nacre-chat-2"));
+        proc_fixture(
+            &proc,
+            101,
+            "",
+            &["/usr/bin/echo", "attach-session", "-t", "=nacre-chat-1"],
+        )?;
+        assert!(!has_tmux_session(100, &proc, uid, "nacre-chat-1"));
         Ok(())
     }
 }

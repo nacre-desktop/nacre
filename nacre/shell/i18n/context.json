@@ -469,6 +469,7 @@
   "bead.panel.calendar-next": "Accessible name of the calendar button that shows the next month.",
   "bead.panel.calendar-previous": "Accessible name of the calendar button that shows the previous month.",
   "bead.panel.calendar-unavailable": "Shown in the calendar view when the date or locale data is not available.",
+  "bead.panel.launcher-activity-unknown": "AI launcher: last activity when the provider has not recorded a chat timestamp.",
   "bead.panel.launcher-back": "AI launcher: button in the inline Quick chat header that returns to the launcher.",
   "bead.panel.launcher-brain": "AI launcher: accessible name of the icon button that opens Nacre Brain.",
   "bead.panel.launcher-choose-project": "AI launcher: button that opens the project chooser for a new chat.",

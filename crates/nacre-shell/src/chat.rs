@@ -536,9 +536,12 @@ impl Chat {
                         "running" => "running",
                         _ => "idle",
                     };
-                    let age = (now - row["lastActivity"].as_f64().unwrap_or(now)).max(0.);
+                    let timestamp = row["lastActivity"].as_f64().unwrap_or(0.);
+                    let age = (now - timestamp).max(0.);
                     let count = ((age / 60.).floor() as u64).to_string();
-                    let last = if age < 60. {
+                    let last = if timestamp <= 0. {
+                        tr("bead.panel.launcher-activity-unknown", &[])
+                    } else if age < 60. {
                         tr("bead.panel.launcher-just-now", &[])
                     } else if age < 3600. {
                         tr("bead.panel.launcher-minutes-ago", &[("count", &count)])

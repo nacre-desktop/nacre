@@ -834,6 +834,23 @@ fn unavailable_launcher_does_not_claim_empty_history() {
     assert_eq!(projected["launcher.can_latest"], Value::Bool(false));
 }
 
+#[test]
+fn session_without_provider_timestamp_does_not_claim_old_activity() {
+    let _guard = serial();
+    let (_, chat) = offline(json!({"available":true,"channels":{}}));
+    chat.st.borrow_mut().launcher = Some(
+        json!({"chats":[{"key":"session","title":"Running chat","provider":"codex","project":"Demo","state":"running","lastActivity":0}],"projects":[],"warning":""}),
+    );
+    let projected = chat.project(&Stores::default());
+    let Value::List(rows) = &projected["launcher.chats"] else {
+        panic!("chat list")
+    };
+    assert_eq!(
+        rows[0]["lastActivityLabel"],
+        tr("bead.panel.launcher-activity-unknown", &[])
+    );
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn launching_a_window_releases_attached_keyboard_but_keeps_pinned_and_detached_launchers() {
     let _guard = serial();

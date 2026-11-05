@@ -1,6 +1,7 @@
 # N0128 — Nacre AI launcher panel
 
-Status: implementing on the owner-provided live-candidate base `59f6ce7f8`.
+Status: implemented on the owner-provided live-candidate base `59f6ce7f8`;
+focused dev-1 validation passes. Topic branch only; no live installation.
 
 The existing left AI route becomes a chat launcher. New chat offers a provider
 and registered project; Resume latest and searchable recent chats open the normal
@@ -30,4 +31,39 @@ always-open model memory; no performance claim without measurement. No framework
 primitive is introduced. The inline transcript remains intentionally for Quick
 chat, with no expiry because it is part of the approved feature.
 
-Evidence and remaining limitations will be recorded after integrated validation.
+The new daemon calls are `ai.launcher.list`, `.open`, `.new`, `.latest`, and
+`.action`. Listing is single-flight, refreshed every 60 seconds or explicitly,
+with at most 30 unique chats and 64 projects. Opaque stable keys resolve records
+held in daemon memory. Discovery shares `ai_dashboard::collect_history` with the
+app; window resumes share `resume_record`. `nacre-ai-chat serve` remains the
+workflow MCP service. The old `ai.chat.saved` contract stays for existing inline
+consumers. Quick chat alone renews the inline worker heartbeat.
+
+Successful external-window actions dismiss an unpinned attached launcher to
+release its exclusive keyboard input. Pinned and detached launchers remain open.
+Existing tmux sessions attach with their original provider/login, including
+session-only records whose provider thread ID is not known yet. Owned terminal
+process metadata identifies existing local tmux clients. Records without tmux
+sessions use the app's normal resume path (direct CLI for local Codex).
+
+Validation in the task container: locked shell/helper checks; 19 panel/model
+tests; 8 runtime and 2 pearl tests; 2 launcher protocol tests; 21 app model tests;
+15 daemon chat and 4 terminal metadata tests; 14 AI command and 15 sidebar
+integration tests pass. Helper/protocol Clippy passes. Main and detached
+launcher goldens at scales 1 and 1.5 were reviewed, along with the deliberately
+updated Quick chat goldens. Translation coverage passes. No runtime memory or
+live desktop claim is made.
+
+The broader desktop replica is recorded in `.lead/`. It finds three Clippy
+argument-count warnings in unchanged placement/reveal helpers and six failures
+in untouched Niri capability/frozen preparation tests. The full shell run also
+finds untouched overview hover-title and dashboard CPU preparation failures;
+the two task-related pearl golden differences were corrected and rechecked.
+Source/UI checks stop on seven untouched Python formatting differences. The
+additional complete catalog mirror check retains 151 English / 150 context
+differences (152 / 151 on the starting tree); none were introduced here, and
+all 19 new launcher labels/contexts match the canonical catalog.
+
+The inherited missing
+Niri test-fixture field and stale framework validation pin were repaired in
+separate commits to make validation executable; frozen expectations were kept.

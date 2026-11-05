@@ -978,13 +978,17 @@ fn tmux_attach_args(session: &str, claude: bool) -> Vec<String> {
 }
 
 fn running_session(item: &serde_json::Value) -> Option<(&str, Option<&str>, bool)> {
-    let session = item["session"].as_str().filter(|session| valid_session(session))?;
-    let host = item["project"]["host"].as_str().filter(|host| !host.is_empty());
+    let session = item["session"]
+        .as_str()
+        .filter(|session| valid_session(session))?;
+    let host = item["project"]["host"]
+        .as_str()
+        .filter(|host| !host.is_empty());
     Some((session, host, item["agent"] == "claude"))
 }
 
 fn valid_session(session: &str) -> bool {
-    !session.is_empty() && session.len() <= 128 && !session.chars().any(char::is_control)
+    !session.is_empty() && session.len() <= 256 && !session.chars().any(char::is_control)
 }
 
 pub(crate) fn resume_record(item: &serde_json::Value) -> Result<()> {
@@ -1009,7 +1013,10 @@ fn resume_record_with_tmux(item: &serde_json::Value, tmux: &std::path::Path) -> 
         }
         return Ok(());
     }
-    let id = item["id"].as_str().filter(|id| !id.is_empty()).ok_or("History record has no id or running session")?;
+    let id = item["id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+        .ok_or("History record has no id or running session")?;
     if agent == "claude" {
         let mut args = vec![
             "nacre-ai-claude".into(),
@@ -1104,8 +1111,13 @@ fn resume_record_with_tmux(item: &serde_json::Value, tmux: &std::path::Path) -> 
     Ok(())
 }
 
-fn validate_resume_record(item: &serde_json::Value, configured: &[serde_json::Value]) -> Result<()> {
-    let project_id = item["project"]["id"].as_str().ok_or("Invalid chat project")?;
+fn validate_resume_record(
+    item: &serde_json::Value,
+    configured: &[serde_json::Value],
+) -> Result<()> {
+    let project_id = item["project"]["id"]
+        .as_str()
+        .ok_or("Invalid chat project")?;
     let allowed = configured.iter().any(|project| {
         if project["id"].as_str() == Some(project_id) && project == &item["project"] {
             return true;
@@ -1130,10 +1142,12 @@ fn validate_resume_record(item: &serde_json::Value, configured: &[serde_json::Va
         || !matches!(agent, "codex" | "claude")
         || (!has_id && running_session(item).is_none())
         || (!item["id"].is_null() && !item["id"].is_string())
-        || item["id"].as_str().is_some_and(|id| {
-            id.len() > 256 || id.chars().any(char::is_control)
-        })
-        || item["session"].as_str().is_some_and(|session| !valid_session(session))
+        || item["id"]
+            .as_str()
+            .is_some_and(|id| id.len() > 256 || id.chars().any(char::is_control))
+        || item["session"]
+            .as_str()
+            .is_some_and(|session| !valid_session(session))
         || item["account"]
             .as_str()
             .is_none_or(|account| !account.is_empty() && !valid_account(account))

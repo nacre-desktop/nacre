@@ -23,6 +23,7 @@ fn runtime_section(chat: crate::chat::Chat, section: &str) -> Runtime {
     let session = bead::ui::Session::new(root(), "chat/main.luau".into(), palette, colors, cold);
     let mut runtime = Runtime::new(session).with_chat(chat).unwrap();
     runtime.state_file = None;
+    runtime.session.restore_on_start(BTreeMap::new());
     runtime.services(Box::new(|_| {}));
     runtime
         .stage(UiEvent::Reload)

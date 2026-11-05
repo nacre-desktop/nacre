@@ -921,7 +921,7 @@ fn existing_chat_window_with_proc(
         }
         if item["project"]["host"].as_str().is_none()
             && item["state"] == "running"
-            && item["agent"] == "claude"
+            && matches!(item["agent"].as_str(), Some("claude" | "codex"))
             && item["session"].as_str().is_some_and(|session| {
                 crate::window_chat_title::has_tmux_session(pid, proc, uid, session)
             })
@@ -1010,7 +1010,7 @@ mod tests {
     }
 
     #[test]
-    fn launcher_focus_finds_local_claude_tmux_client_in_synthetic_proc_tree() -> crate::Result<()> {
+    fn launcher_focus_finds_local_tmux_clients_in_synthetic_proc_tree() -> crate::Result<()> {
         let fixture = tempfile::tempdir()?;
         let proc = fixture.path().join("proc");
         let parent = proc.join("100");
@@ -1027,19 +1027,23 @@ mod tests {
         let item = json!({"id":"thread-claude","title":"Claude chat","state":"running","session":"nacre-chat-claude-1","agent":"claude","project":{"id":"demo","path":"/repo"}});
         let snapshot = json!({"windows":{"niri-window:46":{"appId":"nacre-ai-task","title":"Claude chat","pid":100}}});
         let paths = crate::paths::Paths::new(fixture.path());
-        assert_eq!(
-            existing_chat_window_with_proc(
-                &snapshot,
-                &item,
-                "unused",
-                true,
-                &proc,
-                Some(&paths),
-                nix::unistd::getuid().as_raw(),
-            )
-            .as_deref(),
-            Some("niri-window:46")
-        );
+        for agent in ["claude", "codex"] {
+            let mut item = item.clone();
+            item["agent"] = json!(agent);
+            assert_eq!(
+                existing_chat_window_with_proc(
+                    &snapshot,
+                    &item,
+                    "unused",
+                    true,
+                    &proc,
+                    Some(&paths),
+                    nix::unistd::getuid().as_raw(),
+                )
+                .as_deref(),
+                Some("niri-window:46")
+            );
+        }
         Ok(())
     }
 

@@ -478,6 +478,7 @@
   "bead.panel.calendar-next": "Next month",
   "bead.panel.calendar-previous": "Previous month",
   "bead.panel.calendar-unavailable": "Calendar unavailable",
+  "bead.panel.launcher-activity-unknown": "Activity unknown",
   "bead.panel.launcher-back": "Launcher",
   "bead.panel.launcher-brain": "Open brain",
   "bead.panel.launcher-choose-project": "Choose project",
