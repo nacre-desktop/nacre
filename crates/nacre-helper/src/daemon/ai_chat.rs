@@ -707,14 +707,14 @@ async fn dispatch_launcher(
             let history = tokio::task::spawn_blocking(|| {
                 crate::ai_dashboard::collect_launcher_history(|| false)
             });
-            let (rows, warnings) =
+            let (rows, _warnings) =
                 match tokio::time::timeout(Duration::from_secs(45), history).await {
                     Ok(Ok(Ok(value))) => value,
                     _ => return Err(unavailable("Could not read latest AI chat")),
                 };
-            if !warnings.is_empty() || rows.is_empty() {
+            if rows.is_empty() {
                 return Err(unavailable(
-                    "Latest chat is unavailable while a history source cannot be read",
+                    "Latest chat is unavailable",
                 ));
             }
             let unique_title = rows
@@ -781,7 +781,7 @@ async fn open_launcher_record(
 }
 
 fn launcher_record_is_local(item: &Value) -> bool {
-    item["project"]["host"].as_str().is_none()
+    item["project"]["host"].is_null()
 }
 
 fn find_local_launcher_record(rows: Vec<Value>, key: &str) -> Option<(Value, bool)> {

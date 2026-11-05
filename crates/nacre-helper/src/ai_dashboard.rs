@@ -406,7 +406,7 @@ pub(crate) fn launch_task(command: &str, args: &[String], title: &str) -> Result
 pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Result<()> {
     // The side panel owns only local general chats. Keep this boundary here as
     // well as in collection so stale or forged launcher records cannot SSH.
-    if item["project"]["host"].as_str().is_some() {
+    if !item["project"]["host"].is_null() {
         return Err("Remote chats are unavailable in the launcher".into());
     }
     let encoded = BASE64.encode(serde_json::to_vec(item)?);
@@ -878,7 +878,7 @@ where
             )),
         }
     }
-    records.retain(|item| item["project"]["host"].as_str().is_none());
+    records.retain(|item| item["project"]["host"].is_null());
     sort_history(&mut records);
     Ok((records, warnings))
 }
@@ -2532,6 +2532,27 @@ mod tests {
         assert!(warnings.is_empty());
         assert_eq!(rows.len(), 2);
         assert!(rows.iter().all(|row| row["project"]["host"].is_null()));
+        Ok(())
+    }
+
+    #[test]
+    fn launcher_history_keeps_available_rows_and_sanitizes_partial_failure() -> Result<()> {
+        let (rows, warnings) = collect_local_launcher_history(
+            || false,
+            |project, agent| {
+                if agent == "codex" {
+                    return Err("raw helper stderr: missing binary".into());
+                }
+                Ok(vec![serde_json::json!({
+                    "id":"claude-local","agent":"claude","title":"Saved chat",
+                    "updated_at":1,"project":project
+                })])
+            },
+        )?;
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["id"], "claude-local");
+        assert_eq!(warnings, ["Codex history is temporarily unavailable"]);
+        assert!(warnings.iter().all(|warning| !warning.contains("raw helper stderr")));
         Ok(())
     }
 
