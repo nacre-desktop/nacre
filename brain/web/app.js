@@ -18,12 +18,71 @@ let state = {
   },
   ready = false,
   loading = false,
+  loadFailed = false,
   noteRequest = 0,
   lastNavigation = "",
   mapZoom = 1,
   lastSignature = "",
   searchIds = null,
   searchController = null;
+let firstApiCall = true;
+let retryAction = () => load(true);
+function showLoadError(message, retry = () => load(true)) {
+  retryAction = retry;
+  $("load-error-message").textContent = message;
+  $("load-error").hidden = false;
+}
+function clearLoadError() {
+  $("load-error").hidden = true;
+}
+async function boundedRequest(url, init = {}, decode = "response") {
+  const controller = new AbortController();
+  const externalSignal = init.signal;
+  const abort = () => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  else externalSignal?.addEventListener("abort", abort, { once: true });
+  let timer;
+  try {
+    const operation = (async () => {
+      let response = await fetch(url, { ...init, signal: controller.signal });
+      if (response.status === 403 && firstApiCall) {
+        await (window.__nacreBrainAuthReady || Promise.resolve());
+        response = await fetch(url, { ...init, signal: controller.signal });
+      }
+      firstApiCall = false;
+      if (!response.ok)
+        throw Error(response.statusText || "HTTP " + response.status);
+      return decode === "json" ? response.json() : response;
+    })();
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(
+          Error(
+            tr(
+              "brain.ui.error.request-timed-out",
+              "The request timed out. Try again.",
+            ),
+          ),
+        );
+      }, 8000);
+    });
+    return await Promise.race([operation, timeout]);
+  } catch (error) {
+    if (externalSignal?.aborted) throw externalSignal.reason;
+    if (error.name === "AbortError")
+      throw Error(
+        tr(
+          "brain.ui.error.request-timed-out",
+          "The request timed out. Try again.",
+        ),
+      );
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    externalSignal?.removeEventListener("abort", abort);
+  }
+}
 function el(tag, value = "", className = "") {
   const n = document.createElement(tag);
   if (value) n.textContent = value;
@@ -152,91 +211,141 @@ function theme() {
 }
 async function load(force = false) {
   if (loading) return;
+  if (loadFailed && !force) return;
   loading = true;
+  $("retry").disabled = true;
+  $("load-error").hidden = true;
+  if (!ready) $("loading").hidden = false;
   try {
-    const r = await fetch("/api/brain");
-    if (!r.ok)
-      throw Error(
-        tr(
-          "brain.ui.literal.local-brain-unavailable",
-          "Local brain unavailable",
-        ),
-      );
-    const previous = byId.get(state.selected);
-    graph = await r.json();
-    const signature = JSON.stringify([graph.nodes, graph.links, graph.theme]),
-      changed = force || signature !== lastSignature;
-    lastSignature = signature;
-    byId = new Map(graph.nodes.map((n) => [n.id, n]));
-    groupChildren = new Map();
-    parents = new Map();
-    sourceNeighbours = new Map();
-    for (const link of graph.links) {
-      if (link.kind === "group") {
-        if (!groupChildren.has(link.source)) groupChildren.set(link.source, []);
-        groupChildren.get(link.source).push(link.target);
-        if (!parents.has(link.target)) parents.set(link.target, []);
-        parents.get(link.target).push(link.source);
-      } else {
-        for (const [a, b] of [
-          [link.source, link.target],
-          [link.target, link.source],
-        ]) {
-          if (!sourceNeighbours.has(a)) sourceNeighbours.set(a, new Set());
-          sourceNeighbours.get(a).add(b);
-        }
-      }
-    }
-    theme();
-    ready = true;
-    $("loading").hidden = true;
-    if (state.focus && !byId.has(state.focus)) state.focus = null;
-    if (state.selected && !byId.has(state.selected)) state.selected = null;
-    $("index-status").textContent = tr(
-      "brain.ui.status.index",
-      "{count} notes · {time}",
-      {
-        count: graph.noteCount,
-        time: new Date(graph.generated).toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      },
+    let summaryOnly = !ready;
+    let payload = await requestJson(
+      (summaryOnly ? "/api/summary" : "/api/brain") + (force ? "?retry=1" : ""),
     );
-    if (changed)
-      render(
-        !force &&
-          previous?.kind === "note" &&
-          previous.revision === byId.get(previous.id)?.revision,
+    loadFailed = false;
+    applyGraph(payload, force);
+    while (payload.connections?.state === "building") {
+      setConnectionState("building");
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      payload = await requestJson("/api/brain");
+      summaryOnly = false;
+      applyGraph(payload);
+    }
+    if (payload.connections?.state === "ready" && summaryOnly) {
+      payload = await requestJson("/api/brain");
+      applyGraph(payload);
+    }
+    if (payload.connections?.state === "error")
+      throw Error(
+        payload.connections.error ||
+          tr("brain.ui.error.connections", "Connections could not be loaded."),
       );
-    if (state.query) search();
-  } catch (e) {
-    $("index-status").textContent = e.message;
-    if (!ready)
-      $("loading").textContent = tr(
-        "brain.ui.label.could-not-read-your-brain-use-refresh-knowledge-to-retry",
-        "Could not read your brain. Use Refresh knowledge to retry.",
+    setConnectionState(payload.connections?.state || "ready");
+  } catch (error) {
+    loadFailed = true;
+    const message =
+      error.message ||
+      tr(
+        "brain.ui.error.unavailable",
+        "Could not load your knowledge. Try again.",
       );
+    $("index-status").textContent = message;
+    $("loading").hidden = true;
+    showLoadError(message);
+    setConnectionState("error");
   } finally {
     loading = false;
+    $("retry").disabled = false;
   }
+}
+async function requestJson(url) {
+  try {
+    return await boundedRequest(url, {}, "json");
+  } catch (error) {
+    throw Error(
+      error.message === "Failed to fetch"
+        ? tr(
+            "brain.ui.error.unavailable",
+            "Could not load your knowledge. Try again.",
+          )
+        : error.message ||
+            tr(
+              "brain.ui.error.unavailable",
+              "Could not load your knowledge. Try again.",
+            ),
+    );
+  }
+}
+function setConnectionState(value) {
+  const element = $("connections-status");
+  element.dataset.state = value;
+  element.textContent =
+    value === "building"
+      ? tr("brain.ui.status.building-connections", "Building connections…")
+      : value === "error"
+        ? tr("brain.ui.error.connections", "Connections could not be loaded.")
+        : tr("brain.ui.status.connections-ready", "Connections ready");
+}
+function applyGraph(payload, force = false) {
+  const previous = byId.get(state.selected);
+  graph = payload;
+  const signature = JSON.stringify([graph.nodes, graph.links, graph.theme]),
+    changed = force || signature !== lastSignature;
+  lastSignature = signature;
+  byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  groupChildren = new Map();
+  parents = new Map();
+  sourceNeighbours = new Map();
+  for (const link of graph.links) {
+    if (link.kind === "group") {
+      if (!groupChildren.has(link.source)) groupChildren.set(link.source, []);
+      groupChildren.get(link.source).push(link.target);
+      if (!parents.has(link.target)) parents.set(link.target, []);
+      parents.get(link.target).push(link.source);
+    } else {
+      for (const [a, b] of [
+        [link.source, link.target],
+        [link.target, link.source],
+      ]) {
+        if (!sourceNeighbours.has(a)) sourceNeighbours.set(a, new Set());
+        sourceNeighbours.get(a).add(b);
+      }
+    }
+  }
+  theme();
+  ready = true;
+  $("loading").hidden = true;
+  if (state.focus && !byId.has(state.focus)) state.focus = null;
+  if (state.selected && !byId.has(state.selected)) state.selected = null;
+  $("index-status").textContent = tr(
+    "brain.ui.status.index",
+    "{count} notes · {time}",
+    {
+      count: graph.noteCount,
+      time: new Date(graph.generated).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    },
+  );
+  if (changed)
+    render(
+      !force &&
+        previous?.kind === "note" &&
+        previous.revision === byId.get(previous.id)?.revision,
+    );
+  if (state.query) search();
 }
 async function apiAction(name, value = "") {
   try {
-    const r = await fetch("/api/action", {
+    await boundedRequest("/api/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, value }),
     });
-    if (!r.ok)
-      throw Error(
-        tr(
-          "brain.ui.literal.could-not-open-this-action",
-          "Could not open this action",
-        ),
-      );
+    clearLoadError();
   } catch (e) {
     $("index-status").textContent = e.message;
+    showLoadError(e.message, () => apiAction(name, value));
   }
 }
 function select(
@@ -678,24 +787,26 @@ async function search() {
   const query = state.query;
   searchController = new AbortController();
   try {
-    const r = await fetch("/api/search?q=" + encodeURIComponent(query), {
-      signal: searchController.signal,
-    });
-    if (!r.ok)
-      throw Error(
-        tr("brain.ui.literal.search-unavailable", "Search unavailable"),
-      );
-    const result = await r.json();
+    const result = await boundedRequest(
+      "/api/search?q=" + encodeURIComponent(query),
+      {
+        signal: searchController.signal,
+      },
+      "json",
+    );
     if (state.query === query) {
       searchIds = new Set(result.ids);
       renderMain();
+      clearLoadError();
     }
   } catch (e) {
-    if (e.name !== "AbortError")
+    if (e.name !== "AbortError") {
       $("index-status").textContent = tr(
         "brain.ui.label.search-unavailable-showing-title-matches",
         "Search unavailable; showing title matches.",
       );
+      showLoadError(e.message, () => search());
+    }
   }
 }
 function svgEl(tag, attributes = {}, value) {
@@ -1101,19 +1212,23 @@ function renderInspector() {
 }
 async function readNote(n, container, token) {
   try {
-    const r = await fetch("/api/note?path=" + encodeURIComponent(n.path));
-    if (!r.ok)
-      throw Error(tr("brain.ui.literal.note-unavailable", "Note unavailable"));
-    const data = await r.json();
+    const data = await boundedRequest(
+      "/api/note?path=" + encodeURIComponent(n.path),
+      {},
+      "json",
+    );
     if (token !== noteRequest) return;
+    clearLoadError();
     container.replaceChildren();
     markdown(container, data.text, n.path);
   } catch (e) {
-    if (token === noteRequest)
+    if (token === noteRequest) {
       container.textContent = tr(
         "brain.ui.label.could-not-read-this-note-try-selecting-it-again",
         "Could not read this note. Try selecting it again.",
       );
+      showLoadError(e.message, () => readNote(n, container, token));
+    }
   }
 }
 function resolveNote(target, base) {
@@ -1296,8 +1411,7 @@ function markdown(container, body, base) {
 }
 async function navigation() {
   try {
-    const r = await fetch("/api/navigation"),
-      n = await r.json();
+    const n = await boundedRequest("/api/navigation", {}, "json");
     if (!n.token || lastNavigation === n.token) return;
     const target = graph.nodes.find((v) => v.path === n.path);
     if (target) {
@@ -1309,6 +1423,7 @@ async function navigation() {
 $("brand").onclick = home;
 $("overview-link").onclick = home;
 $("refresh").onclick = () => load(true);
+$("retry").onclick = () => retryAction();
 $("back").onclick = back;
 for (const b of document.querySelectorAll("[data-view]"))
   b.onclick = () => {

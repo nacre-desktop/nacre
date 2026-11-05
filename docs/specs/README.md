@@ -1,6 +1,29 @@
 # Nacre implementation queue
 
-N0132: implemented and verified — Brain bootstrap, handoff and app use the API's
+N0132: reopened after a reported installed-browser loading failure. Follow-up
+code review identified the blocking path: `/api/brain` synchronously built the
+full discovery graph before replying, so a cold index could hold the browser at
+“Reading your knowledge” for the discovery build. The Phase 1 audit measured
+about 145 s single-core with vectors and 21 min lexical-only at 1.9k notes.
+Those timings identify the likely mechanism; the laptop failure itself was not
+reproduced. The earlier N0132 authentication regressions passed for an older session plus
+legacy bootstrap file and an expired session renewed by the launcher. Headless
+Chromium with the real launcher and mocked compositor passed cold start, server
+reuse, session renewal and server restart with an existing browser; each clears
+the loading screen and loads API data. API access requires the cookie and bearer
+together plus same-origin Fetch Metadata; the browser marker is a digest, not a
+credential. Separate credential probes returning 403 do not establish a session
+mismatch. N0132 follow-up validation passed 90 Brain library tests, the CLI test and
+locked helper/shell checks. U12 adds bounded loading/error/retry behavior and
+moves discovery behind the fast summary response. This investigation did not
+access live auth or reproduce the laptop failure. These historical N0132 results
+are separate from the N0134 validation below.
+
+N0134 / U12: [viewer load robustness](0134-brain-viewer-load.md) validated with
+synthetic 2,000-note cold/restart loads in 1.477 s / 1.460 s, timeout/Retry and
+background connection refresh. Full dev-1 desktop CI passed; topic branch only.
+
+Initial N0132 implementation: Brain bootstrap, handoff and app use the API's
 loopback HTTP origin; native file handoff generation is removed and browser focus
 behavior is preserved. Isolated container validation passed: 88 Brain library
 tests, Brain CLI test, locked helper/shell checks, helper build and formatting.
