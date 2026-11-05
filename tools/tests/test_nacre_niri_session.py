@@ -125,6 +125,16 @@ class NacreNiriSessionTests(unittest.TestCase):
                 "SUPER + P": "window_pinning",
                 "SUPER + CTRL + SHIFT + Q": "force_close",
             }
+            stock_keys = {row.get("id") for row in stock_unsupported}
+            self.assertLessEqual(
+                {
+                    "SUPER + H",
+                    "SUPER + SHIFT + H",
+                    "SUPER + ALT + H",
+                    "SUPER + P",
+                },
+                stock_keys,
+            )
             for supported_key, capability in expected_capabilities.items():
                 if not any(row.get("id") == supported_key for row in stock_unsupported):
                     continue
