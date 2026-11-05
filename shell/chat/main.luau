@@ -116,8 +116,11 @@ else
         radius=T.radii.small,font_size=BODY,fill="surfaceContainerHigh",focus_ring=true})
     local refresh_label=ui.tr("bead.panel.chat-refresh")
     add(button("refresh",E+INNER-BTN,search_top,BTN,BTN,"","refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION,refresh_label))
-    add(kit.Tooltip{id="refresh-tooltip",position="absolute",edge="top",bar_size=-T.spacing.sm,
-        left=E+INNER-BTN,width=ui.text_width(refresh_label,"IBM Plex Sans",CAPTION)+2*T.spacing.sm,height=CAPTION+2*T.spacing.sm,
+    local tooltip_height=CAPTION+2*T.spacing.sm
+    local refresh_tooltip_width=ui.text_width(refresh_label,"IBM Plex Sans",CAPTION)+2*T.spacing.sm
+    add(kit.Tooltip{id="refresh-tooltip",position="absolute",edge="top",
+        bar_size=search_top-tooltip_height-2*T.spacing.sm,
+        left=E+INNER-refresh_tooltip_width,width=refresh_tooltip_width,height=tooltip_height,
         padding=T.spacing.xs,visible=string.find(hovered,"refresh",1,true)~=nil or string.find(focused,"refresh",1,true)~=nil,
         ui.Text{text=refresh_label,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
     if warning~="" then
@@ -163,8 +166,9 @@ else
     add(ui.Row(footer_buttons))
     if footer_tooltip~="" then
         local tooltip_width=ui.text_width(footer_tooltip,"IBM Plex Sans",CAPTION)+2*T.spacing.sm
-        add(kit.Tooltip{id="footer-tooltip",position="absolute",edge="top",bar_size=-T.spacing.sm,
-            left=E+(INNER-tooltip_width)/2,width=tooltip_width,height=CAPTION+2*T.spacing.sm,padding=T.spacing.xs,
+        add(kit.Tooltip{id="footer-tooltip",position="absolute",edge="top",
+            bar_size=footer_top-tooltip_height-2*T.spacing.sm,
+            left=E+(INNER-tooltip_width)/2,width=tooltip_width,height=tooltip_height,padding=T.spacing.xs,
             visible=true,ui.Text{text=footer_tooltip,width="fill",height=CAPTION+T.spacing.xs,font_size=CAPTION,color="onSurface"}})
     end
 end
