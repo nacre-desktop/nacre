@@ -135,6 +135,7 @@ pub fn project(snapshot: &Value, backend: &str, keyboard: &Value) -> Result<Valu
         niri_state::capabilities()
     };
     if backend == "niri" {
+        capabilities["workspaceCollections"] = json!(false);
         if let Some(snapshot_capabilities) = snapshot.get("capabilities") {
             for key in [
                 "workspaceCollections",

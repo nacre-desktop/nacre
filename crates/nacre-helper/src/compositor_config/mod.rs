@@ -112,6 +112,77 @@ pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
 pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
     niri::native_unsupported_report(text)
 }
+#[cfg(test)]
+pub(crate) fn native_commands_for_frozen_python(value: Value) -> Value {
+    match value {
+        Value::String(value) => {
+            let mut value = value
+                .replace("NACRE_COMPOSITOR=niri python3 ", "NACRE_COMPOSITOR=niri ")
+                .replace(
+                    "/compositor.py\" action ",
+                    "/nacre-helper\" compositor action ",
+                )
+                .replace(
+                    "/compositor.py\\\" action ",
+                    "/nacre-helper\\\" compositor action ",
+                )
+                .replace(
+                    "spawn-sh \"niri msg action toggle-column-tabbed-display\"",
+                    "toggle-column-tabbed-display",
+                )
+                .replace(
+                    "spawn-sh \"niri msg action focus-window-up-or-bottom\"",
+                    "focus-window-up-or-bottom",
+                )
+                .replace(
+                    "spawn-sh \"niri msg action focus-window-down-or-top\"",
+                    "focus-window-down-or-top",
+                );
+            for (generated, action) in [
+                (niri::action_command("close_window", &[]), "close-window"),
+                (
+                    niri::action_command(
+                        "fullscreen_window",
+                        &["--mode".into(), "fullscreen".into()],
+                    ),
+                    "fullscreen-window",
+                ),
+                (
+                    niri::action_command(
+                        "fullscreen_window",
+                        &["--mode".into(), "maximized".into()],
+                    ),
+                    "maximize-window-to-edges",
+                ),
+                (
+                    niri::action_command("float_window", &["--action".into(), "toggle".into()]),
+                    "toggle-window-floating",
+                ),
+            ] {
+                let wrapped = format!(
+                    "spawn-sh {}",
+                    niri::quoted(&json!(generated))
+                        .expect("compiler command is a valid KDL string")
+                );
+                value = value.replace(&wrapped, action);
+            }
+            Value::String(value)
+        }
+        Value::Array(values) => Value::Array(
+            values
+                .into_iter()
+                .map(native_commands_for_frozen_python)
+                .collect(),
+        ),
+        Value::Object(values) => Value::Object(
+            values
+                .into_iter()
+                .map(|(key, value)| (key, native_commands_for_frozen_python(value)))
+                .collect(),
+        ),
+        value => value,
+    }
+}
 fn lua(value: &Value, named_fields: bool) -> Result<String> {
     Ok(match value {
         Value::Null => "nil".into(),
@@ -718,78 +789,9 @@ mod tests {
             // Frozen reference files themselves remain immutable evidence.
             let expected: Value =
                 serde_json::from_str(case["stdout"].as_str().ok_or("Missing stdout")?)?;
-            fn native_commands(value: Value) -> Value {
-                match value {
-                    Value::String(value) => {
-                        let mut value = value
-                            .replace("NACRE_COMPOSITOR=niri python3 ", "NACRE_COMPOSITOR=niri ")
-                            .replace(
-                                "/compositor.py\" action ",
-                                "/nacre-helper\" compositor action ",
-                            )
-                            .replace(
-                                "/compositor.py\\\" action ",
-                                "/nacre-helper\\\" compositor action ",
-                            )
-                            .replace(
-                                "spawn-sh \\\"niri msg action toggle-column-tabbed-display\\\"",
-                                "toggle-column-tabbed-display",
-                            )
-                            .replace(
-                                "spawn-sh \\\"niri msg action focus-window-up-or-bottom\\\"",
-                                "focus-window-up-or-bottom",
-                            )
-                            .replace(
-                                "spawn-sh \\\"niri msg action focus-window-down-or-top\\\"",
-                                "focus-window-down-or-top",
-                            );
-                        for (generated, action) in [
-                            (niri::action_command("close_window", &[]), "close-window"),
-                            (
-                                niri::action_command(
-                                    "fullscreen_window",
-                                    &["--mode".into(), "fullscreen".into()],
-                                ),
-                                "fullscreen-window",
-                            ),
-                            (
-                                niri::action_command(
-                                    "fullscreen_window",
-                                    &["--mode".into(), "maximized".into()],
-                                ),
-                                "maximize-window-to-edges",
-                            ),
-                            (
-                                niri::action_command(
-                                    "float_window",
-                                    &["--action".into(), "toggle".into()],
-                                ),
-                                "toggle-window-floating",
-                            ),
-                        ] {
-                            let wrapped = format!(
-                                "spawn-sh {}",
-                                niri::quoted(&json!(generated))
-                                    .expect("compiler command is a valid KDL string")
-                            );
-                            value = value.replace(&wrapped, action);
-                        }
-                        Value::String(value)
-                    }
-                    Value::Array(values) => {
-                        Value::Array(values.into_iter().map(native_commands).collect())
-                    }
-                    Value::Object(values) => Value::Object(
-                        values
-                            .into_iter()
-                            .map(|(key, value)| (key, native_commands(value)))
-                            .collect(),
-                    ),
-                    value => value,
-                }
-            }
             assert!(
-                crate::json::encode(&value)? == crate::json::encode(&native_commands(expected))?,
+                crate::json::encode(&value)?
+                    == crate::json::encode(&native_commands_for_frozen_python(expected))?,
                 "Frozen compiler output differs after declared native command swap: {}",
                 request["name"]
             );

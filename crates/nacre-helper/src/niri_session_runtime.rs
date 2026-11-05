@@ -1747,7 +1747,14 @@ mod tests {
                     value!({"text":"Prepared with --stock-niri\n", "mode":0o600}),
                 );
             }
-            assert_eq!(Value::Object(files), expected["files"], "{}", case["name"]);
+            assert_eq!(
+                Value::Object(files),
+                crate::compositor_config::native_commands_for_frozen_python(
+                    expected["files"].clone(),
+                ),
+                "{}",
+                case["name"]
+            );
             assert_eq!(
                 fs::metadata(destination.join("config"))?
                     .permissions()

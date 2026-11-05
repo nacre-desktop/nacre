@@ -330,7 +330,7 @@ mod tests {
             let mut request = String::new();
             stream.read_line(&mut request)?;
             assert_eq!(request, "\"NacreCapabilities\"\n");
-            writeln!(stream.get_mut(), "{{\"NacreCapabilities\":{{\"workspace_collections\":false,\"proportional_x11_widths\":false,\"overview_hover\":false,\"scratchpad\":true,\"window_pinning\":true,\"edge_triggers\":false,\"force_close\":true,\"monitor_workspace_actions\":false,\"window_restore\":true}}}}")
+            writeln!(stream.get_mut(), "{{\"Ok\":{{\"NacreCapabilities\":{{\"workspace_collections\":false,\"proportional_x11_widths\":false,\"overview_hover\":false,\"scratchpad\":true,\"window_pinning\":true,\"edge_triggers\":false,\"force_close\":true,\"monitor_workspace_actions\":false,\"window_restore\":true}}}}}}")
         });
         let capabilities = capabilities_for_socket(&socket);
         assert_eq!(capabilities["windowForceKill"], false);

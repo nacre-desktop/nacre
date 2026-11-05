@@ -476,7 +476,7 @@ impl<T: Transport> Backend<T> {
             "pin_window" => {
                 if !self.transport.nacre_capabilities().window_pinning {
                     return Err(failure(
-                        "Window pinning is unavailable on this niri compositor",
+                        "Operation is not supported by the niri backend; check compositor capabilities",
                     ));
                 }
                 let row = self.transport.window(window, timeout)?;
