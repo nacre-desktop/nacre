@@ -61,6 +61,14 @@
     "home/Documents/Nacre-Brain/runbooks": {
       "mode": "0o700",
       "directory": true
+    },
+    "home/Documents/Nacre-Brain/archive": {
+      "mode": "0o700",
+      "directory": true
+    },
+    "home/Documents/Nacre-Brain/digests": {
+      "mode": "0o700",
+      "directory": true
     }
   },
   "deleted": [],
