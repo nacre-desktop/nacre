@@ -1,12 +1,14 @@
 # N0135 — Brain git history (U1)
 
-Status: implementation in progress; validation requires the authorized remote CI host.
+Status: implemented; acceptance and desktop CI validation in progress.
 
 The vault owns a private git repository. `nacre-brain git init --remote URL`
 creates a baseline import, committed ignores and a pre-commit guard. The guard
 checks indexed bytes, forbidden paths, symlinks, size and provider secret rules;
 diagnostics contain only filenames and rule names. Large raw files remain local
-and receive SHA-256, size and origin entries in `raw/MANIFEST.md`.
+and receive SHA-256, size and origin entries in `raw/MANIFEST.md`. The `vault:`
+origin identifies a file imported from the existing vault; it does not invent
+provenance for an original external source.
 
 Native and retained Python note, memory and maintenance writers share the vault
 lock followed by capture.lock. Writes enqueue relative paths in ignored state;
@@ -24,6 +26,8 @@ container. No live vault, live units, viewer changes or remote Brain pushes.
 
 Temporary duplicates: retained Python `.py.rollback` tools support existing
 compatibility/parity consumers; delete 7 days after the native replacement is
-trusted and those consumers have migrated. The legacy sync binary and unit
-templates remain for compatibility and old-install cleanup; delete 7 days after
-those interfaces are retired. Fresh installs do not install sync units.
+trusted and those consumers have migrated. The legacy sync binary remains while
+`brain_data::api` and the helper dispatcher expose it, and the Python maintenance
+compatibility tool imports its rollback implementation; delete 7 days after
+those interfaces are retired. Sync unit templates are deleted, and fresh installs
+do not install sync units.

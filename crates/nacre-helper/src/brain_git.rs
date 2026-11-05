@@ -296,6 +296,28 @@ pub fn guard_staged(root: &Path) -> Result<()> {
     guard_index(root, None)
 }
 fn guard_index(root: &Path, index: Option<&Path>) -> Result<()> {
+    let mut changed = Command::new("git");
+    changed
+        .arg("-C")
+        .arg(root)
+        .args(["diff", "--cached", "--name-only", "-z"]);
+    if let Some(index) = index {
+        changed.env("GIT_INDEX_FILE", index);
+    }
+    let changed = changed.output()?;
+    if !changed.status.success() {
+        return Err("unable to inspect staged Brain changes".into());
+    }
+    for path in changed
+        .stdout
+        .split(|b| *b == 0)
+        .filter(|path| !path.is_empty())
+    {
+        let path = String::from_utf8_lossy(path);
+        if under_forbidden(&path) {
+            return Err(format!("{path}: forbidden-path").into());
+        }
+    }
     let mut command = Command::new("git");
     command
         .arg("-C")
@@ -447,7 +469,7 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
             ignores.push_str(&format!("{pattern}\n"));
             safe_write(&ignore, ignores.as_bytes(), 0o600)?;
         }
-        let row = format!("{hash} | {size} | {p}\n");
+        let row = format!("{hash} | {size} | vault:{p}\n");
         if !manifest_text.contains(&row) {
             manifest_text.push_str(&row);
         }
@@ -882,6 +904,25 @@ mod tests {
         assert!(fs::read_to_string(root.join(".gitignore"))
             .unwrap()
             .contains("/raw/source.bin"));
+    }
+    #[test]
+    fn guard_rejects_deleted_forbidden_paths() {
+        let (_temp, root) = vault();
+        init(&root, None).unwrap();
+        fs::create_dir_all(root.join("credentials")).unwrap();
+        fs::write(root.join("credentials/reference"), "safe reference").unwrap();
+        success(&root, &["add", "-f", "credentials/reference"]).unwrap();
+        success(
+            &root,
+            &["-c", "core.hooksPath=/dev/null", "commit", "-m", "fixture"],
+        )
+        .unwrap();
+        fs::remove_file(root.join("credentials/reference")).unwrap();
+        success(&root, &["add", "-u"]).unwrap();
+        assert!(guard_staged(&root)
+            .unwrap_err()
+            .to_string()
+            .contains("forbidden-path"));
     }
     #[test]
     fn guard_rejects_secret_without_echoing_it() {
