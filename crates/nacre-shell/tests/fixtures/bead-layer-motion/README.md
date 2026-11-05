@@ -1,11 +1,13 @@
 # Bead layer-motion protocol test fixture
 
 `bead-layer-motion-v1.xml` is copied verbatim from Bead commit
-`e44930898b223c4abe679455bb5e9c0c2f85198c`, path
+`9b7ae08a588a4f27ba30e5e0aee20f15c8138d21`, path
 `protocols/bead-layer-motion-v1.xml`. It carries `SPDX-License-Identifier: MIT`
 and `Copyright © 2026 Bead contributors`. SHA256:
-`52f4775621ff5fcfaa60e2824a8414f70bacd68e6a42a2a653846b3b9a45f20d`.
+`5194db439eaeed061e6d26c714b92800978c5bf2f188a49188b14332e97fee32`.
 
-`LICENSE-MIT` is copied from the same Bead commit. This fixture exists only for
-the private Wayland server bindings in the Nacre request-sequence test; it does
-not define a second protocol source.
+The canonical protocol source remains Bead's
+`protocols/bead-layer-motion-v1.xml`; this verbatim fixture exists only for the
+private Wayland server bindings in the Nacre request-sequence test. `LICENSE-MIT`
+is also copied from Bead commit `9b7ae08a588a4f27ba30e5e0aee20f15c8138d21`
+(SHA256 `7008f723b5623800e80169eda6ea835e81a3d53c5a4629d1aed610914aa6d0e1`).
