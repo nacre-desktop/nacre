@@ -28,6 +28,23 @@ use tokio::{
 pub const TOPIC: &str = "niri.widths";
 const INITIAL_RETRY_MS: u64 = 50;
 const MAX_RETRY_MS: u64 = 2000;
+const NATIVE_WIDTH_POLICY_MESSAGE: &str = "Native proportional X11 width policy is active";
+
+fn native_width_policy_failure() -> Failure {
+    failure(
+        ErrorCode::Unavailable,
+        NATIVE_WIDTH_POLICY_MESSAGE,
+        true,
+    )
+}
+
+fn is_native_width_policy_failure(error: &crate::Error) -> bool {
+    error.downcast_ref::<Failure>().is_some_and(|failure| {
+        failure.code == ErrorCode::Unavailable
+            && failure.message == NATIVE_WIDTH_POLICY_MESSAGE
+    })
+}
+
 fn take_retry_delay(retry_ms: &mut u64) -> Duration {
     let delay = Duration::from_millis(*retry_ms);
     *retry_ms = retry_ms.saturating_mul(2).min(MAX_RETRY_MS);
@@ -135,11 +152,7 @@ pub async fn dispatch(hub: Shared, params: Value) -> Response {
     })?;
     params.validate()?;
     if native_width_policy(&hub) {
-        return Err(failure(
-            ErrorCode::Unavailable,
-            "Native proportional X11 width policy is active",
-            true,
-        ));
+        return Err(native_width_policy_failure());
     }
     let requests = hub.borrow().widths.clone().ok_or_else(|| {
         failure(
@@ -167,16 +180,13 @@ pub fn observe_if_daemon(
 ) -> Result<Option<i32>> {
     use super::client::{self, ConnectError};
     use nacre_protocol::{framing, Id, Message, Mirror, Update};
-    if native_width_policy_available(environment) {
-        return Ok(Some(0));
-    }
     let explicit = std::env::var_os("NACRE_DAEMON_SOCKET").is_some();
     if !explicit
         && environment
             .get("XDG_RUNTIME_DIR")
             .is_none_or(|value| !std::path::Path::new(value).is_absolute())
     {
-        return Ok(None);
+        return Ok(native_width_policy_available(environment).then_some(0));
     }
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -185,10 +195,22 @@ pub fn observe_if_daemon(
     runtime.block_on(async {
         let mut client=match client::connect().await {
             Ok(client)=>client,
-            Err(ConnectError::Absent) if !explicit=>return Ok(None),
+            Err(ConnectError::Absent) => {
+                if native_width_policy_available(environment) {
+                    return Ok(Some(0));
+                }
+                if !explicit {
+                    return Ok(None);
+                }
+                return Err(ConnectError::Absent.into());
+            }
             Err(error)=>return Err(error.into()),
         };
-        if !client.methods.contains_key("niri.widths.configure") {
+        let has_width_method = client.methods.contains_key("niri.widths.configure");
+        if !has_width_method {
+            if native_width_policy_available(environment) {
+                return Ok(Some(0));
+            }
             let status=client.call("daemon.status",json!({}),None).await?;
             if !explicit && status["safe"]==false && status["services"].get("niri-widths").is_none() {
                 return Ok(None);
@@ -206,8 +228,12 @@ pub fn observe_if_daemon(
         let mut retry_ms=INITIAL_RETRY_MS;
         loop {
             let result=async {
-                let topic=if client.methods.contains_key("niri.widths.configure") {
-                    client.call("niri.widths.configure",serde_json::to_value(&params)?,Some(2000)).await?;
+                let topic=if has_width_method {
+                    match client.call("niri.widths.configure",serde_json::to_value(&params)?,Some(2000)).await {
+                        Ok(_) => {},
+                        Err(error) if is_native_width_policy_failure(&error) => return Ok(0),
+                        Err(error) => return Err(error),
+                    }
                     TOPIC
                 }else {"daemon"};
                 // The compatibility observer needs no method schemas after its
@@ -455,6 +481,9 @@ pub async fn run(
                 break;
             }
             if native_width_policy(&hub) {
+                while let Ok(request) = requests.try_recv() {
+                    let _ = request.reply.send(Err(native_width_policy_failure()));
+                }
                 let status = json!({"available":false,"opening_width":opening.get(),"relaxed":0});
                 if hub.borrow().snapshot(TOPIC).as_ref() != Some(&status) {
                     hub.borrow_mut().publish(TOPIC, status)?;
@@ -628,6 +657,17 @@ mod tests {
         assert_eq!(probe(true)?, Some(0));
         assert_eq!(probe(false)?, None);
         Ok(())
+    }
+    #[test]
+    fn only_the_native_policy_unavailable_reply_is_a_successful_noop() {
+        let native: crate::Error = native_width_policy_failure().into();
+        assert!(is_native_width_policy_failure(&native));
+        let other_unavailable: crate::Error =
+            failure(ErrorCode::Unavailable, "Width observer is unavailable", true).into();
+        assert!(!is_native_width_policy_failure(&other_unavailable));
+        let other_native_message: crate::Error =
+            failure(ErrorCode::Internal, NATIVE_WIDTH_POLICY_MESSAGE, false).into();
+        assert!(!is_native_width_policy_failure(&other_native_message));
     }
     #[test]
     fn reconnect_delay_grows_and_stays_capped() {

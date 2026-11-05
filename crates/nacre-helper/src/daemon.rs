@@ -69,9 +69,8 @@ fn width_service_should_start(
     safe: bool,
     niri: bool,
     has_x11_display: bool,
-    native_width_policy: bool,
 ) -> bool {
-    !safe && niri && has_x11_display && !native_width_policy
+    !safe && niri && has_x11_display
 }
 
 async fn serve(
@@ -460,15 +459,10 @@ async fn serve(
     let has_x11_display = width_environment
         .get("DISPLAY")
         .is_some_and(|value| !value.is_empty());
-    let native_width_policy = !counter.safe
-        && niri_backend
-        && has_x11_display
-        && widths::native_width_policy_available(&width_environment);
     let width_service = if width_service_should_start(
         counter.safe,
         niri_backend,
         has_x11_display,
-        native_width_policy,
     ) {
         hub.borrow_mut().service("niri-widths", "starting", 0)?;
         hub.borrow_mut().publish(
@@ -922,11 +916,10 @@ mod width_service_tests {
     use super::width_service_should_start;
 
     #[test]
-    fn observer_actor_starts_only_for_niri_x11_sessions() {
-        assert!(width_service_should_start(false, true, true, false));
-        assert!(!width_service_should_start(false, true, true, true));
-        assert!(!width_service_should_start(true, true, true, false));
-        assert!(!width_service_should_start(false, false, true, false));
-        assert!(!width_service_should_start(false, true, false, false));
+    fn observer_actor_starts_for_niri_x11_to_wait_for_shared_capabilities() {
+        assert!(width_service_should_start(false, true, true));
+        assert!(!width_service_should_start(true, true, true));
+        assert!(!width_service_should_start(false, false, true));
+        assert!(!width_service_should_start(false, true, false));
     }
 }
