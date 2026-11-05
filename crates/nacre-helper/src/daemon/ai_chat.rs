@@ -386,21 +386,11 @@ impl Host {
         };
         let mut saved = BTreeMap::new();
         let mut chats = Vec::new();
-        for item in records.into_iter().take(30) {
-            let Some(title) = item["title"].as_str().filter(|value| !value.trim().is_empty()) else { continue };
-            let Some(project_name) = item["project"]["label"].as_str().filter(|value| !value.trim().is_empty())
-                .or_else(|| item["project"]["name"].as_str().filter(|value| !value.trim().is_empty()))
-                .or_else(|| item["project"]["id"].as_str().filter(|value| !value.trim().is_empty())) else { continue };
-            let key = launcher_key(&item);
-            saved.insert(key.clone(), item.clone());
-            chats.push(nacre_protocol::ai_launcher::Chat {
-                key,
-                title: launcher_text(title, 256),
-                project: launcher_text(project_name, 128),
-                provider: if item["agent"] == "claude" { Provider::Claude } else { Provider::Codex },
-                state: launcher_text(item["state"].as_str().unwrap_or("saved"), 32),
-                last_activity: item["updated_at"].as_f64().unwrap_or(0.0),
-            });
+        for item in records {
+            if chats.len() >= 30 {
+                break;
+            }
+            append_launcher_row(&mut saved, &mut chats, item);
         }
         self.launcher_records.replace(saved);
         let projects = projects.into_iter().filter_map(|row| {
@@ -715,6 +705,30 @@ fn launcher_key(item: &Value) -> String {
     format!("chat{hash:016x}")
 }
 
+fn append_launcher_row(
+    records: &mut BTreeMap<String, Value>,
+    chats: &mut Vec<nacre_protocol::ai_launcher::Chat>,
+    item: Value,
+) {
+    let Some(title) = item["title"].as_str().filter(|value| !value.trim().is_empty()) else { return };
+    let Some(project_name) = item["project"]["label"].as_str().filter(|value| !value.trim().is_empty())
+        .or_else(|| item["project"]["name"].as_str().filter(|value| !value.trim().is_empty()))
+        .or_else(|| item["project"]["id"].as_str().filter(|value| !value.trim().is_empty())) else { return };
+    let key = launcher_key(&item);
+    if records.contains_key(&key) {
+        return;
+    }
+    records.insert(key.clone(), item.clone());
+    chats.push(nacre_protocol::ai_launcher::Chat {
+        key,
+        title: launcher_text(title, 256),
+        project: launcher_text(project_name, 128),
+        provider: if item["agent"] == "claude" { Provider::Claude } else { Provider::Codex },
+        state: launcher_text(item["state"].as_str().unwrap_or("saved"), 32),
+        last_activity: item["updated_at"].as_f64().unwrap_or(0.0),
+    });
+}
+
 fn launcher_text(value: &str, max: usize) -> String {
     value.chars().filter(|ch| !ch.is_control()).take(max).collect()
 }
@@ -723,23 +737,30 @@ fn existing_chat_window(snapshot: &Value, item: &Value, key: &str, unique_title:
     let windows = snapshot["windows"].as_object()?;
     let class = format!("nacre-ai-chat-{key}");
     let chat_id = item["id"].as_str()?;
+    if let Some((id, _)) = windows.iter().find(|(_, window)| window["appId"].as_str() == Some(class.as_str())) {
+        return Some(id.clone());
+    }
+    let matching_titles = windows.iter().filter(|(_, window)| {
+        window["appId"].as_str() == Some("nacre-ai-task")
+            && window["title"].as_str() == item["title"].as_str()
+    }).map(|(id, _)| id.clone()).collect::<Vec<_>>();
+    if unique_title && matching_titles.len() == 1 {
+        return Some(matching_titles[0].clone());
+    }
     let mut paths = None;
     let uid = nix::unistd::getuid().as_raw();
-    for (id, window) in windows.iter().take(64) {
+    for (id, window) in windows.iter().filter(|(_, window)| {
         let app_id = window["appId"].as_str().unwrap_or("");
-        if app_id == class { return Some(id.clone()); }
-        if app_id != "nacre-ai-task" && !app_id.starts_with("nacre-ai-chat-") { continue; }
-        if app_id == "nacre-ai-task" && unique_title
-            && window["title"].as_str() == item["title"].as_str() {
-            return Some(id.clone());
-        }
+        app_id == "nacre-ai-task" || app_id.starts_with("nacre-ai-chat-")
+    }).take(64) {
+        let app_id = window["appId"].as_str().unwrap_or("");
         if paths.is_none() {
             paths = Some(crate::paths::Paths::environment().ok()?);
         }
         let paths = paths.as_ref()?;
         let Some(pid) = window["pid"].as_i64() else { continue };
         let info = crate::window_chat_title::resolve_info(pid, std::path::Path::new("/proc"), paths, uid);
-        if info.thread_id == chat_id || (unique_title && info.thread_id.is_empty()
+        if info.thread_id == chat_id || (unique_title && matching_titles.is_empty() && info.thread_id.is_empty()
             && !info.title.is_empty() && info.title == item["title"].as_str().unwrap_or("")) {
             return Some(id.clone());
         }
@@ -762,10 +783,26 @@ mod tests {
     }
 
     #[test]
+    fn launcher_list_deduplicates_repeated_provider_rows() {
+        let row = json!({"id":"thread-1","agent":"codex","account":"work","title":"Fixture","state":"idle","updated_at":1,"project":{"id":"demo","label":"Demo"}});
+        let mut records = BTreeMap::new();
+        let mut chats = Vec::new();
+        append_launcher_row(&mut records, &mut chats, row.clone());
+        append_launcher_row(&mut records, &mut chats, row);
+        assert_eq!(chats.len(), 1);
+        assert_eq!(records.len(), 1);
+    }
+
+    #[test]
     fn launcher_focus_matches_its_owned_window_class() {
         let row = json!({"id":"thread-1","title":"Fixture","project":{"id":"demo"}});
         let key = launcher_key(&row);
-        let snapshot = json!({"windows":{"niri-window:42":{"appId":format!("nacre-ai-chat-{key}")}}});
+        let mut windows = serde_json::Map::new();
+        for index in 0..96 {
+            windows.insert(format!("unrelated-{index:03}"), json!({"appId":"browser","title":"Other"}));
+        }
+        windows.insert("niri-window:42".into(), json!({"appId":format!("nacre-ai-chat-{key}")}));
+        let snapshot = json!({"windows":windows});
         assert_eq!(existing_chat_window(&snapshot, &row, &key, true).as_deref(), Some("niri-window:42"));
     }
 
@@ -775,6 +812,16 @@ mod tests {
         let snapshot = json!({"windows":{"niri-window:43":{"appId":"nacre-ai-task","title":"Camera work"}}});
         assert_eq!(existing_chat_window(&snapshot, &row, "unused", true).as_deref(), Some("niri-window:43"));
         assert_eq!(existing_chat_window(&snapshot, &row, "unused", false), None);
+    }
+
+    #[test]
+    fn launcher_focus_ignores_ambiguous_generic_titles() {
+        let row = json!({"id":"remote-thread","title":"Camera work","project":{"id":"demo","host":"builder"}});
+        let snapshot = json!({"windows":{
+            "niri-window:43":{"appId":"nacre-ai-task","title":"Camera work"},
+            "niri-window:44":{"appId":"nacre-ai-task","title":"Camera work"}
+        }});
+        assert_eq!(existing_chat_window(&snapshot, &row, "unused", true), None);
     }
 
     fn texts(view: &View) -> Vec<(String, String)> {
