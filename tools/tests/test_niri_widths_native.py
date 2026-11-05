@@ -69,6 +69,7 @@ class WidthObserverNativeTests(unittest.TestCase):
         self.event_ready = threading.Event()
         self.event_connection = None
         self.requests = []
+        self.probes = 0
         self.errors = []
         self.connections = 0
         self.send_lock = threading.Lock()
@@ -133,6 +134,11 @@ class WidthObserverNativeTests(unittest.TestCase):
             with connection, connection.makefile("rb") as stream:
                 for line in stream:
                     request = json.loads(line)
+                    if request == "NacreCapabilities":
+                        # Stock Niri rejects the fork's capability probe.
+                        self.probes += 1
+                        connection.sendall(b'{"Err":"unknown request"}\n')
+                        continue
                     self.requests.append(request)
                     if request == "EventStream":
                         self.event_connection = connection
@@ -200,6 +206,7 @@ class WidthObserverNativeTests(unittest.TestCase):
         self.assertEqual(self.helper.wait(timeout=5), 0)
         self.assertEqual(bytes(self.x11.hints(window)), original)
         self.assertEqual(self.requests, ["EventStream"])
+        self.assertEqual(self.probes, 1)
 
     def test_new_windows_resize_once_over_one_persistent_action_connection(self):
         self.x11.create("Existing", 1600)
