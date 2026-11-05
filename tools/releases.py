@@ -36,7 +36,11 @@ LOCKFILES = {".writer.lock", "release.lock"}
 
 def _ignore_snapshot_locks(directory, names):
     del directory
-    return [name for name in names if name in LOCKFILES or name == "__pycache__"]
+    return [
+        name
+        for name in names
+        if name in LOCKFILES or name == "__pycache__" or name.endswith(".pyc")
+    ]
 
 
 def compositor():
@@ -77,7 +81,11 @@ def fingerprint(path):
     h = hashlib.sha256()
     files = sorted(path.rglob("*")) if path.is_dir() else [path]
     for p in files:
-        if p.name in LOCKFILES or "__pycache__" in p.parts:
+        if (
+            p.name in LOCKFILES
+            or p.name.endswith(".pyc")
+            or "__pycache__" in p.parts
+        ):
             continue
         if p.is_symlink():
             h.update(str(p.relative_to(path) if path.is_dir() else p.name).encode())
