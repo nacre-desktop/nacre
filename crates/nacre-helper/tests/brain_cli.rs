@@ -254,3 +254,58 @@ fn two_process_writes_batch_without_lost_or_partial_notes() {
         20
     );
 }
+
+#[test]
+fn python_and_native_memory_captures_share_deduplication() {
+    use wait_timeout::ChildExt;
+    let temporary = tempfile::tempdir().unwrap();
+    let home = temporary.path();
+    let vault = home.join("vault");
+    assert!(call(home, &vault, &["init"], "").status.success());
+    let repository = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut native = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+    native.arg("nacre-ai-memory");
+    let mut python = Command::new("python3");
+    python.arg(repository.join("bin/nacre-ai-memory.py.rollback"));
+    let children = [&mut native, &mut python]
+        .into_iter()
+        .map(|command| {
+            let mut child = command
+                .args(["--title", "Shared capture", "--source", "fixture"])
+                .env("HOME", home)
+                .env("NACRE_BRAIN", &vault)
+                .env("NACRE_HELPER_BINARY", env!("CARGO_BIN_EXE_nacre-helper"))
+                .env("PYTHONPATH", repository.join("nacre/shell-tools"))
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+            child
+                .stdin
+                .take()
+                .unwrap()
+                .write_all(b"Shared observation.\n")
+                .unwrap();
+            child
+        })
+        .collect::<Vec<_>>();
+    for mut child in children {
+        if child
+            .wait_timeout(std::time::Duration::from_secs(20))
+            .unwrap()
+            .is_none()
+        {
+            child.kill().unwrap();
+            child.wait().unwrap();
+            panic!("memory capture deadlocked");
+        }
+        let output = child.wait_with_output().unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    assert_eq!(fs::read_dir(vault.join("inbox")).unwrap().count(), 1);
+}

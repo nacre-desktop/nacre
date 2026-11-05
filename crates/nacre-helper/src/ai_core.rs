@@ -527,6 +527,23 @@ fn memory(args: &[String]) -> Result<i32> {
     let signature = format!("{:x}", Sha256::digest(signature_data.as_bytes()));
     let root = crate::brain_data::root_path()?;
     let state = root.join(".brain-state");
+    // The Python compatibility capture holds this claim while its native note
+    // subprocess takes the vault locks. Share it to preserve cross-tool dedup.
+    if fs::symlink_metadata(&state).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err(error("Symlinked vault paths are not supported"));
+    }
+    fs::create_dir_all(&state)?;
+    let claim = fs::OpenOptions::new()
+        .read(true)
+        .create(true)
+        .append(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(state.join(format!("capture-{signature}.lock")))?;
+    if !claim.metadata()?.is_file() || claim.metadata()?.nlink() != 1 {
+        return Err(error("Linked or non-regular memory claim"));
+    }
+    rustix::fs::flock(&claim, rustix::fs::FlockOperation::LockExclusive)?;
     let _vault_lock = crate::brain_git::acquire_vault_lock(&root)?;
     let record = state.join(format!("capture-{signature}.json"));
     if fs::symlink_metadata(&record).is_ok_and(|metadata| {
