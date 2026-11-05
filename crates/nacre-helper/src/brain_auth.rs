@@ -654,8 +654,9 @@ mod tests {
         for worker in workers {
             worker.join().unwrap();
         }
-        let page = refresh_bootstrap(&state, 17843, false).unwrap();
-        let token = page.split("nacre-bootstrap=").nth(1).unwrap().to_owned();
+        let token = read_bootstrap(&dir.path().join("auth/ports/17843.bootstrap.json"))
+            .unwrap()
+            .token;
         assert!(auth.consume_bootstrap(&token));
     }
 

@@ -716,6 +716,56 @@ mod tests {
     }
 
     #[test]
+    fn bootstrap_http_exchange_accepts_only_loopback_same_origin_and_rejects_replay() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path().to_path_buf();
+        let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = std::thread::spawn(move || {
+            serve(listener, &state, Duration::from_secs(10), |_| {
+                Response::new(404, "application/json", b"{}".to_vec())
+            })
+            .unwrap()
+        });
+        wait_for_server(port);
+        let bootstrap: Value = serde_json::from_slice(
+            &std::fs::read(dir.path().join(format!("auth/ports/{port}.bootstrap.json"))).unwrap(),
+        )
+        .unwrap();
+        let token = bootstrap["token"].as_str().unwrap().to_owned();
+        let send = |token: &str, host: &str, origin: &str| {
+            let body = serde_json::to_vec(&serde_json::json!({"token":token})).unwrap();
+            let mut client = TcpStream::connect(("127.0.0.1", port)).unwrap();
+            client
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            write!(
+                client,
+                "POST /api/bootstrap HTTP/1.1\r\nHost: {host}\r\nOrigin: {origin}\r\nSec-Fetch-Site: same-origin\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                body.len()
+            )
+            .unwrap();
+            client.write_all(&body).unwrap();
+            let mut response = Vec::new();
+            client.read_to_end(&mut response).unwrap();
+            String::from_utf8(response).unwrap()
+        };
+        let origin = format!("http://127.0.0.1:{port}");
+        assert!(send(&token, &format!("localhost:{port}"), "http://evil.example")
+            .starts_with("HTTP/1.1 403"));
+        assert!(send(&token, "evil.example", &origin).starts_with("HTTP/1.1 403"));
+        assert!(send("wrong-token", &format!("127.0.0.1:{port}"), &origin)
+            .starts_with("HTTP/1.1 403"));
+        let accepted = send(&token, &format!("127.0.0.1:{port}"), &origin);
+        assert!(accepted.starts_with("HTTP/1.1 200"));
+        assert!(accepted.contains("Set-Cookie: nacre_brain_"));
+        assert!(accepted.contains("\"authorization\":\""));
+        assert!(send(&token, &format!("127.0.0.1:{port}"), &origin)
+            .starts_with("HTTP/1.1 403"));
+        server.join().unwrap();
+    }
+
+    #[test]
     fn refuses_non_loopback_listener_and_caps_responses() {
         let dir = tempfile::tempdir().unwrap();
         let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
