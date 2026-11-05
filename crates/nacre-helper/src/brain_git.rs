@@ -44,6 +44,7 @@ fn git(root: &Path, args: &[&str]) -> Result<Output> {
         .arg(root)
         .args(args)
         .env("GIT_TERMINAL_PROMPT", "0")
+        .env("GIT_LITERAL_PATHSPECS", "1")
         .env("GIT_AUTHOR_NAME", IDENT_NAME)
         .env("GIT_AUTHOR_EMAIL", IDENT_EMAIL)
         .env("GIT_COMMITTER_NAME", IDENT_NAME)
@@ -463,7 +464,17 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
     }
     let mut manifest_text = fs::read_to_string(&manifest)?;
     for (p, hash, size) in large {
-        let pattern = format!("/{p}");
+        if p.contains(['\n', '\r']) {
+            return Err("Raw filenames cannot contain line breaks".into());
+        }
+        let escaped = p.chars().fold(String::new(), |mut value, character| {
+            if matches!(character, '\\' | '*' | '?' | '[' | ']' | ' ') {
+                value.push('\\');
+            }
+            value.push(character);
+            value
+        });
+        let pattern = format!("/{escaped}");
         let mut ignores = fs::read_to_string(&ignore)?;
         if !ignores.lines().any(|l| l == pattern) {
             ignores.push_str(&format!("{pattern}\n"));
@@ -567,6 +578,7 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
                 add.arg("-C")
                     .arg(root)
                     .args(["add", "--", path])
+                    .env("GIT_LITERAL_PATHSPECS", "1")
                     .env("GIT_INDEX_FILE", &index);
                 if !add.output()?.status.success() {
                     return Err(format!("unable to stage {path}").into());
@@ -577,6 +589,7 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
                 rm.arg("-C")
                     .arg(root)
                     .args(["rm", "--cached", "--ignore-unmatch", "--", path])
+                    .env("GIT_LITERAL_PATHSPECS", "1")
                     .env("GIT_INDEX_FILE", &index);
                 let _ = rm.output()?;
             }
@@ -923,6 +936,27 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("forbidden-path"));
+    }
+    #[test]
+    fn queued_paths_are_literal_and_preserve_unrelated_files() {
+        let (_temp, root) = vault();
+        init(&root, None).unwrap();
+        fs::create_dir_all(root.join("inbox")).unwrap();
+        fs::write(root.join("inbox/[a].md"), "queued").unwrap();
+        fs::write(root.join("inbox/a.md"), "unrelated").unwrap();
+        commit_paths(
+            &root,
+            &[QueuedPath {
+                path: "inbox/[a].md".into(),
+                agent: "test".into(),
+            }],
+        )
+        .unwrap();
+        assert_eq!(
+            success(&root, &["show", "HEAD:inbox/[a].md"]).unwrap(),
+            "queued"
+        );
+        assert!(success(&root, &["show", "HEAD:inbox/a.md"]).is_err());
     }
     #[test]
     fn guard_rejects_secret_without_echoing_it() {

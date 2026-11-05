@@ -127,9 +127,7 @@ def capture_claim(root, signature):
         raise ValueError("Symlinked Brain state directory")
     state.mkdir(parents=True, exist_ok=True, mode=0o700)
     path = state / ("capture-" + signature + ".lock")
-    fd = os.open(
-        path, os.O_CREAT | os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW, 0o600
-    )
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_APPEND | os.O_NOFOLLOW, 0o600)
     info = os.fstat(fd)
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         os.close(fd)

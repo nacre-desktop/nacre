@@ -641,7 +641,7 @@ fn ensure_world_page(root: &std::path::Path, note: &std::path::Path, world: &str
         .to_string_lossy()
         .replace('\\', "/");
     let content = format!("# {world}\n\nEntity: world\nName: {world}\nAliases: {ident}\nReviewed: {}\nStatus: Evidence-backed subject; initial descriptor\nSource: [[{relative}]]\n\nThis subject was recorded from conversation or work. It does not imply a registered repository.\n\n## Evidence\n\n- [[{relative}]]\n", Local::now().date_naive());
-    crate::brain_data::create_page_locked(&root, &format!("wiki/entity-{ident}.md"), &content)?;
+    crate::brain_data::create_page_locked(root, &format!("wiki/entity-{ident}.md"), &content)?;
     Ok(())
 }
 
