@@ -1,6 +1,6 @@
 # N0135 — Brain git history (U1)
 
-Status: implemented; acceptance and desktop CI validation in progress.
+Status: done; acceptance and the complete desktop CI job passed.
 
 The vault owns a private git repository. `nacre-brain git init --remote URL`
 creates a baseline import, committed ignores and a pre-commit guard. The guard
@@ -23,6 +23,17 @@ symlinks and oversized files; concurrent writers batch without data loss; local
 bare remote recovery and conflict handling; installer unit retirement. Run helper
 checks, touched Python suites and the complete desktop CI job in an isolated Arch
 container. No live vault, live units, viewer changes or remote Brain pushes.
+
+Validation passed with temporary vaults and local bare remotes: baseline commit
+hash stays unchanged on repeated init; all nine secret rules and protected paths,
+symlinks and size limits block; the installed hook rejects secrets without printing
+values. Twenty writes from two processes batch within two commits without lost
+files; Python/native memory captures share deduplication. Rejected pushes rebase
+owned commits and conflicting edits abort with readable status. The full desktop
+job passed in one isolated Arch container (8 CPUs, 16 GiB), including workspace
+Clippy/tests, all 535 helper parity cases, Python suites, product proofs, native
+galleries and CPU raster memory regression. Worktree evidence: `.lead/ci.log` and
+`.lead/acceptance.py`.
 
 Temporary duplicates: retained Python `.py.rollback` tools and their
 `nacre-brain-queue.py` bridge support existing compatibility/parity consumers;
