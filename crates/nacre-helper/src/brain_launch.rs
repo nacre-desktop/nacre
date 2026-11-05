@@ -192,8 +192,7 @@ fn is_brain_window(window: &Value, pids: &std::collections::BTreeSet<u32>) -> bo
                     "msedge-",
                 ]
                 .iter()
-                .any(|prefix| class.starts_with(prefix))
-                ))
+                .any(|prefix| class.starts_with(prefix))))
 }
 
 fn preferred_window(candidates: &[Value], workspace: Option<i64>) -> Option<Value> {
@@ -424,12 +423,7 @@ fn browser_command(url: &str, handoff: bool) -> Result<Vec<String>> {
     }
     let browser = select_browser(&preferred, &env::var("PATH").unwrap_or_default(), Path::new("/opt/google/chrome/chrome"))
         .ok_or_else(|| "No supported Chromium-based browser is installed (tried the default browser, Brave, Chromium, Chrome, Vivaldi, and Edge)".to_owned())?;
-    Ok(browser_arguments(
-        &browser,
-        &profile_path()?,
-        url,
-        handoff,
-    ))
+    Ok(browser_arguments(&browser, &profile_path()?, url, handoff))
 }
 
 fn notify_launch_failure(message: &str) {

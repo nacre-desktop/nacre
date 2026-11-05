@@ -1,5 +1,14 @@
 # Nacre implementation queue
 
+N0132: implemented and verified — Brain bootstrap, handoff and app use the API's
+loopback HTTP origin; native file handoff generation is removed and browser focus
+behavior is preserved. Isolated container validation passed: 88 Brain library
+tests, Brain CLI test, locked helper/shell checks, helper build and formatting.
+Headless Chromium 156 loaded synthetic vault data and hid the loading screen;
+app assets/API shared one origin, auth handoff succeeded, wrong/replayed tokens
+returned 403, and no page errors or token logging occurred. Topic branch only;
+live browser/desktop and owner data were not accessed.
+
 Current handoff: 2026-10-20 lead transfer. F4 and N9 are Done with green
 exact-head CI. N10 is local-only and incomplete. The owner requested that this
 lead finish the current Bead B2 arm, release the desktop, checkpoint both queues

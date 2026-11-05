@@ -1136,8 +1136,11 @@ mod tests {
     #[test]
     fn brain_page_and_bootstrap_use_the_same_loopback_origin_as_api() {
         let page = route(brain_http::Request {
-            method: "GET".into(), path: "/".into(), query: String::new(),
-            headers: BTreeMap::new(), body: Vec::new(),
+            method: "GET".into(),
+            path: "/".into(),
+            query: String::new(),
+            headers: BTreeMap::new(),
+            body: Vec::new(),
         });
         let html = String::from_utf8(page.body).unwrap();
         assert_eq!(page.status, 200);

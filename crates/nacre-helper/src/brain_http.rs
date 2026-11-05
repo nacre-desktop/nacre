@@ -197,8 +197,8 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
     let referer = request.headers.get("referer");
     let canonical = format!("http://127.0.0.1:{port}");
     if request.method == "POST" && request.path == "/api/bootstrap" {
-        let bootstrap: Value = serde_json::from_slice(&request.body)
-            .map_err(|_| Response::error(400))?;
+        let bootstrap: Value =
+            serde_json::from_slice(&request.body).map_err(|_| Response::error(400))?;
         let token = bootstrap.get("token").and_then(Value::as_str).unwrap_or("");
         if origin.map(String::as_str) != Some(canonical.as_str())
             || request.headers.get("content-type").map(String::as_str) != Some("application/json")
@@ -207,15 +207,27 @@ fn authorize(request: Request, port: u16, auth: &mut BrowserAuth) -> Result<Requ
         {
             return Err(Response::error(403));
         }
-        let mut response = Response::new(200, "application/json", serde_json::to_vec(
-            &serde_json::json!({"authorization": auth.bearer_value()}),
-        ).map_err(|_| Response::error(500))?);
-        response.headers.push(("Set-Cookie".into(), format!(
-            "{}={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}",
-            auth.cookie_name(), auth.cookie_value(), auth.cookie_max_age()
-        )));
-        response.headers.push(("Cache-Control".into(), "no-store".into()));
-        response.headers.push(("Referrer-Policy".into(), "no-referrer".into()));
+        let mut response = Response::new(
+            200,
+            "application/json",
+            serde_json::to_vec(&serde_json::json!({"authorization": auth.bearer_value()}))
+                .map_err(|_| Response::error(500))?,
+        );
+        response.headers.push((
+            "Set-Cookie".into(),
+            format!(
+                "{}={}; Path=/; HttpOnly; SameSite=Strict; Max-Age={}",
+                auth.cookie_name(),
+                auth.cookie_value(),
+                auth.cookie_max_age()
+            ),
+        ));
+        response
+            .headers
+            .push(("Cache-Control".into(), "no-store".into()));
+        response
+            .headers
+            .push(("Referrer-Policy".into(), "no-referrer".into()));
         return Err(response);
     }
     if request.method == "POST" {
@@ -699,20 +711,49 @@ mod tests {
         headers.insert("content-type".into(), "application/json".into());
         headers.insert("sec-fetch-site".into(), "same-origin".into());
         let request = |token: &str, headers: BTreeMap<String, String>| Request {
-            method: "POST".into(), path: "/api/bootstrap".into(), query: String::new(),
-            headers, body: serde_json::to_vec(&serde_json::json!({"token":token})).unwrap(),
+            method: "POST".into(),
+            path: "/api/bootstrap".into(),
+            query: String::new(),
+            headers,
+            body: serde_json::to_vec(&serde_json::json!({"token":token})).unwrap(),
         };
         let mut wrong_origin = headers.clone();
         wrong_origin.insert("origin".into(), "http://evil.example".into());
-        assert_eq!(authorize(request(&token, wrong_origin), port, &mut auth).unwrap_err().status, 403);
-        assert!(auth.bootstrap.is_some(), "wrong origin must not consume the token");
-        assert_eq!(authorize(request(&"0".repeat(64), headers.clone()), port, &mut auth).unwrap_err().status, 403);
-        assert!(auth.bootstrap.is_some(), "wrong token must not consume the valid token");
+        assert_eq!(
+            authorize(request(&token, wrong_origin), port, &mut auth)
+                .unwrap_err()
+                .status,
+            403
+        );
+        assert!(
+            auth.bootstrap_token().is_some(),
+            "wrong origin must not consume the token"
+        );
+        assert_eq!(
+            authorize(request(&"0".repeat(64), headers.clone()), port, &mut auth)
+                .unwrap_err()
+                .status,
+            403
+        );
+        assert!(
+            auth.bootstrap_token().is_some(),
+            "wrong token must not consume the valid token"
+        );
         let response = authorize(request(&token, headers.clone()), port, &mut auth).unwrap_err();
         assert_eq!(response.status, 200);
-        assert!(String::from_utf8(response.body).unwrap().contains(auth.bearer_value()));
-        assert!(response.headers.iter().any(|(name, value)| name == "Set-Cookie" && value.contains("HttpOnly")));
-        assert_eq!(authorize(request(&token, headers), port, &mut auth).unwrap_err().status, 403);
+        assert!(String::from_utf8(response.body)
+            .unwrap()
+            .contains(auth.bearer_value()));
+        assert!(response
+            .headers
+            .iter()
+            .any(|(name, value)| name == "Set-Cookie" && value.contains("HttpOnly")));
+        assert_eq!(
+            authorize(request(&token, headers), port, &mut auth)
+                .unwrap_err()
+                .status,
+            403
+        );
     }
 
     #[test]
@@ -751,17 +792,19 @@ mod tests {
             String::from_utf8(response).unwrap()
         };
         let origin = format!("http://127.0.0.1:{port}");
-        assert!(send(&token, &format!("localhost:{port}"), "http://evil.example")
-            .starts_with("HTTP/1.1 403"));
+        assert!(
+            send(&token, &format!("localhost:{port}"), "http://evil.example")
+                .starts_with("HTTP/1.1 403")
+        );
         assert!(send(&token, "evil.example", &origin).starts_with("HTTP/1.1 403"));
-        assert!(send("wrong-token", &format!("127.0.0.1:{port}"), &origin)
-            .starts_with("HTTP/1.1 403"));
+        assert!(
+            send("wrong-token", &format!("127.0.0.1:{port}"), &origin).starts_with("HTTP/1.1 403")
+        );
         let accepted = send(&token, &format!("127.0.0.1:{port}"), &origin);
         assert!(accepted.starts_with("HTTP/1.1 200"));
         assert!(accepted.contains("Set-Cookie: nacre_brain_"));
         assert!(accepted.contains("\"authorization\":\""));
-        assert!(send(&token, &format!("127.0.0.1:{port}"), &origin)
-            .starts_with("HTTP/1.1 403"));
+        assert!(send(&token, &format!("127.0.0.1:{port}"), &origin).starts_with("HTTP/1.1 403"));
         server.join().unwrap();
     }
 
