@@ -13,7 +13,8 @@ provenance for an original external source.
 Native and retained Python note, memory and maintenance writers share the vault
 lock followed by capture.lock. Writes enqueue relative paths in ignored state;
 the daemon batches them after a two-minute quiet period. Git commits use a
-separate index to include only queued paths. Pushes target origin main without
+separate index. N0137 extends selection to all non-ignored vault changes while
+retaining queued attribution. Pushes target origin main without
 force; recovery rebases only task-owned vault commits and aborts conflicts.
 `nacre-brain git status --json` exposes commit, push, pending paths and errors.
 The sync timer is retired from installation and maintenance actions.

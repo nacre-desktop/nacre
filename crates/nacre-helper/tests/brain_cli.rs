@@ -205,6 +205,19 @@ fn two_process_writes_batch_without_lost_or_partial_notes() {
         serde_json::from_slice(&fs::read(&queue_path).unwrap()).unwrap();
     queue["updated"] = serde_json::json!(0);
     fs::write(&queue_path, serde_json::to_vec(&queue).unwrap()).unwrap();
+    // Advance fixture mtimes past the sweep's active-writer safety window.
+    let settled = std::time::SystemTime::now() - std::time::Duration::from_secs(11);
+    for entry in fs::read_dir(vault.join("inbox")).unwrap() {
+        fs::File::open(entry.unwrap().path())
+            .unwrap()
+            .set_times(fs::FileTimes::new().set_modified(settled))
+            .unwrap();
+    }
+    nacre_helper::brain_git::flush(&vault).unwrap();
+    let mut queue: serde_json::Value =
+        serde_json::from_slice(&fs::read(&queue_path).unwrap()).unwrap();
+    queue["sweep_updated"] = serde_json::json!(0);
+    fs::write(&queue_path, serde_json::to_vec(&queue).unwrap()).unwrap();
     nacre_helper::brain_git::flush(&vault).unwrap();
 
     let notes = fs::read_dir(vault.join("inbox"))
