@@ -365,7 +365,7 @@ class PackageSetupTests(unittest.TestCase):
                 )
                 tools = home / ".local/share/nacre/shell/tools"
                 bytecode = tools / "__pycache__/generated.cpython-313.pyc"
-                bytecode.parent.mkdir(parents=True)
+                bytecode.parent.mkdir(parents=True, exist_ok=True)
                 bytecode.write_bytes(b"generated cache")
                 standalone = tools / "generated.pyc"
                 standalone.write_bytes(b"generated cache")

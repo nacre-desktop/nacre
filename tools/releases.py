@@ -81,11 +81,7 @@ def fingerprint(path):
     h = hashlib.sha256()
     files = sorted(path.rglob("*")) if path.is_dir() else [path]
     for p in files:
-        if (
-            p.name in LOCKFILES
-            or p.name.endswith(".pyc")
-            or "__pycache__" in p.parts
-        ):
+        if p.name in LOCKFILES or p.name.endswith(".pyc") or "__pycache__" in p.parts:
             continue
         if p.is_symlink():
             h.update(str(p.relative_to(path) if path.is_dir() else p.name).encode())
