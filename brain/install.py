@@ -37,6 +37,9 @@ def _validate_sources(root):
             "Node.js is required to validate Brain JavaScript before deployment"
         )
     subprocess.run([*node_cmd, "--check", str(root / "web/app.js")], check=True)
+    graph_script = root / "web/graph.js"
+    if graph_script.is_file():
+        subprocess.run([*node_cmd, "--check", str(graph_script)], check=True)
 
 
 def _helper_supports_web(home):

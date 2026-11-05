@@ -430,6 +430,12 @@ function section(title, action) {
 }
 function renderMain() {
   if (!ready) return;
+  if (window.BrainGraphUI?.isActive()) {
+    $("graph-view").hidden = false;
+    $("content").hidden = true;
+    $("inspector").hidden = true;
+    return;
+  }
   const c = context(),
     focus = byId.get(state.focus),
     searching = !!state.query;
@@ -455,6 +461,14 @@ function renderMain() {
   }
   const reading =
     state.view === "read" && byId.get(state.selected)?.kind === "note";
+  const graphContext = $("graph-context");
+  graphContext.hidden = !focus || reading;
+  graphContext.onclick = () => {
+    if (!focus) return;
+    const kind = focus.kind === "note" ? "note" : "area";
+    const value = kind === "note" ? focus.id : focus.label || focus.id;
+    window.BrainGraphUI?.open(`${kind}:${value}`, false);
+  };
   document
     .querySelector(".content-scroll")
     .classList.toggle("reading", reading);
@@ -1031,7 +1045,11 @@ function badge(value) {
 function renderInspector() {
   const panel = $("inspector"),
     n = byId.get(state.selected);
-  if (state.view !== "read" || n?.kind !== "note") {
+  if (
+    window.BrainGraphUI?.isActive() ||
+    state.view !== "read" ||
+    n?.kind !== "note"
+  ) {
     panel.hidden = true;
     return;
   }
@@ -1056,6 +1074,11 @@ function renderInspector() {
         state.selected = null;
         render();
       },
+      "inspector-action",
+    ),
+    button(
+      tr("brain.ui.text.show-in-graph", "Show in graph"),
+      () => window.BrainGraphUI?.open(`note:${n.id}`, false),
       "inspector-action",
     ),
   );
@@ -1425,6 +1448,15 @@ $("overview-link").onclick = home;
 $("refresh").onclick = () => load(true);
 $("retry").onclick = () => retryAction();
 $("back").onclick = back;
+window.BrainGraphUI.request = requestJson;
+window.BrainGraphUI.onClose = () => render();
+window.BrainGraphUI.onOpenNote = (source) => {
+  const n = { ...source, kind: "note" };
+  graph.nodes = graph.nodes.filter((item) => item.id !== n.id).concat(n);
+  byId.set(n.id, n);
+  window.BrainGraphUI.close();
+  select(n.id, { view: "read" });
+};
 for (const b of document.querySelectorAll("[data-view]"))
   b.onclick = () => {
     state.view = b.dataset.view;

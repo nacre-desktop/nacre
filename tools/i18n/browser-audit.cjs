@@ -72,6 +72,8 @@ const graph = {
         ![
           "index.html",
           "app.js",
+          "graph.js",
+          "vendor/d3-force.min.js",
           "style.css",
           "i18n.js",
           "i18n-data.js",

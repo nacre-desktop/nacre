@@ -4296,5 +4296,22 @@
   "controlcenter.calendar.empty": "Control-center calendar and compact-to-sidebar navigation.",
   "controlcenter.calendar.settings": "Control-center calendar and compact-to-sidebar navigation.",
   "controlcenter.calendar.today": "Control-center calendar and compact-to-sidebar navigation.",
-  "controlcenter.navigation.full-panel": "Control-center calendar and compact-to-sidebar navigation."
+  "controlcenter.navigation.full-panel": "Control-center calendar and compact-to-sidebar navigation.",
+  "brain.ui.aria-label.interactive-knowledge-graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.error.graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.label.kind": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.label.world": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.placeholder.search-graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.status.building-graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.status.loading-graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.all-kinds": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.all-knowledge": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.all-worlds": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.show-in-graph": "Brain knowledge graph navigation and canvas controls.",
+  "brain.ui.text.graph-kind-category": "Brain graph node kind filter option.",
+  "brain.ui.text.graph-kind-topic": "Brain graph node kind filter option.",
+  "brain.ui.text.graph-kind-entity": "Brain graph node kind filter option.",
+  "brain.ui.text.graph-kind-wiki-page": "Brain graph node kind filter option.",
+  "brain.ui.text.graph-kind-note": "Brain graph node kind filter option."
 }
