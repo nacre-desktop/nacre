@@ -8,7 +8,6 @@ import http from 'node:http';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
 import vm from 'node:vm';
@@ -192,8 +191,17 @@ async function evaluate(expression) {
   return result.result.value;
 }
 
-function openPage() {
-  return pathToFileURL(path.join(home, '.local/state/nacre/brain/auth/open.html')).href;
+function bootstrapUrl() {
+  const file = path.join(home, '.local/state/nacre/brain/auth/ports', `${brainPort}.bootstrap.json`);
+  const { token } = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (!/^[0-9a-f]{64}$/.test(token)) throw new Error('invalid synthetic bootstrap token');
+  return `${nativeUrl}/#nacre-bootstrap=${token}`;
+}
+
+async function navigateFresh(url) {
+  await cdp('Page.navigate', { url: 'about:blank' });
+  await until(async () => (await cdp('Page.getFrameTree')).frameTree.frame.url === 'about:blank', 'blank page before full navigation');
+  await cdp('Page.navigate', { url });
 }
 
 try {
@@ -223,7 +231,8 @@ try {
   await cdp('Runtime.enable');
   await cdp('Network.enable');
   await cdp('Page.enable');
-  await cdp('Page.navigate', { url: openPage() });
+  const firstBootstrapUrl = bootstrapUrl();
+  await navigateFresh(firstBootstrapUrl);
   await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'), 'Brain graph');
   const graph = await evaluate('({count:graph.noteCount,nodes:graph.nodes.length,subjects:subjects().length})');
   if (graph.count !== 4 || graph.subjects < 1) throw new Error(`unexpected fixture graph ${JSON.stringify(graph)}`);
@@ -273,10 +282,11 @@ try {
   const cookiesBefore = await cdp('Network.getAllCookies');
   const cookie = cookiesBefore.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
   if (!cookie || !cookie.httpOnly) throw new Error('port-specific HttpOnly cookie was not stored');
-  const bootstrapHtml = fs.readFileSync(path.join(home, '.local/state/nacre/brain/auth/open.html'), 'utf8');
-  const bootstrapUrl = bootstrapHtml.match(/http:\/\/127\.0\.0\.1:[0-9]+\/\?token=[^" ]+/)?.[0];
-  if (!bootstrapUrl) throw new Error('bootstrap URL missing from generated handoff file');
-  const replay = await fetch(bootstrapUrl, { redirect: 'manual' });
+  const replay = await fetch(`${nativeUrl}/api/bootstrap`, {
+    method: 'POST',
+    headers: { Origin: nativeUrl, 'Sec-Fetch-Site': 'same-origin', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: new URL(firstBootstrapUrl).hash.split('=')[1] }),
+  });
   if (replay.status !== 403) throw new Error(`consumed bootstrap replay returned ${replay.status}`);
 
   responses.length = 0;
@@ -303,17 +313,13 @@ try {
   await once(brain, 'exit');
   brain = startBrain();
   await waitHealth();
-  const refreshedHtml = fs.readFileSync(path.join(home, '.local/state/nacre/brain/auth/open.html'), 'utf8');
-  if (refreshedHtml === bootstrapHtml) throw new Error('server restart did not rotate bootstrap page');
-  // Restore an existing tab through the separate auto-closing handoff origin.
+  const refreshedBootstrapUrl = bootstrapUrl();
+  if (refreshedBootstrapUrl === firstBootstrapUrl) throw new Error('server restart did not rotate bootstrap token');
+  // Restore the existing origin's bearer with a fresh same-origin bootstrap.
   await evaluate('localStorage.removeItem("nacre-brain-authorization")');
   const withoutBearer = await evaluate('fetch("/api/note?path=inbox/qa.md").then(r=>r.status)');
   if (withoutBearer !== 403) throw new Error('cookie alone authorized the browser after restart');
-  const handoffUrl = pathToFileURL(path.join(home, '.local/state/nacre/brain/auth/handoff.html')).href;
-  const handoffTarget = await (await fetch(`http://127.0.0.1:${cdpPort}/json/new?${handoffUrl}`, { method: 'PUT' })).json();
-  await until(() => evaluate('!!localStorage.getItem("nacre-brain-authorization")'), 'handoff credential restoration');
-  await fetch(`http://127.0.0.1:${cdpPort}/json/close/${handoffTarget.id}`).catch(() => {});
-  await cdp('Page.navigate', { url: nativeUrl + '/' });
+  await navigateFresh(refreshedBootstrapUrl);
   await until(() => evaluate('typeof ready !== "undefined" && ready && graph.noteCount >= 4'), 'Brain graph after restart');
   const cookiesAfter = await cdp('Network.getAllCookies');
   const persistentCookie = cookiesAfter.cookies.find(item => item.name === `nacre_brain_${brainPort}`);
@@ -336,7 +342,7 @@ try {
     crossPortLeakedFixtureContent: bodyText.includes(fixtureSecret),
     stolenCookieReplayStatus: 403,
     persistentCookieAfterRestart: true,
-    handoffCredentialRestored: true,
+    bootstrapCredentialRestored: true,
     fetchInputOriginIsolation: 'passed',
     unverifiedFragmentRejected: true,
     browserExceptions: exceptions.length,
