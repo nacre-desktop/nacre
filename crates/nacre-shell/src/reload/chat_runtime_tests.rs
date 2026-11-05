@@ -3,7 +3,7 @@
 // One test at a time owns the process-wide `send_failed` queue, across awaits.
 #![allow(clippy::await_holding_lock)]
 use super::*;
-use crate::chat::tests::{Frame, chat_for, lab, meter, root, serial};
+use crate::chat::tests::{Frame, call_with_timeout, chat_for, lab, meter, root, serial};
 use serde_json::json;
 use std::time::Duration;
 
@@ -57,7 +57,7 @@ async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inl
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     assert!(runtime.session.view_nodes().iter().find(|node| node.id == "chat.recent-chats").and_then(|node| node.scroll_limit).is_some_and(|limit| limit > 0.));
-    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     step(&mut runtime, UiEvent::Key { text: "brain".into(), backspace: false });
     assert_eq!(runtime.session.stores.get("launcher.search"), Some(&bead::core::Value::Text("brain".into())));
     for _ in 0..5 {
@@ -77,7 +77,7 @@ async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inl
     let selected_rect = bead::ui::rect(&selected_row.draw);
     assert!(selected_rect.y >= viewport_rect.y && selected_rect.y + selected_rect.h <= viewport_rect.y + viewport_rect.h, "selected row is scrolled into view");
     step(&mut runtime, UiEvent::Command { command: "enter".into(), shift: false });
-    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k9"})));
+    assert_eq!(call_with_timeout(&mut lab).await, ("ai.launcher.open".into(), json!({"key":"k9"})));
     assert_eq!(runtime.session.stores.get("chat.section"), Some(&bead::core::Value::Text("launcher".into())));
     assert!(lab.calls.try_recv().is_err(), "launcher interaction does not start ai.chat.open");
 }

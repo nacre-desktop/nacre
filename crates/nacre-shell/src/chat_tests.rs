@@ -505,6 +505,38 @@ pub(crate) async fn lab(initial: Json) -> Lab {
         fail,
     }
 }
+pub(crate) async fn call_with_timeout(lab: &mut Lab) -> (String, Json) {
+    tokio::time::timeout(Duration::from_secs(5), lab.calls.recv())
+        .await
+        .expect("fake service call timed out")
+        .expect("fake service call channel closed")
+}
+async fn expect_launcher_call(lab: &mut Lab, method: &str, params: Json) {
+    loop {
+        let call = call_with_timeout(lab).await;
+        if call.0 == method {
+            assert_eq!(call.1, params);
+            return;
+        }
+        assert_eq!(call.0, "ai.launcher.list", "unexpected call before {method}");
+    }
+}
+async fn finish_launcher_action(chat: &Chat, stores: &Stores) {
+    for _ in 0..100 {
+        chat.project(stores);
+        if !chat
+            .st
+            .borrow()
+            .pending
+            .iter()
+            .any(|pending| pending.call == Call::LauncherAction)
+        {
+            return;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    panic!("launcher action acknowledgement timed out");
+}
 fn snap(data: Json) -> Frame {
     Frame::Msg(Message::Snap {
         topic: "ai.chat".into(),
@@ -724,7 +756,7 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let launcher = Stores::default();
     let first = chat.project(&launcher);
     assert_eq!(first["launcher.can_new"], Value::Bool(false));
-    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     let listed = until(&chat, &launcher, "launcher list", |out| {
         matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
     }).await;
@@ -744,25 +776,20 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
 
     let selected = launcher_stores(&[("launcher.selected", Value::Text("k2".into()))]);
     chat.act("launcher:open-selected", &selected);
-    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k2"})));
-    for _ in 0..100 {
-        chat.project(&launcher);
-        if !chat.st.borrow().pending.iter().any(|pending| pending.call == Call::LauncherAction) {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(10)).await;
-    }
-    assert!(!chat.st.borrow().pending.iter().any(|pending| pending.call == Call::LauncherAction), "focus-existing acknowledgement is consumed");
+    expect_launcher_call(&mut lab, "ai.launcher.open", json!({"key":"k2"})).await;
+    finish_launcher_action(&chat, &launcher).await;
     // The shared service acknowledges a focused or newly opened chat window.
     chat.act("launcher:open:k1", &launcher);
-    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.open".into(), json!({"key":"k1"})));
+    expect_launcher_call(&mut lab, "ai.launcher.open", json!({"key":"k1"})).await;
+    finish_launcher_action(&chat, &launcher).await;
 
     let configured = launcher_stores(&[
         ("launcher.provider", Value::Text("claude".into())),
         ("launcher.project", Value::Text("nacre".into())),
     ]);
     chat.act("launcher:new", &configured);
-    assert_eq!(lab.calls.recv().await.unwrap(), ("ai.launcher.new".into(), json!({"provider":"claude","project":"nacre"})));
+    expect_launcher_call(&mut lab, "ai.launcher.new", json!({"provider":"claude","project":"nacre"})).await;
+    finish_launcher_action(&chat, &launcher).await;
     let quick = chat.act("launcher:quick-chat", &launcher);
     assert_eq!(quick.stores["chat.section"], Value::Text("chat".into()));
     assert_eq!(quick.stores["launcher.quick_chat"], Value::Bool(true));
@@ -780,7 +807,7 @@ async fn launcher_load_error_is_visible_and_does_not_retry_each_projection() {
     let launcher = Stores::default();
     let initial = chat.project(&launcher);
     assert!(!string(&initial, "launcher.empty_state").is_empty());
-    assert_eq!(lab.calls.recv().await.unwrap().0, "ai.launcher.list");
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     let mut failed = BTreeMap::new();
     for _ in 0..100 {
         failed = chat.project(&launcher);
@@ -804,7 +831,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     let chat = chat_for(&lab).await;
     let launcher = Stores::default();
     chat.project(&launcher);
-    let _ = lab.calls.recv().await;
+    let _ = call_with_timeout(&mut lab).await;
     let mut projected = until(&chat, &launcher, "launcher golden data", |out| {
         matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
     }).await;
