@@ -85,7 +85,13 @@ class BrowserAuthenticationTests(unittest.TestCase):
                 self.assertEqual(get("/api/brain")[0], 403)
                 self.assertEqual(get("/api/note?path=anything")[0], 403)
                 self.assertEqual(get("/?token=invalid")[0], 403)
-                for asset in ("/i18n.js", "/i18n-data.js", "/translation-engine.js"):
+                for asset in (
+                    "/i18n.js",
+                    "/i18n-data.js",
+                    "/translation-engine.js",
+                    "/graph.js",
+                    "/vendor/d3-force.min.js",
+                ):
                     self.assertEqual(get(asset)[0], 200)
                     self.assertEqual(get(asset, host="evil.invalid")[0], 403)
                 boot = get("/?" + urlencode({"token": server.auth.token}))
@@ -94,7 +100,13 @@ class BrowserAuthenticationTests(unittest.TestCase):
                 self.assertIn("HttpOnly", boot[1]["Set-Cookie"])
                 self.assertIn("SameSite=Strict", boot[1]["Set-Cookie"])
                 self.assertEqual(boot[1]["Location"], "/")
-                for asset in ("/i18n.js", "/i18n-data.js", "/translation-engine.js"):
+                for asset in (
+                    "/i18n.js",
+                    "/i18n-data.js",
+                    "/translation-engine.js",
+                    "/graph.js",
+                    "/vendor/d3-force.min.js",
+                ):
                     response = get(asset, cookie)
                     self.assertEqual(response[0], 200)
                     self.assertEqual(response[1]["Content-Type"], "text/javascript")

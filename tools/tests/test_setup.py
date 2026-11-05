@@ -352,6 +352,30 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
                 self.assertEqual(account.read_text(), "private fixture")
 
+    def test_restore_ignores_and_removes_python_bytecode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            with (
+                patch.object(releases, "HOME", home),
+                patch.object(releases, "STATE", home / "releases"),
+                patch.object(releases, "subprocess") as release_processes,
+            ):
+                record = releases.deploy_package(
+                    root, profile, {"layout": "no"}, "hyprland"
+                )
+                tools = home / ".local/share/nacre/shell/tools"
+                bytecode = tools / "__pycache__/generated.cpython-313.pyc"
+                bytecode.parent.mkdir(parents=True, exist_ok=True)
+                bytecode.write_bytes(b"generated cache")
+                standalone = tools / "generated.pyc"
+                standalone.write_bytes(b"generated cache")
+
+                releases.restore(Path(record["release"]), record)
+
+                release_processes.run.assert_not_called()
+                self.assertFalse(bytecode.exists())
+                self.assertFalse(standalone.exists())
+
     def test_package_modules_enable_disable_and_uninstall_in_a_temp_home(self):
         import keyboard
         import nacre_modules

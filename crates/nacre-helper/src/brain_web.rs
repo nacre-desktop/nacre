@@ -621,6 +621,149 @@ fn decorate_connections(value: &mut Value) {
     }
 }
 
+/// Project the already-built background graph for the graph viewer. This path
+/// intentionally reads only the completed cache; it never starts discovery.
+fn graph_projection(graph: &Value, scope: &str) -> Value {
+    let nodes = graph["nodes"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|mut node| {
+            if text(&node["kind"]) == "note" && text(&node["path"]).starts_with("wiki/") {
+                node["kind"] = json!("wiki");
+            }
+            node
+        })
+        .collect::<Vec<_>>();
+    let links = graph["links"].as_array().cloned().unwrap_or_default();
+    let ids = nodes
+        .iter()
+        .map(|node| text(&node["id"]).to_owned())
+        .collect::<BTreeSet<_>>();
+    let edge_ends = |edge: &Value| {
+        let source = endpoint(&edge["source"]);
+        let target = endpoint(&edge["target"]);
+        (source, target)
+    };
+    let mut included = BTreeSet::new();
+    if scope == "all" {
+        included.extend(
+            nodes
+                .iter()
+                .filter(|node| text(&node["kind"]) != "note")
+                .map(|n| text(&n["id"]).to_owned()),
+        );
+    } else if let Some((kind, value)) = scope.split_once(':') {
+        let matches = nodes
+            .iter()
+            .filter(|node| {
+                let value = casefold(value);
+                let explicit = [kind, if kind == "world" { "worlds" } else { "area" }]
+                    .iter()
+                    .any(|field| {
+                        let field_value = text(&node[field]);
+                        field_value
+                            .split(',')
+                            .any(|part| casefold(part.trim()) == value)
+                    });
+                let allowed_kind = match kind {
+                    "world" => ["world", "hub", "area", "entity"].contains(&text(&node["kind"])),
+                    "area" => ["area", "hub", "topic", "entity"].contains(&text(&node["kind"])),
+                    _ => false,
+                };
+                allowed_kind
+                    && (explicit
+                        || ["id", "label"]
+                            .iter()
+                            .any(|field| casefold(text(&node[field])) == value))
+            })
+            .map(|node| text(&node["id"]).to_owned())
+            .collect::<BTreeSet<_>>();
+        if kind == "note" {
+            included.insert(value.to_owned());
+            let mut frontier = included.clone();
+            for _ in 0..2 {
+                let next = links
+                    .iter()
+                    .filter_map(|edge| {
+                        let (source, target) = edge_ends(edge);
+                        if frontier.contains(&source) {
+                            Some(target)
+                        } else if frontier.contains(&target) {
+                            Some(source)
+                        } else {
+                            None
+                        }
+                    })
+                    .filter(|id| ids.contains(id) && !included.contains(id))
+                    .collect::<BTreeSet<_>>();
+                included.extend(next.iter().cloned());
+                frontier = next;
+            }
+        } else {
+            included.extend(matches.iter().cloned());
+            // Keep the hierarchy below a matching world/area and its directly
+            // attached notes, without allowing cross-links to flood the view.
+            let mut frontier = matches;
+            while !frontier.is_empty() {
+                let next = links
+                    .iter()
+                    .filter_map(|edge| {
+                        if !["group", "membership"].contains(&text(&edge["kind"])) {
+                            return None;
+                        }
+                        let (source, target) = edge_ends(edge);
+                        if frontier.contains(&source) {
+                            Some(target)
+                        } else {
+                            None
+                        }
+                    })
+                    .filter(|id| ids.contains(id) && !included.contains(id))
+                    .collect::<BTreeSet<_>>();
+                included.extend(next.iter().cloned());
+                frontier = next;
+            }
+            let categories = included.clone();
+            let note_ids = nodes
+                .iter()
+                .filter(|node| ["note", "wiki"].contains(&text(&node["kind"])))
+                .map(|node| text(&node["id"]).to_owned())
+                .collect::<BTreeSet<_>>();
+            for edge in &links {
+                let (source, target) = edge_ends(edge);
+                if categories.contains(&source) && note_ids.contains(&target) {
+                    included.insert(target);
+                }
+            }
+        }
+    }
+    let selected = nodes
+        .into_iter()
+        .filter(|node| included.contains(text(&node["id"])))
+        .collect::<Vec<_>>();
+    let selected_ids = selected
+        .iter()
+        .map(|node| text(&node["id"]).to_owned())
+        .collect::<BTreeSet<_>>();
+    let edges = links
+        .into_iter()
+        .filter(|edge| {
+            let (source, target) = edge_ends(edge);
+            selected_ids.contains(&source) && selected_ids.contains(&target)
+        })
+        .collect::<Vec<_>>();
+    json!({"state":"ready","nodes":selected,"links":edges})
+}
+
+fn endpoint(value: &Value) -> String {
+    value
+        .as_str()
+        .map(str::to_owned)
+        .unwrap_or_else(|| text(&value["id"]).to_owned())
+}
+
 fn schedule_graph_build(retry: bool) {
     if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
         return;
@@ -1160,6 +1303,37 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
             schedule_graph_build(query(&request.query, "retry") == "1");
             return json_response(summary()?);
         }
+        "/api/graph" => {
+            let scope = query(&request.query, "scope");
+            let scope = if scope.is_empty() {
+                "all"
+            } else {
+                scope.as_str()
+            };
+            if scope != "all"
+                && !["world:", "area:", "note:"]
+                    .iter()
+                    .any(|prefix| scope.starts_with(prefix) && scope.len() > prefix.len())
+            {
+                return json_response(json!({"state":"error","error":"Invalid graph scope"}));
+            }
+            schedule_graph_build(query(&request.query, "retry") == "1");
+            if !GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
+                if let Some(error) = GRAPH_ERROR.lock().ok().and_then(|error| error.clone()) {
+                    return json_response(json!({"state":"error","error":error}));
+                }
+                return json_response(json!({"state":"building"}));
+            }
+            let cached = GRAPH
+                .lock()
+                .map_err(|_| "Graph lock failed")?
+                .as_ref()
+                .map(|(_, value)| value.clone());
+            let Some(graph) = cached else {
+                return json_response(json!({"state":"building"}));
+            };
+            return json_response(graph_projection(&graph, scope));
+        }
         "/api/brain" => {
             let retry = query(&request.query, "retry") == "1";
             schedule_graph_build(retry);
@@ -1218,6 +1392,8 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         "/i18n.js" => ("i18n.js", "text/javascript"),
         "/i18n-data.js" => ("i18n-data.js", "text/javascript"),
         "/translation-engine.js" => ("translation-engine.js", "text/javascript"),
+        "/graph.js" => ("graph.js", "text/javascript"),
+        "/vendor/d3-force.min.js" => ("vendor/d3-force.min.js", "text/javascript"),
         _ => return Ok(response(404, "application/json", b"{}".to_vec())),
     };
     let mut content = read(&root().join("web").join(file), 4 * 1024 * 1024)?;
@@ -1505,6 +1681,65 @@ mod tests {
             body: br#"{"name":"exec"}"#.to_vec(),
         });
         assert_eq!(r.status, 400);
+    }
+
+    #[test]
+    fn graph_projection_scopes_nodes_and_keeps_only_valid_edges() {
+        let graph = json!({
+            "nodes":[
+                {"id":"world:work","label":"Work","kind":"hub","world":"Operations","count":4},
+                {"id":"area:tools","label":"Tools","kind":"area","area":"Tools","count":2},
+                {"id":"note:a","label":"A","kind":"note"},
+                {"id":"note:b","label":"B","kind":"note"},
+                {"id":"wiki:guide","label":"Guide","kind":"note","path":"wiki/guide.md"}
+            ],
+            "links":[
+                {"source":"world:work","target":"area:tools","kind":"membership"},
+                {"source":"area:tools","target":"note:a","kind":"membership"},
+                {"source":"note:a","target":"note:b","kind":"source"},
+                {"source":"note:b","target":"wiki:guide","kind":"source"}
+            ]
+        });
+        let all = graph_projection(&graph, "all");
+        assert_eq!(all["nodes"].as_array().unwrap().len(), 3);
+        assert!(all["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|node| node["kind"] != "note"));
+        assert!(all["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|node| node["kind"] == "wiki"));
+        let note = graph_projection(&graph, "note:note:a");
+        assert_eq!(note["nodes"].as_array().unwrap().len(), 5);
+        let area = graph_projection(&graph, "area:Tools");
+        assert!(area["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|node| node["id"] == "note:a"));
+        let world = graph_projection(&graph, "world:Operations");
+        assert!(world["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|node| node["id"] == "area:tools"));
+        assert!(area["links"].as_array().unwrap().iter().all(|edge| {
+            let source = endpoint(&edge["source"]);
+            let target = endpoint(&edge["target"]);
+            area["nodes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|node| text(&node["id"]) == source)
+                && area["nodes"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|node| text(&node["id"]) == target)
+        }));
     }
 
     fn project(root: &Path) -> Value {

@@ -7,6 +7,9 @@ refuse to overwrite later edits. `nacre status` shows the current release;
 `nacre rollback` restores managed private files. It does not undo system package
 upgrades or restore accounts, conversations, notes or personal preferences.
 
+Generated Python bytecode (`__pycache__` and `*.pyc`) is excluded from edit
+detection and snapshots. Rollback discards it when restoring managed directories.
+
 ## Package update checks in isolated sessions
 
 The update checker uses `checkupdates` and its separate pacman database, leaving

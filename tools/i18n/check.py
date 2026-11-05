@@ -231,7 +231,11 @@ def check(root=ROOT):
     for path in [
         *(root / "nacre/shell").rglob("*.qml"),
         *(root / "nacre/login").glob("*.qml"),
-        *([root / "brain/web/app.js"] if (root / "brain/web/app.js").exists() else []),
+        *[
+            root / "brain/web" / name
+            for name in ("app.js", "graph.js")
+            if (root / "brain/web" / name).exists()
+        ],
     ]:
         if path.name == "NacreI18n.qml":
             continue

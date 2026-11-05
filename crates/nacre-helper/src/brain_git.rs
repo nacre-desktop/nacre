@@ -3,7 +3,7 @@
 use crate::Result;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Write};
 use std::os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt};
@@ -25,6 +25,10 @@ struct Queue {
     entries: Vec<QueuedPath>,
     #[serde(default)]
     updated: Option<i64>,
+    #[serde(default)]
+    sweep_signature: Option<String>,
+    #[serde(default)]
+    sweep_updated: Option<i64>,
 }
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 struct Status {
@@ -36,6 +40,17 @@ struct Status {
     owned_commits: Vec<String>,
     #[serde(default)]
     conflict: bool,
+    #[serde(default)]
+    blocked: Vec<BlockedPath>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+struct BlockedPath {
+    path: String,
+    rule: String,
+}
+#[derive(Clone, Debug)]
+struct Candidate {
+    path: String,
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<Output> {
@@ -304,7 +319,7 @@ fn guard_index(root: &Path, index: Option<&Path>) -> Result<()> {
     changed
         .arg("-C")
         .arg(root)
-        .args(["diff", "--cached", "--name-only", "-z"]);
+        .args(["diff", "--cached", "--no-renames", "--name-only", "-z"]);
     if let Some(index) = index {
         changed.env("GIT_INDEX_FILE", index);
     }
@@ -342,30 +357,202 @@ fn guard_index(root: &Path, index: Option<&Path>) -> Result<()> {
         if under_forbidden(path) {
             return Err(format!("{path}: forbidden-path").into());
         }
-        let mode = head.split_whitespace().next().unwrap_or("");
-        if mode == "120000" {
-            return Err(format!("{path}: symlink").into());
-        }
-        if !mode.starts_with("100") {
-            return Err(format!("{path}: non-regular-file").into());
-        }
-        let oid = head.split_whitespace().nth(1).unwrap_or("");
-        let size = success(root, &["cat-file", "-s", oid])?
-            .parse::<u64>()
-            .unwrap_or(u64::MAX);
-        if size > LIMIT {
-            return Err(format!("{path}: over-5-MB").into());
-        }
-        let blob = git(root, &["cat-file", "blob", oid])?;
-        if !blob.status.success() {
-            return Err(format!("{path}: unreadable-staged-blob").into());
-        }
-        if blob.stdout.len() as u64 > LIMIT {
-            return Err(format!("{path}: over-5-MB").into());
-        }
-        scan_text(path, &blob.stdout)?;
+        guard_blob(root, path, head)?;
     }
     Ok(())
+}
+
+fn guard_blob(root: &Path, path: &str, stage: &str) -> Result<()> {
+    if under_forbidden(path) {
+        return Err(format!("{path}: forbidden-path").into());
+    }
+    let mode = stage.split_whitespace().next().unwrap_or("");
+    if mode == "120000" {
+        return Err(format!("{path}: symlink").into());
+    }
+    if !mode.starts_with("100") {
+        return Err(format!("{path}: non-regular-file").into());
+    }
+    let oid = stage.split_whitespace().nth(1).unwrap_or("");
+    let size = success(root, &["cat-file", "-s", oid])?
+        .parse::<u64>()
+        .unwrap_or(u64::MAX);
+    if size > LIMIT {
+        return Err(format!("{path}: over-5-MB").into());
+    }
+    let blob = git(root, &["cat-file", "blob", oid])?;
+    if !blob.status.success() {
+        return Err(format!("{path}: unreadable-staged-blob").into());
+    }
+    if blob.stdout.len() as u64 > LIMIT {
+        return Err(format!("{path}: over-5-MB").into());
+    }
+    scan_text(path, &blob.stdout)
+}
+
+fn guard_index_path(root: &Path, index: &Path, path: &str) -> Result<()> {
+    if under_forbidden(path) {
+        return Err(format!("{path}: forbidden-path").into());
+    }
+    let mut command = Command::new("git");
+    command
+        .arg("-C")
+        .arg(root)
+        .args(["ls-files", "--stage", "-z", "--", path])
+        .env("GIT_LITERAL_PATHSPECS", "1")
+        .env("GIT_INDEX_FILE", index);
+    let listing = command.output()?;
+    if !listing.status.success() {
+        return Err("unable to inspect staged Brain candidate".into());
+    }
+    for record in listing
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|r| !r.is_empty())
+    {
+        let Some(separator) = record.iter().position(|byte| *byte == b'\t') else {
+            continue;
+        };
+        let (stage, stored_path) = record.split_at(separator);
+        let stored_path = &stored_path[1..];
+        let stored_path = String::from_utf8_lossy(stored_path);
+        if stored_path == path {
+            let stage = String::from_utf8_lossy(stage);
+            guard_blob(root, path, &stage)?;
+        }
+    }
+    Ok(())
+}
+
+fn reset_index_path(root: &Path, index: &Path, path: &str) -> Result<()> {
+    let mut reset = Command::new("git");
+    reset
+        .arg("-C")
+        .arg(root)
+        .args(["reset", "--quiet", "HEAD", "--", path])
+        .env("GIT_LITERAL_PATHSPECS", "1")
+        .env("GIT_INDEX_FILE", index);
+    if !reset.output()?.status.success() {
+        return Err(format!("unable to reset private Brain index for {path}").into());
+    }
+    Ok(())
+}
+
+fn porcelain_candidates(root: &Path) -> Result<Vec<Candidate>> {
+    let output = git(
+        root,
+        &["status", "--porcelain=v2", "-z", "--untracked-files=all"],
+    )?;
+    if !output.status.success() {
+        return Err("unable to inspect Brain working tree".into());
+    }
+    let records = output.stdout.split(|byte| *byte == 0).collect::<Vec<_>>();
+    let mut result = BTreeMap::<String, Candidate>::new();
+    let mut index = 0;
+    while index < records.len() {
+        let record = records[index];
+        index += 1;
+        if record.is_empty() {
+            continue;
+        }
+        let mut add = |bytes: &[u8]| {
+            let path = String::from_utf8_lossy(bytes).into_owned();
+            result.entry(path.clone()).or_insert(Candidate { path });
+        };
+        match record[0] {
+            b'?' => add(record.get(2..).unwrap_or_default()),
+            b'1' | b'u' => {
+                let fields = if record[0] == b'1' {
+                    record.splitn(9, |byte| *byte == b' ').collect::<Vec<_>>()
+                } else {
+                    record.splitn(11, |byte| *byte == b' ').collect::<Vec<_>>()
+                };
+                let path_index = if record[0] == b'1' { 8 } else { 10 };
+                let Some(path) = fields.get(path_index) else {
+                    continue;
+                };
+                add(path);
+            }
+            b'2' => {
+                let fields = record.splitn(10, |byte| *byte == b' ').collect::<Vec<_>>();
+                let Some(path) = fields.get(9) else { continue };
+                add(path);
+                if index < records.len() {
+                    add(records[index]);
+                    index += 1;
+                }
+            }
+            _ => (),
+        }
+    }
+    Ok(result.into_values().collect())
+}
+
+fn candidate_signature(root: &Path, candidates: &[Candidate]) -> String {
+    let mut rows = candidates
+        .iter()
+        .map(|candidate| {
+            let full = root.join(&candidate.path);
+            let stamp = fs::symlink_metadata(&full)
+                .map(|meta| {
+                    format!(
+                        "{}:{}:{}:{}:{}:{}:{}",
+                        meta.len(),
+                        meta.mtime(),
+                        meta.mtime_nsec(),
+                        meta.ctime(),
+                        meta.ctime_nsec(),
+                        meta.ino(),
+                        meta.mode()
+                    )
+                })
+                .unwrap_or_else(|_| "deleted".to_owned());
+            format!("{}\0{}", candidate.path, stamp)
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    if rows.is_empty() {
+        return String::new();
+    }
+    use sha2::{Digest, Sha256};
+    format!("{:x}", Sha256::digest(rows.join("\n").as_bytes()))
+}
+
+fn validate_candidate(root: &Path, path: &str) -> Result<()> {
+    if under_forbidden(path) {
+        return Err(format!("{path}: forbidden-path").into());
+    }
+    match fs::symlink_metadata(root.join(path)) {
+        Ok(meta) if meta.file_type().is_symlink() => Err(format!("{path}: symlink").into()),
+        Ok(meta) if !meta.is_file() => Err(format!("{path}: non-regular-file").into()),
+        Ok(_) => {
+            let bytes = path_bytes(root, path)?;
+            scan_text(path, &bytes)
+        }
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error.into()),
+    }
+}
+
+fn is_recent(root: &Path, path: &str) -> bool {
+    fs::symlink_metadata(root.join(path))
+        .ok()
+        .and_then(|meta| {
+            let modified = meta.mtime() as i128 * 1_000_000_000 + meta.mtime_nsec() as i128;
+            let now = chrono::Utc::now().timestamp_nanos_opt()? as i128;
+            Some(now.saturating_sub(modified) < 10_000_000_000)
+        })
+        .unwrap_or(false)
+}
+
+fn blocked_issue(path: &str, error: &str) -> BlockedPath {
+    BlockedPath {
+        path: path.to_owned(),
+        rule: error
+            .strip_prefix(&format!("{path}: "))
+            .unwrap_or("unsafe-file")
+            .to_owned(),
+    }
 }
 
 pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
@@ -546,7 +733,14 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
     Ok(())
 }
 
-fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
+fn commit_selected(
+    root: &Path,
+    selected: &BTreeSet<String>,
+    entries: &[QueuedPath],
+    sweep: bool,
+    blocked: &mut Vec<BlockedPath>,
+    handled: &mut BTreeSet<String>,
+) -> Result<Option<String>> {
     let head = success(root, &["rev-parse", "HEAD"])?;
     let index = root
         .join(".git")
@@ -560,46 +754,47 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
     if !cmd.output()?.status.success() {
         return Err("unable to prepare Brain index".into());
     }
-    let mut paths = BTreeSet::new();
-    for entry in entries {
-        if under_forbidden(&entry.path) {
-            return Err(format!("{}: forbidden-path", entry.path).into());
+    for path in selected {
+        if let Err(error) = validate_candidate(root, path) {
+            blocked.push(blocked_issue(path, &error.to_string()));
+            continue;
         }
-        paths.insert(entry.path.clone());
-    }
-    for path in &paths {
         let full = root.join(path);
-        match fs::symlink_metadata(&full) {
-            Ok(meta) if meta.file_type().is_symlink() => {
-                return Err(format!("{path}: symlink").into())
-            }
-            Ok(meta) if !meta.is_file() => return Err(format!("{path}: non-regular-file").into()),
-            Ok(_) => {
-                let bytes = path_bytes(root, path)?;
-                scan_text(path, &bytes)?;
-                let mut add = Command::new("git");
-                add.arg("-C")
-                    .arg(root)
-                    .args(["add", "--", path])
-                    .env("GIT_LITERAL_PATHSPECS", "1")
-                    .env("GIT_INDEX_FILE", &index);
-                if !add.output()?.status.success() {
-                    return Err(format!("unable to stage {path}").into());
-                }
-            }
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                let mut rm = Command::new("git");
-                rm.arg("-C")
-                    .arg(root)
-                    .args(["rm", "--cached", "--ignore-unmatch", "--", path])
-                    .env("GIT_LITERAL_PATHSPECS", "1")
-                    .env("GIT_INDEX_FILE", &index);
-                let _ = rm.output()?;
-            }
-            Err(error) => return Err(error.into()),
+        let mut stage = Command::new("git");
+        stage
+            .arg("-C")
+            .arg(root)
+            .env("GIT_LITERAL_PATHSPECS", "1")
+            .env("GIT_INDEX_FILE", &index);
+        if full.exists() || fs::symlink_metadata(&full).is_ok() {
+            stage.args(["add", "--", path]);
+        } else {
+            stage.args(["rm", "--cached", "--ignore-unmatch", "--", path]);
         }
+        if !stage.output()?.status.success() {
+            blocked.push(BlockedPath {
+                path: path.clone(),
+                rule: "changed-during-stage".to_owned(),
+            });
+            continue;
+        }
+        if is_recent(root, path) {
+            reset_index_path(root, &index, path)?;
+            continue;
+        }
+        // Validate the actual staged blob as well, closing the race with writers
+        // that do not cooperate with the vault lock.
+        if let Err(error) = guard_index_path(root, &index, path) {
+            reset_index_path(root, &index, path)?;
+            let description = error.to_string();
+            if description.starts_with(&format!("{path}: ")) {
+                blocked.push(blocked_issue(path, &description));
+                continue;
+            }
+            return Err(error);
+        }
+        handled.insert(path.clone());
     }
-    guard_index(root, Some(&index))?;
     let tree = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -614,18 +809,36 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
     if success(root, &["diff-tree", "--quiet", &head, &tree]).is_ok() {
         return Ok(None);
     }
+    let changed = git(
+        root,
+        &["diff", "--no-renames", "--name-only", "-z", &head, &tree],
+    )?;
+    if !changed.status.success() {
+        return Err("unable to count Brain commit paths".into());
+    }
+    let changed_paths = changed
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|path| !path.is_empty())
+        .map(|path| String::from_utf8_lossy(path).into_owned())
+        .collect::<BTreeSet<_>>();
     let agents = entries
         .iter()
+        .filter(|entry| changed_paths.contains(&entry.path))
         .map(|e| e.agent.as_str())
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect::<Vec<_>>();
-    let counts = paths.len();
-    let message = format!(
-        "brain: {counts} paths ({})\n\nAgent: {}",
-        agents.join(", "),
-        agents.join(", ")
-    );
+    let counts = changed_paths.len();
+    let summary = if sweep { "(sweep)" } else { "(queued)" };
+    let message = if agents.is_empty() {
+        format!("brain: {counts} files {summary}")
+    } else {
+        format!(
+            "brain: {counts} files {summary}\n\nAgent: {}",
+            agents.join(", ")
+        )
+    };
     let out = Command::new("git")
         .arg("-C")
         .arg(root)
@@ -662,16 +875,41 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
     Ok(Some(commit))
 }
 
+#[cfg(test)]
+fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
+    let selected = entries.iter().map(|entry| entry.path.clone()).collect();
+    commit_selected(
+        root,
+        &selected,
+        entries,
+        false,
+        &mut Vec::new(),
+        &mut BTreeSet::new(),
+    )
+}
+
 pub fn flush(root: &Path) -> Result<()> {
     if !root.join(".git").exists() {
         return Ok(());
     }
     let _lock = acquire_vault_lock(root)?;
-    let q = read_queue(root)?;
-    if !q.entries.is_empty()
-        && q.updated
-            .is_some_and(|at| chrono::Utc::now().timestamp() - at < 120)
-    {
+    let mut q = read_queue(root)?;
+    let working = porcelain_candidates(root)?;
+    let signature = candidate_signature(root, &working);
+    let now = chrono::Utc::now().timestamp();
+    if signature.is_empty() {
+        q.sweep_signature = None;
+        q.sweep_updated = None;
+    } else if q.sweep_signature.as_deref() != Some(signature.as_str()) {
+        q.sweep_signature = Some(signature);
+        q.sweep_updated = Some(now);
+        write_json(&queue_file(root), &q)?;
+        return Ok(());
+    }
+    if !q.entries.is_empty() && q.updated.is_some_and(|at| now - at < 120) {
+        return Ok(());
+    }
+    if q.sweep_signature.is_some() && q.sweep_updated.is_some_and(|at| now - at < 120) {
         return Ok(());
     }
     let mut initial_status: Status = fs::read(status_file(root))
@@ -682,21 +920,71 @@ pub fn flush(root: &Path) -> Result<()> {
         return Ok(());
     }
     let result = (|| -> Result<()> {
-        let staged = git(root, &["diff", "--cached", "--name-only", "-z"])?;
-        if !staged.status.success() {
+        let staged_output = git(
+            root,
+            &["diff", "--cached", "--no-renames", "--name-only", "-z"],
+        )?;
+        if !staged_output.status.success() {
             return Err("unable to inspect existing staged paths".into());
         }
-        let staged = staged
+        let staged_before = staged_output
             .stdout
-            .split(|b| *b == 0)
-            .filter(|b| !b.is_empty())
-            .map(|b| String::from_utf8_lossy(b).into_owned())
+            .split(|byte| *byte == 0)
+            .filter(|path| !path.is_empty())
+            .map(|path| String::from_utf8_lossy(path).into_owned())
             .collect::<BTreeSet<_>>();
-        let committed = if q.entries.is_empty() {
+        let mut by_path = working
+            .iter()
+            .map(|candidate| candidate.path.clone())
+            .collect::<BTreeSet<_>>();
+        let mut blocked = Vec::new();
+        let mut selected = BTreeSet::new();
+        for entry in &q.entries {
+            by_path.insert(entry.path.clone());
+        }
+        for path in by_path {
+            if is_recent(root, &path) {
+                continue;
+            }
+            selected.insert(path);
+        }
+        let mut status: Status = fs::read(status_file(root))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default();
+        status.blocked = blocked.clone();
+        status.error = None;
+        write_json(&status_file(root), &status)?;
+        let attributed = q
+            .entries
+            .iter()
+            .filter(|entry| selected.contains(&entry.path))
+            .cloned()
+            .collect::<Vec<_>>();
+        let mut handled = BTreeSet::new();
+        let committed = if selected.is_empty() {
             None
         } else {
-            commit_paths(root, &q.entries)?
+            commit_selected(
+                root,
+                &selected,
+                &attributed,
+                true,
+                &mut blocked,
+                &mut handled,
+            )?
         };
+        let mut status: Status = fs::read(status_file(root))
+            .ok()
+            .and_then(|b| serde_json::from_slice(&b).ok())
+            .unwrap_or_default();
+        status.blocked = blocked;
+        write_json(&status_file(root), &status)?;
+        // Only advance clean paths in the ordinary index. Paths staged by the
+        // owner keep their exact index entries while our private index commits.
+        for path in handled.difference(&staged_before) {
+            git(root, &["reset", "--quiet", "HEAD", "--", path])?;
+        }
         initial_status = fs::read(status_file(root))
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
@@ -709,19 +997,14 @@ pub fn flush(root: &Path) -> Result<()> {
             status.last_commit = Some(commit.clone());
             status.error = None;
             write_json(&status_file(root), &status)?;
-            // Bring only clean queued paths forward in the ordinary index. Existing staged work remains intact.
-            for entry in &q.entries {
-                if !staged.contains(&entry.path) {
-                    let _ = git(root, &["reset", "--quiet", "HEAD", "--", &entry.path])?;
-                }
-            }
+            // The separate index leaves the owner's staged work intact.
         }
         let ahead = success(root, &["rev-list", "--count", "origin/main..HEAD"])
             .unwrap_or_else(|_| "1".to_owned());
         if ahead == "0" {
-            if !q.entries.is_empty() {
-                write_json(&queue_file(root), &Queue::default())?;
-            }
+            q.entries.retain(|entry| !handled.contains(&entry.path));
+            q.updated = (!q.entries.is_empty()).then_some(now);
+            write_json(&queue_file(root), &q)?;
             return Ok(());
         }
         let push = git_network(root, &["push", "origin", "HEAD:main"])?;
@@ -736,7 +1019,9 @@ pub fn flush(root: &Path) -> Result<()> {
             status.conflict = false;
             status.owned_commits.clear();
             write_json(&status_file(root), &status)?;
-            write_json(&queue_file(root), &Queue::default())?;
+            q.entries.retain(|entry| !handled.contains(&entry.path));
+            q.updated = (!q.entries.is_empty()).then_some(now);
+            write_json(&queue_file(root), &q)?;
             return Ok(());
         }
         let fetch = git_network(root, &["fetch", "origin", "main"])?;
@@ -785,7 +1070,9 @@ pub fn flush(root: &Path) -> Result<()> {
         status.conflict = false;
         status.owned_commits.clear();
         write_json(&status_file(root), &status)?;
-        write_json(&queue_file(root), &Queue::default())?;
+        q.entries.retain(|entry| !handled.contains(&entry.path));
+        q.updated = (!q.entries.is_empty()).then_some(now);
+        write_json(&queue_file(root), &q)?;
         Ok(())
     })();
     if let Err(ref e) = result {
@@ -868,9 +1155,24 @@ mod tests {
     }
     fn enqueue_ready(root: &Path, path: &str, contents: &str) {
         fs::write(root.join(path), contents).unwrap();
+        set_old_mtime(&root.join(path));
         enqueue(root, &root.join(path), "codex:test").unwrap();
         let mut queue = read_queue(root).unwrap();
         queue.updated = Some(chrono::Utc::now().timestamp() - 121);
+        write_json(&queue_file(root), &queue).unwrap();
+        sweep_ready(root);
+    }
+    fn set_old_mtime(path: &Path) {
+        let file = File::options().write(true).open(path).unwrap();
+        file.set_modified(std::time::SystemTime::now() - Duration::from_secs(15))
+            .unwrap();
+    }
+    fn sweep_ready(root: &Path) {
+        let candidates = porcelain_candidates(root).unwrap();
+        let queue = read_queue(root).unwrap();
+        let mut queue = queue;
+        queue.sweep_signature = Some(candidate_signature(root, &candidates));
+        queue.sweep_updated = Some(chrono::Utc::now().timestamp() - 121);
         write_json(&queue_file(root), &queue).unwrap();
     }
     fn vault() -> (TempDir, PathBuf) {
@@ -946,6 +1248,7 @@ mod tests {
         init(&root, None).unwrap();
         fs::create_dir_all(root.join("inbox")).unwrap();
         fs::write(root.join("inbox/[a].md"), "queued").unwrap();
+        set_old_mtime(&root.join("inbox/[a].md"));
         fs::write(root.join("inbox/a.md"), "unrelated").unwrap();
         commit_paths(
             &root,
@@ -968,6 +1271,7 @@ mod tests {
         fs::create_dir_all(root.join("wiki")).unwrap();
         let path = "wiki/back\\slash.md";
         fs::write(root.join(path), "queued").unwrap();
+        set_old_mtime(&root.join(path));
         enqueue(&root, &root.join(path), "test").unwrap();
         let queue = read_queue(&root).unwrap();
         assert_eq!(queue.entries[0].path, path);
@@ -1081,6 +1385,187 @@ mod tests {
         assert!(checked(&root, &["show", "origin/main:local.md"]).contains("local"));
         let status: serde_json::Value = serde_json::from_str(&status_json(&root).unwrap()).unwrap();
         assert!(status["error"].is_null());
+    }
+
+    #[test]
+    fn sweep_commits_unqueued_owner_edits_additions_and_deletions() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, bare, _) = remote_vault(&temp);
+        fs::write(root.join("shared.md"), "owner edit\n").unwrap();
+        set_old_mtime(&root.join("shared.md"));
+        fs::write(root.join("old-writer.md"), "old agent\n").unwrap();
+        set_old_mtime(&root.join("old-writer.md"));
+        fs::write(root.join("to-delete.md"), "remove me\n").unwrap();
+        set_old_mtime(&root.join("to-delete.md"));
+        success(&root, &["add", "to-delete.md"]).unwrap();
+        success(
+            &root,
+            &[
+                "-c",
+                "core.hooksPath=/dev/null",
+                "-c",
+                "user.name=fixture",
+                "-c",
+                "user.email=fixture@example.invalid",
+                "commit",
+                "-m",
+                "fixture",
+            ],
+        )
+        .unwrap();
+        success(&root, &["push", "origin", "HEAD:main"]).unwrap();
+        fs::remove_file(root.join("to-delete.md")).unwrap();
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        let files = checked(&root, &["ls-tree", "-r", "--name-only", "origin/main"]);
+        assert!(files.contains("old-writer.md"));
+        assert!(files.contains("shared.md"));
+        assert!(!files.contains("to-delete.md"));
+        assert_eq!(
+            checked(&root, &["show", "origin/main:shared.md"]),
+            "owner edit"
+        );
+        assert_eq!(
+            checked(&root, &["show", "origin/main:old-writer.md"]),
+            "old agent"
+        );
+        assert!(checked(&root, &["log", "-1", "--format=%s", "origin/main"]).contains("(sweep)"));
+        assert!(checked(&root, &["status", "--porcelain"]).is_empty());
+        fs::write(root.join("old-writer.md"), "later owner edit\n").unwrap();
+        set_old_mtime(&root.join("old-writer.md"));
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        assert_eq!(
+            checked(&root, &["show", "origin/main:old-writer.md"]),
+            "later owner edit"
+        );
+        assert!(Command::new("git")
+            .arg("--git-dir")
+            .arg(&bare)
+            .args(["cat-file", "-e", "refs/heads/main:old-writer.md"])
+            .status()
+            .unwrap()
+            .success());
+    }
+
+    #[test]
+    fn sweep_blocks_secret_and_commits_other_safe_files() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        let secret = ["sk-", "proj-", "abcdefghijklmnopqrstuv"].concat();
+        fs::write(root.join("blocked.md"), &secret).unwrap();
+        set_old_mtime(&root.join("blocked.md"));
+        fs::write(root.join("safe.md"), "safe note\n").unwrap();
+        set_old_mtime(&root.join("safe.md"));
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        assert_eq!(
+            checked(&root, &["show", "origin/main:safe.md"]),
+            "safe note"
+        );
+        assert!(success(&root, &["show", "origin/main:blocked.md"]).is_err());
+        let status: serde_json::Value = serde_json::from_str(&status_json(&root).unwrap()).unwrap();
+        assert_eq!(status["blocked"][0]["path"], "blocked.md");
+        assert_eq!(status["blocked"][0]["rule"], "openai-style-sk");
+        assert!(!status.to_string().contains(&secret));
+    }
+
+    #[test]
+    fn sweep_waits_for_recent_file_then_commits_it() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        fs::write(root.join("writing.md"), "still writing\n").unwrap();
+        sweep_ready(&root);
+        let before = checked(&root, &["rev-parse", "HEAD"]);
+        flush(&root).unwrap();
+        assert_eq!(checked(&root, &["rev-parse", "HEAD"]), before);
+        set_old_mtime(&root.join("writing.md"));
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        assert_eq!(
+            checked(&root, &["show", "HEAD:writing.md"]),
+            "still writing"
+        );
+    }
+
+    #[test]
+    fn sweep_preserves_the_owners_staged_index_and_handles_nul_paths() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        success(&root, &["mv", "shared.md", "staged.md"]).unwrap();
+        fs::write(root.join("staged.md"), "owner staged\n").unwrap();
+        success(&root, &["add", "staged.md"]).unwrap();
+        fs::write(root.join("staged.md"), "working tree version\n").unwrap();
+        set_old_mtime(&root.join("staged.md"));
+        fs::write(root.join("shared.md"), "recreated after staged rename\n").unwrap();
+        set_old_mtime(&root.join("shared.md"));
+        fs::write(root.join("working.md"), "sweep me\n").unwrap();
+        set_old_mtime(&root.join("working.md"));
+        let odd = "strange name\nwith-tab\t.md";
+        fs::write(root.join(odd), "odd path\n").unwrap();
+        set_old_mtime(&root.join(odd));
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        let staged = checked(&root, &["diff", "--cached", "--name-only"]);
+        assert!(staged.contains("staged.md"));
+        assert!(!staged.contains("working.md"));
+        assert_eq!(
+            checked(&root, &["show", &format!("HEAD:{odd}")]),
+            "odd path"
+        );
+        assert_eq!(checked(&root, &["show", "HEAD:working.md"]), "sweep me");
+        assert_eq!(
+            checked(&root, &["show", "HEAD:staged.md"]),
+            "working tree version"
+        );
+        assert_eq!(checked(&root, &["show", ":staged.md"]), "owner staged");
+        assert!(success(&root, &["show", ":shared.md"]).is_err());
+        assert_eq!(
+            checked(&root, &["show", "HEAD:shared.md"]),
+            "recreated after staged rename"
+        );
+    }
+
+    #[test]
+    fn sweep_parses_rename_records_and_commits_both_names() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        success(&root, &["mv", "shared.md", "renamed note.md"]).unwrap();
+        set_old_mtime(&root.join("renamed note.md"));
+        let candidates = porcelain_candidates(&root).unwrap();
+        assert!(candidates
+            .iter()
+            .any(|candidate| candidate.path == "shared.md"));
+        assert!(candidates
+            .iter()
+            .any(|candidate| candidate.path == "renamed note.md"));
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        assert_eq!(
+            checked(&root, &["show", "origin/main:renamed note.md"]),
+            "base"
+        );
+        assert!(success(&root, &["show", "origin/main:shared.md"]).is_err());
+    }
+
+    #[test]
+    fn sweep_snapshot_resets_when_same_size_note_changes() {
+        let temp = tempfile::tempdir().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        fs::write(root.join("owner.md"), "first\n").unwrap();
+        set_old_mtime(&root.join("owner.md"));
+        flush(&root).unwrap();
+        let before = checked(&root, &["rev-parse", "HEAD"]);
+        let mut queue = read_queue(&root).unwrap();
+        queue.sweep_updated = Some(0);
+        write_json(&queue_file(&root), &queue).unwrap();
+        fs::write(root.join("owner.md"), "other\n").unwrap();
+        set_old_mtime(&root.join("owner.md"));
+        flush(&root).unwrap();
+        assert_eq!(checked(&root, &["rev-parse", "HEAD"]), before);
+        sweep_ready(&root);
+        flush(&root).unwrap();
+        assert_eq!(checked(&root, &["show", "HEAD:owner.md"]), "other");
     }
     #[test]
     fn conflicting_remote_edit_aborts_and_records_status() {

@@ -904,10 +904,12 @@ class Handler(BaseHTTPRequestHandler):
             assets = {
                 "/": "index.html",
                 "/app.js": "app.js",
+                "/graph.js": "graph.js",
                 "/style.css": "style.css",
                 "/i18n.js": "i18n.js",
                 "/i18n-data.js": "i18n-data.js",
                 "/translation-engine.js": "translation-engine.js",
+                "/vendor/d3-force.min.js": "vendor/d3-force.min.js",
             }
             if path.path in assets:
                 name = assets[path.path]
@@ -943,9 +945,11 @@ class Handler(BaseHTTPRequestHandler):
                     {
                         "index.html": "text/html; charset=utf-8",
                         "app.js": "text/javascript",
+                        "graph.js": "text/javascript",
                         "i18n.js": "text/javascript",
                         "i18n-data.js": "text/javascript",
                         "translation-engine.js": "text/javascript",
+                        "vendor/d3-force.min.js": "text/javascript",
                         "style.css": "text/css",
                     }[name],
                 )
