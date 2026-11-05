@@ -10,6 +10,11 @@
   --tertiary: #becca2;
   --logo-highlight: #eee9f4;
   --on-accent: #3b2e10;
+  --world-saturation: 72%;
+  --world-lightness-dark: 72%;
+  --world-lightness-light: 30%;
+  --world-hue-step: 137.508deg;
+  --world-hue-offset: 0deg;
   color-scheme: dark;
   font:
     14px "IBM Plex Sans",
@@ -152,6 +157,52 @@ svg {
   gap: 10px;
   padding: 12px;
   margin: 3px 0;
+}
+.world-row {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+.world-row .subject {
+  flex: 1;
+  min-width: 0;
+}
+.world-row .name,
+.area-link .name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.world-expand {
+  padding: 7px 3px;
+  width: 24px;
+  color: var(--muted);
+}
+.area-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 8px 8px 35px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.area-link .name {
+  flex: 1;
+}
+.area-link.proposed {
+  color: var(--muted);
+  opacity: 0.68;
+}
+.new-badge,
+.proposed-badge {
+  color: var(--muted);
+  opacity: 0.72;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.review-link {
+  margin-top: 8px;
 }
 .subject svg {
   width: 17px;
@@ -359,22 +410,10 @@ h2 {
 .subject-card h2 {
   font-size: 21px;
   letter-spacing: -0.3px;
+  overflow-wrap: anywhere;
 }
 .subject-card p {
   font-size: 12px;
-}
-.activity-track {
-  height: 3px;
-  background: var(--raised);
-  border-radius: 3px;
-  margin-top: auto;
-}
-.activity-track span {
-  display: block;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--accent);
-  min-width: 2px;
 }
 .activity-caption {
   font-size: 11px;
@@ -407,6 +446,9 @@ h2 {
 .note-row .note-title {
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+.note-path-chips {
+  color: var(--accent);
 }
 .note-row small {
   display: block;
@@ -441,6 +483,13 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.suggestions {
+  margin-top: 14px;
+  color: var(--muted);
+}
+.suggestions summary {
+  cursor: pointer;
 }
 .topic {
   background: var(--panel);
@@ -1188,26 +1237,4 @@ h1 {
 }
 .grouping .inspector-label {
   margin: 0 0 6px;
-}
-.grouping small {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  margin: 5px 0 10px;
-}
-.grouping button {
-  font-size: 12px;
-}
-.grouping input {
-  width: 100%;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px;
-}
-.grouping-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
 }

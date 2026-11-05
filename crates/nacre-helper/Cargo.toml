@@ -28,6 +28,7 @@ tempfile = "3"
 regex = "1"
 kdl = "=4.7.1"
 nix = { version = "0.30", features = ["fs", "user", "signal", "feature", "socket", "term", "poll"] }
+notify = { version = "=8.2.0", default-features = false }
 chrono = "0.4"
 chrono-tz = "0.10"
 walkdir = "2"

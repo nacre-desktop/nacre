@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fixture-only parity check for Brain discovery and public graph projection.
+"""Fixture-only discovery parity and registry graph contract checks.
 
 Usage: python brain/tests/verify_native.py --native target/debug/nacre-helper
 Run from a disposable CI checkout with no real vault mounted or configured.
@@ -492,67 +492,87 @@ def populate_vault(vault: Path, today: str):
         )
 
 
-def graph_projection(value):
-    nodes = copy.deepcopy(value["nodes"])
-    links = copy.deepcopy(value["links"])
-    # Fixed fixture dates make activity deterministic. Link iteration reflects
-    # Python set ordering, so compare source/group edges without list order.
-    links.sort(key=canonical)
-    result = copy.deepcopy(value)
-    result.pop("generated", None)
-    result.update(nodes=nodes, links=links)
-    return result
-
-
 def compare_graph(binary: Path):
     today = dt.datetime.now(dt.timezone.utc).date().isoformat()
     with tempfile.TemporaryDirectory(prefix="nacre-brain-graph-") as temp:
-        root = Path(temp)
-        py_home = root / "python-home"
-        native_home = root / "native-home"
-        py_home.mkdir()
-        native_home.mkdir()
-        py_vault = py_home / "fixture-vault"
-        native_vault = native_home / "fixture-vault"
-        populate_vault(py_vault, today)
-        populate_vault(native_vault, today)
-
-        old_home = os.environ.get("HOME")
-        old_dir = os.environ.get("NACRE_BRAIN_DIR")
-        os.environ.update(
-            {
-                "HOME": str(py_home),
-                "NACRE_BRAIN_DIR": str(py_vault),
-                "NACRE_BRAIN_SEMANTICS": "0",
-            }
+        home = Path(temp)
+        vault = home / "fixture-vault"
+        populate_vault(vault, today)
+        registry = {
+            "version": 1,
+            "worlds": [
+                {"name": name, "status": "seed", "aliases": []}
+                for name in ["Nacre", "Audio", "History", "First world", "Second world"]
+            ],
+            "areas": [
+                {
+                    "name": "Signal processing",
+                    "parent": "Audio",
+                    "status": "auto",
+                    "created": today,
+                }
+            ],
+        }
+        registry_path = vault / "registry.json"
+        registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        measurement = vault / "inbox/measurement.md"
+        measurement.write_text(
+            measurement.read_text().replace(
+                "Topics: Signal processing",
+                "Areas: Signal processing\nReview: low-confidence",
+            ),
+            encoding="utf-8",
         )
-        try:
-            control = load_module(
-                "brain_control_graph_reference", ROOT / "brain/control.py"
-            )
-            python_graph = control.graph()
-        finally:
-            if old_home is None:
-                os.environ.pop("HOME", None)
-            else:
-                os.environ["HOME"] = old_home
-            if old_dir is None:
-                os.environ.pop("NACRE_BRAIN_DIR", None)
-            else:
-                os.environ["NACRE_BRAIN_DIR"] = old_dir
-
         env = os.environ.copy()
         env.update(
-            {
-                "HOME": str(native_home),
-                "NACRE_BRAIN_DIR": str(native_vault),
-                "NACRE_BRAIN_SEMANTICS": "0",
-            }
+            HOME=str(home), NACRE_BRAIN_DIR=str(vault), NACRE_BRAIN_SEMANTICS="0"
         )
-        native_graph = native_call(binary, "brain-control", "graph", {}, env)
+
+        def graph():
+            return native_call(binary, "brain-control", "graph", {}, env)
+
+        value = graph()
+        nodes = {node["id"]: node for node in value["nodes"]}
+        worlds = {node["label"] for node in nodes.values() if node["kind"] == "world"}
+        assert worlds == {entry["name"] for entry in registry["worlds"]}, worlds
+        assert not any(node["kind"] == "hub" for node in nodes.values())
+        assert value["reviewCount"] == 1
+        area = next(node for node in nodes.values() if node["kind"] == "area")
+        assert area["label"] == "Signal processing" and area["new"]
+        original = next(
+            node
+            for node in nodes.values()
+            if node.get("path") == "inbox/measurement.md"
+        )
+        assert any(
+            edge["source"] == area["id"]
+            and edge["target"] == original["id"]
+            and edge["kind"] == "membership"
+            for edge in value["links"]
+        )
+        assert all(
+            edge["source"] in nodes and edge["target"] in nodes
+            for edge in value["links"]
+        )
+        archived = vault / "archive/inbox/2026-11/measurement.md"
+        archived.parent.mkdir(parents=True)
+        measurement.rename(archived)
+        moved = next(
+            node
+            for node in graph()["nodes"]
+            if node.get("path") == "archive/inbox/2026-11/measurement.md"
+        )
+        assert moved["id"] == original["id"] and moved["kind"] == "archive"
+        registry["worlds"].append(
+            {"name": "New subject", "status": "auto", "created": today}
+        )
+        registry_path.write_text(json.dumps(registry), encoding="utf-8")
+        assert any(
+            node["label"] == "New subject" and node["new"] for node in graph()["nodes"]
+        )
         configured_env = env.copy()
-        configured_env.pop("NACRE_BRAIN_DIR", None)
-        configured_env["NACRE_BRAIN"] = str(native_vault)
+        configured_env.pop("NACRE_BRAIN_DIR")
+        configured_env["NACRE_BRAIN"] = str(vault)
         for relative in ["ordinary.md", "custom/reference.md"]:
             resolved = native_call(
                 binary,
@@ -561,33 +581,12 @@ def compare_graph(binary: Path):
                 {"args": [relative]},
                 configured_env,
             )
-            assert resolved == str(native_vault / relative), (
+            assert resolved == str(vault / relative), (
                 "web lookup inherited the CLI kind restriction"
             )
-        expected = graph_projection(python_graph)
-        actual = graph_projection(native_graph)
-        if canonical(expected) != canonical(actual):
-            left = json.dumps(
-                expected,
-                default=lambda v: sorted(v) if isinstance(v, set) else str(v),
-                ensure_ascii=False,
-                indent=2,
-                sort_keys=True,
-            ).splitlines()
-            right = json.dumps(
-                actual, ensure_ascii=False, indent=2, sort_keys=True
-            ).splitlines()
-            diff = "\n".join(
-                difflib.unified_diff(
-                    left,
-                    right,
-                    fromfile="python-graph",
-                    tofile="native-graph",
-                    lineterm="",
-                )
-            )
-            raise AssertionError(f"public graph parity failed\n{diff}")
-        print("PASS public fixture graph nodes/links")
+        print(
+            "PASS registry graph membership, review, archive identity and registry cache invalidation"
+        )
 
 
 def main():

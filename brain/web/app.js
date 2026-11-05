@@ -13,6 +13,8 @@ let state = {
     selected: null,
     query: "",
     filter: "all",
+    kindFilter: "all",
+    showArchive: false,
     limit: 60,
     history: [],
   },
@@ -97,23 +99,13 @@ function icon(name) {
   s.setAttribute("aria-hidden", "true");
   return s;
 }
-function subjectIcon(n) {
-  return (
-    {
-      ai: "network",
-      electronics: "chip",
-      software: "code",
-      infrastructure: "chip",
-      personal: "person",
-      music: "music",
-      research: "research",
-    }[n.category] || "folder"
-  );
-}
 function button(label, fn, className = "") {
   const b = el("button", label, className);
   b.onclick = fn;
   return b;
+}
+function isNote(n) {
+  return ["note", "archive", "digest"].includes(n?.kind);
 }
 function ordered(items) {
   return [...items].sort(
@@ -123,12 +115,47 @@ function ordered(items) {
   );
 }
 function subjects() {
-  return graph.nodes
-    .filter((n) => n.kind === "hub")
-    .sort(
-      (a, b) =>
-        (b.activity || 0) - (a.activity || 0) || a.label.localeCompare(b.label),
+  return (graph.worlds || []).map(
+    (w) => byId.get(w.id) || { ...w, kind: "world", count: w.count },
+  );
+}
+function registryWorlds() {
+  return graph.worlds || subjects();
+}
+function areasFor(world) {
+  const record = registryWorlds().find(
+    (w) => w.id === world.id || w.label === world.label,
+  );
+  return record?.areas || children(world.id).filter((n) => n.kind === "area");
+}
+function notePaths(note) {
+  const paths = [];
+  for (const areaName of note.areas || []) {
+    const world = registryWorlds().find((candidate) =>
+      areasFor(candidate).some((area) => area.label === areaName),
     );
+    if (world)
+      paths.push({
+        world: world.label,
+        area: areaName,
+        worldId: world.id,
+        areaId: areasFor(world).find((area) => area.label === areaName)?.id,
+      });
+  }
+  for (const worldName of note.worlds || []) {
+    if (!paths.some((path) => path.world === worldName)) {
+      const world = registryWorlds().find(
+        (candidate) => candidate.label === worldName,
+      );
+      paths.push({
+        world: worldName,
+        area: "",
+        worldId: world?.id,
+        areaId: null,
+      });
+    }
+  }
+  return paths;
 }
 function children(id) {
   return (groupChildren.get(id) || [])
@@ -143,14 +170,21 @@ function ancestors(id, seen = new Set()) {
     .filter(Boolean);
 }
 function notesIn(id) {
-  if (!id) return graph.nodes.filter((n) => n.kind === "note");
+  if (id === "review")
+    return graph.nodes.filter(
+      (n) => n.review && ["note", "archive", "digest"].includes(n.kind),
+    );
+  if (!id)
+    return graph.nodes.filter((n) =>
+      ["note", "archive", "digest"].includes(n.kind),
+    );
   const result = new Map(),
     seen = new Set();
   function walk(key) {
     if (seen.has(key)) return;
     seen.add(key);
     const n = byId.get(key);
-    if (n?.kind === "note") result.set(key, n);
+    if (n && ["note", "archive", "digest"].includes(n.kind)) result.set(key, n);
     else for (const c of children(key)) walk(c.id);
   }
   walk(id);
@@ -158,9 +192,9 @@ function notesIn(id) {
 }
 function context() {
   const focus = byId.get(state.focus);
-  return focus?.kind === "note"
-    ? ancestors(focus.id).find((n) => n.kind === "topic") ||
-        ancestors(focus.id).find((n) => n.kind === "hub")
+  return isNote(focus)
+    ? ancestors(focus.id).find((n) => n.kind === "area") ||
+        ancestors(focus.id).find((n) => n.kind === "world")
     : focus;
 }
 function theme() {
@@ -297,7 +331,7 @@ function applyGraph(payload, force = false) {
   parents = new Map();
   sourceNeighbours = new Map();
   for (const link of graph.links) {
-    if (link.kind === "group") {
+    if (link.kind === "membership") {
       if (!groupChildren.has(link.source)) groupChildren.set(link.source, []);
       groupChildren.get(link.source).push(link.target);
       if (!parents.has(link.target)) parents.set(link.target, []);
@@ -315,7 +349,8 @@ function applyGraph(payload, force = false) {
   theme();
   ready = true;
   $("loading").hidden = true;
-  if (state.focus && !byId.has(state.focus)) state.focus = null;
+  if (state.focus && state.focus !== "review" && !byId.has(state.focus))
+    state.focus = null;
   if (state.selected && !byId.has(state.selected)) state.selected = null;
   $("index-status").textContent = tr(
     "brain.ui.status.index",
@@ -331,8 +366,10 @@ function applyGraph(payload, force = false) {
   if (changed)
     render(
       !force &&
-        previous?.kind === "note" &&
-        previous.revision === byId.get(previous.id)?.revision,
+        isNote(previous) &&
+        previous.revision === byId.get(previous.id)?.revision &&
+        previous.path === byId.get(previous.id)?.path &&
+        previous.kind === byId.get(previous.id)?.kind,
     );
   if (state.query) search();
 }
@@ -361,9 +398,9 @@ function select(
       view: state.view,
     });
   const n = byId.get(id);
-  if (n.kind !== "note" || view === "map") state.focus = id;
+  state.focus = id;
   state.selected = inspect ? id : null;
-  state.view = n.kind === "note" ? "read" : view;
+  state.view = isNote(n) ? "read" : view;
   state.limit = 60;
   mapZoom = 1;
   render();
@@ -399,12 +436,14 @@ function render(keepInspector = false) {
 function renderRail() {
   const list = $("subjects");
   list.replaceChildren();
-  $("subject-count").textContent = subjects().length;
+  $("subject-count").textContent = registryWorlds().length;
   $("overview-link").classList.toggle("active", !state.focus);
   const related = state.focus
     ? new Set([state.focus, ...ancestors(state.focus).map((n) => n.id)])
     : new Set();
-  for (const n of subjects()) {
+  for (const n of registryWorlds()) {
+    const expanded = expandedWorlds.has(n.id);
+    const row = el("div", "", "world-row");
     const b = button(
       "",
       () => {
@@ -415,13 +454,76 @@ function renderRail() {
       },
       "subject" + (related.has(n.id) ? " active" : ""),
     );
-    b.append(
-      icon(subjectIcon(n)),
-      el("span", n.label, "name"),
-      el("span", String(n.count), "count"),
+    const disclosure = button(expanded ? "▾" : "▸", (e) => {}, "world-expand");
+    disclosure.setAttribute("aria-expanded", String(expanded));
+    disclosure.setAttribute(
+      "aria-label",
+      tr(
+        expanded
+          ? "brain.ui.aria.collapse-world"
+          : "brain.ui.aria.expand-world",
+        expanded ? "Collapse world" : "Expand world",
+      ),
     );
-    list.append(b);
+    disclosure.onclick = (event) => {
+      event.stopPropagation();
+      expanded ? expandedWorlds.delete(n.id) : expandedWorlds.add(n.id);
+      renderRail();
+    };
+    b.append(
+      icon("folder"),
+      el("span", n.label, "name"),
+      el("span", String(n.count || 0), "count"),
+    );
+    row.append(disclosure, b);
+    if (n.new)
+      row.append(el("small", tr("brain.ui.label.new", "New"), "new-badge"));
+    list.append(row);
+    if (expanded)
+      for (const area of areasFor(n)) {
+        const ab = button(
+          "",
+          () => select(area.id, { view: "overview" }),
+          "area-link" + (related.has(area.id) ? " active" : ""),
+        );
+        ab.append(
+          el("span", area.label, "name"),
+          el("span", String(area.count || 0), "count"),
+        );
+        if (area.proposed) {
+          ab.querySelector(".name").textContent = tr(
+            "brain.ui.label.new-area",
+            "New: {area}",
+            { area: area.label },
+          );
+          ab.classList.add("proposed");
+        } else if (area.new)
+          ab.append(el("small", tr("brain.ui.label.new", "New"), "new-badge"));
+        list.append(ab);
+      }
   }
+  const review = button(
+    "",
+    () => {
+      state.focus = "review";
+      state.view = "notes";
+      render();
+    },
+    "subject review-link" + (state.focus === "review" ? " active" : ""),
+  );
+  review.append(
+    icon("note"),
+    el("span", tr("brain.ui.label.review", "Review"), "name"),
+    el("span", String(graph.reviewCount || 0), "count"),
+  );
+  list.append(review);
+}
+const expandedWorlds = new Set();
+function toggleArchive() {
+  state.showArchive = !state.showArchive;
+  if (!state.showArchive && state.kindFilter === "archive")
+    state.kindFilter = "all";
+  renderMain();
 }
 function section(title, action) {
   const n = el("div", "", "section-heading");
@@ -447,26 +549,50 @@ function renderMain() {
       button(tr("brain.ui.literal.brain", "Brain"), home),
       el("span", "/"),
     );
-    const parent = ancestors(focus.id).find((n) => n.kind === "hub");
-    if (parent && parent.id !== focus.id)
+    const parent = ancestors(focus.id).find((n) => n.kind === "world");
+    const notePath = isNote(focus) && notePaths(focus)[0];
+    if (notePath?.area)
+      crumbs.append(
+        button(
+          notePath.world,
+          () =>
+            notePath.worldId && select(notePath.worldId, { view: "overview" }),
+        ),
+        el("span", "›"),
+        button(
+          notePath.area,
+          () =>
+            notePath.areaId && select(notePath.areaId, { view: "overview" }),
+        ),
+        el("span", "›"),
+      );
+    else if (notePath)
+      crumbs.append(
+        button(
+          notePath.world,
+          () =>
+            notePath.worldId && select(notePath.worldId, { view: "overview" }),
+        ),
+        el("span", "›"),
+      );
+    if (parent && parent.id !== focus.id && !notePath)
       crumbs.append(
         button(parent.label, () => select(parent.id)),
-        el("span", "/"),
+        el("span", "›"),
       );
     crumbs.append(
       el(
         "span",
-        focus.kind === "note" ? tr("brain.ui.label.note", "Note") : focus.label,
+        isNote(focus) ? tr("brain.ui.label.note", "Note") : focus.label,
       ),
     );
   }
-  const reading =
-    state.view === "read" && byId.get(state.selected)?.kind === "note";
+  const reading = state.view === "read" && isNote(byId.get(state.selected));
   const graphContext = $("graph-context");
   graphContext.hidden = !focus || reading;
   graphContext.onclick = () => {
     if (!focus) return;
-    const kind = focus.kind === "note" ? "note" : "area";
+    const kind = isNote(focus) ? "note" : focus.kind;
     const value = kind === "note" ? focus.id : focus.label || focus.id;
     window.BrainGraphUI?.open(`${kind}:${value}`, false);
   };
@@ -480,7 +606,9 @@ function renderMain() {
     ? byId.get(state.selected).label
     : searching
       ? tr("brain.ui.label.search-results", "Search results")
-      : c?.label || tr("brain.ui.label.your-brain", "Your brain");
+      : state.focus === "review"
+        ? tr("brain.ui.label.review", "Review")
+        : c?.label || tr("brain.ui.label.your-brain", "Your brain");
   $("subtitle").textContent = reading
     ? ""
     : searching
@@ -489,9 +617,9 @@ function renderMain() {
           "Matching titles, topics and note content.",
         )
       : c
-        ? tr("brain.ui.count.notes-topics", "{notes} notes · {topics} topics", {
+        ? tr("brain.ui.count.notes-areas", "{notes} notes · {areas} areas", {
             notes: notesIn(c.id).length,
-            topics: children(c.id).filter((n) => n.kind === "topic").length,
+            areas: c.kind === "world" ? areasFor(c).length : 0,
           })
         : tr(
             "brain.ui.label.the-subjects-you-return-to-connected-by-evidence",
@@ -517,37 +645,29 @@ function renderMain() {
   $("view-summary").textContent = c
     ? tr("brain.ui.label.focused-knowledge", "Focused knowledge")
     : tr(
-        "brain.ui.count.subjects",
-        { one: "{count} subjects", other: "{count} subjects" },
+        "brain.ui.count.worlds",
+        { one: "{count} worlds", other: "{count} worlds" },
         { count: subjects().length },
       );
   if (!c) {
     const cards = el("div", "", "subjects-grid");
-    const peak = Math.max(1, ...subjects().map((n) => n.activity || 0));
     for (const n of subjects()) {
       const b = button("", () => select(n.id), "subject-card"),
         top = el("div", "", "card-top");
       top.append(
-        icon(subjectIcon(n)),
+        icon("folder"),
         el(
           "small",
-          n.origin === "discovered" || n.origin === "promoted"
-            ? tr(
-                "brain.ui.count.suggested-notes",
-                {
-                  one: "{count} notes · Suggested",
-                  other: "{count} notes · Suggested",
-                },
-                { count: n.count },
-              )
-            : tr(
-                "brain.ui.count.notes",
-                { one: "{count} notes", other: "{count} notes" },
-                { count: n.count },
-              ),
+          tr(
+            "brain.ui.count.notes",
+            { one: "{count} notes", other: "{count} notes" },
+            { count: n.count },
+          ),
         ),
       );
-      const topics = children(n.id).filter((v) => v.kind === "topic");
+      if (n.new)
+        top.append(el("small", tr("brain.ui.label.new", "New"), "new-badge"));
+      const topics = areasFor(n);
       b.append(
         top,
         el("h2", n.label),
@@ -555,46 +675,54 @@ function renderMain() {
           "p",
           topics
             .slice(0, 3)
-            .map((v) => v.label)
+            .map((v) =>
+              v.proposed
+                ? tr("brain.ui.label.new-area", "New: {area}", {
+                    area: v.label,
+                  })
+                : v.label,
+            )
             .join(", ") ||
             tr("brain.ui.label.notes-and-ideas", "Notes and ideas"),
         ),
       );
-      const track = el("div", "", "activity-track"),
-        fill = el("span");
-      fill.style.width = Math.max(2, ((n.activity || 0) / peak) * 100) + "%";
-      track.append(fill);
-      b.append(track);
-      b.title = tr(
-        "brain.ui.label.recent-focus-from-dated-evidence-older-knowledge-remains-available",
-        "Recent focus from dated evidence; older knowledge remains available.",
-      );
       cards.append(b);
     }
     out.append(cards);
-    const caption = el("div", "", "activity-caption");
-    caption.append(
-      el("span", tr("brain.ui.label.recent-focus", "Recent focus")),
-      el(
-        "span",
-        tr(
-          "brain.ui.label.from-saved-conversations-and-work",
-          "From saved conversations and work",
-        ),
-      ),
-    );
-    out.append(caption);
   } else {
-    const topics = children(c.id).filter((n) => n.kind === "topic");
+    const topics = c.kind === "world" ? areasFor(c) : [];
     if (topics.length) {
-      out.append(section(tr("brain.ui.literal.topics", "Topics")));
+      out.append(section(tr("brain.ui.label.areas", "Areas")));
       const list = el("div", "", "topics");
       for (const n of topics) {
-        const b = button(n.label, () => select(n.id), "topic");
-        b.append(el("span", String(n.count)));
+        const b = button(
+          n.proposed
+            ? tr("brain.ui.label.new-area", "New: {area}", { area: n.label })
+            : n.label,
+          () => select(n.id),
+          "topic" + (n.proposed ? " proposed" : ""),
+        );
+        b.append(el("span", String(n.count || 0)));
+        if (n.new)
+          b.append(el("small", tr("brain.ui.label.new", "New"), "new-badge"));
         list.append(b);
       }
       out.append(list);
+    }
+    if (c.kind === "area") {
+      const wiki = graph.nodes.find(
+        (node) =>
+          node.path?.startsWith("wiki/") &&
+          (node.area === c.label || node.areas?.includes(c.label)),
+      );
+      if (wiki)
+        out.append(
+          button(
+            tr("brain.ui.label.open-wiki-page", "Open wiki page"),
+            () => select(wiki.id),
+            "wiki-link",
+          ),
+        );
     }
   }
   const split = el("div", "", "split-sections"),
@@ -602,14 +730,27 @@ function renderMain() {
     related = el("div");
   recent.append(
     section(tr("brain.ui.literal.recent-knowledge", "Recent knowledge"), {
-      label: tr("brain.ui.label.view-notes", "View notes"),
-      fn: () => {
+      label: state.showArchive
+        ? tr("brain.ui.label.hide-archive", "Hide archive")
+        : tr("brain.ui.label.show-archive", "Show archive"),
+      fn: toggleArchive,
+    }),
+  );
+  recent.append(
+    button(
+      tr("brain.ui.label.view-notes", "View notes"),
+      () => {
         state.view = "notes";
         renderMain();
       },
-    }),
+      "view-notes-action",
+    ),
   );
-  for (const n of ordered(notesIn(c?.id)).slice(0, 8))
+  for (const n of ordered(
+    notesIn(c?.id).filter(
+      (note) => state.showArchive || note.kind !== "archive",
+    ),
+  ).slice(0, 8))
     recent.append(noteRow(n));
   if (!notesIn(c?.id).length)
     recent.append(
@@ -625,7 +766,7 @@ function renderMain() {
   related.append(
     section(tr("brain.ui.literal.across-subjects", "Across subjects")),
   );
-  const pairs = sharedSubjects(c?.kind === "hub" ? c.id : null).slice(0, 5);
+  const pairs = sharedSubjects(c?.kind === "world" ? c.id : null).slice(0, 5);
   if (pairs.length) {
     for (const p of pairs) {
       const b = button(
@@ -666,6 +807,26 @@ function renderMain() {
         "empty",
       ),
     );
+  const suggestions =
+    graph.discovery?.suggestions || graph.discovery?.clusters || [];
+  const details = el("details", "", "suggestions");
+  details.append(
+    el(
+      "summary",
+      tr("brain.ui.label.suggested-groupings", "Suggested groupings"),
+    ),
+  );
+  if (Array.isArray(suggestions) && suggestions.length) {
+    for (const item of suggestions.slice(0, 20))
+      details.append(el("p", item.label || item.name || String(item)));
+  } else
+    details.append(
+      el(
+        "p",
+        tr("brain.ui.label.no-suggestions", "No suggested groupings yet."),
+      ),
+    );
+  related.append(details);
   split.append(recent, related);
   out.append(split);
 }
@@ -714,12 +875,22 @@ function noteRow(n) {
   const copy = el("div");
   copy.append(el("span", n.label, "note-title"));
   copy.append(el("small", confidenceLabel(n.confidence)));
+  for (const path of notePaths(n))
+    copy.append(
+      el(
+        "small",
+        [path.world, path.area].filter(Boolean).join(" › "),
+        "note-path-chips",
+      ),
+    );
   const date = el("time", n.date || tr("brain.ui.label.undated", "Undated"));
   b.append(icon("note"), copy, date);
   return b;
 }
 function renderNotes(out) {
-  const available = ordered(notesIn(context()?.id));
+  const available = ordered(
+    state.focus === "review" ? notesIn("review") : notesIn(context()?.id),
+  ).filter((n) => state.showArchive || n.kind !== "archive");
   const filtered = available.filter(
     (n) =>
       (!state.query ||
@@ -740,7 +911,8 @@ function renderNotes(out) {
         (n.confidence || "")
           .trim()
           .toLowerCase()
-          .split(/[\s·:]/)[0] === state.filter),
+          .split(/[\s·:]/)[0] === state.filter) &&
+      (state.kindFilter === "all" || n.kind === state.kindFilter),
   );
   $("view-summary").textContent = tr(
     "brain.ui.count.notes",
@@ -765,6 +937,33 @@ function renderNotes(out) {
         state.filter === value ? "active" : "",
       ),
     );
+  for (const [value, label] of [
+    ["all", tr("brain.ui.text.all-kinds", "All kinds")],
+    ["note", tr("brain.ui.label.notes-kind", "Notes")],
+    ["archive", tr("brain.ui.label.archive", "Archive")],
+    ["digest", tr("brain.ui.label.digest", "Digests")],
+  ])
+    filters.append(
+      button(
+        label,
+        () => {
+          state.kindFilter = value;
+          if (value === "archive") state.showArchive = true;
+          state.limit = 60;
+          renderMain();
+        },
+        state.kindFilter === value ? "active" : "",
+      ),
+    );
+  filters.append(
+    button(
+      state.showArchive
+        ? tr("brain.ui.label.hide-archive", "Hide archive")
+        : tr("brain.ui.label.show-archive", "Show archive"),
+      toggleArchive,
+      state.showArchive ? "active" : "",
+    ),
+  );
   out.append(filters);
   for (const n of filtered.slice(0, state.limit)) out.append(noteRow(n));
   if (!filtered.length)
@@ -864,21 +1063,20 @@ function mapNode(svg, n, x, y, width = 225, focus = false) {
       class: "node-mark",
       cx: 15,
       cy: 19,
-      r: n.kind === "note" ? 2 : 3,
+      r: isNote(n) ? 2 : 3,
     }),
   );
   const names = lines(n.label);
   names.forEach((line, i) =>
     g.append(svgEl("text", { x: 27, y: 23 + i * 18 }, line)),
   );
-  const detail =
-    n.kind === "note"
-      ? n.date || tr("brain.ui.detail.evidence-note", "Evidence note")
-      : tr(
-          "brain.ui.count.notes",
-          { one: "{count} notes", other: "{count} notes" },
-          { count: n.count },
-        );
+  const detail = isNote(n)
+    ? n.date || tr("brain.ui.detail.evidence-note", "Evidence note")
+    : tr(
+        "brain.ui.count.notes",
+        { one: "{count} notes", other: "{count} notes" },
+        { count: n.count },
+      );
   g.append(svgEl("text", { class: "node-detail", x: 27, y: 69 }, detail));
   const open = () => select(n.id, { view: "map" });
   g.addEventListener("click", open);
@@ -948,29 +1146,30 @@ function renderMap(out) {
       mapNode(svg, n, p.x, p.y);
     }
   } else {
-    let connected =
-      focus.kind === "note"
-        ? [...(sourceNeighbours.get(focus.id) || [])]
-            .map((id) => byId.get(id))
-            .filter(Boolean)
-        : children(focus.id);
+    let connected = isNote(focus)
+      ? [...(sourceNeighbours.get(focus.id) || [])]
+          .map((id) => byId.get(id))
+          .filter(Boolean)
+      : children(focus.id);
     connected = [...connected].sort((a, b) =>
       a.kind === b.kind
         ? (b.recorded || b.date || "").localeCompare(
             a.recorded || a.date || "",
           ) || a.label.localeCompare(b.label)
-        : a.kind === "topic"
+        : a.kind === "area"
           ? -1
           : 1,
     );
-    if (focus.kind === "note")
+    if (isNote(focus))
       connected = [
         ...connected,
         ...ancestors(focus.id).filter(
-          (n) => n.kind === "topic" || n.kind === "hub",
+          (n) => n.kind === "area" || n.kind === "world",
         ),
       ];
-    connected = [...new Map(connected.map((n) => [n.id, n])).values()];
+    connected = [...new Map(connected.map((n) => [n.id, n])).values()].filter(
+      (n) => state.showArchive || n.kind !== "archive",
+    );
     nodes = connected.slice(0, 16);
     height = Math.max(330, Math.ceil(nodes.length / 2) * 110 + 70);
     svg.setAttribute("viewBox", `0 0 830 ${height}`);
@@ -1046,11 +1245,7 @@ function badge(value) {
 function renderInspector() {
   const panel = $("inspector"),
     n = byId.get(state.selected);
-  if (
-    window.BrainGraphUI?.isActive() ||
-    state.view !== "read" ||
-    n?.kind !== "note"
-  ) {
+  if (window.BrainGraphUI?.isActive() || state.view !== "read" || !isNote(n)) {
     panel.hidden = true;
     return;
   }
@@ -1098,105 +1293,14 @@ function renderInspector() {
       "inspector-label",
     ),
   );
-  const labels = (n.memberships || [])
-    .filter((m) => m.subject !== "review")
-    .map((m) => byId.get(m.subject)?.label)
-    .filter(Boolean);
-  const summary = el(
-    "p",
-    labels.join(", ") || tr("brain.ui.label.needs-grouping", "Needs grouping"),
-  );
-  grouping.append(summary);
-  const reasons = [...new Set((n.memberships || []).map((m) => m.reason))];
-  const manuallyGrouped = reasons.includes("manual grouping");
   grouping.append(
     el(
-      "small",
-      !labels.length
-        ? tr(
-            "brain.ui.label.not-enough-context-for-a-confident-grouping",
-            "Not enough context for a confident grouping",
-          )
-        : manuallyGrouped
-          ? tr("brain.ui.label.your-grouping", "Your grouping")
-          : reasons.some(
-                (r) =>
-                  r.includes("similarity") ||
-                  r.includes("community") ||
-                  r.includes("suggested"),
-              )
-            ? tr(
-                "brain.ui.label.suggested-from-related-evidence",
-                "Suggested from related evidence",
-              )
-            : tr(
-                "brain.ui.label.from-annotations-and-named-evidence",
-                "From annotations and named evidence",
-              ),
+      "p",
+      notePaths(n)
+        .map((path) => [path.world, path.area].filter(Boolean).join(" › "))
+        .join(" · ") || tr("brain.ui.label.needs-review", "Needs review"),
     ),
   );
-  const edit = button(
-    tr("brain.ui.literal.change-grouping", "Change grouping"),
-    () => {
-      edit.hidden = true;
-      const input = el("input");
-      input.value = labels.join(", ");
-      input.placeholder = tr(
-        "brain.ui.label.subjects-separated-by-commas",
-        "Subjects, separated by commas",
-      );
-      input.setAttribute(
-        "aria-label",
-        tr("brain.ui.literal.subjects-for-this-note", "Subjects for this note"),
-      );
-      const suggestions = el("datalist");
-      suggestions.id = "subject-options";
-      for (const subject of subjects().filter((s) => s.id !== "review")) {
-        const option = el("option");
-        option.value = subject.label;
-        suggestions.append(option);
-      }
-      input.setAttribute("list", suggestions.id);
-      const actions = el("div", "", "grouping-actions");
-      actions.append(
-        button(
-          tr("brain.ui.literal.save", "Save"),
-          async () => {
-            await apiAction(
-              "assign-note",
-              JSON.stringify({
-                path: n.path,
-                subjects: input.value
-                  .split(",")
-                  .map((v) => v.trim())
-                  .filter(Boolean),
-              }),
-            );
-            await new Promise((r) => setTimeout(r, 500));
-            load(true);
-          },
-          "primary",
-        ),
-        button(
-          tr(
-            "brain.ui.literal.use-automatic-grouping",
-            "Use automatic grouping",
-          ),
-          async () => {
-            await apiAction(
-              "assign-note",
-              JSON.stringify({ path: n.path, reset: true }),
-            );
-            await new Promise((r) => setTimeout(r, 500));
-            load(true);
-          },
-        ),
-      );
-      grouping.append(input, suggestions, actions);
-      input.focus();
-    },
-  );
-  grouping.append(edit);
   panel.append(grouping);
   const reader = el(
     "div",
@@ -1217,20 +1321,6 @@ function renderInspector() {
       panel.append(el("div", label, "inspector-label"));
       for (const r of related) panel.append(noteRow(r));
     }
-  }
-  const hubs = [
-    ...new Map(
-      ancestors(n.id)
-        .filter((p) => p.kind === "hub")
-        .map((p) => [p.id, p]),
-    ).values(),
-  ];
-  if (hubs.length) {
-    panel.append(
-      el("div", tr("brain.ui.label.subjects", "Subjects"), "inspector-label"),
-    );
-    for (const h of hubs)
-      panel.append(button(h.label, () => select(h.id), "topic"));
   }
   panel.append(el("div", n.path, "reader-path"));
 }
@@ -1263,14 +1353,12 @@ function resolveNote(target, base) {
     const p = new URL(value, "http://local/" + base).pathname.slice(1);
     candidates.push(decodeURIComponent(p));
   } catch {}
-  let found = graph.nodes.find(
-    (n) => n.kind === "note" && candidates.includes(n.path),
-  );
+  let found = graph.nodes.find((n) => isNote(n) && candidates.includes(n.path));
   if (found) return found;
   const name = value.replace(/\.md$/, "").split("/").pop().toLowerCase(),
     matches = graph.nodes.filter(
       (n) =>
-        n.kind === "note" &&
+        isNote(n) &&
         (n.label.toLowerCase() === name ||
           n.path.split("/").pop().replace(/\.md$/, "").toLowerCase() === name),
     );
@@ -1436,6 +1524,8 @@ function markdown(container, body, base) {
 async function navigation() {
   try {
     const n = await boundedRequest("/api/navigation", {}, "json");
+    if (n.graphRevision && n.graphRevision !== graph.graphRevision)
+      await load();
     if (!n.token || lastNavigation === n.token) return;
     const target = graph.nodes.find((v) => v.path === n.path);
     if (target) {
@@ -1452,7 +1542,10 @@ $("back").onclick = back;
 window.BrainGraphUI.request = requestJson;
 window.BrainGraphUI.onClose = () => render();
 window.BrainGraphUI.onOpenNote = (source) => {
-  const n = { ...source, kind: "note" };
+  const n = {
+    ...source,
+    kind: ["archive", "digest"].includes(source.kind) ? source.kind : "note",
+  };
   graph.nodes = graph.nodes.filter((item) => item.id !== n.id).concat(n);
   byId.set(n.id, n);
   window.BrainGraphUI.close();

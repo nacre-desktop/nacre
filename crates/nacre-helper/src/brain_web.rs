@@ -1,6 +1,7 @@
 //! Standalone Brain graph, routes and bounded optional semantic worker.
 use crate::{brain_data, brain_discovery, brain_http, brain_launch, Result};
 use chrono::{DateTime, NaiveDate, Utc};
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use regex::Regex;
 use unicode_casefold::UnicodeCaseFold;
 fn casefold(s: &str) -> String {
@@ -16,110 +17,19 @@ use std::{
     net::TcpListener,
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
-    sync::{LazyLock, Mutex},
+    sync::{mpsc, LazyLock, Mutex},
     time::Duration,
 };
 
 const NOTE_LIMIT: u64 = 1_048_576;
 const VAULT_LIMIT: usize = 64 * 1024 * 1024;
 const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
-const GRAPH_SCHEMA: u32 = 1;
+const GRAPH_SCHEMA: u32 = 2;
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
 const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const params=new URLSearchParams(location.hash.slice(1));const token=params.get('nacre-bootstrap');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(response=>response.ok?response.json():null).then(value=>{if(value&&/^[0-9a-f]{64}$/.test(value.authorization))localStorage.setItem(key,value.authorization);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
 "#;
 const ACTIVITY_MODEL: &str = "Meaningful saved evidence, 21-day half-life, deduplicated captures and diminishing daily returns. Raw message counting is not enabled.";
-const THEMES: &[(&str, &str, &str, &[&str])] = &[
-    (
-        "ai",
-        "AI & learning",
-        "#a9c9f2",
-        &[
-            "ai",
-            "artificial intelligence",
-            "machine learning",
-            "inference",
-            "tensorrt",
-            "neural",
-            "codex",
-            "claude",
-            "llm",
-        ],
-    ),
-    (
-        "electronics",
-        "Electronics & hardware",
-        "#efbd87",
-        &[
-            "electronics",
-            "circuit",
-            "solder",
-            "sensor",
-            "camera",
-            "gun",
-            "bosch",
-            "firmware",
-            "motor",
-            "battery",
-        ],
-    ),
-    (
-        "software",
-        "Software & games",
-        "#c3b2ec",
-        &[
-            "software", "frontend", "backend", "api", "game", "parser", "code", "release",
-            "package",
-        ],
-    ),
-    (
-        "infrastructure",
-        "Systems & networks",
-        "#87cbbb",
-        &[
-            "network",
-            "server",
-            "deployment",
-            "sync",
-            "ssh",
-            "wifi",
-            "latency",
-        ],
-    ),
-    (
-        "personal",
-        "Personal life",
-        "#e6c796",
-        &[
-            "personal",
-            "bouldering",
-            "climbing",
-            "goals",
-            "background",
-            "education",
-            "preference",
-        ],
-    ),
-    (
-        "music",
-        "Music & sound",
-        "#dda9c8",
-        &["music", "musikki", "spotify", "audio", "sound"],
-    ),
-    (
-        "research",
-        "Research & science",
-        "#a4d6dc",
-        &[
-            "research",
-            "science",
-            "experiment",
-            "investigation",
-            "comparison",
-        ],
-    ),
-    ("general", "Mixed knowledge", "#a2b8c4", &[]),
-];
 fn digest(s: impl AsRef<[u8]>) -> String {
     format!("{:x}", Sha256::digest(s.as_ref()))
 }
@@ -228,32 +138,6 @@ fn note_path_at(root: &Path, relative: &str) -> Result<PathBuf> {
 pub fn fields(body: &str) -> Value {
     brain_discovery::header_fields(body)
 }
-fn category(label: &str, body: &str, declared: &str) -> (&'static str, &'static str) {
-    if let Some(t) = THEMES.iter().find(|t| t.0 == declared) {
-        return (t.0, "declared");
-    }
-    let clean=regex(r"(?mi)^(Source|Recorded|Reviewed|Confidence|Status|Entity|Name|Project|Parent|Category|Aliases|Topics|Tags):[^\n]*").replace_all(body,"");
-    let body = clean.chars().take(1800).collect::<String>().to_lowercase();
-    let label = label.to_lowercase();
-    let mut best = ("general", 0);
-    for t in THEMES {
-        let score =
-            t.3.iter()
-                .map(|word| {
-                    let r = regex(&format!(r"(?:^|[^\w]){}(?:$|[^\w])", regex::escape(word)));
-                    4 * usize::from(r.is_match(&label)) + usize::from(r.is_match(&body))
-                })
-                .sum();
-        if score > best.1 {
-            best = (t.0, score)
-        }
-    }
-    (best.0, "inferred")
-}
-fn theme(key: &str) -> (&'static str, &'static str) {
-    let t = THEMES.iter().find(|t| t.0 == key).unwrap_or(&THEMES[7]);
-    (t.1, t.2)
-}
 fn date(meta: &Value) -> Option<NaiveDate> {
     ["recorded", "reviewed"].into_iter().find_map(|key| {
         meta[key]
@@ -277,7 +161,119 @@ fn timestamp(meta: &Value) -> String {
     }
     String::new()
 }
+fn registry(root: &Path) -> Result<Value> {
+    let path = root.join("registry.json");
+    if fs::symlink_metadata(&path).is_ok() {
+        return Ok(serde_json::from_str(&read(&path, 2 * 1024 * 1024)?)?);
+    }
+    Ok(serde_json::from_slice(include_bytes!(
+        "../../../brain/registry-seed.json"
+    ))?)
+}
+fn slug_id(name: &str) -> String {
+    let slug = regex(r"[^\p{L}\p{N}]+")
+        .replace_all(&casefold(name), "-")
+        .trim_matches('-')
+        .to_owned();
+    format!(
+        "{}:{}",
+        if name.starts_with("area:") {
+            "area"
+        } else {
+            "world"
+        },
+        slug
+    )
+}
+fn new_category(entry: &Value, today: NaiveDate) -> bool {
+    text(&entry["status"]) == "auto"
+        && NaiveDate::parse_from_str(text(&entry["created"]), "%Y-%m-%d")
+            .is_ok_and(|created| created <= today && (today - created).num_days() < 7)
+}
+fn hierarchy(root: &Path, all: &[Value], today: NaiveDate) -> Result<(Vec<Value>, Vec<Value>)> {
+    let reg = registry(root)?;
+    let worlds = reg["worlds"].as_array().cloned().unwrap_or_default();
+    let areas = reg["areas"].as_array().cloned().unwrap_or_default();
+    let mut world_values = Vec::new();
+    let mut hierarchy_nodes = Vec::new();
+    let mut membership = Vec::new();
+    for w in worlds.iter().filter(|w| text(&w["merged_into"]).is_empty()) {
+        let name = text(&w["name"]);
+        let id = slug_id(name);
+        let mut area_values = Vec::new();
+        let mut world_members = BTreeSet::new();
+        for a in areas
+            .iter()
+            .filter(|a| text(&a["parent"]) == name && text(&a["merged_into"]).is_empty())
+        {
+            let area_name = text(&a["name"]);
+            let area_id = format!("area:{}", slug_id(area_name).trim_start_matches("world:"));
+            let area_notes = all
+                .iter()
+                .filter(|n| {
+                    n["areas"]
+                        .as_array()
+                        .is_some_and(|v| v.iter().any(|x| text(x) == area_name))
+                })
+                .count();
+            for n in all.iter().filter(|n| {
+                n["areas"]
+                    .as_array()
+                    .is_some_and(|v| v.iter().any(|x| text(x) == area_name))
+            }) {
+                world_members.insert(text(&n["id"]).to_owned());
+            }
+            let created = text(&a["created"]);
+            let new = new_category(a, today);
+            area_values.push(json!({"id":area_id,"label":area_name,"status":a["status"],"created":created,"new":new,"proposed":a["status"]=="proposed","count":area_notes}));
+            hierarchy_nodes.push(json!({"id":area_id,"label":area_name,"kind":"area","area":area_name,"world":name,"status":a["status"],"created":created,"new":new,"count":area_notes}));
+            membership.push(json!({"source":id,"target":area_id,"kind":"membership"}));
+        }
+        let created = text(&w["created"]);
+        let new = new_category(w, today);
+        for n in all.iter().filter(|n| {
+            n["worlds"]
+                .as_array()
+                .is_some_and(|v| v.iter().any(|x| text(x) == name))
+        }) {
+            world_members.insert(text(&n["id"]).to_owned());
+        }
+        hierarchy_nodes.push(json!({"id":id,"label":name,"kind":"world","world":name,"status":w["status"],"created":created,"new":new,"count":world_members.len()}));
+        world_values.push(json!({"id":id,"label":name,"status":w["status"],"created":created,"new":new,"count":world_members.len(),"areas":area_values}));
+    }
+    for n in all {
+        for world in n["worlds"].as_array().into_iter().flatten() {
+            let has_area = n["areas"].as_array().is_some_and(|values| {
+                values.iter().any(|area| {
+                    areas.iter().any(|a| {
+                        text(&a["name"]) == text(area) && text(&a["parent"]) == text(world)
+                    })
+                })
+            });
+            if !has_area {
+                membership.push(
+                    json!({"source":slug_id(text(world)),"target":n["id"],"kind":"membership"}),
+                );
+            }
+        }
+        for area in n["areas"].as_array().into_iter().flatten() {
+            if areas
+                .iter()
+                .any(|a| text(&a["name"]) == text(area) && text(&a["merged_into"]).is_empty())
+            {
+                membership.push(json!({"source":format!("area:{}",slug_id(text(area)).trim_start_matches("world:")),"target":n["id"],"kind":"membership"}));
+            }
+        }
+    }
+    Ok((world_values, {
+        hierarchy_nodes.extend(membership);
+        hierarchy_nodes
+    }))
+}
 fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
+    let registry = registry(root)?;
+    let wr = registry["worlds"].as_array().cloned().unwrap_or_default();
+    let ar = registry["areas"].as_array().cloned().unwrap_or_default();
     let mut paths = walkdir::WalkDir::new(root)
         .follow_links(false)
         .into_iter()
@@ -288,6 +284,7 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
         .collect::<Vec<_>>();
     paths.sort();
     let mut notes = Vec::new();
+    let mut note_ids = BTreeSet::new();
     let mut total = 0;
     for p in paths {
         let rel = p.strip_prefix(root)?.to_string_lossy().into_owned();
@@ -305,14 +302,104 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
             .unwrap_or_else(|| p.file_stem().and_then(|v| v.to_str()).unwrap_or(""))
             .to_owned();
         let meta = fields(&body);
-        let (cat, _) = category(&title, &body, text(&meta["category"]));
         let day = date(&meta);
         let age = day.map(|d| (today - d).num_days().max(0));
         let activity = age
             .map(|a| (-std::f64::consts::LN_2 * a as f64 / 21.0).exp())
             .unwrap_or(0.0);
         let confidence = meta["confidence"].as_str().unwrap_or("source page");
-        notes.push(json!({"id":format!("note:{}",&digest(&rel)[..16]),"label":title,"kind":"note","path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&meta),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!(brain_discovery::rounded(activity,4))}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"category":cat,"color":theme(cat).1}));
+        let filename = p.file_name().ok_or("Brain note has no filename")?;
+        let note_id = format!("note:{}", &digest(filename.as_encoded_bytes())[..16]);
+        if !note_ids.insert(note_id.clone()) {
+            return Err(format!(
+                "Duplicate Brain note filename: {}",
+                filename.to_string_lossy()
+            )
+            .into());
+        }
+        let resolve = |raw: &str, entries: &[Value]| {
+            entries
+                .iter()
+                .find(|entry| {
+                    let name = text(&entry["name"]);
+                    casefold(name) == casefold(raw)
+                        || entry["aliases"]
+                            .as_array()
+                            .is_some_and(|a| a.iter().any(|x| casefold(text(x)) == casefold(raw)))
+                })
+                .and_then(|entry| {
+                    let mut name = text(&entry["name"]).to_owned();
+                    for _ in 0..entries.len() {
+                        let Some(current) = entries
+                            .iter()
+                            .find(|candidate| text(&candidate["name"]) == name)
+                        else {
+                            break;
+                        };
+                        let merged = text(&current["merged_into"]);
+                        if merged.is_empty() {
+                            break;
+                        }
+                        name = merged.to_owned();
+                    }
+                    entries
+                        .iter()
+                        .any(|candidate| {
+                            text(&candidate["name"]) == name
+                                && text(&candidate["merged_into"]).is_empty()
+                        })
+                        .then_some(name)
+                })
+        };
+        let mut worlds: BTreeSet<String> = text(&meta["worlds"])
+            .split(',')
+            .filter_map(|x| resolve(x.trim(), &wr))
+            .collect();
+        let mut areas: BTreeSet<String> = text(&meta["areas"])
+            .split(',')
+            .filter_map(|x| resolve(x.trim(), &ar))
+            .collect();
+        areas.extend(
+            text(&meta["worlds"])
+                .split(',')
+                .filter(|raw| resolve(raw.trim(), &wr).is_none())
+                .filter_map(|raw| resolve(raw.trim(), &ar)),
+        );
+        for area in &areas {
+            if let Some(parent) = ar
+                .iter()
+                .find(|a| text(&a["name"]) == area)
+                .map(|a| text(&a["parent"]))
+            {
+                worlds.insert(parent.to_owned());
+            }
+        }
+        if worlds.is_empty() && text(&meta["entity"]).eq_ignore_ascii_case("world") {
+            if let Some(name) = resolve(text(&meta["name"]), &wr) {
+                worlds.insert(name);
+            }
+        }
+        if areas.is_empty() && text(&meta["entity"]).eq_ignore_ascii_case("area") {
+            if let Some(name) = resolve(text(&meta["name"]), &ar) {
+                if let Some(parent) = ar
+                    .iter()
+                    .find(|a| text(&a["name"]) == name)
+                    .map(|a| text(&a["parent"]).to_owned())
+                {
+                    areas.insert(name);
+                    worlds.insert(parent);
+                }
+            }
+        }
+        let kind = if rel.starts_with("archive/") {
+            "archive"
+        } else if rel.starts_with("digests/") {
+            "digest"
+        } else {
+            "note"
+        };
+        let review = !text(&meta["review"]).trim().is_empty();
+        notes.push(json!({"id":note_id,"label":title,"kind":kind,"path":rel,"date":day.map(|d|d.to_string()).unwrap_or_default(),"recorded":timestamp(&meta),"confidence":confidence,"text":body.chars().take(60000).collect::<String>(),"activity":if day.is_some(){json!(brain_discovery::rounded(activity,4))}else{json!(0)},"revision":&digest(&body)[..16],"meta":meta,"worlds":worlds,"areas":areas,"review":review}));
     }
     Ok(notes)
 }
@@ -423,83 +510,11 @@ fn source_links(notes: &mut [Value]) -> Vec<Value> {
             .filter(|(a, _)| a == text(&note["id"]))
             .map(|(_, b)| b)
             .collect::<Vec<_>>());
-        note["featureText"] = json!(brain_discovery::features(note).1);
     }
     pairs
         .into_iter()
         .map(|(a, b)| json!({"source":a,"target":b,"kind":"source"}))
         .collect()
-}
-fn groups(subjects: &[Value], notes: &[Value], links: &mut Vec<Value>) -> Vec<Value> {
-    let by = notes
-        .iter()
-        .map(|n| (text(&n["id"]), n))
-        .collect::<BTreeMap<_, _>>();
-    let mut nodes = vec![];
-    for s in subjects {
-        let Some(members) = s["members"].as_object() else {
-            continue;
-        };
-        let labels = members
-            .keys()
-            .filter_map(|i| by.get(i.as_str()))
-            .map(|n| text(&n["label"]))
-            .collect::<Vec<_>>()
-            .join(" ");
-        let declared = text(&s["category"]);
-        let cat = category(text(&s["label"]), &labels, declared).0;
-        let mut days: BTreeMap<String, f64> = BTreeMap::new();
-        let mut unique = BTreeSet::new();
-        for id in members.keys() {
-            if let Some(n) = by.get(id.as_str()) {
-                let signature = digest(casefold(&brain_discovery::clean(text(&n["text"]))));
-                if !text(&n["recorded"]).is_empty() && unique.insert(signature) {
-                    *days.entry(text(&n["date"]).to_owned()).or_default() +=
-                        n["activity"].as_f64().unwrap_or(0.0)
-                }
-            }
-        }
-        let activity = days.values().map(|x| x.ln_1p()).sum::<f64>();
-        nodes.push(json!({"id":s["id"],"label":s["label"],"kind":"hub","count":members.len(),"activity":if days.is_empty(){json!(0)}else{json!(brain_discovery::rounded(activity,3))},"radius":20.0+8.0*activity.ln_1p(),"category":cat,"color":theme(cat).1,"themeLabel":theme(cat).0,"themeReason":if declared.is_empty(){"inferred"}else{"declared"},"origin":s["origin"],"parent":s["parent"],"summary":"Grouped from saved knowledge; automatic suggestions are not verified facts."}));
-        let mut covered = BTreeSet::new();
-        if let Some(topics) = s["topics"].as_array() {
-            for t in topics {
-                let ids = t["members"].as_array().cloned().unwrap_or_default();
-                let labels = ids
-                    .iter()
-                    .filter_map(|i| by.get(text(i)))
-                    .map(|n| text(&n["label"]))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                let cat = category(text(&t["label"]), &labels, text(&t["category"])).0;
-                nodes.push(json!({"id":t["id"],"label":t["label"],"kind":"topic","parent":s["id"],"count":ids.len(),"activity":0,"radius":12,"category":cat,"color":theme(cat).1,"groupReason":t["origin"],"summary":"Topics emerge from annotations and coherent note communities."}));
-                links.push(
-                    json!({"source":s["id"],"target":t["id"],"kind":"group","reason":t["origin"]}),
-                );
-                for id in ids {
-                    covered.insert(text(&id).to_owned());
-                    links.push(
-                        json!({"source":t["id"],"target":id,"kind":"group","reason":t["origin"]}),
-                    );
-                }
-            }
-        }
-        for (id, assignment) in members {
-            if !covered.contains(id) {
-                let mut l = json!({"source":s["id"],"target":id,"kind":"group"});
-                if let Some(a) = assignment.as_object() {
-                    for (k, v) in a {
-                        l[k] = v.clone()
-                    }
-                }
-                links.push(l)
-            }
-        }
-        if !s["parent"].is_null() {
-            links.push(json!({"source":s["parent"],"target":s["id"],"kind":"group","reason":"promoted topic"}));
-        }
-    }
-    nodes
 }
 static GRAPH: LazyLock<Mutex<Option<(String, Value)>>> = LazyLock::new(|| Mutex::new(None));
 static GRAPH_BUILDING: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -508,7 +523,11 @@ static GRAPH_WATCHING: std::sync::atomic::AtomicBool = std::sync::atomic::Atomic
 static GRAPH_BUILD_REVISION: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| Mutex::new(None));
 static GRAPH_ERROR: LazyLock<Mutex<Option<String>>> = LazyLock::new(|| Mutex::new(None));
 static SUMMARY_CACHE: LazyLock<Mutex<Option<(String, Value)>>> = LazyLock::new(|| Mutex::new(None));
-
+static WATCH_ACTIVITY: LazyLock<Mutex<std::time::Instant>> =
+    LazyLock::new(|| Mutex::new(std::time::Instant::now()));
+static WATCH_PAUSED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static WATCH_SIGNAL: LazyLock<(Mutex<()>, std::sync::Condvar)> =
+    LazyLock::new(|| (Mutex::new(()), std::sync::Condvar::new()));
 /// Bounded first paint data. This deliberately does not invoke discovery or
 /// take the graph cache lock, so a cold graph build cannot hold up the viewer.
 fn summary() -> Result<Value> {
@@ -528,8 +547,9 @@ fn summary() -> Result<Value> {
     }
     let mut all = notes(&root, Utc::now().date_naive())?;
     all.sort_by(|a, b| text(&b["recorded"]).cmp(text(&a["recorded"])));
-    let (nodes, links) = summary_projection(&all);
-    let mut value = json!({"nodes":nodes,"links":links,"noteCount":all.len(),"activityModel":ACTIVITY_MODEL,"discovery":{},"connections":{"state":"building"}});
+    let (nodes, links, worlds) = summary_projection(&root, &all, Utc::now().date_naive())?;
+    let review_count = all.iter().filter(|n| n["review"] == true).count();
+    let mut value = json!({"nodes":nodes,"links":links,"noteCount":all.len(),"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":{},"connections":{"state":"building"}});
     decorate(&mut value)?;
     decorate_connections(&mut value);
     *SUMMARY_CACHE
@@ -538,53 +558,36 @@ fn summary() -> Result<Value> {
     Ok(value)
 }
 
-fn summary_projection(all: &[Value]) -> (Vec<Value>, Vec<Value>) {
-    let group = |n: &Value| {
-        let meta = &n["meta"];
-        let worlds = text(&meta["worlds"]).split(',').next().unwrap_or("").trim();
-        let entity = text(&meta["entity"]);
-        let label = if !worlds.is_empty() {
-            worlds
-        } else if entity.eq_ignore_ascii_case("world") && !text(&meta["name"]).is_empty() {
-            text(&meta["name"])
-        } else {
-            theme(text(&n["category"])).0
-        };
-        (
-            format!("summary:{}", &digest(casefold(label))[..16]),
-            label.to_owned(),
-            text(&n["category"]).to_owned(),
-        )
-    };
-    let mut counts: BTreeMap<String, (String, String, usize)> = BTreeMap::new();
-    for n in all {
-        let (id, label, category) = group(n);
-        let entry = counts.entry(id).or_insert((label, category, 0));
-        entry.2 += 1;
-    }
-    let mut nodes = Vec::new();
-    for (id, (actual_label, category, count)) in &counts {
-        let (label, color) = theme(category);
-        let display_label = if actual_label.as_str() == label {
-            label
-        } else {
-            actual_label.as_str()
-        };
-        nodes.push(json!({"id":id,"label":display_label,"kind":"hub","count":count,"category":category,"color":color}));
-    }
-    let mut links = Vec::new();
+fn summary_projection(
+    root: &Path,
+    all: &[Value],
+    today: NaiveDate,
+) -> Result<(Vec<Value>, Vec<Value>, Vec<Value>)> {
+    let (worlds, projected) = hierarchy(root, all, today)?;
+    let mut nodes = projected
+        .iter()
+        .filter(|n| n["kind"] != "membership")
+        .cloned()
+        .collect::<Vec<_>>();
+    let mut links = projected
+        .into_iter()
+        .filter(|n| n["kind"] == "membership")
+        .collect::<Vec<_>>();
     for n in all.iter().take(40) {
-        let (id, _, _) = group(n);
-        links.push(json!({"source":id,"target":n["id"],"kind":"group"}));
         let mut node = n.clone();
         if let Some(object) = node.as_object_mut() {
-            for field in ["text", "meta", "references", "featureText"] {
+            for field in ["text", "meta", "references"] {
                 object.remove(field);
             }
         }
         nodes.push(node);
     }
-    (nodes, links)
+    let ids = nodes
+        .iter()
+        .map(|n| text(&n["id"]).to_owned())
+        .collect::<BTreeSet<_>>();
+    links.retain(|link| ids.contains(text(&link["source"])) && ids.contains(text(&link["target"])));
+    Ok((nodes, links, worlds))
 }
 
 fn decorate_connections(value: &mut Value) {
@@ -737,7 +740,10 @@ fn graph_projection(graph: &Value, scope: &str) -> Value {
             selected_ids.contains(&source) && selected_ids.contains(&target)
         })
         .collect::<Vec<_>>();
-    json!({"state":"ready","nodes":selected,"links":edges})
+    let mut value =
+        json!({"state":"ready","nodes":selected,"links":edges,"worlds":graph["worlds"]});
+    refresh_new_badges(&mut value, Utc::now().date_naive());
+    value
 }
 
 fn endpoint(value: &Value) -> String {
@@ -770,7 +776,17 @@ fn schedule_graph_build(retry: bool) {
         match result {
             Ok(_) => {
                 *GRAPH_ERROR.lock().unwrap_or_else(|e| e.into_inner()) = None;
-                GRAPH_READY.store(true, std::sync::atomic::Ordering::Release);
+                let stale = vault()
+                    .and_then(|root| vault_metadata_fingerprint(&root))
+                    .ok()
+                    .zip(GRAPH_BUILD_REVISION.lock().ok().and_then(|v| v.clone()))
+                    .is_some_and(|(now, built)| now != built);
+                GRAPH_READY.store(!stale, std::sync::atomic::Ordering::Release);
+                GRAPH_BUILDING.store(false, std::sync::atomic::Ordering::Release);
+                if stale {
+                    schedule_graph_build(true);
+                }
+                return;
             }
             Err(e) => *GRAPH_ERROR.lock().unwrap_or_else(|e| e.into_inner()) = Some(e.to_string()),
         }
@@ -808,6 +824,18 @@ fn vault_metadata_fingerprint(root: &Path) -> Result<String> {
             stamp.update(time.as_nanos().to_le_bytes());
         }
     }
+    let registry_path = root.join("registry.json");
+    if let Ok(meta) = fs::metadata(&registry_path) {
+        stamp.update(b"registry.json");
+        stamp.update(meta.len().to_le_bytes());
+        if let Some(time) = meta
+            .modified()
+            .ok()
+            .and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok())
+        {
+            stamp.update(time.as_nanos().to_le_bytes());
+        }
+    }
     let override_path = root.join(".brain-state/discovery/overrides.json");
     reject_links(&override_path)?;
     if let Ok(meta) = fs::metadata(override_path) {
@@ -823,22 +851,143 @@ fn vault_metadata_fingerprint(root: &Path) -> Result<String> {
     Ok(format!("{:x}", stamp.finalize()))
 }
 
+fn create_vault_watcher(
+    root: &Path,
+) -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify::Result<Event>>)> {
+    let (sender, receiver) = mpsc::channel();
+    let watched_root = root.to_path_buf();
+    let mut watcher = RecommendedWatcher::new(
+        move |event: notify::Result<Event>| {
+            if event.as_ref().is_err()
+                || event
+                    .as_ref()
+                    .is_ok_and(|event| visible_vault_event(event, &watched_root))
+            {
+                let _ = sender.send(event);
+            }
+        },
+        Config::default().with_follow_symlinks(false),
+    )?;
+    watcher.watch(root, RecursiveMode::Recursive)?;
+    Ok((watcher, receiver))
+}
+fn visible_vault_event(event: &Event, root: &Path) -> bool {
+    if matches!(event.kind, EventKind::Access(_)) {
+        return false;
+    }
+    event.paths.iter().any(|path| {
+        path.strip_prefix(root).ok().is_some_and(|relative| {
+            !relative
+                .components()
+                .any(|component| component.as_os_str().to_string_lossy().starts_with('.'))
+        })
+    })
+}
 fn start_vault_watch() {
     GRAPH_WATCHING.store(true, std::sync::atomic::Ordering::Release);
     std::thread::spawn(|| {
+        let mut watched = vault()
+            .ok()
+            .and_then(|root| create_vault_watcher(&root).ok());
         while GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {
-            std::thread::sleep(Duration::from_secs(5));
+            let (signal, cv) = &*WATCH_SIGNAL;
+            let guard = signal.lock().unwrap_or_else(|e| e.into_inner());
+            let elapsed = WATCH_ACTIVITY
+                .lock()
+                .map(|v| v.elapsed())
+                .unwrap_or(Duration::from_secs(600));
+            let Some(wait) = watcher_wait(elapsed) else {
+                watched = None;
+                WATCH_PAUSED.store(true, std::sync::atomic::Ordering::Release);
+                let guard = cv
+                    .wait_while(guard, |_| {
+                        WATCH_ACTIVITY
+                            .lock()
+                            .map(|activity| watcher_wait(activity.elapsed()).is_none())
+                            .unwrap_or(true)
+                            && GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire)
+                    })
+                    .unwrap_or_else(|e| e.into_inner());
+                drop(guard);
+                if !GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {
+                    break;
+                }
+                if let Ok(root) = vault() {
+                    watched = create_vault_watcher(&root).ok();
+                    if let Ok(current) = vault_metadata_fingerprint(&root) {
+                        let built = GRAPH_BUILD_REVISION.lock().ok().and_then(|v| v.clone());
+                        if built.as_ref().is_some_and(|old| old != &current) {
+                            GRAPH_READY.store(false, std::sync::atomic::Ordering::Release);
+                            if let Ok(mut cache) = SUMMARY_CACHE.lock() {
+                                *cache = None;
+                            }
+                            schedule_graph_build(true);
+                        }
+                    }
+                }
+                let _guard = signal.lock().unwrap_or_else(|e| e.into_inner());
+                WATCH_PAUSED.store(false, std::sync::atomic::Ordering::Release);
+                cv.notify_all();
+                continue;
+            };
+            drop(guard);
+            let received = watched
+                .as_ref()
+                .map(|(_, receiver)| receiver.recv_timeout(wait));
+            let event = match received {
+                Some(Ok(Ok(event))) => event,
+                Some(Ok(Err(_))) => continue,
+                Some(Err(mpsc::RecvTimeoutError::Timeout)) => continue,
+                Some(Err(mpsc::RecvTimeoutError::Disconnected)) => {
+                    watched = vault()
+                        .ok()
+                        .and_then(|root| create_vault_watcher(&root).ok());
+                    continue;
+                }
+                None => {
+                    std::thread::sleep(wait);
+                    continue;
+                }
+            };
             let Ok(root) = vault() else { continue };
+            if !visible_vault_event(&event, &root) {
+                continue;
+            }
+            let mut quiet_until = std::time::Instant::now() + Duration::from_secs(2);
+            loop {
+                let remaining = quiet_until.saturating_duration_since(std::time::Instant::now());
+                if remaining.is_zero() {
+                    break;
+                }
+                let Some((_, receiver)) = watched.as_ref() else {
+                    break;
+                };
+                match receiver.recv_timeout(remaining) {
+                    Ok(Ok(next)) if visible_vault_event(&next, &root) => {
+                        quiet_until = std::time::Instant::now() + Duration::from_secs(2)
+                    }
+                    Ok(_) => continue,
+                    Err(mpsc::RecvTimeoutError::Timeout | mpsc::RecvTimeoutError::Disconnected) => {
+                        break
+                    }
+                }
+            }
             let Ok(current) = vault_metadata_fingerprint(&root) else {
                 continue;
             };
             let built = GRAPH_BUILD_REVISION.lock().ok().and_then(|v| v.clone());
             if built.as_ref().is_some_and(|old| old != &current) {
                 GRAPH_READY.store(false, std::sync::atomic::Ordering::Release);
+                if let Ok(mut cache) = SUMMARY_CACHE.lock() {
+                    *cache = None;
+                }
                 schedule_graph_build(true);
             }
         }
     });
+}
+fn watcher_wait(inactive: Duration) -> Option<Duration> {
+    (inactive < Duration::from_secs(600)).then(|| Duration::from_secs(600).saturating_sub(inactive))
 }
 pub fn graph() -> Result<Value> {
     graph_at(&vault()?, Utc::now().date_naive())
@@ -854,8 +1003,9 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         root,
         notes
             .iter()
-            .map(|n| json!([n["id"], n["revision"]]))
+            .map(|n| json!([n["id"], n["revision"], n["path"], n["kind"]]))
             .collect::<Vec<_>>(),
+        registry(root)?,
         today.to_string(),
         overrides
     ]))?);
@@ -881,25 +1031,82 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
             }
         }
     }
-    let prior = read_json(&derived.join("subjects.json"));
-    let (dense, health) = semantic_vectors(&notes, &derived.join("vectors.json"))?;
-    let mut input = json!(notes);
-    let result = brain_discovery::organize_mut(&mut input, &dense, &prior, &overrides)?;
-    notes = input.as_array().ok_or("Invalid discovery notes")?.clone();
-    let subjects = result[0].as_array().ok_or("Invalid subjects")?;
-    let mut report = result[1].clone();
-    write_json(&derived.join("subjects.json"), &report)?;
-    let mut nodes = groups(subjects, &notes, &mut links);
+    let mut cached_suggestions = disk["graph"]["discovery"]["suggestions"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    if cached_suggestions.is_empty() {
+        cached_suggestions = disk["graph"]["nodes"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|n| ["hub", "topic"].contains(&text(&n["kind"])))
+            .cloned()
+            .collect();
+    }
+    let prior_report = read_json(&derived.join("subjects.json"));
+    let mut candidates = notes
+        .iter()
+        .filter(|n| {
+            n["worlds"].as_array().is_none_or(Vec::is_empty)
+                && n["areas"].as_array().is_none_or(Vec::is_empty)
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    candidates.sort_by(|a, b| {
+        text(&b["recorded"])
+            .cmp(text(&a["recorded"]))
+            .then_with(|| text(&a["id"]).cmp(text(&b["id"])))
+    });
+    candidates.truncate(128);
+    let has_candidates = !candidates.is_empty();
+    let (suggestions, mut report) = if !has_candidates {
+        (
+            cached_suggestions,
+            json!({"discovered":[],"promoted":[],"review":[],"method":"registry classified","embedding":"not needed"}),
+        )
+    } else {
+        for note in &mut candidates {
+            note["featureText"] = json!(brain_discovery::features(note).1);
+        }
+        let (dense, health) = semantic_vectors(&candidates, &derived.join("vectors.json"))?;
+        let mut input = json!(candidates);
+        let result = brain_discovery::organize_mut(&mut input, &dense, &prior_report, &overrides)?;
+        let mut discovered = result[0].as_array().cloned().unwrap_or_default();
+        if discovered.is_empty() {
+            discovered = cached_suggestions;
+        }
+        write_json(&derived.join("subjects.json"), &result[1])?;
+        let mut report = result[1].clone();
+        report["embedding"] = json!(health);
+        (discovered, report)
+    };
+    report["suggestions"] = json!(suggestions);
+    report["suggestionSampleLimit"] = json!(128);
+    if report.get("embedding").is_none() {
+        report["embedding"] = json!("not needed");
+    }
+    let mut nodes = Vec::new();
+    let (worlds, hierarchy_nodes) = hierarchy(root, &notes, today)?;
+    let review_count = notes.iter().filter(|n| n["review"] == true).count();
+    let note_count = notes.len();
+    for node in hierarchy_nodes {
+        if node["kind"] == "world" || node["kind"] == "area" {
+            nodes.push(node);
+        } else {
+            links.push(node);
+        }
+    }
     for mut n in notes {
         if let Some(o) = n.as_object_mut() {
-            for k in ["text", "meta", "references", "featureText"] {
+            for k in ["text", "meta", "references"] {
                 o.remove(k);
             }
         }
         nodes.push(n)
     }
-    report["embedding"] = json!(health);
-    let mut value = json!({"nodes":nodes,"links":links,"noteCount":input.as_array().unwrap().len(),"activityModel":ACTIVITY_MODEL,"discovery":report});
+    let mut value = json!({"nodes":nodes,"links":links,"noteCount":note_count,"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":report});
+    value["graphRevision"] = json!(fingerprint);
     decorate(&mut value)?;
     write_json(
         &persisted,
@@ -908,7 +1115,21 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
     *GRAPH.lock().map_err(|_| "Graph lock failed")? = Some((fingerprint.clone(), value.clone()));
     Ok(value)
 }
+fn refresh_new_badges(value: &mut Value, today: NaiveDate) {
+    for node in value["nodes"].as_array_mut().into_iter().flatten() {
+        if matches!(text(&node["kind"]), "world" | "area") {
+            node["new"] = json!(new_category(node, today));
+        }
+    }
+    for world in value["worlds"].as_array_mut().into_iter().flatten() {
+        world["new"] = json!(new_category(world, today));
+        for area in world["areas"].as_array_mut().into_iter().flatten() {
+            area["new"] = json!(new_category(area, today));
+        }
+    }
+}
 fn decorate(v: &mut Value) -> Result<()> {
+    refresh_new_badges(v, Utc::now().date_naive());
     v["theme"] = desktop_theme()?;
     v["accent"] = json!(palette()?);
     v["generated"] = json!(chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string());
@@ -1036,7 +1257,10 @@ fn assign_note_at(root: &Path, value: &str) -> Result<()> {
     let path = directory.join("overrides.json");
     let mut overrides = read_json(&path);
     let object = overrides.as_object_mut().ok_or("Invalid overrides")?;
-    let id = format!("note:{}", &digest(relative)[..16]);
+    let filename = Path::new(relative)
+        .file_name()
+        .ok_or("Invalid note filename")?;
+    let id = format!("note:{}", &digest(filename.as_encoded_bytes())[..16]);
     if data["reset"] == true {
         object.remove(&id);
     } else if !labels.is_empty() {
@@ -1236,6 +1460,25 @@ fn route(request: brain_http::Request) -> brain_http::Response {
     route_checked(request).unwrap_or_else(|_| response(status, "application/json", b"{}".to_vec()))
 }
 fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
+    if request.method == "GET" && request.path == "/api/health" {
+        return json_response(json!({"ready":true,"authVersion":1}));
+    }
+    {
+        let (signal, cv) = &*WATCH_SIGNAL;
+        let guard = signal.lock().unwrap_or_else(|e| e.into_inner());
+        if let Ok(mut activity) = WATCH_ACTIVITY.lock() {
+            *activity = std::time::Instant::now();
+        }
+        if WATCH_PAUSED.load(std::sync::atomic::Ordering::Acquire) {
+            cv.notify_all();
+            let _guard = cv
+                .wait_while(guard, |_| {
+                    WATCH_PAUSED.load(std::sync::atomic::Ordering::Acquire)
+                        && GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire)
+                })
+                .unwrap_or_else(|e| e.into_inner());
+        }
+    }
     if request.method == "POST" {
         if request.path != "/api/action" {
             return Ok(response(404, "application/json", b"{}".to_vec()));
@@ -1281,7 +1524,6 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         return Ok(response(405, "application/json", b"{}".to_vec()));
     }
     match request.path.as_str() {
-        "/api/health" => return json_response(json!({"ready":true,"authVersion":1})),
         "/api/summary" => {
             schedule_graph_build(query(&request.query, "retry") == "1");
             return json_response(summary()?);
@@ -1347,6 +1589,12 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
                 || Utc::now().timestamp() as f64 - v["created"].as_f64().unwrap_or(0.0) > 60.0
             {
                 v = json!({})
+            }
+            if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
+                if let Some((revision, _)) = GRAPH.lock().map_err(|_| "Graph lock failed")?.as_ref()
+                {
+                    v["graphRevision"] = json!(revision);
+                }
             }
             return json_response(v);
         }
@@ -1458,7 +1706,12 @@ pub fn run(tool: &str, args: &[String]) -> Result<i32> {
                 });
             }
             let result = brain_http::serve(listener, &state()?, Duration::from_secs(idle), route);
-            GRAPH_WATCHING.store(false, std::sync::atomic::Ordering::Release);
+            {
+                let (signal, cv) = &*WATCH_SIGNAL;
+                let _guard = signal.lock().unwrap_or_else(|e| e.into_inner());
+                GRAPH_WATCHING.store(false, std::sync::atomic::Ordering::Release);
+                cv.notify_all();
+            }
             clear_semantic();
             result?;
         }
@@ -1517,6 +1770,7 @@ fn auth_api(operation: &str, request: &Value) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use notify::event::{AccessKind, AccessMode};
     fn fixture() -> tempfile::TempDir {
         tempfile::tempdir().unwrap()
     }
@@ -1534,26 +1788,124 @@ mod tests {
         note(t.path(), "a.md", "two with changed size");
         assert_ne!(before, vault_metadata_fingerprint(t.path()).unwrap());
     }
-    #[test]
-    fn first_paint_summary_links_named_worlds_to_present_note_nodes() {
-        let all = vec![
-            json!({"id":"note:one","label":"Camera","kind":"note","path":"camera.md","recorded":"2026-11-05T00:00:00Z","category":"electronics","meta":{"worlds":"Photography","entity":"topic"},"text":"body"}),
-        ];
-        let (nodes, links) = summary_projection(&all);
-        let ids: BTreeSet<String> = nodes.iter().map(|n| text(&n["id"]).to_owned()).collect();
-        assert!(nodes
-            .iter()
-            .any(|n| n["kind"] == "hub" && n["label"] == "Photography"));
-        for link in links {
-            assert!(ids.contains(text(&link["source"])));
-            assert!(ids.contains(text(&link["target"])));
-        }
-        assert!(nodes
-            .iter()
-            .any(|n| n["id"] == "note:one" && n.get("text").is_none()));
-    }
     fn day() -> NaiveDate {
         NaiveDate::from_ymd_opt(2026, 10, 22).unwrap()
+    }
+    #[test]
+    fn watcher_wait_has_no_deadline_while_paused_and_resets_on_request() {
+        assert_eq!(watcher_wait(Duration::ZERO), Some(Duration::from_secs(600)));
+        assert_eq!(
+            watcher_wait(Duration::from_secs(599)),
+            Some(Duration::from_secs(1))
+        );
+        assert_eq!(watcher_wait(Duration::from_secs(600)), None);
+        assert_eq!(watcher_wait(Duration::from_secs(3600)), None);
+        // A request replaces the injected inactivity duration with zero.
+        assert_eq!(watcher_wait(Duration::ZERO), Some(Duration::from_secs(600)));
+    }
+    #[test]
+    fn cached_new_badges_expire_without_a_vault_mutation() {
+        let entry = json!({"kind":"world","status":"auto","created":"2026-11-05","new":true});
+        let mut value = json!({"nodes":[entry.clone()],"worlds":[{"status":"auto","created":"2026-11-05","areas":[entry]}]});
+        refresh_new_badges(&mut value, NaiveDate::from_ymd_opt(2026, 11, 11).unwrap());
+        assert_eq!(value["nodes"][0]["new"], true);
+        refresh_new_badges(&mut value, NaiveDate::from_ymd_opt(2026, 11, 12).unwrap());
+        assert_eq!(value["nodes"][0]["new"], false);
+        assert_eq!(value["worlds"][0]["new"], false);
+        assert_eq!(value["worlds"][0]["areas"][0]["new"], false);
+    }
+    #[test]
+    fn watcher_filters_access_and_hidden_events_but_keeps_vault_mutations() {
+        let root = Path::new("/vault");
+        let open = Event::new(EventKind::Access(AccessKind::Open(AccessMode::Read)))
+            .add_path(root.join("note.md"));
+        let close_read = Event::new(EventKind::Access(AccessKind::Close(AccessMode::Read)))
+            .add_path(root.join("note.md"));
+        let write_close = Event::new(EventKind::Access(AccessKind::Close(AccessMode::Write)))
+            .add_path(root.join("note.md"));
+        let mutate = Event::new(EventKind::Modify(notify::event::ModifyKind::Any))
+            .add_path(root.join("note.md"));
+        let hidden = Event::new(EventKind::Modify(notify::event::ModifyKind::Any))
+            .add_path(root.join(".brain-state/index/graph.json"));
+        let rename = Event::new(EventKind::Modify(notify::event::ModifyKind::Name(
+            notify::event::RenameMode::Both,
+        )))
+        .add_path(root.join(".registry.json.tmp"))
+        .add_path(root.join("registry.json"));
+        assert!(!visible_vault_event(&open, root));
+        assert!(!visible_vault_event(&close_read, root));
+        assert!(!visible_vault_event(&write_close, root));
+        assert!(visible_vault_event(&mutate, root));
+        assert!(!visible_vault_event(&hidden, root));
+        assert!(visible_vault_event(&rename, root));
+    }
+    #[test]
+    fn watcher_does_not_follow_vault_directory_symlinks() {
+        let root = fixture();
+        let outside = fixture();
+        note(outside.path(), "outside.md", "# Outside");
+        std::os::unix::fs::symlink(outside.path(), root.path().join("linked")).unwrap();
+        let (_watcher, events) = create_vault_watcher(root.path()).unwrap();
+        note(outside.path(), "outside.md", "# Changed outside");
+        assert!(events.recv_timeout(Duration::from_millis(100)).is_err());
+        note(root.path(), "inside.md", "# Inside");
+        let event = events
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap()
+            .unwrap();
+        assert!(event.paths.iter().any(|path| path.starts_with(root.path())));
+    }
+    #[test]
+    fn registry_projection_emits_world_area_and_review_contract() {
+        let t = fixture();
+        fs::write(t.path().join("registry.json"), r#"{"worlds":[{"name":"World A","aliases":["Old World"],"status":"seed","created":"2026-11-05"}],"areas":[{"name":"Area A","aliases":["Old Area"],"parent":"World A","status":"auto","created":"2026-11-05"}]}"#).unwrap();
+        note(
+            t.path(),
+            "area-a.md",
+            "# One\nWorlds: Old Area\nReview: low-confidence",
+        );
+        note(
+            t.path(),
+            "world-alias.md",
+            "# Two\nWorlds: Old World\nAreas: Old Area",
+        );
+        let indexed = notes(t.path(), NaiveDate::from_ymd_opt(2026, 11, 5).unwrap()).unwrap();
+        let (worlds, nodes) = hierarchy(
+            t.path(),
+            &indexed,
+            NaiveDate::from_ymd_opt(2026, 11, 5).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(worlds[0]["count"], 2);
+        assert_eq!(worlds[0]["areas"][0]["count"], 2);
+        assert_eq!(indexed[0]["review"], true);
+        assert!(nodes
+            .iter()
+            .any(|n| n["kind"] == "area" && n["new"] == true));
+        assert!(nodes.iter().any(|n| n["kind"] == "membership"));
+    }
+    #[test]
+    fn first_paint_summary_uses_registry_and_keeps_all_edges_valid() {
+        let t = fixture();
+        fs::write(t.path().join("registry.json"), r#"{"worlds":[{"name":"World A","status":"seed","created":"2026-11-05"}],"areas":[{"name":"Area A","parent":"World A","status":"seed","created":"2026-11-05"}]}"#).unwrap();
+        let all=(0..45).map(|i|json!({"id":format!("note:{i}"),"label":format!("Note {i}"),"kind":"note","recorded":"2026-11-05T00:00:00Z","meta":{},"worlds":["World A"],"areas":["Area A"],"text":"body"})).collect::<Vec<_>>();
+        let (nodes, links, worlds) = summary_projection(
+            t.path(),
+            &all,
+            NaiveDate::from_ymd_opt(2026, 11, 5).unwrap(),
+        )
+        .unwrap();
+        let ids = nodes
+            .iter()
+            .map(|n| text(&n["id"]).to_owned())
+            .collect::<BTreeSet<_>>();
+        assert_eq!(worlds[0]["id"], "world:world-a");
+        assert_eq!(worlds[0]["count"], 45);
+        assert_eq!(nodes.iter().filter(|n| n["kind"] == "note").count(), 40);
+        assert!(links
+            .iter()
+            .all(|e| ids.contains(text(&e["source"])) && ids.contains(text(&e["target"]))));
+        assert!(nodes.iter().all(|n| n["kind"] != "hub"));
     }
     #[test]
     fn brain_page_and_bootstrap_use_the_same_loopback_origin_as_api() {
@@ -1625,17 +1977,38 @@ mod tests {
         assert_eq!(ns[0]["label"], "Personal");
     }
     #[test]
-    fn wiki_links_deduplicate_and_ambiguous_stems_do_not_connect() {
+    fn wiki_links_deduplicate_and_filename_collisions_are_rejected() {
         let t = fixture();
         note(t.path(),"wiki/start.md","# Start\n[[wiki/target|Target page]]\n[[wiki/target#Details]]\n[Target](target.md)\n[[duplicate]]");
         note(t.path(), "wiki/target.md", "# Target");
-        note(t.path(), "projects/duplicate.md", "# A");
-        note(t.path(), "personal/duplicate.md", "# B");
         let mut ns = notes(t.path(), day()).unwrap();
         assert_eq!(source_links(&mut ns).len(), 1);
+        note(t.path(), "projects/duplicate.md", "# A");
+        note(t.path(), "personal/duplicate.md", "# B");
+        assert!(notes(t.path(), day())
+            .unwrap_err()
+            .to_string()
+            .contains("Duplicate Brain note filename"));
     }
     #[test]
-    fn timestamps_revision_activity_and_categories() {
+    fn filename_ids_survive_non_utf8_archive_moves() {
+        use std::os::unix::ffi::OsStrExt;
+        let root = fixture();
+        let filename = std::ffi::OsStr::from_bytes(b"raw-\xff.md");
+        fs::write(root.path().join(filename), "# Raw filename").unwrap();
+        let before = notes(root.path(), day()).unwrap()[0]["id"].clone();
+        fs::create_dir(root.path().join("archive")).unwrap();
+        fs::rename(
+            root.path().join(filename),
+            root.path().join("archive").join(filename),
+        )
+        .unwrap();
+        let moved = notes(root.path(), day()).unwrap();
+        assert_eq!(before, moved[0]["id"]);
+        assert_eq!(moved[0]["kind"], "archive");
+    }
+    #[test]
+    fn timestamps_revision_and_activity() {
         let t = fixture();
         note(
             t.path(),
@@ -1650,7 +2023,6 @@ mod tests {
         note(t.path(), "three.md", "# Undated personal note");
         let ns = notes(t.path(), day()).unwrap();
         assert_eq!(ns[0]["recorded"], "2026-10-03T16:00:00+00:00");
-        assert_ne!(ns[0]["color"], ns[2]["color"]);
         assert_eq!(ns[1]["activity"], 0);
         assert!(ns[0]["activity"].as_f64().unwrap() > ns[2]["activity"].as_f64().unwrap());
         let old = ns[0].clone();
@@ -1755,18 +2127,25 @@ mod tests {
     fn project(root: &Path) -> Value {
         let mut ns = notes(root, day()).unwrap();
         let mut links = source_links(&mut ns);
-        let mut input = json!(ns);
-        let derived = root.join(".brain-state/discovery");
-        let out = brain_discovery::organize_mut(
-            &mut input,
-            &json!({}),
-            &json!({}),
-            &read_json(&derived.join("overrides.json")),
-        )
-        .unwrap();
-        ns = input.as_array().unwrap().clone();
-        let mut nodes = groups(out[0].as_array().unwrap(), &ns, &mut links);
-        nodes.extend(ns);
+        let (_, projected) = hierarchy(root, &ns, day()).unwrap();
+        let mut nodes = Vec::new();
+        for item in projected {
+            if item["kind"] == "membership" {
+                links.push(item);
+            } else {
+                nodes.push(item);
+            }
+        }
+        let mut note_nodes = Vec::new();
+        for mut n in ns.drain(..) {
+            if let Some(object) = n.as_object_mut() {
+                for key in ["text", "meta", "references"] {
+                    object.remove(key);
+                }
+            }
+            note_nodes.push(n);
+        }
+        nodes.extend(note_nodes);
         json!({"nodes":nodes,"links":links})
     }
     #[test]
@@ -1804,30 +2183,19 @@ mod tests {
         );
     }
     #[test]
-    fn explicit_links_grouping_and_topic_entity_categories() {
+    fn explicit_links_remain_in_registry_graph() {
         let t = fixture();
         note(
             t.path(),
             "wiki/photography.md",
-            "# Photography\nEntity: world\nName: Photography\nCategory: research",
+            "# Photography\nEntity: world\nName: Photography",
         );
-        note(t.path(),"wiki/lighting.md","# Lighting\nEntity: topic\nParent: photography\nCategory: electronics\nLighting sensor circuit");
         note(
             t.path(),
             "projects/camera.md",
-            "# Camera controller\nWorlds: Photography\n[Entity](../wiki/photography.md)",
+            "# Camera controller\n[Entity](../wiki/photography.md)",
         );
         let graph = project(t.path());
-        let nodes = graph["nodes"].as_array().unwrap();
-        let ids = nodes
-            .iter()
-            .map(|n| text(&n["id"]))
-            .collect::<BTreeSet<_>>();
-        assert!(graph["links"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .all(|l| ids.contains(text(&l["source"])) && ids.contains(text(&l["target"]))));
         assert_eq!(
             graph["links"]
                 .as_array()
@@ -1836,22 +2204,6 @@ mod tests {
                 .filter(|l| l["kind"] == "source")
                 .count(),
             1
-        );
-        assert!(graph["links"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|l| l["kind"] == "group"));
-        assert_eq!(
-            nodes.iter().find(|n| n["id"] == "photography").unwrap()["themeReason"],
-            "declared"
-        );
-        assert_eq!(
-            nodes
-                .iter()
-                .find(|n| n["id"] == "photography:entity-lighting")
-                .unwrap()["category"],
-            "electronics"
         );
     }
     #[test]
@@ -1869,13 +2221,11 @@ mod tests {
         )
         .unwrap();
         let graph = project(t.path());
-        let n = graph["nodes"]
+        assert!(graph["nodes"]
             .as_array()
             .unwrap()
             .iter()
-            .find(|n| n["kind"] == "note")
-            .unwrap();
-        assert_eq!(n["memberships"][0]["subject"], "climbing");
+            .any(|n| n["kind"] == "note"));
         assert_eq!(fs::read(t.path().join("inbox/result.md")).unwrap(), before);
         assert_eq!(
             fs::metadata(t.path().join(".brain-state/discovery/overrides.json"))
@@ -1888,15 +2238,11 @@ mod tests {
         assert!(assign_note_at(t.path(), r#"{"path":"../outside.md","subjects":["X"]}"#).is_err());
         assign_note_at(t.path(), r#"{"path":"inbox/result.md","reset":true}"#).unwrap();
         let graph = project(t.path());
-        assert_eq!(
-            graph["nodes"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .find(|n| n["kind"] == "note")
-                .unwrap()["memberships"][0]["subject"],
-            "original"
-        );
+        assert!(graph["nodes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|n| n["kind"] == "note"));
     }
     #[test]
     fn declarations_in_raw_imports_and_examples_do_not_create_worlds() {
@@ -1916,48 +2262,11 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .filter(|n| n["kind"] == "hub")
+            .filter(|n| n["kind"] == "world")
             .map(|n| text(&n["label"]))
             .collect::<BTreeSet<_>>();
         assert!(!labels.contains("Imaginary"));
         assert!(!labels.contains("Untrusted"));
-    }
-    #[test]
-    fn registered_project_and_shared_annotations_need_no_registry() {
-        let t = fixture();
-        note(t.path(),"projects/relay.md","# First circuit\nProject: relay\nTopics: Soldering\nRecorded: 2026-10-02\nSoldering a circuit");
-        note(t.path(),"inbox/related.md","# A useful skill\nWorlds: Climbing, Electronics\nTopics: Learning\nRecorded: 2026-10-03\nNo project ID is needed.");
-        let graph = project(t.path());
-        let nodes = graph["nodes"].as_array().unwrap();
-        assert_eq!(
-            nodes.iter().find(|n| n["id"] == "relay").unwrap()["label"],
-            "Relay"
-        );
-        assert_eq!(
-            nodes
-                .iter()
-                .find(|n| n["id"] == "relay:tag-soldering")
-                .unwrap()["category"],
-            "electronics"
-        );
-        let topics = nodes
-            .iter()
-            .filter(|n| n["kind"] == "topic" && n["label"] == "Learning")
-            .collect::<Vec<_>>();
-        assert_eq!(topics.len(), 2);
-        let id = &nodes
-            .iter()
-            .find(|n| n["label"] == "A useful skill")
-            .unwrap()["id"];
-        assert_eq!(
-            graph["links"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .filter(|l| &l["target"] == id && topics.iter().any(|t| t["id"] == l["source"]))
-                .count(),
-            2
-        );
     }
     #[test]
     fn assignment_requires_the_existing_string_value_contract() {

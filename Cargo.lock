@@ -2513,6 +2513,7 @@ dependencies = [
  "nacre-protocol 0.1.0-dev.2",
  "niri-ipc",
  "nix 0.30.1",
+ "notify",
  "nvml-wrapper",
  "orient-core",
  "orient-decoder",
