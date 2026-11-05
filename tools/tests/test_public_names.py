@@ -68,6 +68,18 @@ class PublicNamesTests(unittest.TestCase):
                 )
                 if name == "CONTRIBUTING.md":
                     text = text.replace("`user.name` to `siver" + "teh`", "")
+            if name == "crates/nacre-helper/src/brain_git.rs":
+                # The private-vault committer uses the owner's explicitly
+                # approved Git attribution, never a private runtime alias.
+                identity = "siver" + "teh"
+                email = "92440237+" + identity + "@users.noreply.github.com"
+                for value in (
+                    identity,
+                    email,
+                    "user.name=" + identity,
+                    "user.email=" + email,
+                ):
+                    text = text.replace('"' + value + '"', '""')
             self.assertFalse(any(word in text for word in forbidden), name)
 
     def test_fresh_home_controller_roots_and_provider_profiles_are_canonical(self):

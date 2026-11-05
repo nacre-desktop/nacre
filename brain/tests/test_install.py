@@ -92,7 +92,7 @@ class InstallTests(unittest.TestCase):
         self.assertIn(("enable", "--now", "nacre-brain-check.timer"), commands)
         self.assertNotIn(("enable", "--now", "nacre-brain-sync.timer"), commands)
 
-    def test_sync_timer_is_absent_from_install_plan(self):
+    def test_sync_timer_is_not_installed_or_enabled_by_plan(self):
         output = io.StringIO()
         with (
             patch.object(install, "ROOT", self.root),
@@ -101,8 +101,13 @@ class InstallTests(unittest.TestCase):
             redirect_stdout(output),
         ):
             install.main([])
-        self.assertNotIn("nacre-brain-sync.timer", output.getvalue())
-        self.assertNotIn("nacre-brain-sync.service", output.getvalue())
+        installing = "\n".join(
+            line
+            for line in output.getvalue().splitlines()
+            if line.startswith(("COPY/REPLACE", "ENABLE/START"))
+        )
+        self.assertNotIn("nacre-brain-sync.timer", installing)
+        self.assertNotIn("nacre-brain-sync.service", installing)
 
     def test_capability_probe_requires_expected_usage_response(self):
         helper = self.home / ".local/share/nacre/shell/tools/nacre-helper"

@@ -18,7 +18,9 @@ import tempfile
 import time
 
 _queue_path = Path(__file__).resolve().with_name("nacre-brain-queue.py")
-_queue_loader = importlib.machinery.SourceFileLoader("nacre_brain_queue", str(_queue_path))
+_queue_loader = importlib.machinery.SourceFileLoader(
+    "nacre_brain_queue", str(_queue_path)
+)
 _queue_spec = importlib.util.spec_from_loader(_queue_loader.name, _queue_loader)
 _queue = importlib.util.module_from_spec(_queue_spec)
 _queue_loader.exec_module(_queue)
