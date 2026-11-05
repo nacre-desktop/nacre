@@ -12,6 +12,8 @@ local dwell=c.dwell
 local title_min_width=math.min(t.title_max_width,t.title_height*4)
 local displays={"window title","app + title","app only","icon"}
 local function active_app()
+    local title_app=ui.resolve_for_check(ui.bind("bead.title.app_id"))
+    if title_app and title_app~="" then return title_app end
     local windows=ui.resolve_for_check(ui.bind("bead.windows")) or {}
     for _,window in windows do
         if window.focused then return window.app_id or "" end
@@ -54,7 +56,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
     ui.Button{id="title-band",position="absolute",left="28%",right="28%",top=(header-t.title_height)/2,height=t.title_height,direction="row",justify="center",align="center",fill="transparent",hover_fill="transparent",focus_ring=false,focus_on_pointer=false,activate_on_release=true,edge_hover=true,aria_label=ui.tr("bead.bar.active-window"),on_activate=ui.action("bar.title"),
         -- The drag handle covers the band; it must stay part of the edge-hover target.
         ui.Row{id="title-content",width=animated_width+t.icon_width+t.title_gap,height=t.title_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,
-            centered_text{id="title-icon",visible=ui.bind("bead.desktop.titlevisible"),text="desktop_windows",width=t.icon_width,height=24,shrink=0,family="Material Symbols Rounded",font_size=20,color="primary"},
+            centered_text{id="title-icon",visible=ui.bind("bead.desktop.titlevisible"),text=ui.bind("bead.title.app_glyph"),width=t.icon_width,height=24,shrink=0,family="Material Symbols Rounded",font_size=20,color="primary"},
             centered_text{id="title",visible=ui.bind("bead.desktop.titlevisible"),text=shown,height=24,width=animated_width,max_width=t.title_max_width,family="IBM Plex Sans",font_size=t.title_font,text_align="center",color="primary"},
         },
         kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
@@ -66,7 +68,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
     }}
             end
             local show_text=display~="icon"
-            local glyph="desktop_windows"
+            local glyph=ui.resolve_for_check(ui.bind("bead.title.app_glyph")) or "desktop_windows"
             local show_icon=true
             local icon_width=show_icon and t.icon_width or 0
             local gap=show_icon and show_text and t.title_gap or 0
