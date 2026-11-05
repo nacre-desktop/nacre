@@ -48,6 +48,10 @@ Singleton {
     property var workspaceValues: []
     property var monitorValues: []
     property var clients: []
+    // Nacre-Niri collection rows from the compositor snapshot. Stock niri
+    // omits these and leaves the capability false.
+    property var collections: []
+    property string activeCollectionId: ""
     property var byId: ({})
     property var activeWorkspace: null
     property var focusedMonitor: null
@@ -85,6 +89,9 @@ Singleton {
         const source = daemonEvents.data;
         if (!NacreDaemon.connected || !daemonState.fresh || !daemonEvents.fresh || !state.available || state.backend !== "niri" || !source.available) {
             connected = false;
+            collectionsSupported = false;
+            collections = [];
+            activeCollectionId = "";
             edgeTriggersActive = false;
             daemonConnection = "";
             daemonCheck = "";
@@ -123,6 +130,8 @@ Singleton {
             focusedMonitor: state.outputs?.[state.focus?.outputId],
             overviewOpen: state.overviewOpen,
             capabilities: state.capabilities,
+            collections: state.collections || [],
+            activeCollection: state.activeCollection || "",
             overviewHoverSupported: state.overviewHoverSupported,
             overviewHoveredWindowId: state.overviewHoveredWindowId,
             edgeTriggersActive: source.edgeTriggersActive === true,
@@ -146,6 +155,9 @@ Singleton {
             activeAction = null;
             worker.running = false;
         }
+        collectionsSupported = false;
+        collections = [];
+        activeCollectionId = "";
         edgeTriggersActive = false;
         connected = false;
         daemonConnection = "";
@@ -259,6 +271,8 @@ Singleton {
         activeWindowId = value.activeWindow?.windowId || "";
         overviewOpen = value.overviewOpen === true;
         collectionsSupported = value.capabilities?.workspaceCollections === true;
+        collections = collectionsSupported && Array.isArray(value.collections) ? value.collections : [];
+        activeCollectionId = collectionsSupported && typeof value.activeCollection === "string" ? value.activeCollection : "";
         overviewHoverSupported = value.overviewHoverSupported === true;
         overviewHoveredWindowId = overviewOpen ? value.overviewHoveredWindowId || "" : "";
         edgeTriggersActive = value.edgeTriggersActive === true;
@@ -344,6 +358,9 @@ Singleton {
             if (root.daemonMode)
                 return;
             root.connected = false;
+            root.collectionsSupported = false;
+            root.collections = [];
+            root.activeCollectionId = "";
             root.movingWindows = {};
             root.event({
                 type: "window-move",

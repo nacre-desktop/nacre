@@ -94,6 +94,7 @@ import "fixtures"
 Item {
  Component {id: wallpaperCoverage; WallpaperCoverage {}}
  TestCase {
+  id:testCase
   name:"NiriBackendContract"; when:windowShown
   property var backend:null
   SignalSpy {id:moveEvents;target:backend;signalName:"event"}
@@ -193,13 +194,14 @@ Item {
    verify(backend.accept(Snapshots.initial));verify(backend.connected)
   }
   function test_shortcut_registration_pulse_rename_and_retirement(){
-   const shortcut=backend.createShortcut(backend,{appid:"nacre_shell",name:"test"})
+   const owner=Qt.createQmlObject("import QtQuick; QtObject {}",testCase)
+   const shortcut=backend.createShortcut(owner,{appid:"nacre_shell",name:"test"})
    verify(shortcut);compare(backend.registrations.length,1)
    verify(backend.triggerShortcut("nacre_shell:test"));verify(shortcut.held)
    tryCompare(shortcut,"held",false)
    shortcut.params={appid:"nacre_shell",name:"other"}
    verify(!backend.triggerShortcut("nacre_shell:test"));verify(backend.triggerShortcut("nacre_shell:other"))
-   tryCompare(shortcut,"held",false);shortcut.destroy();tryCompare(backend,"registrations",[])
+   tryCompare(shortcut,"held",false);owner.destroy();tryCompare(backend,"registrations",[])
   }
   function test_opaque_workspace_ids_do_not_pause_actual_app_activity_predicates(){
    for (const activity of [NacreSettingsAppActivity,NacreColorsAppActivity,NacreWelcomeAppActivity]) {
@@ -243,6 +245,9 @@ Item {
                 timeout=40,
             )
             self.assertEqual(result.returncode, 0, (result.stdout + result.stderr))
+            for line in result.stdout.splitlines():
+                if line.startswith(("NiriBackendContract::", "Totals:")):
+                    print(line, flush=True)
 
 
 if __name__ == "__main__":
