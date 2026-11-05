@@ -37,8 +37,10 @@ COLLECTION_BINDINGS = (
 )
 SCRATCHPAD_PIN_BINDINGS = (
     '    Super+h repeat=false hotkey-overlay-title="Nacre:hide" { move-window-to-scratchpad; }\n'
-    '    Super+Shift+h repeat=false hotkey-overlay-title="Nacre:scratchpad-windows" { toggle-scratchpad; }\n'
+    '    Super+Shift+H repeat=false hotkey-overlay-title="Nacre:restore" { restore-last-hidden-window; }\n'
     '    Super+p repeat=false hotkey-overlay-title="Nacre:pin" { toggle-window-pinned; }\n'
+    '    Super+Ctrl+Shift+Q repeat=false hotkey-overlay-title="Nacre:force-close" { force-close-window; }\n'
+    '    Super+Alt+H repeat=false hotkey-overlay-title="Nacre:restore-current" { restore-current-workspace-hidden-windows; }\n'
 )
 PINNED_WINDOW_RULES = (
     '\nwindow-rule {\n    match app-id="^org[.]pulseaudio[.]pavucontrol$"\n'
@@ -140,26 +142,32 @@ def module(path, name):
 def nacre_niri_unsupported(text):
     """Return fork-specific audit metadata while preserving stock Niri's report."""
     document = json.loads(text)
-    supported = {"SUPER + H", "SUPER + SHIFT + H", "SUPER + P"}
+    capabilities = {
+        "SUPER + H": "scratchpad",
+        "SUPER + SHIFT + H": "window_restore",
+        "SUPER + ALT + H": "window_restore",
+        "SUPER + P": "window_pinning",
+        "SUPER + CTRL + SHIFT + Q": "force_close",
+    }
     native_rules = {
         "nacre-audio-mixer",
         "nacre-share-picker",
         "nacre-picture-in-picture",
     }
-    document["unsupported"] = [
-        row
-        for row in document.get("unsupported", [])
-        if not (
-            row.get("source") == "hypr/conf/keybinding.lua"
-            and row.get("kind") == "binding"
-            and row.get("id") in supported
-        )
-        and not (
-            row.get("source") == "hypr/conf/nacre.lua"
-            and row.get("kind") == "window-rule"
-            and row.get("id") in native_rules
-        )
-    ]
+    for row in document.get("unsupported", []):
+        capability = None
+        if row.get("source") == "hypr/conf/keybinding.lua" and row.get("kind") == "binding":
+            capability = capabilities.get(row.get("id"))
+        elif row.get("source") == "hypr/conf/nacre.lua" and row.get("kind") == "window-rule" and row.get("id") in native_rules:
+            capability = "window_pinning"
+        if capability is not None:
+            row["stockNiriUnsupported"] = True
+            row["nacreNiriCapability"] = capability
+            if capability == "force_close":
+                row["nacreNiriLimitation"] = (
+                    "Disconnects the owning Wayland client and its sibling windows; "
+                    "X11 clients are unsupported"
+                )
     return json.dumps(document, indent=2) + "\n"
 
 

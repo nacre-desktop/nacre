@@ -103,24 +103,58 @@ class NacreNiriSessionTests(unittest.TestCase):
                 ("Super+h", "move-window-to-scratchpad"),
                 ("Super+Shift+H", "restore-last-hidden-window"),
                 ("Super+p", "toggle-window-pinned"),
+                ("Super+Ctrl+Shift+Q", "force-close-window"),
+                (
+                    "Super+Alt+H",
+                    "restore-current-workspace-hidden-windows",
+                ),
             ):
                 self.assertIn(key, overlay_text)
                 self.assertIn(action, overlay_text)
                 self.assertNotIn(action, generated_stock)
             self.assertNotIn("Super+Alt+h", overlay_text)
             self.assertIn('hotkey-overlay-title="Nacre:restore"', overlay_text)
+            self.assertIn('hotkey-overlay-title="Nacre:force-close"', overlay_text)
+            self.assertIn('hotkey-overlay-title="Nacre:restore-current"', overlay_text)
             self.assertEqual(overlay_text.count("open-pinned true"), 3)
             self.assertNotIn("open-pinned true", generated_stock)
-            for supported_key in ("SUPER + H", "SUPER + SHIFT + H", "SUPER + P"):
+            expected_capabilities = {
+                "SUPER + H": "scratchpad",
+                "SUPER + SHIFT + H": "window_restore",
+                "SUPER + ALT + H": "window_restore",
+                "SUPER + P": "window_pinning",
+                "SUPER + CTRL + SHIFT + Q": "force_close",
+            }
+            for supported_key, capability in expected_capabilities.items():
                 self.assertTrue(
                     any(row.get("id") == supported_key for row in stock_unsupported)
                 )
-                self.assertFalse(
-                    any(row.get("id") == supported_key for row in native_unsupported)
+                native_row = next(
+                    row for row in native_unsupported if row.get("id") == supported_key
                 )
-            self.assertTrue(
-                any(row.get("id") == "SUPER + ALT + H" for row in native_unsupported)
-            )
+                stock_row = next(
+                    row for row in stock_unsupported if row.get("id") == supported_key
+                )
+                self.assertIs(native_row.get("stockNiriUnsupported"), True)
+                self.assertEqual(native_row.get("nacreNiriCapability"), capability)
+                self.assertEqual(
+                    {
+                        key: value
+                        for key, value in native_row.items()
+                        if key
+                        not in {
+                            "stockNiriUnsupported",
+                            "nacreNiriCapability",
+                            "nacreNiriLimitation",
+                        }
+                    },
+                    stock_row,
+                )
+                if capability == "force_close":
+                    self.assertEqual(
+                        native_row.get("nacreNiriLimitation"),
+                        "Disconnects the owning Wayland client and its sibling windows; X11 clients are unsupported",
+                    )
             for rule_id in (
                 "nacre-audio-mixer",
                 "nacre-share-picker",
@@ -129,8 +163,26 @@ class NacreNiriSessionTests(unittest.TestCase):
                 self.assertTrue(
                     any(row.get("id") == rule_id for row in stock_unsupported)
                 )
-                self.assertFalse(
-                    any(row.get("id") == rule_id for row in native_unsupported)
+                native_row = next(
+                    row for row in native_unsupported if row.get("id") == rule_id
+                )
+                stock_row = next(
+                    row for row in stock_unsupported if row.get("id") == rule_id
+                )
+                self.assertIs(native_row.get("stockNiriUnsupported"), True)
+                self.assertEqual(native_row.get("nacreNiriCapability"), "window_pinning")
+                self.assertEqual(
+                    {
+                        key: value
+                        for key, value in native_row.items()
+                        if key
+                        not in {
+                            "stockNiriUnsupported",
+                            "nacreNiriCapability",
+                            "nacreNiriLimitation",
+                        }
+                    },
+                    stock_row,
                 )
             self.assertNotIn("edge-triggers", config.read_text())
             self.assertNotIn("nacre { edge-triggers; }", overlay.read_text())
