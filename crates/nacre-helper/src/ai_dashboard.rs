@@ -404,6 +404,11 @@ pub(crate) fn launch_task(command: &str, args: &[String], title: &str) -> Result
 }
 
 pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Result<()> {
+    // The side panel owns only local general chats. Keep this boundary here as
+    // well as in collection so stale or forged launcher records cannot SSH.
+    if item["project"]["host"].as_str().is_some() {
+        return Err("Remote chats are unavailable in the launcher".into());
+    }
     let encoded = BASE64.encode(serde_json::to_vec(item)?);
     let args = vec!["resume-record".into(), encoded];
     let title = clean(item["title"].as_str().unwrap_or("Nacre AI chat"));
@@ -413,21 +418,12 @@ pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Resul
     launch_background(child)
 }
 
-pub(crate) fn launcher_new(provider: &str, project_id: &str) -> Result<()> {
+pub(crate) fn launcher_new(provider: &str, _project_id: &str) -> Result<()> {
     if !matches!(provider, "codex" | "claude") {
         return Err("Unknown AI provider".into());
     }
-    let project = configured_projects()?
-        .into_iter()
-        .find(|project| project["id"].as_str() == Some(project_id))
-        .ok_or("Project is not registered")?;
-    if project["path"].as_str().is_none() {
-        return Err("Project path is missing".into());
-    }
     let args = vec![
         "new".into(),
-        "--project".into(),
-        project_id.into(),
         "--agent".into(),
         provider.into(),
     ];
@@ -843,6 +839,35 @@ pub(crate) fn collect_history<F: Fn() -> bool>(
     }
     sort_history(&mut records);
     Ok((records, projects, errors))
+}
+
+/// History for the compact side panel: general chat only, always local.
+/// The regular AI app continues to use `collect_history` and its project sources.
+pub(crate) fn collect_launcher_history<F: Fn() -> bool>(
+    cancelled: F,
+) -> Result<(Vec<serde_json::Value>, Vec<String>)> {
+    let general = serde_json::json!({
+        "id":"general-chat", "label":"General chat", "chat_directory":true,
+        "path":home().join(".local/share/nacre/ai/chats").display().to_string()
+    });
+    let mut records = Vec::new();
+    let mut warnings = Vec::new();
+    for agent in ["codex", "claude"] {
+        if cancelled() {
+            break;
+        }
+        let account = ai_core::effective_account(agent, None)?;
+        match provider_list(&general, agent, &account) {
+            Ok(rows) => records.extend(rows),
+            Err(_) => warnings.push(format!(
+                "{} history is temporarily unavailable",
+                if agent == "claude" { "Claude" } else { "Codex" }
+            )),
+        }
+    }
+    records.retain(|item| item["project"]["host"].as_str().is_none());
+    sort_history(&mut records);
+    Ok((records, warnings))
 }
 
 pub(crate) fn history(command: &str, account_override: Option<&str>) -> Result<()> {

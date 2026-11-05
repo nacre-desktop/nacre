@@ -387,11 +387,11 @@ impl Host {
                 }
             }
             let _release = Release(active);
-            crate::ai_dashboard::collect_history(None, || cancellation.load(Ordering::Acquire))
+            crate::ai_dashboard::collect_launcher_history(|| cancellation.load(Ordering::Acquire))
                 .map_err(|e| e.to_string())
         });
         let result = tokio::time::timeout(Duration::from_secs(45), read).await;
-        let (records, projects, warnings) = match result {
+        let (records, warnings) = match result {
             Ok(Ok(Ok(rows))) => rows,
             _ => {
                 self.launcher_cancel.store(true, Ordering::Release);
@@ -407,21 +407,6 @@ impl Host {
             append_launcher_row(&mut saved, &mut chats, item);
         }
         self.launcher_records.replace(saved);
-        let projects = projects
-            .into_iter()
-            .filter_map(|row| {
-                let id = row["id"].as_str()?;
-                let label = row["label"]
-                    .as_str()
-                    .or_else(|| row["name"].as_str())
-                    .unwrap_or(id);
-                Some(nacre_protocol::ai_launcher::Project {
-                    id: id.chars().take(128).collect(),
-                    label: label.chars().take(128).collect(),
-                })
-            })
-            .take(64)
-            .collect();
         let default_provider =
             crate::ai_core::default_assistant()
                 .ok()
@@ -434,7 +419,7 @@ impl Host {
                 });
         let list = nacre_protocol::ai_launcher::List {
             chats,
-            projects,
+            projects: Vec::new(),
             default_provider,
             warning: launcher_text(&warnings.join("; "), 2048),
         };
@@ -715,27 +700,30 @@ async fn dispatch_launcher(
         }
         "ai.launcher.latest" => {
             checked(parse::<launcher::Empty>(params), |_| Ok(()))?;
-            let list: launcher::List = serde_json::from_value(host.launcher_list().await?)
-                .map_err(|_| unavailable("Could not read latest AI chat"))?;
-            if !list.warning.is_empty() || list.chats.is_empty() {
+            // Resume latest stays independent of an in-flight panel refresh.
+            let history = tokio::task::spawn_blocking(|| {
+                crate::ai_dashboard::collect_launcher_history(|| false)
+            });
+            let (rows, warnings) =
+                match tokio::time::timeout(Duration::from_secs(45), history).await {
+                    Ok(Ok(Ok(value))) => value,
+                    _ => return Err(unavailable("Could not read latest AI chat")),
+                };
+            if !warnings.is_empty() || rows.is_empty() {
                 return Err(unavailable(
                     "Latest chat is unavailable while a history source cannot be read",
                 ));
             }
-            let key = list.chats[0].key.clone();
-            let item = host
-                .launcher_records
-                .borrow()
-                .get(&key)
-                .cloned()
-                .ok_or_else(|| unavailable("Latest chat is no longer available"))?;
-            let unique_title = host
-                .launcher_records
-                .borrow()
-                .values()
-                .filter(|row| row["title"] == item["title"])
+            let unique_title = rows
+                .iter()
+                .filter(|row| row["title"] == rows[0]["title"])
                 .count()
                 == 1;
+            let item = rows
+                .into_iter()
+                .next()
+                .ok_or_else(|| unavailable("Latest chat is no longer available"))?;
+            let key = launcher_key(&item);
             let _ = open_launcher_record(hub, item, key, unique_title).await?;
             Ok(json!({"ok":true}))
         }
@@ -810,22 +798,9 @@ fn append_launcher_row(
     else {
         return;
     };
-    let Some(project_name) = item["project"]["label"]
-        .as_str()
-        .filter(|value| !value.trim().is_empty())
-        .or_else(|| {
-            item["project"]["name"]
-                .as_str()
-                .filter(|value| !value.trim().is_empty())
-        })
-        .or_else(|| {
-            item["project"]["id"]
-                .as_str()
-                .filter(|value| !value.trim().is_empty())
-        })
-    else {
+    if item["project"]["host"].as_str().is_some() {
         return;
-    };
+    }
     let key = launcher_key(&item);
     if records.contains_key(&key) {
         return;
@@ -834,7 +809,9 @@ fn append_launcher_row(
     chats.push(nacre_protocol::ai_launcher::Chat {
         key,
         title: launcher_text(title, 256),
-        project: launcher_text(project_name, 128),
+        // The wire type still requires this legacy field; the panel no longer
+        // renders it and no project is associated with the chat.
+        project: "general".into(),
         provider: if item["agent"] == "claude" {
             Provider::Claude
         } else {
@@ -965,6 +942,17 @@ mod tests {
         append_launcher_row(&mut records, &mut chats, row);
         assert_eq!(chats.len(), 1);
         assert_eq!(records.len(), 1);
+        assert_eq!(chats[0].project, "general");
+    }
+
+    #[test]
+    fn launcher_list_drops_remote_history_rows() {
+        let row = json!({"id":"remote-thread","title":"Fixture","project":{"id":"demo","host":"builder"}});
+        let mut records = BTreeMap::new();
+        let mut chats = Vec::new();
+        append_launcher_row(&mut records, &mut chats, row);
+        assert!(chats.is_empty());
+        assert!(records.is_empty());
     }
 
     #[test]
