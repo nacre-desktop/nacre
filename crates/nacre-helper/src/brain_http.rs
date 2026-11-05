@@ -531,7 +531,10 @@ mod tests {
             .next()
             .unwrap()
             .to_owned();
-        assert_eq!(cookie, format!("{}={}", auth.cookie_name(), auth.cookie_value()));
+        assert_eq!(
+            cookie,
+            format!("{}={}", auth.cookie_name(), auth.cookie_value())
+        );
 
         let mut headers = BTreeMap::new();
         headers.insert("host".into(), format!("127.0.0.1:{port}"));

@@ -1,6 +1,18 @@
 # Nacre implementation queue
 
-N0132: implemented and verified — Brain bootstrap, handoff and app use the API's
+N0132: reopened after a reported installed-browser loading failure. The live
+cause remains unidentified. Follow-up regressions pass for an older session plus
+legacy bootstrap file and an expired session renewed by the launcher. Headless
+Chromium with the real launcher and mocked compositor passes cold start, server
+reuse, session renewal and server restart with an existing browser; each clears
+the loading screen and loads API data. API access requires the cookie and bearer
+together plus same-origin Fetch Metadata; the browser marker is a digest, not a
+credential. Separate credential probes returning 403 do not establish a session
+mismatch. Follow-up validation passes 90 Brain library tests, the CLI test and
+locked helper/shell checks. Actual browser API status/console evidence is needed
+to identify the remaining failure. This investigation did not access live auth.
+
+Initial N0132 implementation: Brain bootstrap, handoff and app use the API's
 loopback HTTP origin; native file handoff generation is removed and browser focus
 behavior is preserved. Isolated container validation passed: 88 Brain library
 tests, Brain CLI test, locked helper/shell checks, helper build and formatting.
