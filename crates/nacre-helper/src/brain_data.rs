@@ -26,6 +26,8 @@ const KINDS: &[&str] = &[
     "wiki",
     "raw",
     "checkpoints",
+    "archive",
+    "digests",
 ];
 const ROOT_FILES: &[&str] = &["README.md", "AGENTS.md", "CLAUDE.md", "INDEX.md"];
 const README: &str = "# Nacre Brain\n\nThis private local folder is the durable knowledge bank shared by your Codex and Claude accounts.\nOpen this folder as an Obsidian vault, or use \x60nacre-brain search WORDS\x60.\n\n| Folder | Content |\n| --- | --- |\n| inbox | New facts and task handoffs awaiting organization |\n| personal | Personal preferences and context |\n| projects | Project summaries and pointers to canonical repository instructions |\n| infrastructure | Dated host inventory, access methods, environment boundaries |\n| devices | Device identity, last verified address, hardware evidence |\n| runbooks | Repeatable operational procedures |\n| decisions | Reasons behind durable choices |\n| credentials | Secret-store references only; never secret values |\n\nSearch before adding a note. Record a source and verification date; distinguish\nobserved facts from user reports and unverified historical assumptions. Recheck\nhost identity before acting on a saved address. Keep project rules in the project.\n\nNotes belong to your OS user, not your ChatGPT account. They are not automatically\navailable to ordinary ChatGPT web chats. Codex reads them through your global\ninstructions and personal skills. The public OS repository contains only the\ntools and templates, never this folder or Codex account state.\n\nUse \x60nacre-brain note --help\x60 to save a unique note without concurrent writers\noverwriting one another. Use \x60nacre-brain store-credential NAME\x60 to put a secret\nin the OS keyring, then document only its reference. Keyring secrets are not\nautomatically copied to other hosts. This folder is not a backup by itself.\n";
@@ -105,12 +107,16 @@ fn initialize() -> Result<PathBuf> {
         return Err(error("Symlinked vault paths are not supported"));
     }
     if !path.exists() {
-        let mut f = OpenOptions::new()
+        match OpenOptions::new()
             .write(true)
             .create_new(true)
             .mode(0o600)
-            .open(path)?;
-        f.write_all(README.as_bytes())?;
+            .open(&path)
+        {
+            Ok(mut file) => file.write_all(README.as_bytes())?,
+            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => reject_links(&path)?,
+            Err(e) => return Err(e.into()),
+        }
     }
     Ok(root)
 }
@@ -164,7 +170,9 @@ fn safe_note(s: &str) -> Result<()> {
         regex::RegexBuilder::new(r"(?m)^\s*(?:password|passwd|api[_ -]?key|access[_ -]?token|refresh[_ -]?token)\s*[:=]\s*\S+").case_insensitive(true).build().unwrap()
     });
     if PRIVATE.is_match(s) || TOKEN.is_match(s) || ASSIGNMENT.is_match(s) {
-        return Err(error("Possible credential found. Store the secret in the OS keyring and save only its reference."));
+        return Err(error(
+            "Possible credential found. Store the secret in the OS keyring and save only its reference.",
+        ));
     }
     Ok(())
 }
@@ -524,9 +532,20 @@ fn brain_git_command(args: &[String]) -> Result<i32> {
 fn brain_note(args: &[String]) -> Result<i32> {
     let (mut kind, mut title, mut source, mut confidence) =
         ("inbox".to_string(), None, None, "reported".to_string());
+    let (mut worlds, mut areas, mut topics) = (Vec::new(), Vec::new(), Vec::new());
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
+            "--world" | "--area" | "--topic" => {
+                let option = args[i].as_str();
+                i += 1;
+                let value = args.get(i).ok_or("expected category")?.clone();
+                match option {
+                    "--world" => worlds.push(value),
+                    "--area" => areas.push(value),
+                    _ => topics.push(value),
+                }
+            }
             "--kind" => {
                 i += 1;
                 kind = args.get(i).ok_or("expected kind")?.clone()
@@ -557,6 +576,8 @@ fn brain_note(args: &[String]) -> Result<i32> {
         "decisions",
         "credentials",
         "checkpoints",
+        "archive",
+        "digests",
     ]
     .contains(&kind.as_str())
     {
@@ -569,7 +590,33 @@ fn brain_note(args: &[String]) -> Result<i32> {
     let source = source.ok_or("the following arguments are required: --source")?;
     let mut body = String::new();
     std::io::stdin().read_to_string(&mut body)?;
-    let path = write_note(&kind, &title, &source, &confidence, &body)?;
+    validate_note(
+        &[
+            vec![title.as_str(), source.as_str(), body.as_str()],
+            worlds.iter().map(String::as_str).collect(),
+            areas.iter().map(String::as_str).collect(),
+            topics.iter().map(String::as_str).collect(),
+        ]
+        .concat()
+        .join("\n"),
+    )?;
+    if body.trim().is_empty() {
+        return Err(error("Note is empty"));
+    }
+    let root = initialize()?;
+    let _guard = crate::brain_git::acquire_vault_lock(&root)?;
+    let categories =
+        crate::brain_registry::resolve_locked(&root, &title, &body, &worlds, &areas, &topics)?;
+    let path = write_categorized_note_locked(
+        &root,
+        &kind,
+        &title,
+        &source,
+        &confidence,
+        &body,
+        &categories,
+    )?;
+    category_feedback(&categories);
     println!("{}", path.display());
     Ok(0)
 }
@@ -594,6 +641,44 @@ pub(crate) fn write_note_locked(
     source: &str,
     confidence: &str,
     body: &str,
+) -> Result<PathBuf> {
+    if !KINDS.contains(&kind) || !["verified", "reported", "unverified"].contains(&confidence) {
+        return Err(error("invalid note metadata"));
+    }
+    safe_note(&format!("{title}\n{source}\n{body}"))?;
+    if body.trim().is_empty() {
+        return Err(error("Note is empty"));
+    }
+    let categories = crate::brain_registry::resolve_locked(root, title, body, &[], &[], &[])?;
+    write_categorized_note_locked(root, kind, title, source, confidence, body, &categories)
+}
+
+pub(crate) fn category_feedback(categories: &crate::brain_registry::Categories) {
+    let mut message = categories.worlds.join(", ");
+    if !categories.areas.is_empty() {
+        message.push_str(&format!(" › {}", categories.areas.join(", ")));
+    }
+    if message.is_empty() {
+        message.push_str("Review queue");
+    }
+    for flag in &categories.review {
+        message.push_str(&format!("; Review: {flag}"));
+    }
+    for change in &categories.changes {
+        message.push_str(&format!("; {change}"));
+    }
+    eprintln!("{message}");
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn write_categorized_note_locked(
+    root: &Path,
+    kind: &str,
+    title: &str,
+    source: &str,
+    confidence: &str,
+    body: &str,
+    categories: &crate::brain_registry::Categories,
 ) -> Result<PathBuf> {
     if !KINDS.contains(&kind) {
         return Err(error("invalid kind"));
@@ -623,12 +708,28 @@ pub(crate) fn write_note_locked(
     let slug = slug.chars().take(70).collect::<String>();
     let slug = if slug.is_empty() { "note" } else { &slug };
     let now = Utc::now();
+    let mut metadata = String::new();
+    for (key, values) in [
+        ("Worlds", &categories.worlds),
+        ("Areas", &categories.areas),
+        ("Topics", &categories.topics),
+        ("Review", &categories.review),
+    ] {
+        if !values.is_empty() {
+            metadata.push_str(&format!("{key}: {}\n", values.join(", ")));
+        }
+    }
     let text = format!(
-        "# {}\n\nRecorded: {}\nConfidence: {}\nSource: {}\n\n{}\n",
-        title.replace('\n', " "),
+        "# {}\n\nRecorded: {}\nConfidence: {}\nSource: {}\n{}\n{}\n",
+        title
+            .replace(['\n', '\r'], " ")
+            .chars()
+            .take(120)
+            .collect::<String>(),
         now.format("%Y-%m-%dT%H:%M:%S%.6f+00:00"),
         confidence,
-        source.replace('\n', " "),
+        source.replace(['\n', '\r'], " "),
+        metadata,
         body.trim_end()
     );
     let p = root.join(kind).join(format!(

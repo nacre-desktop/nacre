@@ -74,7 +74,7 @@ fn memory_capture_is_private_deduplicated_and_discovers_worlds() {
     );
     let first: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(first["worlds"], json!(["Public World"]));
-    assert_eq!(first["topics"], json!(["AI  rust"]));
+    assert_eq!(first["topics"], json!(["ai-rust"]));
     assert!(Path::new(first["path"].as_str().unwrap()).is_file());
     let state = temporary.path().join("vault/.brain-state");
     // Python's historical json.dumps(..., ensure_ascii=False) fingerprint.
@@ -93,10 +93,11 @@ fn memory_capture_is_private_deduplicated_and_discovers_worlds() {
             & 0o777,
         0o600
     );
-    assert!(temporary
+    assert!(!temporary
         .path()
         .join("vault/wiki/entity-public-world.md")
-        .is_file());
+        .exists());
+    assert!(temporary.path().join("vault/registry.json").is_file());
 
     let mut repeated = Command::new(helper());
     repeated

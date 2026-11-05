@@ -1,0 +1,901 @@
+{
+  "version": 1,
+  "worlds": [
+    {
+      "name": "Siverteh",
+      "aliases": [
+        "Sivert",
+        "Personal",
+        "personal",
+        "Personal life",
+        "Owner",
+        "me"
+      ],
+      "patterns": [
+        "\\bowner (?:wants|prefers|likes|dislikes|asked)\\b",
+        "\\bpreference",
+        "\\bprefers?\\b",
+        "\\bpersonal (?:life|interests?)\\b"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "Newbringer",
+      "aliases": [
+        "newbringer",
+        "Newbringer job",
+        "work",
+        "job"
+      ],
+      "patterns": [
+        "newbringer",
+        "\\bguns?\\b",
+        "\\bpilots?\\b",
+        "\\bvenues?\\b",
+        "dyreparken",
+        "skyland",
+        "\\bstm32",
+        "samd51",
+        "\\bbms\\b",
+        "neopixel",
+        "imx678",
+        "\\bmagazine\\b",
+        "\\brecoil\\b"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "Nacre",
+      "aliases": [
+        "nacre",
+        "Siverteh OS",
+        "Siverteh AI",
+        "Siverteh AI and OS",
+        "Observatory",
+        "os",
+        "Nacre OS",
+        "Own",
+        "Bodies",
+        "Merged",
+        "Siverteh AI and OS"
+      ],
+      "patterns": [
+        "\\bnacre\\b",
+        "\\bbead\\b",
+        "\\bniri\\b",
+        "hyprland",
+        "quickshell",
+        "\\bqml\\b",
+        "\\bdashboard\\b",
+        "wallpaper",
+        "launcher",
+        "sidebar",
+        "\\borient\\b",
+        "pkgbuild",
+        "\\baur\\b"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "AI & agents",
+      "aliases": [
+        "Knowledge workflow",
+        "agents",
+        "AI agents",
+        "AI workflow"
+      ],
+      "patterns": [
+        "lead workflow",
+        "lead-workflow",
+        "codex exec",
+        "\\bluna\\b",
+        "\\bsol\\b worker",
+        "nacre brain",
+        "jarvis",
+        "hermes agent"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "Home & devices",
+      "aliases": [
+        "Home",
+        "devices",
+        "hardware"
+      ],
+      "patterns": [
+        "personal desktop",
+        "desktop pc",
+        "zenbook",
+        "home server",
+        "\\bphone\\b",
+        "mx keys",
+        "x2\\+",
+        "bluetooth"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "Infrastructure",
+      "aliases": [
+        "hosts",
+        "hosts-and-sites",
+        "infra"
+      ],
+      "patterns": [
+        "dev-1",
+        "\\bdev1\\b",
+        "\\bprod\\b",
+        "tailscale",
+        "magicdns",
+        "hosted ci"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    },
+    {
+      "name": "Side projects",
+      "aliases": [
+        "Hobbies",
+        "Projects",
+        "hobby projects"
+      ],
+      "patterns": [
+        "temporium",
+        "harmonium",
+        "musikki",
+        "electronics (?:hobby )?bench",
+        "aliexpress"
+      ],
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05"
+    }
+  ],
+  "areas": [
+    {
+      "name": "Preferences",
+      "parent": "Siverteh",
+      "aliases": [
+        "workflow-preferences",
+        "Appearance",
+        "wallpaper preferences"
+      ],
+      "patterns": [
+        "\\bprefer",
+        "\\bpreference",
+        "\\bdislike",
+        "\\bwants\\b"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Background",
+      "parent": "Siverteh",
+      "aliases": [
+        "Professional background",
+        "interests"
+      ],
+      "patterns": [
+        "background",
+        "\\binterests?\\b",
+        "military-training",
+        "\\bhobby\\b"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "HK416",
+      "parent": "Newbringer",
+      "aliases": [
+        "hk416",
+        "HK416 CM4",
+        "hk416-cm4",
+        "cm4-provisioning",
+        "hk416 cm4"
+      ],
+      "patterns": [
+        "hk416",
+        "\\bcm4\\b",
+        "gbb"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Guns",
+      "parent": "Newbringer",
+      "aliases": [
+        "gun-profiles",
+        "Gun release",
+        "Orange gun",
+        "White gun",
+        "Red gun",
+        "Blue gun",
+        "white gun",
+        "white-gun",
+        "orange gun",
+        "orange-gun",
+        "red gun",
+        "red-gun",
+        "red v1",
+        "blue gun",
+        "blue carrier",
+        "blue bench"
+      ],
+      "patterns": [
+        "white gun",
+        "red gun",
+        "orange gun",
+        "blue gun",
+        "gun [0-9a-f]{8}",
+        "\\btrigger\\b",
+        "\\brecoil\\b",
+        "gun battery",
+        "\\bguns?\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "White motor",
+      "parent": "Newbringer",
+      "aliases": [
+        "white-motor",
+        "recoil motor"
+      ],
+      "patterns": [
+        "white motor",
+        "recoil motor",
+        "\\bmotor\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Smash-Board",
+      "parent": "Newbringer",
+      "aliases": [
+        "smashboard",
+        "smash board",
+        "smash-board",
+        "Smash card",
+        "mag smash board"
+      ],
+      "patterns": [
+        "smash[- ]?board",
+        "smashboard",
+        "tca9534",
+        "hall sensors?"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Stations",
+      "parent": "Newbringer",
+      "aliases": [
+        "station",
+        "stations",
+        "AR stations"
+      ],
+      "patterns": [
+        "\\bstations?\\b",
+        "apriltag",
+        "hologram",
+        "folding stand",
+        "p3d3",
+        "infinite-ammo"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Game",
+      "parent": "Newbringer",
+      "aliases": [
+        "game",
+        "game server",
+        "user-stories"
+      ],
+      "patterns": [
+        "game (?:server|setup|join|websocket|runtime)",
+        "websocket",
+        "\\bredis\\b",
+        "callsigns?",
+        "\\blobby\\b",
+        "user stor"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Demo sites",
+      "parent": "Newbringer",
+      "aliases": [
+        "Site",
+        "demo site",
+        "travel laptop",
+        "Arch travel laptop",
+        "Travel laptop",
+        "arch travel laptop",
+        "traveling demo laptop",
+        "demo laptop"
+      ],
+      "patterns": [
+        "demo site",
+        "test site",
+        "travel(?:ing)? (?:demo )?laptop",
+        "arch travel",
+        "\\bvenues?\\b",
+        "dyreparken",
+        "skyland",
+        "demo laptop"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Desktop",
+      "parent": "Nacre",
+      "aliases": [
+        "Nacre desktop",
+        "nacre-desktop",
+        "desktop shell",
+        "dashboard",
+        "launcher",
+        "Wallpaper",
+        "Panel",
+        "Control center",
+        "Docking",
+        "Natural",
+        "Pearls",
+        "Scale recovery",
+        "Wallpaper matched",
+        "Omarchy",
+        "omarchy"
+      ],
+      "patterns": [
+        "dashboard",
+        "\\bpanels?\\b",
+        "launcher",
+        "sidebar",
+        "wallpaper",
+        "palette",
+        "\\btheme",
+        "dropdown",
+        "notifications?",
+        "control center",
+        "lock screen",
+        "workspaces?",
+        "settings page",
+        "\\bmenu\\b",
+        "thunar",
+        "yazi",
+        "\\bkitty\\b",
+        "\\bwidgets?\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Bead",
+      "parent": "Nacre",
+      "aliases": [
+        "bead",
+        "Bead green",
+        "Bead dashboard"
+      ],
+      "patterns": [
+        "\\bbead\\b",
+        "\\bpearls?\\b",
+        "\\bluau\\b",
+        "\\bb0\\d{3}\\b",
+        "\\bb\\d{1,2}[a-z]?\\b gate"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Compositors",
+      "parent": "Nacre",
+      "aliases": [
+        "nacre-niri",
+        "Nacre compositors",
+        "niri",
+        "Niri",
+        "hyprland",
+        "compositor",
+        "nacre-niri integration",
+        "compositor-keybindings",
+        "mouse focus",
+        "Multi-monitor workspaces"
+      ],
+      "patterns": [
+        "\\bniri\\b",
+        "nacre-niri",
+        "hyprland",
+        "compositor",
+        "\\bnn\\d{4}\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Orient",
+      "parent": "Nacre",
+      "aliases": [
+        "orient",
+        "Orient palette"
+      ],
+      "patterns": [
+        "\\borient\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Packages",
+      "parent": "Nacre",
+      "aliases": [
+        "Nacre packages and updates",
+        "Nacre software library",
+        "Software phase",
+        "package distribution",
+        "packaging",
+        "Arch packaging",
+        "nacre-installation",
+        "software library"
+      ],
+      "patterns": [
+        "\\bpackag",
+        "pkgbuild",
+        "\\baur\\b",
+        "installer",
+        "\\brepo-add\\b",
+        "software library",
+        "\\bupdates?\\b",
+        "\\brelease\\b",
+        "pacman"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Performance",
+      "parent": "Nacre",
+      "aliases": [
+        "Nacre performance",
+        "performance",
+        "Performance",
+        "Latency",
+        "soak-testing",
+        "rendering",
+        "Nacre frame",
+        "Correctness",
+        "Calculator full"
+      ],
+      "patterns": [
+        "latency",
+        "performance",
+        "memory gate",
+        "benchmark",
+        "\\bfps\\b",
+        "frame pacing",
+        "\\bsoak",
+        "\\brss\\b",
+        "idle memory"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Helper",
+      "parent": "Nacre",
+      "aliases": [
+        "Nacre helper parity",
+        "nacre-helper",
+        "Rust migration",
+        "rust migration",
+        "native migration",
+        "Daemon",
+        "Joinset",
+        "Rust full",
+        "Wave"
+      ],
+      "patterns": [
+        "nacre-helper",
+        "\\bhelper\\b",
+        "\\bdaemon\\b",
+        "rust migration",
+        "\\bparity\\b",
+        "native migration",
+        "\\bn0\\d{3}\\b",
+        "joinset"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Nacre AI",
+      "parent": "Nacre",
+      "aliases": [
+        "Sidebar chat",
+        "AI dashboard",
+        "nacre-ai"
+      ],
+      "patterns": [
+        "ai chat",
+        "sidebar chat",
+        "ai dashboard",
+        "nacre-ai",
+        "chat naming",
+        "usage limits?"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Lead workflow",
+      "parent": "AI & agents",
+      "aliases": [
+        "lead-workflow",
+        "handoff",
+        "spec coordination",
+        "Independent"
+      ],
+      "patterns": [
+        "lead workflow",
+        "lead-workflow",
+        "\\bworkers?\\b",
+        "orchestrat",
+        "\\bluna\\b",
+        "\\bsol\\b",
+        "codex account",
+        "claude code",
+        "remote control"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Brain",
+      "parent": "AI & agents",
+      "aliases": [
+        "brain",
+        "Nacre Brain",
+        "Brain startup",
+        "knowledge"
+      ],
+      "patterns": [
+        "\\bbrain\\b",
+        "\\bvault\\b",
+        "knowledge"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Inspiration",
+      "parent": "AI & agents",
+      "aliases": [
+        "jarvis",
+        "hermes",
+        "agent ecosystems"
+      ],
+      "patterns": [
+        "jarvis",
+        "hermes",
+        "letta",
+        "memgpt",
+        "karpathy",
+        "openclaw",
+        "agent ecosystem"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Desktop PC",
+      "parent": "Home & devices",
+      "aliases": [
+        "Personal desktop",
+        "personal-desktop",
+        "cachyos-migration",
+        "desktop maintenance",
+        "storage"
+      ],
+      "patterns": [
+        "personal desktop",
+        "desktop pc",
+        "cachyos[- ]migration",
+        "desktop migration",
+        "windows ssd",
+        "desktop purchase",
+        "desktop startup",
+        "default browser"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Laptop",
+      "parent": "Home & devices",
+      "aliases": [
+        "laptop",
+        "zenbook"
+      ],
+      "patterns": [
+        "zenbook",
+        "laptop storage",
+        "\\blaptop\\b(?! demo)(?!.*site)"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Home server",
+      "parent": "Home & devices",
+      "aliases": [
+        "home server",
+        "homeserver"
+      ],
+      "patterns": [
+        "home server",
+        "5600g",
+        "gtx 1650"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Phone",
+      "parent": "Home & devices",
+      "aliases": [
+        "phone"
+      ],
+      "patterns": [
+        "\\bphone\\b",
+        "android",
+        "iphone"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Peripherals",
+      "parent": "Home & devices",
+      "aliases": [
+        "peripherals"
+      ],
+      "patterns": [
+        "mx keys",
+        "x2\\+",
+        "bluetooth (?:pairing|input)",
+        "\\bmouse\\b",
+        "headset",
+        "\\bmonitor\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "dev-1",
+      "parent": "Infrastructure",
+      "aliases": [
+        "dev1",
+        "dev-1"
+      ],
+      "patterns": [
+        "dev-1",
+        "\\bdev1\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "prod",
+      "parent": "Infrastructure",
+      "aliases": [
+        "production",
+        "prod"
+      ],
+      "patterns": [
+        "\\bprod\\b",
+        "production host"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Network",
+      "parent": "Infrastructure",
+      "aliases": [
+        "tailscale",
+        "uwb",
+        "network"
+      ],
+      "patterns": [
+        "tailscale",
+        "magicdns",
+        "wi-?fi",
+        "ssh identity",
+        "\\bdns\\b"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "CI",
+      "parent": "Infrastructure",
+      "aliases": [
+        "CI",
+        "ci",
+        "PR integration"
+      ],
+      "patterns": [
+        "\\bci\\b",
+        "github actions",
+        "hosted ci",
+        "runner"
+      ],
+      "title_only": true,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Temporium",
+      "parent": "Side projects",
+      "aliases": [
+        "temporium",
+        "classroom-tasks"
+      ],
+      "patterns": [
+        "temporium",
+        "harmonium",
+        "hive classroom",
+        "classroom"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "MusikKI",
+      "parent": "Side projects",
+      "aliases": [
+        "musikki"
+      ],
+      "patterns": [
+        "musikki"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    },
+    {
+      "name": "Electronics bench",
+      "parent": "Side projects",
+      "aliases": [
+        "electronics",
+        "Personal electronics"
+      ],
+      "patterns": [
+        "electronics (?:hobby )?bench",
+        "aliexpress",
+        "oscilloscope",
+        "soldering",
+        "multimeter",
+        "bench supply"
+      ],
+      "title_only": false,
+      "status": "seed",
+      "created": "2026-11-05",
+      "updated": "2026-11-05",
+      "uses": []
+    }
+  ]
+}

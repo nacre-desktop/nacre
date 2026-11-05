@@ -160,15 +160,51 @@ def slug(value):
 
 
 def fields(body):
-    clean = re.sub(r"(?ms)^```[^\n]*\n.*?^```[^\n]*$", "", body)
-    clean = re.split(r"^##\s", clean, maxsplit=1, flags=re.M)[0]
-    return {
-        k.lower(): v.strip().strip("\"'")
-        for k, v in re.findall(
-            r"(?mi)^(Entity|Name|Parent|Project|Worlds|Topics|Tags|Category|Aliases):\s*([^\n]+)",
-            clean,
-        )
+    # Brain metadata is a header block, never arbitrary prose in the note body.
+    # The first blank line after the title separates the title from metadata;
+    # the next blank line ends metadata. This also prevents an empty field from
+    # consuming the following line through `\s*`.
+    lines = body.splitlines()
+    if not lines or not lines[0].startswith("# "):
+        return {}
+    lines = lines[1:]
+    while lines and not lines[0].strip():
+        lines = lines[1:]
+    header = {}
+    known = {
+        "recorded",
+        "reviewed",
+        "confidence",
+        "source",
+        "worlds",
+        "areas",
+        "topics",
+        "review",
+        "supersedes",
+        "entity",
+        "name",
+        "parent",
+        "project",
+        "tags",
+        "category",
+        "aliases",
+        "status",
     }
+    started = False
+    for line in lines:
+        if not line.strip():
+            if started:
+                break
+            continue
+        key, separator, value = line.partition(":")
+        key = key.lower()
+        if not separator or key not in known:
+            break
+        started = True
+        value = value.strip().strip("\"'")
+        if value:
+            header[key] = value
+    return header
 
 
 def items(value):
@@ -267,7 +303,10 @@ def note_path(relative):
 
 
 def note_date(body):
-    match = re.search(r"^(?:Recorded|Reviewed):\s*(\d{4}-\d{2}-\d{2})", body, re.M)
+    metadata = fields(body)
+    match = re.match(
+        r"(\d{4}-\d{2}-\d{2})", metadata.get("recorded", metadata.get("reviewed", ""))
+    )
     try:
         return dt.date.fromisoformat(match.group(1)) if match else None
     except ValueError:
@@ -275,7 +314,7 @@ def note_date(body):
 
 
 def note_timestamp(body):
-    match = re.search(r"^Recorded:\s*(\S+)", body, re.M)
+    match = re.match(r"(\S+)", fields(body).get("recorded", ""))
     try:
         value = (
             dt.datetime.fromisoformat(match.group(1).replace("Z", "+00:00"))
@@ -316,7 +355,6 @@ def _graph_notes(today):
             age = max(0, (today - date).days) if date else None
             weight = math.exp(-math.log(2) * age / 21) if age is not None else 0
             ident = "note:" + hashlib.sha256(rel.encode()).hexdigest()[:16]
-            confidence = re.search(r"^Confidence:\s*(.*)", body, re.M)
             meta = fields(body)
             theme, reason = category(title, body, meta.get("category", ""))
             item = dict(
@@ -326,7 +364,7 @@ def _graph_notes(today):
                 path=rel,
                 date=date.isoformat() if date else "",
                 recorded=note_timestamp(body),
-                confidence=confidence.group(1) if confidence else "source page",
+                confidence=meta.get("confidence", "source page"),
                 text=body[:60000],
                 activity=round(weight, 4),
                 revision=hashlib.sha256(body.encode()).hexdigest()[:16],

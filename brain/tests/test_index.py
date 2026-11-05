@@ -33,6 +33,20 @@ class IndexTests(unittest.TestCase):
         p.write_text(body)
         return p
 
+    def test_metadata_is_read_only_from_header_block(self):
+        parsed = module.fields(
+            "# Example\n\nRecorded: 2026-11-05\nWorlds: \nTopics: Tools\n\n"
+            "Project: /home/user/repo. This is body text.\nWorlds: Body World\n"
+        )
+        self.assertNotIn("worlds", parsed)
+        self.assertEqual(parsed["topics"], "Tools")
+        self.assertNotIn("project", parsed)
+        body = (
+            "# Example\n\nOrdinary prose\nRecorded: 2026-11-05\nConfidence: verified\n"
+        )
+        self.assertIsNone(module.note_date(body))
+        self.assertEqual(module.note_timestamp(body), "")
+
     def test_paths_cannot_escape_vault(self):
         with self.assertRaises(ValueError):
             module.note_path("../outside.md")

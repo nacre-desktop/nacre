@@ -28,6 +28,58 @@ pub(crate) fn expression(pattern: &str) -> std::result::Result<Regex, regex::Err
     Ok(compiled)
 }
 
+/// Read only the contiguous metadata block following a Markdown title.
+/// A single blank separator after the title is accepted for older vault notes.
+pub fn header_fields(body: &str) -> Value {
+    let mut lines = body.lines();
+    if !lines.next().is_some_and(|line| line.starts_with("# ")) {
+        return json!({});
+    }
+    let mut result = Map::new();
+    let mut started = false;
+    for line in lines {
+        if line.trim().is_empty() {
+            if started {
+                break;
+            }
+            continue;
+        }
+        let Some((key, value)) = line.split_once(':') else {
+            break;
+        };
+        let key = key.to_ascii_lowercase();
+        if ![
+            "recorded",
+            "reviewed",
+            "confidence",
+            "source",
+            "worlds",
+            "areas",
+            "topics",
+            "review",
+            "supersedes",
+            "entity",
+            "name",
+            "parent",
+            "project",
+            "tags",
+            "category",
+            "aliases",
+            "status",
+        ]
+        .contains(&key.as_str())
+        {
+            break;
+        }
+        started = true;
+        let value = value.trim().trim_matches(['"', '\'']);
+        if !value.is_empty() {
+            result.insert(key, json!(value));
+        }
+    }
+    Value::Object(result)
+}
+
 fn err(s: impl Into<String>) -> Error {
     s.into().into()
 }
@@ -92,7 +144,7 @@ fn items(v: &Value) -> Vec<String> {
 }
 
 fn tokens(s: &str) -> Vec<String> {
-    const STOP:&str="a an the and or but of to in on for with from by at as is are was were be been being this that these those it its my your our their we you they i me he she them have has had do does did can could should would will may into about after before through more most some any all each only other no not new now then than also just how what when where which who why use used using make made first last one two current latest source recorded reviewed confidence entity name parent project worlds topics tags category aliases status evidence note notes knowledge verified reported unverified sourcepage test tests passed check checks result results update updated updating completed complete ready fixed fix added add deployed deploy deployment implement implementation source code files file path paths branch worktree commit git user assistant workflow context saved private local scope preserve existing unchanged previous version changes changed change correct documented requested default actual explicit native shell runtime process processes window windows gui ui cli service services script scripts command commands configuration config settings clean done shows show setup verified validation milestone historical observations observation captured capture memory suggestions suggested subject subjects";
+    const STOP: &str = "a an the and or but of to in on for with from by at as is are was were be been being this that these those it its my your our their we you they i me he she them have has had do does did can could should would will may into about after before through more most some any all each only other no not new now then than also just how what when where which who why use used using make made first last one two current latest source recorded reviewed confidence entity name parent project worlds topics tags category aliases status evidence note notes knowledge verified reported unverified sourcepage test tests passed check checks result results update updated updating completed complete ready fixed fix added add deployed deploy deployment implement implementation source code files file path paths branch worktree commit git user assistant workflow context saved private local scope preserve existing unchanged previous version changes changed change correct documented requested default actual explicit native shell runtime process processes window windows gui ui cli service services script scripts command commands configuration config settings clean done shows show setup verified validation milestone historical observations observation captured capture memory suggestions suggested subject subjects";
     let stop: BTreeSet<&str> = STOP.split_whitespace().collect();
     expression(r"[^\W\d_]{3,}")
         .unwrap()
@@ -2348,6 +2400,24 @@ mod tests {
         assert_eq!(
             out[1]["promoted"],
             json!(["subject-dsp", "subject-d-s-p", "subject-signal-analysis"])
+        );
+    }
+}
+
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+    #[test]
+    fn metadata_stops_at_header_boundary() {
+        assert_eq!(
+            header_fields(
+                "# Title\n\nWorlds: \nAreas: Bead\nTopics: ci\n\nProject: /private/path\nWorlds: false"
+            ),
+            json!({"areas":"Bead", "topics":"ci"})
+        );
+        assert_eq!(
+            header_fields("# Title\n\nOrdinary prose\nProject: false"),
+            json!({})
         );
     }
 }

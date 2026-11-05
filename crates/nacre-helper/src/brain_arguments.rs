@@ -76,7 +76,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
                 "usage: nacre-brain search [-h] query [query ...]\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n"
             ),
             Some("note") => print!(
-                "usage: nacre-brain note [-h] [--kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}]\n                       --title TITLE --source SOURCE\n                       [--confidence {{verified,reported,unverified}}]\n\noptions:\n  -h, --help            show this help message and exit\n  --kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}\n  --title TITLE\n  --source SOURCE\n  --confidence {{verified,reported,unverified}}\n"
+                "usage: nacre-brain note [-h] [--kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}]\n                       --title TITLE --source SOURCE\n                       [--confidence {{verified,reported,unverified}}]\n                       [--world WORLD] [--area AREA] [--topic TOPIC]\n\noptions:\n  -h, --help            show this help message and exit\n  --kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}\n  --title TITLE\n  --source SOURCE\n  --confidence {{verified,reported,unverified}}\n  --world WORLD\n  --area AREA\n  --topic TOPIC\n"
             ),
             Some("run-with-credential") => print!(
                 "usage: nacre-brain run-with-credential [-h] --env ENV name ...\n\npositional arguments:\n  name\n  program\n\noptions:\n  -h, --help  show this help message and exit\n  --env ENV\n"
@@ -114,9 +114,14 @@ fn brain_command() -> Command {
                     "decisions",
                     "credentials",
                     "checkpoints",
+                    "archive",
+                    "digests",
                 ])
                 .default_value("inbox"),
         )
+        .arg(Arg::new("world").long("world").action(ArgAction::Append))
+        .arg(Arg::new("area").long("area").action(ArgAction::Append))
+        .arg(Arg::new("topic").long("topic").action(ArgAction::Append))
         .arg(Arg::new("title").long("title").required(true))
         .arg(Arg::new("source").long("source").required(true))
         .arg(
@@ -267,6 +272,11 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
                 .cloned(),
         ),
         "note" => {
+            for key in ["world", "area", "topic"] {
+                for value in values.get_many::<String>(key).into_iter().flatten() {
+                    result.extend([format!("--{key}"), value.clone()]);
+                }
+            }
             for (key, flag) in [
                 ("kind", "--kind"),
                 ("title", "--title"),

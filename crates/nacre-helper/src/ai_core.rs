@@ -387,7 +387,9 @@ fn context(args: &[String]) -> Result<i32> {
         .position(|arg| arg == "--")
         .unwrap_or(args.len());
     if args[..end].iter().any(|arg| arg == "-h" || arg == "--help") {
-        print!("usage: nacre-ai-context [-h] [query ...]\n\nResolve conversation context without selecting or executing a project.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n");
+        print!(
+            "usage: nacre-ai-context [-h] [query ...]\n\nResolve conversation context without selecting or executing a project.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n"
+        );
         return Ok(0);
     }
     if args[..end].iter().any(|arg| arg.starts_with('-')) {
@@ -425,11 +427,12 @@ fn memory(args: &[String]) -> Result<i32> {
         .collect();
     let (mut kind, mut title, mut source, mut confidence) =
         ("inbox".to_owned(), None, None, "reported".to_owned());
-    let (mut worlds, mut topics) = (Vec::new(), Vec::new());
+    let (mut worlds, mut areas, mut topics) = (Vec::new(), Vec::new(), Vec::new());
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
-            "--kind" | "--title" | "--source" | "--confidence" | "--world" | "--topic" => {
+            "--kind" | "--title" | "--source" | "--confidence" | "--world" | "--area"
+            | "--topic" => {
                 let option = args[i].as_str();
                 i += 1;
                 let Some(value) = args.get(i).cloned() else {
@@ -441,6 +444,7 @@ fn memory(args: &[String]) -> Result<i32> {
                     "--source" => source = Some(value),
                     "--confidence" => confidence = value,
                     "--world" => worlds.push(value),
+                    "--area" => areas.push(value),
                     "--topic" => topics.push(value),
                     _ => unreachable!(),
                 }
@@ -458,7 +462,9 @@ fn memory(args: &[String]) -> Result<i32> {
                 return Ok(0);
             }
             "-h" | "--help" => {
-                print!("usage: nacre-ai-memory [-h] --title TITLE --source SOURCE\n                       [--kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}}]\n                       [--confidence {{verified,reported,unverified}}]\n                       [--world WORLD] [--topic TOPIC]\n\nStore concise evidence and create discoverable, cross-project brain entities.\n\noptions:\n  -h, --help            show this help message and exit\n  --title TITLE\n  --source SOURCE\n  --kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}}\n  --confidence {{verified,reported,unverified}}\n  --world WORLD\n  --topic TOPIC\n");
+                print!(
+                    "usage: nacre-ai-memory [-h] --title TITLE --source SOURCE\n                       [--kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}}]\n                       [--confidence {{verified,reported,unverified}}]\n                       [--world WORLD] [--area AREA] [--topic TOPIC]\n\nStore concise evidence and create discoverable, cross-project brain entities.\n\noptions:\n  -h, --help            show this help message and exit\n  --title TITLE\n  --source SOURCE\n  --kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}}\n  --confidence {{verified,reported,unverified}}\n  --world WORLD\n  --area AREA\n  --topic TOPIC\n"
+                );
                 return Ok(0);
             }
             _ => return Ok(2),
@@ -490,6 +496,7 @@ fn memory(args: &[String]) -> Result<i32> {
     std::io::Read::read_to_string(&mut std::io::stdin(), &mut body)?;
     let mut raw_metadata = vec![title.as_str(), source.as_str(), body.as_str()];
     raw_metadata.extend(worlds.iter().map(String::as_str));
+    raw_metadata.extend(areas.iter().map(String::as_str));
     raw_metadata.extend(topics.iter().map(String::as_str));
     crate::brain_data::validate_note(&raw_metadata.join("\n"))?;
     if body.trim().is_empty() {
@@ -514,16 +521,19 @@ fn memory(args: &[String]) -> Result<i32> {
     let normalized_topics = topics;
     let world_json = python_json_array(&worlds)?;
     let topic_json = python_json_array(&normalized_topics)?;
-    let signature_data = format!(
-        "[{}, {}, {}, {}, {}, {}, {}]",
+    // Preserve existing capture fingerprints for commands without area options.
+    let mut signature_values = vec![
         serde_json::to_string(&kind)?,
         serde_json::to_string(&normalized_title)?,
         serde_json::to_string(&normalized_source)?,
         serde_json::to_string(&confidence)?,
         world_json,
-        topic_json,
-        serde_json::to_string(body.trim())?
-    );
+    ];
+    if !areas.is_empty() {
+        signature_values.push(python_json_array(&areas)?);
+    }
+    signature_values.extend([topic_json, serde_json::to_string(body.trim())?]);
+    let signature_data = format!("[{}]", signature_values.join(", "));
     let signature = format!("{:x}", Sha256::digest(signature_data.as_bytes()));
     let root = crate::brain_data::root_path()?;
     let state = root.join(".brain-state");
@@ -551,6 +561,7 @@ fn memory(args: &[String]) -> Result<i32> {
     }) {
         return Err(error("Linked or non-regular memory record"));
     }
+    let mut feedback = None;
     let note = if record.exists() {
         let data = crate::state::read_strict(&record, json!({}))?;
         let stored = PathBuf::from(
@@ -568,29 +579,50 @@ fn memory(args: &[String]) -> Result<i32> {
         }
         validated
     } else {
-        let metadata = format!(
-            "Worlds: {}\nTopics: {}\n\n",
-            worlds.join(", "),
-            normalized_topics.join(", ")
-        );
-        let note = crate::brain_data::write_note_locked(
+        let categories = crate::brain_registry::resolve_locked(
+            &root,
+            &normalized_title,
+            &body,
+            &worlds,
+            &areas,
+            &normalized_topics,
+        )?;
+        let note = crate::brain_data::write_categorized_note_locked(
             &root,
             &kind,
             &normalized_title,
             &normalized_source,
             &confidence,
-            &(metadata + body.trim()),
+            body.trim(),
+            &categories,
         )?;
+        feedback = Some(categories);
         crate::state::write(&record, &json!({"path":note}))?;
         fs::set_permissions(&record, fs::Permissions::from_mode(0o600))?;
         note
     };
-    for world in &worlds {
-        ensure_world_page(&root, &note, world)?;
-    }
+    let header = crate::brain_discovery::header_fields(&fs::read_to_string(&note)?);
+    let list = |key: &str| -> Vec<String> {
+        header[key]
+            .as_str()
+            .unwrap_or("")
+            .split(',')
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .map(str::to_owned)
+            .collect()
+    };
+    let categories = feedback.unwrap_or_else(|| crate::brain_registry::Categories {
+        worlds: list("worlds"),
+        areas: list("areas"),
+        topics: list("topics"),
+        review: list("review"),
+        changes: Vec::new(),
+    });
+    crate::brain_data::category_feedback(&categories);
     println!(
         "{}",
-        json!({"path":note,"worlds":worlds,"topics":normalized_topics})
+        json!({"path":note,"worlds":categories.worlds,"areas":categories.areas,"topics":categories.topics,"review":categories.review,"category_changes":categories.changes})
     );
     Ok(0)
 }
@@ -611,55 +643,6 @@ fn stable_unique(values: Vec<String>) -> Vec<String> {
         .into_iter()
         .filter(|value| seen.insert(value.clone()))
         .collect()
-}
-fn ensure_world_page(root: &std::path::Path, note: &std::path::Path, world: &str) -> Result<()> {
-    let ident = slug(world);
-    if ident.is_empty() {
-        return Ok(());
-    }
-    let wiki = root.join("wiki");
-    if fs::symlink_metadata(&wiki).is_ok_and(|metadata| metadata.file_type().is_symlink()) {
-        return Err(error("Symlinked vault directories are not supported"));
-    }
-    if wiki.is_dir() {
-        for entry in fs::read_dir(&wiki)? {
-            let entry = entry?;
-            if entry.file_type()?.is_symlink()
-                || !entry.file_type()?.is_file()
-                || entry.path().extension().is_none_or(|ext| ext != "md")
-            {
-                continue;
-            }
-            let text = fs::read_to_string(entry.path())?;
-            let mut names = vec![entry
-                .path()
-                .file_stem()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned()];
-            for line in text.lines() {
-                let lower = line.to_ascii_lowercase();
-                if lower.starts_with("name:") {
-                    names.push(line[5..].trim().to_owned());
-                }
-                if lower.starts_with("aliases:") {
-                    names.extend(line[8..].split(',').map(|v| v.trim().to_owned()));
-                }
-            }
-            if names.iter().any(|name| slug(name) == ident) {
-                return Ok(());
-            }
-        }
-    }
-    let relative = note
-        .strip_prefix(root)
-        .unwrap_or(note)
-        .with_extension("")
-        .to_string_lossy()
-        .replace('\\', "/");
-    let content = format!("# {world}\n\nEntity: world\nName: {world}\nAliases: {ident}\nReviewed: {}\nStatus: Evidence-backed subject; initial descriptor\nSource: [[{relative}]]\n\nThis subject was recorded from conversation or work. It does not imply a registered repository.\n\n## Evidence\n\n- [[{relative}]]\n", Local::now().date_naive());
-    crate::brain_data::create_page_locked(root, &format!("wiki/entity-{ident}.md"), &content)?;
-    Ok(())
 }
 
 pub fn number(value: &Value) -> bool {
@@ -762,7 +745,9 @@ struct UsageArguments {
 
 fn usage(args: &[String]) -> Result<i32> {
     if args.iter().any(|a| a == "-h" || a == "--help") {
-        print!("usage: nacre-ai-usage [-h] {{read,capture}} [--agent {{codex,claude}}] [--account ACCOUNT] [--delegate DELEGATE]\n\nRead provider-supported quota data; capture Claude's native status-line data.\n\npositional arguments:\n  {{read,capture}}\n\noptions:\n  -h, --help            show this help message and exit\n  --agent {{codex,claude}}\n  --account ACCOUNT\n  --delegate DELEGATE\n");
+        print!(
+            "usage: nacre-ai-usage [-h] {{read,capture}} [--agent {{codex,claude}}] [--account ACCOUNT] [--delegate DELEGATE]\n\nRead provider-supported quota data; capture Claude's native status-line data.\n\npositional arguments:\n  {{read,capture}}\n\noptions:\n  -h, --help            show this help message and exit\n  --agent {{codex,claude}}\n  --account ACCOUNT\n  --delegate DELEGATE\n"
+        );
         return Ok(0);
     }
     if args.first().is_some_and(|command| command == "number") {
