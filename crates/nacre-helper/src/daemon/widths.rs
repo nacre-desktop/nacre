@@ -26,6 +26,22 @@ use tokio::{
 };
 
 pub const TOPIC: &str = "niri.widths";
+const INITIAL_RETRY_MS: u64 = 50;
+const MAX_RETRY_MS: u64 = 2000;
+fn take_retry_delay(retry_ms: &mut u64) -> Duration {
+    let delay = Duration::from_millis(*retry_ms);
+    *retry_ms = retry_ms.saturating_mul(2).min(MAX_RETRY_MS);
+    delay
+}
+pub fn native_width_policy_available(environment: &BTreeMap<String, String>) -> bool {
+    environment
+        .get("NIRI_SOCKET")
+        .filter(|socket| !socket.is_empty())
+        .is_some_and(|socket| {
+            crate::compositor::niri_transport::nacre_capabilities(std::path::Path::new(socket))
+                .proportional_x11_widths
+        })
+}
 /// A bounded internal tap on the existing reducer, not another IPC connection.
 pub struct Source {
     sequence: u64,
@@ -151,6 +167,9 @@ pub fn observe_if_daemon(
 ) -> Result<Option<i32>> {
     use super::client::{self, ConnectError};
     use nacre_protocol::{framing, Id, Message, Mirror, Update};
+    if native_width_policy_available(environment) {
+        return Ok(Some(0));
+    }
     let explicit = std::env::var_os("NACRE_DAEMON_SOCKET").is_some();
     if !explicit
         && environment
@@ -184,7 +203,7 @@ pub fn observe_if_daemon(
         params.validate()?;
         let mut terminate=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
         let mut interrupt=tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
-        let mut retry=50;
+        let mut retry_ms=INITIAL_RETRY_MS;
         loop {
             let result=async {
                 let topic=if client.methods.contains_key("niri.widths.configure") {
@@ -214,7 +233,6 @@ pub fn observe_if_daemon(
                             if let Update::Resync(topic)=mirror.receive(&message) {
                                 framing::write(&mut client.writer,&Message::Resync{topics:vec![topic]}).await?;
                             }
-                            if matches!(message,Message::Snap{..}) {retry=50;}
                         },
                     }
                 }
@@ -222,15 +240,14 @@ pub fn observe_if_daemon(
             match result {
                 Ok(code)=>return Ok(Some(code)),
                 Err(error) if error.downcast_ref::<Failure>().is_some_and(|e|!e.retry)=>return Err(error),
-                Err(_)=>eprintln!("nacre-helper: width observer disconnected; reconnecting"),
+                Err(error)=>eprintln!("nacre-helper: width observer disconnected; reconnecting: {error}"),
             }
             loop {
                 tokio::select! {
                     _=terminate.recv()=>return Ok(Some(0)),
                     _=interrupt.recv()=>return Ok(Some(0)),
-                    _=tokio::time::sleep(Duration::from_millis(retry))=>{},
+                    _=tokio::time::sleep(take_retry_delay(&mut retry_ms))=>{},
                 }
-                retry=(retry*2).min(2000);
                 match client::connect().await {
                     Ok(connected)=>{client=connected;break;},
                     Err(ConnectError::Absent)=>{},
@@ -579,6 +596,54 @@ mod tests {
     use super::*;
     use crate::niri_widths::{Identity, SizeHints, MAX_SIZE, MIN_SIZE, X11};
     use std::collections::BTreeSet;
+    #[test]
+    fn native_capability_probe_selects_only_native_policy() -> Result<()> {
+        use std::{
+            io::{BufRead, BufReader, Write},
+            os::unix::net::UnixListener,
+            thread,
+        };
+        fn probe(enabled: bool) -> Result<Option<i32>> {
+            let directory = tempfile::tempdir()?;
+            let socket = directory.path().join("niri.sock");
+            let listener = UnixListener::bind(&socket)?;
+            let peer = thread::spawn(move || -> std::io::Result<()> {
+                let (stream, _) = listener.accept()?;
+                let mut stream = BufReader::new(stream);
+                let mut request = String::new();
+                stream.read_line(&mut request)?;
+                assert_eq!(
+                    serde_json::from_str::<Value>(&request).unwrap(),
+                    json!("NacreCapabilities")
+                );
+                let mut stream = stream.into_inner();
+                writeln!(stream, "{{\"Ok\":{{\"NacreCapabilities\":{{\"workspace_collections\":false,\"proportional_x11_widths\":{enabled},\"overview_hover\":false}}}}}}")
+            });
+            let environment =
+                BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
+            let selected = observe_if_daemon(50.0, &environment)?;
+            peer.join().map_err(|_| "Capability peer panicked")??;
+            Ok(selected)
+        }
+        assert_eq!(probe(true)?, Some(0));
+        assert_eq!(probe(false)?, None);
+        Ok(())
+    }
+    #[test]
+    fn reconnect_delay_grows_and_stays_capped() {
+        let mut retry = INITIAL_RETRY_MS;
+        assert_eq!(take_retry_delay(&mut retry), Duration::from_millis(50));
+        assert_eq!(take_retry_delay(&mut retry), Duration::from_millis(100));
+        assert_eq!(take_retry_delay(&mut retry), Duration::from_millis(200));
+        for _ in 0..16 {
+            let _ = take_retry_delay(&mut retry);
+        }
+        assert_eq!(retry, MAX_RETRY_MS);
+        assert_eq!(
+            take_retry_delay(&mut retry),
+            Duration::from_millis(MAX_RETRY_MS)
+        );
+    }
     #[derive(Clone)]
     struct Fixture(SizeHints);
     impl X11 for Fixture {
