@@ -872,12 +872,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            desktop_exec_in_roots("brave-origin.desktop", &[apps.clone()]).as_deref(),
+            desktop_exec_in_roots("brave-origin.desktop", std::slice::from_ref(&apps)).as_deref(),
             Some("brave-origin")
         );
         let mimeapps = "[Default Applications]\nx-scheme-handler/http=brave-origin.desktop;";
         let mime_id = mime_default(mimeapps).unwrap();
-        let preferred = desktop_exec_in_roots(&mime_id, &[apps.clone()]).unwrap();
+        let preferred = desktop_exec_in_roots(&mime_id, std::slice::from_ref(&apps)).unwrap();
         assert_eq!(
             select_browser(
                 std::slice::from_ref(&preferred),
@@ -1024,13 +1024,13 @@ mod tests {
         let open = browser_arguments(
             Path::new("/browser/chrome"),
             Path::new("/home/test/nacre/brain-browser"),
-            &open_uri,
+            open_uri,
             false,
         );
         let handoff = browser_arguments(
             Path::new("/browser/chrome"),
             Path::new("/home/test/nacre/brain-browser"),
-            &handoff_uri,
+            handoff_uri,
             true,
         );
         assert!(open.iter().any(|arg| arg == "--class=nacre-brain"));
