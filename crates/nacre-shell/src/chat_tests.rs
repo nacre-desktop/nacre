@@ -756,11 +756,13 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let launcher = Stores::default();
     let first = chat.project(&launcher);
     assert_eq!(first["launcher.can_new"], Value::Bool(false));
+    assert_eq!(first["launcher.can_latest"], Value::Bool(false));
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     let listed = until(&chat, &launcher, "launcher list", |out| {
         matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12)
     }).await;
     assert_eq!(listed["launcher.can_new"], Value::Bool(true));
+    assert_eq!(listed["launcher.can_latest"], Value::Bool(true));
     let Value::List(rows) = &listed["launcher.chats"] else { panic!("launcher rows") };
     assert_eq!(rows[0]["provider"], "Codex");
     assert_eq!(rows[0]["state"], "running");

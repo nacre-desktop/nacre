@@ -533,6 +533,7 @@ impl Chat {
             out.insert("launcher.quick_chat".into(), Value::Bool(stores.get("launcher.quick_chat") == Some(&Value::Bool(true))));
             out.insert("launcher.empty_state".into(), text(if !filtered.is_empty() || !st.message.is_empty() { String::new() } else if st.launcher.is_none() && self.ready(LAUNCHER_LIST).is_some() { tr("bead.panel.launcher-loading", &[]) } else if !query.is_empty() { tr("bead.panel.launcher-empty-search", &[]) } else { tr("bead.panel.launcher-empty-history", &[]) }));
             let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
+            out.insert("launcher.can_latest".into(), Value::Bool(!action_pending && st.launcher.is_some() && !st.pending.iter().any(|p| p.call == Call::LauncherList) && self.ready("ai.launcher.latest").is_some()));
             out.insert("launcher.can_new".into(), Value::Bool(!action_pending && !selected_project.is_empty() && !selected_provider.is_empty() && self.ready("ai.launcher.new").is_some()));
             out.insert("launcher.can_open".into(), Value::Bool(!action_pending && self.ready("ai.launcher.open").is_some() && !filtered.is_empty()));
             let scale = self.transcript.borrow().style().scale.clone();

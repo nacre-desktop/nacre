@@ -107,7 +107,7 @@ else
     for _,item in projects do if item.id==project then selected_project=item.label end end
     add(ui.Row{id="launcher-actions",position="absolute",left=E,top=LTOP,width=INNER,height=BTN,gap=T.spacing.xs,
         button("new-chat",nil,nil,nil,BTN,ui.tr("bead.panel.chat-new"),"add_comment",get("launcher.can_new") and ui.action("chat.do","launcher:new") or nil,true,BODY),
-        button("resume",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-resume"),"history",ui.action("chat.do","launcher:latest"),false,BODY)})
+        button("resume",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-resume"),"history",get("launcher.can_latest") and ui.action("chat.do","launcher:latest") or nil,false,BODY)})
     add(ui.Row{id="provider",position="absolute",left=E,top=LT,width=INNER,height=BTN,gap=T.spacing.xs,
         button("codex",nil,nil,nil,BTN,ui.tr("bead.panel.chat-codex"),"",ui.action("chat.do","launcher:provider:codex"),provider=="codex",CAPTION),
         button("claude",nil,nil,nil,BTN,ui.tr("bead.panel.chat-claude"),"",ui.action("chat.do","launcher:provider:claude"),provider=="claude",CAPTION)})

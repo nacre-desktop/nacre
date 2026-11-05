@@ -684,9 +684,8 @@ async fn open_launcher_record(hub: Shared, item: Value, key: String, unique_titl
     let snapshot = hub.borrow().snapshot("compositor");
     let existing = snapshot.as_ref().and_then(|snapshot| existing_chat_window(snapshot, &item, &key, unique_title));
     if let Some(window) = existing {
-        if super::shell_actions::compositor(hub.clone(), "window.focus", json!({"window":window})).await.is_ok() {
-            return Ok(json!({"ok":true,"focused":true}));
-        }
+        super::shell_actions::compositor(hub.clone(), "window.focus", json!({"window":window})).await?;
+        return Ok(json!({"ok":true,"focused":true}));
     }
     let opened = tokio::task::spawn_blocking(move || crate::ai_dashboard::launcher_open_record(&item, &key));
     match tokio::time::timeout(Duration::from_secs(5), opened).await {
@@ -753,7 +752,6 @@ fn existing_chat_window(snapshot: &Value, item: &Value, key: &str, unique_title:
         let app_id = window["appId"].as_str().unwrap_or("");
         app_id == "nacre-ai-task" || app_id.starts_with("nacre-ai-chat-")
     }).take(64) {
-        let app_id = window["appId"].as_str().unwrap_or("");
         if paths.is_none() {
             paths = Some(crate::paths::Paths::environment().ok()?);
         }

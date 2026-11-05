@@ -11,16 +11,16 @@ fn runtime(chat: crate::chat::Chat) -> Runtime {
     runtime_section(chat, "chat")
 }
 fn runtime_section(chat: crate::chat::Chat, section: &str) -> Runtime {
+    let chat = chat.with_memory(std::sync::Arc::new(std::sync::Mutex::new(BTreeMap::from([(
+        "chat.section".into(),
+        bead::core::Value::Text(section.into()),
+    )]))));
     let palette = root().join("palette.json");
     let colors = bead::render::Palette::read(&palette).unwrap();
     let cold = crate::sound::fallback(colors.get("surface").unwrap());
     let session = bead::ui::Session::new(root(), "chat/main.luau".into(), palette, colors, cold);
     let mut runtime = Runtime::new(session).with_chat(chat).unwrap();
     runtime.state_file = None;
-    runtime.session.restore_on_start(BTreeMap::from([(
-        "chat.section".into(),
-        bead::core::Value::Text(section.into()),
-    )]));
     runtime.services(Box::new(|_| {}));
     runtime
         .stage(UiEvent::Reload)
@@ -51,6 +51,7 @@ async fn launcher_search_arrows_and_enter_open_service_chat_without_starting_inl
     assert_eq!(runtime.session.stores.get("view.detached"), Some(&bead::core::Value::Bool(true)));
     assert!(matches!(runtime.session.stores.get("chat.height"), Some(bead::core::Value::Number(height)) if *height <= 268.));
     assert_eq!(runtime.session.stores.get("bead.focused"), Some(&bead::core::Value::Text("chat.search".into())));
+    runtime.viewport(534, 600);
     for _ in 0..300 {
         step(&mut runtime, UiEvent::Model(BTreeMap::new()));
         if matches!(runtime.session.stores.get("launcher.chats"), Some(bead::core::Value::List(rows)) if rows.len() == 12) { break; }
