@@ -222,8 +222,6 @@ async function load(force = false) {
       summaryOnly = false;
       applyGraph(payload);
     }
-    if (payload.connections?.state === "error")
-      throw Error(payload.connections.error || tr("brain.ui.error.connections", "Connections could not be loaded."));
     if (payload.connections?.state === "ready" && summaryOnly) {
       payload = await requestJson("/api/brain");
       applyGraph(payload);

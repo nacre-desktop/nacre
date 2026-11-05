@@ -6,17 +6,18 @@ full discovery graph before replying, so a cold index could hold the browser at
 “Reading your knowledge” for the discovery build. The Phase 1 audit measured
 about 145 s single-core with vectors and 21 min lexical-only at 1.9k notes.
 Those timings identify the likely mechanism; the laptop failure itself was not
-reproduced. Authentication regressions also pass for an older session plus
+reproduced. The earlier N0132 authentication regressions passed for an older session plus
 legacy bootstrap file and an expired session renewed by the launcher. Headless
-Chromium with the real launcher and mocked compositor passes cold start, server
+Chromium with the real launcher and mocked compositor passed cold start, server
 reuse, session renewal and server restart with an existing browser; each clears
 the loading screen and loads API data. API access requires the cookie and bearer
 together plus same-origin Fetch Metadata; the browser marker is a digest, not a
 credential. Separate credential probes returning 403 do not establish a session
-mismatch. Follow-up validation passes 90 Brain library tests, the CLI test and
+mismatch. N0132 follow-up validation passed 90 Brain library tests, the CLI test and
 locked helper/shell checks. U12 adds bounded loading/error/retry behavior and
 moves discovery behind the fast summary response. This investigation did not
-access live auth or reproduce the laptop failure.
+access live auth or reproduce the laptop failure. N0134 runtime validation is
+pending; these historical results do not validate the new loading/cache paths.
 
 Initial N0132 implementation: Brain bootstrap, handoff and app use the API's
 loopback HTTP origin; native file handoff generation is removed and browser focus

@@ -86,7 +86,6 @@ window.NacreEnglish = {
   "brain.ui.literal.change-grouping": "Change grouping",
   "brain.ui.literal.could-not-open-this-action": "Could not open this action",
   "brain.ui.literal.knowledge-connections": "Knowledge connections",
-  "brain.ui.literal.local-brain-unavailable": "Local brain unavailable",
   "brain.ui.literal.note-unavailable": "Note unavailable",
   "brain.ui.literal.open-original-in-obsidian": "Open original in Obsidian",
   "brain.ui.literal.recent-knowledge": "Recent knowledge",

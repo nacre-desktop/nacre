@@ -596,7 +596,8 @@ fn schedule_graph_build(retry: bool) {
     let revision = vault().and_then(|root| vault_metadata_fingerprint(&root)).ok();
     *GRAPH_BUILD_REVISION.lock().unwrap_or_else(|e| e.into_inner()) = revision;
     std::thread::spawn(|| {
-        let result = graph();
+        let result = std::panic::catch_unwind(graph)
+            .unwrap_or_else(|_| Err("Brain discovery worker failed".into()));
         match result {
             Ok(_) => {
                 *GRAPH_ERROR.lock().unwrap_or_else(|e| e.into_inner()) = None;
@@ -706,7 +707,7 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         nodes.push(n)
     }
     report["embedding"] = json!(health);
-    let mut value = json!({"nodes":nodes,"links":links,"noteCount":input.as_array().unwrap().len(),"activityModel":ACTIVITY_MODEL,"discovery":report,"connections":{"state":"ready"}});
+    let mut value = json!({"nodes":nodes,"links":links,"noteCount":input.as_array().unwrap().len(),"activityModel":ACTIVITY_MODEL,"discovery":report});
     decorate(&mut value)?;
     write_json(&persisted, &json!({"schema":GRAPH_SCHEMA,"fingerprint":fingerprint,"graph":value}))?;
     *GRAPH.lock().map_err(|_| "Graph lock failed")? = Some((fingerprint.clone(), value.clone()));
@@ -1093,6 +1094,7 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
             if GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
                 let mut value = GRAPH.lock().map_err(|_| "Graph lock failed")?.as_ref().map(|(_, v)| v.clone()).ok_or("Graph cache missing")?;
                 decorate(&mut value)?;
+                value["connections"] = json!({"state":"ready"});
                 return json_response(value);
             }
             return json_response(summary()?);

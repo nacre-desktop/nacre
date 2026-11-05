@@ -940,7 +940,6 @@
   "brain.ui.literal.change-grouping": "Brain browser visible label/error; not a user note or action ID.",
   "brain.ui.literal.could-not-open-this-action": "Brain browser visible label/error; not a user note or action ID.",
   "brain.ui.literal.knowledge-connections": "Brain browser visible label/error; not a user note or action ID.",
-  "brain.ui.literal.local-brain-unavailable": "Brain browser visible label/error; not a user note or action ID.",
   "brain.ui.literal.note-unavailable": "Brain browser visible label/error; not a user note or action ID.",
   "brain.ui.literal.open-original-in-obsidian": "Brain browser visible label/error; not a user note or action ID.",
   "brain.ui.literal.recent-knowledge": "Brain browser visible label/error; not a user note or action ID.",

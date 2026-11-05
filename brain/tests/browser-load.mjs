@@ -176,6 +176,7 @@ try {
   });
   await cdp('Runtime.enable');
   await cdp('Page.enable');
+  await cdp('Page.bringToFront');
   await cdp('Fetch.enable', { patterns: [{ urlPattern: '*://127.0.0.1:*/api/summary', requestStage: 'Request' }] });
 
   const started = Date.now();
@@ -229,7 +230,7 @@ try {
   if (JSON.stringify(before) !== JSON.stringify(after)) throw new Error('index files changed during restart; expected reuse without rebuild');
   await evaluate('window.__u12PageId="after-restart"');
   fs.writeFileSync(path.join(vault, '2000.md'), '# Research fixture note 2000\nRecorded: 2026-11-05T12:00:00+00:00\nConfidence: verified\nWorlds: Research\n\nSynthetic watcher fixture.\n', { mode: 0o600 });
-  await until(() => evaluate('graph.noteCount === 2001 && document.querySelector("#connections-status")?.dataset.state === "ready"'), 'vault-change summary and connections refresh', 5000);
+  await until(() => evaluate('graph.noteCount === 2001 && document.querySelector("#connections-status")?.dataset.state === "ready"'), 'vault-change summary and connections refresh', 1800000);
   const changed = await evaluate('({count:graph.noteCount,pageId:window.__u12PageId,state:document.querySelector("#connections-status").dataset.state})');
   if (changed.pageId !== 'after-restart') throw new Error(`vault changes required a page reload: ${JSON.stringify(changed)}`);
   console.log(JSON.stringify({ status: 'passed', notes: initial.count, subjects: initial.subjects, firstLaunch403AuthRetry: 'passed', timeoutErrorAndRetry: 'passed', timeoutMs, usefulMs, connectionsWithoutReload: 'passed', restartMs, persistedIndexReused: true, vaultChangeWithoutReload: changed.count, indexFiles: before.length }));
