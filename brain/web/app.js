@@ -225,7 +225,8 @@ async function load(force = false) {
     applyGraph(payload, force);
     while (payload.connections?.state === "building") {
       setConnectionState("building");
-      await new Promise((resolve) => setTimeout(resolve, 1200));
+      // Recheck promptly so a reused index appears without a long startup pause.
+      await new Promise((resolve) => setTimeout(resolve, 250));
       payload = await requestJson("/api/brain");
       summaryOnly = false;
       applyGraph(payload);

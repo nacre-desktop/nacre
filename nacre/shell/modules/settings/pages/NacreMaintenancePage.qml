@@ -13,7 +13,6 @@ NacreSettingsPage {
             "nacre-brain.service": "Brain",
             "nacre-session-watch.service": "Session monitor",
             "hypridle.service": "Sleep locking",
-            "nacre-brain-sync.timer": "Knowledge sync",
             "xdg-desktop-portal.service": "Desktop portal",
             "xdg-desktop-portal-hyprland.service": "Screen sharing",
             "xdg-desktop-portal-gnome.service": "Screen sharing",
@@ -88,15 +87,6 @@ NacreSettingsPage {
         }
         NacreText {
             width: parent.width
-            text: NacreI18n.tr("ui.maintenance-page.text.knowledge-sync-value0", "Knowledge sync: {value0}", {
-                value0: (root.state.brainSync?.message || root.state.brainSync?.state || NacreI18n.tr("ui.maintenance-page.text.not-recorded", "Not recorded"))
-            })
-            font.pointSize: NacreTokens.textSize.caption
-            color: NacreTokens.mutedInk
-            wrapMode: Text.Wrap
-        }
-        NacreText {
-            width: parent.width
             text: root.state.performance?.cpuCorePercent !== undefined ? NacreI18n.tr("ui.maintenance-page.text.last-sample-value0-of-one-core-value1-mib-value2", "Last sample: {value0}% of one core · {value1} MiB ({value2})", {
                 value0: root.state.performance.cpuCorePercent,
                 value1: root.state.performance.memoryMiB,
@@ -138,11 +128,6 @@ NacreSettingsPage {
                 text: NacreI18n.tr("ui.maintenance-page.text.check-session", "Check session")
                 enabled: !Maintenance.busy
                 onClicked: root.act("session")
-            }
-            ActionButton {
-                text: NacreI18n.tr("ui.maintenance-page.text.retry-knowledge-sync", "Retry knowledge sync")
-                enabled: !Maintenance.busy
-                onClicked: root.act("sync-now")
             }
             ActionButton {
                 text: NacreI18n.tr("ui.maintenance-page.text.repair-failed-portals", "Repair failed portals")

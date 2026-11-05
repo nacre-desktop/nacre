@@ -92,7 +92,6 @@ pub fn run(args: &[String]) -> Result<i32> {
         "profile",
         "restart",
         "repair-portals",
-        "sync-now",
         "rollback",
         "session",
     ];
@@ -208,19 +207,6 @@ pub fn run(args: &[String]) -> Result<i32> {
                         )?;
                     }
                 }
-            }
-            "sync-now" => {
-                let _ = command(
-                    &[
-                        paths
-                            .home
-                            .join(".local/bin/nacre-brain-sync")
-                            .to_string_lossy()
-                            .into_owned(),
-                        "--force".into(),
-                    ],
-                    Duration::from_secs(75),
-                );
             }
             "rollback" => {
                 command(

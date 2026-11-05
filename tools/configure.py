@@ -66,10 +66,10 @@ def files(root=ROOT):
         "nacre-welcome-state",
         "nacre-brain",
         "nacre-brain-maintain",
-        "nacre-brain-sync",
         "nacre-brain.py.rollback",
         "nacre-brain-maintain.py.rollback",
         "nacre-brain-sync.py.rollback",
+        "nacre-brain-queue.py",
         "xdg-open",
     ):
         result[Path(".local/bin") / name] = root / "bin" / name
@@ -100,13 +100,9 @@ def files(root=ROOT):
     result[Path(".local/share/applications/nacre-brain.desktop")] = (
         root / "nacre/desktop/nacre-brain.desktop"
     )
-    for kind in ("sync", "check"):
-        for suffix in ("service", "timer"):
-            name = f"nacre-brain-{kind}.{suffix}"
-            result[Path(".config/systemd/user") / name] = root / "ai/systemd" / name
-    result[Path(".config/systemd/user/nacre-brain-sync.service")] = (
-        root / "ai/systemd/nacre-brain-sync.service"
-    )
+    for suffix in ("service", "timer"):
+        name = f"nacre-brain-check.{suffix}"
+        result[Path(".config/systemd/user") / name] = root / "ai/systemd" / name
     result[Path(".config/systemd/user/nacre-power-key.service")] = (
         root / "nacre/shell-tools/nacre-power-key.service"
     )

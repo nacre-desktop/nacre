@@ -3,6 +3,12 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from contextlib import redirect_stdout
+import io
+import json
+import os
+import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -139,6 +145,56 @@ class SnapshotEnumerationTests(unittest.TestCase):
 
 
 class HealthTests(unittest.TestCase):
+    def test_python_note_command_locks_writes_and_enqueues_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "vault"
+            with (
+                patch.dict(os.environ, {"NACRE_BRAIN": str(root)}),
+                patch.object(
+                    sys,
+                    "argv",
+                    [
+                        "nacre-brain",
+                        "note",
+                        "--title",
+                        "Fixture note",
+                        "--source",
+                        "test",
+                    ],
+                ),
+                patch.object(sys, "stdin", io.StringIO("Safe fixture body\n")),
+                redirect_stdout(io.StringIO()),
+            ):
+                sync.brain.main()
+            queue = json.loads((root / ".brain-state/git-queue.json").read_text())
+            self.assertEqual(len(queue["entries"]), 1)
+            relative = queue["entries"][0]["path"]
+            self.assertTrue(relative.startswith("inbox/"))
+            self.assertTrue((root / relative).is_file())
+
+    def test_atomic_note_write_enqueues_path_without_note_content(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            note = root / "inbox/note.md"
+            note.parent.mkdir()
+            with patch.object(sync.brain, "vault_path", return_value=root):
+                sync.atomic(note, "# Private fixture text\n")
+            queue = (root / ".brain-state/git-queue.json").read_text()
+            self.assertIn('"path": "inbox/note.md"', queue)
+            self.assertIn('"agent": "python-compat"', queue)
+            self.assertNotIn("Private fixture text", queue)
+
+    def test_malformed_queue_is_not_replaced(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            state = root / ".brain-state"
+            state.mkdir()
+            queue = state / "git-queue.json"
+            queue.write_text("malformed")
+            with self.assertRaisesRegex(ValueError, "Invalid Brain git queue"):
+                sync._queue.enqueue(root, root / "inbox/note.md")
+            self.assertEqual(queue.read_text(), "malformed")
+
     def test_network_failure_is_distinct_from_authentication_and_protocol(self):
         self.assertEqual(sync.exchange_error(255, "Connection timed out")[0], "offline")
         self.assertEqual(

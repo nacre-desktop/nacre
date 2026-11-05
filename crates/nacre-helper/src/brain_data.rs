@@ -128,11 +128,15 @@ pub fn root_path() -> Result<PathBuf> {
 /// Create a missing wiki page through the vault's symlink checks, safety scan and backups.
 pub fn create_page(name: &str, body: &str) -> Result<bool> {
     let root = initialize()?;
-    let _guard = VaultLock::acquire(&root)?;
+    let _guard = crate::brain_git::acquire_vault_lock(&root)?;
+    create_page_locked(&root, name, body)
+}
+
+pub(crate) fn create_page_locked(root: &Path, name: &str, body: &str) -> Result<bool> {
     if !name.starts_with("wiki/") {
         return Err(error("Only wiki pages may be created"));
     }
-    let path = note_path(&root, name)?;
+    let path = note_path(root, name)?;
     if path.exists() {
         return Ok(false);
     }
@@ -140,9 +144,10 @@ pub fn create_page(name: &str, body: &str) -> Result<bool> {
     if body.trim().is_empty() {
         return Err(error("Empty page"));
     }
-    backup(&root, None)?;
+    backup(root, None)?;
     atomic(&path, body)?;
-    backup(&root, None)?;
+    crate::brain_git::enqueue_locked(root, &path, &agent_label())?;
+    backup(root, None)?;
     Ok(true)
 }
 fn safe_note(s: &str) -> Result<()> {
@@ -273,33 +278,14 @@ fn atomic(path: &Path, text: &str) -> Result<()> {
     f.persist(path)?;
     Ok(())
 }
-struct VaultLock(File);
-impl VaultLock {
-    fn acquire(root: &Path) -> Result<Self> {
-        let state = root.join(".brain-state");
-        private_dir(&state)?;
-        let path = state.join("lock");
-        if fs::symlink_metadata(&path).is_ok_and(|m| m.file_type().is_symlink()) {
-            return Err(error("Symlinked vault paths are not supported"));
-        }
-        let f = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .mode(0o600)
-            .custom_flags(nix::libc::O_NOFOLLOW)
-            .open(&path)?;
-        if !f.metadata()?.is_file() || f.metadata()?.nlink() != 1 {
-            return Err(error("Linked or non-regular vault locks are not supported"));
-        }
-        f.set_permissions(fs::Permissions::from_mode(0o600))?;
-        rustix::fs::flock(&f, rustix::fs::FlockOperation::LockExclusive)?;
-        Ok(Self(f))
+fn agent_label() -> String {
+    if let Some(session) = env::var_os("CLAUDE_SESSION_ID") {
+        return format!("claude: {}", session.to_string_lossy());
     }
-}
-impl Drop for VaultLock {
-    fn drop(&mut self) {
-        let _ = rustix::fs::flock(&self.0, rustix::fs::FlockOperation::Unlock);
+    if let Some(model) = env::var_os("CODEX_MODEL") {
+        return format!("codex: {}", model.to_string_lossy());
     }
+    env::var("NACRE_AGENT").unwrap_or_else(|_| "nacre-helper".to_owned())
 }
 fn backup(root: &Path, provided: Option<&BTreeMap<String, String>>) -> Result<PathBuf> {
     let ns = provided.cloned().map(Ok).unwrap_or_else(|| notes(root))?;
@@ -487,6 +473,14 @@ fn brain(args: &[String]) -> Result<i32> {
             let _root = initialize()?;
             brain_note(&args[1..])
         }
+        "git" => brain_git_command(&args[1..]),
+        "guard" => {
+            if args.len() != 2 || args[1] != "--staged" {
+                return Err(error("usage: nacre-brain guard --staged"));
+            }
+            crate::brain_git::guard_staged(&configured_root_path()?)?;
+            Ok(0)
+        }
         "store-credential" => {
             let _root = initialize()?;
             store_credential(&args[1..])
@@ -496,6 +490,35 @@ fn brain(args: &[String]) -> Result<i32> {
             run_credential(&args[1..])
         }
         _ => Err(error("invalid choice")),
+    }
+}
+
+fn brain_git_command(args: &[String]) -> Result<i32> {
+    match args.first().map(String::as_str) {
+        Some("init") => {
+            let root = initialize()?;
+            let mut remote = None;
+            let mut i = 1;
+            while i < args.len() {
+                if args[i] == "--remote" && i + 1 < args.len() {
+                    remote = Some(args[i + 1].as_str());
+                    i += 2;
+                } else {
+                    return Err(error("usage: nacre-brain git init [--remote URL]"));
+                }
+            }
+            crate::brain_git::init(&root, remote)?;
+            println!("{}", root.display());
+            Ok(0)
+        }
+        Some("status") if args.get(1).is_some_and(|arg| arg == "--json") && args.len() == 2 => {
+            let root = configured_root_path()?;
+            println!("{}", crate::brain_git::status_json(&root)?);
+            Ok(0)
+        }
+        _ => Err(error(
+            "usage: nacre-brain git {init [--remote URL],status --json}",
+        )),
     }
 }
 fn brain_note(args: &[String]) -> Result<i32> {
@@ -559,6 +582,19 @@ pub fn write_note(
     confidence: &str,
     body: &str,
 ) -> Result<PathBuf> {
+    let root = initialize()?;
+    let _guard = crate::brain_git::acquire_vault_lock(&root)?;
+    write_note_locked(&root, kind, title, source, confidence, body)
+}
+
+pub(crate) fn write_note_locked(
+    root: &Path,
+    kind: &str,
+    title: &str,
+    source: &str,
+    confidence: &str,
+    body: &str,
+) -> Result<PathBuf> {
     if !KINDS.contains(&kind) {
         return Err(error("invalid kind"));
     }
@@ -569,7 +605,6 @@ pub fn write_note(
     if body.trim().is_empty() {
         return Err(error("Note is empty"));
     }
-    let root = initialize()?;
     let slug = title
         .to_lowercase()
         .chars()
@@ -610,6 +645,7 @@ pub fn write_note(
     fs::write(&name, &text)?;
     fs::hard_link(&name, &p)?;
     fs::remove_file(name)?;
+    crate::brain_git::enqueue_locked(root, &p, &agent_label())?;
     Ok(p)
 }
 struct PromptTerminal {
@@ -897,8 +933,11 @@ fn restore(archive: &Path, destination: &Path) -> Result<()> {
         safe_note(v)?
     }
     private_dir(destination)?;
+    let _guard = crate::brain_git::acquire_vault_lock(destination)?;
     for (k, v) in map {
-        atomic(&note_path(destination, &k)?, &v)?
+        let path = note_path(destination, &k)?;
+        atomic(&path, &v)?;
+        crate::brain_git::enqueue_locked(destination, &path, &agent_label())?;
     }
     Ok(())
 }
@@ -1054,7 +1093,7 @@ fn sync(args: &[String]) -> Result<i32> {
     }
     if exchange {
         let root = initialize()?;
-        let _guard = VaultLock::acquire(&root)?;
+        let _guard = crate::brain_git::acquire_vault_lock(&root)?;
         let mut input = String::new();
         std::io::stdin().read_to_string(&mut input)?;
         let req: Value = crate::json::parse_value(&input)?;
@@ -1088,7 +1127,7 @@ fn sync(args: &[String]) -> Result<i32> {
         return Ok(0);
     }
     let root = initialize()?;
-    let _guard = VaultLock::acquire(&root)?;
+    let _guard = crate::brain_git::acquire_vault_lock(&root)?;
     let conf = read_json_file(&config)?;
     let host = conf["host"].as_str().ok_or("missing host")?;
     if host.is_empty()
@@ -1245,7 +1284,7 @@ fn maintain(args: &[String]) -> Result<i32> {
         return Ok(0);
     }
     let root = initialize()?;
-    let _guard = VaultLock::acquire(&root)?;
+    let _guard = crate::brain_git::acquire_vault_lock(&root)?;
     match action {
         "backup" => {
             println!("{}", backup(&root, None)?.display());
@@ -1267,7 +1306,8 @@ fn maintain(args: &[String]) -> Result<i32> {
                         }
                         .to_owned()
                     };
-                    atomic(&p, &body)?
+                    atomic(&p, &body)?;
+                    crate::brain_git::enqueue_locked(&root, &p, &agent_label())?;
                 }
             }
             backup(&root, None)?;
@@ -1310,6 +1350,7 @@ fn maintain(args: &[String]) -> Result<i32> {
             }
             backup(&root, None)?;
             atomic(&p, &body)?;
+            crate::brain_git::enqueue_locked(&root, &p, &agent_label())?;
             backup(&root, None)?;
             println!("{}", p.display());
             Ok(0)
@@ -1581,12 +1622,12 @@ mod tests {
         fs::set_permissions(&outside, fs::Permissions::from_mode(0o644)).unwrap();
         let target = root.join(".brain-state/lock");
         fs::hard_link(&outside, &target).unwrap();
-        assert!(VaultLock::acquire(&root).is_err());
+        assert!(crate::brain_git::acquire_vault_lock(&root).is_err());
         assert_eq!(fs::metadata(&outside).unwrap().mode() & 0o777, 0o644);
         assert!(atomic(&target, "changed").is_err());
         fs::remove_file(&target).unwrap();
         std::os::unix::fs::symlink(&outside, &target).unwrap();
-        assert!(VaultLock::acquire(&root).is_err());
+        assert!(crate::brain_git::acquire_vault_lock(&root).is_err());
         assert!(atomic(&target, "changed").is_err());
         assert_eq!(fs::read_to_string(outside).unwrap(), "untouched");
     }

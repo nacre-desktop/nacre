@@ -3,7 +3,6 @@
 
 import argparse
 import datetime as dt
-import fcntl
 import hashlib
 import importlib.machinery
 import importlib.util
@@ -14,6 +13,14 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+_queue_path = Path(__file__).resolve().with_name("nacre-brain-queue.py")
+_queue_loader = importlib.machinery.SourceFileLoader(
+    "nacre_brain_queue", str(_queue_path)
+)
+_queue_spec = importlib.util.spec_from_loader(_queue_loader.name, _queue_loader)
+_queue = importlib.util.module_from_spec(_queue_spec)
+_queue_loader.exec_module(_queue)
 
 
 def slug(value):
@@ -68,8 +75,7 @@ def remember(args, body):
     ).hexdigest()
     state = root / ".brain-state"
     state.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (state / "capture.lock").open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with _queue.capture_claim(root, signature):
         record = state / ("capture-" + signature + ".json")
         if record.exists():
             note = Path(_state.read_json_file(record)["path"])

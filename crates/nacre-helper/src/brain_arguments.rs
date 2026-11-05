@@ -62,7 +62,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
 
     if index == 0 {
         print!(
-            "usage: nacre-brain [-h]\n                    {{init,path,search,note,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,note,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
+            "usage: nacre-brain [-h]\n                    {{init,path,search,note,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,note,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
         );
     } else {
         match args.first().map(String::as_str) {
@@ -140,6 +140,21 @@ fn brain_command() -> Command {
                 .trailing_var_arg(true)
                 .allow_hyphen_values(true),
         );
+    let git = Command::new("git")
+        .arg(help.clone())
+        .subcommand(
+            Command::new("init")
+                .arg(help.clone())
+                .arg(Arg::new("remote").long("remote").num_args(1)),
+        )
+        .subcommand(
+            Command::new("status")
+                .arg(help.clone())
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue)),
+        );
+    let guard = Command::new("guard")
+        .arg(help.clone())
+        .arg(Arg::new("staged").long("staged").action(ArgAction::SetTrue));
     Command::new("nacre-brain")
         .disable_help_flag(true)
         .arg(help)
@@ -170,6 +185,8 @@ fn brain_command() -> Command {
                 .arg(Arg::new("query").required(true).num_args(1..)),
         )
         .subcommand(note)
+        .subcommand(git)
+        .subcommand(guard)
         .subcommand(store)
         .subcommand(run)
 }
@@ -268,6 +285,23 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
                 }
             }
         }
+        "git" => {
+            if let Some((action, options)) = values.subcommand() {
+                result.push(action.to_owned());
+                if action == "init" {
+                    if let Some(remote) = options.get_one::<String>("remote") {
+                        result.extend(["--remote".to_owned(), remote.clone()]);
+                    }
+                } else if options.get_flag("json") {
+                    result.push("--json".to_owned());
+                }
+            }
+        }
+        "guard" => {
+            if values.get_flag("staged") {
+                result.push("--staged".to_owned());
+            }
+        }
         "store-credential" => {
             if let Some(name) = values.get_one::<String>("name") {
                 result.push(name.clone());
@@ -360,5 +394,43 @@ pub(super) fn parse(tool: &str, args: &[String]) -> Result<Parsed> {
             error.print()?;
             Ok(Parsed::Exit(code))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{parse, Parsed};
+
+    fn parsed(args: &[&str]) -> Vec<String> {
+        match parse(
+            "nacre-brain",
+            &args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>(),
+        )
+        .unwrap()
+        {
+            Parsed::Arguments(arguments) => arguments,
+            Parsed::Exit(code) => panic!("unexpected parser exit: {code}"),
+        }
+    }
+
+    fn owned(args: &[&str]) -> Vec<String> {
+        args.iter().map(|arg| (*arg).to_owned()).collect()
+    }
+
+    #[test]
+    fn git_and_guard_arguments_preserve_the_cli_contract() {
+        assert_eq!(
+            parsed(&["git", "init", "--remote", "file:///tmp/brain.git"]),
+            owned(&["git", "init", "--remote", "file:///tmp/brain.git"])
+        );
+        assert_eq!(
+            parsed(&["git", "status", "--json"]),
+            owned(&["git", "status", "--json"])
+        );
+        assert_eq!(
+            parsed(&["guard", "--staged"]),
+            owned(&["guard", "--staged"])
+        );
+        assert_eq!(parsed(&["guard"]), owned(&["guard"]));
     }
 }

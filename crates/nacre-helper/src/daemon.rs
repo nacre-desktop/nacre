@@ -91,6 +91,21 @@ async fn serve(
         counter.safe,
         audio_available,
     )?;
+    let brain_git_task = tokio::task::spawn_local(async move {
+        let mut tick = tokio::time::interval(Duration::from_secs(30));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        loop {
+            tick.tick().await;
+            let Ok(root) = crate::brain_data::configured_root_path() else {
+                continue;
+            };
+            match tokio::task::spawn_blocking(move || crate::brain_git::flush(&root)).await {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => tracing::warn!(error=%error, "Brain git commit or push failed"),
+                Err(_) => tracing::warn!("Brain git commit task failed"),
+            }
+        }
+    });
     helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
@@ -615,6 +630,8 @@ async fn serve(
         }
     }
     drop(fast_server);
+    brain_git_task.abort();
+    let _ = brain_git_task.await;
     drop(audio_observer);
     drop(audio_step_worker);
     fast_calls.abort_all();

@@ -583,6 +583,13 @@ class WorkflowTests(IsolatedWorkflowTest):
             )
             self.assertEqual(registry.read_text(), '{"projects": []}')
             self.assertTrue((home / ".agents/skills/nacre-brain").is_symlink())
+            self.assertFalse((home / ".local/bin/nacre-brain-sync").exists())
+            self.assertFalse(
+                (home / ".config/systemd/user/nacre-brain-sync.timer").exists()
+            )
+            self.assertFalse(
+                (home / ".config/systemd/user/nacre-brain-sync.service").exists()
+            )
 
     def test_full_install_defaults_to_plan_and_apply_mutates_temp_home(self):
         with tempfile.TemporaryDirectory() as tmp:

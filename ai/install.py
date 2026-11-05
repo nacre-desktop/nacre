@@ -211,7 +211,7 @@ def main():
         [
             "nacre-brain",
             "nacre-brain-maintain",
-            "nacre-brain-sync",
+            "nacre-brain-queue.py",
             "nacre-brain.py.rollback",
             "nacre-brain-maintain.py.rollback",
             "nacre-brain-sync.py.rollback",
@@ -235,8 +235,6 @@ def main():
         binaries.append("obsidian")
     if not args.remote:
         for name in (
-            "nacre-brain-sync.service",
-            "nacre-brain-sync.timer",
             "nacre-brain-check.service",
             "nacre-brain-check.timer",
         ):

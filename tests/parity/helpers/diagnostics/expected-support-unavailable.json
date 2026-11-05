@@ -339,7 +339,6 @@
           "nacre-brain.service",
           "nacre-session-watch.service",
           "hypridle.service",
-          "nacre-brain-sync.timer",
           "xdg-desktop-portal.service",
           "xdg-desktop-portal-hyprland.service",
           "xdg-document-portal.service",
