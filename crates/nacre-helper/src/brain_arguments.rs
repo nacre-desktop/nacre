@@ -62,7 +62,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
 
     if index == 0 {
         print!(
-            "usage: nacre-brain [-h]\n                    {{init,path,search,note,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,note,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
+            "usage: nacre-brain [-h]\n                    {{init,path,search,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
         );
     } else {
         match args.first().map(String::as_str) {
@@ -74,6 +74,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
             }
             Some("search") => print!(
                 "usage: nacre-brain search [-h] query [query ...]\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n"
+            ),
+            Some("migrate") => print!(
+                "usage: nacre-brain migrate --step {{meta,inbox,archive,digests,wiki,links,index,all}} (--dry-run | --apply) [--report PATH] [--archive-older-than-days N]\n\nPlan or apply one verified, revertable Brain migration step. Archive age defaults to 21 days.\n"
             ),
             Some("note") => print!(
                 "usage: nacre-brain note [-h] [--kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}]\n                       --title TITLE --source SOURCE\n                       [--confidence {{verified,reported,unverified}}]\n                       [--world WORLD] [--area AREA] [--topic TOPIC]\n\noptions:\n  -h, --help            show this help message and exit\n  --kind {{inbox,personal,projects,infrastructure,devices,runbooks,decisions,credentials,checkpoints}}\n  --title TITLE\n  --source SOURCE\n  --confidence {{verified,reported,unverified}}\n  --world WORLD\n  --area AREA\n  --topic TOPIC\n"
@@ -189,6 +192,37 @@ fn brain_command() -> Command {
                 )
                 .arg(Arg::new("query").required(true).num_args(1..)),
         )
+        .subcommand(
+            Command::new("migrate")
+                .arg(
+                    Arg::new("help")
+                        .short('h')
+                        .long("help")
+                        .action(ArgAction::Help),
+                )
+                .arg(Arg::new("step").long("step").required(true).value_parser([
+                    "meta", "inbox", "archive", "digests", "wiki", "links", "index", "all",
+                ]))
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .action(ArgAction::SetTrue)
+                        .conflicts_with("apply"),
+                )
+                .arg(Arg::new("apply").long("apply").action(ArgAction::SetTrue))
+                .group(
+                    clap::ArgGroup::new("mode")
+                        .args(["dry-run", "apply"])
+                        .required(true),
+                )
+                .arg(Arg::new("report").long("report"))
+                .arg(
+                    Arg::new("archive-older-than-days")
+                        .long("archive-older-than-days")
+                        .value_parser(clap::value_parser!(u32))
+                        .default_value("21"),
+                ),
+        )
         .subcommand(note)
         .subcommand(git)
         .subcommand(guard)
@@ -294,6 +328,24 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
                     }
                 }
             }
+        }
+        "migrate" => {
+            for key in ["step", "report"] {
+                if let Some(value) = values.get_one::<String>(key) {
+                    result.extend([format!("--{key}"), value.clone()]);
+                }
+            }
+            if let Some(days) = values.get_one::<u32>("archive-older-than-days") {
+                result.extend(["--archive-older-than-days".into(), days.to_string()]);
+            }
+            result.push(
+                if values.get_flag("apply") {
+                    "--apply"
+                } else {
+                    "--dry-run"
+                }
+                .into(),
+            );
         }
         "git" => {
             if let Some((action, options)) = values.subcommand() {

@@ -1,0 +1,496 @@
+{
+  "worlds": [
+    {
+      "name": "Siverteh",
+      "page": "wiki/personal.md",
+      "description": "The owner: background, interests, preferences and working style.",
+      "aliases": [
+        "Sivert",
+        "Personal",
+        "personal",
+        "Personal life",
+        "Owner",
+        "me"
+      ],
+      "areas": [
+        {
+          "name": "Preferences",
+          "aliases": [
+            "workflow-preferences",
+            "Appearance",
+            "wallpaper preferences"
+          ]
+        },
+        {
+          "name": "Background",
+          "aliases": [
+            "Professional background",
+            "interests"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Newbringer",
+      "page": "wiki/newbringer.md",
+      "description": "The owner's job: Newbringer guns, stations, game and demo sites.",
+      "aliases": [
+        "newbringer",
+        "Newbringer job",
+        "work",
+        "job"
+      ],
+      "areas": [
+        {
+          "name": "HK416",
+          "page": "wiki/entity-hk416.md",
+          "aliases": [
+            "hk416",
+            "HK416 CM4",
+            "hk416-cm4",
+            "cm4-provisioning"
+          ]
+        },
+        {
+          "name": "Guns",
+          "aliases": [
+            "gun-profiles",
+            "Gun release",
+            "Orange gun",
+            "White gun",
+            "Red gun",
+            "Blue gun"
+          ]
+        },
+        {
+          "name": "White motor",
+          "aliases": [
+            "white-motor",
+            "recoil motor"
+          ]
+        },
+        {
+          "name": "Smash-Board",
+          "page": "wiki/smash-board.md",
+          "aliases": [
+            "smashboard",
+            "smash board",
+            "smash-board",
+            "Smash card",
+            "mag smash board"
+          ]
+        },
+        {
+          "name": "Stations",
+          "aliases": [
+            "station",
+            "stations",
+            "AR stations"
+          ]
+        },
+        {
+          "name": "Game",
+          "aliases": [
+            "game",
+            "game server",
+            "user-stories"
+          ]
+        },
+        {
+          "name": "Demo sites",
+          "aliases": [
+            "Site",
+            "demo site",
+            "travel laptop",
+            "Arch travel laptop"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Nacre",
+      "page": "wiki/siverteh-ai.md",
+      "description": "Nacre, the owner's desktop OS project (formerly Siverteh OS / Siverteh AI).",
+      "aliases": [
+        "nacre",
+        "Siverteh OS",
+        "Siverteh AI",
+        "Siverteh AI and OS",
+        "Observatory",
+        "os",
+        "Nacre OS",
+        "Own",
+        "Bodies",
+        "Merged"
+      ],
+      "areas": [
+        {
+          "name": "Desktop",
+          "page": "wiki/entity-nacre-desktop.md",
+          "aliases": [
+            "Nacre desktop",
+            "nacre-desktop",
+            "desktop shell",
+            "dashboard",
+            "launcher",
+            "Wallpaper",
+            "Panel",
+            "Control center",
+            "Docking",
+            "Natural",
+            "Pearls",
+            "Scale recovery",
+            "Wallpaper matched"
+          ]
+        },
+        {
+          "name": "Bead",
+          "page": "wiki/entity-bead.md",
+          "aliases": [
+            "bead",
+            "Bead green",
+            "Bead dashboard"
+          ]
+        },
+        {
+          "name": "Compositors",
+          "page": "wiki/nacre-compositors.md",
+          "aliases": [
+            "nacre-niri",
+            "Nacre compositors",
+            "niri",
+            "Niri",
+            "hyprland",
+            "compositor",
+            "nacre-niri integration",
+            "compositor-keybindings",
+            "mouse focus",
+            "Multi-monitor workspaces"
+          ]
+        },
+        {
+          "name": "Orient",
+          "page": "wiki/entity-orient.md",
+          "aliases": [
+            "orient",
+            "Orient palette"
+          ]
+        },
+        {
+          "name": "Packages",
+          "page": "wiki/nacre-packages.md",
+          "aliases": [
+            "Nacre packages and updates",
+            "Nacre software library",
+            "Software phase",
+            "package distribution",
+            "packaging",
+            "Arch packaging",
+            "nacre-installation"
+          ]
+        },
+        {
+          "name": "Performance",
+          "page": "wiki/nacre-performance.md",
+          "aliases": [
+            "Nacre performance",
+            "performance",
+            "Performance",
+            "Latency",
+            "soak-testing",
+            "rendering",
+            "Nacre frame",
+            "Correctness",
+            "Calculator full"
+          ]
+        },
+        {
+          "name": "Helper",
+          "page": "wiki/nacre-helper-parity.md",
+          "aliases": [
+            "Nacre helper parity",
+            "nacre-helper",
+            "Rust migration",
+            "rust migration",
+            "native migration",
+            "Daemon",
+            "Joinset",
+            "Rust full",
+            "Wave"
+          ]
+        },
+        {
+          "name": "Nacre AI",
+          "aliases": [
+            "Sidebar chat",
+            "AI dashboard",
+            "nacre-ai"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "AI & agents",
+      "page": "wiki/world-ai-and-agents.md",
+      "description": "How the owner's AI agents work: lead workflow, the Brain itself, and inspiration from agent ecosystems.",
+      "aliases": [
+        "Knowledge workflow",
+        "agents",
+        "AI agents",
+        "AI workflow"
+      ],
+      "areas": [
+        {
+          "name": "Lead workflow",
+          "page": "wiki/knowledge-workflow.md",
+          "aliases": [
+            "lead-workflow",
+            "handoff",
+            "spec coordination",
+            "Independent"
+          ]
+        },
+        {
+          "name": "Brain",
+          "aliases": [
+            "brain",
+            "Nacre Brain",
+            "Brain startup",
+            "knowledge"
+          ]
+        },
+        {
+          "name": "Inspiration",
+          "aliases": [
+            "jarvis",
+            "hermes",
+            "agent ecosystems"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Home & devices",
+      "page": "wiki/world-home-and-devices.md",
+      "description": "The owner's own machines and gadgets: desktop PC, laptop, home server, phone, peripherals.",
+      "aliases": [
+        "Home",
+        "devices",
+        "hardware"
+      ],
+      "areas": [
+        {
+          "name": "Desktop PC",
+          "page": "wiki/entity-personal-desktop.md",
+          "aliases": [
+            "Personal desktop",
+            "personal-desktop",
+            "cachyos-migration",
+            "desktop maintenance",
+            "storage"
+          ]
+        },
+        {
+          "name": "Laptop",
+          "aliases": [
+            "laptop",
+            "zenbook"
+          ]
+        },
+        {
+          "name": "Home server",
+          "aliases": [
+            "home server",
+            "homeserver"
+          ]
+        },
+        {
+          "name": "Phone",
+          "aliases": [
+            "phone"
+          ]
+        },
+        {
+          "name": "Peripherals",
+          "aliases": [
+            "peripherals"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Infrastructure",
+      "page": "wiki/world-infrastructure.md",
+      "description": "Hosts, networks and CI the agents use: dev-1, prod, Tailscale, hosted CI.",
+      "aliases": [
+        "hosts",
+        "hosts-and-sites",
+        "infra"
+      ],
+      "areas": [
+        {
+          "name": "dev-1",
+          "page": "wiki/entity-dev-1.md",
+          "aliases": [
+            "dev1",
+            "dev-1"
+          ]
+        },
+        {
+          "name": "prod",
+          "aliases": [
+            "production",
+            "prod"
+          ]
+        },
+        {
+          "name": "Network",
+          "aliases": [
+            "tailscale",
+            "uwb",
+            "network"
+          ]
+        },
+        {
+          "name": "CI",
+          "aliases": [
+            "CI",
+            "ci",
+            "PR integration"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Side projects",
+      "page": "wiki/world-side-projects.md",
+      "description": "Hobbies and projects outside Nacre and the job: Temporium, MusikKI, the electronics bench.",
+      "aliases": [
+        "Hobbies",
+        "Projects",
+        "hobby projects"
+      ],
+      "areas": [
+        {
+          "name": "Temporium",
+          "page": "wiki/entity-temporium.md",
+          "aliases": [
+            "temporium",
+            "classroom-tasks"
+          ]
+        },
+        {
+          "name": "MusikKI",
+          "page": "wiki/musikki.md",
+          "aliases": [
+            "musikki"
+          ]
+        },
+        {
+          "name": "Electronics bench",
+          "aliases": [
+            "electronics",
+            "Personal electronics"
+          ]
+        }
+      ]
+    }
+  ],
+  "entities": [
+    {
+      "name": "Omarchy",
+      "page": "wiki/entity-omarchy.md",
+      "area": "Desktop",
+      "kind": "reference",
+      "aliases": [
+        "omarchy"
+      ]
+    },
+    {
+      "name": "White gun",
+      "page": "wiki/white-gun.md",
+      "area": "Guns",
+      "kind": "device",
+      "aliases": [
+        "white gun",
+        "white-gun"
+      ]
+    },
+    {
+      "name": "Orange gun",
+      "page": "wiki/entity-orange-gun.md",
+      "area": "Guns",
+      "kind": "device",
+      "aliases": [
+        "orange gun",
+        "orange-gun"
+      ]
+    },
+    {
+      "name": "Red gun",
+      "page": "wiki/red-gun.md",
+      "area": "Guns",
+      "kind": "device",
+      "aliases": [
+        "red gun",
+        "red-gun",
+        "red v1"
+      ]
+    },
+    {
+      "name": "Blue gun",
+      "page": "wiki/blue-gun.md",
+      "area": "Guns",
+      "kind": "device",
+      "aliases": [
+        "blue gun",
+        "blue carrier",
+        "blue bench"
+      ]
+    },
+    {
+      "name": "HK416 CM4",
+      "page": "wiki/hk416-cm4.md",
+      "area": "HK416",
+      "kind": "device",
+      "aliases": [
+        "hk416 cm4",
+        "hk416-cm4"
+      ]
+    },
+    {
+      "name": "Travel laptop",
+      "page": "wiki/travel-laptop.md",
+      "area": "Demo sites",
+      "kind": "device",
+      "aliases": [
+        "travel laptop",
+        "arch travel laptop",
+        "traveling demo laptop",
+        "demo laptop"
+      ]
+    },
+    {
+      "name": "Nacre software library",
+      "page": "wiki/nacre-software-library.md",
+      "area": "Packages",
+      "kind": "feature",
+      "aliases": [
+        "software library"
+      ]
+    },
+    {
+      "name": "nacre-niri",
+      "page": "wiki/entity-nacre-niri.md",
+      "area": "Compositors",
+      "kind": "repository",
+      "aliases": [
+        "nacre-niri"
+      ]
+    }
+  ],
+  "redirects": {
+    "wiki/entity-desktop.md": "Desktop",
+    "wiki/entity-siverteh-ai-and-os.md": "Nacre"
+  }
+}

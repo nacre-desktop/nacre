@@ -1,0 +1,9 @@
+{
+  "helper": "nacre-brain",
+  "args": [
+    "migrate",
+    "--help"
+  ],
+  "command": "python3 bin/nacre-brain",
+  "stdout": "text"
+}

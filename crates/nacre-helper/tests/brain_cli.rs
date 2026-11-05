@@ -207,8 +207,10 @@ fn two_process_writes_batch_without_lost_or_partial_notes() {
     fs::write(&queue_path, serde_json::to_vec(&queue).unwrap()).unwrap();
     // Advance fixture mtimes past the sweep's active-writer safety window.
     let settled = std::time::SystemTime::now() - std::time::Duration::from_secs(11);
-    for entry in fs::read_dir(vault.join("inbox")).unwrap() {
-        fs::File::open(entry.unwrap().path())
+    // Classification also queues registry.json. Settle every queued path;
+    // a faster classifier must not turn CPU time into an implicit sleep.
+    for entry in queue["entries"].as_array().unwrap() {
+        fs::File::open(vault.join(entry["path"].as_str().unwrap()))
             .unwrap()
             .set_times(fs::FileTimes::new().set_modified(settled))
             .unwrap();

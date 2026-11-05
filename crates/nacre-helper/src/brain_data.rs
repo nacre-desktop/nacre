@@ -481,6 +481,7 @@ fn brain(args: &[String]) -> Result<i32> {
             let _root = initialize()?;
             brain_note(&args[1..])
         }
+        "migrate" => crate::brain_migrate::run(&args[1..]),
         "git" => brain_git_command(&args[1..]),
         "guard" => {
             if args.len() != 2 || args[1] != "--staged" {

@@ -1286,13 +1286,14 @@
     {
       "helper": "nacre-brain",
       "source": "bin/nacre-brain",
-      "cases": 5,
+      "cases": 6,
       "operations": [
         "[\"init\"]",
         "[\"note\"]",
         "[\"path\"]",
         "[\"search\"]",
-        "[\"--help\"]"
+        "[\"--help\"]",
+        "[\"migrate\", \"--help\"]"
       ],
       "existing_tests": [
         "ai/tests/test_brain_sync.py",

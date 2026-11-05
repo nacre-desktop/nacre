@@ -287,8 +287,29 @@ impl Drop for RemoveOnDrop {
     }
 }
 
-fn rules() -> Vec<(&'static str, Regex)> {
-    [
+fn migration_pathspec(root: &Path, paths: &BTreeSet<String>) -> Result<(PathBuf, RemoveOnDrop)> {
+    let path = root
+        .join(".git")
+        .join(format!("brain-pathspec-{}", uuid::Uuid::new_v4()));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(&path)?;
+    let cleanup = RemoveOnDrop(path.clone());
+    for item in paths {
+        file.write_all(item.as_bytes())?;
+        file.write_all(&[0])?;
+    }
+    file.sync_all()?;
+    drop(file);
+    Ok((path, cleanup))
+}
+
+fn rules() -> &'static Vec<(&'static str, Regex)> {
+    static RULES: std::sync::OnceLock<Vec<(&'static str, Regex)>> = std::sync::OnceLock::new();
+    RULES.get_or_init(|| [
         ("private-key", r"-----BEGIN (?:OPENSSH |RSA |EC |DSA |PGP |ENCRYPTED )?PRIVATE KEY"),
         ("openai-style-sk", r"\bsk-(?:proj-|svcacct-|ant-)?[A-Za-z0-9_-]{20,}"),
         ("github-token", r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,})"),
@@ -298,7 +319,7 @@ fn rules() -> Vec<(&'static str, Regex)> {
         ("jwt", r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
         ("secret-assignment", r"(?im)^\s*(?:password|passwd|pwd|api[_ -]?key|secret|access[_ -]?token|refresh[_ -]?token|client[_ -]?secret)\s*[:=]\s*\S{6,}"),
         ("url-with-credentials", r"\b[a-z][a-z0-9+.-]*://[^\s/:@]+:[^\s/@]{4,}@"),
-    ].into_iter().map(|(name, pattern)| (name, Regex::new(pattern).expect("valid secret rule"))).collect()
+    ].into_iter().map(|(name, pattern)| (name, Regex::new(pattern).expect("valid secret rule"))).collect())
 }
 fn scan_text(path: &str, bytes: &[u8]) -> Result<()> {
     let text = String::from_utf8_lossy(bytes);
@@ -419,6 +440,57 @@ fn guard_index_path(root: &Path, index: &Path, path: &str) -> Result<()> {
         if stored_path == path {
             let stage = String::from_utf8_lossy(stage);
             guard_blob(root, path, &stage)?;
+        }
+    }
+    Ok(())
+}
+
+/// Validate the exact staged blobs for a migration batch after one pathspec add.
+fn guard_index_paths(root: &Path, index: &Path, paths: &BTreeSet<String>) -> Result<()> {
+    let changed = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["diff", "--cached", "--no-renames", "--name-only", "-z"])
+        .env("GIT_INDEX_FILE", index)
+        .output()?;
+    if !changed.status.success() {
+        return Err("unable to inspect staged Brain changes".into());
+    }
+    for raw in changed
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|p| !p.is_empty())
+    {
+        let path = String::from_utf8_lossy(raw);
+        if !paths.contains(path.as_ref()) {
+            return Err(format!("unexpected staged migration path: {path}").into());
+        }
+        if under_forbidden(&path) {
+            return Err(format!("{path}: forbidden-path").into());
+        }
+    }
+
+    let listing = Command::new("git")
+        .arg("-C")
+        .arg(root)
+        .args(["ls-files", "--stage", "-z"])
+        .env("GIT_INDEX_FILE", index)
+        .output()?;
+    if !listing.status.success() {
+        return Err("unable to inspect staged Brain paths".into());
+    }
+    for record in listing
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|r| !r.is_empty())
+    {
+        let Some(tab) = record.iter().position(|byte| *byte == b'\t') else {
+            continue;
+        };
+        let path = String::from_utf8_lossy(&record[tab + 1..]);
+        if paths.contains(path.as_ref()) {
+            let stage = String::from_utf8_lossy(&record[..tab]);
+            guard_blob(root, &path, &stage)?;
         }
     }
     Ok(())
@@ -733,14 +805,22 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+enum CommitKind<'a> {
+    Queued { sweep: bool },
+    Migration(&'a str),
+}
+
 fn commit_selected(
     root: &Path,
     selected: &BTreeSet<String>,
     entries: &[QueuedPath],
-    sweep: bool,
+    kind: CommitKind<'_>,
     blocked: &mut Vec<BlockedPath>,
     handled: &mut BTreeSet<String>,
 ) -> Result<Option<String>> {
+    if selected.is_empty() {
+        return Ok(None);
+    }
     let head = success(root, &["rev-parse", "HEAD"])?;
     let index = root
         .join(".git")
@@ -754,46 +834,75 @@ fn commit_selected(
     if !cmd.output()?.status.success() {
         return Err("unable to prepare Brain index".into());
     }
-    for path in selected {
-        if let Err(error) = validate_candidate(root, path) {
-            blocked.push(blocked_issue(path, &error.to_string()));
-            continue;
+    if matches!(kind, CommitKind::Migration(_)) {
+        // Migration is atomic: validate every source before staging anything,
+        // then use one literal, NUL-delimited pathspec batch against the private index.
+        for path in selected {
+            validate_candidate(root, path)?;
         }
-        let full = root.join(path);
-        let mut stage = Command::new("git");
-        stage
+        let (pathspec, _pathspec_cleanup) = migration_pathspec(root, selected)?;
+        let staged = Command::new("git")
             .arg("-C")
             .arg(root)
+            .args([
+                "add",
+                "--all",
+                "--pathspec-from-file",
+                pathspec
+                    .to_str()
+                    .ok_or("non-UTF-8 migration pathspec path")?,
+                "--pathspec-file-nul",
+            ])
             .env("GIT_LITERAL_PATHSPECS", "1")
-            .env("GIT_INDEX_FILE", &index);
-        if full.exists() || fs::symlink_metadata(&full).is_ok() {
-            stage.args(["add", "--", path]);
-        } else {
-            stage.args(["rm", "--cached", "--ignore-unmatch", "--", path]);
+            .env("GIT_INDEX_FILE", &index)
+            .output()?;
+        if !staged.status.success() {
+            return Err("migration staging failed".into());
         }
-        if !stage.output()?.status.success() {
-            blocked.push(BlockedPath {
-                path: path.clone(),
-                rule: "changed-during-stage".to_owned(),
-            });
-            continue;
-        }
-        if is_recent(root, path) {
-            reset_index_path(root, &index, path)?;
-            continue;
-        }
-        // Validate the actual staged blob as well, closing the race with writers
-        // that do not cooperate with the vault lock.
-        if let Err(error) = guard_index_path(root, &index, path) {
-            reset_index_path(root, &index, path)?;
-            let description = error.to_string();
-            if description.starts_with(&format!("{path}: ")) {
-                blocked.push(blocked_issue(path, &description));
+        guard_index_paths(root, &index, selected)?;
+        handled.extend(selected.iter().cloned());
+    } else {
+        for path in selected {
+            if let Err(error) = validate_candidate(root, path) {
+                blocked.push(blocked_issue(path, &error.to_string()));
                 continue;
             }
-            return Err(error);
+            let full = root.join(path);
+            let mut stage = Command::new("git");
+            stage
+                .arg("-C")
+                .arg(root)
+                .env("GIT_LITERAL_PATHSPECS", "1")
+                .env("GIT_INDEX_FILE", &index);
+            if full.exists() || fs::symlink_metadata(&full).is_ok() {
+                stage.args(["add", "--", path]);
+            } else {
+                stage.args(["rm", "--cached", "--ignore-unmatch", "--", path]);
+            }
+            if !stage.output()?.status.success() {
+                blocked.push(BlockedPath {
+                    path: path.clone(),
+                    rule: "changed-during-stage".to_owned(),
+                });
+                continue;
+            }
+            if is_recent(root, path) {
+                reset_index_path(root, &index, path)?;
+                continue;
+            }
+            // Validate the actual staged blob as well, closing the race with writers
+            // that do not cooperate with the vault lock.
+            if let Err(error) = guard_index_path(root, &index, path) {
+                reset_index_path(root, &index, path)?;
+                let description = error.to_string();
+                if description.starts_with(&format!("{path}: ")) {
+                    blocked.push(blocked_issue(path, &description));
+                    continue;
+                }
+                return Err(error);
+            }
+            handled.insert(path.clone());
         }
-        handled.insert(path.clone());
     }
     let tree = Command::new("git")
         .arg("-C")
@@ -830,8 +939,14 @@ fn commit_selected(
         .into_iter()
         .collect::<Vec<_>>();
     let counts = changed_paths.len();
-    let summary = if sweep { "(sweep)" } else { "(queued)" };
-    let message = if agents.is_empty() {
+    let summary = if matches!(kind, CommitKind::Queued { sweep: true }) {
+        "(sweep)"
+    } else {
+        "(queued)"
+    };
+    let message = if let CommitKind::Migration(step) = kind {
+        format!("brain: migrate {step}")
+    } else if agents.is_empty() {
         format!("brain: {counts} files {summary}")
     } else {
         format!(
@@ -882,7 +997,7 @@ fn commit_paths(root: &Path, entries: &[QueuedPath]) -> Result<Option<String>> {
         root,
         &selected,
         entries,
-        false,
+        CommitKind::Queued { sweep: false },
         &mut Vec::new(),
         &mut BTreeSet::new(),
     )
@@ -912,7 +1027,7 @@ pub fn flush(root: &Path) -> Result<()> {
     if q.sweep_signature.is_some() && q.sweep_updated.is_some_and(|at| now - at < 120) {
         return Ok(());
     }
-    let mut initial_status: Status = fs::read(status_file(root))
+    let initial_status: Status = fs::read(status_file(root))
         .ok()
         .and_then(|b| serde_json::from_slice(&b).ok())
         .unwrap_or_default();
@@ -969,7 +1084,7 @@ pub fn flush(root: &Path) -> Result<()> {
                 root,
                 &selected,
                 &attributed,
-                true,
+                CommitKind::Queued { sweep: true },
                 &mut blocked,
                 &mut handled,
             )?
@@ -985,10 +1100,6 @@ pub fn flush(root: &Path) -> Result<()> {
         for path in handled.difference(&staged_before) {
             git(root, &["reset", "--quiet", "HEAD", "--", path])?;
         }
-        initial_status = fs::read(status_file(root))
-            .ok()
-            .and_then(|b| serde_json::from_slice(&b).ok())
-            .unwrap_or_default();
         if let Some(ref commit) = committed {
             let mut status: Status = fs::read(status_file(root))
                 .ok()
@@ -999,12 +1110,151 @@ pub fn flush(root: &Path) -> Result<()> {
             write_json(&status_file(root), &status)?;
             // The separate index leaves the owner's staged work intact.
         }
+        push_migration(root)?;
+        q.entries.retain(|entry| !handled.contains(&entry.path));
+        q.updated = (!q.entries.is_empty()).then_some(now);
+        write_json(&queue_file(root), &q)?;
+        Ok(())
+    })();
+    if let Err(ref e) = result {
+        let _ = set_error(root, Some(e.to_string()));
+    }
+    result
+}
+
+/// Refuse to fold earlier note edits into a migration commit. A revert must
+/// restore each affected original, including notes that were initially untracked.
+/// The caller holds the vault locks and passes existing, non-state paths only.
+pub fn require_migration_baseline(root: &Path, paths: &BTreeSet<String>) -> Result<()> {
+    if paths.is_empty() {
+        return Ok(());
+    }
+    if paths.iter().any(|path| {
+        under_forbidden(path)
+            || Path::new(path)
+                .components()
+                .any(|part| !matches!(part, Component::Normal(_)))
+    }) {
+        return Err("unsafe migration baseline path".into());
+    }
+    let mut args = vec!["ls-files", "-v", "-z", "--"];
+    args.extend(paths.iter().map(String::as_str));
+    let listing = git(root, &args)?;
+    if !listing.status.success() {
+        return Err("unable to inspect migration baseline".into());
+    }
+    let tracked: BTreeSet<_> = listing
+        .stdout
+        .split(|byte| *byte == 0)
+        .filter(|row| row.starts_with(b"H "))
+        .map(|row| String::from_utf8_lossy(&row[2..]).into_owned())
+        .collect();
+    if !paths.is_subset(&tracked) {
+        return Err("commit affected notes before migration; untracked or hidden index paths cannot be reverted safely".into());
+    }
+    let mut args = vec![
+        "diff",
+        "--quiet",
+        "--no-ext-diff",
+        "--no-textconv",
+        "HEAD",
+        "--",
+    ];
+    args.extend(paths.iter().map(String::as_str));
+    if !git(root, &args)?.status.success() {
+        return Err("commit affected note edits before migration so git revert preserves their original bodies".into());
+    }
+    Ok(())
+}
+
+/// Commit exactly one verified migration step. The caller holds both vault locks.
+/// Unrelated working/index paths are never staged or swept.
+pub fn commit_migration_step(
+    root: &Path,
+    step: &str,
+    paths: &BTreeSet<String>,
+) -> Result<Option<String>> {
+    if ![
+        "meta", "inbox", "archive", "digests", "wiki", "links", "index",
+    ]
+    .contains(&step)
+    {
+        return Err("invalid migration step".into());
+    }
+    for path in paths {
+        if Path::new(path)
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_)))
+            || under_forbidden(path)
+        {
+            return Err("unsafe migration commit path".into());
+        }
+    }
+    let staged = git(root, &["diff", "--cached", "--name-only", "-z"])?;
+    if !staged.status.success() {
+        return Err("unable to inspect migration index".into());
+    }
+    if staged
+        .stdout
+        .split(|byte| *byte == 0)
+        .any(|path| paths.contains(String::from_utf8_lossy(path).as_ref()))
+    {
+        return Err("migration paths already contain staged changes".into());
+    }
+    let mut handled = BTreeSet::new();
+    let commit = commit_selected(
+        root,
+        paths,
+        &[],
+        CommitKind::Migration(step),
+        &mut Vec::new(),
+        &mut handled,
+    )?;
+    if !handled.is_empty() {
+        // Refresh only selected clean paths after commit. Use a single ordinary
+        // index reset and never let its failure make the caller roll back HEAD.
+        let refresh = (|| -> Result<()> {
+            let (pathspec, _cleanup) = migration_pathspec(root, &handled)?;
+            let output = Command::new("git")
+                .arg("-C")
+                .arg(root)
+                .args([
+                    "reset",
+                    "--quiet",
+                    "HEAD",
+                    "--pathspec-from-file",
+                    pathspec
+                        .to_str()
+                        .ok_or("non-UTF-8 migration pathspec path")?,
+                    "--pathspec-file-nul",
+                ])
+                .env("GIT_LITERAL_PATHSPECS", "1")
+                .output()?;
+            if !output.status.success() {
+                return Err("unable to batch-refresh migration index paths".into());
+            }
+            Ok(())
+        })();
+        if let Err(error) = refresh {
+            eprintln!(
+                "brain: migration committed; unable to refresh selected index paths: {error}"
+            );
+        }
+    }
+    Ok(commit)
+}
+
+/// Push recorded Brain commits using the committer's bounded fetch/rebase retry.
+/// A network failure retains the local commit for a later retry.
+pub fn push_migration(root: &Path) -> Result<()> {
+    let mut initial_status: Status = fs::read(status_file(root))
+        .ok()
+        .and_then(|b| serde_json::from_slice(&b).ok())
+        .unwrap_or_default();
+    let result = (|| -> Result<()> {
         let ahead = success(root, &["rev-list", "--count", "origin/main..HEAD"])
             .unwrap_or_else(|_| "1".to_owned());
         if ahead == "0" {
-            q.entries.retain(|entry| !handled.contains(&entry.path));
-            q.updated = (!q.entries.is_empty()).then_some(now);
-            write_json(&queue_file(root), &q)?;
             return Ok(());
         }
         let push = git_network(root, &["push", "origin", "HEAD:main"])?;
@@ -1019,9 +1269,6 @@ pub fn flush(root: &Path) -> Result<()> {
             status.conflict = false;
             status.owned_commits.clear();
             write_json(&status_file(root), &status)?;
-            q.entries.retain(|entry| !handled.contains(&entry.path));
-            q.updated = (!q.entries.is_empty()).then_some(now);
-            write_json(&queue_file(root), &q)?;
             return Ok(());
         }
         let fetch = git_network(root, &["fetch", "origin", "main"])?;
@@ -1070,13 +1317,10 @@ pub fn flush(root: &Path) -> Result<()> {
         status.conflict = false;
         status.owned_commits.clear();
         write_json(&status_file(root), &status)?;
-        q.entries.retain(|entry| !handled.contains(&entry.path));
-        q.updated = (!q.entries.is_empty()).then_some(now);
-        write_json(&queue_file(root), &q)?;
         Ok(())
     })();
-    if let Err(ref e) = result {
-        let _ = set_error(root, Some(e.to_string()));
+    if let Err(ref error) = result {
+        let _ = set_error(root, Some(error.to_string()));
     }
     result
 }
@@ -1124,6 +1368,58 @@ mod tests {
             .success());
         (root, bare, peer)
     }
+    #[test]
+    fn migration_commit_is_immediate_exact_and_does_not_sweep_staged_work() {
+        let temp = TempDir::new().unwrap();
+        let (root, bare, _) = remote_vault(&temp);
+        let _lock = acquire_vault_lock(&root).unwrap();
+        fs::write(root.join("shared.md"), "migrated\n").unwrap();
+        fs::write(root.join("unrelated.md"), "owner edit\n").unwrap();
+        checked(&root, &["add", "unrelated.md"]);
+        let paths = BTreeSet::from(["shared.md".into()]);
+        assert!(commit_migration_step(&root, "meta", &paths)
+            .unwrap()
+            .is_some());
+        assert_eq!(
+            checked(&root, &["log", "-1", "--format=%s"]),
+            "brain: migrate meta"
+        );
+        assert_eq!(checked(&root, &["show", "HEAD:shared.md"]), "migrated");
+        assert!(!command(&root, &["cat-file", "-e", "HEAD:unrelated.md"])
+            .status
+            .success());
+        assert_eq!(
+            checked(&root, &["diff", "--cached", "--name-only"]),
+            "unrelated.md"
+        );
+        assert!(commit_migration_step(&root, "meta", &paths)
+            .unwrap()
+            .is_none());
+        push_migration(&root).unwrap();
+        assert_eq!(
+            checked(&root, &["rev-parse", "HEAD"]),
+            checked(&bare, &["rev-parse", "refs/heads/main"])
+        );
+    }
+
+    #[test]
+    fn migration_guard_aborts_instead_of_committing_a_subset() {
+        let temp = TempDir::new().unwrap();
+        let (root, _, _) = remote_vault(&temp);
+        let _lock = acquire_vault_lock(&root).unwrap();
+        let head = checked(&root, &["rev-parse", "HEAD"]);
+        fs::write(root.join("shared.md"), "valid edit\n").unwrap();
+        fs::write(
+            root.join("unsafe.md"),
+            "password: synthetic-secret-fixture\n",
+        )
+        .unwrap();
+        let paths = BTreeSet::from(["shared.md".into(), "unsafe.md".into()]);
+        assert!(commit_migration_step(&root, "meta", &paths).is_err());
+        assert_eq!(checked(&root, &["rev-parse", "HEAD"]), head);
+        assert!(checked(&root, &["diff", "--cached", "--name-only"]).is_empty());
+    }
+
     fn clone_remote(bare: &Path, peer: &Path) {
         assert!(Command::new("git")
             .arg("clone")
