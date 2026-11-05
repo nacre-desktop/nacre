@@ -606,7 +606,7 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn single_collection_bar_entry_opens_the_switcher_popout() {
+async fn single_collection_bar_entry_is_hidden() {
     let (dir, client, _calls, _kick) = daemon(&["collection.action"]).await;
     let (mut runtime, events) = bar_with(&client, "left", true);
     let live = client.clone();
@@ -614,27 +614,12 @@ async fn single_collection_bar_entry_opens_the_switcher_popout() {
         live.snapshot().connected
             && runtime.session.stores.get("bar.collection.enabled")
                 == Some(&bead::core::Value::Bool(true))
-            && node(runtime, "collection.switcher.open", None).is_some()
     })
     .await;
     settle_runtime_animations(&mut runtime);
-    let (x, y) = node(&runtime, "collection.switcher.open", None).expect("single desk menu button");
-    assert_eq!(
-        runtime.session.action_at(x, y).map(|(_, name, _)| name),
-        Some("collection.switcher.open".into()),
-        "the rendered single-desk entry must be hit-testable"
-    );
-    while events.try_recv().is_ok() {}
-    runtime.stage(UiEvent::Click { x, y }).unwrap();
-    runtime.commit();
-    runtime.stage(UiEvent::Release).unwrap();
-    runtime.commit();
-    let dispatched: Vec<_> = std::iter::from_fn(|| events.try_recv().ok()).collect();
     assert!(
-        dispatched.iter().any(|event| matches!(event,
-            UiEvent::CompanionSelect { view, toggle:true, .. } if view == "collections"
-        )),
-        "single desk control must open the collection switcher; received {dispatched:?}"
+        node(&runtime, "collection.switcher.open", None).is_none(),
+        "single desk must not render a desk indicator or menu control"
     );
     std::fs::remove_dir_all(dir).ok();
 }

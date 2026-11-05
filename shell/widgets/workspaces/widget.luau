@@ -19,16 +19,19 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
             end
             local show_collections=#collections>1
-            local show_single_collection_menu=#collections==1 and c.popouts
-            local badge_collections={}
             local current_collection_label="Collection"
+            local current_collection_name=""
             for i,collection in ipairs(collections) do
-                local badge=table.clone(collection)
                 local full_label=collection.name or collection.label or tostring(collection.index or i)
-                if collection.id==collection_current then current_collection_label=ui.tr("bead.bar.collection-open",{desk=full_label}) end
-                badge.label=measure.ellipsize(full_label,76,"IBM Plex Sans",kit.tokens.text.body*4/3)
-                badge_collections[i]=badge
+                if collection.id==collection_current then
+                    current_collection_name=full_label
+                end
             end
+            if current_collection_name=="" and #collections>0 then
+                local first=collections[1]
+                current_collection_name=first.name or first.label or tostring(first.index or 1)
+            end
+            if current_collection_name~="" then current_collection_label=ui.tr("bead.bar.collection-open",{desk=current_collection_name}) end
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -49,15 +52,20 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 cursor+=gs+width+2
             end
-            local collection_width=show_collections and 96 or show_single_collection_menu and 32 or 0
+            local desk_badge_text=measure.ellipsize(current_collection_name,t.desk_badge_max_width-t.desk_badge_padding*2,"IBM Plex Sans",t.workspace_number_font)
+            local desk_badge_width=math.max(t.pearl_current,math.min(t.desk_badge_max_width,math.ceil(ui.text_width(desk_badge_text,"IBM Plex Sans",t.workspace_number_font))+t.desk_badge_padding*2))
+            local collection_width=show_collections and desk_badge_width or 0
             local natural_width=10+cursor-(#workspaces>0 and 2 or 0)+(collection_width>0 and collection_width+4 or 0)
             local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
-            local collection_control=show_collections and kit.CollectionSwitcher{id="collection-switcher",groups=badge_collections,current=collection_current,width=92,height=28,switcher_label=current_collection_label,on_toggle=c.popouts and "collection.switcher.open" or nil}
-                or show_single_collection_menu and kit.IconButton{id="collection-menu",text="more_horiz",width=28,height=28,aria_label=current_collection_label,on_activate=ui.action("collection.switcher.open")}
-                or nil
             local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
             local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
-            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=2,radius=t.pill_radius,fill="surfaceContainer",clip_children=true,align="center",
+            local collection_control=show_collections and kit.Button{id="collection-badge",width=desk_badge_width,height=t.pearl_current,padding=0,radius=t.pearl_current/2,
+                fill="surfaceContainerHigh",hover_fill="surfaceContainerHighest",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
+                centered_text{id="collection-name",position="absolute",left=t.desk_badge_padding,top=(t.pearl_current-t.workspace_number_font*t.line_height)/2,text=desk_badge_text,width=desk_badge_width-t.desk_badge_padding*2,shrink=0,font_size=t.workspace_number_font,family="IBM Plex Sans",text_align="center",color="onSurfaceVariant"},
+                kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-kit.tokens.spacing.sm,left=0,width=ui.text_width(current_collection_name,"IBM Plex Sans",t.workspace_number_font)+t.desk_badge_padding*2,height=t.workspace_height,padding=t.desk_badge_padding,visible=string.find(hovered,"collection-badge",1,true)~=nil,
+                    ui.Text{text=current_collection_name,height=t.workspace_height-t.desk_badge_padding*2,width="fill",font_size=t.workspace_number_font,color="onSurface"}}}
+                or nil
+            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=2,radius=t.pill_radius,fill="surfaceContainer",clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
             thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
             active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
@@ -131,7 +139,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                         add(ui.Box{id="ring",position="absolute",left=16-size/2+stroke/2,top=t.workspace_height/2-size/2+stroke/2,width=size-stroke,height=size-stroke,radius=(size-stroke)/2,
                             fill="transparent",border_width=stroke,border_color=on and ui.alpha("onSurface",.5) or ui.alpha(accent,.9)})
                     end
-                    add(centered_text{id="number",position="absolute",left=16-size/2,top=t.workspace_height/2-(#label<2 and 11 or 9)*t.line_height/2,text=label,width=size,font_size=#label<2 and 11 or 9,font_weight=on and 600 or 500,family="IBM Plex Sans",text_align="center",color=lit and t.pearl_dark or "onSurfaceVariant"})
+                    add(centered_text{id="number",position="absolute",left=16-size/2,top=t.workspace_height/2-(#label<2 and t.workspace_number_font or 9)*t.line_height/2,text=label,width=size,font_size=#label<2 and t.workspace_number_font or 9,font_weight=on and 600 or 500,family="IBM Plex Sans",text_align="center",color=lit and t.pearl_dark or "onSurfaceVariant"})
                     add(ui.Row{id="apps",position="absolute",left=33,top=0,width=math.max(0,width-33),height=t.workspace_height,gap=3,align="center",visible=#apps>0,table.unpack(apps)})
                     button=kit.Button{id="workspace",position="absolute",left=gs,top=0,width=animated_width,height=t.workspace_height,radius=t.workspace_radius,padding=0,fill="transparent",hover_fill=ui.alpha(accent,.1),shrink=0,
                         on_activate=activate,

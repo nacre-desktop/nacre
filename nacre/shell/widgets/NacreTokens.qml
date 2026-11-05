@@ -25,6 +25,17 @@ QtObject {
     }
     readonly property var iconSize: sizeScale.icons
     property real textPointSize: textSize.body
+    readonly property real workspaceCellHeight: 30
+    readonly property real workspaceCellRadius: workspaceCellHeight / 2
+    readonly property real workspaceCellGap: space.hairline
+    readonly property real workspacePearlNumberFont: 8.25
+    readonly property real workspacePearlWideNumberFont: 6.75
+    readonly property real workspaceIconNumberFont: 10
+    readonly property real workspacePearlCurrent: 22
+    readonly property real workspacePearlOccupied: 20
+    readonly property real workspacePearlEmpty: 18
+    readonly property real deskBadgePadding: space.xs
+    readonly property real deskBadgeMaxWidth: space.xxl * 2
     // Compatibility alias for modules awaiting redesign.
     property real cornerRadius: space.md
     property real spacing: space.sm

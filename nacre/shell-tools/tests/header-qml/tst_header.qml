@@ -103,7 +103,7 @@ TestCase {
         NacreCompositor.collections = rows;
         NacreCompositor.activeCollectionId = "niri-collection:28";
         verify(badge.visible, "late advertised capability reveals live rows");
-        compare(view.deskBadgeText, "2/3");
+        compare(view.deskBadgeText, "studio");
         compare(view.deskLabel, "studio");
         NacreCompositor.collections = rows.map(row => {
             if (row.id !== "niri-collection:28")
@@ -174,19 +174,26 @@ TestCase {
         wait(30);
         const badge = findChild(view, "collectionDeskBadge");
         verify(!!badge && badge.visible);
+        verify(badge.height === NacreTokens.workspacePearlCurrent, "desk chip matches workspace pearl height");
+        verify(badge.width <= NacreTokens.deskBadgeMaxWidth, "desk chip stays compact");
+        const label = findChild(badge, "collectionDeskBadgeLabel");
+        verify(!!label && label.color === NacreTokens.mutedInk, "desk chip uses muted workspace ink");
         const image = grabImage(view);
         verify(image.width > 0 && image.height > 0);
         const sx = image.width / view.width, sy = image.height / view.height;
         const left = Math.floor(badge.x * sx), right = Math.ceil((badge.x + badge.width) * sx);
         const top = Math.floor(badge.y * sy), bottom = Math.ceil((badge.y + badge.height) * sy);
+        const background = badge.color;
         let ink = 0;
         for (let y = top; y < bottom; y++)
             for (let x = left; x < right; x++) {
                 const pixel = image.pixel(x, y);
-                if (pixel.g > pixel.r + .2 && pixel.b > pixel.r + .2)
+                if (Math.abs(pixel.r - background.r) > .1
+                    || Math.abs(pixel.g - background.g) > .1
+                    || Math.abs(pixel.b - background.b) > .1)
                     ink++;
             }
-        verify(ink > 0, "badge label paints colored ink at the configured screen scale");
+        verify(ink > 0, "badge paints its muted label at the configured screen scale");
         const capturePath = Qt.resolvedUrl("desk-badge.png").toString().slice(7);
         let saved = false;
         verify(view.grabToImage(result => saved = result.saveToFile(capturePath)));

@@ -26,7 +26,7 @@ Item {
         }
         return .2126 * linear(value.r) + .7152 * linear(value.g) + .0722 * linear(value.b);
     }
-    implicitWidth: current ? 22 : occupied ? 20 : 18
+    implicitWidth: current ? NacreTokens.workspacePearlCurrent : occupied ? NacreTokens.workspacePearlOccupied : NacreTokens.workspacePearlEmpty
     implicitHeight: implicitWidth
     Rectangle {
         id: halo
@@ -98,7 +98,7 @@ Item {
         objectName: "workspaceNumber"
         anchors.fill: parent
         text: root.workspaceId > 0 ? root.workspaceId : ""
-        font.pointSize: root.workspaceId < 10 ? 8.25 : 6.75
+        font.pointSize: root.workspaceId < 10 ? NacreTokens.workspacePearlNumberFont : NacreTokens.workspacePearlWideNumberFont
         font.weight: root.current ? Font.DemiBold : Font.Medium
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
