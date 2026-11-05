@@ -10,6 +10,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 26 | [N0128 AI panel launcher](0128-ai-panel-launcher.md) | Implementing on owner-selected live-candidate base | Share the AI app's history/open actions with the left launcher; validate in the isolated dev-1 container, push task branch only. |
 | 25 | N0127 compact bar desk indicator | Implemented; scale 1/1.5 pixels reviewed | Trailing pearl-sized desk chip shares workspace tokens, hides with one desk, and retains the menu and full-name tooltip. Shell checks pass apart from two inherited failures reproduced with the original bar; topic branch only, no live apply. |
 | 25 | [N0121 final Niri workaround sweep](0121-workaround-sweep.md) | Implemented; desktop validation deferred by owner | Stock Niri keeps helper fallbacks; fork capability gates use native group, hide/restore, force-close, pin, and workspace swap/set-rotation operations where semantics match. |
 | 24 | N0124 overview hover title | Implemented; static checks passed, desktop validation pending | Existing compositor topic drives the overview title and app glyph; refresh-rate batching, focus fallback and scale 1/1.5 pixel regression tests added. Task branch only; owner-approved static-only validation. |
