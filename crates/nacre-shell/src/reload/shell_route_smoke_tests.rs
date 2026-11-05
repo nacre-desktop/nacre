@@ -2,46 +2,66 @@
 //! Exercise the actual Luau shell entries through the panel Runtime.
 use super::*;
 
-fn plan_with_cpu_preparation(
-    name: &str,
-    scene: &bead::render::Scene,
+struct PreparedPlanRequest<'a> {
+    name: &'a str,
+    scene: &'a bead::render::Scene,
     opening: bool,
     width: u32,
     height: u32,
     scale: f32,
     format: bead::render::PixelFormat,
+}
+
+fn plan_with_cpu_preparation(
+    request: PreparedPlanRequest<'_>,
     renderer: &mut bead::render::tree::TreeCpuRenderer,
 ) -> std::result::Result<Option<bead::render::layer_motion::LayerMotionPlan>, String> {
     use bead::render::tree::CpuResourcesPending;
 
     for attempt in 0..3 {
         match bead::render::layer_motion::LayerMotionPlan::for_slide(
-            scene, opening, width, height, scale, format, renderer,
+            request.scene,
+            request.opening,
+            request.width,
+            request.height,
+            request.scale,
+            request.format,
+            renderer,
         ) {
             Ok(plan) => return Ok(plan),
             Err(error) => {
                 let Some(pending) = error.downcast_ref::<CpuResourcesPending>() else {
-                    return Err(format!("{name}: layer-motion planning failed: {error}"));
+                    return Err(format!(
+                        "{}: layer-motion planning failed: {error}",
+                        request.name
+                    ));
                 };
                 if attempt == 2 {
                     return Err(format!(
-                        "{name}: CPU preparation remained pending after two worker requests"
+                        "{}: CPU preparation remained pending after two worker requests",
+                        request.name
                     ));
                 }
-                let request = pending.request.clone();
-                if !request.mark_requested() {
+                let preparation = pending.request.clone();
+                if !preparation.mark_requested() {
                     return Err(format!(
-                        "{name}: CPU preparation request was already queued"
+                        "{}: CPU preparation request was already queued",
+                        request.name
                     ));
                 }
                 let worker =
-                    std::thread::scope(|scope| scope.spawn(move || request.prepare()).join());
+                    std::thread::scope(|scope| scope.spawn(move || preparation.prepare()).join());
                 match worker {
                     Ok(Ok(())) => {}
                     Ok(Err(error)) => {
-                        return Err(format!("{name}: CPU worker preparation failed: {error}"));
+                        return Err(format!(
+                            "{}: CPU worker preparation failed: {error}",
+                            request.name
+                        ));
                     }
-                    Err(_) => return Err(format!("{name}: CPU worker preparation panicked")),
+                    Err(_) => {
+                        return Err(format!("{}: CPU worker preparation panicked", request.name));
+                    }
                 }
             }
         }
@@ -495,15 +515,14 @@ fn verify_or_export_motion_plan(
     }
 }
 
-fn export_reveal_reference(
-    directory: &std::path::Path,
-    route: &str,
+struct RevealReference<'a> {
+    route: &'a str,
     timeline_t: f32,
     eased_progress: f32,
     scale: f32,
     duration_ms: f64,
     curve: bead::core::animation::Curve,
-    plan_metadata: &str,
+    plan_metadata: &'a str,
     logical_size: (f32, f32),
     scene_bounds: bead::render::Rect,
     scene_offset: (f32, f32),
@@ -511,8 +530,27 @@ fn export_reveal_reference(
     surface_origin: (i32, i32),
     width: u32,
     height: u32,
-    pixels: &[u8],
-) {
+    pixels: &'a [u8],
+}
+
+fn export_reveal_reference(directory: &std::path::Path, reference: RevealReference<'_>) {
+    let RevealReference {
+        route,
+        timeline_t,
+        eased_progress,
+        scale,
+        duration_ms,
+        curve,
+        plan_metadata,
+        logical_size,
+        scene_bounds,
+        scene_offset,
+        crop,
+        surface_origin,
+        width,
+        height,
+        pixels,
+    } = reference;
     use image::ImageEncoder;
     let stem = format!("{route}-s{scale:.1}-t{timeline_t:.2}");
     let mut png = Vec::new();
@@ -548,23 +586,24 @@ fn export_reveal_reference(
     .expect("write Nacre reference metadata");
 }
 
-fn assert_reveal_reference(
-    route: &str,
-    timeline_t: f32,
-    eased_progress: f32,
-    scale: f32,
-    duration_ms: f64,
-    curve: bead::core::animation::Curve,
-    plan_metadata: &str,
-    logical_size: (f32, f32),
-    scene_bounds: bead::render::Rect,
-    scene_offset: (f32, f32),
-    crop: bead::render::Rect,
-    surface_origin: (i32, i32),
-    width: u32,
-    height: u32,
-    pixels: &[u8],
-) {
+fn assert_reveal_reference(reference: RevealReference<'_>) {
+    let RevealReference {
+        route,
+        timeline_t,
+        eased_progress,
+        scale,
+        duration_ms,
+        curve,
+        plan_metadata,
+        logical_size,
+        scene_bounds,
+        scene_offset,
+        crop,
+        surface_origin,
+        width,
+        height,
+        pixels,
+    } = reference;
     let directory = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/fixtures/bead-layer-motion/reveal-goldens");
     let stem = format!("{route}-s{scale:.1}-t{timeline_t:.2}");
@@ -972,13 +1011,15 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
 
                     let mut renderer = TreeCpuRenderer::default();
                     let opening = plan_with_cpu_preparation(
-                        name,
-                        &scene,
-                        true,
-                        width,
-                        height,
-                        1.5,
-                        PixelFormat::Rgba,
+                        PreparedPlanRequest {
+                            name,
+                            scene: &scene,
+                            opening: true,
+                            width,
+                            height,
+                            scale: 1.5,
+                            format: PixelFormat::Rgba,
+                        },
                         &mut renderer,
                     )
                     .unwrap_or_else(|error| panic!("{name}: open plan failed: {error}"));
@@ -1056,13 +1097,15 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                         );
                         let mut scale_one_renderer = TreeCpuRenderer::default();
                         let scale_one_plan = plan_with_cpu_preparation(
-                            name,
-                            &scale_one,
-                            true,
-                            width,
-                            height,
-                            1.,
-                            PixelFormat::Rgba,
+                            PreparedPlanRequest {
+                                name,
+                                scene: &scale_one,
+                                opening: true,
+                                width,
+                                height,
+                                scale: 1.,
+                                format: PixelFormat::Rgba,
+                            },
                             &mut scale_one_renderer,
                         )
                         .unwrap_or_else(|error| panic!("{name}: scale-1 plan failed: {error}"))
@@ -1090,13 +1133,15 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
 
                     let mut renderer = TreeCpuRenderer::default();
                     let closing = plan_with_cpu_preparation(
-                        name,
-                        &scene,
-                        false,
-                        width,
-                        height,
-                        1.5,
-                        PixelFormat::Rgba,
+                        PreparedPlanRequest {
+                            name,
+                            scene: &scene,
+                            opening: false,
+                            width,
+                            height,
+                            scale: 1.5,
+                            format: PixelFormat::Rgba,
+                        },
                         &mut renderer,
                     )
                     .unwrap_or_else(|error| panic!("{name}: close plan failed: {error}"));
@@ -1156,43 +1201,27 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                             let (width, height, pixels) =
                                 render_legacy_reveal(&scene, progress, scale);
                             let plan_metadata = format!("{name}-s{scale:.1}-plan.json");
+                            let reference = RevealReference {
+                                route: name,
+                                timeline_t,
+                                eased_progress: progress,
+                                scale,
+                                duration_ms,
+                                curve,
+                                plan_metadata: &plan_metadata,
+                                logical_size: (scene.bounds.w, scene.bounds.h),
+                                scene_bounds: scene.bounds,
+                                scene_offset: scene.offset,
+                                crop: contour.crop,
+                                surface_origin: root_origin,
+                                width,
+                                height,
+                                pixels: &pixels,
+                            };
                             if let Some(directory) = &export_directory {
-                                export_reveal_reference(
-                                    directory,
-                                    name,
-                                    timeline_t,
-                                    progress,
-                                    scale,
-                                    duration_ms,
-                                    curve,
-                                    &plan_metadata,
-                                    (scene.bounds.w, scene.bounds.h),
-                                    scene.bounds,
-                                    scene.offset,
-                                    contour.crop,
-                                    root_origin,
-                                    width,
-                                    height,
-                                    &pixels,
-                                );
+                                export_reveal_reference(directory, reference);
                             } else {
-                                assert_reveal_reference(
-                                    name,
-                                    timeline_t,
-                                    progress,
-                                    scale,
-                                    duration_ms,
-                                    curve,
-                                    &plan_metadata,
-                                    (scene.bounds.w, scene.bounds.h),
-                                    scene.bounds,
-                                    scene.offset,
-                                    contour.crop,
-                                    root_origin,
-                                    width,
-                                    height,
-                                    &pixels,
-                                );
+                                assert_reveal_reference(reference);
                             }
                         }
                     }

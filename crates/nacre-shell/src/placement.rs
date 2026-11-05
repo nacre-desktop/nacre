@@ -339,6 +339,17 @@ pub struct Chrome {
     secondary: [u8; 4],
     ink: Option<crate::pearls::Ink>,
 }
+
+#[derive(Clone, Copy)]
+struct RevealContourInput {
+    output: (f32, f32),
+    panel: Rect,
+    body: Rect,
+    top_inset: f32,
+    engaged: bool,
+    edge: Edge,
+}
+
 impl Chrome {
     pub fn set_engaged(&mut self, engaged: bool) {
         self.engaged = engaged;
@@ -439,14 +450,18 @@ impl Chrome {
     fn reveal_contour(
         &self,
         frame: Frame,
-        output: (f32, f32),
-        panel: Rect,
-        body: Rect,
-        top_inset: f32,
-        engaged: bool,
-        edge: Edge,
+        input: RevealContourInput,
     ) -> bead::render::layer_motion::RevealContour {
         use bead::render::layer_motion::{RevealContour, RevealCornerMode, RevealMode, RevealRim};
+
+        let RevealContourInput {
+            output,
+            panel,
+            body,
+            top_inset,
+            engaged,
+            edge,
+        } = input;
 
         // RevealArt coordinates live in the panel's scene space. Translate output-space
         // frame geometry using the same transform used by `Chrome::svg`'s reveal callback.
@@ -849,7 +864,17 @@ impl Chrome {
             let motion = scene.motion.as_mut().unwrap();
             motion.parts = vec![(index, scene.primitives[index].clone())];
             let edge = motion.edge;
-            let contour = self.reveal_contour(frame, output, panel, body, top_inset, engaged, edge);
+            let contour = self.reveal_contour(
+                frame,
+                RevealContourInput {
+                    output,
+                    panel,
+                    body,
+                    top_inset,
+                    engaged,
+                    edge,
+                },
+            );
             motion.art = Some(bead::render::RevealArt {
                 body,
                 index,
