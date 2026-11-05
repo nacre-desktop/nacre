@@ -380,6 +380,7 @@ pub(crate) struct Lab {
     pub calls: mpsc::UnboundedReceiver<(String, Json)>,
     pub push: mpsc::UnboundedSender<Frame>,
     pub fail: Arc<Mutex<Vec<String>>>,
+    list_delay_ms: Arc<std::sync::atomic::AtomicU64>,
 }
 impl Drop for Lab {
     fn drop(&mut self) {
@@ -433,6 +434,8 @@ pub(crate) async fn lab(initial: Json) -> Lab {
     let (push, mut frames) = mpsc::unbounded_channel::<Frame>();
     let fail: Arc<Mutex<Vec<String>>> = Default::default();
     let failing = fail.clone();
+    let list_delay_ms = Arc::new(std::sync::atomic::AtomicU64::new(0));
+    let delayed = list_delay_ms.clone();
     tokio::spawn(async move {
         let mut boot = 0;
         loop {
@@ -463,10 +466,13 @@ pub(crate) async fn lab(initial: Json) -> Lab {
                         }
                         Some(Message::Call { id, m, p, .. }) => {
                             let _ = calls_tx.send((m.clone(), p));
+                            if m == "ai.launcher.list" {
+                                tokio::time::sleep(Duration::from_millis(delayed.load(std::sync::atomic::Ordering::Relaxed))).await;
+                            }
                             let chats: Vec<Json> = (1..=12).map(|index| {
                                 let key = format!("k{index}");
                                 let (title, project, provider, state) = if index == 2 {
-                                    ("Notes", "brain", "claude", "idle")
+                                    ("Brain notes", "brain", "claude", "idle")
                                 } else {
                                     ("Build fixes", "nacre", "codex", if index == 1 { "running" } else { "idle" })
                                 };
@@ -508,6 +514,7 @@ pub(crate) async fn lab(initial: Json) -> Lab {
         calls,
         push,
         fail,
+        list_delay_ms,
     }
 }
 pub(crate) async fn call_with_timeout(lab: &mut Lab) -> (String, Json) {
@@ -553,6 +560,10 @@ fn snap(data: Json) -> Frame {
     })
 }
 pub(crate) async fn chat_for(lab: &Lab) -> Chat {
+    let path = lab.dir.join("cache/chats.json");
+    chat_for_cache(lab, path).await
+}
+async fn chat_for_cache(lab: &Lab, cache: std::path::PathBuf) -> Chat {
     for _ in 0..500 {
         if lab.client.snapshot().connected && lab.client.status().boot.is_some() {
             break;
@@ -560,7 +571,7 @@ pub(crate) async fn chat_for(lab: &Lab) -> Chat {
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
     let topic = lab.client.lease_topic("ai.chat").unwrap();
-    Chat::new(Some(lab.client.clone()), Arc::new(topic), meter())
+    Chat::new(Some(lab.client.clone()), Arc::new(topic), meter()).with_launcher_cache_path(cache)
 }
 async fn until(
     chat: &Chat,
@@ -757,8 +768,8 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let chat = chat_for(&lab).await;
     let launcher = Stores::default();
     let first = chat.project(&launcher);
-    assert_eq!(first["launcher.can_new"], Value::Bool(false));
-    assert_eq!(first["launcher.can_latest"], Value::Bool(false));
+    assert_eq!(first["launcher.can_new"], Value::Bool(true));
+    assert_eq!(first["launcher.can_latest"], Value::Bool(true));
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     let listed = until(
         &chat,
@@ -772,7 +783,7 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let populated = chat.st.borrow().launcher.clone();
     chat.st.borrow_mut().launcher.as_mut().unwrap()["chats"] = json!([]);
     let empty = chat.project(&launcher);
-    assert_eq!(empty["launcher.can_latest"], Value::Bool(false));
+    assert_eq!(empty["launcher.can_latest"], Value::Bool(true));
     assert!(!string(&empty, "launcher.empty_state").is_empty());
     chat.st.borrow_mut().launcher = populated;
     let Value::List(rows) = &listed["launcher.chats"] else {
@@ -780,6 +791,7 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     };
     assert_eq!(rows[0]["provider"], "Codex");
     assert_eq!(rows[0]["state"], "running");
+    assert!(rows[0].get("project").is_none(), "project labels stay out of rows");
     assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
 
     let search = launcher_stores(&[("launcher.search", Value::Text("brain".into()))]);
@@ -804,15 +816,12 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     expect_launcher_call(&mut lab, "ai.launcher.open", json!({"key":"k1"})).await;
     finish_launcher_action(&chat, &launcher).await;
 
-    let configured = launcher_stores(&[
-        ("launcher.provider", Value::Text("claude".into())),
-        ("launcher.project", Value::Text("nacre".into())),
-    ]);
+    let configured = launcher_stores(&[("launcher.provider", Value::Text("claude".into()))]);
     chat.act("launcher:new", &configured);
     expect_launcher_call(
         &mut lab,
         "ai.launcher.new",
-        json!({"provider":"claude","project":"nacre"}),
+        json!({"provider":"claude","project":"general"}),
     )
     .await;
     finish_launcher_action(&chat, &launcher).await;
@@ -822,6 +831,60 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let back = chat.act("launcher:back", &launcher);
     assert_eq!(back.stores["chat.section"], Value::Text("launcher".into()));
     assert_eq!(back.stores["launcher.quick_chat"], Value::Bool(false));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_available() {
+    let _guard = serial();
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
+    lab.list_delay_ms.store(150, std::sync::atomic::Ordering::Relaxed);
+    let cache = lab.dir.join("cache/chats.json");
+    let cold_chat = chat_for_cache(&lab, cache.clone()).await;
+    let launcher = launcher_stores(&[]);
+    let cold_started = std::time::Instant::now();
+    cold_chat.project(&launcher);
+    assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
+    let cold_ms = loop {
+        let out = cold_chat.project(&launcher);
+        if matches!(&out["launcher.chats"], Value::List(rows) if rows.len() == 12) {
+            break cold_started.elapsed().as_millis();
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    };
+    assert!(cold_ms >= 100, "delayed cold fetch returned implausibly early: {cold_ms} ms");
+
+    let mut cached = Chat::load_launcher_cache(&cache).expect("cold fetch wrote cache");
+    cached["chats"][0]["title"] = json!("Saved cache title");
+    Chat::save_launcher_cache(&cache, &cached);
+    let warm_chat = chat_for_cache(&lab, cache).await;
+    let warm_started = std::time::Instant::now();
+    let first = warm_chat.project(&launcher);
+    let first_frame_ms = warm_started.elapsed().as_millis();
+    let Value::List(rows) = &first["launcher.chats"] else { panic!("cached chats") };
+    assert_eq!(rows.len(), 12);
+    assert_eq!(rows[0]["title"], "Saved cache title");
+    assert!(first_frame_ms < 30, "cached list missed first frame: {first_frame_ms} ms");
+    assert_eq!(first["launcher.can_new"], Value::Bool(true));
+    assert_eq!(first["launcher.can_latest"], Value::Bool(true));
+    warm_chat.act("launcher:new", &launcher);
+    let mut saw_list = false;
+    let mut saw_new = false;
+    for _ in 0..2 {
+        let call = call_with_timeout(&mut lab).await;
+        saw_list |= call.0 == "ai.launcher.list";
+        saw_new |= call.0 == "ai.launcher.new";
+    }
+    assert!(saw_list && saw_new, "new action is sent while the refresh is pending");
+    loop {
+        let out = warm_chat.project(&launcher);
+        if matches!(&out["launcher.chats"], Value::List(rows) if rows.first().is_some_and(|row| row["title"] == "Build fixes 1")) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    }
+    let fresh_ms = warm_started.elapsed().as_millis();
+    assert!(fresh_ms < 300, "fresh local fake service exceeded 300 ms: {fresh_ms} ms");
+    eprintln!("launcher timing: cold open-to-list={cold_ms} ms; cached first-frame={first_frame_ms} ms; fresh refresh={fresh_ms} ms");
 }
 
 #[test]

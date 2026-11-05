@@ -29,6 +29,8 @@ const SANS: &str = "IBM Plex Sans";
 const MONO: &str = "JetBrainsMono Nerd Font";
 const HEARTBEAT: Duration = Duration::from_secs(10);
 const LAUNCHER_REFRESH: Duration = Duration::from_secs(60);
+const LAUNCHER_CACHE_LIMIT: usize = 64 * 1024;
+const LAUNCHER_CACHE_ROWS: usize = 30;
 const OPEN: &str = "ai.chat.open";
 const LAUNCHER_LIST: &str = "ai.launcher.list";
 const MAX_QUESTIONS: usize = 4;
@@ -131,6 +133,7 @@ pub struct Chat {
     /// Message text by ordinal for the copy actions of the projected transcript.
     texts: RefCell<BTreeMap<String, String>>,
     memory: Option<crate::popouts::ChatMemory>,
+    launcher_cache_path: Option<std::path::PathBuf>,
 }
 
 /// What a view action asks the host to do besides updating stores.
@@ -193,6 +196,56 @@ fn provider_name(provider: Provider) -> &'static str {
 }
 
 impl Chat {
+    fn default_launcher_cache_path() -> Option<std::path::PathBuf> {
+        let base = std::env::var_os("XDG_CACHE_HOME")
+            .map(std::path::PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache")))?;
+        Some(base.join("nacre/ai-panel/chats.json"))
+    }
+    fn load_launcher_cache(path: &std::path::Path) -> Option<Json> {
+        let bytes = std::fs::read(path).ok()?;
+        if bytes.len() > LAUNCHER_CACHE_LIMIT { return None; }
+        let mut data: Json = serde_json::from_slice(&bytes).ok()?;
+        let chats = data["chats"].as_array_mut()?;
+        chats.truncate(LAUNCHER_CACHE_ROWS);
+        chats.retain(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
+            && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 240));
+        for row in chats {
+            if let Some(object) = row.as_object_mut() {
+                object.remove("project");
+                object.retain(|key, _| matches!(key.as_str(), "key" | "title" | "provider" | "state" | "lastActivity"));
+            }
+        }
+        Some(data)
+    }
+    fn save_launcher_cache(path: &std::path::Path, data: &Json) {
+        let Some(chats) = data["chats"].as_array() else { return; };
+        let cached = json!({
+            "defaultProvider": if data["defaultProvider"].as_str() == Some("claude") { "claude" } else { "codex" },
+            "chats": chats.iter().filter(|row| row["key"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 256)
+                && row["title"].as_str().is_some_and(|v| !v.is_empty() && v.len() <= 240))
+                .take(LAUNCHER_CACHE_ROWS).map(|row| json!({
+                    "key": row["key"], "title": row["title"], "provider": row["provider"],
+                    "state": row["state"], "lastActivity": row["lastActivity"]
+                })).collect::<Vec<_>>()
+        });
+        let Ok(bytes) = serde_json::to_vec(&cached) else { return; };
+        if bytes.len() > LAUNCHER_CACHE_LIMIT { return; }
+        let Some(parent) = path.parent() else { return; };
+        if std::fs::create_dir_all(parent).is_err() { return; }
+        #[cfg(unix)] {
+            use std::os::unix::fs::PermissionsExt;
+            let _ = std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700));
+        }
+        let temp = path.with_extension("json.tmp");
+        if std::fs::write(&temp, bytes).is_ok() {
+            #[cfg(unix)] {
+                use std::os::unix::fs::PermissionsExt;
+                let _ = std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o600));
+            }
+            let _ = std::fs::rename(temp, path);
+        }
+    }
     pub(crate) fn launcher_active(&self, stores: &Stores) -> bool {
         stores.get("panel.open") != Some(&Value::Bool(false))
             && stores.get("chat.section") != Some(&Value::Text("chat".into()))
@@ -204,6 +257,12 @@ impl Chat {
     }
 
     pub fn new(client: Option<Client>, source: Arc<dyn Source>, meter: Meter) -> Self {
+        let launcher_cache_path = if cfg!(test) {
+            None
+        } else {
+            Self::default_launcher_cache_path()
+        };
+        let cached_launcher = launcher_cache_path.as_deref().and_then(Self::load_launcher_cache);
         let style = Style::new(WIDTH as f32 - 32., SANS, MONO);
         let metrics = Metrics::new(WIDTH, &style.scale);
         Self {
@@ -212,6 +271,7 @@ impl Chat {
             transcript: RefCell::new(Transcript::new(style, meter)),
             metrics,
             st: RefCell::new(St {
+                launcher: cached_launcher,
                 follow: true,
                 viewport: (1200., 800.),
                 ..Default::default()
@@ -221,6 +281,7 @@ impl Chat {
             heartbeat: HEARTBEAT,
             texts: Default::default(),
             memory: None,
+            launcher_cache_path,
         }
     }
     /// Feed an unbounded synthetic channel into projection tests without weakening the
@@ -237,6 +298,12 @@ impl Chat {
     /// Process-local keep of the draft and section while the panel is closed.
     pub fn with_memory(mut self, memory: crate::popouts::ChatMemory) -> Self {
         self.memory = Some(memory);
+        self
+    }
+    #[cfg(test)]
+    pub(crate) fn with_launcher_cache_path(mut self, path: std::path::PathBuf) -> Self {
+        self.st.borrow_mut().launcher = Self::load_launcher_cache(&path);
+        self.launcher_cache_path = Some(path);
         self
     }
     pub fn remembered(&self) -> BTreeMap<String, Value> {
@@ -377,9 +444,26 @@ impl Chat {
             let call = st.pending.remove(index).call;
             match (call, reply) {
                 (Call::LauncherList, Ok(value)) => {
-                    st.launcher = Some(value);
+                    let warning = value["warning"].as_str().unwrap_or("");
+                    let mut clean = value.clone();
+                    if let Some(object) = clean.as_object_mut() {
+                        object.remove("projects");
+                        object.remove("warning");
+                    }
+                    if let Some(chats) = clean["chats"].as_array_mut() {
+                        chats.truncate(LAUNCHER_CACHE_ROWS);
+                        for row in chats {
+                            if let Some(object) = row.as_object_mut() { object.remove("project"); }
+                        }
+                    }
+                    if warning.is_empty() {
+                        if let Some(path) = &self.launcher_cache_path {
+                            Self::save_launcher_cache(path, &clean);
+                        }
+                        st.launcher = Some(clean);
+                    }
                     st.launcher_asked = Some(Instant::now());
-                    st.message.clear();
+                    st.message = if warning.is_empty() { String::new() } else { "bead.common.request-failed".into() };
                 }
                 (Call::LauncherList, Err(_)) => {
                     st.launcher_asked = Some(Instant::now());
@@ -499,7 +583,7 @@ impl Chat {
                 self.st.borrow_mut().launcher_asked = Some(Instant::now());
             }
             let st = self.st.borrow();
-            let data = st.launcher.as_ref().cloned().unwrap_or_else(|| json!({}));
+            let data = st.launcher.as_ref().cloned().or_else(|| self.launcher_cache_path.as_deref().and_then(Self::load_launcher_cache)).unwrap_or_else(|| json!({}));
             let query = match stores.get("launcher.search") {
                 Some(Value::Text(s)) => s.to_lowercase(),
                 _ => String::new(),
@@ -509,7 +593,7 @@ impl Chat {
                 .into_iter()
                 .filter(|row| {
                     query.is_empty()
-                        || ["title", "project", "provider"]
+                        || ["title", "provider"]
                             .into_iter()
                             .filter_map(|k| row[k].as_str())
                             .any(|value| value.to_lowercase().contains(&query))
@@ -566,32 +650,15 @@ impl Chat {
                 })
                 .collect();
             out.insert("launcher.chats".into(), Value::list(rows));
-            let projects = data["projects"].as_array().cloned().unwrap_or_default();
-            out.insert("launcher.projects".into(), Value::list(projects.clone()));
             let selected_provider = match stores.get("launcher.provider") {
                 Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
                 _ => data["defaultProvider"]
                     .as_str()
                     .filter(|v| matches!(*v, "codex" | "claude"))
-                    .unwrap_or("")
+                    .unwrap_or("codex")
                     .to_owned(),
             };
             out.insert("launcher.provider".into(), text(selected_provider.clone()));
-            let selected_project = match stores.get("launcher.project") {
-                Some(Value::Text(v)) if projects.iter().any(|p| p["id"].as_str() == Some(v)) => {
-                    v.clone()
-                }
-                _ => projects
-                    .first()
-                    .and_then(|p| p["id"].as_str())
-                    .unwrap_or("")
-                    .to_owned(),
-            };
-            out.insert("launcher.project".into(), text(selected_project.clone()));
-            out.insert(
-                "launcher.project_picker_open".into(),
-                Value::Bool(stores.get("launcher.project_picker_open") == Some(&Value::Bool(true))),
-            );
             out.insert(
                 "launcher.search".into(),
                 text(match stores.get("launcher.search") {
@@ -616,7 +683,7 @@ impl Chat {
             out.insert(
                 "launcher.warning".into(),
                 text(if !warning.is_empty() {
-                    warning.to_owned()
+                    tr("bead.common.request-failed", &[])
                 } else if !st.message.is_empty() {
                     tr(&st.message, &[])
                 } else if self.ready(LAUNCHER_LIST).is_none() {
@@ -652,12 +719,6 @@ impl Chat {
                 "launcher.can_latest".into(),
                 Value::Bool(
                     !action_pending
-                        && st.launcher.is_some()
-                        && data["chats"]
-                            .as_array()
-                            .is_some_and(|chats| !chats.is_empty())
-                        && warning.is_empty()
-                        && !st.pending.iter().any(|p| p.call == Call::LauncherList)
                         && self.ready("ai.launcher.latest").is_some(),
                 ),
             );
@@ -665,10 +726,13 @@ impl Chat {
                 "launcher.can_new".into(),
                 Value::Bool(
                     !action_pending
-                        && !selected_project.is_empty()
                         && !selected_provider.is_empty()
                         && self.ready("ai.launcher.new").is_some(),
                 ),
+            );
+            out.insert(
+                "launcher.loading".into(),
+                Value::Bool(st.launcher.is_none() && st.launcher_asked.is_none()),
             );
             out.insert(
                 "launcher.can_open".into(),
@@ -1006,11 +1070,10 @@ impl Chat {
                 "refresh" => self.st.borrow_mut().launcher_asked = None,
                 "new" => {
                     let provider = value("launcher.provider");
-                    let project = value("launcher.project");
                     self.begin(
                         Call::LauncherAction,
                         "ai.launcher.new",
-                        json!({"provider": provider, "project": project}),
+                        json!({"provider": provider, "project": "general"}),
                         self.waker(),
                     );
                 }
@@ -1036,14 +1099,6 @@ impl Chat {
                     out.stores
                         .insert("bead.focused".into(), text("chat.search"));
                 }
-                "toggle-project-picker" => {
-                    out.stores.insert(
-                        "launcher.project_picker_open".into(),
-                        Value::Bool(
-                            stores.get("launcher.project_picker_open") != Some(&Value::Bool(true)),
-                        ),
-                    );
-                }
                 "open-selected" => {
                     let key = value("launcher.selected");
                     if !key.is_empty() {
@@ -1068,7 +1123,7 @@ impl Chat {
                         .into_iter()
                         .filter(|row| {
                             query.is_empty()
-                                || ["title", "project", "provider"]
+                                || ["title", "provider"]
                                     .into_iter()
                                     .filter_map(|k| row[k].as_str())
                                     .any(|s| s.to_lowercase().contains(&query))
@@ -1111,12 +1166,6 @@ impl Chat {
                 _ if rest.starts_with("provider:") => {
                     out.stores
                         .insert("launcher.provider".into(), text(&rest[9..]));
-                }
-                _ if rest.starts_with("project:") => {
-                    out.stores
-                        .insert("launcher.project".into(), text(&rest[8..]));
-                    out.stores
-                        .insert("launcher.project_picker_open".into(), Value::Bool(false));
                 }
                 _ => {}
             },
