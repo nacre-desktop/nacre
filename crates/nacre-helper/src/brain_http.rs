@@ -497,6 +497,137 @@ fn write_response(stream: &mut TcpStream, mut response: Response) -> io::Result<
 mod tests {
     use super::*;
 
+    fn launch_order_bootstrap_and_authorize(state: &Path, port: u16, auth: &mut BrowserAuth) {
+        let url = crate::brain_auth::refresh_bootstrap(state, port, false).unwrap();
+        let token = url.split("nacre-bootstrap=").nth(1).unwrap();
+        let mut bootstrap_headers = BTreeMap::new();
+        bootstrap_headers.insert("host".into(), format!("127.0.0.1:{port}"));
+        bootstrap_headers.insert("origin".into(), format!("http://127.0.0.1:{port}"));
+        bootstrap_headers.insert("content-type".into(), "application/json".into());
+        bootstrap_headers.insert("sec-fetch-site".into(), "same-origin".into());
+        let response = authorize(
+            Request {
+                method: "POST".into(),
+                path: "/api/bootstrap".into(),
+                query: String::new(),
+                headers: bootstrap_headers,
+                body: serde_json::to_vec(&serde_json::json!({"token": token})).unwrap(),
+            },
+            port,
+            auth,
+        )
+        .unwrap_err();
+        assert_eq!(response.status, 200);
+        let value: Value = serde_json::from_slice(&response.body).unwrap();
+        let bearer = value["authorization"].as_str().unwrap();
+        assert_eq!(bearer, auth.bearer_value());
+        let cookie = response
+            .headers
+            .iter()
+            .find(|(name, _)| name == "Set-Cookie")
+            .unwrap()
+            .1
+            .split(';')
+            .next()
+            .unwrap()
+            .to_owned();
+        assert_eq!(cookie, format!("{}={}", auth.cookie_name(), auth.cookie_value()));
+
+        let mut headers = BTreeMap::new();
+        headers.insert("host".into(), format!("127.0.0.1:{port}"));
+        headers.insert("cookie".into(), cookie);
+        headers.insert("x-nacre-brain-authorization".into(), bearer.to_owned());
+        headers.insert("sec-fetch-site".into(), "same-origin".into());
+        headers.insert("origin".into(), format!("http://127.0.0.1:{port}"));
+        headers.insert("referer".into(), format!("http://127.0.0.1:{port}/"));
+        let request = Request {
+            method: "GET".into(),
+            path: "/api/brain".into(),
+            query: String::new(),
+            headers,
+            body: Vec::new(),
+        };
+        assert_eq!(authorize(request, port, auth).unwrap().path, "/api/brain");
+    }
+
+    #[test]
+    fn launcher_refresh_redeems_current_session_after_server_start_with_legacy_file() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path();
+        let auth_dir = state.join("auth");
+        let ports_dir = auth_dir.join("ports");
+        std::fs::create_dir_all(&ports_dir).unwrap();
+        std::fs::set_permissions(&auth_dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+        std::fs::set_permissions(&ports_dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+        std::fs::write(
+            auth_dir.join("bootstrap.json"),
+            br#"{"token":"legacy-base64-token"}"#,
+        )
+        .unwrap();
+        std::fs::set_permissions(
+            auth_dir.join("bootstrap.json"),
+            std::fs::Permissions::from_mode(0o600),
+        )
+        .unwrap();
+        let port = 17843;
+        let cookie = "a".repeat(64);
+        let bearer = "b".repeat(64);
+        std::fs::write(
+            ports_dir.join(format!("{port}.json")),
+            serde_json::to_vec(&serde_json::json!({
+                "cookie": cookie,
+                "bearer": bearer,
+                "expires": 4102444800u64,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::set_permissions(
+            ports_dir.join(format!("{port}.json")),
+            std::fs::Permissions::from_mode(0o600),
+        )
+        .unwrap();
+
+        // The running server initializes from the older persisted session;
+        // launcher refresh and browser redemption happen after server startup.
+        let mut auth = BrowserAuth::open(state, port).unwrap();
+        assert_eq!(auth.cookie_value(), "a".repeat(64));
+        assert_eq!(auth.bearer_value(), "b".repeat(64));
+        launch_order_bootstrap_and_authorize(state, port, &mut auth);
+        assert!(crate::brain_auth::browser_ready(state, port).unwrap());
+    }
+
+    #[test]
+    fn launcher_renewal_is_adopted_by_an_already_running_server() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path();
+        let port = 17843;
+        let mut auth = BrowserAuth::open(state, port).unwrap();
+        let path = state.join(format!("auth/ports/{port}.json"));
+        std::fs::write(
+            &path,
+            serde_json::to_vec(&serde_json::json!({
+                "cookie": auth.cookie_value(),
+                "bearer": auth.bearer_value(),
+                "expires": 1u64,
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+
+        // The existing listener still holds its old credentials in memory.
+        // The trusted launcher renews disk state; redemption must adopt it.
+        let old_cookie = auth.cookie_value().to_owned();
+        launch_order_bootstrap_and_authorize(state, port, &mut auth);
+        assert_ne!(auth.cookie_value(), old_cookie);
+        assert!(crate::brain_auth::browser_ready(state, port).unwrap());
+    }
+
     #[test]
     fn protected_api_rejects_cross_port_navigation_even_with_host_wide_cookie() {
         let dir = tempfile::tempdir().unwrap();
