@@ -207,7 +207,10 @@ pub fn enqueue_locked(root: &Path, path: &Path, agent: &str) -> Result<()> {
     if rel.components().any(|c| !matches!(c, Component::Normal(_))) {
         return Err("Brain git queue path must be vault-relative and normal".into());
     }
-    let path = rel.to_string_lossy().replace('\\', "/");
+    let path = rel
+        .to_str()
+        .ok_or("Brain git paths must be UTF-8")?
+        .to_owned();
     if under_forbidden(&path) {
         return Ok(());
     }
@@ -957,6 +960,22 @@ mod tests {
             "queued"
         );
         assert!(success(&root, &["show", "HEAD:inbox/a.md"]).is_err());
+    }
+    #[test]
+    fn queue_preserves_literal_backslashes_in_unix_filenames() {
+        let (_temp, root) = vault();
+        init(&root, None).unwrap();
+        fs::create_dir_all(root.join("wiki")).unwrap();
+        let path = "wiki/back\\slash.md";
+        fs::write(root.join(path), "queued").unwrap();
+        enqueue(&root, &root.join(path), "test").unwrap();
+        let queue = read_queue(&root).unwrap();
+        assert_eq!(queue.entries[0].path, path);
+        commit_paths(&root, &queue.entries).unwrap();
+        assert_eq!(
+            success(&root, &["show", &format!("HEAD:{path}")]).unwrap(),
+            "queued"
+        );
     }
     #[test]
     fn guard_rejects_secret_without_echoing_it() {
