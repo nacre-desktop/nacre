@@ -712,6 +712,31 @@ h2 {
   padding: 50px 0;
   color: var(--muted);
 }
+#load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  background: var(--panel);
+}
+#load-error[hidden] {
+  display: none;
+}
+#retry {
+  flex: none;
+}
+#connections-status {
+  color: var(--muted);
+  font-size: .85rem;
+}
+#connections-status[data-state="error"] {
+  color: var(--secondary);
+}
 a {
   color: var(--accent);
 }

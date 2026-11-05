@@ -26,10 +26,11 @@ window.NacreEnglish = {
     other: "{count} notes · Suggested",
   },
   "brain.ui.detail.evidence-note": "Evidence note",
+  "brain.ui.error.connections": "Connections could not be loaded.",
+  "brain.ui.error.request-timed-out": "The request timed out. Try again.",
+  "brain.ui.error.unavailable": "Could not load your knowledge. Try again.",
   "brain.ui.label.could-not-read-this-note-try-selecting-it-again":
     "Could not read this note. Try selecting it again.",
-  "brain.ui.label.could-not-read-your-brain-use-refresh-knowledge-to-retry":
-    "Could not read your brain. Use Refresh knowledge to retry.",
   "brain.ui.label.explicit-note-reference": "Explicit note reference",
   "brain.ui.label.explicit-references-and-shared-notes-will-appear-here-as-your-knowledge-connects":
     "Explicit references and shared notes will appear here as your knowledge connects.",
@@ -104,6 +105,8 @@ window.NacreEnglish = {
   "brain.ui.literal.use-automatic-grouping": "Use automatic grouping",
   "brain.ui.literal.verified": "Verified",
   "brain.ui.placeholder.search-your-brain": "Search your brain",
+  "brain.ui.status.building-connections": "Building connections…",
+  "brain.ui.status.connections-ready": "Connections ready",
   "brain.ui.status.index": "{count} notes · {time}",
   "brain.ui.text.back": "← Back",
   "brain.ui.text.brain": "Brain",
@@ -119,6 +122,7 @@ window.NacreEnglish = {
   "brain.ui.text.reading-local-notes": "Reading local notes…",
   "brain.ui.text.reading-your-knowledge": "Reading your knowledge…",
   "brain.ui.text.refresh-knowledge": "Refresh knowledge",
+  "brain.ui.text.retry": "Retry",
   "brain.ui.text.subjects": "Subjects",
   "brain.ui.text.the-subjects-you-return-to-connected-by-evidence":
     "The subjects you return to, connected by evidence.",
