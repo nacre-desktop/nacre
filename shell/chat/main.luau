@@ -95,9 +95,16 @@ else
     local list_top=recent_top+CAPTION+T.spacing.xs
     local footer_h=BTN+T.spacing.xs
     local list_bottom=H-E-footer_h-T.spacing.md
-    local list_h=math.max(72,list_bottom-list_top)
+    local warning=get("launcher.warning")
+    local warning_h=warning~="" and 2*CAPTION or 0
+    local rows_top=list_top+warning_h
+    local list_h=math.max(0,list_bottom-rows_top)
     local project=get("launcher.project")
+    local project_picker_open=get("launcher.project_picker_open")
     local provider=get("launcher.provider")
+    local projects=get("launcher.projects")
+    local selected_project=""
+    for _,item in projects do if item.id==project then selected_project=item.label end end
     add(ui.Row{id="launcher-actions",position="absolute",left=E,top=LTOP,width=INNER,height=BTN,gap=T.spacing.xs,
         button("new-chat",nil,nil,nil,BTN,ui.tr("bead.panel.chat-new"),"add_comment",get("launcher.can_new") and ui.action("chat.do","launcher:new") or nil,true,BODY),
         button("resume",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-resume"),"history",ui.action("chat.do","launcher:latest"),false,BODY)})
@@ -106,10 +113,9 @@ else
         button("claude",nil,nil,nil,BTN,ui.tr("bead.panel.chat-claude"),"",ui.action("chat.do","launcher:provider:claude"),provider=="claude",CAPTION)})
     add(ui.Row{id="project-picker",position="absolute",left=E,top=PROJECT_TOP,width=INNER,height=BTN,gap=T.spacing.xs,align="center",
         ui.Text{id="project-label",text=ui.tr("bead.panel.launcher-project"),width=CAPTION*4,height=BTN,font_size=CAPTION,color="onSurfaceVariant"},
-        ui.Repeat{id="projects",model=ui.bind("launcher.projects"),key="id",render=function(item)
-            return kit.PillButton{id="project",label=item.label,compact=true,selected=project==item.id,
-                on_activate=ui.action("chat.do","launcher:project:"..item.id),aria_label=item.label}
-        end})})
+        kit.PillButton{id="selected-project",label=selected_project~="" and selected_project or ui.tr("bead.panel.launcher-choose-project"),
+            glyph="arrow_drop_down",width=INNER-CAPTION*4-T.spacing.xs,selected=project_picker_open,
+            on_activate=ui.action("chat.do","launcher:toggle-project-picker"),aria_label=ui.tr("bead.panel.launcher-choose-project")}})
     add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
         text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,
         radius=T.radii.small,font_size=BODY,fill="surfaceContainerHigh",focus_ring=true})
@@ -117,7 +123,11 @@ else
         text=ui.tr("bead.panel.launcher-recent"),font_size=CAPTION,color="onSurfaceVariant"})
     add(button("refresh",E+INNER-T.spacing.huge-T.spacing.xl, recent_top-T.spacing.xs, T.spacing.huge+T.spacing.xl,BTN,
         ui.tr("bead.panel.chat-refresh"),"refresh",ui.action("chat.do","launcher:refresh"),false,CAPTION))
-    add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=list_top,
+    if warning~="" then
+        add(ui.Text{id="launcher-warning",position="absolute",left=E,top=list_top,width=INNER,height=warning_h,
+            text=warning,font_size=CAPTION,color="error"})
+    end
+    add(launcher{id="recent-chats",scroll=ui.bind("launcher.scroll"),position="absolute",left=E,top=rows_top,
         width=INNER,height=list_h,gap=T.spacing.xs,row_height=ROW,model=ui.bind("launcher.chats"),key="key",
         render=function(item)
             local meta_width=INNER-2*T.spacing.sm
@@ -134,17 +144,28 @@ else
                     ui.Text{id="activity",text=(active and ui.tr("bead.panel.launcher-running") or ui.tr("bead.panel.launcher-idle")).."  "..item.lastActivityLabel,
                         width=meta_width,height=CAPTION+1,font_size=CAPTION-1,color=active and "primary" or "onSurfaceVariant"}}}
         end})
-    local warning=get("launcher.warning")
     local empty=get("launcher.empty_state")
-    if warning~="" or empty~="" then
-        add(ui.Text{id="launcher-message",position="absolute",left=E,top=list_top+list_h/2-CAPTION,width=INNER,height=2*CAPTION,
-            text=warning~="" and warning or empty,font_size=CAPTION,text_align="center",color=warning~="" and "error" or "onSurfaceVariant"})
+    if empty~="" then
+        add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-2*CAPTION)/2),width=INNER,height=2*CAPTION,
+            text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"})
     end
     add(ui.Row{id="secondary",position="absolute",left=E,top=H-E-footer_h,width=INNER,height=BTN,gap=T.spacing.xs,
-        button("brain",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-brain"),"neurology",ui.action("chat.do","launcher:brain"),false,CAPTION),
-        button("settings",nil,nil,nil,BTN,ui.tr("bead.panel.chat-tab-settings"),"settings",ui.action("chat.do","launcher:settings"),false,CAPTION),
-        button("projects",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-projects"),"folder_open",ui.action("chat.do","launcher:projects"),false,CAPTION),
-        button("quick-chat",nil,nil,nil,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)))
+        button("brain",nil,nil,40,BTN,"","neurology",ui.action("chat.do","launcher:brain"),false,CAPTION,ui.tr("bead.panel.launcher-brain")),
+        button("settings",nil,nil,40,BTN,"","settings",ui.action("chat.do","launcher:settings"),false,CAPTION,ui.tr("bead.panel.chat-tab-settings")),
+        button("projects",nil,nil,40,BTN,"","folder_open",ui.action("chat.do","launcher:projects"),false,CAPTION,ui.tr("bead.panel.launcher-projects")),
+        button("quick-chat",nil,nil,112,BTN,ui.tr("bead.panel.launcher-quick-chat"),"forum",ui.action("chat.do","launcher:quick-chat"),false,CAPTION)})
+    if project_picker_open and #projects>0 then
+        local PICK_TOP=PROJECT_TOP+BTN
+        local PICK_H=math.min(160,H-E-PICK_TOP-T.spacing.sm)
+        add(launcher{id="project-options",scroll=ui.bind("launcher.project-scroll"),position="absolute",left=E+CAPTION*4+T.spacing.xs,
+            top=PICK_TOP,width=INNER-CAPTION*4-T.spacing.xs,height=PICK_H,gap=T.spacing.xs,row_height=BTN,
+            model=ui.bind("launcher.projects"),key="id",render=function(item)
+                return kit.Button{id="project-option",width="fill",height=BTN,padding=T.spacing.xs,radius=T.radii.small,
+                    fill=item.id==project and "secondaryContainer" or "surfaceContainerHigh",selected=item.id==project,
+                    aria_label=item.label,on_activate=ui.action("chat.do","launcher:project:"..item.id),
+                    ui.Text{text=item.label,width="fill",height=BTN,font_size=BODY,color="onSurface"}}
+            end})
+    end
 end
 return kit.Panel{id="chat",edge=get("view.edge"),open=ui.bind("panel.open"),duration=kit.motion.text,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),
     width=W,height=H,padding=0,radius=T.radii.medium+2,fill="surface",table.unpack(kids)}

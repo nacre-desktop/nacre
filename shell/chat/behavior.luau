@@ -13,9 +13,10 @@ return {stores={
     ["chat.composer_top"]=0,["chat.composer_height"]=100,["chat.actions_top"]=0,
     ["chat.busy"]=false,["chat.workspace"]=false,["chat.can_new"]=false,["chat.can_workspace"]=false,
     ["chat.can_send"]=false,["chat.can_reply"]=false,["chat.can_stop"]=false,
-    ["chat.provider"]="",["chat.saved"]={},["chat.saved_state"]="",
-    ["launcher.chats"]={},["launcher.projects"]={},["launcher.provider"]="codex",["launcher.project"]="",
+    ["chat.provider"]="",
+    ["launcher.chats"]={},["launcher.projects"]={},["launcher.provider"]="",["launcher.project"]="",
     ["launcher.search"]="",["launcher.selected"]="",["launcher.warning"]="",["launcher.empty_state"]="",
+    ["launcher.project_picker_open"]=false,["launcher.project-scroll"]=0,
     ["launcher.quick_chat"]=false,["launcher.can_new"]=false,["launcher.can_open"]=false,["launcher.scroll"]=0,
 },actions={
     close=function(s) s["panel.open"]=false s["chat.pinned"]=false s["panel.anchor_hovered"]=false end,
