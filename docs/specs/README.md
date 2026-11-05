@@ -19,6 +19,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| 28 | N0133 / NN0023 consolidation (B0226–B0228, N0125, N0128–N0132, NN0021–NN0023) | Done 2026-11-05; main 46fd115e pins Bead 8ef16a31; nacre-niri `nacre` daa117cf; full dev-1 desktop CI green (lead-final3) | Live runs 1e487b35 (r3073 compositor installed); deploy main when the owner is free. Brain first-open hang and the overhaul move to the Brain units. |
 | 27 | [N0129 local AI panel polish](0129-ai-panel-polish.md) | Implemented; focused dev-1 checks pass | Local general conversations, cached first frame in 11–12 ms and fake-service refresh in 166–168 ms; reviewed 1×/1.5× goldens; task branch only, no live changes. |
 | 27 | N0130 Brain browser and width observer | Implemented; focused dev-1 checks pass | Prefer supported default Chromium browsers, then Brave/Chromium/Chrome/Vivaldi/Edge; retain profile-scoped focus matching and notify/log launch failures. Native widths skip both daemon actor and foreground observer; reconnects back off to 2 s. Locked helper/shell checks pass; topic branch only, no live apply. |
 | 26 | [N0128 AI panel launcher](0128-ai-panel-launcher.md) | Implemented; focused dev-1 checks pass | Launcher shares app history/resume actions, with Quick chat and detach; task branch only. Broader inherited CI gaps recorded in the spec; owner should try search/open/focus, provider/project, pin/detach and Quick chat. |
