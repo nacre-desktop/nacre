@@ -132,7 +132,20 @@ in the fingerprint). Module `brain_connections.rs`:
 - Screenshots (`.lead/evidence/`, light and dark): `n0144-wiki-home-*`,
   `n0144-wiki-entity-*`, `n0144-wiki-evidence-*`,
   `n0144-reader-connections-*`.
-- Full desktop CI: see the report (`.lead/report.md`).
+- Full `desktop` job of `.github/workflows/check.yml` replayed step by step in
+  `ghcr.io/archlinux/archlinux:latest` on eb7eaf9: `N0144 DESKTOP CI PASS`
+  (fmt, clippy `-D warnings`, 2,219 workspace tests in 81 suites, product
+  shell checks and proofs, cargo deny, helper sandbox, i18n coverage of 4,250
+  messages with current generated assets, `tools/check.py` with 54 Brain
+  Python tests and 537 helper parity cases at 0 failures, English/pseudo
+  galleries of 244 and 185 states, daemon raster memory). It ran in two
+  invocations on the same checkout: the first stopped at "Helper sandbox
+  integrity" because the bind-mounted task directory was mode 0700, so the
+  uid-1000 parity fixture could not reach the source; after `chmod 711` the
+  run resumed at that step and passed every remaining step. Chromium was not
+  installed during the CI replay (it makes the wallpaper pipeline emit a
+  Chromium theme); browser tests ran separately. Prettier `--check` and
+  `node --check` pass for the changed viewer files and both browser tests.
 
 ## Size and cleanup
 
