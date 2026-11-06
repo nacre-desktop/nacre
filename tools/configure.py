@@ -100,9 +100,10 @@ def files(root=ROOT):
     result[Path(".local/share/applications/nacre-brain.desktop")] = (
         root / "nacre/desktop/nacre-brain.desktop"
     )
-    for suffix in ("service", "timer"):
-        name = f"nacre-brain-check.{suffix}"
-        result[Path(".config/systemd/user") / name] = root / "ai/systemd" / name
+    for unit in ("nacre-brain-check", "nacre-brain-consolidate"):
+        for suffix in ("service", "timer"):
+            name = f"{unit}.{suffix}"
+            result[Path(".config/systemd/user") / name] = root / "ai/systemd" / name
     result[Path(".config/systemd/user/nacre-power-key.service")] = (
         root / "nacre/shell-tools/nacre-power-key.service"
     )

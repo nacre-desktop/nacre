@@ -4,9 +4,9 @@ use crate::Result;
 use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 
-const START: &str =
+pub(super) const START: &str =
     "<!-- brain:generated:start (rebuilt by the index job; edit above this line) -->";
-const END: &str = "<!-- brain:generated:end -->";
+pub(super) const END: &str = "<!-- brain:generated:end -->";
 
 #[derive(Clone)]
 struct Evidence {
@@ -19,7 +19,7 @@ struct Evidence {
     review: Option<String>,
 }
 
-fn slug(value: &str) -> String {
+pub(super) fn slug(value: &str) -> String {
     value
         .split(|c: char| !c.is_alphanumeric())
         .filter(|part| !part.is_empty())
@@ -126,9 +126,10 @@ fn rewrite_wiki_header(text: &str, values: &[(&str, String)]) -> String {
     out
 }
 
-type Role = (String, String, String, Vec<String>, Option<String>);
+/// (page, kind, name, aliases, parent) for every world, area, entity and redirect.
+pub(super) type Role = (String, String, String, Vec<String>, Option<String>);
 
-fn roles(vocab: &Value, registry: &Value) -> Vec<Role> {
+pub(super) fn roles(vocab: &Value, registry: &Value) -> Vec<Role> {
     let mut out = Vec::new();
     for world in vocab["worlds"].as_array().into_iter().flatten() {
         let name = world["name"].as_str().unwrap_or_default();
@@ -229,6 +230,7 @@ fn make_digests(
     registry: &Value,
 ) -> Result<BTreeMap<String, Vec<u8>>> {
     let ev = evidence(notes)?;
+    let categories = crate::brain_search::Categories::new(registry);
     let mut groups: BTreeMap<(String, String, String), Vec<&Evidence>> = BTreeMap::new();
     for item in &ev {
         let checkpoint = item.path.starts_with("archive/checkpoints/");
@@ -241,28 +243,10 @@ fn make_digests(
             continue;
         }
         let unresolved_inbox = inbox && item.review.is_some();
-        let world = if unresolved_inbox {
-            String::new()
+        let (world, area) = if unresolved_inbox {
+            Default::default()
         } else {
-            item.worlds.first().cloned().unwrap_or_default()
-        };
-        let area = if unresolved_inbox {
-            String::new()
-        } else {
-            item.areas
-                .iter()
-                .find(|name| {
-                    registry["areas"]
-                        .as_array()
-                        .into_iter()
-                        .flatten()
-                        .any(|area| {
-                            area["name"].as_str() == Some(name.as_str())
-                                && area["parent"].as_str() == Some(world.as_str())
-                        })
-                })
-                .cloned()
-                .unwrap_or_default()
+            canonical(&categories, item)
         };
         groups
             .entry((month.into(), world, area))
@@ -282,7 +266,9 @@ fn make_digests(
         } else {
             format!("{name}-{}", slug(&area))
         };
-        let page = format!("digests/{month}/{name}.md");
+        // File names are vault-unique (viewer note ids): the month prefix keeps a
+        // world/area digest from colliding across months or with a wiki page.
+        let page = format!("digests/{month}/{month}-{name}.md");
         let label = if world.is_empty() {
             "Unsorted (review queue)".to_owned()
         } else if area.is_empty() {
@@ -321,6 +307,40 @@ fn make_digests(
         }
     }
     Ok(out)
+}
+
+/// The note's first world and an area of that world, resolved through registry
+/// names, aliases and `merged_into` (a folded world resolves as its area).
+fn canonical(categories: &crate::brain_search::Categories, item: &Evidence) -> (String, String) {
+    let resolve = |key: &str, raw: &str| {
+        let mut meta = serde_json::Map::new();
+        meta.insert(key.to_owned(), Value::from(raw));
+        categories.resolve(&Value::Object(meta))
+    };
+    let first = |set: BTreeSet<String>| set.into_iter().next().unwrap_or_default();
+    let (mut world, mut area) = item
+        .worlds
+        .iter()
+        .map(|raw| resolve("worlds", raw))
+        .find(|(worlds, _)| !worlds.is_empty())
+        .map(|(worlds, areas)| (first(worlds), first(areas)))
+        .unwrap_or_default();
+    if area.is_empty() {
+        if let Some((worlds, areas)) =
+            item.areas
+                .iter()
+                .map(|raw| resolve("areas", raw))
+                .find(|(worlds, areas)| {
+                    !areas.is_empty() && (world.is_empty() || worlds.contains(&world))
+                })
+        {
+            area = first(areas);
+            if world.is_empty() {
+                world = first(worlds);
+            }
+        }
+    }
+    (world, area)
 }
 
 fn plain_excerpt(line: &str) -> String {
@@ -782,12 +802,14 @@ mod tests {
         notes.insert("archive/checkpoints/2020-01/one.md".into(), note("archive/checkpoints/2020-01/one.md", "# Synthetic checkpoint\n\nRecorded: 2020-01-02\nWorlds: Nacre\nAreas: Helper\n\nFirst sentence\n[[devices/private-target|Device label]] and [readable](private/path.md). Second sentence.\n").1);
         notes.insert("archive/inbox/2020-01/review.md".into(), note("archive/inbox/2020-01/review.md", "# Unresolved archived inbox item\n\nRecorded: 2020-01-03\nReview: unsorted\n\nUnresolved synthetic item.\n").1);
         let generated = make_digests(&notes, &registry()).unwrap();
-        let page = std::str::from_utf8(&generated["digests/2020-01/nacre-helper.md"]).unwrap();
+        let page =
+            std::str::from_utf8(&generated["digests/2020-01/2020-01-nacre-helper.md"]).unwrap();
         assert!(parts(page).1.contains("Worlds: Nacre"));
         assert!(page.contains("First sentence Device label and readable"));
         assert!(!page.contains("private-target"));
         assert!(!page.contains("private/path.md"));
-        let review = std::str::from_utf8(&generated["digests/2020-01/review-unsorted.md"]).unwrap();
+        let review =
+            std::str::from_utf8(&generated["digests/2020-01/2020-01-review-unsorted.md"]).unwrap();
         assert!(review.contains("Unresolved archived inbox item"));
         assert!(review.contains("Review: unsorted"));
         assert_eq!(generated, make_digests(&notes, &registry()).unwrap());

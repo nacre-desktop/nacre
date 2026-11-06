@@ -311,6 +311,17 @@ pub(super) fn broken_links(notes: &Notes) -> Vec<(String, String)> {
     Vault::new(notes.keys().cloned()).broken(notes)
 }
 
+/// Note paths the links of `path` resolve to.
+pub(super) fn link_targets(notes: &Notes, path: &str) -> BTreeSet<String> {
+    let vault = Vault::new(notes.keys().cloned());
+    notes.get(path).map_or_else(BTreeSet::new, |bytes| {
+        links(&String::from_utf8_lossy(bytes))
+            .iter()
+            .filter_map(|link| vault.resolve(link, path))
+            .collect()
+    })
+}
+
 fn generated_parts(body: &str) -> Result<Option<(&str, &str)>> {
     let Some(start) = body.find("<!-- brain:generated:start") else {
         return Ok(None);
@@ -351,22 +362,29 @@ pub(super) fn verify(
         .collect();
     let relinker = Relinker::new(before, moves);
     let after_vault = Vault::new(after.keys().cloned());
+    // Consolidation moves, relinks and regenerates digests, wiki evidence blocks
+    // and the INDEX in one transaction; generated pages follow the wiki rules.
+    let consolidate = step == "consolidate";
+    let wiki_rules = step == "wiki" || consolidate;
     for (old, bytes) in before {
         let path = moves.get(old).unwrap_or(old);
         let actual = after
             .get(path)
             .ok_or_else(|| format!("verify: missing original {old}"))?;
-        if old == "INDEX.md" && step == "index" {
+        if old == "INDEX.md" && (step == "index" || consolidate) {
+            continue;
+        }
+        if consolidate && old.starts_with("digests/") {
             continue;
         }
         let old_text = std::str::from_utf8(bytes)?;
         let new_text = std::str::from_utf8(actual)?;
-        let (title, _, body) = super::header_body(old_text);
+        let (title, _, _) = super::header_body(old_text);
         let (new_title, _, new_body) = super::header_body(new_text);
         if !title.is_empty() && title != new_title {
             return Err(format!("verify: title changed in {old}").into());
         }
-        let expected = if matches!(step, "inbox" | "archive" | "links") {
+        let expected = if matches!(step, "inbox" | "archive" | "links" | "consolidate") {
             relinker.rewrite(old_text, old, path)
         } else {
             old_text.to_owned()
@@ -378,7 +396,7 @@ pub(super) fn verify(
                 continue;
             };
             if ["Worlds", "Areas", "Topics", "Review"].contains(&key)
-                || (step == "wiki"
+                || (wiki_rules
                     && old.starts_with("wiki/")
                     && ["Entity", "Name", "Aliases", "Parent", "Redirect"].contains(&key))
             {
@@ -394,8 +412,8 @@ pub(super) fn verify(
             }
         }
         let expected_body = super::header_body(&expected).2;
-        let unchanged = if step == "wiki" && old.starts_with("wiki/") {
-            wiki_body_unchanged(body, new_body)?
+        let unchanged = if wiki_rules && old.starts_with("wiki/") {
+            wiki_body_unchanged(expected_body, new_body)?
         } else {
             expected_body.as_bytes() == new_body.as_bytes()
         };
@@ -407,7 +425,7 @@ pub(super) fn verify(
         // unchanged, and the run reports them instead of failing.
         let old_links = links(old_text);
         let new_links = links(new_text);
-        if step != "wiki" {
+        if !(wiki_rules && old.starts_with("wiki/")) && step != "wiki" {
             for (i, link) in old_links.iter().enumerate() {
                 let Some(target) = relinker.target(link, old) else {
                     continue;
@@ -436,8 +454,11 @@ pub(super) fn verify(
             .filter_map(|line| line.split_once(':').map(|(k, v)| (k, v.trim())))
             .collect();
         let changed = before.get(path) != Some(bytes);
+        // Consolidation moves notes as written; only new generated pages must classify.
+        let moved = consolidate && moves.values().any(|target| target == path);
         let require = path.contains('/')
             && changed
+            && !moved
             && (step == "meta" || step == "wiki" || !before.contains_key(path));
         if require {
             if fields.get("Worlds").is_some_and(|s| s.is_empty()) {

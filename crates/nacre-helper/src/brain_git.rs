@@ -808,6 +808,7 @@ pub fn init(root: &Path, remote: Option<&str>) -> Result<()> {
 enum CommitKind<'a> {
     Queued { sweep: bool },
     Migration(&'a str),
+    Consolidation(&'a str),
 }
 
 fn commit_selected(
@@ -834,7 +835,10 @@ fn commit_selected(
     if !cmd.output()?.status.success() {
         return Err("unable to prepare Brain index".into());
     }
-    if matches!(kind, CommitKind::Migration(_)) {
+    if matches!(
+        kind,
+        CommitKind::Migration(_) | CommitKind::Consolidation(_)
+    ) {
         // Migration is atomic: validate every source before staging anything,
         // then use one literal, NUL-delimited pathspec batch against the private index.
         for path in selected {
@@ -946,6 +950,8 @@ fn commit_selected(
     };
     let message = if let CommitKind::Migration(step) = kind {
         format!("brain: migrate {step}")
+    } else if let CommitKind::Consolidation(message) = kind {
+        message.to_owned()
     } else if agents.is_empty() {
         format!("brain: {counts} files {summary}")
     } else {
@@ -1122,12 +1128,11 @@ pub fn flush(root: &Path) -> Result<()> {
     result
 }
 
-/// Refuse to fold earlier note edits into a migration commit. A revert must
-/// restore each affected original, including notes that were initially untracked.
-/// The caller holds the vault locks and passes existing, non-state paths only.
-pub fn require_migration_baseline(root: &Path, paths: &BTreeSet<String>) -> Result<()> {
+/// Split existing, non-state paths into (untracked or hidden from the index,
+/// differing from HEAD). The caller holds the vault locks.
+fn baseline(root: &Path, paths: &BTreeSet<String>) -> Result<(BTreeSet<String>, BTreeSet<String>)> {
     if paths.is_empty() {
-        return Ok(());
+        return Ok(Default::default());
     }
     if paths.iter().any(|path| {
         under_forbidden(path)
@@ -1149,22 +1154,56 @@ pub fn require_migration_baseline(root: &Path, paths: &BTreeSet<String>) -> Resu
         .filter(|row| row.starts_with(b"H "))
         .map(|row| String::from_utf8_lossy(&row[2..]).into_owned())
         .collect();
-    if !paths.is_subset(&tracked) {
-        return Err("commit affected notes before migration; untracked or hidden index paths cannot be reverted safely".into());
-    }
     let mut args = vec![
         "diff",
-        "--quiet",
+        "--name-only",
+        "-z",
+        "--no-renames",
         "--no-ext-diff",
         "--no-textconv",
         "HEAD",
         "--",
     ];
     args.extend(paths.iter().map(String::as_str));
-    if !git(root, &args)?.status.success() {
+    let changed = git(root, &args)?;
+    if !changed.status.success() {
+        return Err("unable to inspect migration baseline".into());
+    }
+    Ok((
+        paths.difference(&tracked).cloned().collect(),
+        changed
+            .stdout
+            .split(|byte| *byte == 0)
+            .filter(|path| !path.is_empty())
+            .map(|path| String::from_utf8_lossy(path).into_owned())
+            .collect(),
+    ))
+}
+
+/// Paths a revertable commit cannot include yet: untracked, hidden from the
+/// index or edited since HEAD. The caller holds the vault locks.
+pub fn unclean_paths(root: &Path, paths: &BTreeSet<String>) -> Result<BTreeSet<String>> {
+    let (untracked, changed) = baseline(root, paths)?;
+    Ok(untracked.into_iter().chain(changed).collect())
+}
+
+/// Refuse to fold earlier note edits into a migration commit. A revert must
+/// restore each affected original, including notes that were initially untracked.
+/// The caller holds the vault locks and passes existing, non-state paths only.
+pub fn require_migration_baseline(root: &Path, paths: &BTreeSet<String>) -> Result<()> {
+    let (untracked, changed) = baseline(root, paths)?;
+    if !untracked.is_empty() {
+        return Err("commit affected notes before migration; untracked or hidden index paths cannot be reverted safely".into());
+    }
+    if !changed.is_empty() {
         return Err("commit affected note edits before migration so git revert preserves their original bodies".into());
     }
     Ok(())
+}
+
+/// True when the vault has an `origin` remote to push to.
+pub fn has_origin(root: &Path) -> bool {
+    git(root, &["remote", "get-url", "origin"]).is_ok_and(|out| out.status.success())
 }
 
 /// Commit exactly one verified migration step. The caller holds both vault locks.
@@ -1181,6 +1220,27 @@ pub fn commit_migration_step(
     {
         return Err("invalid migration step".into());
     }
+    commit_exact(root, CommitKind::Migration(step), paths)
+}
+
+/// Commit one verified consolidation run with its summary message, under the
+/// same exact-path rules as a migration step.
+pub fn commit_consolidation(
+    root: &Path,
+    message: &str,
+    paths: &BTreeSet<String>,
+) -> Result<Option<String>> {
+    if !message.starts_with("brain: consolidate") {
+        return Err("invalid consolidation message".into());
+    }
+    commit_exact(root, CommitKind::Consolidation(message), paths)
+}
+
+fn commit_exact(
+    root: &Path,
+    kind: CommitKind<'_>,
+    paths: &BTreeSet<String>,
+) -> Result<Option<String>> {
     for path in paths {
         if Path::new(path)
             .components()
@@ -1202,14 +1262,7 @@ pub fn commit_migration_step(
         return Err("migration paths already contain staged changes".into());
     }
     let mut handled = BTreeSet::new();
-    let commit = commit_selected(
-        root,
-        paths,
-        &[],
-        CommitKind::Migration(step),
-        &mut Vec::new(),
-        &mut handled,
-    )?;
+    let commit = commit_selected(root, paths, &[], kind, &mut Vec::new(), &mut handled)?;
     if !handled.is_empty() {
         // Refresh only selected clean paths after commit. Use a single ordinary
         // index reset and never let its failure make the caller roll back HEAD.

@@ -253,10 +253,11 @@ fn resolve<'a>(r: &'a Registry, label: &str) -> Option<(bool, &'a str, Option<&'
             .chain(a.aliases.iter())
             .any(|x| exact(x, label))
         {
-            return a
-                .parent
-                .as_deref()
-                .map(|w| (false, w, Some(a.name.as_str())));
+            return live(r, a).and_then(|a| {
+                a.parent
+                    .as_deref()
+                    .map(|w| (false, w, Some(a.name.as_str())))
+            });
         }
     }
     if !valid_name(label) {
@@ -285,12 +286,24 @@ fn resolve<'a>(r: &'a Registry, label: &str) -> Option<(bool, &'a str, Option<&'
                 .chain(a.aliases.iter())
                 .any(|x| matches(x))
             {
-                return a
-                    .parent
-                    .as_deref()
-                    .map(|w| (false, w, Some(a.name.as_str())));
+                return live(r, a).and_then(|a| {
+                    a.parent
+                        .as_deref()
+                        .map(|w| (false, w, Some(a.name.as_str())))
+                });
             }
         }
+    }
+    None
+}
+/// An area merged into another resolves to the end of its `merged_into` chain;
+/// a broken chain resolves to nothing (as in the viewer and search).
+fn live<'a>(r: &'a Registry, mut area: &'a Entry) -> Option<&'a Entry> {
+    for _ in 0..=r.areas.len() {
+        let Some(target) = area.merged_into.as_deref().filter(|t| !t.is_empty()) else {
+            return Some(area);
+        };
+        area = r.areas.iter().find(|a| a.name == target)?;
     }
     None
 }
@@ -893,6 +906,229 @@ fn resolve_inner(
         brain_git::enqueue_locked(root, path, "taxonomy")?;
     }
     Ok(out)
+}
+/// Resolve a world or area name or alias to (world, area) without changing the
+/// registry; used by `nacre-brain pack`.
+pub fn resolve_label(
+    registry_bytes: &[u8],
+    label: &str,
+) -> Result<Option<(String, Option<String>)>> {
+    let r: Registry =
+        serde_json::from_slice(registry_bytes).map_err(|_| "Corrupt Brain registry JSON")?;
+    Ok(resolve(&r, label).map(|(_, w, a)| (w.to_owned(), a.map(str::to_owned))))
+}
+
+/// One evidence note as the consolidation pass sees it; categories as written.
+pub struct Usage<'a> {
+    pub title: &'a str,
+    pub body: &'a str,
+    pub labels: Vec<String>,
+    pub date: String,
+}
+
+/// Result of the deterministic taxonomy upkeep (DESIGN §16, N0145).
+pub struct Upkeep {
+    pub registry: Vec<u8>,
+    pub changes: Vec<String>,
+    pub flags: Vec<serde_json::Value>,
+}
+
+const RETIRE_DAYS: i64 = 30;
+const FOLD_DAYS: i64 = 90;
+const FOLD_NOTES: usize = 5;
+const LARGE_AREA: usize = 150;
+const MIXED_AREA: usize = 30;
+
+fn day(value: &str) -> Option<chrono::NaiveDate> {
+    value
+        .get(..10)
+        .and_then(|d| chrono::NaiveDate::parse_from_str(d, "%Y-%m-%d").ok())
+}
+
+/// Promote, merge, retire and fold `auto`/`proposed` entries, and flag areas
+/// that outgrow one page. Seed entries are never modified. The registry bytes
+/// are returned unchanged when nothing changes.
+pub fn upkeep(registry_bytes: &[u8], notes: &[Usage], today: chrono::NaiveDate) -> Result<Upkeep> {
+    let mut r: Registry =
+        serde_json::from_slice(registry_bytes).map_err(|_| "Corrupt Brain registry JSON")?;
+    let stamp = today.to_string();
+    let mut changes = Vec::new();
+    let mut flags = Vec::new();
+    // Per area: (note indices, dates); per world: note indices; cross-world notes per area.
+    let mut areas = BTreeMap::<String, (BTreeSet<usize>, BTreeSet<String>)>::new();
+    let mut worlds = BTreeMap::<String, BTreeSet<usize>>::new();
+    let mut note_worlds = Vec::new();
+    for (i, note) in notes.iter().enumerate() {
+        let mut own = BTreeSet::new();
+        for label in &note.labels {
+            if let Some((_, world, area)) = resolve(&r, label) {
+                own.insert(world.to_owned());
+                worlds.entry(world.to_owned()).or_default().insert(i);
+                if let Some(area) = area {
+                    let entry = areas.entry(area.to_owned()).or_default();
+                    entry.0.insert(i);
+                    if !note.date.is_empty() {
+                        entry.1.insert(note.date.clone());
+                    }
+                }
+            }
+        }
+        note_worlds.push(own);
+    }
+    let count = |name: &str| areas.get(name).map_or(0, |(n, _)| n.len());
+    for area in r.areas.iter_mut().filter(|a| a.status == "proposed") {
+        let (n, days) = areas.get(&area.name).cloned().unwrap_or_default();
+        if n.len() >= 3 && days.len() >= 2 {
+            promote(area, &stamp, &mut changes);
+        }
+    }
+    let mut order: Vec<usize> = (0..r.areas.len())
+        .filter(|&i| matches!(r.areas[i].status.as_str(), "auto" | "proposed"))
+        .collect();
+    order.sort_by(|&a, &b| {
+        (&r.areas[a].created, &r.areas[a].name).cmp(&(&r.areas[b].created, &r.areas[b].name))
+    });
+    for i in order {
+        let me = r.areas[i].clone();
+        let target = r
+            .areas
+            .iter()
+            .filter(|b| {
+                b.name != me.name
+                    && b.status != "merged-into"
+                    && b.merged_into.is_none()
+                    && b.parent == me.parent
+                    && (b.status == "seed" || (&b.created, &b.name) < (&me.created, &me.name))
+                    && std::iter::once(&b.name)
+                        .chain(b.aliases.iter())
+                        .any(|x| similarity(x, &me.name))
+            })
+            .min_by(|a, b| {
+                (a.status != "seed", &a.created, &a.name).cmp(&(
+                    b.status != "seed",
+                    &b.created,
+                    &b.name,
+                ))
+            })
+            .map(|b| b.name.clone());
+        if let Some(target) = target {
+            let area = &mut r.areas[i];
+            area.status = "merged-into".into();
+            area.merged_into = Some(target.clone());
+            area.updated = stamp.clone();
+            changes.push(format!("merged area {} into {target} (alias)", me.name));
+        }
+    }
+    r.areas.retain(|a| {
+        let last = std::iter::once(&a.created)
+            .chain(a.uses.iter())
+            .filter_map(|d| day(d))
+            .max();
+        let retire = a.status == "proposed"
+            && count(&a.name) == 0
+            && last.is_some_and(|d| (today - d).num_days() >= RETIRE_DAYS);
+        if retire {
+            changes.push(format!("retired proposed area {}", a.name));
+        }
+        !retire
+    });
+    let tiny: Vec<Entry> = r
+        .worlds
+        .iter()
+        .filter(|w| {
+            w.status == "auto"
+                && worlds.get(&w.name).map_or(0, BTreeSet::len) < FOLD_NOTES
+                && day(&w.created).is_some_and(|d| (today - d).num_days() >= FOLD_DAYS)
+        })
+        .cloned()
+        .collect();
+    for world in tiny {
+        let mut without = r.clone();
+        without.worlds.retain(|w| w.name != world.name);
+        without
+            .areas
+            .retain(|a| a.parent.as_deref() != Some(world.name.as_str()));
+        let bytes = serde_json::to_vec(&without)?;
+        let mut votes = BTreeMap::<String, usize>::new();
+        for &i in worlds.get(&world.name).into_iter().flatten() {
+            let note = &notes[i];
+            let cats = classify_migration_registry_at(
+                &bytes,
+                note.title,
+                note.body,
+                &[],
+                &[],
+                &[],
+                &stamp,
+            )?;
+            if let Some(w) = cats.worlds.first() {
+                *votes.entry(w.clone()).or_default() += 1;
+            }
+        }
+        let best = votes
+            .into_iter()
+            .max_by(|a, b| a.1.cmp(&b.1).then_with(|| b.0.cmp(&a.0)))
+            .map(|(w, _)| w);
+        let collides = r.areas.iter().any(|a| key(&a.name) == key(&world.name));
+        let Some(best) = best.filter(|_| !collides) else {
+            flags.push(serde_json::json!({"kind":"tiny-world","world":world.name,"notes":worlds.get(&world.name).map_or(0, BTreeSet::len),"reason":if collides {"name-collision"} else {"no-fitting-world"}}));
+            continue;
+        };
+        r.worlds.retain(|w| w.name != world.name);
+        for area in r
+            .areas
+            .iter_mut()
+            .filter(|a| a.parent.as_deref() == Some(world.name.as_str()))
+        {
+            area.parent = Some(best.clone());
+            area.updated = stamp.clone();
+            changes.push(format!(
+                "moved area {} from {} to {best}",
+                area.name, world.name
+            ));
+        }
+        r.areas.push(Entry {
+            status: "auto".into(),
+            updated: stamp.clone(),
+            parent: Some(best.clone()),
+            title_only: false,
+            uses: Vec::new(),
+            merged_into: None,
+            ..world.clone()
+        });
+        changes.push(format!(
+            "folded world {} into {best} as area {} (alias kept)",
+            world.name, world.name
+        ));
+    }
+    for area in r.areas.iter().filter(|a| a.status == "auto") {
+        let Some((members, _)) = areas.get(&area.name) else {
+            continue;
+        };
+        let parent = area.parent.clone().unwrap_or_default();
+        let crossing = members
+            .iter()
+            .filter(|&&i| note_worlds[i].iter().any(|w| *w != parent))
+            .count();
+        let reason = if members.len() >= LARGE_AREA {
+            "large"
+        } else if members.len() >= MIXED_AREA && crossing * 5 >= members.len() * 2 {
+            "mixed"
+        } else {
+            continue;
+        };
+        flags.push(serde_json::json!({"kind":"taxonomy-split","area":area.name,"world":parent,"notes":members.len(),"otherWorldNotes":crossing,"reason":reason}));
+    }
+    let registry = if changes.is_empty() {
+        registry_bytes.to_vec()
+    } else {
+        serde_json::to_vec_pretty(&r)?
+    };
+    Ok(Upkeep {
+        registry,
+        changes,
+        flags,
+    })
 }
 fn best_world(r: &Registry, title: &str, body: &str) -> Option<String> {
     r.worlds

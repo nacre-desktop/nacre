@@ -1,0 +1,8 @@
+[Unit]
+Description=Nightly private brain consolidation (installed disabled; enable explicitly)
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=20m
+Persistent=true
+[Install]
+WantedBy=timers.target

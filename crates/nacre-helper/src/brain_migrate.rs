@@ -14,6 +14,8 @@ use std::{
 };
 use walkdir::WalkDir;
 
+#[path = "brain_consolidate.rs"]
+pub mod consolidate;
 #[path = "brain_migrate_generated.rs"]
 mod generated;
 #[path = "brain_migrate_verify.rs"]
@@ -42,7 +44,10 @@ pub(crate) struct Plan {
     wiki_updated: Vec<String>,
     broken: Vec<(String, String)>,
     state_writes: BTreeMap<String, Vec<u8>>,
+    /// Expected SHA-256 of state files, and of generated non-note files (packs).
     state_hashes: BTreeMap<String, Option<String>>,
+    /// Generated non-note files to remove (stale context packs).
+    deletes: BTreeSet<String>,
 }
 
 fn digest(bytes: &[u8]) -> String {
@@ -514,6 +519,33 @@ fn inbox_target(text: &str) -> Option<&'static str> {
         None
     }
 }
+/// Retention destination of a note (DESIGN §9). `archive` moves checkpoints
+/// at least `days` old and inbox notes at least 30 days old to
+/// `archive/<folder>/YYYY-MM/`; `inbox` triages inbox notes at least 3 days old
+/// by rule. File names are kept.
+fn retention_target(
+    path: &str,
+    text: &str,
+    now: chrono::NaiveDate,
+    days: i64,
+    step: &str,
+) -> Option<String> {
+    let d = date_from(path, text)?;
+    let age = (now - d).num_days();
+    let name = Path::new(path).file_name()?.to_string_lossy();
+    let archived =
+        |folder: &str| format!("archive/{folder}/{:04}-{:02}/{name}", d.year(), d.month());
+    if step == "archive" && path.starts_with("checkpoints/") && age >= days {
+        Some(archived("checkpoints"))
+    } else if step == "inbox" && path.starts_with("inbox/") && age >= 3 {
+        inbox_target(text).map(|folder| format!("{folder}/{name}"))
+    } else if step == "archive" && path.starts_with("inbox/") && age >= 30 {
+        Some(archived("inbox"))
+    } else {
+        None
+    }
+}
+
 fn markdown_report(plan: &Plan, counts: &BTreeMap<&str, usize>) -> String {
     let mut s = String::from("# Brain migration dry-run\n\n## Step counts\n\n");
     for (k, v) in counts {
@@ -666,6 +698,41 @@ fn metadata_plan(
     Ok((plan, candidates))
 }
 
+/// A private report path outside the vault that is not a link.
+fn report_target(root: &Path, report: Option<PathBuf>, default: &str) -> Result<PathBuf> {
+    let path = report.unwrap_or_else(|| root.parent().unwrap_or(root).join(default));
+    let absolute = if path.is_absolute() {
+        path
+    } else {
+        std::env::current_dir()?.join(path)
+    };
+    let parent = fs::canonicalize(absolute.parent().ok_or("invalid report path")?)?;
+    let resolved = parent.join(absolute.file_name().ok_or("invalid report path")?);
+    if resolved.starts_with(root) {
+        return Err("migration report must be outside the vault".into());
+    }
+    if fs::symlink_metadata(&resolved)
+        .is_ok_and(|m| !m.is_file() || m.file_type().is_symlink() || m.nlink() != 1)
+    {
+        return Err("unsafe migration report path".into());
+    }
+    Ok(resolved)
+}
+
+/// Write a report created by `report_target` with private permissions.
+fn write_report(path: &Path, text: &str) -> Result<()> {
+    let mut output = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(true)
+        .mode(0o600)
+        .custom_flags(nix::libc::O_NOFOLLOW)
+        .open(path)?;
+    output.write_all(text.as_bytes())?;
+    output.sync_all()?;
+    Ok(())
+}
+
 /// Run one migration step or the full ordered sequence. Arguments are the
 /// tokens after `nacre-brain migrate`.
 pub fn run(args: &[String]) -> Result<i32> {
@@ -704,27 +771,7 @@ pub fn run(args: &[String]) -> Result<i32> {
     }
     let root = brain_data::configured_root_path()?;
     let report_path = if dry || report.is_some() {
-        let path = report.unwrap_or_else(|| {
-            root.parent()
-                .unwrap_or(&root)
-                .join("brain-migrate-report.md")
-        });
-        let absolute = if path.is_absolute() {
-            path
-        } else {
-            std::env::current_dir()?.join(path)
-        };
-        let parent = fs::canonicalize(absolute.parent().ok_or("invalid report path")?)?;
-        let resolved = parent.join(absolute.file_name().ok_or("invalid report path")?);
-        if resolved.starts_with(&root) {
-            return Err("migration report must be outside the vault".into());
-        }
-        if fs::symlink_metadata(&resolved)
-            .is_ok_and(|m| !m.is_file() || m.file_type().is_symlink() || m.nlink() != 1)
-        {
-            return Err("unsafe migration report path".into());
-        }
-        Some(resolved)
+        Some(report_target(&root, report, "brain-migrate-report.md")?)
     } else {
         None
     };
@@ -744,7 +791,6 @@ pub fn run(args: &[String]) -> Result<i32> {
         .iter()
         .map(|n| (n.path.clone(), n.bytes.clone()))
         .collect();
-    let registry_path = root.join("registry.json");
     let mut virtual_registry = snapshot_file(&root, "registry.json")?
         .map(|(bytes, _)| bytes)
         .unwrap_or_else(|| include_bytes!("../../../brain/registry-seed.json").to_vec());
@@ -812,39 +858,7 @@ pub fn run(args: &[String]) -> Result<i32> {
                 let now = chrono::Local::now().date_naive();
                 for n in &current_notes {
                     let text = String::from_utf8_lossy(&n.bytes);
-                    let d = match date_from(&n.path, &text) {
-                        Some(d) => d,
-                        None => continue,
-                    };
-                    let age = (now - d).num_days();
-                    let dest = if current == "archive"
-                        && n.path.starts_with("checkpoints/")
-                        && age >= days
-                    {
-                        Some(format!(
-                            "archive/checkpoints/{:04}-{:02}/{}",
-                            d.year(),
-                            d.month(),
-                            Path::new(&n.path).file_name().unwrap().to_string_lossy()
-                        ))
-                    } else if current == "inbox" && n.path.starts_with("inbox/") && age >= 3 {
-                        inbox_target(&text).map(|folder| {
-                            format!(
-                                "{folder}/{}",
-                                Path::new(&n.path).file_name().unwrap().to_string_lossy()
-                            )
-                        })
-                    } else if current == "archive" && n.path.starts_with("inbox/") && age >= 30 {
-                        Some(format!(
-                            "archive/inbox/{:04}-{:02}/{}",
-                            d.year(),
-                            d.month(),
-                            Path::new(&n.path).file_name().unwrap().to_string_lossy()
-                        ))
-                    } else {
-                        None
-                    };
-                    if let Some(dest) = dest {
+                    if let Some(dest) = retention_target(&n.path, &text, now, days, current) {
                         plan.moves.insert(n.path.clone(), dest);
                     }
                 }
@@ -864,72 +878,12 @@ pub fn run(args: &[String]) -> Result<i32> {
                     }
                 }
                 if !move_map.is_empty() {
-                    let ledger_path = ".brain-state/migrate-moves.json";
-                    let prior = if dry {
-                        virtual_moves.clone()
-                    } else {
-                        load_moves(&root)?
-                    };
-                    let prior_bytes = snapshot_file(&root, ledger_path)?;
-                    let mut ledger = prior;
-                    for target in ledger.values_mut() {
-                        if let Some(next) = move_map.get(target) {
-                            *target = next.clone();
-                        }
-                    }
-                    ledger.extend(move_map.clone());
-                    let state_rel = ledger_path.to_owned();
-                    plan.state_hashes.insert(
-                        state_rel.clone(),
-                        prior_bytes.as_ref().map(|(bytes, _)| digest(bytes)),
-                    );
-                    plan.state_writes
-                        .insert(state_rel, serde_json::to_vec_pretty(&ledger)?);
-                    virtual_moves = ledger;
-                    let state = root.join(".brain-state");
-                    if state.is_dir() {
-                        for ent in fs::read_dir(&state)? {
-                            let ent = ent?;
-                            let name = ent.file_name().to_string_lossy().into_owned();
-                            if !(name.starts_with("capture") || name.contains("dedup"))
-                                || !name.ends_with(".json")
-                            {
-                                continue;
-                            }
-                            let path = ent.path();
-                            let meta = fs::symlink_metadata(&path)?;
-                            if !meta.is_file()
-                                || meta.file_type().is_symlink()
-                                || meta.nlink() != 1
-                                || meta.len() > 5 * 1024 * 1024
-                            {
-                                return Err("unsafe capture record in Brain state".into());
-                            }
-                            let state_key = format!(".brain-state/{name}");
-                            let bytes = if dry {
-                                virtual_records
-                                    .get(&state_key)
-                                    .cloned()
-                                    .unwrap_or(fs::read(&path)?)
-                            } else {
-                                fs::read(&path)?
-                            };
-                            let Ok(mut record) =
-                                serde_json::from_slice::<serde_json::Value>(&bytes)
-                            else {
-                                continue;
-                            };
-                            let changed =
-                                remap_record(&mut record, "", &move_map, name.contains("dedup"));
-                            if changed {
-                                let state_rel = format!(".brain-state/{name}");
-                                plan.state_hashes
-                                    .insert(state_rel.clone(), Some(digest(&bytes)));
-                                plan.state_writes
-                                    .insert(state_rel, serde_json::to_vec_pretty(&record)?);
-                            }
-                        }
-                    }
+                    virtual_moves = state_updates(
+                        &root,
+                        &move_map,
+                        dry.then_some((&virtual_moves, &virtual_records)),
+                        &mut plan,
+                    )?;
                 }
             }
             "links" => {
@@ -1064,240 +1018,17 @@ pub fn run(args: &[String]) -> Result<i32> {
             brain_git::push_migration(&root)?;
             continue;
         }
-        let output_paths: BTreeSet<String> = plan
-            .writes
-            .keys()
-            .cloned()
-            .chain(plan.moves.iter().flat_map(|(a, b)| [a.clone(), b.clone()]))
-            .chain(plan.state_writes.keys().cloned())
-            .collect();
-        let mut snapshots = BTreeMap::<String, Option<(Vec<u8>, u32)>>::new();
-        for path in &output_paths {
-            snapshots.insert(path.clone(), snapshot_file(&root, path)?);
-        }
-        let baseline_paths = output_paths
-            .iter()
-            .filter(|path| !path.starts_with(".brain-state/") && snapshots[*path].is_some())
-            .cloned()
-            .collect();
-        brain_git::require_migration_baseline(&root, &baseline_paths)?;
-        // Complete all compare-and-swap and collision checks before the first write.
-        for (old, new) in &plan.moves {
-            let expected = current_notes
-                .iter()
-                .find(|n| n.path == *old)
-                .ok_or_else(|| format!("missing move source: {old}"))?;
-            if snapshots
-                .get(old)
-                .and_then(Option::as_ref)
-                .is_none_or(|(bytes, _)| digest(bytes) != expected.hash)
-            {
-                return Err(format!("CAS changed: {old}").into());
-            }
-            if snapshots.get(new).is_some_and(Option::is_some) {
-                return Err(format!("move destination exists: {new}").into());
-            }
-        }
-        for rel in plan.writes.keys() {
-            if let Some((old, _)) = plan.moves.iter().find(|(_, new)| *new == rel) {
-                if snapshots.get(rel).is_some_and(Option::is_some) {
-                    return Err(format!("move destination exists: {rel}").into());
-                }
-                let source = current_notes
-                    .iter()
-                    .find(|n| n.path == *old)
-                    .ok_or("missing moved source")?;
-                if snapshots
-                    .get(old)
-                    .and_then(Option::as_ref)
-                    .is_none_or(|(bytes, _)| digest(bytes) != source.hash)
-                {
-                    return Err(format!("CAS changed: {old}").into());
-                }
-            } else if let Some(note) = current_notes.iter().find(|n| n.path == *rel) {
-                if snapshots
-                    .get(rel)
-                    .and_then(Option::as_ref)
-                    .is_none_or(|(bytes, _)| digest(bytes) != note.hash)
-                {
-                    return Err(format!("CAS changed: {rel}").into());
-                }
-            } else if rel == "registry.json" {
-                let expected = if registry_path.exists() {
-                    Some(digest(&registry_before))
-                } else {
-                    None
-                };
-                let actual = snapshots
-                    .get(rel)
-                    .and_then(Option::as_ref)
-                    .map(|(bytes, _)| digest(bytes));
-                if expected != actual {
-                    return Err("CAS changed: registry.json".into());
-                }
-            } else if snapshots.get(rel).is_some_and(Option::is_some) {
-                return Err(format!("refusing to overwrite existing file: {rel}").into());
-            }
-        }
-        for (rel, expected) in &plan.state_hashes {
-            let actual = snapshots
-                .get(rel)
-                .and_then(Option::as_ref)
-                .map(|(bytes, _)| digest(bytes));
-            if &actual != expected {
-                return Err(format!("CAS changed: {rel}").into());
-            }
-        }
-        let original_dirs = note_dirs(&root)?;
-        let mut applied = BTreeSet::<String>::new();
-        let mut committed = false;
-        let commit_result = (|| -> Result<()> {
-            for (old, new) in &plan.moves {
-                let src = root.join(old);
-                let dst = root.join(new);
-                if snapshot_file(&root, old)? != snapshots[old]
-                    || snapshot_file(&root, new)?.is_some()
-                {
-                    return Err(format!("CAS changed during move: {old}").into());
-                }
-                if let Some(parent) = dst.parent() {
-                    private_dirs(parent)?;
-                }
-                applied.insert(old.clone());
-                applied.insert(new.clone());
-                fs::rename(src, dst)?;
-            }
-            for (rel, bytes) in &plan.writes {
-                let old = plan
-                    .moves
-                    .iter()
-                    .find(|(_, new)| *new == rel)
-                    .map(|(old, _)| old.as_str())
-                    .unwrap_or(rel);
-                let mode = snapshots
-                    .get(rel)
-                    .and_then(Option::as_ref)
-                    .map(|(_, mode)| *mode)
-                    .or_else(|| current_notes.iter().find(|n| n.path == old).map(|n| n.mode))
-                    .unwrap_or(0o600);
-                let expected = if old != rel {
-                    snapshots[old].clone()
-                } else {
-                    snapshots[rel].clone()
-                };
-                if snapshot_file(&root, rel)? != expected {
-                    return Err(format!("CAS changed before replacement: {rel}").into());
-                }
-                applied.insert(rel.clone());
-                safe_write(&root.join(rel), bytes, mode)?;
-            }
-            for (rel, bytes) in &plan.state_writes {
-                let path = root.join(rel);
-                let mode = snapshots[rel]
-                    .as_ref()
-                    .map(|(_, mode)| *mode)
-                    .unwrap_or(0o600);
-                if snapshot_file(&root, rel)? != snapshots[rel] {
-                    return Err(format!("CAS changed before state replacement: {rel}").into());
-                }
-                applied.insert(rel.clone());
-                safe_write(&path, bytes, mode)?;
-            }
-            sync_changes(&root, &applied)?;
-            let after = notes(&root)?;
-            let before_map: BTreeMap<String, Vec<u8>> = current_notes
-                .iter()
-                .map(|n| (n.path.clone(), n.bytes.clone()))
-                .collect();
-            let after_map: BTreeMap<String, Vec<u8>> = after
-                .iter()
-                .map(|n| (n.path.clone(), n.bytes.clone()))
-                .collect();
-            let registry: serde_json::Value = serde_json::from_slice(&virtual_registry)?;
-            if current == "links" {
-                let ledger = load_moves(&root)?
-                    .into_iter()
-                    .filter(|(old, new)| {
-                        !before_map.contains_key(old) && before_map.contains_key(new)
-                    })
-                    .collect();
-                verification::verify_links(&before_map, &after_map, &ledger, &registry)?;
-            } else {
-                verification::verify(&before_map, &after_map, &plan.moves, current, &registry)?;
-            }
-            if std::env::var_os("NACRE_BRAIN_MIGRATE_TEST_FAIL_VERIFY").as_deref()
-                == Some(std::ffi::OsStr::new("1"))
-            {
-                return Err("injected migration verification failure".into());
-            }
-            let paths: BTreeSet<String> = plan
-                .writes
-                .keys()
-                .cloned()
-                .chain(plan.moves.iter().flat_map(|(a, b)| [a.clone(), b.clone()]))
-                .collect();
-            if brain_git::commit_migration_step(&root, current, &paths)?.is_some() {
-                committed = true;
-            }
-            Ok(())
-        })();
-        if let Err(err) = commit_result {
-            if committed {
-                return Err(format!("step committed but follow-up failed: {err}").into());
-            }
-            for (old, new) in plan.moves.iter().rev() {
-                if applied.contains(new) {
-                    let dst = root.join(new);
-                    let src = root.join(old);
-                    if dst.exists() && !src.exists() {
-                        private_dirs(src.parent().unwrap_or(&root))?;
-                        fs::rename(dst, src)?;
-                    }
-                }
-            }
-            let mut rollback_errors = Vec::new();
-            for rel in &applied {
-                match snapshots.get(rel).cloned().flatten() {
-                    Some((bytes, mode)) => {
-                        if let Err(e) = safe_write(&root.join(rel), &bytes, mode) {
-                            rollback_errors.push(format!("{rel}: {e}"));
-                        }
-                    }
-                    None => {
-                        if let Err(e) = fs::remove_file(root.join(rel)) {
-                            if e.kind() != std::io::ErrorKind::NotFound {
-                                rollback_errors.push(format!("{rel}: {e}"));
-                            }
-                        }
-                    }
-                }
-            }
-            if let Ok(dirs) = note_dirs(&root) {
-                for rel in dirs
-                    .difference(&original_dirs)
-                    .collect::<Vec<_>>()
-                    .into_iter()
-                    .rev()
-                {
-                    if let Err(e) = fs::remove_dir(root.join(rel)) {
-                        if e.kind() != std::io::ErrorKind::NotFound {
-                            rollback_errors.push(format!("{}: {e}", rel.display()));
-                        }
-                    }
-                }
-            }
-            if let Err(error) = sync_changes(&root, &applied) {
-                rollback_errors.push(format!("rollback sync: {error}"));
-            }
-            if !rollback_errors.is_empty() {
-                return Err(format!(
-                    "{err}; rollback also failed: {}",
-                    rollback_errors.join("; ")
-                )
-                .into());
-            }
-            return Err(err);
-        }
+        let committed = transact(
+            &root,
+            Apply {
+                step: current,
+                notes: &current_notes,
+                plan: &plan,
+                registry_before: &registry_before,
+                registry: &virtual_registry,
+                message: None,
+            },
+        )?;
         if committed {
             brain_git::push_migration(&root).map_err(|error| {
                 format!("migration {current} committed locally; push failed: {error}")
@@ -1305,16 +1036,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         }
     }
     if let Some(path) = report_path {
-        let md = markdown_report(&report_plan, &all_counts);
-        let mut output = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .mode(0o600)
-            .custom_flags(nix::libc::O_NOFOLLOW)
-            .open(&path)?;
-        output.write_all(md.as_bytes())?;
-        output.sync_all()?;
+        write_report(&path, &markdown_report(&report_plan, &all_counts))?;
         if dry {
             println!(
                 "dry-run: {} notes scanned; report {}",
@@ -1327,6 +1049,347 @@ pub fn run(args: &[String]) -> Result<i32> {
         println!("{name}: {count} changed paths");
     }
     Ok(0)
+}
+
+/// A dry run's planned move ledger and capture/dedup records.
+type VirtualState<'a> = (&'a BTreeMap<String, String>, &'a BTreeMap<String, Vec<u8>>);
+
+/// Record `move_map` in the cumulative move ledger and re-point capture and
+/// dedup records. `virtual_state` holds a dry run's planned ledger and records.
+/// Returns the new ledger.
+fn state_updates(
+    root: &Path,
+    move_map: &BTreeMap<String, String>,
+    virtual_state: Option<VirtualState<'_>>,
+    plan: &mut Plan,
+) -> Result<BTreeMap<String, String>> {
+    let ledger_path = ".brain-state/migrate-moves.json";
+    let mut ledger = match virtual_state {
+        Some((moves, _)) => moves.clone(),
+        None => load_moves(root)?,
+    };
+    let prior_bytes = snapshot_file(root, ledger_path)?;
+    for target in ledger.values_mut() {
+        if let Some(next) = move_map.get(target) {
+            *target = next.clone();
+        }
+    }
+    ledger.extend(move_map.clone());
+    plan.state_hashes.insert(
+        ledger_path.to_owned(),
+        prior_bytes.as_ref().map(|(bytes, _)| digest(bytes)),
+    );
+    plan.state_writes
+        .insert(ledger_path.to_owned(), serde_json::to_vec_pretty(&ledger)?);
+    let state = root.join(".brain-state");
+    if !state.is_dir() {
+        return Ok(ledger);
+    }
+    for ent in fs::read_dir(&state)? {
+        let ent = ent?;
+        let name = ent.file_name().to_string_lossy().into_owned();
+        if !(name.starts_with("capture") || name.contains("dedup")) || !name.ends_with(".json") {
+            continue;
+        }
+        let path = ent.path();
+        let meta = fs::symlink_metadata(&path)?;
+        if !meta.is_file()
+            || meta.file_type().is_symlink()
+            || meta.nlink() != 1
+            || meta.len() > 5 * 1024 * 1024
+        {
+            return Err("unsafe capture record in Brain state".into());
+        }
+        let state_rel = format!(".brain-state/{name}");
+        let bytes = match virtual_state.and_then(|(_, records)| records.get(&state_rel)) {
+            Some(bytes) => bytes.clone(),
+            None => fs::read(&path)?,
+        };
+        let Ok(mut record) = serde_json::from_slice::<serde_json::Value>(&bytes) else {
+            continue;
+        };
+        if remap_record(&mut record, "", move_map, name.contains("dedup")) {
+            plan.state_hashes
+                .insert(state_rel.clone(), Some(digest(&bytes)));
+            plan.state_writes
+                .insert(state_rel, serde_json::to_vec_pretty(&record)?);
+        }
+    }
+    Ok(ledger)
+}
+
+/// One locked, verified and committed transaction of a migration step or a
+/// consolidation run.
+struct Apply<'a> {
+    step: &'a str,
+    /// Lock-held snapshot the plan was built from.
+    notes: &'a [Note],
+    plan: &'a Plan,
+    /// Registry bytes the plan expects on disk (compare-and-swap).
+    registry_before: &'a [u8],
+    /// Registry after the plan, for verification.
+    registry: &'a [u8],
+    /// Consolidation commit message; migration steps use their step name.
+    message: Option<&'a str>,
+}
+
+/// Apply a plan with compare-and-swap checks, verify the result on disk and
+/// commit it; on any failure before the commit every touched file is restored.
+/// Returns whether a commit was created. The caller holds both vault locks.
+fn transact(root: &Path, a: Apply<'_>) -> Result<bool> {
+    let Apply {
+        step: current,
+        notes: current_notes,
+        plan,
+        registry_before,
+        registry: virtual_registry,
+        message,
+    } = a;
+    let registry_path = root.join("registry.json");
+    let output_paths: BTreeSet<String> = plan
+        .writes
+        .keys()
+        .cloned()
+        .chain(plan.moves.iter().flat_map(|(a, b)| [a.clone(), b.clone()]))
+        .chain(plan.state_writes.keys().cloned())
+        .chain(plan.deletes.iter().cloned())
+        .collect();
+    let mut snapshots = BTreeMap::<String, Option<(Vec<u8>, u32)>>::new();
+    for path in &output_paths {
+        snapshots.insert(path.clone(), snapshot_file(root, path)?);
+    }
+    let baseline_paths = output_paths
+        .iter()
+        .filter(|path| !path.starts_with(".brain-state/") && snapshots[*path].is_some())
+        .cloned()
+        .collect();
+    brain_git::require_migration_baseline(root, &baseline_paths)?;
+    // Complete all compare-and-swap and collision checks before the first write.
+    for (old, new) in &plan.moves {
+        let expected = current_notes
+            .iter()
+            .find(|n| n.path == *old)
+            .ok_or_else(|| format!("missing move source: {old}"))?;
+        if snapshots
+            .get(old)
+            .and_then(Option::as_ref)
+            .is_none_or(|(bytes, _)| digest(bytes) != expected.hash)
+        {
+            return Err(format!("CAS changed: {old}").into());
+        }
+        if snapshots.get(new).is_some_and(Option::is_some) {
+            return Err(format!("move destination exists: {new}").into());
+        }
+    }
+    for rel in plan.writes.keys() {
+        if let Some((old, _)) = plan.moves.iter().find(|(_, new)| *new == rel) {
+            if snapshots.get(rel).is_some_and(Option::is_some) {
+                return Err(format!("move destination exists: {rel}").into());
+            }
+            let source = current_notes
+                .iter()
+                .find(|n| n.path == *old)
+                .ok_or("missing moved source")?;
+            if snapshots
+                .get(old)
+                .and_then(Option::as_ref)
+                .is_none_or(|(bytes, _)| digest(bytes) != source.hash)
+            {
+                return Err(format!("CAS changed: {old}").into());
+            }
+        } else if let Some(note) = current_notes.iter().find(|n| n.path == *rel) {
+            if snapshots
+                .get(rel)
+                .and_then(Option::as_ref)
+                .is_none_or(|(bytes, _)| digest(bytes) != note.hash)
+            {
+                return Err(format!("CAS changed: {rel}").into());
+            }
+        } else if rel == "registry.json" {
+            let expected = if registry_path.exists() {
+                Some(digest(registry_before))
+            } else {
+                None
+            };
+            let actual = snapshots
+                .get(rel)
+                .and_then(Option::as_ref)
+                .map(|(bytes, _)| digest(bytes));
+            if expected != actual {
+                return Err("CAS changed: registry.json".into());
+            }
+        } else if plan.state_hashes.contains_key(rel) {
+            // Generated non-note files carry their expected hash (checked below).
+        } else if snapshots.get(rel).is_some_and(Option::is_some) {
+            return Err(format!("refusing to overwrite existing file: {rel}").into());
+        }
+    }
+    for (rel, expected) in &plan.state_hashes {
+        let actual = snapshots
+            .get(rel)
+            .and_then(Option::as_ref)
+            .map(|(bytes, _)| digest(bytes));
+        if &actual != expected {
+            return Err(format!("CAS changed: {rel}").into());
+        }
+    }
+    let original_dirs = note_dirs(root)?;
+    let mut applied = BTreeSet::<String>::new();
+    let mut committed = false;
+    let commit_result = (|| -> Result<()> {
+        for (old, new) in &plan.moves {
+            let src = root.join(old);
+            let dst = root.join(new);
+            if snapshot_file(root, old)? != snapshots[old] || snapshot_file(root, new)?.is_some() {
+                return Err(format!("CAS changed during move: {old}").into());
+            }
+            if let Some(parent) = dst.parent() {
+                private_dirs(parent)?;
+            }
+            applied.insert(old.clone());
+            applied.insert(new.clone());
+            fs::rename(src, dst)?;
+        }
+        for (rel, bytes) in &plan.writes {
+            let old = plan
+                .moves
+                .iter()
+                .find(|(_, new)| *new == rel)
+                .map(|(old, _)| old.as_str())
+                .unwrap_or(rel);
+            let mode = snapshots
+                .get(rel)
+                .and_then(Option::as_ref)
+                .map(|(_, mode)| *mode)
+                .or_else(|| current_notes.iter().find(|n| n.path == old).map(|n| n.mode))
+                .unwrap_or(0o600);
+            let expected = if old != rel {
+                snapshots[old].clone()
+            } else {
+                snapshots[rel].clone()
+            };
+            if snapshot_file(root, rel)? != expected {
+                return Err(format!("CAS changed before replacement: {rel}").into());
+            }
+            applied.insert(rel.clone());
+            safe_write(&root.join(rel), bytes, mode)?;
+        }
+        for (rel, bytes) in &plan.state_writes {
+            let path = root.join(rel);
+            let mode = snapshots[rel]
+                .as_ref()
+                .map(|(_, mode)| *mode)
+                .unwrap_or(0o600);
+            if snapshot_file(root, rel)? != snapshots[rel] {
+                return Err(format!("CAS changed before state replacement: {rel}").into());
+            }
+            applied.insert(rel.clone());
+            safe_write(&path, bytes, mode)?;
+        }
+        for rel in &plan.deletes {
+            if snapshot_file(root, rel)? != snapshots[rel] {
+                return Err(format!("CAS changed before removal: {rel}").into());
+            }
+            applied.insert(rel.clone());
+            fs::remove_file(root.join(rel))?;
+        }
+        sync_changes(root, &applied)?;
+        let after = notes(root)?;
+        let before_map: BTreeMap<String, Vec<u8>> = current_notes
+            .iter()
+            .map(|n| (n.path.clone(), n.bytes.clone()))
+            .collect();
+        let after_map: BTreeMap<String, Vec<u8>> = after
+            .iter()
+            .map(|n| (n.path.clone(), n.bytes.clone()))
+            .collect();
+        let registry: serde_json::Value = serde_json::from_slice(virtual_registry)?;
+        if current == "links" {
+            let ledger = load_moves(root)?
+                .into_iter()
+                .filter(|(old, new)| !before_map.contains_key(old) && before_map.contains_key(new))
+                .collect();
+            verification::verify_links(&before_map, &after_map, &ledger, &registry)?;
+        } else {
+            verification::verify(&before_map, &after_map, &plan.moves, current, &registry)?;
+        }
+        if std::env::var_os("NACRE_BRAIN_MIGRATE_TEST_FAIL_VERIFY").as_deref()
+            == Some(std::ffi::OsStr::new("1"))
+        {
+            return Err("injected migration verification failure".into());
+        }
+        let paths: BTreeSet<String> = plan
+            .writes
+            .keys()
+            .cloned()
+            .chain(plan.moves.iter().flat_map(|(a, b)| [a.clone(), b.clone()]))
+            .chain(plan.deletes.iter().cloned())
+            .collect();
+        let commit = match message {
+            Some(message) => brain_git::commit_consolidation(root, message, &paths)?,
+            None => brain_git::commit_migration_step(root, current, &paths)?,
+        };
+        committed = commit.is_some();
+        Ok(())
+    })();
+    if let Err(err) = commit_result {
+        if committed {
+            return Err(format!("step committed but follow-up failed: {err}").into());
+        }
+        for (old, new) in plan.moves.iter().rev() {
+            if applied.contains(new) {
+                let dst = root.join(new);
+                let src = root.join(old);
+                if dst.exists() && !src.exists() {
+                    private_dirs(src.parent().unwrap_or(root))?;
+                    fs::rename(dst, src)?;
+                }
+            }
+        }
+        let mut rollback_errors = Vec::new();
+        for rel in &applied {
+            match snapshots.get(rel).cloned().flatten() {
+                Some((bytes, mode)) => {
+                    if let Err(e) = safe_write(&root.join(rel), &bytes, mode) {
+                        rollback_errors.push(format!("{rel}: {e}"));
+                    }
+                }
+                None => {
+                    if let Err(e) = fs::remove_file(root.join(rel)) {
+                        if e.kind() != std::io::ErrorKind::NotFound {
+                            rollback_errors.push(format!("{rel}: {e}"));
+                        }
+                    }
+                }
+            }
+        }
+        if let Ok(dirs) = note_dirs(root) {
+            for rel in dirs
+                .difference(&original_dirs)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+            {
+                if let Err(e) = fs::remove_dir(root.join(rel)) {
+                    if e.kind() != std::io::ErrorKind::NotFound {
+                        rollback_errors.push(format!("{}: {e}", rel.display()));
+                    }
+                }
+            }
+        }
+        if let Err(error) = sync_changes(root, &applied) {
+            rollback_errors.push(format!("rollback sync: {error}"));
+        }
+        if !rollback_errors.is_empty() {
+            return Err(format!(
+                "{err}; rollback also failed: {}",
+                rollback_errors.join("; ")
+            )
+            .into());
+        }
+        return Err(err);
+    }
+    Ok(committed)
 }
 
 #[cfg(test)]

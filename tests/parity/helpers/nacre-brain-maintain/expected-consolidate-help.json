@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-brain-maintain consolidate [-h] [--dry-run] [--report PATH]\n\nArchive and triage old notes, refresh digests, wiki evidence, the index and\ncontext packs, flag stale and contradicting facts and tidy the taxonomy, as\none verified, revertable commit. No model calls.\n\noptions:\n  -h, --help     show this help message and exit\n  --dry-run      plan and print the summary; write nothing\n  --report PATH  write a Markdown report outside the vault\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

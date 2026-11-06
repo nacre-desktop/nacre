@@ -1,0 +1,7 @@
+[Unit]
+Description=Consolidate the private brain (deterministic; no model calls)
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+ExecStart=%h/.local/bin/nacre-brain-maintain consolidate

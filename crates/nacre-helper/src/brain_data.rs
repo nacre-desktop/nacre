@@ -470,6 +470,7 @@ fn brain(args: &[String]) -> Result<i32> {
             brain_note(&args[1..])
         }
         "migrate" => crate::brain_migrate::run(&args[1..]),
+        "pack" => crate::brain_migrate::consolidate::pack(&args[1..]),
         "git" => brain_git_command(&args[1..]),
         "guard" => {
             if args.len() != 2 || args[1] != "--staged" {
@@ -1431,6 +1432,10 @@ fn maintain(args: &[String]) -> Result<i32> {
         restore(Path::new(&a[0]), &destination)?;
         println!("{}", destination.display());
         return Ok(0);
+    }
+    if action == "consolidate" {
+        // Takes the vault locks itself; a dry run takes none and writes nothing.
+        return crate::brain_migrate::consolidate::run(a);
     }
     let root = initialize()?;
     let _guard = crate::brain_git::acquire_vault_lock(&root)?;

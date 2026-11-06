@@ -32,7 +32,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
     if tool == "nacre-brain-maintain" {
         if index == 0 {
             print!(
-                "usage: nacre-brain-maintain [-h]\n                            {{check,backup,setup,read,update,restore,resolve}} ...\n\nCheck, version, update and restore the private brain without model calls.\n\npositional arguments:\n  {{check,backup,setup,read,update,restore,resolve}}\n\noptions:\n  -h, --help            show this help message and exit\n"
+                "usage: nacre-brain-maintain [-h]\n                            {{check,backup,setup,read,update,restore,resolve,consolidate}} ...\n\nCheck, version, update and restore the private brain without model calls.\n\npositional arguments:\n  {{check,backup,setup,read,update,restore,resolve,consolidate}}\n\noptions:\n  -h, --help            show this help message and exit\n"
             );
         } else {
             match args.first().map(String::as_str) {
@@ -54,6 +54,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
                 Some("resolve") => print!(
                     "usage: nacre-brain-maintain resolve [-h] conflict_id\n\npositional arguments:\n  conflict_id\n\noptions:\n  -h, --help  show this help message and exit\n"
                 ),
+                Some("consolidate") => print!(
+                    "usage: nacre-brain-maintain consolidate [-h] [--dry-run] [--report PATH]\n\nArchive and triage old notes, refresh digests, wiki evidence, the index and\ncontext packs, flag stale and contradicting facts and tidy the taxonomy, as\none verified, revertable commit. No model calls.\n\noptions:\n  -h, --help     show this help message and exit\n  --dry-run      plan and print the summary; write nothing\n  --report PATH  write a Markdown report outside the vault\n"
+                ),
                 _ => println!("usage: nacre-brain-maintain [command] [-h]"),
             }
         }
@@ -62,7 +65,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
 
     if index == 0 {
         print!(
-            "usage: nacre-brain [-h]\n                    {{init,path,search,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
+            "usage: nacre-brain [-h]\n                    {{init,path,search,pack,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,pack,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
         );
     } else {
         match args.first().map(String::as_str) {
@@ -74,6 +77,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
             }
             Some("search") => print!(
                 "usage: nacre-brain search [-h] [--json] [--limit N] [--world WORLD] [--area AREA]\n                          [--kind KIND] [--since YYYY-MM-DD] [--include-archive]\n                          query [query ...]\n\nRanked search: aliases, compound words and typos are matched.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help          show this help message and exit\n  --json              print ranked results with snippets as JSON\n  --limit N           maximum results (default 20)\n  --world WORLD       only notes in this world (repeatable)\n  --area AREA         only notes in this area (repeatable)\n  --kind KIND         folder kind, or note, archive or digest\n  --since YYYY-MM-DD  only notes recorded on or after this date\n  --include-archive   include archived notes (ranked lower)\n"
+            ),
+            Some("pack") => print!(
+                "usage: nacre-brain pack [-h] [--json] name\n\nPrint the context pack for a world or area (falls back to its world).\n\npositional arguments:\n  name        world or area name or alias\n\noptions:\n  -h, --help  show this help message and exit\n  --json      print the pack and its path as JSON\n"
             ),
             Some("migrate") => print!(
                 "usage: nacre-brain migrate --step {{meta,inbox,archive,digests,wiki,links,index,all}} (--dry-run | --apply) [--report PATH] [--archive-older-than-days N]\n\nPlan or apply one verified, revertable Brain migration step. Archive age defaults to 21 days.\n"
@@ -208,6 +214,17 @@ fn brain_command() -> Command {
                 .arg(Arg::new("query").required(true).num_args(1..)),
         )
         .subcommand(
+            Command::new("pack")
+                .arg(
+                    Arg::new("help")
+                        .short('h')
+                        .long("help")
+                        .action(ArgAction::Help),
+                )
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue))
+                .arg(Arg::new("name").required(true).num_args(1..)),
+        )
+        .subcommand(
             Command::new("migrate")
                 .arg(
                     Arg::new("help")
@@ -305,6 +322,16 @@ fn maintain_command() -> Command {
         .subcommand(update)
         .subcommand(restore)
         .subcommand(resolve)
+        .subcommand(
+            Command::new("consolidate")
+                .arg(help())
+                .arg(
+                    Arg::new("dry-run")
+                        .long("dry-run")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(Arg::new("report").long("report").num_args(1)),
+        )
 }
 
 fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
@@ -359,6 +386,18 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
                     }
                 }
             }
+        }
+        "pack" => {
+            if values.get_flag("json") {
+                result.push("--json".to_owned());
+            }
+            result.extend(
+                values
+                    .get_many::<String>("name")
+                    .into_iter()
+                    .flatten()
+                    .cloned(),
+            );
         }
         "migrate" => {
             for key in ["step", "report"] {
@@ -449,6 +488,14 @@ fn maintain_arguments(matches: &ArgMatches) -> Vec<String> {
             result.extend(values.get_one::<String>("destination").cloned());
         }
         "resolve" => result.extend(values.get_one::<String>("conflict_id").cloned()),
+        "consolidate" => {
+            if values.get_flag("dry-run") {
+                result.push("--dry-run".to_owned());
+            }
+            if let Some(path) = values.get_one::<String>("report") {
+                result.extend(["--report".to_owned(), path.clone()]);
+            }
+        }
         _ => {}
     }
     result
