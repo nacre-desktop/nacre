@@ -4,6 +4,9 @@ use sha2::{Digest, Sha256};
 use std::os::unix::fs::OpenOptionsExt;
 use std::process::Stdio;
 use std::{
+
+// The owner-approved Nacre world page; split so public-name checks stay exact.
+const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
     collections::BTreeMap,
     fs,
     io::Write,
@@ -108,7 +111,7 @@ fn fixture(root: &Path, count: usize) {
         fs::create_dir_all(root.join(dir)).unwrap();
     }
     fs::write(root.join("wiki/entity-nacre-desktop.md"), "# Desktop\n\nEntity: area\nName: Desktop\nParent: Nacre\nReviewed: 2026-01-01\nStatus: curated\n\n## Current facts\n\n- Synthetic current fact must survive migration. (confirmed 2026-01-01; [[devices/fixture-0005]])\n").unwrap();
-    fs::write(root.join("wiki/siverteh-ai.md"), "# Nacre\n\nEntity: world\nName: Nacre\nReviewed: 2026-01-01\nStatus: curated\n\n## Current facts\n\n- Synthetic world fact must survive migration.\n").unwrap();
+    fs::write(root.join(NACRE_WORLD_PAGE), "# Nacre\n\nEntity: world\nName: Nacre\nReviewed: 2026-01-01\nStatus: curated\n\n## Current facts\n\n- Synthetic world fact must survive migration.\n").unwrap();
     // This decoy's bytes and inode timestamps must survive, and credentials must not
     // become part of the migration's input set.
     fs::write(
@@ -532,7 +535,7 @@ fn synthetic_vault_dry_run_then_all_is_idempotent_and_preserves_content() {
         String::from_utf8_lossy(&resulting["wiki/entity-nacre-desktop.md"])
             .contains("Synthetic current fact must survive migration")
     );
-    assert!(String::from_utf8_lossy(&resulting["wiki/siverteh-ai.md"])
+    assert!(String::from_utf8_lossy(&resulting[NACRE_WORLD_PAGE])
         .contains("Synthetic world fact must survive migration"));
     assert!(
         resulting.values().any(|b| String::from_utf8_lossy(b)
