@@ -13,6 +13,14 @@ window.NacreEnglish = {
   "brain.ui.confidence.reported": "reported",
   "brain.ui.confidence.unverified": "unverified",
   "brain.ui.confidence.verified": "verified",
+  "brain.ui.count.evidence-notes": {
+    one: "{count} evidence note. Open one for the full detail.",
+    other: "{count} evidence notes. Open one for the full detail.",
+  },
+  "brain.ui.count.facts": {
+    one: "{count} fact",
+    other: "{count} facts",
+  },
   "brain.ui.count.notes": {
     one: "{count} notes",
     other: "{count} notes",
@@ -21,6 +29,10 @@ window.NacreEnglish = {
   "brain.ui.count.shared": {
     one: "{count} shared note",
     other: "{count} shared notes",
+  },
+  "brain.ui.count.stale-facts": {
+    one: "{count} stale",
+    other: "{count} stale",
   },
   "brain.ui.count.worlds": {
     one: "{count} worlds",
@@ -31,12 +43,15 @@ window.NacreEnglish = {
   "brain.ui.error.graph": "Graph could not be loaded.",
   "brain.ui.error.request-timed-out": "The request timed out. Try again.",
   "brain.ui.error.unavailable": "Could not load your knowledge. Try again.",
+  "brain.ui.label.aliases": "Also known as",
   "brain.ui.label.archive": "Archive",
   "brain.ui.label.areas": "Areas",
   "brain.ui.label.could-not-read-this-note-try-selecting-it-again":
     "Could not read this note. Try selecting it again.",
+  "brain.ui.label.current-facts": "Current facts",
   "brain.ui.label.did-you-mean": "Did you mean",
   "brain.ui.label.digest": "Digests",
+  "brain.ui.label.evidence": "Evidence",
   "brain.ui.label.explicit-note-reference": "Explicit note reference",
   "brain.ui.label.explicit-references-and-shared-notes-will-appear-here-as-your-knowledge-connects":
     "Explicit references and shared notes will appear here as your knowledge connects.",
@@ -45,13 +60,18 @@ window.NacreEnglish = {
   "brain.ui.label.focused-knowledge": "Focused knowledge",
   "brain.ui.label.hide-archive": "Hide archive",
   "brain.ui.label.kind": "Kind",
+  "brain.ui.label.latest-notes": "Latest notes",
+  "brain.ui.label.linked-from": "Linked from",
   "brain.ui.label.matching-titles-topics-and-note-content":
     "Matching titles, areas and note content.",
+  "brain.ui.label.mentions": "Mentions",
   "brain.ui.label.more-connections-overview-shows-all-topics-notes-shows-all-evidence":
     " more connections. Overview shows all areas; Notes shows all evidence.",
   "brain.ui.label.needs-review": "Needs review",
   "brain.ui.label.new": "New",
   "brain.ui.label.new-area": "New: {area}",
+  "brain.ui.label.no-current-facts":
+    "No current facts yet. The consolidation job fills them in from the evidence below.",
   "brain.ui.label.no-explicit-references-yet-open-this-note-to-follow-its-subjects":
     "No explicit references yet. Open this note to follow its subjects.",
   "brain.ui.label.no-matching-notes-try-a-different-search-or-filter":
@@ -59,13 +79,26 @@ window.NacreEnglish = {
   "brain.ui.label.no-notes-here-yet-new-knowledge-will-appear-as-it-is-saved":
     "No notes here yet. New knowledge will appear as it is saved.",
   "brain.ui.label.no-suggestions": "No suggested groupings yet.",
+  "brain.ui.label.no-wiki-page":
+    "No wiki page yet; this summary is built from the evidence.",
   "brain.ui.label.note": "Note",
   "brain.ui.label.note-details": "Note details",
   "brain.ui.label.notes-and-ideas": "Notes and ideas",
   "brain.ui.label.notes-kind": "Notes",
+  "brain.ui.label.open-full-note": "Open the full note",
+  "brain.ui.label.open-in-wiki": "Open in Wiki",
   "brain.ui.label.open-wiki-page": "Open wiki page",
+  "brain.ui.label.other-pages": "Other pages",
+  "brain.ui.label.pages": "Pages",
   "brain.ui.label.reading-note": "Reading note…",
+  "brain.ui.label.recently-saved": "Recently saved",
+  "brain.ui.label.related": "Related",
+  "brain.ui.label.related-area": "Same area: {area}",
+  "brain.ui.label.related-link": "Linked",
+  "brain.ui.label.related-shares": "Shares {names}",
+  "brain.ui.label.related-wording": "Similar wording",
   "brain.ui.label.review": "Review",
+  "brain.ui.label.reviewed": "Reviewed",
   "brain.ui.label.search-results": "Search results",
   "brain.ui.label.search-unavailable-showing-title-matches":
     "Search unavailable; showing title matches.",
@@ -73,13 +106,25 @@ window.NacreEnglish = {
   "brain.ui.label.shared-notes-connect-subjects-they-do-not-establish-a-dependency":
     "Shared notes connect worlds; they do not establish a dependency.",
   "brain.ui.label.show-archive": "Show archive",
+  "brain.ui.label.stale": "Stale",
+  "brain.ui.label.stale-address":
+    "Address or host state checked {days} days ago (limit {limit})",
+  "brain.ui.label.stale-version":
+    "Version or deploy state checked {days} days ago (limit {limit})",
+  "brain.ui.label.status": "Status",
   "brain.ui.label.suggested-groupings": "Suggested groupings",
+  "brain.ui.label.superseded": "Superseded",
+  "brain.ui.label.superseded-on": "Superseded {date}",
   "brain.ui.label.the-subjects-you-return-to-connected-by-evidence":
     "Explore your worlds and areas.",
   "brain.ui.label.topic-grouping-or-shared-notes":
     "Area membership or shared notes",
   "brain.ui.label.undated": "Undated",
   "brain.ui.label.view-notes": "View notes",
+  "brain.ui.label.wiki-area": "Area in {world}",
+  "brain.ui.label.wiki-intro":
+    "What your brain currently knows, summarised. Open any note for the full evidence.",
+  "brain.ui.label.wiki-world": "World",
   "brain.ui.label.world": "World",
   "brain.ui.label.your-brain": "Your brain",
   "brain.ui.literal.across-subjects": "Across worlds",
@@ -88,7 +133,6 @@ window.NacreEnglish = {
   "brain.ui.literal.knowledge-connections": "Knowledge connections",
   "brain.ui.literal.open-original-in-obsidian": "Open original in Obsidian",
   "brain.ui.literal.recent-knowledge": "Recent knowledge",
-  "brain.ui.literal.referenced-by": "Referenced by",
   "brain.ui.literal.references": "References",
   "brain.ui.literal.reported": "Reported",
   "brain.ui.literal.reset-view": "Reset view",
@@ -104,6 +148,7 @@ window.NacreEnglish = {
   "brain.ui.status.connections-ready": "Connections ready",
   "brain.ui.status.index": "{count} notes · {time}",
   "brain.ui.status.loading-graph": "Loading graph…",
+  "brain.ui.status.loading-wiki": "Loading the wiki page…",
   "brain.ui.text.all-kinds": "All kinds",
   "brain.ui.text.all-knowledge": "All knowledge",
   "brain.ui.text.all-worlds": "All worlds",
@@ -135,5 +180,6 @@ window.NacreEnglish = {
   "brain.ui.text.subjects": "Worlds",
   "brain.ui.text.the-subjects-you-return-to-connected-by-evidence":
     "Explore your worlds and areas.",
+  "brain.ui.text.wiki": "Wiki",
   "brain.ui.text.your-brain": "Your brain",
 };

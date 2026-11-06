@@ -244,6 +244,8 @@ try {
     "complete 2,000-note graph",
     30000,
   );
+  // N0144: the Wiki is the landing view; the overview is one click away.
+  await evaluate("document.querySelector('[data-view=overview]').click()");
 
   const model = await evaluate(
     `({worlds:graph.worlds,review:graph.reviewCount,notes:graph.nodes.filter(n=>['note','archive','digest'].includes(n.kind)),archive:graph.nodes.filter(n=>n.kind==='archive').length,digests:graph.nodes.filter(n=>n.kind==='digest').length})`,

@@ -946,6 +946,78 @@ fn wanted(index: &Index, note: &Note, options: &Options) -> bool {
             .is_none_or(|since| note.date.is_some_and(|d| d >= since))
 }
 
+/// Notes with similar wording (N0144 related notes): cosine similarity of
+/// each note's 24 strongest title/body terms (TF-IDF, title doubled). Terms
+/// in a single note or in more than a tenth of the vault are ignored. Returns
+/// up to `per_note` neighbours (similarity >= 0.1) per note id.
+pub(crate) fn similar(root: &Path, per_note: usize) -> Result<HashMap<String, Vec<(String, f64)>>> {
+    let mut guard = INDEX.lock().map_err(|_| "Search index lock failed")?;
+    if DIRTY.swap(false, Ordering::AcqRel) || guard.as_ref().is_none_or(|i| i.root != root) {
+        match Index::refresh(guard.take(), root) {
+            Ok(index) => *guard = Some(index),
+            Err(e) => {
+                invalidate();
+                return Err(e);
+            }
+        }
+    }
+    let index = guard.as_ref().ok_or("Search index missing")?;
+    let count = index.docs.len();
+    let common = (count / 10).max(3);
+    let mut vectors: Vec<Vec<(u32, f64)>> = Vec::with_capacity(count);
+    let mut inverted: HashMap<u32, Vec<(u32, f64)>> = HashMap::new();
+    for (d, doc) in index.docs.iter().enumerate() {
+        let mut tf: HashMap<u32, f64> = HashMap::new();
+        for (field, boost) in [(0, 2.0), (3, 1.0)] {
+            for (term, n) in decode(&doc.terms[field]) {
+                if let Some(&id) = index.dict.get(term) {
+                    *tf.entry(id).or_default() += boost * f64::from(n);
+                }
+            }
+        }
+        let mut weights: Vec<(u32, f64)> = tf
+            .into_iter()
+            .filter_map(|(id, n)| {
+                let df = index.postings[id as usize].len();
+                (2..=common)
+                    .contains(&df)
+                    .then(|| (id, (1.0 + n.ln()) * (count as f64 / df as f64).ln()))
+            })
+            .collect();
+        weights.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        weights.truncate(24);
+        let norm = weights.iter().map(|(_, w)| w * w).sum::<f64>().sqrt();
+        for (id, w) in &mut weights {
+            *w /= norm.max(f64::MIN_POSITIVE);
+            inverted.entry(*id).or_default().push((d as u32, *w));
+        }
+        vectors.push(weights);
+    }
+    let mut out = HashMap::new();
+    for (d, vector) in vectors.iter().enumerate() {
+        let mut dots: HashMap<u32, f64> = HashMap::new();
+        for (id, w) in vector {
+            for &(other, v) in &inverted[id] {
+                if other as usize != d {
+                    *dots.entry(other).or_default() += w * v;
+                }
+            }
+        }
+        let mut best: Vec<(u32, f64)> = dots.into_iter().filter(|(_, s)| *s >= 0.1).collect();
+        best.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.0.cmp(&b.0)));
+        best.truncate(per_note);
+        if !best.is_empty() {
+            out.insert(
+                index.notes[d].id.clone(),
+                best.into_iter()
+                    .map(|(o, s)| (index.notes[o as usize].id.clone(), s.min(1.0)))
+                    .collect(),
+            );
+        }
+    }
+    Ok(out)
+}
+
 /// Rank notes for `query`. The result carries ranked `ids` (viewer
 /// compatibility), `results` with snippets and chips, and `didYouMean`.
 pub fn search(root: &Path, query: &str, options: &Options) -> Result<Value> {

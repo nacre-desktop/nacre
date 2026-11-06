@@ -8,7 +8,7 @@ let graph = { nodes: [], links: [], noteCount: 0 },
   parents = new Map(),
   sourceNeighbours = new Map();
 let state = {
-    view: "overview",
+    view: "wiki",
     focus: null,
     selected: null,
     query: "",
@@ -351,7 +351,12 @@ function applyGraph(payload, force = false) {
   theme();
   ready = true;
   $("loading").hidden = true;
-  if (state.focus && state.focus !== "review" && !byId.has(state.focus))
+  if (
+    state.focus &&
+    state.focus !== "review" &&
+    state.view !== "wiki" &&
+    !byId.has(state.focus)
+  )
     state.focus = null;
   if (state.selected && !byId.has(state.selected)) state.selected = null;
   $("index-status").textContent = tr(
@@ -408,12 +413,12 @@ function select(
   render();
   $("content-scroll").scrollTop = 0;
 }
-function home() {
+function home(view = "wiki") {
   state = {
     ...state,
     focus: null,
     selected: null,
-    view: "overview",
+    view,
     query: "",
     limit: 60,
     history: [],
@@ -439,7 +444,14 @@ function renderRail() {
   const list = $("subjects");
   list.replaceChildren();
   $("subject-count").textContent = registryWorlds().length;
-  $("overview-link").classList.toggle("active", !state.focus);
+  $("overview-link").classList.toggle(
+    "active",
+    !state.focus && state.view !== "wiki",
+  );
+  $("wiki-link").classList.toggle(
+    "active",
+    !state.focus && state.view === "wiki",
+  );
   const related = state.focus
     ? new Set([state.focus, ...ancestors(state.focus).map((n) => n.id)])
     : new Set();
@@ -452,7 +464,7 @@ function renderRail() {
         state.query = "";
         $("search").value = "";
         searchIds = searchResults = null;
-        select(n.id, { view: "overview" });
+        select(n.id, { view: state.view === "wiki" ? "wiki" : "overview" });
       },
       "subject" + (related.has(n.id) ? " active" : ""),
     );
@@ -485,7 +497,10 @@ function renderRail() {
       for (const area of areasFor(n)) {
         const ab = button(
           "",
-          () => select(area.id, { view: "overview" }),
+          () =>
+            select(area.id, {
+              view: state.view === "wiki" ? "wiki" : "overview",
+            }),
           "area-link" + (related.has(area.id) ? " active" : ""),
         );
         ab.append(
@@ -549,7 +564,9 @@ function renderMain() {
   crumbs.replaceChildren();
   if (focus) {
     crumbs.append(
-      button(tr("brain.ui.literal.brain", "Brain"), home),
+      button(tr("brain.ui.literal.brain", "Brain"), () =>
+        home(state.view === "wiki" ? "wiki" : "overview"),
+      ),
       el("span", "/"),
     );
     const parent = ancestors(focus.id).find((n) => n.kind === "world");
@@ -639,6 +656,10 @@ function renderMain() {
   out.replaceChildren();
   if (searching || state.view === "notes") {
     renderNotes(out);
+    return;
+  }
+  if (state.view === "wiki") {
+    renderWiki(out);
     return;
   }
   if (state.view === "map") {
@@ -1364,6 +1385,14 @@ function renderInspector() {
       "inspector-action",
     ),
   );
+  if (n.path?.startsWith("wiki/"))
+    tools.prepend(
+      button(
+        tr("brain.ui.label.open-in-wiki", "Open in Wiki"),
+        () => openWiki(n.id),
+        "inspector-action",
+      ),
+    );
   panel.append(tools);
   const meta = el("div", "", "metadata");
   meta.append(
@@ -1395,20 +1424,546 @@ function renderInspector() {
   );
   panel.append(reader);
   readNote(n, reader, noteRequest);
-  for (const [field, label, opposite] of [
-    ["source", tr("brain.ui.literal.references", "References"), "target"],
-    ["target", tr("brain.ui.literal.referenced-by", "Referenced by"), "source"],
-  ]) {
-    const related = graph.links
-      .filter((e) => e.kind === "source" && e[field] === n.id)
-      .map((e) => byId.get(e[opposite]))
-      .filter(Boolean);
-    if (related.length) {
-      panel.append(el("div", label, "inspector-label"));
-      for (const r of related) panel.append(noteRow(r));
-    }
+  const links = el("div", "", "reader-connections");
+  panel.append(links, el("div", n.path, "reader-path"));
+  readConnections(n, links, noteRequest);
+}
+// Wiki layer (N0144): readable world → area → entity pages led by their
+// current facts, with an evidence index into the detailed note reader.
+let pageLinks = {};
+const wikiCache = new Map();
+function safeDecode(value) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
   }
-  panel.append(el("div", n.path, "reader-path"));
+}
+function ensureNode(summary) {
+  if (!summary?.id) return null;
+  if (!byId.has(summary.id)) {
+    const node = { ...summary, label: summary.label || summary.title };
+    byId.set(node.id, node);
+    graph.nodes.push(node);
+  }
+  return byId.get(summary.id);
+}
+function wikiKey() {
+  return (graph.graphRevision || "summary") + (graph.connections?.state || "");
+}
+// Cached JSON for the wiki view; a changed key refreshes in the background
+// while the previous value stays visible.
+function wikiData(url) {
+  const key = wikiKey(),
+    hit = wikiCache.get(url);
+  if (!hit || hit.key !== key) {
+    wikiCache.set(url, { key, value: hit?.value || null });
+    requestJson(url)
+      .then((value) => wikiCache.set(url, { key, value }))
+      .catch((error) =>
+        wikiCache.set(url, { key, value: { error: error.message } }),
+      )
+      .finally(() => {
+        if (state.view === "wiki" && !state.query) renderMain();
+      });
+  }
+  return wikiCache.get(url).value;
+}
+function openWiki(id) {
+  state.history.push({
+    focus: state.focus,
+    selected: state.selected,
+    view: state.view,
+  });
+  state.focus = id;
+  state.selected = null;
+  state.view = "wiki";
+  state.query = "";
+  $("search").value = "";
+  searchIds = searchResults = null;
+  render();
+  $("content-scroll").scrollTop = 0;
+}
+function wikiTarget() {
+  const id = state.focus;
+  if (!id || id === "review") return null;
+  if (/^(world|area):/.test(id)) return id;
+  const focus = byId.get(id);
+  if (!focus || focus.path?.startsWith("wiki/")) return id;
+  return context()?.id || null;
+}
+function wikiCrumbs(page) {
+  const crumbs = $("breadcrumbs");
+  crumbs.replaceChildren(
+    button(tr("brain.ui.text.wiki", "Wiki"), () => home("wiki")),
+  );
+  for (const part of [page?.world, page?.area, page?.parent].filter(Boolean))
+    crumbs.append(
+      el("span", "›"),
+      button(part.label, () => openWiki(part.id)),
+    );
+}
+function staleBadge(stale) {
+  const badge = el("span", tr("brain.ui.label.stale", "Stale"), "stale-badge");
+  badge.title =
+    stale.class === "address"
+      ? tr(
+          "brain.ui.label.stale-address",
+          "Address or host state checked {days} days ago (limit {limit})",
+          stale,
+        )
+      : tr(
+          "brain.ui.label.stale-version",
+          "Version or deploy state checked {days} days ago (limit {limit})",
+          stale,
+        );
+  return badge;
+}
+function sourceLink(target, base) {
+  const note = resolveNote(target, base);
+  if (!note) return el("span", target.split("/").pop(), "fact-source");
+  const link = el("a", note.label, "fact-source");
+  link.href = "#" + encodeURIComponent(note.id);
+  link.onclick = (event) => {
+    event.preventDefault();
+    select(note.id);
+  };
+  return link;
+}
+function renderFacts(out, page) {
+  const base = page.page?.path || "wiki/";
+  out.append(
+    el("h2", tr("brain.ui.label.current-facts", "Current facts"), "wiki-h2"),
+  );
+  let list = el("ul", "", "facts");
+  out.append(list);
+  for (const fact of page.facts || []) {
+    if (fact.heading) {
+      out.append(el("h3", fact.heading, "facts-group"));
+      list = el("ul", "", "facts");
+      out.append(list);
+      continue;
+    }
+    const item = el(
+      "li",
+      "",
+      "fact" +
+        (fact.superseded ? " superseded" : "") +
+        (fact.stale ? " stale" : ""),
+    );
+    if (fact.indent) item.style.marginInlineStart = fact.indent * 1.25 + "rem";
+    const body = el(fact.superseded ? "s" : "span", "", "fact-text");
+    inline(body, fact.text, base);
+    item.append(body);
+    if (fact.stale) item.append(" ", staleBadge(fact.stale));
+    const meta = el("span", "", "provenance");
+    if (fact.provenance?.date) {
+      const time = el("time", fact.provenance.date);
+      time.dateTime = fact.provenance.date;
+      time.title = fact.provenance.verb;
+      meta.append(time);
+    }
+    for (const source of fact.provenance?.sources || [])
+      meta.append(sourceLink(source, base));
+    if (fact.superseded) {
+      const note = el("span", "", "superseded-by");
+      note.append(
+        fact.superseded.date
+          ? tr("brain.ui.label.superseded-on", "Superseded {date}", {
+              date: fact.superseded.date,
+            })
+          : tr("brain.ui.label.superseded", "Superseded"),
+      );
+      for (const source of fact.superseded.by || [])
+        note.append(" ", sourceLink(source, base));
+      meta.append(note);
+    }
+    if (meta.childNodes.length) item.append(meta);
+    list.append(item);
+  }
+  if (!page.facts?.some((fact) => fact.text)) {
+    list.remove();
+    if (page.factsNote) {
+      const note = el("div", "", "wiki-prose");
+      markdown(note, page.factsNote, base);
+      out.append(note);
+    } else
+      out.append(
+        el(
+          "p",
+          tr(
+            "brain.ui.label.no-current-facts",
+            "No current facts yet. The consolidation job fills them in from the evidence below.",
+          ),
+          "empty",
+        ),
+      );
+  } else if (page.factsNote) {
+    const note = el("div", "", "wiki-prose");
+    markdown(note, page.factsNote, base);
+    out.append(note);
+  }
+}
+function factCounts(summary) {
+  const facts = summary?.facts || {},
+    parts = [];
+  if (facts.current)
+    parts.push(
+      tr(
+        "brain.ui.count.facts",
+        { one: "{count} fact", other: "{count} facts" },
+        { count: facts.current },
+      ),
+    );
+  return parts.join(" · ");
+}
+function wikiCard(label, summary, extra, onClick, className = "") {
+  const card = button("", onClick, "wiki-card" + className);
+  const top = el("div", "", "wiki-card-top");
+  top.append(el("small", extra || "", "wiki-kind"));
+  if (summary?.facts?.stale)
+    top.append(
+      el(
+        "span",
+        tr(
+          "brain.ui.count.stale-facts",
+          { one: "{count} stale", other: "{count} stale" },
+          { count: summary.facts.stale },
+        ),
+        "stale-badge",
+      ),
+    );
+  card.append(top, el("h3", label));
+  if (summary?.summary) card.append(el("p", summary.summary));
+  const counts = factCounts(summary);
+  if (counts) card.append(el("small", counts, "wiki-card-foot"));
+  return card;
+}
+function relatedReason(why = {}) {
+  const parts = [];
+  if (why.e?.length)
+    parts.push(
+      tr("brain.ui.label.related-shares", "Shares {names}", {
+        names: why.e.join(", "),
+      }),
+    );
+  if (why.a)
+    parts.push(
+      tr("brain.ui.label.related-area", "Same area: {area}", { area: why.a }),
+    );
+  if (why.l) parts.push(tr("brain.ui.label.related-link", "Linked"));
+  if (why.w)
+    parts.push(tr("brain.ui.label.related-wording", "Similar wording"));
+  return parts.join(" · ");
+}
+function connectionList(out, title, rows, reasons = false) {
+  if (!rows?.length) return;
+  out.append(el("h3", title, "evidence-heading"));
+  for (const row of rows) {
+    const node = ensureNode(row),
+      item = noteRow(node);
+    if (reasons) {
+      const why = relatedReason(row.why);
+      if (why)
+        item
+          .querySelector(".note-title")
+          .after(el("small", why, "related-reason"));
+    }
+    out.append(item);
+  }
+}
+function renderEvidence(out, page) {
+  const box = el("section", "", "wiki-evidence");
+  box.append(el("h2", tr("brain.ui.label.evidence", "Evidence"), "wiki-h2"));
+  const evidence = page.evidence;
+  if (!evidence) {
+    box.append(
+      el(
+        "p",
+        tr("brain.ui.status.building-connections", "Building connections…"),
+        "empty",
+      ),
+    );
+    out.append(box);
+    return;
+  }
+  box.append(
+    el(
+      "p",
+      tr(
+        "brain.ui.count.evidence-notes",
+        {
+          one: "{count} evidence note. Open one for the full detail.",
+          other: "{count} evidence notes. Open one for the full detail.",
+        },
+        { count: evidence.count },
+      ),
+      "wiki-muted",
+    ),
+  );
+  connectionList(
+    box,
+    tr("brain.ui.label.latest-notes", "Latest notes"),
+    evidence.latest,
+  );
+  connectionList(box, tr("brain.ui.label.digest", "Digests"), evidence.digests);
+  connectionList(
+    box,
+    tr("brain.ui.label.linked-from", "Linked from"),
+    evidence.linkedFrom,
+  );
+  connectionList(
+    box,
+    tr("brain.ui.label.related", "Related"),
+    evidence.related,
+    true,
+  );
+  out.append(box);
+}
+function renderWikiHome(out) {
+  $("title").textContent = tr("brain.ui.text.wiki", "Wiki");
+  $("subtitle").textContent = tr(
+    "brain.ui.label.wiki-intro",
+    "What your brain currently knows, summarised. Open any note for the full evidence.",
+  );
+  $("breadcrumbs").replaceChildren();
+  const index = wikiData("/api/wiki"),
+    pages = new Map((index?.worlds || []).map((world) => [world.id, world]));
+  $("view-summary").textContent = tr(
+    "brain.ui.count.worlds",
+    { one: "{count} worlds", other: "{count} worlds" },
+    { count: registryWorlds().length },
+  );
+  const cards = el("div", "", "wiki-cards");
+  for (const world of registryWorlds()) {
+    const entry = pages.get(world.id),
+      card = wikiCard(
+        world.label,
+        entry?.page,
+        tr(
+          "brain.ui.count.notes",
+          { one: "{count} notes", other: "{count} notes" },
+          { count: world.count || 0 },
+        ),
+        () => openWiki(world.id),
+      );
+    const chips = el("div", "", "wiki-chips");
+    for (const area of areasFor(world).slice(0, 6))
+      chips.append(
+        el(
+          "span",
+          area.proposed
+            ? tr("brain.ui.label.new-area", "New: {area}", { area: area.label })
+            : area.label,
+          "wiki-chip",
+        ),
+      );
+    if (chips.childNodes.length) card.append(chips);
+    cards.append(card);
+  }
+  out.append(cards);
+  if (index?.other?.length) {
+    out.append(
+      el("h2", tr("brain.ui.label.other-pages", "Other pages"), "wiki-h2"),
+    );
+    const other = el("div", "", "wiki-cards compact");
+    for (const page of index.other)
+      other.append(
+        wikiCard(page.name, page, page.entity, () => openWiki(page.id)),
+      );
+    out.append(other);
+  }
+  if (index?.error) out.append(el("p", index.error, "empty"));
+  const recent = ordered(notesIn(null).filter((n) => n.kind === "note")).slice(
+    0,
+    6,
+  );
+  if (recent.length) {
+    out.append(
+      el(
+        "h2",
+        tr("brain.ui.label.recently-saved", "Recently saved"),
+        "wiki-h2",
+      ),
+    );
+    for (const note of recent) out.append(noteRow(note));
+  }
+}
+function renderWiki(out) {
+  const target = wikiTarget();
+  if (!target) {
+    renderWikiHome(out);
+    return;
+  }
+  const page = wikiData("/api/wiki/page?id=" + encodeURIComponent(target));
+  if (!page || page.error) {
+    $("title").textContent =
+      byId.get(target)?.label || tr("brain.ui.text.wiki", "Wiki");
+    $("subtitle").textContent = "";
+    wikiCrumbs(null);
+    out.append(
+      el(
+        "p",
+        page?.error ||
+          tr("brain.ui.status.loading-wiki", "Loading the wiki page…"),
+        "empty",
+      ),
+    );
+    return;
+  }
+  pageLinks = page.links || {};
+  wikiCrumbs(page);
+  $("title").textContent = page.title;
+  $("subtitle").textContent =
+    page.kind === "world"
+      ? tr("brain.ui.label.wiki-world", "World")
+      : page.kind === "area"
+        ? tr("brain.ui.label.wiki-area", "Area in {world}", {
+            world: page.world?.label || "",
+          })
+        : (page.page?.entity || "").replace(/^./, (c) => c.toUpperCase());
+  $("view-summary").textContent = factCounts({ facts: page.counts });
+  const article = el("article", "", "wiki-page");
+  const base = page.page?.path || "wiki/";
+  if (page.intro) {
+    const intro = el("div", "", "wiki-prose wiki-intro");
+    markdown(intro, page.intro, base);
+    article.append(intro);
+  }
+  renderFacts(article, page);
+  const subpages = page.subpages || [];
+  if (subpages.length) {
+    article.append(
+      el(
+        "h2",
+        page.kind === "world"
+          ? tr("brain.ui.label.areas", "Areas")
+          : tr("brain.ui.label.pages", "Pages"),
+        "wiki-h2",
+      ),
+    );
+    const cards = el("div", "", "wiki-cards compact");
+    for (const sub of subpages) {
+      const id = sub.areaId || sub.id,
+        label = sub.proposed
+          ? tr("brain.ui.label.new-area", "New: {area}", { area: sub.label })
+          : sub.label || sub.name;
+      cards.append(
+        wikiCard(
+          label,
+          sub.id ? sub : null,
+          sub.areaId
+            ? tr(
+                "brain.ui.count.notes",
+                { one: "{count} notes", other: "{count} notes" },
+                {
+                  count:
+                    areasFor(byId.get(page.id) || { id: page.id }).find(
+                      (area) => area.id === sub.areaId,
+                    )?.count || 0,
+                },
+              )
+            : sub.entity,
+          () => openWiki(id),
+        ),
+      );
+    }
+    article.append(cards);
+  }
+  if (page.body) {
+    const body = el("div", "", "wiki-prose");
+    markdown(body, page.body, base);
+    article.append(body);
+  }
+  const info = el("p", "", "wiki-info");
+  for (const [label, value] of [
+    [tr("brain.ui.label.status", "Status"), page.meta?.status],
+    [tr("brain.ui.label.reviewed", "Reviewed"), page.meta?.reviewed],
+    [
+      tr("brain.ui.label.aliases", "Also known as"),
+      page.meta?.aliases?.join(", "),
+    ],
+  ])
+    if (value) info.append(el("span", label + ": " + value));
+  if (page.page)
+    info.append(
+      button(
+        tr("brain.ui.label.open-full-note", "Open the full note"),
+        () => select(page.page.id),
+        "wiki-open-note",
+      ),
+    );
+  if (!page.page)
+    info.append(
+      el(
+        "span",
+        tr(
+          "brain.ui.label.no-wiki-page",
+          "No wiki page yet; this summary is built from the evidence.",
+        ),
+      ),
+    );
+  article.append(info);
+  renderEvidence(article, page);
+  out.append(article);
+}
+async function readConnections(n, container, token) {
+  try {
+    const data = await boundedRequest(
+      "/api/connections?id=" + encodeURIComponent(n.id),
+      {},
+      "json",
+    );
+    if (token !== noteRequest) return;
+    if (data.state !== "ready") {
+      container.replaceChildren(
+        el(
+          "p",
+          tr("brain.ui.status.building-connections", "Building connections…"),
+          "empty",
+        ),
+      );
+      setTimeout(() => {
+        if (token === noteRequest) readConnections(n, container, token);
+      }, 1000);
+      return;
+    }
+    container.replaceChildren();
+    if (data.mentions?.length) {
+      container.append(
+        el("div", tr("brain.ui.label.mentions", "Mentions"), "inspector-label"),
+      );
+      const chips = el("div", "", "wiki-chips");
+      for (const target of data.mentions)
+        chips.append(
+          button(
+            target.label,
+            () => openWiki(target.kind === "area" ? target.id : target.page),
+            "wiki-chip",
+          ),
+        );
+      container.append(chips);
+    }
+    for (const [label, rows, reasons] of [
+      [tr("brain.ui.literal.references", "References"), data.linksTo],
+      [tr("brain.ui.label.linked-from", "Linked from"), data.linkedFrom],
+      [tr("brain.ui.label.related", "Related"), data.related, true],
+    ]) {
+      if (!rows?.length) continue;
+      container.append(el("div", label, "inspector-label"));
+      for (const row of rows) {
+        const item = noteRow(ensureNode(row));
+        const why = reasons && relatedReason(row.why);
+        if (why)
+          item
+            .querySelector(".note-title")
+            .after(el("small", why, "related-reason"));
+        container.append(item);
+      }
+    }
+  } catch {
+    if (token === noteRequest) container.replaceChildren();
+  }
 }
 async function readNote(n, container, token) {
   try {
@@ -1434,6 +1989,8 @@ async function readNote(n, container, token) {
 function resolveNote(target, base) {
   let value = target.split("|")[0].split("#")[0].trim();
   if (!value) return null;
+  const known = pageLinks[value] || pageLinks[safeDecode(value)];
+  if (known) return ensureNode(known);
   const candidates = [value, value + ".md"];
   try {
     const p = new URL(value, "http://local/" + base).pathname.slice(1);
@@ -1559,7 +2116,7 @@ function markdown(container, body, base) {
       continue;
     }
     const metadata = line.match(
-      /^(Entity|Name|Project|Aliases|Reviewed|Status|Source|Recorded|Date|Confidence|Worlds|Topics|Kind):\s*(.*)$/,
+      /^(Entity|Name|Project|Aliases|Reviewed|Status|Source|Recorded|Date|Confidence|Worlds|Areas|Parent|Review|Topics|Kind):\s*(.*)$/,
     );
     if (metadata) {
       flush();
@@ -1620,8 +2177,9 @@ async function navigation() {
     }
   } catch {}
 }
-$("brand").onclick = home;
-$("overview-link").onclick = home;
+$("brand").onclick = () => home("wiki");
+$("wiki-link").onclick = () => home("wiki");
+$("overview-link").onclick = () => home("overview");
 $("refresh").onclick = () => load(true);
 $("retry").onclick = () => retryAction();
 $("back").onclick = back;

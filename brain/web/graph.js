@@ -25,6 +25,7 @@
     palette = {},
     themeSignature = "",
     themeColors = [];
+  const derived = new Set(["mention", "related"]);
   const color = (name) =>
     getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const worldSlots = new Map();
@@ -125,8 +126,11 @@
           ? 0.45
           : 0.3;
       ctx.lineWidth = Math.max(0.7, dpr * 0.7);
+      // Derived related-note edges are dashed; explicit links stay solid.
+      ctx.setLineDash(l.kind === "related" ? [3 * dpr, 3 * dpr] : []);
       ctx.stroke();
     }
+    ctx.setLineDash([]);
     ctx.globalAlpha = 1;
     const connected = new Set();
     if (hover)
@@ -405,7 +409,9 @@
           .forceLink(links)
           .id((n) => n.id)
           .distance((l) => (l.kind === "membership" ? 88 : 115))
-          .strength(0.16),
+          // Derived mention/related edges are drawn but exert no force, so
+          // the structural layout never collapses into one cluster.
+          .strength((l) => (derived.has(l.kind) ? 0 : 0.16)),
       )
       .force("charge", d3Force.forceManyBody().strength(-95).distanceMax(420))
       .force("x", d3Force.forceX(0).strength(0.014 / (aspect * aspect)))
