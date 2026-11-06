@@ -4,9 +4,6 @@ use sha2::{Digest, Sha256};
 use std::os::unix::fs::OpenOptionsExt;
 use std::process::Stdio;
 use std::{
-
-// The owner-approved Nacre world page; split so public-name checks stay exact.
-const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
     collections::BTreeMap,
     fs,
     io::Write,
@@ -15,6 +12,9 @@ const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
     process::{Command, Output},
     time::{Duration, Instant},
 };
+
+// The owner-approved Nacre world page; split so public-name checks stay exact.
+const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
 
 const STEPS: &[&str] = &[
     "meta", "inbox", "archive", "digests", "wiki", "links", "index",
