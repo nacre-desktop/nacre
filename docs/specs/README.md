@@ -1,5 +1,9 @@
 # Nacre implementation queue
 
+N0140 / Brain overhaul U3: [registry hierarchy](0140-brain-viewer-hierarchy.md),
+Review, filename note IDs and event-driven watching are implemented on the task
+branch. Synthetic browser evidence and the full dev-1 desktop CI job gate delivery.
+
 N0132: reopened after a reported installed-browser loading failure. Follow-up
 code review identified the blocking path: `/api/brain` synchronously built the
 full discovery graph before replying, so a cold index could hold the browser at

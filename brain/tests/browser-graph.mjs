@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
+import { writeMinimalRegistry } from "./hierarchy-fixture.mjs";
 
 const root = path.resolve(".");
 const binary = path.resolve(
@@ -30,6 +31,7 @@ fs.mkdirSync(evidence, { recursive: true, mode: 0o700 });
 fs.cpSync(webSource, installedWeb, { recursive: true });
 
 const worlds = ["Research", "Software", "Music", "Climbing", "Electronics"];
+writeMinimalRegistry(vault, worlds);
 for (let i = 0; i < 2000; i += 1) {
   const world = worlds[i % worlds.length];
   const prev = i > 0 ? `\nRelated: [[${String(i - 1).padStart(4, "0")}]]` : "";

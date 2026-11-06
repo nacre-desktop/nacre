@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 import { spawn } from 'node:child_process';
+import { writeMinimalRegistry } from './hierarchy-fixture.mjs';
 
 const binary = path.resolve(process.env.BRAIN_TEST_NATIVE || 'target/debug/nacre-helper');
 const webSource = path.resolve(process.env.BRAIN_TEST_WEB || 'brain/web');
@@ -29,6 +30,7 @@ fs.mkdirSync(fixtureBin, { recursive: true, mode: 0o700 });
 fs.cpSync(webSource, installedWeb, { recursive: true });
 
 const subjects = ['Climbing', 'Electronics', 'Research', 'Music', 'Software'];
+writeMinimalRegistry(vault, subjects);
 for (let i = 0; i < 2000; i += 1) {
   const subject = subjects[i % subjects.length];
   fs.writeFileSync(path.join(vault, `${String(i).padStart(4, '0')}.md`),

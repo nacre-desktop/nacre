@@ -21,6 +21,7 @@
     query = "",
     selected = null,
     active = false,
+    showArchive = false,
     palette = {},
     themeSignature = "",
     themeColors = [];
@@ -29,8 +30,20 @@
   const worldSlots = new Map();
   const paletteFor = (value) => {
     const world = value || "Brain";
-    if (!worldSlots.has(world)) worldSlots.set(world, worldSlots.size);
-    return themeColors[worldSlots.get(world) % themeColors.length];
+    if (!worldSlots.has(world)) {
+      const index = window.BrainGraphUI?.worlds?.indexOf(world);
+      worldSlots.set(world, index >= 0 ? index : worldSlots.size);
+    }
+    const light =
+      getComputedStyle(document.documentElement).colorScheme === "light";
+    const hueStep = parseFloat(color("--world-hue-step")) || 137.508;
+    const hueOffset = parseFloat(color("--world-hue-offset")) || 0;
+    const hue = (worldSlots.get(world) * hueStep + hueOffset) % 360;
+    const saturation = color("--world-saturation") || "72%";
+    const lightness =
+      color(light ? "--world-lightness-light" : "--world-lightness-dark") ||
+      (light ? "30%" : "72%");
+    return `hsl(${hue} ${saturation} ${lightness})`;
   };
   const text = (node, value) => {
     node.textContent = value;
@@ -51,9 +64,10 @@
   }
   function visible(n) {
     return (
+      (n.kind !== "archive" || showArchive) &&
       (world === "all" ||
         n.world === world ||
-        n.category === world ||
+        n.worlds?.includes(world) ||
         n.label === world) &&
       (kind === "all" || n.kind === kind)
     );
@@ -71,15 +85,16 @@
       line = color("--muted"),
       foreground = color("--text"),
       font = getComputedStyle(document.body).fontFamily;
-    const base = [color("--accent"), color("--secondary"), color("--tertiary")];
-    themeColors = [
-      ...base,
-      ...base.flatMap((token, i) => [
-        `color-mix(in srgb, ${token} 65%, ${base[(i + 1) % 3]})`,
-        `color-mix(in srgb, ${token} 35%, ${base[(i + 1) % 3]})`,
-      ]),
-    ];
-    const signature = themeColors.join("|");
+    themeColors = [...worldSlots.keys()].map(paletteFor);
+    const signature = JSON.stringify([
+      getComputedStyle(document.documentElement).colorScheme,
+      color("--world-saturation"),
+      color("--world-lightness-dark"),
+      color("--world-lightness-light"),
+      color("--world-hue-step"),
+      color("--world-hue-offset"),
+      themeColors,
+    ]);
     if (signature !== themeSignature) {
       themeSignature = signature;
       palette = {};
@@ -106,7 +121,7 @@
       ctx.strokeStyle = highlighted ? foreground : line;
       ctx.globalAlpha = highlighted
         ? 0.85
-        : l.kind === "group" || l.kind === "membership"
+        : l.kind === "membership"
           ? 0.45
           : 0.3;
       ctx.lineWidth = Math.max(0.7, dpr * 0.7);
@@ -136,10 +151,12 @@
       if (!shown.has(n.id)) continue;
       const p = point(n),
         r = size(n) * dpr * Math.sqrt(scale),
-        group = n.world || n.category || n.label;
+        group = n.world || "";
       ctx.beginPath();
       ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = palette[group] || (palette[group] = paletteFor(group));
+      ctx.fillStyle = group
+        ? palette[group] || (palette[group] = paletteFor(group))
+        : line;
       ctx.globalAlpha = hover && n !== hover && !connected.has(n.id) ? 0.24 : 1;
       ctx.fill();
       if (n === hover) {
@@ -244,7 +261,7 @@
     const legend = $("graph-legend");
     if (!legend) return;
     const worlds = [
-      ...new Set(nodes.map((n) => n.world || n.category).filter(Boolean)),
+      ...new Set(nodes.map((n) => n.world).filter(Boolean)),
     ].sort();
     const rows = worlds.map((v) => [
       v,
@@ -337,30 +354,36 @@
   function loadData(data) {
     if (simulation) simulation.stop();
     selected = null;
-    nodes = data.nodes.map((n) => ({
-      ...n,
-      kind:
-        n.kind === "topic" && n.groupReason === "annotated" ? "entity" : n.kind,
-    }));
+    nodes = data.nodes.map((n) => ({ ...n }));
     links = data.links.map((l) => ({ ...l }));
-    // Until the registry supplies worlds, use the existing subject hierarchy.
+    window.BrainGraphUI.worlds = (data.worlds || []).map((w) => w.label);
+    if (!window.BrainGraphUI.worlds.length)
+      window.BrainGraphUI.worlds = nodes
+        .filter((n) => n.kind === "world")
+        .map((n) => n.label);
+    worldSlots.clear();
+    window.BrainGraphUI.worlds.forEach((name, index) =>
+      worldSlots.set(name, index),
+    );
+    palette = {};
+    themeSignature = "";
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const parents = new Map(
       nodes.filter((n) => n.parent).map((n) => [n.id, n.parent]),
     );
     for (const l of links)
-      if (["group", "membership"].includes(l.kind) && !parents.has(l.target))
+      if (l.kind === "membership" && !parents.has(l.target))
         parents.set(l.target, l.source);
     function worldFor(n, seen = new Set()) {
       if (n.world) return n.world;
-      if (seen.has(n.id)) return n.category || n.label;
+      if (seen.has(n.id)) return "";
       seen.add(n.id);
       const parent = byId.get(parents.get(n.id));
       return parent
         ? worldFor(parent, seen)
-        : ["hub", "world", "area"].includes(n.kind)
+        : ["world", "area"].includes(n.kind)
           ? n.label
-          : n.category || "";
+          : "";
     }
     for (const n of nodes) n.world = worldFor(n);
     const valid = new Set(nodes.map((n) => n.id));
@@ -381,9 +404,7 @@
         d3Force
           .forceLink(links)
           .id((n) => n.id)
-          .distance((l) =>
-            l.kind === "group" || l.kind === "membership" ? 88 : 115,
-          )
+          .distance((l) => (l.kind === "membership" ? 88 : 115))
           .strength(0.16),
       )
       .force("charge", d3Force.forceManyBody().strength(-95).distanceMax(420))
@@ -403,17 +424,17 @@
   }
   function fillFilters() {
     const worlds = [
-        ...new Set(nodes.map((n) => n.world || n.category).filter(Boolean)),
+        ...new Set(nodes.map((n) => n.world).filter(Boolean)),
       ].sort(),
       kinds = [...new Set(nodes.map((n) => n.kind).filter(Boolean))].sort();
     const labels = {
       world: tr("brain.ui.label.world", "World"),
-      hub: tr("brain.ui.text.graph-kind-category", "Category"),
-      area: tr("brain.ui.text.graph-kind-category", "Category"),
-      topic: tr("brain.ui.text.graph-kind-topic", "Topic"),
+      area: tr("brain.ui.text.graph-kind-area", "Area"),
       entity: tr("brain.ui.text.graph-kind-entity", "Entity"),
       wiki: tr("brain.ui.text.graph-kind-wiki-page", "Wiki page"),
       note: tr("brain.ui.text.graph-kind-note", "Note"),
+      archive: tr("brain.ui.label.archive", "Archive"),
+      digest: tr("brain.ui.label.digest", "Digests"),
     };
     for (const [id, values, selected] of [
       ["graph-world", worlds, world],
@@ -519,7 +540,7 @@
     const level =
       n.kind === "world"
         ? "world"
-        : ["area", "hub", "topic", "entity"].includes(n.kind)
+        : n.kind === "area" || n.kind === "entity"
           ? "area"
           : null;
     if (level) open(level + ":" + n.label);
@@ -588,7 +609,7 @@
     const n = hit(e.offsetX, e.offsetY),
       click = !drag?.moved;
     if (n && click) {
-      if (n.kind === "note" || n.kind === "wiki")
+      if (["note", "archive", "digest", "wiki"].includes(n.kind))
         window.BrainGraphUI?.openNote(n);
       else narrow(n);
     }
@@ -623,6 +644,20 @@
   $("graph-toggle").addEventListener("click", () =>
     active ? close() : open("all"),
   );
+  const archiveToggle = document.createElement("button");
+  archiveToggle.id = "graph-archive-toggle";
+  archiveToggle.textContent = tr("brain.ui.label.show-archive", "Show archive");
+  archiveToggle.onclick = () => {
+    showArchive = !showArchive;
+    archiveToggle.textContent = tr(
+      showArchive
+        ? "brain.ui.label.hide-archive"
+        : "brain.ui.label.show-archive",
+      showArchive ? "Hide archive" : "Show archive",
+    );
+    draw();
+  };
+  $("graph-world").parentElement.after(archiveToggle);
   $("graph-back").addEventListener("click", () =>
     open(history.pop() || "all", false),
   );
@@ -689,5 +724,6 @@
     onOpenNote: null,
     onClose: null,
     request: null,
+    worlds: [],
   };
 })();
