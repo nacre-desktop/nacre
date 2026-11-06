@@ -1,7 +1,7 @@
 # N0145 — Brain consolidation (U8a, deterministic)
 
-Status: implemented; synthetic acceptance and the full desktop CI job are
-recorded in the unit report. No live vault, unit or installation is touched.
+Status: implemented; synthetic acceptance and the full desktop CI job passed
+(dev-1). No live vault, unit or installation is touched.
 
 `nacre-brain-maintain consolidate [--dry-run] [--report PATH]` keeps the Brain
 tidy without model calls (DESIGN §7–9, §16). A run holds both vault locks
@@ -165,6 +165,22 @@ Helper parity adds `nacre-brain-maintain/consolidate-help`,
 `nacre-brain/pack-json` and `nacre-brain/pack-fallback`; the root help lists of
 both commands gain `consolidate` and `pack` (intentional help-contract
 extension, reviewed manually as in N0141).
+
+Full `desktop` job of `.github/workflows/check.yml`, every run step replicated
+in `ghcr.io/archlinux/archlinux:latest` (container `n0145`, 8 CPUs, 16 GiB,
+nice 10, `cargo -j2`, no Chromium): `N0145 DESKTOP CI PASS` on 6bb4073 (fmt,
+clippy `-D warnings`, workspace tests with 88 passing test binaries and none
+failing, product shell/Luau/proof suites, cargo deny, i18n, `tools/check.py`
+with 540 helper parity cases and 0 failures, galleries, daemon memory). No
+timing flake needed a rerun. Log: `.lead/n0145-full-ci.log` in the worktree.
+
+Size: product code about +2,640/−410 lines including in-file unit tests
+(`brain_consolidate.rs` 1,750 lines after rustfmt, about 80 of them tests;
+`brain_registry.rs` +236; `brain_migrate.rs` net +63 after extracting the
+shared transaction). There is no Python original to compare with. The
+simplicity pass reused the migration transaction, generators and resolver
+instead of adding a second write path, and removed nothing else (no code is
+replaced by this unit). Tests: 660 integration lines, 3 parity cases.
 
 ## Lead's first real run
 
