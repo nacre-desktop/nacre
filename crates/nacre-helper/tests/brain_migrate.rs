@@ -50,15 +50,9 @@ fn git(dir: &Path, args: &[&str]) {
         .arg(dir)
         .args(args)
         .env("GIT_AUTHOR_NAME", OWNER)
-        .env(
-            "GIT_AUTHOR_EMAIL",
-            OWNER_EMAIL,
-        )
+        .env("GIT_AUTHOR_EMAIL", OWNER_EMAIL)
         .env("GIT_COMMITTER_NAME", OWNER)
-        .env(
-            "GIT_COMMITTER_EMAIL",
-            OWNER_EMAIL,
-        )
+        .env("GIT_COMMITTER_EMAIL", OWNER_EMAIL)
         .output()
         .unwrap();
     assert!(
@@ -251,14 +245,7 @@ fn fixture(root: &Path, count: usize) {
     fs::write(root.join("wiki/unregistered.md"),"# Unregistered synthetic wiki\n\nSource: synthetic-fixture\n\nCurated unregistered text stays byte-identical.  \n").unwrap();
     git(root, &["init", "-b", "main"]);
     git(root, &["config", "user.name", OWNER]);
-    git(
-        root,
-        &[
-            "config",
-            "user.email",
-            OWNER_EMAIL,
-        ],
-    );
+    git(root, &["config", "user.email", OWNER_EMAIL]);
     git(
         root,
         &[
