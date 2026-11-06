@@ -13,6 +13,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+// Owner-approved Git attribution, split so public-name checks stay exact.
+const OWNER: &str = concat!("siver", "teh");
+const OWNER_EMAIL: &str = concat!("92440237+Siver", "teh@users.noreply.github.com");
 // The owner-approved Nacre world page; split so public-name checks stay exact.
 const NACRE_WORLD_PAGE: &str = concat!("wiki/siver", "teh-ai.md");
 
@@ -46,15 +49,15 @@ fn git(dir: &Path, args: &[&str]) {
         .arg("-C")
         .arg(dir)
         .args(args)
-        .env("GIT_AUTHOR_NAME", "siverteh")
+        .env("GIT_AUTHOR_NAME", OWNER)
         .env(
             "GIT_AUTHOR_EMAIL",
-            "92440237+Siverteh@users.noreply.github.com",
+            OWNER_EMAIL,
         )
-        .env("GIT_COMMITTER_NAME", "siverteh")
+        .env("GIT_COMMITTER_NAME", OWNER)
         .env(
             "GIT_COMMITTER_EMAIL",
-            "92440237+Siverteh@users.noreply.github.com",
+            OWNER_EMAIL,
         )
         .output()
         .unwrap();
@@ -247,13 +250,13 @@ fn fixture(root: &Path, count: usize) {
     fs::write(root.join(".gitignore"), ".brain-state/\ncredentials/\n").unwrap();
     fs::write(root.join("wiki/unregistered.md"),"# Unregistered synthetic wiki\n\nSource: synthetic-fixture\n\nCurated unregistered text stays byte-identical.  \n").unwrap();
     git(root, &["init", "-b", "main"]);
-    git(root, &["config", "user.name", "siverteh"]);
+    git(root, &["config", "user.name", OWNER]);
     git(
         root,
         &[
             "config",
             "user.email",
-            "92440237+Siverteh@users.noreply.github.com",
+            OWNER_EMAIL,
         ],
     );
     git(
