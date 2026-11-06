@@ -4266,5 +4266,6 @@
   "brain.ui.label.review": "Review",
   "brain.ui.label.show-archive": "Show archive",
   "brain.ui.label.suggested-groupings": "Suggested groupings",
-  "brain.ui.text.graph-kind-area": "Area"
+  "brain.ui.text.graph-kind-area": "Area",
+  "brain.ui.label.did-you-mean": "Did you mean"
 }

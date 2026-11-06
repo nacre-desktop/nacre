@@ -35,6 +35,7 @@ window.NacreEnglish = {
   "brain.ui.label.areas": "Areas",
   "brain.ui.label.could-not-read-this-note-try-selecting-it-again":
     "Could not read this note. Try selecting it again.",
+  "brain.ui.label.did-you-mean": "Did you mean",
   "brain.ui.label.digest": "Digests",
   "brain.ui.label.explicit-note-reference": "Explicit note reference",
   "brain.ui.label.explicit-references-and-shared-notes-will-appear-here-as-your-knowledge-connects":

@@ -464,19 +464,7 @@ fn brain(args: &[String]) -> Result<i32> {
             eprintln!("nacre-brain: error: unrecognized arguments");
             Ok(2)
         }
-        "search" => {
-            let root = initialize()?;
-            if args.len() < 2 {
-                eprintln!("nacre-brain search: error: the following arguments are required: query");
-                return Ok(2);
-            }
-            let q = args.get(1..).unwrap_or(&[]).join(" ");
-            let s = Command::new("rg")
-                .args(["-n", "-i", "-F", "--glob", "*.md", "--", &q])
-                .arg(root)
-                .status()?;
-            Ok(s.code().unwrap_or(1))
-        }
+        "search" => brain_search(&args[1..]),
         "note" => {
             let _root = initialize()?;
             brain_note(&args[1..])
@@ -500,6 +488,65 @@ fn brain(args: &[String]) -> Result<i32> {
         }
         _ => Err(error("invalid choice")),
     }
+}
+
+/// Ranked search over canonical arguments: options, `--`, then query words.
+/// Text output keeps the former `path:line:text` shape, one line per note.
+fn brain_search(args: &[String]) -> Result<i32> {
+    let root = initialize()?;
+    let mut options = crate::brain_search::Options::default();
+    let mut json = false;
+    let mut i = 0;
+    while i < args.len() && args[i] != "--" {
+        let value = args.get(i + 1).cloned().unwrap_or_default();
+        match args[i].as_str() {
+            "--json" => json = true,
+            "--include-archive" => options.include_archive = true,
+            "--limit" => options.limit = value.parse().map_err(|_| error("invalid --limit"))?,
+            "--world" => options.worlds.push(value),
+            "--area" => options.areas.push(value),
+            "--kind" => options.kind = Some(value),
+            "--since" => {
+                options.since = Some(
+                    chrono::NaiveDate::parse_from_str(&value, "%Y-%m-%d")
+                        .map_err(|_| error("--since expects YYYY-MM-DD"))?,
+                )
+            }
+            _ => break,
+        }
+        i += if matches!(args[i].as_str(), "--json" | "--include-archive") {
+            1
+        } else {
+            2
+        };
+    }
+    let words = &args[i.min(args.len())..];
+    let query = words
+        .strip_prefix(&["--".to_owned()])
+        .unwrap_or(words)
+        .join(" ");
+    if query.trim().is_empty() {
+        eprintln!("nacre-brain search: error: the following arguments are required: query");
+        return Ok(2);
+    }
+    let found = crate::brain_search::search(&root, &query, &options)?;
+    let results = found["results"].as_array().cloned().unwrap_or_default();
+    if json {
+        println!("{}", serde_json::to_string(&found)?);
+    } else {
+        for r in &results {
+            println!(
+                "{}:{}:{}",
+                r["file"].as_str().unwrap_or(""),
+                r["line"],
+                r["snippet"].as_str().unwrap_or("")
+            );
+        }
+        if let Some(suggestion) = found["didYouMean"].as_str() {
+            eprintln!("Did you mean: {suggestion}");
+        }
+    }
+    Ok(if results.is_empty() { 1 } else { 0 })
 }
 
 fn brain_git_command(args: &[String]) -> Result<i32> {

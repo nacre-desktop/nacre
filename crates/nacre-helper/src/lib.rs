@@ -17,6 +17,7 @@ pub mod brain_http;
 pub mod brain_launch;
 pub mod brain_migrate;
 pub mod brain_registry;
+pub mod brain_search;
 pub mod brain_web;
 pub mod branding;
 pub mod classic_state;

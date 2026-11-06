@@ -1,0 +1,22 @@
+{
+  "helper": "nacre-brain",
+  "args": [
+    "search",
+    "--json",
+    "--limit",
+    "5",
+    "publc",
+    "content"
+  ],
+  "command": "python3 bin/nacre-brain",
+  "fixtures": {
+    "home/Documents/Nacre-Brain/inbox/demo.md": {
+      "text": "# Public fixture\nRecorded: 2026-11-01\nAreas: Network\n\nPublic content about the tailnet.\n",
+      "mtime": 1790000000
+    },
+    "home/Documents/Nacre-Brain/archive/inbox/2026-09/old.md": {
+      "text": "# Old public note\n\nPublic content, archived.\n",
+      "mtime": 1790000000
+    }
+  }
+}

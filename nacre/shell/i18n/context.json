@@ -4314,5 +4314,6 @@
   "brain.ui.label.review": "Separate sidebar entry for notes flagged for review.",
   "brain.ui.label.show-archive": "Button that includes archived notes in the current note list or graph.",
   "brain.ui.label.suggested-groupings": "Collapsed optional section containing discovered cluster suggestions.",
-  "brain.ui.text.graph-kind-area": "Brain graph node kind filter option."
+  "brain.ui.text.graph-kind-area": "Brain graph node kind filter option.",
+  "brain.ui.label.did-you-mean": "Lead-in before a clickable spelling suggestion for the Brain search query, e.g. 'Did you mean tailscale'."
 }

@@ -1286,7 +1286,7 @@
     {
       "helper": "nacre-brain",
       "source": "bin/nacre-brain",
-      "cases": 6,
+      "cases": 7,
       "operations": [
         "[\"init\"]",
         "[\"note\"]",
