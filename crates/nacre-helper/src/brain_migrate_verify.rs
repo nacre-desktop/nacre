@@ -7,12 +7,23 @@ use std::path::{Component, Path};
 
 type Notes = BTreeMap<String, Vec<u8>>;
 
+/// How a link spells its target. Resolution follows Obsidian: Markdown and
+/// `[[./x]]`/`[[../x]]` are folder-relative, `[[folder/x]]` is vault-rooted and
+/// `[[x]]` names a file anywhere in the vault.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Style {
+    Markdown,
+    Relative,
+    Root,
+    Name,
+}
+
 #[derive(Debug)]
 struct Link {
     start: usize,
     end: usize,
     target: String,
-    wiki: bool,
+    style: Style,
 }
 
 fn decode(s: &str) -> String {
@@ -50,6 +61,49 @@ fn normal(path: &str) -> Option<String> {
     Some(parts.join("/"))
 }
 
+fn folder(path: &str) -> &str {
+    path.rsplit_once('/').map_or("", |(dir, _)| dir)
+}
+
+fn with_ext(path: String) -> String {
+    if path.ends_with(".md") {
+        path
+    } else {
+        format!("{path}.md")
+    }
+}
+
+/// Inline code spans (equal backtick runs) on one line; links inside stay text.
+fn code_spans(line: &str) -> Vec<(usize, usize)> {
+    let bytes = line.as_bytes();
+    let run = |at: usize| bytes[at..].iter().take_while(|&&b| b == b'`').count();
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] != b'`' {
+            i += 1;
+            continue;
+        }
+        let open = run(i);
+        let mut j = i + open;
+        i = j;
+        while j < bytes.len() {
+            if bytes[j] != b'`' {
+                j += 1;
+                continue;
+            }
+            let close = run(j);
+            if close == open {
+                spans.push((i - open, j + close));
+                i = j + close;
+                break;
+            }
+            j += close;
+        }
+    }
+    spans
+}
+
 fn links(text: &str) -> Vec<Link> {
     static RE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
         Regex::new(r"\[\[([^\]|#]+)(?:[^\]]*)\]\]|\]\((?:<([^>]+)>|([^\s)]+))(?:\s+[^)]*)?\)")
@@ -74,12 +128,21 @@ fn links(text: &str) -> Vec<Link> {
                 fence = Some(kind);
             }
         } else if fence.is_none() {
+            let code = code_spans(line);
             for c in RE.captures_iter(line) {
+                let whole = c.get(0).unwrap();
+                if code
+                    .iter()
+                    .any(|&(a, b)| a < whole.end() && whole.start() < b)
+                {
+                    continue;
+                }
                 let wiki = c.get(1).is_some();
                 let m = c.get(1).or_else(|| c.get(2)).or_else(|| c.get(3)).unwrap();
                 let raw = m.as_str();
                 let target = if wiki {
-                    raw
+                    // `[[x\|alias]]` is the table-safe alias form.
+                    raw.strip_suffix('\\').unwrap_or(raw)
                 } else {
                     raw.split('#').next().unwrap_or("")
                 };
@@ -94,11 +157,20 @@ fn links(text: &str) -> Vec<Link> {
                 {
                     continue;
                 }
+                let style = if !wiki {
+                    Style::Markdown
+                } else if target.starts_with("./") || target.starts_with("../") {
+                    Style::Relative
+                } else if target.contains('/') {
+                    Style::Root
+                } else {
+                    Style::Name
+                };
                 found.push(Link {
                     start: offset + m.start(),
                     end: offset + m.start() + target.len(),
                     target: decode(target),
-                    wiki,
+                    style,
                 });
             }
         }
@@ -107,74 +179,120 @@ fn links(text: &str) -> Vec<Link> {
     found
 }
 
-fn resolve(link: &Link, source: &str, notes: &Notes) -> Option<String> {
-    let with_ext = |s: String| {
-        if s.ends_with(".md") {
-            s
-        } else {
-            format!("{s}.md")
-        }
+/// The note path a link spells, whether or not it exists; names spell no path.
+fn spelled(link: &Link, source: &str) -> Option<String> {
+    let path = match link.style {
+        Style::Name => return None,
+        Style::Root => link.target.clone(),
+        Style::Markdown | Style::Relative => match folder(source) {
+            "" => link.target.clone(),
+            dir => format!("{dir}/{}", link.target),
+        },
     };
-    if link.wiki {
-        if let Some(root) = normal(&link.target).map(with_ext) {
-            if notes.contains_key(&root) {
-                return Some(root);
-            }
-        }
-    }
-    let parent = Path::new(source).parent()?.to_str()?;
-    let joined = if parent.is_empty() {
-        link.target.clone()
-    } else {
-        format!("{parent}/{}", link.target)
-    };
-    if let Some(path) = normal(&joined).map(with_ext) {
-        if notes.contains_key(&path) {
-            return Some(path);
-        }
-    }
-    if link.wiki && !link.target.contains('/') {
-        let root = with_ext(link.target.clone());
-        let name = Path::new(&root).file_name()?;
-        let mut matches = notes
-            .keys()
-            .filter(|p| Path::new(p).file_name() == Some(name));
-        let first = matches.next()?.clone();
-        return matches.next().is_none().then_some(first);
-    }
-    None
+    normal(&path).map(with_ext)
 }
 
-fn historical_target(
-    link: &Link,
-    source: &str,
-    notes: &Notes,
-    moves: &BTreeMap<String, String>,
-) -> Option<String> {
-    let mut candidates = Vec::new();
-    if link.wiki {
-        candidates.extend(normal(&link.target));
+/// Note paths with a file-name index; resolution never opens a file.
+struct Vault {
+    paths: BTreeSet<String>,
+    names: BTreeMap<String, Vec<String>>,
+}
+
+impl Vault {
+    fn new(paths: impl IntoIterator<Item = String>) -> Self {
+        let paths: BTreeSet<String> = paths.into_iter().collect();
+        let mut names = BTreeMap::<String, Vec<String>>::new();
+        for path in &paths {
+            let name = path.rsplit('/').next().unwrap_or(path);
+            names.entry(name.to_owned()).or_default().push(path.clone());
+        }
+        Self { paths, names }
     }
-    let parent = Path::new(source).parent()?.to_str()?;
-    let joined = if parent.is_empty() {
-        link.target.clone()
-    } else {
-        format!("{parent}/{}", link.target)
-    };
-    candidates.extend(normal(&joined));
-    for target in candidates {
-        let path = if target.ends_with(".md") {
-            target
-        } else {
-            format!("{target}.md")
-        };
-        if let Some(new) = moves.get(&path) {
-            if notes.contains_key(new) {
-                return Some(path);
-            }
+
+    fn resolve(&self, link: &Link, source: &str) -> Option<String> {
+        if link.style != Style::Name {
+            return spelled(link, source).filter(|path| self.paths.contains(path));
+        }
+        let name = with_ext(link.target.clone());
+        if self.paths.contains(&name) {
+            return Some(name);
+        }
+        match self.names.get(&name)?.as_slice() {
+            [only] => Some(only.clone()),
+            // An ambiguous name means the note beside the source, if any.
+            many => many.iter().find(|p| folder(p) == folder(source)).cloned(),
         }
     }
-    None
+
+    fn broken(&self, notes: &Notes) -> Vec<(String, String)> {
+        let mut broken = Vec::new();
+        for (path, bytes) in notes {
+            for link in links(&String::from_utf8_lossy(bytes)) {
+                if self.resolve(&link, path).is_none() {
+                    broken.push((path.clone(), link.target));
+                }
+            }
+        }
+        broken
+    }
+}
+
+/// Link edits for one step: `moves` applied to the step's input notes.
+pub(super) struct Relinker<'a> {
+    moves: &'a BTreeMap<String, String>,
+    before: Vault,
+    after: Vault,
+}
+
+impl<'a> Relinker<'a> {
+    pub(super) fn new(notes: &Notes, moves: &'a BTreeMap<String, String>) -> Self {
+        Self {
+            moves,
+            before: Vault::new(notes.keys().cloned()),
+            after: Vault::new(notes.keys().map(|p| moves.get(p).unwrap_or(p).clone())),
+        }
+    }
+
+    /// What a link meant before the step. A ledger move also repairs a link that
+    /// still spells a path the migration moved away earlier.
+    fn target(&self, link: &Link, source: &str) -> Option<String> {
+        self.before.resolve(link, source).or_else(|| {
+            let old = spelled(link, source)?;
+            let new = self.moves.get(&old)?;
+            self.after.paths.contains(new).then_some(old)
+        })
+    }
+
+    /// Rewrites only links that would otherwise stop resolving to their target,
+    /// keeping each link's style, `.md` suffix, fragment and alias.
+    pub(super) fn rewrite(&self, text: &str, old: &str, new: &str) -> String {
+        let mut out = text.to_owned();
+        for link in links(text).into_iter().rev() {
+            let Some(target) = self.target(&link, old) else {
+                continue;
+            };
+            let destination = self.moves.get(&target).unwrap_or(&target);
+            if self.after.resolve(&link, new).as_ref() == Some(destination) {
+                continue;
+            }
+            let path = match link.style {
+                Style::Markdown | Style::Relative => relative(new, destination),
+                // A name that stopped resolving uniquely gets its vault path.
+                Style::Root | Style::Name => destination.clone(),
+            };
+            let path = match path.strip_suffix(".md") {
+                Some(bare) if !link.target.ends_with(".md") => bare.to_owned(),
+                _ => path,
+            };
+            let replacement = match link.style {
+                Style::Markdown => path.replace(' ', "%20"),
+                Style::Relative if !path.starts_with("../") => format!("./{path}"),
+                _ => path,
+            };
+            out.replace_range(link.start..link.end, &replacement);
+        }
+        out
+    }
 }
 
 fn relative(source: &str, target: &str) -> String {
@@ -188,40 +306,9 @@ fn relative(source: &str, target: &str) -> String {
         .join("/")
 }
 
-/// Rewrites only resolved link targets. Moving a source also rebases its outbound links.
-pub(super) fn rewrite_links(
-    text: &str,
-    old: &str,
-    new: &str,
-    moves: &BTreeMap<String, String>,
-    notes: &Notes,
-) -> String {
-    let mut out = text.to_owned();
-    for link in links(text).into_iter().rev() {
-        let Some(target) =
-            resolve(&link, old, notes).or_else(|| historical_target(&link, old, notes, moves))
-        else {
-            continue;
-        };
-        let destination = moves.get(&target).unwrap_or(&target);
-        if destination == &target && old == new {
-            continue;
-        }
-        let replacement = if link.wiki {
-            if destination == &target {
-                continue;
-            }
-            if link.target.ends_with(".md") {
-                destination.clone()
-            } else {
-                destination.trim_end_matches(".md").to_owned()
-            }
-        } else {
-            relative(new, destination).replace(' ', "%20")
-        };
-        out.replace_range(link.start..link.end, &replacement);
-    }
-    out
+/// Links that resolve to no note; migration keeps them exactly as written.
+pub(super) fn broken_links(notes: &Notes) -> Vec<(String, String)> {
+    Vault::new(notes.keys().cloned()).broken(notes)
 }
 
 fn generated_parts(body: &str) -> Result<Option<(&str, &str)>> {
@@ -262,6 +349,8 @@ pub(super) fn verify(
         .flatten()
         .filter_map(|w| w["name"].as_str())
         .collect();
+    let relinker = Relinker::new(before, moves);
+    let after_vault = Vault::new(after.keys().cloned());
     for (old, bytes) in before {
         let path = moves.get(old).unwrap_or(old);
         let actual = after
@@ -278,7 +367,7 @@ pub(super) fn verify(
             return Err(format!("verify: title changed in {old}").into());
         }
         let expected = if matches!(step, "inbox" | "archive" | "links") {
-            rewrite_links(old_text, old, path, moves, before)
+            relinker.rewrite(old_text, old, path)
         } else {
             old_text.to_owned()
         };
@@ -313,22 +402,28 @@ pub(super) fn verify(
         if !unchanged {
             return Err(format!("verify: body checksum mismatch in {old}").into());
         }
-        // Every previously resolved link must still resolve after the step. Pre-existing
-        // broken links are retained as evidence, never silently fixed or discarded.
+        // Every previously resolved link must still resolve to the same (moved) note.
+        // Pre-existing broken links stay as written: the byte check above keeps them
+        // unchanged, and the run reports them instead of failing.
         let old_links = links(old_text);
         let new_links = links(new_text);
         if step != "wiki" {
             for (i, link) in old_links.iter().enumerate() {
-                if let Some(target) = resolve(link, old, before) {
-                    let wanted = moves.get(&target).unwrap_or(&target);
-                    if new_links
-                        .get(i)
-                        .and_then(|l| resolve(l, path, after))
-                        .as_ref()
-                        != Some(wanted)
-                    {
-                        return Err(format!("verify: broken or redirected link in {old}").into());
-                    }
+                let Some(target) = relinker.target(link, old) else {
+                    continue;
+                };
+                let wanted = moves.get(&target).unwrap_or(&target);
+                if new_links
+                    .get(i)
+                    .and_then(|l| after_vault.resolve(l, path))
+                    .as_ref()
+                    != Some(wanted)
+                {
+                    return Err(format!(
+                        "verify: broken or redirected link in {old}: {}",
+                        link.target
+                    )
+                    .into());
                 }
             }
         }
@@ -355,12 +450,19 @@ pub(super) fn verify(
                 return Err(format!("verify: no canonical world or Review in {path}").into());
             }
         }
-        if !before.contains_key(path) || (path == "INDEX.md" && step == "index") {
-            for link in links(text) {
-                if resolve(&link, path, after).is_none() {
-                    return Err(format!("verify: new page {path} contains a broken link").into());
-                }
-            }
+    }
+    // A step may keep pre-existing broken links but must add none, including in
+    // generated pages and blocks. The INDEX is rebuilt whole: all of it resolves.
+    let mut kept = BTreeMap::<(String, String), usize>::new();
+    for (path, target) in relinker.before.broken(before) {
+        let path = moves.get(&path).cloned().unwrap_or(path);
+        *kept.entry((path, target)).or_default() += 1;
+    }
+    for (path, target) in after_vault.broken(after) {
+        let index = step == "index" && path == "INDEX.md";
+        match kept.get_mut(&(path.clone(), target.clone())) {
+            Some(count) if *count > 0 && !index => *count -= 1,
+            _ => return Err(format!("verify: new broken link in {path}: {target}").into()),
         }
     }
     Ok(())
@@ -387,20 +489,174 @@ pub(super) fn verify_links(
 mod tests {
     use super::*;
 
+    fn notes(paths: &[&str]) -> Notes {
+        paths
+            .iter()
+            .map(|p| ((*p).to_owned(), Vec::new()))
+            .collect()
+    }
+
     #[test]
     fn moved_source_rebases_unchanged_target_and_preserves_fences_and_fragments() {
-        let notes = BTreeMap::from([
-            ("inbox/a.md".into(), Vec::new()),
-            ("projects/a space.md".into(), Vec::new()),
-        ]);
+        let notes = notes(&["inbox/a.md", "projects/a space.md"]);
         let moves = BTreeMap::from([(
             "inbox/a.md".into(),
             "archive/checkpoints/2020-01/a.md".into(),
         )]);
-        let text =
-            "[[a#Anchor|label]] [target](../projects/a%20space.md#frag)\n```md\n[[inbox/a]]\n```\n";
-        assert_eq!(rewrite_links(text, "inbox/a.md", "archive/checkpoints/2020-01/a.md", &moves, &notes),
-            "[[archive/checkpoints/2020-01/a#Anchor|label]] [target](../../../projects/a%20space.md#frag)\n```md\n[[inbox/a]]\n```\n");
+        let text = "[[a#Anchor|label]] [target](../projects/a%20space.md#frag) `[x](../projects/a%20space.md)`\n```md\n[[inbox/a]]\n```\n";
+        assert_eq!(Relinker::new(&notes, &moves).rewrite(text, "inbox/a.md", "archive/checkpoints/2020-01/a.md"),
+            "[[a#Anchor|label]] [target](../../../projects/a%20space.md#frag) `[x](../projects/a%20space.md)`\n```md\n[[inbox/a]]\n```\n");
+    }
+
+    #[test]
+    fn every_link_style_keeps_its_spelling_and_resolves_after_moves() {
+        let notes = notes(&[
+            "checkpoints/s.md",
+            "checkpoints/sib.md",
+            "checkpoints/dup.md",
+            "checkpoints/stay.md",
+            "projects/dup.md",
+            "runbooks/r.md",
+            "inbox/i.md",
+            "wiki/w.md",
+            "INDEX.md",
+        ]);
+        let moves = BTreeMap::from([
+            (
+                "checkpoints/s.md".into(),
+                "archive/checkpoints/2020-01/s.md".into(),
+            ),
+            (
+                "checkpoints/sib.md".into(),
+                "archive/checkpoints/2020-01/sib.md".into(),
+            ),
+            (
+                "checkpoints/dup.md".into(),
+                "archive/checkpoints/2020-01/dup.md".into(),
+            ),
+            ("inbox/i.md".into(), "projects/i.md".into()),
+        ]);
+        let relinker = Relinker::new(&notes, &moves);
+        // A moved note linking out, in every style.
+        let out = "[[sib]] [[../runbooks/r]] [[../runbooks/r#Steps|alias]] [[./sib.md]] \
+                   [[runbooks/r.md|root]] [[r]] [[w|alias]] [[dup]] [[inbox/i]] [[../inbox/i]] \
+                   [m](../runbooks/r.md#s) [m](sib.md) [m](../runbooks/r) | [[../runbooks/r\\|t]] | \
+                   `[[../runbooks/r]]` [[../projects/missing]] [[nowhere]] [[#Local]]\n";
+        assert_eq!(
+            relinker.rewrite(out, "checkpoints/s.md", "archive/checkpoints/2020-01/s.md"),
+            "[[sib]] [[../../../runbooks/r]] [[../../../runbooks/r#Steps|alias]] [[./sib.md]] \
+             [[runbooks/r.md|root]] [[r]] [[w|alias]] [[dup]] [[projects/i]] [[../../../projects/i]] \
+             [m](../../../runbooks/r.md#s) [m](sib.md) [m](../../../runbooks/r) | [[../../../runbooks/r\\|t]] | \
+             `[[../runbooks/r]]` [[../projects/missing]] [[nowhere]] [[#Local]]\n"
+        );
+        // Unmoved notes linking into moved notes.
+        let into =
+            "[[../checkpoints/s]] [[checkpoints/s#H|a]] [[s]] [[./r]] [m](../checkpoints/s.md#f) \
+                    [m](../checkpoints/sib) `[[checkpoints/s]]`\n";
+        assert_eq!(
+            relinker.rewrite(into, "runbooks/r.md", "runbooks/r.md"),
+            "[[../archive/checkpoints/2020-01/s]] [[archive/checkpoints/2020-01/s#H|a]] [[s]] [[./r]] \
+             [m](../archive/checkpoints/2020-01/s.md#f) [m](../archive/checkpoints/2020-01/sib) `[[checkpoints/s]]`\n"
+        );
+        let root = "[[./checkpoints/s]] [m](checkpoints/s.md) [[../inbox/i]]\n";
+        assert_eq!(
+            relinker.rewrite(root, "INDEX.md", "INDEX.md"),
+            "[[./archive/checkpoints/2020-01/s]] [m](archive/checkpoints/2020-01/s.md) [[../inbox/i]]\n"
+        );
+        assert_eq!(
+            relinker.rewrite("[[../inbox/i]] [[i]]\n", "wiki/w.md", "wiki/w.md"),
+            "[[../projects/i]] [[i]]\n"
+        );
+        // `dup` meant the checkpoint beside it; once that moves away the name is
+        // ambiguous, so the link takes the moved note's vault path.
+        assert_eq!(
+            relinker.rewrite(
+                "[[dup]] [[dup.md|d]]\n",
+                "checkpoints/stay.md",
+                "checkpoints/stay.md"
+            ),
+            "[[archive/checkpoints/2020-01/dup]] [[archive/checkpoints/2020-01/dup.md|d]]\n"
+        );
+        // Rewritten text is stable: a rerun with no moves changes nothing.
+        let after: Notes = notes
+            .keys()
+            .map(|p| (moves.get(p).unwrap_or(p).clone(), Vec::new()))
+            .collect();
+        let none = BTreeMap::new();
+        let rewritten =
+            relinker.rewrite(out, "checkpoints/s.md", "archive/checkpoints/2020-01/s.md");
+        assert_eq!(
+            Relinker::new(&after, &none).rewrite(
+                &rewritten,
+                "archive/checkpoints/2020-01/s.md",
+                "archive/checkpoints/2020-01/s.md"
+            ),
+            rewritten
+        );
+    }
+
+    #[test]
+    fn verifier_rejects_new_breakage_but_keeps_preexisting_broken_links() {
+        let source = b"# S\nWorlds: Nacre\n\n[[../runbooks/r]] [[nowhere]] [x](../gone.md)\n";
+        let before = BTreeMap::from([
+            ("checkpoints/s.md".to_owned(), source.to_vec()),
+            ("runbooks/r.md".to_owned(), b"# R\n\nBody.\n".to_vec()),
+        ]);
+        let moves = BTreeMap::from([(
+            "checkpoints/s.md".to_owned(),
+            "archive/checkpoints/2020-01/s.md".to_owned(),
+        )]);
+        let registry = serde_json::json!({"worlds":[{"name":"Nacre"}]});
+        let moved = |text: &[u8]| {
+            let mut after = before.clone();
+            after.remove("checkpoints/s.md");
+            after.insert("archive/checkpoints/2020-01/s.md".into(), text.to_vec());
+            after
+        };
+        let planned = Relinker::new(&before, &moves).rewrite(
+            std::str::from_utf8(source).unwrap(),
+            "checkpoints/s.md",
+            "archive/checkpoints/2020-01/s.md",
+        );
+        assert!(planned.contains("[[../../../runbooks/r]] [[nowhere]] [x](../gone.md)"));
+        verify(
+            &before,
+            &moved(planned.as_bytes()),
+            &moves,
+            "archive",
+            &registry,
+        )
+        .unwrap();
+        // The old bug moved a relative wikilink without rebasing it. The body check
+        // rejects that text, and so does the independent resolution check when the
+        // planned body agrees with the mistake (step "meta" expects no rewrite).
+        assert!(verify(&before, &moved(source), &moves, "archive", &registry).is_err());
+        let error = verify(&before, &moved(source), &moves, "meta", &registry).unwrap_err();
+        assert!(
+            error.to_string().contains("broken or redirected link"),
+            "{error}"
+        );
+        // A generated page may not add a broken link of its own.
+        let mut generated = before.clone();
+        generated.insert(
+            "digests/d.md".into(),
+            b"# D\nWorlds: Nacre\n\n[[nowhere]]\n".to_vec(),
+        );
+        let error =
+            verify(&before, &generated, &BTreeMap::new(), "digests", &registry).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("new broken link in digests/d.md"),
+            "{error}"
+        );
+        assert_eq!(
+            broken_links(&before),
+            [
+                ("checkpoints/s.md".to_owned(), "nowhere".to_owned()),
+                ("checkpoints/s.md".to_owned(), "../gone.md".to_owned()),
+            ]
+        );
     }
 
     #[test]

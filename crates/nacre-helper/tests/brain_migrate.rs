@@ -938,3 +938,257 @@ fn apply_waits_for_capture_lock_and_includes_the_later_note() {
     assert!(note.lines().any(|line| line.starts_with("Worlds: Nacre")));
     assert!(!note.lines().any(|line| line == "Worlds:"));
 }
+
+const STYLE_SOURCE: &str = "20200110T000000Z-style-source-aaaa1111";
+const STYLE_SIBLING: &str = "20200111T000000Z-style-sibling-bbbb2222";
+
+/// Every link shape from the vault survey, with invented names: old checkpoints
+/// that archive together, a moving inbox note, and unmoved notes linking in.
+fn link_style_fixture(root: &Path) {
+    let notes = [
+        (
+            format!("checkpoints/{STYLE_SOURCE}.md"),
+            format!(
+                "# Synthetic link style checkpoint\n\nRecorded: 2020-01-10\nWorlds: Nacre\n\n\
+Sibling [[{STYLE_SIBLING}]] and runbook [[../runbooks/style-runbook]].\n\
+Anchored [[../runbooks/style-runbook#Steps|the steps]], dotted [[./{STYLE_SIBLING}.md]], rooted [[runbooks/style-runbook.md|root form]].\n\
+Names [[style-runbook]] and [[style-wiki|wiki alias]]; inbox [[inbox/20200105-style-inbox]] and [[../inbox/20200105-style-inbox]].\n\
+Markdown [steps](../runbooks/style-runbook.md#steps), [sibling]({STYLE_SIBLING}.md), [spaced](../wiki/style%20space.md), [bare](../runbooks/style-runbook).\n\
+| [[../runbooks/style-runbook\\|table alias]] |\n\
+Code `[[../runbooks/style-runbook]]` stays text.\n\
+```text\n[[../runbooks/style-runbook]] [x](../runbooks/style-runbook.md)\n```\n\
+Same-folder name [[style-dup]].\n\
+Already broken: [[../projects/style-missing]], [[style-nowhere]] and [gone](../runbooks/style-gone.md).\n"
+            ),
+        ),
+        (
+            format!("checkpoints/{STYLE_SIBLING}.md"),
+            format!("# Synthetic sibling checkpoint\n\nRecorded: 2020-01-11\nWorlds: Nacre\n\nBack to [[{STYLE_SOURCE}|the source]] and [[./{STYLE_SOURCE}]].\n"),
+        ),
+        (
+            "runbooks/style-runbook.md".into(),
+            format!("# Synthetic style runbook\n\nWorlds: Nacre\n\n## Steps\n\nInto the archive: [[../checkpoints/{STYLE_SOURCE}]], [[checkpoints/{STYLE_SOURCE}#Heading|rooted]], [[{STYLE_SIBLING}]], [md](../checkpoints/{STYLE_SOURCE}.md#frag), [bare](../checkpoints/{STYLE_SIBLING}).\nNeighbour [[./style-neighbour]]. Code `[[checkpoints/{STYLE_SOURCE}]]` stays text.\nAlready broken too: [[../checkpoints/style-never]].\n"),
+        ),
+        (
+            "runbooks/style-neighbour.md".into(),
+            "# Synthetic style neighbour\n\nWorlds: Nacre\n\nNeighbour body.\n".into(),
+        ),
+        (
+            "inbox/20200105-style-inbox.md".into(),
+            "# Synthetic style decision record\n\nRecorded: 2020-01-05\nWorlds: Nacre\n\nDecision body links [[../runbooks/style-runbook]] and [[style-wiki]].\n".into(),
+        ),
+        (
+            "wiki/style-wiki.md".into(),
+            format!("# Synthetic style wiki\n\nWorlds: Nacre\n\nKnowledge links [[../inbox/20200105-style-inbox]], [[inbox/20200105-style-inbox|rooted inbox]], [[../checkpoints/{STYLE_SIBLING}]].\n"),
+        ),
+        (
+            "wiki/style space.md".into(),
+            "# Synthetic spaced wiki\n\nWorlds: Nacre\n\nSpaced page.\n".into(),
+        ),
+        (
+            "README.md".into(),
+            format!("# Synthetic readme\n\n[readme](checkpoints/{STYLE_SOURCE}.md) and [[./checkpoints/{STYLE_SIBLING}]].\n"),
+        ),
+        (
+            "checkpoints/style-dup.md".into(),
+            "# Synthetic duplicate name\n\nRecorded: 2020-01-12\nWorlds: Nacre\n\nArchived duplicate.\n".into(),
+        ),
+        (
+            "projects/style-dup.md".into(),
+            "# Synthetic duplicate project\n\nWorlds: Nacre\n\nUnmoved duplicate.\n".into(),
+        ),
+        (
+            "checkpoints/style-dup-user.md".into(),
+            "# Synthetic undated reference\n\nWorlds: Nacre\n\nAmbiguous after the move: [[style-dup]].\n".into(),
+        ),
+    ];
+    for (path, text) in notes {
+        fs::write(root.join(path), text).unwrap();
+    }
+    git(root, &["add", "."]);
+    git(
+        root,
+        &["commit", "-m", "brain: link style fixture [no-publish]"],
+    );
+}
+
+/// Obsidian resolution written independently of the migration's resolver:
+/// `[[name]]` by unique (or same-folder) file name, `[[a/b]]` from the root,
+/// `[[./x]]`, `[[../x]]` and Markdown links from the note's folder.
+fn unresolved_links(files: &BTreeMap<String, Vec<u8>>) -> Vec<(String, String)> {
+    let link = regex::Regex::new(r"\[\[([^\]|#]+)[^\]]*\]\]|\]\(([^)\s#]+)[^)]*\)").unwrap();
+    let code = regex::Regex::new(r"(?s)```.*?```|`[^`\n]*`").unwrap();
+    let notes: Vec<&String> = files.keys().filter(|p| p.ends_with(".md")).collect();
+    let mut broken = Vec::new();
+    for path in &notes {
+        let text = String::from_utf8_lossy(&files[*path]);
+        let text = code.replace_all(&text, "");
+        let dir = Path::new(path.as_str()).parent().unwrap();
+        for c in link.captures_iter(&text) {
+            let (raw, wiki) = match (c.get(1), c.get(2)) {
+                (Some(m), _) => (m.as_str().trim_end_matches('\\'), true),
+                (_, Some(m)) => (m.as_str(), false),
+                _ => unreachable!(),
+            };
+            if !wiki && (raw.contains(':') || Path::new(raw).extension().is_some_and(|x| x != "md"))
+            {
+                continue;
+            }
+            let raw = raw.replace("%20", " ");
+            let file = if raw.ends_with(".md") {
+                raw.clone()
+            } else {
+                format!("{raw}.md")
+            };
+            let local = normalized_path(&dir.join(&file))
+                .to_string_lossy()
+                .into_owned();
+            let found = if wiki && !raw.contains('/') {
+                files.contains_key(&local)
+                    || notes
+                        .iter()
+                        .filter(|p| p.rsplit('/').next() == Some(file.as_str()))
+                        .count()
+                        == 1
+            } else if wiki && !raw.starts_with("./") && !raw.starts_with("../") {
+                files.contains_key(&file)
+            } else {
+                files.contains_key(&local)
+            };
+            if !found {
+                broken.push((path.to_string(), raw));
+            }
+        }
+    }
+    broken
+}
+
+#[test]
+fn every_link_style_survives_inbox_and_archive_moves() {
+    let temp = tempfile::tempdir().unwrap();
+    let home = temp.path().join("home");
+    fs::create_dir_all(&home).unwrap();
+    let seed = temp.path().join("seed");
+    fixture(&seed, 24);
+    link_style_fixture(&seed);
+    let sequential = temp.path().join("sequential");
+    let together = temp.path().join("together");
+    for vault in [&sequential, &together] {
+        fs::create_dir_all(vault).unwrap();
+        copy_tree(&seed, vault);
+        remote(vault);
+    }
+    let source = format!("checkpoints/{STYLE_SOURCE}.md");
+    let pre_existing = vec![
+        (source.clone(), "../projects/style-missing".to_owned()),
+        (source.clone(), "style-nowhere".to_owned()),
+        (source.clone(), "../runbooks/style-gone.md".to_owned()),
+        (
+            "runbooks/style-runbook.md".to_owned(),
+            "../checkpoints/style-never".to_owned(),
+        ),
+    ];
+    let mut before = unresolved_links(&snapshot(&sequential));
+    before.sort();
+    let mut expected = pre_existing.clone();
+    expected.sort();
+    assert_eq!(
+        before, expected,
+        "fixture must start with exactly these broken links"
+    );
+
+    let report = temp.path().join("style-dry-run.md");
+    let dry = call(&home, &sequential, "all", "--dry-run", Some(&report));
+    assert!(String::from_utf8_lossy(&dry.stderr).contains("4 pre-existing broken links"));
+    success(dry);
+    let report_text = fs::read_to_string(&report).unwrap();
+    assert!(report_text.contains("## Pre-existing broken links"));
+    assert!(report_text.contains(&format!("- `{source}` → `style-nowhere`")));
+
+    for step in STEPS {
+        let out = call(&home, &sequential, step, "--apply", None);
+        if *step == "archive" {
+            assert!(
+                String::from_utf8_lossy(&out.stderr).contains("pre-existing broken links"),
+                "archive did not report the pre-existing broken links"
+            );
+        }
+        success(out);
+    }
+    success(call(&home, &together, "all", "--apply", None));
+    let result = snapshot(&together);
+    assert_eq!(
+        snapshot(&sequential),
+        result,
+        "step-by-step differs from all"
+    );
+
+    let archived = format!("archive/checkpoints/2020-01/{STYLE_SOURCE}.md");
+    let text = |path: &str| String::from_utf8_lossy(&result[path]).into_owned();
+    assert!(
+        !result.contains_key(&source),
+        "old checkpoint was not archived"
+    );
+    assert!(text(&archived).ends_with(&format!(
+        "Sibling [[{STYLE_SIBLING}]] and runbook [[../../../runbooks/style-runbook]].\n\
+Anchored [[../../../runbooks/style-runbook#Steps|the steps]], dotted [[./{STYLE_SIBLING}.md]], rooted [[runbooks/style-runbook.md|root form]].\n\
+Names [[style-runbook]] and [[style-wiki|wiki alias]]; inbox [[decisions/20200105-style-inbox]] and [[../../../decisions/20200105-style-inbox]].\n\
+Markdown [steps](../../../runbooks/style-runbook.md#steps), [sibling]({STYLE_SIBLING}.md), [spaced](../../../wiki/style%20space.md), [bare](../../../runbooks/style-runbook).\n\
+| [[../../../runbooks/style-runbook\\|table alias]] |\n\
+Code `[[../runbooks/style-runbook]]` stays text.\n\
+```text\n[[../runbooks/style-runbook]] [x](../runbooks/style-runbook.md)\n```\n\
+Same-folder name [[style-dup]].\n\
+Already broken: [[../projects/style-missing]], [[style-nowhere]] and [gone](../runbooks/style-gone.md).\n"
+    )), "{}", text(&archived));
+    assert!(
+        text(&format!("archive/checkpoints/2020-01/{STYLE_SIBLING}.md")).ends_with(&format!(
+            "Back to [[{STYLE_SOURCE}|the source]] and [[./{STYLE_SOURCE}]].\n"
+        ))
+    );
+    assert!(text("runbooks/style-runbook.md").ends_with(&format!(
+        "Into the archive: [[../archive/checkpoints/2020-01/{STYLE_SOURCE}]], [[archive/checkpoints/2020-01/{STYLE_SOURCE}#Heading|rooted]], [[{STYLE_SIBLING}]], [md](../archive/checkpoints/2020-01/{STYLE_SOURCE}.md#frag), [bare](../archive/checkpoints/2020-01/{STYLE_SIBLING}).\nNeighbour [[./style-neighbour]]. Code `[[checkpoints/{STYLE_SOURCE}]]` stays text.\nAlready broken too: [[../checkpoints/style-never]].\n"
+    )), "{}", text("runbooks/style-runbook.md"));
+    assert!(text("decisions/20200105-style-inbox.md")
+        .ends_with("Decision body links [[../runbooks/style-runbook]] and [[style-wiki]].\n"));
+    assert!(text("wiki/style-wiki.md").contains(&format!(
+        "Knowledge links [[../decisions/20200105-style-inbox]], [[decisions/20200105-style-inbox|rooted inbox]], [[../archive/checkpoints/2020-01/{STYLE_SIBLING}]].\n"
+    )), "{}", text("wiki/style-wiki.md"));
+    assert_eq!(
+        text("README.md"),
+        format!("# Synthetic readme\n\n[readme](archive/checkpoints/2020-01/{STYLE_SOURCE}.md) and [[./archive/checkpoints/2020-01/{STYLE_SIBLING}]].\n")
+    );
+    assert!(text("checkpoints/style-dup-user.md")
+        .ends_with("Ambiguous after the move: [[archive/checkpoints/2020-01/style-dup]].\n"));
+
+    let mut after = unresolved_links(&result);
+    after.sort();
+    let mut expected: Vec<_> = pre_existing
+        .into_iter()
+        .map(|(path, target)| {
+            (
+                if path == source {
+                    archived.clone()
+                } else {
+                    path
+                },
+                target,
+            )
+        })
+        .collect();
+    expected.sort();
+    assert_eq!(after, expected, "migration added or removed broken links");
+
+    let head = |vault: &Path| {
+        Command::new("git")
+            .arg("-C")
+            .arg(vault)
+            .args(["rev-parse", "HEAD"])
+            .output()
+            .unwrap()
+            .stdout
+    };
+    let head_before = head(&together);
+    success(call(&home, &together, "all", "--apply", None));
+    assert_eq!(snapshot(&together), result, "rerun was not a no-op");
+    assert_eq!(head(&together), head_before, "rerun created a commit");
+}

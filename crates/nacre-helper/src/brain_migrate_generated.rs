@@ -481,10 +481,12 @@ fn generate_wiki(
             } else {
                 role_list
                     .iter()
-                    .filter(|(_, child_kind, _, _, child_parent)| {
+                    .filter(|(child_page, child_kind, _, _, child_parent)| {
                         child_kind != "world"
                             && child_kind != "area"
                             && child_parent.as_deref() == Some(name.as_str())
+                            // Redirect pages are only updated, never created.
+                            && (child_kind != "alias" || notes.contains_key(child_page))
                     })
                     .collect::<Vec<_>>()
             };

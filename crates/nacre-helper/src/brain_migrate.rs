@@ -40,6 +40,7 @@ pub(crate) struct Plan {
     samples: Vec<(String, String, String)>,
     wiki_new: Vec<String>,
     wiki_updated: Vec<String>,
+    broken: Vec<(String, String)>,
     state_writes: BTreeMap<String, Vec<u8>>,
     state_hashes: BTreeMap<String, Option<String>>,
 }
@@ -540,6 +541,13 @@ fn markdown_report(plan: &Plan, counts: &BTreeMap<&str, usize>) -> String {
     for path in &plan.wiki_updated {
         s.push_str(&format!("- `{path}`\n"));
     }
+    s.push_str("\n## Pre-existing broken links\n\nLeft exactly as written; migration verifies only that it adds none.\n\n");
+    for (path, target) in &plan.broken {
+        s.push_str(&format!("- `{path}` → `{target}`\n"));
+    }
+    if plan.broken.is_empty() {
+        s.push_str("- none\n");
+    }
     s.push_str("\n## Sample headers\n\n");
     for (p, a, b) in plan.samples.iter().take(30) {
         s.push_str(&format!(
@@ -743,7 +751,16 @@ pub fn run(args: &[String]) -> Result<i32> {
     let mut virtual_records = BTreeMap::<String, Vec<u8>>::new();
     let mut virtual_moves = load_moves(&root)?;
     let mut all_counts = BTreeMap::new();
-    let mut report_plan = Plan::default();
+    let mut report_plan = Plan {
+        broken: verification::broken_links(&virtual_state),
+        ..Plan::default()
+    };
+    if !report_plan.broken.is_empty() {
+        eprintln!(
+            "nacre-brain: {} pre-existing broken links are left as written (listed by --report)",
+            report_plan.broken.len()
+        );
+    }
     for note in &originals {
         let text = std::str::from_utf8(&note.bytes)?;
         if let Some((_, flag)) = field_lines(header_body(text).1)
@@ -836,17 +853,12 @@ pub fn run(args: &[String]) -> Result<i32> {
                     .iter()
                     .map(|n| (n.path.clone(), n.bytes.clone()))
                     .collect();
+                let relinker = verification::Relinker::new(&link_snapshot, &move_map);
                 for n in &current_notes {
                     let new_path = move_map.get(&n.path).unwrap_or(&n.path);
                     let txt = String::from_utf8(n.bytes.clone())
                         .map_err(|_| format!("non UTF-8 note: {}", n.path))?;
-                    let rewritten = verification::rewrite_links(
-                        &txt,
-                        &n.path,
-                        new_path,
-                        &move_map,
-                        &link_snapshot,
-                    );
+                    let rewritten = relinker.rewrite(&txt, &n.path, new_path);
                     if rewritten != txt {
                         plan.writes.insert(new_path.clone(), rewritten.into_bytes());
                     }
@@ -933,11 +945,11 @@ pub fn run(args: &[String]) -> Result<i32> {
                 .into_iter()
                 .filter(|(old, new)| !map.contains_key(old) && map.contains_key(new))
                 .collect();
+                let relinker = verification::Relinker::new(&map, &link_moves);
                 for n in &current_notes {
                     let text = String::from_utf8(n.bytes.clone())
                         .map_err(|_| format!("non UTF-8 note: {}", n.path))?;
-                    let updated =
-                        verification::rewrite_links(&text, &n.path, &n.path, &link_moves, &map);
+                    let updated = relinker.rewrite(&text, &n.path, &n.path);
                     if updated != text {
                         plan.writes.insert(n.path.clone(), updated.into_bytes());
                     }
