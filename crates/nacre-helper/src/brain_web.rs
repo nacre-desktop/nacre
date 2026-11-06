@@ -1,5 +1,8 @@
 //! Standalone Brain graph, routes and bounded optional semantic worker.
-use crate::{brain_data, brain_discovery, brain_http, brain_launch, brain_search, Result};
+use crate::{
+    brain_connections, brain_data, brain_discovery, brain_http, brain_launch, brain_search,
+    brain_wiki, Result,
+};
 use chrono::{DateTime, NaiveDate, Utc};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use regex::Regex;
@@ -24,7 +27,7 @@ use std::{
 pub(crate) const NOTE_LIMIT: u64 = 1_048_576;
 pub(crate) const VAULT_LIMIT: usize = 64 * 1024 * 1024;
 pub(crate) const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
-const GRAPH_SCHEMA: u32 = 2;
+const GRAPH_SCHEMA: u32 = 3;
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
 const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const params=new URLSearchParams(location.hash.slice(1));const token=params.get('nacre-bootstrap');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(response=>response.ok?response.json():null).then(value=>{if(value&&/^[0-9a-f]{64}$/.test(value.authorization))localStorage.setItem(key,value.authorization);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
@@ -32,6 +35,14 @@ const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization'
 const ACTIVITY_MODEL: &str = "Meaningful saved evidence, 21-day half-life, deduplicated captures and diminishing daily returns. Raw message counting is not enabled.";
 pub(crate) fn digest(s: impl AsRef<[u8]>) -> String {
     format!("{:x}", Sha256::digest(s.as_ref()))
+}
+/// Viewer note ids follow the file name, so moving a note keeps its id.
+pub(crate) fn note_id(path: &Path) -> String {
+    let name = path
+        .file_name()
+        .map(|f| f.as_encoded_bytes())
+        .unwrap_or_default();
+    format!("note:{}", &digest(name)[..16])
 }
 fn text(v: &Value) -> &str {
     v.as_str().unwrap_or("")
@@ -170,7 +181,11 @@ pub(crate) fn registry(root: &Path) -> Result<Value> {
         "../../../brain/registry-seed.json"
     ))?)
 }
-fn slug_id(name: &str) -> String {
+/// Graph node id of a registry area.
+pub(crate) fn area_id(name: &str) -> String {
+    format!("area:{}", slug_id(name).trim_start_matches("world:"))
+}
+pub(crate) fn slug_id(name: &str) -> String {
     let slug = regex(r"[^\p{L}\p{N}]+")
         .replace_all(&casefold(name), "-")
         .trim_matches('-')
@@ -207,7 +222,7 @@ fn hierarchy(root: &Path, all: &[Value], today: NaiveDate) -> Result<(Vec<Value>
             .filter(|a| text(&a["parent"]) == name && text(&a["merged_into"]).is_empty())
         {
             let area_name = text(&a["name"]);
-            let area_id = format!("area:{}", slug_id(area_name).trim_start_matches("world:"));
+            let area_id = area_id(area_name);
             let area_notes = all
                 .iter()
                 .filter(|n| {
@@ -261,7 +276,9 @@ fn hierarchy(root: &Path, all: &[Value], today: NaiveDate) -> Result<(Vec<Value>
                 .iter()
                 .any(|a| text(&a["name"]) == text(area) && text(&a["merged_into"]).is_empty())
             {
-                membership.push(json!({"source":format!("area:{}",slug_id(text(area)).trim_start_matches("world:")),"target":n["id"],"kind":"membership"}));
+                membership.push(
+                    json!({"source":area_id(text(area)),"target":n["id"],"kind":"membership"}),
+                );
             }
         }
     }
@@ -307,7 +324,7 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
             .unwrap_or(0.0);
         let confidence = meta["confidence"].as_str().unwrap_or("source page");
         let filename = p.file_name().ok_or("Brain note has no filename")?;
-        let note_id = format!("note:{}", &digest(filename.as_encoded_bytes())[..16]);
+        let note_id = note_id(&p);
         if !note_ids.insert(note_id.clone()) {
             return Err(format!(
                 "Duplicate Brain note filename: {}",
@@ -363,78 +380,96 @@ fn normalize_path(path: &Path) -> Option<PathBuf> {
     }
     Some(out)
 }
-fn source_links(notes: &mut [Value]) -> Vec<Value> {
-    let lookup = notes
-        .iter()
-        .map(|n| (text(&n["path"]).to_owned(), text(&n["id"]).to_owned()))
-        .collect::<BTreeMap<_, _>>();
-    let mut stems: BTreeMap<String, Vec<String>> = BTreeMap::new();
-    for (p, id) in &lookup {
-        stems
-            .entry(casefold(
-                Path::new(p).file_stem().unwrap().to_str().unwrap_or(""),
-            ))
-            .or_default()
-            .push(id.clone());
-    }
-    let mut pairs = BTreeSet::new();
-    let md = regex(r"\]\(([^)]+\.md)(?:#[^)]*)?\)");
-    let wiki = regex(r"\[\[([^]\n]+)\]\]");
-    for note in notes.iter() {
-        let body = text(&note["text"]);
-        let targets = md
-            .captures_iter(body)
-            .map(|c| (c[1].to_owned(), false))
-            .chain(wiki.captures_iter(body).map(|c| (c[1].to_owned(), true)));
-        for (value, is_wiki) in targets {
-            let mut target = decode(value.split(['|', '#']).next().unwrap_or(""))
+/// Link targets of a note body: Markdown `.md` links and `[[wikilinks]]`
+/// (target text without `|alias`/`#fragment`; `true` marks a wikilink).
+pub(crate) fn link_targets(body: &str) -> Vec<(String, bool)> {
+    static MD: LazyLock<Regex> = LazyLock::new(|| regex(r"\]\(([^)]+\.md)(?:#[^)]*)?\)"));
+    static WIKI: LazyLock<Regex> = LazyLock::new(|| regex(r"\[\[([^]\n]+)\]\]"));
+    MD.captures_iter(body)
+        .map(|c| (c[1].to_owned(), false))
+        .chain(WIKI.captures_iter(body).map(|c| (c[1].to_owned(), true)))
+        .filter_map(|(value, wiki)| {
+            let target = decode(value.split(['|', '#']).next().unwrap_or(""))
                 .trim()
                 .to_owned();
-            if target.is_empty() || target.contains("://") {
-                continue;
-            }
-            if is_wiki && !target.ends_with(".md") {
-                target.push_str(".md")
-            }
-            let parent = Path::new(text(&note["path"]))
-                .parent()
-                .unwrap_or(Path::new(""));
-            let mut candidates = vec![];
-            if is_wiki {
-                candidates.push(PathBuf::from(&target))
-            }
-            candidates.push(parent.join(&target));
-            let mut ident = candidates
-                .iter()
-                .filter_map(|p| normalize_path(p))
-                .find_map(|p| lookup.get(p.to_str().unwrap_or("")))
-                .cloned();
-            if ident.is_none() && is_wiki && !target.contains('/') {
-                if let Some(matches) = stems.get(&casefold(
-                    Path::new(&target)
+            (!target.is_empty() && !target.contains("://")).then_some((target, wiki))
+        })
+        .collect()
+}
+/// Resolves note links to note ids: vault-rooted or note-relative paths, then
+/// a unique wikilink file name.
+pub(crate) struct Resolver {
+    lookup: BTreeMap<String, String>,
+    stems: BTreeMap<String, Vec<String>>,
+}
+impl Resolver {
+    pub(crate) fn new(pairs: impl IntoIterator<Item = (String, String)>) -> Self {
+        let lookup = pairs.into_iter().collect::<BTreeMap<_, _>>();
+        let mut stems: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for (p, id) in &lookup {
+            stems
+                .entry(casefold(
+                    Path::new(p)
                         .file_stem()
-                        .unwrap()
-                        .to_str()
+                        .and_then(|v| v.to_str())
                         .unwrap_or(""),
-                )) {
-                    if matches.len() == 1 {
-                        ident = Some(matches[0].clone())
-                    }
-                }
-            }
-            if let Some(id) = ident {
+                ))
+                .or_default()
+                .push(id.clone());
+        }
+        Self { lookup, stems }
+    }
+    pub(crate) fn resolve(&self, source: &str, target: &str, wiki: bool) -> Option<&str> {
+        let mut target = target.to_owned();
+        if wiki && !target.ends_with(".md") {
+            target.push_str(".md")
+        }
+        let parent = Path::new(source).parent().unwrap_or(Path::new(""));
+        let mut candidates = vec![];
+        if wiki {
+            candidates.push(PathBuf::from(&target))
+        }
+        candidates.push(parent.join(&target));
+        let found = candidates
+            .iter()
+            .filter_map(|p| normalize_path(p))
+            .find_map(|p| self.lookup.get(p.to_str().unwrap_or("")));
+        if found.is_some() || !wiki || target.contains('/') {
+            return found.map(String::as_str);
+        }
+        let stem = Path::new(&target).file_stem().and_then(|v| v.to_str());
+        match self.stems.get(&casefold(stem.unwrap_or(""))) {
+            Some(matches) if matches.len() == 1 => Some(matches[0].as_str()),
+            _ => None,
+        }
+    }
+}
+fn source_links(notes: &mut [Value]) -> Vec<Value> {
+    let resolver = Resolver::new(
+        notes
+            .iter()
+            .map(|n| (text(&n["path"]).to_owned(), text(&n["id"]).to_owned())),
+    );
+    let mut pairs = BTreeSet::new();
+    for note in notes.iter() {
+        for (target, wiki) in link_targets(text(&note["text"])) {
+            if let Some(id) = resolver.resolve(text(&note["path"]), &target, wiki) {
                 if id != text(&note["id"]) {
-                    pairs.insert((text(&note["id"]).to_owned(), id));
+                    pairs.insert((text(&note["id"]).to_owned(), id.to_owned()));
                 }
             }
         }
     }
-    for note in notes {
-        note["references"] = json!(pairs
-            .iter()
-            .filter(|(a, _)| a == text(&note["id"]))
-            .map(|(_, b)| b)
-            .collect::<Vec<_>>());
+    let mut references: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for (a, b) in &pairs {
+        references.entry(a).or_default().push(b);
+    }
+    for note in notes.iter_mut() {
+        let refs = references
+            .get(text(&note["id"]))
+            .cloned()
+            .unwrap_or_default();
+        note["references"] = json!(refs);
     }
     pairs
         .into_iter()
@@ -547,7 +582,12 @@ fn graph_projection(graph: &Value, scope: &str) -> Value {
             node
         })
         .collect::<Vec<_>>();
-    let links = graph["links"].as_array().cloned().unwrap_or_default();
+    // Derived mention/related edges join explicit links and membership; the
+    // canvas kind filters hide them with their endpoints.
+    let links = [&graph["links"], &graph["connections"]["links"]]
+        .into_iter()
+        .flat_map(|v| v.as_array().cloned().unwrap_or_default())
+        .collect::<Vec<_>>();
     let ids = nodes
         .iter()
         .map(|node| text(&node["id"]).to_owned())
@@ -642,7 +682,11 @@ fn graph_projection(graph: &Value, scope: &str) -> Value {
                 .filter(|node| ["note", "wiki"].contains(&text(&node["kind"])))
                 .map(|node| text(&node["id"]).to_owned())
                 .collect::<BTreeSet<_>>();
-            for edge in &links {
+            // Derived edges only connect nodes already in scope.
+            for edge in links
+                .iter()
+                .filter(|e| !["mention", "related"].contains(&text(&e["kind"])))
+            {
                 let (source, target) = edge_ends(edge);
                 if categories.contains(&source) && note_ids.contains(&target) {
                     included.insert(target);
@@ -1015,6 +1059,18 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
     }
     let mut nodes = Vec::new();
     let (worlds, hierarchy_nodes) = hierarchy(root, &notes, today)?;
+    let similar = brain_search::similar(root, 10).unwrap_or_default();
+    let mut connections = brain_connections::build(&notes, &links, &registry(root)?, &similar);
+    let node_ids = hierarchy_nodes
+        .iter()
+        .chain(notes.iter())
+        .map(|n| text(&n["id"]).to_owned())
+        .collect::<BTreeSet<_>>();
+    if let Some(edges) = connections["links"].as_array_mut() {
+        edges.retain(|e| {
+            node_ids.contains(text(&e["source"])) && node_ids.contains(text(&e["target"]))
+        });
+    }
     let review_count = notes.iter().filter(|n| n["review"] == true).count();
     let note_count = notes.len();
     for node in hierarchy_nodes {
@@ -1032,7 +1088,7 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         }
         nodes.push(n)
     }
-    let mut value = json!({"nodes":nodes,"links":links,"noteCount":note_count,"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":report});
+    let mut value = json!({"nodes":nodes,"links":links,"noteCount":note_count,"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":report,"connections":connections});
     value["graphRevision"] = json!(fingerprint);
     decorate(&mut value)?;
     write_json(
@@ -1177,10 +1233,10 @@ fn assign_note_at(root: &Path, value: &str) -> Result<()> {
     let path = directory.join("overrides.json");
     let mut overrides = read_json(&path);
     let object = overrides.as_object_mut().ok_or("Invalid overrides")?;
-    let filename = Path::new(relative)
+    Path::new(relative)
         .file_name()
         .ok_or("Invalid note filename")?;
-    let id = format!("note:{}", &digest(filename.as_encoded_bytes())[..16]);
+    let id = note_id(Path::new(relative));
     if data["reset"] == true {
         object.remove(&id);
     } else if !labels.is_empty() {
@@ -1488,11 +1544,34 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
                 .as_ref()
                 .map(|(_, value)| value.clone());
             if let Some(mut value) = cached {
+                // Per-note connections are served on demand by /api/connections.
+                if let Some(object) = value.as_object_mut() {
+                    object.remove("connections");
+                }
                 decorate(&mut value)?;
                 decorate_connections(&mut value);
                 return json_response(value);
             }
             return json_response(summary()?);
+        }
+        "/api/wiki" => return json_response(brain_wiki::index(&vault()?)?),
+        "/api/wiki/page" | "/api/connections" => {
+            let ready = GRAPH_READY.load(std::sync::atomic::Ordering::Acquire);
+            let cached = GRAPH
+                .lock()
+                .map_err(|_| "Graph lock failed")?
+                .as_ref()
+                .filter(|_| ready)
+                .map(|(_, value)| value.clone());
+            let id = query(&request.query, "id");
+            return json_response(if request.path == "/api/connections" {
+                cached.map_or_else(
+                    || json!({"state":"building"}),
+                    |graph| brain_wiki::connections(&graph, &id),
+                )
+            } else {
+                brain_wiki::page(&vault()?, &id, Utc::now().date_naive(), cached.as_ref())?
+            });
         }
         "/api/search" => {
             if !GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {

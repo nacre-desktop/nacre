@@ -942,7 +942,6 @@
   "brain.ui.literal.knowledge-connections": "Knowledge connections",
   "brain.ui.literal.open-original-in-obsidian": "Open original in Obsidian",
   "brain.ui.literal.recent-knowledge": "Recent knowledge",
-  "brain.ui.literal.referenced-by": "Referenced by",
   "brain.ui.literal.references": "References",
   "brain.ui.literal.reported": "Reported",
   "brain.ui.literal.reset-view": "Reset view",
@@ -4267,5 +4266,47 @@
   "brain.ui.label.show-archive": "Show archive",
   "brain.ui.label.suggested-groupings": "Suggested groupings",
   "brain.ui.text.graph-kind-area": "Area",
-  "brain.ui.label.did-you-mean": "Did you mean"
+  "brain.ui.label.did-you-mean": "Did you mean",
+  "brain.ui.text.wiki": "Wiki",
+  "brain.ui.label.stale": "Stale",
+  "brain.ui.label.stale-address": "Address or host state checked {days} days ago (limit {limit})",
+  "brain.ui.label.stale-version": "Version or deploy state checked {days} days ago (limit {limit})",
+  "brain.ui.label.current-facts": "Current facts",
+  "brain.ui.label.superseded-on": "Superseded {date}",
+  "brain.ui.label.superseded": "Superseded",
+  "brain.ui.label.no-current-facts": "No current facts yet. The consolidation job fills them in from the evidence below.",
+  "brain.ui.count.facts": {
+    "one": "{count} fact",
+    "other": "{count} facts"
+  },
+  "brain.ui.count.stale-facts": {
+    "one": "{count} stale",
+    "other": "{count} stale"
+  },
+  "brain.ui.label.related-shares": "Shares {names}",
+  "brain.ui.label.related-area": "Same area: {area}",
+  "brain.ui.label.related-link": "Linked",
+  "brain.ui.label.related-wording": "Similar wording",
+  "brain.ui.label.evidence": "Evidence",
+  "brain.ui.count.evidence-notes": {
+    "one": "{count} evidence note. Open one for the full detail.",
+    "other": "{count} evidence notes. Open one for the full detail."
+  },
+  "brain.ui.label.latest-notes": "Latest notes",
+  "brain.ui.label.linked-from": "Linked from",
+  "brain.ui.label.related": "Related",
+  "brain.ui.label.wiki-intro": "What your brain currently knows, summarised. Open any note for the full evidence.",
+  "brain.ui.label.other-pages": "Other pages",
+  "brain.ui.label.recently-saved": "Recently saved",
+  "brain.ui.status.loading-wiki": "Loading the wiki page…",
+  "brain.ui.label.wiki-world": "World",
+  "brain.ui.label.wiki-area": "Area in {world}",
+  "brain.ui.label.pages": "Pages",
+  "brain.ui.label.status": "Status",
+  "brain.ui.label.reviewed": "Reviewed",
+  "brain.ui.label.aliases": "Also known as",
+  "brain.ui.label.open-full-note": "Open the full note",
+  "brain.ui.label.no-wiki-page": "No wiki page yet; this summary is built from the evidence.",
+  "brain.ui.label.mentions": "Mentions",
+  "brain.ui.label.open-in-wiki": "Open in Wiki"
 }
