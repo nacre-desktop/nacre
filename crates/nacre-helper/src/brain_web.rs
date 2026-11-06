@@ -1,5 +1,5 @@
 //! Standalone Brain graph, routes and bounded optional semantic worker.
-use crate::{brain_data, brain_discovery, brain_http, brain_launch, Result};
+use crate::{brain_data, brain_discovery, brain_http, brain_launch, brain_search, Result};
 use chrono::{DateTime, NaiveDate, Utc};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use regex::Regex;
@@ -21,16 +21,16 @@ use std::{
     time::Duration,
 };
 
-const NOTE_LIMIT: u64 = 1_048_576;
-const VAULT_LIMIT: usize = 64 * 1024 * 1024;
-const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
+pub(crate) const NOTE_LIMIT: u64 = 1_048_576;
+pub(crate) const VAULT_LIMIT: usize = 64 * 1024 * 1024;
+pub(crate) const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
 const GRAPH_SCHEMA: u32 = 2;
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
 const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const params=new URLSearchParams(location.hash.slice(1));const token=params.get('nacre-bootstrap');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(response=>response.ok?response.json():null).then(value=>{if(value&&/^[0-9a-f]{64}$/.test(value.authorization))localStorage.setItem(key,value.authorization);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
 "#;
 const ACTIVITY_MODEL: &str = "Meaningful saved evidence, 21-day half-life, deduplicated captures and diminishing daily returns. Raw message counting is not enabled.";
-fn digest(s: impl AsRef<[u8]>) -> String {
+pub(crate) fn digest(s: impl AsRef<[u8]>) -> String {
     format!("{:x}", Sha256::digest(s.as_ref()))
 }
 fn text(v: &Value) -> &str {
@@ -68,7 +68,7 @@ pub fn vault() -> Result<PathBuf> {
     }
     brain_data::configured_root_path()
 }
-fn reject_links(p: &Path) -> Result<()> {
+pub(crate) fn reject_links(p: &Path) -> Result<()> {
     for a in p.ancestors() {
         if fs::symlink_metadata(a).is_ok_and(|m| m.file_type().is_symlink()) {
             return Err("Refusing linked Brain state".into());
@@ -76,13 +76,13 @@ fn reject_links(p: &Path) -> Result<()> {
     }
     Ok(())
 }
-fn private_dir(p: &Path) -> Result<()> {
+pub(crate) fn private_dir(p: &Path) -> Result<()> {
     reject_links(p)?;
     fs::create_dir_all(p)?;
     fs::set_permissions(p, fs::Permissions::from_mode(0o700))?;
     Ok(())
 }
-fn read(p: &Path, limit: u64) -> Result<String> {
+pub(crate) fn read(p: &Path, limit: u64) -> Result<String> {
     reject_links(p)?;
     let mut bytes = Vec::new();
     let file = OpenOptions::new()
@@ -138,7 +138,7 @@ fn note_path_at(root: &Path, relative: &str) -> Result<PathBuf> {
 pub fn fields(body: &str) -> Value {
     brain_discovery::header_fields(body)
 }
-fn date(meta: &Value) -> Option<NaiveDate> {
+pub(crate) fn date(meta: &Value) -> Option<NaiveDate> {
     ["recorded", "reviewed"].into_iter().find_map(|key| {
         meta[key]
             .as_str()
@@ -161,7 +161,7 @@ fn timestamp(meta: &Value) -> String {
     }
     String::new()
 }
-fn registry(root: &Path) -> Result<Value> {
+pub(crate) fn registry(root: &Path) -> Result<Value> {
     let path = root.join("registry.json");
     if fs::symlink_metadata(&path).is_ok() {
         return Ok(serde_json::from_str(&read(&path, 2 * 1024 * 1024)?)?);
@@ -271,9 +271,7 @@ fn hierarchy(root: &Path, all: &[Value], today: NaiveDate) -> Result<(Vec<Value>
     }))
 }
 fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
-    let registry = registry(root)?;
-    let wr = registry["worlds"].as_array().cloned().unwrap_or_default();
-    let ar = registry["areas"].as_array().cloned().unwrap_or_default();
+    let categories = brain_search::Categories::new(&registry(root)?);
     let mut paths = walkdir::WalkDir::new(root)
         .follow_links(false)
         .into_iter()
@@ -317,80 +315,7 @@ fn notes(root: &Path, today: NaiveDate) -> Result<Vec<Value>> {
             )
             .into());
         }
-        let resolve = |raw: &str, entries: &[Value]| {
-            entries
-                .iter()
-                .find(|entry| {
-                    let name = text(&entry["name"]);
-                    casefold(name) == casefold(raw)
-                        || entry["aliases"]
-                            .as_array()
-                            .is_some_and(|a| a.iter().any(|x| casefold(text(x)) == casefold(raw)))
-                })
-                .and_then(|entry| {
-                    let mut name = text(&entry["name"]).to_owned();
-                    for _ in 0..entries.len() {
-                        let Some(current) = entries
-                            .iter()
-                            .find(|candidate| text(&candidate["name"]) == name)
-                        else {
-                            break;
-                        };
-                        let merged = text(&current["merged_into"]);
-                        if merged.is_empty() {
-                            break;
-                        }
-                        name = merged.to_owned();
-                    }
-                    entries
-                        .iter()
-                        .any(|candidate| {
-                            text(&candidate["name"]) == name
-                                && text(&candidate["merged_into"]).is_empty()
-                        })
-                        .then_some(name)
-                })
-        };
-        let mut worlds: BTreeSet<String> = text(&meta["worlds"])
-            .split(',')
-            .filter_map(|x| resolve(x.trim(), &wr))
-            .collect();
-        let mut areas: BTreeSet<String> = text(&meta["areas"])
-            .split(',')
-            .filter_map(|x| resolve(x.trim(), &ar))
-            .collect();
-        areas.extend(
-            text(&meta["worlds"])
-                .split(',')
-                .filter(|raw| resolve(raw.trim(), &wr).is_none())
-                .filter_map(|raw| resolve(raw.trim(), &ar)),
-        );
-        for area in &areas {
-            if let Some(parent) = ar
-                .iter()
-                .find(|a| text(&a["name"]) == area)
-                .map(|a| text(&a["parent"]))
-            {
-                worlds.insert(parent.to_owned());
-            }
-        }
-        if worlds.is_empty() && text(&meta["entity"]).eq_ignore_ascii_case("world") {
-            if let Some(name) = resolve(text(&meta["name"]), &wr) {
-                worlds.insert(name);
-            }
-        }
-        if areas.is_empty() && text(&meta["entity"]).eq_ignore_ascii_case("area") {
-            if let Some(name) = resolve(text(&meta["name"]), &ar) {
-                if let Some(parent) = ar
-                    .iter()
-                    .find(|a| text(&a["name"]) == name)
-                    .map(|a| text(&a["parent"]).to_owned())
-                {
-                    areas.insert(name);
-                    worlds.insert(parent);
-                }
-            }
-        }
+        let (worlds, areas) = categories.resolve(&meta);
         let kind = if rel.starts_with("archive/") {
             "archive"
         } else if rel.starts_with("digests/") {
@@ -921,6 +846,7 @@ fn start_vault_watch() {
                             if let Ok(mut cache) = SUMMARY_CACHE.lock() {
                                 *cache = None;
                             }
+                            brain_search::invalidate();
                             schedule_graph_build(true);
                         }
                     }
@@ -981,6 +907,7 @@ fn start_vault_watch() {
                 if let Ok(mut cache) = SUMMARY_CACHE.lock() {
                     *cache = None;
                 }
+                brain_search::invalidate();
                 schedule_graph_build(true);
             }
         }
@@ -1200,24 +1127,17 @@ pub fn theme_css() -> Result<String> {
     );
     Ok(format!("\n:root{{{declarations}}}\n"))
 }
+/// Ranked note ids for the module API (every kind, archive included).
 pub fn search_notes(query: &str) -> Result<Value> {
-    let words = casefold(&query.chars().take(200).collect::<String>());
-    let words = words.split_whitespace().collect::<Vec<_>>();
-    if words.is_empty() {
-        return Ok(json!([]));
+    if !GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {
+        brain_search::invalidate();
     }
-    let mut ids = vec![];
-    for n in notes(&vault()?, Utc::now().date_naive())? {
-        let content = casefold(&format!(
-            "{}\n{}",
-            text(&n["path"]),
-            read(&vault()?.join(text(&n["path"])), NOTE_LIMIT)?
-        ));
-        if words.iter().all(|w| content.contains(w)) {
-            ids.push(n["id"].clone())
-        }
-    }
-    Ok(json!(ids))
+    let options = brain_search::Options {
+        limit: 10000,
+        include_archive: true,
+        ..Default::default()
+    };
+    Ok(brain_search::search(&vault()?, query, &options)?["ids"].take())
 }
 pub fn assign_note(value: &str) -> Result<()> {
     let data: Value = serde_json::from_str(value)?;
@@ -1575,7 +1495,28 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
             return json_response(summary()?);
         }
         "/api/search" => {
-            return json_response(json!({"ids":search_notes(&query(&request.query,"q"))?}))
+            if !GRAPH_WATCHING.load(std::sync::atomic::Ordering::Acquire) {
+                brain_search::invalidate();
+            }
+            let q = &request.query;
+            let list = |key: &str| {
+                Some(query(q, key))
+                    .filter(|v| !v.trim().is_empty())
+                    .into_iter()
+                    .collect::<Vec<_>>()
+            };
+            let options = brain_search::Options {
+                limit: query(q, "limit")
+                    .parse::<usize>()
+                    .unwrap_or(200)
+                    .clamp(1, 500),
+                worlds: list("world"),
+                areas: list("area"),
+                kind: list("kind").pop(),
+                since: NaiveDate::parse_from_str(&query(q, "since"), "%Y-%m-%d").ok(),
+                include_archive: query(q, "archive") == "1",
+            };
+            return json_response(brain_search::search(&vault()?, &query(q, "q"), &options)?);
         }
         "/api/note" => {
             return json_response(

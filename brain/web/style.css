@@ -465,6 +465,30 @@ h2 {
 .note-row.selected {
   background: color-mix(in srgb, var(--accent) 9%, var(--bg));
 }
+.note-snippet {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.note-snippet mark {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+.did-you-mean {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.did-you-mean button {
+  color: var(--accent);
+  font-style: italic;
+  padding: 0;
+  text-decoration: underline;
+}
 .connection-row {
   display: block;
   text-align: left;

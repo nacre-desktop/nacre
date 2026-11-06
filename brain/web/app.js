@@ -26,6 +26,8 @@ let state = {
   mapZoom = 1,
   lastSignature = "",
   searchIds = null,
+  searchResults = null,
+  searchSuggestion = "",
   searchController = null;
 let firstApiCall = true;
 let retryAction = () => load(true);
@@ -417,7 +419,7 @@ function home() {
     history: [],
   };
   $("search").value = "";
-  searchIds = null;
+  searchIds = searchResults = null;
   render();
 }
 function back() {
@@ -449,7 +451,7 @@ function renderRail() {
       () => {
         state.query = "";
         $("search").value = "";
-        searchIds = null;
+        searchIds = searchResults = null;
         select(n.id, { view: "overview" });
       },
       "subject" + (related.has(n.id) ? " active" : ""),
@@ -524,6 +526,7 @@ function toggleArchive() {
   if (!state.showArchive && state.kindFilter === "archive")
     state.kindFilter = "all";
   renderMain();
+  if (state.query) search();
 }
 function section(title, action) {
   const n = el("div", "", "section-heading");
@@ -887,7 +890,29 @@ function noteRow(n) {
   b.append(icon("note"), copy, date);
   return b;
 }
+// Ranked server row with a highlighted snippet. Results the partial
+// first-paint graph lacks are added so the reader can open them.
+function resultRow(r) {
+  if (!byId.has(r.id)) byId.set(r.id, { ...r, label: r.title });
+  const n = byId.get(r.id);
+  const b = noteRow(n);
+  const snippet = el("p", "", "note-snippet");
+  const chars = Array.from(r.snippet || "");
+  let at = 0;
+  for (const [start, end] of r.highlights || []) {
+    snippet.append(chars.slice(at, start).join(""));
+    snippet.append(el("mark", chars.slice(start, end).join("")));
+    at = end;
+  }
+  snippet.append(chars.slice(at).join(""));
+  b.querySelector(".note-title").after(snippet);
+  return b;
+}
 function renderNotes(out) {
+  if (state.query && searchResults) {
+    renderResults(out);
+    return;
+  }
   const available = ordered(
     state.focus === "review" ? notesIn("review") : notesIn(context()?.id),
   ).filter((n) => state.showArchive || n.kind !== "archive");
@@ -919,6 +944,34 @@ function renderNotes(out) {
     { one: "{count} notes", other: "{count} notes" },
     { count: filtered.length },
   );
+  renderNotesFilters(out);
+  for (const n of filtered.slice(0, state.limit)) out.append(noteRow(n));
+  if (!filtered.length)
+    out.append(
+      el(
+        "p",
+        searchIds === null && state.query
+          ? tr("brain.ui.label.searching", "Searching…")
+          : tr(
+              "brain.ui.label.no-matching-notes-try-a-different-search-or-filter",
+              "No matching notes. Try a different search or filter.",
+            ),
+        "empty",
+      ),
+    );
+  if (filtered.length > state.limit)
+    out.append(
+      button(
+        tr("brain.ui.literal.show-more-notes", "Show more notes"),
+        () => {
+          state.limit += 60;
+          renderMain();
+        },
+        "load-more",
+      ),
+    );
+}
+function renderNotesFilters(out) {
   const filters = el("div", "", "filters");
   for (const [value, label] of [
     ["all", tr("brain.ui.literal.all-notes", "All notes")],
@@ -965,21 +1018,50 @@ function renderNotes(out) {
     ),
   );
   out.append(filters);
-  for (const n of filtered.slice(0, state.limit)) out.append(noteRow(n));
-  if (!filtered.length)
+}
+function renderResults(out) {
+  const results = searchResults.filter(
+    (r) =>
+      (state.filter === "all" ||
+        (r.confidence || "")
+          .trim()
+          .toLowerCase()
+          .split(/[\s·:]/)[0] === state.filter) &&
+      (state.kindFilter === "all" || r.kind === state.kindFilter),
+  );
+  // `ids` lists every ranked match; rows carry the first page with snippets.
+  const unfiltered = state.filter === "all" && state.kindFilter === "all";
+  $("view-summary").textContent = tr(
+    "brain.ui.count.notes",
+    { one: "{count} notes", other: "{count} notes" },
+    { count: unfiltered ? searchIds.size : results.length },
+  );
+  if (searchSuggestion) {
+    const line = el("p", "", "did-you-mean");
+    line.append(
+      tr("brain.ui.label.did-you-mean", "Did you mean"),
+      " ",
+      button(searchSuggestion, () => {
+        $("search").value = searchSuggestion;
+        $("search").dispatchEvent(new Event("input"));
+      }),
+    );
+    out.append(line);
+  }
+  renderNotesFilters(out);
+  for (const r of results.slice(0, state.limit)) out.append(resultRow(r));
+  if (!results.length)
     out.append(
       el(
         "p",
-        searchIds === null && state.query
-          ? tr("brain.ui.label.searching", "Searching…")
-          : tr(
-              "brain.ui.label.no-matching-notes-try-a-different-search-or-filter",
-              "No matching notes. Try a different search or filter.",
-            ),
+        tr(
+          "brain.ui.label.no-matching-notes-try-a-different-search-or-filter",
+          "No matching notes. Try a different search or filter.",
+        ),
         "empty",
       ),
     );
-  if (filtered.length > state.limit)
+  if (results.length > state.limit)
     out.append(
       button(
         tr("brain.ui.literal.show-more-notes", "Show more notes"),
@@ -994,7 +1076,7 @@ function renderNotes(out) {
 async function search() {
   searchController?.abort();
   if (!state.query) {
-    searchIds = null;
+    searchIds = searchResults = null;
     renderMain();
     return;
   }
@@ -1002,7 +1084,9 @@ async function search() {
   searchController = new AbortController();
   try {
     const result = await boundedRequest(
-      "/api/search?q=" + encodeURIComponent(query),
+      "/api/search?q=" +
+        encodeURIComponent(query) +
+        (state.showArchive ? "&archive=1" : ""),
       {
         signal: searchController.signal,
       },
@@ -1010,6 +1094,8 @@ async function search() {
     );
     if (state.query === query) {
       searchIds = new Set(result.ids);
+      searchResults = result.results || null;
+      searchSuggestion = result.didYouMean || "";
       renderMain();
       clearLoadError();
     }
@@ -1566,7 +1652,7 @@ $("search").oninput = () => {
   state.selected = null;
   state.limit = 60;
   state.focus = null;
-  searchIds = null;
+  searchIds = searchResults = null;
   clearTimeout(searchDelay);
   renderMain();
   searchDelay = setTimeout(search, 250);
@@ -1580,7 +1666,7 @@ document.addEventListener("keydown", (e) => {
     if (state.query) {
       $("search").value = "";
       state.query = "";
-      searchIds = null;
+      searchIds = searchResults = null;
       renderMain();
     } else if (state.history.length) back();
     else if (state.selected) {

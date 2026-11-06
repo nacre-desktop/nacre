@@ -73,7 +73,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
                 );
             }
             Some("search") => print!(
-                "usage: nacre-brain search [-h] query [query ...]\n\npositional arguments:\n  query\n\noptions:\n  -h, --help  show this help message and exit\n"
+                "usage: nacre-brain search [-h] [--json] [--limit N] [--world WORLD] [--area AREA]\n                          [--kind KIND] [--since YYYY-MM-DD] [--include-archive]\n                          query [query ...]\n\nRanked search: aliases, compound words and typos are matched.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help          show this help message and exit\n  --json              print ranked results with snippets as JSON\n  --limit N           maximum results (default 20)\n  --world WORLD       only notes in this world (repeatable)\n  --area AREA         only notes in this area (repeatable)\n  --kind KIND         folder kind, or note, archive or digest\n  --since YYYY-MM-DD  only notes recorded on or after this date\n  --include-archive   include archived notes (ranked lower)\n"
             ),
             Some("migrate") => print!(
                 "usage: nacre-brain migrate --step {{meta,inbox,archive,digests,wiki,links,index,all}} (--dry-run | --apply) [--report PATH] [--archive-older-than-days N]\n\nPlan or apply one verified, revertable Brain migration step. Archive age defaults to 21 days.\n"
@@ -190,6 +190,21 @@ fn brain_command() -> Command {
                         .long("help")
                         .action(ArgAction::Help),
                 )
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue))
+                .arg(
+                    Arg::new("include-archive")
+                        .long("include-archive")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("limit")
+                        .long("limit")
+                        .value_parser(clap::value_parser!(u16).range(1..=500)),
+                )
+                .arg(Arg::new("world").long("world").action(ArgAction::Append))
+                .arg(Arg::new("area").long("area").action(ArgAction::Append))
+                .arg(Arg::new("kind").long("kind"))
+                .arg(Arg::new("since").long("since"))
                 .arg(Arg::new("query").required(true).num_args(1..)),
         )
         .subcommand(
@@ -298,13 +313,29 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
     };
     let mut result = vec![command.to_owned()];
     match command {
-        "search" => result.extend(
-            values
-                .get_many::<String>("query")
-                .into_iter()
-                .flatten()
-                .cloned(),
-        ),
+        "search" => {
+            for flag in ["json", "include-archive"] {
+                if values.get_flag(flag) {
+                    result.push(format!("--{flag}"));
+                }
+            }
+            if let Some(limit) = values.get_one::<u16>("limit") {
+                result.extend(["--limit".to_owned(), limit.to_string()]);
+            }
+            for key in ["world", "area", "kind", "since"] {
+                for value in values.get_many::<String>(key).into_iter().flatten() {
+                    result.extend([format!("--{key}"), value.clone()]);
+                }
+            }
+            result.push("--".to_owned());
+            result.extend(
+                values
+                    .get_many::<String>("query")
+                    .into_iter()
+                    .flatten()
+                    .cloned(),
+            );
+        }
         "note" => {
             for key in ["world", "area", "topic"] {
                 for value in values.get_many::<String>(key).into_iter().flatten() {
