@@ -142,7 +142,15 @@ All on dev-1 in the task's Arch container (`n0142`, 8 CPUs, 16 GiB, nice 10,
   covers `--json`, typo correction, chips and archive exclusion (fixture mtimes
   are fixed so the index bytes are stable).
 - Full `desktop` job of `.github/workflows/check.yml` replicated step by step in
-  `ghcr.io/archlinux/archlinux:latest`: FULL_CI_RESULT
+  `ghcr.io/archlinux/archlinux:latest`: `N0142 DESKTOP CI PASS` on 65ff793
+  (fmt, clippy `-D warnings`, workspace tests, product shell suites, cargo
+  deny, i18n, `tools/check.py` with 537 helper parity cases and 0 failures,
+  galleries, daemon memory). Earlier runs failed: U4's `tests/brain_migrate.rs`
+  tripped the public-names guard on base fdda3a9 (fixed on main; this branch is
+  rebased onto 3e82cbc4); the evaluation fixture then tripped the same guard with
+  an owner-named seed world (replaced by a neutral world, results unchanged); and
+  Chromium installed for the browser tests made the wallpaper pipeline emit a
+  Chromium theme. The passing run had no Chromium on PATH, like CI.
 
 ## Size and cleanup
 
