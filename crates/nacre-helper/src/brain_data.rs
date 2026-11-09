@@ -472,6 +472,7 @@ fn brain(args: &[String]) -> Result<i32> {
         }
         "migrate" => crate::brain_migrate::run(&args[1..]),
         "pack" => crate::brain_migrate::consolidate::pack(&args[1..]),
+        "loops" => crate::brain_migrate::consolidate::loops(&args[1..]),
         "git" => brain_git_command(&args[1..]),
         "guard" => {
             if args.len() != 2 || args[1] != "--staged" {

@@ -1,7 +1,7 @@
 //! Standalone Brain graph, routes and bounded optional semantic worker.
 use crate::{
     brain_ask, brain_connections, brain_data, brain_discovery, brain_http, brain_launch,
-    brain_search, brain_wiki, Result,
+    brain_loops, brain_search, brain_wiki, Result,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -27,7 +27,7 @@ use std::{
 pub(crate) const NOTE_LIMIT: u64 = 1_048_576;
 pub(crate) const VAULT_LIMIT: usize = 64 * 1024 * 1024;
 pub(crate) const ROOT_FILES: &[&str] = &["AGENTS.md", "CLAUDE.md", "README.md", "INDEX.md"];
-const GRAPH_SCHEMA: u32 = 3;
+const GRAPH_SCHEMA: u32 = 4;
 // The independent API credential stays in storage scoped to scheme/host/port.
 // Cookies are deliberately insufficient: every localhost port receives them.
 const BROWSER_AUTH_SCRIPT: &str = r#"(()=>{const key='nacre-brain-authorization';const params=new URLSearchParams(location.hash.slice(1));const token=params.get('nacre-bootstrap');const original=window.fetch.bind(window);let ready=Promise.resolve();if(token&&/^[0-9a-f]{64}$/.test(token)){history.replaceState(null,'',location.pathname+location.search);ready=original('/api/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(response=>response.ok?response.json():null).then(value=>{if(value&&/^[0-9a-f]{64}$/.test(value.authorization))localStorage.setItem(key,value.authorization);}).catch(()=>{});}window.__nacreBrainAuthReady=ready;window.fetch=async(input,init={})=>{await ready;const url=new URL(typeof input==='object'&&input!==null&&typeof input.url==='string'?input.url:String(input),location.href);if(url.origin!==location.origin)return original(input,init);const headers=new Headers(init.headers||(input instanceof Request?input.headers:undefined));const credential=localStorage.getItem(key);if(credential)headers.set('X-Nacre-Brain-Authorization',credential);return original(input,{...init,headers});};})();
@@ -117,6 +117,15 @@ fn read_json(p: &Path) -> Value {
 }
 fn write_json(p: &Path, v: &Value) -> Result<()> {
     reject_links(p)?;
+    if fs::metadata(p).is_ok_and(|m| m.permissions().mode() & 0o777 == 0o600)
+        && read(p, 16 * 1024 * 1024)
+            .ok()
+            .and_then(|s| serde_json::from_str::<Value>(&s).ok())
+            .as_ref()
+            == Some(v)
+    {
+        return Ok(());
+    }
     let parent = p.parent().ok_or("Invalid state path")?;
     private_dir(parent)?;
     let mut f = tempfile::NamedTempFile::new_in(parent)?;
@@ -817,6 +826,19 @@ fn vault_metadata_fingerprint(root: &Path) -> Result<String> {
             stamp.update(time.as_nanos().to_le_bytes());
         }
     }
+    let review_path = root.join(".brain-state/index/review.json");
+    reject_links(&review_path)?;
+    if let Ok(meta) = fs::metadata(review_path) {
+        stamp.update(b"review.json");
+        stamp.update(meta.len().to_le_bytes());
+        if let Some(time) = meta
+            .modified()
+            .ok()
+            .and_then(|v| v.duration_since(std::time::UNIX_EPOCH).ok())
+        {
+            stamp.update(time.as_nanos().to_le_bytes());
+        }
+    }
     Ok(format!("{:x}", stamp.finalize()))
 }
 
@@ -846,6 +868,9 @@ fn visible_vault_event(event: &Event, root: &Path) -> bool {
     }
     event.paths.iter().any(|path| {
         path.strip_prefix(root).ok().is_some_and(|relative| {
+            if relative == Path::new(".brain-state/index/review.json") {
+                return true;
+            }
             !relative
                 .components()
                 .any(|component| component.as_os_str().to_string_lossy().starts_with('.'))
@@ -969,6 +994,9 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
     let derived = root.join(".brain-state/discovery");
     reject_links(&derived)?;
     let overrides = read_json(&derived.join("overrides.json"));
+    let review_path = root.join(".brain-state/index/review.json");
+    reject_links(&review_path)?;
+    let review = read_json(&review_path);
     let fingerprint = digest(serde_json::to_vec(&json!([
         GRAPH_SCHEMA,
         root,
@@ -978,7 +1006,8 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
             .collect::<Vec<_>>(),
         registry(root)?,
         today.to_string(),
-        overrides
+        overrides,
+        review
     ]))?);
     let persisted = root.join(".brain-state/index/graph.json");
     reject_links(&persisted)?;
@@ -988,6 +1017,10 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         && disk["graph"].is_object()
     {
         let mut value = disk["graph"].clone();
+        write_json(
+            &root.join(".brain-state/index/loops.json"),
+            &json!({"schema":1,"loops":value["loops"],"timeline":value["timeline"]}),
+        )?;
         decorate(&mut value)?;
         *GRAPH.lock().map_err(|_| "Graph lock failed")? = Some((fingerprint, value.clone()));
         return Ok(value);
@@ -997,6 +1030,10 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         if let Some((key, value)) = &*cache {
             if key == &fingerprint {
                 let mut v = value.clone();
+                write_json(
+                    &root.join(".brain-state/index/loops.json"),
+                    &json!({"schema":1,"loops":v["loops"],"timeline":v["timeline"]}),
+                )?;
                 decorate(&mut v)?;
                 return Ok(v);
             }
@@ -1072,6 +1109,8 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         });
     }
     let review_count = notes.iter().filter(|n| n["review"] == true).count();
+    let loops = brain_loops::derive(&notes, &review);
+    write_json(&root.join(".brain-state/index/loops.json"), &loops)?;
     let note_count = notes.len();
     for node in hierarchy_nodes {
         if node["kind"] == "world" || node["kind"] == "area" {
@@ -1088,7 +1127,7 @@ fn graph_at(root: &Path, today: NaiveDate) -> Result<Value> {
         }
         nodes.push(n)
     }
-    let mut value = json!({"nodes":nodes,"links":links,"noteCount":note_count,"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":report,"connections":connections});
+    let mut value = json!({"nodes":nodes,"links":links,"noteCount":note_count,"worlds":worlds,"reviewCount":review_count,"activityModel":ACTIVITY_MODEL,"discovery":report,"connections":connections,"loops":loops["loops"],"timeline":loops["timeline"]});
     value["graphRevision"] = json!(fingerprint);
     decorate(&mut value)?;
     write_json(
@@ -1582,6 +1621,21 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
             return json_response(summary()?);
         }
         "/api/wiki" => return json_response(brain_wiki::index(&vault()?)?),
+        "/api/loops" => {
+            schedule_graph_build(false);
+            if !GRAPH_READY.load(std::sync::atomic::Ordering::Acquire) {
+                return json_response(json!({"state":"building"}));
+            }
+            let cached = GRAPH
+                .lock()
+                .map_err(|_| "Graph lock failed")?
+                .as_ref()
+                .map(|(_, value)| value.clone());
+            return json_response(cached.map_or_else(
+                || json!({"state":"building"}),
+                |graph| json!({"loops":graph["loops"],"timeline":graph["timeline"]}),
+            ));
+        }
         "/api/wiki/page" | "/api/connections" => {
             let ready = GRAPH_READY.load(std::sync::atomic::Ordering::Acquire);
             let cached = GRAPH
@@ -1826,6 +1880,22 @@ mod tests {
         fs::create_dir_all(p.parent().unwrap()).unwrap();
         fs::write(p, body).unwrap();
     }
+    #[test]
+    fn unchanged_private_index_json_preserves_bytes_and_mtime() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("loops.json");
+        let bytes = b"{\n  \"schema\": 1, \"loops\": []\n}\n";
+        fs::write(&path, bytes).unwrap();
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).unwrap();
+        let modified = fs::metadata(&path).unwrap().modified().unwrap();
+        write_json(&path, &json!({"schema":1,"loops":[]})).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+        assert_eq!(fs::metadata(&path).unwrap().modified().unwrap(), modified);
+        fs::write(&path, b"invalid JSON").unwrap();
+        write_json(&path, &json!({})).unwrap();
+        assert_eq!(fs::read(&path).unwrap(), b"{}");
+    }
+
     #[test]
     fn vault_metadata_fingerprint_detects_note_mutation_without_reading_bodies() {
         let t = fixture();

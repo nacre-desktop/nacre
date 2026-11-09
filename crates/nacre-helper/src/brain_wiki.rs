@@ -559,6 +559,7 @@ fn evidence(graph: &Value, kind: &str, name: &str, target: &str, page: Option<&s
     let record = page.map_or(&NULL, |id| &graph["connections"]["notes"][id]);
     json!({
         "count": evidence.len(),
+        "sources": evidence.iter().map(|n| n["id"].clone()).chain(page.into_iter().map(|id| json!(id))).collect::<Vec<_>>(),
         "latest": evidence.iter().take(10).map(|n| node_summary(n)).collect::<Vec<_>>(),
         "digests": digests.iter().take(8).map(|n| node_summary(n)).collect::<Vec<_>>(),
         "mentions": mentioned.len(),

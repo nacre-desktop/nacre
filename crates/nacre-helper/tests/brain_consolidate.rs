@@ -539,6 +539,47 @@ fn consolidation_archives_flags_tidies_and_packs_in_one_commit() {
         let size = entry.unwrap().metadata().unwrap().len();
         assert!(size <= 4096);
     }
+    // Consolidation and the filtered CLI expose the same source-backed loop.
+    let loops = json(&vault, ".brain-state/index/loops.json");
+    assert!(loops["loops"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|item| item["text"] == "Is the GPU needed?"
+            && item["kind"] == "question"
+            && item["source"].as_str().unwrap().starts_with("note:")));
+    let filtered: Value = serde_json::from_str(&ok(&command(
+        &home,
+        &vault,
+        "nacre-brain",
+        &[
+            "loops",
+            "--area",
+            "dev-1",
+            "--world",
+            "Infrastructure",
+            "--kind",
+            "question",
+            "--json",
+        ],
+    )
+    .output()
+    .unwrap()))
+    .unwrap();
+    let selected = filtered["loops"].as_array().unwrap();
+    assert_eq!(selected.len(), 1);
+    assert_eq!(selected[0]["text"], "Is the GPU needed?");
+    assert_eq!(selected[0]["status"], "open");
+    let empty: Value = serde_json::from_str(&ok(&command(
+        &home,
+        &vault,
+        "nacre-brain",
+        &["loops", "--area", "Missing Area", "--json"],
+    )
+    .output()
+    .unwrap()))
+    .unwrap();
+    assert_eq!(empty["loops"], serde_json::json!([]));
     // The CLI prints the nearest pack: the area's own, or its world's.
     let printed = ok(&command(&home, &vault, "nacre-brain", &["pack", "dev-1"])
         .output()

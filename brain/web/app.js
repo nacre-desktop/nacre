@@ -508,7 +508,12 @@ function setConnectionState(value) {
 function applyGraph(payload, force = false) {
   const previous = byId.get(state.selected);
   graph = payload;
-  const signature = JSON.stringify([graph.nodes, graph.links, graph.theme]),
+  const signature = JSON.stringify([
+      graph.graphRevision,
+      graph.nodes,
+      graph.links,
+      graph.theme,
+    ]),
     changed = force || signature !== lastSignature;
   lastSignature = signature;
   byId = new Map(graph.nodes.map((n) => [n.id, n]));
@@ -717,6 +722,20 @@ function renderRail() {
     el("span", String(graph.reviewCount || 0), "count"),
   );
   list.append(review);
+  const openLoops = (graph.loops || []).filter(
+    (loop) => loop.status === "open",
+  );
+  const loopsLink = button(
+    "",
+    () => openWiki("open-loops"),
+    "subject review-link" + (state.focus === "open-loops" ? " active" : ""),
+  );
+  loopsLink.append(
+    icon("note"),
+    el("span", tr("brain.ui.label.open-loops", "Open loops"), "name"),
+    el("span", String(openLoops.length), "count"),
+  );
+  list.append(loopsLink);
 }
 const expandedWorlds = new Set();
 function toggleArchive() {
@@ -811,7 +830,9 @@ function renderMain() {
       ? tr("brain.ui.label.search-results", "Search results")
       : state.focus === "review"
         ? tr("brain.ui.label.review", "Review")
-        : c?.label || tr("brain.ui.label.your-brain", "Your brain");
+        : state.focus === "open-loops"
+          ? tr("brain.ui.label.open-loops", "Open loops")
+          : c?.label || tr("brain.ui.label.your-brain", "Your brain");
   $("subtitle").textContent = reading
     ? ""
     : searching
@@ -837,6 +858,10 @@ function renderMain() {
   const out = $("content");
   if (reading) return;
   out.replaceChildren();
+  if (state.focus === "open-loops") {
+    renderOpenLoops(out);
+    return;
+  }
   if (searching || state.view === "notes") {
     renderNotes(out);
     return;
@@ -1669,7 +1694,7 @@ function openWiki(id) {
 }
 function wikiTarget() {
   const id = state.focus;
-  if (!id || id === "review") return null;
+  if (!id || id === "review" || id === "open-loops") return null;
   if (/^(world|area):/.test(id)) return id;
   const focus = byId.get(id);
   if (!focus || focus.path?.startsWith("wiki/")) return id;
@@ -2014,6 +2039,8 @@ function renderWiki(out) {
     article.append(intro);
   }
   renderFacts(article, page);
+  if (page.page || page.kind === "world" || page.kind === "area")
+    renderLoopsPanel(article, page);
   const subpages = page.subpages || [];
   if (subpages.length) {
     article.append(
@@ -2089,6 +2116,137 @@ function renderWiki(out) {
   article.append(info);
   renderEvidence(article, page);
   out.append(article);
+}
+let wikiLoopTab = "open";
+function loopScopeMatches(item, page) {
+  if (page.kind === "area")
+    return (item.areas || []).includes(page.area?.label || page.title);
+  if (page.kind === "world")
+    return (item.worlds || []).includes(page.world?.label || page.title);
+  return (page.evidence?.sources || []).includes(item.source);
+}
+function renderLoopsPanel(article, page) {
+  const loops = (graph.loops || []).filter(
+    (item) => item.status === "open" && loopScopeMatches(item, page),
+  );
+  const timeline = (graph.timeline || [])
+    .map((group) => ({
+      ...group,
+      events: (group.events || []).filter((event) =>
+        loopScopeMatches(event, page),
+      ),
+    }))
+    .filter((group) => group.events.length);
+  const panel = el("section", "", "wiki-loops");
+  const tabs = el("div", "", "segmented wiki-loop-tabs");
+  tabs.setAttribute("role", "tablist");
+  for (const [key, label] of [
+    ["open", tr("brain.ui.label.open", "Open")],
+    ["timeline", tr("brain.ui.label.timeline", "Timeline")],
+  ]) {
+    const tab = button(label, () => {
+      wikiLoopTab = key;
+      renderMain();
+    });
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(wikiLoopTab === key));
+    if (wikiLoopTab === key) tab.classList.add("active");
+    tabs.append(tab);
+  }
+  panel.append(tabs);
+  if (wikiLoopTab === "open") {
+    panel.append(
+      el(
+        "h2",
+        tr("brain.ui.label.open", "Open") + " · " + loops.length,
+        "wiki-h2",
+      ),
+    );
+    appendOpenLoops(panel, loops);
+  } else {
+    panel.append(
+      el("h2", tr("brain.ui.label.timeline", "Timeline"), "wiki-h2"),
+    );
+    for (const group of timeline) {
+      const day = el("section", "", "timeline-day");
+      day.append(el("h3", group.date + " · " + group.week));
+      const list = el("ul");
+      for (const event of group.events) {
+        const row = el("li", "", "timeline-event");
+        row.append(
+          button(event.title, () => select(event.source), "timeline-source"),
+        );
+        if (event.digest)
+          row.append(el("span", event.digest, "timeline-digest"));
+        for (const id of event.unitIds || [])
+          row.append(el("code", id, "unit-id"));
+        list.append(row);
+      }
+      day.append(list);
+      panel.append(day);
+    }
+    if (!timeline.length)
+      panel.append(
+        el(
+          "p",
+          tr("brain.ui.label.no-timeline-events", "No timeline events."),
+          "empty",
+        ),
+      );
+  }
+  article.append(panel);
+}
+function renderOpenLoops(out) {
+  const loops = (graph.loops || []).filter((item) => item.status === "open");
+  appendOpenLoops(out, loops);
+}
+function appendOpenLoops(container, loops) {
+  const filter = el("select", "", "loop-kind-filter");
+  filter.setAttribute(
+    "aria-label",
+    tr("brain.ui.label.filter-by-kind", "Filter by kind"),
+  );
+  for (const [value, label] of [
+    ["all", tr("brain.ui.label.all-kinds", "All kinds")],
+    ["todo", tr("brain.ui.kind.todo", "Todo")],
+    ["question", tr("brain.ui.kind.question", "Question")],
+    ["waiting", tr("brain.ui.kind.waiting", "Waiting")],
+    ["blocked", tr("brain.ui.kind.blocked", "Blocked")],
+  ]) {
+    const option = el("option", label);
+    option.value = value;
+    filter.append(option);
+  }
+  const list = el("ul", "", "open-loop-list");
+  const draw = () => {
+    list.replaceChildren();
+    for (const item of loops.filter(
+      (loop) => filter.value === "all" || loop.kind === filter.value,
+    )) {
+      const row = el("li", "", "open-loop");
+      row.append(
+        el("span", item.text, "open-loop-text"),
+        el("span", tr("brain.ui.kind." + item.kind, item.kind), "loop-kind"),
+      );
+      row.append(
+        button(
+          [item.path || tr("brain.ui.label.source", "Source"), item.date]
+            .filter(Boolean)
+            .join(" · "),
+          () => select(item.source),
+          "wiki-loop-source",
+        ),
+      );
+      list.append(row);
+    }
+    if (!list.childElementCount)
+      list.append(
+        el("li", tr("brain.ui.label.no-open-loops", "No open loops."), "empty"),
+      );
+  };
+  filter.addEventListener("change", draw);
+  draw();
+  container.append(filter, list);
 }
 async function readConnections(n, container, token) {
   try {

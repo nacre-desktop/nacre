@@ -1440,6 +1440,79 @@ button.wiki-chip:hover {
   font-size: 16px;
   color: var(--muted);
 }
+.wiki-loops {
+  margin: 24px 0 30px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+}
+.wiki-loop-tabs {
+  display: inline-flex;
+  margin-bottom: 4px;
+}
+.wiki-loop-tabs button {
+  min-height: 32px;
+}
+.loop-kind-filter {
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+}
+.open-loop-list,
+.timeline-day ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+.open-loop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.open-loop-text {
+  overflow-wrap: anywhere;
+}
+.loop-kind {
+  color: var(--muted);
+  font-size: 12px;
+}
+.wiki-loop-source,
+.timeline-source {
+  color: var(--accent);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.timeline-day {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.timeline-day h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.timeline-event {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 0;
+}
+.timeline-digest {
+  color: var(--muted);
+}
+.unit-id {
+  color: var(--accent);
+  background: var(--panel);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
 .wiki-prose p {
   margin: 10px 0;
 }

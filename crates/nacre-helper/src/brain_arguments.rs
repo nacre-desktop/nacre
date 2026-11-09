@@ -68,7 +68,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
 
     if index == 0 {
         print!(
-            "usage: nacre-brain [-h]\n                    {{init,path,search,ask,pack,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,ask,pack,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    ask                 Answer a question from notes using Claude (opt-in)\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
+            "usage: nacre-brain [-h]\n                    {{init,path,search,ask,pack,loops,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,ask,pack,loops,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    ask                 Answer a question from notes using Claude (opt-in)\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
         );
     } else {
         match args.first().map(String::as_str) {
@@ -86,6 +86,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
             ),
             Some("pack") => print!(
                 "usage: nacre-brain pack [-h] [--json] name\n\nPrint the context pack for a world or area (falls back to its world).\n\npositional arguments:\n  name        world or area name or alias\n\noptions:\n  -h, --help  show this help message and exit\n  --json      print the pack and its path as JSON\n"
+            ),
+            Some("loops") => print!(
+                "usage: nacre-brain loops [-h] [--area AREA] [--world WORLD] [--kind {{todo,question,waiting,blocked}}] [--json]\n\nList open loops from the last consolidation index.\n\noptions:\n  -h, --help  show this help message and exit\n  --area AREA\n  --world WORLD\n  --kind {{todo,question,waiting,blocked}}\n  --json      print matching loops as JSON\n"
             ),
             Some("migrate") => print!(
                 "usage: nacre-brain migrate --step {{meta,inbox,archive,digests,wiki,links,index,all}} (--dry-run | --apply) [--report PATH] [--archive-older-than-days N]\n\nPlan or apply one verified, revertable Brain migration step. Archive age defaults to 21 days.\n"
@@ -177,7 +180,7 @@ fn brain_command() -> Command {
         .arg(Arg::new("staged").long("staged").action(ArgAction::SetTrue));
     Command::new("nacre-brain")
         .disable_help_flag(true)
-        .arg(help)
+        .arg(help.clone())
         .subcommand(
             Command::new("init").arg(
                 Arg::new("help")
@@ -245,6 +248,19 @@ fn brain_command() -> Command {
                 )
                 .arg(Arg::new("json").long("json").action(ArgAction::SetTrue))
                 .arg(Arg::new("name").required(true).num_args(1..)),
+        )
+        .subcommand(
+            Command::new("loops")
+                .about("List extracted open loops")
+                .arg(help.clone())
+                .arg(Arg::new("area").long("area"))
+                .arg(Arg::new("world").long("world"))
+                .arg(
+                    Arg::new("kind")
+                        .long("kind")
+                        .value_parser(["todo", "question", "waiting", "blocked"]),
+                )
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue)),
         )
         .subcommand(
             Command::new("migrate")
@@ -447,6 +463,16 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
                     .flatten()
                     .cloned(),
             );
+        }
+        "loops" => {
+            for key in ["area", "world", "kind"] {
+                if let Some(value) = values.get_one::<String>(key) {
+                    result.extend([format!("--{key}"), value.clone()]);
+                }
+            }
+            if values.get_flag("json") {
+                result.push("--json".into());
+            }
         }
         "migrate" => {
             for key in ["step", "report"] {

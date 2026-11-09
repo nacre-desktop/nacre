@@ -11,7 +11,7 @@ use super::{
     retention_target, snapshot_file, state_updates, transact, verification, write_report, Apply,
     Note, Plan,
 };
-use crate::{brain_data, brain_git, brain_registry, brain_search, brain_web, Result};
+use crate::{brain_data, brain_git, brain_loops, brain_registry, brain_search, brain_web, Result};
 use chrono::NaiveDate;
 use regex::Regex;
 use serde_json::{json, Value};
@@ -107,13 +107,10 @@ static REVERSAL: LazyLock<Regex> = LazyLock::new(|| {
     )
 });
 static WIKILINK: LazyLock<Regex> = LazyLock::new(|| rx(r"\[\[([^\]|#]+)[^\]]*\]\]"));
-static OPEN_HEADING: LazyLock<Regex> =
-    LazyLock::new(|| rx(r"(?i)^#+\s*(?:open (?:questions|loops)|todo|next steps?|pending)\b"));
 static DO_HEADING: LazyLock<Regex> =
     LazyLock::new(|| rx(r"(?i)^#+\s*do(?:\s*(?:and|/|&)\s*)don'?t"));
 static DO_LINE: LazyLock<Regex> =
     LazyLock::new(|| rx(r"(?i)^(?:do:|don'?t\b|do not\b|never\b|always\b)"));
-
 /// Today, or `NACRE_BRAIN_TODAY` (YYYY-MM-DD) so tests can inject the clock.
 pub(super) fn today() -> Result<NaiveDate> {
     match std::env::var("NACRE_BRAIN_TODAY") {
@@ -860,6 +857,7 @@ struct PackInputs<'a> {
     categories: Vec<Member>,
     facts: &'a Facts,
     today: NaiveDate,
+    loops: Vec<Value>,
 }
 
 fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
@@ -871,6 +869,7 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         categories,
         facts,
         today,
+        loops,
     } = inputs;
     let (kind, name) = match scope.area {
         Some(area) => ("area", area),
@@ -1071,10 +1070,10 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
     key_facts.sort_by(|a, b| (&b.0, &a.1).cmp(&(&a.0, &b.1)));
     key_facts.dedup_by(|a, b| a.1 == b.1);
     let key_facts: Vec<String> = key_facts.into_iter().take(20).map(|(_, l)| l).collect();
-    // Open questions.
-    let mut open = Vec::new();
+    // Preserve existing freshness and contradiction guidance in the pack.
+    let mut review_open = Vec::new();
     for fact in &stale {
-        open.push(format!(
+        review_open.push(format!(
             "- Recheck {} fact from {}: {} {}",
             fact.class,
             fact.date,
@@ -1083,7 +1082,7 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         ));
     }
     for (newer, older) in &outdated {
-        open.push(format!(
+        review_open.push(format!(
             "- Update {}: {} is now {} ({}) {}, was {}",
             link(&older.path),
             newer.subject(),
@@ -1094,7 +1093,7 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         ));
     }
     for (newer, older) in &contradictions {
-        open.push(format!(
+        review_open.push(format!(
             "- {}: {} ({}) {} vs {} ({}) {}",
             newer.subject(),
             newer.value,
@@ -1106,19 +1105,17 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         ));
     }
     for (decision, _, older, entity) in &reversals {
-        open.push(format!(
+        review_open.push(format!(
             "- {} reverses {} ({entity})",
             link(decision),
             link(older)
         ));
     }
     let mut dos = Vec::new();
-    let mut section_open = false;
     let mut section_do = false;
     for (_, line) in prose_lines(page_text) {
         let trimmed = line.trim();
         if trimmed.starts_with('#') {
-            section_open = OPEN_HEADING.is_match(trimmed);
             section_do = DO_HEADING.is_match(trimmed);
             continue;
         }
@@ -1126,14 +1123,38 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
             .strip_prefix("- ")
             .or_else(|| trimmed.strip_prefix("* "))
             .unwrap_or("");
-        if let Some(task) = item.strip_prefix("[ ] ") {
-            open.push(format!("- {}", clip(task, 200)));
-        } else if section_open && !item.is_empty() {
-            open.push(format!("- {}", clip(item, 200)));
-        } else if !item.is_empty() && (section_do || DO_LINE.is_match(item)) {
+        if !item.is_empty() && (section_do || DO_LINE.is_match(item)) {
             dos.push(format!("- {}", clip(item, 200)));
         }
     }
+    // Open loops are resolved against later completion evidence.
+    let open: Vec<String> = loops
+        .iter()
+        .filter(|item| item["status"] == "open")
+        .filter(|item| {
+            scope.area.map_or_else(
+                || {
+                    item["worlds"]
+                        .as_array()
+                        .is_some_and(|v| v.iter().any(|x| x.as_str() == Some(scope.world)))
+                },
+                |area| {
+                    item["areas"]
+                        .as_array()
+                        .is_some_and(|v| v.iter().any(|x| x.as_str() == Some(area)))
+                },
+            )
+        })
+        .take(5)
+        .map(|item| {
+            let source = item["path"].as_str().unwrap_or("");
+            format!(
+                "- {} {}",
+                clip(item["text"].as_str().unwrap_or(""), 180),
+                link(source)
+            )
+        })
+        .collect();
     // Where to look.
     let mut look = Vec::new();
     if let Some(page) = &page {
@@ -1225,7 +1246,8 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         ("Identity", identity),
         ("Current state", state),
         ("Key facts", key_facts),
-        ("Open questions", open.into_iter().take(8).collect()),
+        ("Open questions", review_open.into_iter().take(8).collect()),
+        ("Open loops", open),
         ("Where to look", look),
         ("Do and don't", dos.into_iter().take(6).collect()),
     ];
@@ -1237,14 +1259,15 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         out
     };
     for (index, keep) in [
-        (4, 3),
+        (5, 3),
         (3, 3),
-        (5, 2),
+        (6, 2),
         (2, 10),
         (3, 0),
-        (5, 0),
-        (4, 1),
+        (6, 0),
+        (5, 1),
         (2, 3),
+        (4, 0),
         (0, 1),
     ] {
         while render(&sections).len() > PACK_LIMIT && sections[index].1.len() > keep {
@@ -1253,10 +1276,18 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
     }
     let mut out = render(&sections);
     while out.len() > PACK_LIMIT {
-        let Some((_, lines)) = sections.iter_mut().rev().find(|(_, l)| !l.is_empty()) else {
+        let Some(index) = (0..sections.len())
+            .rev()
+            .find(|index| *index != 4 && !sections[*index].1.is_empty())
+            .or_else(|| {
+                (0..sections.len())
+                    .rev()
+                    .find(|index| !sections[*index].1.is_empty())
+            })
+        else {
             break;
         };
-        lines.pop();
+        sections[index].1.pop();
         out = render(&sections);
     }
     Some(out)
@@ -1308,6 +1339,13 @@ pub(super) fn derive(vault: &Notes, reg: &Value, today: NaiveDate) -> Result<Der
         categories,
         facts: &facts,
         today,
+        loops: {
+            let notes = loop_notes(vault, reg);
+            brain_loops::derive(&notes, &json!({"items":[]}))["loops"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default()
+        },
     };
     let mut rendered = Notes::new();
     for world in reg["worlds"].as_array().into_iter().flatten() {
@@ -1352,6 +1390,23 @@ pub(super) fn derive(vault: &Notes, reg: &Value, today: NaiveDate) -> Result<Der
     })
 }
 
+fn loop_notes(vault: &Notes, registry: &Value) -> Vec<Value> {
+    let categories = brain_search::Categories::new(registry);
+    vault
+        .iter()
+        .filter(|(path, _)| !path.starts_with("packs/"))
+        .map(|(path, bytes)| {
+            let body = text(bytes);
+            let meta = brain_web::fields(body);
+            let (worlds, areas) = categories.resolve(&meta);
+            let id = brain_web::note_id(Path::new(path));
+            json!({"id":id,"label":header_body(body).0.trim_start_matches("# "),"path":path,
+            "date":date_from(path, body).map(|d|d.to_string()).unwrap_or_default(),"text":body,
+            "meta":meta,"worlds":worlds,"areas":areas})
+        })
+        .collect()
+}
+
 /// What one run changes, flags and reports.
 struct Run {
     plan: Plan,
@@ -1359,6 +1414,7 @@ struct Run {
     changes: Vec<String>,
     facts: Value,
     review: Value,
+    loops: Value,
     counts: BTreeMap<&'static str, usize>,
     deferred: Vec<(String, String)>,
     broken: Vec<(String, String)>,
@@ -1589,12 +1645,14 @@ fn plan(
         "reversals": facts.reversals.iter().map(|(d, date, o, e)| json!({"decision":d,"date":date,"reverses":o,"entity":e})).collect::<Vec<_>>(),
     });
     let review = json!({"schema": 1, "date": today.to_string(), "items": items});
+    let loops = brain_loops::derive(&loop_notes(&vault, &reg), &review);
     Ok(Run {
         plan,
         registry: upkeep.registry,
         changes: upkeep.changes,
         facts: facts_json,
         review,
+        loops,
         counts,
         deferred,
         broken: verification::broken_links(&state),
@@ -1825,6 +1883,7 @@ pub fn run(args: &[String]) -> Result<i32> {
     }
     write_index(&root, "facts.json", &run.facts)?;
     write_index(&root, "review.json", &run.review)?;
+    write_index(&root, "loops.json", &run.loops)?;
     let outcome = if committed {
         let head = brain_git::status_json(&root)
             .ok()
@@ -1898,6 +1957,80 @@ pub fn pack(args: &[String]) -> Result<i32> {
         return Ok(0);
     }
     Err(format!("no context pack for {name} yet; run nacre-brain-maintain consolidate").into())
+}
+
+/// `nacre-brain loops [--area A] [--world W] [--kind K] [--json]`.
+pub fn loops(args: &[String]) -> Result<i32> {
+    let mut area = None;
+    let mut world = None;
+    let mut kind = None;
+    let mut json_output = false;
+    let mut i = 0;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--json" => json_output = true,
+            flag @ ("--area" | "--world" | "--kind") => {
+                let value = args
+                    .get(i + 1)
+                    .ok_or_else(|| format!("{flag} requires a value"))?
+                    .clone();
+                match flag {
+                    "--area" => area = Some(value),
+                    "--world" => world = Some(value),
+                    _ => kind = Some(value),
+                }
+                i += 1;
+            }
+            other => return Err(format!("unknown loops argument: {other}").into()),
+        }
+        i += 1;
+    }
+    let root = brain_data::configured_root_path()?;
+    let data = snapshot_file(&root, ".brain-state/index/loops.json")?
+        .map(|(bytes, _)| serde_json::from_slice::<Value>(&bytes))
+        .transpose()?
+        .unwrap_or_else(|| json!({"loops":[]}));
+    let loops = data["loops"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter(|item| item["status"] == "open")
+        .filter(|item| {
+            area.as_ref().is_none_or(|a| {
+                item["areas"]
+                    .as_array()
+                    .is_some_and(|v| v.iter().any(|x| x.as_str() == Some(a)))
+            })
+        })
+        .filter(|item| {
+            world.as_ref().is_none_or(|w| {
+                item["worlds"]
+                    .as_array()
+                    .is_some_and(|v| v.iter().any(|x| x.as_str() == Some(w)))
+            })
+        })
+        .filter(|item| {
+            kind.as_ref()
+                .is_none_or(|k| item["kind"].as_str() == Some(k))
+        })
+        .cloned()
+        .collect::<Vec<_>>();
+    if json_output {
+        println!("{}", serde_json::to_string_pretty(&json!({"loops":loops}))?);
+    } else if loops.is_empty() {
+        println!("No open loops. Run nacre-brain-maintain consolidate to refresh the index.");
+    } else {
+        for item in loops {
+            println!(
+                "[{}] {} — {} ({})",
+                item["kind"].as_str().unwrap_or("todo"),
+                item["text"].as_str().unwrap_or(""),
+                item["path"].as_str().unwrap_or(""),
+                item["date"].as_str().unwrap_or("")
+            );
+        }
+    }
+    Ok(0)
 }
 
 #[cfg(test)]
@@ -2187,5 +2320,65 @@ mod tests {
             pack_path("Nacre", Some("Compositors")),
             "packs/pack-nacre-compositors.md"
         );
+    }
+
+    #[test]
+    fn packs_include_at_most_five_open_loops_under_four_kib() {
+        let page_path = "wiki/area-a.md";
+        let page =
+            "# Area A\n\nEntity: area\nName: Area A\nParent: World A\n\nArea summary.\n".to_owned();
+        let vault = BTreeMap::from([
+            (
+                "inbox/test.md".to_owned(),
+                b"# Fixture\n\nRecorded: 2026-11-08\n".to_vec(),
+            ),
+            (page_path.to_owned(), page.into_bytes()),
+        ]);
+        let worlds = BTreeSet::from(["World A".to_owned()]);
+        let categories = vec![Member {
+            path: "inbox/test.md".into(),
+            worlds,
+            areas: BTreeSet::from(["Area A".to_owned()]),
+            date: "2026-11-08".into(),
+            title: "Fixture".into(),
+        }];
+        let loops = (0..6).map(|i| json!({"status":"open","text":format!("loop-item-{i}"),"path":"inbox/test.md","date":"2026-11-08","worlds":["World A"],"areas":["Area A"]})).collect();
+        let registry = json!({"worlds":[{"name":"World A"}],"areas":[]});
+        let facts = Facts {
+            lines: (0..40)
+                .map(|line| FactLine {
+                    path: page_path.into(),
+                    line: line + 1,
+                    text: format!("{} durable evidence detail", "substantial".repeat(35)),
+                    date: "2026-11-08".into(),
+                    class: "other",
+                    stale: line < 8,
+                    age: 40,
+                    superseded: false,
+                })
+                .collect(),
+            ..Facts::default()
+        };
+        let inputs = PackInputs {
+            vault: &vault,
+            registry: &registry,
+            shown: &registry,
+            pages: BTreeMap::from([(("area".into(), "Area A".into()), page_path.into())]),
+            categories,
+            facts: &facts,
+            today: NaiveDate::from_ymd_opt(2026, 11, 9).unwrap(),
+            loops,
+        };
+        let pack = render_pack(
+            &inputs,
+            &Scope {
+                world: "World A",
+                area: Some("Area A"),
+            },
+        )
+        .unwrap();
+        assert!(pack.len() <= PACK_LIMIT);
+        assert_eq!(pack.matches("- loop-item-").count(), 5);
+        assert!(!pack.contains("loop-item-5"));
     }
 }

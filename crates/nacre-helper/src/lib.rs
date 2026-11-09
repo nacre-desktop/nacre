@@ -18,6 +18,7 @@ pub mod brain_discovery;
 pub mod brain_git;
 pub mod brain_http;
 pub mod brain_launch;
+pub mod brain_loops;
 pub mod brain_migrate;
 pub mod brain_registry;
 pub mod brain_search;

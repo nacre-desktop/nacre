@@ -64,7 +64,12 @@ window.NacreEnglish = {
   "brain.ui.error.graph": "Graph could not be loaded.",
   "brain.ui.error.request-timed-out": "The request timed out. Try again.",
   "brain.ui.error.unavailable": "Could not load your knowledge. Try again.",
+  "brain.ui.kind.blocked": "Blocked",
+  "brain.ui.kind.question": "Question",
+  "brain.ui.kind.todo": "Todo",
+  "brain.ui.kind.waiting": "Waiting",
   "brain.ui.label.aliases": "Also known as",
+  "brain.ui.label.all-kinds": "All kinds",
   "brain.ui.label.archive": "Archive",
   "brain.ui.label.areas": "Areas",
   "brain.ui.label.ask-question": "Your question",
@@ -78,6 +83,7 @@ window.NacreEnglish = {
   "brain.ui.label.explicit-references-and-shared-notes-will-appear-here-as-your-knowledge-connects":
     "Explicit references and shared notes will appear here as your knowledge connects.",
   "brain.ui.label.filed-under": "Filed under",
+  "brain.ui.label.filter-by-kind": "Filter by kind",
   "brain.ui.label.focused-connections": "Focused connections",
   "brain.ui.label.focused-knowledge": "Focused knowledge",
   "brain.ui.label.follow-up-questions": "Follow-up questions",
@@ -101,15 +107,19 @@ window.NacreEnglish = {
     "No matching notes. Try a different search or filter.",
   "brain.ui.label.no-notes-here-yet-new-knowledge-will-appear-as-it-is-saved":
     "No notes here yet. New knowledge will appear as it is saved.",
+  "brain.ui.label.no-open-loops": "No open loops.",
   "brain.ui.label.no-suggestions": "No suggested groupings yet.",
+  "brain.ui.label.no-timeline-events": "No timeline events.",
   "brain.ui.label.no-wiki-page":
     "No wiki page yet; this summary is built from the evidence.",
   "brain.ui.label.note": "Note",
   "brain.ui.label.note-details": "Note details",
   "brain.ui.label.notes-and-ideas": "Notes and ideas",
   "brain.ui.label.notes-kind": "Notes",
+  "brain.ui.label.open": "Open",
   "brain.ui.label.open-full-note": "Open the full note",
   "brain.ui.label.open-in-wiki": "Open in Wiki",
+  "brain.ui.label.open-loops": "Open loops",
   "brain.ui.label.open-wiki-page": "Open wiki page",
   "brain.ui.label.other-pages": "Other pages",
   "brain.ui.label.pages": "Pages",
@@ -129,6 +139,7 @@ window.NacreEnglish = {
   "brain.ui.label.shared-notes-connect-subjects-they-do-not-establish-a-dependency":
     "Shared notes connect worlds; they do not establish a dependency.",
   "brain.ui.label.show-archive": "Show archive",
+  "brain.ui.label.source": "Source",
   "brain.ui.label.sources": "Sources",
   "brain.ui.label.stale": "Stale",
   "brain.ui.label.stale-address":
@@ -141,6 +152,7 @@ window.NacreEnglish = {
   "brain.ui.label.superseded-on": "Superseded {date}",
   "brain.ui.label.the-subjects-you-return-to-connected-by-evidence":
     "Explore your worlds and areas.",
+  "brain.ui.label.timeline": "Timeline",
   "brain.ui.label.topic-grouping-or-shared-notes":
     "Area membership or shared notes",
   "brain.ui.label.undated": "Undated",
