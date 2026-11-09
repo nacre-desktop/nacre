@@ -311,6 +311,27 @@ pub(super) fn broken_links(notes: &Notes) -> Vec<(String, String)> {
     Vault::new(notes.keys().cloned()).broken(notes)
 }
 
+/// The shared Obsidian-style resolver over a fixed set of note paths.
+pub(super) struct LinkResolver(Vault);
+
+impl LinkResolver {
+    pub(super) fn new(paths: impl IntoIterator<Item = String>) -> Self {
+        Self(Vault::new(paths))
+    }
+
+    /// Every link in `text` (as written in `source`): its target and the note it
+    /// resolves to, if any.
+    pub(super) fn resolve_all(&self, source: &str, text: &str) -> Vec<(String, Option<String>)> {
+        links(text)
+            .into_iter()
+            .map(|link| {
+                let resolved = self.0.resolve(&link, source);
+                (link.target, resolved)
+            })
+            .collect()
+    }
+}
+
 /// Note paths the links of `path` resolve to.
 pub(super) fn link_targets(notes: &Notes, path: &str) -> BTreeSet<String> {
     let vault = Vault::new(notes.keys().cloned());

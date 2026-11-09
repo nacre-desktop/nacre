@@ -1437,6 +1437,10 @@ fn maintain(args: &[String]) -> Result<i32> {
         // Takes the vault locks itself; a dry run takes none and writes nothing.
         return crate::brain_migrate::consolidate::run(a);
     }
+    if action == "curate" {
+        // Takes the vault locks per page, only around its compare-and-swap write.
+        return crate::brain_migrate::curate::run(a);
+    }
     let root = initialize()?;
     let _guard = crate::brain_git::acquire_vault_lock(&root)?;
     match action {

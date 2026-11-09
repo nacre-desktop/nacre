@@ -322,13 +322,18 @@ fn rules() -> &'static Vec<(&'static str, Regex)> {
     ].into_iter().map(|(name, pattern)| (name, Regex::new(pattern).expect("valid secret rule"))).collect())
 }
 fn scan_text(path: &str, bytes: &[u8]) -> Result<()> {
-    let text = String::from_utf8_lossy(bytes);
-    for (name, regex) in rules() {
-        if regex.is_match(&text) {
-            return Err(format!("{path}: {name}").into());
-        }
+    match secret_rule(&String::from_utf8_lossy(bytes)) {
+        Some(name) => Err(format!("{path}: {name}").into()),
+        None => Ok(()),
     }
-    Ok(())
+}
+
+/// The first commit-guard secret rule that `text` trips, by name (never the match).
+pub fn secret_rule(text: &str) -> Option<&'static str> {
+    rules()
+        .iter()
+        .find(|(_, regex)| regex.is_match(text))
+        .map(|(name, _)| *name)
 }
 
 /// Check exactly the index that would be committed, without printing blob data.
@@ -1232,6 +1237,19 @@ pub fn commit_consolidation(
 ) -> Result<Option<String>> {
     if !message.starts_with("brain: consolidate") {
         return Err("invalid consolidation message".into());
+    }
+    commit_exact(root, CommitKind::Consolidation(message), paths)
+}
+
+/// Commit one curated wiki page (and its regenerated packs), under the same
+/// exact-path rules as a migration step.
+pub fn commit_curation(
+    root: &Path,
+    message: &str,
+    paths: &BTreeSet<String>,
+) -> Result<Option<String>> {
+    if !message.starts_with("wiki: ") || !paths.iter().any(|p| p.starts_with("wiki/")) {
+        return Err("invalid curation commit".into());
     }
     commit_exact(root, CommitKind::Consolidation(message), paths)
 }

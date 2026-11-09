@@ -228,6 +228,19 @@ fn fixture(root: &Path) {
             "dev-1 tailscale address is now 100.64.0.9.",
         ),
     );
+    // Two notes on one day disagree about prod's address: a real contradiction.
+    for (file, address) in [("prod-a", "10.30.0.4"), ("prod-b", "10.30.0.5")] {
+        write(
+            root,
+            &format!("devices/{file}.md"),
+            &note(
+                "prod network",
+                "2026-06-12",
+                "Worlds: Infrastructure\nAreas: prod\n",
+                &format!("prod LAN address is {address}."),
+            ),
+        );
+    }
     write(
         root,
         "decisions/20260301T090000Z-enable-sync.md",
@@ -445,18 +458,49 @@ fn consolidation_archives_flags_tidies_and_packs_in_one_commit() {
     assert!(!read(&vault, "wiki/entity-dev-1.md").contains("stale"));
     let review = json(&vault, ".brain-state/index/review.json");
     let items = review["items"].as_array().unwrap();
+    // dev-1's address changed with "now" wording: a supersession, not a flag.
+    assert!(!items
+        .iter()
+        .any(|i| i["kind"] == "contradiction" && i["entity"] == "dev-1"));
+    let supersession = facts["supersessions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|s| s["entity"] == "dev-1" && s["attribute"] == "tailscale-ip")
+        .expect("supersession");
+    assert_eq!(
+        (
+            &supersession["newer"]["path"],
+            &supersession["older"]["path"]
+        ),
+        (
+            &Value::from("devices/dev-1-network.md"),
+            &Value::from("wiki/entity-dev-1.md")
+        )
+    );
     let contradiction = items
         .iter()
-        .find(|i| i["kind"] == "contradiction" && i["attribute"] == "tailscale-ip")
+        .find(|i| i["kind"] == "contradiction")
         .expect("contradiction item");
-    assert_eq!(contradiction["entity"], "dev-1");
+    assert_eq!(
+        (&contradiction["entity"], &contradiction["attribute"]),
+        (&Value::from("prod"), &Value::from("ip"))
+    );
     assert_eq!(
         contradiction["paths"],
-        serde_json::json!(["devices/dev-1-network.md", "wiki/entity-dev-1.md"])
+        serde_json::json!(["devices/prod-b.md", "devices/prod-a.md"])
     );
     assert_eq!(
         contradiction["values"],
-        serde_json::json!(["100.64.0.9", "100.64.0.5"])
+        serde_json::json!(["10.30.0.5", "10.30.0.4"])
+    );
+    assert_eq!(
+        items
+            .iter()
+            .filter(|i| i["kind"] == "contradiction")
+            .count(),
+        1,
+        "{items:#?}"
     );
     let reversal = items
         .iter()

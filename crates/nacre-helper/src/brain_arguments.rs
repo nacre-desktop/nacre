@@ -32,7 +32,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
     if tool == "nacre-brain-maintain" {
         if index == 0 {
             print!(
-                "usage: nacre-brain-maintain [-h]\n                            {{check,backup,setup,read,update,restore,resolve,consolidate}} ...\n\nCheck, version, update and restore the private brain without model calls.\n\npositional arguments:\n  {{check,backup,setup,read,update,restore,resolve,consolidate}}\n\noptions:\n  -h, --help            show this help message and exit\n"
+                "usage: nacre-brain-maintain [-h]\n                            {{check,backup,setup,read,update,restore,resolve,consolidate,curate}} ...\n\nCheck, version, update and restore the private brain (only curate calls a model).\n\npositional arguments:\n  {{check,backup,setup,read,update,restore,resolve,consolidate,curate}}\n\noptions:\n  -h, --help            show this help message and exit\n"
             );
         } else {
             match args.first().map(String::as_str) {
@@ -53,6 +53,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
                 ),
                 Some("resolve") => print!(
                     "usage: nacre-brain-maintain resolve [-h] conflict_id\n\npositional arguments:\n  conflict_id\n\noptions:\n  -h, --help  show this help message and exit\n"
+                ),
+                Some("curate") => print!(
+                    "usage: nacre-brain-maintain curate [-h] (--page WIKI_PATH | --area NAME | --world NAME | --all)\n                                   [--stale-only] [--max-pages N] [--dry-run]\n                                   [--model MODEL] [--report PATH]\n\nRewrite wiki \"Current facts\" with claude -p (no tools, fixed prompt) from\nbounded evidence; validate links, dates and secrets, write each page with\ncompare-and-swap and commit it with its context packs, one commit per page.\n\noptions:\n  -h, --help         show this help message and exit\n  --page WIKI_PATH   one wiki page (wiki/x.md)\n  --area NAME        the pages of an area\n  --world NAME       the pages of a world\n  --all              every wiki page\n  --stale-only       only pages with evidence newer than their curation\n  --max-pages N      at most N pages (default 10)\n  --dry-run          call the model and write proposals to a report only\n  --model MODEL      Claude model (default sonnet)\n  --report PATH      write a Markdown report outside the vault\n"
                 ),
                 Some("consolidate") => print!(
                     "usage: nacre-brain-maintain consolidate [-h] [--dry-run] [--report PATH]\n\nArchive and triage old notes, refresh digests, wiki evidence, the index and\ncontext packs, flag stale and contradicting facts and tidy the taxonomy, as\none verified, revertable commit. No model calls.\n\noptions:\n  -h, --help     show this help message and exit\n  --dry-run      plan and print the summary; write nothing\n  --report PATH  write a Markdown report outside the vault\n"
@@ -332,6 +335,18 @@ fn maintain_command() -> Command {
                 )
                 .arg(Arg::new("report").long("report").num_args(1)),
         )
+        .subcommand(
+            Command::new("curate")
+                .arg(help())
+                .args(
+                    ["stale-only", "dry-run", "all"]
+                        .map(|flag| Arg::new(flag).long(flag).action(ArgAction::SetTrue)),
+                )
+                .args(
+                    ["page", "area", "world", "max-pages", "model", "report"]
+                        .map(|name| Arg::new(name).long(name).num_args(1)),
+                ),
+        )
 }
 
 fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
@@ -494,6 +509,18 @@ fn maintain_arguments(matches: &ArgMatches) -> Vec<String> {
             }
             if let Some(path) = values.get_one::<String>("report") {
                 result.extend(["--report".to_owned(), path.clone()]);
+            }
+        }
+        "curate" => {
+            for flag in ["all", "stale-only", "dry-run"] {
+                if values.get_flag(flag) {
+                    result.push(format!("--{flag}"));
+                }
+            }
+            for name in ["page", "area", "world", "max-pages", "model", "report"] {
+                if let Some(value) = values.get_one::<String>(name) {
+                    result.extend([format!("--{name}"), value.clone()]);
+                }
             }
         }
         _ => {}

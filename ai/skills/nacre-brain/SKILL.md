@@ -5,68 +5,95 @@ description: Retrieve or save durable personal knowledge, host/device facts, pro
 
 # Nacre Brain
 
-The vault lives at `$HOME/Documents/Nacre-Brain`, independent of ChatGPT
-accounts. Use `nacre-brain path` if the user configured a different location.
+The vault lives at `$HOME/Documents/Nacre-Brain` (`nacre-brain path` prints a
+configured location). It is a git repository. Repo-local instructions and specs
+stay authoritative for code and deployment; host addresses and service state are
+dated observations, so verify before operating on a machine.
 
-Search relevant terms before reading entire folders. Prefer verified, recent
-notes; inspect the cited source when the fact controls an operation. Host
-addresses are dated observations, so verify machine identity before changing it.
-Repo-local instructions and specs stay authoritative for code and deployment.
+## Session start
 
-Automatically record useful new knowledge at verified milestones and before
-finishing a task; do not wait for a user reminder. During long tasks, checkpoint
-important findings as they become established. Search first, skip trivial turns
-and duplicates, and mark corrections as superseding older evidence. Never dump
-whole conversations or tool logs into the vault. Use the CLI:
+1. Load the context pack for the area you work in: `nacre-brain pack WORLD|AREA`
+   (names or aliases; an area without its own pack falls back to its world).
+2. Search for specifics (below).
+3. Open the evidence notes a pack or hit links to before relying on a claim.
+
+`wiki/` pages (the viewer's Wiki tab) are the curated current truth. Notes and
+checkpoints are the dated evidence layer behind them; prefer verified, recent
+evidence and check its source when a fact controls an operation.
+
+## Search
+
+```sh
+nacre-brain search QUERY [--json] [--limit N] [--world W] [--area A] \
+  [--kind K] [--since YYYY-MM-DD] [--include-archive]
+```
+
+Ranked, typo-tolerant and alias-aware ("smash card" finds Smash-Board). One line
+per note (`PATH:LINE:TEXT`); `--json` adds snippets and a `didYouMean`. Archive
+is excluded unless `--include-archive`. Exit 1 means no match.
+
+## Writing
+
+Save decisions, outcomes, useful research and explicit preferences at verified
+milestones and before finishing; do not wait for a reminder. Search first; skip
+trivia, duplicates, raw transcripts and tool logs. Mark corrections as
+superseding the older note. Never store secret values (credential notes hold OS
+keyring references only); the guard blocks common patterns but review the text.
 
 ```sh
 nacre-brain note --kind runbooks --title 'Short factual title' \
-  --source 'Exact local file, command evidence, or source URL' --confidence verified
+  --source 'Exact file, command evidence or URL' --confidence verified \
+  --world Nacre --area Helper --topic some-topic   # Markdown on stdin
+nacre-ai-memory --title T --source S --confidence reported --world W --area A
 ```
 
-Supply Markdown on stdin. Include what was observed, verification date, relevant
-commands, practical limits, and next step where needed. Choose `reported` for
-user statements and `unverified` for claims that have not been checked. Each call
-creates a unique file, so concurrent chats can safely add notes. Organize existing
-notes without rewriting other active tasks' files.
+- Pass `--world` AND `--area` with canonical names from the table below, from
+  `registry.json` in the vault, or from the pack. Aliases resolve automatically.
+  Never invent near-duplicate names (check first: `nacre-brain search --area X`).
+- A new explicit `--area` is created at once. A new subject inferred from a
+  `Subject: title` becomes a proposed area and is promoted after repeated use.
+- Read the one-line CLI feedback on stderr: resolved `world > area`, Review
+  flags, and any new or proposed category. Fix wrong placement by rewriting
+  the note with the right names, not by hand-moving files.
+- Topics are lowercase-hyphen. Metadata lives only in the header block.
+- Confidence: `verified` for tested outcomes, `reported` for user statements,
+  `unverified` for ideas. Each call creates a unique file, so concurrent chats
+  are safe.
 
-Never store secret values. Credential notes contain OS keyring references only.
-The helper rejects common credential patterns but is not a complete detector;
-review the text. Never sync private vault content or account state into the
-public OS repo. Ordinary ChatGPT web memory is a separate system and does not
-automatically read this folder.
+## Seed worlds and areas
 
-## Maintenance and project overviews
+| World | Areas |
+|---|---|
+| personal world (first in `registry.json`) | Preferences, Background |
+| Newbringer | HK416, Guns, White motor, Smash-Board, Stations, Game, Demo sites |
+| Nacre | Desktop, Bead, Compositors, Orient, Packages, Performance, Helper, Nacre AI |
+| AI & agents | Lead workflow, Brain, Inspiration |
+| Home & devices | Desktop PC, Laptop, Home server, Phone, Peripherals |
+| Infrastructure | dev-1, prod, Network, CI |
+| Side projects | Temporium, MusikKI, Electronics bench |
 
-At meaningful milestones, or when notes conflict, read
-[maintenance](references/maintenance.md). Keep reconciliation scoped, preserve
-historical evidence, and save only changed reusable conclusions. Use the shared
-Obsidian skills for formatting and views; this skill governs what belongs in the
-private brain. The app does not need to be open for file-based maintenance.
+Growth beyond this is automatic and registry-owned; never a free-form world.
 
-## Conversation-first context and memory
+## Git
 
-New chats are general conversations, not assigned projects. Resolve the relevant
-repositories only when the user requests work, using `nacre-ai-context QUERY`
-(or MCP `nacre_workflow.resolve_context`). Keep the same chat across subjects.
-Resolve ambiguity from the conversation and registry before asking; do not guess
-which repository to modify. Registry build_host/build_path remain authoritative.
+Every write is auto-committed in batches (a quiet-period sweep) and pushed to a
+private remote. Never commit `credentials/`; a pre-commit guard blocks secrets,
+forbidden paths and oversized files. To undo a bad change use `git revert` in
+the vault (`nacre-brain git status --json` shows pending and push state). Never
+force-push or rewrite vault history.
 
-The brain includes personal life, ideas, research, devices and skills as well as
-projects. At meaningful milestones, search existing evidence first, then use
-`nacre-ai-memory --title TITLE --source SOURCE --confidence reported|verified|unverified
---world SUBJECT --topic TOPIC` with a concise Markdown body on stdin. Repeat
---world to connect several subjects, and --topic for shared subtopics. Codex also
-exposes find_knowledge and remember in nacre_workflow; Claude uses the same CLI.
-Keep entity names stable; reuse canonical wiki names/aliases. New subjects create
-missing wiki descriptors automatically; this does not register a coding project.
-Preserve existing curated pages and reconcile them through expected-hash updates.
+## Maintenance
 
-Save decisions, outcomes, useful research and explicit personal preferences;
-do not save every utterance, duplicate unchanged facts, transient output or raw
-transcripts. User statements are reported; tested outcomes are verified; ideas
-and hypotheses remain unverified. Link sources. Correct older facts explicitly.
-The visual brain grows from dated evidence with activity decay, not message counts.
-Meaningful new topics can emerge within existing worlds; promote a distinct new
-world when it warrants its own stable subject. New repositories belong in the
-project registry only when actually created or discovered and verified.
+Read [maintenance](references/maintenance.md) at milestones, when notes conflict,
+or when asked to organize. Agents add evidence through the tools above and do not
+hand-move or rewrite other notes; the owner-approved `nacre-brain-maintain
+consolidate` does retention, taxonomy upkeep, freshness flags and packs.
+
+## Conversation-first context
+
+New chats are general conversations, not assigned projects. Resolve repositories
+only when work is requested, with `nacre-ai-context QUERY` (or MCP
+`nacre_workflow.resolve_context`); registry build_host/build_path stay
+authoritative. Codex also has `find_knowledge` and `remember` in `nacre_workflow`;
+Claude uses the CLI. New repositories enter the project registry only when
+actually created and verified. Ordinary web-chat memory is a separate system.
