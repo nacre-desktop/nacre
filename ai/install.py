@@ -234,13 +234,16 @@ def main():
     ):
         binaries.append("obsidian")
     if not args.remote:
-        # The consolidation timer is installed but never enabled here; the
-        # owner enables it explicitly (systemctl --user enable --now ...).
+        # The consolidation and curation timers are installed but never
+        # enabled here; the owner enables them explicitly
+        # (systemctl --user enable --now ...).
         for name in (
             "nacre-brain-check.service",
             "nacre-brain-check.timer",
             "nacre-brain-consolidate.service",
             "nacre-brain-consolidate.timer",
+            "nacre-brain-curate.service",
+            "nacre-brain-curate.timer",
         ):
             link(repo / "ai/systemd" / name, home / ".config/systemd/user" / name)
         secret_service = (

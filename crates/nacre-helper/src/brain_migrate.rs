@@ -16,6 +16,8 @@ use walkdir::WalkDir;
 
 #[path = "brain_consolidate.rs"]
 pub mod consolidate;
+#[path = "brain_curate.rs"]
+pub mod curate;
 #[path = "brain_migrate_generated.rs"]
 mod generated;
 #[path = "brain_migrate_verify.rs"]

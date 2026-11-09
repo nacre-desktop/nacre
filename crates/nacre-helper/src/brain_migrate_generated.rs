@@ -7,6 +7,9 @@ use std::collections::{BTreeMap, BTreeSet};
 pub(super) const START: &str =
     "<!-- brain:generated:start (rebuilt by the index job; edit above this line) -->";
 pub(super) const END: &str = "<!-- brain:generated:end -->";
+/// The agent-curated "Current facts" block (N0148); text outside it is human.
+pub(super) const CURATED_START: &str = "<!-- brain:curated:start";
+pub(super) const CURATED_END: &str = "<!-- brain:curated:end -->";
 
 #[derive(Clone)]
 struct Evidence {

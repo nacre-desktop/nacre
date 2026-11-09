@@ -136,6 +136,8 @@ def paths(repo):
             "nacre-brain-check.timer",
             "nacre-brain-consolidate.service",
             "nacre-brain-consolidate.timer",
+            "nacre-brain-curate.service",
+            "nacre-brain-curate.timer",
             "nacre-power-key.service",
         )
     ]

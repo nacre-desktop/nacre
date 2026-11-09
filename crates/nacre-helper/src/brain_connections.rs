@@ -200,6 +200,8 @@ pub(crate) fn prose(note: &str) -> String {
             generated = true;
         } else if line.starts_with("<!-- brain:generated:end") {
             generated = false;
+        } else if line.starts_with("<!-- brain:curated:") {
+            // Curated-block markers (N0148) frame page text; they are not text.
         } else if !generated {
             out.push_str(line);
             out.push('\n');

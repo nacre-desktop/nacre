@@ -1,0 +1,9 @@
+[Unit]
+Description=Curate stale Brain wiki pages with claude -p (no tools; one commit per page)
+After=nacre-brain-consolidate.service
+[Service]
+Type=oneshot
+Nice=10
+IOSchedulingClass=idle
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/.local/bin/nacre-brain-maintain curate --all --stale-only --max-pages 10

@@ -68,6 +68,21 @@ static VERSION: LazyLock<Regex> =
 static DEPLOYED: LazyLock<Regex> =
     LazyLock::new(|| rx(r"(?i)\b(?:deployed|installed|running|pinned)\b"));
 static HASH: LazyLock<Regex> = LazyLock::new(|| rx(r"\b[0-9a-f]{7,40}\b"));
+/// Words before a hex token that make it a serial, digest or id, not a commit.
+static NOT_COMMIT: LazyLock<Regex> =
+    LazyLock::new(|| rx(r"(?i)(?:serial|sha-?\d*|digest|boot|uuid|\bid)\W*$"));
+/// Update wording: a newer value with it supersedes an older one (DESIGN §7).
+static CUE: LazyLock<Regex> = LazyLock::new(|| {
+    rx(
+        r"(?i)\b(?:now|currently|updated?|upgraded?|changed|moved|migrated|switched|replaced|renumbered|reassigned|rotated|bumped|re-?deploy\w*|deploy\w*|install\w*|became|new|latest|from\s+\S+\s+to)\b",
+    )
+});
+/// A repo, branch, package or host token (`helios-web`, `owner/repo`, `newbringer-v2-…`).
+static IDENT: LazyLock<Regex> =
+    LazyLock::new(|| rx(r"\b[A-Za-z][A-Za-z0-9]*(?:[-_/@][A-Za-z0-9]+)+\b"));
+/// Notes this many days apart asserting different values contradict each other;
+/// further apart, a newer value is ordinary progress (addresses excepted).
+const WINDOW_DAYS: i64 = 3;
 static RUNS_ON: LazyLock<Regex> =
     LazyLock::new(|| rx(r"(?i)\bruns? on (?:the )?([a-z0-9][a-z0-9._-]*[a-z0-9])"));
 static STATE: LazyLock<Regex> = LazyLock::new(|| rx(r"(?i)\b(not\s+)?(enabled|disabled)\b"));
@@ -100,7 +115,7 @@ static DO_LINE: LazyLock<Regex> =
     LazyLock::new(|| rx(r"(?i)^(?:do:|don'?t\b|do not\b|never\b|always\b)"));
 
 /// Today, or `NACRE_BRAIN_TODAY` (YYYY-MM-DD) so tests can inject the clock.
-fn today() -> Result<NaiveDate> {
+pub(super) fn today() -> Result<NaiveDate> {
     match std::env::var("NACRE_BRAIN_TODAY") {
         Ok(value) if !value.is_empty() => NaiveDate::parse_from_str(&value, "%Y-%m-%d")
             .map_err(|_| "NACRE_BRAIN_TODAY expects YYYY-MM-DD".into()),
@@ -146,6 +161,19 @@ fn prose_lines(text: &str) -> Vec<(usize, &str)> {
         }
     }
     out
+}
+
+/// The summary paragraph at the top of a page's curated block (N0148), if any.
+fn curated_summary(text: &str) -> Option<String> {
+    let start = text.find(generated::CURATED_START)?;
+    let after = &text[start..];
+    let paragraph: Vec<&str> = after
+        .lines()
+        .skip(1)
+        .map(str::trim)
+        .take_while(|l| !l.is_empty() && !l.starts_with(['-', '*', '#', '<']))
+        .collect();
+    (!paragraph.is_empty()).then(|| paragraph.join(" "))
 }
 
 /// Registry, vocabulary and wiki names that identify what a fact is about.
@@ -275,24 +303,49 @@ struct FactLine {
 struct Observation {
     entity: String,
     attribute: String,
+    /// Repo/host/device name near the value: one subject per qualifier.
+    qualifier: String,
     date: String,
     wiki: bool,
     path: String,
     line: usize,
     value: String,
+    /// The line uses update wording (now, updated, deployed, …).
+    cue: bool,
 }
 
 impl Observation {
     fn json(&self) -> Value {
-        json!({"entity":self.entity,"attribute":self.attribute,"value":self.value,"path":self.path,"line":self.line,"date":self.date,"source":if self.wiki {"wiki"} else {"note"}})
+        json!({"entity":self.entity,"attribute":self.attribute,"qualifier":self.qualifier,"value":self.value,"path":self.path,"line":self.line,"date":self.date,"source":if self.wiki {"wiki"} else {"note"}})
     }
+
+    /// "dev-1 tailscale-ip" or "Desktop deployed-commit (helios-web)".
+    fn subject(&self) -> String {
+        if self.qualifier.is_empty() {
+            format!("{} {}", self.entity, self.attribute)
+        } else {
+            format!("{} {} ({})", self.entity, self.attribute, self.qualifier)
+        }
+    }
+}
+
+/// One typed value on a line: (entity, attribute, qualifier, value).
+#[derive(Debug, PartialEq, Eq)]
+struct Typed {
+    entity: String,
+    attribute: String,
+    qualifier: String,
+    value: String,
 }
 
 #[derive(Default)]
 struct Facts {
     lines: Vec<FactLine>,
     current: Vec<Observation>,
+    /// (newer, older): values that disagree without an update in between.
     contradictions: Vec<(Observation, Observation)>,
+    /// (newer, older): a later value replacing an older one (normal progress).
+    supersessions: Vec<(Observation, Observation)>,
     reversals: Vec<(String, String, String, String)>,
 }
 
@@ -320,9 +373,99 @@ fn attribute_days(attribute: &str) -> i64 {
     }
 }
 
-/// Typed (entity, attribute, value) facts on one line. The entity is the nearest
-/// registry/vocabulary name (areas and entities before worlds), else `fallback`.
-fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<(String, String, String)> {
+/// A commit hash on a deploy line: 7–12 or 40 hex digits with a deploy word
+/// close by, not glued to a longer token and not a serial, digest or id.
+fn commit_hash(line: &str) -> Option<regex::Match<'_>> {
+    let near = |from: usize, to: usize| {
+        let from = line.floor_char_boundary(from);
+        let to = line.ceil_char_boundary(to.min(line.len()));
+        DEPLOYED.is_match(&line[from..to])
+    };
+    HASH.find_iter(line).find(|m| {
+        let token = m.as_str();
+        let glued = |c: Option<char>| matches!(c, Some('-' | '_' | '.' | ':' | '/' | '@'));
+        // Sentence punctuation after a hash is fine; `.g56…` or `:ab…` is not.
+        let mut after = line[m.end()..].chars();
+        let glued_after = match after.next() {
+            Some('.' | ':') => after.next().is_some_and(|c| c.is_ascii_alphanumeric()),
+            next => glued(next),
+        };
+        matches!(token.len(), 7..=12 | 40)
+            && token.chars().any(|c| c.is_ascii_digit())
+            && token.chars().any(|c| c.is_ascii_alphabetic())
+            && !glued(line[..m.start()].chars().next_back())
+            && !glued_after
+            && !NOT_COMMIT
+                .is_match(&line[line.floor_char_boundary(m.start().saturating_sub(16))..m.start()])
+            && (near(m.start().saturating_sub(48), m.start()) || near(m.end(), m.end() + 24))
+    })
+}
+
+/// The repo/host/device name qualifying the value at `start`: the name part of
+/// the token the value is embedded in (`nacre-niri-26.04.r3063`), else the
+/// nearest other name or identifier-like token between the previous value on
+/// the line (or the clause start, at most 64 bytes back) and the value.
+fn qualifier(line: &str, floor: usize, start: usize, entity: &str, names: &Names) -> String {
+    let own = |label: &str| {
+        names
+            .canonical(label)
+            .is_some_and(|name| name.eq_ignore_ascii_case(entity))
+            || label.eq_ignore_ascii_case(entity)
+    };
+    let label = |token: &str| {
+        names
+            .canonical(token)
+            .unwrap_or_else(|| token.to_lowercase())
+    };
+    let prefix_len: usize = line[..start]
+        .chars()
+        .rev()
+        .take_while(|c| c.is_ascii_alphanumeric() || "-_./".contains(*c))
+        .map(char::len_utf8)
+        .sum();
+    let token_start = start - prefix_len;
+    let name = line[token_start..start]
+        .trim_end_matches(|c: char| c.is_ascii_digit() || "-_./".contains(c));
+    if name.chars().filter(char::is_ascii_alphabetic).count() >= 3 && !own(name) {
+        return label(name);
+    }
+    let clause = ["; ", ". ", " — ", " | "]
+        .iter()
+        .filter_map(|sep| line[..token_start].rfind(sep).map(|i| i + sep.len()))
+        .max()
+        .unwrap_or(0);
+    // Overlapping values (`version 1.2.3.4`) must not push the floor past the value.
+    let from = line.floor_char_boundary(
+        floor
+            .max(clause)
+            .max(token_start.saturating_sub(64))
+            .min(token_start),
+    );
+    let mut best: Option<(usize, String)> = None;
+    for (s, e, name, _) in names.find(line) {
+        if s >= from
+            && e <= token_start
+            && !own(&name)
+            && !ADDRESS_WORDS.contains(&line[s..e].to_lowercase().as_str())
+            && best.as_ref().is_none_or(|(at, _)| e > *at)
+        {
+            best = Some((e, name));
+        }
+    }
+    for m in IDENT.find_iter(&line[from..token_start]) {
+        let token = m.as_str().trim_end_matches(['-', '_', '/', '@']);
+        let end = from + m.end();
+        if !own(token) && best.as_ref().is_none_or(|(at, _)| end > *at) {
+            best = Some((end, label(token)));
+        }
+    }
+    best.map(|(_, label)| label).unwrap_or_default()
+}
+
+/// Typed facts on one line. The entity is the nearest registry/vocabulary name
+/// (areas and entities before worlds), else `fallback`; the qualifier names the
+/// repo, host or device the value belongs to when the line says so.
+fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<Typed> {
     let mut values = Vec::<(usize, usize, String, String)>::new();
     for c in IPV4.captures_iter(line) {
         let m = c.get(0).unwrap();
@@ -354,18 +497,13 @@ fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<(String, St
         let m = c.get(0).unwrap();
         values.push((m.start(), m.end(), "version".into(), c[1].to_owned()));
     }
-    if DEPLOYED.is_match(line) {
-        if let Some(m) = HASH.find_iter(line).find(|m| {
-            m.as_str().chars().any(|c| c.is_ascii_digit())
-                && m.as_str().chars().any(|c| c.is_ascii_alphabetic())
-        }) {
-            values.push((
-                m.start(),
-                m.end(),
-                "deployed-commit".into(),
-                m.as_str()[..7].into(),
-            ));
-        }
+    if let Some(m) = commit_hash(line) {
+        values.push((
+            m.start(),
+            m.end(),
+            "deployed-commit".into(),
+            m.as_str()[..7].into(),
+        ));
     }
     for c in RUNS_ON.captures_iter(line) {
         let host = c.get(1).unwrap();
@@ -428,8 +566,10 @@ fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<(String, St
     if values.is_empty() {
         return Vec::new();
     }
+    values.sort();
     let entities = names.find(line);
     let mut out = Vec::new();
+    let mut floor = 0;
     for (start, end, attribute, value) in values {
         // Network words name the kind of address, not what it belongs to.
         let address = attribute.ends_with("ip");
@@ -448,6 +588,8 @@ fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<(String, St
             .or_else(|| candidates.iter().filter(|e| e.0 >= end).min_by_key(|e| e.0))
             .map(|e| e.2.clone())
             .or_else(|| fallback.map(str::to_owned));
+        let previous = floor;
+        floor = floor.max(end);
         let Some(entity) = entity else {
             continue;
         };
@@ -460,7 +602,18 @@ fn observe(line: &str, names: &Names, fallback: Option<&str>) -> Vec<(String, St
             }
             _ => attribute,
         };
-        let row = (entity, attribute, value);
+        // Enabled/disabled already carry the word they qualify.
+        let qualifier = if attribute.starts_with("state") || attribute == "host" {
+            String::new()
+        } else {
+            qualifier(line, previous, start, &entity, names)
+        };
+        let row = Typed {
+            entity,
+            attribute,
+            qualifier,
+            value,
+        };
         if !out.contains(&row) {
             out.push(row);
         }
@@ -530,29 +683,34 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
                 }
             };
             let fallback = page.as_deref().filter(|p| !p.is_empty());
-            for (entity, attribute, value) in observe(line, names, fallback) {
+            let cue = CUE.is_match(line);
+            for typed in observe(line, names, fallback) {
                 observations.push(Observation {
-                    entity,
-                    attribute,
+                    entity: typed.entity,
+                    attribute: typed.attribute,
+                    qualifier: typed.qualifier,
                     date: date.clone(),
                     wiki,
                     path: path.clone(),
                     line: number,
-                    value,
+                    value: typed.value,
+                    cue,
                 });
             }
         }
     }
     observations.sort();
     observations.dedup_by(|a, b| {
-        (&a.entity, &a.attribute, &a.path, &a.value) == (&b.entity, &b.attribute, &b.path, &b.value)
+        (&a.entity, &a.attribute, &a.qualifier, &a.path, &a.value)
+            == (&b.entity, &b.attribute, &b.qualifier, &b.path, &b.value)
     });
-    let mut keys = BTreeMap::<(String, String), Vec<Observation>>::new();
+    let mut keys = BTreeMap::<(String, String, String), Vec<Observation>>::new();
     for o in observations {
-        keys.entry((o.entity.clone(), o.attribute.clone()))
+        keys.entry((o.entity.clone(), o.attribute.clone(), o.qualifier.clone()))
             .or_default()
             .push(o);
     }
+    let day = |d: &str| NaiveDate::parse_from_str(d, "%Y-%m-%d").ok();
     for (_, mut list) in keys {
         // Newest last; on the same day a wiki fact (curated) outranks a note.
         list.sort_by(|a, b| {
@@ -566,7 +724,22 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
                 .skip(1)
                 .find(|o| o.value != newest.value && o.path != newest.path)
             {
-                facts.contradictions.push((newest.clone(), older.clone()));
+                // A later value with update wording supersedes; so does any
+                // later value outside the window, except a host's address,
+                // which must not change silently. Within the window (or on the
+                // same day) different values contradict.
+                let later = newest.date > older.date;
+                let gap = day(&newest.date)
+                    .zip(day(&older.date))
+                    .map_or(0, |(n, o)| (n - o).num_days());
+                let pair = (newest.clone(), older.clone());
+                if later && newest.cue {
+                    facts.supersessions.push(pair);
+                } else if newest.attribute.ends_with("ip") || gap <= WINDOW_DAYS {
+                    facts.contradictions.push(pair);
+                } else {
+                    facts.supersessions.push(pair);
+                }
             }
         }
         facts.current.push(newest);
@@ -603,15 +776,20 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
     }
     decisions.sort();
     for (i, (date, path, title, _, supersedes, body)) in decisions.iter().enumerate() {
-        let trigger_lines: Vec<&str> = std::iter::once(title.as_str())
-            .chain(body.lines())
+        // Only a decision's title, its `Supersedes:` header or a body line that
+        // links the decision it reverses count; reversal words in passing do not.
+        let titled = REVERSAL.is_match(title);
+        let linked: String = body
+            .lines()
             .filter(|line| REVERSAL.is_match(line))
-            .collect();
-        if trigger_lines.is_empty() && supersedes.is_empty() {
+            .flat_map(|line| WIKILINK.find_iter(line).map(|m| m.as_str()))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if !titled && linked.is_empty() && supersedes.is_empty() {
             continue;
         }
         let mut found = BTreeSet::new();
-        for target in WIKILINK.captures_iter(supersedes) {
+        for target in WIKILINK.captures_iter(&format!("{supersedes} {linked}")) {
             let stem = target[1].trim().trim_end_matches(".md");
             let stem = stem.rsplit('/').next().unwrap_or(stem);
             if let Some((_, older, _, _, _, _)) = decisions[..i]
@@ -621,12 +799,16 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
                 found.insert((older.clone(), "supersedes".to_owned()));
             }
         }
-        let entities: BTreeSet<String> = trigger_lines
-            .iter()
-            .flat_map(|line| names.find(line))
-            .filter(|e| e.3 == 0)
-            .map(|e| e.2)
-            .collect();
+        let entities: BTreeSet<String> = if titled {
+            names
+                .find(title)
+                .into_iter()
+                .filter(|e| e.3 == 0)
+                .map(|e| e.2)
+                .collect()
+        } else {
+            BTreeSet::new()
+        };
         for entity in entities {
             if let Some(older) = decisions[..i].iter().rev().find(|d| d.3.contains(&entity)) {
                 if !found.iter().any(|(p, _)| *p == older.1) {
@@ -645,7 +827,7 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
 
 /// Context pack path for a world or area (vault-unique file name: the viewer
 /// keys notes by file name, and wiki pages already use `<world>[-<area>].md`).
-fn pack_path(world: &str, area: Option<&str>) -> String {
+pub(super) fn pack_path(world: &str, area: Option<&str>) -> String {
     match area {
         Some(area) => format!(
             "packs/pack-{}-{}.md",
@@ -745,7 +927,10 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         .skip_while(|l| !prose(l))
         .take_while(prose)
         .collect();
-    if !paragraph.is_empty() {
+    // A curated summary (N0148) describes the page best; else its first paragraph.
+    if let Some(summary) = curated_summary(page_text) {
+        identity.push(clip(&summary, 400));
+    } else if !paragraph.is_empty() {
         identity.push(clip(&paragraph.join(" "), 400));
     }
     let entry = registry[if scope.area.is_some() {
@@ -822,9 +1007,16 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         newest.map(|d| format!(", newest {d}")).unwrap_or_default(),
         stale.len() + contradictions.len() + reversals.len()
     ));
+    // Wiki facts whose value a newer note replaced: the page needs an update.
+    let outdated: Vec<&(Observation, Observation)> = facts
+        .supersessions
+        .iter()
+        .filter(|(_, older)| older.wiki && scope_pages.contains(&older.path))
+        .collect();
     // Key facts: newest current wiki facts, then typed observations.
     let contradicted: BTreeSet<(&str, usize)> = contradictions
         .iter()
+        .chain(outdated.iter())
         .filter(|(_, older)| older.wiki)
         .map(|(_, older)| (older.path.as_str(), older.line))
         .collect();
@@ -867,10 +1059,9 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
             key_facts.push((
                 o.date.clone(),
                 format!(
-                    "- {}: {} {}: {} {}",
+                    "- {}: {}: {} {}",
                     o.date,
-                    o.entity,
-                    o.attribute,
+                    o.subject(),
                     o.value,
                     link(&o.path)
                 ),
@@ -891,11 +1082,21 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
             link(&fact.path)
         ));
     }
+    for (newer, older) in &outdated {
+        open.push(format!(
+            "- Update {}: {} is now {} ({}) {}, was {}",
+            link(&older.path),
+            newer.subject(),
+            newer.value,
+            newer.date,
+            link(&newer.path),
+            older.value
+        ));
+    }
     for (newer, older) in &contradictions {
         open.push(format!(
-            "- {} {}: {} ({}) {} vs {} ({}) {}",
-            newer.entity,
-            newer.attribute,
+            "- {}: {} ({}) {} vs {} ({}) {}",
+            newer.subject(),
             newer.value,
             newer.date,
             link(&newer.path),
@@ -1059,6 +1260,96 @@ fn render_pack(inputs: &PackInputs<'_>, scope: &Scope<'_>) -> Option<String> {
         out = render(&sections);
     }
     Some(out)
+}
+
+/// Facts and context packs derived from one vault snapshot (shared with curation).
+pub(super) struct Derived {
+    facts: Facts,
+    pub(super) packs: Notes,
+}
+
+/// Scan facts and render every world/area context pack for `vault`.
+pub(super) fn derive(vault: &Notes, reg: &Value, today: NaiveDate) -> Result<Derived> {
+    let mut shown = reg.clone();
+    if let Some(areas) = shown["areas"].as_array_mut() {
+        areas.retain(|a| a["status"].as_str() != Some("proposed"));
+    }
+    let vocabulary: Value = serde_json::from_slice(VOCABULARY)?;
+    let names = Names::new(reg, &vocabulary);
+    let facts = scan_facts(vault, &names, today);
+    let pages = generated::roles(&vocabulary, &shown)
+        .into_iter()
+        .filter(|(_, kind, _, _, _)| kind == "world" || kind == "area")
+        .map(|(page, kind, name, _, _)| ((kind, name), page))
+        .collect();
+    let resolver = brain_search::Categories::new(reg);
+    let categories = vault
+        .iter()
+        .filter(|(p, _)| EVIDENCE.contains(&root_of(p)))
+        .map(|(path, bytes)| {
+            let text = text(bytes);
+            let (worlds, areas) = resolver.resolve(&brain_web::fields(text));
+            Member {
+                path: path.clone(),
+                worlds,
+                areas,
+                date: date_from(path, text)
+                    .map(|d| d.to_string())
+                    .unwrap_or_default(),
+                title: header_body(text).0.trim_start_matches("# ").to_owned(),
+            }
+        })
+        .collect();
+    let inputs = PackInputs {
+        vault,
+        registry: reg,
+        shown: &shown,
+        pages,
+        categories,
+        facts: &facts,
+        today,
+    };
+    let mut rendered = Notes::new();
+    for world in reg["worlds"].as_array().into_iter().flatten() {
+        let world_name = world["name"].as_str().unwrap_or_default();
+        if let Some(pack) = render_pack(
+            &inputs,
+            &Scope {
+                world: world_name,
+                area: None,
+            },
+        ) {
+            rendered.insert(pack_path(world_name, None), pack.into_bytes());
+        }
+        for area in shown["areas"].as_array().into_iter().flatten().filter(|a| {
+            a["parent"].as_str() == Some(world_name)
+                && a["status"].as_str() != Some("merged-into")
+                && a["merged_into"].as_str().is_none_or(str::is_empty)
+        }) {
+            let area_name = area["name"].as_str().unwrap_or_default();
+            let scope = Scope {
+                world: world_name,
+                area: Some(area_name),
+            };
+            if let Some(pack) = render_pack(&inputs, &scope) {
+                rendered.insert(pack_path(world_name, Some(area_name)), pack.into_bytes());
+            }
+        }
+    }
+    let mut combined = vault.clone();
+    combined.extend(rendered.clone());
+    let broken_pack_links: Vec<_> = verification::broken_links(&combined)
+        .into_iter()
+        .filter(|(path, _)| path.starts_with("packs/"))
+        .collect();
+    if let Some((path, target)) = broken_pack_links.first() {
+        return Err(format!("generated pack {path} has a broken link: {target}").into());
+    }
+    drop(inputs);
+    Ok(Derived {
+        facts,
+        packs: rendered,
+    })
 }
 
 /// What one run changes, flags and reports.
@@ -1229,78 +1520,12 @@ fn plan(
         plan.writes
             .insert("registry.json".into(), upkeep.registry.clone());
     }
-    // Freshness and contradictions (§7) go to the derived index only.
-    let names = Names::new(&reg, &vocabulary);
-    let facts = scan_facts(&vault, &names, today);
-    // Context packs (§8).
-    let pages = generated::roles(&vocabulary, &shown)
-        .into_iter()
-        .filter(|(_, kind, _, _, _)| kind == "world" || kind == "area")
-        .map(|(page, kind, name, _, _)| ((kind, name), page))
-        .collect();
-    let resolver = brain_search::Categories::new(&reg);
-    let categories = vault
-        .iter()
-        .filter(|(p, _)| EVIDENCE.contains(&root_of(p)))
-        .map(|(path, bytes)| {
-            let text = text(bytes);
-            let (worlds, areas) = resolver.resolve(&brain_web::fields(text));
-            Member {
-                path: path.clone(),
-                worlds,
-                areas,
-                date: date_from(path, text)
-                    .map(|d| d.to_string())
-                    .unwrap_or_default(),
-                title: header_body(text).0.trim_start_matches("# ").to_owned(),
-            }
-        })
-        .collect();
-    let inputs = PackInputs {
-        vault: &vault,
-        registry: &reg,
-        shown: &shown,
-        pages,
-        categories,
-        facts: &facts,
-        today,
-    };
-    let mut rendered = Notes::new();
-    for world in reg["worlds"].as_array().into_iter().flatten() {
-        let world_name = world["name"].as_str().unwrap_or_default();
-        if let Some(pack) = render_pack(
-            &inputs,
-            &Scope {
-                world: world_name,
-                area: None,
-            },
-        ) {
-            rendered.insert(pack_path(world_name, None), pack.into_bytes());
-        }
-        for area in shown["areas"].as_array().into_iter().flatten().filter(|a| {
-            a["parent"].as_str() == Some(world_name)
-                && a["status"].as_str() != Some("merged-into")
-                && a["merged_into"].as_str().is_none_or(str::is_empty)
-        }) {
-            let area_name = area["name"].as_str().unwrap_or_default();
-            let scope = Scope {
-                world: world_name,
-                area: Some(area_name),
-            };
-            if let Some(pack) = render_pack(&inputs, &scope) {
-                rendered.insert(pack_path(world_name, Some(area_name)), pack.into_bytes());
-            }
-        }
-    }
-    let mut combined = vault.clone();
-    combined.extend(rendered.clone());
-    let broken_pack_links: Vec<_> = verification::broken_links(&combined)
-        .into_iter()
-        .filter(|(path, _)| path.starts_with("packs/"))
-        .collect();
-    if let Some((path, target)) = broken_pack_links.first() {
-        return Err(format!("generated pack {path} has a broken link: {target}").into());
-    }
+    // Freshness and contradictions (§7) go to the derived index only; context
+    // packs (§8) are rendered from the same facts.
+    let Derived {
+        facts,
+        packs: rendered,
+    } = derive(&vault, &reg, today)?;
     for (path, bytes) in &rendered {
         if packs.get(path) == Some(bytes) {
             continue;
@@ -1332,7 +1557,7 @@ fn plan(
         items.push(json!({"kind":"stale-fact","path":fact.path,"line":fact.line,"class":fact.class,"date":fact.date,"ageDays":fact.age,"text":fact.text}));
     }
     for (newer, older) in &facts.contradictions {
-        items.push(json!({"kind":"contradiction","entity":newer.entity,"attribute":newer.attribute,"paths":[newer.path,older.path],"values":[newer.value,older.value],"dates":[newer.date,older.date]}));
+        items.push(json!({"kind":"contradiction","entity":newer.entity,"attribute":newer.attribute,"qualifier":newer.qualifier,"paths":[newer.path,older.path],"values":[newer.value,older.value],"dates":[newer.date,older.date]}));
     }
     for (decision, date, older, entity) in &facts.reversals {
         items.push(json!({"kind":"reversal","paths":[decision,older],"date":date,"entity":entity}));
@@ -1359,7 +1584,8 @@ fn plan(
         "date": today.to_string(),
         "facts": facts.lines.iter().map(|f| json!({"path":f.path,"line":f.line,"text":f.text,"date":f.date,"class":f.class,"stale":f.stale,"ageDays":f.age,"superseded":f.superseded})).collect::<Vec<_>>(),
         "current": facts.current.iter().map(Observation::json).collect::<Vec<_>>(),
-        "contradictions": facts.contradictions.iter().map(|(n, o)| json!({"entity":n.entity,"attribute":n.attribute,"newer":n.json(),"older":o.json()})).collect::<Vec<_>>(),
+        "contradictions": facts.contradictions.iter().map(|(n, o)| json!({"entity":n.entity,"attribute":n.attribute,"qualifier":n.qualifier,"newer":n.json(),"older":o.json()})).collect::<Vec<_>>(),
+        "supersessions": facts.supersessions.iter().map(|(n, o)| json!({"entity":n.entity,"attribute":n.attribute,"qualifier":n.qualifier,"newer":n.json(),"older":o.json()})).collect::<Vec<_>>(),
         "reversals": facts.reversals.iter().map(|(d, date, o, e)| json!({"decision":d,"date":date,"reverses":o,"entity":e})).collect::<Vec<_>>(),
     });
     let review = json!({"schema": 1, "date": today.to_string(), "items": items});
@@ -1684,40 +1910,252 @@ mod tests {
         Names::new(&registry, &vocabulary)
     }
 
+    fn rows(line: &str, fallback: Option<&str>) -> Vec<(String, String, String, String)> {
+        observe(line, &names(), fallback)
+            .into_iter()
+            .map(|t| (t.entity, t.attribute, t.qualifier, t.value))
+            .collect()
+    }
+
+    fn row(
+        entity: &str,
+        attribute: &str,
+        qualifier: &str,
+        value: &str,
+    ) -> (String, String, String, String) {
+        (
+            entity.into(),
+            attribute.into(),
+            qualifier.into(),
+            value.into(),
+        )
+    }
+
     #[test]
     fn extractors_key_typed_facts_by_nearest_entity() {
-        let names = names();
-        let rows = observe(
-            "dev-1 answers on 100.64.0.5 and prod on 10.1.2.3",
-            &names,
-            None,
+        let found = rows("dev-1 answers on 100.64.0.5 and prod on 10.1.2.3", None);
+        assert!(found.contains(&row("dev-1", "tailscale-ip", "", "100.64.0.5")));
+        assert!(
+            found.contains(&row("prod", "ip", "", "10.1.2.3")),
+            "{found:?}"
         );
-        assert!(rows.contains(&("dev-1".into(), "tailscale-ip".into(), "100.64.0.5".into())));
-        assert!(rows.contains(&("prod".into(), "ip".into(), "10.1.2.3".into())));
-        let rows = observe("dev-1 tailscale address is now 100.64.0.9", &names, None);
         assert_eq!(
-            rows,
-            vec![("dev-1".into(), "tailscale-ip".into(), "100.64.0.9".into())]
+            rows("dev-1 tailscale address is now 100.64.0.9", None),
+            vec![row("dev-1", "tailscale-ip", "", "100.64.0.9")]
         );
-        let rows = observe("Bead pinned at r412 and deployed 3cc38598ab", &names, None);
-        assert!(rows.contains(&("Bead".into(), "revision".into(), "r412".into())));
-        assert!(rows.contains(&("Bead".into(), "deployed-commit".into(), "3cc3859".into())));
-        let rows = observe("The Brain viewer runs on dev-1", &names, None);
-        assert!(rows.contains(&("Brain".into(), "host".into(), "dev-1".into())));
-        let rows = observe("CI: the nightly timer is not enabled", &names, None);
-        assert!(rows.contains(&("CI".into(), "state:timer".into(), "disabled".into())));
+        let found = rows("Bead pinned at r412 and deployed 3cc38598ab", None);
+        assert!(
+            found.contains(&row("Bead", "revision", "", "r412")),
+            "{found:?}"
+        );
+        assert!(found.contains(&row("Bead", "deployed-commit", "", "3cc3859")));
+        let found = rows("The Brain viewer runs on dev-1", None);
+        assert!(found.contains(&row("Brain", "host", "", "dev-1")));
+        let found = rows("CI: the nightly timer is not enabled", None);
+        assert!(found.contains(&row("CI", "state:timer", "", "disabled")));
         // Versions, subnets and loopback are not addresses.
-        assert!(observe(
-            "dev-1 runs v1.2.3.4 on 10.0.0.0/24 and 127.0.0.1",
-            &names,
-            None
-        )
-        .iter()
-        .all(|(_, a, _)| a != "ip"));
-        assert!(observe("no entity here 10.9.8.7", &names, None).is_empty());
+        assert!(
+            rows("dev-1 runs v1.2.3.4 on 10.0.0.0/24 and 127.0.0.1", None)
+                .iter()
+                .all(|(_, a, _, _)| a != "ip")
+        );
+        assert!(rows("no entity here 10.9.8.7", None).is_empty());
         assert_eq!(
-            observe("- address 10.9.8.7", &names, Some("Laptop")),
-            vec![("Laptop".into(), "ip".into(), "10.9.8.7".into())]
+            rows("- address 10.9.8.7", Some("Laptop")),
+            vec![row("Laptop", "ip", "", "10.9.8.7")]
+        );
+    }
+
+    #[test]
+    fn qualifiers_name_the_repo_or_host_and_commits_need_a_deploy_word() {
+        // The repo or branch a commit belongs to qualifies it.
+        assert_eq!(
+            rows("Desktop: deployed helios-web at 1a2b3c4d.", None),
+            vec![row("Desktop", "deployed-commit", "helios-web", "1a2b3c4")]
+        );
+        // A package revision belongs to its package, qualified by the host.
+        let found = rows("Laptop installed nacre-niri-26.04.r3063.g568232cc", None);
+        assert!(
+            found.contains(&row("Compositors", "revision", "Laptop", "r3063")),
+            "{found:?}"
+        );
+        // A value inside a larger token is qualified by the token's name part.
+        assert_eq!(
+            rows("the kiosk build helios-web-r42 shipped", Some("Desktop")),
+            vec![row("Desktop", "revision", "helios-web", "r42")]
+        );
+        // Serials, digests, glued tokens and hashes far from a deploy word are
+        // not deployed commits.
+        for line in [
+            "Laptop deployed; serial 10000000344fe947 verified",
+            "Laptop installed SHA256 2b880c14f44da31aac04640212de41cff6cb0a4b043152b0",
+            "Laptop deployed boot id 0455e1f7-c6d6-446b-a372-1cf90fb65a4",
+            "Laptop pushed 914412f97397eedf54fed3a568ab641ba59ffc15 to the review branch and much later, in a separate step that is unrelated, deployed",
+        ] {
+            assert!(
+                rows(line, None).iter().all(|(_, a, _, _)| a != "deployed-commit"),
+                "{line}: {:?}",
+                rows(line, None)
+            );
+        }
+    }
+
+    fn note(path: &str, date: &str, body: &str) -> (String, Vec<u8>) {
+        (
+            path.to_owned(),
+            format!(
+                "# {path}\n\nRecorded: {date}T09:00:00+00:00\nConfidence: reported\n\n{body}\n"
+            )
+            .into_bytes(),
+        )
+    }
+
+    fn scan(notes: &[(String, Vec<u8>)]) -> Facts {
+        let vault: Notes = notes.iter().cloned().collect();
+        scan_facts(
+            &vault,
+            &names(),
+            NaiveDate::from_ymd_opt(2026, 6, 15).unwrap(),
+        )
+    }
+
+    #[test]
+    fn realistic_shapes_flag_only_real_contradictions() {
+        // Commits for different repos in one area on consecutive days: no flag.
+        let facts = scan(&[
+            note(
+                "checkpoints/a.md",
+                "2026-06-10",
+                "Desktop: deployed helios-web at 1a2b3c4d.",
+            ),
+            note(
+                "checkpoints/b.md",
+                "2026-06-11",
+                "Desktop: deployed atlas-api at 5e6f7a8b.",
+            ),
+            // The same repo two days later: ordinary progress.
+            note(
+                "checkpoints/c.md",
+                "2026-06-12",
+                "Desktop: deployed helios-web at 9c8d7e6f.",
+            ),
+        ]);
+        assert!(
+            facts.contradictions.is_empty(),
+            "{:?}",
+            facts.contradictions
+        );
+        assert_eq!(facts.supersessions.len(), 1);
+        assert_eq!(facts.supersessions[0].0.value, "9c8d7e6");
+        // A host's Tailscale address changing with "now" wording: supersession.
+        let facts = scan(&[
+            note(
+                "devices/a.md",
+                "2026-06-01",
+                "dev-1 tailscale address is 100.64.0.5.",
+            ),
+            note(
+                "devices/b.md",
+                "2026-06-12",
+                "dev-1 tailscale address is now 100.64.0.9.",
+            ),
+        ]);
+        assert!(facts.contradictions.is_empty());
+        assert_eq!(
+            (
+                facts.supersessions[0].0.value.as_str(),
+                facts.supersessions[0].1.value.as_str()
+            ),
+            ("100.64.0.9", "100.64.0.5")
+        );
+        // The same change without update wording weeks later still flags: an
+        // address must not change silently.
+        let facts = scan(&[
+            note(
+                "devices/a.md",
+                "2026-06-01",
+                "dev-1 tailscale address is 100.64.0.5.",
+            ),
+            note(
+                "devices/b.md",
+                "2026-06-12",
+                "dev-1 tailscale address is 100.64.0.9.",
+            ),
+        ]);
+        assert_eq!(facts.contradictions.len(), 1);
+        // Conflicting addresses on the same day: flag.
+        let facts = scan(&[
+            note(
+                "devices/a.md",
+                "2026-06-12",
+                "prod LAN address is 10.30.0.4.",
+            ),
+            note(
+                "devices/b.md",
+                "2026-06-12",
+                "prod LAN address is 10.30.0.5.",
+            ),
+        ]);
+        assert_eq!(facts.contradictions.len(), 1, "{:?}", facts.contradictions);
+        assert_eq!(facts.contradictions[0].0.subject(), "prod ip");
+        // Different revisions of one package within the window: flag; far apart: progress.
+        let facts = scan(&[
+            note("projects/a.md", "2026-06-10", "Laptop runs Bead r100."),
+            note("projects/b.md", "2026-06-11", "Laptop runs Bead r120."),
+        ]);
+        assert_eq!(facts.contradictions.len(), 1);
+        let facts = scan(&[
+            note("projects/a.md", "2026-05-01", "Laptop runs Bead r100."),
+            note("projects/b.md", "2026-06-11", "Laptop runs Bead r120."),
+        ]);
+        assert!(facts.contradictions.is_empty());
+    }
+
+    #[test]
+    fn reversals_need_a_title_header_or_link_not_a_word_in_passing() {
+        let decision = |path: &str, date: &str, title: &str, body: &str| {
+            (
+                path.to_owned(),
+                format!("# {title}\n\nRecorded: {date}T09:00:00+00:00\n\n{body}\n").into_bytes(),
+            )
+        };
+        let facts = scan(&[
+            decision(
+                "decisions/a.md",
+                "2026-06-01",
+                "Bead preview stays on the laptop",
+                "Keep it.",
+            ),
+            decision(
+                "decisions/b.md",
+                "2026-06-02",
+                "Bead dashboard header layout",
+                "The old Bead header stays disabled while the new one ships.",
+            ),
+            decision(
+                "decisions/c.md",
+                "2026-06-03",
+                "Revert the Bead preview decision",
+                "Undo it.",
+            ),
+            decision(
+                "decisions/d.md",
+                "2026-06-04",
+                "Laptop sync timer",
+                "This reverts [[decisions/a]] for the laptop.",
+            ),
+        ]);
+        let pairs: Vec<(&str, &str)> = facts
+            .reversals
+            .iter()
+            .map(|(d, _, o, _)| (d.as_str(), o.as_str()))
+            .collect();
+        assert_eq!(
+            pairs,
+            vec![
+                ("decisions/c.md", "decisions/b.md"),
+                ("decisions/d.md", "decisions/a.md")
+            ]
         );
     }
 

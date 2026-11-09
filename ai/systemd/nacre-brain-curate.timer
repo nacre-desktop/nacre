@@ -1,0 +1,8 @@
+[Unit]
+Description=Nightly Brain wiki curation after consolidation (installed disabled; enable explicitly)
+[Timer]
+OnCalendar=*-*-* 04:30:00
+RandomizedDelaySec=10m
+Persistent=true
+[Install]
+WantedBy=timers.target
