@@ -323,7 +323,9 @@ Item {
                 visible: root.section === "brain" && search.text.trim().length > 0
                 NacreText {
                     visible: DesktopExtras.brainSuggestion.length > 0
-                    text: "Did you mean: " + DesktopExtras.brainSuggestion
+                    text: NacreI18n.tr("extras.left-drawer.text.did-you-mean", "Did you mean: {query}", {
+                        query: DesktopExtras.brainSuggestion
+                    })
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
                 NacreText {
