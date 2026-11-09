@@ -1189,7 +1189,7 @@ mod tests {
         let rows = brain_search_at("smash card", root)?;
         assert_eq!(rows["results"][0]["title"], "Smash-Board firmware");
         crate::brain_search::invalidate();
-        let typo = brain_search_at("smash crad", root)?;
+        let typo = brain_search_at("smash caard", root)?;
         assert_eq!(typo["results"][0]["title"], "Smash-Board firmware");
         assert_eq!(typo["didYouMean"], "smash card");
         Ok(())

@@ -231,6 +231,7 @@ Item {
                 }
                 onTextChanged: {
                     DesktopExtras.brainQuery = text;
+                    DesktopExtras.brainSuggestion = "";
                     DesktopExtras.notes = [];
                     searchDelay.restart();
                 }
