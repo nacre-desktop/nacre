@@ -24,17 +24,27 @@ headings or markers, or write anything outside the JSON fields below.
 {"summary": "…", "facts": ["- …", "…"], "open_questions": ["- …"]}
 ```
 
-- `summary`: one plain paragraph (at most 1,000 characters, no line breaks,
+- `summary`: one plain paragraph of at most 600 characters (no line breaks,
   no headings or lists) saying what the subject is and its current state.
-- `facts`: the page's new "Current facts", 5 to 25 current fact lines when the
+- `facts`: the page's new "Current facts": 5 to 25 current fact lines when the
   evidence supports that many (never fewer than 1; never pad), then any
-  superseded lines. Exact formats, one line each, at most 400 characters:
+  superseded lines. Each fact is one line stating one claim in at most 300
+  characters (the claim, not counting the provenance in parentheses): split a
+  compound fact ("X runs Y and was moved to Z") into separate facts, each with
+  its own source. Exact formats:
   - current: `- <fact>. (confirmed YYYY-MM-DD; [[folder/note]])`
   - superseded: `- ~~<old fact>~~ (superseded YYYY-MM-DD by [[folder/newer-note]])`
   Several sources are comma separated: `[[a/x]], [[b/y]]`.
-- `open_questions`: at most 10 lines, `- <question>`, for conflicts the
-  evidence does not settle, stale facts nobody re-checked and next steps the
-  notes leave open. Use `[]` when there are none.
+- `open_questions`: at most 10 lines, `- <question>`, each at most 200
+  characters, for conflicts the evidence does not settle, stale facts nobody
+  re-checked and next steps the notes leave open. Use `[]` when there are none.
+
+Limits at a glance: summary ≤ 600 characters; 5–25 current facts; each fact's
+claim ≤ 300 characters, one claim per fact; at most 10 questions of ≤ 200
+characters.
+
+When the request ends with a list of errors in your previous reply, fix every
+one of them and send the complete corrected JSON object again (not a diff).
 
 ## Facts
 

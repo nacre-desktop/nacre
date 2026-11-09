@@ -40,9 +40,17 @@ const MAX_NOTES: usize = 80;
 const MAX_FACTS: usize = 25;
 const MAX_SUPERSEDED: usize = 25;
 const MAX_QUESTIONS: usize = 10;
-const FACT_CHARS: usize = 400;
-const SUMMARY_CHARS: usize = 1_200;
-const QUESTION_CHARS: usize = 300;
+/// Prompt targets and enforced claim/summary limits.
+const CLAIM_TARGET: usize = 300;
+const CLAIM_CHARS: usize = CLAIM_TARGET;
+const SUMMARY_TARGET: usize = 600;
+const SUMMARY_CHARS: usize = SUMMARY_TARGET;
+const QUESTION_TARGET: usize = 200;
+const QUESTION_CHARS: usize = 240;
+/// A whole fact line, provenance included.
+const LINE_CHARS: usize = 1_000;
+/// The previous reply quoted back on the retry.
+const RETRY_REPLY: usize = 16_000;
 const BLOCK_LIMIT: usize = 16_384;
 /// A curated page with open review flags is retried after this many days.
 const RECHECK_DAYS: i64 = 7;
@@ -619,26 +627,32 @@ impl Context<'_> {
     fn cited(&self, part: &str) -> std::result::Result<Option<NaiveDate>, String> {
         let resolved = self.resolver.resolve_all(self.page, part);
         if resolved.len() != WIKILINK.find_iter(part).count() || part.contains("](") {
-            return Err(format!("unsupported link form in: {}", clip(part, 120)));
+            return Err("uses an unsupported link form; cite notes only as [[folder/note]]".into());
         }
         let mut newest = None;
         for (target, path) in resolved {
             if target.contains("credentials") {
-                return Err("cites a credentials path".into());
+                return Err(format!(
+                    "link [[{target}]] names a credentials path; never cite it"
+                ));
             }
             let Some(path) = path else {
-                return Err(format!("link does not resolve: [[{target}]]"));
+                return Err(format!(
+                    "link [[{target}]] does not resolve to a note; cite only links shown in the data"
+                ));
             };
             if !self.allowed.contains(&path) {
                 return Err(format!(
-                    "cites a note that was not in the evidence: [[{target}]]"
+                    "link [[{target}]] was not in the evidence; cite only links shown in the data"
                 ));
             }
             let date = self
                 .vault
                 .get(&path)
                 .and_then(|b| date_from(&path, text(b)))
-                .ok_or_else(|| format!("cited note has no Recorded date: [[{target}]]"))?;
+                .ok_or_else(|| {
+                    format!("cited note [[{target}]] has no Recorded date; cite another")
+                })?;
             newest = newest.max(Some(date));
         }
         Ok(newest)
@@ -648,122 +662,208 @@ impl Context<'_> {
     /// later than the newest cited note (+1 day).
     fn dated(&self, date: &str, links: &str) -> std::result::Result<(), String> {
         let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
-            .map_err(|_| format!("invalid date {date}"))?;
+            .map_err(|_| format!("date {date} is not a valid YYYY-MM-DD date"))?;
         if date > self.today {
-            return Err(format!("future date {date}"));
+            return Err(format!(
+                "date {date} is in the future (today is {})",
+                self.today
+            ));
         }
-        let newest = self.cited(links)?.ok_or("fact cites no note")?;
+        let newest = self.cited(links)?.ok_or("cites no note")?;
         if date > newest + chrono::Duration::days(1) {
             return Err(format!(
-                "date {date} is later than its newest cited note ({newest})"
+                "date {date} is later than its newest cited note ({newest}); use {newest}"
             ));
         }
         Ok(())
     }
 }
 
-fn plain_line(value: &str, limit: usize, what: &str) -> std::result::Result<(), String> {
+/// One-line text: no line breaks or comment markers (they would write outside
+/// the curated block), no heading or quote, at most `limit` characters.
+fn plain_line(
+    value: &str,
+    limit: usize,
+    target: usize,
+    what: &str,
+) -> std::result::Result<(), String> {
     if value.contains(['\n', '\r']) || value.contains("<!--") || value.contains("-->") {
         return Err(format!(
-            "{what} tries to write outside the curated block (line break or marker)"
+            "{what} contains a line break or comment marker, which would write outside the curated block; keep it on one line"
         ));
     }
     if value.trim_start().starts_with('#') || value.trim_start().starts_with('>') {
-        return Err(format!("{what} starts a heading or quote"));
+        return Err(format!(
+            "{what} starts a heading or quote; write plain text"
+        ));
     }
-    if value.chars().count() > limit {
-        return Err(format!("{what} longer than {limit} characters"));
+    let length = value.chars().count();
+    if length > limit {
+        return Err(format!(
+            "{what} is {length} characters: split or shorten it to ≤ {target}"
+        ));
     }
     Ok(())
 }
 
-/// Check a reply and render the curated block, or say why it is rejected.
-fn render(reply: &Reply, ctx: &Context<'_>, notes: usize) -> std::result::Result<String, String> {
-    let summary = reply.summary.trim();
-    if summary.is_empty() {
-        return Err("empty summary".into());
-    }
-    plain_line(summary, SUMMARY_CHARS, "summary")?;
-    if summary.starts_with(['-', '*', '<']) {
-        return Err("summary is not a paragraph".into());
-    }
-    ctx.cited(summary)?;
-    let (mut current, mut superseded) = (Vec::new(), Vec::new());
-    for fact in &reply.facts {
-        let fact = fact.trim();
-        plain_line(fact, FACT_CHARS, "fact")?;
-        if let Some(c) = CURRENT.captures(fact) {
-            if c["claim"].contains("[[") || c["claim"].contains("~~") {
-                return Err(format!("malformed fact: {}", clip(fact, 120)));
-            }
-            ctx.dated(&c["date"], &c["links"])?;
-            if !current.contains(&fact) {
-                current.push(fact);
-            }
-        } else if let Some(c) = SUPERSEDED.captures(fact) {
-            if c["claim"].contains("[[") {
-                return Err(format!("malformed fact: {}", clip(fact, 120)));
-            }
-            if let (Some(date), Some(links)) = (c.name("cdate"), c.name("clinks")) {
-                ctx.dated(date.as_str(), links.as_str())?;
-            }
-            ctx.dated(&c["date"], &c["links"])?;
-            if !superseded.contains(&fact) {
-                superseded.push(fact);
-            }
-        } else {
+/// Check one fact line; true for a current fact, false for a superseded one.
+fn check_fact(fact: &str, what: &str, ctx: &Context<'_>) -> std::result::Result<bool, String> {
+    plain_line(fact, LINE_CHARS, LINE_CHARS, what)?;
+    let prefixed = |e: String| format!("{what}: {e}");
+    if let Some(c) = CURRENT.captures(fact) {
+        if c["claim"].contains("[[") || c["claim"].contains("~~") {
             return Err(format!(
-                "fact not in the required format: {}",
-                clip(fact, 120)
+                "{what}: keep links and ~~ out of the claim; sources go in the parentheses"
             ));
         }
-    }
-    if current.is_empty() || current.len() > MAX_FACTS || superseded.len() > MAX_SUPERSEDED {
-        return Err(format!(
-            "{} current and {} superseded facts (allowed 1–{MAX_FACTS} and 0–{MAX_SUPERSEDED})",
-            current.len(),
-            superseded.len()
-        ));
-    }
-    if reply.questions.len() > MAX_QUESTIONS {
-        return Err(format!("more than {MAX_QUESTIONS} open questions"));
-    }
-    let mut questions = Vec::new();
-    for q in &reply.questions {
-        let q = q.trim();
-        let q = q.strip_prefix("- ").unwrap_or(q).trim();
-        if q.is_empty() {
-            continue;
+        plain_line(&c["claim"], CLAIM_CHARS, CLAIM_TARGET, what)?;
+        ctx.dated(&c["date"], &c["links"]).map_err(prefixed)?;
+        Ok(true)
+    } else if let Some(c) = SUPERSEDED.captures(fact) {
+        if c["claim"].contains("[[") {
+            return Err(format!("{what}: keep links out of the struck claim"));
         }
-        plain_line(q, QUESTION_CHARS, "open question")?;
-        ctx.cited(q)?;
-        questions.push(format!("- {q}"));
+        plain_line(&c["claim"], CLAIM_CHARS, CLAIM_TARGET, what)?;
+        if let (Some(date), Some(links)) = (c.name("cdate"), c.name("clinks")) {
+            ctx.dated(date.as_str(), links.as_str()).map_err(prefixed)?;
+        }
+        ctx.dated(&c["date"], &c["links"]).map_err(prefixed)?;
+        Ok(false)
+    } else {
+        Err(format!(
+            "{what} is not in the required format `- <fact>. (confirmed YYYY-MM-DD; [[folder/note]])` or `- ~~<old fact>~~ (superseded YYYY-MM-DD by [[folder/note]])`: {}",
+            clip(fact, 120)
+        ))
     }
+}
+
+/// The curated block for a summary, fact lines and questions, as written.
+fn block_text(
+    today: NaiveDate,
+    notes: usize,
+    summary: &str,
+    facts: &[&str],
+    questions: &[String],
+) -> String {
     let mut block = format!(
-        "{} (curated {} from {notes} notes [agent: claude]; edit outside this block) -->\n{summary}\n\n",
+        "{} (curated {today} from {notes} notes [agent: claude]; edit outside this block) -->\n{summary}\n\n",
         generated::CURATED_START,
-        ctx.today
     );
-    for fact in current.iter().chain(superseded.iter()) {
+    for fact in facts {
         block.push_str(fact);
         block.push('\n');
     }
     if !questions.is_empty() {
         block.push_str("\n### Open questions\n\n");
-        for q in &questions {
+        for q in questions {
             block.push_str(q);
             block.push('\n');
         }
     }
     block.push_str(generated::CURATED_END);
+    block
+}
+
+fn question_line(q: &str) -> Option<String> {
+    let q = q.trim();
+    let q = q.strip_prefix("- ").unwrap_or(q).trim();
+    (!q.is_empty()).then(|| format!("- {q}"))
+}
+
+/// The block a reply asks for, unchecked: shown in reports for every attempt.
+fn draft_block(reply: &Reply, today: NaiveDate, notes: usize) -> String {
+    let facts: Vec<&str> = reply.facts.iter().map(|f| f.trim()).collect();
+    let questions: Vec<String> = reply
+        .questions
+        .iter()
+        .filter_map(|q| question_line(q))
+        .collect();
+    block_text(today, notes, reply.summary.trim(), &facts, &questions)
+}
+
+/// Check a reply and render the curated block, or list every problem found.
+fn render(
+    reply: &Reply,
+    ctx: &Context<'_>,
+    notes: usize,
+) -> std::result::Result<String, Vec<String>> {
+    let mut errors = Vec::new();
+    let summary = reply.summary.trim();
+    let checked = if summary.is_empty() {
+        Err("summary is empty".to_owned())
+    } else if summary.starts_with(['-', '*', '<']) {
+        Err("summary must be one plain paragraph, not a list".into())
+    } else {
+        plain_line(summary, SUMMARY_CHARS, SUMMARY_TARGET, "summary")
+            .and_then(|()| ctx.cited(summary).map_err(|e| format!("summary: {e}")))
+            .map(|_| ())
+    };
+    errors.extend(checked.err());
+    let (mut current, mut superseded) = (Vec::new(), Vec::new());
+    for (index, fact) in reply.facts.iter().enumerate() {
+        let fact = fact.trim();
+        match check_fact(fact, &format!("fact {}", index + 1), ctx) {
+            Ok(true) if !current.contains(&fact) => current.push(fact),
+            Ok(false) if !superseded.contains(&fact) => superseded.push(fact),
+            Ok(_) => (),
+            Err(error) => errors.push(error),
+        }
+    }
+    if errors.iter().all(|e| !e.starts_with("fact ")) {
+        if current.is_empty() {
+            errors.push("there are no current facts; give 5–25".into());
+        } else if current.len() > MAX_FACTS {
+            errors.push(format!(
+                "there are {} current facts; keep the {MAX_FACTS} most important",
+                current.len()
+            ));
+        }
+    }
+    if superseded.len() > MAX_SUPERSEDED {
+        errors.push(format!(
+            "there are {} superseded lines; keep the {MAX_SUPERSEDED} newest",
+            superseded.len()
+        ));
+    }
+    if reply.questions.len() > MAX_QUESTIONS {
+        errors.push(format!(
+            "there are {} open questions; keep at most {MAX_QUESTIONS}",
+            reply.questions.len()
+        ));
+    }
+    let mut questions = Vec::new();
+    for (index, q) in reply.questions.iter().enumerate() {
+        let Some(line) = question_line(q) else {
+            continue;
+        };
+        let what = format!("open question {}", index + 1);
+        let checked = plain_line(&line[2..], QUESTION_CHARS, QUESTION_TARGET, &what)
+            .and_then(|()| ctx.cited(&line).map_err(|e| format!("{what}: {e}")));
+        match checked {
+            Ok(_) => questions.push(line),
+            Err(error) => errors.push(error),
+        }
+    }
+    if !errors.is_empty() {
+        return Err(errors);
+    }
+    let lines: Vec<&str> = current.iter().chain(superseded.iter()).copied().collect();
+    let block = block_text(ctx.today, notes, summary, &lines, &questions);
     if let Some(rule) = brain_git::secret_rule(&block) {
-        return Err(format!("secret-looking text ({rule})"));
+        return Err(vec![format!(
+            "the reply holds secret-looking text ({rule}); leave secrets out"
+        )]);
     }
     if block.contains("credentials/") {
-        return Err("mentions a credentials path".into());
+        return Err(vec![
+            "the reply mentions a credentials path; leave it out".into()
+        ]);
     }
     if block.len() > BLOCK_LIMIT {
-        return Err(format!("curated block over {BLOCK_LIMIT} bytes"));
+        return Err(vec![format!(
+            "the curated block is {} bytes, over {BLOCK_LIMIT}; shorten it",
+            block.len()
+        )]);
     }
     Ok(block)
 }
@@ -1011,12 +1111,20 @@ enum Outcome {
     Skipped(String),
 }
 
+/// One model call for a page and what validation made of it.
+struct Attempt {
+    usage: String,
+    errors: Vec<String>,
+    /// The curated block the reply asks for (unchecked), or the raw reply.
+    draft: String,
+}
+
 struct Written {
     path: String,
     title: String,
     notes: usize,
     input: usize,
-    usage: String,
+    attempts: Vec<Attempt>,
     outcome: Outcome,
     proposal: Option<String>,
     packs: Vec<String>,
@@ -1132,6 +1240,35 @@ fn commit_page(
     }
 }
 
+/// The first request plus the rejected reply and its errors, for the one retry.
+fn retry_request(input: &str, reply: &str, errors: &[String]) -> String {
+    let previous: String = reply.chars().take(RETRY_REPLY).collect();
+    let mut out = format!(
+        "{input}\n<previous-reply>\n{}\n</previous-reply>\n\nYour previous reply (above) was rejected for these reasons:\n",
+        previous.replace("</previous-reply", "</previous_reply")
+    );
+    for error in errors {
+        out.push_str(&format!("- {error}\n"));
+    }
+    out.push_str("\nFix every error and reply with the complete corrected JSON object only, following all your instructions.\n");
+    out
+}
+
+fn usage_line(attempts: &[Attempt]) -> String {
+    match attempts {
+        [] => "-".into(),
+        [one] => one.usage.clone(),
+        [first, rest @ ..] => format!(
+            "{}; retry {}",
+            first.usage,
+            rest.iter()
+                .map(|a| a.usage.as_str())
+                .collect::<Vec<_>>()
+                .join("; ")
+        ),
+    }
+}
+
 fn fence(text: &str) -> String {
     let longest = text.split(|c| c != '`').map(str::len).max().unwrap_or(0);
     "`".repeat(longest.max(3) + 1)
@@ -1155,10 +1292,30 @@ fn report(runs: &[Written], header: &str) -> String {
             run.notes,
             run.input,
             run.input * 2 / 7,
-            run.usage
+            usage_line(&run.attempts)
         ));
         if !run.packs.is_empty() {
             out.push_str(&format!("- Packs: {}\n", run.packs.join(", ")));
+        }
+        for (index, attempt) in run.attempts.iter().enumerate() {
+            out.push_str(&format!(
+                "\n### Attempt {} — {}\n\n- Model usage: {}\n",
+                index + 1,
+                if attempt.errors.is_empty() {
+                    "valid"
+                } else {
+                    "rejected"
+                },
+                attempt.usage
+            ));
+            for error in &attempt.errors {
+                out.push_str(&format!("- Error: {error}\n"));
+            }
+            let fence = fence(&attempt.draft);
+            out.push_str(&format!(
+                "\nCurated block as proposed:\n\n{fence}markdown\n{}\n{fence}\n",
+                attempt.draft.trim_end()
+            ));
         }
         if let Some(page) = &run.proposal {
             let fence = fence(page);
@@ -1286,7 +1443,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             title: page.title.clone(),
             notes: input.notes,
             input: input.text.len(),
-            usage: String::new(),
+            attempts: Vec::new(),
             outcome: Outcome::Unchanged,
             proposal: None,
             packs: Vec::new(),
@@ -1299,21 +1456,12 @@ pub fn run(args: &[String]) -> Result<i32> {
             runs.push(written);
             continue;
         }
-        let reply = match call_claude(&args.model, &input.text) {
-            Call::Reply(reply, usage) => {
-                written.usage = usage;
-                reply
-            }
-            Call::Fail(reason) => {
-                written.outcome = Outcome::Rejected(reason);
-                runs.push(written);
-                continue;
-            }
-            Call::Stop(reason) => {
-                stopped = Some(reason);
-                break;
-            }
-        };
+        // A page whose layout curation cannot own is refused before any call.
+        if let Err(reason) = owned_region(&page_text) {
+            written.outcome = Outcome::Rejected(reason);
+            runs.push(written);
+            continue;
+        }
         let ctx = Context {
             page: &page.path,
             today,
@@ -1321,20 +1469,78 @@ pub fn run(args: &[String]) -> Result<i32> {
             allowed: &input.allowed,
             vault: &vault,
         };
-        let new_text = parse_reply(&reply)
-            .and_then(|r| render(&r, &ctx, input.notes))
-            .and_then(|block| splice(&page_text, &block));
-        let new_text = match new_text {
-            Ok(text) => text,
-            Err(reason) => {
-                written.outcome = Outcome::Rejected(reason);
-                runs.push(written);
-                continue;
+        // One call, and one retry with the validation errors fed back.
+        let mut request = input.text.clone();
+        let mut accepted = None;
+        let mut failure = None;
+        for round in 0..2 {
+            let (reply, usage) = match call_claude(&args.model, &request) {
+                Call::Reply(reply, usage) => (reply, usage),
+                Call::Fail(reason) => {
+                    failure = Some(reason);
+                    break;
+                }
+                Call::Stop(reason) => {
+                    stopped = Some(reason);
+                    break;
+                }
+            };
+            let parsed = parse_reply(&reply).map_err(|e| vec![e]);
+            let draft = match &parsed {
+                Ok(parsed) => draft_block(parsed, today, input.notes),
+                Err(_) => reply.clone(),
+            };
+            let checked = parsed
+                .and_then(|r| render(&r, &ctx, input.notes))
+                .and_then(|block| splice(&page_text, &block).map_err(|e| vec![e]));
+            match checked {
+                Ok(new_text) => {
+                    written.attempts.push(Attempt {
+                        usage,
+                        errors: Vec::new(),
+                        draft,
+                    });
+                    accepted = Some(new_text);
+                    break;
+                }
+                Err(errors) => {
+                    if round == 0 {
+                        request = retry_request(&input.text, &reply, &errors);
+                    }
+                    written.attempts.push(Attempt {
+                        usage,
+                        errors,
+                        draft,
+                    });
+                }
             }
+        }
+        if let Some(reason) = &stopped {
+            if !written.attempts.is_empty() {
+                written.outcome = Outcome::Rejected(format!("not finished: {reason}"));
+                runs.push(written);
+            }
+            break;
+        }
+        let Some(new_text) = accepted else {
+            let errors = written
+                .attempts
+                .last()
+                .map(|a| a.errors.join("; "))
+                .unwrap_or_default();
+            let reason = match failure {
+                Some(failure) if errors.is_empty() => failure,
+                Some(failure) => format!("{failure}; first attempt: {errors}"),
+                None if written.attempts.len() > 1 => format!("{errors} (after one retry)"),
+                None => errors,
+            };
+            written.outcome = Outcome::Rejected(reason);
+            runs.push(written);
+            continue;
         };
+        written.proposal = Some(new_text.clone());
         if args.dry {
             written.outcome = Outcome::Proposed;
-            written.proposal = Some(new_text);
         } else if new_text == page_text {
             written.outcome = Outcome::Unchanged;
         } else {
@@ -1370,11 +1576,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             run.path,
             run.notes,
             run.input * 2 / 7,
-            if run.usage.is_empty() {
-                "-"
-            } else {
-                &run.usage
-            }
+            usage_line(&run.attempts)
         );
     }
     let summary = counts
