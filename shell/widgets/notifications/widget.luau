@@ -9,7 +9,8 @@ local popouts=c.popouts
 local status_glyph=c.status_glyph
 local visual=require("../desktop-visuals")
 local font="IBM Plex Sans"
-local count_max=ui.text_width("999…",font,t.detail_font)
+-- Whole pixels, as the drawn box (see context.whole_width): the reservation fits the widest count.
+local count_max=math.ceil(ui.text_width("999…",font,t.detail_font))
 local function count_reservation()
     local hit_pad=popouts and t.status_hit_pad or 0
     return t.status_padding+t.status_count_padding+2*hit_pad+t.status_ink.notifications+t.item_gap+count_max
@@ -17,8 +18,9 @@ end
 local function bar(props,settings,_data)
     local hit_pad=popouts and t.status_hit_pad or 0
     local style=props.form_style
-    local available=props.available_width and math.max(0,props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
-        -(t.status_symbol_ink.notifications or t.status_ink.notifications)-t.item_gap)
+    -- A label is fitted to whole pixels, so its capacity is too.
+    local available=props.available_width and math.max(0,math.floor(props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
+        -(t.status_symbol_ink.notifications or t.status_ink.notifications)-t.item_gap))
     local value_capacity=math.min(count_max,available or count_max)
     local text_capacity=available or ui.text_width("Notifications",font,t.detail_font)
     local content_capacity=style=="icon+value" and value_capacity or text_capacity

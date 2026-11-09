@@ -56,12 +56,21 @@ local function status_glyph(id,text,kind,color)
         ui.Text{id="ink",width=t.icon_width,height=t.icon_font*t.line_height,shrink=0,
             text=text,family="Material Symbols Rounded",font_size=t.icon_font,color=color or "secondary",text_align="center"}}
 end
+-- Layout snaps every box to whole logical pixels, and text paints wrapped at its box's
+-- device width. A label box sized to its exact fractional advance can round below the
+-- glyph run and wrap the last glyph out of its one line ("34" drew as "3" at scale 1),
+-- so label boxes take whole pixels. The tolerance only absorbs animation rounding noise.
+local function whole_width(width)
+    return type(width)=="number" and math.ceil(width-1e-9) or width
+end
 local function status_text(p)
     -- Text paints from the top of its line box; centering a shorter box lowers
     -- the baseline without changing the group's hit area or the icon's centre.
     local offset=p.font_size==t.clock_font and t.clock_text_offset or t.status_text_offset
     p.height=p.font_size*t.line_height-2*offset
     p.family="IBM Plex Sans"
+    p.width=whole_width(p.width)
+    p.max_width=whole_width(p.max_width)
     return ui.Text(p)
 end
-return {ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text}
+return {ui=ui,kit=kit,t=t,centered_text=centered_text,launcher=launcher,popouts=popouts,ws_on=ws_on,tray_on=tray_on,dash_on=dash_on,focus_on=focus_on,updates_on=updates_on,updates_n=updates_n,header=header,title=title,title_width=title_width,cue_extent=cue_extent,dwell=dwell,ws_count=ws_count,ws_icons=ws_icons,thread=thread,pearl_accent=pearl_accent,glyph=glyph,status_glyph=status_glyph,status_text=status_text,whole_width=whole_width}

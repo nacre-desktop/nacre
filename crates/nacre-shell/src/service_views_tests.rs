@@ -3111,3 +3111,128 @@ fn status_value_styles_keep_icons_and_values_on_the_same_bar_line() -> Result<()
     }
     Ok(())
 }
+
+/// N0147: one bar's labels, on the laptop (1.5) and on an external output (1), with the counts given.
+fn n0147_bar(width: u32, scale: f32, updates: u64, notifications: u64) -> Result<Harness> {
+    let layout: serde_json::Value =
+        serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
+    let mut models = super::initial_models()?;
+    models.insert("widgets.layout".into(), Value::list(vec![layout]));
+    models.insert("bar.popouts".into(), Value::Bool(true));
+    models.insert("bar.updates.count".into(), Value::Number(updates as f64));
+    models.insert(
+        "bar.notifications.count".into(),
+        Value::Number(notifications as f64),
+    );
+    models.insert(
+        "bar.notifications.text".into(),
+        Value::Text(notifications.min(999).to_string()),
+    );
+    let mut bar = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("palette.json"),
+        models,
+        Config {
+            width,
+            height: 70,
+            scale,
+        },
+    )?;
+    settle_harness_animations(&mut bar)?;
+    Ok(bar)
+}
+
+/// N0147: every bar label stays on its one line at this output scale, and `label` paints its last glyph.
+fn assert_bar_label_whole(bar: &mut Harness, scale: f32, label: &str, case: &str) -> Result<()> {
+    let scene = bar.scene().clone();
+    let mut found = None;
+    for primitive in &scene.primitives {
+        let bead::render::Primitive::Text {
+            rect,
+            text,
+            family,
+            size,
+            ..
+        } = primitive
+        else {
+            continue;
+        };
+        if family.contains("Symbols") || text.is_empty() {
+            continue;
+        }
+        // Layout snaps boxes to whole logical pixels and the renderer wraps at the box's
+        // device width: a box below the glyph run drops the last glyph ("34" drew as "3").
+        let run = bead::render::text_width(&scene, text, family, *size)?;
+        let lines =
+            bead::render::text_lines(&scene, text, family, size * scale, (rect.w * scale).ceil())?;
+        assert!(
+            rect.w >= run && lines == 1,
+            "{case}: {text:?} needs {run} px but its box is {} px and paints {lines} lines at scale {scale}",
+            rect.w
+        );
+        if text == label {
+            found = Some((*rect, family.clone(), *size, run));
+        }
+    }
+    let (rect, family, size, run) = found.ok_or_else(|| format!("{case}: missing {label:?}"))?;
+    let last = label
+        .char_indices()
+        .next_back()
+        .map_or(0, |(index, _)| index);
+    let before = bead::render::text_width(&scene, &label[..last], &family, size)?;
+    let frame = bar.render()?;
+    let (ox, oy) = scene.offset;
+    let x0 = ((rect.x + ox + before + 1.) * scale).floor() as u32;
+    let x1 = ((rect.x + ox + run - 1.) * scale).ceil() as u32;
+    let y0 = ((rect.y + oy) * scale).floor() as u32;
+    let y1 = ((rect.y + oy + rect.h) * scale).ceil() as u32;
+    let (mut low, mut high) = (u32::MAX, 0);
+    for y in y0..y1.min(frame.height) {
+        for x in x0..x1.min(frame.width) {
+            let i = (y * frame.width + x) as usize * 4;
+            let luma = frame.pixels[i..i + 3]
+                .iter()
+                .map(|c| u32::from(*c))
+                .sum::<u32>();
+            low = low.min(luma);
+            high = high.max(luma);
+        }
+    }
+    assert!(
+        high.saturating_sub(low) > 96,
+        "{case}: the last glyph of {label:?} paints no ink at scale {scale} (luma {low}..{high})"
+    );
+    Ok(())
+}
+
+#[test]
+fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()> {
+    for (width, scale) in [(3440, 1.), (1920, 1.5)] {
+        for (count, label) in [(7, "7"), (34, "34"), (154, "154"), (1000, "999…")] {
+            let mut bar = n0147_bar(width, scale, count, count)?;
+            let case = format!("{width}@{scale} count {count}");
+            assert_bar_label_whole(&mut bar, scale, label, &case)?;
+        }
+    }
+    // The laptop bar runs first; the external output is plugged in later, starts before the
+    // count arrives and then animates to it. Both show the whole count.
+    let mut laptop = n0147_bar(1920, 1.5, 34, 154)?;
+    assert_bar_label_whole(&mut laptop, 1.5, "34", "laptop before hotplug")?;
+    let mut external = n0147_bar(3440, 1., 0, 154)?;
+    external.update(BTreeMap::from([(
+        "bar.updates.count".into(),
+        Value::Number(34.),
+    )]))?;
+    settle_harness_animations(&mut external)?;
+    assert_bar_label_whole(&mut external, 1., "34", "hotplugged external")?;
+    laptop.update(BTreeMap::new())?;
+    assert_bar_label_whole(&mut laptop, 1.5, "34", "laptop after hotplug")?;
+    assert_bar_label_whole(
+        &mut external,
+        1.,
+        "154",
+        "hotplugged external notifications",
+    )?;
+    Ok(())
+}

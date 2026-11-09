@@ -12,7 +12,8 @@ local updates_on=c.updates_on
 local status_glyph=c.status_glyph
 local visual=api.app.visual
 local font="IBM Plex Sans"
-local count_max=ui.text_width("999…",font,t.clock_font)
+-- Whole pixels, as the drawn box (see context.whole_width): the reservation fits the widest count.
+local count_max=math.ceil(ui.text_width("999…",font,t.clock_font))
 local function fit_count(value,width)
     return measure.ellipsize(value,math.min(count_max,width or count_max),font,t.clock_font)
 end
@@ -23,8 +24,9 @@ end
 local function bar(props,settings,_data)
     local hit_pad=popouts and t.status_hit_pad or 0
     local style=props.form_style
-    local available=props.available_width and math.max(0,props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
-        -(t.status_symbol_ink.package_2 or t.status_ink.package)-t.item_gap)
+    -- A label is fitted to whole pixels, so its capacity is too.
+    local available=props.available_width and math.max(0,math.floor(props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
+        -(t.status_symbol_ink.package_2 or t.status_ink.package)-t.item_gap))
     local count_capacity=math.min(count_max,available or count_max)
     local text_capacity=available or ui.text_width("Updates",font,t.clock_font)
     local content_capacity=style=="icon+value" and count_capacity or text_capacity

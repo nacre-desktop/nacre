@@ -80,15 +80,16 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             local available=centered and ((ui.resolve_for_check(ui.bind("bead.viewport.width")) or 1920)*.44) or max_width
             if props.available_width then available=math.min(available,props.available_width) end
             local capacity=math.max(0,math.min(max_width,available))
-            local text_capacity=math.max(0,capacity-icon_width-gap)
+            -- Whole pixels, as the label box must be (context.whole_width).
+            local text_capacity=math.max(0,math.floor(capacity-icon_width-gap))
             local natural_width=show_text and math.max(0,math.min(text_capacity,
-                math.max(min_width-icon_width-gap,ui.text_width(title_text,"IBM Plex Sans",t.title_font)))) or 0
+                math.ceil(math.max(min_width-icon_width-gap,ui.text_width(title_text,"IBM Plex Sans",t.title_font))))) or 0
             -- Keep the allocation at its configured maximum reservation while the
             -- rendered child follows the natural title width smoothly.
             local animated_text_width=show_text and ui.animate("title.width."..props.instance.iid,natural_width,.18,"out-cubic") or 0
             -- A shrinking max width takes effect immediately even while the existing
             -- natural-width animation is still moving toward its new target.
-            local text_width=math.max(0,math.min(animated_text_width,text_capacity))
+            local text_width=math.max(0,math.min(c.whole_width(animated_text_width),text_capacity))
             local shown=show_text and measure.ellipsize(title_text,text_width,"IBM Plex Sans",t.title_font) or ""
             local content_width=math.min(capacity,math.max(math.min(min_width,capacity),icon_width+gap+text_width))
             local action=behavior=="click" and ui.action("view.open","dashboard-today")

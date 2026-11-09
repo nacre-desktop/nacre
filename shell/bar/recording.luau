@@ -11,5 +11,5 @@ return {kit.Button{id="recording",visible=ui.bind("bar.recording"),direction="ro
     aria_label=ui.tr("bead.bar.stop-recording"),on_activate=ui.action("bar.recording.stop"),
     ui.Text{id="icon",text="stop_circle",family="Material Symbols Rounded",font_size=t.status_ink.package or 20,width=t.status_ink.package or 20,
         height=t.status_height,text_align="center",color="error"},
-    ui.Text{id="elapsed",text=ui.bind("bar.recording.elapsed"),width=ui.text_width("00:00:00","IBM Plex Sans",t.clock_font),
+    ui.Text{id="elapsed",text=ui.bind("bar.recording.elapsed"),width=math.ceil(ui.text_width("00:00:00","IBM Plex Sans",t.clock_font)),
         height=t.status_height,font_size=t.clock_font,color="error"}}}

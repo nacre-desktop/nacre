@@ -10,10 +10,11 @@ local status_glyph=c.status_glyph
 local visual=require("../desktop-visuals")
 local clock_font="IBM Plex Sans"
 local display_font=visual.display_font
-local time_max=math.max(t.clock_min_width,ui.text_width("23:59",clock_font,t.clock_font),
-    ui.text_width("11:59 PM",clock_font,t.clock_font),ui.text_width("12:59 PM",clock_font,t.clock_font))
-local seconds_max=math.max(ui.text_width("23:59:59",clock_font,t.clock_font),ui.text_width("12:59:59 PM",clock_font,t.clock_font))
-local date_max=math.max(ui.text_width("9999-12-31",clock_font,t.detail_font),ui.text_width("8888-88-88",clock_font,t.detail_font),ui.text_width("0000-00-00",clock_font,t.detail_font))+kit.tokens.spacing.hairline
+-- Whole pixels, as each drawn label box (context.whole_width), so the widest value still fits.
+local time_max=math.ceil(math.max(t.clock_min_width,ui.text_width("23:59",clock_font,t.clock_font),
+    ui.text_width("11:59 PM",clock_font,t.clock_font),ui.text_width("12:59 PM",clock_font,t.clock_font)))
+local seconds_max=math.ceil(math.max(ui.text_width("23:59:59",clock_font,t.clock_font),ui.text_width("12:59:59 PM",clock_font,t.clock_font)))
+local date_max=math.ceil(math.max(ui.text_width("9999-12-31",clock_font,t.detail_font),ui.text_width("8888-88-88",clock_font,t.detail_font),ui.text_width("0000-00-00",clock_font,t.detail_font)))+kit.tokens.spacing.hairline
 local date_content_max=time_max+t.item_gap+date_max
 local function reserve_clock(content_width)
     local hit_pad=popouts and t.status_hit_pad or 0
@@ -100,8 +101,8 @@ local function clock_content(style,instance_id,available_width)
     end
     local date=ui.resolve_for_check(ui.bind("bead.desktop.clock.date")) or ""
     local capacity=math.min(date_content_max,available_width or date_content_max)
-    local time_natural=ui.text_width(measure.ellipsize(time,time_max,clock_font,t.clock_font),clock_font,t.clock_font)
-    local date_natural=ui.text_width(measure.ellipsize(date,date_max,clock_font,t.detail_font),clock_font,t.detail_font)
+    local time_natural=math.ceil(ui.text_width(measure.ellipsize(time,time_max,clock_font,t.clock_font),clock_font,t.clock_font))
+    local date_natural=math.ceil(ui.text_width(measure.ellipsize(date,date_max,clock_font,t.detail_font),clock_font,t.detail_font))
     local target_time=math.min(time_natural,capacity)
     local target_date=math.min(date_natural,math.max(0,capacity-target_time-(date_natural>0 and t.item_gap or 0)))
     local target=target_time+target_date+(target_date>0 and target_time>0 and t.item_gap or 0)
