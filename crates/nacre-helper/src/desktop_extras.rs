@@ -11,7 +11,7 @@ use std::{
     os::unix::process::CommandExt,
     path::{Path, PathBuf},
     process::{Command, Stdio},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 fn state(paths: &Paths) -> PathBuf {
@@ -523,86 +523,26 @@ fn vault() -> Result<PathBuf> {
     Ok(fs::canonicalize(path)?)
 }
 fn brain_search(query: &str) -> Result<Value> {
-    if query.chars().count() > 160 {
-        return Ok(json!([]));
-    }
-    let words: Vec<String> = query
-        .split_whitespace()
-        .take(8)
-        .map(str::to_lowercase)
-        .collect();
-    if words.is_empty() {
-        return Ok(json!([]));
+    if query.chars().count() > 160 || query.trim().is_empty() {
+        return Ok(json!({"results":[],"didYouMean":null}));
     }
     let root = vault()?;
-    brain_search_at(&words, &root)
+    brain_search_at(query, &root)
 }
-fn brain_search_at(words: &[String], root: &Path) -> Result<Value> {
-    let start = Instant::now();
-    let mut results = Vec::new();
-    for (count, entry) in walkdir::WalkDir::new(root)
-        .follow_links(false)
-        .into_iter()
-        .filter_map(std::result::Result::ok)
-        .enumerate()
-    {
-        if count >= 10000 || start.elapsed() > Duration::from_millis(1500) {
-            break;
-        }
-        let path = entry.path();
-        if entry.file_type().is_symlink()
-            || !path.is_file()
-            || path.extension().is_none_or(|v| v != "md")
-        {
-            continue;
-        }
-        let relative = path.strip_prefix(root)?;
-        if relative
-            .components()
-            .any(|p| p.as_os_str().to_string_lossy().starts_with('.'))
-        {
-            continue;
-        }
-        let meta = match fs::metadata(path) {
-            Ok(v) if v.len() <= 512 * 1024 => v,
-            _ => continue,
-        };
-        let text = match fs::read_to_string(path) {
-            Ok(v) => v,
-            Err(_) => continue,
-        };
-        let folded = text.to_lowercase();
-        if !words.iter().all(|w| folded.contains(w)) {
-            continue;
-        }
-        let title = text
-            .lines()
-            .find_map(|line| line.strip_prefix("# "))
-            .unwrap_or_else(|| path.file_stem().and_then(|v| v.to_str()).unwrap_or(""));
-        let excerpt = text
-            .lines()
-            .find(|line| {
-                !line.starts_with('#') && words.iter().any(|w| line.to_lowercase().contains(w))
-            })
-            .unwrap_or(title);
-        let mtime = meta
-            .modified()
-            .unwrap_or(UNIX_EPOCH)
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs_f64();
-        results.push(json!({"path":relative.to_string_lossy(),"title":clean(title).chars().take(120).collect::<String>(),"preview":clean(excerpt).chars().take(180).collect::<String>(),"score":words.iter().map(|w| folded.matches(w).count()).sum::<usize>(),"mtime":mtime}));
-    }
-    results.sort_by(|a, b| {
-        b["score"].as_u64().cmp(&a["score"].as_u64()).then_with(|| {
-            b["mtime"]
-                .as_f64()
-                .partial_cmp(&a["mtime"].as_f64())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-    });
-    results.truncate(25);
-    Ok(Value::Array(results))
+fn brain_search_at(query: &str, root: &Path) -> Result<Value> {
+    let ranked = crate::brain_search::search(
+        root,
+        query,
+        &crate::brain_search::Options {
+            limit: 20,
+            ..Default::default()
+        },
+    )?;
+    let results = ranked["results"].as_array().cloned().unwrap_or_default();
+    Ok(json!({"results": results.iter().map(|row| json!({
+        "path": row["path"], "title": row["title"], "preview": row["snippet"],
+        "chips": row["chips"], "rank": row["rank"]
+    })).collect::<Vec<_>>(), "didYouMean": ranked["didYouMean"]}))
 }
 fn menu_route(command: &str) -> String {
     if let Some((_, tail)) = command.split_once("nacrectl ui nacre menu ") {
@@ -1240,20 +1180,21 @@ mod tests {
     }
 
     #[test]
-    fn brain_search_requires_every_term_and_skips_hidden_files_and_symlinks() -> Result<()> {
+    fn brain_search_uses_ranked_aliases_and_returns_suggestions() -> Result<()> {
         let folder = tempfile::tempdir()?;
         let root = folder.path();
-        fs::write(root.join("visible.md"), "# Visible\nalpha beta\n")?;
-        fs::create_dir(root.join(".hidden"))?;
-        fs::write(root.join(".hidden/secret.md"), "alpha beta")?;
-        std::os::unix::fs::symlink(root.join("visible.md"), root.join("alias.md"))?;
-        let rows = brain_search_at(&["alpha".into(), "beta".into()], root)?;
-        assert_eq!(rows.as_array().unwrap().len(), 1);
-        assert_eq!(rows[0]["path"], "visible.md");
-        assert!(brain_search_at(&["alpha".into(), "missing".into()], root)?
-            .as_array()
-            .unwrap()
-            .is_empty());
+        fs::create_dir(root.join("projects"))?;
+        fs::write(
+            root.join("projects/board.md"),
+            "# Smash-Board firmware\n\nFlash card firmware.\n",
+        )?;
+        crate::brain_search::invalidate();
+        let rows = brain_search_at("smash card", root)?;
+        assert_eq!(rows["results"][0]["title"], "Smash-Board firmware");
+        crate::brain_search::invalidate();
+        let typo = brain_search_at("smash caard", root)?;
+        assert_eq!(typo["results"][0]["title"], "Smash-Board firmware");
+        assert_eq!(typo["didYouMean"], "smash card");
         Ok(())
     }
 }

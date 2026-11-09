@@ -10,6 +10,7 @@ Singleton {
     property var clips: []
     property var keys: []
     property var notes: []
+    property string brainSuggestion: ""
     property string brainQuery: ""
     property string notesQuery: ""
     property string message: ""
@@ -46,7 +47,8 @@ Singleton {
         if (action === "keys")
             keys = result.result;
         if (action === "brain" && result.query === brainQuery) {
-            notes = result.result;
+            notes = result.result.results || [];
+            brainSuggestion = result.result.didYouMean || "";
             notesQuery = result.query;
         }
         if (action === "pin" || action === "delete")

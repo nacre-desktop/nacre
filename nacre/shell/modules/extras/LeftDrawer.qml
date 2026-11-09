@@ -231,6 +231,7 @@ Item {
                 }
                 onTextChanged: {
                     DesktopExtras.brainQuery = text;
+                    DesktopExtras.brainSuggestion = "";
                     DesktopExtras.notes = [];
                     searchDelay.restart();
                 }
@@ -243,7 +244,7 @@ Item {
                 }
                 Timer {
                     id: searchDelay
-                    interval: 250
+                    interval: 120
                     onTriggered: DesktopExtras.request("brain", {
                         query: search.text
                     })
@@ -321,6 +322,13 @@ Item {
                 spacing: 8
                 visible: root.section === "brain" && search.text.trim().length > 0
                 NacreText {
+                    visible: (DesktopExtras.brainSuggestion || "").length > 0
+                    text: NacreI18n.tr("extras.left-drawer.text.did-you-mean", "Did you mean: {query}", {
+                        query: DesktopExtras.brainSuggestion || ""
+                    })
+                    color: NacreColours.palette.m3onSurfaceVariant
+                }
+                NacreText {
                     text: DesktopExtras.busy.brain ? NacreI18n.tr("extras.left-drawer.text.searching", "Searching…") : NacreI18n.tr("extras.left-drawer.text.knowledge", "Knowledge")
                     color: NacreColours.palette.m3primary
                 }
@@ -343,6 +351,14 @@ Item {
                                 text: note.modelData.title
                                 textFormat: Text.PlainText
                                 font.pointSize: 11
+                            }
+                            NacreText {
+                                width: 418
+                                elide: Text.ElideRight
+                                visible: (note.modelData.chips || []).length > 0
+                                text: (note.modelData.chips || []).join(" · ")
+                                font.pointSize: 8
+                                color: NacreColours.palette.m3primary
                             }
                             NacreText {
                                 width: 418

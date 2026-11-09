@@ -60,7 +60,33 @@ impl Context {
         if self.brain_query != query {
             return Vec::new();
         }
-        self.notes.iter().map(|item|{let path=text::field(item,"path");self.value_row("actions.assistant.search",&hash(&path),&text::field(item,"title"),"note",item["path"].clone(),"description",&text::field(item,"preview"),json!({"breadcrumb":"Nacre Brain","note":true,"matchedQuery":query,"filePath":format!("{}/{}",text::field(&self.workflows,"brainRoot"),path),"previewText":item["preview"]}))}).collect()
+        self.notes
+            .iter()
+            .map(|item| {
+                let path = text::field(item, "path");
+                let breadcrumb = item["chips"]
+                    .as_array()
+                    .map(|chips| {
+                        chips
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .collect::<Vec<_>>()
+                            .join(" · ")
+                    })
+                    .filter(|chips| !chips.is_empty())
+                    .unwrap_or_else(|| "Nacre Brain".into());
+                self.value_row(
+                    "actions.assistant.search",
+                    &hash(&path),
+                    &text::field(item, "title"),
+                    "note",
+                    item["path"].clone(),
+                    "description",
+                    &text::field(item, "preview"),
+                    json!({"breadcrumb":breadcrumb,"note":true,"matchedQuery":query,"filePath":format!("{}/{}",text::field(&self.workflows,"brainRoot"),path),"previewText":item["preview"]}),
+                )
+            })
+            .collect()
     }
     pub fn workflow_rows(&self, query: &str) -> Vec<Value> {
         let mut rows = Vec::new();

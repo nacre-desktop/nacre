@@ -1163,7 +1163,21 @@ async fn run_inner(
                                 if request.reply.send(Err(failure(ErrorCode::Busy,"Launcher provider request limit reached",true))).is_err(){tracing::debug!("Launcher caller ended");}
                             }else{
                                 let pool=pool.clone();
-                                jobs.spawn_local(async move {let result=pool.request(&action,&term).await;(Some(request),action,term,result)});
+                                if action == "brain" {
+                                    let search_term = term.clone();
+                                    jobs.spawn_local(async move {
+                                        let result = tokio::task::spawn_blocking(move || {
+                                            let root = crate::brain_data::root_path()?;
+                                            crate::brain_search::search(&root, &search_term,
+                                                &crate::brain_search::Options { limit: 8, ..Default::default() })
+                                        }).await
+                                            .map_err(|_| failure(ErrorCode::Unavailable, "Brain search worker ended", true))
+                                            .and_then(|result| result.map_err(|_| failure(ErrorCode::Unavailable, "Brain search is unavailable", true)));
+                                        (Some(request), action, term, result)
+                                    });
+                                } else {
+                                    jobs.spawn_local(async move {let result=pool.request(&action,&term).await;(Some(request),action,term,result)});
+                                }
                             }
                             continue;
                         }
@@ -2002,6 +2016,7 @@ fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, S
     let term = text::field(&scope, "text");
     let enabled = |key| context.source_options[key] != false;
     let action = match kind {
+        "brain" if enabled("brain") && !term.is_empty() && term.chars().count() <= 160 => "brain",
         "files" if enabled("files") => "files",
         "calculator" if enabled("calculator") && conversion_query(&term) => "convert",
         "all" if request.route.as_deref() == Some("software.packages") && !term.is_empty() => {
@@ -2062,6 +2077,23 @@ fn apply_provider(context: &mut Context, action: &str, term: &str, value: &Value
         "emoji" => {
             context.previews["emojiQuery"] = json!(term);
             context.previews["emojiMatches"] = value["entries"].clone();
+        }
+        "brain" => {
+            context.brain_query = term.into();
+            context.notes = value["results"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .map(|row| json!({"path":row["path"],"title":row["title"],"preview":row["snippet"],"chips":row["chips"]}))
+                .collect();
+            if !context.previews["providerMessages"].is_object() {
+                context.previews["providerMessages"] = json!({});
+            }
+            context.previews["providerMessages"][term] = value["didYouMean"]
+                .as_str()
+                .map(|suggestion| format!("Did you mean: {suggestion}"))
+                .unwrap_or_default()
+                .into();
         }
         "convert" => {
             context.previews["conversionQuery"] = json!(term);
@@ -2325,6 +2357,33 @@ mod tests {
             failed["conversion"]["error"],
             "The result is undefined or outside the numeric range"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn brain_scope_uses_the_ranked_provider_and_preserves_suggestion_and_chips() -> Result<()> {
+        let mut state = engine()?;
+        let request: MenuQuery =
+            serde_json::from_value(json!({"query":"#smash card","mode":"search"}))?;
+        assert_eq!(
+            provider_request(&state.loaded.context, &request),
+            Some(("brain".into(), "smash card".into()))
+        );
+        apply_provider(
+            &mut state.loaded.context,
+            "brain",
+            "smash card",
+            &json!({
+                "results":[{"path":"projects/board.md","title":"Smash-Board notes","snippet":"Board firmware","chips":["Newbringer › Smash-Board"]}],
+                "didYouMean":"smash cards"
+            }),
+        );
+        let result = state.query(request)?;
+        assert_eq!(result["order"].as_array().unwrap().len(), 1);
+        let row = &result["items"][result["order"][0].as_str().unwrap()];
+        assert_eq!(row["name"], "Smash-Board notes");
+        assert_eq!(row["breadcrumb"], "Newbringer › Smash-Board");
+        assert_eq!(result["message"], "Did you mean: smash cards");
         Ok(())
     }
     #[test]
