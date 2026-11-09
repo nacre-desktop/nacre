@@ -1408,6 +1408,7 @@
   "extras.left-drawer.text.refresh": "nacre/shell/modules/extras/LeftDrawer.qml: text",
   "extras.left-drawer.text.save-to-brain": "nacre/shell/modules/extras/LeftDrawer.qml: text",
   "extras.left-drawer.text.searching": "nacre/shell/modules/extras/LeftDrawer.qml: text",
+  "extras.left-drawer.text.did-you-mean": "Left drawer Brain search: typo correction hint; query is the suggested replacement.",
   "extras.left-drawer.text.used-for-new-chats-here-and-in-the-workspace-existing-c": "nacre/shell/modules/extras/LeftDrawer.qml: text",
   "extras.left-drawer.text.workspace-chats": "nacre/shell/modules/extras/LeftDrawer.qml: text",
   "extras.overview.placeholder.search-windows-or-applications": "nacre/shell/modules/extras/Overview.qml: placeholder",

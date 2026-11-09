@@ -1423,6 +1423,7 @@
   "extras.left-drawer.text.refresh": "Refresh",
   "extras.left-drawer.text.save-to-brain": "Save to brain",
   "extras.left-drawer.text.searching": "Searching…",
+  "extras.left-drawer.text.did-you-mean": "Did you mean: {query}",
   "extras.left-drawer.text.used-for-new-chats-here-and-in-the-workspace-existing-c": "Used for new chats here and in the workspace. Existing chats keep their assistant.",
   "extras.left-drawer.text.workspace-chats": "Workspace chats",
   "extras.overview.placeholder.search-windows-or-applications": "Search windows or applications",
