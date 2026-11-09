@@ -2365,11 +2365,19 @@ mod tests {
         let mut state = engine()?;
         let request: MenuQuery =
             serde_json::from_value(json!({"query":"#smash card","mode":"search"}))?;
-        assert_eq!(provider_request(&state.loaded.context, &request), Some(("brain".into(), "smash card".into())));
-        apply_provider(&mut state.loaded.context, "brain", "smash card", &json!({
-            "results":[{"path":"projects/board.md","title":"Smash-Board notes","snippet":"Board firmware","chips":["Newbringer › Smash-Board"]}],
-            "didYouMean":"smash cards"
-        }));
+        assert_eq!(
+            provider_request(&state.loaded.context, &request),
+            Some(("brain".into(), "smash card".into()))
+        );
+        apply_provider(
+            &mut state.loaded.context,
+            "brain",
+            "smash card",
+            &json!({
+                "results":[{"path":"projects/board.md","title":"Smash-Board notes","snippet":"Board firmware","chips":["Newbringer › Smash-Board"]}],
+                "didYouMean":"smash cards"
+            }),
+        );
         let result = state.query(request)?;
         assert_eq!(result["order"].as_array().unwrap().len(), 1);
         let row = &result["items"][result["order"][0].as_str().unwrap()];

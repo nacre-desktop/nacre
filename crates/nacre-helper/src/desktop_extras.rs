@@ -1184,7 +1184,10 @@ mod tests {
         let folder = tempfile::tempdir()?;
         let root = folder.path();
         fs::create_dir(root.join("projects"))?;
-        fs::write(root.join("projects/board.md"), "# Smash-Board firmware\n\nFlash card firmware.\n")?;
+        fs::write(
+            root.join("projects/board.md"),
+            "# Smash-Board firmware\n\nFlash card firmware.\n",
+        )?;
         crate::brain_search::invalidate();
         let rows = brain_search_at("smash card", root)?;
         assert_eq!(rows["results"][0]["title"], "Smash-Board firmware");
