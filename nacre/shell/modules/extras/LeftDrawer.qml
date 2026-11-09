@@ -322,9 +322,9 @@ Item {
                 spacing: 8
                 visible: root.section === "brain" && search.text.trim().length > 0
                 NacreText {
-                    visible: DesktopExtras.brainSuggestion.length > 0
+                    visible: (DesktopExtras.brainSuggestion || "").length > 0
                     text: NacreI18n.tr("extras.left-drawer.text.did-you-mean", "Did you mean: {query}", {
-                        query: DesktopExtras.brainSuggestion
+                        query: DesktopExtras.brainSuggestion || ""
                     })
                     color: NacreColours.palette.m3onSurfaceVariant
                 }
