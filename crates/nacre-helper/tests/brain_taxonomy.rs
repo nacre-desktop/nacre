@@ -127,6 +127,138 @@ fn python_memory_and_native_note_share_canonical_headers() {
 }
 
 #[test]
+fn memory_topics_only_deduplicate_exact_category_slugs() {
+    let cases = [
+        (
+            "AI and agents, Brain overlap",
+            vec!["AI & agents"],
+            vec!["Brain"],
+            vec!["brain-overhaul"],
+            vec!["brain-overhaul"],
+            vec!["Brain"],
+        ),
+        (
+            "Nacre with Brain topic",
+            vec!["nacre"],
+            vec![],
+            vec!["Brain overhaul"],
+            vec!["brain-overhaul"],
+            vec![],
+        ),
+        (
+            "Lead workflow with deploy",
+            vec!["AI & agents"],
+            vec!["Lead workflow"],
+            vec!["deploy"],
+            vec!["deploy"],
+            vec!["Lead workflow"],
+        ),
+        (
+            "Exact Brain duplicate",
+            vec!["AI & agents"],
+            vec!["Brain"],
+            vec!["brain"],
+            vec![],
+            vec!["Brain"],
+        ),
+        (
+            "Only exact duplicate removed",
+            vec!["AI & agents"],
+            vec!["Brain"],
+            vec!["brain-overhaul", "brain", "deploy"],
+            vec!["brain-overhaul", "deploy"],
+            vec!["Brain"],
+        ),
+    ];
+    for (index, (name, worlds, areas, topics, expected_topics, expected_areas)) in
+        cases.into_iter().enumerate()
+    {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home");
+        let vault = root.path().join("vault");
+        fs::create_dir_all(&home).unwrap();
+        let input = serde_json::json!({"world": worlds, "area": areas, "topic": topics});
+        let mut args = vec![
+            "nacre-ai-memory".to_owned(),
+            "--title".to_owned(),
+            format!("Topic case {index}"),
+            "--source".to_owned(),
+            "taxonomy parity fixture".to_owned(),
+            "--kind".to_owned(),
+            "checkpoints".to_owned(),
+        ];
+        for (flag, values) in [
+            ("--world", &worlds),
+            ("--area", &areas),
+            ("--topic", &topics),
+        ] {
+            for value in values {
+                args.extend([flag.to_owned(), (*value).to_owned()]);
+            }
+        }
+        let refs = args.iter().map(String::as_str).collect::<Vec<_>>();
+        let native = call(
+            &home,
+            &vault,
+            "nacre-ai-memory",
+            &refs[1..],
+            "Synthetic topic deduplication fixture.",
+        );
+        assert!(
+            native.status.success(),
+            "{name}: {}",
+            String::from_utf8_lossy(&native.stderr)
+        );
+        let native_json: serde_json::Value = serde_json::from_slice(&native.stdout).unwrap();
+
+        let writer = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../bin/nacre-ai-memory.py.rollback"
+        );
+        let python = Command::new("python3")
+            .args([
+                "-c",
+                "import argparse, importlib.machinery, importlib.util, json, sys; loader=importlib.machinery.SourceFileLoader('memory_writer', sys.argv[1]); spec=importlib.util.spec_from_loader(loader.name, loader); mod=importlib.util.module_from_spec(spec); loader.exec_module(mod); data=json.loads(sys.argv[2]); args=argparse.Namespace(title=sys.argv[3], source='taxonomy parity fixture', kind='checkpoints', confidence='reported', world=data['world'], area=data['area'], topic=data['topic']); print(json.dumps(mod.remember(args, sys.stdin.read())))",
+                writer,
+                &input.to_string(),
+                &format!("Topic case {index}"),
+            ])
+            .env_clear()
+            .env("HOME", &home)
+            .env("NACRE_BRAIN", &vault)
+            .env("NACRE_HELPER_BINARY", helper())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map(|mut child| {
+                child.stdin.take().unwrap().write_all(b"Synthetic topic deduplication fixture.").unwrap();
+                child.wait_with_output().unwrap()
+            })
+            .unwrap();
+        assert!(
+            python.status.success(),
+            "{name}: {}",
+            String::from_utf8_lossy(&python.stderr)
+        );
+        let python_json: serde_json::Value = serde_json::from_slice(&python.stdout).unwrap();
+        for key in ["worlds", "areas", "topics"] {
+            assert_eq!(native_json[key], python_json[key], "{name}: {key} parity");
+        }
+        assert_eq!(
+            native_json["topics"],
+            serde_json::json!(expected_topics),
+            "{name}"
+        );
+        assert_eq!(
+            native_json["areas"],
+            serde_json::json!(expected_areas),
+            "{name}"
+        );
+    }
+}
+
+#[test]
 fn invalid_category_shaped_inputs_do_not_create_junk_registry_entries() {
     let root = tempfile::tempdir().unwrap();
     let home = root.path();

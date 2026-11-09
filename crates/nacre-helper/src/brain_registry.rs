@@ -781,7 +781,10 @@ fn resolve_inner(
     for t in topics {
         let topic = normalize_topic(t);
         if let Some((_, w, a)) = resolve(&r, t).or_else(|| resolve(&r, &topic)) {
-            if explicit_worlds.is_empty() || explicit_worlds.contains(&w.to_owned()) {
+            let exact_category = topic == slug(w) || a.is_some_and(|area| topic == slug(area));
+            if exact_category
+                && (explicit_worlds.is_empty() || explicit_worlds.contains(&w.to_owned()))
+            {
                 if !explicit_worlds.contains(&w.to_owned()) {
                     explicit_worlds.push(w.to_owned());
                 }
