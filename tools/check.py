@@ -356,10 +356,13 @@ def main():
         run([*node_cmd, "--check", str(ROOT / "brain/web/app.js")])
         graph_script = ROOT / "brain/web/graph.js"
         graph_browser_test = ROOT / "brain/tests/browser-graph.mjs"
+        ask_browser_test = ROOT / "brain/tests/browser-ask.mjs"
         if graph_script.is_file():
             run([*node_cmd, "--check", str(graph_script)])
         if graph_browser_test.is_file():
             run([*node_cmd, "--check", str(graph_browser_test)])
+        if ask_browser_test.is_file():
+            run([*node_cmd, "--check", str(ask_browser_test)])
         vendor_graph = ROOT / "brain/web/vendor/d3-force.min.js"
         if vendor_graph.is_file():
             run([*node_cmd, "--check", str(vendor_graph)])
@@ -371,6 +374,8 @@ def main():
                 run([*node_cmd, str(prettier), "--check", str(graph_script)])
             if graph_browser_test.is_file():
                 run([*node_cmd, str(prettier), "--check", str(graph_browser_test)])
+            if ask_browser_test.is_file():
+                run([*node_cmd, str(prettier), "--check", str(ask_browser_test)])
             print("Brain JavaScript syntax and formatting passed.", flush=True)
             run([*node_cmd, str(prettier), "--check", str(spotify_script)])
             print("Spicetify JavaScript syntax and formatting passed.", flush=True)

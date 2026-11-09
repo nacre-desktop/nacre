@@ -408,7 +408,11 @@ fn scan(root: &Path) -> Result<Vec<(String, u64, u64)>> {
     for entry in walkdir::WalkDir::new(root)
         .follow_links(false)
         .into_iter()
-        .filter_entry(|e| e.depth() == 0 || !e.file_name().to_string_lossy().starts_with('.'))
+        .filter_entry(|e| {
+            e.depth() == 0
+                || (e.file_name() != "credentials"
+                    && !e.file_name().to_string_lossy().starts_with('.'))
+        })
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file() && e.path().extension().is_some_and(|s| s == "md"))
     {
@@ -1165,6 +1169,17 @@ pub fn search(root: &Path, query: &str, options: &Options) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn indexing_prunes_credentials_before_reading_notes() {
+        let root = tempfile::tempdir().unwrap();
+        fs::create_dir(root.path().join("credentials")).unwrap();
+        fs::write(root.path().join("credentials/decoy.md"), "private").unwrap();
+        fs::write(root.path().join("public.md"), "public").unwrap();
+        let scanned = scan(root.path()).unwrap();
+        assert_eq!(scanned.len(), 1);
+        assert_eq!(scanned[0].0, "public.md");
+    }
     fn note(root: &Path, path: &str, body: &str) {
         let p = root.join(path);
         fs::create_dir_all(p.parent().unwrap()).unwrap();

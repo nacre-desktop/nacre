@@ -17,7 +17,8 @@ const HEADER_LIMIT: usize = 16 * 1024;
 const BODY_LIMIT: usize = 4096;
 const RESPONSE_LIMIT: usize = 8 * 1024 * 1024;
 const IO_DEADLINE: Duration = Duration::from_secs(5);
-const CONNECTION_DEADLINE: Duration = Duration::from_secs(60);
+// Ask allows a 60-second CLI call plus bounded retrieval and serialization.
+const CONNECTION_DEADLINE: Duration = Duration::from_secs(75);
 
 #[derive(Clone, Debug)]
 pub struct Request {
@@ -444,7 +445,9 @@ fn write_response(stream: &mut TcpStream, mut response: Response) -> io::Result<
         400 => "Bad Request",
         403 => "Forbidden",
         404 => "Not Found",
+        429 => "Too Many Requests",
         500 => "Internal Server Error",
+        502 => "Bad Gateway",
         _ => "Response",
     };
     let mut head = format!("HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'\r\n", response.status, reason, response.mime, response.body.len());

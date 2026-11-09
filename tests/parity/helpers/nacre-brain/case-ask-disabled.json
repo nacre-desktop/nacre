@@ -1,0 +1,13 @@
+{
+  "helper": "nacre-brain",
+  "args": [
+    "ask",
+    "status"
+  ],
+  "command": "python3 bin/nacre-brain",
+  "stdout": "text",
+  "compare_stderr": true,
+  "env": {
+    "NACRE_LANGUAGE": "en"
+  }
+}

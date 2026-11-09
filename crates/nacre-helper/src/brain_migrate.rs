@@ -21,7 +21,7 @@ pub mod curate;
 #[path = "brain_migrate_generated.rs"]
 mod generated;
 #[path = "brain_migrate_verify.rs"]
-mod verification;
+pub(crate) mod verification;
 
 const STEPS: &[&str] = &[
     "meta", "inbox", "archive", "digests", "wiki", "links", "index",
@@ -151,7 +151,7 @@ fn field_lines(header: &str) -> Vec<(String, String)> {
         })
         .collect()
 }
-pub(super) fn header_body(text: &str) -> (&str, &str, &str) {
+pub(crate) fn header_body(text: &str) -> (&str, &str, &str) {
     if !text.starts_with("# ") {
         return ("", "", text);
     }

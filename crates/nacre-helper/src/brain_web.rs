@@ -1,7 +1,7 @@
 //! Standalone Brain graph, routes and bounded optional semantic worker.
 use crate::{
-    brain_connections, brain_data, brain_discovery, brain_http, brain_launch, brain_search,
-    brain_wiki, Result,
+    brain_ask, brain_connections, brain_data, brain_discovery, brain_http, brain_launch,
+    brain_search, brain_wiki, Result,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
@@ -1456,6 +1456,32 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         }
     }
     if request.method == "POST" {
+        if request.path == "/api/ask" {
+            let data: Value = serde_json::from_slice(&request.body)?;
+            let Some(question) = data["question"].as_str() else {
+                return Ok(response(
+                    400,
+                    "application/json",
+                    serde_json::to_vec(
+                        &json!({"error":crate::i18n::tr("brain.ui.error.ask-question", "Enter a question of 1–1000 characters."),"code":"question"}),
+                    )?,
+                ));
+            };
+            return match brain_ask::ask(&vault()?, question, false) {
+                Ok(answer) => json_response(serde_json::to_value(answer)?),
+                Err(error) => Ok(response(
+                    error.status,
+                    "application/json",
+                    serde_json::to_vec(&json!({"error":error.to_string(),"code":error.code}))?,
+                )),
+            };
+        }
+        if request.path == "/api/ask/settings" {
+            let data: Value = serde_json::from_slice(&request.body)?;
+            let enabled = data["enabled"].as_bool().ok_or("Invalid Ask setting")?;
+            brain_ask::set_enabled(enabled)?;
+            return json_response(json!({"enabled":brain_ask::enabled()}));
+        }
         if request.path != "/api/action" {
             return Ok(response(404, "application/json", b"{}".to_vec()));
         }
@@ -1500,6 +1526,7 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         return Ok(response(405, "application/json", b"{}".to_vec()));
     }
     match request.path.as_str() {
+        "/api/ask" => return json_response(json!({"enabled":brain_ask::enabled()})),
         "/api/summary" => {
             schedule_graph_build(query(&request.query, "retry") == "1");
             return json_response(summary()?);

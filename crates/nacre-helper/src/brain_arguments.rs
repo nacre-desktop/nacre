@@ -68,7 +68,7 @@ fn print_help(tool: &str, args: &[String]) -> bool {
 
     if index == 0 {
         print!(
-            "usage: nacre-brain [-h]\n                    {{init,path,search,pack,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,pack,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
+            "usage: nacre-brain [-h]\n                    {{init,path,search,ask,pack,note,migrate,git,guard,store-credential,run-with-credential}} ...\n\nSmall, account-independent Markdown knowledge vault and credential references.\n\npositional arguments:\n  {{init,path,search,ask,pack,note,migrate,git,guard,store-credential,run-with-credential}}\n    note                Read a Markdown note from stdin; write a unique dated file\n    ask                 Answer a question from notes using Claude (opt-in)\n    git                 Initialize or inspect private git version history\n    guard               Scan staged paths before commit\n    store-credential    Prompt privately and store a credential in the OS keyring\n    run-with-credential\n                        Supply a keyring secret directly to a child environment\n\noptions:\n  -h, --help            show this help message and exit\n"
         );
     } else {
         match args.first().map(String::as_str) {
@@ -80,6 +80,9 @@ fn print_help(tool: &str, args: &[String]) -> bool {
             }
             Some("search") => print!(
                 "usage: nacre-brain search [-h] [--json] [--limit N] [--world WORLD] [--area AREA]\n                          [--kind KIND] [--since YYYY-MM-DD] [--include-archive]\n                          query [query ...]\n\nRanked search: aliases, compound words and typos are matched.\n\npositional arguments:\n  query\n\noptions:\n  -h, --help          show this help message and exit\n  --json              print ranked results with snippets as JSON\n  --limit N           maximum results (default 20)\n  --world WORLD       only notes in this world (repeatable)\n  --area AREA         only notes in this area (repeatable)\n  --kind KIND         folder kind, or note, archive or digest\n  --since YYYY-MM-DD  only notes recorded on or after this date\n  --include-archive   include archived notes (ranked lower)\n"
+            ),
+            Some("ask") => print!(
+                "usage: nacre-brain ask [-h] [--json] [--yes-once] question [question ...]\n\nAnswer from matching Brain notes using your Claude subscription. Enabling Ask\nsends excerpts of matching notes to Anthropic.\n\noptions:\n  -h, --help  show this help message and exit\n  --json      print structured JSON\n  --yes-once  run once without enabling Ask\n"
             ),
             Some("pack") => print!(
                 "usage: nacre-brain pack [-h] [--json] name\n\nPrint the context pack for a world or area (falls back to its world).\n\npositional arguments:\n  name        world or area name or alias\n\noptions:\n  -h, --help  show this help message and exit\n  --json      print the pack and its path as JSON\n"
@@ -190,6 +193,22 @@ fn brain_command() -> Command {
                     .long("help")
                     .action(ArgAction::Help),
             ),
+        )
+        .subcommand(
+            Command::new("ask")
+                .arg(
+                    Arg::new("help")
+                        .short('h')
+                        .long("help")
+                        .action(ArgAction::Help),
+                )
+                .arg(Arg::new("json").long("json").action(ArgAction::SetTrue))
+                .arg(
+                    Arg::new("yes-once")
+                        .long("yes-once")
+                        .action(ArgAction::SetTrue),
+                )
+                .arg(Arg::new("question").required(true).num_args(1..)),
         )
         .subcommand(
             Command::new("search")
@@ -373,6 +392,21 @@ fn brain_arguments(matches: &ArgMatches) -> Vec<String> {
             result.extend(
                 values
                     .get_many::<String>("query")
+                    .into_iter()
+                    .flatten()
+                    .cloned(),
+            );
+        }
+        "ask" => {
+            for flag in ["json", "yes-once"] {
+                if values.get_flag(flag) {
+                    result.push(format!("--{flag}"));
+                }
+            }
+            result.push("--".into());
+            result.extend(
+                values
+                    .get_many::<String>("question")
                     .into_iter()
                     .flatten()
                     .cloned(),
@@ -599,5 +633,25 @@ mod tests {
             owned(&["guard", "--staged"])
         );
         assert_eq!(parsed(&["guard"]), owned(&["guard"]));
+    }
+
+    #[test]
+    fn ask_arguments_preserve_flags_and_multiword_question() {
+        assert_eq!(
+            parsed(&["ask", "what's", "the", "status?", "--json", "--yes-once"]),
+            owned(&[
+                "ask",
+                "--json",
+                "--yes-once",
+                "--",
+                "what's",
+                "the",
+                "status?"
+            ])
+        );
+        assert_eq!(
+            parsed(&["ask", "--", "literal", "--yes-once"]),
+            owned(&["ask", "--", "literal", "--yes-once"])
+        );
     }
 }

@@ -1,0 +1,8 @@
+{
+  "stdout": "usage: nacre-brain ask [-h] [--json] [--yes-once] question [question ...]\n\nAnswer from matching Brain notes using your Claude subscription. Enabling Ask\nsends excerpts of matching notes to Anthropic.\n\noptions:\n  -h, --help  show this help message and exit\n  --json      print structured JSON\n  --yes-once  run once without enabling Ask\n",
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}

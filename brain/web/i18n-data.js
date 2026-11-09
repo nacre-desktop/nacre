@@ -39,6 +39,27 @@ window.NacreEnglish = {
     other: "{count} worlds",
   },
   "brain.ui.detail.evidence-note": "Evidence note",
+  "brain.ui.error.ask-auth":
+    "Claude is not signed in. Sign in with the Claude CLI and try again.",
+  "brain.ui.error.ask-busy":
+    "Another question is being answered. Try again shortly.",
+  "brain.ui.error.ask-citation": "Could not open that source.",
+  "brain.ui.error.ask-cli":
+    "Claude CLI is unavailable. Install Claude Code and sign in.",
+  "brain.ui.error.ask-disabled": "Ask is disabled.",
+  "brain.ui.error.ask-enable": "Could not enable Ask.",
+  "brain.ui.error.ask-failed": "Could not answer that question.",
+  "brain.ui.error.ask-invalid-citation":
+    "Claude cited a source outside the selected notes. The answer was refused.",
+  "brain.ui.error.ask-question": "Enter a question of 1–1000 characters.",
+  "brain.ui.error.ask-timeout": "The answer took too long. Try again.",
+  "brain.ui.error.ask-unavailable": "Ask is unavailable right now.",
+  "brain.ui.error.ask-unsafe-input":
+    "The question or matching notes may contain a secret. Nothing was sent.",
+  "brain.ui.error.ask-unsafe-reply":
+    "The answer failed the safety checks and was refused.",
+  "brain.ui.error.ask-usage":
+    "Claude could not process this request. Check your subscription usage.",
   "brain.ui.error.connections": "Connections could not be loaded.",
   "brain.ui.error.graph": "Graph could not be loaded.",
   "brain.ui.error.request-timed-out": "The request timed out. Try again.",
@@ -46,6 +67,7 @@ window.NacreEnglish = {
   "brain.ui.label.aliases": "Also known as",
   "brain.ui.label.archive": "Archive",
   "brain.ui.label.areas": "Areas",
+  "brain.ui.label.ask-question": "Your question",
   "brain.ui.label.could-not-read-this-note-try-selecting-it-again":
     "Could not read this note. Try selecting it again.",
   "brain.ui.label.current-facts": "Current facts",
@@ -58,6 +80,7 @@ window.NacreEnglish = {
   "brain.ui.label.filed-under": "Filed under",
   "brain.ui.label.focused-connections": "Focused connections",
   "brain.ui.label.focused-knowledge": "Focused knowledge",
+  "brain.ui.label.follow-up-questions": "Follow-up questions",
   "brain.ui.label.hide-archive": "Hide archive",
   "brain.ui.label.kind": "Kind",
   "brain.ui.label.latest-notes": "Latest notes",
@@ -106,6 +129,7 @@ window.NacreEnglish = {
   "brain.ui.label.shared-notes-connect-subjects-they-do-not-establish-a-dependency":
     "Shared notes connect worlds; they do not establish a dependency.",
   "brain.ui.label.show-archive": "Show archive",
+  "brain.ui.label.sources": "Sources",
   "brain.ui.label.stale": "Stale",
   "brain.ui.label.stale-address":
     "Address or host state checked {days} days ago (limit {limit})",
@@ -141,6 +165,7 @@ window.NacreEnglish = {
   "brain.ui.literal.source-page": "Source page",
   "brain.ui.literal.unverified": "Unverified",
   "brain.ui.literal.verified": "Verified",
+  "brain.ui.placeholder.ask-question": "Ask about something in your notes",
   "brain.ui.placeholder.search-graph": "Find a node",
   "brain.ui.placeholder.search-your-brain": "Search your brain",
   "brain.ui.status.building-connections": "Building connections…",
@@ -152,11 +177,21 @@ window.NacreEnglish = {
   "brain.ui.text.all-kinds": "All kinds",
   "brain.ui.text.all-knowledge": "All knowledge",
   "brain.ui.text.all-worlds": "All worlds",
+  "brain.ui.text.ask": "Ask",
+  "brain.ui.text.ask-disclosure":
+    "Ask the Brain sends excerpts of matching notes to Anthropic (Claude) using your subscription.",
+  "brain.ui.text.ask-intro":
+    "Get a short answer from your notes, with sources.",
+  "brain.ui.text.ask-loading": "Searching your notes…",
+  "brain.ui.text.ask-not-found": "That is not in your notes.",
+  "brain.ui.text.ask-the-brain": "Ask the Brain",
   "brain.ui.text.back": "← Back",
   "brain.ui.text.brain": "Brain",
   "brain.ui.text.capture": "Capture",
+  "brain.ui.text.close": "Close",
   "brain.ui.text.connections": "Connections",
   "brain.ui.text.ctrl-k": "Ctrl K",
+  "brain.ui.text.enable": "Enable",
   "brain.ui.text.graph": "Graph",
   "brain.ui.text.graph-fit": "Fit",
   "brain.ui.text.graph-kind-area": "Area",

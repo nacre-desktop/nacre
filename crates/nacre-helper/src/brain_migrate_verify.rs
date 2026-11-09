@@ -312,16 +312,16 @@ pub(super) fn broken_links(notes: &Notes) -> Vec<(String, String)> {
 }
 
 /// The shared Obsidian-style resolver over a fixed set of note paths.
-pub(super) struct LinkResolver(Vault);
+pub(crate) struct LinkResolver(Vault);
 
 impl LinkResolver {
-    pub(super) fn new(paths: impl IntoIterator<Item = String>) -> Self {
+    pub(crate) fn new(paths: impl IntoIterator<Item = String>) -> Self {
         Self(Vault::new(paths))
     }
 
     /// Every link in `text` (as written in `source`): its target and the note it
     /// resolves to, if any.
-    pub(super) fn resolve_all(&self, source: &str, text: &str) -> Vec<(String, Option<String>)> {
+    pub(crate) fn resolve_all(&self, source: &str, text: &str) -> Vec<(String, Option<String>)> {
         links(text)
             .into_iter()
             .map(|link| {

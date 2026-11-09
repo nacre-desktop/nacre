@@ -827,7 +827,7 @@ fn scan_facts(vault: &Notes, names: &Names, today: NaiveDate) -> Facts {
 
 /// Context pack path for a world or area (vault-unique file name: the viewer
 /// keys notes by file name, and wiki pages already use `<world>[-<area>].md`).
-pub(super) fn pack_path(world: &str, area: Option<&str>) -> String {
+pub(crate) fn pack_path(world: &str, area: Option<&str>) -> String {
     match area {
         Some(area) => format!(
             "packs/pack-{}-{}.md",

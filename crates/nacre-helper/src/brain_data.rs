@@ -465,6 +465,7 @@ fn brain(args: &[String]) -> Result<i32> {
             Ok(2)
         }
         "search" => brain_search(&args[1..]),
+        "ask" => brain_ask(&args[1..]),
         "note" => {
             let _root = initialize()?;
             brain_note(&args[1..])
@@ -488,6 +489,27 @@ fn brain(args: &[String]) -> Result<i32> {
             run_credential(&args[1..])
         }
         _ => Err(error("invalid choice")),
+    }
+}
+
+fn brain_ask(args: &[String]) -> Result<i32> {
+    let flags = args.iter().take_while(|arg| arg.as_str() != "--");
+    let flags = flags.collect::<Vec<_>>();
+    let json_output = flags.iter().any(|arg| arg.as_str() == "--json");
+    let yes_once = flags.iter().any(|arg| arg.as_str() == "--yes-once");
+    let question = args
+        .iter()
+        .skip_while(|arg| arg.as_str() != "--")
+        .skip(1)
+        .cloned()
+        .collect::<Vec<_>>()
+        .join(" ");
+    match crate::brain_ask::run_cli(&vault()?, &question, json_output, yes_once) {
+        Ok(()) => Ok(0),
+        Err(failure) => {
+            eprintln!("nacre-brain ask: {failure}");
+            Ok(1)
+        }
     }
 }
 

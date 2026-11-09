@@ -30,11 +30,194 @@ let state = {
   searchSuggestion = "",
   searchController = null;
 let firstApiCall = true;
+let askEnabled = false;
 let retryAction = () => load(true);
 function showLoadError(message, retry = () => load(true)) {
   retryAction = retry;
   $("load-error-message").textContent = message;
   $("load-error").hidden = false;
+}
+function askActivate(active) {
+  $("ask-panel").hidden = !active;
+  $("content-scroll").classList.toggle("ask-active", active);
+  if (active) refreshAskSetting();
+}
+async function refreshAskSetting() {
+  try {
+    const response = await fetch("/api/ask");
+    if (!response.ok) throw new Error("Ask setting unavailable");
+    const data = await response.json();
+    askEnabled = !!data.enabled;
+    $("ask-disabled").hidden = askEnabled;
+    $("ask-form").hidden = !askEnabled;
+    if (!askEnabled) {
+      $("ask-result").hidden = true;
+      $("ask-result").replaceChildren();
+      $("ask-status").hidden = true;
+    }
+  } catch {
+    $("ask-status").textContent = tr(
+      "brain.ui.error.ask-unavailable",
+      "Ask is unavailable right now.",
+    );
+    $("ask-status").hidden = false;
+  }
+}
+async function submitAsk(event) {
+  event.preventDefault();
+  const question = $("ask-question").value.trim();
+  if (!question || !askEnabled) return;
+  const status = $("ask-status"),
+    result = $("ask-result");
+  result.hidden = true;
+  status.hidden = false;
+  status.textContent = tr("brain.ui.text.ask-loading", "Searching your notes…");
+  try {
+    const submit = $("ask-form").querySelector("button[type=submit]");
+    submit.disabled = true;
+    let response;
+    try {
+      response = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+    } finally {
+      submit.disabled = false;
+    }
+    const data = await response.json();
+    if (!response.ok) {
+      const messages = {
+        disabled: tr("brain.ui.error.ask-disabled", "Ask is disabled."),
+        busy: tr(
+          "brain.ui.error.ask-busy",
+          "Another question is being answered. Try again shortly.",
+        ),
+        auth: tr(
+          "brain.ui.error.ask-auth",
+          "Claude is not signed in. Sign in with the Claude CLI and try again.",
+        ),
+        usage: tr(
+          "brain.ui.error.ask-usage",
+          "Claude could not process this request. Check your subscription usage.",
+        ),
+        timeout: tr(
+          "brain.ui.error.ask-timeout",
+          "The answer took too long. Try again.",
+        ),
+        missing_cli: tr(
+          "brain.ui.error.ask-cli",
+          "Claude CLI is unavailable. Install Claude Code and sign in.",
+        ),
+        question: tr(
+          "brain.ui.error.ask-question",
+          "Enter a question of 1–1000 characters.",
+        ),
+        unsafe_input: tr(
+          "brain.ui.error.ask-unsafe-input",
+          "The question or matching notes may contain a secret. Nothing was sent.",
+        ),
+        invalid_citation: tr(
+          "brain.ui.error.ask-invalid-citation",
+          "Claude cited a source outside the selected notes. The answer was refused.",
+        ),
+        unsafe_reply: tr(
+          "brain.ui.error.ask-unsafe-reply",
+          "The answer failed the safety checks and was refused.",
+        ),
+        unavailable: tr(
+          "brain.ui.error.ask-unavailable",
+          "Ask is unavailable right now.",
+        ),
+      };
+      status.textContent =
+        messages[data.code] ||
+        tr("brain.ui.error.ask-failed", "Could not answer that question.");
+      return;
+    }
+    status.hidden = true;
+    result.replaceChildren();
+    result.hidden = false;
+    result.append(
+      el(
+        "p",
+        data.confidence === "not_found"
+          ? tr("brain.ui.text.ask-not-found", "That is not in your notes.")
+          : data.answer || "",
+        "ask-answer",
+      ),
+    );
+    if (Array.isArray(data.citations) && data.citations.length) {
+      const citations = el("div", "", "ask-citations");
+      citations.append(
+        el("span", tr("brain.ui.label.sources", "Sources"), "ask-label"),
+      );
+      for (const citation of data.citations) {
+        const path = String(citation).replace(/^\[\[|\]\]$/g, "");
+        citations.append(
+          button(path, () => openAskCitation(path), "ask-citation"),
+        );
+      }
+      result.append(citations);
+    }
+    if (Array.isArray(data.followups) && data.followups.length) {
+      const followups = el("div", "", "ask-followups");
+      followups.append(
+        el(
+          "span",
+          tr("brain.ui.label.follow-up-questions", "Follow-up questions"),
+          "ask-label",
+        ),
+      );
+      for (const followup of data.followups)
+        followups.append(
+          button(
+            followup,
+            () => {
+              $("ask-question").value = followup;
+              $("ask-form").requestSubmit();
+            },
+            "ask-followup",
+          ),
+        );
+      result.append(followups);
+    }
+  } catch {
+    status.textContent = tr(
+      "brain.ui.error.ask-failed",
+      "Could not answer that question.",
+    );
+  }
+}
+async function openAskCitation(path) {
+  try {
+    const known = graph.nodes.find((item) => item.path === path);
+    let note = known;
+    if (!note) {
+      const filename = path.split("/").pop();
+      const digest = new Uint8Array(
+        await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(filename),
+        ),
+      );
+      const hash = Array.from(digest.slice(0, 8), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
+      note = { id: `note:${hash}`, kind: "note", path, label: path };
+    }
+    byId.set(note.id, note);
+    if (!graph.nodes.some((item) => item.id === note.id))
+      graph.nodes.push(note);
+    askActivate(false);
+    select(note.id, { view: "read" });
+  } catch {
+    $("ask-status").textContent = tr(
+      "brain.ui.error.ask-citation",
+      "Could not open that source.",
+    );
+    $("ask-status").hidden = false;
+  }
 }
 function clearLoadError() {
   $("load-error").hidden = true;
@@ -2178,6 +2361,31 @@ async function navigation() {
   } catch {}
 }
 $("brand").onclick = () => home("wiki");
+$("ask-open").onclick = () => askActivate(true);
+$("ask-close").onclick = () => askActivate(false);
+$("ask-enable").onclick = async () => {
+  try {
+    const response = await fetch("/api/ask/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ enabled: true }),
+    });
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(tr("brain.ui.error.ask-enable", "Could not enable Ask."));
+    askEnabled = !!data.enabled;
+    $("ask-disabled").hidden = askEnabled;
+    $("ask-form").hidden = !askEnabled;
+    $("ask-question").focus();
+  } catch (error) {
+    $("ask-status").textContent = tr(
+      "brain.ui.error.ask-enable",
+      "Could not enable Ask.",
+    );
+    $("ask-status").hidden = false;
+  }
+};
+$("ask-form").addEventListener("submit", submitAsk);
 $("wiki-link").onclick = () => home("wiki");
 $("overview-link").onclick = () => home("overview");
 $("refresh").onclick = () => load(true);
