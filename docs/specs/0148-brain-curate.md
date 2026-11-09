@@ -34,7 +34,8 @@ viewer's connections index (`graph.json`, when present). Each evidence entry
 is `[[path]] | Recorded date | title`, its categories and the first 600
 characters of the body; at most 80. Notes under `credentials/` are never read
 (the shared walker prunes them); evidence that trips a commit-guard secret
-rule is never sent. All vault text sits inside `<vault-data id="nonce">`,
+rule is never sent, and a page whose own text or flags trip one is rejected
+before the call. All vault text sits inside `<vault-data id="nonce">`,
 declared untrusted in the request and in the prompt; a closing tag inside the
 data is defused.
 
@@ -212,8 +213,18 @@ requested shapes (different repos in one area → no flag; "now" address change
 → supersession; same-day conflicting addresses → flag) plus window and
 reversal-trigger cases.
 
-Results: see the task report (`.lead/report.md`); the full `desktop` job log
-is `.lead/n0148-full-ci.log` in the worktree.
+Full `desktop` job of `.github/workflows/check.yml`, every run step replayed
+in order in `ghcr.io/archlinux/archlinux:latest` from a clean clone of
+6b540e6 (orient at its pin; no Chromium): `N0148 DESKTOP CI PASS` — fmt,
+clippy `-D warnings`, workspace tests (88 suites, 2,242 passed, 0 failed), the
+minimal protocol consumer, product shell Rust checks, Luau and proof suites,
+cargo deny, helper sandbox integrity, i18n coverage, `tools/check.py` (54
+Brain Python tests, 541 helper parity cases, 0 failures), English/pseudo
+galleries (244 and 185 states), daemon raster memory. No timing flake needed
+a rerun. Log: `.lead/n0148-full-ci.log` in the worktree.
+
+The live effect of the tuning on the owner's 49 + 32 flags is not measured
+here (no owner data in tests); the lead's next consolidation dry run shows it.
 
 ## Lead's first real run
 
@@ -229,7 +240,13 @@ output 1–3k tokens; about 20–28k tokens per page with Sonnet.
 
 ## Size and cleanup
 
-No temporary duplicates; nothing replaced. Size is recorded in the task report.
+Product code about +1,880 / −150 lines (after rustfmt): `brain_curate.rs`
+1,413 product lines (+74 unit-test lines), `brain_consolidate.rs` about +370 /
+−145 product lines (the pack loop moved into `derive()`; ~210 new unit-test
+lines), small hooks in `brain_git.rs`, `brain_migrate_verify.rs`,
+`brain_arguments.rs`, `brain_connections.rs`. Tests: 666 integration lines,
+one parity case; prompt 61 lines. There is no Python original. No temporary
+duplicates; nothing is replaced, so nothing is removed.
 Out of scope: viewer UI, `ai/skills/nacre-brain/SKILL.md` and `ai/brain/*`,
 taxonomy reshaping by the agent (§16 upkeep stays deterministic), re-filing
 notes of merged areas (N0145 known limitation).
