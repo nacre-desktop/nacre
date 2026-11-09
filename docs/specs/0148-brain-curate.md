@@ -72,12 +72,28 @@ and `open_questions`. A page is rejected, reported and skipped when:
 - the rendered block trips a commit-guard secret rule (`brain_git::secret_rule`,
   the same nine rules as the pre-commit guard) or mentions `credentials/`;
 - there are 0 or more than 25 current facts, more than 25 superseded lines,
-  more than 10 questions, or the block exceeds 16 KB (fact 400, summary 1,200,
-  question 300 characters).
+  more than 10 questions, or the block exceeds 16 KB.
 
-The prompt asks for 5–25 current facts "when the evidence supports that
-many"; validation accepts 1–25 so thin pages are not padded with invented
-facts.
+Limits (follow-up after the first real run, where a 400-character line limit
+that counted the provenance rejected `wiki/entity-bead.md`): the prompt states
+summary ≤ 600 characters, 5–25 current facts, one claim per fact (compound
+facts split) with the claim ≤ 300 characters not counting its provenance, and
+questions ≤ 200. Validation enforces claim 300 and summary 600 (question 240, whole fact line
+1,000) and accepts 1–25 facts so thin pages are
+not padded with invented facts.
+
+**One retry.** Validation collects every problem, each phrased as a fix
+("fact 7 is 512 characters: split or shorten it to ≤ 300", "fact 3: link
+[[x]] was not in the evidence; cite only links shown in the data", "fact 2:
+date … is later than its newest cited note (…); use …"). A rejected reply is
+sent back once: the original request, the previous reply in a
+`<previous-reply>` block (≤ 16,000 characters) and the error list, asking for
+the complete corrected JSON. The second reply is validated the same way; if it
+fails too the page is rejected with its errors "(after one retry)". CLI
+failures are not retried, auth/usage errors still stop the run, and a page
+whose layout curation cannot own (two blocks, a dangling marker) is refused
+before any call. Stdout and the report give both attempts' usage
+(`usage A; retry B`).
 
 ### 4. Page format and byte-identity
 
@@ -125,9 +141,13 @@ Identical output (same reply, same inputs, same day) makes no commit. Commits
 are pushed once at the end when `origin` exists.
 
 `--dry-run` takes no lock and writes nothing in the vault; it still calls the
-model and writes each proposed page (fenced), its evidence count, input size
-and reported token usage to `--report` (default
-`<vault parent>/brain-curate-report.md`; refused inside the vault).
+model and writes the report to `--report` (default
+`<vault parent>/brain-curate-report.md`; refused inside the vault). For every
+page the report lists the evidence count, input size and, per attempt, the
+model usage, each validation error and the curated block as the reply
+proposed it (unchecked; the raw reply when it is not JSON), so rejected pages
+can be judged too; accepted pages add the full proposed page. Non-dry runs
+write the same report when `--report` is given.
 
 ## Timer (installed, disabled)
 
@@ -200,9 +220,19 @@ envelopes:
   injected credentials citation echoed back, a real note that was not shown,
   unformatted fact, invalid JSON.
 - An auth error (`Invalid API key · Please run /login`) stops the run after
-  the first call with exit 3 and no change.
-- `--dry-run` writes only the report (proposed page, usage); a report inside
-  the vault is refused; a page edited during the model call is skipped by the
+  the first call with exit 3 and no change. An auth/usage error on the retry
+  also stops before the next page, retaining the rejected first draft in the report.
+- Retry: a too-long fact (and a bad link) first, a valid reply second →
+  committed; the retry request repeats the first, quotes the previous reply
+  and lists "fact 1 is N characters: split or shorten it to ≤ 300" and the
+  link error; both usages are printed. Invalid twice → rejected "(after one
+  retry)", unchanged tree; the report shows both attempts with errors and
+  drafts. Exact 300-character claims and 600-character summaries pass with
+  Unicode text; 301/601 characters fail, and provenance does not count toward
+  the claim limit.
+- `--dry-run` writes only the report (proposed page, usage); accepted pages
+  carry the full proposed page, rejected ones their errors and draft blocks; a
+  report inside the vault is refused; a page edited during the model call is skipped by the
   compare-and-swap check and keeps the edit; a page with uncommitted edits is
   held.
 

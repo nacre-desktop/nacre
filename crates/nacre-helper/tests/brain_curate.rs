@@ -27,10 +27,13 @@ printf '%s' "$input" > "$dir/last-input.txt"
 printf '%s\n' "$*" > "$dir/last-args.txt"
 page=$(printf '%s\n' "$input" | sed -n 's|^Page: wiki/\(.*\)\.md$|\1|p' | head -n 1)
 printf '%s\n' "$page" >> "$dir/calls.log"
+printf '%s' "$input" > "$dir/input-$page-$(grep -cx "$page" "$dir/calls.log").txt"
+call=$(grep -cx "$page" "$dir/calls.log")
 if [ -n "$CURATE_STUB_TOUCH" ]; then
   printf 'Owner edit during the model call.\n' >> "$CURATE_STUB_TOUCH"
 fi
-if [ -f "$dir/$page.json" ]; then cat "$dir/$page.json"
+if [ -f "$dir/$page.$call.json" ]; then cat "$dir/$page.$call.json"
+elif [ -f "$dir/$page.json" ]; then cat "$dir/$page.json"
 elif [ -f "$dir/default.json" ]; then cat "$dir/default.json"
 else printf '{"type":"result","is_error":false,"result":"no canned reply"}'
 fi
@@ -214,9 +217,23 @@ impl Fixture {
 
     /// Canned reply for one page (by file stem), wrapped like `claude -p --output-format json`.
     fn reply(&self, page: &str, result: &str) {
+        self.reply_to_call(page, None, result);
+    }
+
+    /// Canned reply for one numbered call of a page (calls count per calls.log).
+    fn reply_to_call(&self, page: &str, call: Option<usize>, result: &str) {
         let stem = page.trim_start_matches("wiki/").trim_end_matches(".md");
-        let envelope = json!({"type":"result","subtype":"success","is_error":false,"result":result,"usage":{"input_tokens":9000,"cache_read_input_tokens":1000,"output_tokens":700}});
-        fs::write(self.stub.join(format!("{stem}.json")), envelope.to_string()).unwrap();
+        let tokens = 8000 + call.unwrap_or(1) * 1000;
+        let envelope = json!({"type":"result","subtype":"success","is_error":false,"result":result,"usage":{"input_tokens":tokens,"cache_read_input_tokens":1000,"output_tokens":700}});
+        let name = match call {
+            Some(n) => format!("{stem}.{n}.json"),
+            None => format!("{stem}.json"),
+        };
+        fs::write(self.stub.join(name), envelope.to_string()).unwrap();
+    }
+
+    fn reset_calls(&self) {
+        let _ = fs::remove_file(self.stub.join("calls.log"));
     }
 
     fn calls(&self) -> Vec<String> {
@@ -334,7 +351,7 @@ fn good_pages_commit_with_their_packs_and_reruns_change_nothing() {
     assert!(out.contains(&format!("curate: {CI}: committed")), "{out}");
     assert!(out.contains(&format!("curate: {DEV1}: committed")), "{out}");
     assert!(
-        out.contains("curate: wiki/world-infrastructure.md: rejected: link does not resolve"),
+        out.contains("curate: wiki/world-infrastructure.md: rejected: fact 1: link [[devices/20260610T090000Z-dev-2]] does not resolve to a note"),
         "{out}"
     );
     assert!(out.contains("curate: 2 committed"), "{out}");
@@ -474,17 +491,17 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 )],
                 &[],
             ),
-            "link does not resolve: [[decisions/20260101T000000Z-made-up]]",
+            "fact 1: link [[decisions/20260101T000000Z-made-up]] does not resolve to a note",
         ),
         (
             "future date",
             reply("CI.", &[&fact("CI is green.", "2026-07-01", NIGHTLY)], &[]),
-            "future date 2026-07-01",
+            "fact 1: date 2026-07-01 is in the future (today is 2026-06-15)",
         ),
         (
             "date later than its source",
             reply("CI.", &[&fact("CI is green.", "2026-06-14", NIGHTLY)], &[]),
-            "date 2026-06-14 is later than its newest cited note (2026-06-05)",
+            "fact 1: date 2026-06-14 is later than its newest cited note (2026-06-05); use 2026-06-05",
         ),
         (
             "secret-looking string",
@@ -497,7 +514,7 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 )],
                 &[],
             ),
-            "secret-looking text (github-token)",
+            "the reply holds secret-looking text (github-token)",
         ),
         (
             "edit outside the markers",
@@ -506,7 +523,7 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 &[&fact("CI is green.", "2026-06-05", NIGHTLY)],
                 &[],
             ),
-            "summary tries to write outside the curated block",
+            "summary contains a line break or comment marker, which would write outside the curated block",
         ),
         (
             "heading in a question",
@@ -515,7 +532,7 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 &[&fact("CI is green.", "2026-06-05", NIGHTLY)],
                 &["## Owned"],
             ),
-            "open question starts a heading",
+            "open question 1 starts a heading or quote",
         ),
         (
             "prompt injection echoed back",
@@ -528,7 +545,7 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 )],
                 &[],
             ),
-            "cites a credentials path",
+            "fact 1: link [[credentials/vault-token]] names a credentials path",
         ),
         (
             "a real note that was not shown",
@@ -541,12 +558,22 @@ fn bad_replies_are_rejected_and_change_nothing() {
                 )],
                 &[],
             ),
-            "cites a note that was not in the evidence",
+            "fact 1: link [[personal/20260601T090000Z-owner-prefers]] was not in the evidence",
         ),
         (
             "unformatted fact",
             reply("CI.", &["CI is green."], &[]),
-            "fact not in the required format",
+            "fact 1 is not in the required format",
+        ),
+        (
+            "claim just above the limit",
+            reply("CI.", &[&fact(&"é".repeat(301), "2026-06-05", NIGHTLY)], &[]),
+            "fact 1 is 301 characters: split or shorten it to ≤ 300",
+        ),
+        (
+            "summary just above the limit",
+            reply(&"é".repeat(601), &[&fact("CI is green.", "2026-06-05", NIGHTLY)], &[]),
+            "summary is 601 characters: split or shorten it to ≤ 600",
         ),
         (
             "invalid JSON",
@@ -558,11 +585,15 @@ fn bad_replies_are_rejected_and_change_nothing() {
     let tree = f.tree();
     for (name, result, reason) in cases {
         f.reply(CI, &result);
+        f.reset_calls();
         let out = ok(&f.curate(&["--page", CI]));
         assert!(
             out.contains(&format!("curate: {CI}: rejected: {reason}")),
             "{name}: {out}"
         );
+        // The same bad reply twice: one retry, then the rejection stands.
+        assert!(out.contains("(after one retry)"), "{name}: {out}");
+        assert_eq!(f.calls().len(), 2, "{name}");
         assert!(out.contains("curate: 1 rejected"), "{name}: {out}");
         assert_eq!(f.head(), head, "{name}");
         assert_eq!(f.tree(), tree, "{name}");
@@ -588,6 +619,30 @@ fn an_auth_error_stops_the_run_before_the_next_page() {
     assert_eq!(f.calls().len(), 1);
     assert_eq!(f.head(), head);
     assert_eq!(f.tree(), tree);
+}
+
+#[test]
+fn an_auth_error_on_retry_stops_before_the_next_page() {
+    let f = Fixture::new();
+    f.reply_to_call(CI, Some(1), "invalid first reply");
+    let envelope = json!({"is_error":true,"result":"Usage limit reached"});
+    fs::write(f.stub.join("area-ci.2.json"), envelope.to_string()).unwrap();
+    let head = f.head();
+    let tree = f.tree();
+    let report = f.home.join("auth-retry-report.md");
+    let out = f.curate(&[
+        "--world",
+        "Infrastructure",
+        "--report",
+        report.to_str().unwrap(),
+    ]);
+    assert_eq!(out.status.code(), Some(3), "{out:?}");
+    assert_eq!(f.calls(), vec!["area-ci", "area-ci"]);
+    assert_eq!(f.head(), head);
+    assert_eq!(f.tree(), tree);
+    let report = fs::read_to_string(report).unwrap();
+    assert!(report.contains("invalid first reply"));
+    assert!(report.contains("Usage limit reached"));
 }
 
 #[test]
@@ -663,4 +718,144 @@ fn curate_needs_one_selector() {
         .output()
         .unwrap());
     assert!(help.starts_with("usage: nacre-brain-maintain curate [-h]"));
+}
+
+#[test]
+fn limits_count_characters_and_exclude_fact_provenance() {
+    let f = Fixture::new();
+    f.reply(
+        CI,
+        &reply(
+            &"é".repeat(600),
+            &[&format!(
+                "- {} (confirmed 2026-06-05; [[{NIGHTLY}]])",
+                "é".repeat(300)
+            )],
+            &[],
+        ),
+    );
+    let out = ok(&f.curate(&["--page", CI, "--dry-run"]));
+    assert!(out.contains(&format!("curate: {CI}: proposed")), "{out}");
+    assert_eq!(f.calls().len(), 1);
+}
+
+#[test]
+fn a_rejected_reply_is_retried_once_with_its_errors() {
+    let f = Fixture::new();
+    let long = format!("CI {} runs nightly.", "really ".repeat(70));
+    let too_long = reply(
+        "CI runs nightly.",
+        &[
+            &format!("- {long} (confirmed 2026-06-05; [[{NIGHTLY}]])"),
+            "- CI is cached. (confirmed 2026-06-12; [[decisions/20260101T000000Z-made-up]])",
+        ],
+        &[],
+    );
+    // A too-long fact first, a valid reply on the retry: accepted.
+    f.reply_to_call(CI, Some(1), &too_long);
+    f.reply_to_call(CI, Some(2), &good_ci());
+    let head = f.head();
+    let out = ok(&f.curate(&["--page", CI]));
+    assert!(out.contains(&format!("curate: {CI}: committed")), "{out}");
+    assert!(
+        out.contains("usage 10000 in / 700 out; retry 11000 in / 700 out"),
+        "{out}"
+    );
+    assert_eq!(git(&f.vault, &["rev-parse", "HEAD~1"]), head);
+    assert_eq!(f.calls(), vec!["area-ci".to_owned(), "area-ci".to_owned()]);
+    let retry = fs::read_to_string(f.stub.join("input-area-ci-2.txt")).unwrap();
+    let first = fs::read_to_string(f.stub.join("input-area-ci-1.txt")).unwrap();
+    assert!(retry.starts_with(&first), "the retry repeats the request");
+    assert!(
+        retry.contains("<previous-reply>\n{") && retry.contains("\"summary\":\"CI runs nightly.\"")
+    );
+    let chars = long.chars().count();
+    assert!(
+        retry.contains(&format!(
+            "- fact 1 is {chars} characters: split or shorten it to ≤ 300\n"
+        )),
+        "{retry}"
+    );
+    assert!(retry.contains(
+        "- fact 2: link [[decisions/20260101T000000Z-made-up]] does not resolve to a note"
+    ));
+    assert!(read(&f.vault, CI).contains("- CI caches pacman packages weekly."));
+    // Invalid twice: rejected with the second attempt's errors, nothing written.
+    let f = Fixture::new();
+    f.reply_to_call(CI, Some(1), &too_long);
+    f.reply_to_call(CI, Some(2), "still not JSON");
+    let head = f.head();
+    let tree = f.tree();
+    let report = f.home.join("retry-report.md");
+    let out = ok(&f.curate(&["--page", CI, "--report", report.to_str().unwrap()]));
+    assert!(
+        out.contains(&format!(
+            "curate: {CI}: rejected: invalid JSON: no object in the reply (after one retry)"
+        )),
+        "{out}"
+    );
+    assert_eq!(f.calls().len(), 2);
+    assert_eq!(f.head(), head);
+    assert_eq!(f.tree(), tree);
+    // The report keeps both attempts: usage, errors and what was proposed.
+    let text = fs::read_to_string(&report).unwrap();
+    assert!(text.contains(
+        "### Attempt 1 — rejected\n\n- Model usage: 10000 in / 700 out\n- Error: fact 1 is"
+    ));
+    assert!(text.contains(&format!("- {long} (confirmed 2026-06-05; [[{NIGHTLY}]])")));
+    assert!(text.contains(
+        "### Attempt 2 — rejected\n\n- Model usage: 11000 in / 700 out\n- Error: invalid JSON"
+    ));
+    assert!(text.contains("still not JSON"));
+}
+
+#[test]
+fn dry_run_reports_show_accepted_and_rejected_proposals() {
+    let f = Fixture::new();
+    f.reply(DEV1, &good_dev1());
+    f.reply(
+        CI,
+        &reply(
+            "CI.",
+            &[&format!(
+                "- CI is green. (confirmed 2026-07-01; [[{NIGHTLY}]])"
+            )],
+            &[],
+        ),
+    );
+    let tree = f.tree();
+    let report = f.home.join("dry-report.md");
+    ok(&f.curate(&[
+        "--area",
+        "dev-1",
+        "--dry-run",
+        "--report",
+        report.to_str().unwrap(),
+    ]));
+    ok(&f.curate(&[
+        "--page",
+        CI,
+        "--dry-run",
+        "--report",
+        f.home.join("ci-report.md").to_str().unwrap(),
+    ]));
+    assert_eq!(f.tree(), tree);
+    let accepted = fs::read_to_string(&report).unwrap();
+    assert!(accepted.contains("## dev-1 — proposed (dry run; nothing written)"));
+    assert!(accepted.contains("### Attempt 1 — valid"));
+    // The full proposed page: human text, the curated block, the evidence index.
+    let page = accepted
+        .split("Proposed page:\n\n")
+        .nth(1)
+        .expect("proposed page");
+    assert!(page.contains("The shared synthetic build host."));
+    assert!(page.contains("- dev-1 builds run in one capped container per task."));
+    assert!(page.contains("<!-- brain:generated:start"));
+    let rejected = fs::read_to_string(f.home.join("ci-report.md")).unwrap();
+    assert!(rejected.contains("## CI — rejected: fact 1: date 2026-07-01 is in the future"));
+    assert!(rejected
+        .contains("- Error: fact 1: date 2026-07-01 is in the future (today is 2026-06-15)"));
+    assert!(rejected.contains("Curated block as proposed:"));
+    assert!(rejected.contains("- CI is green. (confirmed 2026-07-01;"));
+    assert!(!rejected.contains("Proposed page:"));
 }
