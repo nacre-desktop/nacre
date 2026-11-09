@@ -1291,6 +1291,14 @@ pub fn run(args: &[String]) -> Result<i32> {
             proposal: None,
             packs: Vec::new(),
         };
+        // Evidence notes are screened one by one; the page text and flags too.
+        if let Some(rule) = brain_git::secret_rule(&input.text) {
+            written.outcome = Outcome::Rejected(format!(
+                "the page text looks like it holds a secret ({rule}); nothing was sent"
+            ));
+            runs.push(written);
+            continue;
+        }
         let reply = match call_claude(&args.model, &input.text) {
             Call::Reply(reply, usage) => {
                 written.usage = usage;
