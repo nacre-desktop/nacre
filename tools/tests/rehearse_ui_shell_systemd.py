@@ -172,7 +172,9 @@ with (state / "release.lock").open() as release_lock:
             break
         time.sleep(1)
     assert retries and int(retries) > 0, "busy recovery was not retried"
-    assert exhausted, "shell did not reach its start limit while the release lock was held"
+    assert exhausted, (
+        "shell did not reach its start limit while the release lock was held"
+    )
 # Recovery must resume after the unrelated release drops its lock.
 deadline = time.monotonic() + 65
 while time.monotonic() < deadline:

@@ -369,6 +369,29 @@ class SwitchTests(Base):
         self.assertNotIn(m.LEGACY_MARK, switch.fallback.read_text())
         self.assertBead()
 
+    def test_migration_retires_an_owned_legacy_windows_companion(self):
+        self.bead()
+        switch = self.switch()
+        switch.windows.write_text(m.LEGACY_MARK + "[Service]\nExecStart=/old/windows\n")
+        self.manager.cfg["windows"] = True
+        self.manager.windows = 123
+        self.assertEqual(switch.migrate()["shell"], "bead")
+        self.assertFalse(switch.windows.exists())
+        self.assertIsNone(self.manager.windows)
+        self.assertIn(["systemctl", "--user", "stop", m.WINDOWS], self.manager.calls)
+        self.assertBead()
+        other = self.launcher.with_name("other")
+        other.write_text("#!/bin/sh\n")
+        other.chmod(0o700)
+        switch.windows.write_text(m.LEGACY_MARK + "[Service]\nExecStart=/old/windows\n")
+        self.manager.cfg["windows"] = True
+        self.manager.windows = 124
+        self.manager.launcher = str(other)
+        switch.bead(str(other), "none", migration=True)
+        self.assertFalse(switch.windows.exists())
+        self.assertIsNone(self.manager.windows)
+        self.assertBead()
+
     def test_migration_preserves_foreign_fallback_beside_healthy_bead(self):
         self.bead()
         fallback = self.manager.root / m.FALLBACK

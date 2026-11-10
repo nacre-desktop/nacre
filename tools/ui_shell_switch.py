@@ -821,6 +821,8 @@ class UiShell(f4.Switch):
             self.binding = self.binding_env()
             self.layout(self.snapshot()[0])
             self._update_fallback()
+            if migration:
+                self._remove_windows_unit(stop=True)
             shell_active = (
                 self.props(SHELL, "ActiveState").get("ActiveState") == "active"
             )
@@ -978,6 +980,12 @@ class UiShell(f4.Switch):
                 "write-fallback",
                 lambda: f4.atomic(self.fallback, fallback_text(recover), 0o644),
             )
+            if migration:
+                self.phase(
+                    record,
+                    "remove-windows",
+                    lambda: self._remove_windows_unit(stop=True),
+                )
             self.phase(
                 record, "write-dropin", lambda: f4.atomic(self.dropin, want, 0o644)
             )
@@ -1134,10 +1142,12 @@ class UiShell(f4.Switch):
         except (OSError, subprocess.SubprocessError):
             pass
 
-    def _remove_windows_unit(self):
+    def _remove_windows_unit(self, *, stop=False):
         if not self.mark_ok(self.windows):
             raise RuntimeError(f"Refusing to remove unmanaged file: {self.windows}")
         if self.windows.exists():
+            if stop and self.props(WINDOWS, "LoadState")["LoadState"] == "loaded":
+                self.ctl("stop", WINDOWS)
             self.windows.unlink()
             f4.syncdir(self.windows.parent)
 

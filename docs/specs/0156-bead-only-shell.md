@@ -45,7 +45,10 @@ This avoids losing a failure notification during a configs-only release.
 Ordinary scheduled restarts must
 not trigger recovery before the service's start limit is exhausted. Cut over
 the fallback before restarting even an identical Bead build; comparing desired
-unit bytes keeps repeat requests idempotent. Manual
+unit bytes keeps repeat requests idempotent.
+Migration also stops and removes a managed legacy `nacre-qml-windows.service`
+before restarting an identical Bead build; an unmanaged unit is refused.
+Manual
 rollback refuses without changing a healthy running shell when no previous copy
 exists; if older copies are damaged, its current known-good copy is the final
 recovery option. Automatic failure recovery excludes the failed current copy.
