@@ -10370,9 +10370,9 @@ fn backend_title_only(
     })
 }
 
-/// Project the compositor topic's overview hover into the bar's existing title
+/// Project the compositor topic's overview selection into the bar's existing title
 /// stores. The topic contains every desk's windows, unlike the output-filtered
-/// backend model, so a hovered tile remains addressable wherever it lives.
+/// backend model, so a selected tile remains addressable wherever it lives.
 pub(crate) fn overview_title_values(
     topic: &serde_json::Value,
     workspaces: &crate::workspace_rows::Rows,
@@ -10383,9 +10383,14 @@ pub(crate) fn overview_title_values(
     let hovered = topic["overviewHoveredWindowId"]
         .as_str()
         .and_then(|id| windows.and_then(|windows| windows.get(id)));
+    let highlighted = topic["focus"]["workspaceId"]
+        .as_str()
+        .and_then(|id| topic["workspaces"][id]["activeWindowId"].as_str())
+        .and_then(|id| windows.and_then(|windows| windows.get(id)));
     let focused =
         windows.and_then(|windows| windows.values().find(|window| window["focused"] == true));
-    let chosen = hovered.or(focused);
+    // Hover can change as tiles animate beneath a stationary pointer.
+    let chosen = highlighted.or(hovered).or(focused);
     let app_id = chosen
         .and_then(|window| window["appId"].as_str())
         .unwrap_or_default();
@@ -10445,9 +10450,13 @@ mod overview_title_projection_tests {
         let mut topic = serde_json::json!({
             "overviewOpen": true,
             "overviewHoveredWindowId": "niri-window:desk-b-window",
-            "focus": {"windowId": "niri-window:focused-window"},
+            "focus": {"windowId": null, "workspaceId":"desk-b"},
+            "workspaces": {
+                "desk-a":{"activeWindowId":"niri-window:focused-window"},
+                "desk-b":{"activeWindowId":"niri-window:desk-b-window"}
+            },
             "windows": {
-                "niri-window:focused-window": {"id":"niri-window:focused-window", "title":"Focused", "appId":"nacre-ai", "focused":true, "workspaceId":"desk-a"},
+                "niri-window:focused-window": {"id":"niri-window:focused-window", "title":"Focused", "appId":"nacre-ai", "focused":false, "workspaceId":"desk-a"},
                 "niri-window:desk-b-window": {"id":"niri-window:desk-b-window", "title":"Other desk A", "appId":"nacre-control", "focused":false, "workspaceId":"desk-b"}
             }
         });
@@ -10456,9 +10465,24 @@ mod overview_title_projection_tests {
         assert_eq!(title(&hovered_a, "bead.title.app_id"), "nacre-control");
         assert_eq!(title(&hovered_a, "bead.title.app_glyph"), "tune");
 
+        // Keyboard navigation updates the selected workspace window while
+        // the hover stream can still report the tile under the parked pointer.
+        topic["focus"]["workspaceId"] = serde_json::json!("desk-a");
+        let keyboard = values(&topic);
+        assert_eq!(title(&keyboard, "bead.overview.title"), "Focused");
+
+        // A later pointer move updates the selected window too, so its title wins.
+        topic["focus"]["workspaceId"] = serde_json::json!("desk-b");
+        topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:desk-b-window");
+        let pointer = values(&topic);
+        assert_eq!(title(&pointer, "bead.overview.title"), "Other desk A");
+
+        // Older snapshots without selection data retain hover/focus fallbacks.
+        topic["focus"]["workspaceId"] = serde_json::Value::Null;
+        topic["windows"]["niri-window:focused-window"]["focused"] = serde_json::Value::Bool(true);
         topic["overviewHoveredWindowId"] = serde_json::json!("niri-window:focused-window");
-        let hovered_b = values(&topic);
-        assert_eq!(title(&hovered_b, "bead.overview.title"), "Focused");
+        let hover_fallback = values(&topic);
+        assert_eq!(title(&hover_fallback, "bead.overview.title"), "Focused");
 
         topic["overviewHoveredWindowId"] = serde_json::Value::Null;
         let empty = values(&topic);
