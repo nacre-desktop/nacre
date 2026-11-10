@@ -92,7 +92,7 @@ def files(root=ROOT):
         root / "nacre/desktop/nacre-widgets.desktop"
     )
     result[Path(".local/share/icons/hicolor/scalable/apps/nacre-widgets.svg")] = (
-        root / "nacre/shell/branding/nacre-widgets.svg"
+        root / "nacre/shell-tools/branding/nacre-widgets.svg"
     )
     result[Path(".local/share/applications/nacre-terminal.desktop")] = (
         root / "nacre/desktop/nacre-terminal.desktop"

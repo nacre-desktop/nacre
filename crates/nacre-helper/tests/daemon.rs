@@ -1882,69 +1882,6 @@ profile.install(home)
 }
 
 #[test]
-fn legacy_ui_fallback_requires_a_proven_undispatched_call() -> Result<()> {
-    // `nacre settings PAGE` is the provider-neutral route; QML's legacy handler is `settingsApp open`.
-    let cases: [(&[&str], &str); 2] = [
-        (
-            &["nacre", "launcher", ""],
-            "-c nacre ipc call nacre launcher  ",
-        ),
-        (
-            &["nacre", "settings", "sound"],
-            "-c nacre ipc call settingsApp open sound ",
-        ),
-    ];
-    for (dispatched, (route, recorded)) in cases
-        .iter()
-        .flat_map(|case| [false, true].map(|dispatched| (dispatched, *case)))
-    {
-        let home = tempfile::Builder::new().prefix("nf-").tempdir()?;
-        fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
-        let folder = home.path().join("runtime/nacre");
-        fs::create_dir_all(&folder)?;
-        fs::set_permissions(&folder, fs::Permissions::from_mode(0o700))?;
-        let endpoint = folder.join("daemon.sock");
-        let server = UnixListener::bind(&endpoint)?;
-        fs::set_permissions(&endpoint, fs::Permissions::from_mode(0o600))?;
-        let server = thread::spawn(move || {
-            let (stream, _) = server.accept().unwrap();
-            let mut reader = BufReader::new(stream);
-            let mut line = String::new();
-            reader.read_line(&mut line).unwrap();
-            writeln!(
-                reader.get_mut(),
-                "{}",
-                json!({"t":"welcome","proto":1,"min":1,"boot":"fixture","topics":{},"methods":{}})
-            )
-            .unwrap();
-            line.clear();
-            reader.read_line(&mut line).unwrap();
-            let call: Value = serde_json::from_str(&line).unwrap();
-            writeln!(reader.get_mut(),"{}",json!({"t":"ret","id":call["id"],"err":{"code":"unavailable","message":"Synthetic unavailable UI","retry":true,"dispatched":dispatched}})).unwrap();
-        });
-        let binary = home.path().join(".local/share/nacre/shell/bin/qs");
-        fs::create_dir_all(binary.parent().ok_or("Missing fixture parent")?)?;
-        fs::write(
-            &binary,
-            "#!/bin/sh\nprintf '%s ' \"$@\" > \"$FALLBACK_MARKER\"\n",
-        )?;
-        fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))?;
-        let marker = home.path().join("fallback-ran");
-        let mut call = command(home.path(), &home.path().join("niri.sock"), &endpoint);
-        call.env_remove("NACRE_DAEMON_SOCKET")
-            .env("FALLBACK_MARKER", &marker);
-        let result = call.args(["ctl", "ui"]).args(route).output()?;
-        assert_eq!(result.status.success(), !dispatched);
-        assert_eq!(marker.exists(), !dispatched);
-        if !dispatched {
-            assert_eq!(fs::read_to_string(&marker)?, recorded);
-        }
-        server.join().map_err(|_| "Private UI fixture failed")?;
-    }
-    Ok(())
-}
-
-#[test]
 fn watch_exits_when_its_output_is_closed_instead_of_reconnecting_forever() -> Result<()> {
     let home = tempfile::Builder::new().prefix("nw-").tempdir()?;
     fs::set_permissions(home.path(), fs::Permissions::from_mode(0o700))?;
@@ -2056,8 +1993,7 @@ fn daemon_serve_replays_frozen_dialogue_and_large_packets_without_an_interpreter
                 })??,
         )?)
     };
-    let fixtures =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/parity/helpers/helper-service");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/helper-service");
     let case: Value =
         serde_json::from_slice(&fs::read(fixtures.join("case-all-hosted-operations.json"))?)?;
     let expected: Value = serde_json::from_slice(&fs::read(
@@ -3145,7 +3081,7 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
     let endpoint = private.join("daemon.sock");
     let config = home.path().join("config/nacre");
     let tools = home.path().join("tree/tools");
-    let catalog = home.path().join("tree/shell/i18n");
+    let catalog = tools.join("i18n");
     for directory in [&config, &tools, &catalog] {
         fs::create_dir_all(directory)?;
     }
@@ -3153,7 +3089,7 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
     fs::write(&desktop, br#"{"version":3,"language":"en"}"#)?;
     fs::write(
         catalog.join("en.json"),
-        br#"{"bead.bar.clock":"Clock {zone}","bead.panel.windows":{"one":"{count} window","other":"{count} windows"},"launcher.search":"Search"}"#,
+        br#"{"bead.bar.clock":"Clock {zone}","bead.dashboard.updates-count":{"one":"{count} update","other":"{count} updates"},"launcher.search":"Search"}"#,
     )?;
     let notify = home.path().join("notify.sock");
     let notifications = UnixDatagram::bind(&notify)?;
@@ -3197,14 +3133,38 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
             Ok(english.is_some())
         }),
     )?;
-    let english = english.unwrap();
+    let mut english = english.unwrap();
     assert_eq!(english["revision"], 1);
     assert_eq!(english["entries"]["bead.bar.clock"], "Clock {zone}");
+    assert!(english["entries"].get("launcher.search").is_none());
+    let mut after = english["next"].as_str().map(str::to_owned);
+    while let Some(cursor) = after {
+        let page = call(
+            "i18n.catalog",
+            json!({"namespace":"bead","revision":1,"after":cursor}),
+        )?
+        .ok_or("Missing next catalog page")?;
+        assert_eq!(page["revision"], 1);
+        assert!(page["entries"].get("launcher.search").is_none());
+        let next = page["next"].as_str().map(str::to_owned);
+        if let Some(next) = &next {
+            assert!(next > &cursor, "Catalog cursor must advance");
+        }
+        english["entries"]
+            .as_object_mut()
+            .ok_or("Missing English entries")?
+            .extend(
+                page["entries"]
+                    .as_object()
+                    .ok_or("Missing catalog page entries")?
+                    .clone(),
+            );
+        after = next;
+    }
     assert_eq!(
-        english["entries"]["bead.panel.windows"]["other"],
-        "{count} windows"
+        english["entries"]["bead.dashboard.updates-count"]["other"],
+        "{count} updates"
     );
-    assert!(english["entries"].get("launcher.search").is_none() && english.get("next").is_none());
 
     fs::write(&desktop, br#"{"version":3,"language":"pseudo"}"#)?;
     until(

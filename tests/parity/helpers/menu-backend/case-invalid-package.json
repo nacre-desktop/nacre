@@ -1,7 +1,0 @@
-{
-  "helper": "menu-backend",
-  "args": [
-    "install",
-    "bad; command"
-  ]
-}

@@ -282,3 +282,13 @@ Bead and replace the old failure fallback with recovery to a previous healthy
 Bead build. They retain the previous build until the candidate passes health
 checks. Package setup stages a matched executable and Luau tree for the next
 login without restarting the current session. See [shell recovery](recovery.md).
+
+## Shell migration
+
+Nacre ships the Bead shell. Source updates with `install.py --code-only` activate
+a checked Bead copy and replace the old failure action with recovery to a
+previous healthy Bead. Only after successful activation do they archive the old
+shell source and recognized legacy launch scripts. Shared runtime tools remain
+under `~/.local/share/nacre/shell/tools`; the SDDM greeter remains QtQuick.
+Offline package setup prepares Bead and its recovery units for the next login.
+See [recovery](recovery.md) for rollback and journal commands.

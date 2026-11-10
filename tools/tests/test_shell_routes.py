@@ -13,8 +13,7 @@ import nacre_native_config as config
 
 REGISTRY = json.loads((ROOT / "nacre/shell-tools/shell-routes.json").read_text())
 ROUTES = {row["id"]: row for row in REGISTRY["routes"]}
-# Window rules match the class `org.quickshell`; that is not an IPC call.
-FORBIDDEN = ("quickshell ipc", "qs ipc", "ipc call", "bin/qs", "qs -c")
+FORBIDDEN = ("ipc call",)
 BINDING_FILES = (
     "niri/bindings.kdl",
     "hypr/conf/keybinding.lua",
@@ -64,7 +63,6 @@ class ShellRouteTests(unittest.TestCase):
         for row in REGISTRY["commands"]:
             if row["kind"] == "ui":
                 self.assertIn(row["route"], ROUTES, row["command"])
-        self.assertNotIn("quickshell", text)
         self.assertNotIn(" ipc ", text)
         # Literal targets only; brightness/keyboard-light share one case through "$target".
         for call in re.findall(r'nacrectl" ui ([A-Za-z]+) ([A-Za-z]+)', text):
@@ -74,13 +72,6 @@ class ShellRouteTests(unittest.TestCase):
         self.assertIn("keyboardLight.step", ROUTES)
         for row in REGISTRY["apps"]:
             self.assertIn(row["route"], ROUTES)
-
-    def test_qml_only_rows_carry_an_expiry(self):
-        for row in REGISTRY["commands"]:
-            if row["kind"] == "qml-only":
-                self.assertTrue(row["expiry"])
-        for row in REGISTRY["fallbacks"]:
-            self.assertTrue(row["expiry"])
 
     def test_gap_rows_name_the_bead_unit_to_do(self):
         for row in ROUTES.values():
@@ -124,34 +115,6 @@ class ShellRouteTests(unittest.TestCase):
                 self.assertNotIn(forbidden, text, name)
             for call in ui_calls(text):
                 self.assertTrue(registered(call), (name, call))
-
-    def test_qml_provider_answers_every_registered_route(self):
-        sources = "\n".join(
-            path.read_text() for path in (ROOT / "nacre/shell").rglob("*.qml")
-        )
-        handlers = {}
-        for target, body in re.findall(
-            r'registerIpc\("([A-Za-z]+)", \w+, \{(.*?)\}\)', sources, re.DOTALL
-        ):
-            for method, signature in re.findall(r'"(\w+)": \[([^\]]*)\]', body):
-                handlers[f"{target}.{method}"] = signature.count('"') // 2
-        for route in ROUTES.values():
-            self.assertIn(route["id"], handlers, route["id"])
-            self.assertTrue(
-                (ROOT / "nacre/shell" / "services" / route["qml"]).exists()
-                or any((ROOT / "nacre/shell").rglob(route["qml"])),
-                route["qml"],
-            )
-            counts = {len(example) for example in route["examples"]}
-            if route["id"] == "nacre.settings":
-                # The one-argument form is answered in NacreShellIpc.daemonCall.
-                self.assertIn("openSettings(params.args[0])", sources)
-                counts.discard(1)
-            self.assertEqual(counts, {handlers[route["id"]]}, route["id"])
-
-    def test_registry_paths_exist(self):
-        for row in REGISTRY["routes"]:
-            self.assertTrue(list((ROOT / "nacre/shell").rglob(row["qml"])), row["qml"])
 
 
 if __name__ == "__main__":

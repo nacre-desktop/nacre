@@ -1,10 +1,9 @@
-"""Settings IDs, atomic patches and actual QML file watching in private state."""
+"""Settings IDs and atomic patches in private state."""
 
 import concurrent.futures
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
@@ -39,7 +38,6 @@ class SettingsStorageTests(unittest.TestCase):
             "HYPRLAND_INSTANCE_SIGNATURE",
             "NACRE_COMPOSITOR_TOOLS",
             "NACRE_PEARL_TOOLS",
-            "NACRE_QS_CONFIG",
             "QML_IMPORT_PATH",
             "QML2_IMPORT_PATH",
             "QT_LOGGING_RULES",
@@ -106,81 +104,3 @@ class SettingsStorageTests(unittest.TestCase):
                 0,
             )
             self.assertEqual(path.read_bytes(), original)
-
-    def test_actual_qml_storage_acknowledges_external_changes(self):
-        if not shutil.which("quickshell"):
-            self.skipTest("Quickshell unavailable")
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            home, env = self.environment(root)
-            tools = home / ".local/share/nacre/shell/tools"
-            tools.mkdir(parents=True)
-            shutil.copy2(self.helper, tools / "nacre-helper")
-            shutil.copy2(ROOT / "nacre/shell-tools/nacre-state-files.json", tools)
-            (home / ".config/nacre").mkdir(parents=True)
-            utils = root / "utils"
-            utils.mkdir()
-            shutil.copy2(ROOT / "nacre/shell/utils/NacrePaths.qml", utils)
-            (utils / "qmldir").write_text("singleton NacrePaths 1.0 NacrePaths.qml\n")
-            services = root / "services"
-            services.mkdir()
-            shutil.copy2(
-                ROOT / "nacre/shell/services/NacreSettingsStorage.qml", services
-            )
-            shutil.copy2(ROOT / "nacre/shell/services/daemon-state.js", services)
-            # This fixture exercises file watching with the daemon disabled.
-            (services / "NacreDaemon.qml").write_text("""pragma Singleton
-import QtQuick
-QtObject {
-    readonly property bool enabled: false
-    readonly property bool connected: false
-    signal newBoot()
-}
-""")
-            (services / "qmldir").write_text(
-                "singleton NacreSettingsStorage 1.0 NacreSettingsStorage.qml\n"
-                "singleton NacreDaemon 1.0 NacreDaemon.qml\n"
-            )
-            (root / "shell.qml").write_text("""import QtQuick
-import Quickshell
-import Quickshell.Io
-import "services"
-ShellRoot {
- property var storage:NacreSettingsStorage
- property int phase:0
- Connections {target:NacreSettingsStorage
-  function onDocumentsChanged(){
-   const data=NacreSettingsStorage.documents.power;
-   if(!data)return;
-   if(phase===0){phase=1;NacreSettingsStorage.request("power",["ac"],"performance")}
-   else if(phase===1 && data.ac==="performance"){phase=2;external.running=true}
-   else if(phase===2 && data.ac==="balanced"){console.log("SETTINGS_WATCH_ACK");Qt.quit()}
-  }
- }
- Process {id:external;command:[Qt.resolvedUrl("utils/../external.py").toString().replace("file://"," ").trim()];}
- Timer {interval:8000;running:true;onTriggered:{console.log("SETTINGS_TIMEOUT");Qt.quit()}}
-}""")
-            external = root / "external.py"
-            external.write_text(
-                "#!/usr/bin/env python3\nimport json,os\nfrom pathlib import Path\np=Path(os.environ['HOME'])/'.config/nacre/power.json'\nd=json.loads(p.read_text());d['ac']='balanced';p.write_text(json.dumps(d))\n"
-            )
-            external.chmod(0o700)
-            result = subprocess.run(
-                [
-                    "quickshell",
-                    "-p",
-                    str(root / "shell.qml"),
-                    "-n",
-                    "--log-rules",
-                    "js.debug=true",
-                ],
-                env=env,
-                text=True,
-                capture_output=True,
-                timeout=12,
-            )
-            output = result.stdout + result.stderr
-            self.assertEqual(result.returncode, 0, output)
-            self.assertIn("SETTINGS_WATCH_ACK", output)
-            self.assertNotIn("SETTINGS_TIMEOUT", output)
-            self.assertNotIn("WARN scene", output)

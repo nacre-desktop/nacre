@@ -32,7 +32,7 @@ jobs:
           key: arch-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
           restore-keys: arch-pacman-${{ runner.arch }}-
       - name: Install target-platform checks
-        run: pacman -Syu --noconfirm --needed git curl unzip python python-pip python-pillow ruff lua fish qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats gcc pkgconf rust clang libpipewire mpv lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm jq xorg-server-xvfb xorg-xauth kitty less mesa dbus ttf-dejavu niri sway swaybg grim fastfetch ffmpeg curl unzip gdk-pixbuf2 fontconfig libxkbcommon wayland
+        run: pacman -Syu --noconfirm --needed git curl unzip python python-pip python-pillow ruff lua fish qt6-declarative qt6-imageformats gcc pkgconf rust clang libpipewire mpv lcms2 cmake make gtk3 librsvg kconfig kcolorscheme breeze nodejs npm jq xorg-server-xvfb xorg-xauth kitty less mesa dbus ttf-dejavu niri sway swaybg grim fastfetch ffmpeg curl unzip gdk-pixbuf2 fontconfig libxkbcommon wayland
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           submodules: recursive
@@ -72,10 +72,10 @@ jobs:
           pins = json.load(open("dependencies.lock.json"))["python"]
           subprocess.run(["/tmp/check-env/bin/pip", "install", "./nacre/shell-cli", "ruff==0.16.10", "dbus-next==0.2.3", *[name + "==" + version for name, version in pins.items()]], check=True)
           PY
-      - name: Candidate engine for fresh-install tests
+      - name: Candidate engine for package setup tests
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: smoke-engine
+          name: package-engine
           path: deps/orient/target/release/orient
           retention-days: 3
       - name: Native helper library checks
@@ -122,19 +122,12 @@ jobs:
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Product dependency and license graph
         run: cargo deny --manifest-path crates/nacre-shell/Cargo.toml --all-features --config bead-shell/deny-product.toml check
-      - name: Candidate helper for fresh-install tests
+      - name: Candidate helper for package setup tests
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: smoke-helper
+          name: package-helper
           path: target/release/nacre-helper
           retention-days: 3
-      - name: Install developer-only helper parity tooling
-        run: |
-          pacman -S --noconfirm --needed bubblewrap shadow
-          getent passwd 1000 >/dev/null || useradd --uid 1000 --user-group --create-home parity-fixture
-          /tmp/check-env/bin/pip install dbus-next==0.2.3 jsonschema==4.26.0
-      - name: Helper sandbox integrity
-        run: /tmp/check-env/bin/python -m unittest discover -s tests/parity/helpers -p test_runner.py
       - name: Install development-only JavaScript formatter
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Translation coverage
@@ -146,12 +139,8 @@ jobs:
           export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
           export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
-      - name: Native English and pseudo gallery
-        run: |
-          export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
-          dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --download-fonts --output /tmp/nacre-pseudo-audit
-          NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-pseudo-audit/aur-review
-          dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/i18n/audit.py --font-directory /tmp/nacre-pseudo-audit/fonts --text-family "DejaVu Sans" --output /tmp/nacre-pseudo-wide-font colors controls launcher chat summary
+      - name: Native AUR review gallery
+        run: NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-aur-review
       - name: Daemon raster memory regression
         run: |
           NACRE_MEMORY_BINARY="$PWD/target/release/nacre-helper" cargo test -j2 --locked -p nacre-helper --test daemon memory:: -- --ignored --nocapture
@@ -160,9 +149,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-gallery
-          path: |
-            /tmp/nacre-pseudo-audit
-            /tmp/nacre-pseudo-wide-font
+          path: /tmp/nacre-aur-review
           retention-days: 7
       - name: Save Arch packages
         if: always()
@@ -195,8 +182,8 @@ jobs:
           path: |
             ~/.npm
           key: arch-npm-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
-  fresh-install:
-    if: ${{ always() && github.ref == 'refs/heads/main' }}
+  package-stage-install:
+    if: ${{ github.ref == 'refs/heads/main' && needs.desktop.result == 'success' }}
     needs: desktop
     runs-on: ${{ fromJSON(vars.NACRE_CI_RUNNER || '["self-hosted","linux","nacre-ci"]') }}
     container:
@@ -204,52 +191,30 @@ jobs:
       options: ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
     timeout-minutes: 10
     steps:
-      - name: Rolling package cache key
-        id: cache_epoch
-        run: printf 'week=%s\n' "$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
-      - name: Restore smoke packages
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: /var/cache/pacman/pkg
-          key: arch-smoke-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
-          restore-keys: arch-smoke-pacman-${{ runner.arch }}-
-      - name: Install nested compositor test dependencies
-        run: pacman -Syu --noconfirm --needed git python python-pip python-pillow libpipewire qt6-declarative qt6-wayland quickshell qt6-multimedia qt6-multimedia-ffmpeg qt6-imageformats librsvg fontconfig freetype2 libraqm libjpeg-turbo lcms2 niri hyprland grim xorg-server-xvfb mesa dbus ttf-dejavu
+      - name: Install package-test runtime
+        run: pacman -Syu --noconfirm --needed git python python-pillow python-yaml python-gobject python-dbus python-dbus-next python-jsonschema libpipewire mpv fontconfig freetype2 libraqm libjpeg-turbo lcms2 librsvg glib2 libxkbcommon gdk-pixbuf2
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          submodules: recursive
       - name: Download candidate engine
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: smoke-engine
-          path: /tmp/smoke-engine
+          name: package-engine
+          path: deps/orient/target/release
       - name: Download candidate helper
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: smoke-helper
-          path: nacre/shell-tools
-      - name: Install candidate test runtime
-        run: |
-          python -m venv /tmp/smoke-env
-          python - <<'PY'
-          import json, subprocess
-          pins = json.load(open("dependencies.lock.json"))["python"]
-          subprocess.run(["/tmp/smoke-env/bin/pip", "install", "./nacre/shell-cli", *[name + "==" + version for name, version in pins.items()]], check=True)
-          PY
-          chmod +x /tmp/smoke-engine/orient nacre/shell-tools/nacre-helper
-      - name: Fresh default install in nested niri
+          name: package-helper
+          path: target/release
+      - name: Run isolated package staging and install tests
         env:
-          NACRE_ORIENT_BINARY: /tmp/smoke-engine/orient
-        run: PATH="/tmp/smoke-env/bin:$PATH" python tools/tests/smoke_install.py --output /tmp/nacre-install-smoke
-      - name: Fresh-install evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: fresh-install-niri
-          path: |
-            /tmp/nacre-install-smoke
-          retention-days: 7
-      - name: Save smoke packages
-        if: always()
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: /var/cache/pacman/pkg
-          key: arch-smoke-pacman-${{ runner.arch }}-${{ steps.cache_epoch.outputs.week }}
+          NACRE_HELPER_BINARY: ${{ github.workspace }}/target/release/nacre-helper
+          NACRE_ORIENT_BINARY: ${{ github.workspace }}/deps/orient/target/release/orient
+          PYTHONPATH: ${{ github.workspace }}/tools/tests:${{ github.workspace }}/nacre/shell-tools:${{ github.workspace }}/nacre/shell-cli/src
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE/deps/orient"
+          chmod +x "$NACRE_HELPER_BINARY" "$NACRE_ORIENT_BINARY"
+          python -m unittest \
+            test_setup.PackageSetupTests.test_apply_is_offline_repeatable_preserves_private_state_and_rolls_back \
+            test_setup.ArchPackageLayoutTests.test_split_packages_have_no_file_collisions_and_ship_native_artifacts

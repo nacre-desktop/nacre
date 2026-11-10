@@ -62,18 +62,6 @@ def invoke(request):
                     )
                 elif operation == "companion":
                     result = overview_hover_binary(Path(provider["home"]))
-                elif operation == "build":
-                    subprocess.run(
-                        [
-                            str(ROOT / "target/release/nacre-helper"),
-                            "build-niri-overview-hover",
-                            "--backend",
-                            provider["backend"],
-                            "--install",
-                        ],
-                        check=True,
-                    )
-                    result = None
                 else:
                     raise ValueError("Unknown provider operation")
                 reply = {"value": str(result) if isinstance(result, Path) else result}
@@ -131,16 +119,3 @@ def verified_hover_binary(root, owner, *, packaged=False):
 def overview_hover_binary(home):
     result = invoke({"operation": "overview_hover_binary", "home": str(home)})
     return Path(result) if result else None
-
-
-def ensure_overview_hover(backend, home):
-    try:
-        invoke(
-            {
-                "operation": "ensure_overview_hover",
-                "backend": str(backend),
-                "home": str(home),
-            }
-        )
-    except ValueError as error:
-        raise RuntimeError(str(error)) from error

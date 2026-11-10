@@ -19,10 +19,7 @@ ACCENTS = str.maketrans(
 
 @lru_cache(maxsize=1)
 def english():
-    paths = (
-        Path(__file__).resolve().parent.parent / "source/i18n/en.json",
-        Path(__file__).resolve().parent.parent / "shell/i18n/en.json",
-    )
+    paths = (Path(__file__).resolve().parent / "i18n/en.json",)
     for path in paths:
         try:
             value = json.loads(path.read_text())

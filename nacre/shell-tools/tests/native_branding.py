@@ -8,7 +8,7 @@ from nacre_native_palette import _call
 
 ROOT = Path(__file__).resolve().parents[3]
 __file__ = str(ROOT / "tools/generate_branding.py")
-MASTER = ROOT / "nacre/shell/branding/nacre-master.svg"
+MASTER = ROOT / "nacre/shell-tools/branding/nacre-master.svg"
 GEOMETRY = MASTER
 VIEWBOX = "2.8 3 58 58"
 APPLICATIONS = ("ai", "brain", "settings", "colors", "notifications")

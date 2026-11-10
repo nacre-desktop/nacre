@@ -53,6 +53,14 @@ rollback refuses without changing a healthy running shell when no previous copy
 exists; if older copies are damaged, its current known-good copy is the final
 recovery option. Automatic failure recovery excludes the failed current copy.
 
+Direct source migration holds `releases/release.lock`, the same lock as the
+switch/recovery controller. It must not acquire the daemon's config writer
+lease: the running daemon owns that lease for its lifetime. An inherited writer
+descriptor from an enclosing release is still validated. Legacy-file archiving
+runs under that same release lock only after health succeeds, with the config
+root pinned and validated; it touches retired QML files, never daemon settings.
+The real-session code-only proof exposed and corrected this lock conflict.
+
 The real-session rollback proof also exposed shared UI crash history: a failed
 copy could put an older healthy copy into Bead safe mode before its provider
 registered. Each installed launcher now exports its immutable release ID;
@@ -84,7 +92,7 @@ health checks. Stage B removes the old transaction and QML installer branches.
 
 ## Validation and migration evidence
 
-Stage A focused checks ran in the task's Arch container on dev-1 with disposable
+Initial Stage A focused checks ran in the task's Arch container on dev-1 with disposable
 HOMEs. The common environment was
 `PYTHONPATH=tools:nacre/shell-tools:nacre/shell-cli/src`, with
 `NACRE_HELPER_BINARY=/work/target/release/nacre-helper` and
@@ -124,9 +132,64 @@ shell with unchanged `NRestarts=0` after exhaustion. It does not prove rendered
 Bead UI health. The fixture copies its controller into the disposable HOME and
 the failure unit executes that persisted copy.
 
-Full desktop CI, installed-package acceptance and actual Bead/daemon recovery
-evidence remain pending. No installer runs against the owner's HOME and no laptop
-session, units or installed files are changed.
+The initial standalone Stage A full check was not green: its legacy shared-engine
+QML aggregate still exceeded the enlarged 900-second limit and the dual-context
+wrapper exceeded 40 seconds. Those QML-only
+suites are removed in Stage B, as requested; their failures are not reported as
+passing Stage A CI.
+
+The final native workflow passed on the final-compatible Stage B sources:
+`cargo fmt --check`, `cargo clippy --workspace --all-targets --locked -j2 -- -D warnings`,
+`cargo build --locked --examples -j2`, `cargo test --workspace --locked -j2`, the
+minimal protocol consumer, release helper build and every imported product
+feature/build command from `.github/workflows/check.yml`. The product Rust suite
+reported **867 passed, 0 failed, 4 intentionally ignored**. Native source hashes
+were unchanged when the clean test/consumer corrections were committed.
+
+On clean `9e124324a1`,
+`dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py` passed:
+404 tools tests (one skipped), 138 AI, 54 Brain, 374 shell-tools, 13 Bead proof
+suites/179 tests, six package Python tests and 14 product Python suites/185 tests.
+Palette CLI, generated configuration, SDDM parser and JavaScript checks passed.
+The subsequent fresh-Niri palette guard receives its own focused and final
+source-check validation below. Publication still awaits the remaining fresh
+install, package stage/install and isolated memory proofs.
+
+The actual Bead proof (recorded as proof29) ran in the task-only systemd container:
+
+```sh
+# Inside n0156-ci-desktop, UID 1001; fresh /home/beadproof, runtime /run/user/1001:
+nice -n 10 python3 /tmp/n0156-real-bead-recovery.py
+# Container root, using RUN_STARTED printed by that exact invocation:
+journalctl --since "$RUN_STARTED" _UID=1001 --no-pager
+journalctl --since "$RUN_STARTED" _UID=1001 --identifier=nacre-ui-shell-fallback --no-pager
+```
+
+Result: exit 0. It used all three real Bead executables, the actual daemon and
+Niri under Xvfb. The initial legacy service was a harmless placeholder, not a
+QML UI health claim. Real migration, stale-fallback `install.py --code-only`,
+rollback/update, failed-B-to-good-A recovery and exhausted-copy shutdown passed.
+The live daemon held the config writer lease during the direct installer run.
+A normal SIGTERM left `ui-health-<release>.json` with `running:null` and unchanged
+empty failures. Each restored Bead answered the real `nacre.hide` route (`null`,
+exit 0). The root journal contained seven real OSD prewarm markers, zero
+`UI_ERROR` entries, and the required no-good-copy hint. Shell and fallback restart
+counts were stable for five seconds after the terminal fallback completed.
+Completed oneshot units may lose their InvocationID through systemd collection;
+the fresh, UID-scoped journal proves that execution instead.
+
+The final real-manager stub rehearsal also passed, with a fresh UID 1000 HOME:
+`nice -n 10 python /work/tools/tests/rehearse_ui_shell_systemd.py` (exit 0).
+While `releases/release.lock` was held, fallback `NRestarts` advanced 0 to 3;
+after unlocking it recovered the known-good copy. Rollback/next update and
+terminal shutdown passed, with the shell inactive and `NRestarts=0` stable.
+The system journal query scoped to `_UID=1000` since `2026-11-10 15:14:08`
+confirmed the recovery hint. These stub checks prove actual systemd wiring and
+contention; proof29 separately establishes real provider/daemon health.
+
+All commands above ran with nice level 10, Cargo `-j2`, and task containers capped
+at eight CPUs and 16 GiB. No installer ran against the owner's HOME; no laptop
+session, units or installed files were changed.
 
 ## Owner-run live migration (procedure only; not executed here)
 
@@ -147,22 +210,51 @@ systemctl --user is-active nacre-shell.service nacre-daemon.service
 journalctl --user -u nacre-shell.service -u nacre-ui-shell-fallback.service --no-pager -n 100
 ```
 
-Stage A replaces the managed `nacre-ui-shell-fallback.service` action with
-`ui-shell recover-bead --recover`, stages an immutable matched Bead copy, and
-health-checks the activated shell. Existing Bead remains recoverable. It retains
+Stage A replaced the managed `nacre-ui-shell-fallback.service` action with
+`ui-shell recover-bead --recover`, staged an immutable matched Bead copy, and
+health-checked the activated shell. Existing Bead remains recoverable. It retained
 QML files under `~/.local/share/nacre/shell/source`, `source.previous`,
-`source.good` and `~/.config/quickshell/nacre` until Stage B is validated.
+`source.good` and `~/.config/quickshell/nacre` until Stage B. The final installer
+archives those owned legacy files after Bead passes health checks, as below.
 The shared `~/.local/share/nacre/shell/tools` and `shell/bin` paths remain product
 runtime paths; their name does not make them obsolete QML code.
 
 The way back for a Bead update is `nacre ui-shell rollback`, followed by the
 status and journal commands above. A source release rollback uses
 `nacre rollback` for the managed file snapshot; a direct install's helper/tree
-rollback remains separate. Stage A also retains explicit `ui-shell qml` solely
-as compatibility until Stage B. It is never the automatic failure action.
-Stage B must record the exact removal/backup policy for old QML files here before
-its deletion commit is eligible to push. No command above grants workers live
-access.
+rollback remains separate. Stage A retained explicit `ui-shell qml` as temporary
+compatibility. Stage B removed that command; it was never the new automatic
+failure action.
+After Stage B, the same `--code-only` command keeps shared command/configuration,
+palette, font, app-isolation and daemon setup, installs the matched Bead copy,
+restarts under the managed unit, and waits for process/provider/daemon/settings
+health. It replaces the old fallback action before activating the candidate.
+Only after success, under the release lock, it moves owned `source`,
+`source.previous`, `source.good`, and `source.good.next` out of
+`~/.local/share/nacre/shell/` to
+`~/.local/state/nacre/shell/backups/<UTC>/legacy-shell/`. It also moves
+`~/.config/quickshell/nacre` only when its exact symlink target is an old product
+source location, and moves `shell/bin/qs`, `shell/tools/launch.sh` and
+`shell/tools/qt-check.sh` only when their bytes match the known old scripts.
+Unrecognized config links/directories and modified scripts remain untouched. The adjacent
+`manifest.json` records moves; `backups/latest-legacy-shell-backup` records its
+parent. Shared `shell/tools`, `shell/bin/nacre_shell`, palette/user data and the
+SDDM greeter remain. Legacy Python shell-supervisor code is retired with its
+other already-ported helper originals. A prepared Niri session refresh retains
+the live bind directory inode while removing obsolete staged source files and
+rebuilding the generic/shared view.
+
+Package setup removes the two old source/config links only when its existing
+package-links receipt owns their exact targets; it stages a matched Bead copy
+and recovery units without starting live services. The next login activates
+those units. Package source trees no longer contain the old shell.
+
+The supported way back is `nacre ui-shell rollback` to the previous healthy Bead,
+or the release snapshot owner `nacre rollback` for an applied source/package
+configuration transaction. Archive manifests retain old bytes for lead-led
+inspection; no QML launch command is shipped. A standalone install's `--restore`
+restores its private-file manifest and leaves the previous service restart to
+the lead. No command above grants workers live access.
 
 ## Rollback-copy inventory
 
@@ -178,3 +270,242 @@ last-edit dates do not establish trust. Retain pending proof of the trust date;
 delete 7 days after each replacement is trusted, with its test/i18n/configure
 consumers. The three Brain copies import one another and require a grouped
 consumer review.
+
+## Stage B extraction and limits
+
+The old daemon/menu benchmark adapters imported the retired QML session driver;
+retire both adapters with that driver rather than add another nested-session
+framework. Existing native daemon contract and memory tests remain. The generic
+power sampler now fingerprints Bead Luau/Lua/JSON files. Historical development
+guides identify their retired QML commands explicitly.
+
+Standalone QML panel extensions are removed with their interpreter. Validation
+rejects their manifests; an old `.qml` entry point is never executed as a program.
+Launcher and theme extensions retain their shared validation and launch behavior.
+Review-tree preparation no longer stages QML source, and successful releases no
+longer promote `source.good`; Bead journals own known-good shell recovery.
+
+Moved shared settings/navigation metadata, branding masters and the non-QML
+English/context catalog into `nacre/shell-tools`. The daemon combines its
+embedded Bead English with that installed shared catalog, so newer Bead strings
+are not lost. Notification expiration defaults now live in the existing shared
+notification policy rather than being parsed from QML source. Original shared
+translation/launcher reference records and legal attribution remain historical
+research; generic native tests remain, while QML UI/parity suites and drivers
+are retired. The SDDM QtQuick parser/tests and its Qt dependencies remain. Its translation
+engine is now a regular file containing the former shared engine bytes, replacing
+a symlink into the retired shell tree. The Widgets application icon also remains
+shared data because the Bead application desktop entry still consumes it.
+The native Niri runtime test provider remains for host preferences, palette,
+verified companions and commands; only its deleted hover-builder operation and
+its callers are retired. JSON Schema remains a developer test dependency for
+shared notification contracts. Frozen historical diagnostic fixtures are excluded
+from the live compositor-dispatch scan only at their anchored archive path.
+
+The obsolete private Niri auto-builder required a QML caption probe. That
+builder and probe are retired together; existing receipt-validated companions
+and native Nacre Niri remain selectable. Without one, the existing stock-Niri
+fallback runs with hover streaming disabled. Fresh stock-Niri sessions therefore
+lack companion overview-hover titles until a verified companion is supplied.
+No unverified build is promoted in place of the deleted proof.
+
+`bead-shell/` is untouched because N0157 owns its mirror/proofs. Necessary
+migration code/tests still spell old configuration paths explicitly. These
+are exceptions to a literal global `git grep -il quickshell` requirement:
+removing those references would prevent safe old-install migration, and editing
+`bead-shell/` would cross this task's boundary. The final inventory must list
+all residual paths, rather than obscuring names or removing provenance.
+
+Ordinary Niri application rounding remains a shared setting. Its generated rule
+now excludes Bead's client-rendered pearl app IDs, replacing the retired QML
+app-ID exclusion; the geometry/clip rule and validation bounds are retained.
+
+The shared `nacre start` dispatcher requests the managed service. If the base
+service invokes it without a Bead drop-in, it reports the missing activation
+and exits with EX_CONFIG (78); the existing service prevents restart for that
+status. This avoids self-start recursion and a missing-configuration loop.
+
+## Remaining literal-name inventory
+
+The exact remaining file set from `git grep -il quickshell` is listed below.
+The migration references are removal-only or negative/provenance tests; no
+shipped shell launch path invokes that runtime. This inventory includes the
+explicit N0157 exclusion rather than silently treating it as deleted.
+
+### Historical documentation and reference evidence (39)
+
+- `assets/screenshots/settings-review/README.md`
+- `docs/architecture/foundation.md`
+- `docs/architecture/protocol.md`
+- `docs/development/compositors.md`
+- `docs/development/detachable-panels.md`
+- `docs/development/native-helpers.md`
+- `docs/development/niri-parity.md`
+- `docs/development/niri-testing.md`
+- `docs/development/performance-session-results.json`
+- `docs/development/performance.md`
+- `docs/development/power-baseline.md`
+- `docs/development/rust-migration-results.json`
+- `docs/development/settings-architecture.md`
+- `docs/development/soak.md`
+- `docs/development/testing.md`
+- `docs/research/bead-vs-qml-shell-benchmark-20261110.md`
+- `docs/research/bead-vs-qml-shell-benchmark-20261110/provenance.csv`
+- `docs/research/f4-n0007-gc-diagnostic.md`
+- `docs/research/launcher-engine-notice.md`
+- `docs/research/n0156-reference/diagnostics/case-support-collect.json`
+- `docs/research/n0156-reference/diagnostics/case-support-malformed-devices.json`
+- `docs/research/n0156-reference/diagnostics/expected-support-collect.json`
+- `docs/research/n0156-reference/diagnostics/expected-support-malformed-devices.json`
+- `docs/research/n0156-reference/diagnostics/expected-support-markdown.json`
+- `docs/research/n0156-reference/launcher-base-menu.json`
+- `docs/research/n0156-reference/launcher-reference.md`
+- `docs/research/n0156-reference/qt-translation.json`
+- `docs/specs/0007-f4-qml-memory-fix.md`
+- `docs/specs/0011-f4-qml-residency-investigation.md`
+- `docs/specs/0019-weather-updates-workers.md`
+- `docs/specs/0033-dashboard-player-metrics-contracts.md`
+- `docs/specs/0046-control-center-action-contracts.md`
+- `docs/specs/0048-cli-ui-routes.md`
+- `docs/specs/0055-daemon-updates-count.md`
+- `docs/specs/0073-retire-qml-windows-companion.md`
+- `docs/specs/0101-install-tiers.md`
+- `docs/specs/0156-bead-only-shell.md`
+- `docs/specs/0158-launch-workspace.md`
+- `docs/specs/README.md`
+
+### Migration and its regression/installed-package proofs (7)
+
+- `nacre/shell-tools/install.py`
+- `nacre/shell-tools/tests/test_installer_dropin_guard.py`
+- `packaging/arch/test-installed.py`
+- `tools/package_runtime.py`
+- `tools/releases.py`
+- `tools/tests/test_releases.py`
+- `tools/tests/test_setup.py`
+
+### N0157-owned mirror, proofs and records (outside this unit) (100)
+
+- `bead-shell/FEASIBILITY.md`
+- `bead-shell/README.md`
+- `bead-shell/docs/decisions/0004-structure-licensing-generalization.md`
+- `bead-shell/docs/research/00-scope.md`
+- `bead-shell/docs/research/02-rendering.md`
+- `bead-shell/docs/research/05-prior-art.md`
+- `bead-shell/docs/research/baseline-summary.md`
+- `bead-shell/docs/research/feature8-gate-c.md`
+- `bead-shell/docs/research/qml-retirement-inventory-20261023.md`
+- `bead-shell/docs/research/scope-index.md`
+- `bead-shell/docs/research/scope-inventory.json`
+- `bead-shell/docs/research/source-pins.json`
+- `bead-shell/docs/research/spike-setup.md`
+- `bead-shell/docs/specs/0029-packaging-coexistence-rollback.md`
+- `bead-shell/docs/specs/0033-switch-systemd-validation.md`
+- `bead-shell/docs/specs/0037-workspace-launcher-parity.md`
+- `bead-shell/docs/specs/0051-osd-kinds-pin.md`
+- `bead-shell/docs/specs/0056-visual-parity.md`
+- `bead-shell/docs/specs/0059-welcome-app.md`
+- `bead-shell/docs/specs/0083-weather-settings-i18n-harness.md`
+- `bead-shell/docs/specs/0084-trial-switch-routes.md`
+- `bead-shell/docs/specs/0090-live-window-previews.md`
+- `bead-shell/docs/specs/0092-palette-mode.md`
+- `bead-shell/docs/specs/0095-sound-wifi-parity.md`
+- `bead-shell/docs/specs/0099-wallpaper-hwdec.md`
+- `bead-shell/docs/specs/0168-smoothness-audit.md`
+- `bead-shell/docs/specs/0197-launcher-actions.md`
+- `bead-shell/docs/specs/0208-widgets-editor.md`
+- `bead-shell/docs/specs/0213-launcher.md`
+- `bead-shell/docs/specs/evidence/0076/metrics.json`
+- `bead-shell/docs/specs/evidence/0103/README.md`
+- `bead-shell/docs/specs/evidence/0124/validation.json`
+- `bead-shell/docs/specs/evidence/0136/launcher-favorite-stars.json`
+- `bead-shell/docs/specs/evidence/0136/notification-app-icons.json`
+- `bead-shell/docs/specs/evidence/0136/notification-history-popout.json`
+- `bead-shell/examples/hyprland-backend.lua`
+- `bead-shell/examples/niri-backend.kdl`
+- `bead-shell/scripts/rehearse-ui-switch.py`
+- `bead-shell/scripts/systemd-validation/Dockerfile`
+- `bead-shell/scripts/systemd-validation/install.sh`
+- `bead-shell/scripts/systemd-validation/validate.py`
+- `bead-shell/spikes/backend-reference.py`
+- `bead-shell/spikes/backend-windows.qml`
+- `bead-shell/spikes/bar-matrix.py`
+- `bead-shell/spikes/bar-reference.py`
+- `bead-shell/spikes/bar-ui.py`
+- `bead-shell/spikes/blank-outputs.qml`
+- `bead-shell/spikes/blank.qml`
+- `bead-shell/spikes/calendar-reference.py`
+- `bead-shell/spikes/detach-ghost-proof.py`
+- `bead-shell/spikes/fake-bluez.py`
+- `bead-shell/spikes/fake-power.py`
+- `bead-shell/spikes/fake_system.py`
+- `bead-shell/spikes/fullscreen-lips.py`
+- `bead-shell/spikes/launcher-port.qml`
+- `bead-shell/spikes/launcher-reference.py`
+- `bead-shell/spikes/measure.py`
+- `bead-shell/spikes/model-proof.py`
+- `bead-shell/spikes/notification-reference.py`
+- `bead-shell/spikes/panel-reference.py`
+- `bead-shell/spikes/panel-reload.qml`
+- `bead-shell/spikes/panel.qml`
+- `bead-shell/spikes/parity-compare.py`
+- `bead-shell/spikes/placement-reference.py`
+- `bead-shell/spikes/reference/nacre-placement/README.md`
+- `bead-shell/spikes/results/baseline.json`
+- `bead-shell/spikes/status-reference.py`
+- `bead-shell/spikes/stress.py`
+- `bead-shell/spikes/tests/test_fake_system.py`
+- `bead-shell/spikes/wallpaper-video-bench.py`
+- `bead-shell/ssh-placeholder/shell/shell-routes.json`
+- `bead-shell/ssh-placeholder/shell/sound/body.luau`
+- `bead-shell/ssh-placeholder/spikes/backend-reference.py`
+- `bead-shell/ssh-placeholder/spikes/backend-windows.qml`
+- `bead-shell/ssh-placeholder/spikes/bar-matrix.py`
+- `bead-shell/ssh-placeholder/spikes/bar-reference.py`
+- `bead-shell/ssh-placeholder/spikes/bar-ui.py`
+- `bead-shell/ssh-placeholder/spikes/blank-outputs.qml`
+- `bead-shell/ssh-placeholder/spikes/blank.qml`
+- `bead-shell/ssh-placeholder/spikes/calendar-reference.py`
+- `bead-shell/ssh-placeholder/spikes/fake-bluez.py`
+- `bead-shell/ssh-placeholder/spikes/fake-power.py`
+- `bead-shell/ssh-placeholder/spikes/fake_system.py`
+- `bead-shell/ssh-placeholder/spikes/fullscreen-lips.py`
+- `bead-shell/ssh-placeholder/spikes/launcher-port.qml`
+- `bead-shell/ssh-placeholder/spikes/launcher-reference.py`
+- `bead-shell/ssh-placeholder/spikes/measure.py`
+- `bead-shell/ssh-placeholder/spikes/model-proof.py`
+- `bead-shell/ssh-placeholder/spikes/notification-reference.py`
+- `bead-shell/ssh-placeholder/spikes/panel-reference.py`
+- `bead-shell/ssh-placeholder/spikes/panel-reload.qml`
+- `bead-shell/ssh-placeholder/spikes/panel.qml`
+- `bead-shell/ssh-placeholder/spikes/parity-compare.py`
+- `bead-shell/ssh-placeholder/spikes/placement-reference.py`
+- `bead-shell/ssh-placeholder/spikes/reference/nacre-placement/README.md`
+- `bead-shell/ssh-placeholder/spikes/results/baseline.json`
+- `bead-shell/ssh-placeholder/spikes/status-reference.py`
+- `bead-shell/ssh-placeholder/spikes/stress.py`
+- `bead-shell/ssh-placeholder/spikes/tests/test_fake_system.py`
+- `bead-shell/ssh-placeholder/spikes/wallpaper-video-bench.py`
+
+## Stage B focused validation
+
+The final isolated dev-1 snapshot passed shared i18n coverage (1,787 messages;
+2,503 obsolete IDs removed), pinned Ruff 0.16.10 format/lint for 29 Python files,
+`cargo fmt --all --check`, and `git diff --check`. Exact focused commands:
+
+```sh
+nice -n 10 /tmp/check-env/bin/python tools/i18n/check.py
+nice -n 10 /tmp/check-env/bin/python -m unittest discover -s tools/tests -p test_ui_shell_switch.py -v
+PYTHONPATH=nacre/shell-tools nice -n 10 /tmp/check-env/bin/python -m unittest discover -s nacre/shell-tools/tests -p test_installer_dropin_guard.py -v
+nice -n 10 cargo fmt --all --check
+```
+
+Results: i18n PASS, switch 18 tests OK, installer 13 tests OK, Rust format exit 0.
+The installer tests cover shared fresh/code-only setup and preservation of old
+files when Bead activation fails. These checks are supplemental; full desktop
+CI, real Bead recovery and package acceptance remain required before publication.
+
+The menu engine's frozen JavaScript/provider tests retain their original catalog
+input under historical research. Only the shipped launcher catalog loses the
+retired documentation entry; original generic reference inputs and compressed
+expected outputs remain unchanged.

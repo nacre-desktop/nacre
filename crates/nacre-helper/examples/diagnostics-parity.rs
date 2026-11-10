@@ -18,8 +18,6 @@ impl diagnostics::Probe for FixtureProbe {
             ["fixture-compositor", "runningVersion"] => "runningVersion",
             ["fixture-compositor", "allMonitors"] => "allMonitors",
             ["fixture-compositor", "configErrors"] => "configErrors",
-            ["quickshell", "--version"] => "quickshell-version",
-            ["/usr/lib/qt6/bin/qtpaths", "--qt-version"] => "qt-version",
             ["pacman", "-Q"] => "packages",
             ["pw-dump"] => "audio",
             ["fixture-python", "--version"] => "python-version",
@@ -34,7 +32,6 @@ impl diagnostics::Probe for FixtureProbe {
             ["journalctl", "--user", "--no-pager", "-o", "cat", "--since", "1 hour ago", "-p", "warning", "-n", "80", ..] => {
                 "journal"
             }
-            ["quickshell", "log", "--config", "nacre", "--no-color", "--tail", "60"] => "shell-log",
             ["du", "-s", "-B1", "/case/home/.local/state/nacre/releases"] => "release-size",
             ["nmcli", "--terse", "--escape", "no", "--fields", "SSID", "device", "wifi", "list", "--rescan", "no"] => {
                 "ssids"
@@ -153,7 +150,6 @@ fn main() -> Result<()> {
             "hyprctl",
             "uwsm",
             "python3",
-            "quickshell",
             "systemctl",
             "wpctl",
             "nmcli",

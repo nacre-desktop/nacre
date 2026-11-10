@@ -3,7 +3,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, io::Read};
 #[test]
-fn frozen_current_quickshell_catalog_metadata_and_commands_match() -> Result<()> {
+fn frozen_original_upstream_catalog_metadata_and_commands_match() -> Result<()> {
     let mut bytes = Vec::new();
     flate2::read::GzDecoder::new(include_bytes!("fixtures/desktop-catalog.json.gz").as_slice())
         .read_to_end(&mut bytes)?;

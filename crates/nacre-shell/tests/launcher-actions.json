@@ -670,15 +670,6 @@
    "icon": "public"
   },
   {
-   "id": "learn.quickshell",
-   "kind": "action",
-   "name": "Quickshell documentation",
-   "operation": "url",
-   "disabled": false,
-   "value": "https://quickshell.org/docs/",
-   "icon": "public"
-  },
-  {
    "id": "learn.news",
    "kind": "action",
    "name": "Nacre project",
@@ -979,7 +970,7 @@
    "name": "actions.emoji.x",
    "operation": "copy",
    "disabled": false,
-   "value": "😀",
+   "value": "\ud83d\ude00",
    "icon": "content_copy"
   },
   {
@@ -1379,48 +1370,289 @@
   }
  ],
  "navigation": [
-  {"id":"home","kind":"group","label":"Home","icon":"home"},
-  {"id":"apps","kind":"group","label":"All apps","icon":"apps","provider":"apps"},
-  {"id":"actions","kind":"group","label":"Actions","icon":"bolt"},
-  {"id":"style","kind":"group","label":"Style","icon":"palette"},
-  {"id":"setup","kind":"group","label":"Setup","icon":"tune"},
-  {"id":"software","kind":"group","label":"Software","icon":"download"},
-  {"id":"health","kind":"group","label":"Health","icon":"build"},
-  {"id":"learn","kind":"group","label":"Learn","icon":"help"},
-  {"id":"power","kind":"group","label":"Power","icon":"power_settings_new"},
-  {"id":"actions.capture","kind":"group","label":"Capture","icon":"screenshot"},
-  {"id":"actions.clipboard","kind":"group","label":"Clipboard history","icon":"content_paste","provider":"clipboard"},
-  {"id":"actions.emoji","kind":"group","label":"Emoji","icon":"mood","provider":"emoji"},
-  {"id":"actions.windows","kind":"group","label":"Windows","icon":"view_quilt","provider":"windows"},
-  {"id":"actions.reminders","kind":"group","label":"Reminders","icon":"timer","provider":"timers"},
-  {"id":"actions.assistant","kind":"group","label":"Nacre AI and Brain","icon":"neurology"},
-  {"id":"actions.controls","kind":"group","label":"Quick controls","icon":"toggle_on"},
-  {"id":"style.wallpapers","kind":"group","label":"Wallpapers","icon":"wallpaper","provider":"wallpapers"},
-  {"id":"style.personality","kind":"group","label":"Orient personality","icon":"palette"},
-  {"id":"style.background","kind":"group","label":"Background tint","icon":"gradient"},
-  {"id":"style.appearance","kind":"group","label":"Light and dark","icon":"contrast"},
-  {"id":"style.accents","kind":"group","label":"Accent choice","icon":"color_lens","provider":"accents"},
-  {"id":"style.fonts","kind":"group","label":"Interface font","icon":"text_fields","provider":"fonts"},
-  {"id":"style.mono-fonts","kind":"group","label":"Terminal font","icon":"terminal","provider":"fonts"},
-  {"id":"setup.wifi-networks","kind":"group","label":"Wi-Fi networks","icon":"wifi","provider":"wifi"},
-  {"id":"setup.bluetooth-devices","kind":"group","label":"Bluetooth devices","icon":"bluetooth","provider":"bluetooth"},
-  {"id":"software.discover","kind":"group","label":"Apps","icon":"apps","provider":"software"},
-  {"id":"software.packages","kind":"group","label":"Search packages","icon":"search","provider":"packages"},
-  {"id":"software.installed","kind":"group","label":"Installed packages","icon":"inventory_2","provider":"installed"},
-  {"id":"software.development","kind":"group","label":"Developer environments","icon":"code","provider":"environments"},
-  {"id":"software.tui","kind":"group","label":"Terminal apps","icon":"terminal","provider":"tui-apps"},
-  {"id":"software.webapps","kind":"group","label":"Web apps","icon":"public","provider":"webapps"},
-  {"id":"learn.shortcuts","kind":"group","label":"Keyboard shortcuts","icon":"keyboard","provider":"keys"},
-  {"id":"actions.controls.profile","kind":"group","label":"Power profile","icon":"battery_full"},
-  {"id":"actions.media","kind":"group","label":"Media and audio","icon":"volume_up","provider":"audio"},
-  {"id":"actions.saved","kind":"group","label":"Saved launcher items","icon":"bookmark"},
-  {"id":"actions.dictation","kind":"group","label":"Voice typing","icon":"mic"},
-  {"id":"software.themes","kind":"group","label":"Themes","icon":"palette","provider":"software-themes"},
-  {"id":"software.extensions","kind":"group","label":"Extensions","icon":"extension","provider":"software-extensions"},
-  {"id":"software.discover.ai","kind":"group","label":"AI","icon":"smart_toy","provider":"software-ai"},
-  {"id":"health.fixits","kind":"group","label":"Fix a problem","icon":"build","provider":"health-fixits"},
-  {"id":"setup.system","kind":"group","label":"System setup","icon":"settings_suggest","provider":"system-setup"},
-  {"id":"setup.hardware","kind":"group","label":"Hardware controls","icon":"devices","provider":"system-hardware"},
-  {"id":"health.speed","kind":"group","label":"Speed tests","icon":"speed","provider":"system-speed"}
+  {
+   "id": "home",
+   "kind": "group",
+   "label": "Home",
+   "icon": "home"
+  },
+  {
+   "id": "apps",
+   "kind": "group",
+   "label": "All apps",
+   "icon": "apps",
+   "provider": "apps"
+  },
+  {
+   "id": "actions",
+   "kind": "group",
+   "label": "Actions",
+   "icon": "bolt"
+  },
+  {
+   "id": "style",
+   "kind": "group",
+   "label": "Style",
+   "icon": "palette"
+  },
+  {
+   "id": "setup",
+   "kind": "group",
+   "label": "Setup",
+   "icon": "tune"
+  },
+  {
+   "id": "software",
+   "kind": "group",
+   "label": "Software",
+   "icon": "download"
+  },
+  {
+   "id": "health",
+   "kind": "group",
+   "label": "Health",
+   "icon": "build"
+  },
+  {
+   "id": "learn",
+   "kind": "group",
+   "label": "Learn",
+   "icon": "help"
+  },
+  {
+   "id": "power",
+   "kind": "group",
+   "label": "Power",
+   "icon": "power_settings_new"
+  },
+  {
+   "id": "actions.capture",
+   "kind": "group",
+   "label": "Capture",
+   "icon": "screenshot"
+  },
+  {
+   "id": "actions.clipboard",
+   "kind": "group",
+   "label": "Clipboard history",
+   "icon": "content_paste",
+   "provider": "clipboard"
+  },
+  {
+   "id": "actions.emoji",
+   "kind": "group",
+   "label": "Emoji",
+   "icon": "mood",
+   "provider": "emoji"
+  },
+  {
+   "id": "actions.windows",
+   "kind": "group",
+   "label": "Windows",
+   "icon": "view_quilt",
+   "provider": "windows"
+  },
+  {
+   "id": "actions.reminders",
+   "kind": "group",
+   "label": "Reminders",
+   "icon": "timer",
+   "provider": "timers"
+  },
+  {
+   "id": "actions.assistant",
+   "kind": "group",
+   "label": "Nacre AI and Brain",
+   "icon": "neurology"
+  },
+  {
+   "id": "actions.controls",
+   "kind": "group",
+   "label": "Quick controls",
+   "icon": "toggle_on"
+  },
+  {
+   "id": "style.wallpapers",
+   "kind": "group",
+   "label": "Wallpapers",
+   "icon": "wallpaper",
+   "provider": "wallpapers"
+  },
+  {
+   "id": "style.personality",
+   "kind": "group",
+   "label": "Orient personality",
+   "icon": "palette"
+  },
+  {
+   "id": "style.background",
+   "kind": "group",
+   "label": "Background tint",
+   "icon": "gradient"
+  },
+  {
+   "id": "style.appearance",
+   "kind": "group",
+   "label": "Light and dark",
+   "icon": "contrast"
+  },
+  {
+   "id": "style.accents",
+   "kind": "group",
+   "label": "Accent choice",
+   "icon": "color_lens",
+   "provider": "accents"
+  },
+  {
+   "id": "style.fonts",
+   "kind": "group",
+   "label": "Interface font",
+   "icon": "text_fields",
+   "provider": "fonts"
+  },
+  {
+   "id": "style.mono-fonts",
+   "kind": "group",
+   "label": "Terminal font",
+   "icon": "terminal",
+   "provider": "fonts"
+  },
+  {
+   "id": "setup.wifi-networks",
+   "kind": "group",
+   "label": "Wi-Fi networks",
+   "icon": "wifi",
+   "provider": "wifi"
+  },
+  {
+   "id": "setup.bluetooth-devices",
+   "kind": "group",
+   "label": "Bluetooth devices",
+   "icon": "bluetooth",
+   "provider": "bluetooth"
+  },
+  {
+   "id": "software.discover",
+   "kind": "group",
+   "label": "Apps",
+   "icon": "apps",
+   "provider": "software"
+  },
+  {
+   "id": "software.packages",
+   "kind": "group",
+   "label": "Search packages",
+   "icon": "search",
+   "provider": "packages"
+  },
+  {
+   "id": "software.installed",
+   "kind": "group",
+   "label": "Installed packages",
+   "icon": "inventory_2",
+   "provider": "installed"
+  },
+  {
+   "id": "software.development",
+   "kind": "group",
+   "label": "Developer environments",
+   "icon": "code",
+   "provider": "environments"
+  },
+  {
+   "id": "software.tui",
+   "kind": "group",
+   "label": "Terminal apps",
+   "icon": "terminal",
+   "provider": "tui-apps"
+  },
+  {
+   "id": "software.webapps",
+   "kind": "group",
+   "label": "Web apps",
+   "icon": "public",
+   "provider": "webapps"
+  },
+  {
+   "id": "learn.shortcuts",
+   "kind": "group",
+   "label": "Keyboard shortcuts",
+   "icon": "keyboard",
+   "provider": "keys"
+  },
+  {
+   "id": "actions.controls.profile",
+   "kind": "group",
+   "label": "Power profile",
+   "icon": "battery_full"
+  },
+  {
+   "id": "actions.media",
+   "kind": "group",
+   "label": "Media and audio",
+   "icon": "volume_up",
+   "provider": "audio"
+  },
+  {
+   "id": "actions.saved",
+   "kind": "group",
+   "label": "Saved launcher items",
+   "icon": "bookmark"
+  },
+  {
+   "id": "actions.dictation",
+   "kind": "group",
+   "label": "Voice typing",
+   "icon": "mic"
+  },
+  {
+   "id": "software.themes",
+   "kind": "group",
+   "label": "Themes",
+   "icon": "palette",
+   "provider": "software-themes"
+  },
+  {
+   "id": "software.extensions",
+   "kind": "group",
+   "label": "Extensions",
+   "icon": "extension",
+   "provider": "software-extensions"
+  },
+  {
+   "id": "software.discover.ai",
+   "kind": "group",
+   "label": "AI",
+   "icon": "smart_toy",
+   "provider": "software-ai"
+  },
+  {
+   "id": "health.fixits",
+   "kind": "group",
+   "label": "Fix a problem",
+   "icon": "build",
+   "provider": "health-fixits"
+  },
+  {
+   "id": "setup.system",
+   "kind": "group",
+   "label": "System setup",
+   "icon": "settings_suggest",
+   "provider": "system-setup"
+  },
+  {
+   "id": "setup.hardware",
+   "kind": "group",
+   "label": "Hardware controls",
+   "icon": "devices",
+   "provider": "system-hardware"
+  },
+  {
+   "id": "health.speed",
+   "kind": "group",
+   "label": "Speed tests",
+   "icon": "speed",
+   "provider": "system-speed"
+  }
  ]
 }

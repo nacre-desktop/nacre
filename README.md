@@ -4,7 +4,7 @@
 <p align="center">Colors shaped by your wallpaper.</p>
 <p align="center"><a href="docs/installation.md">Get started</a> · <a href="#shortcuts">Shortcuts</a> · <a href="#user-guides">User guides</a> · <a href="https://github.com/nacre-desktop/orient">Orient</a></p>
 
-Nacre is a Quickshell desktop for Hyprland, with experimental niri support. Pick a
+Nacre is a Wayland desktop shell built with Bead for Hyprland, with experimental niri support. Pick a
 wallpaper and its colors carry through the bar, window frame, launcher and apps.
 The separate [Orient](https://github.com/nacre-desktop/orient) Rust engine builds
 readable dark and light palettes: keep the image's balance with Natural, bring
@@ -26,8 +26,8 @@ The Bead-based Nacre product lives in `crates/nacre-shell/` and `shell/`.
 [Build it from this checkout](docs/development/product-shell-build.md) using
 Cargo’s pinned Bead framework dependency. Historical product tooling and records
 are retained under `bead-shell/`; the [import record](docs/development/b0214-import/frozen-export.json)
-identifies the frozen export and preserved history. The QML desktop remains
-available through the existing shell selection and rollback commands.
+identifies the frozen export and preserved history. Shell failure recovery uses
+the last known-good Bead copy; see [recovery](docs/recovery.md).
 
 ## Features
 

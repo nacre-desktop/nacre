@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Sample Nacre CPU/RSS/PSS/USS, Python launches and IPC completion latency without sudo."""
+"""Sample Nacre CPU/RSS/PSS/USS, Python launches without sudo."""
 
 import argparse
 from collections import Counter
@@ -8,7 +8,6 @@ import math
 import os
 from pathlib import Path
 import statistics
-import subprocess
 import time
 
 
@@ -260,61 +259,6 @@ def idle(shell_pid, duration, interval, spawn_log=None, detached=True):
     }
 
 
-def call(pid, target, method, *arguments):
-    result = subprocess.run(
-        ["quickshell", "ipc", "--pid", str(pid), "call", target, method, *arguments],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        check=True,
-    )
-    return result.stdout.strip()
-
-
-def ready(state, expected):
-    return all(state.get(key) == value for key, value in expected.items())
-
-
-def actions(pid, specifications, repeats, spawn_log=None):
-    results = {}
-    for name, spec in specifications.items():
-        values = []
-        launches = []
-        for _ in range(repeats):
-            for command in spec.get("prepare", []):
-                call(pid, *command)
-            time.sleep(spec.get("settle_s", 0.25))
-            started = time.monotonic()
-            offset = spawn_log.stat().st_size if spawn_log else 0
-            try:
-                call(pid, *spec["call"])
-                while True:
-                    checks = spec.get("checks", [spec])
-                    if all(
-                        ready(json.loads(call(pid, *check["state"])), check["expected"])
-                        for check in checks
-                    ):
-                        break
-                    if time.monotonic() - started > spec.get("timeout_s", 30):
-                        raise TimeoutError(name + " did not reach the requested state")
-                    time.sleep(0.01)
-                values.append((time.monotonic() - started) * 1000)
-                if spawn_log:
-                    with spawn_log.open() as stream:
-                        stream.seek(offset)
-                        launches.append(len(stream.readlines()))
-            finally:
-                for command in spec.get("cleanup", []):
-                    call(pid, *command)
-        results[name] = {
-            "ms": summarize(values),
-            "runs_ms": values,
-            "python_launches": launches,
-            "method": spec,
-        }
-    return results
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--pid", required=True, type=int)
@@ -322,14 +266,10 @@ def main():
     parser.add_argument("--interval", type=float, default=0.05)
     parser.add_argument("--spawn-log", type=Path)
     parser.add_argument("--descendants-only", action="store_true")
-    parser.add_argument(
-        "--actions", type=Path, help="JSON IPC calls and ready predicates"
-    )
-    parser.add_argument("--repeats", type=int, default=10)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    if args.duration <= 0 or args.interval <= 0 or args.repeats <= 0:
-        parser.error("duration, interval and repeats must be positive")
+    if args.duration <= 0 or args.interval <= 0:
+        parser.error("duration and interval must be positive")
     report = {
         "version": 2,
         "date": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -344,11 +284,6 @@ def main():
             args.spawn_log,
             not args.descendants_only,
         ),
-        "actions": actions(
-            args.pid, json.loads(args.actions.read_text()), args.repeats, args.spawn_log
-        )
-        if args.actions
-        else {},
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

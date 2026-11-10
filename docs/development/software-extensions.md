@@ -2,14 +2,12 @@
 
 A Nacre extension repository contains `nacre.extension.json` at its root. The
 Software → Extensions page imports a public HTTPS Git repository, validates its
-manifest and assets, and leaves it disabled. Enable registers launcher actions;
-panels only start when you explicitly open them. Imported code has the same
-user-level file, process and network access as other applications. Separate panel
-processes avoid sharing the main shell's object tree; they are not a filesystem
-sandbox.
+manifest and assets, and leaves it disabled. Enable registers launcher actions
+and makes themes available. Imported commands have the same user-level file,
+process and network access as other applications; they are not sandboxed.
 
-The initial supported kinds are `launcher`, `theme` and `panel`. A manifest can
-combine kinds. Installation hooks, Git submodules and symbolic links are rejected.
+The supported kinds are `launcher` and `theme`. A manifest can combine kinds.
+Installation hooks, Git submodules and symbolic links are rejected.
 Updates preserve edited checkouts and disable the new revision. Clone to edit
 creates a disabled local copy under your own ID; `org.nacre.*` is reserved for
 bundled content.
@@ -40,12 +38,10 @@ expansion. Use explicit shell arguments only when you intend to run shell code.
 Action IDs must be unique within a pack. Keep labels short and descriptions
 useful; the launcher displays metadata as plain text.
 
-A `panel` declares `"entryPoint": "shell.qml"`. That file is a complete standalone
-Quickshell configuration. It is launched in its own managed user scope. Disable,
-remove and update stop only a scope with the matching recorded ownership marker.
-Panel packages can provide a relative `preview` image. Assets must remain inside
-the extension folder. Whole replacement bars and dashboard widget injection are
-not supported by this format.
+QML panel extensions were retired in N0156. Manifests declaring `panel` are
+rejected. Existing extension checkouts can still be disabled or removed.
+Packages can provide a relative `preview` image; assets must remain inside the
+extension folder.
 
 A `theme` declares `theme.modes.dark` and `theme.modes.light`, each containing a
 complete Orient palette. Export an existing theme from Software → Themes for a

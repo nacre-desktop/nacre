@@ -1,5 +1,8 @@
 # QML desktop power baseline
 
+Historical measurement evidence: software versions and process identities below
+describe the captured QML-era session, not the current Bead installation.
+
 ## Scope and conditions
 
 2026-10-14, owner's laptop, charger connected. The owner asked to retain all apps

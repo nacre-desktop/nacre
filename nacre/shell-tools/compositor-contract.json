@@ -1197,19 +1197,6 @@
       {
         "kind": "window-rule",
         "selector": {
-          "app_id_regex": "^org.quickshell$",
-          "title_regex": "^Nacre lock screen preview$"
-        },
-        "effects": {
-          "centered": true,
-          "floating": true,
-          "size": "70% 70%"
-        },
-        "id": "nacre-lock-preview"
-      },
-      {
-        "kind": "window-rule",
-        "selector": {
           "app_id_regex": "^org\\.pulseaudio\\.pavucontrol$"
         },
         "effects": {
@@ -1289,42 +1276,6 @@
             "force_zero_scaling": true
           }
         }
-      },
-      {
-        "kind": "window-rule",
-        "selector": {
-          "app_id_regex": "^org[.]quickshell$",
-          "title_regex": "^Nacre Settings$"
-        },
-        "effects": {
-          "centered": true,
-          "floating": true
-        },
-        "id": "nacre-settings-app"
-      },
-      {
-        "kind": "window-rule",
-        "selector": {
-          "app_id_regex": "^org[.]quickshell$",
-          "title_regex": "^Nacre Colors$"
-        },
-        "effects": {
-          "centered": true,
-          "floating": true
-        },
-        "id": "nacre-colors-app"
-      },
-      {
-        "kind": "window-rule",
-        "selector": {
-          "app_id_regex": "^org[.]quickshell$",
-          "title_regex": "^Nacre Welcome$"
-        },
-        "effects": {
-          "centered": true,
-          "floating": true
-        },
-        "id": "nacre-welcome"
       },
       {
         "kind": "window-rule",
@@ -1479,17 +1430,6 @@
       },
       {
         "kind": "binding",
-        "keys": "Escape",
-        "action": "shell.shortcut",
-        "parameters": {
-          "name": "nacre_shell:dismissHoverEdges"
-        },
-        "options": {
-          "non_consuming": true
-        }
-      },
-      {
-        "kind": "binding",
         "keys": "SUPER + CTRL + D",
         "action": "application.launch",
         "parameters": {
@@ -1497,23 +1437,6 @@
         },
         "options": {
           "description": "Nacre:detach-panel"
-        }
-      },
-      {
-        "kind": "window-rule",
-        "selector": {
-          "app_id_regex": "^org[.]quickshell$",
-          "title_regex": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
-        },
-        "effects": {
-          "floating": true,
-          "corner_radius": 18,
-          "client_border": true
-        },
-        "backend": {
-          "hyprland": {
-            "no_anim": true
-          }
         }
       },
       {

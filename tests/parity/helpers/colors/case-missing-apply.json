@@ -1,8 +1,0 @@
-{
-  "helper": "colors",
-  "args": [
-    "apply"
-  ],
-  "stdin": "{\"id\":\"missing\"}\n",
-  "native_engine": true
-}

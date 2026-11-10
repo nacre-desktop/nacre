@@ -130,7 +130,7 @@ fn run_preflight_process(
                 )?;
             }
             return Err(format!(
-                "Quickshell/Qt update preflight timed out after {} seconds; mirror not responding — aborting update because pending Qt state is unknown",
+                "Update check timed out after {} seconds; mirror not responding",
                 timeout.as_secs()
             )
             .into());
@@ -161,31 +161,6 @@ fn run_preflight_process(
                 stdout: output.join().map_err(|_| "Child output reader failed")??,
                 stderr: error.join().map_err(|_| "Child error reader failed")??,
             });
-        }
-    }
-}
-fn bounded_output(
-    program: &str,
-    args: &[&str],
-    timeout: Duration,
-    cause: &str,
-) -> Option<std::process::Output> {
-    let owned = args.iter().map(|arg| (*arg).to_owned()).collect::<Vec<_>>();
-    let command = std::iter::once(program.to_owned())
-        .chain(owned)
-        .collect::<Vec<_>>();
-    eprintln!("nacre-helper updates: starting {program} for {cause}");
-    let wrapped = if program == "pacman" {
-        package_command(&command)
-    } else {
-        command.clone()
-    };
-    let (executable, arguments) = wrapped.split_first()?;
-    match process::run(executable, arguments, None, timeout) {
-        Ok(output) => Some(output),
-        Err(error) => {
-            eprintln!("nacre-helper updates: {program} for {cause} failed: {error}");
-            None
         }
     }
 }
@@ -271,105 +246,14 @@ fn collect_counts(
         json!({"text":count.to_string(),"count":count,"checked":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64(),"truncated":count > MAX_DASHBOARD_PACKAGES,"packages":packages}),
     )
 }
-fn pkg_release(s: &str) -> String {
-    s.rsplit_once('-').map(|x| x.0).unwrap_or(s).to_owned()
-}
-pub fn pending_qt_release_change(pending: &str) -> Result<bool> {
-    for line in pending.lines() {
-        let fields = line.split_whitespace().collect::<Vec<_>>();
-        if fields
-            .first()
-            .is_none_or(|s| !["qt6-base", "qt6-declarative", "qt6-wayland"].contains(s))
-        {
-            continue;
-        }
-        if fields.len() != 4 || fields[2] != "->" {
-            return Err("Could not parse the pending Qt update".into());
-        }
-        if pkg_release(fields[1]) != pkg_release(fields[3]) {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-fn status(pending: &str) -> Result<Value> {
-    let version = bounded_output(
-        "quickshell",
-        &["--version", "-v"],
-        Duration::from_secs(10),
-        "checking the active Quickshell build",
-    )
-    .ok_or("Could not run the Quickshell version probe")?;
-    let local = String::from_utf8_lossy(&version.stdout).contains("Nacre local Qt rebuild");
-    let blocked = local && pending_qt_release_change(pending)?;
-    let mut message = if blocked {
-        "Quickshell rebuild needed before updating"
-    } else {
-        ""
-    }
-    .to_owned();
-    let candidate = bounded_output(
-        "pacman",
-        &["-Sp", "--print-format", "%f", "quickshell"],
-        Duration::from_secs(10),
-        "checking the Quickshell distribution candidate",
-    );
-    let installed = bounded_output(
-        "pacman",
-        &["-Q", "qt6-base"],
-        Duration::from_secs(10),
-        "checking the installed Qt release",
-    );
-    let qt = installed
-        .filter(|o| o.status.success())
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .and_then(|s| s.split_whitespace().last().map(str::to_owned))
-        .map(|s| s.rsplit_once('-').map(|x| x.0).unwrap_or(&s).to_owned())
-        .unwrap_or_default();
-    let archive = candidate
-        .and_then(|o| String::from_utf8(o.stdout).ok())
-        .and_then(|s| {
-            s.lines()
-                .last()
-                .map(|s| PathBuf::from("/var/cache/pacman/pkg").join(s))
-        });
-    let ready = if local {
-        if let Some(a) = archive.filter(|p| p.is_file()) {
-            bounded_output(
-                "bsdtar",
-                &["-xOf", a.to_str().unwrap_or(""), ".BUILDINFO"],
-                Duration::from_secs(10),
-                "reading cached Quickshell build metadata",
-            )
-            .filter(|x| x.status.success())
-            .is_some_and(|x| {
-                String::from_utf8_lossy(&x.stdout)
-                    .lines()
-                    .any(|l| l.starts_with(&format!("installed = qt6-base-{qt}-")))
-            })
-        } else {
-            false
-        }
-    } else {
-        false
-    };
-    if ready {
-        if !message.is_empty() {
-            message.push_str(". ");
-        }
-        message
-            .push_str("A cached distribution Quickshell matches installed Qt; you can switch back");
-    }
-    Ok(json!({"message":message,"rebuildNeeded":blocked,"distributionReady":ready}))
-}
-fn preflight() -> Result<Value> {
+fn preflight() -> Result<()> {
     let cmd = if available("checkupdates") {
         vec!["checkupdates".into()]
     } else {
         vec!["pacman".into(), "-Qu".into()]
     };
     eprintln!(
-        "nacre-helper updates: starting {} for Quickshell/Qt update preflight",
+        "nacre-helper updates: starting {} for update preflight",
         cmd[0]
     );
     let out = run_preflight_command(
@@ -386,7 +270,7 @@ fn preflight() -> Result<Value> {
         )
         .into());
     }
-    status(&String::from_utf8_lossy(&out.stdout))
+    Ok(())
 }
 fn cache(p: &Paths) -> PathBuf {
     p.cache.join("updates.json")
@@ -433,11 +317,7 @@ fn refresh(p: &Paths) -> Result<()> {
         return Ok(());
     };
     let target = cache(p);
-    let mut data = count_updates()?;
-    let pre = preflight()?;
-    if let (Some(a), Some(b)) = (data.as_object_mut(), pre.as_object()) {
-        a.extend(b.clone());
-    }
+    let data = count_updates()?;
     let tmp = target.with_extension("next");
     if tmp.exists() && fs::symlink_metadata(&tmp)?.file_type().is_symlink() {
         return Err("refusing linked update cache temporary".into());
@@ -472,16 +352,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         );
     }
     if args.iter().any(|a| a == "--preflight") {
-        let d = preflight()?;
-        if !d["message"].as_str().unwrap_or("").is_empty() {
-            println!("{}", d["message"].as_str().unwrap());
-        }
-        if d["rebuildNeeded"] == true {
-            println!(
-                "Prepare a matching Quickshell package together with the pending Qt release; see docs/features/runtime.md"
-            );
-            return Ok(3);
-        }
+        preflight()?;
         return Ok(0);
     }
     if args.iter().any(|a| a == "--refresh") {
@@ -512,22 +383,11 @@ pub fn run(args: &[String]) -> Result<i32> {
 mod tests {
     use super::*;
     #[test]
-    fn package_mapping_and_qt_release_assertions() {
-        assert!(!needs_host_runtime("0 0 4294967295"));
-        assert!(needs_host_runtime("1000 1000 1"));
-        assert!(pending_qt_release_change("qt6-base 6.12 -> 6.13\n").unwrap());
-        assert!(!pending_qt_release_change("qt6-base 6.12.0-2 -> 6.12.0-2.1\n").unwrap());
-        assert!(!pending_qt_release_change("fish 4 -> 5\n").unwrap());
-        assert!(pending_qt_release_change("qt6-base unknown update format").is_err());
-        assert!(pending_qt_release_change("qt6-wayland 6.12.0-2 -> 1:6.12.0-1").unwrap());
-    }
-    #[test]
     fn count_and_error_status_contracts_are_explicit() {
         assert_eq!(count_result("paru", 1, "", "").unwrap(), 0);
         assert_eq!(count_result("paru", 0, "chrome 1 -> 2\n", "").unwrap(), 1);
         assert!(count_result("paru", 1, "", "error: network failure").is_err());
         assert_eq!(count_result("checkupdates", 2, "", "").unwrap(), 0);
-        assert!(pending_qt_release_change("qt6-declarative 6.12.0-1.1 -> 6.12.1-1").unwrap());
     }
     #[test]
     fn upgrade_flow_remains_unchanged() {
@@ -661,14 +521,13 @@ mod preflight_progress_tests {
     }
 
     #[test]
-    fn preflight_timeout_reports_unknown_qt_state_and_stops_command() {
+    fn preflight_timeout_reports_update_timeout_and_stops_command() {
         let root = tempfile::tempdir().unwrap();
         let cmd = fake_checkupdates(root.path(), "exec sleep 5");
         let mut progress = Vec::new();
         let result = run_preflight_process(&cmd, Duration::from_secs(1), false, &mut progress);
         let error = result.unwrap_err().to_string();
         assert!(error.contains("mirror not responding"));
-        assert!(error.contains("pending Qt state is unknown"));
         assert!(String::from_utf8(progress)
             .unwrap()
             .contains("timed out after 1 s"));

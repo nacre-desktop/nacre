@@ -654,7 +654,7 @@
       "icon": "image",
       "operation": "background",
       "value": "wallpaper",
-      "description": "Tint from the image’s own tones",
+      "description": "Tint from the image\u2019s own tones",
       "state": "background",
       "labelId": "launcher.catalog.style.background.wallpaper.label",
       "descriptionId": "launcher.catalog.style.background.wallpaper.description"
@@ -1210,16 +1210,6 @@
       "value": "https://wiki.archlinux.org/",
       "description": "",
       "labelId": "launcher.catalog.learn.arch.label"
-    },
-    {
-      "id": "learn.quickshell",
-      "kind": "action",
-      "label": "Quickshell documentation",
-      "icon": "public",
-      "operation": "url",
-      "value": "https://quickshell.org/docs/",
-      "description": "",
-      "labelId": "launcher.catalog.learn.quickshell.label"
     },
     {
       "id": "learn.news",

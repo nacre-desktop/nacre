@@ -1,7 +1,0 @@
-{
-  "helper": "composer",
-  "args": [
-    "save"
-  ],
-  "stdin": "{\"key\":\"demo\",\"text\":\"Public draft\",\"attachments\":[]}\n"
-}

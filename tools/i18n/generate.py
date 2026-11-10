@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def assets(root=ROOT):
-    english = json.loads((root / "nacre/shell/i18n/en.json").read_text())
+    english = json.loads((root / "nacre/shell-tools/i18n/en.json").read_text())
     login = {
         key: value
         for key, value in english.items()
@@ -22,14 +22,11 @@ def assets(root=ROOT):
         key: value for key, value in english.items() if key.startswith("brain.ui.")
     }
     engine = (
-        (root / "nacre/shell/i18n/translation.js")
+        (root / "nacre/login/translation.js")
         .read_text()
         .removeprefix(".pragma library\n")
     )
     return {
-        Path("nacre/login/translation.js"): (
-            root / "nacre/shell/i18n/translation.js"
-        ).read_text(),
         Path("nacre/login/messages.js"): ".pragma library\n\nconst english = "
         + json.dumps(login, indent=2, ensure_ascii=False, sort_keys=True)
         + ";\n",

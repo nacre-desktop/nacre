@@ -1,8 +1,0 @@
-{
-  "helper": "nacre-ai",
-  "args": [
-    "window"
-  ],
-  "command": "python3 bin/nacre-ai",
-  "stdout": "text"
-}

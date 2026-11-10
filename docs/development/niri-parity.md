@@ -1,5 +1,10 @@
 # Niri parity audit — 2026-10-13
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 Keybinding follow-up supersedes the Q-family rows in the original inventory below:
 
 | General binding | Hyprland before → after | Niri before → after |

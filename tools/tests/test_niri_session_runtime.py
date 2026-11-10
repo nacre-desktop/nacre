@@ -22,11 +22,7 @@ class NiriRuntimeTests(unittest.TestCase):
                 home
                 / ".local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell"
             )
-            for name in (
-                "source/shell.qml",
-                "tools/nacre_native_compositor.py",
-                "bin/qs",
-            ):
+            for name in ("bin/nacre-shell", "bin/nacre-daemon"):
                 path = shell / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.touch()
@@ -205,7 +201,7 @@ class NiriRuntimeTests(unittest.TestCase):
     ):
         env = {"XDG_CURRENT_DESKTOP": "Hyprland", "NIRI_SOCKET": "stale"}
         argv, child = runtime.command("shell", env, Path("/fixture"))
-        self.assertEqual(argv, ["/fixture/.local/bin/nacre-shell", "start"])
+        self.assertEqual(argv, ["systemctl", "--user", "start", "nacre-shell.service"])
         self.assertEqual(child, env)
         argv, child = runtime.command("brain", env, Path("/fixture"))
         self.assertEqual(
@@ -222,10 +218,14 @@ class NiriRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "explicit niri"):
             runtime.command("shell", {}, Path("/fixture"))
 
-    def test_missing_source_fails_without_falling_back_to_hyprland(self):
+    def test_niri_shell_activation_uses_managed_service_without_source_tree(self):
         with tempfile.TemporaryDirectory() as folder:
-            with self.assertRaisesRegex(ValueError, "separate niri source"):
-                runtime.command("shell", {"XDG_CURRENT_DESKTOP": "niri"}, Path(folder))
+            argv, _ = runtime.command(
+                "shell", {"XDG_CURRENT_DESKTOP": "niri"}, Path(folder)
+            )
+            self.assertEqual(
+                argv, ["systemctl", "--user", "start", "nacre-shell.service"]
+            )
 
     def test_niri_overlays_code_only_and_uses_real_session_environment(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -234,11 +234,7 @@ class NiriRuntimeTests(unittest.TestCase):
                 home
                 / ".local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell"
             )
-            for name in (
-                "source/shell.qml",
-                "tools/nacre_native_compositor.py",
-                "bin/qs",
-            ):
+            for name in ("bin/nacre-shell", "bin/nacre-daemon"):
                 path = shell / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text("fixture")
@@ -250,10 +246,16 @@ class NiriRuntimeTests(unittest.TestCase):
             }
             for action in ("compositor", "shell", "brain"):
                 argv, child = runtime.command(action, env, home)
-                self.assertIn(str(shell), argv)
-                self.assertIn(str(home / ".local/share/nacre/shell"), argv)
-                self.assertNotIn("dbus-run-session", argv)
-                self.assertNotIn(str(home / ".config/nacre"), argv)
+                if action == "shell":
+                    self.assertEqual(
+                        argv, ["systemctl", "--user", "start", "nacre-shell.service"]
+                    )
+                else:
+                    self.assertIn(str(shell / "bin"), argv)
+                    self.assertIn(str(home / ".local/share/nacre/shell/bin"), argv)
+                    self.assertNotIn("dbus-run-session", argv)
+                    self.assertNotIn(str(home / ".config/nacre"), argv)
+                    self.assertNotIn("shell.qml", " ".join(argv))
                 self.assertEqual(child["DBUS_SESSION_BUS_ADDRESS"], "real")
                 self.assertEqual(child["XDG_RUNTIME_DIR"], "/real/runtime")
                 self.assertEqual(child["NIRI_SOCKET"], "real")

@@ -1,7 +1,0 @@
-{
-  "helper": "wallpaper-watch",
-  "args": [
-    "--help"
-  ],
-  "stdout": "text"
-}

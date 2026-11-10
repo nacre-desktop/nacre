@@ -17,8 +17,6 @@ def references(root):
     result = set()
     files = (
         list((root / "nacre/login").glob("*.qml"))
-        + list((root / "nacre/shell").rglob("*.qml"))
-        + list((root / "nacre/shell").rglob("*.js"))
         + list((root / "nacre/shell-tools").glob("*.py"))
         + list((root / "tools").glob("*.py"))
         + list((root / "hypr/scripts").glob("*.py"))
@@ -111,71 +109,33 @@ def references(root):
             for field in ("label", "description", "confirm"):
                 if row.get(field + "Id"):
                     result.add(row[field + "Id"])
-    # Portable Settings fragments carry the same i18n identifiers as QML.
-    registry = root / "nacre/shell/modules/settings/registry"
-    if (registry / "manifest.json").exists():
 
-        def identifiers(value):
-            if isinstance(value, dict):
-                for key, item in value.items():
-                    if (
-                        key.endswith("Id")
-                        and key != "storeId"
-                        and isinstance(item, str)
-                    ):
-                        result.add(item)
-                    else:
-                        identifiers(item)
-            elif isinstance(value, list):
-                for item in value:
+    def identifiers(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key.endswith("Id") and key != "storeId" and isinstance(item, str):
+                    result.add(item)
+                else:
                     identifiers(item)
+        elif isinstance(value, list):
+            for item in value:
+                identifiers(item)
 
-        publisher = root / "nacre/shell-tools/theme-targets.json"
-        if publisher.exists():
-            identifiers(json.loads(publisher.read_text()))
-        for fragment in json.loads((registry / "manifest.json").read_text())[
-            "fragments"
-        ]:
-            identifiers(json.loads((registry / fragment).read_text()))
-        for path in (root / "nacre/shell/modules/settings/prototype").glob("*.qml"):
-            result.update(
-                re.findall(
-                    r'"(settings\.(?:registry|preview)\.[^"]+)"', path.read_text()
-                )
-            )
-    return result
-
-
-def dynamic_references(root):
-    """Finite runtime IDs, with caller evidence so stale exemptions fail."""
-    path = root / "tools/i18n/dynamic.json"
-    if not path.exists():
-        return set()
-    result = set()
-    options = json.loads((root / "nacre/shell/i18n/options.json").read_text())
-    for name, group in json.loads(path.read_text()).items():
-        source = root / group["source"]
-        if (
-            not group.get("reason")
-            or not source.is_file()
-            or group["reference"] not in source.read_text()
-        ):
-            raise ValueError("Stale dynamic message allowlist: " + name)
-        if domain := group.get("optionsDomain"):
-            declared = {row["id"] for row in options.get(domain, {}).values()}
-            if set(group["ids"]) != declared:
-                raise ValueError("Stale dynamic option IDs: " + name)
-        for key in group["ids"]:
-            if key in result:
-                raise ValueError("Duplicate dynamic message ID: " + key)
-            result.add(key)
+    for relative in (
+        "nacre/shell-tools/settings-registry/settings.json",
+        "nacre/shell-tools/settings-registry/navigation.json",
+        "nacre/shell-tools/theme-targets.json",
+    ):
+        path = root / relative
+        if path.is_file():
+            identifiers(json.loads(path.read_text()))
     return result
 
 
 def check(root=ROOT):
-    english = json.loads((root / "nacre/shell/i18n/en.json").read_text())
-    context = json.loads((root / "nacre/shell/i18n/context.json").read_text())
-    used = references(root) | dynamic_references(root)
+    english = json.loads((root / "nacre/shell-tools/i18n/en.json").read_text())
+    context = json.loads((root / "nacre/shell-tools/i18n/context.json").read_text())
+    used = references(root)
     errors = []
     # Preserve these exact catalog IDs for old clients after the text transport
     # disappears. This is a finite compatibility contract, not a prefix waiver.
@@ -207,16 +167,13 @@ def check(root=ROOT):
                 errors.append(
                     f"{path.relative_to(root)}:{line}: Rust fallback/ID mismatch: {key}"
                 )
-    # Bead's `bead.*` strings are referenced by Bead's code, not by this repo; the
-    # shared catalog still requires valid IDs and translator context for them.
-    external = {key for key in english if key.startswith("bead.")}
     for key in sorted(used - english.keys()):
         errors.append("Missing English ID: " + key)
-    for key in sorted(english.keys() - used - compatibility - external):
+    for key in sorted(english.keys() - used - compatibility):
         errors.append("Unused English ID: " + key)
     for key in sorted(context.keys() - english.keys()):
         errors.append("Unused translator context: " + key)
-    for key in sorted((used | compatibility | external) - context.keys()):
+    for key in sorted((used | compatibility) - context.keys()):
         errors.append("Missing translator context: " + key)
     for key, value in english.items():
         if not re.fullmatch(r"[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)+", key):
@@ -229,7 +186,6 @@ def check(root=ROOT):
         elif not isinstance(value, str):
             errors.append("English message must be text or plural forms: " + key)
     for path in [
-        *(root / "nacre/shell").rglob("*.qml"),
         *(root / "nacre/login").glob("*.qml"),
         *[
             root / "brain/web" / name
@@ -237,8 +193,6 @@ def check(root=ROOT):
             if (root / "brain/web" / name).exists()
         ],
     ]:
-        if path.name == "NacreI18n.qml":
-            continue
         source = path.read_text()
         for field, offset, value in uncovered(source):
             line = source[:offset].count("\n") + 1
@@ -258,31 +212,6 @@ def check(root=ROOT):
                             + "."
                             + field
                         )
-    for domain in json.loads(
-        (root / "nacre/shell/i18n/options.json").read_text()
-    ).values():
-        for row in domain.values():
-            if row["id"] not in english:
-                errors.append("Missing option message ID: " + row["id"])
-    for relative in ("modules/welcome/welcome-catalog.js",):
-        path = root / "nacre/shell" / relative
-        stream = tokens(path.read_text())
-        for index, token in enumerate(stream[:-2]):
-            if (
-                token.text
-                in ("label", "title", "detail", "description", "setup", "status")
-                and stream[index + 1].text == ":"
-                and stream[index + 2].kind == "string"
-            ):
-                value = literal(stream[index + 2])
-                # Explicit companion ID is required next to each source-language catalog field.
-                previous = stream[max(0, index - 4) : index]
-                if not any(t.text == token.text + "Id" for t in previous):
-                    errors.append(
-                        str(path.relative_to(root))
-                        + ": catalog field has no message ID: "
-                        + str(value)
-                    )
     if errors:
         raise ValueError("\n".join(errors))
     print(f"Translation coverage passed: {len(english)} owned messages.")

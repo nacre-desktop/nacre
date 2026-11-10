@@ -8,4 +8,4 @@ Icon=nacre
 Terminal=false
 Categories=Utility;Settings;
 Keywords=Nacre;Welcome;Setup;Guide;Help;Shortcuts;
-StartupWMClass=org.quickshell
+StartupWMClass=nacre-welcome

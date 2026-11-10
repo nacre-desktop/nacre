@@ -58,8 +58,8 @@ local function level(id,label)
    text_align="right",font_size=T.text.caption*4/3,color="onSurfaceVariant"}}
 end
 -- Application streams (B0086, N0061): an icon (or the apps glyph), name, volume slider with its
--- percent and a mute button on one card, as the QML card. The slider is perceptual like a device's (Quickshell's
--- volume is the cube root of PipeWire's), the call linear.
+-- percent and a mute button on one card. The slider uses the cube root of PipeWire volume;
+-- the call uses linear volume.
 local streams=ui.resolve_for_check(ui.bind("cc.streams")) or {}
 local function stream_card(item)
  local mute_size=32

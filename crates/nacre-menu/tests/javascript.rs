@@ -62,7 +62,9 @@ fn actual_qt_reference_has_only_the_six_documented_ecmascript_differences() -> R
 fn frozen_current_javascript_outputs_are_exact() -> Result<()> {
     let reference = reference()?;
     let ordering = OrderingRules::new("en-US")?;
-    let base: Value = serde_json::from_str(include_str!("fixtures/base-menu.json"))?;
+    let base: Value = serde_json::from_str(include_str!(
+        "../../../docs/research/n0156-reference/launcher-base-menu.json"
+    ))?;
     let rows = base["entries"].as_array().ok_or("Missing menu rows")?;
     let mut failures = Vec::new();
     for case in reference["cases"]

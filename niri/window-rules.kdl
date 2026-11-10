@@ -27,13 +27,6 @@ layer-rule {
 }
 
 window-rule {
-    match app-id="^org.quickshell$" title="^Nacre lock screen preview$"
-    open-floating true
-    default-column-width { proportion 0.7; }
-    default-window-height { proportion 0.7; }
-}
-
-window-rule {
     match app-id="^org\\.pulseaudio\\.pavucontrol$"
     open-floating true
     default-column-width { fixed 700; }
@@ -74,21 +67,6 @@ window-rule {
 }
 
 window-rule {
-    match app-id="^org[.]quickshell$" title="^Nacre Settings$"
-    open-floating true
-}
-
-window-rule {
-    match app-id="^org[.]quickshell$" title="^Nacre Colors$"
-    open-floating true
-}
-
-window-rule {
-    match app-id="^org[.]quickshell$" title="^Nacre Welcome$"
-    open-floating true
-}
-
-window-rule {
     match app-id="^nacre-settings$"
     open-floating true
 }
@@ -120,14 +98,4 @@ window-rule {
     open-floating true
     default-column-width { fixed 80; }
     default-window-height { fixed 80; }
-}
-
-window-rule {
-    match app-id="^org[.]quickshell$" title="^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
-    open-floating true
-    geometry-corner-radius 18
-    clip-to-geometry true
-    border { off; }
-    focus-ring { off; }
-    shadow { off; }
 }

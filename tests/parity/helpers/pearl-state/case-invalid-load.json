@@ -1,9 +1,0 @@
-{
-  "helper": "pearl-state",
-  "args": [
-    "load"
-  ],
-  "fixtures": {
-    "home/.local/state/nacre/shell/pearls.json": "{\"version\":2}"
-  }
-}

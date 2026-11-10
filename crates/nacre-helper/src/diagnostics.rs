@@ -118,15 +118,11 @@ const PACKAGES: &[&str] = &[
     "python",
     "python-pip",
     "python-pillow",
-    "quickshell",
     "pipewire",
     "wireplumber",
     "networkmanager",
     "bluez",
     "librsvg",
-    "qt6-imageformats",
-    "qt6-multimedia",
-    "qt6-multimedia-ffmpeg",
     "ddcutil",
     "cpptrace",
     "libdwarf",
@@ -135,7 +131,6 @@ const PACKAGES: &[&str] = &[
     "kitty",
     "dolphin",
     "kio-extras",
-    "qt6ct",
     "ark",
     "hypridle",
     "hyprlock",
@@ -185,23 +180,6 @@ pub fn collect(context: &Context, platform: &Platform, queries: &mut impl Probe)
     versions.insert(
         format!("{}Installed", context.backend),
         probe(&command("installedVersion")?, queries)?,
-    );
-    versions.insert(
-        "Quickshell".into(),
-        probe(&["quickshell".into(), "--version".into()], queries)?,
-    );
-    let qt = queries
-        .executable("qtpaths6")
-        .unwrap_or_else(|| PathBuf::from("/usr/lib/qt6/bin/qtpaths"));
-    versions.insert(
-        "Qt".into(),
-        probe(
-            &[
-                qt.to_str().ok_or("Invalid Qt tool path")?.into(),
-                "--qt-version".into(),
-            ],
-            queries,
-        )?,
     );
     versions.insert("Python".into(), probe(&context.runtime_command, queries)?);
     let mut gpu = queries.gpu_inventory(&platform.sys)?;
@@ -272,18 +250,6 @@ pub fn collect(context: &Context, platform: &Platform, queries: &mut impl Probe)
         args.extend(["-u".into(), (*unit).into()]);
     }
     let journal = probe(&args, queries)?;
-    let shell = probe(
-        &[
-            "quickshell".into(),
-            "log".into(),
-            "--config".into(),
-            "nacre".into(),
-            "--no-color".into(),
-            "--tail".into(),
-            "60".into(),
-        ],
-        queries,
-    )?;
     let config = probe(&command("configErrors")?, queries)?;
     let release = serde_json::from_str::<Value>(&read_fact(
         &context.paths.state.join("releases/current.json"),
@@ -319,7 +285,7 @@ pub fn collect(context: &Context, platform: &Platform, queries: &mut impl Probe)
         .filter(|name| queries.executable(name).is_none())
         .cloned()
         .collect::<Vec<_>>();
-    let mut report = serde_json::json!({"schemaVersion":1,"checked":context.checked,"software":{"distro":distro,"kernel":platform.kernel,"architecture":platform.architecture,"compositor":if versions["compositor"]["status"]=="ok"{context.backend.as_str()}else{"unavailable"},"versions":versions,"release":release},"hardware":hardware,"monitors":{"status":monitor["status"],"devices":monitors(monitor["value"].as_str().unwrap_or(""))},"audio":{"status":audio["status"],"devices":audio_devices(audio["value"].as_str().unwrap_or(""))},"dependencies":{"packageManager":if installed["status"]=="ok" {"pacman"}else{"unavailable (command checks only)"},"missingPackages":if installed["status"]=="ok"{Value::Array(PACKAGES.iter().filter(|name|!packages.contains(**name)).map(|name|Value::String((*name).into())).collect())}else{Value::Null},"missingCommands":missing_commands},"services":units,"maintenance":maintenance_facts(context,queries),"recentErrors":{"journal":journal,"shellLog":shell,"compositorConfig":config},"privacy":"Redacted locally. No account files, environment dump, Wi-Fi scan, uploads or privileged probes. Review free-form logs before sharing."});
+    let mut report = serde_json::json!({"schemaVersion":1,"checked":context.checked,"software":{"distro":distro,"kernel":platform.kernel,"architecture":platform.architecture,"compositor":if versions["compositor"]["status"]=="ok"{context.backend.as_str()}else{"unavailable"},"versions":versions,"release":release},"hardware":hardware,"monitors":{"status":monitor["status"],"devices":monitors(monitor["value"].as_str().unwrap_or(""))},"audio":{"status":audio["status"],"devices":audio_devices(audio["value"].as_str().unwrap_or(""))},"dependencies":{"packageManager":if installed["status"]=="ok" {"pacman"}else{"unavailable (command checks only)"},"missingPackages":if installed["status"]=="ok"{Value::Array(PACKAGES.iter().filter(|name|!packages.contains(**name)).map(|name|Value::String((*name).into())).collect())}else{Value::Null},"missingCommands":missing_commands},"services":units,"maintenance":maintenance_facts(context,queries),"recentErrors":{"journal":journal,"compositorConfig":config},"privacy":"Redacted locally. No account files, environment dump, Wi-Fi scan, uploads or privileged probes. Review free-form logs before sharing."});
     let release_size = probe(
         &[
             "du".into(),
@@ -725,9 +691,7 @@ fn label(key: &str) -> String {
     match key {
         "cpu" => "CPU".into(),
         "gpus" => "GPUs".into(),
-        "Qt" => "Qt".into(),
         "Python" => "Python".into(),
-        "Quickshell" => "Quickshell".into(),
         "deviceId" => "Device ID".into(),
         "logicalCpus" => "Logical CPUs".into(),
         "refreshRate" => "Refresh rate (Hz)".into(),
@@ -956,7 +920,7 @@ mod tests {
     }
     fn reference(name: &str) -> Result<Value> {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!(
-            "../../tests/parity/helpers/diagnostics/expected-support-{name}.json"
+            "../../docs/research/n0156-reference/diagnostics/expected-support-{name}.json"
         ));
         Ok(serde_json::from_slice(&std::fs::read(path)?)?)
     }
@@ -974,7 +938,7 @@ mod tests {
     #[test]
     fn frozen_device_filtering_preserves_fields_and_discards_malformed_values() -> Result<()> {
         let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/parity/helpers/diagnostics");
+            .join("../../docs/research/n0156-reference/diagnostics");
         for name in ["collect", "malformed-devices"] {
             let case: Value = serde_json::from_slice(&std::fs::read(
                 folder.join(format!("case-support-{name}.json")),
@@ -1014,7 +978,7 @@ mod tests {
     #[test]
     fn frozen_recursive_redaction_keeps_public_metrics_and_exact_text() -> Result<()> {
         let folder = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/parity/helpers/diagnostics");
+            .join("../../docs/research/n0156-reference/diagnostics");
         for name in [
             "redact-full",
             "redact-short",

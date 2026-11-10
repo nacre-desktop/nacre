@@ -1,8 +1,0 @@
-{
-  "helper": "resource-state",
-  "args": [],
-  "fixtures": {
-    "sys/class/hwmon/hwmon0/name": "coretemp",
-    "sys/class/hwmon/hwmon0/temp1_input": "NaN"
-  }
-}

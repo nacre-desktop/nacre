@@ -18,9 +18,9 @@ class CompositorBoundaryTests(unittest.TestCase):
             root = Path(folder)
             archive = root / ".research/soak/shell"
             archive.mkdir(parents=True)
-            (archive / "old.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
+            (archive / "old.py").write_text('command=["niri","msg","windows"]\n')
             self.assertEqual(boundary.check(root), [])
-            (root / "new.qml").write_text("import Quickshell.Hyprland\nItem {}\n")
+            (root / "new.py").write_text('command=["niri","msg","windows"]\n')
             self.assertEqual(len(boundary.check(root)), 1)
 
     def test_imported_proofs_do_not_exempt_runtime_paths_with_the_same_name(self):
@@ -38,30 +38,13 @@ class CompositorBoundaryTests(unittest.TestCase):
                 self.assertEqual(bool(boundary.violations(path, root)), not is_proof)
             self.assertEqual(len(boundary.check(root)), 2)
 
-    def test_settings_review_exception_is_one_explicit_fixture(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            command = 'command=["/usr/bin/niri","msg","windows"]\n'
-            for name, allowed in [
-                ("tools/settings-preview.py", True),
-                ("tools/settings-preview-other.py", False),
-                ("nacre/shell-tools/settings-preview.py", False),
-            ]:
-                path = root / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(command)
-                self.assertEqual(
-                    not bool(boundary.violations(path, root)), allowed, name
-                )
-
-    def test_python_qml_shell_and_expressions_cannot_bypass_service(self):
+    def test_python_shell_and_expressions_cannot_bypass_service(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             samples = {
                 "helper.py": 'import subprocess\nsubprocess.run(["hyprctl","clients","-j"])\n',
                 "absolute.py": 'command=["/usr/bin/hyprctl","reload"]\n',
                 "expression.py": 'expression="hl.dispatch(hl.dsp.exit())"\n',
-                "Window.qml": "import Quickshell.Hyprland\nItem {}\n",
                 "picker.sh": "#!/bin/sh\nhyprctl clients -j\n",
                 "niri.py": 'command=["niri","msg","windows"]\n',
                 "niri.sh": "#!/bin/sh\nniri msg windows\n",
@@ -76,7 +59,6 @@ class CompositorBoundaryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for name, text in {
-                "nacre/shell/services/compositor/HyprlandBackend.qml": "import Quickshell.Hyprland\n",
                 "nacre/shell-tools/compositor_backends/hyprland.py": 'command=["hyprctl"]\n',
                 "hypr/conf/keybinding.lua": "hl.bind('Super+A',hl.dsp.exec_cmd('app'))\n",
                 "tests/test_transport.py": 'command=["hyprctl"]\n',

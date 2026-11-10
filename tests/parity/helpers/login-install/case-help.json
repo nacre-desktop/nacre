@@ -1,7 +1,0 @@
-{
-  "helper": "login-install",
-  "args": [
-    "--help"
-  ],
-  "stdout": "text"
-}

@@ -24,6 +24,10 @@ validated Bead manually, use:
 nacre ui-shell rollback
 ```
 
+If no previous copy exists, the command leaves the current shell unchanged.
+Damaged older copies are skipped; a manual rollback can restore its healthy
+starting copy if necessary. Automatic failure recovery excludes the failed copy.
+
 This shell rollback is separate from `nacre rollback`, which restores managed
 private files. If recovery reports that no healthy Bead exists, install a checked
 Nacre build and apply its setup again; do not repeatedly restart a failed build.
@@ -132,3 +136,13 @@ from the backup. Keep `profile.json`, keyboard/monitor overrides, accounts,
 conversations and the Brain vault. Never remove all of `~/.config/nacre` or
 `~/.local/share/nacre` as a reset shortcut. See [path limits](configuration.md#files-and-xdg-paths)
 if you have changed XDG variables.
+
+## Legacy shell archives
+
+A successful source update archives the old shell's owned source copies and
+recognized launch scripts under
+`~/.local/state/nacre/shell/backups/<UTC>/legacy-shell/`; the adjacent
+`manifest.json` lists each move. The path to that backup is recorded in
+`~/.local/state/nacre/shell/backups/latest-legacy-shell-backup`. Unrecognized
+configuration and modified legacy scripts are preserved. These archives are
+recovery evidence; supported shell rollback selects a healthy Bead copy.

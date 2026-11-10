@@ -291,15 +291,21 @@ pub(super) fn message_language(settings: &Value) -> String {
     }
 }
 pub(super) fn translations(paths: &Paths, language: &str) -> Result<Value> {
-    if let Some(parent) = paths.assets().parent() {
-        for name in ["source/i18n", "shell/i18n"] {
-            let directory = parent.join(name);
-            if directory.join("en.json").is_file() {
-                return translations_in(&directory, language);
-            }
-        }
+    let mut messages: Value = serde_json::from_str(include_str!("../../../../shell/i18n/en.json"))?;
+    let directory = paths.assets().join("i18n");
+    if directory.join("en.json").is_file() {
+        let shared = translations_in(&directory, language)?;
+        messages
+            .as_object_mut()
+            .ok_or("Invalid Bead English catalog")?
+            .extend(
+                shared
+                    .as_object()
+                    .ok_or("Invalid shared translation catalog")?
+                    .clone(),
+            );
     }
-    Ok(json!({}))
+    Ok(messages)
 }
 fn translations_in(directory: &Path, language: &str) -> Result<Value> {
     let mut messages = read_json(&directory.join("en.json"))?;

@@ -11,7 +11,7 @@ monitoring tools implicitly, or disable kernel/device protections for a test.
   document (schema version 1). Plain `nacre doctor` also emits redacted JSON.
 - Open Launcher → Health → **Copy support report**, paste into a local editor and
   compare with the Markdown command. Clipboard failure must show an action error.
-- Check distro/kernel, running and installed Hyprland versions, Quickshell/Qt/Python,
+- Check distro/kernel, running and installed compositor/Nacre versions, Bead, Qt/Python,
   CPU, every GPU and its driver, monitor dimensions/scale/refresh, chassis type,
   battery/backlight/Bluetooth/Wi-Fi presence, audio sinks/sources and dependencies.
 - Check recent user-unit warnings/errors (last hour, at most 80 entries), shell log

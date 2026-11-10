@@ -1,5 +1,0 @@
-usage: niri-preview.py run [-h] --destination DESTINATION
-
-options:
-  -h, --help            show this help message and exit
-  --destination DESTINATION

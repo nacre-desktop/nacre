@@ -290,7 +290,7 @@ class PackageSetupTests(unittest.TestCase):
             staged = Path(folder)
             (staged / "tools").mkdir()
             (staged / "nacre/shell-tools").mkdir(parents=True)
-            (staged / "nacre/shell/i18n").mkdir(parents=True)
+            (staged / "nacre/shell-tools/i18n").mkdir(parents=True)
             for source, target in [
                 (
                     TOOLS.parent / "nacre/shell-tools/nacre_state.py",
@@ -310,8 +310,8 @@ class PackageSetupTests(unittest.TestCase):
                     staged / "nacre/shell-tools/nacre_i18n.py",
                 ),
                 (
-                    TOOLS.parent / "nacre/shell/i18n/en.json",
-                    staged / "nacre/shell/i18n/en.json",
+                    TOOLS.parent / "nacre/shell-tools/i18n/en.json",
+                    staged / "nacre/shell-tools/i18n/en.json",
                 ),
             ]:
                 target.write_bytes(source.read_bytes())
@@ -352,11 +352,12 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn(
                     str(home), (home / ".config/nacre/shortcuts.lua").read_text()
                 )
-                self.assertTrue((home / ".config/quickshell/nacre").is_symlink())
+                self.assertFalse((home / ".config/quickshell/nacre").exists())
+                self.assertFalse((home / ".local/share/nacre/shell/source").exists())
+                self.assertFalse(foreign_config.exists())
                 dropin = home / package_runtime.BEAD_UNITS[0]
                 fallback = home / ".config/systemd/user/nacre-ui-shell-fallback.service"
                 self.assertIn("/bead/", dropin.read_text())
-                self.assertFalse(foreign_config.exists())
                 self.assertIn("recover-bead --recover", fallback.read_text())
                 journals = list(
                     (home / ".local/state/nacre/ui-shell").glob("*/journal.json")
@@ -373,7 +374,8 @@ class PackageSetupTests(unittest.TestCase):
                 releases.restore(Path(record["release"]), record)
                 release_processes.run.assert_not_called()
                 self.assertFalse((home / ".config/nacre/keyboard.lua").exists())
-                self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
+                self.assertFalse((home / ".config/quickshell/nacre").exists())
+                self.assertFalse((home / ".local/share/nacre/shell/source").exists())
                 self.assertFalse(dropin.exists())
                 self.assertFalse(fallback.exists())
                 self.assertEqual(account.read_text(), "private fixture")
@@ -779,12 +781,45 @@ class PackageSetupTests(unittest.TestCase):
     def test_runtime_conflicts_preserve_foreign_and_broken_links(self):
         with tempfile.TemporaryDirectory() as folder:
             root, home, profile = self.fixture(folder)
-            path = home / ".config/quickshell/nacre"
+            path = home / ".local/share/nacre/shell/tools"
             path.parent.mkdir(parents=True)
             path.symlink_to(home / "foreign")
             with self.assertRaisesRegex(RuntimeError, "Local runtime preserved"):
                 package_runtime.plan(home, root, profile)
             self.assertTrue(path.is_symlink())
+
+    def test_retire_only_receipt_owned_legacy_qml_links(self):
+        for relative in package_runtime.LEGACY_QML_LINKS:
+            with (
+                self.subTest(relative=relative),
+                tempfile.TemporaryDirectory() as folder,
+            ):
+                root, home, profile = self.fixture(folder)
+                target = home / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.symlink_to(root / "nacre/shell")
+                receipt = home / ".local/state/nacre/package-links.json"
+                receipt.parent.mkdir(parents=True, exist_ok=True)
+                receipt.write_text(
+                    json.dumps({str(relative): str(root / "nacre/shell")})
+                )
+                self.assertIn(
+                    (relative, None), package_runtime.plan(home, root, profile)
+                )
+
+        with tempfile.TemporaryDirectory() as folder:
+            root, home, profile = self.fixture(folder)
+            relative = Path(".config/quickshell/nacre")
+            target = home / relative
+            target.parent.mkdir(parents=True)
+            target.symlink_to(home / "foreign-qml-config")
+            receipt = home / ".local/state/nacre/package-links.json"
+            receipt.parent.mkdir(parents=True, exist_ok=True)
+            receipt.write_text("{}")
+            self.assertNotIn(
+                (relative, None), package_runtime.plan(home, root, profile)
+            )
+            self.assertEqual(os.readlink(target), str(home / "foreign-qml-config"))
 
     def test_seeded_palette_changes_and_existing_keyboard_survive_repeat_setup(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -1660,6 +1695,13 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
             self.assertIn(Path("usr/bin/nacre_shell"), owned)
+            self.assertFalse((base / "core/usr/share/nacre/nacre/shell").exists())
+            self.assertFalse(
+                (
+                    base
+                    / "core/usr/share/nacre/deployment/core/.local/share/nacre/shell/bin/qs"
+                ).exists()
+            )
             private_shell = base / "core/usr/lib/nacre/bead-shell"
             for name in (
                 "nacre-shell",
@@ -1742,6 +1784,20 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (base / "core" / notice).read_bytes(),
                     (TOOLS.parent / "crates/nacre-helper" / name).read_bytes(),
                 )
+            launcher_notice = Path("usr/share/licenses/nacre/launcher-engine-notice.md")
+            self.assertIn(launcher_notice, owned)
+            self.assertEqual(
+                (base / "core" / launcher_notice).read_bytes(),
+                (TOOLS.parent / "docs/research/launcher-engine-notice.md").read_bytes(),
+            )
+            core_dependencies = json.loads(
+                (TOOLS.parent / "packaging/packages.json").read_text()
+            )["arch"]["core"]
+            self.assertNotIn("quickshell", core_dependencies)
+            self.assertNotIn("qt6-multimedia", core_dependencies)
+            self.assertNotIn("qt6-multimedia-ffmpeg", core_dependencies)
+            self.assertIn("qt6-base", core_dependencies)
+            self.assertIn("qt6-declarative", core_dependencies)
             if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
                 self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)

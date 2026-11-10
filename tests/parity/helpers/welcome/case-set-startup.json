@@ -1,7 +1,0 @@
-{
-  "helper": "welcome",
-  "args": [
-    "set-startup",
-    "false"
-  ]
-}

@@ -13,10 +13,26 @@ pub fn command(
     action: &str,
     environment: &BTreeMap<String, String>,
     paths: &Paths,
+    companion: impl FnMut(&Paths) -> Option<PathBuf>,
+) -> Result<(Vec<String>, BTreeMap<String, String>)> {
+    command_with_versions(action, environment, paths, companion, &mut NativeVersions)
+}
+fn command_with_versions(
+    action: &str,
+    environment: &BTreeMap<String, String>,
+    paths: &Paths,
     mut companion: impl FnMut(&Paths) -> Option<PathBuf>,
+    versions: &mut impl Versions,
 ) -> Result<(Vec<String>, BTreeMap<String, String>)> {
     let mut environment = environment.clone();
-    let original = if action == "brain" {
+    let original = if action == "shell" {
+        vec![
+            "systemctl".into(),
+            "--user".into(),
+            "start".into(),
+            "nacre-shell.service".into(),
+        ]
+    } else if action == "brain" {
         vec![
             "/usr/bin/python3".into(),
             paths
@@ -37,14 +53,16 @@ pub fn command(
         ]
     };
     let context = crate::niri_session_gate::compositor(&environment);
+    if action == "shell" && ["hyprland", "niri"].contains(&context) {
+        return Ok((original, environment));
+    }
     if ["shell", "brain"].contains(&action) && context == "hyprland" {
         return Ok((original, environment));
     }
     if context != "niri" {
         return Err("Niri runtime requires an explicit niri session".into());
     }
-    let (selected_binary, selected_native) =
-        selected_niri_binary(&environment, &mut NativeVersions)?;
+    let (selected_binary, selected_native) = selected_niri_binary(&environment, versions)?;
     if ["widths", "widths-check"].contains(&action)
         && active_capabilities(&environment).proportional_x11_widths
     {
@@ -56,17 +74,7 @@ pub fn command(
         return Ok((vec![program.into()], environment));
     }
     let root = paths.share.join("niri-on-pc/session");
-    let shell = root.join("home-view/.local/share/nacre/shell");
-    if [
-        "source/shell.qml",
-        "tools/nacre_native_compositor.py",
-        "bin/qs",
-    ]
-    .iter()
-    .any(|name| !shell.join(name).is_file())
-    {
-        return Err("Prepare the separate niri source before logging in".into());
-    }
+    let shell_bin = root.join("home-view/.local/share/nacre/shell/bin");
     let mut args = vec![
         "bwrap".into(),
         "--bind".into(),
@@ -78,8 +86,8 @@ pub fn command(
         "--proc".into(),
         "/proc".into(),
         "--ro-bind".into(),
-        shell.to_string_lossy().into_owned(),
-        paths.share.join("shell").to_string_lossy().into_owned(),
+        shell_bin.to_string_lossy().into_owned(),
+        paths.share.join("shell/bin").to_string_lossy().into_owned(),
         "--die-with-parent".into(),
     ];
     for (name, value) in [
@@ -93,16 +101,6 @@ pub fn command(
             paths.tools().to_string_lossy().into_owned(),
         ),
         (
-            "NACRE_QS_CONFIG",
-            paths
-                .config
-                .parent()
-                .ok_or("Invalid config root")?
-                .join("quickshell/nacre/shell.qml")
-                .to_string_lossy()
-                .into_owned(),
-        ),
-        (
             "NACRE_NIRI_CONFIG",
             root.join("config/config.kdl")
                 .to_string_lossy()
@@ -113,10 +111,6 @@ pub fn command(
             root.join("config/desktop.kdl")
                 .to_string_lossy()
                 .into_owned(),
-        ),
-        (
-            "NACRE_NIRI_TOOLS_SOURCE",
-            shell.join("tools").to_string_lossy().into_owned(),
         ),
     ] {
         environment.insert(name.into(), value);
@@ -159,14 +153,8 @@ pub fn command(
                 args.push("--check-session".into());
             }
         }
-        _ => args.extend([
-            "/usr/bin/python3".into(),
-            paths
-                .tools()
-                .join("shell-supervisor.py")
-                .to_string_lossy()
-                .into_owned(),
-        ]),
+        "shell" => return Ok((original, environment)),
+        _ => return Err(format!("Unknown Niri session action: {action}").into()),
     }
     Ok((args, environment))
 }
@@ -1112,11 +1100,8 @@ pub fn run(args: &[String]) -> Result<i32> {
             .backend
             .ok_or("prepare requires --backend")?
             .canonicalize()?;
-        let (selected_binary, native_binary) =
+        let (selected_binary, _native_binary) =
             selected_niri_binary(&environment, &mut NativeVersions)?;
-        if !parsed.stock && !native_binary {
-            crate::niri_hover_install::ensure(&backend, &paths, &environment)?;
-        }
         prepare(
             &backend,
             &paths.share.join("niri-on-pc/session"),
@@ -1230,18 +1215,7 @@ mod tests {
             let home = tempfile::tempdir()?;
             let paths = Paths::new(home.path());
             let root = paths.share.join("niri-on-pc/session");
-            fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/source"))?;
-            fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/tools"))?;
             fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/bin"))?;
-            fs::write(
-                root.join("home-view/.local/share/nacre/shell/source/shell.qml"),
-                "",
-            )?;
-            fs::write(
-                root.join("home-view/.local/share/nacre/shell/tools/nacre_native_compositor.py"),
-                "",
-            )?;
-            fs::write(root.join("home-view/.local/share/nacre/shell/bin/qs"), "")?;
             fs::write(root.join("stock-niri"), "stock\n")?;
             let socket = home.path().join("niri.sock");
             let listener = UnixListener::bind(&socket)?;
@@ -1766,91 +1740,60 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn frozen_routing_overlay_environment_and_companion_selection() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-session-runtime-reference.json"
-        ))?;
-        for case in reference["cases"]
-            .as_array()
-            .ok_or("Missing runtime cases")?
-            .iter()
-            .filter(|case| case["request"]["operation"] == "command")
-        {
-            let request = &case["request"];
-            let home = tempfile::tempdir()?;
-            let paths = Paths::new(home.path());
-            let root = paths.share.join("niri-on-pc/session");
-            let shell = root.join("home-view/.local/share/nacre/shell");
-            if request["ready"] == true {
-                for name in [
-                    "source/shell.qml",
-                    "tools/nacre_native_compositor.py",
-                    "bin/qs",
-                ] {
-                    let file = shell.join(name);
-                    fs::create_dir_all(file.parent().ok_or("Invalid fixture path")?)?;
-                    fs::write(file, "")?;
-                }
-            }
-            if request["stock"] == true {
-                fs::write(root.join("stock-niri"), "stock\n")?;
-            }
-            let environment: BTreeMap<String, String> =
-                serde_json::from_value(request["environment"].clone())?;
-            let mut calls = vec![];
-            let result = command(
-                request["action"].as_str().ok_or("Missing action")?,
-                &environment,
-                &paths,
-                |_| {
-                    calls.push(value!({"method":"overview_hover_binary"}));
-                    (request["companion"] == true).then(|| PathBuf::from("/companion/niri"))
-                },
-            );
-            let observed = match result {
-                Ok((argv, environment)) => {
-                    value!({"value":{"argv":argv,"environment":environment},"error":null})
-                }
-                Err(error) => {
-                    value!({"value":null,"error":{"type":"ValueError","message":error.to_string()}})
-                }
-            };
-            fn normalize(value: Value, home: &str) -> Value {
-                match value {
-                    Value::String(text) => value!(text.replace(home, "{home}")),
-                    Value::Array(values) => Value::Array(
-                        values
-                            .into_iter()
-                            .map(|value| normalize(value, home))
-                            .collect(),
-                    ),
-                    Value::Object(values) => Value::Object(
-                        values
-                            .into_iter()
-                            .map(|(key, value)| (key, normalize(value, home)))
-                            .collect(),
-                    ),
-                    other => other,
-                }
-            }
-            let observed = normalize(observed, home.path().to_str().ok_or("Invalid home")?);
+    fn shell_action_starts_only_the_managed_bead_unit() -> Result<()> {
+        for compositor in ["hyprland", "niri"] {
+            let environment = BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), compositor.into())]);
+            let paths = Paths::new(Path::new("/private/home"));
+            let (argv, returned) = command("shell", &environment, &paths, |_| {
+                panic!("shell activation must not inspect or select a compositor companion")
+            })?;
             assert_eq!(
-                observed["value"], case["observed"]["value"],
-                "{}",
-                request["name"]
+                argv,
+                ["systemctl", "--user", "start", "nacre-shell.service"]
             );
-            assert_eq!(
-                observed["error"], case["observed"]["error"],
-                "{}",
-                request["name"]
-            );
-            assert_eq!(
-                value!(calls),
-                case["observed"]["calls"],
-                "{}",
-                request["name"]
-            );
+            assert_eq!(returned, environment);
         }
+        Ok(())
+    }
+    #[test]
+    fn stock_niri_without_receipt_disables_hover_without_staging_a_companion() -> Result<()> {
+        struct FixtureVersions;
+        impl Versions for FixtureVersions {
+            fn version(&mut self, binary: &Path) -> Result<String> {
+                assert_eq!(binary, Path::new("/usr/bin/niri"));
+                Ok("niri 26.04 (stock fixture)".into())
+            }
+        }
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let root = paths.share.join("niri-on-pc/session");
+        fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/bin"))?;
+        fs::write(root.join("stock-niri"), "stock\n")?;
+        let base_environment = BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]);
+        let mut versions = FixtureVersions;
+        let (argv, environment) = command_with_versions(
+            "compositor",
+            &base_environment,
+            &paths,
+            |_| None,
+            &mut versions,
+        )?;
+        assert!(argv.iter().any(|argument| argument == "/usr/bin/niri"));
+        assert_eq!(environment["NACRE_NIRI_HOVER_STREAM"], "0");
+        assert!(!paths.share.join("niri-overview-hover/source").exists());
+        assert!(!environment.contains_key("NACRE_QS_CONFIG"));
+
+        fs::remove_file(root.join("stock-niri"))?;
+        let mut versions = FixtureVersions;
+        let (argv, environment) = command_with_versions(
+            "compositor",
+            &base_environment,
+            &paths,
+            |_| Some(PathBuf::from("/verified/niri")),
+            &mut versions,
+        )?;
+        assert!(argv.iter().any(|argument| argument == "/verified/niri"));
+        assert_eq!(environment["NACRE_NIRI_HOVER_STREAM"], "1");
         Ok(())
     }
     #[test]

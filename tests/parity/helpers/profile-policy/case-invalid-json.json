@@ -1,9 +1,0 @@
-{
-  "helper": "profile-policy",
-  "args": [
-    "show"
-  ],
-  "fixtures": {
-    "home/.config/nacre/profile.json": "{broken"
-  }
-}

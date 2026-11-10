@@ -11,11 +11,10 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
   state and outside connections, one settings writer, UIs are views. Heavy/risky
   work uses bounded workers that exit when idle. Headless bead-services live in
   the daemon, outside the view.
-- Target the Bead core switch, not full parity: bar, popouts/service panels,
-  launcher, notifications/OSD, dashboard, static wallpaper, session/hyprlock.
-  Settings, Colors, Welcome, AI and software library remain on-demand QML windows.
-  QML remains daily driver until the owner approves the switch. hyprlock remains
-  the lock screen; further IME/screen-reader work is deferred to public release.
+- Owner decision 2026-11-10: Bead is the product shell. N0156 retires the old
+  QML shell after its benchmark and recovery gates pass; failure recovery uses a
+  known-good Bead. Keep the SDDM QML greeter and hyprlock. Further IME/screen-reader
+  work remains deferred to public release.
 - Pages/panels load on first open and release about 2 seconds after closing.
   Decode only each page's concrete types, not every service's enum.
 - Nacre order: F4 single writer; core device/service hosting plus rare weather /

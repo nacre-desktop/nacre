@@ -6,7 +6,7 @@ pub fn descriptors() -> &'static [Value] {
     static REGISTRY: OnceLock<Value> = OnceLock::new();
     REGISTRY.get_or_init(|| {
         serde_json::from_str(include_str!(
-            "../../../../nacre/shell/modules/settings/registry/settings.json"
+            "../../../../nacre/shell-tools/settings-registry/settings.json"
         ))
         .expect("checked-in Settings registry")
     })["settings"]

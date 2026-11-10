@@ -1,5 +1,10 @@
 # Shell performance
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 ## Measurement method
 
 Measure an unchanged revision before migrating helpers. Use the same interpreter,

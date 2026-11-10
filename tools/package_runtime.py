@@ -42,6 +42,13 @@ BEAD_STATE = (
     Path(".local/state/nacre/ui-shell"),
 )
 
+# Old package-runtime receipt entries retained solely so upgrades can remove
+# the two exact links created by the former QML source setup.
+LEGACY_QML_LINKS = {
+    Path(".local/share/nacre/shell/source"),
+    Path(".config/quickshell/nacre"),
+}
+
 
 def prepare_bead(home, root):
     """Prepare the next Bead login; package setup never restarts a live session."""
@@ -174,11 +181,9 @@ def launcher_seed(home, common, temporary):
 
 def links(root, profile, compositor="hyprland"):
     values = {
-        ".local/share/nacre/shell/source": root / "nacre/shell",
         ".local/share/nacre/shell/tools": root / "nacre/shell-tools",
         ".local/share/nacre/dolphin-style": Path("/usr/lib/nacre/dolphin-style"),
         ".local/share/nacre/thunar-style": Path("/usr/lib/nacre/thunar-style"),
-        ".config/quickshell/nacre": root / "nacre/shell",
     }
     for name in (
         "nacre-daemon",
@@ -218,6 +223,7 @@ def plan(home, root, profile, compositor="hyprland"):
         for backend in ("hyprland", "niri")
         for path in links(root, {"components": ["ai", "brain"]}, backend)
     }
+    permitted.update(str(path) for path in LEGACY_QML_LINKS)
     # Retire only a legacy palette link recorded in the managed manifest. The
     # usual exact-target checks below still refuse foreign links/directories.
     permitted.add(".local/share/nacre/palette-runtime")

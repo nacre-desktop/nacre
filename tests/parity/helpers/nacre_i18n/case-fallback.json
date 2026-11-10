@@ -1,8 +1,0 @@
-{
-  "helper": "nacre_i18n",
-  "args": [
-    "missing.id",
-    "Public fixture"
-  ],
-  "stdout": "text"
-}

@@ -1,7 +1,0 @@
-{
-  "helper": "nacre-ai-chat",
-  "args": [
-    "list"
-  ],
-  "command": "python3 bin/nacre-ai-chat"
-}

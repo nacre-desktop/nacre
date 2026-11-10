@@ -47,26 +47,6 @@ class UpdateTests(unittest.TestCase):
 
 
 class UpdateFailureTests(unittest.TestCase):
-    def test_recovery_build_blocks_pending_qt_but_not_other_packages(self):
-        for pending, blocked in (
-            ("qt6-base 6.12 -> 6.13\n", True),
-            ("qt6-base 6.12.0-2 -> 6.12.0-2.1\n", False),
-            ("qt6-wayland 6.12.0-1 -> 6.12.0-1.1\n", False),
-            ("qt6-declarative 6.12.0-1.1 -> 6.12.1-1\n", True),
-            ("qt6-wayland 6.12.0-1 -> 6.13.0-1\n", True),
-            ("fish 4 -> 5\n", False),
-        ):
-            results = [
-                subprocess.CompletedProcess(
-                    [], 0, "distributed by Nacre local Qt rebuild", ""
-                ),
-                subprocess.CompletedProcess([], 0, "", ""),
-                subprocess.CompletedProcess([], 0, "qt6-base 6.12.0-2", ""),
-            ]
-            with patch.object(updates.subprocess, "run", side_effect=results):
-                status = updates.qt_update_status(pending)
-            self.assertEqual(status["rebuildNeeded"], blocked)
-
     def test_failure_trap_reports_step_exit_and_keeps_skipreview(self):
         import os
         import tempfile
@@ -92,17 +72,6 @@ class UpdateFailureTests(unittest.TestCase):
             self.assertEqual(result.returncode, 7)
             self.assertIn("-Syu --skipreview", result.stdout)
             self.assertIn("system package update (exit 7)", result.stderr)
-
-
-class QtReleaseTests(unittest.TestCase):
-    def test_malformed_qt_metadata_is_not_silently_allowed(self):
-        with self.assertRaisesRegex(RuntimeError, "Could not parse"):
-            updates.pending_qt_release_change("qt6-base unknown update format")
-
-    def test_epoch_change_retains_dependency_guard(self):
-        self.assertTrue(
-            updates.pending_qt_release_change("qt6-base 6.12.0-2 -> 1:6.12.0-1")
-        )
 
 
 class UpdateRuntimeTests(unittest.TestCase):
@@ -141,8 +110,7 @@ class UpdateRuntimeTests(unittest.TestCase):
                     with self.assertRaises(RuntimeError):
                         updates.preflight()
                 else:
-                    with patch.object(updates, "qt_update_status", return_value={}):
-                        updates.preflight()
+                    updates.preflight()
                 self.assertEqual(
                     run.call_args.args[0],
                     [

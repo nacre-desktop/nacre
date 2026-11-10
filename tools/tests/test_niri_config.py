@@ -130,7 +130,8 @@ class NiriConfigTests(unittest.TestCase):
 
     def test_pearl_rule_and_orient_colors_do_not_replace_user_settings(self):
         rules = config.render(config.load(), backend="niri")["niri/window-rules.kdl"]
-        self.assertIn("Nacre Pearl (Launcher|Dashboard|AI|Controls|Media)", rules)
+        pearl_rules = (ROOT / "shell/niri-pearls.kdl").read_text()
+        self.assertIn('match app-id="^bead[.]pearl([.]pending)?$"', pearl_rules)
         self.assertIn("open-floating true", rules)
         palette = (
             ROOT / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"

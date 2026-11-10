@@ -1,8 +1,0 @@
-{
-  "helper": "nacre-settings",
-  "args": [
-    "unknown"
-  ],
-  "command": "python3 bin/nacre-settings",
-  "stdout": "text"
-}

@@ -1,5 +1,9 @@
 # Settings phase 2 review
 
+Historical QML review evidence retained during N0156. The generating fixture is
+retired; the current shell uses Bead. Instructions below describe the capture
+that produced these images, not the current development workflow.
+
 The Settings prototype is ready for owner review. The legacy pages and CLI/IPC
 entry points remain in place. The existing Settings window's rounded outer
 surface is also fixed in source; nothing was deployed to the live desktop.

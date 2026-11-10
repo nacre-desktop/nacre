@@ -123,7 +123,7 @@ pub fn desktop(preferences: &Value) -> Result<String> {
         lines.push(format!("layout {{\n    {}\n}}", layout.join("\n    ")));
     }
     if let Some(value) = preferences.get("rounding") {
-        lines.push(format!("window-rule {{\n    exclude app-id=\"^org[.]quickshell$\" title=\"^Nacre Pearl \"\n    geometry-corner-radius {}\n    clip-to-geometry true\n}}",text(value)?));
+        lines.push(format!("window-rule {{\n    exclude app-id=\"^bead[.]pearl([.]pending)?$\"\n    geometry-corner-radius {}\n    clip-to-geometry true\n}}",text(value)?));
     }
     let mut rules = Vec::new();
     if let Some(value) = preferences.get("shadow") {

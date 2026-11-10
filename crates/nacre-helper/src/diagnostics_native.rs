@@ -123,25 +123,14 @@ impl Probe for Queries {
         }
         let allowed = matches!(
             args.as_slice(),
-            ["quickshell", "--version"]
-                | [
-                    "quickshell",
-                    "log",
-                    "--config",
-                    "nacre",
-                    "--no-color",
-                    "--tail",
-                    "60"
-                ]
-                | ["pacman", "-Q"]
+            ["pacman", "-Q"]
                 | ["pw-dump"]
                 | ["lspci", "-s", _]
                 | ["modinfo", "-F", "version", _]
                 | ["Hyprland", "--version"]
                 | ["niri", "--version"]
                 | ["niri", "validate"]
-        ) || (args.len() == 2 && args[1] == "--qt-version")
-            || (args.first() == Some(&"journalctl") && args.get(1) == Some(&"--user"));
+        ) || (args.first() == Some(&"journalctl") && args.get(1) == Some(&"--user"));
         if !allowed {
             return Err("Unsupported support-report query".into());
         }
@@ -259,7 +248,6 @@ pub fn report(as_json: bool) -> Result<String> {
             .clone(),
         required_commands: [
             "uwsm",
-            "quickshell",
             "wpctl",
             "bluetoothctl",
             "kitty",

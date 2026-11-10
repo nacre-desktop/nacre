@@ -16,14 +16,6 @@
       "ai fixture\n",
       448
     ],
-    "nacre/shell/shell.qml": [
-      "shell fixture\n",
-      420
-    ],
-    "nacre/shell/__pycache__/ignored.pyc": [
-      "ignored",
-      420
-    ],
     "nacre/shell-tools/helper.json": [
       "{}\n",
       384
@@ -90,17 +82,9 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-shell.service": {
-          "text": "shell unit\n",
-          "mode": 420
-        },
         ".local/bin/nacre-app": {
           "text": "#!/bin/sh\nexit 0\n",
           "mode": 493
-        },
-        ".local/share/nacre/shell/source/shell.qml": {
-          "text": "shell fixture\n",
-          "mode": 420
         },
         ".local/share/nacre/shell/tools/helper.json": {
           "text": "{}\n",
@@ -159,10 +143,6 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-shell.service": {
-          "text": "shell unit\n",
-          "mode": 420
-        },
         ".config/systemd/user/nacre-sidebar-ai.service": {
           "text": "ai unit\n",
           "mode": 420
@@ -174,10 +154,6 @@
         ".local/bin/nacre-app": {
           "text": "#!/bin/sh\nexit 0\n",
           "mode": 493
-        },
-        ".local/share/nacre/shell/source/shell.qml": {
-          "text": "shell fixture\n",
-          "mode": 420
         },
         ".local/share/nacre/shell/tools/helper.json": {
           "text": "{}\n",
@@ -239,10 +215,6 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-shell.service": {
-          "text": "shell unit\n",
-          "mode": 420
-        },
         ".local/bin/nacre-app": {
           "text": "#!/bin/sh\nexit 0\n",
           "mode": 493
@@ -253,10 +225,6 @@
         },
         ".local/share/nacre/brain/control.py": {
           "text": "brain fixture\n",
-          "mode": 420
-        },
-        ".local/share/nacre/shell/source/shell.qml": {
-          "text": "shell fixture\n",
           "mode": 420
         },
         ".local/share/nacre/shell/tools/helper.json": {
@@ -321,10 +289,6 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-shell.service": {
-          "text": "shell unit\n",
-          "mode": 420
-        },
         ".config/systemd/user/nacre-sidebar-ai.service": {
           "text": "ai unit\n",
           "mode": 420
@@ -343,10 +307,6 @@
         },
         ".local/share/nacre/brain/control.py": {
           "text": "brain fixture\n",
-          "mode": 420
-        },
-        ".local/share/nacre/shell/source/shell.qml": {
-          "text": "shell fixture\n",
           "mode": 420
         },
         ".local/share/nacre/shell/tools/helper.json": {

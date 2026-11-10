@@ -1,8 +1,0 @@
-{
-  "helper": "colors",
-  "args": [
-    "preview"
-  ],
-  "stdin": "{}\n",
-  "native_engine": true
-}

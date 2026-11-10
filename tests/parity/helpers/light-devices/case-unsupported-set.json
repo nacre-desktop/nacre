@@ -1,8 +1,0 @@
-{
-  "helper": "light-devices",
-  "args": [
-    "set",
-    "{\"kind\":\"unknown\"}",
-    "50"
-  ]
-}

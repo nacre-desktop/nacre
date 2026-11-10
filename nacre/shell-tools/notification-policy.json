@@ -1,4 +1,6 @@
 {
+  "expire": true,
+  "defaultExpireTimeout": 5000,
   "feedbackApps": [
     "notify-send",
     "window-trash",

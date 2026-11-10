@@ -1,5 +1,8 @@
 # Versioned settings and state
 
+The QML client examples below are historical after N0156. Bead and native
+clients use the same versioned-store and single-writer contracts.
+
 Nacre-owned persistent JSON uses the shared
 [`nacre-state-files.json`](../../nacre/shell-tools/nacre-state-files.json) registry.
 Rust embeds this registry; the independent Python guard reads it. QML-owned stores

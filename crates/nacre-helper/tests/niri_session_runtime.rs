@@ -47,15 +47,7 @@ fn compositor_exec_preserves_environment_and_code_only_namespace() -> Result<()>
     let shell = home
         .path()
         .join(".local/share/nacre/niri-on-pc/session/home-view/.local/share/nacre/shell");
-    for name in [
-        "source/shell.qml",
-        "tools/nacre_native_compositor.py",
-        "bin/qs",
-    ] {
-        let path = shell.join(name);
-        fs::create_dir_all(path.parent().ok_or("Invalid fixture")?)?;
-        fs::write(path, "")?;
-    }
+    fs::create_dir_all(shell.join("bin"))?;
     let root = home.path().join(".local/share/nacre/niri-on-pc/session");
     fs::write(root.join("stock-niri"), "stock\n")?;
     let bins = home.path().join("bin");
@@ -105,11 +97,7 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
         env!("CARGO_BIN_EXE_nacre-helper"),
         tools.join("nacre-helper"),
     )?;
-    for name in ["nacre-shell.service", "nacre-niri-widths.service"] {
-        fs::write(tools.join(name), "unit fixture\n")?;
-    }
-    fs::create_dir_all(repo.join("nacre/shell"))?;
-    fs::write(repo.join("nacre/shell/shell.qml"), "shell fixture\n")?;
+    fs::write(tools.join("nacre-niri-widths.service"), "unit fixture\n")?;
     fs::create_dir_all(repo.join("niri"))?;
     for name in ["wallpaper.kdl", "workspace-visitors.kdl"] {
         fs::copy(
@@ -177,6 +165,9 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     let destination = home.path().join(".local/share/nacre/niri-on-pc/session");
     assert!(destination.join("source-revision").is_file());
     assert!(destination.join("stock-niri").is_file());
+    assert!(!destination
+        .join("home-view/.local/share/nacre/shell/source")
+        .exists());
     let config = fs::read_to_string(destination.join("config/config.kdl"))?;
     assert_eq!(
         config

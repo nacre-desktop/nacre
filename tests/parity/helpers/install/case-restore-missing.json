@@ -1,7 +1,0 @@
-{
-  "helper": "install",
-  "args": [
-    "--restore"
-  ],
-  "stdout": "text"
-}

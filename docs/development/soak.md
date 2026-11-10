@@ -1,5 +1,10 @@
 # Desktop soak testing
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 The current `tools/soak.py` exercises Niri and Hyprland sequentially in nested sessions with
 public fixtures and disposable HOME/XDG, D-Bus, network and PID namespaces.
 The host filesystem is read-only; only the parent Wayland endpoint is exposed.

@@ -614,7 +614,7 @@ impl ControlCenter {
             "screenshot.capture" | "color-picker.pick" | "wallpaper.next" => self
                 .can(ACTIONS.iter().find(|(id, _)| *id == source)?.1)
                 .then(Reading::default),
-            // B0086: an application stream, `stream:<audio topic id>`; its slider is perceptual like a device's (B0095: QML's stream slider is Quickshell's volume, the cube root of PipeWire's).
+            // B0086: an application stream, `stream:<audio topic id>`; its slider is perceptual like a device's (the cube root of PipeWire volume).
             _ => {
                 let id = source.strip_prefix(STREAM)?;
                 let data = self.data("audio").filter(|data| healthy(data))?;

@@ -1,6 +1,0 @@
-{
-  "helper": "dashboard-media",
-  "args": [
-    "{\"lyrics\": false, \"title\": \"Demo\", \"artist\": \"Fixture\"}"
-  ]
-}

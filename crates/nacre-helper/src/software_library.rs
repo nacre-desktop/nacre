@@ -388,14 +388,14 @@ fn validate(root: &Path, data: &Value) -> Result<()> {
         "Choose an extension kind",
     ))?;
     if kinds.is_empty()
-        || kinds.len() > 3
+        || kinds.len() > 2
         || kinds
             .iter()
-            .any(|v| !matches!(v.as_str(), Some("launcher" | "theme" | "panel")))
+            .any(|v| !matches!(v.as_str(), Some("launcher" | "theme")))
     {
         return Err(tr(
-            "helper.software-library.supported-extension-kinds-are-launcher-theme-and-panel",
-            "Supported extension kinds are launcher, theme and panel",
+            "helper.software-library.supported-extension-kinds-are-launcher-and-theme",
+            "Supported extension kinds are launcher and theme",
         )
         .into());
     }
@@ -450,9 +450,6 @@ fn validate(root: &Path, data: &Value) -> Result<()> {
             ))?;
             orient_core::palette::validate(colors)?;
         }
-    }
-    if kinds.contains(&json!("panel")) {
-        asset(root, text(data, "entryPoint", 240)?)?;
     }
     if let Some(preview) = data["preview"].as_str() {
         asset(root, preview)?;
@@ -793,7 +790,11 @@ fn change(paths: &Paths, id: &str, operation: &str) -> Result<Value> {
     )
 }
 fn open_extension(paths: &Paths, id: &str, action: Option<&str>) -> Result<Value> {
-    let mut value = config(paths)?;
+    let action = action.ok_or(tr(
+        "helper.software-library.extension-action-is-no-longer-available",
+        "Extension action is no longer available",
+    ))?;
+    let value = config(paths)?;
     let record = existing(&value, id)?.clone();
     if record["enabled"] != true {
         return Err(tr(
@@ -810,67 +811,32 @@ fn open_extension(paths: &Paths, id: &str, action: Option<&str>) -> Result<Value
         "--collect".into(),
         "--quiet".into(),
     ];
-    if let Some(action) = action {
-        let item = manifest["actions"]
-            .as_array()
-            .and_then(|a| a.iter().find(|a| a["id"] == action))
-            .ok_or(tr(
-                "helper.software-library.extension-action-is-no-longer-available",
-                "Extension action is no longer available",
-            ))?;
-        args.extend([
-            "--".into(),
-            "env".into(),
-            "-u".into(),
-            "LD_LIBRARY_PATH".into(),
-            "-u".into(),
-            "QML_IMPORT_PATH".into(),
-            "-u".into(),
-            "QML2_IMPORT_PATH".into(),
-            "-u".into(),
-            "QT_PLUGIN_PATH".into(),
-            "-u".into(),
-            "NACRE_LIB_DIR".into(),
-        ]);
-        args.extend(item["command"].as_array().unwrap().iter().map(|a| {
-            a.as_str()
-                .unwrap()
-                .replace("{home}", paths.home.to_str().unwrap_or(""))
-        }));
-    } else {
-        let entry = asset(&root, text(&manifest, "entryPoint", 240)?)?;
-        stop(paths, &record)?;
-        let owner = uuid::Uuid::new_v4().simple().to_string();
-        let name = format!("nacre-extension-{owner}.scope");
-        args.extend([
-            format!("--unit={name}"),
-            format!("--property=Description=Nacre extension {owner}"),
-            "--".into(),
-            "env".into(),
-            "-u".into(),
-            "LD_LIBRARY_PATH".into(),
-            "-u".into(),
-            "QML_IMPORT_PATH".into(),
-            "-u".into(),
-            "QML2_IMPORT_PATH".into(),
-            "-u".into(),
-            "QT_PLUGIN_PATH".into(),
-            "-u".into(),
-            "NACRE_LIB_DIR".into(),
-            "quickshell".into(),
-            "-p".into(),
-            entry.to_string_lossy().into_owned(),
-        ]);
-        let row = value["extensions"]
-            .as_array_mut()
+    let item = manifest["actions"]
+        .as_array()
+        .and_then(|actions| actions.iter().find(|item| item["id"] == action))
+        .ok_or(tr(
+            "helper.software-library.extension-action-is-no-longer-available",
+            "Extension action is no longer available",
+        ))?;
+    args.extend([
+        "--".into(),
+        "env".into(),
+        "-u".into(),
+        "LD_LIBRARY_PATH".into(),
+        "-u".into(),
+        "QML_IMPORT_PATH".into(),
+        "-u".into(),
+        "QML2_IMPORT_PATH".into(),
+        "-u".into(),
+        "QT_PLUGIN_PATH".into(),
+        "-u".into(),
+        "NACRE_LIB_DIR".into(),
+    ]);
+    args.extend(item["command"].as_array().unwrap().iter().map(|arg| {
+        arg.as_str()
             .unwrap()
-            .iter_mut()
-            .find(|e| e["id"] == id)
-            .unwrap();
-        row["owner"] = json!(owner);
-        row["unit"] = json!(name);
-        write(&store(paths), &value)?;
-    }
+            .replace("{home}", paths.home.to_str().unwrap_or(""))
+    }));
     process::spawn_detached_quiet("systemd-run", &args)?;
     Ok(json!({"message":tr("helper.software-library.extension-opened", "Extension opened")}))
 }
@@ -1118,6 +1084,40 @@ mod tests {
         assert!(theme_export(&paths, preset, &json!({"path":target})).is_err());
         Ok(())
     }
+    #[test]
+    fn launcher_actions_remain_valid_and_legacy_panel_entry_is_rejected() -> Result<()> {
+        let (temp, paths) = sandbox()?;
+        validate(temp.path(), &bundled().remove(0))?;
+
+        let id = "user.legacy-panel";
+        let root = directory(&paths).join(id);
+        fs::create_dir_all(&root)?;
+        let marker = temp.path().join("panel-ran");
+        let mut entry = fs::File::create(root.join("panel.qml"))?;
+        writeln!(entry, "#!/bin/sh\ntouch '{}'", marker.display())?;
+        fs::set_permissions(root.join("panel.qml"), fs::Permissions::from_mode(0o700))?;
+        let manifest = json!({
+            "schemaVersion": 1,
+            "id": id,
+            "name": "Legacy panel",
+            "description": "Previously accepted panel entry point",
+            "version": "1.0.0",
+            "kinds": ["panel"],
+            "entryPoint": "panel.qml"
+        });
+        write(&root.join("nacre.extension.json"), &manifest)?;
+        write(
+            &store(&paths),
+            &json!({"version":1,"extensions":[{"id":id,"source":"local","revision":"legacy","enabled":true}]}),
+        )?;
+
+        let error = open_extension(&paths, id, None).unwrap_err();
+        assert_eq!(error.to_string(), "Extension action is no longer available");
+        assert!(tree(&root).is_err());
+        assert!(!marker.exists(), "legacy panel entry point must not run");
+        Ok(())
+    }
+
     #[test]
     fn malformed_library_is_preserved_and_disabled_extensions_cannot_execute() -> Result<()> {
         let (_temp, paths) = sandbox()?;

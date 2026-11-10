@@ -49,11 +49,6 @@ def _prepare_locked(repo, destination, profile, lease):
     lease.publish("profile.lua", policy.lua(profile).encode())
     shell = destination / ".local/share/nacre/shell"
     shutil.copytree(
-        repo / "nacre/shell",
-        shell / "source",
-        ignore=shutil.ignore_patterns("__pycache__"),
-    )
-    shutil.copytree(
         repo / "nacre/shell-tools",
         shell / "tools",
         ignore=shutil.ignore_patterns("tests", "__pycache__", "nacre-helper"),

@@ -386,23 +386,17 @@ pub fn stage(
     )?;
     let shell = destination.join(".local/share/nacre/shell");
     copy_tree(
-        &repo.join("nacre/shell"),
-        &shell.join("source"),
-        &["__pycache__"],
-    )?;
-    copy_tree(
         &repo.join("nacre/shell-tools"),
         &shell.join("tools"),
         &["tests", "__pycache__", "nacre-helper", "backend"],
     )?;
     copied(helper, &shell.join("tools/nacre-helper"))?;
     let units = destination.join(".config/systemd/user");
-    for name in ["nacre-shell.service", "nacre-niri-widths.service"] {
-        copied(
-            &repo.join("nacre/shell-tools").join(name),
-            &units.join(name),
-        )?;
-    }
+    let name = "nacre-niri-widths.service";
+    copied(
+        &repo.join("nacre/shell-tools").join(name),
+        &units.join(name),
+    )?;
     let components = profile["components"]
         .as_array()
         .ok_or("Invalid optional component list")?;

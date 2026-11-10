@@ -1,9 +1,0 @@
-{
-  "helper": "nacre_i18n",
-  "args": [
-    "missing.id",
-    "Hello {name}",
-    "{\"name\":\"Demo\"}"
-  ],
-  "stdout": "text"
-}

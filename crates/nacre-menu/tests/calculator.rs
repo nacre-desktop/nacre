@@ -24,7 +24,7 @@ fn compare(compressed: &[u8], digest: &str, count: usize) -> Result<()> {
     Ok(())
 }
 #[test]
-fn frozen_current_quickshell_calculator_outputs_are_exact() -> Result<()> {
+fn frozen_original_upstream_calculator_outputs_are_exact() -> Result<()> {
     compare(
         include_bytes!("fixtures/calculator.json.gz"),
         "46f8140957260cecafee458bf6cafe0493d2404a254fb12272421f9270ab143e",

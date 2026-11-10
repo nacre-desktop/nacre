@@ -1,6 +1,6 @@
-//! Locale/Exec adaptation: Quickshell contributors, LGPL-3.0, relicensed GPL-3.0-only.
-//! See nacre/shell-tools/launcher-engine-NOTICE.txt for source and license.
-//! Desktop-entry compatibility with the frozen Quickshell 0.3.2 catalog.
+//! Locale/Exec adaptation under LGPL-3.0, relicensed GPL-3.0-only.
+//! See docs/research/launcher-engine-notice.md for original authors, source and license.
+//! Desktop-entry compatibility with the frozen reference catalog.
 //! Visibility and Exec field-code behavior intentionally retain the old launcher.
 use crate::{text::OrderingRules, Result};
 use serde_json::{json, Value};

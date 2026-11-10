@@ -1,7 +1,5 @@
 //! Developer-only interactive provider mapping; all runtime decisions stay Rust.
-use nacre_helper::{
-    json, niri_hover_install, niri_session_runtime as runtime, paths::Paths, Result,
-};
+use nacre_helper::{json, niri_session_runtime as runtime, paths::Paths, Result};
 use serde_json::{json as value, Value};
 use std::{
     io::{BufRead, Write},
@@ -77,21 +75,6 @@ fn execute(request: &Value) -> Result<Value> {
                 },
             )?;
             value!([argv, environment])
-        }
-        "ensure_overview_hover" => {
-            niri_hover_install::ensure_with(
-                || {
-                    path_callback(
-                        value!({"operation":"companion","home":paths.home}),
-                        &mut error,
-                    )
-                },
-                || {
-                    callback(value!({"operation":"build","backend":request["backend"]}))?;
-                    Ok(())
-                },
-            )?;
-            Value::Null
         }
         _ => return Err("Unknown runtime parity operation".into()),
     };

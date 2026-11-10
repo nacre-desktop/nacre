@@ -1,7 +1,0 @@
-{
-  "helper": "menu-backend",
-  "args": [
-    "webapp-create"
-  ],
-  "stdin": "{\"label\": \"Demo\", \"url\": \"javascript:alert(1)\"}\n"
-}

@@ -1596,19 +1596,6 @@
         "center": true,
         "float": true,
         "match": {
-          "class": "^org.quickshell$",
-          "title": "^Nacre lock screen preview$"
-        },
-        "name": "nacre-lock-preview",
-        "size": "70% 70%"
-      }
-    },
-    {
-      "kind": "window_rule",
-      "value": {
-        "center": true,
-        "float": true,
-        "match": {
           "class": "^org\\.pulseaudio\\.pavucontrol$"
         },
         "name": "nacre-audio-mixer",
@@ -1683,42 +1670,6 @@
         "xwayland": {
           "force_zero_scaling": true
         }
-      }
-    },
-    {
-      "kind": "window_rule",
-      "value": {
-        "center": true,
-        "float": true,
-        "match": {
-          "class": "^org[.]quickshell$",
-          "title": "^Nacre Settings$"
-        },
-        "name": "nacre-settings-app"
-      }
-    },
-    {
-      "kind": "window_rule",
-      "value": {
-        "center": true,
-        "float": true,
-        "match": {
-          "class": "^org[.]quickshell$",
-          "title": "^Nacre Colors$"
-        },
-        "name": "nacre-colors-app"
-      }
-    },
-    {
-      "kind": "window_rule",
-      "value": {
-        "center": true,
-        "float": true,
-        "match": {
-          "class": "^org[.]quickshell$",
-          "title": "^Nacre Welcome$"
-        },
-        "name": "nacre-welcome"
       }
     }
   ],
@@ -1845,22 +1796,6 @@
       "value": {
         "action": {
           "args": [
-            "nacre_shell:dismissHoverEdges"
-          ],
-          "method": "global"
-        },
-        "flags": {
-          "non_consuming": true
-        },
-        "keys": "Escape",
-        "submap": ""
-      }
-    },
-    {
-      "kind": "binding",
-      "value": {
-        "action": {
-          "args": [
             "~/.local/bin/nacre-shell detach"
           ],
           "method": "exec_cmd"
@@ -1870,19 +1805,6 @@
         },
         "keys": "SUPER + CTRL + D",
         "submap": ""
-      }
-    },
-    {
-      "kind": "window_rule",
-      "value": {
-        "float": true,
-        "match": {
-          "class": "^org[.]quickshell$",
-          "title": "^Nacre Pearl (Launcher|Dashboard|AI|Controls|Media) [0-9]+$"
-        },
-        "no_anim": true,
-        "rounding": 18,
-        "border_size": 0
       }
     },
     {

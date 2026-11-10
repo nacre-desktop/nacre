@@ -1,8 +1,0 @@
-{
-  "helper": "lock-info",
-  "args": [
-    "snapshot",
-    "{\"args\": [], \"kwargs\": {}}"
-  ],
-  "command": "python3 tests/parity/helpers/api.py nacre/shell-tools/lock-info.py"
-}

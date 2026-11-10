@@ -1,7 +1,0 @@
-{
-  "helper": "menu-backend",
-  "args": [
-    "files",
-    "bad\nname"
-  ]
-}

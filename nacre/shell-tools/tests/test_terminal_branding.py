@@ -143,6 +143,7 @@ class TerminalBrandingTests(unittest.TestCase):
             text=True,
             timeout=15,
             check=True,
+            env={**os.environ, "TERM": "xterm-256color"},
         )
         self.assertIn("\033[34mDesktop", result.stdout)
         self.assertIn("\033[34mTerminal", result.stdout)
@@ -159,8 +160,7 @@ class TerminalBrandingTests(unittest.TestCase):
             tools = root / "nacre/shell-tools"
             for folder in [
                 tools,
-                root / "nacre/shell/branding",
-                root / "nacre/shell/widgets",
+                root / "nacre/shell-tools/branding",
                 root / "nacre/login",
                 root / "brain/web",
                 home,
@@ -175,23 +175,16 @@ class TerminalBrandingTests(unittest.TestCase):
             ):
                 shutil.copyfile(ROOT / "nacre/shell-tools" / name, tools / name)
             shutil.copyfile(
-                branding.GEOMETRY, root / "nacre/shell/branding/nacre-master.svg"
+                branding.GEOMETRY, root / "nacre/shell-tools/branding/nacre-master.svg"
             )
             (root / "brain/web/index.html").write_text(
                 '<svg><symbol id="sh" viewBox="0 0 34 28"></symbol></svg>'
             )
             env = {**os.environ, "HOME": str(home)}
             paths = [
-                root / "nacre/shell/branding/nacre.svg",
-                root / "nacre/shell/widgets/BrandLogo.qml",
                 root / "nacre/login/Logo.qml",
+                root / "nacre/login/LogoData.js",
                 root / "brain/web/index.html",
-                root / "nacre/shell/branding/nacre-ai.svg",
-                root / "nacre/shell/branding/nacre-ai-compact.svg",
-                root / "nacre/shell/branding/nacre-ai-symbolic.svg",
-                root / "nacre/shell/branding/nacre-notifications.svg",
-                root / "nacre/shell/branding/nacre-notifications-compact.svg",
-                root / "nacre/shell/branding/nacre-notifications-symbolic.svg",
             ]
             subprocess.run(
                 [sys.executable, str(script), "--build"],
@@ -210,8 +203,10 @@ class TerminalBrandingTests(unittest.TestCase):
             )
             self.assertEqual({p: p.read_bytes() for p in paths}, first)
             self.assertEqual(list(home.rglob("*")), [])
+            logo = paths[0].read_text()
             widget = paths[1].read_text()
-            self.assertIn("NacreColours.palette", widget)
+            self.assertIn("property color primary:", logo)
+            self.assertIn("LogoData.colored(root.primary", logo)
             self.assertNotIn("root:/", widget)
 
     def test_published_lock_logo_is_transparent_and_roles_remain_distinct(self):

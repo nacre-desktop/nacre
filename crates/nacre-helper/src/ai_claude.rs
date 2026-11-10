@@ -1373,10 +1373,8 @@ mod tests {
 
     #[test]
     fn frozen_help_matches_the_sdk_wording_byte_for_byte() {
-        let frozen: Value = serde_json::from_str(include_str!(
-            "../../../tests/parity/helpers/nacre-ai-claude/expected-help.json"
-        ))
-        .unwrap();
+        let frozen: Value =
+            serde_json::from_str(include_str!("../tests/fixtures/claude-help.json")).unwrap();
         assert_eq!(help(), frozen["stdout"].as_str().unwrap());
     }
 

@@ -30,7 +30,7 @@ pub fn legacy_compositor_backend() -> Result<tempfile::TempDir> {
     let contract = include_bytes!("../tests/fixtures/compositor-contract-before-foundation.json");
     assert_eq!(
         format!("{:x}", Sha256::digest(contract)),
-        "c075df8a6763f350a91f2910133cba1f5e00fdd8eeedc52e17dc40efade54c9b"
+        "fba3484fa6dfa5a3e5a07f4583807bf313929daf1f3b530d285701525760184c"
     );
     fs::write(tools.join("compositor-contract.json"), contract)?;
     Ok(backend)

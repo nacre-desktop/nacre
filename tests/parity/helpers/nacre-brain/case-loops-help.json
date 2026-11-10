@@ -1,6 +1,0 @@
-{
-  "helper": "nacre-brain",
-  "args": ["loops", "--help"],
-  "command": "python3 bin/nacre-brain",
-  "stdout": "text"
-}

@@ -1,7 +1,0 @@
-{
-  "version": 1,
-  "fragments": [
-    "navigation.json",
-    "settings.json"
-  ]
-}

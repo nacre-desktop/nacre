@@ -325,8 +325,7 @@ pub fn ui_call(target: &str, method: &str, args: &[&str]) -> UiReply {
         }
     })
 }
-/// The daemon's own answer to a media key, for shells that do not host the QML `mpris` target:
-/// the active `dashboard.player` entity gets `player.{play_pause,next,previous}`.
+/// Resolve media keys from the daemon's active `dashboard.player` entity.
 pub fn player_key(method: &str) -> Result<()> {
     if !["player.play_pause", "player.next", "player.previous"].contains(&method) {
         return Err("Unknown player key".into());
@@ -364,27 +363,6 @@ pub fn player_key(method: &str) -> Result<()> {
         client.call(method, json!({"player":id}), None).await?;
         Ok(())
     })
-}
-/// The only remaining `quickshell ipc` caller for shell routes (N0048). It runs when the
-/// daemon is absent or no UI provider is registered, which today means the QML shell
-/// is the only provider that can exist. Expiry: delete this function and the
-/// `fallback` flag in `run` in the Group F QML deletion pass.
-fn legacy_ui(arguments: &[String]) -> Result<i32> {
-    use std::os::unix::process::CommandExt;
-    let paths = crate::paths::Paths::environment()?;
-    let binary = paths.share.join("shell/bin/qs");
-    // `nacre settings PAGE` is provider-neutral; the legacy QML handler is `settingsApp open`.
-    let arguments = match arguments {
-        [target, method, page] if target == "nacre" && method == "settings" => {
-            vec!["settingsApp".to_owned(), "open".to_owned(), page.clone()]
-        }
-        _ => arguments.to_vec(),
-    };
-    Err(std::process::Command::new(binary)
-        .args(["-c", "nacre", "ipc", "call"])
-        .args(arguments)
-        .exec()
-        .into())
 }
 fn usage() -> i32 {
     println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl key-step METHOD JSON\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
@@ -486,35 +464,13 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         .validate()?;
     }
     let client = runtime.block_on(connect());
-    let fallback = matches!(arguments.first().map(String::as_str), Some("ui"))
-        && std::env::var_os("NACRE_DAEMON_SOCKET").is_none();
     match client {
-        Err(ConnectError::Absent) if fallback => {
-            drop(runtime);
-            legacy_ui(&arguments[1..])
-        }
         Err(error) => Err(error.into()),
         Ok(mut client) => {
             let result = if list {
                 serde_json::to_value(&client.methods)?
             } else {
-                match runtime.block_on(client.call(&method, params, timeout)) {
-                    Ok(value) => value,
-                    Err(error)
-                        if fallback
-                            && error.downcast_ref::<nacre_protocol::Failure>().is_some_and(
-                                |error| {
-                                    error.code == ErrorCode::Unavailable
-                                        && error.dispatched == Some(false)
-                                },
-                            ) =>
-                    {
-                        drop(client);
-                        drop(runtime);
-                        return legacy_ui(&arguments[1..]);
-                    }
-                    Err(error) => return Err(error),
-                }
+                runtime.block_on(client.call(&method, params, timeout))?
             };
             println!("{}", serde_json::to_string(&result)?);
             Ok(0)

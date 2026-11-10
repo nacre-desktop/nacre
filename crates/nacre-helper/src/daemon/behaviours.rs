@@ -878,7 +878,7 @@ async fn read_sample(system: &zbus::Connection) -> Sample {
     ) else {
         return unready;
     };
-    // Quickshell's isLaptopBattery: a power-supply battery device.
+    // A laptop battery is a power-supply battery device.
     let supply = device
         .get_property::<bool>("PowerSupply")
         .await

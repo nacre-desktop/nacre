@@ -229,32 +229,13 @@ fn channel() -> (Requests, mpsc::Receiver<Request>) {
     )
 }
 
-/// Source checkout: nacre/shell-tools + nacre/shell/config. Installed tree:
-/// shell/tools + shell/source/config (there is no shell/config there).
-fn policy_source(assets: &std::path::Path) -> Result<std::path::PathBuf> {
-    let base = assets
-        .parent()
-        .ok_or("Missing notification configuration")?;
-    ["shell/config", "source/config", "config"]
-        .iter()
-        .map(|folder| base.join(folder).join("NacreNotifications.qml"))
-        .find(|path| path.is_file())
-        .ok_or_else(|| "Notification timeout policy is unavailable".into())
-}
-
-fn policy(paths: &Paths, raw: &Value) -> Result<Policy> {
-    let assets = paths.assets();
-    let qml = policy_source(&assets)?;
-    let qml = std::fs::read_to_string(qml)?;
-    let timeout =
-        regex::Regex::new(r"(?m)^\s*property\s+int\s+defaultExpireTimeout\s*:\s*([0-9]+)\s*$")?
-            .captures(&qml)
-            .and_then(|c| c[1].parse::<u32>().ok())
-            .filter(|n| *n > 0 && *n <= i32::MAX as u32)
-            .ok_or("Notification timeout policy is unavailable")?;
-    let expire = regex::Regex::new(r"(?m)^\s*property\s+bool\s+expire\s*:\s*(true|false)\s*$")?
-        .captures(&qml)
-        .map(|c| &c[1] == "true")
+fn policy(raw: &Value) -> Result<Policy> {
+    let timeout = raw["defaultExpireTimeout"]
+        .as_u64()
+        .filter(|n| *n > 0 && *n <= i32::MAX as u64)
+        .ok_or("Notification timeout policy is unavailable")? as u32;
+    let expire = raw["expire"]
+        .as_bool()
         .ok_or("Notification expiry policy is unavailable")?;
     let strings = |key: &str| -> Result<Vec<String>> {
         raw[key]
@@ -672,7 +653,7 @@ async fn wait_name_released(ingress: &Ingress) -> bool {
 pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     let mut notices = hub.borrow().observe();
     let raw_policy = crate::notification_history::policy(&paths)?;
-    let timing = policy(&paths, &raw_policy)?;
+    let timing = policy(&raw_policy)?;
     let history = paths.state.join("shell/notifications/history.json");
     let mut store =
         Some(tokio::task::spawn_blocking(move || Store::open(history, raw_policy)).await??);
@@ -1001,34 +982,18 @@ mod tests {
     use super::*;
 
     #[test]
-    fn policy_is_found_in_source_and_installed_layouts() {
-        let root = tempfile::tempdir().unwrap();
-        let put = |folder: &str| {
-            let dir = root.path().join(folder);
-            std::fs::create_dir_all(&dir).unwrap();
-            std::fs::write(dir.join("NacreNotifications.qml"), "").unwrap();
-            dir.join("NacreNotifications.qml")
-        };
-        let source = root.path().join("source-tree");
-        let installed = root.path().join("installed");
-        std::fs::create_dir_all(&source).unwrap();
-        // Installed: shell/tools beside shell/source/config (no shell/config).
-        let installed_qml = {
-            let dir = installed.join("source/config");
-            std::fs::create_dir_all(&dir).unwrap();
-            std::fs::write(dir.join("NacreNotifications.qml"), "").unwrap();
-            dir.join("NacreNotifications.qml")
-        };
-        assert_eq!(
-            policy_source(&installed.join("tools")).unwrap(),
-            installed_qml
-        );
-        assert!(policy_source(&source.join("shell-tools")).is_err());
-        let source_qml = put("source-tree/shell/config");
-        assert_eq!(
-            policy_source(&source.join("shell-tools")).unwrap(),
-            source_qml
-        );
+    fn notification_timeout_policy_is_explicit_and_bounded() {
+        let mut raw: Value = serde_json::from_str(include_str!(
+            "../../../../nacre/shell-tools/notification-policy.json"
+        ))
+        .unwrap();
+        let defaults = policy(&raw).unwrap();
+        assert!(defaults.expire);
+        assert_eq!(defaults.default_timeout_ms, 5000);
+        for invalid in [json!(0), json!(-1), json!(i32::MAX as u64 + 1)] {
+            raw["defaultExpireTimeout"] = invalid;
+            assert!(policy(&raw).is_err());
+        }
     }
 
     #[tokio::test]

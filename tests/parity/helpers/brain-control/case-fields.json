@@ -1,8 +1,0 @@
-{
-  "helper": "brain-control",
-  "args": [
-    "fields",
-    "{\"args\": [\"# Public\\nWorlds: Demo\\nTopics: fixture\\n- [ ] Read docs\\n\"], \"kwargs\": {}}"
-  ],
-  "command": "python3 tests/parity/helpers/api.py brain/control.py"
-}

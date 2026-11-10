@@ -1363,19 +1363,6 @@
     {
       "action": {
         "args": [
-          "nacre_shell:dismissHoverEdges"
-        ],
-        "method": "global"
-      },
-      "flags": {
-        "non_consuming": true
-      },
-      "keys": "Escape",
-      "submap": ""
-    },
-    {
-      "action": {
-        "args": [
           "~/.local/bin/nacre-shell detach"
         ],
         "method": "exec_cmd"

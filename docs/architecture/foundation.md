@@ -123,7 +123,10 @@ later brief, not acceptance claims for F1–F4.
 Nested results are labelled nested. Keep the frozen Wave 3 sources and pending
 desktop-PC A/B/A/B plan unchanged; missing measurements are not zeros.
 
-## 9. Scope and sequence
+## 9. Original migration scope and sequence
+
+This section preserves the approved October 2026 migration plan. N0156 later
+retired the QML shell; its incremental QML instructions are historical.
 
 Keep Bead's renderer and Luau, hyprlock, versioned stores, parity fixtures and
 measurement gates. Do not rewrite working QML merely to route it through the

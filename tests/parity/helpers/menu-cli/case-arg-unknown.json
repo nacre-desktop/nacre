@@ -1,7 +1,0 @@
-{
-  "helper": "menu-cli",
-  "args": [
-    "--unknown"
-  ],
-  "stdout": "json"
-}

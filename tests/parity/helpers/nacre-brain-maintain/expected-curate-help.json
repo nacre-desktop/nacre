@@ -1,8 +1,0 @@
-{
-  "stdout": "usage: nacre-brain-maintain curate [-h] (--page WIKI_PATH | --area NAME | --world NAME | --all)\n                                   [--stale-only] [--max-pages N] [--dry-run]\n                                   [--model MODEL] [--report PATH]\n\nRewrite wiki \"Current facts\" with claude -p (no tools, fixed prompt) from\nbounded evidence; validate links, dates and secrets, write each page with\ncompare-and-swap and commit it with its context packs, one commit per page.\n\noptions:\n  -h, --help         show this help message and exit\n  --page WIKI_PATH   one wiki page (wiki/x.md)\n  --area NAME        the pages of an area\n  --world NAME       the pages of a world\n  --all              every wiki page\n  --stale-only       only pages with evidence newer than their curation\n  --max-pages N      at most N pages (default 10)\n  --dry-run          call the model and write proposals to a report only\n  --model MODEL      Claude model (default sonnet)\n  --report PATH      write a Markdown report outside the vault\n",
-  "exit": 0,
-  "files": {},
-  "deleted": [],
-  "effects": [],
-  "ipc": []
-}

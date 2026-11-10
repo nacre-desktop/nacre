@@ -89,35 +89,6 @@ class NiriPackageTests(unittest.TestCase):
         ):
             self.assertEqual(runtime.overview_hover_binary(home), old)
 
-    def test_automatic_prepare_skips_build_for_installed_package_and_checks_result(
-        self,
-    ):
-        home = Path("/fixture")
-        with (
-            patch.object(
-                runtime, "overview_hover_binary", return_value=Path("/package/niri")
-            ),
-            patch.object(runtime.subprocess, "run") as run,
-        ):
-            runtime.ensure_overview_hover(ROOT, home)
-            run.assert_not_called()
-        with (
-            patch.object(
-                runtime,
-                "overview_hover_binary",
-                side_effect=[None, Path("/built/niri")],
-            ),
-            patch.object(runtime.subprocess, "run") as run,
-        ):
-            runtime.ensure_overview_hover(ROOT, home)
-            self.assertEqual(run.call_args.args[0][-1], "--install")
-        with (
-            patch.object(runtime, "overview_hover_binary", return_value=None),
-            patch.object(runtime.subprocess, "run"),
-        ):
-            with self.assertRaisesRegex(RuntimeError, "usable companion"):
-                runtime.ensure_overview_hover(ROOT, home)
-
     def test_receipt_with_wrong_source_never_selects_companion(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)

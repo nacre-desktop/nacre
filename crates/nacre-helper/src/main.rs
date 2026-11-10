@@ -139,10 +139,8 @@ fn run() -> Result<i32> {
         );
     }
     let inherited_tokio_threads = std::env::var_os("TOKIO_WORKER_THREADS").is_some();
-    if !matches!(
-        tool.as_str(),
-        "shell-supervisor" | "shell-environment" | "ctl" | "daemon"
-    ) && std::env::var_os("TOKIO_WORKER_THREADS").is_none()
+    if !matches!(tool.as_str(), "shell-environment" | "ctl" | "daemon")
+        && std::env::var_os("TOKIO_WORKER_THREADS").is_none()
     {
         // zbus's blocking compatibility API owns a Tokio runtime when Tokio is
         // enabled. Bound that fallback pool before any helper threads start;
@@ -190,12 +188,9 @@ fn run() -> Result<i32> {
     if tool == "startup-apps" {
         return nacre_helper::launchers::startup_apps(&arguments);
     }
-    if tool == "shell-supervisor" {
-        return nacre_helper::shell_supervisor::run(None);
-    }
     if tool == "shell-environment" {
-        let initial: nacre_helper::shell_supervisor::Environment = std::env::vars().collect();
-        let environment = nacre_helper::shell_supervisor::environment(
+        let initial: nacre_helper::shell_environment::Environment = std::env::vars().collect();
+        let environment = nacre_helper::shell_environment::environment(
             initial.clone(),
             std::time::Duration::from_secs(20),
             None,
@@ -339,9 +334,6 @@ fn run() -> Result<i32> {
     }
     if tool == "niri-acceptance-monitor" {
         return nacre_helper::niri_acceptance_monitor::run(&arguments);
-    }
-    if tool == "niri-preview" {
-        return nacre_helper::niri_preview::run(&arguments);
     }
     if tool == "compositor-render" {
         if arguments.len() != 3 {

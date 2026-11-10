@@ -1,8 +1,0 @@
-{
-  "helper": "nacre-brain",
-  "args": [
-    "init"
-  ],
-  "command": "python3 bin/nacre-brain",
-  "stdout": "text"
-}

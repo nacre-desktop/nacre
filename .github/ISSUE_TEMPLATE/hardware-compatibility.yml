@@ -10,7 +10,7 @@ body:
       label: Hardware and software
       description:
         Device/model, CPU architecture, GPU and driver, distribution/kernel, compositor/version,
-        Quickshell/Qt, displays/scaling, and power source. Omit serial numbers and unique device identifiers.
+        Bead, displays/scaling, and power source. Omit serial numbers and unique device identifiers.
     validations:
       required: true
   - type: textarea

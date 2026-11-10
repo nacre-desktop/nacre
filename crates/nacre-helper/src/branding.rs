@@ -12,14 +12,12 @@ use std::{
 pub const APPLICATIONS: [&str; 5] = ["ai", "brain", "settings", "colors", "notifications"];
 pub const VIEWBOX: &str = "2.8 3 58 58";
 pub fn master(assets: &Path) -> Result<PathBuf> {
-    let parent = assets.parent().ok_or("Invalid branding assets")?;
-    [
-        parent.join("shell/branding/nacre-master.svg"),
-        parent.join("source/branding/nacre-master.svg"),
-    ]
-    .into_iter()
-    .find(|p| p.is_file())
-    .ok_or_else(|| "Nacre branding master is unavailable".into())
+    let path = assets.join("branding/nacre-master.svg");
+    if path.is_file() {
+        Ok(path)
+    } else {
+        Err("Nacre branding master is unavailable".into())
+    }
 }
 pub fn asset_names() -> Vec<(String, String)> {
     let mut result = Vec::new();

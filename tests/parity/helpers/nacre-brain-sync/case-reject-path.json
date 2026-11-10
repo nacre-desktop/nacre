@@ -1,8 +1,0 @@
-{
-  "helper": "nacre-brain-sync",
-  "args": [
-    "note_path",
-    "{\"args\": [{\"$path\": \"{home}/Brain\"}, \"../outside\"], \"kwargs\": {}}"
-  ],
-  "command": "python3 tests/parity/helpers/api.py bin/nacre-brain-sync"
-}

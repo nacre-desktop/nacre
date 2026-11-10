@@ -61,84 +61,6 @@ def count_updates():
     return {"text": str(total), "count": total, "checked": time.time()}
 
 
-def pending_qt_release_change(pending):
-    # Arch pkgrel changes (including CachyOS optimized rebuilds) do not change
-    # the Qt release or the local package's pkgrel-independent Qt dependency.
-    pinned = {"qt6-base", "qt6-declarative", "qt6-wayland"}
-    for line in pending.splitlines():
-        fields = line.split()
-        if not fields or fields[0] not in pinned:
-            continue
-        if len(fields) != 4 or fields[2] != "->":
-            raise RuntimeError(
-                tr(
-                    "helper.updates.could-not-parse-the-pending-qt-update",
-                    "Could not parse the pending Qt update",
-                )
-            )
-        old, new = fields[1], fields[3]
-        old_release = old.rsplit("-", 1)[0] if "-" in old else old
-        new_release = new.rsplit("-", 1)[0] if "-" in new else new
-        if old_release != new_release:
-            return True
-    return False
-
-
-def qt_update_status(pending):
-    version = subprocess.run(
-        ["quickshell", "--version", "-v"], capture_output=True, text=True, timeout=10
-    )
-    local = "Nacre local Qt rebuild" in version.stdout
-    if not local:
-        package = subprocess.run(
-            ["pacman", "-Q", "quickshell"], capture_output=True, text=True, timeout=10
-        )
-        local = package.returncode == 0 and package.stdout.strip().endswith("-1.2")
-    blocked = local and pending_qt_release_change(pending)
-    message = "Quickshell rebuild needed before updating" if blocked else ""
-    # Installed/cached distribution archives provide build-time Qt metadata without
-    # executing downloaded binaries or guessing compatibility from package versions.
-    candidate = subprocess.run(
-        ["pacman", "-Sp", "--print-format", "%f", "quickshell"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
-    installed = subprocess.run(
-        ["pacman", "-Q", "qt6-base"], capture_output=True, text=True, timeout=10
-    )
-    qt = (
-        installed.stdout.split()[-1].rsplit("-", 1)[0]
-        if installed.returncode == 0
-        else ""
-    )
-    archive = (
-        Path("/var/cache/pacman/pkg") / candidate.stdout.strip().splitlines()[-1]
-        if candidate.stdout.strip()
-        else None
-    )
-    distribution_ready = False
-    if local and archive and archive.is_file():
-        info = subprocess.run(
-            ["bsdtar", "-xOf", str(archive), ".BUILDINFO"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        ).stdout
-        distribution_ready = any(
-            line.startswith("installed = qt6-base-" + qt + "-")
-            for line in info.splitlines()
-        )
-        if distribution_ready:
-            message = (
-                (message + ". " if message else "")
-                + "A cached distribution Quickshell matches installed Qt; you can switch back"
-            )
-    return dict(
-        message=message, rebuildNeeded=blocked, distributionReady=distribution_ready
-    )
-
-
 def preflight():
     command = ["checkupdates"] if shutil.which("checkupdates") else ["pacman", "-Qu"]
     result = subprocess.run(
@@ -154,7 +76,7 @@ def preflight():
                 {"value0": result.stderr.strip()},
             )
         )
-    return qt_update_status(result.stdout)
+    return {}
 
 
 def refresh():
@@ -165,7 +87,6 @@ def refresh():
         except BlockingIOError:
             return
         data = count_updates()
-        data.update(preflight())
         temp = CACHE.with_suffix(".next")
         temp.write_text(json.dumps(data))
         os.replace(temp, CACHE)
@@ -180,15 +101,7 @@ def main():
     if args.needs_host:
         raise SystemExit(0 if needs_host_runtime() else 1)
     if args.preflight:
-        status = preflight()
-        if status["message"]:
-            print(status["message"], flush=True)
-        if status["rebuildNeeded"]:
-            print(
-                "Prepare a matching Quickshell package together with the pending Qt release; see docs/features/runtime.md",
-                flush=True,
-            )
-            raise SystemExit(3)
+        preflight()
         return
     if args.refresh:
         refresh()

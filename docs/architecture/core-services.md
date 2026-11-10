@@ -2,7 +2,7 @@
 
 These are reserved schemas and example transcripts, approved on 2026-10-17.
 They are **not implemented capabilities**. This change does not register methods,
-claim a bus name, load bead-services, or change Quickshell's service ownership.
+claim a bus name, load bead-services, or change existing service ownership.
 Clients enable a control only when the daemon's actual `welcome.methods` and
 `welcome.topics` advertise its supported version. Missing support stays disabled
 or uses an explicitly selected existing fallback; never simulate success.

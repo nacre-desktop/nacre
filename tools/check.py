@@ -6,7 +6,6 @@ import ast
 import json
 import os
 from pathlib import Path
-import re
 import shutil
 import subprocess
 import sys
@@ -16,9 +15,9 @@ ROOT = Path(__file__).resolve().parent.parent
 # Standalone helpers share the translation runtime during source-tree tooling.
 sys.path.insert(0, str(ROOT / "nacre/shell-tools"))
 RETIRED = (
+    "nacre/shell",
     "nacre/shell-tools/tests/qml_source.py",
     "nacre/login/issue",
-    "nacre/shell/run.fish",
     "waybar",
     "swaync",
     "waypaper",
@@ -29,10 +28,6 @@ RETIRED = (
     "nacre/wallpapers",
     "nacre/welcome",
     "hypr/scripts/low-battery.sh",
-    "nacre/shell/utils/thumbnail.py",
-    "nacre/shell/services/Cava.qml",
-    "nacre/shell/widgets/Spectrum.qml",
-    "nacre/shell/utils/scripts/beat.js",
     "nacre/shell-tools/tests/test_beats.mjs",
 )
 
@@ -62,7 +57,6 @@ def test_environment():
         "NACRE_COMPOSITOR",
         "NACRE_COMPOSITOR_TOOLS",
         "NACRE_PEARL_TOOLS",
-        "NACRE_QS_CONFIG",
         "NIRI_SOCKET",
         "NIRI_CONFIG",
         "NACRE_NIRI_CONFIG",
@@ -97,25 +91,9 @@ def test_environment():
     return environment
 
 
-def check_home_paths(root=ROOT):
-    """Keep every QML/JavaScript HOME lookup in the shared path singleton."""
-    owner = root / "nacre/shell/utils/NacrePaths.qml"
-    pattern = re.compile(r"\bQuickshell\s*\.\s*env\s*\(\s*(['\"])HOME\1\s*\)")
-    for path in (root / "nacre").rglob("*"):
-        if path == owner or path.suffix not in (".qml", ".js"):
-            continue
-        source = path.read_text()
-        if match := pattern.search(source):
-            line = source[: match.start()].count("\n") + 1
-            raise RuntimeError(
-                f"{path.relative_to(root)}:{line}: HOME lookup outside NacrePaths.qml; use NacrePaths"
-            )
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.parse_args()
-    check_home_paths()
     run([sys.executable, str(ROOT / "tools/generate_usage_keybindings.py"), "--check"])
     print("Shortcut documentation matches the compositor contract.", flush=True)
     for path in RETIRED:
@@ -214,11 +192,12 @@ def main():
                     "Qt source formatting differs: " + str(path.relative_to(ROOT))
                 )
         print(
-            "All desktop QML/JavaScript parsed and formatted with local Qt.", flush=True
+            "SDDM greeter QML/JavaScript parsed and formatted with local Qt.",
+            flush=True,
         )
     else:
         print(
-            "Desktop QML parser skipped; target-host validation remains required.",
+            "SDDM greeter QML parser unavailable; target-host validation remains required.",
             flush=True,
         )
     run([sys.executable, str(ROOT / "tools/generate_compositor_config.py"), "--check"])
@@ -255,78 +234,6 @@ def main():
             )
         ):
             print(line, flush=True)
-    for specification in ("state", "actions", "transport"):
-        run(
-            [
-                sys.executable,
-                f"tests/parity/helpers/verify_niri_{specification}_native.py",
-            ],
-            env=environment,
-        )
-    run(
-        [
-            sys.executable,
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            "tests/parity/helpers",
-            "-p",
-            "test_niri*reference*.py",
-        ],
-        env=environment,
-    )
-    print(
-        "Native Niri legacy assertions and frozen reference integrity passed.",
-        flush=True,
-    )
-    for contract in (
-        "brain",
-        "colors",
-        "palette_cli",
-        "wallpaper_watch",
-        "wallpaper_media_cli",
-        "wallpaper_media_files",
-        "wallpaper_media_pipeline",
-        "wallpaper_session",
-        "wallpaper_demo",
-        "wallpaper_warm",
-        "wallpaper_pick",
-        "lock_prepare",
-        "supervisor",
-    ):
-        run(
-            [sys.executable, f"tests/parity/helpers/verify_{contract}_native.py"],
-            env=environment,
-        )
-    print(
-        "Native palette and wallpaper immutable workflow references passed.",
-        flush=True,
-    )
-
-    run(
-        [sys.executable, "tests/parity/helpers/verify_hyprland_native.py"],
-        env=environment,
-    )
-    print("Native Hyprland legacy assertions passed.", flush=True)
-    output = run(
-        [
-            sys.executable,
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            "tests/parity/helpers",
-            "-p",
-            "test_runner.py",
-        ],
-        env=environment,
-    )
-    print("Helper parity harness integrity passed.", flush=True)
-    print(
-        run([sys.executable, "tests/parity/helpers/run.py"], env=environment).strip(),
-        flush=True,
-    )
     cli_python = Path(sys.executable)
     if cli_python.exists():
         environment = dict(os.environ, PYTHONPATH=str(ROOT / "nacre/shell-cli/src"))

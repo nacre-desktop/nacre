@@ -1,7 +1,0 @@
-{
-  "helper": "dashboard-data",
-  "args": [
-    "focus-start",
-    "{\"minutes\":0}"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "stdout": "usage: nacre-brain loops [-h] [--area AREA] [--world WORLD] [--kind {todo,question,waiting,blocked}] [--json]\n\nList open loops from the last consolidation index.\n\noptions:\n  -h, --help  show this help message and exit\n  --area AREA\n  --world WORLD\n  --kind {todo,question,waiting,blocked}\n  --json      print matching loops as JSON\n",
-  "exit": 0,
-  "files": {},
-  "deleted": [],
-  "effects": [],
-  "ipc": []
-}

@@ -1,4 +1,4 @@
-//! Public Colors launcher; opens the app through the provider-neutral `nacrectl ui colorsApp open` route (N0048).
+//! Public Colors launcher; opens the app through the provider-neutral `nacrectl ui colorsApp open` route.
 use crate::{paths, process, Result};
 use serde_json::json;
 use std::{path::Path, time::Duration};
@@ -61,8 +61,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         )?;
         let _: zbus::zvariant::OwnedObjectPath =
             manager.call("StartUnit", &("nacre-shell.service", "replace"))?;
-        // Quickshell target registration has no external readiness event. Retain
-        // the existing bounded startup retry while the service loads its QML.
+        // Wait briefly for the desktop provider to register its route.
         for _ in 0..32 {
             std::thread::sleep(Duration::from_millis(250));
             if call(Duration::from_secs(2))? {

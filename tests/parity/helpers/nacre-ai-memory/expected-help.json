@@ -1,8 +1,0 @@
-{
-  "stdout": "usage: nacre-ai-memory [-h] --title TITLE --source SOURCE\n                       [--kind {inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}]\n                       [--confidence {verified,reported,unverified}]\n                       [--world WORLD] [--area AREA] [--topic TOPIC]\n\nStore concise evidence and create discoverable, cross-project brain entities.\n\noptions:\n  -h, --help            show this help message and exit\n  --title TITLE\n  --source SOURCE\n  --kind {inbox,personal,projects,infrastructure,devices,runbooks,decisions,checkpoints}\n  --confidence {verified,reported,unverified}\n  --world WORLD\n  --area AREA\n  --topic TOPIC\n",
-  "exit": 0,
-  "files": {},
-  "deleted": [],
-  "effects": [],
-  "ipc": []
-}

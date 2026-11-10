@@ -1,9 +1,0 @@
-{
-  "helper": "nacre-ai-chat",
-  "args": [
-    "--help"
-  ],
-  "command": "python3 bin/nacre-ai-chat",
-  "stdout": "text",
-  "account_help": "shared-codex-history-v1"
-}

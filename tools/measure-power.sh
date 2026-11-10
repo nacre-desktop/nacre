@@ -10,12 +10,12 @@ interval=10
 lead_in=0
 output=""
 revision=unknown
-scope='quickshell|nacre-shell|orient|codex|claude|/nacre/(shell|brain|ai)/'
+scope='nacre-shell|orient|codex|claude|/nacre/(shell|brain|ai)/'
 setup_only=false
 protected=false
 protected_data=""
 summary_dir=""
-live_source="${NACRE_QS_CONFIG:-$HOME/.config/quickshell/nacre}"
+live_source="${NACRE_BEAD_SHELL:-$HOME/.local/share/nacre/bead}"
 usage() {
     cat <<'HELP'
 Usage: tools/measure-power.sh [--duration SECONDS] [--interval SECONDS] [--lead-in SECONDS]
@@ -26,7 +26,7 @@ Defaults: 600 seconds, 10-second samples, ignored .power-baseline/ timestamp dir
 --summarize regenerates a completed run summary; --protected-data adds that stream.
 Requires Bash, GNU awk and standard Linux utilities.
 --scope matches command lines privately in memory, then includes descendants.
-Default scope includes QML/native shells, Orient, Nacre helpers and AI workers.
+Default scope includes Bead shells, Orient, Nacre helpers and AI workers.
 Raw files contain process names/IDs, not arguments, window titles or environments.
 Root may read RAPL/PSS; this script never requests elevation or changes permissions.
 Package C states and true wakeups are unavailable; context switches are a proxy.
@@ -111,7 +111,7 @@ trap 'echo "Interrupted; partial raw data: $output" >&2; exit 130' INT TERM
 if [[ -f $live_source ]]; then live_source=$(dirname -- "$live_source"); fi
 fingerprint() {
     if [[ -d $live_source ]]; then
-        (cd -- "$live_source" && find . -type f \( -name '*.qml' -o -name '*.js' -o -name qmldir \) -print0 | sort -z | xargs -0 -r sha256sum | sha256sum)
+        (cd -- "$live_source" && find . -type f \( -name '*.luau' -o -name '*.lua' -o -name '*.json' \) -print0 | sort -z | xargs -0 -r sha256sum | sha256sum)
     else echo 'unavailable'; fi
 }
 if [[ -z $summary_dir ]]; then

@@ -55,6 +55,10 @@ for target in (binary, reference, *binary.parents, *reference.parents):
         assert metadata.st_mode & 0o022 == 0, target
 assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
 product_bundle = Path("/usr/lib/nacre/bead-shell")
+assert not Path("/usr/share/nacre/nacre/shell").exists()
+assert not Path(
+    "/usr/share/nacre/deployment/core/.local/share/nacre/shell/bin/qs"
+).exists()
 for name in ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode"):
     executable = product_bundle / "bin" / name
     assert executable.is_file() and not executable.is_symlink(), executable
@@ -106,6 +110,7 @@ for name in (
     "LICENSE-Pillow",
     "NOTICE-Orient",
     "libjpeg-turbo-LICENSE.md",
+    "launcher-engine-notice.md",
 ):
     notice = Path("/usr/share/licenses/nacre") / name
     assert notice.is_file() and notice.stat().st_uid == 0
@@ -170,7 +175,6 @@ assert '["input.kb_layout"] = "no"' in keyboard.read_text(), (
 )
 keyboard_hash = digest(keyboard)
 for relative in (
-    ".config/quickshell/nacre",
     ".local/share/nacre/shell/tools",
     ".local/share/nacre/brain",
     ".local/share/nacre/ai/application",
@@ -178,6 +182,8 @@ for relative in (
 ):
     path = home / relative
     assert path.is_symlink() and path.exists(), relative
+for relative in (".config/quickshell/nacre", ".local/share/nacre/shell/source"):
+    assert not (home / relative).exists(), relative
 assert not (
     home / ".config/systemd/user/graphical-session.target.wants/nacre-shell.service"
 ).exists()
@@ -340,5 +346,7 @@ assert not (home / ".local/share/nacre/palette-runtime").is_symlink()
 assert (home / ".local/share/nacre/shell/tools").resolve() == Path(
     "/usr/share/nacre/nacre/shell-tools"
 )
+assert not (home / ".config/quickshell/nacre").exists()
+assert not (home / ".local/share/nacre/shell/source").exists()
 print("Conflict refusal, package rollback and reapply pass without a desktop session.")
 print("FRESH_USER_PACKAGE_PROOF_OK")

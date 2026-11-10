@@ -4,7 +4,6 @@
       "python",
       "python-pillow",
       "orient",
-      "quickshell",
       "xdg-desktop-portal",
       "uwsm",
       "fish",
@@ -32,8 +31,6 @@
       "lcms2",
       "librsvg",
       "qt6-imageformats",
-      "qt6-multimedia",
-      "qt6-multimedia-ffmpeg",
       "ddcutil",
       "wtype",
       "papirus-icon-theme",
@@ -123,14 +120,42 @@
       "chromium: app-window browser for Brain",
       "obsidian: alternate Markdown vault editor"
     ],
-    "session_niri": ["niri>=26.04", "xwayland-satellite", "xdg-desktop-portal-gnome"],
-    "session_nacre_niri": ["nacre-niri", "xwayland-satellite", "xdg-desktop-portal-gnome"],
-    "session_hyprland": ["hyprland>=0.56.2", "xdg-desktop-portal-hyprland"],
-    "niri": [
-      "niri", "cairo", "glib2", "glibc", "libdisplay-info", "libgcc",
-      "libinput", "libpipewire", "libxkbcommon", "mesa", "pango", "pixman",
-      "seatd", "systemd-libs"
+    "session_niri": [
+      "niri>=26.04",
+      "xwayland-satellite",
+      "xdg-desktop-portal-gnome"
     ],
-    "niri_build": ["git", "python", "cargo", "clang", "pkgconf"]
+    "session_nacre_niri": [
+      "nacre-niri",
+      "xwayland-satellite",
+      "xdg-desktop-portal-gnome"
+    ],
+    "session_hyprland": [
+      "hyprland>=0.56.2",
+      "xdg-desktop-portal-hyprland"
+    ],
+    "niri": [
+      "niri",
+      "cairo",
+      "glib2",
+      "glibc",
+      "libdisplay-info",
+      "libgcc",
+      "libinput",
+      "libpipewire",
+      "libxkbcommon",
+      "mesa",
+      "pango",
+      "pixman",
+      "seatd",
+      "systemd-libs"
+    ],
+    "niri_build": [
+      "git",
+      "python",
+      "cargo",
+      "clang",
+      "pkgconf"
+    ]
   }
 }

@@ -3,7 +3,7 @@ use sha2::{Digest, Sha256};
 
 #[test]
 fn frozen_current_qml_translation_and_pseudo_outputs_are_exact() {
-    let bytes = include_bytes!("fixtures/qml-reference.json");
+    let bytes = include_bytes!("../../../docs/research/n0156-reference/qt-translation.json");
     assert_eq!(
         format!("{:x}", Sha256::digest(bytes)),
         "224ea17d96c13cff1e5b6470de852d6991489f847046cd2680516eae44a1e1aa"

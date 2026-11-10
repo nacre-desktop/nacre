@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location(
-    "window_hide_socket_peer", ROOT / "tests/parity/helpers/native_compositor_peer.py"
+    "window_hide_socket_peer", ROOT / "tools/tests/native_compositor_peer.py"
 )
 peer_module = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(peer_module)

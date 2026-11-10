@@ -321,7 +321,7 @@ fn actual_branding_cli_preserves_every_raster_vector_and_text_logo() -> Result<(
     fs::create_dir(&binary)?;
     let renderer = binary.join("rsvg-convert");
     fs::copy(
-        assets().join("../../tests/parity/helpers/svg_fixture.py"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/svg_fixture.py"),
         &renderer,
     )?;
     fs::set_permissions(&renderer, fs::Permissions::from_mode(0o755))?;
@@ -459,7 +459,7 @@ fn whole_publication_preserves_every_frozen_file_and_link() -> Result<()> {
     fs::create_dir(&empty_data_dirs)?;
     let renderer = binary.join("rsvg-convert");
     fs::copy(
-        assets().join("../../tests/parity/helpers/svg_fixture.py"),
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/svg_fixture.py"),
         &renderer,
     )?;
     fs::set_permissions(&renderer, fs::Permissions::from_mode(0o755))?;

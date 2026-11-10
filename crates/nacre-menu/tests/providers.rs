@@ -15,7 +15,9 @@ fn reference() -> Result<Value> {
 }
 fn context(reference: &Value, name: &str) -> Result<Context> {
     let seed = &reference["contexts"][name];
-    let mut catalog: Value = serde_json::from_str(include_str!("fixtures/base-menu.json"))?;
+    let mut catalog: Value = serde_json::from_str(include_str!(
+        "../../../docs/research/n0156-reference/launcher-base-menu.json"
+    ))?;
     catalog["rows"] = catalog["entries"].clone();
     let constants = serde_json::from_str(include_str!("../data/defaults.json"))?;
     let mut c = Context::new(catalog, constants, "en-US", 1720000000.0)?;

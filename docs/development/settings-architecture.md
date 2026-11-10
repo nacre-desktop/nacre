@@ -1,5 +1,10 @@
 # Settings architecture and phase 2 contract
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 Audited 2026-10-14 against Nacre `ab5fbea2` (the worktree base). This is a
 source audit, not an observation of personal configuration. Phase 1 records
 current behavior and the destination of existing settings. Phase 2 is an opt-in

@@ -10,7 +10,6 @@ import json
 import os
 import re
 import shutil
-import signal
 import subprocess
 import tempfile
 import time
@@ -27,7 +26,6 @@ import writer_lease  # noqa: E402
 
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
-SHELL = ROOT.parent / "shell"
 DEST = HOME / ".local/share/nacre/shell"
 STATE = HOME / ".local/state/nacre/shell"
 
@@ -67,12 +65,6 @@ RETIRED_HELPERS = (
     "pearl-state",
     "pearl-window",
     "compositor",
-    "compositor_backends/hyprland",
-    "compositor_backends/niri",
-    "compositor_backends/niri_widths",
-    "compositor_config",
-    "compositor_backends/hyprland_config",
-    "compositor_backends/niri_config",
 )
 RETIRED_NIRI = ("niri-session-runtime", "niri-acceptance-monitor", "niri-preview")
 MANAGED_UNITS = (
@@ -117,56 +109,15 @@ def daemon_active():
     )
 
 
-def active_ui_shell():
-    """Return the configured active shell from the ui-shell status command."""
-    command = [str(HOME / ".local/bin/nacre"), "ui-shell", "status"]
-    try:
-        result = subprocess.run(
-            command, capture_output=True, text=True, check=True, timeout=15
-        )
-        status = json.loads(result.stdout)
-        active = status.get("active")
-        if (
-            active == "mixed"
-            and status.get("dropin_present")
-            and not status.get("dropin_loaded")
-        ):
-            active = "qml"  # Managed next-login Bead preparation is not active yet.
-    except (OSError, subprocess.SubprocessError, ValueError, AttributeError) as error:
-        raise RuntimeError(
-            f"Could not determine the active Nacre shell: {error}"
-        ) from error
-    if active not in {"qml", "bead"}:
-        raise RuntimeError(f"Cannot install while the active Nacre shell is {active!r}")
-    return active
-
-
-def validate_bead_live():
-    """Validate the running Bead shell and daemon without probing QML."""
-    status = active_ui_shell()
-    if status != "bead":
-        raise RuntimeError("Bead shell is no longer active after the code-only install")
-    shell = subprocess.run(
-        ["systemctl", "--user", "is-active", "--quiet", "nacre-shell.service"]
-    )
-    if shell.returncode:
-        raise RuntimeError("Bead shell unit nacre-shell.service is not active")
-    if not wait_daemon_healthy():
-        raise RuntimeError("Nacre daemon is not healthy while Bead is active")
-    print(
-        "Validated Bead shell: nacre-shell.service active with Bead drop-in loaded; "
-        "Nacre daemon healthy. QML source staged and unvalidated; source.good unchanged."
-    )
-
-
 def bead_candidate():
     """Return an installed package build or matching source build."""
     repo = ROOT.parents[1]
-    if (repo / "package.json.installed").is_file():
-        packaged = repo.parent.parent / "lib/nacre/bead-shell"
-        binary, shell = packaged / "bin/nacre-shell", packaged / "shell"
-    else:
-        binary, shell = repo / "target/release/nacre-shell", repo / "shell"
+    packaged = Path("/usr/lib/nacre/bead-shell")
+    binary, shell = packaged / "bin/nacre-shell", packaged / "shell"
+    if binary.is_file() and shell.is_dir():
+        return binary, shell
+    target = repo / "target/release"
+    binary, shell = target / "nacre-shell", repo / "shell"
     return (binary, shell) if binary.is_file() and shell.is_dir() else None
 
 
@@ -180,7 +131,7 @@ def ui_switch():
     return ui_shell_switch.UiShell(HOME, state_home / "nacre")
 
 
-def migrate_ui_shell(candidate=None):
+def migrate_ui_shell(candidate=None, *, prepare=False):
     """Converge to the available Bead build after the shell code deploy."""
     binary, shell = candidate if candidate else (None, None)
     switch = ui_switch()
@@ -188,22 +139,132 @@ def migrate_ui_shell(candidate=None):
 
     def apply():
         releases.install_controller(ROOT.parents[1], home=HOME)
-        return switch.migrate(binary, shell)
+        if prepare:
+            if candidate is None:
+                raise RuntimeError(
+                    "A Bead build is required to prepare the first login"
+                )
+            return switch.prepare_bead(binary, shell)
+        result = switch.migrate(binary, shell)
+        if result.get("status") in {"complete", "recovered"}:
+            # The daemon owns the config writer lease for its lifetime. Only
+            # retired QML files are moved here, under the release lock.
+            with writer_lease.pinned_directory(HOME / ".config/nacre") as config:
+                archive_legacy_shell()
+                config.ensure_valid()
+        return result
 
     inherited_fd = writer_lease.inherited_fd_from_env()
     if inherited_fd is not None:
-        # The release controller already serializes this deployment; validate
-        # its inherited config lease rather than acquiring the release lock again.
         with writer_lease.writer_lease(HOME / ".config/nacre", inherited_fd):
             return apply()
     lock_path = switch.state / "releases/release.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with lock_path.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        # A live Nacre daemon owns the config writer lease. The UI shell switch
-        # only updates its own managed unit/state files and validates those paths.
-        # Do not reacquire the daemon's settings lease for this direct migration.
         return apply()
+
+
+def archive_legacy_shell():
+    """Move only known QML runtime paths to a dated backup after Bead is healthy."""
+    state = HOME / ".local/state/nacre/shell/backups"
+    stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    backup = state / stamp / "legacy-shell"
+    moves = []
+    qml_trees = {
+        str(DEST / "source"),
+        str(ROOT.parent / "shell"),
+        "/usr/share/nacre/shell",
+        "/usr/share/nacre/nacre/shell",
+    }
+    paths = [
+        (DEST / "source", "source"),
+        (DEST / "source.previous", "source.previous"),
+        (DEST / "source.good", "source.good"),
+        (DEST / "source.good.next", "source.good.next"),
+    ]
+    for path, name in paths:
+        if path.is_symlink() and os.readlink(path) not in qml_trees:
+            continue
+        if path.exists() or path.is_symlink():
+            target = backup / name
+            target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            os.replace(path, target)
+            moves.append({"from": str(path), "to": str(target)})
+
+    quickshell = HOME / ".config/quickshell/nacre"
+    if quickshell.is_symlink() and os.readlink(quickshell) in qml_trees:
+        target = backup / "config-quickshell-nacre"
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        os.replace(quickshell, target)
+        moves.append({"from": str(quickshell), "to": str(target)})
+
+    known_scripts = {
+        DEST
+        / "bin/qs": "b362c8be57cb3c59fbe1099a3678af8e81ce509525adabab4209fb8ec7e18627",
+        DEST
+        / "tools/launch.sh": "b362c8be57cb3c59fbe1099a3678af8e81ce509525adabab4209fb8ec7e18627",
+        DEST
+        / "tools/qt-check.sh": "86f2c2b17baa678680ab014df327f9276926f017f826ba444c7b6dc7ebb908b4",
+    }
+    for path, expected in known_scripts.items():
+        if path.is_file() and not path.is_symlink() and digest(path) == expected:
+            target = backup / "wrappers" / path.name
+            target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            os.replace(path, target)
+            moves.append({"from": str(path), "to": str(target)})
+    old_dbus = HOME / ".local/share/dbus-1/services/org.erikreider.swaync.service"
+    if old_dbus_matches(old_dbus):
+        target = backup / "old-notification-service"
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        os.replace(old_dbus, target)
+        moves.append({"from": str(old_dbus), "to": str(target)})
+    config_backup = retire_unused_config()
+    if config_backup:
+        moves.append(
+            {"from": str(HOME / ".config/nacre/shell.json"), "to": str(config_backup)}
+        )
+    if moves:
+        backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        _state.write(backup.parent / "manifest.json", moves)
+        pointer = state / "latest-legacy-shell-backup"
+        pointer.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        pointer.write_text(str(backup.parent))
+        pointer.chmod(0o600)
+    return backup.parent if moves else None
+
+
+def install_control_dispatcher():
+    """Update the shared nacre-shell command dispatcher and retain its prior bytes."""
+    source = ROOT / "control.sh"
+    target = HOME / ".local/bin/nacre-shell"
+    if not source.is_file() or source.is_symlink():
+        raise RuntimeError("The Bead-compatible nacre-shell dispatcher is unavailable")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        raise RuntimeError("Refusing to replace a linked nacre-shell dispatcher")
+    if target.is_file() and digest(target) == digest(source):
+        return None
+    backup = None
+    if target.is_file():
+        backup = (
+            STATE
+            / "backups"
+            / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+            / "nacre-shell"
+        )
+        backup.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        shutil.copy2(target, backup)
+    fd, name = tempfile.mkstemp(prefix=".nacre-shell.", dir=target.parent)
+    os.close(fd)
+    pending = Path(name)
+    try:
+        shutil.copy2(source, pending)
+        os.chmod(pending, 0o755)
+        os.replace(pending, target)
+    finally:
+        pending.unlink(missing_ok=True)
+    return backup
 
 
 def daemon_status_healthy(text):
@@ -243,7 +304,7 @@ def wait_daemon_healthy(timeout=None):
 
 
 def save_previous_tools():
-    """Snapshot the owned tools/ tree (source/ has its own source.previous) for rollback."""
+    """Snapshot the owned shared tools/ runtime for rollback."""
     saved = DEST / "tools.previous"
     if saved.exists():
         shutil.rmtree(saved)
@@ -254,21 +315,18 @@ def save_previous_tools():
 
 
 def restore_previous_trees():
-    """Put back source/ and tools/ as they were before this code-only deploy (N0053)."""
-    for name in ("source", "tools"):
-        current, saved = DEST / name, DEST / (name + ".previous")
-        if not saved.is_dir():
-            continue
-        if current.exists() or current.is_symlink():
-            shutil.rmtree(current)
+    """Restore the shared tools/ runtime after a failed daemon restart."""
+    current, saved = DEST / "tools", DEST / "tools.previous"
+    if current.exists() or current.is_symlink():
+        shutil.rmtree(current)
+    if saved.exists():
         saved.rename(current)
 
 
 def restart_daemon_checked(target, previous, trees=False):
     """Restart the running daemon on the new helper; restore the old install on failure.
 
-    With `trees` the previous source/ and tools/ come back too, so a failed deploy never
-    leaves a mixed install, and nacre-shell is restarted on the restored tree."""
+    With `trees` the previous shared tools/ runtime comes back too."""
     print("Restarting " + DAEMON_UNIT + " so it runs the new helper binary.")
     restarted = (
         subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT]).returncode == 0
@@ -294,12 +352,10 @@ def restart_daemon_checked(target, previous, trees=False):
     install_native_helper(previous, target)
     subprocess.run(["systemctl", "--user", "restart", DAEMON_UNIT])
     healthy = wait_daemon_healthy()
-    if trees:
-        subprocess.run(["systemctl", "--user", "restart", "nacre-shell"])
     if healthy:
         raise RuntimeError(
             "The new helper left the daemon unhealthy. The previous helper "
-            + ("and the previous source and tools were" if trees else "was")
+            + ("and the previous shared tools were" if trees else "was")
             + " restored and the daemon is healthy again; the new install is not active."
         )
     raise RuntimeError(
@@ -368,7 +424,6 @@ def install_session_backend(source_root):
         shutil.rmtree(pending)
     (pending / "nacre").mkdir(parents=True)
     (pending / "nacre/shell-tools").symlink_to("../..")
-    (pending / "nacre/shell").symlink_to("../../../source")
     for name in (
         "hypr",
         "kitty",
@@ -458,7 +513,7 @@ def refresh_niri_session_if_changed():
 
 
 def dry_run():
-    """Print the daemon/niri steps a code-only install would take; change nothing."""
+    """Print the Bead/shared-runtime steps a code-only update would take."""
     helper = ROOT / "nacre-helper"
     target = DEST / "tools/nacre-helper"
     if not helper.is_file():
@@ -468,12 +523,12 @@ def dry_run():
     else:
         changed = "yes"
     print("Dry run (code-only): nothing is changed.")
-    shell = active_ui_shell()
-    print(
-        "Plan: migrate "
-        + shell
-        + " to checked Bead with last known-good Bead recovery."
-    )
+    candidate = bead_candidate()
+    print("Plan: activate the packaged/source Bead candidate and verify its provider.")
+    if candidate is None:
+        print("Plan: stop before changing files; no Bead candidate is available.")
+    else:
+        print("Bead candidate: " + str(candidate[0]))
     print("Helper binary changed: " + changed)
     if changed == "no":
         print("Plan: leave " + DAEMON_UNIT + " as is.")
@@ -484,8 +539,7 @@ def dry_run():
             + " after the new helper is in place, wait up to "
             + str(DAEMON_WAIT_SECONDS)
             + "s for nacrectl status to report healthy; if it does not, restore the "
-            "previous helper, source/ and tools/ together, restart the daemon again "
-            "and restart nacre-shell on the restored tree."
+            "previous helper and shared tools together, then restart the daemon again."
         )
     else:
         print("Plan: " + DAEMON_UNIT + " is not active; nothing to restart.")
@@ -533,10 +587,10 @@ def old_dbus_matches(path):
 def retire_unused_config():
     path = HOME / ".config/nacre/shell.json"
     if not path.is_file() or path.is_symlink():
-        return
+        return None
     if not unused_config_matches(path):
         print("Unused shell.json has local edits; leaving it private and inactive")
-        return
+        return None
     saved = (
         STATE
         / "backups"
@@ -546,42 +600,7 @@ def retire_unused_config():
     saved.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     shutil.copy2(path, saved)
     path.unlink()
-
-
-def stop_other_shells():
-    for proc in Path("/proc").iterdir():
-        if not proc.name.isdigit():
-            continue
-        try:
-            args = (proc / "cmdline").read_bytes().split(b"\0")
-        except OSError:
-            continue
-        if not args or Path(args[0].decode()).name not in ("qs", "quickshell"):
-            continue
-        if any(
-            b"/observatory/shell/" in x or b"/os-shell/shell.qml" in x for x in args
-        ):
-            try:
-                os.kill(int(proc.name), signal.SIGTERM)
-            except ProcessLookupError:
-                pass
-
-
-def source_digest(directory):
-    digest = hashlib.sha256()
-    for file in sorted(directory.rglob("*")):
-        if (
-            not file.is_file()
-            or any(
-                part in ("build", "__pycache__")
-                for part in file.relative_to(directory).parts
-            )
-            or file.name == ".qmlls.ini"
-        ):
-            continue
-        digest.update(str(file.relative_to(directory)).encode())
-        digest.update(file.read_bytes())
-    return digest.hexdigest()
+    return saved
 
 
 def install_native_helper(helper, target):
@@ -895,15 +914,10 @@ def guard_retired_niri_bindings():
 def deploy(code_only=False, retire_niri_experiment=False):
     guard_retired_niri_bindings()
     dropins = retired_dropins(retire_niri_experiment)
-    shell_to_validate = active_ui_shell() if code_only else "qml"
     candidate = bead_candidate()
-    if (
-        shell_to_validate == "qml"
-        and candidate is None
-        and not ui_switch().migration_launcher()
-    ):
+    if candidate is None and (not code_only or not ui_switch().migration_launcher()):
         raise RuntimeError(
-            "A Bead build is required before updating a QML shell; install the Nacre package or build the source release first"
+            "A Bead build is required before updating the shell; install the Nacre package or build the source release first"
         )
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"
@@ -916,56 +930,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
         )
     if not helper.is_file() or not os.access(helper, os.X_OK):
         raise RuntimeError("The native nacre-helper candidate is unavailable")
-    # Parse every QML file before replacing live source. A failed candidate stays local.
-    formatter = (
-        "/usr/lib/qt6/bin/qmlformat"
-        if Path("/usr/lib/qt6/bin/qmlformat").exists()
-        else shutil.which("qmlformat")
-    )
-    if formatter:
-        for file in SHELL.rglob("*.qml"):
-            result = subprocess.run(
-                [formatter, str(file)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            if result.returncode:
-                raise RuntimeError(
-                    tr(
-                        "helper.install.qml-validation-failed-value0-value1",
-                        "QML validation failed: {value0} {value1}",
-                        {
-                            "value0": str(file.relative_to(SHELL)),
-                            "value1": result.stderr.strip(),
-                        },
-                    )
-                )
-    if not Path("/usr/bin/quickshell").is_file() or not helper.is_file():
-        raise RuntimeError(
-            tr(
-                "helper.install.install-system-desktop-packages-and-provision-the-palette-engine",
-                "Install system desktop packages and provision the palette engine first",
-            )
-        )
     backup, entries = backup_retirements(dropins)
     # The release transaction snapshots the old runtime before this activation.
 
     # Fonts have their own hash/notice/rollback owner; loaded applications stay alive.
     subprocess.run(["python3", str(ROOT / "font-setup.py"), "--apply"], check=True)
-    pending = DEST / "source.next"
-    if pending.exists():
-        shutil.rmtree(pending)
-    shutil.copytree(
-        SHELL, pending, ignore=shutil.ignore_patterns("build", "__pycache__")
-    )
-    source_saved = (DEST / "source").exists()
-    if source_saved:
-        stale = DEST / "source.previous"
-        if stale.exists():
-            shutil.rmtree(stale)
-        (DEST / "source").rename(stale)
-    pending.rename(DEST / "source")
     tools_saved = save_previous_tools() if code_only else False
     shutil.copytree(
         ROOT,
@@ -1079,23 +1048,18 @@ def deploy(code_only=False, retire_niri_experiment=False):
         check=True,
         capture_output=True,
     )
-    retire_unused_config()
     menu_command = HOME / ".local/bin/nacre-menu"
     menu_command.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / "menu.sh", menu_command)
     menu_command.chmod(0o755)
     if code_only:
+        install_control_dispatcher()
         for src, dest in [
-            ("control.sh", HOME / ".local/bin/nacre-shell"),
             ("menu.sh", HOME / ".local/bin/nacre-menu"),
             ("cli-bridge.sh", DEST / "bin/nacre_shell"),
-            ("launch.sh", DEST / "bin/qs"),
         ]:
             shutil.copyfile(ROOT / src, dest)
             dest.chmod(0o755)
-        current = HOME / ".config/quickshell/nacre"
-        current.unlink(missing_ok=True)
-        current.symlink_to(DEST / "source")
         subprocess.run(["python3", str(ROOT / "install-extras.py")], check=True)
         if (HOME / ".local/state/nacre/scheme.json").exists():
             refresh_orient(target)
@@ -1104,9 +1068,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
             )
         subprocess.run(["python3", str(ROOT / "isolate-apps.py")], check=True)
         if previous_helper is not None and daemon_active():
-            restart_daemon_checked(
-                target, previous_helper, trees=source_saved and tools_saved
-            )
+            restart_daemon_checked(target, previous_helper, trees=tools_saved)
         result = migrate_ui_shell(candidate)
         if result and result.get("status") not in {"complete", "recovered"}:
             raise RuntimeError(
@@ -1150,13 +1112,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
 
     for name in ["cli.json"]:
         write(HOME / ".config/nacre" / name, (ROOT / name).read_text())
-    write(HOME / ".config/quickshell/nacre", link=DEST / "source")
     write(
         HOME / ".local/bin/nacre-shell",
         (ROOT / "control.sh").read_text(),
         mode=0o755,
     )
-    write(DEST / "bin/qs", (ROOT / "launch.sh").read_text(), mode=0o755)
     write(DEST / "bin/nacre_shell", (ROOT / "cli-bridge.sh").read_text(), mode=0o755)
     for name in USER_CLIENTS:
         write(
@@ -1247,7 +1207,6 @@ def deploy(code_only=False, retire_niri_experiment=False):
             entry["after_hash"] = digest(Path(entry["target"]))
     _state.write(backup / "manifest.json", entries)
     (STATE / "latest-backup").write_text(str(backup))
-    stop_other_shells()
     subprocess.run(
         [
             "systemctl",
@@ -1259,6 +1218,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
         capture_output=True,
     )
     subprocess.run(["python3", str(ROOT / "install-extras.py")], check=True)
+    migrate_ui_shell(candidate, prepare=True)
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
     subprocess.run(
         ["systemctl", "--user", "enable", "--now", "nacre-shell.service"],
@@ -1280,58 +1240,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
     subprocess.run(
         ["systemctl", "--user", "restart", "nacre-shell.service"], check=True
     )
-    validate_live(source_digest(SHELL))
-    migrate_ui_shell(candidate)
+    result = migrate_ui_shell()
+    if result and result.get("status") not in {"complete", "recovered"}:
+        raise RuntimeError(result.get("hint", "Bead shell migration did not complete"))
     refresh_niri_session_if_changed()
     print("Native shell installed. Backup:", backup)
-
-
-def validate_live(expected=None):
-    for _ in range(80):
-        try:
-            result = subprocess.run(
-                [
-                    str(DEST / "bin/qs"),
-                    "-c",
-                    "nacre",
-                    "ipc",
-                    "call",
-                    "nacre",
-                    "state",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=3,
-            )
-            ready = result.returncode == 0 and "reveal" in json.loads(result.stdout)
-        except (subprocess.TimeoutExpired, ValueError):
-            ready = False
-        if ready:
-            if expected is not None and source_digest(DEST / "source") != expected:
-                raise RuntimeError(
-                    tr(
-                        "helper.install.the-candidate-failed-to-load-the-previous-validated-desktop-was-r",
-                        "The candidate failed to load; the previous validated desktop was restored.",
-                    )
-                )
-            if os.environ.get("NACRE_RELEASE_TRANSACTION"):
-                return
-            good = DEST / "source.good"
-            pending = DEST / "source.good.next"
-            if pending.exists():
-                shutil.rmtree(pending)
-            shutil.copytree(DEST / "source", pending)
-            if good.exists():
-                shutil.rmtree(good)
-            pending.rename(good)
-            return
-        time.sleep(0.25)
-    raise RuntimeError(
-        tr(
-            "helper.install.desktop-did-not-load-the-supervisor-will-retain-or-recover-the-la",
-            "Desktop did not load; the supervisor will retain or recover the last validated source.",
-        )
-    )
 
 
 def restore():

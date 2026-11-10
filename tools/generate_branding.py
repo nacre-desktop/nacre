@@ -48,9 +48,6 @@ def build():
         )
     root = HERE.parent
     values = templates()
-    for variant, name in asset_names():
-        (root / "shell/branding" / name).write_text(values[variant])
-    (root / "shell/branding/nacre-text.txt").write_text(text_logo())
     helper = (HERE / "logo-data.js.in").read_text()
     data = ".pragma library\n"
     for application in ("", *APPLICATIONS):
@@ -59,29 +56,13 @@ def build():
             key = application + "-" + variant if application else variant
             data += "var " + name + "Template=" + json.dumps(values[key]) + ";\n"
     data += helper
-    for target in [root / "shell/branding/LogoData.js", root / "login/LogoData.js"]:
+    for target in [root / "login/LogoData.js"]:
         target.write_text(data)
     common = (HERE / "logo-widget.qml.in").read_text()
     login_i18n = """property string language: "system"
     function tr(id, fallback, args = {}) {
         return Translation.translate(Messages.english, language, id, fallback, args);
     }"""
-    widget = root / "shell/widgets/BrandLogo.qml"
-    widget.write_text(
-        'import QtQuick\nimport qs.services\nimport "../branding/LogoData.js" as LogoData\n'
-        + common.replace("I18N_HELPER", "")
-        .replace("I18N_TR", "NacreI18n.tr")
-        .replace("DEFAULT_PRIMARY", "NacreColours.palette.m3primary")
-        .replace("DEFAULT_SECONDARY", "NacreColours.palette.m3secondary")
-        .replace("DEFAULT_TERTIARY", "NacreColours.palette.m3tertiary || secondary")
-        .replace("DEFAULT_HIGHLIGHT", "NacreColours.palette.m3primaryFixed || primary")
-        .replace(
-            "DEFAULT_BACKGROUND",
-            "NacreColours.palette.m3frame || NacreColours.palette.m3surface",
-        )
-        .replace("DEFAULT_FOREGROUND", "NacreColours.palette.m3onSurface")
-        .replace("DEFAULT_MOTION", "DesktopSettings.data.animations !== false")
-    )
     login = root / "login/Logo.qml"
     login.write_text(
         'import QtQuick\nimport "LogoData.js" as LogoData\nimport "translation.js" as Translation\nimport "messages.js" as Messages\n'
@@ -95,7 +76,7 @@ def build():
         .replace("DEFAULT_FOREGROUND", '"#f4f1ef"')
         .replace("DEFAULT_MOTION", "false")
     )
-    for file in [widget, login]:
+    for file in [login]:
         for _ in range(3):
             formatted = subprocess.check_output(
                 [formatter, str(file.resolve())], text=True

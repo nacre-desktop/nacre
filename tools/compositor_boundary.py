@@ -7,7 +7,6 @@ import re
 
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = (
-    "nacre/shell/services/compositor/",
     "nacre/shell-tools/compositor_backends/",
     "hypr/conf/",
 )
@@ -15,11 +14,6 @@ BACKEND_FILES = {
     "hypr/hyprland.lua",
     "nacre/shell-tools/shortcuts.lua",
     "tools/compositor_boundary.py",
-    # Disposable performance fixtures own native compositor startup and input.
-    "tools/performance-session.py",
-    # Private Settings review harness; never dispatches to the live socket.
-    "tools/settings-preview.py",
-    "tools/soak.py",
     # Session lifecycle owns starting/validating the native compositor, not IPC.
     # Packaged session lifecycle validates/starts Niri; it performs no native IPC.
     "tools/package_niri.py",
@@ -36,9 +30,7 @@ EXCLUDED = {
     ".research",
 }
 NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown", "niri"}
-TEXT_NATIVE = re.compile(
-    r"import\s+Quickshell\.Hyprland|\bNative\.Hyprland|\bhl\.(?:dsp|dispatch|config|monitor|window_rule|bind)\b"
-)
+TEXT_NATIVE = re.compile(r"\bhl\.(?:dsp|dispatch|config|monitor|window_rule|bind)\b")
 SHELL_NATIVE = re.compile(
     r"(?<![\w.-])(?:hyprctl|Hyprland|hyprshutdown|niri)(?=$|[\s\"'])"
 )
@@ -56,7 +48,11 @@ def excluded(path, root):
     relative = path.relative_to(root)
     # Imported history and private nested proofs are not installed dispatchers.
     # Limit the exemption to this top-level archive, never an inner runtime path.
-    return relative.parts[:1] == ("bead-shell",) or bool(set(relative.parts) & EXCLUDED)
+    return (
+        relative.parts[:1] == ("bead-shell",)
+        or relative.parts[:3] == ("docs", "research", "n0156-reference")
+        or bool(set(relative.parts) & EXCLUDED)
+    )
 
 
 def violations(path, root=ROOT):

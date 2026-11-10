@@ -1,7 +1,0 @@
-{
-  "helper": "composer",
-  "args": [
-    "files"
-  ],
-  "stdin": "{\"files\":[\"/case/home/missing\"]}\n"
-}

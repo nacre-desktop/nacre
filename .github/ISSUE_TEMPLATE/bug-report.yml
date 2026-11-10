@@ -54,7 +54,7 @@ body:
     attributes:
       label: Session and environment
       description:
-        Distribution/version, Nacre version/commit, compositor/version, Quickshell and Qt versions,
+        Distribution/version, Nacre version/commit, compositor/version, Bead version,
         GPU/driver, display layout/scaling, and installation method/profile. Mention optional AI/Brain components
         without sharing personal profile files.
     validations:

@@ -1,7 +1,0 @@
-{
-  "helper": "light-devices",
-  "args": [
-    "read-ddc",
-    "{\"kind\":\"ddc\",\"bus\":-1}"
-  ]
-}

@@ -396,7 +396,6 @@ CONTROLLER_FILES = (
     "releases.py",
     "f4_switch.py",
     "ui_shell_switch.py",
-    "check-overlays.py",
     "configure.py",
     "keyboard.py",
     "nacre_modules.py",
@@ -575,9 +574,6 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
             ],
             check=True,
         )
-    keyboard = keyboard or shutil.which("wtype") or "/usr/bin/wtype"
-    if not Path(keyboard).is_file():
-        raise RuntimeError("Install wtype for the live release gate")
     initially_active = {
         service
         for service in DESKTOP_SERVICES
@@ -603,7 +599,6 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
             pass_fds=(lease.fd,),
             check=True,
         )
-        install_controller(repo)
         for component in components:
             lease.ensure_valid()
             commands = {
@@ -636,16 +631,7 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
                 for entry in record["entries"]
             ):
                 compositor().reload()
-        subprocess.run(
-            [
-                sys.executable,
-                str(repo / "tools/check-overlays.py"),
-                "--keyboard",
-                keyboard,
-                "--dismiss-hover",
-            ],
-            check=True,
-        )
+        install_controller(repo)
         for service in required_live_services(components, initially_active):
             subprocess.run(
                 ["systemctl", "--user", "is-active", "--quiet", service], check=True
@@ -653,15 +639,6 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
         errors = compositor().config_errors().strip()
         if errors:
             raise RuntimeError(errors)
-        installed = HOME / ".local/share/nacre/shell"
-        good = installed / "source.good"
-        pending = installed / "source.good.next"
-        if pending.exists():
-            shutil.rmtree(pending)
-        shutil.copytree(installed / "source", pending)
-        if good.exists():
-            shutil.rmtree(good)
-        pending.rename(good)
         retire_native_runtimes(release)
         for entry in record["entries"]:
             entry["after"] = fingerprint(Path(entry["path"]))

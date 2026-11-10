@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Journaled Bead shell activation and Stage A QML compatibility rollback.
+"""Journaled activation, update, and recovery for the Bead shell.
 
 One unit (nacre-shell.service) is always the UI. Bead mode is exactly one managed
 drop-in that replaces its ExecStart, so two shells can never be started by systemd
@@ -63,7 +63,7 @@ def dropin_text(launcher, notifications="none"):
 
 
 def daemon_text(argv):
-    """Bead with --notifications daemon: the daemon owns notifications and the QML-owned behaviours."""
+    """Bead with --notifications daemon: the daemon owns notices and behaviours."""
     return (
         f"{MARK}[Service]\nExecStart=\nExecStart={' '.join([*argv, *DAEMON_FLAGS])}\n"
     ).encode()
@@ -296,9 +296,10 @@ class UiShell(f4.Switch):
 
     def mark_ok(self, path):
         f4.checked(path)
-        return not path.exists() or any(
-            mark.encode() in f4.read(path) for mark in (MARK, LEGACY_MARK)
-        )
+        if not path.exists():
+            return True
+        data = f4.read(path)
+        return MARK.encode() in data or LEGACY_MARK.encode() in data
 
     def provider_ready(self, binding):
         """The daemon routes ui.* to a registered provider; none means 'unavailable'."""
@@ -330,8 +331,8 @@ class UiShell(f4.Switch):
                 raise RuntimeError(f"Timed out: {what}")
             self.sleep(0.5)
 
-    def settle(self, bead):
-        """Active, same process for several seconds, right drop-in loaded, right companion state."""
+    def settle(self):
+        """Bead stays active with one process, the expected unit, and no legacy companion."""
 
         def up():
             p = self.props(SHELL, "ActiveState", "SubState", "MainPID", "NRestarts")
@@ -350,15 +351,11 @@ class UiShell(f4.Switch):
                 raise RuntimeError(
                     "Shell restarted or exited during the stability window"
                 )
-        if self.loaded() != bead:
-            raise RuntimeError("Loaded drop-in does not match the requested shell")
+        if not self.loaded():
+            raise RuntimeError("Bead drop-in is not loaded")
         win = self.props(WINDOWS, "LoadState", "ActiveState")
-        if bead and (win["LoadState"] == "loaded" or win["ActiveState"] == "active"):
-            raise RuntimeError("QML windows companion remains installed or running")
-        if not bead and win["ActiveState"] == "active":
-            raise RuntimeError(
-                "QML windows companion still running beside the QML shell"
-            )
+        if win["LoadState"] == "loaded" or win["ActiveState"] == "active":
+            raise RuntimeError("Legacy windows companion remains installed or running")
 
     def verify_bead(self):
         expected = None
@@ -373,23 +370,11 @@ class UiShell(f4.Switch):
             raise RuntimeError(
                 "The running shell unit has not loaded the requested Bead launcher"
             )
-        self.settle(True)
-        if self._current_notifications() == "daemon":
-            self.daemon_ready(True)
+        self.settle()
         self.wait(
             lambda: self.provider_ready(self.binding), "UI provider did not register"
         )
         self.health(self.binding)
-
-    def verify_qml(self):
-        self.settle(False)
-        effective = f4.environment(self.ctl("show-environment"))
-        effective.update(f4.environment(self.show(SHELL).get("Environment", "")))
-        if effective.get(f4.KEY) == "1":
-            self.wait(
-                lambda: self.provider_ready(self.binding),
-                "QML provider did not register",
-            )
 
     # -- daemon takeover (N0068) ---------------------------------------------
     def daemon_argv(self):
@@ -554,14 +539,15 @@ class UiShell(f4.Switch):
         return {
             "active": "bead"
             if present and loaded
-            else "qml"
+            else "prepared"
+            if present and not loaded and self.mark_ok(self.dropin)
+            else "legacy"
             if not present and not loaded
             else "mixed",
             "launcher": launcher or None,
             "dropin_present": present,
             "dropin_loaded": loaded,
             "daemon_dropin_present": self.daemon_dropin.exists(),
-            "windows": self.props(WINDOWS, "ActiveState")["ActiveState"],
             "notifications": notifications,
             "ready_for_bead": list(dict.fromkeys(reasons)),
             "incomplete": [
@@ -615,133 +601,27 @@ class UiShell(f4.Switch):
         self.ctl("reset-failed", SHELL)
         self.ctl("restart", SHELL)
 
-    def converge_qml(self, record):
-        """Idempotent: every step is safe to repeat from any interrupted point."""
-
-        def restore_paths(paths):
-            prior = record.get("prior", {})
-            for path in paths:
-                if not self.mark_ok(path):
-                    raise RuntimeError(f"File is not managed by this tool: {path}")
-                saved = prior.get(path.name)
-                if saved is None:
-                    if path.exists():
-                        path.unlink()
-                        f4.syncdir(path.parent)
-                else:
-                    f4.atomic(path, base64.b64decode(saved["data"]), saved["mode"])
-
-        def stop_windows():
-            if self.props(WINDOWS, "LoadState")["LoadState"] == "loaded":
-                self.ctl("stop", WINDOWS)
-
-        daemon = record.get("daemon", False)
-        self.phase(
-            record,
-            "remove-dropin",
-            lambda: restore_paths([self.dropin, self.daemon_dropin]),
-        )
-        self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
-        self.phase(record, "stop-windows", stop_windows)
-        self.phase(
-            record,
-            "restore-companions",
-            lambda: restore_paths([self.windows, self.fallback]),
-        )
-        self.phase(record, "reload-restored", lambda: self.ctl("daemon-reload"))
-        if daemon:  # back to the legacy daemon before QML starts and asks for the name
-            self.phase(record, "restart-daemon", self.restart_daemon_best_effort)
-        self.phase(record, "restart-shell", self.restart)
-        if daemon:
-            self.phase(record, "daemon-ready", lambda: self.daemon_ready(False))
-        self.phase(record, "health", self.verify_qml)
-
-    def qml(self, recover=False):
-        records = self.records()
-        self.binding = self.binding_env()
-        self.layout(self.snapshot()[0])
-        if (
-            not self.dropin.exists()
-            and not self.daemon_dropin.exists()
-            and not self.loaded()
-            and all(r["status"] in DONE for r in records)
-            and not any(
-                r["operation"] == "bead" and r["status"] == "complete" for r in records
-            )
-        ):
-            return {"status": "complete", "shell": "qml"}
-        previous = next(
-            (
-                r
-                for r in reversed(records)
-                if r["operation"] in {"qml", "bead"} and r["status"] != "rolled-back"
-            ),
-            {},
-        )
-        record = self.begin(
-            "qml",
-            prior=previous.get("prior", {}),
-            daemon=bool(previous.get("daemon")) or self.daemon_dropin.exists(),
-        )
-        try:
-            self.converge_qml(record)
-        except Exception as error:
-            record["status"] = "failed"
-            self.save(record)
-            raise RuntimeError(
-                f"QML rollback incomplete: {error}; transaction {record['id']}; rerun nacre ui-shell qml"
-            ) from error
-        record["status"] = "complete"
-        self.save(record)
-        for old in records:
-            if (
-                old["status"] not in DONE
-                or old["operation"] == "bead"
-                and old["status"] == "complete"
-            ):
-                if old["operation"] == "bead" and old["status"] == "complete":
-                    old["known_good"] = True
-                old["status"] = "rolled-back"
-                self.save(old)
-        return {"status": "complete", "shell": "qml", "transaction": record["id"]}
-
     def migrate(self, binary=None, shell=None):
         """Converge an installed user to Bead and the Bead recovery unit."""
         if bool(binary) != bool(shell):
             raise RuntimeError("migrate requires both --binary and --shell")
-        for path in self.managed:
-            if not self.mark_ok(path):
-                raise RuntimeError(
-                    f"Refusing to overwrite an unmanaged ui-shell file: {path}"
-                )
         installed = self.install(binary, shell) if binary else None
         status = self.status()
-        if status["active"] == "mixed" and self.dropin.exists() and not self.loaded():
-            # Package setup can prepare Bead while the old shell is still live.
-            # Keep that process running until the normal migration stops it.
-            for path in (self.dropin, self.daemon_dropin):
-                if path.exists():
-                    path.unlink()
-                    f4.syncdir(path.parent)
-            self.ctl("daemon-reload")
-            status = self.status()
         if status["active"] == "bead":
             launcher = installed["launcher"] if installed else status["launcher"]
             notifications = status["notifications"] or "none"
             result = self.bead(launcher, notifications, migration=True)
             self._update_fallback()
             return result
-        if status["active"] != "qml":
+        if status["active"] not in {"legacy", "prepared"}:
             raise RuntimeError(
                 f"Cannot migrate while shell state is {status['active']!r}"
             )
-        if self.dropin.exists() or self.daemon_dropin.exists():
-            self.qml()
         launcher = installed["launcher"] if installed else self.migration_launcher()
         if not launcher:
-            hint = "No Bead build is installed; the existing shell remains active. Install the packaged Bead build and rerun install.py --code-only."
+            hint = "No Bead build is installed; the current shell remains active. Install a Bead build and rerun the Nacre update."
             self._recovery_hint(hint)
-            return {"status": "pending", "shell": "qml", "hint": hint}
+            return {"status": "pending", "shell": "legacy", "hint": hint}
         return self.bead(launcher, "daemon", migration=True)
 
     def prepare_bead(self, binary, shell):
@@ -813,7 +693,7 @@ class UiShell(f4.Switch):
         records = self.records()
         if any(r["status"] not in DONE for r in records):
             raise RuntimeError(
-                "Incomplete ui-shell transaction; run nacre ui-shell qml"
+                "Resolve the incomplete Bead transaction before retrying"
             )
         want = dropin_text(launcher, notifications)
         if self.dropin.exists():
@@ -873,15 +753,6 @@ class UiShell(f4.Switch):
                 want_daemon = daemon_text(self.daemon_argv())
         if reasons:
             raise RuntimeError("; ".join(dict.fromkeys(reasons)))
-        argv = re.search(
-            r"argv\[\]=(.*?) ; ignore_errors",
-            self.props(SHELL, "ExecStart")["ExecStart"],
-        )
-        qml_argv = shlex.split(argv[1]) if argv else []
-        if not qml_argv or not all(
-            SAFE.fullmatch(a) or re.fullmatch(r"[a-z-]+", a) for a in qml_argv
-        ):
-            raise RuntimeError("Cannot determine a plain QML shell command line")
         recover = self._recovery_command()
         self.binding = self.binding_env()
         record = self.begin(
@@ -889,7 +760,6 @@ class UiShell(f4.Switch):
             launcher=launcher,
             notifications=notifications,
             daemon=daemon,
-            qml_exec=qml_argv,
             prior={p.name: f4.file_state(p) for p in self.managed},
         )
         try:
@@ -927,8 +797,7 @@ class UiShell(f4.Switch):
             )
             self.phase(record, "reload", lambda: self.ctl("daemon-reload"))
             if daemon:
-                # QML releases org.freedesktop.Notifications, the daemon restarts and
-                # takes it, and only then does Bead start.
+                # The legacy shell releases org.freedesktop.Notifications before takeover.
                 self.phase(record, "stop-shell", lambda: self.ctl("stop", SHELL))
                 self.phase(record, "restart-daemon", self.restart_daemon)
                 self.phase(record, "daemon-ready", lambda: self.daemon_ready(True))
@@ -937,16 +806,17 @@ class UiShell(f4.Switch):
             record["status"] = "complete"
             self._remember_good(record)
         except Exception as error:
-            try:
-                self.converge_qml(record)
-                record["status"] = "rolled-back"
-                self.save(record)
-            except Exception as recovery:  # noqa: BLE001 - reported with the transaction
+            record["status"] = "failed"
+            record["error"] = str(error)
+            self.save(record)
+            self._reject_launcher(self.records(), launcher, str(error))
+            recovery = self.recover_bead()
+            if recovery["status"] == "recovered":
                 raise RuntimeError(
-                    f"Bead failed: {error}; QML rollback incomplete: {recovery}; run nacre ui-shell qml (transaction {record['id']})"
+                    f"Bead activation failed: {error}; previous healthy Bead restored"
                 ) from error
             raise RuntimeError(
-                f"Bead failed: {error}; the QML shell was restored; transaction {record['id']}"
+                f"Bead activation failed: {error}; {recovery['hint']}"
             ) from error
         return {"status": "complete", "shell": "bead", "transaction": record["id"]}
 
@@ -1013,7 +883,7 @@ class UiShell(f4.Switch):
                 self.verify_bead()
                 record["status"] = "rolled-back"
                 self.save(record)
-            except Exception as recovery:  # noqa: BLE001 - retain both failures in the transaction error
+            except Exception as recovery:  # noqa: BLE001 - rollback must catch any failed recovery step
                 record["status"] = "failed"
                 record["error"] = str(recovery)
                 self.save(record)
@@ -1044,15 +914,19 @@ class UiShell(f4.Switch):
             ]
             candidates = [row for row in candidates if row.get("launcher") != current]
             if not mark_failed_current:
-                if not candidates:
+                if not candidates and current_copies:
                     raise RuntimeError(
                         "No previous known-good Bead copy is available; the current shell remains unchanged"
                     )
-                # Manual rollback may restore its healthy starting copy if every
-                # older copy fails. Automatic recovery must exclude the failed copy.
-                candidates = current_copies + candidates
+                if candidates:
+                    # Manual rollback may restore its healthy starting copy if every
+                    # older copy fails. Automatic recovery must exclude the failed copy.
+                    candidates = current_copies + candidates
         self.binding = self.binding_env()
-        if not self.mark_ok(self.dropin) or not self.mark_ok(self.fallback):
+        if not all(
+            self.mark_ok(path)
+            for path in (self.dropin, self.fallback, self.daemon_dropin)
+        ):
             hint = "Bead recovery refused an unmanaged shell or fallback unit; inspect the user systemd unit files before reinstalling."
             return self._stop_with_hint(hint)
         try:
@@ -1101,7 +975,7 @@ class UiShell(f4.Switch):
                 self._reject_launcher(records, launcher, str(error))
                 try:
                     self.ctl("stop", SHELL)
-                except (OSError, subprocess.SubprocessError):
+                except Exception:  # noqa: BLE001 - continue journaling if stop itself fails
                     pass
         hint = "No healthy Bead copy remains. Run the Nacre installer to install and activate a Bead build; the shell was stopped to prevent a restart loop."
         for row in records:
@@ -1128,7 +1002,7 @@ class UiShell(f4.Switch):
     def _stop_with_hint(self, hint):
         try:
             self.ctl("stop", SHELL)
-        except (OSError, subprocess.SubprocessError):
+        except Exception:  # noqa: BLE001 - always write a recovery hint after best-effort stop
             pass
         self._recovery_hint(hint)
         return {"status": "stopped", "shell": None, "hint": hint}
@@ -1159,15 +1033,7 @@ def dispatch(args, home, release_state, **kw):
     parser = argparse.ArgumentParser(prog="nacre ui-shell")
     parser.add_argument(
         "operation",
-        choices=(
-            "status",
-            "install",
-            "bead",
-            "qml",
-            "rollback",
-            "recover-bead",
-            "migrate",
-        ),
+        choices=("status", "install", "bead", "rollback", "recover-bead", "migrate"),
     )
     parser.add_argument("--launcher", default=DEFAULT_LAUNCHER)
     parser.add_argument("--binary", type=Path)
@@ -1195,11 +1061,6 @@ def dispatch(args, home, release_state, **kw):
             os.environ.get("XDG_STATE_HOME") or Path(home) / ".local/state"
         )
         switch = UiShell(home, state_home / "nacre", **kw)
-        if parsed.recover and parsed.operation == "qml":
-            return {
-                "status": "ignored",
-                "detail": "automatic QML fallback is disabled; update the fallback unit",
-            }
         if (
             parsed.recover
             and parsed.operation == "recover-bead"
@@ -1225,4 +1086,4 @@ def dispatch(args, home, release_state, **kw):
             return switch.recover_bead(exclude_current=True, mark_failed_current=True)
         if parsed.operation == "rollback":
             return switch.recover_bead(exclude_current=True)
-        return switch.qml()
+        raise RuntimeError("Unsupported ui-shell operation")

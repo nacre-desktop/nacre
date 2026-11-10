@@ -1,5 +1,9 @@
 # Using Nacre
 
+Nacre uses the Bead shell. If its normal restart attempts fail, the managed
+fallback tries a previous healthy Bead copy, then stops with a journal recovery
+hint if none works. See [recovery](recovery.md).
+
 Settings groups pages under **Look & feel**, **Desktop**, **Devices**, **System**
 and **Add-ons**. Wallpaper, Colors and Appearance have separate pages. Panels
 shows every edge; its Dashboard and Control center pages use the same editors
@@ -14,7 +18,7 @@ The overflow menu contains Reset to defaults. A small “Set by profile” badge
 identifies values held by the selected desktop preset.
 
 `nacre-settings panels/dashboard#pages` opens a specific preference. IPC callers
-use `settingsApp.open("panels/dashboard#pages")`; the old desktop, workflows,
+use `nacrectl ui nacre settings panels/dashboard#pages`; the old desktop, workflows,
 lock, time, ai and maintenance page IDs continue to resolve. AI assistant and
 Notes appear when their add-ons are installed; otherwise Add-ons offers the
 existing setup entry point. Hardware pages and controls follow detected support.
@@ -28,8 +32,7 @@ its small desktop preview uses the live palette and current wallpaper thumbnail.
 Colors studio remains the full editor; App theming lists the publisher’s actual
 target manifest and last publication status.
 
-Planned controls are hidden during normal use. The separate developer preview
-can reveal schema reservations; the battery-saver bundle stays hidden.
+Planned controls and schema reservations stay hidden during normal use.
 
 
 Open the launcher with Super+Space and type what you want. Normal search includes
@@ -286,7 +289,6 @@ For custom bindings and the trash opt-in, see [configuration](configuration.md).
 | Super + Ctrl + Space | Command palette |
 | Super + K / Super + F1 | Shortcut list |
 | Super + A | Optional AI sidebar |
-| Escape | Dismiss hover panels (also passes Escape to the app) |
 | Super + Ctrl + D | Detach the open panel |
 | Super + left mouse button | Move a panel or window by dragging |
 | left mouse button (release) | Finish dragging a panel or window |

@@ -107,27 +107,24 @@ class CompositorConfigTests(unittest.TestCase):
             self.assertFalse(observed["float"])
             self.assertEqual(observed["workspace"], "8 silent")
 
-    def test_detached_panels_share_attached_corner_radius_on_both_backends(self):
+    def test_bead_pearls_use_native_client_chrome(self):
+        rules = (ROOT / "shell/niri-pearls.kdl").read_text()
+        self.assertIn('match app-id="^bead[.]pearl([.]pending)?$"', rules)
+        self.assertIn("border { off; }", rules)
+        self.assertIn("focus-ring { off; }", rules)
+        self.assertIn("background-effect { blur false; }", rules)
+
+    def test_generic_corner_radius_is_bounded_and_clipped_on_both_backends(self):
         row = next(
-            row
+            copy.deepcopy(row)
             for rows in config.load()["outputs"].values()
             for row in rows
-            if row.get("selector", {})
-            .get("title_regex", "")
-            .startswith("^Nacre Pearl ")
+            if row.get("selector", {}).get("app_id_regex")
         )
-        self.assertEqual(row["effects"]["corner_radius"], 18)
-        self.assertTrue(row["effects"]["client_border"])
-        self.assertIn("border_size=0", config.rule_lua(row))
+        row["effects"]["corner_radius"] = 18
+        row["effects"]["client_border"] = True
         self.assertIn("rounding=18", config.rule_lua(row))
-        output = config.niri.rule_kdl(row)
-        self.assertIn("geometry-corner-radius 18", output)
-        self.assertIn("clip-to-geometry true", output)
-        self.assertIn("border { off; }", output)
-        self.assertIn("focus-ring { off; }", output)
-        plain = copy.deepcopy(row)
-        plain["effects"].pop("corner_radius")
-        self.assertNotIn("clip-to-geometry", config.niri.rule_kdl(plain))
+        self.assertIn("clip-to-geometry true", config.niri.rule_kdl(row))
         for invalid in (True, -1, 1.5, "18"):
             broken = copy.deepcopy(row)
             broken["effects"]["corner_radius"] = invalid

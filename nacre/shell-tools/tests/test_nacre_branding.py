@@ -92,18 +92,6 @@ class NacreBrandingTests(unittest.TestCase):
                 ):
                     self.assertEqual(image.getpixel(corner)[3], 0)
 
-    def test_standalone_login_uses_identical_shared_sources(self):
-        for source, copy in (
-            ("shell/branding/LogoData.js", "login/LogoData.js"),
-            ("shell/i18n/translation.js", "login/translation.js"),
-        ):
-            with self.subTest(copy=copy):
-                self.assertEqual(
-                    (ROOT.parent / source).read_bytes(),
-                    (ROOT.parent / copy).read_bytes(),
-                    "Regenerate the standalone login theme from the shared source",
-                )
-
     def test_qt_javascript_color_binding_agrees_with_publisher(self):
         node = shutil.which("node")
         command = (
@@ -116,7 +104,7 @@ class NacreBrandingTests(unittest.TestCase):
         if command is None:
             self.skipTest("JavaScript runtime unavailable")
         source = (
-            (ROOT.parent / "shell/branding/LogoData.js")
+            (ROOT.parent / "login/LogoData.js")
             .read_text()
             .replace(".pragma library", "")
         )

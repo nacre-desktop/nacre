@@ -21,7 +21,6 @@ if python3 "$script_dir/updates.py" --needs-host; then
         /usr/bin/bash "$script_dir/updates.sh"
     exit 0
 fi
-source "$script_dir/qt-check.sh"
 if command -v gum >/dev/null; then
     palette="$HOME/.config/nacre/colors"
     accent=$(cat "$palette/primary" 2>/dev/null || printf '#808080')
@@ -31,7 +30,7 @@ else
     read -r -p 'Update system packages now? [y/N] ' answer
     [[ "$answer" == [yY] ]] || exit 0
 fi
-step="Quickshell update preflight"
+step="package update preflight"
 python3 "$script_dir/updates.py" --preflight
 step="system package update"
 if command -v paru >/dev/null; then
@@ -45,8 +44,6 @@ else
     printf 'Starting pacman for the explicitly confirmed system package update.\n' >&2
     sudo pacman -Syu
 fi
-step="Quickshell/Qt compatibility check"
-if ! qt_match_check; then qt_recovery_help; false; fi
 step="Flatpak update"
 if command -v flatpak >/dev/null; then
     printf 'Starting flatpak for the explicitly confirmed Flatpak update.\n' >&2

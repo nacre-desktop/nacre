@@ -1,5 +1,10 @@
 # Compositor interface
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 The shell and helpers consume a shared compositor contract. Hyprland retains its
 existing behavior; the niri backend targets niri 26.04 using JSON IPC. Backend
 selection does not alter layout, profile choices or optional assistant permissions.

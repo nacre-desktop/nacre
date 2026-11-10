@@ -1,5 +1,10 @@
 # Side-by-side niri testing
 
+> Historical QML implementation record: N0156 retired the QML shell and its
+> dedicated tooling. QML commands and source paths below describe that retired
+> implementation. Use [the Bead build guide](product-shell-build.md),
+> [usage](../usage.md) and [recovery](../recovery.md) for the current shell.
+
 This is an incremental acceptance record, not a claim of completed niri support.
 The working Hyprland files and package-owned session entries remain the fallback.
 Test results below distinguish measured checks from pending physical-session work.

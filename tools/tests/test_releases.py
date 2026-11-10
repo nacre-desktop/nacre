@@ -94,7 +94,6 @@ class ReleaseTests(unittest.TestCase):
                 "hypr",
                 "kitty",
                 "nacre/desktop",
-                "nacre/shell",
                 "nacre/shell-tools",
                 "niri",
                 "tools/patches",
@@ -111,7 +110,6 @@ class ReleaseTests(unittest.TestCase):
 
             shell = home / ".local/share/nacre/shell"
             tools = shell / "tools"
-            shutil.copytree(checkout / "nacre/shell", shell / "source")
             shutil.copytree(checkout / "nacre/shell-tools", tools)
             helper = Path(os.environ["NACRE_HELPER_BINARY"])
             shutil.copy2(helper, tools / "nacre-helper")
@@ -543,6 +541,36 @@ class ReleaseTests(unittest.TestCase):
                 with self.assertRaises(m._writer.WriterLeaseError):
                     with m._writer.writer_lease(home / ".config/nacre"):
                         pass
+
+    def test_successful_config_release_needs_no_legacy_shell_source(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            home = root / "home"
+            home.mkdir()
+            repo = root / "repo"
+            repo.mkdir()
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m, "STATE", home / ".local/state/nacre/releases"),
+                patch.object(
+                    m.subprocess, "check_output", side_effect=["revision\n", ""]
+                ),
+                patch.object(
+                    m.subprocess, "run", return_value=SimpleNamespace(returncode=0)
+                ),
+                patch.object(m, "install_controller"),
+                patch.object(m, "compositor") as service,
+                m._writer.writer_lease(home / ".config/nacre") as lease,
+            ):
+                service.return_value.config_errors.return_value = ""
+                result = m._deploy_locked(repo, ["configs"], None, lease=lease)
+                self.assertEqual(result["status"], "good")
+                self.assertFalse(
+                    (home / ".local/share/nacre/shell/source.good").exists()
+                )
+                self.assertEqual(
+                    m._state.read_json_file(m.STATE / "current.json")["status"], "good"
+                )
 
     def test_doctor_forwards_export_mode_without_an_extra_json_prefix(self):
         import io

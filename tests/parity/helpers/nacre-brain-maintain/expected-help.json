@@ -1,8 +1,0 @@
-{
-  "stdout": "usage: nacre-brain-maintain [-h]\n                            {check,backup,setup,read,update,restore,resolve,consolidate,curate} ...\n\nCheck, version, update and restore the private brain (only curate calls a model).\n\npositional arguments:\n  {check,backup,setup,read,update,restore,resolve,consolidate,curate}\n\noptions:\n  -h, --help            show this help message and exit\n",
-  "exit": 0,
-  "files": {},
-  "deleted": [],
-  "effects": [],
-  "ipc": []
-}

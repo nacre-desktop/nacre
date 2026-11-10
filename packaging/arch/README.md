@@ -33,11 +33,11 @@ duplicated in the package recipe.
 Cargo fetches the Bead framework at the full revision pinned in Nacre's
 manifest. The output `artifacts/ui-shell/` bundle contains `bin/` with all
 three executables and the matching `shell/` tree. The package stages it under
-`/usr/lib/nacre/bead-shell/`, preserving the existing `/usr/bin/nacre-shell`
-QML wrapper. To select that build, use
-`nacre ui-shell install --binary /usr/lib/nacre/bead-shell/bin/nacre-shell
---shell /usr/lib/nacre/bead-shell/shell`. The installer copies the matched
-bundle into a private versioned user directory before checking it.
+`/usr/lib/nacre/bead-shell/`. Setup stages a matched immutable user copy and
+Bead service drop-in; the normal update activates it and health-checks it.
+The fallback recovers a previously healthy Bead copy. If every copy fails,
+the shell stops and the journal gives a recovery command. `/usr/bin/nacre-shell`
+remains the shared Nacre control dispatcher.
 
 Shared code is under `/usr/share/nacre`, native app-scoped modules under
 `/usr/lib/nacre`, and fonts under `/usr/share/fonts/nacre`. Setup deploys private
@@ -85,7 +85,7 @@ namcap PKGBUILD
 Git sources are fixed commits; the Orient submodule is initialized from the
 separately fetched exact pin with file transport enabled only for that command.
 `SKIP` is used only for the fixed VCS sources; font assets have SHA-256 checksums.
-Checks include the repository's lint/format/tests, QML and Brain JavaScript.
+Checks include the repository's lint/format/tests, the SDDM greeter QML and Brain JavaScript.
 
 ## Clean chroot and fresh-user proof
 
@@ -282,9 +282,8 @@ before the next login; removing that marker restores automatic companion selecti
 
 The runtime packages must have no unresolved errors. Script/config-launched
 programs can be reported as unused dependencies; retain dependencies evidenced
-by the installed entry points, Lua config and subprocess calls. Quickshell's
-`qs.*` modules are local config imports, and Python helpers under the shared
-`tools`/`shell-tools` directories use explicit local import paths. These are
+by the installed entry points, Lua config and subprocess calls. Python helpers
+under the shared `tools`/`shell-tools` directories use explicit local import paths. These are
 not missing distro packages. The Orient imports and CLI are covered by an
 installed-package smoke test.
 

@@ -713,22 +713,15 @@ fn takeover_scenario() {
     let connection = Connection::session().expect("connect to dbus-run-session bus");
     let source = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../nacre");
 
-    // Installed layout: tools next to source/config, no shell/config folder.
+    // Installed layout: the shared neutral notification policy is beside shell tools.
     let tools = home.join("data/nacre/shell/tools");
-    let config = home.join("data/nacre/shell/source/config");
     fs::create_dir_all(&tools).unwrap();
-    fs::create_dir_all(&config).unwrap();
     fs::copy(
         source.join("shell-tools/notification-policy.json"),
         tools.join("notification-policy.json"),
     )
     .unwrap();
-    fs::copy(
-        source.join("shell/config/NacreNotifications.qml"),
-        config.join("NacreNotifications.qml"),
-    )
-    .unwrap();
-    // A history file as the QML shell writes it.
+    // A history file using the legacy on-disk format.
     let history = home.join("state/nacre/shell/notifications");
     fs::create_dir_all(&history).unwrap();
     fs::set_permissions(&history, fs::Permissions::from_mode(0o700)).unwrap();

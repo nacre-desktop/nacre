@@ -1,8 +1,0 @@
-{
-  "stdout": "usage: nacre-brain migrate --step {meta,inbox,archive,digests,wiki,links,index,all} (--dry-run | --apply) [--report PATH] [--archive-older-than-days N]\n\nPlan or apply one verified, revertable Brain migration step. Archive age defaults to 21 days.\n",
-  "exit": 0,
-  "files": {},
-  "deleted": [],
-  "effects": [],
-  "ipc": []
-}

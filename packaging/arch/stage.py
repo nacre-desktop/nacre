@@ -80,7 +80,6 @@ def stage(root, destination, component, build):
             "packaging/packages.json",
             "packaging/sessions.json",
             "VERSION",
-            "nacre/shell",
             "nacre/shell-tools",
         ):
             copy(root / name, shared / name)
@@ -160,8 +159,10 @@ def stage(root, destination, component, build):
         # is a separate owner-approved action, never a package/setup side effect.
         for name in ("nacre-daemon.socket", "nacre-daemon.service"):
             copy(tools / name, destination / "usr/lib/systemd/user" / name)
-        for name, source in (("qs", "launch.sh"), ("nacre_shell", "cli-bridge.sh")):
-            copy(tools / source, deploy / ".local/share/nacre/shell/bin" / name)
+        copy(
+            tools / "cli-bridge.sh",
+            deploy / ".local/share/nacre/shell/bin/nacre_shell",
+        )
         for name in ("shortcuts.lua", "cli.json"):
             copy(tools / name, deploy / ".config/nacre" / name)
         text(
@@ -355,10 +356,15 @@ def stage(root, destination, component, build):
         / ("nacre" if component == "core" else "nacre-" + component)
         / "LICENSE",
     )
+    if component == "core":
+        copy(
+            root / "docs/research/launcher-engine-notice.md",
+            destination / "usr/share/licenses/nacre/launcher-engine-notice.md",
+        )
 
 
 def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None):
-    """Install the matched native UI bundle beside Nacre's QML wrapper."""
+    """Install the matched Bead UI bundle and its required license notices."""
     names = ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode")
     for name in names:
         source = bundle / "bin" / name

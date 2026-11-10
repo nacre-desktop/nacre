@@ -38,7 +38,7 @@ class LockReadyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             home = Path(folder)
             monitors = [dict(name="eDP-1", width=2880, height=1800, scale=1.5)]
-            sys.path.insert(0, str(ROOT.parents[1] / "tests/parity/helpers"))
+            sys.path.insert(0, str(ROOT.parents[1] / "tools/tests"))
             from native_compositor_peer import Peer
 
             (home / "effects.jsonl").touch()

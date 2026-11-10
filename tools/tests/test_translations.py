@@ -38,7 +38,7 @@ class CoverageTests(unittest.TestCase):
             source.parent.mkdir(parents=True)
             source.write_text("pub fn snapshot() {}")
             guard.check(root)
-            english = root / "nacre/shell/i18n/en.json"
+            english = root / "nacre/shell-tools/i18n/en.json"
             english.write_text(json.dumps({**messages, "test.unused": "Unused"}))
             with self.assertRaisesRegex(ValueError, "Unused English ID: test.unused"):
                 guard.check(root)
@@ -50,7 +50,7 @@ class CoverageTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Changed compatibility message"):
                 guard.check(root)
             english.write_text(json.dumps(messages))
-            (root / "nacre/shell/i18n/context.json").write_text("{}")
+            (root / "nacre/shell-tools/i18n/context.json").write_text("{}")
             with self.assertRaisesRegex(ValueError, "Missing translator context"):
                 guard.check(root)
 
@@ -140,7 +140,7 @@ class CoverageTests(unittest.TestCase):
             root = Path(folder)
             self.fixture(root, {"test.label": "Open"}, "Item {}")
             self.rust(root, 'tr("test.label", "Open");')
-            (root / "nacre/shell/i18n/context.json").write_text("{}")
+            (root / "nacre/shell-tools/i18n/context.json").write_text("{}")
             with self.assertRaisesRegex(ValueError, "Missing translator context"):
                 guard.check(root)
 
@@ -211,21 +211,16 @@ class CoverageTests(unittest.TestCase):
         )
 
     def fixture(self, root, english, qml):
-        shell = root / "nacre/shell"
-        (shell / "i18n").mkdir(parents=True)
+        login = root / "nacre/login"
+        login.mkdir(parents=True)
         tools = root / "nacre/shell-tools"
-        tools.mkdir(parents=True)
-        (shell / "modules/settings").mkdir(parents=True)
-        (shell / "modules/welcome").mkdir(parents=True)
-        (shell / "modules/settings/settings-catalog.js").write_text("")
-        (shell / "modules/welcome/welcome-catalog.js").write_text("")
+        (tools / "i18n").mkdir(parents=True)
         (tools / "launcher-menu.json").write_text('{"entries": []}')
-        (shell / "i18n/options.json").write_text("{}")
-        (shell / "i18n/en.json").write_text(json.dumps(english))
-        (shell / "i18n/context.json").write_text(
+        (tools / "i18n/en.json").write_text(json.dumps(english))
+        (tools / "i18n/context.json").write_text(
             json.dumps({key: "Test context" for key in english})
         )
-        (shell / "Test.qml").write_text(qml)
+        (login / "Test.qml").write_text(qml)
 
     def test_missing_unused_and_unwrapped_messages_fail(self):
         for english, qml, error in (
@@ -243,25 +238,6 @@ class CoverageTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     guard.check(root)
 
-    def test_bead_namespace_is_exempt_from_unused_but_needs_context(self):
-        for english, context, error in (
-            ({"bead.bar.clock": "Clock"}, None, ""),
-            ({"bead.bar.clock": "Clock"}, {}, "Missing translator context"),
-            ({"other.unused": "y"}, None, "Unused English ID: other.unused"),
-        ):
-            with self.subTest(english=english), tempfile.TemporaryDirectory() as folder:
-                root = Path(folder)
-                self.fixture(root, english, "Item {}")
-                if context is not None:
-                    (root / "nacre/shell/i18n/context.json").write_text(
-                        json.dumps(context)
-                    )
-                if error:
-                    with self.assertRaisesRegex(ValueError, error):
-                        guard.check(root)
-                else:
-                    guard.check(root)
-
     def test_conditional_plural_ids_are_tracked(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
@@ -277,47 +253,6 @@ class CoverageTests(unittest.TestCase):
                 'Item {text: NacreI18n.tr(active ? "test.active" : "test.inactive", "", {count: count})}',
             )
             self.assertEqual(guard.references(root), {"test.active", "test.inactive"})
-
-    def test_dynamic_ids_need_explicit_live_caller_evidence(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            self.fixture(root, {"test.dynamic": "Hello"}, "Item {}")
-            allowlist = root / "tools/i18n/dynamic.json"
-            allowlist.parent.mkdir(parents=True)
-            caller = root / "nacre/shell/Runtime.qml"
-            caller.write_text('Item {function label(kind){return tr("test." + kind)}}')
-            group = {
-                "source": "nacre/shell/Runtime.qml",
-                "reference": 'tr("test." + kind)',
-                "reason": "Runtime fixture builds a finite ID",
-                "ids": ["test.dynamic"],
-            }
-            allowlist.write_text(json.dumps({"runtime": group}))
-            guard.check(root)
-            group["optionsDomain"] = "runtime"
-            allowlist.write_text(json.dumps({"runtime": group}))
-            with self.assertRaisesRegex(ValueError, "Stale dynamic option IDs"):
-                guard.check(root)
-            del group["optionsDomain"]
-            allowlist.write_text(json.dumps({"runtime": group}))
-            caller.write_text("Item {}")
-            with self.assertRaisesRegex(ValueError, "Stale dynamic"):
-                guard.check(root)
-            caller.write_text('Item {function label(kind){return tr("test." + kind)}}')
-            group["ids"] = ["test.deleted"]
-            allowlist.write_text(json.dumps({"runtime": group}))
-            with self.assertRaisesRegex(ValueError, "Missing English ID"):
-                guard.check(root)
-
-    def test_option_tables_do_not_exempt_unused_ids(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root = Path(folder)
-            self.fixture(root, {"test.unused": "Hello"}, "Item {}")
-            (root / "nacre/shell/i18n/options.json").write_text(
-                json.dumps({"unused": {"value": {"id": "test.unused"}}})
-            )
-            with self.assertRaisesRegex(ValueError, "Unused English ID"):
-                guard.check(root)
 
     def test_language_preference_and_pseudo_gate(self):
         from unittest.mock import patch
@@ -373,23 +308,6 @@ class CoverageTests(unittest.TestCase):
                 profile.lua({"routes": [], "brainWorkspace": None}),
                 "-- Generated by the selected Nacre profile.\n\n",
             )
-
-    def test_actual_launcher_guide_catalog_matches_current_keybinding_fallback(self):
-        import ast
-        import re
-
-        source = (ROOT / "nacre/shell/modules/launcher/NacreAppBrowser.qml").read_text()
-        identifier = "launcher.app-browser.text.super-a-opens-this-menu-search-finds-apps-and-controls"
-        match = re.search(
-            r'NacreI18n\.tr\("' + re.escape(identifier) + r'",\s*("(?:\\.|[^"\\])*")',
-            source,
-        )
-        self.assertIsNotNone(match)
-        fallback = ast.literal_eval(match.group(1))
-        english = json.loads((ROOT / "nacre/shell/i18n/en.json").read_text())
-        self.assertEqual(english[identifier], fallback)
-        self.assertTrue(english[identifier].startswith("Super+Space opens this menu."))
-        self.assertIn("Ctrl+D adds or removes a favorite.", english[identifier])
 
     def test_setup_tool_message_ids_are_references(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -7,15 +7,10 @@ fn english() -> &'static Value {
     static CATALOG: OnceLock<Value> = OnceLock::new();
     CATALOG.get_or_init(|| {
         if let Ok(paths) = Paths::environment() {
-            let assets = paths.assets();
-            if let Some(parent) = assets.parent() {
-                for name in ["source/i18n/en.json", "shell/i18n/en.json"] {
-                    if let Ok(bytes) = fs::read(parent.join(name)) {
-                        if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
-                            if value.is_object() {
-                                return value;
-                            }
-                        }
+            if let Ok(bytes) = fs::read(paths.assets().join("i18n/en.json")) {
+                if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
+                    if value.is_object() {
+                        return value;
                     }
                 }
             }

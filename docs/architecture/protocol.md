@@ -1,5 +1,8 @@
 # Nacre private protocol v1
 
+QML client implementation notes and reference outputs below are historical
+after N0156. The wire contracts remain in use by Bead and native clients.
+
 The protocol (schemas, generated types, golden transcripts, and protocol docs) is licensed under MIT OR Apache-2.0. The daemon and the rest of Nacre remain GPL-3.0-only. See the licenses in [`protocol/`](../../protocol/README.md).
 
 Contract for nacre-protocol and all Nacre clients. See
@@ -154,7 +157,7 @@ An ordinary failed call leaves the link usable.
 ### QML stdio transport
 
 `nacrectl attach` forwards one checked socket connection through stdin/stdout
-pipes. The pinned Quickshell 0.3.2 Socket/SplitParser accepts valid traffic, but
+pipes. The historical Quickshell 0.3.2 Socket/SplitParser accepted valid traffic, but
 replaces invalid UTF-8 and buffers an oversized unfinished line before a QML
 callback can reject it. This native bridge enforces the same byte-level framing
 in both directions before forwarding; unknown optional fields remain unchanged.

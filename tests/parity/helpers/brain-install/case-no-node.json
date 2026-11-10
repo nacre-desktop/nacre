@@ -1,6 +1,0 @@
-{
-  "helper": "brain-install",
-  "args": [],
-  "command": "python3 brain/install.py",
-  "stdout": "text"
-}

@@ -1,6 +1,0 @@
-{
-  "helper": "dashboard-media",
-  "args": [
-    "{\"palette\": true, \"art\": \"http://example.invalid/art\"}"
-  ]
-}

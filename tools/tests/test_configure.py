@@ -118,11 +118,11 @@ class ConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
             (root / "nacre/desktop").mkdir(parents=True)
-            (root / "nacre/shell/branding").mkdir(parents=True)
+            (root / "nacre/shell-tools/branding").mkdir(parents=True)
             source = module.ROOT / "nacre/desktop/nacre-widgets.desktop"
             shutil.copy2(source, root / "nacre/desktop/nacre-widgets.desktop")
-            icon = module.ROOT / "nacre/shell/branding/nacre-widgets.svg"
-            shutil.copy2(icon, root / "nacre/shell/branding/nacre-widgets.svg")
+            icon = module.ROOT / "nacre/shell-tools/branding/nacre-widgets.svg"
+            shutil.copy2(icon, root / "nacre/shell-tools/branding/nacre-widgets.svg")
             module.apply(home, root)
             target = home / ".local/share/applications/nacre-widgets.desktop"
             self.assertEqual(target.read_bytes(), source.read_bytes())
