@@ -1180,18 +1180,17 @@ def deploy(code_only=False, retire_niri_experiment=False):
         (ROOT / "nacre-niri-widths.service").read_text(),
     )
     # Apply the selected palette last, after any older profile overrides.
-    path = HOME / ".config/hypr/hyprland.lua"
-    marker = "-- Nacre committed wallpaper palette"
-    if (
-        marker not in path.read_text()
-        or 'load_private("palette")' not in path.read_text()
-    ):
-        raise RuntimeError(
-            tr(
-                "helper.install.managed-palette-loader-missing-run-install-sh-apply-from-the-repo",
-                "Managed palette loader missing; run ./install.sh --apply from the repository",
+    if compositor.backend_name == "hyprland":
+        path = HOME / ".config/hypr/hyprland.lua"
+        marker = "-- Nacre committed wallpaper palette"
+        config = path.read_text() if path.is_file() else ""
+        if marker not in config or 'load_private("palette")' not in config:
+            raise RuntimeError(
+                tr(
+                    "helper.install.managed-palette-loader-missing-run-install-sh-apply-from-the-repo",
+                    "Managed palette loader missing; run ./install.sh --apply from the repository",
+                )
             )
-        )
     # The reference style is code; wallpaper files remain private user assets.
     style = _state.read_json_file(ROOT / "reference-style.json")
     scheme = HOME / ".local/state/nacre/scheme"

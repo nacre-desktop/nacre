@@ -247,7 +247,7 @@ class InstallerDropinGuardTests(unittest.TestCase):
             self.assertTrue(installer.unused_config_matches(config))
         self.assertFalse(installer.unused_config_matches(config))
 
-    def fixture_deployment(self):
+    def fixture_deployment(self, palette_loader=True):
         root = self.base / "candidate/tools"
         shell = self.base / "candidate/shell"
         shell.mkdir(parents=True, exist_ok=True)
@@ -277,18 +277,25 @@ class InstallerDropinGuardTests(unittest.TestCase):
             root / "reference-style.json",
             '{"colours": {"primary": "#123456"}, "mode": "dark"}',
         )
-        self.put(
-            self.home / ".config/hypr/hyprland.lua",
-            '-- Nacre committed wallpaper palette\nload_private("palette")\n',
-        )
+        if palette_loader:
+            self.put(
+                self.home / ".config/hypr/hyprland.lua",
+                '-- Nacre committed wallpaper palette\nload_private("palette")\n',
+            )
         (self.home / ".config/quickshell").mkdir(parents=True, exist_ok=True)
         (self.dest / "bin").mkdir(parents=True, exist_ok=True)
         return root, shell
 
     def deploy_fixture(
-        self, code_only, opt_in, active_shell="qml", existing_copy=False
+        self,
+        code_only,
+        opt_in,
+        active_shell="qml",
+        existing_copy=False,
+        backend_name=None,
+        palette_loader=True,
     ):
-        root, shell = self.fixture_deployment()
+        root, shell = self.fixture_deployment(palette_loader=palette_loader)
         candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
         candidate_shell = self.base / "bead/shell"
         self.put(candidate_shell / "palette.json", "{}\n")
@@ -299,7 +306,13 @@ class InstallerDropinGuardTests(unittest.TestCase):
                 return RUN(command, **kwargs)
             return subprocess.CompletedProcess(command, 0, "", "")
 
+        backend = (
+            patch.object(installer.compositor, "backend_name", backend_name)
+            if backend_name is not None
+            else contextlib.nullcontext()
+        )
         with (
+            backend,
             patch.multiple(installer, ROOT=root, SHELL=shell),
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
@@ -325,6 +338,19 @@ class InstallerDropinGuardTests(unittest.TestCase):
                 "/existing/bead/launch"
             )
             installer.deploy(code_only=code_only, retire_niri_experiment=opt_in)
+
+    def test_niri_full_install_does_not_require_hyprland_palette_loader(self):
+        self.deploy_fixture(False, False, backend_name="niri", palette_loader=False)
+        self.assertFalse((self.home / ".config/hypr/hyprland.lua").exists())
+
+    def test_hyprland_full_install_still_requires_palette_loader(self):
+        with (
+            patch.object(installer, "tr", return_value="missing palette loader"),
+            self.assertRaisesRegex(RuntimeError, "missing palette loader"),
+        ):
+            self.deploy_fixture(
+                False, False, backend_name="hyprland", palette_loader=False
+            )
 
     def test_code_only_qml_migration_can_reuse_installed_copy(self):
         self.deploy_fixture(True, False, existing_copy=True)
