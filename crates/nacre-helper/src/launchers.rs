@@ -164,7 +164,9 @@ fn host_terminal(argv: &[String]) -> Result<()> {
         .ok_or("Cannot open a normal terminal: systemd-run is unavailable")?;
     let cwd = env::current_dir()?;
     let environment = env::vars().collect::<BTreeMap<_, _>>();
-    let command = host_terminal_argv(argv, &cwd, &environment);
+    let unit = format!("nacre-app-{}.service", uuid::Uuid::new_v4());
+    let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
+    let command = host_terminal_argv(argv, &cwd, &environment, &unit, token.as_deref());
     let output = Command::new(&runner)
         .args(&command)
         .status()
@@ -195,7 +197,13 @@ fn find_program(program: &str) -> Option<String> {
         .map(|path| path.to_string_lossy().into())
 }
 
-fn host_terminal_argv(argv: &[String], cwd: &Path, envs: &BTreeMap<String, String>) -> Vec<String> {
+fn host_terminal_argv(
+    argv: &[String],
+    cwd: &Path,
+    envs: &BTreeMap<String, String>,
+    unit: &str,
+    launch_token: Option<&str>,
+) -> Vec<String> {
     let mut command = vec![
         "--user".into(),
         "--quiet".into(),
@@ -205,6 +213,11 @@ fn host_terminal_argv(argv: &[String], cwd: &Path, envs: &BTreeMap<String, Strin
         "--property=Type=exec".into(),
         format!("--working-directory={}", cwd.display()),
     ];
+    if let Some(token) = launch_token {
+        command.push(format!("--unit={unit}"));
+        command.push(format!("--setenv=XDG_ACTIVATION_TOKEN={token}"));
+        command.push(format!("--setenv=DESKTOP_STARTUP_ID={token}"));
+    }
     for name in [
         "DISPLAY",
         "WAYLAND_DISPLAY",
@@ -219,8 +232,12 @@ fn host_terminal_argv(argv: &[String], cwd: &Path, envs: &BTreeMap<String, Strin
         "LC_ALL",
         "LC_CTYPE",
         "SSH_AUTH_SOCK",
+        "XDG_ACTIVATION_TOKEN",
+        "DESKTOP_STARTUP_ID",
     ] {
-        if let Some(value) = envs.get(name) {
+        if let Some(value) = envs.get(name).filter(|_| {
+            launch_token.is_none() || !matches!(name, "XDG_ACTIVATION_TOKEN" | "DESKTOP_STARTUP_ID")
+        }) {
             command.push(format!("--setenv={name}={value}"));
         }
     }
@@ -1360,19 +1377,35 @@ impl StartupDriver for StartupRuntime {
     }
     fn launch(&mut self, argv: &[String]) -> Result<()> {
         let runner = find_program("systemd-run").ok_or("systemd-run is unavailable")?;
-        let mut command = vec![
-            "--user".into(),
-            "--scope".into(),
-            "--collect".into(),
-            "--quiet".into(),
-        ];
-        command.extend(argv.iter().cloned());
+        let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
+        let token = env::var_os("NIRI_SOCKET").and_then(|socket| {
+            crate::compositor::niri_transport::prepare_launch(Path::new(&socket), Some(&unit), None)
+        });
+        let command = startup_scope_argv(argv, &unit, token.as_deref());
         drop(process::spawn_detached_quiet(&runner, &command)?);
         Ok(())
     }
     fn pause(&mut self, duration: Duration) {
         thread::sleep(duration);
     }
+}
+
+fn startup_scope_argv(argv: &[String], unit: &str, token: Option<&str>) -> Vec<String> {
+    let mut command = vec![
+        "--user".into(),
+        "--scope".into(),
+        "--collect".into(),
+        "--quiet".into(),
+    ];
+    if let Some(token) = token {
+        command.extend([
+            format!("--unit={unit}"),
+            format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
+            format!("--setenv=DESKTOP_STARTUP_ID={token}"),
+        ]);
+    }
+    command.extend(argv.iter().cloned());
+    command
 }
 
 fn run_startup(profile: &Value, driver: &mut impl StartupDriver) -> Result<i32> {
@@ -1659,10 +1692,37 @@ mod tests {
             &BTreeMap::from([
                 ("NIRI_SOCKET".into(), "/run/niri.sock".into()),
                 ("PATH".into(), "/overlay/bin".into()),
+                ("XDG_ACTIVATION_TOKEN".into(), "stale-xdg".into()),
+                ("DESKTOP_STARTUP_ID".into(), "stale-startup".into()),
             ]),
+            "nacre-app-test.service",
+            Some("fresh-token"),
         );
         assert!(command.contains(&"--working-directory=/home/test/a directory".into()));
+        assert!(command.contains(&"--unit=nacre-app-test.service".into()));
         assert!(command.contains(&"--setenv=NIRI_SOCKET=/run/niri.sock".into()));
+        assert!(command.contains(&"--setenv=XDG_ACTIVATION_TOKEN=fresh-token".into()));
+        assert!(command.contains(&"--setenv=DESKTOP_STARTUP_ID=fresh-token".into()));
+        assert_eq!(
+            command
+                .iter()
+                .filter(|arg| arg.starts_with("--setenv=XDG_ACTIVATION_TOKEN="))
+                .count(),
+            1
+        );
+        let fallback = host_terminal_argv(
+            &argv,
+            Path::new("/home/test/a directory"),
+            &BTreeMap::from([
+                ("XDG_ACTIVATION_TOKEN".into(), "inherited-token".into()),
+                ("DESKTOP_STARTUP_ID".into(), "inherited-startup".into()),
+            ]),
+            "nacre-app-test.service",
+            None,
+        );
+        assert!(!fallback.iter().any(|arg| arg.starts_with("--unit=")));
+        assert!(fallback.contains(&"--setenv=XDG_ACTIVATION_TOKEN=inherited-token".into()));
+        assert!(fallback.contains(&"--setenv=DESKTOP_STARTUP_ID=inherited-startup".into()));
         assert!(!command
             .iter()
             .any(|part| part.starts_with("--setenv=PATH=")));
@@ -1859,6 +1919,36 @@ mod tests {
         assert_eq!(claims.iter().filter(|claim| claim.is_some()).count(), 1);
         Ok(())
     }
+    #[test]
+    fn startup_scope_registers_only_with_a_prepared_token() {
+        let argv = vec!["example-browser".into(), "literal $HOME".into()];
+        assert_eq!(
+            startup_scope_argv(&argv, "nacre-app-startup.scope", None),
+            [
+                "--user",
+                "--scope",
+                "--collect",
+                "--quiet",
+                "example-browser",
+                "literal $HOME"
+            ]
+        );
+        assert_eq!(
+            startup_scope_argv(&argv, "nacre-app-startup.scope", Some("fresh-token")),
+            [
+                "--user",
+                "--scope",
+                "--collect",
+                "--quiet",
+                "--unit=nacre-app-startup.scope",
+                "--setenv=XDG_ACTIVATION_TOKEN=fresh-token",
+                "--setenv=DESKTOP_STARTUP_ID=fresh-token",
+                "example-browser",
+                "literal $HOME"
+            ]
+        );
+    }
+
     #[test]
     fn startup_plan_retains_workspace_targets_and_client_matching() -> Result<()> {
         let profile = json!({"workspaceNames":["", "Work"]});

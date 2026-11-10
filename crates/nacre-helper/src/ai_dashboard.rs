@@ -446,6 +446,7 @@ pub(crate) fn launcher_action(action: &str) -> Result<()> {
 }
 
 fn launch_background(mut command: Command) -> Result<()> {
+    crate::compositor::niri_transport::apply_launch_token(&mut command);
     launch_background_at(&mut command, &home())
 }
 

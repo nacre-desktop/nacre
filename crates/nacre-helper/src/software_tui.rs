@@ -244,7 +244,16 @@ fn launch(paths: &Paths, id: &str) -> Result<Value> {
         return Err("Install the selected terminal and command first".into());
     }
     let args = terminal_command(row, &paths.home);
-    process::spawn_detached_quiet(&args[0], &args[1..])?;
+    if let Some(token) = crate::compositor::niri_transport::prepare_current_launch() {
+        let mut command = vec![
+            format!("XDG_ACTIVATION_TOKEN={token}"),
+            format!("DESKTOP_STARTUP_ID={token}"),
+        ];
+        command.extend(args);
+        process::spawn_detached_quiet("env", &command)?;
+    } else {
+        process::spawn_detached_quiet(&args[0], &args[1..])?;
+    }
     Ok(json!({"message":tr("software.tui.opened","Terminal app opened")}))
 }
 pub fn execute(paths: &Paths, action: &str, id: &str, input: Option<Value>) -> Result<Value> {

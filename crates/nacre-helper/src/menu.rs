@@ -465,7 +465,10 @@ pub fn launch_webapp(id: &str) -> Result<()> {
     } else {
         arguments.extend(["nacre-app".into(), "browser".into(), url.into()]);
     }
-    process::spawn_detached("uwsm", &arguments)?;
+    let token = crate::compositor::niri_transport::prepare_current_launch();
+    let command =
+        crate::compositor::niri_transport::uwsm_app_args(&arguments[2..], token.as_deref());
+    process::spawn_detached("uwsm", &command)?;
     Ok(())
 }
 

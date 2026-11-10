@@ -408,13 +408,28 @@ fn launch_application(entry: &Value, inherited_tokio_threads: bool) -> Result<Va
         "LISTEN_FDS",
         "LISTEN_FDNAMES",
     ];
-    let environment: Vec<String> = std::env::vars()
+    let mut environment: Vec<String> = std::env::vars()
         .filter(|(key, _)| {
             !REMOVE.contains(&key.as_str())
                 && (inherited_tokio_threads || key != "TOKIO_WORKER_THREADS")
         })
         .map(|(key, value)| format!("{key}={value}"))
         .collect();
+    let name = format!("nacre-app-{}.service", uuid::Uuid::new_v4());
+    if let Some(socket) = std::env::var_os("NIRI_SOCKET") {
+        if let Some(token) = crate::compositor::niri_transport::prepare_launch(
+            std::path::Path::new(&socket),
+            Some(&name),
+            None,
+        ) {
+            environment.retain(|value| {
+                !value.starts_with("XDG_ACTIVATION_TOKEN=")
+                    && !value.starts_with("DESKTOP_STARTUP_ID=")
+            });
+            environment.push(format!("XDG_ACTIVATION_TOKEN={token}"));
+            environment.push(format!("DESKTOP_STARTUP_ID={token}"));
+        }
+    }
     let mut properties: Vec<(&str, OwnedValue)> = vec![
         (
             "Description",
@@ -448,7 +463,6 @@ fn launch_application(entry: &Value, inherited_tokio_threads: bool) -> Result<Va
             ))?,
         ));
     }
-    let name = format!("nacre-app-{}.service", uuid::Uuid::new_v4());
     crate::menu_registry::systemd_job(
         "StartTransientUnit",
         &(

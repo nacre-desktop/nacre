@@ -42,6 +42,9 @@ pub fn capabilities_with_native(native: niri_transport::NacreCapabilities) -> Va
     if native.monitor_workspace_actions {
         result["monitorWorkspaceActions"] = json!(true);
     }
+    if native.launch_workspace {
+        result["launchWorkspace"] = json!(true);
+    }
     result
 }
 pub fn capabilities_for_socket(socket: &Path) -> Value {

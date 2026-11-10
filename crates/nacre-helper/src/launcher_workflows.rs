@@ -387,12 +387,18 @@ fn launch(args: &[String], cwd: Option<&Path>) -> Result<()> {
     {
         return Err("Install the selected application before using this action".into());
     }
+    let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
+    let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
     let mut command = std::process::Command::new("systemd-run");
+    command.args(["--user", "--scope", "--collect", "--quiet"]);
+    if let Some(token) = token {
+        command.args([
+            format!("--unit={unit}"),
+            format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
+            format!("--setenv=DESKTOP_STARTUP_ID={token}"),
+        ]);
+    }
     command.args([
-        "--user",
-        "--scope",
-        "--collect",
-        "--quiet",
         "env",
         "-u",
         "LD_LIBRARY_PATH",
@@ -443,14 +449,21 @@ fn workspace(paths: &Paths, entry: &Value) -> Result<Value> {
         if !executable_available(&arguments[0], Some(&directory)) {
             return Err("Install the workspace editor and terminal, or save a recipe using your own applications".into());
         }
+        let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
         let mut args = vec![
             "--user".into(),
             "--collect".into(),
             "--quiet".into(),
             format!("--unit={unit}"),
             format!("--working-directory={}", directory.display()),
-            "--".into(),
         ];
+        if let Some(token) = token {
+            args.extend([
+                format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
+                format!("--setenv=DESKTOP_STARTUP_ID={token}"),
+            ]);
+        }
+        args.push("--".into());
         args.extend(arguments);
         process::checked("systemd-run", &args, None, Duration::from_secs(5))?;
         started = true;

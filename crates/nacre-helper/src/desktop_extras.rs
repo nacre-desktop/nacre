@@ -699,12 +699,19 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
     let item = records.get(key).ok_or("Saved chat no longer exists")?;
     if !terminal {
         let title = clean(item["title"].as_str().unwrap_or("Nacre chat"));
-        Command::new("systemd-run")
+        let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
+        let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
+        let mut command = Command::new("systemd-run");
+        command.args(["--user", "--scope", "--collect", "--quiet"]);
+        if let Some(token) = token {
+            command.args([
+                format!("--unit={unit}"),
+                format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
+                format!("--setenv=DESKTOP_STARTUP_ID={token}"),
+            ]);
+        }
+        command
             .args([
-                "--user",
-                "--scope",
-                "--collect",
-                "--quiet",
                 "env",
                 "-u",
                 "LD_LIBRARY_PATH",
@@ -993,8 +1000,10 @@ pub fn run(args: &[String]) -> Result<i32> {
                         && file.is_file() =>
                 {
                     if action == "note" {
-                        Command::new("xdg-open")
-                            .arg(file)
+                        let mut command = Command::new("xdg-open");
+                        command.arg(file);
+                        crate::compositor::niri_transport::apply_launch_token(&mut command);
+                        command
                             .stdout(Stdio::null())
                             .stderr(Stdio::null())
                             .spawn()?;
@@ -1004,8 +1013,10 @@ pub fn run(args: &[String]) -> Result<i32> {
                             &directory.join("brain-focus.json"),
                             &json!({"path":file.strip_prefix(&root)?.to_string_lossy(),"token":token,"created":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64()}),
                         )?;
-                        Command::new("nacre-shell")
-                            .arg("brain")
+                        let mut command = Command::new("nacre-shell");
+                        command.arg("brain");
+                        crate::compositor::niri_transport::apply_launch_token(&mut command);
+                        command
                             .stdout(Stdio::null())
                             .stderr(Stdio::null())
                             .spawn()?;

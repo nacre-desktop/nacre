@@ -30,6 +30,17 @@ impl Lab {
         Self::with_fonts(bus, false)
     }
     fn with_fonts(bus: Option<&str>, blocked: bool) -> Result<Self> {
+        Self::with_options(bus, blocked, None, false)
+    }
+    fn with_niri(bus: Option<&str>, niri: &Path, inherited_token: bool) -> Result<Self> {
+        Self::with_options(bus, false, Some(niri), inherited_token)
+    }
+    fn with_options(
+        bus: Option<&str>,
+        blocked: bool,
+        niri: Option<&Path>,
+        inherited_token: bool,
+    ) -> Result<Self> {
         let home = tempfile::tempdir()?;
         let root = home.path();
         fs::set_permissions(root, fs::Permissions::from_mode(0o700))?;
@@ -56,6 +67,14 @@ impl Lab {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_BIN_EXE_nacre-helper")));
         let mut command = Command::new(binary);
         environment(&mut command, root, &socket);
+        if let Some(niri) = niri {
+            command.env("NIRI_SOCKET", niri);
+        }
+        if inherited_token {
+            command
+                .env("XDG_ACTIVATION_TOKEN", "stale-xdg")
+                .env("DESKTOP_STARTUP_ID", "stale-startup");
+        }
         command.env("QML_IMPORT_PATH", "private-test-no-import");
         if blocked {
             let bin = root.join("bin");
@@ -370,7 +389,10 @@ fn provider_worker_reuses_its_index_is_nice_and_exits_after_idle() -> Result<()>
 }
 
 type Properties = Vec<(String, zbus::zvariant::OwnedValue)>;
-struct Manager(std::sync::Arc<std::sync::Mutex<Vec<Properties>>>);
+struct Manager {
+    calls: std::sync::Arc<std::sync::Mutex<Vec<(String, Properties)>>>,
+    events: std::sync::Arc<std::sync::Mutex<Vec<&'static str>>>,
+}
 #[zbus::interface(name = "org.freedesktop.systemd1.Manager")]
 impl Manager {
     fn subscribe(&self) {}
@@ -385,7 +407,8 @@ impl Manager {
         assert!(unit.starts_with("nacre-app-") && unit.ends_with(".service"));
         assert_eq!(mode, "fail");
         assert!(auxiliary.is_empty());
-        self.0.lock().unwrap().push(properties);
+        self.events.lock().unwrap().push("launch");
+        self.calls.lock().unwrap().push((unit.clone(), properties));
         let job =
             zbus::zvariant::OwnedObjectPath::try_from("/org/freedesktop/systemd1/job/1").unwrap();
         Self::job_removed(&emitter, 1, job.as_ref(), &unit, "done").await?;
@@ -420,11 +443,93 @@ fn app_activation_uses_private_manager_literal_argv_clean_environment_and_existi
     BufReader::new(bus.0.stdout.take().ok_or("Missing private bus address")?)
         .read_line(&mut address)?;
     let calls = Arc::new(Mutex::new(Vec::new()));
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let niri_dir = tempfile::tempdir()?;
+    let niri_path = niri_dir.path().join("niri.sock");
+    let listener = std::os::unix::net::UnixListener::bind(&niri_path)?;
+    listener.set_nonblocking(true)?;
+    let niri_events = events.clone();
+    let niri_peer = thread::spawn(move || -> Result<Vec<String>> {
+        let mut units = Vec::new();
+        while units.len() < 3 {
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let (stream, _) = loop {
+                match listener.accept() {
+                    Ok(accepted) => break accepted,
+                    Err(error)
+                        if error.kind() == std::io::ErrorKind::WouldBlock
+                            && Instant::now() < deadline =>
+                    {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => return Err(error.into()),
+                }
+            };
+            let mut stream = BufReader::new(stream);
+            let mut line = String::new();
+            stream.read_line(&mut line)?;
+            let request: Value = serde_json::from_str(&line)?;
+            if request == json!("NacreCapabilities") {
+                writeln!(
+                    stream.get_mut(),
+                    "{}",
+                    json!({"Ok":{"NacreCapabilities":{
+                        "workspace_collections":false,
+                        "proportional_x11_widths":false,
+                        "overview_hover":false,
+                        "launch_workspace":true
+                    }}})
+                )?;
+                continue;
+            }
+            if request.get("NacrePrepareLaunch").is_none() {
+                writeln!(
+                    stream.get_mut(),
+                    "{}",
+                    json!({"Err":"unsupported test request"})
+                )?;
+                continue;
+            }
+            let intent = &request["NacrePrepareLaunch"];
+            assert_eq!(
+                intent["launch_token"],
+                Value::Null,
+                "unexpected request: {request}"
+            );
+            let unit = intent["unit"]
+                .as_str()
+                .unwrap_or_else(|| panic!("unexpected request: {request}"))
+                .to_owned();
+            assert!(unit.starts_with("nacre-app-") && unit.ends_with(".service"));
+            niri_events.lock().unwrap().push("prepare");
+            match units.len() {
+                0 => writeln!(
+                    stream.get_mut(),
+                    "{}",
+                    json!({"Ok":{"NacreLaunchToken":{"token":"fresh-token"}}})
+                )?,
+                1 => writeln!(
+                    stream.get_mut(),
+                    "{}",
+                    json!({"Err":"unsupported test request"})
+                )?,
+                _ => thread::sleep(Duration::from_millis(700)),
+            }
+            units.push(unit);
+        }
+        Ok(units)
+    });
     let _manager = zbus::blocking::connection::Builder::address(address.trim())?
         .name("org.freedesktop.systemd1")?
-        .serve_at("/org/freedesktop/systemd1", Manager(calls.clone()))?
+        .serve_at(
+            "/org/freedesktop/systemd1",
+            Manager {
+                calls: calls.clone(),
+                events: events.clone(),
+            },
+        )?
         .build()?;
-    let lab = Lab::with_bus(Some(address.trim()))?;
+    let lab = Lab::with_niri(Some(address.trim()), &niri_path, true)?;
     let mut client = lab.client()?;
     let result = client.call(
         50,
@@ -434,40 +539,83 @@ fn app_activation_uses_private_manager_literal_argv_clean_environment_and_existi
     let item = &result["ok"]["items"]["fixture-0000"];
     let result=client.call(51,"menu.activate",json!({"id":"fixture-0000","activation":item["activation"],"catalog_rev":result["ok"]["catalog_rev"]}))?;
     assert_eq!(result["ok"], json!({"keep_open":false}));
+    for request_id in [53, 55] {
+        let result = client.call(
+            request_id,
+            "menu.query",
+            json!({"mode":"apps","route":"apps","query":""}),
+        )?;
+        let item = &result["ok"]["items"]["fixture-0000"];
+        let result = client.call(
+            request_id + 1,
+            "menu.activate",
+            json!({"id":"fixture-0000","activation":item["activation"],"catalog_rev":result["ok"]["catalog_rev"]}),
+        )?;
+        assert_eq!(result["ok"], json!({"keep_open":false}));
+    }
+    let prepared_units = niri_peer.join().unwrap()?;
+    assert_eq!(
+        *events.lock().unwrap(),
+        ["prepare", "launch", "prepare", "launch", "prepare", "launch"]
+    );
     let mut calls = calls.lock().unwrap();
-    assert_eq!(calls.len(), 1);
-    let mut properties: std::collections::BTreeMap<String, OwnedValue> =
-        calls.remove(0).into_iter().collect();
-    let exec =
-        Vec::<(String, Vec<String>, bool)>::try_from(properties.remove("ExecStart").unwrap())?;
-    assert_eq!(
-        exec,
-        vec![(
-            "/bin/true".into(),
-            vec!["/bin/true".into(), "$HOME;$(touch forbidden)".into()],
-            false
-        )]
-    );
-    assert_eq!(
-        String::try_from(properties.remove("WorkingDirectory").unwrap())?,
-        lab.home.path().join("working").to_str().unwrap()
-    );
-    assert_eq!(
-        String::try_from(properties.remove("Type").unwrap())?,
-        "exec"
-    );
-    let environment = Vec::<String>::try_from(properties.remove("Environment").unwrap())?;
-    assert!(
-        !environment.iter().any(|e| e.starts_with("QML_IMPORT_PATH=")
-            || e.starts_with("TOKIO_WORKER_THREADS=")
-            || e.starts_with("NOTIFY_SOCKET="))
-    );
-    assert!(environment
-        .iter()
-        .any(|e| e == &format!("HOME={}", lab.home.path().display())));
+    assert_eq!(calls.len(), 3);
+    for (index, (unit, properties)) in calls.drain(..).enumerate() {
+        assert_eq!(unit, prepared_units[index]);
+        let mut properties: std::collections::BTreeMap<String, OwnedValue> =
+            properties.into_iter().collect();
+        let exec =
+            Vec::<(String, Vec<String>, bool)>::try_from(properties.remove("ExecStart").unwrap())?;
+        assert_eq!(
+            exec,
+            vec![(
+                "/bin/true".into(),
+                vec!["/bin/true".into(), "$HOME;$(touch forbidden)".into()],
+                false
+            )]
+        );
+        assert_eq!(
+            String::try_from(properties.remove("WorkingDirectory").unwrap())?,
+            lab.home.path().join("working").to_str().unwrap()
+        );
+        assert_eq!(
+            String::try_from(properties.remove("Type").unwrap())?,
+            "exec"
+        );
+        let environment = Vec::<String>::try_from(properties.remove("Environment").unwrap())?;
+        if index == 0 {
+            assert!(environment
+                .iter()
+                .any(|e| e == "XDG_ACTIVATION_TOKEN=fresh-token"));
+            assert!(environment
+                .iter()
+                .any(|e| e == "DESKTOP_STARTUP_ID=fresh-token"));
+            assert!(!environment
+                .iter()
+                .any(|e| e == "XDG_ACTIVATION_TOKEN=stale-xdg"));
+            assert!(!environment
+                .iter()
+                .any(|e| e == "DESKTOP_STARTUP_ID=stale-startup"));
+        } else {
+            assert!(environment
+                .iter()
+                .any(|e| e == "XDG_ACTIVATION_TOKEN=stale-xdg"));
+            assert!(environment
+                .iter()
+                .any(|e| e == "DESKTOP_STARTUP_ID=stale-startup"));
+        }
+        assert!(
+            !environment.iter().any(|e| e.starts_with("QML_IMPORT_PATH=")
+                || e.starts_with("TOKIO_WORKER_THREADS=")
+                || e.starts_with("NOTIFY_SOCKET="))
+        );
+        assert!(environment
+            .iter()
+            .any(|e| e == &format!("HOME={}", lab.home.path().display())));
+    }
     let history = client.call(52, "menu.preferences", json!({"action":"load"}))?;
     assert_eq!(history["ok"]["recent"][0], "fixture-0000");
-    assert_eq!(history["ok"]["usage"]["fixture-0000"]["count"], 1);
+    assert_eq!(history["ok"]["usage"]["fixture-0000"]["count"], 3);
     assert!(!lab.home.path().join("working/forbidden").exists());
     Ok(())
 }

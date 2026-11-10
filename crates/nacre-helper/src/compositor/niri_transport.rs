@@ -6,6 +6,7 @@ use super::{
 use serde_json::{json, Value};
 use std::{
     io::{BufRead, BufReader, Write},
+    os::fd::AsRawFd,
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
     time::{Duration, Instant},
@@ -49,6 +50,7 @@ pub struct NacreCapabilities {
     pub force_close: bool,
     pub monitor_workspace_actions: bool,
     pub window_restore: bool,
+    pub launch_workspace: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -96,8 +98,82 @@ impl NacreCapabilities {
                 .get("window_restore")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
+            launch_workspace: features
+                .get("launch_workspace")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
         })
     }
+}
+/// Register a launch with Nacre's optional compositor extension. This is deliberately
+/// bounded and best-effort: unsupported peers preserve the caller's inherited env.
+/// An absent manager unit is useful for launchers such as UWSM that choose their own unit.
+pub fn prepare_launch(
+    socket: &Path,
+    unit: Option<&str>,
+    launch_token: Option<&str>,
+) -> Option<String> {
+    const TIMEOUT: Duration = Duration::from_millis(500);
+    let deadline = Instant::now().checked_add(TIMEOUT)?;
+    let fd = nix::sys::socket::socket(
+        nix::sys::socket::AddressFamily::Unix,
+        nix::sys::socket::SockType::Stream,
+        nix::sys::socket::SockFlag::SOCK_CLOEXEC,
+        None::<nix::sys::socket::SockProtocol>,
+    )
+    .ok()?;
+    let remaining = remaining(deadline).ok()?;
+    let micros = remaining.as_micros().max(1).min(i64::MAX as u128) as i64;
+    nix::sys::socket::setsockopt(
+        &fd,
+        nix::sys::socket::sockopt::SendTimeout,
+        &nix::sys::time::TimeVal::new((micros / 1_000_000) as _, (micros % 1_000_000) as _),
+    )
+    .ok()?;
+    let address = nix::sys::socket::UnixAddr::new(socket).ok()?;
+    nix::sys::socket::connect(fd.as_raw_fd(), &address).ok()?;
+    let mut connection = Connection::from_stream(UnixStream::from(fd));
+    connection
+        .request_value_until(
+            &json!({"NacrePrepareLaunch":{"unit":unit,"launch_token":launch_token}}),
+            deadline,
+            4096,
+            false,
+        )
+        .ok()?
+        .get("NacreLaunchToken")?
+        .get("token")?
+        .as_str()
+        .filter(|token| !token.is_empty() && !token.contains('\0'))
+        .map(str::to_owned)
+}
+pub fn prepare_inherited_launch(unit: Option<&str>) -> Option<String> {
+    let socket = std::env::var_os("NIRI_SOCKET")?;
+    let token = std::env::var("XDG_ACTIVATION_TOKEN").ok();
+    prepare_launch(Path::new(&socket), unit, token.as_deref())
+}
+pub fn prepare_current_launch() -> Option<String> {
+    let socket = std::env::var_os("NIRI_SOCKET")?;
+    prepare_launch(Path::new(&socket), None, None)
+}
+pub fn apply_launch_token(command: &mut std::process::Command) {
+    if let Some(token) = prepare_current_launch() {
+        command
+            .env("XDG_ACTIVATION_TOKEN", &token)
+            .env("DESKTOP_STARTUP_ID", token);
+    }
+}
+pub fn uwsm_app_args(args: &[String], token: Option<&str>) -> Vec<String> {
+    let mut command = vec!["app".into(), "--".into()];
+    if let Some(token) = token {
+        command.extend([
+            "env".into(),
+            format!("XDG_ACTIVATION_TOKEN={token}"),
+            format!("DESKTOP_STARTUP_ID={token}"),
+        ]);
+    }
+    command.extend(args.iter().cloned());
+    command
 }
 pub fn nacre_capabilities(socket: &Path) -> NacreCapabilities {
     let mut connection = Connection::new(socket);
@@ -168,13 +244,25 @@ impl Connection {
         let deadline = Instant::now()
             .checked_add(timeout)
             .ok_or_else(|| invalid("Invalid niri IPC deadline"))?;
+        self.request_value_until(request, deadline, max_bytes, preserve_rejection)
+    }
+    fn request_value_until(
+        &mut self,
+        request: &Value,
+        deadline: Instant,
+        max_bytes: usize,
+        preserve_rejection: bool,
+    ) -> Result<Value> {
+        if max_bytes == 0 || max_bytes > 4 * 1024 * 1024 {
+            return Err(invalid("Invalid niri IPC bounds"));
+        }
         let wire = crate::json::encode(request).map_err(|e| invalid(e.to_string()))? + "\n";
         let mut preserve_stream = false;
         let result = (|| {
             let stream = self.stream()?;
             stream
                 .get_mut()
-                .set_write_timeout(Some(timeout))
+                .set_write_timeout(Some(remaining(deadline)?))
                 .map_err(io_error)?;
             let mut pending = wire.as_bytes();
             while !pending.is_empty() {
@@ -383,7 +471,8 @@ mod tests {
             "edge_trigger_cues": true,
             "force_close": true,
             "monitor_workspace_actions": true,
-            "window_restore": true
+            "window_restore": true,
+            "launch_workspace": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -398,6 +487,7 @@ mod tests {
                 force_close: true,
                 monitor_workspace_actions: true,
                 window_restore: true,
+                launch_workspace: true,
             })
         );
         assert_eq!(
@@ -466,6 +556,191 @@ mod tests {
             None
         );
     }
+    #[test]
+    fn prepare_launch_binds_the_unit_and_accepts_only_a_token_reply() -> crate::Result<()> {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("niri.sock");
+        let listener = UnixListener::bind(&path)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            let mut stream = BufReader::new(stream);
+            let mut line = String::new();
+            stream.read_line(&mut line)?;
+            let request: Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(
+                request,
+                json!({"NacrePrepareLaunch": {
+                    "unit":"nacre-app-test.service",
+                    "launch_token":"inherited-token"
+                }})
+            );
+            writeln!(
+                stream.get_mut(),
+                "{}",
+                json!({"Ok":{"NacreLaunchToken":{"token":"fresh-token"}}})
+            )?;
+            Ok(())
+        });
+        assert_eq!(
+            prepare_launch(
+                &path,
+                Some("nacre-app-test.service"),
+                Some("inherited-token")
+            )
+            .as_deref(),
+            Some("fresh-token")
+        );
+        peer.join().unwrap()?;
+
+        let path = directory.path().join("unitless.sock");
+        let listener = UnixListener::bind(&path)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            let mut stream = BufReader::new(stream);
+            let mut line = String::new();
+            stream.read_line(&mut line)?;
+            let request: Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(
+                request,
+                json!({"NacrePrepareLaunch":{"unit":null,"launch_token":null}})
+            );
+            writeln!(
+                stream.get_mut(),
+                "{}",
+                json!({"Ok":{"NacreLaunchToken":{"token":"unitless-token"}}})
+            )?;
+            Ok(())
+        });
+        assert_eq!(
+            prepare_launch(&path, None, None).as_deref(),
+            Some("unitless-token")
+        );
+        peer.join().unwrap()?;
+
+        let path = directory.path().join("inherited-unitless.sock");
+        let listener = UnixListener::bind(&path)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            let mut stream = BufReader::new(stream);
+            let mut line = String::new();
+            stream.read_line(&mut line)?;
+            let request: Value = serde_json::from_str(&line).unwrap();
+            assert_eq!(
+                request,
+                json!({"NacrePrepareLaunch":{"unit":null,"launch_token":"inherited-token"}})
+            );
+            writeln!(
+                stream.get_mut(),
+                "{}",
+                json!({"Ok":{"NacreLaunchToken":{"token":"inherited-token"}}})
+            )?;
+            Ok(())
+        });
+        assert_eq!(
+            prepare_launch(&path, None, Some("inherited-token")).as_deref(),
+            Some("inherited-token")
+        );
+        peer.join().unwrap()?;
+
+        let path = directory.path().join("unsupported.sock");
+        let listener = UnixListener::bind(&path)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            let (stream, _) = listener.accept()?;
+            let mut stream = BufReader::new(stream);
+            let mut line = String::new();
+            stream.read_line(&mut line)?;
+            writeln!(stream.get_mut(), "{}", json!({"Err":"unknown request"}))?;
+            Ok(())
+        });
+        assert_eq!(
+            prepare_launch(&path, Some("nacre-app-test.service"), None),
+            None
+        );
+        peer.join().unwrap()?;
+        Ok(())
+    }
+
+    #[test]
+    fn prepare_launch_bounds_connect_when_the_listener_backlog_is_full() -> crate::Result<()> {
+        let directory = tempfile::tempdir()?;
+        let path = directory.path().join("full.sock");
+        let listener = nix::sys::socket::socket(
+            nix::sys::socket::AddressFamily::Unix,
+            nix::sys::socket::SockType::Stream,
+            nix::sys::socket::SockFlag::SOCK_CLOEXEC,
+            None::<nix::sys::socket::SockProtocol>,
+        )?;
+        let address = nix::sys::socket::UnixAddr::new(&path)?;
+        nix::sys::socket::bind(listener.as_raw_fd(), &address)?;
+        nix::sys::socket::listen(&listener, nix::sys::socket::Backlog::new(1)?)?;
+        let mut queued = Vec::new();
+        let mut backlog_full = false;
+        for _ in 0..64 {
+            let fd = nix::sys::socket::socket(
+                nix::sys::socket::AddressFamily::Unix,
+                nix::sys::socket::SockType::Stream,
+                nix::sys::socket::SockFlag::SOCK_CLOEXEC
+                    | nix::sys::socket::SockFlag::SOCK_NONBLOCK,
+                None::<nix::sys::socket::SockProtocol>,
+            )?;
+            match nix::sys::socket::connect(fd.as_raw_fd(), &address) {
+                Ok(()) => queued.push(fd),
+                Err(nix::errno::Errno::EAGAIN) => {
+                    backlog_full = true;
+                    break;
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+
+        let (send, receive) = std::sync::mpsc::channel();
+        let launch_path = path.clone();
+        let launch = thread::spawn(move || {
+            let started = Instant::now();
+            let token = prepare_launch(&launch_path, Some("nacre-app-test.service"), None);
+            let _ = send.send((token, started.elapsed()));
+        });
+        let response = receive.recv_timeout(Duration::from_secs(2));
+        drop(listener);
+        drop(queued);
+        launch.join().unwrap();
+
+        assert!(backlog_full, "the test listener backlog did not fill");
+        let (token, elapsed) = response.expect("bounded connect did not return");
+        assert_eq!(token, None);
+        assert!(elapsed < Duration::from_secs(1), "took {elapsed:?}");
+        Ok(())
+    }
+
+    #[test]
+    fn uwsm_env_prefix_is_added_only_after_a_ticket_exists() {
+        let args = vec![
+            "/usr/bin/browser".into(),
+            "--app=https://example.test".into(),
+        ];
+        assert_eq!(
+            uwsm_app_args(&args, None),
+            [
+                "app",
+                "--",
+                "/usr/bin/browser",
+                "--app=https://example.test"
+            ]
+        );
+        assert_eq!(
+            uwsm_app_args(&args, Some("fresh-token")),
+            [
+                "app",
+                "--",
+                "env",
+                "XDG_ACTIVATION_TOKEN=fresh-token",
+                "DESKTOP_STARTUP_ID=fresh-token",
+                "/usr/bin/browser",
+                "--app=https://example.test"
+            ]
+        );
+    }
+
     #[test]
     fn rejected_optional_capability_keeps_the_persistent_request_socket() -> crate::Result<()> {
         let (client, server) = UnixStream::pair()?;

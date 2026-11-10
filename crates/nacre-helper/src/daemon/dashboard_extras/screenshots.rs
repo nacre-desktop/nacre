@@ -238,8 +238,19 @@ pub async fn open(
                 true,
             )
         })?;
-    let mut child = tokio::process::Command::new("xdg-open")
-        .arg(path)
+    let token =
+        tokio::task::spawn_blocking(crate::compositor::niri_transport::prepare_current_launch)
+            .await
+            .ok()
+            .flatten();
+    let mut command = tokio::process::Command::new("xdg-open");
+    command.arg(path);
+    if let Some(token) = token {
+        command
+            .env("XDG_ACTIVATION_TOKEN", &token)
+            .env("DESKTOP_STARTUP_ID", token);
+    }
+    let mut child = command
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

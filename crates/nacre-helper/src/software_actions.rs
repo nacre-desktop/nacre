@@ -506,7 +506,17 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
         id.into(),
     ];
     let _ = paths;
-    process::spawn_detached_quiet("kitty", &args)?;
+    if let Some(token) = crate::compositor::niri_transport::prepare_current_launch() {
+        let mut command = vec![
+            format!("XDG_ACTIVATION_TOKEN={token}"),
+            format!("DESKTOP_STARTUP_ID={token}"),
+            "kitty".into(),
+        ];
+        command.extend(args);
+        process::spawn_detached_quiet("env", &command)?;
+    } else {
+        process::spawn_detached_quiet("kitty", &args)?;
+    }
     Ok(
         json!({"message":tr("software.actions.opened","Review and confirm the action in the terminal")}),
     )

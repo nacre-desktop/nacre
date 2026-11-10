@@ -22,9 +22,13 @@ fn run(program: &str, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 fn launch(args: &[String]) -> Result<()> {
-    Command::new("uwsm")
-        .args(["app", "--"])
-        .args(args)
+    let token = crate::compositor::niri_transport::prepare_current_launch();
+    let mut command = Command::new("uwsm");
+    command
+        .args(crate::compositor::niri_transport::uwsm_app_args(
+            args,
+            token.as_deref(),
+        ))
         .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null())

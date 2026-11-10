@@ -34,12 +34,21 @@ fn launch_error_message(program: &str, error: &dyn std::fmt::Display) -> String 
 }
 
 pub(crate) fn launch_app(argv: &[String]) -> Result<()> {
+    let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
+    let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
     let mut command = vec![
         "systemd-run".into(),
         "--user".into(),
         "--scope".into(),
         "--collect".into(),
         "--quiet".into(),
+    ];
+    if let Some(token) = token {
+        command.push(format!("--unit={unit}"));
+        command.push(format!("--setenv=XDG_ACTIVATION_TOKEN={token}"));
+        command.push(format!("--setenv=DESKTOP_STARTUP_ID={token}"));
+    }
+    command.extend([
         "env".into(),
         "-u".into(),
         "LD_LIBRARY_PATH".into(),
@@ -47,7 +56,7 @@ pub(crate) fn launch_app(argv: &[String]) -> Result<()> {
         "QML_IMPORT_PATH".into(),
         "-u".into(),
         "QT_PLUGIN_PATH".into(),
-    ];
+    ]);
     command.extend_from_slice(argv);
     launch(&command)
 }
