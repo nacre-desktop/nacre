@@ -359,6 +359,18 @@ class Base(unittest.TestCase):
 
 
 class SwitchTests(Base):
+    def test_reinstall_replaces_a_damaged_launcher_with_a_checked_copy(self):
+        switch = self.switch()
+        assets = self.home / "build-shell"
+        (assets / "bar").mkdir(parents=True)
+        (assets / "palette.json").write_text("{}")
+        first = switch.install(self.launcher, assets)
+        Path(first["launcher"]).write_text("#!/bin/sh\nexit 42\n")
+        repaired = switch.install(self.launcher, assets)
+        self.assertNotEqual(first["launcher"], repaired["launcher"])
+        self.assertFalse(switch.launcher_reasons(repaired["launcher"]))
+        self.assertEqual(self.manager.mutations, 0)
+
     def test_migration_accepts_legacy_managed_units_and_replaces_fallback(self):
         self.bead()
         switch = self.switch()

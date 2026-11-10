@@ -188,7 +188,9 @@ class UiShell(f4.Switch):
             ):
                 continue
             version = Path(old.get("launcher", "")).parent
-            if self._same_build(binary, shell, version):
+            if self._same_build(binary, shell, version) and not self.launcher_reasons(
+                old["launcher"]
+            ):
                 return {
                     "status": "complete",
                     "launcher": old["launcher"],
