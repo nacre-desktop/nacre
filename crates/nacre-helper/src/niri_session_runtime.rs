@@ -443,6 +443,7 @@ fn prepare_configuration_inner(
     mut validate: impl FnMut(&Path) -> Result<()>,
 ) -> Result<()> {
     let directory = backend.join("nacre/shell-tools");
+    let source_config = crate::niri_session_stage::source_config_root(backend);
     let contract: Value =
         serde_json::from_slice(&fs::read(directory.join("compositor-contract.json"))?)?;
     let count = profile["workspaceCount"]
@@ -484,7 +485,7 @@ fn prepare_configuration_inner(
     )?;
     fs::write(
         config.join("wallpaper.kdl"),
-        fs::read(backend.join("niri/wallpaper.kdl"))?,
+        fs::read(source_config.join("niri/wallpaper.kdl"))?,
     )?;
     // Keep Bead's pearl window policy in the generated session so refreshes do
     // not depend on user-owned custom.kdl or an installed Bead checkout.
@@ -624,14 +625,14 @@ window-rule {
     let shortcuts = if desktop["monitorWorkspaceActions"] == true
         && desktop["niriWorkspaceMode"] == "fixed-all"
     {
-        fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?
+        fs::read(source_config.join("niri/monitor-workspace-actions.kdl"))?
     } else {
         Vec::new()
     };
     fs::write(config.join("monitor-workspace-actions.kdl"), shortcuts)?;
     fs::write(
         config.join("workspace-visitors.kdl"),
-        fs::read(backend.join("niri/workspace-visitors.kdl"))?,
+        fs::read(source_config.join("niri/workspace-visitors.kdl"))?,
     )?;
     text.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\n");
     text.push_str("spawn-at-startup \"wl-paste\" \"--watch\" \"nacre-desktop-extras\" \"store\"\n");
@@ -1366,7 +1367,7 @@ mod tests {
         assert!(!root.contains("\nworkspace "));
         assert_eq!(
             fs::read(destination.join("config/monitor-workspace-actions.kdl"))?,
-            fs::read(backend.join("niri/monitor-workspace-actions.kdl"))?
+            fs::read(backend.join("config/niri/monitor-workspace-actions.kdl"))?
         );
         assert!(
             fs::read_to_string(destination.join("config/workspaces.kdl"))?.contains("workspace ")

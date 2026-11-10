@@ -82,7 +82,7 @@ class NiriSessionGateTests(unittest.TestCase):
             ("niri", "niri", "niri.desktop"),
         ):
             config = configparser.ConfigParser(interpolation=None)
-            config.read(ROOT / "uwsm/sessions" / ("nacre-" + name + ".desktop"))
+            config.read(ROOT / "config/uwsm/sessions" / ("nacre-" + name + ".desktop"))
             session = config["Desktop Entry"]
             self.assertEqual(
                 session["Exec"], "uwsm start -e -D " + desktop + " " + entry
@@ -98,7 +98,13 @@ class NiriSessionGateTests(unittest.TestCase):
             marker.parent.mkdir(parents=True)
             marker.write_text("fixture\n")
             result = subprocess.check_output(
-                ["sh", "-c", '. "$1"; env', "probe", str(ROOT / "uwsm/env-niri")],
+                [
+                    "sh",
+                    "-c",
+                    '. "$1"; env',
+                    "probe",
+                    str(ROOT / "config/uwsm/env-niri"),
+                ],
                 env={"PATH": "/usr/bin", "HOME": folder},
                 text=True,
             )
@@ -112,7 +118,7 @@ class NiriSessionGateTests(unittest.TestCase):
 
     def test_niri_environment_does_not_leak_hyprland_into_activation_context(self):
         result = subprocess.check_output(
-            ["sh", "-c", '. "$1"; env', "probe", str(ROOT / "uwsm/env-niri")],
+            ["sh", "-c", '. "$1"; env', "probe", str(ROOT / "config/uwsm/env-niri")],
             env={
                 "PATH": "/usr/bin",
                 "HOME": "/fixture",

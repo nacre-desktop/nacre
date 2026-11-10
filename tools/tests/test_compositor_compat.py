@@ -134,12 +134,12 @@ class CompositorCompatibilityTests(unittest.TestCase):
             compat.main(["close-window", "address:0x123"], service)
 
     def test_legacy_entrypoint_is_only_a_compatibility_wrapper(self):
-        wrapper = (ROOT / "hypr/scripts/hyprctl-lua.sh").read_text()
+        wrapper = (ROOT / "config/hypr/scripts/hyprctl-lua.sh").read_text()
         self.assertIn('compositor-compat "$@"', wrapper)
         self.assertNotIn("python3", wrapper)
         self.assertNotIn("eval", wrapper)
         for filename in ("window-close.sh", "window-trash.sh", "matrix-rest.sh"):
-            source = (ROOT / "hypr/scripts" / filename).read_text()
+            source = (ROOT / "config/hypr/scripts" / filename).read_text()
             self.assertNotIn("hl.dispatch", source)
             self.assertNotIn("hyprctl ", source)
             self.assertIn("compositor query", source)

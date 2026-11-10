@@ -112,7 +112,7 @@ class WindowTrashSecurityTests(unittest.TestCase):
 
     def run_script(self, *args):
         return subprocess.run(
-            ["bash", str(ROOT / "hypr/scripts/window-trash.sh"), *args],
+            ["bash", str(ROOT / "config/hypr/scripts/window-trash.sh"), *args],
             env=self.env,
             cwd=self.home,
             capture_output=True,

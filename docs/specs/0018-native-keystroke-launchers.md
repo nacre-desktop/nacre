@@ -4,7 +4,7 @@
 - Date: 2026-10-21
 - Plan: AI/Brain/Wave-4 migration plan 2026-10-21
 
-Goal: `nacre-app`, `nacre-settings`, `nacre-welcome`, `startup-apps` (plus `hypr/scripts/startup-apps.sh`) run as
+Goal: `nacre-app`, `nacre-settings`, `nacre-welcome`, `startup-apps` (plus `config/hypr/scripts/startup-apps.sh`) run as
 native multi-call commands, removing a Python start from every launcher hotkey (SUPER+RETURN/E/SHIFT+B/I,
 login autostart). Foundation: keybindings use `nacrectl`, no Python.
 Scope: ports of bin/nacre-app (112), bin/nacre-settings (100), bin/nacre-welcome (92), shell-tools/startup-apps.py

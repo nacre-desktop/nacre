@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location(
@@ -74,6 +75,48 @@ class NativeHelperInstallTests(unittest.TestCase):
             ):
                 self.assertEqual((tools / name).read_text(), "existing")
             installer.retire_native_helpers(tools)
+
+    def test_session_backend_refresh_reads_relocated_configs_and_keeps_runtime_paths(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            source = base / "source"
+            destination = base / "home/.local/share/nacre/shell"
+            entries = {
+                "hypr/hyprland.lua": "new hypr source",
+                "niri/bindings.kdl": "new niri source",
+                "uwsm/env-niri": "new uwsm source",
+            }
+            for relative, body in entries.items():
+                path = source / "config" / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(body)
+            with (
+                patch.object(installer, "DEST", destination),
+                patch.object(installer, "repo_revision", return_value=None),
+            ):
+                installer.install_session_backend(source)
+                backend = destination / "tools/backend"
+                for relative, body in entries.items():
+                    self.assertEqual((backend / relative).read_text(), body)
+                self.assertFalse((backend / "config").exists())
+
+                # Refresh the existing runtime tree used by the former root-layout release.
+                (backend / "hypr/hyprland.lua").write_text("previous release")
+                (source / "config/hypr/hyprland.lua").write_text("updated release")
+                installer.install_session_backend(source)
+                self.assertEqual(
+                    (backend / "hypr/hyprland.lua").read_text(), "updated release"
+                )
+                self.assertEqual(
+                    (backend / "niri/bindings.kdl").read_text(),
+                    entries["niri/bindings.kdl"],
+                )
+                self.assertEqual(
+                    (backend / "uwsm/env-niri").read_text(),
+                    entries["uwsm/env-niri"],
+                )
 
     def test_atomic_candidate_keeps_existing_service_alive(self):
         binary = Path(

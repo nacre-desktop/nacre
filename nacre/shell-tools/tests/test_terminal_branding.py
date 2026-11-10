@@ -55,7 +55,7 @@ class TerminalBrandingTests(unittest.TestCase):
                     "--no-config",
                     "-c",
                     "function fish_greeting; echo CACHYOS_GREETING; end; source $argv[1]; fish_greeting",
-                    str(ROOT / "kitty/greeting.fish"),
+                    str(ROOT / "config/kitty/greeting.fish"),
                 ],
                 env={
                     **os.environ,
@@ -115,7 +115,7 @@ class TerminalBrandingTests(unittest.TestCase):
             [
                 "fastfetch",
                 "--config",
-                str(ROOT / "fastfetch/config.jsonc"),
+                str(ROOT / "config/fastfetch/config.jsonc"),
                 "--format",
                 "json",
             ],
@@ -133,7 +133,7 @@ class TerminalBrandingTests(unittest.TestCase):
             [
                 "fastfetch",
                 "--config",
-                str(ROOT / "fastfetch/config.jsonc"),
+                str(ROOT / "config/fastfetch/config.jsonc"),
                 "--logo",
                 "none",
                 "--pipe",

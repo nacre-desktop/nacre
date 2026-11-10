@@ -24,8 +24,8 @@ class IdleSeedTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             repo, home = base / "repo", base / "home"
-            (repo / "hypr").mkdir(parents=True)
-            (repo / "hypr/hypridle.conf").write_text(configure.IDLE_WRAPPER)
+            (repo / "config/hypr").mkdir(parents=True)
+            (repo / "config/hypr/hypridle.conf").write_text(configure.IDLE_WRAPPER)
             (repo / "tools/defaults").mkdir(parents=True)
             (repo / "tools/defaults/hypridle.conf").write_bytes(seed)
             self.assertEqual(configure.idle_policy(home, repo, False), seed)

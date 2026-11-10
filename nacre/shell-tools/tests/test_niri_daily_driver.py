@@ -189,7 +189,7 @@ class NiriDailyDriverTests(unittest.TestCase):
 
     def test_generated_and_private_shortcuts_are_inspectable_without_native_ipc(self):
         backend = niri.Backend()
-        path = ROOT.parents[1] / "niri/bindings.kdl"
+        path = ROOT.parents[1] / "config/niri/bindings.kdl"
         with patch.object(backend, "binding_source_files", return_value=[path]):
             rows = backend.query("bindings")
         self.assertGreater(len(rows), 60)

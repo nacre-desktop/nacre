@@ -1027,8 +1027,8 @@ class PackageSetupTests(unittest.TestCase):
                 TOOLS / "package_hyprland.py", root / "tools/package_hyprland.py"
             )
             for name, text in {
-                "hypr/hyprland.lua": "-- fixture\n",
-                "hypr/conf/autostart.lua": "-- existing startup\n",
+                "config/hypr/hyprland.lua": "-- fixture\n",
+                "config/hypr/conf/autostart.lua": "-- existing startup\n",
                 "tools/defaults/hypridle.conf": "general {\n}\n",
             }.items():
                 path = root / name
@@ -1662,6 +1662,21 @@ class ArchPackageLayoutTests(unittest.TestCase):
             ):
                 destination = base / component
                 stage.stage(TOOLS.parent, destination, component, build)
+                if component == "core":
+                    packaged_configs = destination / "usr/share/nacre/config"
+                    self.assertFalse(
+                        (destination / "usr/share/nacre/tools/fuzz").exists()
+                    )
+                    for name in (
+                        "fastfetch",
+                        "fish",
+                        "hypr",
+                        "kitty",
+                        "niri",
+                        "profiles",
+                        "uwsm",
+                    ):
+                        self.assertTrue((packaged_configs / name).is_dir(), name)
                 files = {
                     p.relative_to(destination)
                     for p in destination.rglob("*")
@@ -1805,7 +1820,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
             self.assertIn(
-                Path("usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"),
+                Path("usr/share/nacre/config/uwsm/sessions/nacre-niri-managed.desktop"),
                 owned,
             )
             self.assertNotIn(
@@ -1827,6 +1842,12 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     base
                     / "session-niri/usr/share/wayland-sessions/nacre-session-niri.desktop"
                 ).read_text(),
+            )
+            self.assertTrue(
+                (
+                    base
+                    / "core/usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"
+                ).is_symlink()
             )
             fork_entry = (
                 base / "core/usr/share/nacre/uwsm/sessions/nacre-niri-managed.desktop"

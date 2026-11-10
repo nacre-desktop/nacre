@@ -6,7 +6,7 @@ import subprocess
 
 
 def supported(root):
-    return (root / "hypr/hyprland.lua").is_file()
+    return (root / "config/hypr/hyprland.lua").is_file()
 
 
 def files(root, home, profile, keyboard, destination, common, *, validate_config=True):

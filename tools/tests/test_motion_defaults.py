@@ -42,7 +42,7 @@ assert(leaves.specialWorkspace.style == "slidevert")
 assert(leaves.windows.style == leaves.windowsIn.style)
 """
         subprocess.run(
-            ["lua", "-", str(ROOT / "hypr/conf/animation.lua")],
+            ["lua", "-", str(ROOT / "config/hypr/conf/animation.lua")],
             input=source,
             capture_output=True,
             text=True,

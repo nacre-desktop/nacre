@@ -169,10 +169,10 @@ class ConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
             (root / "bin").mkdir(parents=True)
-            (root / "hypr").mkdir()
+            (root / "config/hypr").mkdir(parents=True)
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
-            source = root / "hypr/hyprland.lua"
+            source = root / "config/hypr/hyprland.lua"
             source.write_text("current source")
             module.apply(home, root)
             self.assertEqual(module.plan(home, root)[0], [])
@@ -183,14 +183,49 @@ class ConfigurationTests(unittest.TestCase):
                 module.apply(home, root)
             self.assertEqual(target.read_text(), "personal edit")
 
+    def test_update_from_root_app_layout_preserves_home_paths_and_private_files(self):
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as directory:
+            root, home = Path(directory) / "repo", Path(directory) / "home"
+            old_source = root / "hypr/hyprland.lua"
+            old_source.parent.mkdir(parents=True)
+            old_source.write_text("old source")
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            for name in ("nacre-app", "xdg-open"):
+                (bin_dir / name).write_text("helper")
+            previous_files = {
+                Path(".config/hypr/hyprland.lua"): old_source,
+                Path(".local/bin/nacre-app"): bin_dir / "nacre-app",
+                Path(".local/bin/xdg-open"): bin_dir / "xdg-open",
+            }
+            with patch.object(module, "files", return_value=previous_files):
+                module.apply(home, root)
+
+            new_source = root / "config/hypr/hyprland.lua"
+            new_source.parent.mkdir(parents=True)
+            new_source.write_text("new source")
+            old_source.unlink()
+            old_source.parent.rmdir()
+            private = home / ".config/hypr/private.conf"
+            private.write_text("private config")
+            target = home / ".config/hypr/hyprland.lua"
+            module.apply(home, root)
+            self.assertEqual(target.read_text(), "new source")
+            self.assertEqual(private.read_text(), "private config")
+            self.assertIsNone(module.apply(home, root))
+            self.assertEqual(target.read_text(), "new source")
+            self.assertEqual(private.read_text(), "private config")
+
     def test_app_routes_scope_preserves_unrelated_edits_and_their_manifest(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
             (root / "bin").mkdir(parents=True)
-            (root / "hypr").mkdir()
+            (root / "config/hypr").mkdir(parents=True)
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("old route")
-            (root / "hypr/hypridle.conf").write_text("original idle")
+            (root / "config/hypr/hypridle.conf").write_text("original idle")
             module.apply(home, root)
             manifest = home / ".local/state/nacre/configuration.json"
             before = json.loads(manifest.read_text())[".config/hypr/hypridle.conf"]
@@ -215,10 +250,10 @@ class ConfigurationTests(unittest.TestCase):
     def test_explicit_scope_updates_rules_without_replacing_unrelated_edits(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
-            (root / "hypr/conf").mkdir(parents=True)
-            source = root / "hypr/conf/windowrule.lua"
+            (root / "config/hypr/conf").mkdir(parents=True)
+            source = root / "config/hypr/conf/windowrule.lua"
             source.write_text("old managed rules")
-            other = root / "hypr/conf/keyboard.lua"
+            other = root / "config/hypr/conf/keyboard.lua"
             other.write_text("managed keyboard")
             module.apply(home, root)
             manifest = home / ".local/state/nacre/configuration.json"
@@ -255,7 +290,7 @@ class ConfigurationTests(unittest.TestCase):
             base = Path(directory)
             root, old, home = base / "repo", base / "old", base / "home"
             for directory in (
-                root / "hypr/conf",
+                root / "config/hypr/conf",
                 old / "hypr/conf",
                 root / "bin",
                 old / ".git",
@@ -264,7 +299,7 @@ class ConfigurationTests(unittest.TestCase):
                 directory.mkdir(parents=True)
             (old / "hypr/conf/monitor.lua").write_text("host monitor override")
             (old / "hypr/old.conf").write_text("retired")
-            (root / "hypr/conf/monitor.lua").write_text("generic fallback")
+            (root / "config/hypr/conf/monitor.lua").write_text("generic fallback")
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
             (home / ".config/hypr").symlink_to(old / "hypr")
@@ -283,16 +318,18 @@ class ConfigurationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "repo"
             home = Path(directory) / "home"
-            (root / "uwsm").mkdir(parents=True)
+            (root / "config/uwsm").mkdir(parents=True)
             (root / "bin").mkdir()
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
-            (root / "uwsm/env").write_text("export XCURSOR_SIZE=24\n")
-            (root / "uwsm/env-hyprland").write_text("export HYPRCURSOR_SIZE=24\n")
+            (root / "config/uwsm/env").write_text("export XCURSOR_SIZE=24\n")
+            (root / "config/uwsm/env-hyprland").write_text(
+                "export HYPRCURSOR_SIZE=24\n"
+            )
             module.apply(home, root)
             self.assertEqual(module.plan(home, root)[0], [])
             (home / ".config/uwsm/env").write_text("personal environment")
-            (root / "uwsm/env").write_text("export XCURSOR_SIZE=32\n")
+            (root / "config/uwsm/env").write_text("export XCURSOR_SIZE=32\n")
             with self.assertRaisesRegex(RuntimeError, "Local edit preserved"):
                 module.apply(home, root)
 
@@ -303,7 +340,7 @@ class ConfigurationTests(unittest.TestCase):
             home = base / "home"
             old = base / "legacy/fish"
             for path in (
-                root / "fish/functions",
+                root / "config/fish/functions",
                 root / "bin",
                 old / "functions",
                 home / ".config",
@@ -312,7 +349,7 @@ class ConfigurationTests(unittest.TestCase):
                 path.mkdir(parents=True)
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
-            (root / "fish/functions/fish_title.fish").write_text("owned title")
+            (root / "config/fish/functions/fish_title.fish").write_text("owned title")
             (old / "functions/fish_title.fish").write_text("owned title")
             (old / "config.fish").write_text("personal setup")
             (home / ".config/fish").symlink_to(old)
@@ -339,11 +376,11 @@ class ConfigurationTests(unittest.TestCase):
     def test_removed_managed_file_is_backed_up_and_pruned_only_when_unmodified(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
-            (root / "hypr").mkdir(parents=True)
+            (root / "config/hypr").mkdir(parents=True)
             (root / "bin").mkdir()
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
-            old = root / "hypr/retired.lua"
+            old = root / "config/hypr/retired.lua"
             old.write_text("owned old configuration")
             module.apply(home, root)
             old.unlink()
@@ -363,11 +400,11 @@ class IdleMigrationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
             (root / "bin").mkdir(parents=True)
-            (root / "hypr").mkdir()
+            (root / "config/hypr").mkdir(parents=True)
             (root / "tools/defaults").mkdir(parents=True)
             for name in ("nacre-app", "xdg-open"):
                 (root / "bin" / name).write_text("helper")
-            source = root / "hypr/hypridle.conf"
+            source = root / "config/hypr/hypridle.conf"
             source.write_text("original")
             module.apply(home, root)
             target = home / ".config/hypr/hypridle.conf"
@@ -393,8 +430,8 @@ class IdleMigrationTests(unittest.TestCase):
     def test_conflicting_private_idle_policy_is_not_overwritten(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
-            (root / "hypr").mkdir(parents=True)
-            (root / "hypr/hypridle.conf").write_text(module.IDLE_WRAPPER)
+            (root / "config/hypr").mkdir(parents=True)
+            (root / "config/hypr/hypridle.conf").write_text(module.IDLE_WRAPPER)
             (home / ".config/hypr").mkdir(parents=True)
             (home / ".config/hypr/hypridle.conf").write_text("manual policy")
             (home / ".config/nacre").mkdir()
@@ -407,9 +444,9 @@ class PowerMigrationTests(unittest.TestCase):
     def test_only_recognized_power_hook_is_migrated(self):
         with tempfile.TemporaryDirectory() as directory:
             root, home = Path(directory) / "repo", Path(directory) / "home"
-            (root / "hypr").mkdir(parents=True)
+            (root / "config/hypr").mkdir(parents=True)
             (home / ".config/hypr/conf").mkdir(parents=True)
-            source = root / "hypr/hyprland.lua"
+            source = root / "config/hypr/hyprland.lua"
             source.write_text("base\n\n-- Optional private host behavior.\nnew hook\n")
             current = home / ".config/hypr/hyprland.lua"
             current.write_text("base\n" + module.POWER_TAIL)

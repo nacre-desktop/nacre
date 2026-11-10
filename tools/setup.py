@@ -155,7 +155,7 @@ def selection(args, root, home, interactive):
         profile = profiles.load(home)
     else:
         path = (
-            root / "profiles/default.json"
+            root / "config/profiles/default.json"
             if chosen == "default"
             else Path(chosen).expanduser()
         )

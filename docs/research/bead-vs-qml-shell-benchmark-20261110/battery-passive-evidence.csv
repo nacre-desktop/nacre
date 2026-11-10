@@ -1,3 +1,0 @@
-date_grouping_timezone,status,date,discharge_rate_samples,median_discharge_rate_w,shell_journal_evidence,comparison_limit
-UTC,observed,2026-11-05,912,8.154,"nacre-shell process evidence on Nov 5/6; no explicit shell-switch records","workload and time coverage unequal; no QML-only day cohort"
-UTC,observed,2026-11-09,899,5.699,"nacre-shell process evidence on Nov 9; no explicit shell-switch records","workload and time coverage unequal; no QML-only day cohort"

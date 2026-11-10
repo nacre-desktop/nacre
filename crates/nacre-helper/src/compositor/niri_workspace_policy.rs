@@ -462,7 +462,7 @@ impl Session {
                 let shortcuts = if desktop["niriWorkspaceMode"] == "fixed-all"
                     && desktop["monitorWorkspaceActions"] == true
                 {
-                    include_str!("../../../../niri/monitor-workspace-actions.kdl")
+                    include_str!("../../../../config/niri/monitor-workspace-actions.kdl")
                 } else {
                     ""
                 };

@@ -59,7 +59,7 @@ class CompositorBoundaryTests(unittest.TestCase):
             root = Path(folder)
             for name, text in {
                 "nacre/shell-tools/compositor_backends/hyprland.py": 'command=["hyprctl"]\n',
-                "hypr/conf/keybinding.lua": "hl.bind('Super+A',hl.dsp.exec_cmd('app'))\n",
+                "config/hypr/conf/keybinding.lua": "hl.bind('Super+A',hl.dsp.exec_cmd('app'))\n",
                 "tests/test_transport.py": 'command=["hyprctl"]\n',
                 "helper.py": 'import compositor\ncompositor.query("windows")\n',
                 "wrapper.sh": "#!/bin/sh\nexec python3 ~/.config/hypr/scripts/compositor-compat.py\n",

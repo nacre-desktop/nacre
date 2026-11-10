@@ -8,7 +8,7 @@ import unittest
 class PrivateLuaTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
     def test_broken_desktop_does_not_block_later_overrides(self):
-        source = (Path(__file__).parents[2] / "hypr/hyprland.lua").read_text()
+        source = (Path(__file__).parents[2] / "config/hypr/hyprland.lua").read_text()
         source = source[source.index("local function load_private") :]
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

@@ -31,7 +31,7 @@ hl.exec_cmd = function(command) io.write(command .. "\\n") end
 callback()
 """
         result = subprocess.run(
-            ["lua", "-", home, str(ROOT / "hypr/conf/autostart.lua")],
+            ["lua", "-", home, str(ROOT / "config/hypr/conf/autostart.lua")],
             input=source,
             capture_output=True,
             text=True,

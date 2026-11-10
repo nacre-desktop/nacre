@@ -20,7 +20,7 @@ jobs:
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
       # Arch Sway carries cap_sys_nice; its private video smoke needs that
       # capability in the container bounding set to execute the packaged binary.
-      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add=SYS_NICE ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
+      options: --security-opt seccomp=unconfined --security-opt apparmor=unconfined --cap-add=SYS_NICE --tmpfs /tmp:rw,exec,nosuid,size=4g ${{ !contains(vars.NACRE_CI_RUNNER, 'ubuntu-') && '--cpus=10 --memory=28g' || '' }}
     steps:
       - name: Rolling package cache key
         id: cache_epoch

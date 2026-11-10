@@ -19,7 +19,7 @@ niri = config.niri
 
 class NiriConfigTests(unittest.TestCase):
     def test_wallpaper_fragment_matches_bead_wallpaper_namespaces(self):
-        wallpaper = (ROOT / "niri/wallpaper.kdl").read_text()
+        wallpaper = (ROOT / "config/niri/wallpaper.kdl").read_text()
         self.assertIn(
             'match namespace="^(nacre-background|bead-wallpaper|'
             'bead-wallpaper-video)$"',
@@ -62,7 +62,10 @@ class NiriConfigTests(unittest.TestCase):
         original = config.render(config.load(), backend="hyprland")
         self.assertEqual(set(original), set(config.OUTPUTS))
         for name, text in original.items():
-            self.assertEqual(text, (ROOT / name).read_text(), name)
+            source = Path(name)
+            if source.parts[0] in {"hypr", "niri"}:
+                source = Path("config") / source
+            self.assertEqual(text, (ROOT / source).read_text(), name)
         generated = config.render(config.load(), backend="niri")
         self.assertFalse(set(generated) & set(original))
         self.assertEqual(original, config.render(config.load(), backend="hyprland"))
@@ -259,7 +262,7 @@ class NiriConfigTests(unittest.TestCase):
             (root / "bindings.kdl").write_text(generated["niri/bindings.kdl"])
             (root / "rules.kdl").write_text(generated["niri/window-rules.kdl"])
             (root / "wallpaper.kdl").write_text(
-                (ROOT / "niri/wallpaper.kdl").read_text()
+                (ROOT / "config/niri/wallpaper.kdl").read_text()
             )
             palette = (
                 ROOT / "nacre/shell-tools/compositor_backends/niri/palette.kdl.in"

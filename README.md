@@ -24,10 +24,16 @@ Nacre is a wallpaper-themed Wayland desktop that runs on [nacre-niri](https://gi
 
 ## Repository layout
 
-- `crates/nacre-shell/` and `shell/`: native Bead shell engine and Luau UI.
-- `crates/`, `nacre/`: compositor integration, daemon, protocol and tools.
-- `docs/`: user guides, architecture, specifications and research.
-- `nacre/login/`: QML-based SDDM greeter.
+| Path | Contents |
+| --- | --- |
+| `crates/`, `shell/` | Native shell, daemon, shared contracts and Luau product views. |
+| `nacre/` | CLI, desktop integration, session tools and the QML SDDM greeter. |
+| `config/` | Shipped app configs and install profiles; installed `~/.config/<app>` paths stay unchanged. |
+| `ai/`, `brain/`, `bin/` | Optional assistant and knowledge tools, plus installed command entrypoints. |
+| `assets/`, `protocol/` | Product art and protocol licensing. |
+| `tools/`, `packaging/`, `.github/` | Development checks, installers, package recipes and CI. |
+| `deps/`, `vendor/` | Pinned Orient source and vendored dependencies. |
+| `docs/` | Guides, architecture and short evidence summaries; see [N0159](docs/specs/0159-root-tidy.md). |
 
 Nacre also has a Hyprland backend in the code.
 

@@ -18,7 +18,7 @@ class ConfigurationArtifactTests(unittest.TestCase):
     def test_source_enumeration_skips_machine_generated_files(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            scripts = root / "hypr/scripts"
+            scripts = root / "config/hypr/scripts"
             scripts.mkdir(parents=True)
             (scripts / "example.py").write_text("source")
             (scripts / "example.pyc").write_bytes(b"bytecode")
@@ -30,6 +30,28 @@ class ConfigurationArtifactTests(unittest.TestCase):
             self.assertEqual(
                 list(configure.files(root)), [Path(".config/hypr/scripts/example.py")]
             )
+
+    def test_shipped_configs_keep_their_user_config_destinations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            relatives = (
+                "config/hypr/hyprland.lua",
+                "config/kitty/kitty.conf",
+                "config/fish/conf.d/90-nacre.fish",
+                "config/fastfetch/config.jsonc",
+                "config/uwsm/env-niri",
+            )
+            for relative in relatives:
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("fixture")
+            actual = configure.files(root)
+            expected = {
+                Path(".config") / relative.removeprefix("config/")
+                for relative in relatives
+            }
+            self.assertEqual(set(actual), expected)
+            self.assertTrue(all(path.is_file() for path in actual.values()))
 
     def test_only_owned_generated_copy_is_retired_with_backup(self):
         with tempfile.TemporaryDirectory() as directory:

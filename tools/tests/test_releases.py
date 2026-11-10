@@ -89,15 +89,9 @@ class ReleaseTests(unittest.TestCase):
                 "ai/systemd",
                 "bin",
                 "brain",
-                "fastfetch",
-                "fish",
-                "hypr",
-                "kitty",
                 "nacre/desktop",
                 "nacre/shell-tools",
-                "niri",
                 "tools/patches",
-                "uwsm",
             ):
                 source = root / name
                 if source.is_dir():
@@ -106,6 +100,12 @@ class ReleaseTests(unittest.TestCase):
                         checkout / name,
                         ignore=shutil.ignore_patterns("tests", "__pycache__"),
                     )
+            for name in ("fastfetch", "fish", "hypr", "kitty", "niri", "uwsm"):
+                shutil.copytree(
+                    root / "config" / name,
+                    checkout / "config" / name,
+                    ignore=shutil.ignore_patterns("tests", "__pycache__"),
+                )
             shutil.copy2(root / "VERSION", checkout / "VERSION")
 
             shell = home / ".local/share/nacre/shell"
@@ -136,7 +136,7 @@ class ReleaseTests(unittest.TestCase):
             config = home / ".config/nacre"
             config.mkdir(parents=True)
             (config / "profile.json").write_text(
-                (root / "profiles/default.json").read_text()
+                (root / "config/profiles/default.json").read_text()
             )
             (config / "desktop.json").write_text("{}\n")
             (config / "niri").mkdir(parents=True)

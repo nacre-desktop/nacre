@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location(
-    "matrix_rest", Path(__file__).parents[2] / "hypr/scripts/matrix-rest.py"
+    "matrix_rest", Path(__file__).parents[2] / "config/hypr/scripts/matrix-rest.py"
 )
 matrix = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(matrix)

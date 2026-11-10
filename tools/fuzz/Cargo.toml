@@ -10,7 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-nacre-protocol = { path = "../crates/nacre-protocol" }
+nacre-protocol = { path = "../../crates/nacre-protocol" }
 serde_json = "1"
 
 [[bin]]

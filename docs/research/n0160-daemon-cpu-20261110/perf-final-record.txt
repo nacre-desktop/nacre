@@ -1,2 +1,0 @@
-[ perf record: Woken up 94 times to write data ]
-[ perf record: Captured and wrote 25.827 MB /work/.lead/tmp/n0160/perf-final.data (1571 samples) ]

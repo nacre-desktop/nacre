@@ -290,7 +290,7 @@ dofile(arg[1]);dofile(arg[2])
             [
                 "lua",
                 "-",
-                str(ROOT / "hypr/conf/keybinding.lua"),
+                str(ROOT / "config/hypr/conf/keybinding.lua"),
                 str(ROOT / "nacre/shell-tools/shortcuts.lua"),
             ],
             input=script,
@@ -329,5 +329,5 @@ dofile(arg[1]);dofile(arg[2])
         entry = (ROOT / "nacre/desktop/nacre-welcome.desktop").read_text()
         self.assertIn("Icon=nacre\n", entry)
         self.assertIn("Terminal=false", entry)
-        startup = (ROOT / "hypr/conf/autostart.lua").read_text()
+        startup = (ROOT / "config/hypr/conf/autostart.lua").read_text()
         self.assertEqual(startup.count('"--login"'), 1)

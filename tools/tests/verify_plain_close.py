@@ -73,7 +73,7 @@ def verify(backend, output, parent_binary, parent_libraries):
     with tempfile.TemporaryDirectory(prefix="nclose-") as temporary:
         home = Path(temporary) / "h"
         prepare.prepare(
-            ROOT, home, json.loads((ROOT / "profiles/default.json").read_text())
+            ROOT, home, json.loads((ROOT / "config/profiles/default.json").read_text())
         )
         runtime = home / "r"
         runtime.mkdir(mode=0o700)

@@ -47,14 +47,15 @@ def digest(path):
 def files(root=ROOT):
     result = {}
     for folder in ("hypr", "kitty", "fastfetch", "fish", "uwsm"):
-        for source in (root / folder).rglob("*"):
+        app_root = root / "config" / folder
+        for source in app_root.rglob("*"):
             if (
                 source.is_file()
                 and "__pycache__" not in source.relative_to(root).parts
                 and source.suffix not in (".pyc", ".pyo")
                 and source.name != ".qmlls.ini"
             ):
-                result[Path(".config") / source.relative_to(root)] = source
+                result[Path(".config") / source.relative_to(root / "config")] = source
     for name in (
         "nacre-ai",
         "nacre-colors",
@@ -189,7 +190,7 @@ def power_policy(home, root, migrate_idle):
     if not migrate_idle:
         return None
     current = home / ".config/hypr/hyprland.lua"
-    source = root / "hypr/hyprland.lua"
+    source = root / "config/hypr/hyprland.lua"
     if not current.exists() or not source.exists():
         return None
     # Accept only this recognized historical addition, never arbitrary Lua drift.
@@ -204,7 +205,7 @@ def power_policy(home, root, migrate_idle):
 
 
 def idle_policy(home, root, migrate_idle):
-    source = root / "hypr/hypridle.conf"
+    source = root / "config/hypr/hypridle.conf"
     if not source.exists() or source.read_text() != IDLE_WRAPPER:
         return None
     private = home / ".config/nacre/hypridle.local.conf"
@@ -244,6 +245,18 @@ def enabled_files(root, enabled):
         for path, source in files(root).items()
         if nacre_modules.module_of(path) in enabled
     }
+
+
+def source_checkout(path):
+    """Recognize only a known app tree in either supported checkout layout."""
+    apps = {"fastfetch", "fish", "hypr", "kitty", "niri", "uwsm", "profiles"}
+    resolved = Path(path).resolve()
+    for app in (resolved, *resolved.parents):
+        if app.name not in apps:
+            continue
+        root = app.parent.parent if app.parent.name == "config" else app.parent
+        return (root / ".git").exists()
+    return False
 
 
 def plan(
@@ -291,7 +304,7 @@ def plan(
                     for relative, value in managed.items()
                 )
             )
-            source_tree = (target.parent / ".git").exists()
+            source_tree = source_checkout(target)
             if (
                 not migrate
                 or target.name != name
@@ -325,7 +338,7 @@ def plan(
             owned_link = owned_link or (
                 migrate
                 and dest.resolve().name == source.name
-                and (dest.resolve().parent.parent / ".git").exists()
+                and source_checkout(dest.resolve())
             )
         if (
             current is not None

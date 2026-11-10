@@ -8,10 +8,10 @@ import re
 ROOT = Path(__file__).resolve().parents[1]
 BACKENDS = (
     "nacre/shell-tools/compositor_backends/",
-    "hypr/conf/",
+    "config/hypr/conf/",
 )
 BACKEND_FILES = {
-    "hypr/hyprland.lua",
+    "config/hypr/hyprland.lua",
     "nacre/shell-tools/shortcuts.lua",
     "tools/compositor_boundary.py",
     # Session lifecycle owns starting/validating the native compositor, not IPC.

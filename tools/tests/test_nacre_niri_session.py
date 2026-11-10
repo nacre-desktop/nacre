@@ -25,7 +25,7 @@ session_spec.loader.exec_module(package_sessions)
 
 class NacreNiriSessionTests(unittest.TestCase):
     def test_prepared_wrapper_keeps_fork_selected_for_offline_queries(self):
-        wrapper = (ROOT / "uwsm/niri-session-bin/niri").read_text()
+        wrapper = (ROOT / "config/uwsm/niri-session-bin/niri").read_text()
         self.assertIn('if [ "${NACRE_NIRI_FORK:-0}" = 1 ]', wrapper)
         self.assertIn("fork=/usr/bin/nacre-niri", wrapper)
         self.assertIn('exec "$fork" "$@"', wrapper)
@@ -458,7 +458,7 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertEqual(execute.call_args.args[2]["NIRI_CONFIG"], str(overlay))
 
     def test_uwsm_env_exports_shared_config_and_keeps_stock_override_separate(self):
-        script = ROOT / "uwsm/env-niri"
+        script = ROOT / "config/uwsm/env-niri"
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             prepared = home / ".local/share/nacre/niri-on-pc/session"

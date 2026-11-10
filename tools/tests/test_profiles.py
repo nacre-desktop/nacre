@@ -22,7 +22,7 @@ spec.loader.exec_module(staging)
 class ProfileTests(unittest.TestCase):
     def test_generic_profile_has_no_personal_routes_apps_or_agent_permissions(self):
         profile = policy.validate(
-            json.loads((ROOT / "profiles/default.json").read_text())
+            json.loads((ROOT / "config/profiles/default.json").read_text())
         )
         self.assertEqual(profile["components"], ["configs", "shell"])
         self.assertEqual(profile["workspaceIcons"], [])

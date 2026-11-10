@@ -51,7 +51,7 @@ class CompositorEntrypointTests(unittest.TestCase):
                 "  assert(item.icon == 'error' and item.timeout == 15000)\n"
                 "  table.insert(failures, item.text)\n"
                 "end }}\n"
-                f"dofile({json.dumps(str(ROOT / 'hypr/hyprland.lua'))})\n"
+                f"dofile({json.dumps(str(ROOT / 'config/hypr/hyprland.lua'))})\n"
                 "print(table.concat(modules, ','))\n"
                 "print(table.concat(loaded, ','))\n"
                 "print(#failures)\n"
@@ -68,7 +68,7 @@ class CompositorEntrypointTests(unittest.TestCase):
         self.assertEqual(lines[:3], [",".join(f"conf.{n}" for n in MODULES), "", "0"])
 
     def test_loader_markers_remain_available_to_managed_helpers(self):
-        source = (ROOT / "hypr/hyprland.lua").read_text()
+        source = (ROOT / "config/hypr/hyprland.lua").read_text()
         for label in [
             "committed wallpaper palette",
             "desktop settings",

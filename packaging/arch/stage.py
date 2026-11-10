@@ -28,7 +28,12 @@ def stage(root, destination, component, build):
                 target,
                 dirs_exist_ok=True,
                 ignore=shutil.ignore_patterns(
-                    "tests", "__pycache__", "*.pyc", ".qmlls.ini", "nacre-helper"
+                    "tests",
+                    "fuzz",
+                    "__pycache__",
+                    "*.pyc",
+                    ".qmlls.ini",
+                    "nacre-helper",
                 ),
             )
         else:
@@ -70,19 +75,26 @@ def stage(root, destination, component, build):
             )
         copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
-            "hypr",
-            "kitty",
-            "fish",
-            "fastfetch",
-            "uwsm",
+            "config/hypr",
+            "config/kitty",
+            "config/fish",
+            "config/fastfetch",
+            "config/niri",
+            "config/uwsm",
             "tools",
-            "profiles",
+            "config/profiles",
             "packaging/packages.json",
             "packaging/sessions.json",
             "VERSION",
             "nacre/shell-tools",
         ):
             copy(root / name, shared / name)
+        # Preserve the documented managed-session template path across upgrades.
+        session_templates = shared / "uwsm/sessions"
+        session_templates.mkdir(parents=True)
+        (session_templates / "nacre-niri-managed.desktop").symlink_to(
+            "../../config/uwsm/sessions/nacre-niri-managed.desktop"
+        )
         (shared / "package.json.installed").write_text(
             json.dumps(
                 {
@@ -228,14 +240,16 @@ def stage(root, destination, component, build):
         terminal = ".config/nacre/terminal/"
         text(
             terminal + "kitty.conf",
-            (root / "kitty/kitty.conf").read_text()
+            (root / "config/kitty/kitty.conf").read_text()
             + "\nshell fish --init-command 'source \"$HOME/.config/nacre/terminal/greeting.fish\"'\n",
         )
-        copy(root / "kitty/greeting.fish", deploy / terminal / "greeting.fish")
-        copy(root / "fastfetch/system-age.sh", deploy / terminal / "system-age.sh")
+        copy(root / "config/kitty/greeting.fish", deploy / terminal / "greeting.fish")
+        copy(
+            root / "config/fastfetch/system-age.sh", deploy / terminal / "system-age.sh"
+        )
         text(
             terminal + "fastfetch.jsonc",
-            (root / "fastfetch/config.jsonc")
+            (root / "config/fastfetch/config.jsonc")
             .read_text()
             .replace(
                 "$HOME/.config/fastfetch/system-age.sh",

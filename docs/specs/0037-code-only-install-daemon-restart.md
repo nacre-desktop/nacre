@@ -25,7 +25,7 @@ stayed inactive until a manual restart. The generated niri session config
    aborts non-zero with a message saying whether the daemon is healthy again. The
    shell is not restarted in that case. With no backup the failure is reported.
 3. **Niri session refresh.** Applies only when
-   `session/source-revision` exists (the same marker `uwsm/env-niri` uses to select
+   `session/source-revision` exists (the same marker `config/uwsm/env-niri` uses to select
    the prepared session) and differs from `git rev-parse HEAD` of the checkout.
    The installer moves `session` to `session.previous` (one slot, replaced each
    time), then runs `nacre-helper niri-session-runtime --backend <repo>

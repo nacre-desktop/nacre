@@ -9,7 +9,7 @@ pub fn legacy_compositor_backend() -> Result<tempfile::TempDir> {
         .canonicalize()?;
     let backend = tempfile::tempdir()?;
     for name in ["niri", "hypr"] {
-        symlink(source.join(name), backend.path().join(name))?;
+        symlink(source.join("config").join(name), backend.path().join(name))?;
     }
     let nacre = backend.path().join("nacre");
     fs::create_dir(&nacre)?;

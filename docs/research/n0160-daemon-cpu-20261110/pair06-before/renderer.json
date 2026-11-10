@@ -1,7 +1,0 @@
-{
-  "parent_renderer": "wlroots pixman",
-  "nested_renderer": "Mesa software EGL",
-  "niri_binary": "/usr/bin/niri",
-  "niri_is_nacre_wrapper": false,
-  "size": "1280x720"
-}

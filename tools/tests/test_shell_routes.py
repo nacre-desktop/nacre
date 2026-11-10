@@ -15,10 +15,10 @@ REGISTRY = json.loads((ROOT / "nacre/shell-tools/shell-routes.json").read_text()
 ROUTES = {row["id"]: row for row in REGISTRY["routes"]}
 FORBIDDEN = ("ipc call",)
 BINDING_FILES = (
-    "niri/bindings.kdl",
-    "hypr/conf/keybinding.lua",
-    "hypr/conf/nacre.lua",
-    "hypr/conf/brain.lua",
+    "config/niri/bindings.kdl",
+    "config/hypr/conf/keybinding.lua",
+    "config/hypr/conf/nacre.lua",
+    "config/hypr/conf/brain.lua",
     "nacre/shell-tools/shortcuts.lua",
 )
 

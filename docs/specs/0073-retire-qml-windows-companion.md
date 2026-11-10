@@ -17,7 +17,7 @@ invoke `nacre-settings notifications`. QML mode keeps the same routes through
 its registered provider. Bead window rules cover the three native app IDs.
 Evidence: `nacre/shell-tools/shell-routes.json`,
 `crates/nacre-helper/src/launchers.rs`, `nacre/desktop/*.desktop`,
-`niri/bindings.kdl`, `hypr/conf/keybinding.lua`,
+`config/niri/bindings.kdl`, `config/hypr/conf/keybinding.lua`,
 `nacre/shell-tools/desktop-actions.py`, and B0084's route/window-rule table.
 The `org.quickshell` StartupWMClass desktop metadata is legacy metadata and is
 not used by the Bead app routes or window rules.

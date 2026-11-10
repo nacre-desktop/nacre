@@ -27,7 +27,7 @@ RETIRED = (
     "rice",
     "nacre/wallpapers",
     "nacre/welcome",
-    "hypr/scripts/low-battery.sh",
+    "config/hypr/scripts/low-battery.sh",
     "nacre/shell-tools/tests/test_beats.mjs",
 )
 
@@ -143,7 +143,7 @@ def main():
             json.loads(path.read_text())
         elif (
             path.suffix == ".sh"
-            or path.parent == ROOT / "uwsm"
+            or path.parent == ROOT / "config/uwsm"
             or (
                 path.parent == ROOT / "bin"
                 and "bash" in path.read_text().splitlines()[0]
@@ -163,8 +163,8 @@ def main():
     from window_rules import conflicts, bind_conflicts
 
     extra_lua = [ROOT / "nacre/shell-tools/shortcuts.lua"]
-    contradictory = conflicts(ROOT / "hypr/conf", extra_lua) + bind_conflicts(
-        ROOT / "hypr/conf", extra_lua
+    contradictory = conflicts(ROOT / "config/hypr/conf", extra_lua) + bind_conflicts(
+        ROOT / "config/hypr/conf", extra_lua
     )
     if contradictory:
         raise RuntimeError("Conflicting window rules:\n" + "\n".join(contradictory))
@@ -172,7 +172,7 @@ def main():
     lua = shutil.which("luac")
     if lua:
         for path in [
-            *(ROOT / "hypr").rglob("*.lua"),
+            *(ROOT / "config/hypr").rglob("*.lua"),
             *extra_lua,
             *(ROOT / "tools").glob("*.lua"),
             ROOT / "nacre/shell-tools/compositor_backends/hyprland/bindings.lua",

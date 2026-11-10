@@ -49,7 +49,7 @@ def main():
     policy = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(policy)
     profile_path = (
-        ROOT / "profiles/default.json"
+        ROOT / "config/profiles/default.json"
         if args.profile == "default"
         else (Path(args.profile).resolve() if args.profile else None)
     )

@@ -240,6 +240,15 @@ pub fn copy_tree(source: &Path, target: &Path, ignored: &[&str]) -> Result<()> {
     Ok(())
 }
 
+pub fn source_config_root(root: &Path) -> PathBuf {
+    let relocated = root.join("config");
+    if relocated.is_dir() {
+        relocated
+    } else {
+        root.to_path_buf()
+    }
+}
+
 pub fn file_map(repo: &Path, profile: &Value) -> Result<BTreeMap<PathBuf, PathBuf>> {
     let mut files = BTreeMap::new();
     fn discover(
@@ -273,8 +282,14 @@ pub fn file_map(repo: &Path, profile: &Value) -> Result<BTreeMap<PathBuf, PathBu
         }
         Ok(())
     }
+    let config_root = source_config_root(repo);
     for name in ["hypr", "kitty", "fastfetch", "fish", "uwsm"] {
-        discover(repo, &repo.join(name), Path::new(".config"), &mut files)?;
+        discover(
+            &config_root,
+            &config_root.join(name),
+            Path::new(".config"),
+            &mut files,
+        )?;
     }
     for name in [
         "nacre-app",
@@ -436,6 +451,20 @@ pub fn stage(
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+    #[test]
+    fn relocated_app_configs_keep_their_installed_targets() -> Result<()> {
+        let repo = tempfile::tempdir()?;
+        let source = repo.path().join("config/hypr/hyprland.lua");
+        fs::create_dir_all(source.parent().ok_or("Invalid config source")?)?;
+        fs::write(&source, "fixture\n")?;
+        let files = file_map(repo.path(), &value!({"components":["configs","shell"]}))?;
+        assert_eq!(
+            files.get(Path::new(".config/hypr/hyprland.lua")),
+            Some(&source)
+        );
+        Ok(())
+    }
+
     #[test]
     fn frozen_source_installation_file_maps_filter_optional_commands() -> Result<()> {
         let reference: Value = serde_json::from_str(include_str!(

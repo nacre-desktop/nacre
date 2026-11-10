@@ -94,8 +94,9 @@ completion. Owner/lead live audit remains separate from container evidence.
 
 ## Matched measurements
 
-[Raw samples, identities and replay sources](../research/n0160-daemon-cpu-20261110/)
-contain five alternating before/after pairs, numbered 03–07. Each fresh private
+The summary tables below report five alternating before/after pairs, numbered
+03–07; the [method note](../research/n0160-daemon-cpu-20261110/README.md) preserves
+measurement accounting and build details. Each fresh private
 session warms for 30 seconds, measures idle for 30 seconds, runs the six-cycle
 60-second interaction, then measures another 30 idle seconds. Both arms use the
 same release flags, symbols, timing overlay, real shell, palette and static
@@ -147,10 +148,9 @@ The old inline background computation is removed in the same change.
 ## Full desktop validation
 
 Every check in the complete `desktop` job from `.github/workflows/check.yml`
-passed in `ghcr.io/archlinux/archlinux:latest` on dev-1. The archived
-[`full-desktop-ci.sh.txt`](../research/n0160-daemon-cpu-20261110/replay/full-desktop-ci.sh.txt)
-contains every build/check command, including `CI=true`, pinned Luau analyzer,
-cargo-deny, `tools/check.py`, native gallery and ignored daemon memory tests.
+passed in `ghcr.io/archlinux/archlinux:latest` on dev-1, including `CI=true`,
+pinned Luau analyzer, cargo-deny, `tools/check.py`, native gallery and ignored
+daemon memory tests.
 The six probe-modified files were restored first; `rg N0160Timer` has no matches.
 The canonical changed source SHA-256 is
 `dc3e5b5a487de96d6e69c9f595a8f39098da4edd9f178ea4b66d8dabe0a3fa76`.
@@ -159,8 +159,8 @@ revision `3efe8d1e7fb50200d74a3e0193ad63699cb8ebe8`; a diff against that revisio
 confirmed the already-copied Orient content was unchanged. Disposable container
 Git snapshot commits are not product commit identities and are never pushed.
 
-[CI results and log digests](../research/n0160-daemon-cpu-20261110/ci-results.md)
-record the complete command coverage. The nice-10 run passed formatting, Clippy,
+The [CI summary](../research/n0160-daemon-cpu-20261110/ci-results.md) records the
+nice-10 run, which passed formatting, Clippy,
 examples, all workspace tests, minimal consumer, release helper, feature checks,
 shell/wallpaper builds, Luau/product smoke, cargo-deny, npm and translations.
 The source guard then rejected untracked benchmark Python under `.lead`; moving

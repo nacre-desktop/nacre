@@ -44,10 +44,14 @@ class SessionDeployTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="nacre-session-deploy-") as folder:
             base = Path(folder)
             home, backend = base / "home", base / "backend"
-            for relative in ("nacre/shell", "nacre/shell-tools", "niri"):
+            for source, target in (
+                ("nacre/shell", "nacre/shell"),
+                ("nacre/shell-tools", "nacre/shell-tools"),
+                ("config/niri", "niri"),
+            ):
                 shutil.copytree(
-                    ROOT / relative,
-                    backend / relative,
+                    ROOT / source,
+                    backend / target,
                     ignore=shutil.ignore_patterns(
                         "tests", "__pycache__", "nacre-helper"
                     ),
@@ -74,7 +78,7 @@ class SessionDeployTests(unittest.TestCase):
             state = home / ".local/state/nacre"
             config.mkdir(parents=True)
             state.mkdir(parents=True)
-            shutil.copy2(ROOT / "profiles/default.json", config / "profile.json")
+            shutil.copy2(ROOT / "config/profiles/default.json", config / "profile.json")
             (state / "scheme.json").write_text(
                 json.dumps(
                     {

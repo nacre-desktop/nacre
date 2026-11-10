@@ -17,7 +17,7 @@ import termios
 import time
 import unittest
 
-SCRIPT = Path(__file__).parents[2] / "hypr/scripts/matrix-rest.py"
+SCRIPT = Path(__file__).parents[2] / "config/hypr/scripts/matrix-rest.py"
 SPEC = importlib.util.spec_from_file_location("matrix_renderer", SCRIPT)
 matrix = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(matrix)

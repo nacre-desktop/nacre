@@ -93,6 +93,17 @@ assert importlib.util.find_spec("nacre_shell") is None, (
 )
 assert not Path("/usr/share/nacre/runtime/palette").exists()
 metadata = json.loads(Path("/usr/share/nacre/package.json.installed").read_text())
+config_root = Path("/usr/share/nacre/config")
+for name in (
+    "fastfetch",
+    "fish",
+    "hypr",
+    "kitty",
+    "niri",
+    "profiles",
+    "uwsm",
+):
+    assert (config_root / name).is_dir(), config_root / name
 engine = metadata["orient"]["engine"]
 assert run("orient", "--version").stdout.strip() == engine
 assert run("nacre_shell", "--version").stdout.strip() == engine

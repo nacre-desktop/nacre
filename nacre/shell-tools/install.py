@@ -424,16 +424,11 @@ def install_session_backend(source_root):
         shutil.rmtree(pending)
     (pending / "nacre").mkdir(parents=True)
     (pending / "nacre/shell-tools").symlink_to("../..")
-    for name in (
-        "hypr",
-        "kitty",
-        "fastfetch",
-        "fish",
-        "uwsm",
-        "bin",
-        "brain",
-        "niri",
-    ):
+    for name in ("hypr", "kitty", "fastfetch", "fish", "uwsm", "niri"):
+        source = source_root / "config" / name
+        if source.is_dir():
+            shutil.copytree(source, pending / name, symlinks=True)
+    for name in ("bin", "brain"):
         source = source_root / name
         if source.is_dir():
             shutil.copytree(source, pending / name, symlinks=True)

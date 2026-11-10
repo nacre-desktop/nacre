@@ -26,7 +26,10 @@ class CompositorConfigTests(unittest.TestCase):
     def test_all_checked_in_output_matches_authoritative_source(self):
         for path, output in config.render(config.load()).items():
             with self.subTest(path=path):
-                self.assertEqual((ROOT / path).read_text(), output)
+                relative = Path(path)
+                if relative.parts[0] in {"hypr", "niri"}:
+                    relative = Path("config") / relative
+                self.assertEqual((ROOT / relative).read_text(), output)
 
     @unittest.skipUnless(shutil.which("lua"), "Lua unavailable")
     def test_registrations_match_defaults_and_unchanged_historical_contracts(self):
@@ -288,7 +291,10 @@ class CompositorConfigTests(unittest.TestCase):
             generated = config.render(config.load())
             generated.update(config.render(config.load(), backend="niri"))
             for path, output in generated.items():
-                target = root / path
+                relative = Path(path)
+                if relative.parts[0] in {"hypr", "niri"}:
+                    relative = Path("config") / relative
+                target = root / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(output)
             script = root / "tools/generate_compositor_config.py"
@@ -298,7 +304,7 @@ class CompositorConfigTests(unittest.TestCase):
                 ).returncode,
                 0,
             )
-            changed = root / "hypr/conf/windowrule.lua"
+            changed = root / "config/hypr/conf/windowrule.lua"
             changed.write_text("-- accidental hand edit\n")
             result = subprocess.run(
                 [sys.executable, str(script), "--check"], capture_output=True, text=True

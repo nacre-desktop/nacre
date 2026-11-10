@@ -28,7 +28,7 @@ class ConfigDefaultsTests(unittest.TestCase):
                     path.write_text("#!/bin/sh\nprintf '%s\\n' '" + str(value) + "'\n")
                     path.chmod(0o700)
                 result = subprocess.run(
-                    [bash, str(ROOT / "fastfetch/system-age.sh")],
+                    [bash, str(ROOT / "config/fastfetch/system-age.sh")],
                     env={**os.environ, "PATH": str(target)},
                     capture_output=True,
                     text=True,

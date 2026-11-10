@@ -98,7 +98,7 @@ class TranslationTests(unittest.TestCase):
     def test_notification_bridge_fallback_preserves_count_without_installed_assets(
         self,
     ):
-        script = (ROOT / "hypr/scripts/window-trash.sh").read_text()
+        script = (ROOT / "config/hypr/scripts/window-trash.sh").read_text()
         function = script[
             script.index("nacre_message() {") : script.index("\nnotify() {")
         ]

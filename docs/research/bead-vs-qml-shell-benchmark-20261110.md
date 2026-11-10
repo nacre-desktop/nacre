@@ -52,7 +52,7 @@ matched default settings, rather than a copy of the owner's customized setup.
 The private presentation records point to that PNG with animated/dynamic flags
 false. Bead's native wallpaper consumer runs; no substitute `swaybg` is included.
 Inputs, source trees, collector, executables and output geometry are verified
-identical across accepted arms; hashes are in [provenance.csv](bead-vs-qml-shell-benchmark-20261110/provenance.csv).
+identical across accepted arms; their hashes were verified for all accepted arms.
 The remaining wallpaper-helper and Orient executable hashes are listed below.
 
 The daemon executable and commit match, but its modes follow the product session:
@@ -70,8 +70,7 @@ with a 60-second no-shell baseline and 1,800 seconds after IPC readiness. They
 are not six uninterrupted back-to-back launches: two incomplete Bead attempts
 were discarded after shared desktop-lock contention, and the final Bead arm was
 started separately after a swap preflight refusal. No data from those incomplete
-attempts enter the medians. [run-ledger.csv](bead-vs-qml-shell-benchmark-20261110/run-ledger.csv)
-records the source attempt, UTC start, last phase and acceptance for each file.
+attempts enter the medians.
 
 The same 60-second interaction starts after 600 seconds of idle. Six ten-second
 cycles each request launcher open (0.8 s), close, dashboard drawer open (0.8 s),
@@ -101,9 +100,8 @@ CPU uses `/proc/PID/stat` self plus waited-child user/system ticks for each live
 descendant, retaining reaped helper CPU in its parent's child counters. Percent
 is `100 × delta_ticks / (100 Hz × elapsed_monotonic_seconds)`. Idle CPU uses the
 last pre-interaction minute; interaction CPU uses the following minute. CSV
-elapsed times are rounded to 0.1 s; minute CPU uses those endpoint times.
-[per-minute-cpu.csv](bead-vs-qml-shell-benchmark-20261110/per-minute-cpu.csv) also
-reports all 30 minute windows per arm. Reads are not atomic, and descendants
+elapsed times are rounded to 0.1 s; minute CPU uses those endpoint times. The
+summary tables report the accepted run distributions. Reads are not atomic, and descendants
 reparented or missed between samples can escape accounting. Context switches are
 summed over threads' voluntary/involuntary counters; vanished threads can be
 missed. They are a lower-bound activity proxy, not hardware wakeups.
@@ -115,8 +113,7 @@ available, abort threshold is 2 GiB. Arm preflight requires host swap below
 shell/daemon SwapPss. The shared desktop capture lock is held in chunks of at
 most 590 seconds. Contention at a boundary invalidates the arm and triggers
 exact-PID/start-time-checked cleanup before waiting for the peer. No peer process
-was stopped. [guards.csv](bead-vs-qml-shell-benchmark-20261110/guards.csv) records
-scope exits, memory rails and OOM counters. The driver checked the host
+was stopped. Scope exits, memory rails and OOM counters were checked. The driver checked the host
 swap-in threshold, but did not retain its exact before/after counters; successful
 progress/exit is the retained evidence for that check.
 
@@ -125,8 +122,7 @@ capture finished and with no arm/build/desktop CI active, the authorized guarded
 reset at 11:47:01 UTC used `swapoff -a` then `swapon -p 100 /dev/zram0`.
 MemAvailable was 10,158,168 KiB before, exceeding used swap plus 8 GiB; afterward
 it was 10,093,996 KiB and swap usage zero. Zram capacity and priority were
-preserved. [preflight.csv](bead-vs-qml-shell-benchmark-20261110/preflight.csv)
-contains both guarded resets. No cache drops or kernel tuning were performed.
+preserved. No cache drops or kernel tuning were performed.
 
 The controller laptop rebooted near 08:53 and 09:35 local time (07:53 and 08:35
 UTC). The desktop did not reboot. All accepted arms begin and finish on one side
@@ -268,10 +264,8 @@ prove that the first frame was visible or that animations were smooth.
 
 The desktop has no system battery. Laptop access was passive file/journal
 reading only, with no shell runs or workload generation. Readable UPower rate
-and charge histories were copied passively. Raw Nov 5/9 records are retained in
-`battery-rate-cohorts.csv` and `battery-charge-cohorts.csv`, with input hashes and
-coverage in `battery-provenance.csv`. UTC grouping and the discharge cohorts were
-verified against the later snapshot; both daily counts and medians match the
+and charge histories were copied passively. UTC grouping and discharge cohorts
+were verified against a later snapshot; daily counts and medians matched the
 initial read. Descriptive discharge-rate medians are **8.15 W (912 samples) on
 Nov 5** and **5.70 W (899 samples) on Nov 9**; these are irregular rate samples,
 not controlled time-weighted energy measurements.
@@ -282,28 +276,20 @@ QML-only day cohort could be established; `quickshell` matches can also come fro
 on-demand apps and version probes. Nov 10 is excluded from day comparison
 because it is partial and includes controller reboots. The dates have different workload,
 coverage and charging histories. **No defensible QML-versus-Bead battery estimate
-can be made from this evidence.** See [battery-passive-evidence.csv](bead-vs-qml-shell-benchmark-20261110/battery-passive-evidence.csv).
+can be made from this evidence.**
 
 ## Evidence, checks and caveats
 
-The CSV directory includes one compact one-second sample file per accepted run,
-two excluded incomplete attempts, the run ledger, provenance, scope guards,
-per-run summary, per-minute CPU and median/range table. Empty cells mean missing
-or inapplicable, not zero. Raw CPU cumulative ticks are retained; redundant
-instantaneous CPU/combined columns, a live-only CPU diagnostic and unavailable
-energy channels are omitted to keep the evidence below 2 MB. KiB/MiB are binary;
-power inputs are µW, temperatures m°C and VRAM inputs bytes. Baseline and active
-elapsed seconds use separate origins; the `phase` column distinguishes them.
-Source IDs in the ledger refer to the task directory, not another repository.
+Per-run captures and derived CSVs have been removed. This document retains the
+human-readable summary tables, method, validation results and measurement limits.
 
 Validation on the desktop accepted all six complete windows: matched artifact,
 input and geometry records; zero process SwapPss and OOM deltas; capture/scope
 exit codes zero; no `UI_ERROR`; active-sample gaps below two seconds. There are
 six run summaries, 180 per-minute CPU rows, and three observations in every
 median/range group. An independent read-only audit recomputed all six runs,
-all 180 minute windows and all 92 median/range rows from the raw CSVs. The
-passive UTC discharge cohorts independently reproduce
-912 / 899 samples and 8.154 / 5.699 W medians.
+all 180 minute windows and all 92 median/range rows. The passive UTC discharge
+cohorts reproduce 912 / 899 samples and 8.154 / 5.699 W medians.
 
 On dev-1 in the Arch container, the existing capture-safety suite
 `python3 -m unittest test_dashboard_capture_windows.CaptureSafetyTests -v`

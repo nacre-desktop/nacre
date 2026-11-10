@@ -18,7 +18,7 @@ class WindowRoutingTests(unittest.TestCase):
         expected = json.loads(
             (TOOLS / "tests/fixtures/window-routing-contract.json").read_text()
         )
-        actual = capture(TOOLS.parent / "hypr/conf/windowrule.lua", "rules")
+        actual = capture(TOOLS.parent / "config/hypr/conf/windowrule.lua", "rules")
         self.assertEqual(actual, expected[-3:])
         self.assertEqual(len(actual), 3)
         self.assertEqual(len({rule["name"] for rule in actual}), 3)

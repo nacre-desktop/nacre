@@ -1,6 +1,6 @@
 [workspace]
 members = ["crates/nacre-helper", "crates/nacre-protocol", "crates/nacre-menu", "crates/nacre-i18n", "crates/nacre-shell"]
-exclude = ["deps/orient", "fuzz"]
+exclude = ["deps/orient", "tools/fuzz"]
 resolver = "2"
 
 [workspace.package]

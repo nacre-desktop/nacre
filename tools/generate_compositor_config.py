@@ -7,8 +7,16 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 DIRECTORY = ROOT / "nacre/shell-tools"
+CONFIG_DIRS = {"hypr", "niri"}
 sys.path.insert(0, str(DIRECTORY))
 from nacre_native_config import load, render  # noqa: E402 - thin native client
+
+
+def output_path(path):
+    relative = Path(path)
+    if relative.parts[0] in CONFIG_DIRS:
+        relative = Path("config") / relative
+    return ROOT / relative
 
 
 def main():
@@ -26,7 +34,7 @@ def main():
     different = [
         path
         for path, text in generated.items()
-        if not (ROOT / path).exists() or (ROOT / path).read_text() != text
+        if not output_path(path).exists() or output_path(path).read_text() != text
     ]
     if args.check and different:
         parser.exit(
@@ -37,8 +45,9 @@ def main():
         )
     if not args.check:
         for path in different:
-            (ROOT / path).parent.mkdir(parents=True, exist_ok=True)
-            (ROOT / path).write_text(generated[path])
+            target = output_path(path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(generated[path])
     print(
         "Compositor configuration matches its neutral source."
         if args.check

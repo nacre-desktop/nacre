@@ -30,7 +30,7 @@ dofile(path)
 assert(fired)
 """
         result = subprocess.run(
-            ["lua", "-", theme, size, str(ROOT / "hypr/conf/cursor.lua")],
+            ["lua", "-", theme, size, str(ROOT / "config/hypr/conf/cursor.lua")],
             input=source,
             capture_output=True,
             text=True,

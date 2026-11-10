@@ -43,8 +43,8 @@ Arch CI container (8 CPUs, 16 GiB); no desktop TEST host access was used.
 
 ## Remaining references
 
-`git grep -l bead-shell`: only the historical benchmark `provenance.csv` under
-`docs/research/bead-vs-qml-shell-benchmark-20261110/` and specs 0054, 0156, 0157.
+`git grep -l bead-shell`: only the historical benchmark summary and specs 0054,
+0156, 0157.
 
 The N0156 upgrade cleanup still requires the old runtime name: installer,
 package runtime and release cleanup, plus their five regression-test files.

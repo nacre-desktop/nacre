@@ -33,7 +33,7 @@ class ReleaseConfigurationMapTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             repo, home = base / "repo", base / "home"
-            source = repo / "hypr/scripts/helper.py"
+            source = repo / "config/hypr/scripts/helper.py"
             source.parent.mkdir(parents=True)
             source.write_text("source")
             generated = source.parent / "__pycache__/helper.cpython-314.pyc"

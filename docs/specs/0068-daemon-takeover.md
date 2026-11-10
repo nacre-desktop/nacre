@@ -58,8 +58,8 @@ overriding the daemon `ExecStart` (e.g. the lead's `60-shell-switch-bead.conf`) 
 - Python: model tests for the handover order (stop shell, restart daemon, start shell), exact rollback bytes, no Bead before
   the daemon owns notifications, no QML beside the managed daemon, crash at every forward and rollback phase, failing
   notifications restore QML, foreign daemon override refused, rollback survives a failing daemon restart. 27 -> 33 tests.
-- Real systemd user manager (`tools/tests/rehearse_ui_shell_systemd.py`, extended: stub daemon records its flags):
-  [output](../evidence/n0068/systemd.txt) ends `PASS: ... daemon takeover and back`.
+- Real systemd user manager (`tools/tests/rehearse_ui_shell_systemd.py`, extended: stub daemon records its flags)
+  completed the daemon takeover and rollback cycle successfully.
 - Desktop reproduction: before, `Managed notifications stopped reason=No such file or directory` + abort exit 134; after,
   `notifications: running`, owner `org.freedesktop.Notifications`, clean stop (exit 0).
 

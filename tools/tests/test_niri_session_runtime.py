@@ -179,7 +179,7 @@ class NiriRuntimeTests(unittest.TestCase):
                 p.write_text("#!/bin/sh\n" + text + "\n")
                 p.chmod(0o700)
             script = root / "wrapper"
-            text = (ROOT / "uwsm/niri-session-bin/loginctl").read_text()
+            text = (ROOT / "config/uwsm/niri-session-bin/loginctl").read_text()
             for name in ("hyprlock", "loginctl"):
                 text = text.replace("/usr/bin/" + name, str(root / name))
             script.write_text(text)

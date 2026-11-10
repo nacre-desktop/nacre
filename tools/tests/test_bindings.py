@@ -19,7 +19,7 @@ class BindingContractTests(unittest.TestCase):
         expected = json.loads(
             (TOOLS / "tests/fixtures/keybindings-defaults.json").read_text()
         )
-        actual = capture(TOOLS.parent / "hypr/conf/keybinding.lua")
+        actual = capture(TOOLS.parent / "config/hypr/conf/keybinding.lua")
         compositor_contract = json.loads(
             (TOOLS.parent / "nacre/shell-tools/compositor-contract.json").read_text()
         )
@@ -86,11 +86,11 @@ class BindingContractTests(unittest.TestCase):
         root = TOOLS.parent
         self.assertEqual(
             bind_conflicts(
-                root / "hypr/conf", [root / "nacre/shell-tools/shortcuts.lua"]
+                root / "config/hypr/conf", [root / "nacre/shell-tools/shortcuts.lua"]
             ),
             [],
         )
-        rows = capture(root / "hypr/conf/keybinding.lua")
+        rows = capture(root / "config/hypr/conf/keybinding.lua")
         rows += capture(root / "nacre/shell-tools/shortcuts.lua")
         commands = [
             row["action"]["args"][0]

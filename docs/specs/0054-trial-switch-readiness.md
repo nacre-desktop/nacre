@@ -139,12 +139,11 @@ and keeps its journal rather than claiming success.
 - Full desktop CI: all executable steps from `.github/workflows/check.yml` in
   `ghcr.io/archlinux/archlinux:latest`, including native checks, full
   `tools/check.py`, translation generation and native/pseudo galleries.
-- Focused result: **22/22 passed**. Real-systemd stub cycle: **passed**;
-  [command output](../evidence/n0054/systemd.txt) and
-  [start-limit/fallback journal](../evidence/n0054/systemd-journal.txt).
+- Focused result: **22/22 passed**. Real-systemd stub cycle passed with
+  start-limit/fallback recovery verified.
 - Desktop result: **27/27 passed**, including native Settings/Colors/Welcome/chat
   and provider-neutral routes, rollback, crash-loop fallback and interrupted
-  switch recovery; [normalized output](../evidence/n0054/desktop.txt).
+  switch recovery.
   Bead source `a4917a566f04d698cde57fcbc4e6f9d2b82b2906`, staged source-build profile
   `release`; binary SHA-256
   `b0bde190fecae27f57aeb4b33c565b78f64f48137e60c42126498028402d5420`.

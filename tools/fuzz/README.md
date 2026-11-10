@@ -1,10 +1,10 @@
 # Protocol fuzz targets
 
-Developer tooling only, never installed. With cargo-fuzz and a nightly toolchain:
+Developer tooling only, never installed. From the repository root, with cargo-fuzz and a nightly toolchain:
 
 ```sh
-cargo fuzz run decoder -- -max_len=1048577 -max_total_time=600
-cargo fuzz run merge_patch -- -max_len=1048576 -max_total_time=600
+cargo fuzz --fuzz-dir tools/fuzz run decoder -- -max_len=1048577 -max_total_time=600
+cargo fuzz --fuzz-dir tools/fuzz run merge_patch -- -max_len=1048576 -max_total_time=600
 ```
 
 The decoder checks size limits, malformed JSON, duplicate keys and arbitrary

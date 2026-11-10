@@ -98,17 +98,17 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
         tools.join("nacre-helper"),
     )?;
     fs::write(tools.join("nacre-niri-widths.service"), "unit fixture\n")?;
-    fs::create_dir_all(repo.join("niri"))?;
+    fs::create_dir_all(repo.join("config/niri"))?;
     for name in ["wallpaper.kdl", "workspace-visitors.kdl"] {
         fs::copy(
-            original.join("niri").join(name),
-            repo.join("niri").join(name),
+            original.join("config/niri").join(name),
+            repo.join("config/niri").join(name),
         )?;
     }
     fs::write(repo.join("VERSION"), "0.0.fixture\n")?;
     fs::create_dir_all(home.path().join(".config/nacre"))?;
     fs::copy(
-        original.join("profiles/default.json"),
+        original.join("config/profiles/default.json"),
         home.path().join(".config/nacre/profile.json"),
     )?;
     fs::create_dir_all(home.path().join(".local/state/nacre"))?;
@@ -207,7 +207,7 @@ fn offline_stock_preparation_works_with_python_absent_from_path() -> Result<()> 
     assert!(include_at("bead-pearls.kdl") > include_at("desktop.kdl"));
     assert_eq!(
         fs::read(destination.join("config/workspace-visitors.kdl"))?,
-        fs::read(repo.join("niri/workspace-visitors.kdl"))?
+        fs::read(repo.join("config/niri/workspace-visitors.kdl"))?
     );
     assert!(destination
         .join("home-view/.local/share/nacre/shell/tools/nacre-helper")

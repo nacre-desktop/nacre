@@ -7,7 +7,7 @@ wallpapers, conversations or notes.
 
 ## Profiles
 
-The [default profile](../profiles/default.json) has `version: 1`, six workspace
+The [default profile](../config/profiles/default.json) has `version: 1`, six workspace
 pearls, no startup apps and no app-to-workspace assignments. AI and Brain open on
 the current workspace unless `aiWorkspace` or `brainWorkspace` is set. The bar
 keeps extra occupied workspaces visible; scroll over the pearls to switch, or
