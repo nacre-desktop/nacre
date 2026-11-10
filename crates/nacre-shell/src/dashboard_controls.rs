@@ -263,7 +263,7 @@ impl Dashboard {
                     .is_some_and(|wallpaper| wallpaper.motion.is_some())
         })
     }
-    fn wallpaper_settings_valid(data: &Json) -> bool {
+    pub(super) fn wallpaper_settings_valid(data: &Json) -> bool {
         data.get("error").is_none_or(Json::is_null)
             && data.get("rev").and_then(Json::as_u64).is_some()
             && data
@@ -674,8 +674,17 @@ impl Dashboard {
             let Some(name) = path.to_str().and_then(|s| s.strip_prefix("@icon:")) else {
                 continue;
             };
-            if name == "today-wallpaper" {
-                if let Some((pair, _, _, Some(bytes))) = &*self.poster.borrow() {
+            if name == "today-wallpaper" || name.starts_with("today-wallpaper:") {
+                if let Some((_, bytes)) = self
+                    .video
+                    .borrow()
+                    .as_ref()
+                    .and_then(super::video::Preview::frame)
+                {
+                    let key = std::path::PathBuf::from("@today-wallpaper/video");
+                    scene.asset_data.insert(key.clone(), bytes);
+                    *path = key;
+                } else if let Some((pair, _, _, Some(bytes))) = &*self.poster.borrow() {
                     let key =
                         std::path::PathBuf::from(format!("@today-wallpaper/{}", pair.revision));
                     scene.asset_data.insert(key.clone(), bytes.clone());

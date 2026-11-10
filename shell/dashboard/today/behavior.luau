@@ -90,7 +90,7 @@ local dashboard={stores={
     ["panel.open"]=true,["view.edge"]="top",
     ["dashboard.page"]="today",["dashboard.title"]=tr("bead.dashboard.page-today"),
     ["dashboard.clock"]="—",["dashboard.agenda.scroll.y"]=0,
-    ["dashboard.wallpaper"]=false,["dashboard.hero.width"]=940,["dashboard.hero.height"]=256,["dashboard.hero.scroll"]=0,["dashboard.host"]={},
+    ["dashboard.wallpaper"]=false,["dashboard.wallpaper_image"]="today-wallpaper",["dashboard.hero.width"]=940,["dashboard.hero.height"]=256,["dashboard.hero.scroll"]=0,["dashboard.host"]={},
     ["dashboard.preview"]=false,["dashboard.ready"]=false,["dashboard.stale"]=false,
     ["dashboard.heading"]=tr("bead.dashboard.page-unavailable",{page=tr("bead.dashboard.page-system")}),["dashboard.summary"]=tr("bead.dashboard.data-pending"),
     ["dashboard.detail"]="",["dashboard.metric"]="—",

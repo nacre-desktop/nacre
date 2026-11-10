@@ -81,6 +81,18 @@ impl Prefs {
     }
 }
 
+/// A visible preview is not covered by windows behind the dashboard. Battery,
+/// explicit pause, still mode and session suspension apply just as on desktop.
+pub(crate) fn preview_allowed(store: &Json, services: &Services, reduced: bool) -> bool {
+    let prefs = Prefs::decode(store);
+    !reduced
+        && !prefs.paused
+        && prefs.mode != Mode::Still
+        && !(prefs.mode == Mode::Battery && services.battery.on_battery)
+        && !services.session.locked
+        && !services.session.sleeping
+}
+
 /// QML `NacreWallpaperScene`: an output is covered when a window of its active workspace is
 /// fullscreen or (with `pauseCovered`) not floating; fullscreen also hides it entirely.
 /// A locked or sleeping session hides every output.
@@ -374,6 +386,35 @@ mod tests {
             ],
             ..Default::default()
         }
+    }
+
+    #[test]
+    fn preview_follows_motion_power_and_session_policy() {
+        let mut services = Services::default();
+        let full = json!({"data":{"motionMode":"full","pauseCovered":true}});
+        assert!(preview_allowed(&full, &services, false));
+        assert!(!preview_allowed(&full, &services, true));
+        for data in [json!({"paused":true}), json!({"motionMode":"still"})] {
+            assert!(!preview_allowed(&json!({"data":data}), &services, false));
+        }
+        services.battery.on_battery = true;
+        assert!(preview_allowed(&full, &services, false));
+        assert!(!preview_allowed(
+            &json!({"data":{"motionMode":"battery"}}),
+            &services,
+            false
+        ));
+        services.battery.on_battery = false;
+        assert!(preview_allowed(
+            &json!({"data":{"motionMode":"battery"}}),
+            &services,
+            false
+        ));
+        services.session.locked = true;
+        assert!(!preview_allowed(&full, &services, false));
+        services.session.locked = false;
+        services.session.sleeping = true;
+        assert!(!preview_allowed(&full, &services, false));
     }
 
     #[test]

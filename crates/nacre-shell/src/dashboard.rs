@@ -306,6 +306,11 @@ pub fn spec(
                     .with_player(player)
                     .with_overview(system, wallpaper, summary_updates)
                     .with_wallpaper_settings(wallpaper_settings)
+                    .with_video_desktop(
+                        (page == Page::Today)
+                            .then(|| owner.get().cloned())
+                            .flatten(),
+                    )
                     .with_controls(settings, controls, choice.client.clone())
                     .with_prefs(choice.prefs.clone()),
             )
@@ -511,6 +516,8 @@ type Notify = Arc<dyn Fn(bead::wayland::UiEvent) + Send + Sync>;
 
 #[path = "dashboard_controls.rs"]
 mod controls;
+#[path = "dashboard_video.rs"]
+mod video;
 
 pub struct Dashboard {
     page: Page,
@@ -525,6 +532,9 @@ pub struct Dashboard {
     raster_scale: std::cell::Cell<f64>,
     poster: std::cell::RefCell<Option<Poster>>,
     poster_job: std::cell::RefCell<Option<PosterJob>>,
+    video: std::cell::RefCell<Option<video::Preview>>,
+    desktop: Option<Arc<bead::services::Desktop>>,
+    desktop_subscription: std::cell::RefCell<Option<bead::services::Subscription>>,
     /// Thumbnail of the active player's art, decoded once per path while visible.
     art: std::cell::RefCell<Option<Art>>,
     /// The Weather page's daemon city photo, held only while the page is shown.
@@ -570,6 +580,9 @@ impl Dashboard {
             raster_scale: std::cell::Cell::new(2.),
             poster: Default::default(),
             poster_job: Default::default(),
+            video: Default::default(),
+            desktop: None,
+            desktop_subscription: Default::default(),
             art: Default::default(),
             photo: Default::default(),
             shots: Default::default(),
@@ -654,6 +667,13 @@ impl Dashboard {
         self.clock = clock;
         self
     }
+    fn with_video_desktop(mut self, desktop: Option<Arc<bead::services::Desktop>>) -> Self {
+        self.desktop = desktop;
+        self
+    }
+    pub(crate) fn stop_video(&self) {
+        self.video.borrow_mut().take();
+    }
     pub fn raster_scale(&self) -> f32 {
         self.raster_scale.get() as f32
     }
@@ -665,6 +685,15 @@ impl Dashboard {
     pub fn project_with_stores(&self, stores: &bead::core::Stores) -> BTreeMap<String, Value> {
         let mut values = self.project();
         let open = stores.get("panel.open") != Some(&Value::Bool(false));
+        if self.page != Page::Today || !open {
+            self.stop_video();
+        }
+        if self.page == Page::Today && !open {
+            values.insert(
+                "dashboard.wallpaper_image".into(),
+                Value::Text("today-wallpaper".into()),
+            );
+        }
         if self.page == Page::Today && open {
             self.project_wallpaper(stores, &mut values);
         } else if self.page == Page::Today {
@@ -748,6 +777,12 @@ impl Dashboard {
             })
         };
         *self.notify.borrow_mut() = Some(notify.clone());
+        if let Some(desktop) = &self.desktop {
+            let notify = notify.clone();
+            *self.desktop_subscription.borrow_mut() = Some(desktop.subscribe(move |_| {
+                notify(bead::wayland::UiEvent::Model(BTreeMap::new()));
+            }));
+        }
         let callback: Callback = {
             let notify = notify.clone();
             Arc::new(move |_| notify(bead::wayland::UiEvent::Model(BTreeMap::new())))
@@ -1413,6 +1448,32 @@ impl Dashboard {
             dimension("dashboard.hero.width"),
             dimension("dashboard.hero.height"),
         );
+        let request = pair.as_ref().and_then(|pair| {
+            let settings = self.wallpaper_settings.as_ref()?.snapshot();
+            let services = self.desktop.as_ref()?.snapshot();
+            let reduced = self.prefs().is_none_or(|p| p.reduce_motion);
+            if !settings.connected
+                || !Self::wallpaper_settings_valid(&settings.data)
+                || !crate::wallpaper_motion::preview_allowed(&settings.data, &services, reduced)
+                || w == 0
+                || h == 0
+            {
+                return None;
+            }
+            let scale = (1600. / f64::from(w)).min(1000. / f64::from(h)).min(1.);
+            Some(video::Request {
+                motion: pair.motion.clone()?,
+                width: (f64::from(w) * scale).floor().max(1.) as u32,
+                height: (f64::from(h) * scale).floor().max(1.) as u32,
+            })
+        });
+        let mut video = self.video.borrow_mut();
+        if video.as_ref().map(|p| &p.request) != request.as_ref() {
+            video.take();
+            *video =
+                request.map(|request| video::Preview::start(request, self.notify.borrow().clone()));
+        }
+        drop(video);
         let mut held = self.poster.borrow_mut();
         let mut pending = self.poster_job.borrow_mut();
         if let Some(job) = pending.as_ref() {
@@ -1472,11 +1533,20 @@ impl Dashboard {
             // projection. Poll it on later updates; retirement still joins it.
             *held = None;
         }
+        let frame = self.video.borrow().as_ref().and_then(video::Preview::frame);
+        out.insert(
+            "dashboard.wallpaper_image".into(),
+            Value::Text(frame.as_ref().map_or_else(
+                || "today-wallpaper".into(),
+                |(sequence, _)| format!("today-wallpaper:{sequence}"),
+            )),
+        );
         out.insert(
             "dashboard.wallpaper".into(),
             Value::Bool(
                 held.as_ref()
-                    .is_some_and(|(_, _, _, bytes)| bytes.is_some()),
+                    .is_some_and(|(_, _, _, bytes)| bytes.is_some())
+                    || frame.is_some(),
             ),
         );
     }

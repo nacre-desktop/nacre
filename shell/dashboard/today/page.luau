@@ -99,7 +99,7 @@ return function()
     local hero=ui.Box{id="hero",width=l.width,height=l.hero,radius=l.heroRadius,fill="surfaceContainer",
         wallpaper and ui.Scroll{id="wallpaper-crop",width=l.width,height=l.hero,scroll=ui.bind("dashboard.hero.scroll"),
             ui.Row{id="wallpaper-centred",width=l.width,height=l.hero,shrink=0,justify="center",align="center",
-                ui.Image{id="wallpaper",icon="today-wallpaper",width=l.width,height=l.hero,shrink=0}}}
+                ui.Image{id="wallpaper",icon=ui.bind("dashboard.wallpaper_image"),width=l.width,height=l.hero,shrink=0}}}
             or ui.Box{id="wallpaper-empty",width=l.width,height=l.hero,fill="transparent"},
         ui.Image{id="shade",position="absolute",left=0,top=0,width=l.width,height=l.hero,path="dashboard/today/hero-shade.themed.svg"},
         ui.Column{id="clock-card",position="absolute",left=l.heroInset,top=l.heroInset,width=l.width-2*l.heroInset,

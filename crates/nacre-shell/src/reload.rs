@@ -5160,6 +5160,7 @@ impl Runtime {
                 return Err(error.into());
             }
         };
+        previous.stop_video();
         self.pending_dashboard = Some(PendingDashboard {
             view: previous,
             subscriptions: std::mem::replace(&mut self.dashboard_subscription, subscriptions),

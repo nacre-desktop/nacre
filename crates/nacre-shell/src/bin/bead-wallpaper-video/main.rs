@@ -12,6 +12,7 @@
 //! its own. Protocol: `bead_wallpaper::protocol` JSON lines on stdin/stdout.
 mod gl;
 mod mpv;
+mod preview;
 
 use bead_wallpaper::protocol::{self, Command, Decoder, Event, Source};
 use calloop::{
@@ -1093,7 +1094,15 @@ fn main() {
         libc::mallopt(-3, 256 * 1024); // M_MMAP_THRESHOLD (also disables the dynamic raise)
         libc::mallopt(-8, 2); // M_ARENA_MAX
     }
-    let options = match parse_args(std::env::args().skip(1)) {
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.as_slice() == ["--preview"] {
+        if let Err(error) = preview::run() {
+            eprintln!("bead-wallpaper-video preview: {error}");
+            std::process::exit(1);
+        }
+        return;
+    }
+    let options = match parse_args(args) {
         Ok(options) => options,
         Err(usage) => {
             eprintln!("{usage}");
