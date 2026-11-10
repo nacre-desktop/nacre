@@ -52,6 +52,7 @@ def prepare_bead(home, root):
         home,
         home / ".local/state/nacre",
         recovery_router=root / "tools/releases.py",
+        environ={"XDG_CONFIG_HOME": str(home / ".config")},
     ).prepare_bead(bundle / "bin/nacre-shell", bundle / "shell")
     from configure import record_modules
     import nacre_modules

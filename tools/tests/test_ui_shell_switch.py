@@ -234,6 +234,7 @@ class Manager:
                 "ActiveState": state if self.shell_active else "inactive",
                 "SubState": "running" if state == "active" else "failed",
                 "MainPID": str(pid),
+                "InvocationID": f"{pid:032x}",
                 "NRestarts": "0",
                 "Result": self.result,
                 "UnitFileState": "enabled",
@@ -634,6 +635,64 @@ class SwitchTests(Base):
         self.switch().bead(str(other), "none")
         self.assertBead()
         self.assertIn(str(other), self.switch().status()["launcher"])
+
+    def test_manual_rollback_without_previous_copy_preserves_running_shell(self):
+        self.bead()
+        mutations = self.manager.mutations
+        with self.assertRaisesRegex(RuntimeError, "No previous known-good"):
+            self.switch().recover_bead(exclude_current=True)
+        self.assertEqual(self.manager.mutations, mutations)
+        self.assertBead()
+
+    def test_manual_rollback_restores_current_if_previous_copy_is_damaged(self):
+        self.bead()
+        other = self.launcher.with_name("current")
+        other.write_text("#!/bin/sh\n")
+        other.chmod(0o700)
+        self.manager.launcher = str(other)
+        self.switch().bead(str(other), "none")
+        self.launcher.chmod(0o600)
+        result = self.switch().recover_bead(exclude_current=True)
+        self.assertEqual(result["launcher"], str(other))
+        self.assertBead()
+
+    def test_reloaded_candidate_is_not_mistaken_for_running_known_good(self):
+        self.bead()
+        original_pid = self.manager.shell[1]
+        other = self.launcher.with_name("prepared")
+        other.write_text("#!/bin/sh\n")
+        other.chmod(0o700)
+        self.manager.launcher = str(other)
+        switch = self.switch()
+        switch.dropin.write_bytes(m.dropin_text(str(other), "none"))
+        switch.ctl("daemon-reload")
+        self.assertEqual(self.manager.shell[1], original_pid)
+        switch.bead(str(other), "none")
+        self.assertNotEqual(self.manager.shell[1], original_pid)
+        record = next(r for r in switch.records() if r.get("launcher") == str(other))
+        self.assertTrue(record["known_good"])
+        self.assertEqual(record["invocation"], f"{self.manager.shell[1]:032x}")
+
+    def test_recovery_attempts_each_copy_once_and_rejects_all_its_records(self):
+        self.bead()
+        self.switch().qml()
+        self.bead()
+        self.manager.launcher_fails = True
+        self.manager.calls.clear()
+        result = self.switch().recover_bead()
+        self.assertEqual(result["status"], "stopped")
+        checks = [c for c in self.manager.calls if c == [str(self.launcher), "check"]]
+        self.assertEqual(len(checks), 1)
+        records = [r for r in self.switch().records() if r.get("operation") == "bead"]
+        self.assertGreater(len(records), 1)
+        self.assertTrue(all(r.get("recovery_failed") for r in records))
+
+    def test_migration_reuses_previous_healthy_copy_without_fresh_build(self):
+        self.bead()
+        self.switch().qml()
+        self.assertEqual(self.switch().migration_launcher(), str(self.launcher))
+        self.switch().migrate()
+        self.assertBead()
 
     def test_start_limit_recovers_previous_healthy_bead_and_records_failed_current(
         self,

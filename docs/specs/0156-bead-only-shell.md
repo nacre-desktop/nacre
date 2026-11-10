@@ -23,7 +23,12 @@ Stage B must stay local while the benchmark is absent. Each commit contains
 Use the product's versioned copies under `~/.local/share/nacre/bead/` and its
 `~/.local/state/nacre/ui-shell/` transaction journal. A copied executable and
 matching Luau tree are a candidate, not a known-good release. Only a completed
-live health check establishes a recovery candidate. Keep previous healthy copies
+live health check establishes a recovery candidate. Bind that checkpoint to the
+systemd InvocationID: daemon-reload changes cached ExecStart without changing
+the running process, so a newly prepared launcher must restart and pass health
+before it can be certified. Recovery tries each distinct copy once and rejects
+all journal references to a failed copy. A source update without fresh build
+output may reuse a validated installed copy. Keep previous healthy copies
 through updates and rollback. The lead's private `stable-bead` and
 `good-bead-nacre-*` copies are outside the product's recovery contract.
 
@@ -32,7 +37,10 @@ validate its executable, restart the shell and check process stability, provider
 registration and daemon health. An exhausted recovery attempt stops the shell
 and reports a TTY recovery command in the journal; it must not repeatedly
 restart the failed candidate or invoke QML. Ordinary scheduled restarts must
-not trigger recovery before the service's start limit is exhausted.
+not trigger recovery before the service's start limit is exhausted. Manual
+rollback refuses without changing a healthy running shell when no previous copy
+exists; if older copies are damaged, its current known-good copy is the final
+recovery option. Automatic failure recovery excludes the failed current copy.
 
 ## Scope and retention
 
@@ -63,12 +71,16 @@ HOMEs. The common environment was
 
 | Exact command (from `/work`, prefixed `nice -n 10`) | Result |
 | --- | --- |
-| `python -m unittest discover -s tools/tests -p test_ui_shell_switch.py` | 35 tests, OK |
+| `python -m unittest discover -s tools/tests -p test_ui_shell_switch.py` | 40 tests, OK |
 | `python -m unittest discover -s tools/tests -p test_releases.py` | 21 tests, OK, 1 skipped |
-| `python -m unittest discover -s nacre/shell-tools/tests -p test_installer_dropin_guard.py` | 30 tests, OK |
+| `python -m unittest discover -s nacre/shell-tools/tests -p test_installer_dropin_guard.py` | 31 tests, OK |
 | `python -m unittest discover -s tools/tests -p test_setup.py` | 46 tests, OK |
 
-Pinned Ruff 0.16.10 formatting and lint passed on all eight changed Python files.
+Pinned Ruff 0.16.10 formatting and lint passed on the original eight Python files
+and the six Python files changed in the safety review. The full-check environment
+exposed inherited `XDG_CONFIG_HOME` directing offline preparation outside its
+explicit HOME; preparation now pins that HOME's config root, and the setup
+rollback test verifies the inherited foreign directory is not created.
 The source installer tests exercise fresh/update deployment in temporary HOMEs
 with external services mocked; package setup tests exercise real private-file
 preparation and rollback with executable fixtures.

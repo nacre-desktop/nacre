@@ -112,6 +112,22 @@ class UiShell(f4.Switch):
         ]
         return installs[-1]["launcher"] if installs else ""
 
+    def migration_launcher(self):
+        """Prefer a validated existing copy when no fresh build was supplied."""
+        records = self.records()
+        launchers = [
+            row.get("launcher", "")
+            for row in reversed(records)
+            if row.get("operation") == "bead"
+            and row.get("known_good", row.get("status") == "complete")
+            and not row.get("recovery_failed")
+        ]
+        launchers.append(self.selected_launcher())
+        for launcher in dict.fromkeys(launchers):
+            if launcher and not self.launcher_reasons(launcher):
+                return launcher
+        return ""
+
     def install(self, binary, shell):
         """Copy a matched source build; only a completed journal selects it.
 
@@ -716,7 +732,7 @@ class UiShell(f4.Switch):
             )
         if self.dropin.exists() or self.daemon_dropin.exists():
             self.qml()
-        launcher = self.selected_launcher()
+        launcher = installed["launcher"] if installed else self.migration_launcher()
         if not launcher:
             hint = "No Bead build is installed; the existing shell remains active. Install the packaged Bead build and rerun install.py --code-only."
             self._recovery_hint(hint)
@@ -768,6 +784,22 @@ class UiShell(f4.Switch):
             self.daemon_dropin.unlink()
             f4.syncdir(self.daemon_dropin.parent)
 
+    def _verified_invocation(self, launcher, records):
+        invocation = self.props(SHELL, "InvocationID").get("InvocationID")
+        return bool(invocation) and any(
+            row.get("launcher") == launcher
+            and row.get("known_good")
+            and not row.get("recovery_failed")
+            and row.get("invocation") == invocation
+            for row in records
+            if row.get("operation") == "bead"
+        )
+
+    def _remember_good(self, record):
+        record["known_good"] = True
+        record["invocation"] = self.props(SHELL, "InvocationID").get("InvocationID")
+        self.save(record)
+
     def bead(self, launcher, notifications, *, migration=False):
         launcher = launcher or self.selected_launcher()
         records = self.records()
@@ -786,7 +818,12 @@ class UiShell(f4.Switch):
             shell_active = (
                 self.props(SHELL, "ActiveState").get("ActiveState") == "active"
             )
-            if migration or self.active_launcher() != launcher or not shell_active:
+            if (
+                migration
+                or self.active_launcher() != launcher
+                or not shell_active
+                or not self._verified_invocation(launcher, records)
+            ):
                 self.ctl("daemon-reload")
                 if migration and notifications == "daemon":
                     self.ctl("stop", SHELL)
@@ -798,14 +835,14 @@ class UiShell(f4.Switch):
                 (
                     r
                     for r in reversed(records)
-                    if r.get("operation") == "bead" and r.get("launcher") == launcher
+                    if r.get("operation") == "bead"
+                    and r.get("launcher") == launcher
+                    and not r.get("recovery_failed")
                 ),
                 None,
             )
             if active is not None:
-                active["known_good"] = True
                 active["notifications"] = notifications
-                self.save(active)
             else:
                 active = self.begin(
                     "bead",
@@ -813,8 +850,8 @@ class UiShell(f4.Switch):
                     notifications=notifications,
                     daemon=notifications == "daemon",
                 )
-                active.update(status="complete", known_good=True)
-                self.save(active)
+                active["status"] = "complete"
+            self._remember_good(active)
             return {"status": "complete", "shell": "bead"}
         reasons, units, _ = self.readiness(launcher, notifications, migration=migration)
         daemon = notifications == "daemon"
@@ -887,8 +924,7 @@ class UiShell(f4.Switch):
             self.phase(record, "restart-shell", self.restart)
             self.phase(record, "health", self.verify_bead)
             record["status"] = "complete"
-            record["known_good"] = True
-            self.save(record)
+            self._remember_good(record)
         except Exception as error:
             try:
                 self.converge_qml(record)
@@ -943,8 +979,7 @@ class UiShell(f4.Switch):
             self.phase(record, "restart-shell", self.restart)
             self.phase(record, "health", self.verify_bead)
             record["status"] = "complete"
-            record["known_good"] = True
-            self.save(record)
+            self._remember_good(record)
         except Exception as error:
             try:
                 for path, saved in (
@@ -980,18 +1015,25 @@ class UiShell(f4.Switch):
             row
             for row in records
             if row.get("operation") == "bead"
-            and (row.get("known_good") or row.get("status") == "complete")
+            and row.get("known_good", row.get("status") == "complete")
             and not row.get("recovery_failed")
         ]
         current = self.active_launcher()
         if mark_failed_current and current:
-            for row in records:
-                if row.get("operation") == "bead" and row.get("launcher") == current:
-                    row["recovery_failed"] = True
-                    row["recovery_error"] = "systemd start limit reached"
-                    self.save(row)
+            self._reject_launcher(records, current, "systemd start limit reached")
         if exclude_current and current:
+            current_copies = [
+                row for row in candidates if row.get("launcher") == current
+            ]
             candidates = [row for row in candidates if row.get("launcher") != current]
+            if not mark_failed_current:
+                if not candidates:
+                    raise RuntimeError(
+                        "No previous known-good Bead copy is available; the current shell remains unchanged"
+                    )
+                # Manual rollback may restore its healthy starting copy if every
+                # older copy fails. Automatic recovery must exclude the failed copy.
+                candidates = current_copies + candidates
         self.binding = self.binding_env()
         if not self.mark_ok(self.dropin) or not self.mark_ok(self.fallback):
             hint = "Bead recovery refused an unmanaged shell or fallback unit; inspect the user systemd unit files before reinstalling."
@@ -1003,14 +1045,16 @@ class UiShell(f4.Switch):
             return self._stop_with_hint(
                 f"Bead recovery could not inspect the desktop: {error}"
             )
+        attempted = set()
         for candidate in reversed(candidates):
             launcher = candidate.get("launcher", "")
+            if launcher in attempted:
+                continue
+            attempted.add(launcher)
             notifications = candidate.get("notifications", "none")
             reasons = self.launcher_reasons(launcher)
             if reasons:
-                candidate["recovery_failed"] = True
-                candidate["recovery_error"] = "; ".join(reasons)
-                self.save(candidate)
+                self._reject_launcher(records, launcher, "; ".join(reasons))
                 continue
             try:
                 desired = dropin_text(launcher, notifications)
@@ -1033,13 +1077,11 @@ class UiShell(f4.Switch):
                 self.restart()
                 self.verify_bead()
                 candidate["recovered_at"] = time.time_ns()
-                self.save(candidate)
+                self._remember_good(candidate)
                 self._settle_recovered_records(records, launcher)
                 return {"status": "recovered", "shell": "bead", "launcher": launcher}
             except Exception as error:  # noqa: BLE001 - every failed recovery candidate must be stopped
-                candidate["recovery_failed"] = True
-                candidate["recovery_error"] = str(error)
-                self.save(candidate)
+                self._reject_launcher(records, launcher, str(error))
                 try:
                     self.ctl("stop", SHELL)
                 except (OSError, subprocess.SubprocessError):
@@ -1051,6 +1093,13 @@ class UiShell(f4.Switch):
                 row["recovery_stopped"] = True
                 self.save(row)
         return self._stop_with_hint(hint)
+
+    def _reject_launcher(self, records, launcher, error):
+        for row in records:
+            if row.get("operation") == "bead" and row.get("launcher") == launcher:
+                row["recovery_failed"] = True
+                row["recovery_error"] = str(error)
+                self.save(row)
 
     def _settle_recovered_records(self, records, launcher):
         for row in records:

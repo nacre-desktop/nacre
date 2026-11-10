@@ -170,29 +170,31 @@ def bead_candidate():
     return (binary, shell) if binary.is_file() and shell.is_dir() else None
 
 
-def migrate_ui_shell(candidate=None):
-    """Converge to the available Bead build after the shell code deploy."""
-    binary, shell = candidate if candidate else (None, None)
-    repo = ROOT.parents[1]
-    tools = repo / "tools"
+def ui_switch():
+    tools = ROOT.parents[1] / "tools"
     if str(tools) not in sys.path:
         sys.path.insert(0, str(tools))
-    import releases
-
     import ui_shell_switch
 
     state_home = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state")
+    return ui_shell_switch.UiShell(HOME, state_home / "nacre")
+
+
+def migrate_ui_shell(candidate=None):
+    """Converge to the available Bead build after the shell code deploy."""
+    binary, shell = candidate if candidate else (None, None)
+    switch = ui_switch()
+    import releases
 
     def apply():
-        releases.install_controller(repo, home=HOME)
-        switch = ui_shell_switch.UiShell(HOME, state_home / "nacre")
+        releases.install_controller(ROOT.parents[1], home=HOME)
         return switch.migrate(binary, shell)
 
     inherited_fd = writer_lease.inherited_fd_from_env()
     if inherited_fd is not None:
         with writer_lease.writer_lease(HOME / ".config/nacre", inherited_fd):
             return apply()
-    lock_path = state_home / "nacre/releases/release.lock"
+    lock_path = switch.state / "releases/release.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with lock_path.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -891,7 +893,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
     dropins = retired_dropins(retire_niri_experiment)
     shell_to_validate = active_ui_shell() if code_only else "qml"
     candidate = bead_candidate()
-    if shell_to_validate == "qml" and candidate is None:
+    if (
+        shell_to_validate == "qml"
+        and candidate is None
+        and not ui_switch().migration_launcher()
+    ):
         raise RuntimeError(
             "A Bead build is required before updating a QML shell; install the Nacre package or build the source release first"
         )

@@ -334,7 +334,9 @@ class PackageSetupTests(unittest.TestCase):
             account = home / ".codex/auth.json"
             account.parent.mkdir()
             account.write_text("private fixture")
+            foreign_config = Path(folder) / "inherited-config"
             with (
+                patch.dict(os.environ, XDG_CONFIG_HOME=str(foreign_config)),
                 patch.object(releases, "HOME", home),
                 patch.object(releases, "STATE", home / "releases"),
                 patch.object(releases, "subprocess") as release_processes,
@@ -354,6 +356,7 @@ class PackageSetupTests(unittest.TestCase):
                 dropin = home / package_runtime.BEAD_UNITS[0]
                 fallback = home / ".config/systemd/user/nacre-ui-shell-fallback.service"
                 self.assertIn("/bead/", dropin.read_text())
+                self.assertFalse(foreign_config.exists())
                 self.assertIn("recover-bead --recover", fallback.read_text())
                 journals = list(
                     (home / ".local/state/nacre/ui-shell").glob("*/journal.json")

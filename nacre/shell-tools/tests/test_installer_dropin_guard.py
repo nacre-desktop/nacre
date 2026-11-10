@@ -284,7 +284,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
         (self.dest / "bin").mkdir(parents=True, exist_ok=True)
         return root, shell
 
-    def deploy_fixture(self, code_only, opt_in, active_shell="qml"):
+    def deploy_fixture(
+        self, code_only, opt_in, active_shell="qml", existing_copy=False
+    ):
         root, shell = self.fixture_deployment()
         candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
         candidate_shell = self.base / "bead/shell"
@@ -305,7 +307,9 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.object(
                 installer,
                 "bead_candidate",
-                return_value=(candidate_binary, candidate_shell),
+                return_value=None
+                if existing_copy
+                else (candidate_binary, candidate_shell),
             ),
             patch.object(
                 installer,
@@ -314,8 +318,15 @@ class InstallerDropinGuardTests(unittest.TestCase):
             ),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
+            patch.object(installer, "ui_switch") as switch,
         ):
+            switch.return_value.migration_launcher.return_value = (
+                "/existing/bead/launch"
+            )
             installer.deploy(code_only=code_only, retire_niri_experiment=opt_in)
+
+    def test_code_only_qml_migration_can_reuse_installed_copy(self):
+        self.deploy_fixture(True, False, existing_copy=True)
 
     def test_source_install_uses_helper_from_build_output(self):
         root, shell = self.fixture_deployment()
