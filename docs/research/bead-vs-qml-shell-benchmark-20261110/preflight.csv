@@ -1,0 +1,5 @@
+preflight_start_utc,phase,memavailable_kib,swap_total_kib,swap_used_kib,swap_priority
+2026-11-10T07:39:02Z,before_guarded_reset,10603644,15203324,1300768,100
+2026-11-10T07:39:02Z,after_guarded_reset,10126120,15203324,0,100
+2026-11-10T11:47:01Z,before_guarded_reset,10158168,15203324,91584,100
+2026-11-10T11:47:01Z,after_guarded_reset,10093996,15203324,0,100

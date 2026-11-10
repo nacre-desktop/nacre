@@ -1,0 +1,16 @@
+source_series,after_arm,elapsed_s,tctl_mC,edge_mC,within_baseline
+full-post-reboot,qml,0.0,40500,37000,1
+full-post-reboot,qml,17.3,39000,38000,1
+full-post-reboot,qml,27.3,38875,37000,1
+continuation2,bead,0.0,39000,37000,1
+continuation2,bead,10.0,38875,37000,1
+continuation2,bead,20.0,38875,37000,1
+continuation2,qml,0.0,39000,37000,1
+continuation2,qml,10.0,39000,37000,1
+continuation2,qml,20.0,39000,37000,1
+continuation2,bead,0.0,39000,37000,1
+continuation2,bead,10.0,39000,37000,1
+continuation2,bead,20.0,38875,36000,1
+continuation2,qml,0.0,39125,37000,1
+continuation2,qml,10.0,38875,37000,1
+continuation2,qml,20.0,38875,37000,1
