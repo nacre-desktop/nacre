@@ -204,7 +204,7 @@ TestCase {
                 capture_output=True,
                 text=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
-                timeout=40,
+                timeout=900,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertNotIn("QWARN", result.stdout + result.stderr)
@@ -253,6 +253,6 @@ TestCase {
                 capture_output=True,
                 text=True,
                 env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
-                timeout=20,
+                timeout=40,
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

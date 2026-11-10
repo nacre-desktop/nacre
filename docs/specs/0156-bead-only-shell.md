@@ -93,6 +93,13 @@ The source installer tests exercise fresh/update deployment in temporary HOMEs
 with external services mocked; package setup tests exercise real private-file
 preparation and rollback with executable fixtures.
 
+The initial full desktop run reached the legacy launcher's 64-case QML suite
+and exceeded its 40-second aggregate wrapper limit. Individual measured cases
+took roughly 5–20 seconds. Keep its original shared-engine execution and all
+assertions; allow 900 seconds for the aggregate suite. The two-context suite
+passed alone in 19.513 seconds against its former 20-second limit and now has
+40 seconds. These test wrappers are retired with their QML surfaces in Stage B.
+
 Real-systemd command: as UID 1000 `tester` in a task-only Arch container booted
 with systemd PID 1, run
 `nice -n 10 python /work/tools/tests/rehearse_ui_shell_systemd.py`. Result: exit 0,
