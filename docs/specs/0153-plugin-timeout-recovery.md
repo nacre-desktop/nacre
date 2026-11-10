@@ -2,7 +2,7 @@
 
 ## Problem and root cause
 
-After a loaded login, the updates bar item disappeared on both outputs. The
+After login under heavy load, the updates bar item disappeared on both outputs. The
 plugin host had saved `runtime error: markup exceeded 50 ms limit` in
 `plugins.json` as a permanent fault. Restarting the shell therefore excluded the
 plugin again. The plugin form's protected call swallowed the timeout, recorded
@@ -51,8 +51,19 @@ failed before checkout: the existing workflow requests 8 CPUs, but the hosted
 runner has 4. No code checks ran there. That CI configuration issue is outside
 this plugin unit; the required full workflow was replicated on dev-1.
 
-The Nacre workspace suite passed, including all 866 shell tests (4 existing
-ignored checks), saved-updates-timeout recovery and the workspace drag preview
-with collection defaults and projected selection. The protocol consumer proof
-also passed. Full Arch `desktop` CI is still running through the release builds,
-product proofs, source checks, galleries and raster-memory checks on dev-1.
+The complete Nacre Arch `desktop` CI checks passed on dev-1 (8 CPUs, 16 GiB):
+formatting, warnings-denied Clippy, workspace tests (866 shell tests passed,
+4 existing ignored), protocol proof, release helper, feature checks, Luau/product
+proofs, cargo-deny, sandbox, translations and `tools/check.py`. The saved-updates
+fault and collection-default/projection regressions both passed. The source
+checks included all 544 helper parity cases and 185 product Python proofs.
+
+English/pseudo galleries passed 244 states per language; the wide-font subset
+passed 185 states per language. The final daemon raster-memory regression
+passed (1 test), ending with `N0153_FULL_CI_PASS` and exit 0.
+
+Completed Rust checks were reused when validation resumed after updating the
+proof-runner pin and committing the built sources for its clean-checkout guard.
+The source checks, galleries and memory regression then passed on the clean
+`ed139ce683a4439ce30b1c1562d8c3654ef238bd` code commit. Evidence and exact
+emulation scripts are retained in the task's ignored `.lead/evidence/` directory.
