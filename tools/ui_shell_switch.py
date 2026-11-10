@@ -71,8 +71,10 @@ def daemon_text(argv):
 
 def fallback_text(recover):
     return (
-        f"{MARK}[Unit]\nDescription=Recover the last known-good Bead after a failure\n\n"
+        f"{MARK}[Unit]\nDescription=Recover the last known-good Bead after a failure\n"
+        "StartLimitIntervalSec=0\n\n"
         f"[Service]\nType=oneshot\nExecStart={recover}\n"
+        "RestartForceExitStatus=75\nRestartSec=2\n"
     ).encode()
 
 

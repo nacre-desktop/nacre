@@ -14,8 +14,9 @@ origin and require this exact check to succeed:
 git cat-file -e origin/main:docs/research/bead-vs-qml-shell-benchmark-20261110.md
 ```
 
-The check failed at the start of N0156. Stage A may be pushed independently;
-Stage B must stay local while the benchmark is absent. Each commit contains
+The check failed at the start of N0156 and passed after N0154 landed on
+`origin/main` at `2a1d6d786`. Recheck before pushing deletion. Stage A may be
+pushed independently. Each commit contains
 `[no-publish]`; integration uses a normal fast-forward push to main.
 
 ## Recovery design
@@ -36,7 +37,12 @@ through updates and rollback. The lead's private `stable-bead` and
 validate its executable, restart the shell and check process stability, provider
 registration and daemon health. An exhausted recovery attempt stops the shell
 and reports a TTY recovery command in the journal; it must not repeatedly
-restart the failed candidate or invoke QML. Ordinary scheduled restarts must
+restart the failed candidate or invoke QML.
+When an unrelated release holds the lock, the recovery controller exits 75;
+the existing fallback unit retries only that exit status after two seconds.
+Successful recovery, exhaustion and other errors do not restart the fallback.
+This avoids losing a failure notification during a configs-only release.
+Ordinary scheduled restarts must
 not trigger recovery before the service's start limit is exhausted. Cut over
 the fallback before restarting even an identical Bead build; comparing desired
 unit bytes keeps repeat requests idempotent. Manual
@@ -125,7 +131,7 @@ Stage A replaces the managed `nacre-ui-shell-fallback.service` action with
 `ui-shell recover-bead --recover`, stages an immutable matched Bead copy, and
 health-checks the activated shell. Existing Bead remains recoverable. It retains
 QML files under `~/.local/share/nacre/shell/source`, `source.previous`,
-`source.good` and `~/.config/quickshell/nacre` while the benchmark gate is open.
+`source.good` and `~/.config/quickshell/nacre` until Stage B is validated.
 The shared `~/.local/share/nacre/shell/tools` and `shell/bin` paths remain product
 runtime paths; their name does not make them obsolete QML code.
 

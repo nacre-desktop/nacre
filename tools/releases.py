@@ -897,7 +897,10 @@ def main():
         import ui_shell_switch
 
         try:
-            print(json.dumps(ui_shell_switch.dispatch(sys.argv[2:], HOME, STATE)))
+            result = ui_shell_switch.dispatch(sys.argv[2:], HOME, STATE)
+            print(json.dumps(result))
+            if result.get("status") == "busy" and "--recover" in sys.argv[2:]:
+                raise SystemExit(75)  # Retry only contention, never exhausted copies.
         except (OSError, RuntimeError, subprocess.SubprocessError, ValueError) as error:
             raise SystemExit(str(error)) from error
         return

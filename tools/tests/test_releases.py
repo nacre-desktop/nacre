@@ -18,6 +18,29 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_automatic_recovery_retries_only_a_busy_release_lock(self):
+        import ui_shell_switch
+
+        for status in ("busy", "stopped", "recovered", "ignored"):
+            with (
+                self.subTest(status=status),
+                patch.object(
+                    m.sys,
+                    "argv",
+                    ["releases.py", "ui-shell", "recover-bead", "--recover"],
+                ),
+                patch.object(
+                    ui_shell_switch, "dispatch", return_value={"status": status}
+                ),
+                patch("builtins.print"),
+            ):
+                if status == "busy":
+                    with self.assertRaises(SystemExit) as raised:
+                        m.main()
+                    self.assertEqual(raised.exception.code, 75)
+                else:
+                    m.main()
+
     def test_controller_files_include_every_local_module_they_import(self):
         import ast
 

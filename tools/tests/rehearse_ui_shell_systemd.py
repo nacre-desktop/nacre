@@ -5,6 +5,7 @@ Exercises Stage A migration/recovery wiring. The stub UI provider proves only th
 systemd selected and kept the requested launcher alive; it does not prove Bead UI.
 """
 
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -155,7 +156,19 @@ failed_candidate = ui("status")["launcher"]
 assert failed_candidate != good_launcher
 
 # Candidate crashes on each start; real systemd exhausts StartLimitBurst and runs OnFailure.
-write(rt / "crash-candidate", "1")
+with (state / "release.lock").open() as release_lock:
+    fcntl.flock(release_lock, fcntl.LOCK_EX)
+    write(rt / "crash-candidate", "1")
+    deadline = time.monotonic() + 65
+    while time.monotonic() < deadline:
+        retries = ctl(
+            "show", "nacre-ui-shell-fallback.service", "-p", "NRestarts", "--value"
+        ).stdout.strip()
+        if retries and int(retries) > 0:
+            break
+        time.sleep(1)
+    assert retries and int(retries) > 0, "busy recovery was not retried"
+# Recovery must resume after the unrelated release drops its lock.
 deadline = time.monotonic() + 65
 while time.monotonic() < deadline:
     status = ui("status")
