@@ -42,16 +42,17 @@ def install():
         HOME / ".config/nacre/shortcuts.lua",
         (ROOT / "shortcuts.lua").read_text(),
     )
-    main = HOME / ".config/hypr/hyprland.lua"
-    text = main.read_text()
-    marker = "-- Nacre native desktop shortcuts"
-    if marker not in text or 'load_private("shortcuts")' not in text:
-        raise RuntimeError(
-            tr(
-                "helper.install-extras.managed-shortcuts-loader-missing-run-install-sh-apply-from-the-re",
-                "Managed shortcuts loader missing; run ./install.sh --apply from the repository",
+    if compositor.backend_name == "hyprland":
+        main = HOME / ".config/hypr/hyprland.lua"
+        text = main.read_text()
+        marker = "-- Nacre native desktop shortcuts"
+        if marker not in text or 'load_private("shortcuts")' not in text:
+            raise RuntimeError(
+                tr(
+                    "helper.install-extras.managed-shortcuts-loader-missing-run-install-sh-apply-from-the-re",
+                    "Managed shortcuts loader missing; run ./install.sh --apply from the repository",
+                )
             )
-        )
 
     if changed and compositor.session_id():
         compositor.reload(timeout=None)
