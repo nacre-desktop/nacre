@@ -37,7 +37,9 @@ validate its executable, restart the shell and check process stability, provider
 registration and daemon health. An exhausted recovery attempt stops the shell
 and reports a TTY recovery command in the journal; it must not repeatedly
 restart the failed candidate or invoke QML. Ordinary scheduled restarts must
-not trigger recovery before the service's start limit is exhausted. Manual
+not trigger recovery before the service's start limit is exhausted. Cut over
+the fallback before restarting even an identical Bead build; comparing desired
+unit bytes keeps repeat requests idempotent. Manual
 rollback refuses without changing a healthy running shell when no previous copy
 exists; if older copies are damaged, its current known-good copy is the final
 recovery option. Automatic failure recovery excludes the failed current copy.
@@ -71,7 +73,7 @@ HOMEs. The common environment was
 
 | Exact command (from `/work`, prefixed `nice -n 10`) | Result |
 | --- | --- |
-| `python -m unittest discover -s tools/tests -p test_ui_shell_switch.py` | 40 tests, OK |
+| `python -m unittest discover -s tools/tests -p test_ui_shell_switch.py` | 41 tests, OK |
 | `python -m unittest discover -s tools/tests -p test_releases.py` | 21 tests, OK, 1 skipped |
 | `python -m unittest discover -s nacre/shell-tools/tests -p test_installer_dropin_guard.py` | 31 tests, OK |
 | `python -m unittest discover -s tools/tests -p test_setup.py` | 46 tests, OK |

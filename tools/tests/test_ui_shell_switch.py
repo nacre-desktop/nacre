@@ -636,6 +636,23 @@ class SwitchTests(Base):
         self.assertBead()
         self.assertIn(str(other), self.switch().status()["launcher"])
 
+    def test_same_build_migration_cuts_over_fallback_before_restart(self):
+        self.bead()
+        switch = self.switch()
+        switch.fallback.write_text(
+            m.LEGACY_MARK + "[Service]\nExecStart=/old/ui-shell qml --recover\n"
+        )
+        start_shell = self.manager.start_shell
+
+        def start_checked():
+            self.assertIn("recover-bead --recover", switch.fallback.read_text())
+            self.assertNotIn("qml --recover", switch.fallback.read_text())
+            start_shell()
+
+        with patch.object(self.manager, "start_shell", side_effect=start_checked):
+            switch.migrate()
+        self.assertBead()
+
     def test_manual_rollback_without_previous_copy_preserves_running_shell(self):
         self.bead()
         mutations = self.manager.mutations

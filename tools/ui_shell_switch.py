@@ -758,7 +758,10 @@ class UiShell(f4.Switch):
     def _update_fallback(self):
         if not self.mark_ok(self.fallback):
             raise RuntimeError("Refusing to overwrite an unmanaged fallback unit")
-        f4.atomic(self.fallback, fallback_text(self._recovery_command()), 0o644)
+        desired = fallback_text(self._recovery_command())
+        if self.fallback.exists() and f4.read(self.fallback) == desired:
+            return
+        f4.atomic(self.fallback, desired, 0o644)
         self.ctl("daemon-reload")
 
     def _recovery_command(self):
@@ -815,6 +818,7 @@ class UiShell(f4.Switch):
                 )
             self.binding = self.binding_env()
             self.layout(self.snapshot()[0])
+            self._update_fallback()
             shell_active = (
                 self.props(SHELL, "ActiveState").get("ActiveState") == "active"
             )
