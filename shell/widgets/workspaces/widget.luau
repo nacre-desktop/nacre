@@ -18,7 +18,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 collections=ui.resolve_for_check(ui.bind("bar.collections")) or {}
                 collection_current=ui.resolve_for_check(ui.bind("bar.collection.current")) or ""
             end
-            local show_collections=#collections>1
+            local show_collections=#collections>0
             local current_collection_label="Collection"
             local current_collection_name=""
             for i,collection in ipairs(collections) do
@@ -32,6 +32,21 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 current_collection_name=first.name or first.label or tostring(first.index or 1)
             end
             if current_collection_name~="" then current_collection_label=ui.tr("bead.bar.collection-open",{desk=current_collection_name}) end
+            local spacing=kit.tokens.spacing
+            local icons=kit.tokens.icons
+            local stack_family=kit.tokens.fonts.sans
+            local stack_font=kit.tokens.text.caption
+            local capsule_gap=spacing.xs/2
+            local stack_icon_width=icons.medium
+            local stack_name_max_width=spacing.xl*5
+            local stack_name_text=show_collections and measure.ellipsize(current_collection_name,stack_name_max_width,stack_family,stack_font) or ""
+            local stack_name_width=show_collections and math.min(stack_name_max_width,math.ceil(ui.text_width(stack_name_text,stack_family,stack_font))) or 0
+            local stack_chevron_width=icons.small
+            local stack_padding=spacing.sm
+            local stack_gap=spacing.xs
+            local stack_content_width=stack_icon_width+stack_gap+stack_name_width+stack_gap+stack_chevron_width
+            local stack_control_width=stack_content_width+stack_padding*2
+            local collection_width=show_collections and stack_control_width+spacing.md+spacing.hairline or 0
             local active_left,active_width,active_accent,active_icon_mode
             local cursor=0
             for _,item in workspaces do
@@ -45,31 +60,33 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     width=32+shown*18+(more~="" and 20 or 0)+(item.hinted==true and 4 or 0)
                 end
                 if item.active then
-                    active_left=5+cursor+gs
+                    active_left=5+collection_width+(show_collections and capsule_gap or 0)+cursor+gs
                     active_width=width
                     active_accent=pearl_accent((item.index or 1)-1)
                     active_icon_mode=item.icon_mode==true
                 end
-                cursor+=gs+width+2
+                cursor+=gs+width+capsule_gap
             end
-            local desk_badge_text=measure.ellipsize(current_collection_name,t.desk_badge_max_width-t.desk_badge_padding*2,"IBM Plex Sans",t.workspace_number_font)
-            local desk_badge_width=math.max(t.pearl_current,math.min(t.desk_badge_max_width,math.ceil(ui.text_width(desk_badge_text,"IBM Plex Sans",t.workspace_number_font))+t.desk_badge_padding*2))
-            local collection_width=show_collections and desk_badge_width or 0
-            local natural_width=10+cursor-(#workspaces>0 and 2 or 0)+(collection_width>0 and collection_width+4 or 0)
+            local natural_width=10+cursor-(#workspaces>0 and capsule_gap or 0)+(collection_width>0 and collection_width+capsule_gap or 0)
             local pill_width=ui.animate("workspaces.pill.width:"..props.instance.iid,natural_width,.16,"out-cubic")
             local pressed=ui.resolve_for_check(ui.bind("bead.pressed"))==true
             local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""
-            local collection_control=show_collections and kit.Button{id="collection-badge",width=desk_badge_width,height=t.pearl_current,padding=0,radius=t.pearl_current/2,
-                fill="surfaceContainerHigh",hover_fill="surfaceContainerHighest",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
-                centered_text{id="collection-name",position="absolute",left=t.desk_badge_padding,top=(t.pearl_current-t.workspace_number_font*t.line_height)/2,text=desk_badge_text,width=desk_badge_width-t.desk_badge_padding*2,shrink=0,font_size=t.workspace_number_font,family="IBM Plex Sans",text_align="center",color="onSurfaceVariant"},
-                kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-kit.tokens.spacing.sm,left=0,width=math.ceil(ui.text_width(current_collection_name,"IBM Plex Sans",t.workspace_number_font))+t.desk_badge_padding*2,height=t.workspace_height,padding=t.desk_badge_padding,visible=string.find(hovered,"collection-badge",1,true)~=nil,
-                    ui.Text{text=current_collection_name,height=t.workspace_height-t.desk_badge_padding*2,width="fill",font_size=t.workspace_number_font,color="onSurface"}}}
+            local collection_control=show_collections and ui.Row{id="collection-segment",height=t.workspace_height,gap=spacing.md,align="center",shrink=0,
+                kit.Button{id="collection-badge",width=stack_control_width,height=t.workspace_height,padding=0,radius=t.workspace_radius,
+                    fill="surfaceContainerHigh",hover_fill=pressed and "surfaceBright" or "surfaceContainerHighest",aria_label=current_collection_label,on_activate=c.popouts and ui.action("collection.switcher.open") or nil,
+                    ui.Row{id="collection-content",width=stack_control_width,height=t.workspace_height,padding_left=stack_padding,padding_right=stack_padding,gap=stack_gap,align="center",justify="center",
+                        ui.Text{id="collection-icon",text="layers",width=stack_icon_width,height=stack_icon_width,shrink=0,family=kit.tokens.fonts.icon,font_size=icons.medium,color="onSurfaceVariant",text_align="center"},
+                        ui.Text{id="collection-name",text=stack_name_text,width=stack_name_width,height=math.ceil(ui.text_line_height(stack_family,stack_font)),shrink=0,font_size=stack_font,family=stack_family,color="onSurfaceVariant"},
+                        ui.Text{id="collection-chevron",text="expand_more",width=stack_chevron_width,height=stack_chevron_width,shrink=0,family=kit.tokens.fonts.icon,font_size=icons.small,color="onSurfaceVariant",text_align="center"}}},
+                ui.Box{id="collection-divider",width=spacing.hairline,height=t.workspace_height-spacing.xs*2,shrink=0,radius=spacing.hairline/2,fill="outlineVariant"}}
                 or nil
-            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=2,radius=t.pill_radius,fill="surfaceContainer",clip_children=false,align="center",
+            return ui.Row{id="capsule",width=pill_width,height=t.pill_height,padding_left=5,padding_right=5,gap=capsule_gap,radius=t.pill_radius,fill="surfaceContainer",clip_children=false,align="center",
             -- QML workspaceThread: a 1 px primary -> secondary -> tertiary line at 12 % behind the pearls, inset 16 px.
-            thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21,right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
+            thread and kit.tokens.gradients and ui.Image{id="thread",position="absolute",left=21+collection_width+(show_collections and capsule_gap or 0),right=21,top=(t.pill_height-1)/2,height=1,path="bar/assets/workspace-thread.themed.svg"} or ui.Box{id="thread",width=0,height=0,shrink=0,visible=false},
             active_left and ui.Box{id="active-capsule",position="absolute",left=ui.animate("workspaces.active.left:"..props.instance.iid,active_left,.18,"out-cubic"),top=(t.pill_height-t.active_height)/2,width=ui.animate("workspaces.active.width:"..props.instance.iid,active_width,.16,"out-cubic"),height=t.active_height,radius=t.active_radius,
                 fill=active_icon_mode and active_accent or ui.tint("surfaceContainer",active_accent,.15),border_width=1,border_color=ui.alpha(active_accent,.24)} or ui.Box{id="active-capsule",width=0,height=0,visible=false,shrink=0},
+            -- Keep the child list dense when no stack is advertised, so Repeat still renders.
+            collection_control or ui.Box{id="collection-segment",width=0,height=0,visible=false,shrink=0},
             ui.Repeat{id="workspaces",model=ui.bind("bead.workspaces"),key="id",render=function(item)
                 local accent=pearl_accent((item.index or 1)-1)
                 local label=item.label or item.name or ""
@@ -158,6 +175,7 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                 end
                 return ui.Box{id="cell",width=gs+animated_width,height=t.workspace_height,shrink=0,table.unpack(kids)}
             end},
-            collection_control,
+            show_collections and kit.Tooltip{id="collection-tooltip",edge="top",bar_size=-spacing.sm,left=0,width=math.ceil(ui.text_width(current_collection_name,stack_family,stack_font))+stack_padding*2,height=t.workspace_height,padding=stack_padding,visible=stack_name_text~=current_collection_name and string.find(hovered,"collection-badge",1,true)~=nil,
+                ui.Text{text=current_collection_name,height=t.workspace_height-stack_padding*2,width="fill",font_size=stack_font,family=stack_family,color="onSurface"}} or nil,
         }
     end}}}}}

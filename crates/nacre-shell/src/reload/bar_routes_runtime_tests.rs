@@ -606,7 +606,7 @@ fn collection_popout_rebinds_output_and_tracks_later_topic_updates() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn single_collection_bar_entry_is_hidden() {
+async fn single_collection_bar_entry_keeps_the_switcher() {
     let (dir, client, _calls, _kick) = daemon(&["collection.action"]).await;
     let (mut runtime, events) = bar_with(&client, "left", true);
     let live = client.clone();
@@ -618,8 +618,8 @@ async fn single_collection_bar_entry_is_hidden() {
     .await;
     settle_runtime_animations(&mut runtime);
     assert!(
-        node(&runtime, "collection.switcher.open", None).is_none(),
-        "single desk must not render a desk indicator or menu control"
+        node(&runtime, "collection.switcher.open", None).is_some(),
+        "a single stack must retain its name segment and menu control"
     );
     std::fs::remove_dir_all(dir).ok();
 }

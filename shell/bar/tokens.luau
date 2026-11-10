@@ -12,7 +12,6 @@ return {
     status_text_offset=0, clock_text_offset=2/3,
     pill_height=34, pill_radius=17, pill_gap=0,
     workspace_height=30, workspace_radius=15, workspace_number_font=11,
-    desk_badge_padding=6, desk_badge_max_width=48,
     active_height=28, active_radius=14, app_font=14,
     pearl_current=22, pearl_occupied=20, pearl_empty=18,
     pearl_current_border=1, pearl_empty_border=1.5,

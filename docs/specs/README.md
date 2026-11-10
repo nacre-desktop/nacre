@@ -46,6 +46,7 @@ and stop. The transfer receipt below supersedes older grants and results.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| N0164 | [Workspace stack parent segment](0164-workspace-stack-indicator.md) | Implemented; reviewed goldens and all dev-1 desktop CI stages passed | Name remains with one stack; click opens the existing menu. Desktop TEST captures deferred by owner. |
 | N0157 | [Retire pre-split shell archive](0157-retire-shell-archive.md) | Done; desktop and package checks passed | Archive removed; current checks/licenses retained. Migration-only old-name references remain. |
 | — | [N0154 Bead versus QML benchmark](../research/bead-vs-qml-shell-benchmark-20261110.md) | Measured 2026-11-10; three 30-minute runs per shell at Nacre `2f33e1ff` | Controlled private nested sessions on the desktop TEST host; median/range resource results and raw samples retained. OSD, frame pacing, direct energy and causal battery comparison remain unmeasured; no product changes. |
 | 30 | [N0156 Bead recovery and QML retirement](0156-bead-only-shell.md) | Validated: Bead recovery and QML retirement | N0154 gate passed; desktop/package and private-HOME proofs passed; no live install. |

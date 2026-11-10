@@ -1398,17 +1398,9 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
             let badge = nodes
                 .iter()
                 .find(|node| node.action.as_deref() == Some("collection.switcher.open"));
-            assert_eq!(
-                badge.is_none(),
-                single,
-                "badge visibility at {scale}: {name}"
-            );
+            assert!(badge.is_some(), "stack segment visible at {scale}: {name}");
             if let Some(badge) = badge {
                 let rect = bead::ui::rect(&badge.draw);
-                assert!(
-                    rect.h <= 22. && rect.w <= 66.,
-                    "desk chip must stay pearl-sized: {rect:?}"
-                );
                 assert_eq!(
                     bar.session
                         .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
@@ -1420,15 +1412,45 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                     .primitives
                     .iter()
                     .filter_map(|primitive| match primitive {
-                        bead::render::Primitive::Text { text, .. } if text.contains('…') => {
-                            Some(text.as_str())
-                        }
+                        bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
                         _ => None,
                     })
                     .collect();
-                if name == "long" {
-                    assert!(!texts.is_empty(), "long desk name must ellipsize: {scale}");
+                assert!(texts.contains(&"layers"), "stack icon at {scale}: {name}");
+                assert!(
+                    texts.contains(&"expand_more"),
+                    "stack chevron at {scale}: {name}"
+                );
+                if name == "number" {
+                    assert!(texts.contains(&"2"), "stack name at {scale}: {name}");
+                } else {
+                    assert!(
+                        texts.iter().any(|text| text.contains('…')),
+                        "long stack name must ellipsize at {scale}: {name}"
+                    );
                 }
+                let bounds = |id: &str| -> Result<(f32, f32)> {
+                    let layer = bar
+                        .scene()
+                        .layers
+                        .iter()
+                        .find(|layer| layer.id.ends_with(id))
+                        .ok_or("stack layer missing")?;
+                    bar.scene().primitives[layer.own.clone()]
+                        .iter()
+                        .find_map(|primitive| match primitive {
+                            bead::render::Primitive::Rounded { rect, .. } => Some((rect.x, rect.w)),
+                            _ => None,
+                        })
+                        .ok_or_else(|| "stack geometry missing".into())
+                };
+                let active_rect = bounds("active-capsule")?;
+                let divider_rect = bounds("collection-divider")?;
+                assert!(
+                    divider_rect.0 > rect.x + rect.w
+                        && active_rect.0 > divider_rect.0 + divider_rect.1,
+                    "workspace capsule must follow stack segment and divider: {scale}: {active_rect:?} after {divider_rect:?}"
+                );
             }
             let frame = bar.pose((0., 0.), 1.)?;
             let golden = root().join(format!("tests/goldens/desk-chip-{name}-{scale}.png"));
