@@ -70,6 +70,97 @@ fn today_companion_fallback_surface_matches_joined_frame_geometry() -> Result<()
 }
 
 #[test]
+fn today_wallpaper_transport_buttons_fill_and_center_in_the_pill() -> Result<()> {
+    use bead::render::Primitive;
+
+    let palette = root().join("palette.json");
+    for scale in [1., 1.5] {
+        let mut h = Harness::load(
+            &root(),
+            Path::new("dashboard/today/main.luau"),
+            &palette,
+            BTreeMap::new(),
+            Config {
+                width: 1048,
+                height: 714,
+                scale,
+            },
+        )?;
+        let dashboard = Dashboard::new(
+            Page::Today,
+            Arc::new(FakeSource::new(fixture("calendar"))?),
+            None,
+            true,
+        );
+        let mut values = dashboard.project_with_stores(&h.session.stores);
+        for key in [
+            "dashboard.can_wallpaper_previous",
+            "dashboard.can_wallpaper_pause",
+            "dashboard.can_wallpaper_next",
+        ] {
+            values.insert(key.into(), Value::Bool(true));
+        }
+        values.insert("dashboard.wallpaper_dynamic".into(), Value::Bool(true));
+        values.insert("dashboard.wallpaper_paused".into(), Value::Bool(false));
+        let scene = h.session.update_model(values)?.ok_or("Today scene")?;
+        h.session.commit(scene.clone());
+        let rect = |id: &str| {
+            h.session
+                .view_nodes()
+                .iter()
+                .find(|node| node.id == id || node.id.ends_with(&format!(".{id}")))
+                .map(|node| bead::ui::rect(&node.draw))
+                .unwrap_or_else(|| panic!("missing node {id}"))
+        };
+        // Passive containers have no input node; inspect the actual pill paint.
+        let pill = scene
+            .primitives
+            .iter()
+            .find_map(|primitive| match primitive {
+                Primitive::Rounded { rect, .. } if rect.w == 228. && rect.h == 38. => Some(*rect),
+                _ => None,
+            })
+            .expect("default token wallpaper pill paint");
+        for id in ["wallpaper-previous", "wallpaper-pause", "wallpaper-next"] {
+            let button = rect(id);
+            assert_eq!(
+                (button.y, button.h),
+                (pill.y, pill.h),
+                "{id} fills pill height at scale {scale}"
+            );
+        }
+        for (glyph, id) in [
+            ("chevron_left", "wallpaper-previous"),
+            ("pause", "wallpaper-pause"),
+            ("chevron_right", "wallpaper-next"),
+        ] {
+            let button = rect(id);
+            let icon = scene
+                .primitives
+                .iter()
+                .find_map(|primitive| match primitive {
+                    Primitive::Text { text, rect, .. }
+                        if text == glyph && rect.x >= button.x && rect.x < button.x + button.w =>
+                    {
+                        Some(*rect)
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("missing glyph {glyph}"));
+            assert!(
+                (icon.x + icon.w / 2. - (button.x + button.w / 2.)).abs() <= 1.,
+                "{glyph} is horizontally centered at scale {scale}"
+            );
+            assert!(
+                (icon.y + icon.h / 2. - (button.y + button.h / 2.)).abs() <= 1.,
+                "{glyph} is vertically centered at scale {scale}"
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn today_projects_host_storage_and_releases_overview_sources_and_poster() -> Result<()> {
     use nacre_protocol::wallpaper::{ActiveWallpaper, WallpaperFileIdentity};
     let dir = std::env::temp_dir().join(format!("bead-today-poster-{}", std::process::id()));

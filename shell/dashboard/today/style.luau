@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 -- Today overview geometry follows the dashboard canvas rather than shell settings.
 local M={}
-function M.layout(width,height)
+function M.layout(width,height,tokens)
     local summary=math.max(288,math.min(420,height*.38))
     local gap=18
     local hero=height-summary-gap
@@ -17,9 +17,12 @@ function M.layout(width,height)
         heroTextColor={255,253,250,255},
         transportSize=34,transportGap=6,transportIconSize=17*4/3,
         heroActionWidth=111,heroActionHeight=36,heroActionRadius=10,heroActionBottom=56,
-        wallpaperTransportWidth=228,wallpaperTransportHeight=38,wallpaperTransportRight=18,wallpaperTransportBottom=12,wallpaperTransportRadius=12,
-        wallpaperTransportInset=3,wallpaperTransportButtonWidth=74,
-        wallpaperIconSize=16*4/3,wallpaperDisabledOpacity=.4,wallpaperControlRadius=9,
+        wallpaperTransportWidth=3*(4*tokens.spacing.xl+tokens.spacing.xs),
+        wallpaperTransportHeight=2*tokens.spacing.xl+tokens.spacing.hairline,
+        wallpaperTransportRight=tokens.spacing.xl,
+        wallpaperTransportBottom=tokens.spacing.md,
+        wallpaperTransportRadius=tokens.radii.small+tokens.spacing.xs,
+        wallpaperIconSize=tokens.icons.medium*4/3,wallpaperDisabledOpacity=.4,
         heroActionsRight=18,heroActionsGap=6,
         artSize=art,
         artContainer=art+56,

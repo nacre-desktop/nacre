@@ -57,7 +57,7 @@ end
 
 return function()
     local l=style.layout(ui.resolve_for_check(ui.bind("dashboard.hero.width")),
-        ui.resolve_for_check(ui.bind("dashboard.hero.height"))+288+18)
+        ui.resolve_for_check(ui.bind("dashboard.hero.height"))+288+18,kit.tokens)
     local calendarReady=ui.resolve_for_check(ui.bind("calendar.ready"))
     local host=ui.resolve_for_check(ui.bind("dashboard.host"))
     local gauges=ui.resolve_for_check(ui.bind("dashboard.gauges"))
@@ -69,11 +69,11 @@ return function()
     local function wallpaperControl(id,index,glyph,label,available,operation)
         local action=available and ui.action("dashboard.do",operation) or nil
         local informational=id=="wallpaper-pause" and not dynamic
-        return kit.Button{id=id,position="absolute",left=(index-1)*l.wallpaperTransportButtonWidth,
-            top=0,width=l.wallpaperTransportButtonWidth,height=l.wallpaperTransportHeight-2*l.wallpaperTransportInset,padding=0,radius=l.wallpaperControlRadius,justify="center",align="center",
+        return kit.Button{id=id,position="absolute",left=(index-1)*l.wallpaperTransportWidth/3,
+            top=0,width=l.wallpaperTransportWidth/3,height=l.wallpaperTransportHeight,padding=0,radius=l.wallpaperTransportRadius,justify="center",align="center",
             fill="transparent",hover_fill=action and ui.alpha("onSurface",.08) or "transparent",aria_label=label,
             on_activate=action,activate_on_release=true,
-            ui.Text{text=glyph,family="Material Symbols Rounded",font_size=l.wallpaperIconSize,width=24,height=24,text_align="center",
+            ui.Text{text=glyph,family=kit.tokens.fonts.icon,font_size=l.wallpaperIconSize,width=kit.tokens.icons.xlarge,height=kit.tokens.icons.xlarge,text_align="center",
                 color=(informational or action) and "onSurface" or ui.alpha("onSurface",l.wallpaperDisabledOpacity)}}
     end
     local canPause=ui.resolve_for_check(ui.bind("dashboard.can_wallpaper_pause"))
@@ -113,9 +113,9 @@ return function()
             width=2*l.heroActionWidth+l.heroActionsGap,height=l.heroActionHeight,gap=l.heroActionsGap,
             heroAction("wallpapers","wallpaper",ui.tr("bead.dashboard.wallpapers"),ui.tr("bead.dashboard.wallpapers"),wallpapers),
             heroAction("colors","palette",colorsText,ui.tr("bead.welcome.colors-open"),colors)},
-        kit.Button{id="wallpaper-transport",position="absolute",right=l.wallpaperTransportRight,bottom=l.wallpaperTransportBottom,
-            width=l.wallpaperTransportWidth,height=l.wallpaperTransportHeight,padding=l.wallpaperTransportInset,radius=l.wallpaperTransportRadius,
-            fill=ui.tint("surface","secondary",.1),hover_fill=ui.tint("surface","secondary",.1),
+        ui.Box{id="wallpaper-transport",position="absolute",right=l.wallpaperTransportRight,bottom=l.wallpaperTransportBottom,
+            width=l.wallpaperTransportWidth,height=l.wallpaperTransportHeight,radius=l.wallpaperTransportRadius,clip_children=true,
+            fill=ui.tint("surface","secondary",.1),
             wallpaperControl("wallpaper-previous",1,"chevron_left",ui.tr("bead.dashboard.wallpaper-previous"),
                 ui.resolve_for_check(ui.bind("dashboard.can_wallpaper_previous")),"wallpaper.previous"),
             wallpaperControl("wallpaper-pause",2,not dynamic and "image" or paused and "play_arrow" or "pause",pauseLabel,canPause,"wallpaper.pause"),

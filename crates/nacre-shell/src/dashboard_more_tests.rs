@@ -1335,9 +1335,9 @@ async fn today_wallpaper_controls_follow_live_state_and_published_calls() -> Res
     for (operation, size) in [
         ("wallpapers.open", (111., 36.)),
         ("colors.open", (111., 36.)),
-        ("wallpaper.previous", (74., 32.)),
-        ("wallpaper.pause", (74., 32.)),
-        ("wallpaper.next", (74., 32.)),
+        ("wallpaper.previous", (76., 38.)),
+        ("wallpaper.pause", (76., 38.)),
+        ("wallpaper.next", (76., 38.)),
     ] {
         let node = harness
             .session
