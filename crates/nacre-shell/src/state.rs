@@ -24,6 +24,16 @@ fn durable(id: &str, value: &Value) -> bool {
         _ => false,
     }
 }
+/// Failed builds must not force an independently healthy release into safe mode.
+pub fn recovery_path(parent: &std::path::Path, release: Option<&str>) -> Result<PathBuf, String> {
+    match release {
+        None => Ok(parent.join("ui-health.json")),
+        Some(id) if id.len() == 32 && id.bytes().all(|b| b.is_ascii_hexdigit()) => {
+            Ok(parent.join(format!("ui-health-{id}.json")))
+        }
+        Some(_) => Err("invalid UI release identity".into()),
+    }
+}
 impl File {
     pub fn path() -> Result<PathBuf, String> {
         let root = std::env::var_os("XDG_STATE_HOME")
@@ -107,6 +117,32 @@ impl File {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn failed_release_history_does_not_poison_a_known_good_release() {
+        let root = std::env::temp_dir().join(format!("bead-recovery-{}", std::process::id()));
+        let a = recovery_path(&root, Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")).unwrap();
+        let b = recovery_path(&root, Some("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")).unwrap();
+        let mut good = bead::core::recovery::Run::begin(a.clone(), 1).unwrap();
+        good.finish().unwrap();
+        drop(good);
+        for now in 2..5 {
+            drop(bead::core::recovery::Run::begin(b.clone(), now).unwrap());
+        }
+        let bad = bead::core::recovery::Run::begin(b, 5).unwrap();
+        assert!(bad.safe_mode);
+        let mut recovered = bead::core::recovery::Run::begin(a, 6).unwrap();
+        assert!(!recovered.safe_mode);
+        recovered.finish().unwrap();
+        drop(recovered);
+        drop(bad);
+        assert!(recovery_path(&root, Some("../outside")).is_err());
+        assert!(recovery_path(&root, Some("")).is_err());
+        assert_eq!(
+            recovery_path(&root, None).unwrap(),
+            root.join("ui-health.json")
+        );
+        std::fs::remove_dir_all(root).unwrap();
+    }
     #[test]
     fn atomic_panel_restore_excludes_private_transient_state_and_rejects_bad_schema() {
         let root = std::env::temp_dir().join(format!(

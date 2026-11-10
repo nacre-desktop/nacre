@@ -53,6 +53,16 @@ rollback refuses without changing a healthy running shell when no previous copy
 exists; if older copies are damaged, its current known-good copy is the final
 recovery option. Automatic failure recovery excludes the failed current copy.
 
+The real-session rollback proof also exposed shared UI crash history: a failed
+copy could put an older healthy copy into Bead safe mode before its provider
+registered. Each installed launcher now exports its immutable release ID;
+Nacre passes a separate crash-history filename to the existing Bead recovery
+primitive. Panel state stays shared. The three-crash protection stays active for
+each copy. Legacy launchers retain their original history file. UI startup blocks
+SIGINT/SIGTERM before spawning workers so the existing Calloop signal source can
+complete a normal service stop and write the clean-shutdown marker. CLI client
+cancellation is unchanged. No Bead framework API or dependency revision changes.
+
 ## Scope and retention
 
 Keep root `shell/`, `crates/nacre-shell`, `nacre/login` (SDDM QtQuick), and shared

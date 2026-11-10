@@ -154,6 +154,20 @@ fn start(
     if std::env::args().any(|arg| arg == "--backend-probe") {
         return backends::probe::run();
     }
+    // Calloop consumes these through signalfd. Block before any UI worker is
+    // spawned so a service stop cannot terminate an unmasked worker instead.
+    // CLI clients above keep their ordinary cancellation signals.
+    // SAFETY: initialized signal set; this thread is still the sole UI thread.
+    unsafe {
+        let mut signals: libc::sigset_t = std::mem::zeroed();
+        libc::sigemptyset(&mut signals);
+        libc::sigaddset(&mut signals, libc::SIGINT);
+        libc::sigaddset(&mut signals, libc::SIGTERM);
+        let error = libc::pthread_sigmask(libc::SIG_BLOCK, &signals, std::ptr::null_mut());
+        if error != 0 {
+            return Err(std::io::Error::from_raw_os_error(error).into());
+        }
+    }
     let started = std::time::Instant::now();
     let mut profile = false;
     let mut bar_panel = false;
@@ -550,7 +564,9 @@ fn start(
             .duration_since(std::time::UNIX_EPOCH)?
             .as_millis()
             .min(u64::MAX as u128) as u64;
-        match bead::core::recovery::Run::begin(parent.join("ui-health.json"), now) {
+        let release = std::env::var("NACRE_UI_RELEASE").ok();
+        let path = state::recovery_path(parent, release.as_deref())?;
+        match bead::core::recovery::Run::begin(path, now) {
             Ok(run_health) => *health = Some(run_health),
             Err(_) => {
                 forced_safe_mode = true;

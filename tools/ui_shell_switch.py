@@ -222,6 +222,7 @@ class UiShell(f4.Switch):
                 "start) shift ;;\n"
                 '*) echo "usage: launch check|start" >&2; exit 2 ;;\nesac\n'
                 ': "${XDG_RUNTIME_DIR:?}"\n'
+                f"export NACRE_UI_RELEASE={record['id']}\n"
                 '[ "${NACRE_UI_NOTIFICATIONS:-none}" != daemon ] || set -- --notices\n'
                 "exec ./nacre-shell --bar --core-views --ui-provider "
                 '--command-socket "$XDG_RUNTIME_DIR/bead-ui.sock" '
