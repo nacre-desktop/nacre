@@ -1,19 +1,17 @@
-# Building the product shell from Nacre
+# Build and stage the product shell
 
-The shipping workspace pins every Bead package to the same frozen framework
-revision. Cargo fetches Bead from GitHub when building from a Nacre checkout;
-no Bead checkout is needed. `Cargo.lock` records the resolved graph.
+Nacre's native shell is in `crates/nacre-shell/`; the Bead-based UI is in
+`shell/`. The Cargo manifests pin the framework revision used by this checkout.
 
-Build the three executable targets, then stage the established preview/package
-shape (`bin/{nacre-shell,bead-wallpaper-video,nacre-wallpaper-decode}` plus
-`shell/`):
+Build the three product executables:
 
 ```sh
-nice -n 10 cargo build --locked --release -j2 -p nacre-shell \
-  --bin nacre-shell \
-  --bin bead-wallpaper-video \
-  --bin nacre-wallpaper-decode
+nice -n 10 cargo build --locked --release -j2 -p nacre-shell --bin nacre-shell --bin bead-wallpaper-video --bin nacre-wallpaper-decode
+```
 
+Stage an isolated preview/package tree:
+
+```sh
 stage="$PWD/target/product-shell"
 mkdir -p "$stage/bin" "$stage/shell"
 install -m 755 target/release/nacre-shell "$stage/bin/nacre-shell"
@@ -22,52 +20,4 @@ install -m 755 target/release/nacre-wallpaper-decode "$stage/bin/nacre-wallpaper
 cp -a shell/. "$stage/shell/"
 ```
 
-For local development only, temporarily add this example to the root
-`Cargo.toml` and adjust each path to the developer's Bead checkout. Do not
-commit this patch: shipping manifests must continue using the pinned git source.
-
-```toml
-[patch."https://github.com/nacre-desktop/bead"]
-bead = { path = "/path/to/bead/crates/bead" }
-bead-backends = { path = "/path/to/bead/crates/bead-backends" }
-bead-core = { path = "/path/to/bead/crates/bead-core" }
-bead-kit = { path = "/path/to/bead/crates/bead-kit" }
-bead-render = { path = "/path/to/bead/crates/bead-render" }
-bead-services = { path = "/path/to/bead/crates/bead-services" }
-bead-test = { path = "/path/to/bead/crates/bead-test" }
-bead-ui = { path = "/path/to/bead/crates/bead-ui" }
-bead-wallpaper = { path = "/path/to/bead/crates/bead-wallpaper" }
-bead-wayland = { path = "/path/to/bead/crates/bead-wayland" }
-bead-widgets = { path = "/path/to/bead/crates/bead-widgets" }
-```
-
-The root `fontconfig` and `system-tray` patches vendor Bead's exact sources and
-notices because patches declared in a git dependency do not apply to Nacre's
-workspace. The release profile retains Nacre's thin LTO, single codegen unit,
-and stripped output, while applying Bead's size optimization to dependencies
-and full optimization to Bead workspace crates and its rendering, text, and
-image hot-path dependencies.
-
-The shell build script discovers the resolved `bead-test` manifest through
-`cargo metadata --locked` and exports the pinned Bead checkout root to
-the product crate. Product tests that need Bead's IBM Plex fixture font,
-neutral UI fixture, or hello plugin use that root directly. This keeps those
-tests runnable from Nacre alone without copying framework fixtures into the
-product tree or setting a developer-specific environment variable.
-
-Nacre retains `serde_json/preserve_order`. Feature unification makes Bead IPC
-replies and the shell’s command payload larger than in Bead’s standalone graph.
-The existing inline reply and queue contracts are retained with narrowly scoped
-Clippy size allowances; no protocol pin, ordering contract or golden is changed.
-
-Desktop CI keeps Nacre’s existing checks and runs the imported product workspace
-and trace tests, renderer feature checks, generated Luau 0.742 declarations,
-video smoke, product license graph, and all 13 historical Python proof suites
-(179 test methods) plus six staging tests. The full `shell/` tree, including
-304 golden files, is unchanged from the frozen export. Framework-only minimal
-hosts, service/private-bus checks and independent MIT graphs remain in Bead CI.
-
-The Bead checkout temporarily retains its product copy during this unit. Step 4
-removes it only after lead acceptance of the Nacre producer and checks; delete
-that duplicate seven days after the replacement is trusted. This unit does not
-switch an installed desktop or update the lead’s preview tooling.
+For the complete Arch source gate, see the [desktop workflow](../../.github/workflows/check.yml).

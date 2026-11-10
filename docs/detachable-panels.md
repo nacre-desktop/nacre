@@ -54,6 +54,3 @@ Hyprland additionally shows its stretching membrane, supported on both paths.
 Detached panels use the same 18-logical-pixel corners as their attached surfaces.
 Their window border follows that radius, and Niri clips the full window content
 to it so opaque backgrounds or previews cannot leave square corners.
-
-For implementation details, compositor differences and regression checks, see
-[the developer docking contract](development/detachable-panels.md).

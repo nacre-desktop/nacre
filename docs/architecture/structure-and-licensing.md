@@ -1,13 +1,12 @@
 # Structure and licensing
 
 Accepted owner direction (2026-10-21): Bead remains MIT OR Apache-2.0 as a
-permissive general framework; Nacre remains GPL-3.0 as the flagship desktop
+permissive general framework; Nacre remains GPL-3.0-only as the flagship desktop
 built on Bead; Orient remains MIT. The daemon and Nacre-specific integrations
 (including compositor bindings, media backends, and daemon implementation) stay
-on Nacre's GPL side behind neutral adapters. The `nacre-protocol` schemas,
-generated types, golden transcripts, and protocol documentation are MIT OR
-Apache-2.0, so third-party Bead shells can speak to the daemon without taking a
-GPL dependency. See the [protocol license notice](../../protocol/README.md).
+on Nacre's GPL side behind neutral adapters. The `nacre-protocol` schemas, generated types, golden transcripts and protocol
+documentation are dual-licensed MIT OR Apache-2.0, so third-party Bead shells can
+speak to the daemon without taking a GPL dependency. See the [protocol license notice](../../protocol/README.md).
 
 No daemon repository split is planned. Revisit only if it becomes a general
 services daemon with outside users. Nacre-first priorities remain unchanged;

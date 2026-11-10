@@ -11,10 +11,9 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
   state and outside connections, one settings writer, UIs are views. Heavy/risky
   work uses bounded workers that exit when idle. Headless bead-services live in
   the daemon, outside the view.
-- Owner decision 2026-11-10: Bead is the product shell. N0156 retires the old
-  QML shell after its benchmark and recovery gates pass; failure recovery uses a
-  known-good Bead. Keep the SDDM QML greeter and hyprlock. Further IME/screen-reader
-  work remains deferred to public release.
+- Owner decision 2026-11-10: Bead is Nacre’s product shell, running on nacre-niri.
+  Failure recovery uses a known-good Bead copy. The separate SDDM greeter remains
+  QML, as does hyprlock. Further IME/screen-reader work remains deferred to release.
 - Pages/panels load on first open and release about 2 seconds after closing.
   Decode only each page's concrete types, not every service's enum.
 - Nacre order: F4 single writer; core device/service hosting plus rare weather /
@@ -32,8 +31,8 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
 - Author AND committer: siverteh <92440237+Siverteh@users.noreply.github.com>.
   No personal paths, usernames or machine inventory in commits (the approved
   Git identity is the attribution exception).
-- Follow CONTRIBUTING direct integration: isolated worktree, latest main, normal
-  fast-forward push directly to main, no PR unless requested, no force-push.
+- Direct integration uses an isolated worktree, latest main, a normal fast-forward
+  push to main, and no force-push.
   Rebase only own unpublished commits; inspect outgoing history and check CI
   after every push. Preserve unrelated work and rewritten-history boundaries.
 - Commands use nice -n 10; Cargo uses -j2. Test only private/nested sessions.
@@ -58,8 +57,7 @@ benchmarks, long builds, memory captures, installed files or desktop configurati
 - Registry note: foundation's65-store count is historical. At5f4c0bf3 there
   are72 records,19 with Settings metadata. Preserve provider/root boundaries;
   generic Settings access does not imply authority over every record.
-- Nacre applies [security review](../development/security-review.md) to touched
-  paths. Frozen desktop-settings 150 validation / 50 controller cases remain
+- Nacre reviews security-sensitive paths touched by changes. Frozen desktop-settings 150 validation / 50 controller cases remain
   the F4 reference; never regenerate expected results to fit a port.
 
 ## Measurement scheduling and evidence

@@ -16,7 +16,7 @@ package publication, unit enablement and live opt-in remain separate owner work.
 
 ## Context and immutable bindings
 
-Read N0001, N0004, architecture/standing-rules.md and development/rust-migration.md.
+Read N0001, N0004 and architecture/standing-rules.md; use the retained research reports for historical measurements.
 Baseline source5f4c0bf3025d5f2944b50ff5546ed7f8a3dcfe57; release helper
 4a65f4ec887bc85e93b5b862f1786fe6f1b7a811875333765ee8f8c052cce0aa.
 Candidate1382a28ab544743e32e906f7542bcecdfdfca083; manifest

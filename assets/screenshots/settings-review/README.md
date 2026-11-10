@@ -73,7 +73,6 @@ focus warning. There were no QML scene/parse errors. The native Qt unit suite pa
 The compositor boundary has a regression-tested exception for this one nested
 fixture; production callers remain rejected.
 
-[Architecture, inventory and research](../../../docs/development/settings-architecture.md)
-contain the final destinations and backend boundaries. Owner review should cover
-group names/findability, diagram behavior, row density, narrow navigation,
-Colors studio boundary and unavailable-feature treatment. **Phase 3 has not begun.**
+This screenshot set records the proposed page grouping, row density, narrow navigation,
+Colors studio boundary and unavailable-feature treatment. It is review evidence,
+not a current feature-status page.

@@ -86,7 +86,7 @@ ownership expansion, measurements except separately granted N0002 continuation.
    one-release standalone mode only when selected before dispatch. Preserve
    preview/confirm/revert, root privilege boundaries, unknown fields, normal
    language enum and developer pseudo-language opt-in. No Python in ported path.
-8. Update protocol.md and rust-migration.md to exact supported ownership and
+8. Update protocol.md and the N0001 acceptance record to exact supported ownership and
    outstanding gaps; do not publish runtime changes until N0002 passes. If a
    correctness fix changes captured bytes, retain old evidence as diagnostic and
    ask spec agent to reissue the capture revision; never relabel old results.

@@ -1,6 +1,6 @@
 # Nacre private protocol v1
 
-QML client implementation notes and reference outputs below are historical
+shell client implementation notes and reference outputs below are historical
 after N0156. The wire contracts remain in use by Bead and native clients.
 
 The protocol (schemas, generated types, golden transcripts, and protocol docs) is licensed under MIT OR Apache-2.0. The daemon and the rest of Nacre remain GPL-3.0-only. See the licenses in [`protocol/`](../../protocol/README.md).
@@ -154,33 +154,6 @@ uncertain result. An explicit private socket override disables that fallback.
 Malformed/oversized frames, failed handshakes and UID mismatches close the link.
 An ordinary failed call leaves the link usable.
 
-### QML stdio transport
-
-`nacrectl attach` forwards one checked socket connection through stdin/stdout
-pipes. The historical Quickshell 0.3.2 Socket/SplitParser accepted valid traffic, but
-replaces invalid UTF-8 and buffers an oversized unfinished line before a QML
-callback can reject it. This native bridge enforces the same byte-level framing
-in both directions before forwarding; unknown optional fields remain unchanged.
-It reuses the endpoint/peer checks above and the ten-second output deadline.
-
-Rust readers expose `retained_bytes()` for their line-buffer capacity and
-`trim_idle(max_bytes)` to release a completed or empty buffer above that ceiling.
-Trimming refuses unfinished frames, including cancelled reads; it does not
-change wire data or promise a process RSS reduction. Underlying reader buffers
-and payloads owned by callers are outside that accounting.
-
-The UI sends hello and owns subscriptions, IDs, deadlines and reconnects. Closing
-either UI pipe ends the bridge; daemon loss fails the connection. The bridge
-never reconnects, queues work for a later connection, or falls back to another
-executor. A lost reply leaves dispatch uncertain. No live UI or unit is enabled
-by adding this command.
-
-During foundation validation, `NACRE_DAEMON_CLIENT=1` opts the QML client in;
-unset or `0` retains the legacy paths. Reconnects use 50 ms–2 s backoff, retain
-last snapshots and expose stale state after two seconds without a connection.
-No pending call is replayed. Provider replies use the same connection without
-waiting for the outbound activation they acknowledge.
-
 ## Events, liveness and UI providers
 
 ```json
@@ -202,7 +175,7 @@ Only one connection registers the UI provider at a time; another receives busy.
 Registration lasts for that connection. `ui.*` calls are forwarded as call/ret
 messages to its registered method allowlist with daemon-generated IDs; map the
 reply back to the original caller. Provider loss returns unavailable to waiting
-callers. Unregistered UI methods never execute. F3 adapts existing QML IpcHandler
+callers. Unregistered UI methods never execute. F3 adapts existing shell IpcHandler
 targets without redesigning them; `nacrectl ui TARGET METHOD [ARGS]` encodes their
 target/method/argv parameters for the registered UI dispatcher.
 
@@ -388,11 +361,11 @@ or the two directions would deadlock.
 `menu-ui-actions.jsonl` supplements the original immutable menu transcripts with
 calculator-copy tickets, clipboard IDs, confirmation, literal argv, refusal of
 public row injection and an unsupported operation. Arithmetic now runs directly
-in the Rust engine, matching 217 frozen Quickshell outputs and 96 separately
+in the Rust engine, matching 217 frozen Bead outputs and 96 separately
 frozen numeric/whitespace/power cases. The optional `conversion` field carries either
 arithmetic or unit-conversion results; successful results issue literal-copy
 tickets. Only lowercase whole-word `to`/`in` queries enter the existing conversion
-worker. Invalid arithmetic returns its original error without a worker. The QML
+worker. Invalid arithmetic returns its original error without a worker. The shell
 cutover remains a separate F3 step; its JavaScript fallback stays for one release.
 
 Files, packages, unit conversions, CLDR emoji and catalog discovery reuse native
@@ -523,7 +496,7 @@ for missing capabilities or mismatched sources. Once accepted, source failure or
 connection loss ends the client with an error; it never replays through a second
 watcher. Closing the output pipe exits without an idle polling timer.
 
-## QML compositor, helper packets and launcher views
+## shell compositor, helper packets and launcher views
 
 `niri.source {socket}` returns `connection_id` only when the selected socket has
 exactly the daemon compositor's device/inode identity. `niri.action
@@ -537,7 +510,7 @@ is uncertain and must not be replayed. These methods are advertised only on niri
 `release:[names]` removes consumed packets from that same connection's lease.
 Names, ownership, mode0600, regular-file/link count and existing size limits are
 checked for reads and release. Reserve/release retain the128-packet cap; disconnect
-removes the lease. QML uses FileView only with these pre-reserved input files.
+removes the lease. shell uses FileView only with these pre-reserved input files.
 
 `menu.query` additionally accepts optional `filter`, `category`, and
 `presentation`. Omission retains the old response and ranking behavior.
@@ -573,7 +546,7 @@ after 150 ms quiet; `dirty:false` confirms publication. `settings.desktop
 may omit `rev`. Display rollback journals remain durable before physical changes.
 Caller loss never replays an admitted mutation or starts a fallback writer.
 
-`settings.publish {store,value,rev}` preserves the three existing QML publishers:
+`settings.publish {store,value,rev}` preserves the three existing shell publishers:
 `control-center`, `dashboard-extras`, and `battery-alerts`. It accepts their
 current document version and owned fields, retains unknown existing fields, and
 rejects other stores. It grants no arbitrary path, provider, or privileged write.
@@ -607,7 +580,7 @@ read/modify/write operations check both the originating boot and revision, wait
 for durable publication, and route rollback through the same owner.
 
 Intended difference: with the daemon present, legacy `state-file save-id` bulk
-writes outside the three QML publisher stores are refused; validated `set-id`
+writes outside the three shell publisher stores are refused; validated `set-id`
 remains available. Provider-owned/read-only stores and unported tools retain
 their existing privilege boundaries; this step does not migrate all 72 stores.
 

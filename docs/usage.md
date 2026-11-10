@@ -181,7 +181,7 @@ Notifications can be reviewed in history; Do not disturb suppresses popups.
 Night light warms display colors, and Stay awake temporarily inhibits idle
 actions. On niri, night light needs wlsunset and output gamma control. Niri display
 changes support scale, mode and extension with rollback; mirroring is unavailable.
-Read [Nacre on niri](../README.md#nacre-on-niri) for limits.
+Nacre runs on [nacre-niri](https://github.com/nacre-desktop/nacre-niri), its own niri compositor fork.
 
 New Nacre sessions use a window border width of 3. On Niri this is measured in
 logical pixels: each display's scale determines its physical thickness, so scale

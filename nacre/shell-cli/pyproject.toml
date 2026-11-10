@@ -7,6 +7,7 @@ name = "nacre_shell"
 requires-python = ">=3.13"
 version = "0.1.0.dev2"
 description = "Nacre desktop adapter for the standalone Orient engine"
+license = "GPL-3.0-only"
 dependencies = ["pillow>=11,<13"]
 
 [project.scripts]

@@ -83,8 +83,7 @@ exec uwsm start -e -D niri niri.desktop
 
 `exec` replaces the TTY shell so closing the desktop does not leave that shell
 open. `nacre rollback` can restore a failed managed update; it refuses later
-local edits. For niri-specific preparation and rollback limits, see the
-[niri guide](development/niri-testing.md#recovery-first-return-to-hyprland-from-a-tty).
+local edits.
 
 ## How do I collect a support report?
 

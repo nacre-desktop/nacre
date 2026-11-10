@@ -194,10 +194,7 @@ acceptance test. Check first login, launcher, keyboard, displays, audio, network
 manual lock/password unlock and logout. Explicit lock requests are handled by a
 session-owned Hypridle service; automatic idle/suspend locking is not enabled by
 this preparation. Validate manual unlock before adding that policy. Keep the
-plain Niri session available and see [Nacre on niri](../README.md#nacre-on-niri)
-for compositor feature limits. The source-only [separate login preparation
-guide](development/niri-testing.md#full-nacre-login-preparation-2026-10-13) remains
-available for development experiments.
+plain Niri session available.
 
 ### Niri hover companion
 
@@ -258,7 +255,7 @@ locking or screen sharing.
 
 ## Source installation
 
-Contributors need the [source build tools](contributing.md#build-tools). Clone
+Source check commands are in the [development checks guide](development/ci.md). Clone
 the repository and initialize its pinned Orient dependency:
 
 ```sh

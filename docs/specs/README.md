@@ -1,48 +1,15 @@
-# Nacre implementation queue
+# Nacre specifications
 
-N0140 / Brain overhaul U3: [registry hierarchy](0140-brain-viewer-hierarchy.md),
-Review, filename note IDs and event-driven watching are implemented on the task
-branch. Synthetic browser evidence and the full dev-1 desktop CI job gate delivery.
+## Current status — 2026-11-10
 
-N0132: reopened after a reported installed-browser loading failure. Follow-up
-code review identified the blocking path: `/api/brain` synchronously built the
-full discovery graph before replying, so a cold index could hold the browser at
-“Reading your knowledge” for the discovery build. The Phase 1 audit measured
-about 145 s single-core with vectors and 21 min lexical-only at 1.9k notes.
-Those timings identify the likely mechanism; the laptop failure itself was not
-reproduced. The earlier N0132 authentication regressions passed for an older session plus
-legacy bootstrap file and an expired session renewed by the launcher. Headless
-Chromium with the real launcher and mocked compositor passed cold start, server
-reuse, session renewal and server restart with an existing browser; each clears
-the loading screen and loads API data. API access requires the cookie and bearer
-together plus same-origin Fetch Metadata; the browser marker is a digest, not a
-credential. Separate credential probes returning 403 do not establish a session
-mismatch. N0132 follow-up validation passed 90 Brain library tests, the CLI test and
-locked helper/shell checks. U12 adds bounded loading/error/retry behavior and
-moves discovery behind the fast summary response. This investigation did not
-access live auth or reproduce the laptop failure. These historical N0132 results
-are separate from the N0134 validation below.
+Live: Nacre `6c67f792` with Bead `7ea19860`, in active daily use and not yet released. Nacre runs on nacre-niri, its own niri compositor fork, with Bead as its native shell.
 
-N0134 / U12: [viewer load robustness](0134-brain-viewer-load.md) validated with
-synthetic 2,000-note cold/restart loads in 1.477 s / 1.460 s, timeout/Retry and
-background connection refresh. Full dev-1 desktop CI passed; topic branch only.
+Active: N0156 retires the former QML shell; N0157 prunes archived copies. Done today: N0153 plugin-timeout fix; N0154 [Bead/QML shell benchmark](../research/bead-vs-qml-shell-benchmark-20261110.md); and NN0025 + N0158 launch-workspace affinity.
 
-Initial N0132 implementation: Brain bootstrap, handoff and app use the API's
-loopback HTTP origin; native file handoff generation is removed and browser focus
-behavior is preserved. Isolated container validation passed: 88 Brain library
-tests, Brain CLI test, locked helper/shell checks, helper build and formatting.
-Headless Chromium 156 loaded synthetic vault data and hid the loading screen;
-app assets/API shared one origin, auth handoff succeeded, wrong/replayed tokens
-returned 403, and no page errors or token logging occurred. Topic branch only;
-live browser/desktop and owner data were not accessed.
+## Historical unit table
 
-Current handoff: 2026-10-20 lead transfer. F4 and N9 are Done with green
-exact-head CI. N10 is local-only and incomplete. The owner requested that this
-lead finish the current Bead B2 arm, release the desktop, checkpoint both queues
-and stop. The transfer receipt below supersedes older grants and results.
-[Standing rules](../architecture/standing-rules.md) apply.
-
-- Structure/licensing decision accepted 2026-10-21: [architecture note](../architecture/structure-and-licensing.md); Bead roadmap and ADR 0004 are in Bead.
+The table below preserves earlier queue entries and their recorded statuses as
+history. Those entries are not a live queue and have not been rewritten here.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |

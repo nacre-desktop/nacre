@@ -51,7 +51,6 @@ class PublicNamesTests(unittest.TestCase):
                     "https://github.com/" + "siver" + "teh/siver" + "teh-os", ""
                 )
             if name in (
-                "CONTRIBUTING.md",
                 "packaging/arch/PKGBUILD",
                 "packaging/arch/recipe.py",
                 "packaging/arch/niri/PKGBUILD",
@@ -63,8 +62,6 @@ class PublicNamesTests(unittest.TestCase):
                     "siver" + "teh <92440237+siver" + "teh@users.noreply.github.com>",
                     "",
                 )
-                if name == "CONTRIBUTING.md":
-                    text = text.replace("`user.name` to `siver" + "teh`", "")
             if name == "crates/nacre-helper/src/brain_git.rs":
                 # The private-vault committer uses the owner's explicitly
                 # approved Git attribution, never a private runtime alias.

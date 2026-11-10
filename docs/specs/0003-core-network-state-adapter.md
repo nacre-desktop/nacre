@@ -18,7 +18,7 @@ target devices.
 
 Start at the reviewed published N0002 endpoint, descendant of5f4c0bf3; record full
 hash. Read architecture/{foundation,protocol,core-services,standing-rules}.md,
-development/security-review.md, daemon/network.rs and network_state.rs.
+the reviewed security boundary, daemon/network.rs and network_state.rs.
 Current runtime has network.watch generation signals and a legacy network-state
 helper snapshot; the richer core network topic is still reserved. Do not claim
 that the reserved network schema is already a running service.

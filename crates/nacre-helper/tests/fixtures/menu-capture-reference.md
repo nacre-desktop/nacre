@@ -10,7 +10,7 @@ The 11 cases compare results, arguments, image bytes and written filenames.
 
 Intended security difference: captures are reserved at 0600 inside a repaired
 0700 screenshot leaf directory; linked destinations and filename collisions are
-refused, following `docs/development/security-review.md#fix-during-port`.
+refused, using the reserved-directory and ownership checks.
 The reference's original 0644 modes remain unchanged and explicitly checked.
 
 Intended transport difference: Hyprland uses its socket; niri uses `niri-ipc`
