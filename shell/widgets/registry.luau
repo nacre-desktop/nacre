@@ -90,9 +90,10 @@ for _,id in ids do
     install(id,package,({clock="tertiary",sound="secondary",wifi="secondary"})[id] or "primary")
 end
 -- Plugins (spec 0203). The generated index lists every discovered plugin; active ones
--- register here like built-ins. A plugin that fails to load is skipped and switched off.
-local found,index=pcall(function() return require("../plugins/index") end)
-local plugins=found and index.plugins or {}
+-- register here like built-ins. Permanent failures switch a plugin off; budget
+-- overruns escape through plugin_fault to the host's last-good/retry path.
+local index=require("../plugins/index")
+local plugins=index.plugins or {}
 local app_api={context=context,measure=require("bead.widgets.measure"),visual=require("desktop-visuals")}
 local plugin_widgets={}
 for _,entry in plugins do
@@ -125,7 +126,7 @@ for _,entry in plugins do
     end
 end
 local M={catalogue=registry,default=require("default"),
-    plugins={list=plugins,widgets=plugin_widgets,notice=found and index.notice or "",user_dir=found and index.user_dir or false}}
+    plugins={list=plugins,widgets=plugin_widgets,notice=index.notice or "",user_dir=index.user_dir or false}}
 function M.validate(document)
     assert(type(document)=="table" and document.version==1,"unsupported widget layout version")
     assert(type(document.preset)=="string" and type(document.hosts)=="table","invalid widget layout")

@@ -1180,6 +1180,8 @@ impl Runtime {
         let public_bar_keys = [
             "bar.clock.text",
             "bar.clock.twelve",
+            "bar.collections",
+            "bar.collection.current",
             "bar.dashboard.enabled",
             "bar.height",
             "bar.launcher",

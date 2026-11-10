@@ -79,6 +79,37 @@ fn bundled_updates_plugin_loads_and_the_plugins_page_lists_its_access() {
 }
 
 #[test]
+fn saved_updates_timeout_does_not_hide_the_bundled_widget_on_next_start() {
+    let temp = std::env::temp_dir().join(format!("nacre-plugin-timeout-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&temp);
+    let root = temp.join("shell");
+    copy_tree(&repository().join("shell"), &root);
+    let config = plugins::Config {
+        system: vec![root.canonicalize().unwrap().join("plugins")],
+        user: None,
+        state: Some(temp.join("plugins.json")),
+    };
+    plugins::State {
+        faults: BTreeMap::from([(
+            "updates".into(),
+            "runtime error: markup exceeded 50 ms limit".into(),
+        )]),
+        ..Default::default()
+    }
+    .save(config.state.as_ref().unwrap())
+    .unwrap();
+    plugins::configure(&root, config.clone());
+    let detail = texts(&app(&root, "updates"));
+    assert!(detail.iter().any(|t| t == "package_2"), "{detail:?}");
+    assert!(
+        plugins::State::load(config.state.as_deref())
+            .faults
+            .is_empty()
+    );
+    std::fs::remove_dir_all(temp).unwrap();
+}
+
+#[test]
 fn example_plugin_enables_renders_unloads_and_a_faulting_plugin_is_switched_off() {
     let temp = std::env::temp_dir().join(format!("nacre-plugins-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&temp);

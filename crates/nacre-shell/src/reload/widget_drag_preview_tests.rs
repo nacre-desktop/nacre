@@ -2193,6 +2193,52 @@ fn widget_surface_source(
     source
 }
 
+#[test]
+fn passive_workspace_ghost_has_collection_defaults_and_accepts_projection() {
+    let mut model = canvas_transfer_drag_model(&default_widget_fixture(), 100.);
+    model.insert("bar.popouts".into(), Value::Bool(true));
+    model.insert("widgets.drag.destination".into(), Value::Text("bar".into()));
+    model.insert(
+        "widgets.drag.source".into(),
+        Value::list(vec![json!({"iid":"workspaces","group":"workspaces",
+            "widget":"workspaces","host":"top_bar","form":"bar",
+            "style":"pearls","settings":{}})]),
+    );
+    let mut ghost = widget_surface_source(
+        true,
+        model,
+        std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+    );
+    let scene = ghost
+        .stage(UiEvent::Model(BTreeMap::from([
+            (
+                "bar.collections".into(),
+                Value::list(vec![
+                    json!({"id":"desk-a","name":"A"}),
+                    json!({"id":"desk-b","name":"B"}),
+                ]),
+            ),
+            (
+                "bar.collection.current".into(),
+                Value::Text("desk-b".into()),
+            ),
+        ])))
+        .unwrap()
+        .expect("projected collections update the workspace preview");
+    ghost.validate().unwrap();
+    assert!(ghost.commit());
+    let texts: Vec<_> = scene
+        .primitives
+        .iter()
+        .filter_map(|primitive| match primitive {
+            bead::render::Primitive::Text { text, .. } => Some(text.as_str()),
+            _ => None,
+        })
+        .collect();
+    assert!(texts.contains(&"B"), "{texts:?}");
+    assert!(ghost.input_regions().is_empty());
+}
+
 fn deliver_widget_surface_models<'a>(
     events: &[UiEvent],
     canvas: &'a mut dyn SceneSource,
@@ -2497,6 +2543,14 @@ fn canvas_and_passive_ghost_use_distinct_declared_host_model_contracts() {
         ("widgets.editing".into(), Value::Bool(false)),
         ("bar.workspace.hints".into(), Value::Bool(false)),
         (
+            "bar.collection.current".into(),
+            Value::Text("desk-a".into()),
+        ),
+        (
+            "bar.collections".into(),
+            Value::list(vec![json!({"id":"desk-a","name":"Desk A"})]),
+        ),
+        (
             "bar.workspace.origins".into(),
             Value::list(vec![json!({"id":"workspace-1","x":18})]),
         ),
@@ -2506,6 +2560,10 @@ fn canvas_and_passive_ghost_use_distinct_declared_host_model_contracts() {
     // The bar emits the initial canvas/ghost offers and later Model envelopes.
     let mut bar = real_bar_runtime(dir.join("widgets.json"));
     bar.session.stores.commit(source_values.clone()).unwrap();
+    for key in ["bar.collections", "bar.collection.current"] {
+        assert_eq!(bar.widget_drag_preview_values()[key], source_values[key]);
+        assert_eq!(bar.widget_surface_values(true)[key], source_values[key]);
+    }
     bar.widget_drag_model = Some(drag_model.clone());
     let bar_events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
     let sent = bar_events.clone();
