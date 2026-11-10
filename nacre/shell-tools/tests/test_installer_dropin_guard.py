@@ -10,7 +10,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 TOOLS = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("dropin_installer", TOOLS / "install.py")
@@ -653,6 +654,30 @@ class InstallerDropinGuardTests(unittest.TestCase):
         self.assertEqual(
             (self.dest / "source.good/last-good.qml").read_text(), "last validated\n"
         )
+
+    def test_direct_migration_works_while_live_daemon_holds_config_lease(self):
+        switch = Mock()
+        switch.state = self.home / ".local/state/nacre"
+        switch.migrate.return_value = {"status": "complete", "shell": "bead"}
+        install_controller = Mock()
+        config = self.home / ".config/nacre"
+        with (
+            patch.multiple(installer, HOME=self.home, ROOT=self.base),
+            patch.object(installer, "ui_switch", return_value=switch),
+            patch.object(
+                installer.writer_lease, "inherited_fd_from_env", return_value=None
+            ),
+            patch.dict(
+                sys.modules,
+                {"releases": SimpleNamespace(install_controller=install_controller)},
+            ),
+        ):
+            with installer.writer_lease.writer_lease(config):
+                result = installer.migrate_ui_shell()
+        self.assertEqual(result, {"status": "complete", "shell": "bead"})
+        install_controller.assert_called_once_with(self.base.parents[1], home=self.home)
+        switch.migrate.assert_called_once_with(None, None)
+        self.assertTrue((switch.state / "releases/release.lock").is_file())
 
     def test_code_only_qml_migrates_without_restarting_qml(self):
         root, shell = self.fixture_deployment()

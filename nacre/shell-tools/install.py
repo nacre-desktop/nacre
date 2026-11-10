@@ -192,14 +192,18 @@ def migrate_ui_shell(candidate=None):
 
     inherited_fd = writer_lease.inherited_fd_from_env()
     if inherited_fd is not None:
+        # The release controller already serializes this deployment; validate
+        # its inherited config lease rather than acquiring the release lock again.
         with writer_lease.writer_lease(HOME / ".config/nacre", inherited_fd):
             return apply()
     lock_path = switch.state / "releases/release.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     with lock_path.open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        with writer_lease.writer_lease(HOME / ".config/nacre"):
-            return apply()
+        # A live Nacre daemon owns the config writer lease. The UI shell switch
+        # only updates its own managed unit/state files and validates those paths.
+        # Do not reacquire the daemon's settings lease for this direct migration.
+        return apply()
 
 
 def daemon_status_healthy(text):
