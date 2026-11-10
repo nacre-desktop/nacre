@@ -32,4 +32,18 @@ service, or temporary product duplicate is added.
 
 ## Evidence
 
-Pending final dev-1 desktop CI and private nested desktop capture.
+The current `desktop` job in `.github/workflows/check.yml` ran in the Arch
+container with 8 CPUs, 16 GiB and `RUST_TEST_THREADS=2`. All 21 required stages
+passed, including the workspace regression, product proof suites, dependency
+checks, `tools/check.py`, native gallery and ignored daemon raster memory test.
+The source stage was rerun after removing an untracked formatting scratch
+directory; the initial failure and passing retry are both retained.
+
+The real Bead nested proof is prepared under the shared desktop lock with a
+12 GiB, zero-swap private scope. Its preflight refused to start because host
+swap use exceeded the standing 64 MiB gate. Desktop keyboard/pointer screenshot
+acceptance remains pending; the earlier QML diagnostic is not acceptance of
+the current Bead shell. No host memory or swap setting was changed.
+
+Private command logs, binary hashes and the preflight refusal are retained in
+the task's `.lead/evidence/n0161` directory.
