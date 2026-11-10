@@ -291,7 +291,7 @@ impl Player {
         // SAFETY: valid handle and NUL-terminated strings.
         unsafe { (self.api.set_option)(self.handle, name.as_ptr(), value.as_ptr()) >= 0 }
     }
-    fn property(&self, name: &str, value: &str) -> bool {
+    pub(super) fn property(&self, name: &str, value: &str) -> bool {
         let (Ok(name), Ok(value)) = (CString::new(name), CString::new(value)) else {
             return false;
         };

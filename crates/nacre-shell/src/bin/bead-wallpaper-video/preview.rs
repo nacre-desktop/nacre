@@ -75,7 +75,12 @@ fn request() -> Result<(Request, std::fs::File), String> {
 pub fn run() -> Result<(), String> {
     let (request, file) = request()?;
     let (ping, _source) = calloop::ping::make_ping().map_err(|e| e.to_string())?;
-    let player = Player::new("no", None, None, Arc::new(ping))?;
+    // Reuse the live renderer's VA-API copy-back path, with software fallback.
+    let player = Player::new("vaapi", None, None, Arc::new(ping))?;
+    // Use bilinear software scaling for the small preview, as the GL path does.
+    player.property("sws-allow-zimg", "no");
+    player.property("sws-scaler", "bilinear");
+    player.property("sws-fast", "yes");
     player.load(
         &format!("/proc/self/fd/{}", file.as_raw_fd()),
         Fit::Crop,
@@ -115,10 +120,10 @@ pub fn run() -> Result<(), String> {
             if !player.render(request.width, request.height, stride, &mut bgr) {
                 return Err("mpv preview render failed".into());
             }
-            // mpv overwrites this buffer on the next render; convert in place.
-            for pixel in bgr.as_chunks_mut::<4>().0 {
-                pixel.swap(0, 2);
-                pixel[3] = 255;
+            // Pack opaque RGB into the prefix; mpv overwrites the buffer next render.
+            for index in 0..bgr.len() / 4 {
+                let rgb = [bgr[index * 4 + 2], bgr[index * 4 + 1], bgr[index * 4]];
+                bgr[index * 3..index * 3 + 3].copy_from_slice(&rgb);
             }
             use image::ImageEncoder;
             let mut png = Vec::new();
@@ -128,10 +133,10 @@ pub fn run() -> Result<(), String> {
                 image::codecs::png::FilterType::Sub,
             )
             .write_image(
-                &bgr,
+                &bgr[..bgr.len() / 4 * 3],
                 request.width,
                 request.height,
-                image::ExtendedColorType::Rgba8,
+                image::ExtendedColorType::Rgb8,
             )
             .map_err(|e| e.to_string())?;
             if png.len() > MAX_FRAME {
