@@ -3,6 +3,7 @@
 import fcntl
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -49,6 +50,7 @@ class Manager:
         self.client_on = True
         self.daemon_down = False
         self.result = "success"  # the shell unit's Result property
+        self.journal = []
         # Daemon model (N0068): reload caches the drop-in, restart applies it.
         self.daemon_cfg = self.daemon_mode = False
         self.notifications_broken = False
@@ -104,6 +106,9 @@ class Manager:
 
     def __call__(self, command, **kwargs):
         self.calls.append(command)
+        if command[0] == "systemd-cat":
+            self.journal.append(kwargs.get("input", ""))
+            return done(command)
         if command[0] == self.launcher:
             if self.launcher_fails:
                 raise subprocess.CalledProcessError(1, command)
@@ -215,6 +220,14 @@ class Manager:
             if self.flap and kind == "bead":
                 self.pid += 1
                 pid = self.pid
+            exec_start = QML_EXEC
+            if self.cfg["bead"]:
+                match = re.search(
+                    r"(?m)^ExecStart=\nExecStart=(\S+ start)$", self.dropin_text()
+                )
+                if match:
+                    launcher = match.group(1)[:-6]
+                    exec_start = f"{{ path={launcher} ; argv[]={launcher} start ; ignore_errors=no ; }}"
             values = {
                 "FragmentPath": "/usr/lib/systemd/user/" + name,
                 "LoadState": "loaded",
@@ -225,7 +238,7 @@ class Manager:
                 "Result": self.result,
                 "UnitFileState": "enabled",
                 "Environment": "NACRE_DAEMON_CLIENT=1" if self.client_on else "",
-                "ExecStart": QML_EXEC,
+                "ExecStart": exec_start,
                 "DropInPaths": " ".join(
                     [
                         *self.foreign,
@@ -287,6 +300,9 @@ class Base(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / "home"
         self.home.mkdir(mode=0o700)
+        controller = self.home / ".local/share/nacre/control/releases.py"
+        controller.parent.mkdir(parents=True, exist_ok=True)
+        controller.write_text("# fixture controller\n")
         self.state = self.home / ".local/state/nacre"
         self.state.mkdir(parents=True, mode=0o700)
         self.launcher = Path(self.temp.name) / "bead-shell"
@@ -342,6 +358,26 @@ class Base(unittest.TestCase):
 
 
 class SwitchTests(Base):
+    def test_migration_accepts_legacy_managed_units_and_replaces_fallback(self):
+        self.bead()
+        switch = self.switch()
+        for path in (switch.dropin, switch.fallback):
+            path.write_text(path.read_text().replace(m.MARK, m.LEGACY_MARK))
+        self.assertEqual(switch.migrate()["shell"], "bead")
+        self.assertIn("recover-bead --recover", switch.fallback.read_text())
+        self.assertNotIn(m.LEGACY_MARK, switch.fallback.read_text())
+        self.assertBead()
+
+    def test_migration_preserves_foreign_fallback_beside_healthy_bead(self):
+        self.bead()
+        fallback = self.manager.root / m.FALLBACK
+        fallback.write_text("[Service]\nExecStart=/owner/recovery\n")
+        before = fallback.read_bytes()
+        with self.assertRaisesRegex(RuntimeError, "unmanaged"):
+            self.switch().migrate()
+        self.assertEqual(fallback.read_bytes(), before)
+        self.assertBead()
+
     def test_roundtrip_and_files(self):
         result = self.bead()
         self.assertEqual(result["shell"], "bead")
@@ -355,7 +391,8 @@ class SwitchTests(Base):
         self.assertFalse((self.manager.root / m.WINDOWS).exists())
         self.assertIn(f"After={f4.SOCKET} {m.DAEMON}\n", dropin)
         self.assertIn(
-            "ui-shell qml --recover", (self.manager.root / m.FALLBACK).read_text()
+            "ui-shell recover-bead --recover",
+            (self.manager.root / m.FALLBACK).read_text(),
         )
         self.assertEqual(self.switch().status(str(self.launcher))["active"], "bead")
         self.assertEqual(self.switch().qml()["shell"], "qml")
@@ -410,8 +447,13 @@ class SwitchTests(Base):
         (assets / "bar").mkdir(parents=True)
         (assets / "palette.json").write_text("{}")
         first = switch.install(self.launcher, assets)
+        reused = switch.install(self.launcher, assets)
+        self.assertEqual(reused["launcher"], first["launcher"])
+        self.assertTrue(reused["reused"])
+        self.launcher.write_text("#!/bin/sh\n# next build\n")
         second = switch.install(self.launcher, assets)
         self.assertNotEqual(first["launcher"], second["launcher"])
+        self.assertFalse(any(r.get("known_good") for r in switch.records()))
         self.assertTrue(Path(first["launcher"]).is_file())
         self.assertEqual(switch.selected_launcher(), second["launcher"])
         text = Path(second["launcher"]).read_text()
@@ -438,6 +480,7 @@ class SwitchTests(Base):
         (assets / "palette.json").write_text("{}")
         first = self.switch().install(self.launcher, assets)
         for phase in ("copy-build", "check-build"):
+            self.launcher.write_text(f"#!/bin/sh\n# {phase}\n")
 
             def hook(name, phase=phase):
                 if name == phase:
@@ -579,7 +622,7 @@ class SwitchTests(Base):
                     )
                     self.assertNotIn("applying", self.statuses())
 
-    def test_repeat_is_idempotent_and_different_dropin_refused(self):
+    def test_repeat_is_idempotent_and_different_build_upgrades_transactionally(self):
         self.bead()
         mutations = self.manager.mutations
         self.bead()
@@ -587,8 +630,73 @@ class SwitchTests(Base):
         other = self.launcher.with_name("other")
         other.write_text("#!/bin/sh\n")
         other.chmod(0o700)
-        with self.assertRaisesRegex(RuntimeError, "different Bead drop-in"):
+        self.manager.launcher = str(other)
+        self.switch().bead(str(other), "none")
+        self.assertBead()
+        self.assertIn(str(other), self.switch().status()["launcher"])
+
+    def test_start_limit_recovers_previous_healthy_bead_and_records_failed_current(
+        self,
+    ):
+        self.bead()
+        prior = str(self.launcher)
+        other = self.launcher.with_name("candidate")
+        other.write_text("#!/bin/sh\n")
+        other.chmod(0o700)
+        self.manager.launcher = str(other)
+        self.switch().bead(str(other), "none")
+        self.manager.launcher = prior
+        self.manager.result = "start-limit-hit"
+        result = self.switch().recover_bead(
+            exclude_current=True, mark_failed_current=True
+        )
+        self.assertEqual((result["status"], result["launcher"]), ("recovered", prior))
+        failed = next(
+            r for r in self.switch().records() if r.get("launcher") == str(other)
+        )
+        self.assertTrue(failed["recovery_failed"])
+        self.assertEqual(self.switch().status()["launcher"], prior)
+
+    def test_failed_build_update_restores_bead_and_keeps_bead_fallback(self):
+        self.bead()
+        previous = self.switch().active_launcher()
+        self.manager.root.joinpath(m.FALLBACK).write_text(
+            m.MARK + "[Unit]\nDescription=legacy fallback\n"
+        )
+        other = self.launcher.with_name("candidate")
+        other.write_text("#!/bin/sh\n")
+        other.chmod(0o700)
+        self.manager.launcher = str(other)
+        self.manager.fail["restart"] = 1
+        with self.assertRaisesRegex(RuntimeError, "previous healthy Bead restored"):
             self.switch().bead(str(other), "none")
+        self.assertEqual(self.switch().active_launcher(), previous)
+        self.assertBead()
+        fallback = (self.manager.root / m.FALLBACK).read_text()
+        self.assertIn("recover-bead --recover", fallback)
+        self.assertNotIn("qml --recover", fallback)
+
+    def test_prepare_stages_next_login_without_restarting_or_marking_good(self):
+        shell = Path(self.temp.name) / "shell"
+        (shell / "bar").mkdir(parents=True)
+        (shell / "bar/main.luau").write_text("return {}\n")
+        (shell / "palette.json").write_text("{}\n")
+        result = self.switch().prepare_bead(self.launcher, shell)
+        self.assertEqual(result["status"], "prepared")
+        self.assertFalse(
+            any(call[:2] == ["systemctl", "--user"] for call in self.manager.calls)
+        )
+        self.assertTrue(
+            (self.manager.root / (m.SHELL + ".d") / m.DROPIN_NAME).is_file()
+        )
+        install = next(
+            r for r in self.switch().records() if r["operation"] == "install"
+        )
+        self.assertNotIn("known_good", install)
+        migrated = self.switch().migrate(self.launcher, shell)
+        self.assertEqual(migrated["shell"], "bead")
+        self.assertTrue(any(r.get("known_good") for r in self.switch().records()))
+        self.assertBead()
 
     def test_refusals_write_nothing(self):
         mgr = self.manager
@@ -953,7 +1061,7 @@ class SwitchTests(Base):
             with open(releases / "release.lock") as held:
                 fcntl.flock(held, fcntl.LOCK_EX)
                 busy = m.dispatch(
-                    ["qml", "--recover"],
+                    ["recover-bead", "--recover"],
                     self.home,
                     releases,
                     runner=self.manager,
@@ -973,8 +1081,9 @@ class SwitchTests(Base):
             self.assertEqual(ignored["status"], "ignored")
             self.assertBead()
             self.manager.result = "start-limit-hit"
+            interrupted = self.switch().begin("bead", launcher=str(self.launcher))
             result = m.dispatch(
-                ["qml", "--recover"],
+                ["recover-bead", "--recover"],
                 self.home,
                 releases,
                 runner=self.manager,
@@ -982,8 +1091,23 @@ class SwitchTests(Base):
                 sleep=self.clock.sleep,
                 now=self.clock.now,
             )
-            self.assertEqual(result["shell"], "qml")
-            self.assertQml()
+            self.assertEqual(result["status"], "stopped")
+            self.assertIsNone(result["shell"])
+            self.assertIn("No healthy Bead copy remains", self.manager.journal[-1])
+            self.manager.result = "success"
+            shell = self.home / "next-shell"
+            (shell / "bar").mkdir(parents=True)
+            (shell / "bar/main.luau").write_text("return {}\n")
+            (shell / "palette.json").write_text("{}\n")
+            migrated = self.switch().migrate(self.launcher, shell)
+            self.assertEqual(migrated["status"], "complete")
+            self.assertEqual(
+                next(
+                    r for r in self.switch().records() if r["id"] == interrupted["id"]
+                )["status"],
+                "stopped",
+            )
+            self.assertBead()
 
 
 if __name__ == "__main__":

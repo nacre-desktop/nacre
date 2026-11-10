@@ -286,6 +286,10 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
     def deploy_fixture(self, code_only, opt_in, active_shell="qml"):
         root, shell = self.fixture_deployment()
+        candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
+        candidate_shell = self.base / "bead/shell"
+        self.put(candidate_shell / "palette.json", "{}\n")
+        self.put(candidate_shell / "bar/main.luau", "return {}\n")
 
         def run(command, **kwargs):
             if command[0] == "systemctl":
@@ -298,6 +302,16 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.object(installer, "validate_live"),
             patch.object(installer, "active_ui_shell", return_value=active_shell),
             patch.object(installer, "wait_daemon_healthy", return_value=True),
+            patch.object(
+                installer,
+                "bead_candidate",
+                return_value=(candidate_binary, candidate_shell),
+            ),
+            patch.object(
+                installer,
+                "migrate_ui_shell",
+                return_value={"status": "complete", "shell": "bead"},
+            ),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
@@ -305,6 +319,10 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
     def test_source_install_uses_helper_from_build_output(self):
         root, shell = self.fixture_deployment()
+        candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
+        candidate_shell = self.base / "bead/shell"
+        self.put(candidate_shell / "palette.json", "{}\n")
+        self.put(candidate_shell / "bar/main.luau", "return {}\n")
         (root / "nacre-helper").unlink()
         helper_log = self.base / "helper.log"
         helper = self.put(
@@ -326,6 +344,16 @@ class InstallerDropinGuardTests(unittest.TestCase):
             ) as build,
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
+            patch.object(
+                installer,
+                "bead_candidate",
+                return_value=(candidate_binary, candidate_shell),
+            ),
+            patch.object(
+                installer,
+                "migrate_ui_shell",
+                return_value={"status": "complete", "shell": "bead"},
+            ),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
@@ -526,6 +554,10 @@ class InstallerDropinGuardTests(unittest.TestCase):
 
     def daemon_deploy(self, new_status, old_status=None, active=True):
         root, shell = self.fixture_deployment()
+        candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
+        candidate_shell = self.base / "bead/shell"
+        self.put(candidate_shell / "palette.json", "{}\n")
+        self.put(candidate_shell / "bar/main.luau", "return {}\n")
         self.put(root / "nacre-helper", self.fake_helper(new_status)).chmod(0o755)
         if old_status is not None:
             old = self.put(
@@ -553,6 +585,16 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "validate_live"),
             patch.object(installer, "active_ui_shell", return_value="qml"),
+            patch.object(
+                installer,
+                "bead_candidate",
+                return_value=(candidate_binary, candidate_shell),
+            ),
+            patch.object(
+                installer,
+                "migrate_ui_shell",
+                return_value={"status": "complete", "shell": "bead"},
+            ),
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
@@ -566,13 +608,14 @@ class InstallerDropinGuardTests(unittest.TestCase):
         root = self.daemon_deploy(self.HEALTHY, self.UNHEALTHY)
         calls = self.calls()
         daemon = calls.index("--user restart nacre-daemon.service")
-        self.assertLess(daemon, calls.index("--user restart nacre-shell"))
+        self.assertLess(daemon, len(calls))
+        self.assertNotIn("--user restart nacre-shell", calls)
         self.assertEqual(
             (self.dest / "tools/nacre-helper").read_bytes(),
             (root / "nacre-helper").read_bytes(),
         )
 
-    def test_code_only_bead_validates_bead_and_daemon_without_qml_probe(self):
+    def test_code_only_bead_migrates_without_qml_probe(self):
         root, shell = self.fixture_deployment()
         self.put(self.dest / "source.good/last-good.qml", "last validated\n")
 
@@ -584,22 +627,28 @@ class InstallerDropinGuardTests(unittest.TestCase):
         with (
             patch.multiple(installer, ROOT=root, SHELL=shell),
             patch.object(installer.subprocess, "run", side_effect=run),
-            patch.object(installer, "active_ui_shell", return_value="bead") as status,
-            patch.object(installer, "wait_daemon_healthy", return_value=True) as daemon,
+            patch.object(installer, "active_ui_shell", return_value="bead"),
+            patch.object(
+                installer,
+                "migrate_ui_shell",
+                return_value={"status": "complete", "shell": "bead"},
+            ),
             patch.object(installer, "validate_live") as qml,
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
             installer.deploy(code_only=True)
         qml.assert_not_called()
-        self.assertGreaterEqual(status.call_count, 2)
-        daemon.assert_called_once()
         self.assertEqual(
             (self.dest / "source.good/last-good.qml").read_text(), "last validated\n"
         )
 
-    def test_code_only_qml_keeps_live_qml_validation(self):
+    def test_code_only_qml_migrates_without_restarting_qml(self):
         root, shell = self.fixture_deployment()
+        candidate_binary = self.put(self.base / "bead/bin/nacre-shell", "#!/bin/sh\n")
+        candidate_shell = self.base / "bead/shell"
+        self.put(candidate_shell / "palette.json", "{}\n")
+        self.put(candidate_shell / "bar/main.luau", "return {}\n")
 
         def run(command, **kwargs):
             if command[0] in {"systemctl", str(self.dest / "tools/nacre-helper")}:
@@ -610,12 +659,23 @@ class InstallerDropinGuardTests(unittest.TestCase):
             patch.multiple(installer, ROOT=root, SHELL=shell),
             patch.object(installer.subprocess, "run", side_effect=run),
             patch.object(installer, "active_ui_shell", return_value="qml"),
+            patch.object(
+                installer,
+                "bead_candidate",
+                return_value=(candidate_binary, candidate_shell),
+            ),
+            patch.object(
+                installer,
+                "migrate_ui_shell",
+                return_value={"status": "complete", "shell": "bead"},
+            ) as migration,
             patch.object(installer, "validate_live") as qml,
             patch.object(installer, "stop_other_shells"),
             patch.object(installer.compositor, "reload"),
         ):
             installer.deploy(code_only=True)
-        qml.assert_called_once()
+        qml.assert_not_called()
+        migration.assert_called_once()
 
     def test_code_only_dry_run_names_the_shell_validation(self):
         with (
@@ -627,8 +687,8 @@ class InstallerDropinGuardTests(unittest.TestCase):
             contextlib.redirect_stdout(io.StringIO()) as output,
         ):
             installer.dry_run()
-        self.assertIn("validate Bead shell and daemon", output.getvalue())
-        self.assertIn("QML source unvalidated", output.getvalue())
+        self.assertIn("migrate bead to checked Bead", output.getvalue())
+        self.assertIn("last known-good Bead recovery", output.getvalue())
 
     def test_code_only_unhealthy_daemon_restores_previous_helper(self):
         old = self.fake_helper(self.HEALTHY)

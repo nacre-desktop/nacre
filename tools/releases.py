@@ -126,6 +126,10 @@ def paths(repo):
         HOME / ".config/systemd/user" / p
         for p in (
             "nacre-shell.service",
+            "nacre-shell.service.d/60-nacre-ui-shell.conf",
+            "nacre-daemon.service.d/60-nacre-ui-shell-daemon.conf",
+            "nacre-ui-shell-fallback.service",
+            "nacre-qml-windows.service",
             "nacre-session-watch.service",
             "nacre-niri-widths.service",
             "nacre-sidebar-ai.service",
@@ -406,11 +410,13 @@ CONTROLLER_FILES = (
 )
 
 
-def install_controller(repo):
-    CONTROL.mkdir(parents=True, exist_ok=True)
+def install_controller(repo, home=None):
+    control = CONTROL if home is None else Path(home) / ".local/share/nacre/control"
+    wrapper_home = HOME if home is None else Path(home)
+    control.mkdir(parents=True, exist_ok=True)
     for name in CONTROLLER_FILES:
-        shutil.copy2(repo / "tools" / name, CONTROL / name)
-    wrapper = HOME / ".local/bin/nacre"
+        shutil.copy2(repo / "tools" / name, control / name)
+    wrapper = wrapper_home / ".local/bin/nacre"
     wrapper.parent.mkdir(parents=True, exist_ok=True)
     wrapper.write_text(
         '#!/bin/sh\nexec python3 "$HOME/.local/share/nacre/control/releases.py" "$@"\n'
@@ -597,6 +603,7 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
             pass_fds=(lease.fd,),
             check=True,
         )
+        install_controller(repo)
         for component in components:
             lease.ensure_valid()
             commands = {
@@ -656,7 +663,6 @@ def _deploy_locked(repo, components, keyboard, migrate=False, *, lease):
             shutil.rmtree(good)
         pending.rename(good)
         retire_native_runtimes(release)
-        install_controller(repo)
         for entry in record["entries"]:
             entry["after"] = fingerprint(Path(entry["path"]))
         record["status"] = "good"
@@ -779,6 +785,10 @@ def package_plan(
         runtime = package_runtime.plan(HOME, repo, profile, compositor)
         result = [HOME / relative for relative, _ in changed + runtime]
         result += package_runtime.legacy_units(HOME, repo)
+        result += [
+            HOME / path
+            for path in (*package_runtime.BEAD_UNITS, *package_runtime.BEAD_STATE)
+        ]
         result += [
             HOME / ".config/nacre" / name
             for name in ("profile.json", "profile.lua", "keyboard.lua")

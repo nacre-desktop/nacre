@@ -4,6 +4,7 @@
 import sys
 import argparse
 import datetime as dt
+import fcntl
 import hashlib
 import json
 import os
@@ -22,6 +23,7 @@ from nacre_i18n import tr  # noqa: E402
 import nacre_state as _state  # noqa: E402
 import nacre_native_compositor as compositor  # noqa: E402
 import niri_session_refresh as session_refresh  # noqa: E402
+import writer_lease  # noqa: E402
 
 HOME = Path.home()
 ROOT = Path(__file__).resolve().parent
@@ -122,7 +124,14 @@ def active_ui_shell():
         result = subprocess.run(
             command, capture_output=True, text=True, check=True, timeout=15
         )
-        active = json.loads(result.stdout).get("active")
+        status = json.loads(result.stdout)
+        active = status.get("active")
+        if (
+            active == "mixed"
+            and status.get("dropin_present")
+            and not status.get("dropin_loaded")
+        ):
+            active = "qml"  # Managed next-login Bead preparation is not active yet.
     except (OSError, subprocess.SubprocessError, ValueError, AttributeError) as error:
         raise RuntimeError(
             f"Could not determine the active Nacre shell: {error}"
@@ -148,6 +157,47 @@ def validate_bead_live():
         "Validated Bead shell: nacre-shell.service active with Bead drop-in loaded; "
         "Nacre daemon healthy. QML source staged and unvalidated; source.good unchanged."
     )
+
+
+def bead_candidate():
+    """Return an installed package build or matching source build."""
+    repo = ROOT.parents[1]
+    if (repo / "package.json.installed").is_file():
+        packaged = repo.parent.parent / "lib/nacre/bead-shell"
+        binary, shell = packaged / "bin/nacre-shell", packaged / "shell"
+    else:
+        binary, shell = repo / "target/release/nacre-shell", repo / "shell"
+    return (binary, shell) if binary.is_file() and shell.is_dir() else None
+
+
+def migrate_ui_shell(candidate=None):
+    """Converge to the available Bead build after the shell code deploy."""
+    binary, shell = candidate if candidate else (None, None)
+    repo = ROOT.parents[1]
+    tools = repo / "tools"
+    if str(tools) not in sys.path:
+        sys.path.insert(0, str(tools))
+    import releases
+
+    import ui_shell_switch
+
+    state_home = Path(os.environ.get("XDG_STATE_HOME") or HOME / ".local/state")
+
+    def apply():
+        releases.install_controller(repo, home=HOME)
+        switch = ui_shell_switch.UiShell(HOME, state_home / "nacre")
+        return switch.migrate(binary, shell)
+
+    inherited_fd = writer_lease.inherited_fd_from_env()
+    if inherited_fd is not None:
+        with writer_lease.writer_lease(HOME / ".config/nacre", inherited_fd):
+            return apply()
+    lock_path = state_home / "nacre/releases/release.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with lock_path.open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        with writer_lease.writer_lease(HOME / ".config/nacre"):
+            return apply()
 
 
 def daemon_status_healthy(text):
@@ -414,12 +464,9 @@ def dry_run():
     print("Dry run (code-only): nothing is changed.")
     shell = active_ui_shell()
     print(
-        "Plan: validate "
-        + (
-            "Bead shell and daemon; stage QML source unvalidated."
-            if shell == "bead"
-            else "QML desktop load and source digest."
-        )
+        "Plan: migrate "
+        + shell
+        + " to checked Bead with last known-good Bead recovery."
     )
     print("Helper binary changed: " + changed)
     if changed == "no":
@@ -843,6 +890,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
     guard_retired_niri_bindings()
     dropins = retired_dropins(retire_niri_experiment)
     shell_to_validate = active_ui_shell() if code_only else "qml"
+    candidate = bead_candidate()
+    if shell_to_validate == "qml" and candidate is None:
+        raise RuntimeError(
+            "A Bead build is required before updating a QML shell; install the Nacre package or build the source release first"
+        )
     # Resolve/build the native candidate before any source/runtime activation.
     helper = ROOT / "nacre-helper"
     if not helper.is_file():
@@ -1045,11 +1097,11 @@ def deploy(code_only=False, retire_niri_experiment=False):
             restart_daemon_checked(
                 target, previous_helper, trees=source_saved and tools_saved
             )
-        subprocess.run(["systemctl", "--user", "restart", "nacre-shell"], check=True)
-        if shell_to_validate == "bead":
-            validate_bead_live()
-        else:
-            validate_live(source_digest(SHELL))
+        result = migrate_ui_shell(candidate)
+        if result and result.get("status") not in {"complete", "recovered"}:
+            raise RuntimeError(
+                result.get("hint", "Bead shell migration did not complete")
+            )
         refresh_niri_session_if_changed()
         return
     if backup is None:
@@ -1220,6 +1272,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
         ["systemctl", "--user", "restart", "nacre-shell.service"], check=True
     )
     validate_live(source_digest(SHELL))
+    migrate_ui_shell(candidate)
     refresh_niri_session_if_changed()
     print("Native shell installed. Backup:", backup)
 

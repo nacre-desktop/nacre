@@ -1,6 +1,6 @@
 # Updates, recovery and FAQ
 
-Keep desktop packages and Qt/Quickshell compatible. Package updates are followed
+Keep desktop packages updated together. Package updates are followed
 by `nacre setup`; source updates use committed, checked code and a reviewed
 installation plan. Managed changes keep snapshots, restore failed applies and
 refuse to overwrite later edits. `nacre status` shows the current release;
@@ -10,13 +10,31 @@ upgrades or restore accounts, conversations, notes or personal preferences.
 Generated Python bytecode (`__pycache__` and `*.pyc`) is excluded from edit
 detection and snapshots. Rollback discards it when restoring managed directories.
 
+Bead failures use `nacre-ui-shell-fallback.service`. After the shell exhausts its
+normal restart limit, recovery selects a previous Bead build that passed live
+health checks. It checks that build again after starting it. If no healthy copy
+remains, recovery stops the shell and writes a recovery hint to the journal.
+An offline package preparation checks the executable but cannot certify live
+health. Keep a working Bead copy through updates.
+
+From a TTY, inspect the shell and fallback logs first. To select a previous
+validated Bead manually, use:
+
+```sh
+nacre ui-shell rollback
+```
+
+This shell rollback is separate from `nacre rollback`, which restores managed
+private files. If recovery reports that no healthy Bead exists, install a checked
+Nacre build and apply its setup again; do not repeatedly restart a failed build.
+
 ## Package update checks in isolated sessions
 
 The update checker uses `checkupdates` and its separate pacman database, leaving
 the system database untouched. In a session with remapped user IDs, Nacre runs
 package checks through the systemd user manager. The interactive updater also
 uses a user service so pacman's download user and the normal sudo password prompt
-work. Update confirmation, Qt compatibility checks and package signatures remain
+work. Update confirmation and package signatures remain
 in effect; normal sessions continue to run the tools directly.
 
 ## Recover from a TTY
@@ -75,12 +93,11 @@ password unlock, suspend/resume or screen sharing works on your hardware.
 
 ## Where are the logs?
 
-Service logs live in the systemd user journal; Quickshell keeps separate runtime
-logs, which you can read in the graphical session with its log command:
+Shell and recovery logs live in the systemd user journal:
 
 ```sh
 journalctl --user -u nacre-shell.service --no-pager -n 50
-quickshell log --config nacre --no-color --tail 50
+journalctl --user -u nacre-ui-shell-fallback.service --no-pager -n 50
 ```
 
 Launcher → **Health → Logs** opens recent service logs. Release records are in

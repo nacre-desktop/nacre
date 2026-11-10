@@ -124,12 +124,21 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertEqual(json.loads(target.read_text())["favorites"], [])
 
     def fixture(self, folder):
-        root = Path(folder) / "package"
+        root = Path(folder) / "usr/share/nacre"
         home = Path(folder) / "home"
         home.mkdir()
         (root / "nacre/shell-tools").mkdir(parents=True)
         (root / "tools").mkdir()
+        (root / "tools/releases.py").write_bytes((TOOLS / "releases.py").read_bytes())
         (root / "runtime/palette").mkdir(parents=True)
+        bundle = root.parent.parent / "lib/nacre/bead-shell"
+        (bundle / "bin").mkdir(parents=True)
+        (bundle / "shell/bar").mkdir(parents=True)
+        (bundle / "shell/palette.json").write_text("{}")
+        for name in ("nacre-shell", "bead-wallpaper-video", "nacre-wallpaper-decode"):
+            executable = bundle / "bin" / name
+            executable.write_text("#!/bin/sh\nexit 0\n")
+            executable.chmod(0o755)
         for name in ("profile-policy.py", "nacre_native_config.py"):
             (root / "nacre/shell-tools" / name).write_bytes(
                 (TOOLS.parent / "nacre/shell-tools" / name).read_bytes()
@@ -342,6 +351,18 @@ class PackageSetupTests(unittest.TestCase):
                     str(home), (home / ".config/nacre/shortcuts.lua").read_text()
                 )
                 self.assertTrue((home / ".config/quickshell/nacre").is_symlink())
+                dropin = home / package_runtime.BEAD_UNITS[0]
+                fallback = home / ".config/systemd/user/nacre-ui-shell-fallback.service"
+                self.assertIn("/bead/", dropin.read_text())
+                self.assertIn("recover-bead --recover", fallback.read_text())
+                journals = list(
+                    (home / ".local/state/nacre/ui-shell").glob("*/journal.json")
+                )
+                self.assertTrue(journals)
+                # Offline preparation checks the executable; it cannot establish
+                # live health or certify the candidate as a recovery copy.
+                for journal in journals:
+                    self.assertFalse(json.loads(journal.read_text()).get("known_good"))
                 self.assertEqual(record["status"], "prepared")
                 self.assertFalse(
                     any(".codex" in entry["path"] for entry in record["entries"])
@@ -350,6 +371,8 @@ class PackageSetupTests(unittest.TestCase):
                 release_processes.run.assert_not_called()
                 self.assertFalse((home / ".config/nacre/keyboard.lua").exists())
                 self.assertFalse((home / ".config/quickshell/nacre").is_symlink())
+                self.assertFalse(dropin.exists())
+                self.assertFalse(fallback.exists())
                 self.assertEqual(account.read_text(), "private fixture")
 
     def test_restore_ignores_and_removes_python_bytecode(self):
@@ -394,7 +417,12 @@ class PackageSetupTests(unittest.TestCase):
             assistant = root / "deployment/ai/.local/bin/nacre-ai-hello"
             assistant.parent.mkdir(parents=True)
             assistant.write_text("assistant\n")
-            for directory in (".config", ".local/bin", ".local/share", ".local/state"):
+            for directory in (
+                ".config/systemd/user",
+                ".local/bin",
+                ".local/share",
+                ".local/state",
+            ):
                 (home / directory).mkdir(parents=True, exist_ok=True)
             mine = home / ".config/kitty/kitty.conf"
             mine.parent.mkdir()

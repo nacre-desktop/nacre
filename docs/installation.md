@@ -3,9 +3,9 @@
 Use an updated Arch or CachyOS system and the signed binary repository below.
 Setup can install the selected Wayland compositor if it is missing, or prepare
 Nacre alongside an existing session. **No AUR package or source build is required.**
-The tested Hyprland
-stack uses Hyprland 0.56.2 (Lua configuration), Quickshell 0.3.2, Qt 6.12 and UWSM.
-Upgrade the desktop and Qt together; avoid partial system upgrades.
+The desktop shell uses Bead, with Nacre's views in Luau. Hyprland uses Lua
+configuration and UWSM manages the login session. The SDDM greeter still uses
+QtQuick. Avoid partial system upgrades.
 
 ## Development repository
 
@@ -46,8 +46,8 @@ intact. Keyboard and profile
 overrides remain available through command-line options and Settings.
 
 Missing dependencies are installed through pacman. Routine provider defaults
-follow the configured repository priority, with FFmpeg selected for Qt's
-multimedia backend. Pacman's transaction approval remains interactive. You need a
+follow the configured repository priority. Pacman's transaction approval remains
+interactive. You need a
 working network and a normal local user login. If there is no display manager,
 log out of any existing graphical session and start the prepared login from a
 TTY with `nacre session niri` or `nacre session hyprland`. An existing login
@@ -266,6 +266,7 @@ git clone --recurse-submodules https://github.com/nacre-desktop/nacre.git
 cd nacre
 npm ci --ignore-scripts
 python3 nacre/shell-tools/provision.py
+cargo build --locked --release -j2 -p nacre-shell --bins
 ./install.sh --profile default
 ./install.sh --profile default --prepare /tmp/nacre-preview
 ```
@@ -275,3 +276,9 @@ without changing the running desktop. From a supported Hyprland session, apply a
 committed, checked candidate with `./install.sh --profile default --apply`.
 For optional apps, add `--with ai` and/or `--with brain`. Source deployment uses
 live health checks and rollback; package setup only prepares files for next login.
+
+Source `install.py --code-only` updates migrate an older shell selection to
+Bead and replace the old failure fallback with recovery to a previous healthy
+Bead build. They retain the previous build until the candidate passes health
+checks. Package setup stages a matched executable and Luau tree for the next
+login without restarting the current session. See [shell recovery](recovery.md).

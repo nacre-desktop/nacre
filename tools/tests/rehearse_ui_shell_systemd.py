@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Disposable-container only: real systemd user manager, stub Bead and daemon."""
+"""Disposable-container only: real systemd user manager, stub Bead and daemon.
+
+Exercises Stage A migration/recovery wiring. The stub UI provider proves only that
+systemd selected and kept the requested launcher alive; it does not prove Bead UI.
+"""
 
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import time
@@ -12,30 +17,39 @@ home = Path.home()
 assert str(home) == "/home/tester" and os.getuid() == 1000
 assert Path("/.dockerenv").is_file()
 repo = Path(__file__).resolve().parents[2]
-root = home / ".config/systemd/user"
-assert not root.exists(), "Use a fresh disposable tester HOME"
-root.mkdir(parents=True)
+unit_dir = home / ".config/systemd/user"
+assert not unit_dir.exists(), "Use a fresh disposable tester HOME"
+unit_dir.mkdir(parents=True)
 rt = Path(os.environ["XDG_RUNTIME_DIR"])
 state = home / ".local/state/nacre/releases"
 state.mkdir(parents=True, mode=0o700, exist_ok=True)
 (state / "release.lock").touch(mode=0o600)
+control = home / ".local/share/nacre/control"
+control.mkdir(parents=True)
+for name in ("releases.py", "f4_switch.py", "ui_shell_switch.py"):
+    shutil.copy2(repo / "tools" / name, control / name)
+shared = home / ".local/share/nacre/shell/tools"
+shared.mkdir(parents=True)
+for name in ("nacre_state.py", "nacre-state-files.json", "writer_lease.py"):
+    shutil.copy2(repo / "nacre/shell-tools" / name, shared / name)
 
 
-def run(*args):
+def run(*args, check=True):
     p = subprocess.run(args, text=True, capture_output=True, timeout=120)
     print("$", *args, "\n", p.stdout, p.stderr, flush=True)
-    p.check_returncode()
-    return p.stdout
+    if check:
+        p.check_returncode()
+    return p
 
 
 def ui(*args):
     return json.loads(
-        run(sys.executable, str(repo / "tools/releases.py"), "ui-shell", *args)
+        run(sys.executable, str(repo / "tools/releases.py"), "ui-shell", *args).stdout
     )
 
 
-def ctl(*args):
-    return run("systemctl", "--user", *args)
+def ctl(*args, check=True):
+    return run("systemctl", "--user", *args, check=check)
 
 
 def write(path, data, mode=0o644):
@@ -64,135 +78,146 @@ else:
 )
 qml = home / "qml"
 write(qml, "#!/bin/sh\nexec /usr/bin/sleep infinity\n", 0o700)
-bead = home / "stub-bead"
+
+
+def build(label):
+    binary = home / f"bead-{label}"
+    script = "\n".join(
+        [
+            "#!/bin/sh",
+            'case "${1:-}" in --help) exit 0 ;; --bar) ;; *) exit 2 ;; esac',
+            "systemctl --user is-active --quiet nacre-daemon.service || { echo 'daemon was not active when Bead started' >&2; exit 91; }",
+            './bead-wallpaper-video --daemon-socket "${NACRE_DAEMON_SOCKET:-$XDG_RUNTIME_DIR/nacre/daemon.sock}" &',
+            f'echo $! > "$XDG_RUNTIME_DIR/wallpaper-{label}.pid"',
+            f'while [ ! -e "$XDG_RUNTIME_DIR/crash-{label}" ]; do sleep .2; done',
+            "exit 3",
+            "",
+        ]
+    )
+    write(binary, script, 0o700)
+    write(
+        home / "bead-wallpaper-video",
+        '#!/bin/sh\n[ "${1:-}" = --check ] && exit 0\necho $$ > "$XDG_RUNTIME_DIR/wallpaper.pid"\nwhile :; do sleep 1; done\n',
+        0o700,
+    )
+    write(home / "nacre-wallpaper-decode", "#!/bin/sh\nexit 1\n", 0o700)
+    shell = home / f"build-shell-{label}"
+    (shell / "bar").mkdir(parents=True, exist_ok=True)
+    write(shell / "palette.json", "{}")
+    return binary, shell
+
+
+good_binary, good_shell = build("good")
+candidate_binary, candidate_shell = build("candidate")
 write(
-    bead,
-    """#!/bin/sh
-[ "${1:-}" = --help ] && exit 0
-systemctl --user is-active --quiet nacre-daemon.service || {
-    echo 'daemon was not active when Bead started' >&2
-    exit 91
-}
-./bead-wallpaper-video --daemon-socket "${NACRE_DAEMON_SOCKET:-$XDG_RUNTIME_DIR/nacre/daemon.sock}" &
-while [ ! -e "$XDG_RUNTIME_DIR/crash" ]; do sleep .2; done
-exit 3
-""",
-    0o700,
-)
-write(
-    home / "bead-wallpaper-video",
-    """#!/bin/sh
-[ "${1:-}" = --check ] && exit 0
-echo $$ > "$XDG_RUNTIME_DIR/wallpaper.pid"
-while :; do sleep 1; done
-""",
-    0o700,
-)
-write(home / "nacre-wallpaper-decode", "#!/bin/sh\nexit 1\n", 0o700)
-shell = home / "build-shell"
-(shell / "bar").mkdir(parents=True, exist_ok=True)
-write(shell / "palette.json", "{}")
-write(
-    root / "nacre-shell.service",
+    unit_dir / "nacre-shell.service",
     f"[Service]\nExecStart={qml} start\nRestart=on-failure\nRestartSec=2\n[Install]\nWantedBy=default.target\n",
 )
 write(
-    root / "nacre-shell.service.d/50-nacre-f4.conf",
+    unit_dir / "nacre-shell.service.d/50-nacre-f4.conf",
     "[Service]\nEnvironment=NACRE_DAEMON_CLIENT=1\n",
 )
-# Stub daemon: records the flags it was started with (the helper stub above reads them).
+old_fallback = "# managed by nacre ui-shell; remove with: nacre ui-shell qml\n[Unit]\nDescription=Return to the QML shell after a Bead failure\n\n[Service]\nType=oneshot\nExecStart=/usr/bin/python tools/releases.py ui-shell qml --recover\n"
 daemon = home / "stub-daemon"
 write(
     daemon,
     '#!/bin/sh\nprintf "%s\\n" "$*" > "$XDG_RUNTIME_DIR/daemon-args"\ntouch "$XDG_RUNTIME_DIR/daemon-ready"\nexec /usr/bin/sleep infinity\n',
     0o700,
 )
-write(root / "nacre-daemon.service", f"[Service]\nExecStart={daemon}\n")
-write(root / "nacre-daemon.socket", "[Socket]\nListenStream=%t/nacre/daemon.sock\n")
+write(unit_dir / "nacre-daemon.service", f"[Service]\nExecStart={daemon}\n")
+write(unit_dir / "nacre-daemon.socket", "[Socket]\nListenStream=%t/nacre/daemon.sock\n")
 ctl("daemon-reload")
 ctl("start", "nacre-daemon.socket")
 ctl("enable", "--now", "nacre-shell.service")
-installed = ui("install", "--binary", str(bead), "--shell", str(shell))
-assert Path(installed["launcher"]).is_file()
-assert ui("status")["ready_for_bead"] == []
-ui("bead", "--notifications", "none")
+
+# Fresh migration from the existing QML service.
+result = ui("migrate", "--binary", str(good_binary), "--shell", str(good_shell))
+assert result["shell"] == "bead"
+good_launcher = ui("status")["launcher"]
 assert ui("status")["active"] == "bead"
-bead_dropin = (root / "nacre-shell.service.d/60-nacre-ui-shell.conf").read_text()
-assert "nacre-qml-windows.service" not in bead_dropin
-assert "Wants=nacre-daemon.socket nacre-daemon.service" in bead_dropin
-assert "After=nacre-daemon.socket nacre-daemon.service" in bead_dropin
-assert (rt / "daemon-ready").is_file(), "daemon did not start before Bead"
-assert not (root / "nacre-qml-windows.service").exists()
-assert "LoadState=not-found" in ctl(
-    "show", "--property=LoadState", "nacre-qml-windows.service"
-)
-wallpaper_pid = int((rt / "wallpaper.pid").read_text())
-os.kill(wallpaper_pid, 0)
-# Real service manager re-reads the persisted selection on the next start.
-ctl("stop", "nacre-shell.service")
-ctl("stop", "nacre-daemon.service")
-ctl("stop", "nacre-daemon.socket")
+fallback = unit_dir / "nacre-ui-shell-fallback.service"
+assert "last known-good Bead" in fallback.read_text()
+assert "recover-bead --recover" in fallback.read_text()
+assert "ui-shell qml --recover" not in fallback.read_text()
+assert ctl("is-active", "nacre-shell.service").stdout.strip() == "active"
+
+# In-place Bead update with the old QML fallback unit present.
+write(fallback, old_fallback)
 ctl("daemon-reload")
-ctl("start", "nacre-shell.service")
-assert ctl("is-active", "nacre-daemon.socket").strip() == "active"
+updated = ui(
+    "migrate", "--binary", str(candidate_binary), "--shell", str(candidate_shell)
+)
+assert updated["shell"] == "bead"
 assert ui("status")["active"] == "bead"
-# ExecStart crashes on each automatic restart, no host process is signalled.
-write(rt / "crash", "1")
-end = time.monotonic() + 65
-dropin = root / "nacre-shell.service.d/60-nacre-ui-shell.conf"
-while dropin.exists() and time.monotonic() < end:
-    time.sleep(0.5)
-assert not dropin.exists(), "OnFailure did not restore QML"
-while time.monotonic() < end:
+assert "recover-bead --recover" in fallback.read_text()
+assert ctl("is-active", "nacre-shell.service").stdout.strip() == "active"
+failed_candidate = ui("status")["launcher"]
+assert failed_candidate != good_launcher
+
+# Candidate crashes on each start; real systemd exhausts StartLimitBurst and runs OnFailure.
+write(rt / "crash-candidate", "1")
+deadline = time.monotonic() + 65
+while time.monotonic() < deadline:
     status = ui("status")
-    if status["active"] == "qml" and status["incomplete"] == []:
+    if status["active"] == "bead" and status.get("launcher") == good_launcher:
         break
     time.sleep(1)
-assert status["active"] == "qml" and status["incomplete"] == []
-assert ctl("is-active", "nacre-shell.service").strip() == "active"
-ui("rollback")
-assert not (root / "nacre-qml-windows.service").exists()
-assert not (root / "nacre-ui-shell-fallback.service").exists()
-(rt / "crash").unlink()
-ui("bead", "--notifications", "none")
-wallpaper_pid = int((rt / "wallpaper.pid").read_text())
-ui("qml")
-assert ui("status")["active"] == "qml"
-try:
-    os.kill(wallpaper_pid, 0)
-except ProcessLookupError:
-    pass
-else:
-    raise AssertionError("wallpaper renderer child survived the Bead shell")
-# N0068: daemon notifications take over the daemon flags, and qml gives them back.
-args = rt / "daemon-args"
+assert status["active"] == "bead" and status.get("launcher") == good_launcher, status
+assert ctl("is-active", "nacre-shell.service").stdout.strip() == "active"
+failed_records = [
+    json.loads(path.read_text())
+    for path in (home / ".local/state/nacre/ui-shell").glob("*/journal.json")
+]
+assert any(
+    row.get("launcher") == failed_candidate and row.get("recovery_failed")
+    for row in failed_records
+), "start-limited candidate was not marked failed"
 
+# Roll back to the earlier Bead and then perform another update.
+(rt / "crash-candidate").unlink()
+retry = ui(
+    "migrate", "--binary", str(candidate_binary), "--shell", str(candidate_shell)
+)
+assert retry["shell"] == "bead"
+rolled = ui("rollback")
+assert rolled["shell"] == "bead" and rolled.get("launcher") == good_launcher, rolled
+again = ui(
+    "migrate", "--binary", str(candidate_binary), "--shell", str(candidate_shell)
+)
+assert again["shell"] == "bead" and ui("status")["active"] == "bead"
 
-def flags():
-    # The unit is Type=simple: restart returns before the stub has written its arguments.
-    end = time.monotonic() + 10
-    while time.monotonic() < end:
-        try:
-            return args.read_text().split()
-        except OSError:
-            time.sleep(0.2)
-    raise AssertionError("the daemon stub did not start")
+# Simulate every retained Bead failing its health check; recovery must stop and journal a hint.
+index = home / ".local/state/nacre/ui-shell"
+for journal in index.glob("*/journal.json"):
+    data = json.loads(journal.read_text())
+    data["recovery_failed"] = True
+    journal.write_text(json.dumps(data))
+write(rt / "crash-candidate", "1")
+deadline = time.monotonic() + 65
+while time.monotonic() < deadline:
+    active = ctl("is-active", "nacre-shell.service", check=False).stdout.strip()
+    if active == "inactive":
+        break
+    time.sleep(1)
+assert active == "inactive", f"shell was not cleanly stopped: {active}"
+restarts = ctl("show", "nacre-shell.service", "--property=NRestarts").stdout.strip()
+time.sleep(3)
+assert ctl("is-active", "nacre-shell.service", check=False).stdout.strip() == "inactive"
+assert (
+    ctl("show", "nacre-shell.service", "--property=NRestarts").stdout.strip()
+    == restarts
+)
+journal = run(
+    "journalctl",
+    "--user",
+    "--identifier=nacre-ui-shell-fallback",
+    "--no-pager",
+    check=False,
+)
+assert "No healthy Bead copy remains" in journal.stdout + journal.stderr
+assert "shell was stopped to prevent a restart loop" in journal.stdout + journal.stderr
 
-
-args.unlink(missing_ok=True)
-ctl("restart", "nacre-daemon.service")
-assert flags() == [], flags()
-ui("bead", "--notifications", "daemon")
-assert ui("status")["active"] == "bead"
-assert flags() == ["--notifications=daemon", "--behaviours=daemon"], flags()
-daemon_dropin = root / "nacre-daemon.service.d/60-nacre-ui-shell-daemon.conf"
-assert daemon_dropin.is_file()
-args.unlink()
-ui("qml")
-assert ui("status")["active"] == "qml"
-assert flags() == [], flags()
-assert not daemon_dropin.exists()
 print(
-    "PASS: install → switch → persisted restart → use → crash-loop fallback → rollback → repeat → daemon takeover and back",
+    "PASS: fresh migration → old fallback update → start-limit recovery → rollback → next update → exhausted-copy stop and journal hint",
     flush=True,
 )

@@ -430,7 +430,7 @@ it. Import and export use a Nacre theme manifest with both palettes. Saved palet
 share the existing Nacre Colors library; built-in palettes cannot be removed,
 and apply another palette before removing the one currently in use.
 
-**Extensions** manages launcher packs, palette themes and independent Quickshell
+**Extensions** manages launcher packs, palette themes and independent shell
 panels. Quick folders and Reference shortcuts are bundled starter packs. Imported
 extensions and local clones start disabled. Updates validate the repository,
 preserve local edits, and leave the new version disabled for review. Panels run

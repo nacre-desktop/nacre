@@ -26,6 +26,45 @@ CORE_USER_UNITS = tuple(
     )
 )
 
+# Release snapshots include these files so private-file rollback restores the
+# prior Bead selection as well as the ordinary package runtime links.
+BEAD_UNITS = tuple(
+    Path(".config/systemd/user") / name
+    for name in (
+        "nacre-shell.service.d/60-nacre-ui-shell.conf",
+        "nacre-daemon.service.d/60-nacre-ui-shell-daemon.conf",
+        "nacre-ui-shell-fallback.service",
+        "nacre-qml-windows.service",
+    )
+)
+BEAD_STATE = (
+    Path(".local/share/nacre/bead"),
+    Path(".local/state/nacre/ui-shell"),
+)
+
+
+def prepare_bead(home, root):
+    """Prepare the next Bead login; package setup never restarts a live session."""
+    from ui_shell_switch import UiShell
+
+    bundle = root.parent.parent / "lib/nacre/bead-shell"
+    result = UiShell(
+        home,
+        home / ".local/state/nacre",
+        recovery_router=root / "tools/releases.py",
+    ).prepare_bead(bundle / "bin/nacre-shell", bundle / "shell")
+    from configure import record_modules
+    import nacre_modules
+
+    version = Path(result["launcher"]).parent
+    written = [
+        (path.relative_to(home), False)
+        for path in [*version.rglob("*"), *(home / unit for unit in BEAD_UNITS)]
+        if path.is_file() and not path.is_symlink()
+    ]
+    record_modules(home, nacre_modules.resolve(home), {}, written)
+    return result
+
 
 def vendor_units(root):
     marker = root / "package.json.installed"
@@ -220,6 +259,7 @@ def plan(home, root, profile, compositor="hyprland"):
 
 
 def apply(home, root, profile, compositor="hyprland"):
+    prepare_bead(home, root)
     for relative, target in plan(home, root, profile, compositor):
         path = home / relative
         path.parent.mkdir(parents=True, exist_ok=True)
