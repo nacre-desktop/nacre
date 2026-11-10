@@ -33,7 +33,7 @@ duplicated in the package recipe.
 Cargo fetches the Bead framework at the full revision pinned in Nacre's
 manifest. The output `artifacts/ui-shell/` bundle contains `bin/` with all
 three executables and the matching `shell/` tree. The package stages it under
-`/usr/lib/nacre/bead-shell/`. Setup stages a matched immutable user copy and
+`/usr/lib/nacre/ui-shell/`. Setup stages a matched immutable user copy and
 Bead service drop-in; the normal update activates it and health-checks it.
 The fallback recovers a previously healthy Bead copy. If every copy fails,
 the shell stops and the journal gives a recovery command. `/usr/bin/nacre-shell`

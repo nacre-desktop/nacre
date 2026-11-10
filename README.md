@@ -24,9 +24,7 @@ needed.
 
 The Bead-based Nacre product lives in `crates/nacre-shell/` and `shell/`.
 [Build it from this checkout](docs/development/product-shell-build.md) using
-Cargo’s pinned Bead framework dependency. Historical product tooling and records
-are retained under `bead-shell/`; the [import record](docs/development/b0214-import/frozen-export.json)
-identifies the frozen export and preserved history. Shell failure recovery uses
+Cargo’s pinned Bead framework dependency. Shell failure recovery uses
 the last known-good Bead copy; see [recovery](docs/recovery.md).
 
 ## Features

@@ -54,7 +54,7 @@ def prepare_bead(home, root):
     """Prepare the next Bead login; package setup never restarts a live session."""
     from ui_shell_switch import UiShell
 
-    bundle = root.parent.parent / "lib/nacre/bead-shell"
+    bundle = root.parent.parent / "lib/nacre/ui-shell"
     result = UiShell(
         home,
         home / ".local/state/nacre",

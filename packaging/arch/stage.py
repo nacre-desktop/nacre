@@ -57,15 +57,15 @@ def stage(root, destination, component, build):
     if component == "core":
         stage_ui_shell(
             build / "ui-shell",
-            destination / "usr/lib/nacre/bead-shell",
-            root / "bead-shell",
+            destination / "usr/lib/nacre/ui-shell",
+            root,
             root / "crates/nacre-shell/assets/fonts/Outfit-OFL.txt",
         )
         for vendor in ("fontconfig", "system-tray"):
             copy(
                 root / "vendor" / vendor / "LICENSE",
                 destination
-                / "usr/share/licenses/nacre/bead-shell"
+                / "usr/share/licenses/nacre/ui-shell"
                 / (vendor + "-LICENSE"),
             )
         copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
@@ -384,10 +384,13 @@ def stage_ui_shell(bundle, destination, product_root=None, embedded_notice=None)
             path.chmod(0o755)
         elif path.is_file():
             path.chmod(0o755 if path.stat().st_mode & 0o111 else 0o644)
-    notices = destination.parents[2] / "share/licenses/nacre/bead-shell"
+    notices = destination.parents[2] / "share/licenses/nacre/ui-shell"
     if product_root is not None:
-        for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
-            source = product_root / name
+        for name, relative in (
+            ("LICENSE-MIT", "packaging/licenses/LICENSE-Bead-MIT"),
+            ("LICENSE-GPL-3.0", "LICENSE"),
+        ):
+            source = product_root / relative
             if not source.is_file():
                 raise FileNotFoundError(f"Missing product license notice: {source}")
             notices.mkdir(parents=True, exist_ok=True)

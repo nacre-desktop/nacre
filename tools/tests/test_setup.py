@@ -131,7 +131,7 @@ class PackageSetupTests(unittest.TestCase):
         (root / "tools").mkdir()
         (root / "tools/releases.py").write_bytes((TOOLS / "releases.py").read_bytes())
         (root / "runtime/palette").mkdir(parents=True)
-        bundle = root.parent.parent / "lib/nacre/bead-shell"
+        bundle = root.parent.parent / "lib/nacre/ui-shell"
         (bundle / "bin").mkdir(parents=True)
         (bundle / "shell/bar").mkdir(parents=True)
         (bundle / "shell/palette.json").write_text("{}")
@@ -1702,13 +1702,13 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     / "core/usr/share/nacre/deployment/core/.local/share/nacre/shell/bin/qs"
                 ).exists()
             )
-            private_shell = base / "core/usr/lib/nacre/bead-shell"
+            private_shell = base / "core/usr/lib/nacre/ui-shell"
             for name in (
                 "nacre-shell",
                 "bead-wallpaper-video",
                 "nacre-wallpaper-decode",
             ):
-                relative = Path("usr/lib/nacre/bead-shell/bin") / name
+                relative = Path("usr/lib/nacre/ui-shell/bin") / name
                 self.assertIn(relative, owned)
                 self.assertEqual(
                     (private_shell / "bin" / name).read_bytes(),
@@ -1718,8 +1718,8 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (private_shell / "bin" / name).stat().st_mode & 0o777, 0o755
                 )
             for relative in (
-                Path("usr/lib/nacre/bead-shell/shell/palette.json"),
-                Path("usr/lib/nacre/bead-shell/shell/bar/main.luau"),
+                Path("usr/lib/nacre/ui-shell/shell/palette.json"),
+                Path("usr/lib/nacre/ui-shell/shell/bar/main.luau"),
             ):
                 self.assertIn(relative, owned)
             self.assertTrue((private_shell / "shell/bar").is_dir())
@@ -1732,12 +1732,15 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertNotEqual(wrapper_target, private_shell / "bin/nacre-shell")
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/control.sh"), owned)
-            for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
-                notice = Path("usr/share/licenses/nacre/bead-shell") / name
+            for name, source in (
+                ("LICENSE-MIT", "packaging/licenses/LICENSE-Bead-MIT"),
+                ("LICENSE-GPL-3.0", "LICENSE"),
+            ):
+                notice = Path("usr/share/licenses/nacre/ui-shell") / name
                 self.assertIn(notice, owned)
                 self.assertEqual(
                     (base / "core" / notice).read_bytes(),
-                    (TOOLS.parent / "bead-shell" / name).read_bytes(),
+                    (TOOLS.parent / source).read_bytes(),
                 )
             for name in ("nacre-daemon", "nacrectl"):
                 relative = Path("usr/bin") / name

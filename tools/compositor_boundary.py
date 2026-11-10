@@ -46,12 +46,9 @@ def native_program(value):
 
 def excluded(path, root):
     relative = path.relative_to(root)
-    # Imported history and private nested proofs are not installed dispatchers.
-    # Limit the exemption to this top-level archive, never an inner runtime path.
-    return (
-        relative.parts[:1] == ("bead-shell",)
-        or relative.parts[:3] == ("docs", "research", "n0156-reference")
-        or bool(set(relative.parts) & EXCLUDED)
+    # Frozen reference captures are not installed dispatchers.
+    return relative.parts[:3] == ("docs", "research", "n0156-reference") or bool(
+        set(relative.parts) & EXCLUDED
     )
 
 

@@ -310,7 +310,7 @@ class Base(unittest.TestCase):
         controller.write_text("# fixture controller\n")
         self.state = self.home / ".local/state/nacre"
         self.state.mkdir(parents=True, mode=0o700)
-        self.launcher = Path(self.temp.name) / "bead-shell"
+        self.launcher = Path(self.temp.name) / "nacre-shell"
         self.launcher.write_text("#!/bin/sh\n")
         self.launcher.chmod(0o700)
         self.wallpaper_video = self.launcher.with_name("bead-wallpaper-video")

@@ -70,4 +70,3 @@ node_modules/
 !/shell/**/*.png
 !/shell/**/*.jpg
 !/shell/**/*.webp
-!/bead-shell/examples/*.png

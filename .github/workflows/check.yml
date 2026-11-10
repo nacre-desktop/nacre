@@ -106,8 +106,8 @@ jobs:
           if-no-files-found: ignore
       - name: Build pinned Luau analyzer
         run: python tools/check_product_shell.py --download-analyzer "$RUNNER_TEMP/luau/luau-analyze"
-      - name: Imported product shell, Luau and proof suites
-        run: python tools/check_product_shell.py --analyzer "$RUNNER_TEMP/luau/luau-analyze" --native-only
+      - name: Product shell, Luau and wallpaper checks
+        run: python tools/check_product_shell.py --analyzer "$RUNNER_TEMP/luau/luau-analyze"
       - name: Install pinned cargo-deny for product graph
         run: |
           asset=cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
@@ -121,7 +121,7 @@ jobs:
           install -m 755 "$RUNNER_TEMP/${asset%.tar.gz}/cargo-deny" "$HOME/.cargo/bin/cargo-deny"
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Product dependency and license graph
-        run: cargo deny --manifest-path crates/nacre-shell/Cargo.toml --all-features --config bead-shell/deny-product.toml check
+        run: cargo deny --manifest-path crates/nacre-shell/Cargo.toml --all-features --config crates/nacre-shell/deny.toml check
       - name: Candidate helper for package setup tests
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

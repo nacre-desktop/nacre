@@ -54,7 +54,7 @@ for target in (binary, reference, *binary.parents, *reference.parents):
     if not target.is_symlink():
         assert metadata.st_mode & 0o022 == 0, target
 assert run("pacman", "-Qoq", str(binary)).stdout.strip() == "nacre"
-product_bundle = Path("/usr/lib/nacre/bead-shell")
+product_bundle = Path("/usr/lib/nacre/ui-shell")
 assert not Path("/usr/share/nacre/nacre/shell").exists()
 assert not Path(
     "/usr/share/nacre/deployment/core/.local/share/nacre/shell/bin/qs"
@@ -115,14 +115,13 @@ for name in (
     notice = Path("/usr/share/licenses/nacre") / name
     assert notice.is_file() and notice.stat().st_uid == 0
 for name in (
-    "LICENSE.md",
     "LICENSE-MIT",
     "LICENSE-GPL-3.0",
     "Outfit-OFL.txt",
     "fontconfig-LICENSE",
     "system-tray-LICENSE",
 ):
-    notice = Path("/usr/share/licenses/nacre/bead-shell") / name
+    notice = Path("/usr/share/licenses/nacre/ui-shell") / name
     assert notice.is_file() and notice.stat().st_uid == 0, notice
     assert run("pacman", "-Qoq", str(notice)).stdout.strip() == "nacre"
 # The public native CLI must work before setup creates private runtime links.

@@ -112,7 +112,6 @@ def main():
     for path in ROOT.rglob("*"):
         if (
             not path.is_file()
-            or path.is_relative_to(ROOT / "bead-shell")
             or path.is_relative_to(ROOT / "vendor")
             or path.is_relative_to(ROOT / ".lead")
             or any(
@@ -221,19 +220,6 @@ def main():
             if line.startswith(("Ran ", "OK ", "OK"))
         )
         print(suite + ": " + summary.replace("\n", "; "), flush=True)
-    product_output = run(
-        [sys.executable, "tools/check_product_shell.py", "--python-only"],
-        env=environment,
-    )
-    for line in product_output.splitlines():
-        if line.startswith(
-            (
-                "Bead product suite ",
-                "Bead product proof suites:",
-                "Bead product Python tests:",
-            )
-        ):
-            print(line, flush=True)
     cli_python = Path(sys.executable)
     if cli_python.exists():
         environment = dict(os.environ, PYTHONPATH=str(ROOT / "nacre/shell-cli/src"))

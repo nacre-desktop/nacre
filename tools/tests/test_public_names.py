@@ -27,9 +27,6 @@ class PublicNamesTests(unittest.TestCase):
             if (
                 not name
                 or name.startswith("docs/")
-                # Preserve imported historical records and private proof tools.
-                # Runtime crates/nacre-shell and shell remain in this scan.
-                or name.startswith("bead-shell/")
                 or name == "README.md"
                 or "NOTICE" in name
                 or "LICENSE" in name

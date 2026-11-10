@@ -34,17 +34,22 @@ class UiShellBundleTests(unittest.TestCase):
             (bundle / "shell/bar").chmod(0o775)
             (bundle / "shell/palette.json").chmod(0o664)
             (bundle / "shell/bar/main.luau").chmod(0o775)
-            product = root / "source/bead-shell"
+            product = root / "source"
             product.mkdir(parents=True)
-            for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
-                (product / name).write_text("notice: " + name + "\n")
+            for name, relative in (
+                ("LICENSE-MIT", "packaging/licenses/LICENSE-Bead-MIT"),
+                ("LICENSE-GPL-3.0", "LICENSE"),
+            ):
+                notice = product / relative
+                notice.parent.mkdir(parents=True, exist_ok=True)
+                notice.write_text("notice: " + name + "\n")
             dest = root / "pkg"
 
             stage_module.stage_ui_shell(
-                bundle, dest / "usr/lib/nacre/bead-shell", product
+                bundle, dest / "usr/lib/nacre/ui-shell", product
             )
 
-            private = dest / "usr/lib/nacre/bead-shell"
+            private = dest / "usr/lib/nacre/ui-shell"
             for name in (
                 "nacre-shell",
                 "bead-wallpaper-video",
@@ -74,9 +79,9 @@ class UiShellBundleTests(unittest.TestCase):
                 (bundle / "shell/bar/main.luau").stat().st_mode & 0o777, 0o775
             )
             self.assertFalse((dest / "usr/bin/nacre-shell").exists())
-            for name in ("LICENSE.md", "LICENSE-MIT", "LICENSE-GPL-3.0"):
+            for name in ("LICENSE-MIT", "LICENSE-GPL-3.0"):
                 self.assertEqual(
-                    (dest / "usr/share/licenses/nacre/bead-shell" / name).read_text(),
+                    (dest / "usr/share/licenses/nacre/ui-shell" / name).read_text(),
                     "notice: " + name + "\n",
                 )
 

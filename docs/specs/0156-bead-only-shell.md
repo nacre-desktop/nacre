@@ -419,6 +419,9 @@ status. This avoids self-start recursion and a missing-configuration loop.
 
 ## Remaining literal-name inventory
 
+Historical inventory at N0156 completion. [N0157](0157-retire-shell-archive.md)
+subsequently removed the excluded pre-split archive and records the current set.
+
 The exact remaining file set from `git grep -il quickshell` is listed below.
 The migration references are removal-only or negative/provenance tests; no
 shipped shell launch path invokes that runtime. This inventory includes the

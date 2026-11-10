@@ -23,14 +23,13 @@ class CompositorBoundaryTests(unittest.TestCase):
             (root / "new.py").write_text('command=["niri","msg","windows"]\n')
             self.assertEqual(len(boundary.check(root)), 1)
 
-    def test_imported_proofs_do_not_exempt_runtime_paths_with_the_same_name(self):
+    def test_reference_captures_do_not_exempt_runtime_paths(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             for name, is_proof in (
-                ("bead-shell/spikes/capture.py", True),
-                ("bead-shell/ssh-placeholder/spikes/capture.py", True),
+                ("docs/research/n0156-reference/capture.py", True),
                 ("tools/capture.py", False),
-                ("nacre/shell-tools/bead-shell/capture.py", False),
+                ("nacre/shell-tools/reference/capture.py", False),
             ):
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)

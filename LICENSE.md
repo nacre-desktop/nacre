@@ -9,10 +9,7 @@ The root `vendor/fontconfig/` and `vendor/system-tray/` patches retain their
 upstream MIT licenses and patch provenance. Bead's generic test fonts and plugin
 examples remain in the dependency checkout, with their original notices.
 
-`bead-shell/` preserves the selected product history and its historical
-[license record](bead-shell/LICENSE.md), [MIT text](bead-shell/LICENSE-MIT)
-and [GPL text](bead-shell/LICENSE-GPL-3.0). Historical records describe their
-original repository layout and licensing dates; they do not relicense Nacre or
-third-party assets. Research, tools and spikes retain their per-file notices;
-GPL reference implementations remain GPL. Bundled font, image and icon notices
-remain adjacent to their assets, including the CC0 welcome demo provenance.
+The shipped shell binaries include Bead framework code; its MIT notice ships
+from `packaging/licenses/LICENSE-Bead-MIT`. Nacre’s GPL license ships from `LICENSE`.
+Bundled font, image and icon notices remain adjacent to their assets, including
+the CC0 welcome demo provenance.

@@ -197,7 +197,7 @@ mod tests {
             }
             let artifacts = std::env::var_os("BEAD_TEST_ARTIFACTS")
                 .map(PathBuf::from)
-                .unwrap_or_else(|| std::env::temp_dir().join("bead-shell-goldens"))
+                .unwrap_or_else(|| std::env::temp_dir().join("nacre-shell-goldens"))
                 .join(name);
             frame.compare(&golden, bead_test::Tolerance::default(), &artifacts)?;
             let offset = harness.scene().offset;

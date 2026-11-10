@@ -1,56 +1,14 @@
 #!/usr/bin/env python3
-"""Run product checks moved from Bead, against Nacre's pinned framework source."""
+"""Check the product shell against Nacre's pinned Bead framework."""
 
 import argparse
 import json
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-PRODUCT = ROOT / "bead-shell"
-SUITES = (
-    "test_dashboard_capture_windows.py",
-    "test_menu_engine_trace.py",
-    "test_b0003_arm.py",
-    "test_b0002_arm.py",
-    "test_laptop_reference_capture.py",
-    "test_foundation_preview.py",
-    "test_fake_system.py",
-    "test_fullscreen_lips.py",
-    "test_pearl_release_proof.py",
-    "test_detach_ghost_proof.py",
-    "test_launcher_icons_proof.py",
-    "test_launcher_memory_proof.py",
-    "test_scrolling_proof.py",
-)
-PY_COMPILE = (
-    "capture_safety.py",
-    "measure.py",
-    "bar-matrix.py",
-    "dashboard-residency.py",
-    "launcher-proof.py",
-    "b0002-arm.py",
-    "laptop-reference-capture.py",
-    "laptop-reference-artifacts.py",
-    "parity-compare.py",
-    "fake-bluez.py",
-    "fake-power.py",
-    "fake_system.py",
-    "foundation-preview.py",
-    "menu-engine-proof.py",
-    "menu_engine_trace.py",
-    "b0003-arm.py",
-    "tests/test_dashboard_capture_windows.py",
-    "tests/test_menu_engine_trace.py",
-    "tests/test_b0002_arm.py",
-    "tests/test_laptop_reference_capture.py",
-    "tests/test_b0003_arm.py",
-    "tests/test_fake_system.py",
-    "tests/test_launcher_memory_proof.py",
-)
 LUAU_URL = "https://github.com/luau-lang/luau/releases/download/0.742/luau-ubuntu.zip"
 LUAU_SHA256 = "152058b98c60ff1f5b5ec9bca0b8eb37793cae161dd3a05608cc3d8738ba1a4d"
 BEAD_REVISION = "7ea19860ed1e5f0157d47f7b27c92ee035c21978"
@@ -181,36 +139,6 @@ def framework_checkout():
     return bead_root
 
 
-def suite(directory, pattern="test*.py"):
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "unittest",
-            "discover",
-            "-s",
-            directory,
-            "-p",
-            pattern,
-        ],
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        stdin=subprocess.DEVNULL,
-    )
-    output = result.stdout + result.stderr
-    if result.returncode:
-        print(output, end="")
-        raise SystemExit(result.returncode)
-    match = re.search(r"Ran (\d+) tests?", output)
-    if not match:
-        print(output, end="")
-        raise RuntimeError("Could not read unittest count for " + pattern)
-    count = int(match.group(1))
-    print(f"Bead product suite {directory}/{pattern}: {count} tests OK", flush=True)
-    return count
-
-
 def native_checks(binary, analyzer):
     binary, analyzer = binary.resolve(), analyzer.resolve()
     if not binary.is_file() or not analyzer.is_file():
@@ -220,7 +148,7 @@ def native_checks(binary, analyzer):
     run(
         [
             sys.executable,
-            str(PRODUCT / "tools/check-luau.py"),
+            "tools/check_luau.py",
             "--analyzer",
             str(analyzer),
             "--binary",
@@ -233,7 +161,7 @@ def native_checks(binary, analyzer):
     run(
         [
             sys.executable,
-            "bead-shell/spikes/wallpaper-video-smoke.py",
+            "tools/wallpaper_video_smoke.py",
             "--engine",
             str(binary.with_name("bead-wallpaper-video")),
             "--expect-presentation",
@@ -246,29 +174,9 @@ def native_checks(binary, analyzer):
     )
 
 
-def python_checks():
-    test_count = sum(suite("bead-shell/spikes/tests", pattern) for pattern in SUITES)
-    py_compile = [str(PRODUCT / "spikes" / path) for path in PY_COMPILE]
-    run([sys.executable, "-m", "py_compile", *py_compile])
-    print(
-        f"Bead product proof suites: {len(SUITES)} suites, {test_count} tests; "
-        "py_compile list OK",
-        flush=True,
-    )
-    package_count = suite("bead-shell/packaging/tests")
-    print(
-        f"Bead product Python tests: {len(SUITES) + 1} suites, "
-        f"{test_count + package_count} tests passed.",
-        flush=True,
-    )
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    modes = parser.add_mutually_exclusive_group()
-    modes.add_argument("--python-only", action="store_true")
-    modes.add_argument("--native-only", action="store_true")
-    modes.add_argument("--download-analyzer", type=Path, metavar="DESTINATION")
+    parser.add_argument("--download-analyzer", type=Path, metavar="DESTINATION")
     parser.add_argument("--analyzer", type=Path)
     target_dir = Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
     if not target_dir.is_absolute():
@@ -278,12 +186,9 @@ def main():
     if args.download_analyzer is not None:
         download_analyzer(args.download_analyzer)
         return
-    if not args.python_only:
-        if args.analyzer is None:
-            parser.error("--analyzer is required for native checks")
-        native_checks(args.binary, args.analyzer)
-    if not args.native_only:
-        python_checks()
+    if args.analyzer is None:
+        parser.error("--analyzer is required for native checks")
+    native_checks(args.binary, args.analyzer)
 
 
 if __name__ == "__main__":

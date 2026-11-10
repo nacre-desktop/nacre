@@ -112,7 +112,7 @@ def daemon_active():
 def bead_candidate():
     """Return an installed package build or matching source build."""
     repo = ROOT.parents[1]
-    packaged = Path("/usr/lib/nacre/bead-shell")
+    packaged = Path("/usr/lib/nacre/ui-shell")
     binary, shell = packaged / "bin/nacre-shell", packaged / "shell"
     if binary.is_file() and shell.is_dir():
         return binary, shell
