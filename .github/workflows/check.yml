@@ -81,6 +81,7 @@ jobs:
       - name: Native helper library checks
         env:
           BEAD_TEST_ARTIFACTS: ${{ runner.temp }}/bead-headless
+          RUST_TEST_THREADS: 2
         run: |
           cargo fmt --check
           cargo clippy --workspace --all-targets --locked -j2 -- -D warnings
