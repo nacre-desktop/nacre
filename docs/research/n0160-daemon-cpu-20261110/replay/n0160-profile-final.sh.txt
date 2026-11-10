@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$HOME/nacre-lead/n0160"
+nice -n 10 docker exec n0160-lab nice -n 10 python /work/.lead/n0160-run.py \
+  --repo /work --helper /work/.lead/tmp/n0160-baseline-helper \
+  --shell /work/target/release/nacre-shell --bin /work/target/release \
+  --out /tmp/n0160-profile-final --warmup-seconds 10 --idle-seconds 5 \
+  --interaction-seconds 60 --post-idle-seconds 5 >logs/profile-final.log 2>&1 &
+runner_pid=$!
+for attempt in {1..60}; do
+  if daemon_pid=$(nice -n 10 docker exec n0160-lab cat /tmp/n0160-profile-final/daemon.pid 2>/dev/null); then
+    break
+  fi
+  sleep 1
+done
+test -n "${daemon_pid:-}"
+nice -n 10 docker exec --privileged n0160-lab nice -n 10 perf record \
+  -e cpu-clock:u -F 99 --call-graph dwarf,16384 -p "$daemon_pid" \
+  -o /work/.lead/tmp/n0160/perf-final.data -- sleep 75 >logs/perf-final.log 2>&1
+wait "$runner_pid"
+nice -n 10 docker exec n0160-lab nice -n 10 perf report \
+  -i /work/.lead/tmp/n0160/perf-final.data --stdio --no-children --percent-limit 2 \
+  >logs/perf-final-report.txt 2>&1
+printf 'PROFILE_FINAL_PASS\n'

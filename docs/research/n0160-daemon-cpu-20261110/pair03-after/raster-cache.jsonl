@@ -1,0 +1,3 @@
+{"phase": "idle-before", "files": [{"name": "lock-background-49d504a2dbe47fe8ee9f2a06990fcb42b35a855904daff8bf0bd869d5ee46403.png", "inode": 23096779, "bytes": 22082, "mtime_ns": 1794344549483583451}]}
+{"phase": "interaction", "files": [{"name": "lock-background-49d504a2dbe47fe8ee9f2a06990fcb42b35a855904daff8bf0bd869d5ee46403.png", "inode": 23096779, "bytes": 22082, "mtime_ns": 1794344549483583451}]}
+{"phase": "idle-after", "files": [{"name": "lock-background-49d504a2dbe47fe8ee9f2a06990fcb42b35a855904daff8bf0bd869d5ee46403.png", "inode": 23096779, "bytes": 22082, "mtime_ns": 1794344549483583451}]}

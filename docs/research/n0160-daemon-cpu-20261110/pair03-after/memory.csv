@@ -1,0 +1,4 @@
+phase,pid,rss_kib,pss_kib,pss_anon_kib,pss_file_kib,pss_shmem_kib,swap_pss_kib
+idle-before,52920,54796,49346,21788,27558,0,0
+interaction,52920,57520,51991,23680,28311,0,0
+idle-after,52920,57544,52006,23704,28302,0,0

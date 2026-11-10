@@ -1,0 +1,454 @@
+#!/usr/bin/env python3
+"""Private headless daemon CPU capture using the archived N0154 Arm topology."""
+import argparse
+import importlib.util
+import json
+import os
+from pathlib import Path
+import shutil
+import signal
+import subprocess
+import struct
+import sys
+import threading
+import time
+import zlib
+import hashlib
+
+HERE = Path(__file__).resolve().parent
+ARCHIVE = HERE / 'tmp/n0160-harness'
+
+
+def pid_identity(pid):
+    try:
+        raw = (Path('/proc') / str(pid) / 'stat').read_text()
+        tail = raw[raw.rfind(')') + 2:].split()
+        return int(tail[19])
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def owned_processes(roots):
+    table = {}
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            raw = (entry / 'stat').read_text()
+            tail = raw[raw.rfind(')') + 2:].split()
+            table[int(entry.name)] = int(tail[1])
+        except (OSError, ValueError, IndexError):
+            continue
+    found = set(roots)
+    while True:
+        children = {pid for pid, ppid in table.items() if ppid in found}
+        if children <= found:
+            break
+        found.update(children)
+    return {pid: pid_identity(pid) for pid in found if pid_identity(pid) is not None}
+
+
+def signal_exact(identities, pid, sig):
+    start = identities.get(pid)
+    if start is not None and pid_identity(pid) == start:
+        try:
+            os.kill(pid, sig)
+        except ProcessLookupError:
+            pass
+
+
+def exact_shutdown(arm):
+    # Drain in reverse start order so Niri finishes writing before labwc exits.
+    for process in reversed(arm.procs):
+        identities = owned_processes([process.pid])
+        children = [pid for pid in identities if pid != process.pid]
+        for pid in children:
+            signal_exact(identities, pid, signal.SIGTERM)
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline and any(pid_identity(pid) == identities[pid] for pid in children):
+            time.sleep(.1)
+        signal_exact(identities, process.pid, signal.SIGTERM)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            for pid in children:
+                signal_exact(identities, pid, signal.SIGKILL)
+            signal_exact(identities, process.pid, signal.SIGKILL)
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                pass
+        except ChildProcessError:
+            pass
+
+
+def static_png(path, width=1920, height=1080):
+    def chunk(kind, data):
+        body = kind + data
+        return struct.pack('>I', len(data)) + body + struct.pack('>I', zlib.crc32(body) & 0xffffffff)
+    row = b'\x00' + bytes((22, 31, 43)) * width
+    payload = (b'\x89PNG\r\n\x1a\n'
+               + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+               + chunk(b'IDAT', zlib.compress(row * height, level=6)) + chunk(b'IEND', b''))
+    path.write_bytes(payload)
+    path.chmod(0o600)
+
+
+def sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def tree_sha256(path):
+    digest = hashlib.sha256()
+    for source in sorted(item for item in path.rglob('*') if item.is_file()):
+        digest.update(source.relative_to(path).as_posix().encode() + b'\0')
+        digest.update(source.read_bytes())
+        digest.update(b'\0')
+    return digest.hexdigest()
+
+
+def memory_sample(pid, phase, output):
+    fields = {}
+    try:
+        for line in (Path('/proc') / str(pid) / 'smaps_rollup').read_text().splitlines():
+            if ':' in line:
+                name, value = line.split(':', 1)
+                if name in ('Rss', 'Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem', 'SwapPss'):
+                    fields[name] = int(value.split()[0])
+    except (OSError, ValueError, IndexError):
+        fields = {}
+    path = Path(output)
+    if fields.get('SwapPss') != 0:
+        raise RuntimeError('Daemon SwapPss is nonzero or unavailable')
+    header = 'phase,pid,rss_kib,pss_kib,pss_anon_kib,pss_file_kib,pss_shmem_kib,swap_pss_kib\n'
+    if not path.exists():
+        path.write_text(header)
+    with path.open('a') as stream:
+        stream.write(','.join([phase, str(pid)] + [str(fields.get(k, '')) for k in
+            ('Rss', 'Pss', 'Pss_Anon', 'Pss_File', 'Pss_Shmem', 'SwapPss')]) + '\n')
+    backgrounds = []
+    for cached in sorted((path.parent / 'private/cache/nacre/lock-ready').glob('lock-background-*.png')):
+        stat = cached.stat()
+        backgrounds.append({'name': cached.name, 'inode': stat.st_ino, 'bytes': stat.st_size,
+                            'mtime_ns': stat.st_mtime_ns})
+    with (path.parent / 'raster-cache.jsonl').open('a') as stream:
+        stream.write(json.dumps({'phase': phase, 'files': backgrounds}) + '\n')
+
+
+def load_arm():
+    sys.path.insert(0, str(ARCHIVE))
+    parity_path = ARCHIVE / 'parity-compare.py'
+    source = parity_path.read_text().replace("WLR_RENDERER='gles2'", "WLR_RENDERER='pixman'")
+    parity_path.write_text(source)
+    spec = importlib.util.spec_from_file_location('n0160_parity', ARCHIVE / 'parity-compare.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.NIRI_CONFIG = module.NIRI_CONFIG.replace('animations {\n    off\n}\n', '')
+    return module
+
+
+def interaction(arm):
+    for cycle in range(6):
+        start = time.monotonic()
+        arm.dispatch('nacre', 'launcher', '')
+        time.sleep(.8)
+        arm.dispatch('nacre', 'close')
+        arm.dispatch('drawers', 'toggle', 'dashboard')
+        arm.dispatch('nacre', 'tab', '0')
+        time.sleep(.8)
+        arm.dispatch('nacre', 'close')
+        for workspace in ('2', '1', '3', '1'):
+            arm.run(['niri', 'msg', 'action', 'focus-workspace', workspace])
+            deadline = time.monotonic() + 3
+            active = None
+            while time.monotonic() < deadline:
+                rows = json.loads(arm.run(['niri', 'msg', '-j', 'workspaces']).stdout)
+                if isinstance(rows, dict):
+                    rows = rows.get('workspaces', [])
+                current = next((row for row in rows if row.get('is_focused') or row.get('focused')), None)
+                if current:
+                    active = current.get('idx', current.get('index'))
+                    if str(active) == workspace:
+                        break
+                time.sleep(.05)
+            if str(active) != workspace:
+                raise RuntimeError(f'workspace {workspace} was not observed (active={active})')
+            time.sleep(.3)
+        for index in range(4):
+            command = ['gdbus', 'call', '--session', '--dest', 'org.freedesktop.Notifications',
+                       '--object-path', '/org/freedesktop/Notifications', '--method',
+                       'org.freedesktop.Notifications.Notify', 'N0154', '0', '',
+                       f'Benchmark {cycle + 1}.{index + 1}', 'Identical private notification burst',
+                       '[]', '{}', '2500']
+            reply = arm.run(command, check=False)
+            if reply.returncode:
+                raise RuntimeError(f'notification {cycle + 1}.{index + 1} failed: '
+                                   f'rc={reply.returncode}; stdout={reply.stdout.strip()}; '
+                                   f'stderr={reply.stderr.strip()}')
+            time.sleep(.2)
+        time.sleep(max(0, start + 10 - time.monotonic()))
+
+
+def run(args):
+    if not Path('/.dockerenv').exists():
+        raise RuntimeError('N0160 captures run only in the task-private dev-1 container')
+    mem_available = int(next(line for line in Path('/proc/meminfo').read_text().splitlines()
+                             if line.startswith('MemAvailable:')).split()[1])
+    if mem_available < 4 * 1024 * 1024:
+        raise RuntimeError('MemAvailable below 4 GiB start gate')
+    parity = load_arm()
+    task_bin = args.out / 'bin'
+    task_bin.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if not args.compositor_only:
+        for name, source in [('nacre-helper', args.helper), ('nacre-shell', args.shell)]:
+            link = task_bin / name
+            if link.exists() or link.is_symlink():
+                link.unlink()
+            link.symlink_to(source.resolve())
+    niri = args.niri or args.bin / 'nacre-niri'
+    if not niri.is_file():
+        niri = Path(shutil.which('niri') or '')
+    if not niri.is_file():
+        raise RuntimeError('neither packaged nacre-niri nor distro niri is available')
+    wlr_randr = shutil.which('wlr-randr')
+    if not wlr_randr:
+        raise RuntimeError('wlr-randr is required to set the private 60 Hz parent output')
+    if not args.compositor_only and (args.out / 'cpu.csv').exists():
+        raise RuntimeError(f'output already contains a previous CPU capture: {args.out / "cpu.csv"}')
+    niri_link = task_bin / 'nacre-niri'
+    if niri_link.exists() or niri_link.is_symlink():
+        niri_link.unlink()
+    niri_link.symlink_to(niri.resolve())
+    (args.out / 'renderer.json').write_text(json.dumps({
+        'parent_renderer': 'wlroots pixman', 'nested_renderer': 'Mesa software EGL',
+        'niri_binary': str(niri.resolve()), 'niri_is_nacre_wrapper': niri.name == 'nacre-niri',
+        'size': args.size}, indent=2) + '\n')
+    size = tuple(map(int, args.size.split('x')))
+    config = args.out / 'dbus-session.conf'
+    config.write_text('''<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig><type>session</type><listen>unix:tmpdir=/tmp</listen><auth>EXTERNAL</auth>
+<policy context="default"><allow send_destination="*" eavesdrop="true"/><allow eavesdrop="true"/><allow own="*"/></policy></busconfig>\n''')
+    private = args.out / 'private'
+    private.mkdir(exist_ok=True, mode=0o700)
+    env = {key: value for key, value in os.environ.items()
+           if not key.startswith(('NACRE_', 'BEAD_', 'NIRI_', 'QT_', 'XDG_', 'WLR_',
+                                  '__GL', 'MESA_', 'GBM_'))
+           and key not in ('WAYLAND_DISPLAY', 'DISPLAY', 'NIRI_SOCKET', 'DBUS_SYSTEM_BUS_ADDRESS',
+                           'HYPRLAND_INSTANCE_SIGNATURE', 'DRI_PRIME')}
+    env.update(WLR_RENDERER='pixman', LIBGL_ALWAYS_SOFTWARE='1', N0160_TIMING='1')
+    paths = {}
+    for name in ('home', 'data', 'config', 'state/nacre', 'cache', 'runtime'):
+        path = private / name
+        path.mkdir(parents=True, exist_ok=True, mode=0o700)
+        paths[name] = path
+    bus_env = dict(env, HOME=str(paths['home']), XDG_DATA_HOME=str(paths['data']),
+                   XDG_CONFIG_HOME=str(paths['config']), XDG_STATE_HOME=str(private / 'state'),
+                   XDG_CACHE_HOME=str(paths['cache']), XDG_RUNTIME_DIR=str(paths['runtime']),
+                   XDG_DATA_DIRS='/usr/local/share:/usr/share', PATH=f'{task_bin}:/usr/bin:/bin')
+    (args.out / 'bus-ready').write_text('')
+    command = ['dbus-run-session', f'--config-file={config}', '--', sys.executable,
+               str(Path(__file__).resolve()), '--inner', '--out', str(args.out), '--repo', str(args.repo),
+               '--helper', str(args.helper), '--shell', str(args.shell), '--bin', str(args.bin),
+               '--niri', str(niri), '--size', args.size,
+               '--warmup-seconds', str(args.warmup_seconds), '--idle-seconds', str(args.idle_seconds),
+               '--interaction-seconds', str(args.interaction_seconds),
+               '--post-idle-seconds', str(args.post_idle_seconds)]
+    if args.compositor_only:
+        command.append('--compositor-only')
+    if not args.inner:
+        subprocess.run(command, env=bus_env, check=True)
+        return
+    dbus_address = env.get('DBUS_SESSION_BUS_ADDRESS')
+    if not dbus_address:
+        raise RuntimeError('private D-Bus session address missing')
+    env.update(bus_env)
+    env['DBUS_SESSION_BUS_ADDRESS'] = dbus_address
+    size_args = argparse.Namespace(nacre=args.repo, bead_bin=task_bin, bead_shell=args.repo / 'shell',
+        out=args.out, size=size, scale=1.0, pointer_tool='enabled-for-mode-setup',
+        parent_output_tool=wlr_randr, parent_hz=60,
+        shortcut_fixture=False, states=['launcher', 'dashboard-0'], presentation=None,
+        wallpaper_fixture=False, wallpapers=0, wallpaper_videos=0, wallpaper_video_static=False,
+        fake_nm=False, fake_wifi=False, cpu=False, boot_settle=0.0)
+    arm = parity.Arm(size_args, 'bead', private)
+    arm.shutdown = lambda: exact_shutdown(arm)
+    arm.env = env
+    arm.runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
+    arm.env['XDG_RUNTIME_DIR'] = str(arm.runtime)
+    succeeded = False
+    try:
+        os.environ['PARITY_NAMED_WORKSPACES'] = '1'
+        arm.start_compositor()
+        os.environ.pop('PARITY_NAMED_WORKSPACES', None)
+        if args.compositor_only:
+            (args.out / 'compositor-ready.json').write_text(json.dumps(arm.geometry, indent=2) + '\n')
+            succeeded = True
+            return
+        outputs = json.loads(arm.run(['niri', 'msg', '-j', 'outputs']).stdout)
+        active = outputs[arm.geometry['name']]
+        refresh = active['modes'][active['current_mode']].get('refresh_rate')
+        if refresh is None or abs(refresh - 60000) > 100:
+            raise RuntimeError(f'expected 60 Hz nested Niri output, got refresh_rate={refresh}')
+        (args.out / 'refresh-rate.json').write_text(json.dumps({
+            'output': arm.geometry, 'refresh_rate_millihz': refresh,
+            'parent_output_tool': wlr_randr}, indent=2) + '\n')
+        # N0154's isolated daemon setup: private data roots, private socket and bus only.
+        for name in ('home', 'data', 'config', 'state/nacre', 'cache'):
+            (private / name).mkdir(parents=True, exist_ok=True, mode=0o700)
+        (arm.runtime / 'nacre').mkdir(parents=True, exist_ok=True, mode=0o700)
+        arm.endpoint = arm.runtime / 'nacre/daemon.sock'
+        arm.nacrectl = str(private / 'nacrectl')
+        (private / 'nacrectl').symlink_to(task_bin / 'nacre-helper')
+        arm.env.update(HOME=str(private / 'home'), XDG_DATA_HOME=str(private / 'data'),
+            XDG_CONFIG_HOME=str(private / 'config'), XDG_STATE_HOME=str(private / 'state'),
+            XDG_CACHE_HOME=str(private / 'cache'), NACRE_DAEMON_SOCKET=str(arm.endpoint),
+            NACRE_COMPOSITOR='niri', NACRE_NIRI_HOVER_STREAM='0',
+            NACRE_HELPER_TOOLS=str(args.repo / 'nacre/shell-tools'),
+            NACRE_HELPER_BINARY=str(task_bin / 'nacre-helper'),
+            DBUS_SYSTEM_BUS_ADDRESS=dbus_address, PIPEWIRE_REMOTE='n0160-unavailable',
+            PULSE_SERVER='unix:' + str(private / 'no-pulse'), GIO_USE_VFS='local',
+            GVFS_DISABLE_FUSE='1', QT_NO_XDG_DESKTOP_PORTAL='1', GTK_USE_PORTAL='0')
+        for part in ('shell', 'shell/notifications', 'shell/notifications/images'):
+            (private / 'state/nacre' / part).mkdir(parents=True, exist_ok=True, mode=0o700)
+        (private / 'config/nacre').mkdir(parents=True, exist_ok=True, mode=0o700)
+        (private / 'config/nacre/desktop.json').write_text('{}\n')
+        wallpaper = private / 'static-wallpaper.png'
+        static_png(wallpaper)
+        record = json.loads((args.repo / 'shell/palette.json').read_text())
+        record.update(path=str(wallpaper), poster=str(wallpaper), dynamic=False, animated=False)
+        (private / 'state/nacre/presentation.json').write_text(json.dumps(record, sort_keys=True) + '\n')
+        daemon = arm.spawn([str(task_bin / 'nacre-helper'), 'daemon',
+                            '--notifications=daemon', '--behaviours=daemon'], 'daemon')
+        arm.daemon = daemon
+        (args.out / 'daemon.pid').write_text(f'{daemon.pid}\n')
+        parity.wait_until(lambda: arm._try(lambda: arm.call('daemon.status', {})), 30, 'private Nacre daemon')
+        def services_ready():
+            status = arm.call('daemon.status', {})
+            return (all(status['services'].get(name, {}).get('status') == 'running'
+                        for name in ('compositor', 'settings', 'menu'))
+                    and {'displays', 'settings.store.widgets'} <= set(status['topics']))
+        parity.wait_until(lambda: arm._try(services_ready), 30, 'daemon core services')
+        start_process = arm.spawn
+        def spawn_without_wallpaper(command, name, *positional, **kwargs):
+            if name == 'matched-wallpaper':
+                return None
+            return start_process(command, name, *positional, **kwargs)
+        arm.spawn = spawn_without_wallpaper
+        arm.start_shell()
+        sampler_spec = importlib.util.spec_from_file_location('n0160_repro', HERE / 'n0160-repro.py')
+        sampler = importlib.util.module_from_spec(sampler_spec)
+        sampler_spec.loader.exec_module(sampler)
+        sample = sampler.sample
+        sampler_args = argparse.Namespace(daemon_pid=daemon.pid, out=args.out / 'cpu.csv')
+        (args.out / 'artifacts.json').write_text(json.dumps({
+            'helper_sha256': sha256(args.helper), 'shell_sha256': sha256(args.shell),
+            'shell_tree_sha256': tree_sha256(args.repo / 'shell'),
+            'sampler_sha256': sha256(HERE / 'n0160-repro.py'),
+            'runner_sha256': sha256(HERE / 'n0160-run.py'),
+            'archived_arm_sha256': sha256(ARCHIVE / 'parity-compare.py'),
+            'wallpaper_sha256': sha256(wallpaper),
+            'palette_sha256': sha256(args.repo / 'shell/palette.json'),
+            'clock_ticks_per_second': os.sysconf('SC_CLK_TCK'),
+            'daemon_nice': os.getpriority(os.PRIO_PROCESS, daemon.pid),
+            'cgroup': {name: (Path('/sys/fs/cgroup') / name).read_text().strip()
+                       for name in ('memory.max', 'memory.swap.max', 'cpu.max')},
+            'niri_sha256': sha256(niri), 'niri_binary': str(niri.resolve()),
+            'niri_is_nacre_wrapper': niri.name == 'nacre-niri',
+            'timing_overlay_sha256': sha256(HERE / 'n0160-instrument.py')
+                if (HERE / 'n0160-instrument.py').is_file() else None,
+            'N0160_TIMING': '1', 'debug_symbols': True, 'stripped': False,
+            'rendering': 'labwc pixman; nested software Mesa EGL', 'size': args.size,
+            'warmup_seconds': args.warmup_seconds, 'interaction': 'N0154 six cycles, 60 seconds'}, indent=2) + '\n')
+        time.sleep(args.warmup_seconds)
+        shell_log_path = arm.logs / 'shell.log'
+        startup_log = shell_log_path.read_text(errors='replace')
+        startup_errors = [line for line in startup_log.splitlines() if 'UI_ERROR' in line]
+        known_startup_errors = {
+            'UI_ERROR bar/main.luau:1:1: unknown state widgets.outputs',
+            'UI_ERROR bar/main.luau:1:1: unknown state widgets.layout',
+        }
+        if any(line not in known_startup_errors for line in startup_errors):
+            raise RuntimeError('Unexpected UI_ERROR before measurement; see shell.log')
+        measurement_log_offset = shell_log_path.stat().st_size
+        (args.out / 'ui-errors.json').write_text(json.dumps({
+            'startup_known_widget_errors': startup_errors,
+            'measurement_log_offset_bytes': measurement_log_offset,
+            'measurement_errors': None,
+        }, indent=2) + '\n')
+        sample(sampler_args, 'idle-before', args.idle_seconds)
+        memory_sample(daemon.pid, 'idle-before', args.out / 'memory.csv')
+        failures = []
+        def run_interaction():
+            try:
+                interaction(arm)
+            except BaseException as error:
+                failures.append(error)
+        workload = threading.Thread(target=run_interaction)
+        workload_started = time.monotonic()
+        workload.start()
+        sample(sampler_args, 'interaction', args.interaction_seconds)
+        workload.join(timeout=15)
+        if workload.is_alive() or time.monotonic() - workload_started > 61:
+            raise RuntimeError('The six-cycle workload exceeded its 60s interaction window')
+        if failures:
+            raise failures[0]
+        (args.out / 'interaction.json').write_text(json.dumps({
+            'elapsed_s': time.monotonic() - workload_started,
+            'cycles': 6, 'ui_calls': 30, 'workspace_actions': 24, 'notifications': 24,
+        }, indent=2) + '\n')
+        with shell_log_path.open('rb') as stream:
+            stream.seek(measurement_log_offset)
+            measured_log = stream.read().decode(errors='replace')
+        if 'UI_ERROR' in measured_log:
+            raise RuntimeError('Bead shell reported UI_ERROR during measurement; see shell.log')
+        memory_sample(daemon.pid, 'interaction', args.out / 'memory.csv')
+        sample(sampler_args, 'idle-after', args.post_idle_seconds)
+        memory_sample(daemon.pid, 'idle-after', args.out / 'memory.csv')
+        with shell_log_path.open('rb') as stream:
+            stream.seek(measurement_log_offset)
+            measured_errors = [line for line in stream.read().decode(errors='replace').splitlines()
+                               if 'UI_ERROR' in line]
+        (args.out / 'ui-errors.json').write_text(json.dumps({
+            'startup_known_widget_errors': startup_errors,
+            'measurement_log_offset_bytes': measurement_log_offset,
+            'measurement_errors': measured_errors,
+        }, indent=2) + '\n')
+        if measured_errors:
+            raise RuntimeError('Bead shell reported UI_ERROR during measured idle; see shell.log')
+        succeeded = True
+    finally:
+        arm.shutdown()
+        for name in ('daemon', 'shell', 'niri', 'labwc'):
+            log = arm.logs / f'{name}.log'
+            if log.is_file():
+                shutil.copyfile(log, args.out / f'{name}.log')
+        if succeeded:
+            (args.out / 'lab-complete').write_text('true\n')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--repo', type=Path, required=True)
+    parser.add_argument('--helper', type=Path, required=True)
+    parser.add_argument('--shell', type=Path, required=True)
+    parser.add_argument('--bin', type=Path, required=True)
+    parser.add_argument('--niri', type=Path)
+    parser.add_argument('--out', type=Path, required=True)
+    parser.add_argument('--size', default='1280x720')
+    parser.add_argument('--warmup-seconds', type=int, default=60)
+    parser.add_argument('--idle-seconds', type=int, default=60)
+    parser.add_argument('--interaction-seconds', type=int, default=60)
+    parser.add_argument('--post-idle-seconds', type=int, default=60)
+    parser.add_argument('--inner', action='store_true')
+    parser.add_argument('--compositor-only', action='store_true')
+    args = parser.parse_args()
+    args.out.mkdir(parents=True, exist_ok=True, mode=0o700)
+    run(args)
+
+
+if __name__ == '__main__':
+    main()

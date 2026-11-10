@@ -236,6 +236,137 @@ fn plain(value: &Value) -> String {
         .take(1024)
         .collect()
 }
+fn background_cache_path(
+    wallpaper: &Path,
+    surface: [u8; 3],
+    monitor: &Value,
+    paths: &Paths,
+) -> Option<PathBuf> {
+    let metadata = fs::metadata(wallpaper).ok()?;
+    let mut width = monitor["width"].as_f64().unwrap_or(2048.0);
+    let mut height = monitor["height"].as_f64().unwrap_or(1152.0);
+    let transform = monitor["transform"].as_i64().unwrap_or(0);
+    if transform % 2 != 0 {
+        std::mem::swap(&mut width, &mut height);
+    }
+    let factor = layout(monitor);
+    if factor <= 0.0 || !factor.is_finite() {
+        return None;
+    }
+    let identity = format!(
+        "{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}",
+        wallpaper.display(),
+        metadata.dev(),
+        metadata.ino(),
+        metadata.size(),
+        metadata.mtime(),
+        metadata.mtime_nsec(),
+        metadata.ctime(),
+        metadata.ctime_nsec(),
+        surface[0],
+        surface[1],
+        surface[2],
+        width.to_bits(),
+        height.to_bits(),
+        transform,
+        factor.to_bits(),
+        WIDTH,
+        HEIGHT,
+        RESOLUTION,
+    );
+    let key = format!("{:x}", Sha256::digest(identity.as_bytes()));
+    Some(
+        paths
+            .cache
+            .join("lock-ready")
+            .join(format!("lock-background-{key}.png")),
+    )
+}
+
+fn background_raster(
+    wallpaper: &Path,
+    surface: [u8; 3],
+    monitor: &Value,
+    paths: &Paths,
+) -> Result<RgbaImage> {
+    let cache = background_cache_path(wallpaper, surface, monitor, paths);
+    if let Some(path) = &cache {
+        if image::ImageReader::open(path)
+            .ok()
+            .and_then(|reader| reader.into_dimensions().ok())
+            .is_some_and(|size| size == (WIDTH * RESOLUTION, HEIGHT * RESOLUTION))
+        {
+            if let Ok(image) = image::open(path) {
+                return Ok(image.to_rgba8());
+            }
+        }
+    }
+    let source = orient_decoder::load_rgba(wallpaper)?;
+    let factor = layout(monitor);
+    if factor <= 0.0 || !factor.is_finite() {
+        return Err("Invalid lock output scale".into());
+    }
+    let mut width = monitor["width"].as_f64().unwrap_or(2048.0);
+    let mut height = monitor["height"].as_f64().unwrap_or(1152.0);
+    if monitor["transform"].as_i64().unwrap_or(0) % 2 != 0 {
+        std::mem::swap(&mut width, &mut height);
+    }
+    let canvas = fitted(
+        &source,
+        (
+            (width / factor).round_ties_even() as u32,
+            (height / factor).round_ties_even() as u32,
+        ),
+    )?;
+    drop(source);
+    let x = (canvas.width() as i64 - i64::from(WIDTH)) / 2;
+    let y = (canvas.height() as i64 - i64::from(HEIGHT)) / 2;
+    let crop = image::imageops::crop_imm(&canvas, x as u32, y as u32, WIDTH, HEIGHT).to_image();
+    drop(canvas);
+    let resized = orient_decoder::resize_rgba(
+        &crop,
+        (WIDTH * RESOLUTION, HEIGHT * RESOLUTION),
+        orient_decoder::Filter::Bicubic,
+    )?;
+    drop(crop);
+    let mut image = orient_decoder::blur_rgba(&resized, 40.0 * RESOLUTION as f32)?;
+    drop(resized);
+    paint::composite(
+        &mut image,
+        &RgbaImage::from_pixel(
+            WIDTH * RESOLUTION,
+            HEIGHT * RESOLUTION,
+            Rgba([surface[0], surface[1], surface[2], 135]),
+        ),
+        (0, 0),
+        None,
+    );
+    if let Some(path) = cache {
+        if let Ok(bytes) = orient_decoder::encode_rgba_png(&image, 2) {
+            if let Err(error) = crate::files::atomic(&path, &bytes) {
+                eprintln!("Lock wallpaper raster cache: {error}");
+            } else if let Ok(entries) = fs::read_dir(path.parent().unwrap_or(Path::new("."))) {
+                let mut old: Vec<_> = entries
+                    .flatten()
+                    .map(|entry| entry.path())
+                    .filter(|p| {
+                        p != &path
+                            && p.file_name().is_some_and(|n| {
+                                n.to_string_lossy().starts_with("lock-background-")
+                            })
+                            && p.extension().is_some_and(|ext| ext == "png")
+                    })
+                    .collect();
+                old.sort();
+                let remove = old.len().saturating_sub(8);
+                for stale in old.into_iter().take(remove) {
+                    let _ = fs::remove_file(stale);
+                }
+            }
+        }
+    }
+    Ok(image)
+}
 struct Painter<'a> {
     data: &'a Value,
     colors: &'a Map<String, Value>,
@@ -281,50 +412,8 @@ impl<'a> Painter<'a> {
             Rgba([surface[0], surface[1], surface[2], 235]),
         );
         if !wallpaper.as_os_str().is_empty() {
-            let background = || -> Result<RgbaImage> {
-                let source = orient_decoder::load_rgba(wallpaper)?;
-                let default = json!({"width":2048,"height":1152});
-                let monitor = monitor.unwrap_or(&default);
-                let factor = layout(monitor);
-                if factor <= 0.0 || !factor.is_finite() {
-                    return Err("Invalid lock output scale".into());
-                }
-                let mut w = monitor["width"].as_f64().unwrap_or(2048.0);
-                let mut h = monitor["height"].as_f64().unwrap_or(1152.0);
-                if monitor["transform"].as_i64().unwrap_or(0) % 2 != 0 {
-                    std::mem::swap(&mut w, &mut h);
-                }
-                let canvas = fitted(
-                    &source,
-                    (
-                        (w / factor).round_ties_even() as u32,
-                        (h / factor).round_ties_even() as u32,
-                    ),
-                )?;
-                drop(source);
-                let x = (canvas.width() as i64 - i64::from(WIDTH)) / 2;
-                let y = (canvas.height() as i64 - i64::from(HEIGHT)) / 2;
-                let crop = image::imageops::crop_imm(&canvas, x as u32, y as u32, WIDTH, HEIGHT)
-                    .to_image();
-                drop(canvas);
-                let resized =
-                    orient_decoder::resize_rgba(&crop, size, orient_decoder::Filter::Bicubic)?;
-                drop(crop);
-                let mut image = orient_decoder::blur_rgba(&resized, 40.0 * RESOLUTION as f32)?;
-                drop(resized);
-                paint::composite(
-                    &mut image,
-                    &RgbaImage::from_pixel(
-                        size.0,
-                        size.1,
-                        Rgba([surface[0], surface[1], surface[2], 135]),
-                    ),
-                    (0, 0),
-                    None,
-                );
-                Ok(image)
-            };
-            match background() {
+            let default = json!({"width":2048,"height":1152});
+            match background_raster(wallpaper, surface, monitor.unwrap_or(&default), paths) {
                 Ok(background) => image = background,
                 Err(error) => eprintln!("Lock wallpaper texture: {error}"),
             }
@@ -1196,4 +1285,107 @@ pub fn publish_with_context(
         json::dumps(&metadata, false)?.as_bytes(),
     )?;
     Ok(json!(output))
+}
+
+#[cfg(test)]
+mod background_cache_tests {
+    use super::*;
+
+    #[test]
+    fn reuses_pixel_identical_background_and_recovers_bad_cache() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let wallpaper = home.path().join("wallpaper.png");
+        let source = RgbaImage::from_fn(80, 45, |x, y| {
+            Rgba([(x * 3) as u8, (y * 5) as u8, ((x + y) * 2) as u8, 255])
+        });
+        source.save(&wallpaper)?;
+        let monitor = json!({"width":2048,"height":1152,"transform":0});
+        let first = background_raster(&wallpaper, [30, 40, 50], &monitor, &paths)?;
+        let cache = background_cache_path(&wallpaper, [30, 40, 50], &monitor, &paths)
+            .ok_or("Missing wallpaper cache identity")?;
+        let saved = fs::read(&cache)?;
+        let inode = fs::metadata(&cache)?.ino();
+        let reused = background_raster(&wallpaper, [30, 40, 50], &monitor, &paths)?;
+        assert_eq!(first.as_raw(), reused.as_raw());
+        assert_eq!(saved, fs::read(&cache)?);
+        assert_eq!(
+            inode,
+            fs::metadata(&cache)?.ino(),
+            "cache hit rewrote raster"
+        );
+
+        fs::remove_file(&cache)?;
+        let missing_recovered = background_raster(&wallpaper, [30, 40, 50], &monitor, &paths)?;
+        assert_eq!(first.as_raw(), missing_recovered.as_raw());
+
+        RgbaImage::from_pixel(1, 1, Rgba([0, 0, 0, 255])).save(&cache)?;
+        let wrong_size_recovered = background_raster(&wallpaper, [30, 40, 50], &monitor, &paths)?;
+        assert_eq!(first.as_raw(), wrong_size_recovered.as_raw());
+
+        fs::write(&cache, b"corrupt png")?;
+        let recovered = background_raster(&wallpaper, [30, 40, 50], &monitor, &paths)?;
+        assert_eq!(first.as_raw(), recovered.as_raw());
+        let decoded = image::load_from_memory(&fs::read(&cache)?)?.to_rgba8();
+        assert_eq!(first.as_raw(), decoded.as_raw());
+
+        assert_ne!(
+            Some(cache.clone()),
+            background_cache_path(&wallpaper, [31, 40, 50], &monitor, &paths)
+        );
+        assert_ne!(
+            Some(cache.clone()),
+            background_cache_path(
+                &wallpaper,
+                [30, 40, 50],
+                &json!({"width":1920,"height":1080,"transform":0}),
+                &paths
+            )
+        );
+        RgbaImage::from_pixel(32, 8, Rgba([1, 2, 3, 255])).save(&wallpaper)?;
+        assert_ne!(
+            Some(cache),
+            background_cache_path(&wallpaper, [30, 40, 50], &monitor, &paths)
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn missing_wallpaper_keeps_rounded_surface_fallback() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let data = json!({});
+        let colors: Map<String, Value> = [
+            ("surface", json!("#202020")),
+            ("surfaceContainer", json!("#303030")),
+            ("onSurface", json!("#ffffff")),
+            ("primary", json!("#ff0000")),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_owned(), value))
+        .collect();
+        let missing = home.path().join("missing-wallpaper.png");
+        let mut empty_context = Context::default();
+        let mut missing_context = Context::default();
+        let empty = Painter::new(
+            &data,
+            &colors,
+            Path::new(""),
+            None,
+            &paths,
+            None,
+            &mut empty_context,
+        )?;
+        let missing_wallpaper = Painter::new(
+            &data,
+            &colors,
+            &missing,
+            None,
+            &paths,
+            None,
+            &mut missing_context,
+        )?;
+        assert_eq!(empty.image.as_raw(), missing_wallpaper.image.as_raw());
+        Ok(())
+    }
 }

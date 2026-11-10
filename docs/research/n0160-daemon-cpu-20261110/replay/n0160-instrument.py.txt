@@ -1,0 +1,36 @@
+"""Temporary profiling overlay. Run only in the task's remote source copy."""
+from pathlib import Path
+
+root = Path('/work/crates/nacre-helper/src')
+lib = root / 'lib.rs'
+lib.write_text(lib.read_text() + '''
+#[doc(hidden)]
+pub struct N0160Timer(&'static str, std::time::Instant);
+impl N0160Timer {
+    pub fn new(name: &'static str) -> Self { Self(name, std::time::Instant::now()) }
+}
+impl Drop for N0160Timer {
+    fn drop(&mut self) {
+        let elapsed = self.1.elapsed().as_micros();
+        if elapsed >= 1000 && std::env::var_os("N0160_TIMING").is_some() {
+            eprintln!("N0160_TIMING {} {}", self.0, elapsed);
+        }
+    }
+}
+''')
+points = {
+    'daemon/hub.rs': ['fn fixed_methods(', 'fn publish_state(', 'pub fn status('],
+    'daemon/notifications/model.rs': ['pub fn snapshot(', 'pub fn notify(', 'pub fn tick(', 'pub fn persisted_rows('],
+    'daemon/notifications/storage.rs': ['pub fn save('],
+    'daemon/notifications.rs': ['fn publish(', 'fn resolve('],
+    'daemon/compositor.rs': ['fn publish(', 'fn flush_niri('],
+}
+for file, functions in points.items():
+    path = root / file
+    text = path.read_text()
+    for function in functions:
+        offset = text.index(function)
+        body = text.index('{', offset) + 1
+        name = file + ':' + function.split('(')[0].split()[-1]
+        text = text[:body] + f'\nlet _n0160_timer = crate::N0160Timer::new("{name}");\n' + text[body:]
+    path.write_text(text)

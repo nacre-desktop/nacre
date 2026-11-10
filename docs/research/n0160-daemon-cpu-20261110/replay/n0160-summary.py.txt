@@ -1,0 +1,67 @@
+"""Summarize completed N0160 arms using raw ticks and actual elapsed time."""
+import csv
+import json
+from pathlib import Path
+import statistics
+
+root = Path('/work/.lead/tmp/n0160/pairs')
+summary, memory, identities = [], [], {}
+for case in sorted(root.glob('pair[0-9][0-9]-*')):
+    result_path = case / 'result.json'
+    if not result_path.is_file():
+        continue
+    result = json.loads(result_path.read_text())
+    if result['exit_code'] != 0:
+        print(json.dumps({'excluded': case.name, 'exit_code': result['exit_code']}))
+        continue
+    artifacts = json.loads((case / 'artifacts.json').read_text())
+    assert artifacts.get('daemon_nice') == 10, (case.name, 'incorrect process priority')
+    identities[case.name] = artifacts
+    errors = json.loads((case / 'ui-errors.json').read_text())
+    assert not errors['measurement_errors'], case.name
+    rows = list(csv.DictReader((case / 'cpu.csv').open()))
+    hz = artifacts['clock_ticks_per_second']
+    for phase, expected in [('idle-before', 30), ('interaction', 60), ('idle-after', 30)]:
+        selected = [row for row in rows if row['phase'] == phase]
+        assert len(selected) == expected, (case.name, phase, len(selected))
+        elapsed = sum(float(row['sample_elapsed_s']) for row in selected)
+        ticks = lambda key: sum(int(row[key]) for row in selected)
+        percentage = lambda key: 100 * ticks(key) / hz / elapsed
+        summary.append(dict(case=case.name, pair=result['pair'], arm=result['arm'], phase=phase,
+            seconds=round(elapsed, 6), daemon_ticks=ticks('daemon_delta_ticks'),
+            daemon_cpu_pct=round(percentage('daemon_delta_ticks'), 4),
+            daemon_self_cpu_pct=round(percentage('daemon_self_delta_ticks'), 4),
+            waited_child_cpu_pct=round(percentage('daemon_waited_delta_ticks'), 4),
+            tree_cpu_pct=round(percentage('tree_delta_ticks'), 4),
+            min_mem_available_kib=min(int(row['mem_available_kib']) for row in selected),
+            startup_known_widget_errors=len(errors['startup_known_widget_errors']), measured_ui_errors=0))
+    for row in csv.DictReader((case / 'memory.csv').open()):
+        assert int(row['swap_pss_kib']) == 0
+        memory.append(dict(case=case.name, pair=result['pair'], arm=result['arm'], **row,
+            unreclaimable_kib=sum(int(row[key]) for key in ('pss_anon_kib', 'pss_shmem_kib', 'swap_pss_kib'))))
+
+def save(name, rows):
+    if rows:
+        with (root / name).open('w', newline='') as stream:
+            writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+            writer.writeheader()
+            writer.writerows(rows)
+
+save('run-summary.csv', summary)
+save('memory-summary.csv', memory)
+(root / 'identities.json').write_text(json.dumps(identities, indent=2) + '\n')
+for arm in ('before', 'after'):
+    for phase in ('idle-before', 'interaction', 'idle-after'):
+        selected = [row['daemon_cpu_pct'] for row in summary if row['arm'] == arm and row['phase'] == phase]
+        if selected:
+            print(json.dumps(dict(arm=arm, phase=phase, n=len(selected), cpu=selected,
+                                  median=statistics.median(selected))))
+for phase in ('idle-before', 'interaction', 'idle-after'):
+    differences = []
+    for pair in sorted({row['pair'] for row in memory}):
+        selected = {row['arm']: row for row in memory if row['pair'] == pair and row['phase'] == phase}
+        if selected.keys() >= {'before', 'after'}:
+            differences.append(selected['after']['unreclaimable_kib'] - selected['before']['unreclaimable_kib'])
+    if differences:
+        print(json.dumps(dict(phase=phase, paired_unreclaimable_delta_kib=differences,
+                              median=statistics.median(differences))))

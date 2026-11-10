@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /work
+export CI=true
+export RUNNER_TEMP=/tmp/runner-temp
+export PATH="$HOME/.cargo/bin:$PATH"
+unset RUST_TEST_THREADS BEAD_TEST_ARTIFACTS
+export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
+export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
+nice -n 10 dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
+echo STEP_TOOLS_CHECK=PASS
+nice -n 10 env NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-aur-review
+echo STEP_CAPTURE_AUR_REVIEW=PASS
+nice -n 10 env NACRE_MEMORY_BINARY="$PWD/target/release/nacre-helper" cargo test -j2 --locked -p nacre-helper --test daemon memory:: -- --ignored --nocapture
+echo STEP_DAEMON_MEMORY=PASS
+nice -n 10 git diff --exit-code
+echo SOURCE_WORKTREE_MATCHES_INDEX=PASS
+sha256sum target/release/nacre-helper
+echo COMPLETION_RECIPE=PASS
