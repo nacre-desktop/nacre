@@ -15,8 +15,8 @@ git cat-file -e origin/main:docs/research/bead-vs-qml-shell-benchmark-20261110.m
 ```
 
 The check failed at the start of N0156 and passed after N0154 landed on
-`origin/main` at `2a1d6d786`. Recheck before pushing deletion. Stage A may be
-pushed independently. Each commit contains
+`origin/main` at `2a1d6d786`. Recheck before pushing deletion. Stage A was held while the legacy QML checks failed; both stages are integrated
+after the final Bead-only gates pass. Each commit contains
 `[no-publish]`; integration uses a normal fast-forward push to main.
 
 ## Recovery design
@@ -151,9 +151,34 @@ On clean `9e124324a1`,
 404 tools tests (one skipped), 138 AI, 54 Brain, 374 shell-tools, 13 Bead proof
 suites/179 tests, six package Python tests and 14 product Python suites/185 tests.
 Palette CLI, generated configuration, SDDM parser and JavaScript checks passed.
-The subsequent fresh-Niri palette guard receives its own focused and final
-source-check validation below. Publication still awaits the remaining fresh
-install, package stage/install and isolated memory proofs.
+The palette guard and its two regression cases were then validated on clean
+`250f4f641a`: pinned Ruff passed, all 16 B installer cases passed, and the full
+`tools/check.py` command passed again with the same discovered-suite totals.
+The remaining desktop steps also passed: Luau analyzer 0.742 (189 modules),
+native-only proof suites, cargo-deny 0.20.2 (advisories/bans/licenses/sources), npm,
+translation coverage (1787 messages), generated assets and the native AUR gallery.
+The existing CPU daemon-raster memory test passed: settled RSS 54272 KiB,
+anonymous 20540 KiB and file PSS 19032 KiB, with transient peak anonymous
+259152 KiB (22.87 seconds). This is the existing CI raster-cache gate, not a
+laptop UI measurement or a relative-renderer performance claim.
+
+Package staging/setup used the repository's `package-stage-install` equivalent:
+
+```sh
+python -m unittest \
+  test_setup.PackageSetupTests.test_apply_is_offline_repeatable_preserves_private_state_and_rolls_back \
+  test_setup.ArchPackageLayoutTests.test_split_packages_have_no_file_collisions_and_ship_native_artifacts
+```
+
+Result on clean `250f4f641a`: two tests, OK (0.130 seconds), using the actual B
+helper and pinned Orient engine. The workflow now uses the correct layout-test
+class. Those unit cases deliberately use Bead executable fixtures; a supplemental
+real-artifact call to `packaging/arch/stage.py::stage_ui_shell` staged the three
+real Bead release binaries below with the real shell tree and product/font
+notices. All hashes matched before/after; binaries were ELF, mode 0755, owner
+0:0; palette/bar and all four license notices were present, with no QML runtime
+staged. Actual execution of these same artifacts is covered by the B fresh proof.
+No pacman transaction or package publication was performed.
 
 The actual Bead proof (recorded as proof29) ran in the task-only systemd container:
 
@@ -190,6 +215,73 @@ contention; proof29 separately establishes real provider/daemon health.
 All commands above ran with nice level 10, Cargo `-j2`, and task containers capped
 at eight CPUs and 16 GiB. No installer ran against the owner's HOME; no laptop
 session, units or installed files were changed.
+
+## Bead-only fresh install and artifact provenance
+
+The B proof used an empty `/home/beadproof` (UID 1001), a restarted private user
+manager, and its own Niri/Xvfb processes. Neither the HOME nor the source checkout
+contained the old QML tree or configuration link. The old A clone's canonical
+`/work/nacre/shell` was moved aside so it could not mask a missing resource.
+It ran the real source pipeline, not a preseeded runtime:
+
+```sh
+NACRE_HELPER_BINARY="$B_ROOT/nacre/shell-tools/nacre-helper" python3 "$B_ROOT/tools/configure.py" --apply
+python3 "$B_ROOT/nacre/shell-tools/install.py"
+# Then, after injecting owned old-runtime paths and the old managed fallback:
+python3 "$B_ROOT/nacre/shell-tools/install.py" --code-only
+python3 "$B_ROOT/tools/releases.py" ui-shell rollback
+python3 "$B_ROOT/nacre/shell-tools/install.py" --code-only
+```
+
+Commands ran at nice level 10 inside `n0156-ci-desktop`, with
+`B_ROOT=/opt/n0156-stage-b`. The manual proof's subprocess log records exact
+arguments and results. Result: exit 0. Fresh install activated Bead and its actual
+provider; code-only archived the injected old source/config link and replaced
+the old fallback. Rollback followed by a real installer update stayed healthy.
+An injected B start failure recovered A with the provider responding; corrupting
+all retained copies stopped the shell, emitted the recovery hint and left stable
+restart counts. The final UID-scoped system journal contained ten real OSD prewarm
+markers and zero `UI_ERROR` entries.
+
+This exposed two Niri-only bootstrap issues: shortcuts and palette validation
+incorrectly required a Hyprland loader. Each check is now scoped to Hyprland;
+Niri still receives all shared palette/shortcut setup. Focused checks passed:
+`test_install_extras.py` two tests; installer guard 34 A tests and 16 B tests.
+The Hyprland missing-loader refusal remains tested.
+
+The final proof ran on clean, committed `250f4f641a`, using the tracked
+[`rehearse_bead_recovery.py`](../../tools/tests/rehearse_bead_recovery.py).
+Its local, uploaded and executed file hashes were identical:
+`4a6348e6f248779f8b85cb685d35a639e7a77436936a18b7510a8d45d71877c4`.
+The exact invocation inside the container's UID-1001 scope was:
+
+```sh
+N0156_SOURCE_ROOT=/opt/n0156-stage-b \
+N0156_ARTIFACT_ROOT=/opt/n0156-stage-b \
+N0156_ARTIFACT_COMMIT=2f5ba7f5073cd4e502eda57a939224dc509d73c3 \
+N0156_FRESH_B=1 nice -n 10 python3 /tmp/n0156-real-bead-recovery-b.py
+```
+
+The executed `/tmp` copy was byte-identical to the tracked manual rehearsal.
+Root queried `journalctl --since "$RUN_STARTED" _UID=1001 --no-pager`, required
+actual Bead prewarm output and the no-good-copy hint, and rejected `UI_ERROR`.
+The wrapper returned zero. The source and artifact identities were:
+
+| Input | SHA-256 |
+| --- | --- |
+| B `nacre/shell-tools/install.py` | `13cc8c741780522b1607a8bf432aba77d663d76b255df36f0254a266a20c4254` |
+| B installer guard test | `1d474fc33fb9530858d8b02ad89504aeff2b90780d2ed3fdecc9e5b3b87efc55` |
+| `nacre-shell` | `1b62a189b37041567ca6fab51fc2de1a14d143f32469b324fd1caf87b079fa85` |
+| `bead-wallpaper-video` | `23030f3f47bd6105fcee1ab504283bd7e3744608d1d942d1282fe648baebaa6b` |
+| `nacre-wallpaper-decode` | `3a4e5c11963bf814fdc43bc7304821b24129cdbf31733b22d644627c3dd230be` |
+| B helper | `eb5a92cba561abc4664f89827bcb54e2c538a7556a2506a7fc0830273db5ef49` |
+
+The three Bead release binaries were built from `2f5ba7f50` with
+`cargo build --locked -j2 --release -p nacre-shell --bins`; later B commits changed
+only tests, developer dependency metadata and the Python installer guard. The
+runtime Rust and its compiled product inputs were unchanged. The helper was the
+actual B release build. These artifacts are identified separately from the source
+checkout, rather than claiming they were rebuilt from a later commit.
 
 ## Owner-run live migration (procedure only; not executed here)
 
@@ -374,13 +466,14 @@ explicit N0157 exclusion rather than silently treating it as deleted.
 - `docs/specs/0158-launch-workspace.md`
 - `docs/specs/README.md`
 
-### Migration and its regression/installed-package proofs (7)
+### Migration and its regression/installed-package proofs (8)
 
 - `nacre/shell-tools/install.py`
 - `nacre/shell-tools/tests/test_installer_dropin_guard.py`
 - `packaging/arch/test-installed.py`
 - `tools/package_runtime.py`
 - `tools/releases.py`
+- `tools/tests/rehearse_bead_recovery.py`
 - `tools/tests/test_releases.py`
 - `tools/tests/test_setup.py`
 
@@ -503,7 +596,8 @@ nice -n 10 cargo fmt --all --check
 Results: i18n PASS, switch 18 tests OK, installer 13 tests OK, Rust format exit 0.
 The installer tests cover shared fresh/code-only setup and preservation of old
 files when Bead activation fails. These checks are supplemental; full desktop
-CI, real Bead recovery and package acceptance remain required before publication.
+The final full desktop, real Bead and package results supersede these initial
+focused checks and are recorded above.
 
 The menu engine's frozen JavaScript/provider tests retain their original catalog
 input under historical research. Only the shipped launcher catalog loses the
