@@ -648,15 +648,25 @@ async fn launcher_quick_calls_published_toggles_and_releases_all_topic_leases() 
         while let Ok(topics) = lab.unsubs.try_recv() {
             released.extend(topics);
         }
-        if ["controls", "notifications", "dashboard.updates", "capabilities"]
-            .iter()
-            .all(|topic| released.iter().any(|item| item == topic))
+        if [
+            "controls",
+            "notifications",
+            "dashboard.updates",
+            "capabilities",
+        ]
+        .iter()
+        .all(|topic| released.iter().any(|item| item == topic))
         {
             break;
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    for topic in ["controls", "notifications", "dashboard.updates", "capabilities"] {
+    for topic in [
+        "controls",
+        "notifications",
+        "dashboard.updates",
+        "capabilities",
+    ] {
         assert!(
             released.iter().any(|item| item == topic),
             "missing lease release for {topic}: {released:?}"

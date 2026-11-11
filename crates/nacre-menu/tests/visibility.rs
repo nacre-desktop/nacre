@@ -3,7 +3,10 @@ use serde_json::{json, Value};
 
 fn context() -> Result<Context> {
     Context::new(
-        config::merge(include_str!("../../../nacre/shell-tools/launcher-menu.json"), "")?,
+        config::merge(
+            include_str!("../../../nacre/shell-tools/launcher-menu.json"),
+            "",
+        )?,
         serde_json::from_str(include_str!("../data/defaults.json"))?,
         "en-US",
         0.,
@@ -26,7 +29,10 @@ fn optional_rows_and_empty_static_groups_follow_capabilities() -> Result<()> {
                 assert_eq!(ids(&rows).contains(&row["id"].as_str().unwrap()), enabled);
             }
         }
-        assert_eq!(!c.content("home", "? question", "all", "all")?.is_empty(), ai);
+        assert_eq!(
+            !c.content("home", "? question", "all", "all")?.is_empty(),
+            ai
+        );
     }
     // The rule works for custom groups too; it does not depend on a Nacre group ID.
     c.catalog = json!({"rows":[{"id":"custom","kind":"group"},
@@ -42,9 +48,11 @@ fn backend_rows_are_hidden_instead_of_disabled() -> Result<()> {
     for backend in ["niri", "hyprland", ""] {
         c.compositor = json!({"backendName":backend});
         let rows = c.all_static();
-        for (id, expected) in [("learn.niri", backend == "niri"),
+        for (id, expected) in [
+            ("learn.niri", backend == "niri"),
             ("learn.hyprland", backend == "hyprland"),
-            ("actions.bring-visitors", backend == "niri")] {
+            ("actions.bring-visitors", backend == "niri"),
+        ] {
             assert_eq!(ids(&rows).contains(&id), expected, "{backend}: {id}");
         }
     }

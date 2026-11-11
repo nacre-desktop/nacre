@@ -630,21 +630,41 @@ fn launcher_entry_table_icons_resolve_to_real_symbols() -> Result<()> {
 fn optional_hint_chips_follow_the_adapter_flags() -> Result<()> {
     // Hint labels are anonymous text draws; inspect the rendered scene, not named nodes.
     let mut h = harness_at_scale("", 0., 1.)?;
-    let labels = |h: &Harness| h.scene().primitives.iter().filter_map(|draw| {
-        if let bead::render::Primitive::Text { text, .. } = draw {
-            Some(text.clone())
-        } else { None }
-    }).collect::<Vec<_>>();
+    let labels = |h: &Harness| {
+        h.scene()
+            .primitives
+            .iter()
+            .filter_map(|draw| {
+                if let bead::render::Primitive::Text { text, .. } = draw {
+                    Some(text.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+    };
     h.render()?;
-    assert!(!labels(&h).iter().any(|text| text.starts_with("# ") || text.starts_with("? ")));
+    assert!(
+        !labels(&h)
+            .iter()
+            .any(|text| text.starts_with("# ") || text.starts_with("? "))
+    );
     h.update(BTreeMap::from([
         ("launcher.hint_brain".into(), Value::Bool(true)),
         ("launcher.hint_ai".into(), Value::Bool(true)),
     ]))?;
     h.render()?;
-    assert!(labels(&h).iter().any(|text| text.starts_with("# ")), "visible labels: {:?}; brain={:?}", labels(&h), h.session.resolve("launcher.hint_brain")?);
+    assert!(
+        labels(&h).iter().any(|text| text.starts_with("# ")),
+        "visible labels: {:?}; brain={:?}",
+        labels(&h),
+        h.session.resolve("launcher.hint_brain")?
+    );
     assert!(labels(&h).iter().any(|text| text.starts_with("? ")));
-    h.update(BTreeMap::from([("launcher.hint_brain".into(), Value::Bool(false))]))?;
+    h.update(BTreeMap::from([(
+        "launcher.hint_brain".into(),
+        Value::Bool(false),
+    )]))?;
     h.render()?;
     assert!(!labels(&h).iter().any(|text| text.starts_with("# ")));
     assert!(labels(&h).iter().any(|text| text.starts_with("? ")));

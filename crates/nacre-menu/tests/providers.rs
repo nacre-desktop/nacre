@@ -61,7 +61,9 @@ fn context(reference: &Value, name: &str) -> Result<Context> {
     }
     c.audio["sink_id"] = c.audio["outputs"][0]["id"].clone();
     // The old populated captures predate the explicit Brain flag.
-    if name != "empty" { c.snapshot["capabilities"]["brain"] = json!(true); }
+    if name != "empty" {
+        c.snapshot["capabilities"]["brain"] = json!(true);
+    }
     c.utc_offset_seconds = Some(0);
     for (out, key) in [
         (&mut c.brain_query, "brainQuery"),
@@ -156,14 +158,18 @@ fn current_content_reference(c: &Context, original: &Value) -> Value {
     let mut rows = original.as_array().unwrap().clone();
     let ai = c.snapshot["capabilities"]["ai"] == true;
     let brain = c.snapshot["capabilities"]["brain"] == true;
-    rows.retain(|row| row["id"] != "home"
-        && !(row["brand"] == "ai" && !ai)
-        && !(row["brand"] == "brain" && !brain)
-        && !(row["id"] == "actions.assistant" && !ai && !brain)
-        && !(row["id"] == "scope-ai" && !ai)
-        && !(row["id"] == "scope-brain" && !brain));
+    rows.retain(|row| {
+        row["id"] != "home"
+            && !(row["brand"] == "ai" && !ai)
+            && !(row["brand"] == "brain" && !brain)
+            && !(row["id"] == "actions.assistant" && !ai && !brain)
+            && !(row["id"] == "scope-ai" && !ai)
+            && !(row["id"] == "scope-brain" && !brain)
+    });
     for row in &mut rows {
-        if row["operation"] == "note" { row["value"] = row["filePath"].clone(); }
+        if row["operation"] == "note" {
+            row["value"] = row["filePath"].clone();
+        }
     }
     json!(rows)
 }

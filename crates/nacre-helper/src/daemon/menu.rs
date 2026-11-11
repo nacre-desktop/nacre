@@ -1103,7 +1103,12 @@ async fn run_inner(
     if let Some(snapshot) = hub.borrow().snapshot("compositor") {
         compositor_inputs(&mut engine.loaded.context, &snapshot);
     }
-    capability_inputs(&mut engine.loaded.context, hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
+    capability_inputs(
+        &mut engine.loaded.context,
+        hub.borrow()
+            .snapshot_ref("capabilities")
+            .unwrap_or(&Value::Null),
+    );
     engine.prepare_queries().await?;
     hub.borrow_mut().publish("menu", engine.status())?;
     let pool = hub.borrow().providers.clone();
@@ -2021,7 +2026,9 @@ fn compositor_inputs(context: &mut Context, snapshot: &Value) -> bool {
     let windows:Vec<_>=source_windows.iter().map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
     let next = json!({"windows":windows,"backendName":snapshot["backend"]});
     let changed = context.compositor["backendName"] != next["backendName"];
-    if changed { context.inputs_changed(); }
+    if changed {
+        context.inputs_changed();
+    }
     context.compositor = next;
     changed
 }
@@ -2054,8 +2061,14 @@ fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, S
     let term = text::field(&scope, "text");
     let enabled = |key| context.source_options[key] != false;
     let action = match kind {
-        "brain" if enabled("brain") && context.snapshot["capabilities"]["brain"] == true
-            && !term.is_empty() && term.chars().count() <= 160 => "brain",
+        "brain"
+            if enabled("brain")
+                && context.snapshot["capabilities"]["brain"] == true
+                && !term.is_empty()
+                && term.chars().count() <= 160 =>
+        {
+            "brain"
+        }
         "files" if enabled("files") => "files",
         "calculator" if enabled("calculator") && conversion_query(&term) => "convert",
         "all" if request.route.as_deref() == Some("software.packages") && !term.is_empty() => {
@@ -2912,10 +2925,15 @@ mod tests {
         let id = result["order"][0].as_str().unwrap();
         let request: MenuActivate = serde_json::from_value(json!({
             "id":id,"activation":result["items"][id]["activation"],"catalog_rev":state.rev}))?;
-        assert_eq!(state.activate(request.clone())?["application"]["command"],
-            json!(["fixture", "$HOME;$(touch forbidden)"]));
+        assert_eq!(
+            state.activate(request.clone())?["application"]["command"],
+            json!(["fixture", "$HOME;$(touch forbidden)"])
+        );
         state.loaded.context.preferences["hidden"] = json!(["fixture"]);
-        assert_eq!(state.activate(request).unwrap_err().code, ErrorCode::Unavailable);
+        assert_eq!(
+            state.activate(request).unwrap_err().code,
+            ErrorCode::Unavailable
+        );
         Ok(())
     }
 
@@ -2926,10 +2944,15 @@ mod tests {
         compositor_inputs(&mut state.loaded.context, &json!({"backend":"niri"}));
         assert_eq!(state.loaded.context.compositor["backendName"], "niri");
         assert!(!state.loaded.context.queries_prepared());
-        capability_inputs(&mut state.loaded.context, &json!({"flags":{"ai":true,"brain":false}}));
+        capability_inputs(
+            &mut state.loaded.context,
+            &json!({"flags":{"ai":true,"brain":false}}),
+        );
         assert_eq!(state.loaded.context.snapshot["capabilities"]["ai"], true);
-        assert_eq!(state.loaded.context.snapshot["capabilities"]["brain"], false);
+        assert_eq!(
+            state.loaded.context.snapshot["capabilities"]["brain"],
+            false
+        );
         Ok(())
     }
-
 }

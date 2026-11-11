@@ -98,5 +98,10 @@ pub fn query(context: &Context, query: &str) -> Vec<Value> {
             row["icon"] = json!("apps");
             row
         });
-    actions.into_iter().chain(windows).chain(apps).filter(|row| context.visible(row)).collect()
+    actions
+        .into_iter()
+        .chain(windows)
+        .chain(apps)
+        .filter(|row| context.visible(row))
+        .collect()
 }

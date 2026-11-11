@@ -333,11 +333,13 @@ impl Context {
             "calculator" => return Ok(Vec::new()),
             "brain" => return Ok(self.brain_rows(term)),
             "ai" => {
-                return Ok(if term.is_empty() || self.snapshot["capabilities"]["ai"] != true {
-                    Vec::new()
-                } else {
-                    vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask,"reason":if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
-                })
+                return Ok(
+                    if term.is_empty() || self.snapshot["capabilities"]["ai"] != true {
+                        Vec::new()
+                    } else {
+                        vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask,"reason":if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
+                    },
+                )
             }
             "help" => {
                 let mut rows = Vec::new();
