@@ -57,7 +57,10 @@ impl Context {
             .collect()
     }
     pub fn brain_rows(&self, query: &str) -> Vec<Value> {
-        if self.brain_query != query || self.snapshot["capabilities"]["brain"] != true {
+        if self.brain_query != query
+            || self.source_options["brain"] == false
+            || self.snapshot["capabilities"]["brain"] != true
+        {
             return Vec::new();
         }
         self.notes
@@ -80,7 +83,8 @@ impl Context {
                     &hash(&path),
                     &text::field(item, "title"),
                     "note",
-                    item["path"].clone(),
+                    item.get("file").filter(|file| yes(file)).cloned().unwrap_or_else(||
+                        json!(format!("{}/{}",text::field(&self.workflows,"brainRoot"),path))),
                     "description",
                     &text::field(item, "preview"),
                     json!({"breadcrumb":breadcrumb,"note":true,"matchedQuery":query,"filePath":format!("{}/{}",text::field(&self.workflows,"brainRoot"),path),"previewText":item["preview"]}),
@@ -199,6 +203,7 @@ impl Context {
             .filter_map(|id| {
                 model::favorite(&text::string(id), &apps, &candidates, &self.legacy_actions)
             })
+            .filter(|row| self.visible(row))
             .cloned()
             .collect();
         Ok(model::alphabetical(&selected, &self.ordering)
@@ -328,7 +333,7 @@ impl Context {
             "calculator" => return Ok(Vec::new()),
             "brain" => return Ok(self.brain_rows(term)),
             "ai" => {
-                return Ok(if term.is_empty() {
+                return Ok(if term.is_empty() || self.snapshot["capabilities"]["ai"] != true {
                     Vec::new()
                 } else {
                     vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask||!yes(&self.snapshot["capabilities"]["ai"]),"reason":if !yes(&self.snapshot["capabilities"]["ai"]){tr("launcher.disabled.nacre-ai-is-optional-open-setup-to-add-it","Nacre AI is optional; open Setup to add it")}else if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
@@ -388,7 +393,10 @@ impl Context {
                         "? ",
                     ),
                 ] {
-                    if self.source_options[source] != false {
+                    if self.source_options[source] != false
+                        && (!matches!(source, "ai" | "brain")
+                            || self.snapshot["capabilities"][source] == true)
+                    {
                         rows.push(json!({"id":format!("scope-{source}"),"kind":"action","name":tr(name_id,name),"label":tr(label_id,name),"description":tr(description_id,description),"operation":"scope","value":prefix,"icon":icon}));
                     }
                 }

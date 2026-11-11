@@ -8,7 +8,7 @@ return {
     ["launcher.search.text"] = "", ["launcher.result_query"] = "", ["launcher.scroll.y"] = 0,
     ["launcher.conversion.value"]="", ["launcher.conversion.description"]="",
     ["launcher.conversion.error"]="", ["launcher.message"]="",
-    ["launcher.quick"]={}, ["launcher.quick_error"]="", ["launcher.updates.count"]=-1,
+    ["launcher.hint_ai"]=false, ["launcher.hint_brain"]=false, ["launcher.quick"]={}, ["launcher.quick_error"]="", ["launcher.updates.count"]=-1,
     ["launcher.plugin.scroll"]=0, ["launcher.plugin.active"]=false, ["launcher.plugin.source"]="", ["launcher.plugin.rows"]={},
     ["launcher.plugin.notice"]="", ["plugins.message"]="",
     -- The inline form (B0199): `launcher_form.rs` opens it (kind, prompt, starting values) and runs its backend.

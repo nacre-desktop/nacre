@@ -1,5 +1,5 @@
 {
- "source": "Nacre origin/main 816957914b3c95872f942a9bd6d7bb0b4ac8a64e launcher-menu.json; B0197 provider operation fixtures",
+ "source": "N0200 current launcher-menu.json; provider operation contracts",
  "catalogue": [
   {
    "id": "actions.capture.area",
@@ -243,15 +243,6 @@
    "disabled": false,
    "value": "bluetooth",
    "icon": "bluetooth"
-  },
-  {
-   "id": "style.wallpapers.picker",
-   "kind": "action",
-   "name": "Wallpaper picker",
-   "operation": "route",
-   "disabled": false,
-   "value": "wallpaper",
-   "icon": "wallpaper"
   },
   {
    "id": "style.wallpapers.next",
@@ -539,8 +530,8 @@
    "operation": "tool",
    "disabled": false,
    "value": "install-mise",
-   "confirm": "Open a terminal to install mise? The package manager may ask for administrator permission.",
-   "icon": "download"
+   "icon": "download",
+   "confirm": "Open a terminal to install mise? The package manager may ask for administrator permission."
   },
   {
    "id": "software.tui.new",
@@ -621,8 +612,8 @@
    "operation": "maintenance",
    "disabled": false,
    "value": "restart",
-   "confirm": "Restart the Nacre shell?",
-   "icon": "restart_alt"
+   "icon": "restart_alt",
+   "confirm": "Restart the Nacre shell?"
   },
   {
    "id": "health.rollback",
@@ -661,6 +652,15 @@
    "icon": "public"
   },
   {
+   "id": "learn.niri",
+   "kind": "action",
+   "name": "Niri wiki",
+   "operation": "url",
+   "disabled": false,
+   "value": "https://github.com/YaLTeR/niri/wiki",
+   "icon": "public"
+  },
+  {
    "id": "learn.arch",
    "kind": "action",
    "name": "Arch Linux guide",
@@ -694,8 +694,8 @@
    "operation": "power",
    "disabled": false,
    "value": "suspend",
-   "confirm": "Sleep?",
-   "icon": "bedtime"
+   "icon": "bedtime",
+   "confirm": "Sleep?"
   },
   {
    "id": "power.logout",
@@ -704,8 +704,8 @@
    "operation": "power",
    "disabled": false,
    "value": "logout",
-   "confirm": "Log out?",
-   "icon": "logout"
+   "icon": "logout",
+   "confirm": "Log out?"
   },
   {
    "id": "power.reboot",
@@ -714,8 +714,8 @@
    "operation": "power",
    "disabled": false,
    "value": "reboot",
-   "confirm": "Restart?",
-   "icon": "restart_alt"
+   "icon": "restart_alt",
+   "confirm": "Restart?"
   },
   {
    "id": "power.poweroff",
@@ -724,8 +724,8 @@
    "operation": "power",
    "disabled": false,
    "value": "poweroff",
-   "confirm": "Shut down?",
-   "icon": "power_settings_new"
+   "icon": "power_settings_new",
+   "confirm": "Shut down?"
   },
   {
    "id": "actions.files",
@@ -744,15 +744,6 @@
    "disabled": false,
    "value": "terminal",
    "icon": "terminal"
-  },
-  {
-   "id": "actions.apps",
-   "kind": "action",
-   "name": "All apps",
-   "operation": "route",
-   "disabled": false,
-   "value": "apps",
-   "icon": "apps"
   },
   {
    "id": "actions.controls.profile.power-saver",
@@ -891,7 +882,7 @@
    "operation": "command",
    "disabled": false,
    "arguments": [
-    "kitty",
+    "nacre-terminal",
     "--",
     "voxtype",
     "configure"
@@ -970,7 +961,7 @@
    "name": "actions.emoji.x",
    "operation": "copy",
    "disabled": false,
-   "value": "\ud83d\ude00",
+   "value": "😀",
    "icon": "content_copy"
   },
   {
@@ -1366,7 +1357,7 @@
    "operation": "software-open",
    "value": "fixture-package",
    "icon": "download",
-   "proposal": "N-unit: daemon handles software-open with its indexed desktopId, before forwarding to UI"
+   "proposal": "Owned by the daemon indexed application launcher; refuse raw UI operations."
   }
  ],
  "navigation": [

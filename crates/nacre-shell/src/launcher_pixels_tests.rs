@@ -625,3 +625,27 @@ fn launcher_entry_table_icons_resolve_to_real_symbols() -> Result<()> {
     assert!(glyphs.contains_key("extension") && glyphs.contains_key("widgets"));
     Ok(())
 }
+
+#[test]
+fn optional_hint_chips_follow_the_adapter_flags() -> Result<()> {
+    let mut h = harness_at_scale("", 0., 1.)?;
+    let labels = |h: &Harness| h.session.view_nodes().iter().filter_map(|node| {
+        if let bead::render::Primitive::Text { text, .. } = &node.draw {
+            Some(text.clone())
+        } else { None }
+    }).collect::<Vec<_>>();
+    h.render()?;
+    assert!(!labels(&h).iter().any(|text| text.starts_with("# ") || text.starts_with("? ")));
+    h.update(BTreeMap::from([
+        ("launcher.hint_brain".into(), Value::Bool(true)),
+        ("launcher.hint_ai".into(), Value::Bool(true)),
+    ]))?;
+    h.render()?;
+    assert!(labels(&h).iter().any(|text| text.starts_with("# ")));
+    assert!(labels(&h).iter().any(|text| text.starts_with("? ")));
+    h.update(BTreeMap::from([("launcher.hint_brain".into(), Value::Bool(false))]))?;
+    h.render()?;
+    assert!(!labels(&h).iter().any(|text| text.starts_with("# ")));
+    assert!(labels(&h).iter().any(|text| text.starts_with("? ")));
+    Ok(())
+}

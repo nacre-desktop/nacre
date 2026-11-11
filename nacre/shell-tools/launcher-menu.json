@@ -909,9 +909,10 @@
       "operation": "settings",
       "value": "ai",
       "description": "Assistant integration",
-      "brand": "settings",
+      "brand": "ai",
       "labelId": "launcher.catalog.setup.ai.label",
-      "descriptionId": "launcher.catalog.setup.ai.description"
+      "descriptionId": "launcher.catalog.setup.ai.description",
+      "capability": "ai"
     },
     {
       "id": "setup.wifi-networks",
@@ -942,7 +943,8 @@
       "value": "shortcuts",
       "description": "Open your private Hyprland override",
       "labelId": "launcher.catalog.setup.shortcuts.label",
-      "descriptionId": "launcher.catalog.setup.shortcuts.description"
+      "descriptionId": "launcher.catalog.setup.shortcuts.description",
+      "backend": "hyprland"
     },
     {
       "id": "setup.defaults",
@@ -1188,7 +1190,8 @@
       "operation": "url",
       "value": "https://wiki.hypr.land/",
       "description": "",
-      "labelId": "launcher.catalog.learn.hyprland.label"
+      "labelId": "launcher.catalog.learn.hyprland.label",
+      "backend": "hyprland"
     },
     {
       "id": "learn.niri",
@@ -1198,7 +1201,8 @@
       "operation": "url",
       "value": "https://github.com/YaLTeR/niri/wiki",
       "description": "",
-      "labelId": "launcher.catalog.learn.niri.label"
+      "labelId": "launcher.catalog.learn.niri.label",
+      "backend": "niri"
     },
     {
       "id": "learn.arch",
@@ -1499,9 +1503,14 @@
       "label": "Configure voice typing",
       "labelId": "launcher.catalog.dictation-setup",
       "icon": "settings_voice",
-      "operation": "tool",
-      "value": "dictation-config",
-      "capability": "dictation"
+      "operation": "command",
+      "capability": "dictation",
+      "arguments": [
+        "nacre-terminal",
+        "--",
+        "voxtype",
+        "configure"
+      ]
     },
     {
       "id": "actions.share",
@@ -1643,7 +1652,8 @@
       ],
       "capability": "niriWorkspaces",
       "labelId": "launcher.catalog.bring-visitors.label",
-      "descriptionId": "launcher.catalog.bring-visitors.description"
+      "descriptionId": "launcher.catalog.bring-visitors.description",
+      "backend": "niri"
     }
   ],
   "software": [

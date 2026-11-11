@@ -10,9 +10,15 @@ local Plugins = require("./components/plugins")
 local M = require("./components/metrics")
 local plugin_active=ui.resolve_for_check(ui.bind("launcher.plugin.active"))
 local show_quick=not plugin_active and M.show(ui.resolve_for_check(ui.bind("bead.viewport.width")),ui.resolve_for_check(ui.bind("launcher.quick_allowed")))
--- QML NacreAppBrowser prefixHints: five 24 px chips at the search field's right end while the query is empty.
+-- Prefix chips follow the same optional-component capabilities as menu rows.
 local function HintRow()
     local hints={"> "..ui.tr("bead.launcher.hint-actions"),"= "..ui.tr("bead.launcher.hint-calculate"),": "..ui.tr("bead.launcher.hint-files")}
+    if ui.resolve_for_check(ui.bind("launcher.hint_brain")) then
+        table.insert(hints,3,"# "..ui.tr("bead.launcher.hint-brain"))
+    end
+    if ui.resolve_for_check(ui.bind("launcher.hint_ai")) then
+        table.insert(hints,"? "..ui.tr("bead.launcher.hint-ai"))
+    end
     local chips={}
     for index,label in ipairs(hints) do
         chips[index]=ui.Box{id="hint"..index,width=math.floor(#label*6.1+14),height=24,radius=6,fill=ui.alpha("onSurface",0.045),

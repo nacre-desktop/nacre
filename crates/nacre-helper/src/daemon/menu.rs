@@ -926,9 +926,14 @@ impl Engine {
                 })
             }));
         }
-        if row["operation"] == "app" {
-            let entry = self.loaded.entries.get(&request.id).ok_or_else(stale)?;
-            if array(&self.loaded.context.preferences["hidden"]).contains(&json!(request.id))
+        if row["operation"] == "app" || row["operation"] == "software-open" {
+            let app_id = if row["operation"] == "software-open" {
+                row["desktopId"].as_str().ok_or_else(stale)?
+            } else {
+                &request.id
+            };
+            let entry = self.loaded.entries.get(app_id).ok_or_else(stale)?;
+            if array(&self.loaded.context.preferences["hidden"]).contains(&json!(app_id))
                 || entry.data["noDisplay"] == true
             {
                 return Err(failure(
@@ -1098,6 +1103,7 @@ async fn run_inner(
     if let Some(snapshot) = hub.borrow().snapshot("compositor") {
         compositor_inputs(&mut engine.loaded.context, &snapshot);
     }
+    capability_inputs(&mut engine.loaded.context, hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
     engine.prepare_queries().await?;
     hub.borrow_mut().publish("menu", engine.status())?;
     let pool = hub.borrow().providers.clone();
@@ -1389,7 +1395,7 @@ async fn run_inner(
                 } else {
                     refreshing = false;
                     match result {
-                        Ok(value)=>{apply_provider(&mut engine.loaded.context,&action,&term,&value);engine.prepare_queries().await?;engine.providers_rev=engine.providers_rev.checked_add(1).filter(|v|*v<=nacre_protocol::MAX_SAFE_INTEGER).ok_or("Launcher provider revision exhausted")?;hub.borrow_mut().service("menu","running",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":true,"error":""}))?;hub.borrow_mut().publish("menu",engine.status())?;},
+                        Ok(value)=>{apply_provider(&mut engine.loaded.context,&action,&term,&value);capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));engine.prepare_queries().await?;engine.providers_rev=engine.providers_rev.checked_add(1).filter(|v|*v<=nacre_protocol::MAX_SAFE_INTEGER).ok_or("Launcher provider revision exhausted")?;hub.borrow_mut().service("menu","running",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":true,"error":""}))?;hub.borrow_mut().publish("menu",engine.status())?;},
                         Err(error)=>{tracing::warn!(code=?error.code,"Launcher provider unavailable");hub.borrow_mut().service("menu","degraded",0)?;hub.borrow_mut().publish("menu.providers",json!({"available":false,"error":error.message}))?;},
                     }
                     if refresh_again {
@@ -1402,12 +1408,18 @@ async fn run_inner(
             },
             change=changes.recv()=>{
                 match change {
+                    Ok(super::hub::Notice::Changed{topic,..}) if topic=="capabilities"=>{
+                        capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
+                        engine.prepare_queries().await?;
+                        hub.borrow_mut().publish("menu",engine.status())?;
+                    },
                     Ok(super::hub::Notice::Changed{topic,..}) if topic=="compositor"=>{
                         let snapshot=hub.borrow().snapshot("compositor");
                         if let Some(snapshot)=snapshot {compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;}
                     },
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>{
-                        tracing::warn!("Launcher missed state updates; resynchronizing from current compositor data");
+                        tracing::warn!("Launcher missed state updates; resynchronizing current inputs");
+                        capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
                         let snapshot=hub.borrow().snapshot("compositor");
                         if let Some(snapshot)=snapshot {compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;}
                     },
@@ -2005,8 +2017,23 @@ fn compositor_inputs(context: &mut Context, snapshot: &Value) {
         .map(|row| json!({"windowId":row["id"],"title":row["title"],"workspace":{"id":row["workspace"]["id"]}}))
         .collect();
     let windows:Vec<_>=source_windows.iter().map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
-    let next = json!({"windows":windows});
+    let next = json!({"windows":windows,"backendName":snapshot["backend"]});
+    if context.compositor["backendName"] != next["backendName"] {
+        context.inputs_changed();
+    }
     context.compositor = next;
+}
+fn capability_inputs(context: &mut Context, snapshot: &Value) {
+    for name in ["ai", "brain"] {
+        let enabled = snapshot["flags"][name] == true;
+        if context.snapshot["capabilities"][name] != enabled {
+            context.inputs_changed();
+            if !context.snapshot["capabilities"].is_object() {
+                context.snapshot["capabilities"] = json!({});
+            }
+            context.snapshot["capabilities"][name] = json!(enabled);
+        }
+    }
 }
 // The existing view requests conversion only for lowercase whole words to/in.
 fn conversion_query(term: &str) -> bool {
@@ -2022,7 +2049,8 @@ fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, S
     let term = text::field(&scope, "text");
     let enabled = |key| context.source_options[key] != false;
     let action = match kind {
-        "brain" if enabled("brain") && !term.is_empty() && term.chars().count() <= 160 => "brain",
+        "brain" if enabled("brain") && context.snapshot["capabilities"]["brain"] == true
+            && !term.is_empty() && term.chars().count() <= 160 => "brain",
         "files" if enabled("files") => "files",
         "calculator" if enabled("calculator") && conversion_query(&term) => "convert",
         "all" if request.route.as_deref() == Some("software.packages") && !term.is_empty() => {
@@ -2090,7 +2118,7 @@ fn apply_provider(context: &mut Context, action: &str, term: &str, value: &Value
                 .as_array()
                 .into_iter()
                 .flatten()
-                .map(|row| json!({"path":row["path"],"title":row["title"],"preview":row["snippet"],"chips":row["chips"]}))
+                .map(|row| json!({"path":row["path"],"file":row["file"],"title":row["title"],"preview":row["snippet"],"chips":row["chips"]}))
                 .collect();
             if !context.previews["providerMessages"].is_object() {
                 context.previews["providerMessages"] = json!({});
@@ -2867,4 +2895,35 @@ mod tests {
             .any(|row| row["name"] == "Updated unique caption"));
         Ok(())
     }
+    #[test]
+    fn installed_software_uses_the_indexed_app_and_respects_hidden_preferences() -> Result<()> {
+        let mut state = engine()?;
+        state.loaded.context.catalog["software"] = json!([
+            {"package":"fixture","label":"Fixture app","repository":"extra"}]);
+        state.loaded.context.snapshot = json!({"capabilities":{"packages":true}});
+        let result = state.query(serde_json::from_value(json!({
+            "query":"","mode":"apps","route":"software.discover"}))?)?;
+        let id = result["order"][0].as_str().unwrap();
+        let request: MenuActivate = serde_json::from_value(json!({
+            "id":id,"activation":result["items"][id]["activation"],"catalog_rev":state.rev}))?;
+        assert_eq!(state.activate(request.clone())?["application"]["command"],
+            json!(["fixture", "$HOME;$(touch forbidden)"]));
+        state.loaded.context.preferences["hidden"] = json!(["fixture"]);
+        assert_eq!(state.activate(request).unwrap_err().code, ErrorCode::Unavailable);
+        Ok(())
+    }
+
+    #[test]
+    fn compositor_identity_and_existing_capability_flags_reach_menu_context() -> Result<()> {
+        let mut state = engine()?;
+        state.loaded.context.prepare_queries()?;
+        compositor_inputs(&mut state.loaded.context, &json!({"backend":"niri"}));
+        assert_eq!(state.loaded.context.compositor["backendName"], "niri");
+        assert!(!state.loaded.context.queries_prepared());
+        capability_inputs(&mut state.loaded.context, &json!({"flags":{"ai":true,"brain":false}}));
+        assert_eq!(state.loaded.context.snapshot["capabilities"]["ai"], true);
+        assert_eq!(state.loaded.context.snapshot["capabilities"]["brain"], false);
+        Ok(())
+    }
+
 }

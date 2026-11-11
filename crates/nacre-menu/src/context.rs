@@ -125,6 +125,7 @@ impl Context {
         self.visible_apps
             .iter()
             .map(|app| model::application(app))
+            .filter(|app| self.visible(app))
             .collect()
     }
     // Keep the frozen row constructor's named fields visible at each provider.
@@ -183,6 +184,23 @@ impl Context {
             _ => return None,
         })
     }
+    /// Provider groups can populate dynamically; static groups disappear when all children do.
+    pub fn visible(&self, row: &Value) -> bool {
+        let backend = text::field(row, "backend");
+        let brand = text::field(row, "brand");
+        if yes(&row["hidden"])
+            || (!backend.is_empty() && self.compositor["backendName"] != backend)
+            || (matches!(brand.as_str(), "ai" | "brain")
+                && self.snapshot["capabilities"][&brand] != true)
+        {
+            return false;
+        }
+        if row["kind"] == "group" && !yes(&row["provider"]) {
+            let children = model::children(&text::field(row, "id"), self.rows());
+            return children.is_empty() || children.iter().any(|child| self.visible(child));
+        }
+        true
+    }
     pub fn decorate(&self, row: &Value) -> Value {
         let mut out = model::entry(row, self.rows());
         let checked = self.checked(row);
@@ -231,17 +249,9 @@ impl Context {
             String::new()
         });
         let capability = text::field(row, "capability");
-        let backend = text::field(&self.compositor, "backendName");
-        let brand = text::field(row, "brand");
-        let hidden = (brand == "ai" && self.snapshot["capabilities"]["ai"] != true)
-            || (brand == "brain" && self.snapshot["capabilities"]["brain"] != true)
-            || (row["id"] == "actions.assistant"
-                && self.snapshot["capabilities"]["ai"] != true
-                && self.snapshot["capabilities"]["brain"] != true)
-            || (row["id"] == "actions.bring-visitors" && backend != "niri")
-            || (row["id"] == "learn.hyprland" && backend != "hyprland")
-            || (row["id"] == "learn.niri" && backend != "niri");
-        out["hidden"] = json!(hidden);
+        if !self.visible(row) {
+            out["hidden"] = json!(true);
+        }
         let disabled = if capability == "niriWorkspaces" {
             self.compositor["backendName"] != "niri"
         } else {

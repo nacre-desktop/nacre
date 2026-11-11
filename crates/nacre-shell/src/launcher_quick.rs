@@ -32,6 +32,7 @@ const ITEMS: [(&str, &str, &str, &str); 3] = [
 pub struct Quick {
     control: ControlCenter,
     updates: Option<Arc<dyn Source>>,
+    capabilities: Option<Arc<dyn Source>>,
 }
 
 impl Quick {
@@ -40,12 +41,16 @@ impl Quick {
             .iter()
             .find(|(name, _)| *name == "dashboard.updates")
             .map(|(_, source)| source.clone());
+        let capabilities = topics
+            .iter()
+            .find(|(name, _)| *name == "capabilities")
+            .map(|(_, source)| source.clone());
         let control = ControlCenter::new(client, topics, None, Vec::new());
-        Self { control, updates }
+        Self { control, updates, capabilities }
     }
 
     pub fn lease(client: Client) -> source::Result<Self> {
-        let topics = ["controls", "notifications", "dashboard.updates"]
+        let topics = ["controls", "notifications", "dashboard.updates", "capabilities"]
             .into_iter()
             .map(|name| {
                 let topic = client.view_topic(name)?;
@@ -107,8 +112,14 @@ impl Quick {
             .filter(|count| *count <= u64::from(u32::MAX))
             .map(|count| count as f64)
             .unwrap_or(-1.);
+        let capabilities = self.capabilities.as_ref().map(|source| source.snapshot());
+        let enabled = |name: &str| capabilities.as_ref().is_some_and(|snapshot| {
+            snapshot.connected && snapshot.data["flags"][name] == true
+        });
         let message = self.control.quick_message();
         BTreeMap::from([
+            ("launcher.hint_ai".into(), Value::Bool(enabled("ai"))),
+            ("launcher.hint_brain".into(), Value::Bool(enabled("brain"))),
             ("launcher.quick".into(), Value::list(rows)),
             ("launcher.updates.count".into(), Value::Number(count)),
             ("launcher.quick_error".into(), Value::Text(message)),

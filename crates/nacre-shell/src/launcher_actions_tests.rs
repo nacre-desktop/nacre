@@ -353,7 +353,7 @@ fn extension_rows_use_existing_helper_routes_and_authoritative_state() {
 }
 
 #[test]
-fn software_open_is_an_explicit_nacre_contract_proposal_not_a_fake_route() {
+fn daemon_owned_software_open_is_refused_by_the_ui() {
     let table: Value =
         serde_json::from_str(include_str!("../tests/launcher-actions.json")).unwrap();
     for entry in table["blocked"].as_array().unwrap() {

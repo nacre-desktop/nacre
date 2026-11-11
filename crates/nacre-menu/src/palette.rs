@@ -37,6 +37,9 @@ pub fn query(context: &Context, query: &str) -> Vec<Value> {
         .map_or(normalized.as_str(), str::trim_start)
         .trim();
     if q.starts_with("brain:") {
+        if context.snapshot["capabilities"]["brain"] != true {
+            return Vec::new();
+        }
         let value = raw_slice(query, 6).trim();
         return vec![json!({
             "id":"nacre-palette:brain-query", "kind":"action",
@@ -51,7 +54,7 @@ pub fn query(context: &Context, query: &str) -> Vec<Value> {
     let actions: Vec<_> = context
         .legacy_actions
         .iter()
-        .filter(|row| row["launcher"] != false)
+        .filter(|row| row["launcher"] != false && context.visible(row))
         .filter(|row| matching(row, &words))
         .cloned()
         .collect();
@@ -95,5 +98,5 @@ pub fn query(context: &Context, query: &str) -> Vec<Value> {
             row["icon"] = json!("apps");
             row
         });
-    actions.into_iter().chain(windows).chain(apps).collect()
+    actions.into_iter().chain(windows).chain(apps).filter(|row| context.visible(row)).collect()
 }

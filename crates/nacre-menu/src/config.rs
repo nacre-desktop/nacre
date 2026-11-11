@@ -69,6 +69,7 @@ const FIELDS: &[&str] = &[
     "value",
     "provider",
     "capability",
+    "backend",
     "state",
     "confirm",
     "brand",

@@ -526,7 +526,6 @@ fn act(row: &MenuUiRow) -> Result<(Act, bool, Option<MenuView>), Option<&'static
 /// The `tool` rows of Actions > Capture, Reminders and Health.
 fn tool(name: &str) -> Option<Act> {
     Some(match name {
-        "dictation-config" => terminal("Configure voice typing", &["voxtype", "configure"]),
         "capture-area" | "capture-screen" | "capture-window" => later(
             helper(&["launcher-workflows", "capture", name]),
             Some(json!({})),
