@@ -1,0 +1,3 @@
+# N0172 dashboard CPU warm sample
+
+The dashboard System tab showed no CPU value until the second `/proc/stat` sample because each `dashboard.system` subscription began without a counter baseline. Read one baseline when the daemon starts and retain the most recent baseline across inactive periods; the first subscribed sample now computes and publishes CPU immediately, while all periodic sampling remains subscription-gated and stops with the topic, keeping idle polling unchanged. Regression coverage verifies that the first read after opening returns a percentage from the warm baseline; the next normal sample refreshes it. No temporary duplicate implementation was introduced.

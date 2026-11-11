@@ -107,6 +107,12 @@ fn parse_cpu(text: &str) -> Option<Cpu> {
         idle: columns[3] + columns.get(4).copied().unwrap_or(0),
     })
 }
+fn read_cpu(sources: &Sources) -> Option<Cpu> {
+    fs::read_to_string(sources.proc.join("stat"))
+        .ok()
+        .as_deref()
+        .and_then(parse_cpu)
+}
 fn cpu_percent(before: Cpu, after: Cpu) -> Option<f64> {
     let total = after.total.checked_sub(before.total).filter(|t| *t > 0)?;
     let idle = after
@@ -420,12 +426,18 @@ async fn finished<T>(job: &mut Option<JoinHandle<T>>) -> Option<T> {
 pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
     let mut interest = hub.borrow_mut().watch_interest(TOPIC);
     hub.borrow_mut().service("dashboard-system", "running", 0)?;
+    // Keep a one-time baseline so the first subscribed sample can publish a
+    // CPU rate immediately. No reads repeat while the topic is idle.
+    let mut cpu_baseline = read_cpu(&sources);
     loop {
         publish_idle(&hub)?;
         while !*interest.borrow() {
             interest.changed().await?;
         }
-        let mut metrics = Metrics::default();
+        let mut metrics = Metrics {
+            cpu: cpu_baseline,
+            ..Metrics::default()
+        };
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_millis() as u64);
@@ -448,6 +460,7 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
                         timer.set_missed_tick_behavior(MissedTickBehavior::Skip);
                     }
                     metrics.sample(&sources, Instant::now());
+                    cpu_baseline = metrics.cpu;
                     if listing.is_none() {
                         let proc = sources.proc.clone();
                         listing = Some(tokio::task::spawn_blocking(move || dashboard_system::snapshot(&proc)));
@@ -704,6 +717,9 @@ mod tests {
                 tokio::time::sleep(Duration::from_millis(300)).await;
                 let idle = read(&hub);
                 assert!(!idle.health.available && idle.memory.is_none() && idle.network.is_empty());
+                // The daemon sampled the CPU baseline while idle. The first
+                // post-open read must therefore already produce a percentage.
+                fs::write(dir.path().join("stat"), "cpu  200 0 200 1400 200 0 0 0\n")?;
                 let (client, _wake) = hub.borrow_mut().add_client()?;
                 hub.borrow_mut().subscribe(client, &[TOPIC.into()], false)?;
                 tokio::time::sleep(Duration::from_millis(300)).await;
@@ -714,14 +730,11 @@ mod tests {
                     s.health.available && s.memory.is_some()
                 })
                 .await;
-                assert!(
-                    read(&hub).cpu_percent.is_none(),
-                    "one CPU reading is not a rate"
-                );
+                assert_eq!(read(&hub).cpu_percent, Some(20.0), "first read after open");
                 let host = read(&hub).host.expect("host block");
                 assert_eq!(host.os.as_deref(), Some("Fixture Linux 1"));
                 assert_eq!(host.uptime_s, Some(90061));
-                fs::write(dir.path().join("stat"), "cpu  200 0 200 1400 200 0 0 0\n")?;
+                fs::write(dir.path().join("stat"), "cpu  300 0 300 2100 300 0 0 0\n")?;
                 fs::write(dir.path().join("net/dev"), dev(1_000_000, 500_000, 0))?;
                 wait(hub.clone(), "warm second sample", |s| {
                     s.cpu_percent == Some(20.0) && !s.network.is_empty()
@@ -734,7 +747,7 @@ mod tests {
                 })
                 .await;
                 let seq = hub.borrow().topic_seq(TOPIC);
-                fs::write(dir.path().join("stat"), "cpu  300 0 300 2100 300 0 0 0\n")?;
+                fs::write(dir.path().join("stat"), "cpu  400 0 400 2800 400 0 0 0\n")?;
                 tokio::time::sleep(Duration::from_millis(2600)).await;
                 assert_eq!(
                     hub.borrow().topic_seq(TOPIC),
