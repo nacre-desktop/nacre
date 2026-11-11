@@ -129,12 +129,7 @@ def selection(args, root, home, interactive):
             tr(
                 "setup.prompt.compositor",
                 "Compositor ({choices})",
-                {
-                    "choices": ", ".join(
-                        f"{name} (recommended)" if name == "nacre-niri" else name
-                        for name in choices
-                    )
-                },
+                {"choices": ", ".join(choices)},
             ),
             detected,
         )

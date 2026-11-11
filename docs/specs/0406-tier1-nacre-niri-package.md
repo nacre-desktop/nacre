@@ -7,6 +7,10 @@ Pin: `1028c5b919abac907c06b63c6610584e42bded0f`, `nacre` branch,
 the retained NN0027/NN0028 install note identifies the same package/revision.
 `nacre-brain search "r3079"` returned only older r3073 notes, so history and
 the retained package note provide the exact pin evidence.
+The pin lives in `packaging/arch/niri/recipe.py` as `SOURCE`. Bump it only after
+reviewing the new fork commit and confirming its own `packaging/arch/PKGBUILD`
+and companion wrapper files with the same build/runtime proof; update this hash
+and the recorded fork version together.
 
 The niri package component stages the fork's own PKGBUILD, session wrapper and
 desktop entry at that pin. Only `_commit` is added, using the recipe's existing
