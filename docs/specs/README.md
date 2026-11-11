@@ -6,6 +6,7 @@
 | N0401 | [Fresh-Arch VM install gate](0401-fresh-arch-vm-gate.md) | Phase A done; harness next | dev-1 QEMU/KVM with virgl renders native niri and Hyprland; the October snapshot installs, runs and fails the removal check. |
 | N0403 | `nacre update` | In progress | One update path: extend the existing interactive updater with the setup plan/apply review; `nacre update` runs it. |
 | N0406 | Tier 1 nacre-niri package and setup choice | In progress; full dev-1 CI running | Build the fork at r3079 from its own recipe, retire the upstream-niri hover companion, and offer nacre-niri first in setup. |
+| N0407 | [Package dependency review](0407-package-dependency-review.md) | Planned; after N0406 | Sort each of the 58 core dependencies into keep, optional, move or drop, then prove the smaller set in the VM gate. |
 | N0174 | [Daemon restart reconnect](0174-daemon-restart-reconnect.md) | Done; full dev-1 desktop CI passed | Recover permanent and leased subscriptions, identify successful reconnects once, and keep the compositor watcher on the shared permanent topic path. The restart regression passed in the 871-test workspace suite. |
 
 Live: Nacre `6c67f792` with Bead `7ea19860`, in active daily use and not yet released. Nacre runs on nacre-niri, its own niri compositor fork, with Bead as its native shell.
