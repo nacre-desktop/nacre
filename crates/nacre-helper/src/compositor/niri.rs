@@ -196,11 +196,10 @@ impl Backend {
             .actions
             .transport
             .nacre_capabilities(Duration::from_millis(500));
-        let socket = if native_capabilities.workspace_collections {
-            niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?
-        } else {
-            niri_events::EventSocket::connect(Path::new(self.session_id()), hover)?
-        };
+        // Startup capability probes can precede ConfigLoaded. The stream's own
+        // negotiation handles collection support and falls back for older peers.
+        let socket =
+            niri_events::EventSocket::connect_collections(Path::new(self.session_id()), hover)?;
         niri_events::Events::new_with_capabilities(
             socket,
             niri_transport::Connection::new(self.session_id()),
@@ -354,6 +353,157 @@ mod tests {
         assert!(capabilities.get("monitorWorkspaceActions").is_none());
         peer.join()
             .map_err(|_| "Niri capability fixture panicked")??;
+        Ok(())
+    }
+    #[test]
+    fn collection_stream_is_negotiated_when_startup_probe_precedes_config_loaded(
+    ) -> crate::Result<()> {
+        use std::{
+            io::{BufRead, BufReader, Write},
+            os::unix::net::UnixListener,
+            thread,
+        };
+
+        let directory = tempfile::tempdir()?;
+        let socket = directory.path().join("niri.sock");
+        let listener = UnixListener::bind(&socket)?;
+        let peer = thread::spawn(move || -> std::io::Result<()> {
+            // The startup capability probe runs before ConfigLoaded and reports
+            // collections disabled.
+            let (stream, _) = listener.accept()?;
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut probe = BufReader::new(stream);
+            let mut request = String::new();
+            probe.read_line(&mut request)?;
+            assert_eq!(request, "\"NacreCapabilities\"\n");
+            writeln!(
+                probe.get_mut(),
+                "{}",
+                serde_json::json!({"Ok":{"NacreCapabilities":{
+                    "workspace_collections":false,"proportional_x11_widths":false,"overview_hover":false,
+                    "scratchpad":false,"window_pinning":false,"edge_triggers":false,"edge_trigger_cues":false,
+                    "force_close":false,"monitor_workspace_actions":false,"window_restore":false
+                }}})
+            )?;
+
+            // The richer stream is still requested. Simulate a peer that lacks
+            // the combined hover variant but supports collection events.
+            let (stream, _) = listener.accept()?;
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut combined = BufReader::new(stream);
+            request.clear();
+            combined.read_line(&mut request)?;
+            assert_eq!(
+                request.trim(),
+                "\"NacreOverviewHoverStreamWithCollections\""
+            );
+            writeln!(combined.get_mut(), "{{\"Err\":\"unsupported\"}}")?;
+            drop(combined);
+
+            let (stream, _) = listener.accept()?;
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut collections = BufReader::new(stream);
+            request.clear();
+            collections.read_line(&mut request)?;
+            assert_eq!(request.trim(), "\"EventStreamWithCollections\"");
+            writeln!(collections.get_mut(), "{{\"Ok\":\"Handled\"}}")?;
+            for event in [
+                serde_json::json!({"CollectionsChanged":{"collections":[
+                    {"id":17,"idx":1,"name":"work","output":"DP-1","is_active":true,"workspace_ids":[4]},
+                    {"id":28,"idx":1,"name":"mail","output":"eDP-1","is_active":true,"workspace_ids":[8]}
+                ]}}),
+                serde_json::json!({"WorkspacesChanged":{"workspaces":[]}}),
+                serde_json::json!({"WindowsChanged":{"windows":[]}}),
+                serde_json::json!({"ConfigLoaded":{"failed":false}}),
+                serde_json::json!({"ConfigLoaded":{"failed":false}}),
+            ] {
+                writeln!(collections.get_mut(), "{event}")?;
+            }
+            drop(collections);
+
+            // Events refreshes outputs on workspace changes and reads edge-cue
+            // capabilities, outputs and native capabilities on each reload.
+            let (stream, _) = listener.accept()?;
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut queries = BufReader::new(stream);
+            for reply in [
+                ("Outputs", serde_json::json!({})),
+                ("Outputs", serde_json::json!({})),
+                (
+                    "NacreCapabilities",
+                    serde_json::json!({
+                        "workspace_collections":false,"proportional_x11_widths":false,"overview_hover":false,
+                        "scratchpad":false,"window_pinning":false,"edge_triggers":false,"edge_trigger_cues":false,
+                        "force_close":false,"monitor_workspace_actions":false,"window_restore":false
+                    }),
+                ),
+                ("Outputs", serde_json::json!({})),
+                (
+                    "NacreCapabilities",
+                    serde_json::json!({
+                        "workspace_collections":false,"proportional_x11_widths":false,"overview_hover":false,
+                        "scratchpad":false,"window_pinning":false,"edge_triggers":false,"edge_trigger_cues":false,
+                        "force_close":false,"monitor_workspace_actions":false,"window_restore":false
+                    }),
+                ),
+                (
+                    "NacreCapabilities",
+                    serde_json::json!({
+                        "workspace_collections":true,"proportional_x11_widths":false,"overview_hover":false,
+                        "scratchpad":false,"window_pinning":false,"edge_triggers":false,"edge_trigger_cues":false,
+                        "force_close":false,"monitor_workspace_actions":false,"window_restore":false
+                    }),
+                ),
+                ("Outputs", serde_json::json!({})),
+                (
+                    "NacreCapabilities",
+                    serde_json::json!({
+                        "workspace_collections":true,"proportional_x11_widths":false,"overview_hover":false,
+                        "scratchpad":false,"window_pinning":false,"edge_triggers":false,"edge_trigger_cues":false,
+                        "force_close":false,"monitor_workspace_actions":false,"window_restore":false
+                    }),
+                ),
+            ] {
+                request.clear();
+                queries.read_line(&mut request)?;
+                let (name, value) = reply;
+                assert_eq!(request.trim(), serde_json::to_string(name).unwrap());
+                let mut response = serde_json::json!({"Ok":{}});
+                response["Ok"][name] = value;
+                writeln!(queries.get_mut(), "{response}")?;
+            }
+            Ok(())
+        });
+
+        let environment =
+            BTreeMap::from([("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned())]);
+        let mut backend = Backend::new(Paths::new(directory.path()), environment);
+        let mut events = backend.events()?;
+        let initial_snapshot = events.next_value()?;
+        assert!(initial_snapshot["capabilities"]
+            .get("workspaceCollections")
+            .is_none());
+        assert!(initial_snapshot.get("collections").is_none());
+        let _queued_change = events.next_value()?;
+        let disabled_snapshot = events.next_value()?;
+        assert!(disabled_snapshot["capabilities"]
+            .get("workspaceCollections")
+            .is_none());
+        assert!(disabled_snapshot.get("collections").is_none());
+        let _disabled_change = events.next_value()?;
+        let restored_snapshot = events.next_value()?;
+        assert_eq!(
+            restored_snapshot["capabilities"]["workspaceCollections"],
+            true
+        );
+        assert_eq!(
+            restored_snapshot["collections"].as_array().unwrap().len(),
+            2
+        );
+        assert_eq!(restored_snapshot["collections"][0]["output"], "DP-1");
+        assert_eq!(restored_snapshot["collections"][1]["output"], "eDP-1");
+        peer.join()
+            .map_err(|_| "Niri late collection fixture panicked")??;
         Ok(())
     }
     #[test]

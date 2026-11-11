@@ -458,11 +458,9 @@ async fn niri(
     let mut native_capabilities = capabilities;
     let event_path = path.clone();
     let reader = tokio::task::spawn_blocking(move || {
-        let socket = if capabilities.workspace_collections {
-            niri_events::EventSocket::connect_collections(&event_path, hover)
-        } else {
-            niri_events::EventSocket::connect(&event_path, hover)
-        };
+        // Collection support may become available after startup (ConfigLoaded).
+        // Negotiate the richer stream independently of the bounded capability probe.
+        let socket = niri_events::EventSocket::connect_collections(&event_path, hover);
         socket.map(niri_events::EventSocket::into_stream)
     })
     .await??;
@@ -521,11 +519,7 @@ async fn niri(
                                         Ok(backend.actions.transport.nacre_capabilities(Duration::from_millis(500)))
                                     }).await?;
                                     native_capabilities=capabilities;
-                                    if !capabilities.workspace_collections {
-                                        state.collections.clear();
-                                        state.active_collection=None;
-                                        state.collections_supported=false;
-                                    }
+                                    // Keep subscribed collections; flush_niri gates their publication.
                                     proportional_x11_widths=capabilities.proportional_x11_widths;
                                     let enabled=capabilities.edge_triggers && capabilities.edge_trigger_cues;
                             let next=if enabled {

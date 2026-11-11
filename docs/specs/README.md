@@ -14,6 +14,7 @@ history. Those entries are not a live queue and have not been rewritten here.
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
 | N0168 | [Shrink reference fixtures](0168-reference-fixtures.md) | Done; full dev-1 desktop CI passed | Fixtures 43.28 → 9.88 MB; 24 orphaned captures removed; all 2,728 active cases retained. |
+| N0170 | [Stack stream startup](0170-stack-stream-startup.md) | Validated; full dev-1 desktop CI passed after rebase onto N0168 | Collection subscription and received state survive capability probes. Deploy the corrected helper and restart the daemon; no live changes made. |
 | N0159 | [Repository root and evidence cleanup](0159-root-tidy.md) | Done; full dev-1 desktop, package and disposable-HOME update checks passed | Configs consolidated; raw evidence removed; installed paths preserved. |
 | N0164 | [Workspace stack parent segment](0164-workspace-stack-indicator.md) | Implemented; reviewed goldens and all dev-1 desktop CI stages passed | Name remains with one stack; click opens the existing menu. Desktop TEST captures deferred by owner. |
 | N0157 | [Retire pre-split shell archive](0157-retire-shell-archive.md) | Done; desktop and package checks passed | Archive removed; current checks/licenses retained. Migration-only old-name references remain. |

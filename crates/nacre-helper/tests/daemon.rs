@@ -1092,7 +1092,7 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
     assert!(hotplug.elapsed() >= Duration::from_millis(300));
     let record: Value = serde_json::from_slice(&fs::read(&latest)?)?;
     assert_eq!(record["monitors"][0]["width"], 1600);
-    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    assert_eq!(source.sockets.lock().unwrap().len(), 3);
     let output = command(home.path(), &source_path, &endpoint)
         .args(["session-watch", "watch"])
         .output()?;
@@ -1274,8 +1274,10 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
     drop(replacement);
     fs::remove_file(&source_path)?;
     fs::rename(&original, &source_path)?;
-    // One event stream and one persistent request connection, regardless of consumers.
-    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    // One live event stream, one persistent request connection, and the rejected
+    // collection-stream negotiation probe, regardless of consumer count.
+    assert_eq!(source.sockets.lock().unwrap().len(), 3);
+    assert_eq!(source.event_sockets.lock().unwrap().len(), 1);
     let control = first.control()?;
     let (finished, result) = std::sync::mpsc::channel();
     let reader = thread::spawn(move || finished.send(first.next_value().is_err()));
@@ -1396,7 +1398,7 @@ fn native_width_clients_share_stream_scope_and_reconnect() -> Result<()> {
     wait_width(&mut reader, &mut mirror, 44.5)?;
     assert_eq!(
         source.sockets.lock().unwrap().len(),
-        2,
+        3,
         "Compatibility widths clients opened compositor sockets"
     );
     let other_path = home.path().join("other-niri.sock");
@@ -1453,14 +1455,14 @@ fn native_width_clients_share_stream_scope_and_reconnect() -> Result<()> {
         .env("XAUTHORITY", &authority)
         .output()?;
     assert!(!wrong_display.status.success());
-    assert_eq!(source.sockets.lock().unwrap().len(), 2);
+    assert_eq!(source.sockets.lock().unwrap().len(), 3);
     daemon.0.kill()?;
     daemon.0.wait()?;
     thread::sleep(Duration::from_millis(250));
     assert!(first.0.try_wait()?.is_none() && second.0.try_wait()?.is_none());
     assert_eq!(
         source.sockets.lock().unwrap().len(),
-        2,
+        3,
         "Disconnected client opened a standalone compositor stream"
     );
     daemon = start()?;
@@ -1468,7 +1470,7 @@ fn native_width_clients_share_stream_scope_and_reconnect() -> Result<()> {
     loop {
         if status(home.path(), &source_path, &endpoint)
             .is_ok_and(|v| v["services"]["niri-widths"]["status"] == "running")
-            && source.sockets.lock().unwrap().len() == 4
+            && source.sockets.lock().unwrap().len() == 6
         {
             break;
         }

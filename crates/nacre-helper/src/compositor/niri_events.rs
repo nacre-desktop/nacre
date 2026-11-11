@@ -87,6 +87,10 @@ impl EventSocket {
             requests.push("NacreOverviewHoverStreamWithCollections");
         }
         requests.push("EventStreamWithCollections");
+        if hover {
+            // Keep hover support when a peer implements it without collections.
+            requests.push("NacreOverviewHoverStream");
+        }
         requests.push("EventStream");
         Self::connect_requests(open, &requests, MAX_BYTES)
     }
@@ -383,12 +387,8 @@ impl<T: Outputs> Events<T> {
                 self.state.outputs = outputs;
             }
             if event.get("ConfigLoaded").is_some() {
+                // Gate publication below without discarding subscribed collection state.
                 self.native_capabilities = self.outputs.nacre_capabilities();
-                if !self.native_capabilities.workspace_collections {
-                    self.state.collections.clear();
-                    self.state.active_collection = None;
-                    self.state.collections_supported = false;
-                }
             }
             if self.state.ready.len() == 2
                 && self.state.ready.contains("window")
@@ -860,6 +860,51 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<Value>(wires[1].lines().next().ok_or("missing request")?)?,
             json!("EventStreamWithCollections")
+        );
+        Ok(())
+    }
+    #[test]
+    fn collection_stream_falls_back_to_legacy_hover_before_stock() -> crate::Result<()> {
+        let mut clients = VecDeque::new();
+        let mut peers = Vec::new();
+        for reply in [
+            "{\"Err\":\"combined stream unavailable\"}\n",
+            "{\"Err\":\"collection stream unavailable\"}\n",
+            "{\"Ok\":\"Handled\"}\n\"ready\"\n",
+        ] {
+            let (client, mut server) = UnixStream::pair()?;
+            server.write_all(reply.as_bytes())?;
+            clients.push_back(client);
+            peers.push(server);
+        }
+        let mut socket = EventSocket::connect_collections_with(
+            || {
+                clients
+                    .pop_front()
+                    .ok_or_else(|| invalid("Unexpected stream open"))
+            },
+            true,
+        )?;
+        assert_eq!(socket.next_event()?, json!("ready"));
+        drop(socket);
+        let mut wires = Vec::new();
+        for mut peer in peers {
+            peer.set_read_timeout(Some(Duration::from_secs(2)))?;
+            let mut bytes = Vec::new();
+            peer.read_to_end(&mut bytes)?;
+            wires.push(String::from_utf8(bytes)?);
+        }
+        assert_eq!(
+            serde_json::from_str::<Value>(wires[0].trim())?,
+            json!("NacreOverviewHoverStreamWithCollections")
+        );
+        assert_eq!(
+            serde_json::from_str::<Value>(wires[1].trim())?,
+            json!("EventStreamWithCollections")
+        );
+        assert_eq!(
+            serde_json::from_str::<Value>(wires[2].trim())?,
+            json!("NacreOverviewHoverStream")
         );
         Ok(())
     }
