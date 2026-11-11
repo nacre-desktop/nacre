@@ -859,6 +859,11 @@ class PackageSetupTests(unittest.TestCase):
 
     def niri_fixture(self, folder):
         root, home, profile = self.fixture(folder)
+        (root / "packaging").mkdir()
+        shutil.copy2(
+            TOOLS.parent / "packaging/sessions.json",
+            root / "packaging/sessions.json",
+        )
         (root / "package.json.installed").write_text(
             json.dumps(
                 {
