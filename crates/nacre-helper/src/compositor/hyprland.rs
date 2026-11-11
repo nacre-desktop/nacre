@@ -715,7 +715,8 @@ impl<T: Transport> Backend<T> {
 mod tests {
     use super::*;
     #[test]
-    fn capability_bits_match_implemented_hyprland_paths() {
+    fn advertised_capability_bits_match_reviewed_hyprland_snapshot() {
+        // Snapshot only: when a bit changes, verify its implementation in crates/nacre-shell/src/backends/hyprland.rs.
         let capabilities = capabilities();
         let mut advertised = capabilities
             .as_object()

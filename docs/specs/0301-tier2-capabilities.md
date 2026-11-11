@@ -28,7 +28,8 @@ actions in `crates/nacre-shell/src/backends/{niri,hyprland}.rs`.
 | Hyprland | `pinWindow`, `windowHide` | Helper command routes and capabilities: `crates/nacre-helper/src/compositor/hyprland.rs:289-290,654`; window hide/restore adapter helpers. |
 | Hyprland | `windowGroups`, `windowForceKill`, `pseudoTiling`, `layoutSplit` | Hyprland helper command dispatcher: `crates/nacre-helper/src/compositor/hyprland.rs:600-654`; shell capabilities/action handling in `crates/nacre-shell/src/backends/hyprland.rs`. |
 | Hyprland | `keymaps`, `nonConsumingShortcuts`, `bindingIntrospection` | Binding inventory, parsing, and action query: `crates/nacre-helper/src/compositor/hyprland.rs:314-369,654`; Settings capability publication uses the compositor flags. |
-| Hyprland | `windowCapture`, `windowTrash`, `scratchpad`, `monitorMirroring` | **Removed from advertised true bits.** The shell backend returns `Unsupported` for these actions (`crates/nacre-shell/src/backends/hyprland.rs:284-295`); the helper screenshot route also directs callers to geometry capture (`crates/nacre-helper/src/compositor/hyprland.rs:633`). Overview previews use the shell capture hub (`crates/nacre-shell/src/extras.rs:351,468-489`) and are independent of backend `windowCapture`. |
+| Hyprland | `windowTrash`, `scratchpad`, `monitorMirroring` | **Removed from advertised true bits.** The shell backend returns `Unsupported` for these actions (`crates/nacre-shell/src/backends/hyprland.rs:284-295`). |
+| Hyprland | `windowCapture` | **Decision pending runtime evidence.** The explicit `backend.windowCapture` action is unsupported (`crates/nacre-shell/src/backends/hyprland.rs:284-295`), while overview previews use the shell capture hub (`crates/nacre-shell/src/extras.rs:351,468-489`) and Settings hides `windows-workspaces.overview.livePreviews` when this bit is false (`shell/settings/registry/settings.json:2471-2492`). The screenshot check could not run because the desktop TEST host is unreachable. Keep the current false value until the nested overview capture is observed. |
 
 The helper's stock-niri capability map is `crates/nacre-helper/src/compositor/niri.rs:27-28`;
 native Nacre flags are selectively overlaid at lines 30-48. Missing or unsupported
@@ -64,8 +65,13 @@ Status: not run. The desktop TEST host did not accept SSH (`ssh -F ~/.ssh/config
 No screenshots or raw logs are included. Shell-lead UI checks to carry into the
 runtime pass: hide unsupported scratchpad controls with `scratchpad`; hide trash
 controls with `windowTrash`; gate native mirror settings with `monitorMirroring`;
-keep overview preview fallback independent of compositor `windowCapture` because
-the capture hub may provide previews without a compositor action. Collections
+settle the Settings live-preview gate with the Hyprland overview screenshot. The
+explicit `backend.windowCapture` route is registered by `crates/nacre-shell/src/reload.rs:4613-4618`
+and dispatched at `:4653`; no Luau callsite was found, so there is no exact UI
+entry to name yet. If previews render on Hyprland, keep `windowCapture` true for
+the capture-hub setting and ask Shell to hide the unsupported `backend.windowCapture`
+action where offered. Keep the single capability bit; this unit does not add a
+second flag because the action currently has no discovered UI caller. Collections
 should continue to use `workspaceCollections`.
 
 ## Validation and scope

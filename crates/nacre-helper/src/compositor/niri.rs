@@ -514,7 +514,8 @@ mod tests {
         );
     }
     #[test]
-    fn stock_capability_bits_match_implemented_paths() {
+    fn stock_advertised_capability_bits_match_reviewed_snapshot() {
+        // Snapshot only: when a bit changes, verify its implementation in crates/nacre-shell/src/backends/niri.rs.
         let capabilities = capabilities();
         let mut advertised = capabilities
             .as_object()
@@ -532,7 +533,8 @@ mod tests {
         assert_eq!(advertised, implemented);
     }
     #[test]
-    fn nacre_niri_probe_adds_only_native_supported_capabilities() {
+    fn nacre_niri_advertised_capabilities_match_reviewed_probe_snapshot() {
+        // Snapshot only: when a bit changes, verify its implementation in crates/nacre-shell/src/backends/niri.rs.
         let capabilities = capabilities_with_native(niri_transport::NacreCapabilities {
             scratchpad: true,
             window_pinning: true,
