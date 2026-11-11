@@ -500,17 +500,6 @@
       "descriptionId": "launcher.catalog.style.wallpapers.description"
     },
     {
-      "id": "style.wallpapers.picker",
-      "kind": "action",
-      "label": "Wallpaper picker",
-      "icon": "wallpaper",
-      "operation": "route",
-      "value": "wallpaper",
-      "description": "Open the full wallpaper view",
-      "labelId": "launcher.catalog.style.wallpapers.picker.label",
-      "descriptionId": "launcher.catalog.style.wallpapers.picker.description"
-    },
-    {
       "id": "style.wallpapers.next",
       "kind": "action",
       "label": "Next wallpaper",
@@ -654,7 +643,7 @@
       "icon": "image",
       "operation": "background",
       "value": "wallpaper",
-      "description": "Tint from the image\u2019s own tones",
+      "description": "Tint from the image’s own tones",
       "state": "background",
       "labelId": "launcher.catalog.style.background.wallpaper.label",
       "descriptionId": "launcher.catalog.style.background.wallpaper.description"
@@ -1202,6 +1191,16 @@
       "labelId": "launcher.catalog.learn.hyprland.label"
     },
     {
+      "id": "learn.niri",
+      "kind": "action",
+      "label": "Niri wiki",
+      "icon": "public",
+      "operation": "url",
+      "value": "https://github.com/YaLTeR/niri/wiki",
+      "description": "",
+      "labelId": "launcher.catalog.learn.niri.label"
+    },
+    {
       "id": "learn.arch",
       "kind": "action",
       "label": "Arch Linux guide",
@@ -1314,17 +1313,6 @@
       ],
       "labelId": "launcher.catalog.actions.terminal.label",
       "descriptionId": "launcher.catalog.actions.terminal.description"
-    },
-    {
-      "id": "actions.apps",
-      "kind": "action",
-      "label": "All apps",
-      "icon": "apps",
-      "operation": "route",
-      "value": "apps",
-      "description": "Browse installed applications",
-      "labelId": "launcher.catalog.actions.apps.label",
-      "descriptionId": "launcher.catalog.actions.apps.description"
     },
     {
       "id": "actions.controls.profile",
@@ -1511,13 +1499,8 @@
       "label": "Configure voice typing",
       "labelId": "launcher.catalog.dictation-setup",
       "icon": "settings_voice",
-      "operation": "command",
-      "arguments": [
-        "kitty",
-        "--",
-        "voxtype",
-        "configure"
-      ],
+      "operation": "tool",
+      "value": "dictation-config",
       "capability": "dictation"
     },
     {
