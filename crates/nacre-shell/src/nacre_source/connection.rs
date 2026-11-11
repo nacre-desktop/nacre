@@ -9,6 +9,7 @@ use std::{
 pub(super) struct Connection {
     pub(super) publisher: Publisher,
     since: Mutex<Option<Instant>>,
+    connected_once: Mutex<bool>,
 }
 impl Connection {
     pub(super) fn new(epoch: String, now: Instant) -> source::Result<Self> {
@@ -18,13 +19,21 @@ impl Connection {
                 serde_json::json!({"connected":false,"reconnecting":false}),
             )?,
             since: Mutex::new(Some(now)),
+            connected_once: Mutex::new(false),
         })
     }
-    pub(super) fn connected(&self) {
+    pub(super) fn connected(&self) -> bool {
         *self.since.lock().unwrap_or_else(|p| p.into_inner()) = None;
         let _ = self
             .publisher
             .publish(serde_json::json!({"connected":true,"reconnecting":false}));
+        let mut connected_once = self
+            .connected_once
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let reconnected = *connected_once;
+        *connected_once = true;
+        reconnected
     }
     pub(super) fn disconnected(&self, now: Instant) {
         let since = *self
@@ -130,7 +139,7 @@ mod tests {
         let revision = c.publisher.snapshot().revision;
         c.disconnected(now + Duration::from_secs(20));
         assert_eq!(c.publisher.snapshot().revision, revision);
-        c.connected();
+        assert!(!c.connected());
         assert_eq!(
             c.publisher.snapshot().data,
             std::sync::Arc::new(serde_json::json!({"connected":true,"reconnecting":false}))
@@ -139,6 +148,7 @@ mod tests {
         assert_eq!(c.publisher.snapshot().data["reconnecting"], false);
         c.disconnected(now + Duration::from_secs(23));
         assert_eq!(c.publisher.snapshot().data["reconnecting"], true);
+        assert!(c.connected());
     }
 }
 

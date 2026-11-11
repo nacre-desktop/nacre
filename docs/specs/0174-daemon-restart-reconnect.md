@@ -1,0 +1,3 @@
+# N0174: Daemon restart reconnect
+
+Treat a daemon restart as a normal shell reconnect: recover permanent and leased topic subscriptions, emit one informational `daemon restarted, reconnected` line per recovered connection, and keep transient daemon loss out of UI errors while preserving genuine failure reporting when recovery does not succeed. The shell's permanent compositor watcher now uses the shared topic lookup. Validation simulates a live shell client across daemon boots and confirms subscriptions and connection state recover; no temporary duplicates or extra runtime services are introduced.

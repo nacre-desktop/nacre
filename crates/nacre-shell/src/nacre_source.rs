@@ -1003,7 +1003,9 @@ async fn run(config: Config, shared: Arc<Shared>, mut commands: mpsc::Receiver<C
             let _ = shared
                 .link
                 .publish(serde_json::json!({"boot":session.boot,"methods":session.methods}));
-            shared.connection.connected();
+            if shared.connection.connected() {
+                eprintln!("INFO daemon restarted, reconnected");
+            }
             let mut mirrors = config
                 .topics
                 .iter()

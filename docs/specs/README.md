@@ -2,6 +2,8 @@
 
 ## Current status — 2026-11-10
 
+| N0174 | [Daemon restart reconnect](0174-daemon-restart-reconnect.md) | Done; full dev-1 desktop CI passed | Recover permanent and leased subscriptions, identify successful reconnects once, and keep the compositor watcher on the shared permanent topic path. The restart regression passed in the 871-test workspace suite. |
+
 Live: Nacre `6c67f792` with Bead `7ea19860`, in active daily use and not yet released. Nacre runs on nacre-niri, its own niri compositor fork, with Bead as its native shell.
 
 Active: N0156 retires the former QML shell; N0157 prunes archived copies. Done today: N0153 plugin-timeout fix; N0154 [Bead/QML shell benchmark](../research/bead-vs-qml-shell-benchmark-20261110.md); and NN0025 + N0158 launch-workspace affinity.

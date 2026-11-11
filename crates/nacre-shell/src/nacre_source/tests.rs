@@ -120,6 +120,14 @@ async fn all_active_topics_recover_after_late_start_restart_and_socket_reconnect
         permanent.map(String::from).to_vec(),
     ))
     .unwrap();
+    let connection = client.connection();
+    let connection_events = Arc::new(Mutex::new(Vec::new()));
+    let observed = connection_events.clone();
+    let _connection_subscription = connection
+        .subscribe(Arc::new(move |snapshot| {
+            observed.lock().unwrap().push(snapshot.data.clone());
+        }))
+        .unwrap();
     let sources = names
         .iter()
         .map(|n| client.view_topic(n).unwrap())
@@ -248,6 +256,16 @@ async fn all_active_topics_recover_after_late_start_restart_and_socket_reconnect
         .unwrap();
         tokio::time::sleep(Duration::from_millis(150)).await;
     }
+    assert_eq!(
+        connection_events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|state| state["connected"] == true)
+            .count(),
+        3,
+        "initial connection and both daemon restarts remain visible as normal reconnects"
+    );
     client.stop().await.unwrap();
 }
 #[test]
