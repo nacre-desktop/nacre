@@ -53,7 +53,6 @@ class PublicNamesTests(unittest.TestCase):
             if name in (
                 "packaging/arch/PKGBUILD",
                 "packaging/arch/recipe.py",
-                "packaging/arch/niri/PKGBUILD",
                 "packaging/arch/niri/recipe.py",
             ):
                 # Owner-approved public commit/maintainer attribution is metadata,

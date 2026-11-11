@@ -5,7 +5,7 @@
     "package": "nacre-session-nacre-niri",
     "dependencies": "session_nacre_niri",
     "desktop": "config/uwsm/sessions/nacre-niri-managed.desktop",
-    "experimental": true
+    "experimental": false
   },
   "niri": {
     "label": "Niri",

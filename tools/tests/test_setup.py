@@ -1153,6 +1153,10 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn("nacre-session-nacre-niri", requested)
                 self.assertIn("nacre-session-niri", requested)
                 self.assertIn("niri>=26.04", requested)
+                setup.missing_packages(root, profile, ["nacre-niri", "hyprland"])
+                requested = query.call_args.args[0]
+                self.assertIn("nacre-session-nacre-niri", requested)
+                self.assertIn("nacre-session-hyprland", requested)
                 setup.missing_packages(root, profile, ["hyprland", "niri"])
                 self.assertIn("nacre-session-hyprland", query.call_args.args[0])
 

@@ -6,8 +6,6 @@ import unittest
 import os
 import subprocess
 import shutil
-import hashlib
-import json
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -31,14 +29,7 @@ class NiriRuntimeTests(unittest.TestCase):
                 "NIRI_SOCKET": "/test/niri.sock",
                 "DISPLAY": ":8",
             }
-            with patch.object(
-                runtime,
-                "overview_hover_binary",
-                side_effect=AssertionError(
-                    "Observer must not read a large compositor artifact"
-                ),
-            ):
-                args, env = runtime.command("widths", environment, home)
+            args, env = runtime.command("widths", environment, home)
             self.assertEqual(
                 args[-2:],
                 [
@@ -53,52 +44,6 @@ class NiriRuntimeTests(unittest.TestCase):
             self.assertEqual(check[-1], "--check-session")
             with self.assertRaises(ValueError):
                 runtime.command("widths", {"NACRE_COMPOSITOR": "hyprland"}, home)
-
-    def test_hover_binary_requires_verified_hash_and_matching_stock_version(self):
-        with tempfile.TemporaryDirectory() as folder:
-            home = Path(folder)
-            root = home / ".local/share/nacre/niri-on-pc/overview-hover"
-            root.mkdir(parents=True)
-            binary = root / "niri"
-            binary.write_text("verified experiment")
-            binary.chmod(0o700)
-            manifest = {
-                "schema": 1,
-                "enabled": True,
-                "nestedVerified": True,
-                "sourceRevision": runtime.HOVER_SOURCE,
-                "protocol": "NacreOverviewHoverStream",
-                "patchSha256": hashlib.sha256(
-                    (
-                        ROOT / "tools/patches/niri-26.04-overview-hover.patch"
-                    ).read_bytes()
-                ).hexdigest(),
-                "binarySha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-            }
-            (root / "manifest.json").write_text(json.dumps(manifest))
-            with patch.object(
-                runtime.subprocess, "check_output", return_value="niri 26.04 (stock)"
-            ):
-                self.assertEqual(runtime.overview_hover_binary(home), binary)
-                current_patch = manifest.pop("patchSha256")
-                (root / "manifest.json").write_text(json.dumps(manifest))
-                self.assertIsNone(runtime.overview_hover_binary(home))
-                manifest["patchSha256"] = "old companion patch"
-                (root / "manifest.json").write_text(json.dumps(manifest))
-                self.assertIsNone(runtime.overview_hover_binary(home))
-                manifest["patchSha256"] = current_patch
-                (root / "manifest.json").write_text(json.dumps(manifest))
-                binary.write_text("changed after verification")
-                self.assertIsNone(runtime.overview_hover_binary(home))
-            manifest["binarySha256"] = hashlib.sha256(binary.read_bytes()).hexdigest()
-            (root / "manifest.json").write_text(json.dumps(manifest))
-            with patch.object(
-                runtime.subprocess, "check_output", return_value="niri 26.12 (new)"
-            ):
-                self.assertIsNone(runtime.overview_hover_binary(home))
-            manifest["nestedVerified"] = False
-            (root / "manifest.json").write_text(json.dumps(manifest))
-            self.assertIsNone(runtime.overview_hover_binary(home))
 
     def test_palette_prefers_live_publisher_with_offline_seed_fallback(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -269,15 +214,4 @@ class NiriRuntimeTests(unittest.TestCase):
                 ],
             )
             argv, _ = runtime.command("compositor", env, home)
-            with patch.object(
-                runtime, "overview_hover_binary", return_value=Path("/companion/niri")
-            ):
-                argv, child = runtime.command("compositor", env, home)
-                self.assertEqual(argv[-2:], ["/companion/niri", "--session"])
-                self.assertEqual(child["NACRE_NIRI_HOVER_STREAM"], "1")
-                (home / ".local/share/nacre/niri-on-pc/session/stock-niri").write_text(
-                    "explicit opt-out"
-                )
-                argv, child = runtime.command("compositor", env, home)
-                self.assertEqual(child["NACRE_NIRI_HOVER_STREAM"], "0")
             self.assertEqual(argv[-2:], ["/usr/bin/niri", "--session"])

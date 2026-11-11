@@ -438,10 +438,6 @@ def install_session_backend(source_root):
     source = source_root / "ai/systemd"
     if source.is_dir():
         shutil.copytree(source, pending / "ai/systemd", symlinks=True)
-    source = source_root / "tools/patches/niri-26.04-overview-hover.patch"
-    if source.is_file():
-        (pending / "tools/patches").mkdir(parents=True)
-        shutil.copy2(source, pending / "tools/patches" / source.name)
     source = source_root / "tools/build-helper.sh"
     if source.is_file():
         (pending / "tools").mkdir(exist_ok=True)

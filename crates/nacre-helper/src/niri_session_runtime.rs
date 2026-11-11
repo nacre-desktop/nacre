@@ -1,11 +1,10 @@
 //! Prepared-session routing and configuration, independent of a running shell.
 use crate::{json, paths::Paths, Result};
 use serde_json::{json as value, Value};
-use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     fs,
-    os::unix::fs::{MetadataExt, PermissionsExt},
+    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -13,15 +12,13 @@ pub fn command(
     action: &str,
     environment: &BTreeMap<String, String>,
     paths: &Paths,
-    companion: impl FnMut(&Paths) -> Option<PathBuf>,
 ) -> Result<(Vec<String>, BTreeMap<String, String>)> {
-    command_with_versions(action, environment, paths, companion, &mut NativeVersions)
+    command_with_versions(action, environment, paths, &mut NativeVersions)
 }
 fn command_with_versions(
     action: &str,
     environment: &BTreeMap<String, String>,
     paths: &Paths,
-    mut companion: impl FnMut(&Paths) -> Option<PathBuf>,
     versions: &mut impl Versions,
 ) -> Result<(Vec<String>, BTreeMap<String, String>)> {
     let mut environment = environment.clone();
@@ -115,28 +112,13 @@ fn command_with_versions(
     ] {
         environment.insert(name.into(), value);
     }
-    let stock = root.join("stock-niri").is_file() && !selected_native;
-    let native_binary = selected_native;
-    let hover = if needs_hover_companion(action, stock, native_binary) {
-        companion(paths)
-    } else {
-        None
-    };
     environment.insert(
         "NACRE_NIRI_HOVER_STREAM".into(),
-        if hover.is_some() || native_binary {
-            "1"
-        } else {
-            "0"
-        }
-        .into(),
+        if selected_native { "1" } else { "0" }.into(),
     );
     match action {
         "compositor" => args.extend([
-            hover
-                .unwrap_or(selected_binary)
-                .to_string_lossy()
-                .into_owned(),
+            selected_binary.to_string_lossy().into_owned(),
             "--session".into(),
         ]),
         "brain" => args.extend(original),
@@ -179,9 +161,6 @@ fn selected_niri_binary(
         .is_ok_and(|version| crate::niri_identity::is_nacre_niri_version(&version));
     Ok((binary, native))
 }
-fn needs_hover_companion(action: &str, stock: bool, native_binary: bool) -> bool {
-    !["widths", "widths-check"].contains(&action) && !stock && !native_binary
-}
 fn active_capabilities(
     environment: &BTreeMap<String, String>,
 ) -> crate::compositor::niri_transport::NacreCapabilities {
@@ -190,15 +169,6 @@ fn active_capabilities(
         .filter(|socket| !socket.is_empty())
         .map(|socket| crate::compositor::niri_transport::nacre_capabilities(Path::new(socket)))
         .unwrap_or_default()
-}
-pub const HOVER_SOURCE: &str = "8ed0da44d974c32c6877d2f4630c314da0717ecb";
-pub fn hover_patch_digest() -> String {
-    format!(
-        "{:x}",
-        Sha256::digest(include_bytes!(
-            "../../../tools/patches/niri-26.04-overview-hover.patch"
-        ))
-    )
 }
 pub trait Versions {
     fn version(&mut self, binary: &Path) -> Result<String>;
@@ -214,96 +184,6 @@ impl Versions for NativeVersions {
         )?;
         Ok(String::from_utf8(output.stdout)?)
     }
-}
-pub fn verified_hover_binary(
-    root: &Path,
-    owner: u32,
-    packaged: bool,
-    versions: &mut impl Versions,
-) -> Result<Option<PathBuf>> {
-    let receipt = root.join("manifest.json");
-    let binary = root.join("niri");
-    let meta = match fs::symlink_metadata(&receipt) {
-        Ok(meta) => meta,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(error.into()),
-    };
-    let binary_meta = match fs::symlink_metadata(&binary) {
-        Ok(meta) => meta,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
-        Err(error) => return Err(error.into()),
-    };
-    if meta.file_type().is_symlink()
-        || binary_meta.file_type().is_symlink()
-        || !binary_meta.is_file()
-        || meta.uid() != owner
-        || binary_meta.uid() != owner
-        || binary_meta.permissions().mode() & 0o111 == 0
-        || packaged && (meta.permissions().mode() | binary_meta.permissions().mode()) & 0o022 != 0
-    {
-        return Ok(None);
-    }
-    let manifest: Value = serde_json::from_slice(&fs::read(&receipt)?)?;
-    if !manifest.is_object()
-        || !(manifest["schema"] == true || manifest["schema"].as_f64() == Some(1.0))
-        || manifest["enabled"] != true
-        || !packaged && manifest["nestedVerified"] != true
-        || manifest["sourceRevision"] != HOVER_SOURCE
-        || manifest["protocol"] != "NacreOverviewHoverStream"
-        || manifest["patchSha256"] != hover_patch_digest()
-    {
-        return Ok(None);
-    }
-    if !packaged {
-        let digest = format!("{:x}", Sha256::digest(fs::read(&binary)?));
-        if manifest["binarySha256"] != digest {
-            return Ok(None);
-        }
-        if !versions
-            .version(Path::new("/usr/bin/niri"))?
-            .starts_with("niri 26.04 ")
-        {
-            return Ok(None);
-        }
-    }
-    Ok(versions
-        .version(&binary)?
-        .starts_with("niri 26.04 ")
-        .then_some(binary))
-}
-pub fn overview_hover_binary(paths: &Paths, versions: &mut impl Versions) -> Option<PathBuf> {
-    select_companion(paths, |root, owner, packaged| {
-        match verified_hover_binary(root, owner, packaged, versions) {
-            Ok(binary) => binary,
-            Err(error) => {
-                eprintln!("nacre-helper: compositor trust probe failed: {error}");
-                None
-            }
-        }
-    })
-}
-pub fn select_companion(
-    paths: &Paths,
-    mut verify: impl FnMut(&Path, u32, bool) -> Option<PathBuf>,
-) -> Option<PathBuf> {
-    for (root, owner, packaged) in [
-        (PathBuf::from("/usr/lib/nacre/niri"), 0, true),
-        (
-            paths.share.join("niri/overview-hover"),
-            nix::unistd::getuid().as_raw(),
-            false,
-        ),
-        (
-            paths.share.join("niri-on-pc/overview-hover"),
-            nix::unistd::getuid().as_raw(),
-            false,
-        ),
-    ] {
-        if let Some(binary) = verify(&root, owner, packaged) {
-            return Some(binary);
-        }
-    }
-    None
 }
 
 fn numeric(value: &Value, message: &str, min: f64, max: f64, strict_min: bool) -> Result<()> {
@@ -1112,9 +992,7 @@ pub fn run(args: &[String]) -> Result<i32> {
         )?;
         return Ok(0);
     }
-    let (args, environment) = command(&parsed.action, &environment, &paths, |paths| {
-        overview_hover_binary(paths, &mut NativeVersions)
-    })?;
+    let (args, environment) = command(&parsed.action, &environment, &paths)?;
     use std::os::unix::process::CommandExt;
     Err(std::process::Command::new(&args[0])
         .args(&args[1..])
@@ -1244,7 +1122,7 @@ mod tests {
                 ("XDG_CURRENT_DESKTOP".into(), "niri".into()),
                 ("NIRI_SOCKET".into(), socket.to_string_lossy().into_owned()),
             ]);
-            let (argv, _) = command("widths-check", &environment, &paths, |_| None)?;
+            let (argv, _) = command("widths-check", &environment, &paths)?;
             peer.join().map_err(|_| "Capability peer panicked")??;
             Ok(argv)
         }
@@ -1754,160 +1632,12 @@ mod tests {
         for compositor in ["hyprland", "niri"] {
             let environment = BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), compositor.into())]);
             let paths = Paths::new(Path::new("/private/home"));
-            let (argv, returned) = command("shell", &environment, &paths, |_| {
-                panic!("shell activation must not inspect or select a compositor companion")
-            })?;
+            let (argv, returned) = command("shell", &environment, &paths)?;
             assert_eq!(
                 argv,
                 ["systemctl", "--user", "start", "nacre-shell.service"]
             );
             assert_eq!(returned, environment);
-        }
-        Ok(())
-    }
-    #[test]
-    fn stock_niri_without_receipt_disables_hover_without_staging_a_companion() -> Result<()> {
-        struct FixtureVersions;
-        impl Versions for FixtureVersions {
-            fn version(&mut self, binary: &Path) -> Result<String> {
-                assert_eq!(binary, Path::new("/usr/bin/niri"));
-                Ok("niri 26.04 (stock fixture)".into())
-            }
-        }
-        let home = tempfile::tempdir()?;
-        let paths = Paths::new(home.path());
-        let root = paths.share.join("niri-on-pc/session");
-        fs::create_dir_all(root.join("home-view/.local/share/nacre/shell/bin"))?;
-        fs::write(root.join("stock-niri"), "stock\n")?;
-        let base_environment = BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]);
-        let mut versions = FixtureVersions;
-        let (argv, environment) = command_with_versions(
-            "compositor",
-            &base_environment,
-            &paths,
-            |_| None,
-            &mut versions,
-        )?;
-        assert!(argv.iter().any(|argument| argument == "/usr/bin/niri"));
-        assert_eq!(environment["NACRE_NIRI_HOVER_STREAM"], "0");
-        assert!(!paths.share.join("niri-overview-hover/source").exists());
-        assert!(!environment.contains_key("NACRE_QS_CONFIG"));
-
-        fs::remove_file(root.join("stock-niri"))?;
-        let mut versions = FixtureVersions;
-        let (argv, environment) = command_with_versions(
-            "compositor",
-            &base_environment,
-            &paths,
-            |_| Some(PathBuf::from("/verified/niri")),
-            &mut versions,
-        )?;
-        assert!(argv.iter().any(|argument| argument == "/verified/niri"));
-        assert_eq!(environment["NACRE_NIRI_HOVER_STREAM"], "1");
-        Ok(())
-    }
-    #[test]
-    fn frozen_companion_trust_checks_and_offline_palette_paths() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-session-runtime-reference.json"
-        ))?;
-        for case in reference["cases"]
-            .as_array()
-            .ok_or("Missing runtime cases")?
-        {
-            let request = &case["request"];
-            let home = tempfile::tempdir()?;
-            let paths = Paths::new(home.path());
-            if request["operation"] == "palette_include" {
-                if request["live"] == true {
-                    fs::create_dir_all(paths.config.join("niri"))?;
-                    fs::write(paths.config.join("niri/palette.kdl"), "palette\n")?;
-                }
-                let rendered = palette_include(&paths, &home.path().join("stage/config"))
-                    .to_string_lossy()
-                    .replace(home.path().to_str().ok_or("Invalid home")?, "{home}");
-                assert_eq!(rendered, case["observed"]["value"]);
-                continue;
-            }
-            if request["operation"] != "verified_hover_binary" {
-                continue;
-            }
-            let variant = request["variant"].as_str().ok_or("Missing trust variant")?;
-            let root = home.path().join("companion");
-            fs::create_dir(&root)?;
-            let binary = root.join("niri");
-            fs::write(&binary, "verified companion\n")?;
-            fs::set_permissions(&binary, fs::Permissions::from_mode(0o700))?;
-            let mut manifest = value!({"schema":1,"enabled":true,"nestedVerified":true,"sourceRevision":HOVER_SOURCE,"protocol":"NacreOverviewHoverStream","binarySha256":format!("{:x}",Sha256::digest(fs::read(&binary)?))});
-            manifest["patchSha256"] = value!(hover_patch_digest());
-            match variant {
-                "changed-binary" => fs::write(&binary, "changed\n")?,
-                "no-nested-proof" => manifest["nestedVerified"] = value!(false),
-                "wrong-source" => manifest["sourceRevision"] = value!("untrusted"),
-                "wrong-protocol" => manifest["protocol"] = value!("Other"),
-                "disabled" => manifest["enabled"] = value!(false),
-                "not-executable" => {
-                    fs::set_permissions(&binary, fs::Permissions::from_mode(0o600))?
-                }
-                _ => {}
-            }
-            let receipt = root.join("manifest.json");
-            fs::write(&receipt, json::encode(&manifest)?)?;
-            fs::set_permissions(&receipt, fs::Permissions::from_mode(0o600))?;
-            if variant == "binary-symlink" {
-                fs::rename(&binary, root.join("target"))?;
-                std::os::unix::fs::symlink(root.join("target"), &binary)?;
-            }
-            if variant == "receipt-symlink" {
-                fs::rename(&receipt, root.join("receipt"))?;
-                std::os::unix::fs::symlink(root.join("receipt"), &receipt)?;
-            }
-            if variant == "packaged-writable" {
-                fs::set_permissions(&receipt, fs::Permissions::from_mode(0o622))?;
-            }
-            struct Fixture<'a> {
-                variant: &'a str,
-                binary: PathBuf,
-                home: &'a str,
-                calls: Vec<Value>,
-            }
-            impl Versions for Fixture<'_> {
-                fn version(&mut self, binary: &Path) -> Result<String> {
-                    self.calls.push(value!({"method":"check_output","args":[binary.to_string_lossy().replace(self.home,"{home}"),"--version"],"kwargs":{"text":true,"timeout":2}}));
-                    Ok(if self.variant == "stock-new-version"
-                        && binary == Path::new("/usr/bin/niri")
-                        || self.variant == "candidate-new-version" && binary == self.binary
-                    {
-                        "niri 26.12 (new)"
-                    } else {
-                        "niri 26.04 (fixture)"
-                    }
-                    .into())
-                }
-            }
-            let mut fixture = Fixture {
-                variant,
-                binary: binary.clone(),
-                home: home.path().to_str().ok_or("Invalid home")?,
-                calls: vec![],
-            };
-            let result = verified_hover_binary(
-                &root,
-                nix::unistd::getuid().as_raw(),
-                variant.starts_with("packaged"),
-                &mut fixture,
-            )?;
-            let result = result.map(|path| path.to_string_lossy().replace(fixture.home, "{home}"));
-            assert_eq!(
-                serde_json::to_value(result)?,
-                case["observed"]["value"],
-                "{variant}"
-            );
-            assert_eq!(
-                value!(fixture.calls),
-                case["observed"]["calls"],
-                "{variant}"
-            );
         }
         Ok(())
     }

@@ -4,12 +4,9 @@ import json
 import math
 import os
 from pathlib import Path
-import select
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[2]
-HOVER_SOURCE = "8ed0da44d974c32c6877d2f4630c314da0717ecb"
-PACKAGED_HOVER = Path("/usr/lib/nacre/niri")
 
 
 def wire(value):
@@ -28,53 +25,13 @@ def invoke(request):
     binary = os.environ.get("NACRE_SESSION_RUNTIME_PARITY") or str(
         ROOT / "target/debug/examples/niri-session-runtime-parity"
     )
-    process = subprocess.Popen(
-        [binary, json.dumps(wire(request), allow_nan=False)],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        text=True,
+    result = subprocess.check_output(
+        [binary, json.dumps(wire(request), allow_nan=False)], text=True, timeout=10
     )
-    try:
-        while True:
-            if not select.select([process.stdout], [], [], 10)[0]:
-                raise RuntimeError("Native runtime provider timed out")
-            line = process.stdout.readline()
-            if not line:
-                raise RuntimeError("Native runtime provider exited without a result")
-            message = json.loads(line)
-            if "callback" not in message:
-                process.wait(timeout=10)
-                if "error" in message:
-                    raise ValueError(message["error"])
-                return message["result"]
-            provider = message["callback"]
-            try:
-                operation = provider["operation"]
-                if operation == "version":
-                    result = subprocess.check_output(
-                        [provider["binary"], "--version"], text=True, timeout=2
-                    )
-                elif operation == "verify":
-                    result = verified_hover_binary(
-                        Path(provider["root"]),
-                        provider["owner"],
-                        packaged=provider["packaged"],
-                    )
-                elif operation == "companion":
-                    result = overview_hover_binary(Path(provider["home"]))
-                else:
-                    raise ValueError("Unknown provider operation")
-                reply = {"value": str(result) if isinstance(result, Path) else result}
-            except (OSError, ValueError, subprocess.SubprocessError) as failure:
-                reply = {"error": str(failure)}
-            process.stdin.write(json.dumps(reply) + "\n")
-            process.stdin.flush()
-    finally:
-        if process.poll() is None:
-            process.terminate()
-            process.wait(timeout=5)
-        process.stdin.close()
-        process.stdout.close()
+    message = json.loads(result)
+    if "error" in message:
+        raise ValueError(message["error"])
+    return message["result"]
 
 
 def command(action, environment=None, home=None):
@@ -99,23 +56,3 @@ def palette_include(home, config):
             {"operation": "palette_include", "home": str(home), "config": str(config)}
         )
     )
-
-
-def verified_hover_binary(root, owner, *, packaged=False):
-    try:
-        result = invoke(
-            {
-                "operation": "verified_hover_binary",
-                "root": str(root),
-                "owner": owner,
-                "packaged": packaged,
-            }
-        )
-    except ValueError:
-        return None
-    return Path(result) if result else None
-
-
-def overview_hover_binary(home):
-    result = invoke({"operation": "overview_hover_binary", "home": str(home)})
-    return Path(result) if result else None
