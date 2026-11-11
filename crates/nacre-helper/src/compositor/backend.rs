@@ -607,7 +607,10 @@ mod tests {
         }
         assert!(select(&BTreeMap::from([("NACRE_COMPOSITOR".into(), "bad".into())])).is_err());
         assert_eq!(
-            select(&BTreeMap::from([("NACRE_COMPOSITOR".into(), "nacre-niri".into())]))?,
+            select(&BTreeMap::from([(
+                "NACRE_COMPOSITOR".into(),
+                "nacre-niri".into()
+            )]))?,
             "niri"
         );
         Ok(())

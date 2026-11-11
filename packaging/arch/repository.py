@@ -79,7 +79,10 @@ def verify_artifacts(root, artifacts):
             if name != "orient":
                 build = run("bsdtar", "-xOf", str(path), ".BUILDINFO")
                 tested_recipe = fork_recipe if name == "nacre-niri" else recipe
-                if "pkgbuild_sha256sum = " + digest(tested_recipe) not in build.splitlines():
+                if (
+                    "pkgbuild_sha256sum = " + digest(tested_recipe)
+                    not in build.splitlines()
+                ):
                     raise ValueError(
                         "Archive does not match the tested recipe: " + name
                     )

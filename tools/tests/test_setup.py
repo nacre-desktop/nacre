@@ -1147,7 +1147,9 @@ class PackageSetupTests(unittest.TestCase):
                 requested = query.call_args.args[0]
                 self.assertIn("nacre-session-nacre-niri", requested)
                 self.assertIn("nacre-niri", requested)
-                self.assertFalse(any("nacre-session-niri" == value for value in requested))
+                self.assertFalse(
+                    any("nacre-session-niri" == value for value in requested)
+                )
                 setup.missing_packages(root, profile, ["nacre-niri", "niri"])
                 requested = query.call_args.args[0]
                 self.assertIn("nacre-session-nacre-niri", requested)

@@ -34,6 +34,7 @@ if __name__ == "__main__":
     else:
         with tempfile.TemporaryDirectory() as folder:
             subprocess.run(
-                ["git", "clone", "--bare", "--filter=blob:none", URL, folder], check=True
+                ["git", "clone", "--bare", "--filter=blob:none", URL, folder],
+                check=True,
             )
             stage(folder, args.output)

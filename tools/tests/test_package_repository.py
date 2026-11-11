@@ -85,11 +85,18 @@ class RepositoryTests(unittest.TestCase):
             "FRESH_USER_PACKAGE_PROOF_OK\n" * 4
         )
         (self.root / "packaging/arch/niri").mkdir()
-        shutil.copy2(ROOT / "packaging/arch/niri/recipe.py", self.root / "packaging/arch/niri/recipe.py")
-        fork_spec = importlib.util.spec_from_file_location("fixture_fork", ROOT / "packaging/arch/niri/recipe.py")
+        shutil.copy2(
+            ROOT / "packaging/arch/niri/recipe.py",
+            self.root / "packaging/arch/niri/recipe.py",
+        )
+        fork_spec = importlib.util.spec_from_file_location(
+            "fixture_fork", ROOT / "packaging/arch/niri/recipe.py"
+        )
         fork = importlib.util.module_from_spec(fork_spec)
         fork_spec.loader.exec_module(fork)
-        (self.artifacts / "niri/PKGBUILD").write_text(f"_commit={fork.SOURCE}\n# fixture\n")
+        (self.artifacts / "niri/PKGBUILD").write_text(
+            f"_commit={fork.SOURCE}\n# fixture\n"
+        )
         self.recipe_digest = hashlib.sha256(
             (self.artifacts / "nacre/PKGBUILD").read_bytes()
         ).hexdigest()
@@ -111,11 +118,25 @@ class RepositoryTests(unittest.TestCase):
             ]
             (folder / ".PKGINFO").write_text("\n".join(info) + "\n")
             (folder / ".BUILDINFO").write_text(
-                "pkgbuild_sha256sum = " + (hashlib.sha256((self.artifacts / "niri/PKGBUILD").read_bytes()).hexdigest() if name == "nacre-niri" else self.recipe_digest) + "\n"
+                "pkgbuild_sha256sum = "
+                + (
+                    hashlib.sha256(
+                        (self.artifacts / "niri/PKGBUILD").read_bytes()
+                    ).hexdigest()
+                    if name == "nacre-niri"
+                    else self.recipe_digest
+                )
+                + "\n"
             )
             path = (
                 self.artifacts
-                / ("orient" if name == "orient" else "niri" if name == "nacre-niri" else "nacre")
+                / (
+                    "orient"
+                    if name == "orient"
+                    else "niri"
+                    if name == "nacre-niri"
+                    else "nacre"
+                )
                 / f"{name}-{version}-x86_64.pkg.tar.zst"
             )
             subprocess.run(

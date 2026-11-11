@@ -229,9 +229,7 @@ if backend in {"nacre-niri", "niri", "both"}:
 
     niri_compositor = "nacre-niri" if backend == "nacre-niri" else "niri"
     validate(home / ".config/nacre/niri/config.kdl", compositor=niri_compositor)
-    launch = command(
-        home / ".config/nacre/niri/config.kdl", compositor=niri_compositor
-    )
+    launch = command(home / ".config/nacre/niri/config.kdl", compositor=niri_compositor)
     parsed = subprocess.run(
         [*launch[:2], "-n", *launch[2:]], text=True, capture_output=True, timeout=15
     )
@@ -247,7 +245,9 @@ if backend in {"nacre-niri", "niri", "both"}:
     assert Path("/usr/share/wayland-sessions", session_name).is_file()
     if backend == "nacre-niri":
         assert Path("/usr/bin/nacre-niri").is_file()
-        assert run("pacman", "-Qoq", "/usr/bin/nacre-niri").stdout.strip() == "nacre-niri"
+        assert (
+            run("pacman", "-Qoq", "/usr/bin/nacre-niri").stdout.strip() == "nacre-niri"
+        )
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
     appearance = (home / ".config/nacre/niri/desktop.kdl").read_text()
     assert "focus-ring { width 3; }" in appearance

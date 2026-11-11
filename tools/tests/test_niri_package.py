@@ -19,13 +19,23 @@ class NiriPackageTests(unittest.TestCase):
         files = [b"# fork recipe\nbuild() { upstream; }\n", b"wrapper", b"desktop"]
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder) / "PKGBUILD"
-            with patch.object(recipe.subprocess, "check_output", side_effect=files) as read:
+            with patch.object(
+                recipe.subprocess, "check_output", side_effect=files
+            ) as read:
                 recipe.stage("/fork", output)
-            self.assertEqual(output.read_bytes(), f"_commit={recipe.SOURCE}\n".encode() + files[0])
+            self.assertEqual(
+                output.read_bytes(), f"_commit={recipe.SOURCE}\n".encode() + files[0]
+            )
             for index, name in enumerate(recipe.FILES):
                 self.assertEqual(
                     read.call_args_list[index].args[0],
-                    ["git", "-C", "/fork", "show", f"{recipe.SOURCE}:packaging/arch/{name}"],
+                    [
+                        "git",
+                        "-C",
+                        "/fork",
+                        "show",
+                        f"{recipe.SOURCE}:packaging/arch/{name}",
+                    ],
                 )
                 if index:
                     self.assertEqual(output.with_name(name).read_bytes(), files[index])
