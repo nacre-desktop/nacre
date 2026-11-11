@@ -171,7 +171,8 @@ impl Daemon {
         let endpoint = private.join("daemon.sock");
         let notify_path = root.join("notify.sock");
         let notify = UnixDatagram::bind(&notify_path)?;
-        notify.set_read_timeout(Some(Duration::from_secs(20)))?;
+        // This bounds a hung fixture; shared-host startup speed is not acceptance.
+        notify.set_read_timeout(Some(Duration::from_secs(60)))?;
         let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
         command
             .arg("daemon")
@@ -212,7 +213,11 @@ impl Daemon {
             home,
             _niri: niri,
         };
-        notify.recv(&mut [0; 256])?;
+        let mut ready = [0; 256];
+        let received = notify.recv(&mut ready)?;
+        assert!(std::str::from_utf8(&ready[..received])?
+            .lines()
+            .any(|line| line == "READY=1"));
         Ok(daemon)
     }
     fn root(&self) -> &Path {

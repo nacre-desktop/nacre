@@ -1009,8 +1009,8 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
     Ok(())
 }
 
-/// B0192: a workspace switch ticks once per refresh of a 120 Hz output, in both directions: the median
-/// scheduled gap is one refresh, and the frame count matches the tween length.
+/// B0192: workspace motion schedules advancing frames and reaches both targets at 120 Hz.
+/// NACRE_TEST_PERF=1 additionally checks real-time cadence on an idle host.
 #[test]
 fn workspace_switch_ticks_every_refresh_at_120_hz_in_both_directions() -> Result<()> {
     let refresh = std::time::Duration::from_nanos(8_333_333);
@@ -1038,20 +1038,71 @@ fn workspace_switch_ticks_every_refresh_at_120_hz_in_both_directions() -> Result
     )?;
     h.session.set_frame_interval(refresh);
     settle_harness_animations(&mut h)?;
+    let capsule_x = |h: &Harness| -> Result<f32> {
+        let layer = h
+            .scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id.ends_with("active-capsule"))
+            .ok_or("active workspace capsule missing")?;
+        h.scene().primitives[layer.own.clone()]
+            .iter()
+            .find_map(|primitive| {
+                if let bead::render::Primitive::Rounded { rect, .. } = primitive {
+                    Some(rect.x)
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| "active workspace capsule geometry missing".into())
+    };
+    let original_x = capsule_x(&h)?;
     for (from, to) in [(3, 1), (1, 3)] {
+        let start_x = capsule_x(&h)?;
         h.update(BTreeMap::from([("bead.workspaces".into(), row(to))]))?;
+        assert!(
+            h.session.preview_deadline().is_some(),
+            "workspace {from}->{to} must animate"
+        );
         let mut deadlines = Vec::new();
+        let mut previous_x = start_x;
         while let Some(deadline) = h.session.preview_deadline() {
             assert!(
                 deadlines.len() < 64,
                 "workspace {from}->{to} did not settle"
             );
+            if let Some(previous) = deadlines.last() {
+                assert!(deadline > *previous, "workspace deadlines must advance");
+            }
             deadlines.push(deadline);
             let now = std::time::Instant::now();
             if deadline > now {
                 std::thread::sleep(deadline - now);
             }
             h.update(BTreeMap::new())?;
+            let x = capsule_x(&h)?;
+            assert!(
+                (x - previous_x) * (to as f32 - from as f32) >= -0.01,
+                "workspace {from}->{to} reversed direction: {previous_x} -> {x}"
+            );
+            previous_x = x;
+        }
+        let target_x = h
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| {
+                node.action.as_deref() == Some("backend.workspace.switch")
+                    && node.action_arg == Some(Value::Text(format!("w{to}")))
+            })
+            .map(|node| bead::ui::rect(&node.draw).x)
+            .ok_or("workspace target missing")?;
+        assert!(
+            (previous_x - target_x).abs() < 0.01,
+            "workspace {from}->{to} did not reach its target: {previous_x} != {target_x}"
+        );
+        if std::env::var("NACRE_TEST_PERF").as_deref() != Ok("1") {
+            continue;
         }
         assert!(
             deadlines.len() >= 16,
@@ -1070,6 +1121,10 @@ fn workspace_switch_ticks_every_refresh_at_120_hz_in_both_directions() -> Result
             "workspace {from}->{to}: median scheduled gap {median:?} exceeds one refresh"
         );
     }
+    assert!(
+        (capsule_x(&h)? - original_x).abs() < 0.01,
+        "return motion reaches the original workspace"
+    );
     Ok(())
 }
 

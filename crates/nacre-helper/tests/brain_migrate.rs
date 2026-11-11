@@ -372,6 +372,16 @@ fn success(out: Output) {
 
 #[test]
 fn synthetic_vault_dry_run_then_all_is_idempotent_and_preserves_content() {
+    synthetic_vault_migration(false);
+}
+
+#[test]
+#[ignore = "performance gate; run explicitly on an otherwise idle host"]
+fn synthetic_vault_migration_performance() {
+    synthetic_vault_migration(true);
+}
+
+fn synthetic_vault_migration(performance: bool) {
     let temp = tempfile::tempdir().unwrap();
     let home = temp.path().join("home");
     fs::create_dir_all(&home).unwrap();
@@ -441,7 +451,7 @@ fn synthetic_vault_dry_run_then_all_is_idempotent_and_preserves_content() {
         start.elapsed().as_secs_f64()
     );
     assert!(
-        start.elapsed() < Duration::from_secs(60),
+        !performance || start.elapsed() < Duration::from_secs(60),
         "migration of 2,000 synthetic notes took {:?}",
         start.elapsed()
     );
@@ -476,7 +486,7 @@ fn synthetic_vault_dry_run_then_all_is_idempotent_and_preserves_content() {
         all_start.elapsed().as_secs_f64()
     );
     assert!(
-        all_start.elapsed() < Duration::from_secs(60),
+        !performance || all_start.elapsed() < Duration::from_secs(60),
         "all migration took {:?}",
         all_start.elapsed()
     );

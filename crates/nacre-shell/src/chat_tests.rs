@@ -374,7 +374,7 @@ fn error_status_and_hidden_panel() {
 
 pub(crate) enum Frame {
     Msg(Message),
-    Drop,
+    Drop(tokio::sync::oneshot::Receiver<()>),
 }
 pub(crate) struct Lab {
     dir: std::path::PathBuf,
@@ -504,7 +504,11 @@ pub(crate) async fn lab(initial: Json) -> Lab {
                             framing::write(&mut writer, &Message::Snap { topic, seq, data }).await.unwrap();
                         }
                         Some(Frame::Msg(message)) => framing::write(&mut writer, &message).await.unwrap(),
-                        Some(Frame::Drop) => break,
+                        Some(Frame::Drop(resume)) => {
+                            drop(writer);
+                            let _ = resume.await;
+                            break;
+                        },
                         None => return,
                     },
                 }
@@ -754,12 +758,15 @@ async fn a_dropped_daemon_link_reopens_the_worker_and_resyncs() {
     let none = stores(&[]);
     until(&chat, &none, "history", |o| num(o, "chat.extent") > 0.).await;
     assert_eq!(lab.calls.recv().await.unwrap().0, "ai.chat.open");
-    lab.push.send(Frame::Drop).unwrap();
+    let (resume, disconnected) = tokio::sync::oneshot::channel();
+    lab.push.send(Frame::Drop(disconnected)).unwrap();
     until(&chat, &none, "disconnect", |o| {
-        o["chat.can_new"] == Value::Bool(false)
+        o["chat.can_new"] == Value::Bool(false) && !opened(&chat)
     })
     .await;
     assert!(!opened(&chat));
+    // Keep reconnection parked until the disconnected projection was observed.
+    resume.send(()).unwrap();
     // The client reconnects with a new boot id; the next projection reopens the channel.
     let out = until(&chat, &none, "reconnect", |o| {
         o["chat.can_new"] == Value::Bool(true)

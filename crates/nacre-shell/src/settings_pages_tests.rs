@@ -82,6 +82,13 @@ impl Drop for Lab {
     }
 }
 impl Lab {
+    /// Drain preceding client commands through a reply on the same socket.
+    async fn barrier(&self) {
+        self.client
+            .call("daemon.status".into(), json!({}), Duration::from_secs(30))
+            .await
+            .expect("fake daemon barrier");
+    }
     /// The next call the daemon saw: `(method, params)`.
     async fn call(&mut self) -> (String, Json) {
         tokio::time::timeout(Duration::from_secs(5), self.calls.recv())
@@ -2149,7 +2156,9 @@ fn current_scene_goldens() {
     }
 }
 
-#[tokio::test(flavor = "current_thread")]
+// Scene compilation is synchronous: keep the fake socket server runnable while
+// it runs, including replies to the client's one-second registry refresh.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn current_scene_picker_dispatches_once_on_pointer_release() {
     use bead::wayland::{SceneSource, UiEvent};
     crate::i18n::init();
@@ -2187,7 +2196,7 @@ async fn current_scene_picker_dispatches_once_on_pointer_release() {
         })
         .unwrap();
     runtime.commit();
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    l.barrier().await;
     assert!(
         l.calls.try_recv().is_err(),
         "pressing must not activate a release button"
@@ -2205,6 +2214,6 @@ async fn current_scene_picker_dispatches_once_on_pointer_release() {
         runtime.session.stores.get("bead.pressed"),
         Some(&Value::Bool(false))
     );
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    l.barrier().await;
     assert!(l.calls.try_recv().is_err(), "release dispatches once");
 }
