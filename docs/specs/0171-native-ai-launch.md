@@ -6,6 +6,11 @@ The legacy Load chat action emits `kitty --class nacre-ai-task --title "Load cha
 and paused after startup failure; kitty therefore disappeared only with the
 native replacement. The newer Luau recent-chat row instead emits
 `nacre-ai resume-record <base64 record>` and needs its own regression coverage.
+Source: `crates/nacre-shell/src/launcher_actions.rs:208`,
+`crates/nacre-helper/src/ai_dashboard.rs:407`, and the restored boundary at
+`ai_dashboard.rs:2143`; Python's original hold is
+`bin/nacre-ai.py.rollback:672`. Kitty child stderr stays in its closing terminal,
+so an asynchronously spawned terminal does not put that failure in the journal.
 
 ## Change
 
@@ -40,9 +45,20 @@ default/named accounts, explicit history and stale inherited environment.
 Installer tests exercise help/unknown arguments with an unchanged empty HOME.
 Native `resume-record` has no Python CLI counterpart; its provider result is
 compared with Python's history resume for the same synthetic record.
+The regressions are `ai/tests/test_native_launch.py` and
+`ai/tests/test_installer_arguments.py`; all histories and accounts are fabricated.
 
-Validation pending: the complete `.github/workflows/check.yml` desktop job in
-the task's disposable Arch container on dev-1, including `tools/check.py`.
+Validated after rebasing onto N0167 (`238f4f76c`), in the disposable Arch
+container `n0171` on dev-1 (8 CPUs, 16 GiB): every desktop workflow stage passed,
+including `tools/check.py`, AUR gallery and the ignored daemon memory check.
+The final complete `cargo test --workspace --locked -j2` passed after retries
+for existing reconnect/120 Hz timing flakes; each also passed in isolation.
+An earlier LLVM crash required cleaning this task's helper build artifacts.
+Release-helper `python -m unittest ai.tests.test_native_launch
+ai.tests.test_installer_arguments -v`: **8 passed**, including 16 installer
+subcases. Real-tmux probes confirmed both providers hold failures until Enter
+and Claude's pane cwd follows its provider. Product delta: **+199/-37**, net +162;
+the extra boundary and shared pane hold add no persistent Rust supervisor.
 No live runtime, accounts or chats are changed. The lead performs the switch.
 Only the launch controllers' covered behavior is cleared by this unit;
 account/context/memory/skills/usage and brain maintain/sync receive no new bulk
