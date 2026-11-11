@@ -14,7 +14,7 @@ home = Path.home()
 expected_home = Path("/home") / (
     "nacre-package-test-delivery"
     if compositor == "niri"
-    else "nacre-package-test-delivery-nacre-niri"
+    else "nacre-delivery-nacre-niri"
 )
 assert os.geteuid() != 0 and home == expected_home
 assert not (home / ".config/nacre").exists()
