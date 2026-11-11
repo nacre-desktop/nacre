@@ -1,4 +1,4 @@
-//! Developer-only interactive provider mapping; all runtime decisions stay Rust.
+//! Developer-only runtime adapter; all session decisions stay Rust.
 use nacre_helper::{json, niri_session_runtime as runtime, paths::Paths, Result};
 use serde_json::{json as value, Value};
 use std::path::Path;

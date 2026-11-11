@@ -6,7 +6,6 @@ import unittest
 import os
 import subprocess
 import shutil
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 import native_niri_session_runtime as runtime
