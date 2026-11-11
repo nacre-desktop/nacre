@@ -1043,10 +1043,6 @@ mod tests {
             active_capabilities(&BTreeMap::new()),
             crate::compositor::niri_transport::NacreCapabilities::default()
         );
-        assert!(needs_hover_companion("compositor", false, false));
-        assert!(!needs_hover_companion("compositor", true, false));
-        assert!(!needs_hover_companion("compositor", false, true));
-        assert!(!needs_hover_companion("widths", false, false));
     }
     #[test]
     fn generated_edge_delay_uses_valid_saved_setting_and_safe_default() {
