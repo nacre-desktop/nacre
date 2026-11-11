@@ -198,7 +198,7 @@
   "bead.dashboard.gauge-memory": "Memory",
   "bead.dashboard.gauge-storage": "Storage",
   "bead.dashboard.gauge-unavailable": "Metric unavailable",
-  "bead.dashboard.host-compositor": "Hyprland",
+  "bead.dashboard.host-compositor-unknown": "Unknown compositor",
   "bead.dashboard.host-uptime": "Up {hours}h {minutes}m",
   "bead.dashboard.host-uptime-days": "Up {days}d {hours}h {minutes}m",
   "bead.dashboard.media-art": "Album art",

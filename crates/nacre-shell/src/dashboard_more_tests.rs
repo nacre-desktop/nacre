@@ -630,8 +630,8 @@ fn system_with_metrics() -> Json {
         json!({"used": 6 * 1024 * 1024 * 1024_u64, "total": 16 * 1024 * 1024 * 1024_u64});
     data["gpu"] = json!({"percent": 12.0});
     // Booted 25 h before `fixed_now`.
-    data["host"] = json!({"user":"fixture","os":"Fixture Linux","kernel":"6.0.0-fixture",
-        "uptime_s": 1, "boot_ms": fixed_now() - 90_000_000});
+    data["host"] = json!({"user":"fixture","os":"Fixture Linux","compositor":"Hyprland",
+        "kernel":"6.0.0-fixture", "uptime_s": 1, "boot_ms": fixed_now() - 90_000_000});
     data
 }
 

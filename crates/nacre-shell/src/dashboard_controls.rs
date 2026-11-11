@@ -991,7 +991,9 @@ pub(super) fn host(s: &DashboardSystemState, now: fn() -> u64, out: &mut BTreeMa
     ));
     rows.push(row(
         "desktop_windows",
-        tr("bead.dashboard.host-compositor", &[]),
+        h.compositor
+            .clone()
+            .unwrap_or_else(|| tr("bead.dashboard.host-compositor-unknown", &[])),
     ));
     rows.extend(up.map(|s| {
         let (d, h, m) = (s / 86400, s / 3600 % 24, s / 60 % 60);

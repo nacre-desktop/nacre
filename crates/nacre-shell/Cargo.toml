@@ -34,7 +34,7 @@ freedesktop-icons = "0.4"
 fontconfig = "=0.11.0"
 fontdb = "=0.23.0"
 skrifa = "=0.44.0"
-nacre-protocol = { git = "https://github.com/nacre-desktop/nacre", rev = "17ba7d11a30d9606162e8204484be2646b8c4e9a" }
+nacre-protocol = { git = "https://github.com/nacre-desktop/nacre", rev = "e147c8f1a1427d02d55a66f1d2374d3f456252dc" }
 tokio = { version = "1", features = ["rt", "sync", "net", "io-util", "time", "macros"] }
 zbus = { version = "=5.19.0", default-features = false, features = ["tokio"] }
 
