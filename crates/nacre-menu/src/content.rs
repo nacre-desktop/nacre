@@ -336,7 +336,7 @@ impl Context {
                 return Ok(if term.is_empty() || self.snapshot["capabilities"]["ai"] != true {
                     Vec::new()
                 } else {
-                    vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask||!yes(&self.snapshot["capabilities"]["ai"]),"reason":if !yes(&self.snapshot["capabilities"]["ai"]){tr("launcher.disabled.nacre-ai-is-optional-open-setup-to-add-it","Nacre AI is optional; open Setup to add it")}else if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
+                    vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask,"reason":if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
                 })
             }
             "help" => {

@@ -194,7 +194,8 @@ fn legacy(action: &str, value: &str) -> Option<(Act, bool, Option<MenuView>)> {
         "palette" | "overview" | "keys" => nacre("mode", &[action]),
         "colors" => Act::Shell(shell_call("colorsApp", "open", &[""])),
         "welcome" => Act::Shell(shell_call("welcomeApp", "open", &["home"])),
-        "left" | "brain-query" => nacre("left", &[]),
+        "left" => nacre("left", &[]),
+        "brain-query" => return Some((Act::View, true, query(&format!("# {value}")))),
         "power" => Act::Shell(shell_call("bead.panel", "open", &["session"])),
         "preset" if word(value) => Act::Preset(value.into()),
         "toggle-setting" if matches!(value, "animations" | "blur" | "shadow") => {

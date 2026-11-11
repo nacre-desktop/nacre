@@ -518,9 +518,9 @@
    "id": "setup.defaults",
    "kind": "action",
    "name": "Default applications",
-   "operation": "config",
+   "operation": "settings",
    "disabled": false,
-   "value": "defaults",
+   "value": "apps",
    "icon": "apps"
   },
   {
@@ -582,9 +582,9 @@
    "id": "health.status",
    "kind": "action",
    "name": "Current health",
-   "operation": "info",
+   "operation": "settings",
    "disabled": false,
-   "value": "health",
+   "value": "system",
    "icon": "monitor_heart"
   },
   {
@@ -637,9 +637,9 @@
    "id": "learn.nacre",
    "kind": "action",
    "name": "Nacre guide",
-   "operation": "info",
+   "operation": "url",
    "disabled": false,
-   "value": "guide",
+   "value": "https://github.com/nacre-desktop/nacre/blob/main/docs/usage.md",
    "icon": "help"
   },
   {
@@ -1347,6 +1347,15 @@
    "value": "user.fixture",
    "extensionAction": "launch",
    "icon": "extension"
+  },
+  {
+   "id": "provider-route",
+   "kind": "action",
+   "name": "Browse apps",
+   "operation": "route",
+   "value": "apps",
+   "disabled": false,
+   "icon": "apps"
   }
  ],
  "blocked": [

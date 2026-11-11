@@ -197,7 +197,7 @@ impl Context {
         }
         if row["kind"] == "group" && !yes(&row["provider"]) {
             let children = model::children(&text::field(row, "id"), self.rows());
-            return children.is_empty() || children.iter().any(|child| self.visible(child));
+            return children.iter().any(|child| self.visible(child));
         }
         true
     }

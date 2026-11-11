@@ -46,17 +46,26 @@ impl Quick {
             .find(|(name, _)| *name == "capabilities")
             .map(|(_, source)| source.clone());
         let control = ControlCenter::new(client, topics, None, Vec::new());
-        Self { control, updates, capabilities }
+        Self {
+            control,
+            updates,
+            capabilities,
+        }
     }
 
     pub fn lease(client: Client) -> source::Result<Self> {
-        let topics = ["controls", "notifications", "dashboard.updates", "capabilities"]
-            .into_iter()
-            .map(|name| {
-                let topic = client.view_topic(name)?;
-                Ok((name, topic))
-            })
-            .collect::<source::Result<Vec<_>>>()?;
+        let topics = [
+            "controls",
+            "notifications",
+            "dashboard.updates",
+            "capabilities",
+        ]
+        .into_iter()
+        .map(|name| {
+            let topic = client.view_topic(name)?;
+            Ok((name, topic))
+        })
+        .collect::<source::Result<Vec<_>>>()?;
         Ok(Self::new(Some(client), topics))
     }
 
@@ -113,9 +122,11 @@ impl Quick {
             .map(|count| count as f64)
             .unwrap_or(-1.);
         let capabilities = self.capabilities.as_ref().map(|source| source.snapshot());
-        let enabled = |name: &str| capabilities.as_ref().is_some_and(|snapshot| {
-            snapshot.connected && snapshot.data["flags"][name] == true
-        });
+        let enabled = |name: &str| {
+            capabilities
+                .as_ref()
+                .is_some_and(|snapshot| snapshot.connected && snapshot.data["flags"][name] == true)
+        };
         let message = self.control.quick_message();
         BTreeMap::from([
             ("launcher.hint_ai".into(), Value::Bool(enabled("ai"))),

@@ -951,8 +951,8 @@
       "kind": "action",
       "label": "Default applications",
       "icon": "apps",
-      "operation": "config",
-      "value": "defaults",
+      "operation": "settings",
+      "value": "apps",
       "description": "Choose the apps used by Nacre",
       "labelId": "launcher.catalog.setup.defaults.label",
       "descriptionId": "launcher.catalog.setup.defaults.description"
@@ -1096,8 +1096,8 @@
       "kind": "action",
       "label": "Current health",
       "icon": "monitor_heart",
-      "operation": "info",
-      "value": "health",
+      "operation": "settings",
+      "value": "system",
       "description": "Show the current services and release",
       "labelId": "launcher.catalog.health.status.label",
       "descriptionId": "launcher.catalog.health.status.description"
@@ -1176,8 +1176,8 @@
       "kind": "action",
       "label": "Nacre guide",
       "icon": "help",
-      "operation": "info",
-      "value": "guide",
+      "operation": "url",
+      "value": "https://github.com/nacre-desktop/nacre/blob/main/docs/usage.md",
       "description": "Getting around the universal launcher",
       "labelId": "launcher.catalog.learn.nacre.label",
       "descriptionId": "launcher.catalog.learn.nacre.description"

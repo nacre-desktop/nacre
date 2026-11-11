@@ -154,12 +154,18 @@ fn disconnected_updates_topic_is_unknown() {
 
 #[test]
 fn optional_prefix_hints_follow_capability_publications() {
-    let capabilities = Arc::new(FakeSource::new(json!({"flags":{"ai":true,"brain":false}})).unwrap());
-    let quick = Quick::new(None, vec![("capabilities", capabilities.clone() as Arc<dyn Source>)]);
+    let capabilities =
+        Arc::new(FakeSource::new(json!({"flags":{"ai":true,"brain":false}})).unwrap());
+    let quick = Quick::new(
+        None,
+        vec![("capabilities", capabilities.clone() as Arc<dyn Source>)],
+    );
     let first = quick.project(&Stores::default());
     assert_eq!(first["launcher.hint_ai"], Value::Bool(true));
     assert_eq!(first["launcher.hint_brain"], Value::Bool(false));
-    capabilities.publish(json!({"flags":{"ai":false,"brain":true}})).unwrap();
+    capabilities
+        .publish(json!({"flags":{"ai":false,"brain":true}}))
+        .unwrap();
     let second = quick.project(&Stores::default());
     assert_eq!(second["launcher.hint_ai"], Value::Bool(false));
     assert_eq!(second["launcher.hint_brain"], Value::Bool(true));

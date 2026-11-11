@@ -910,7 +910,7 @@ impl Engine {
                 false,
             ));
         }
-        if row["disabled"] == true {
+        if row["disabled"] == true || !self.loaded.context.visible(&row) {
             return Err(failure(
                 ErrorCode::Unavailable,
                 "Launcher item is unavailable",
@@ -1409,19 +1409,21 @@ async fn run_inner(
             change=changes.recv()=>{
                 match change {
                     Ok(super::hub::Notice::Changed{topic,..}) if topic=="capabilities"=>{
-                        capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
+                        let changed = capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
                         engine.prepare_queries().await?;
-                        hub.borrow_mut().publish("menu",engine.status())?;
+                        if changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}
                     },
                     Ok(super::hub::Notice::Changed{topic,..}) if topic=="compositor"=>{
                         let snapshot=hub.borrow().snapshot("compositor");
-                        if let Some(snapshot)=snapshot {compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;}
+                        if let Some(snapshot)=snapshot {let changed=compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;if changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}}
                     },
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>{
                         tracing::warn!("Launcher missed state updates; resynchronizing current inputs");
-                        capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
+                        let capabilities_changed=capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
                         let snapshot=hub.borrow().snapshot("compositor");
-                        if let Some(snapshot)=snapshot {compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;}
+                        let backend_changed=snapshot.as_ref().is_some_and(|snapshot|compositor_inputs(&mut engine.loaded.context,snapshot));
+                        engine.prepare_queries().await?;
+                        if capabilities_changed || backend_changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}
                     },
                     Err(tokio::sync::broadcast::error::RecvError::Closed)=>return Err("Launcher state observer ended".into()),
                     _=>{},
@@ -2007,7 +2009,7 @@ fn apply_preferences(engine: &mut Engine, result: &Value) -> std::result::Result
 
 // Window actions are query-dynamic, so title/workspace publications do not
 // invalidate the prepared installed-app/software/font candidate index.
-fn compositor_inputs(context: &mut Context, snapshot: &Value) {
+fn compositor_inputs(context: &mut Context, snapshot: &Value) -> bool {
     let source_windows: Vec<_> = array(&snapshot["windowOrder"])
         .iter()
         .filter_map(|id| id.as_str().and_then(|id| snapshot["windows"].get(id)))
@@ -2018,15 +2020,17 @@ fn compositor_inputs(context: &mut Context, snapshot: &Value) {
         .collect();
     let windows:Vec<_>=source_windows.iter().map(|row|json!({"windowId":row["windowId"],"title":row["title"],"wmClass":row["wmClass"],"workspace":{"name":row["workspace"]["name"]}})).collect();
     let next = json!({"windows":windows,"backendName":snapshot["backend"]});
-    if context.compositor["backendName"] != next["backendName"] {
-        context.inputs_changed();
-    }
+    let changed = context.compositor["backendName"] != next["backendName"];
+    if changed { context.inputs_changed(); }
     context.compositor = next;
+    changed
 }
-fn capability_inputs(context: &mut Context, snapshot: &Value) {
+fn capability_inputs(context: &mut Context, snapshot: &Value) -> bool {
+    let mut changed = false;
     for name in ["ai", "brain"] {
         let enabled = snapshot["flags"][name] == true;
         if context.snapshot["capabilities"][name] != enabled {
+            changed = true;
             context.inputs_changed();
             if !context.snapshot["capabilities"].is_object() {
                 context.snapshot["capabilities"] = json!({});
@@ -2034,6 +2038,7 @@ fn capability_inputs(context: &mut Context, snapshot: &Value) {
             context.snapshot["capabilities"][name] = json!(enabled);
         }
     }
+    changed
 }
 // The existing view requests conversion only for lowercase whole words to/in.
 fn conversion_query(term: &str) -> bool {
@@ -2332,6 +2337,7 @@ mod tests {
             json!({"id":"fixture","name":"Fixture app","comment":"Synthetic","genericName":"","icon":"fixture","categories":[],"keywords":[],"command":["fixture","$HOME;$(touch forbidden)"],"runInTerminal":false,"workingDirectory":""}),
         )];
         context.visible_apps = context.all_apps.clone();
+        context.snapshot = json!({"capabilities":{"ai":true,"brain":true}});
         context.legacy_actions = nacre_menu::browser::default_actions(&context);
         context.preferences = json!({"favorites":[],"hidden":[],"recent":[],"usage":{}});
         context.palette_windows = json!([
@@ -2408,7 +2414,7 @@ mod tests {
             "brain",
             "smash card",
             &json!({
-                "results":[{"path":"projects/board.md","title":"Smash-Board notes","snippet":"Board firmware","chips":["Newbringer › Smash-Board"]}],
+                "results":[{"path":"projects/board.md","file":"/brain/projects/board.md","title":"Smash-Board notes","snippet":"Board firmware","chips":["Newbringer › Smash-Board"]}],
                 "didYouMean":"smash cards"
             }),
         );

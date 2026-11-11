@@ -60,6 +60,8 @@ fn context(reference: &Value, name: &str) -> Result<Context> {
         c.emoji_entries.clear();
     }
     c.audio["sink_id"] = c.audio["outputs"][0]["id"].clone();
+    // The old populated captures predate the explicit Brain flag.
+    if name != "empty" { c.snapshot["capabilities"]["brain"] = json!(true); }
     c.utc_offset_seconds = Some(0);
     for (out, key) in [
         (&mut c.brain_query, "brainQuery"),
@@ -149,6 +151,23 @@ fn frozen_provider_functions_keep_full_rows_and_optional_fields() -> Result<()> 
     Ok(())
 }
 
+// Retain the original capture and hash; normalize only the intentional N0200 changes.
+fn current_content_reference(c: &Context, original: &Value) -> Value {
+    let mut rows = original.as_array().unwrap().clone();
+    let ai = c.snapshot["capabilities"]["ai"] == true;
+    let brain = c.snapshot["capabilities"]["brain"] == true;
+    rows.retain(|row| row["id"] != "home"
+        && !(row["brand"] == "ai" && !ai)
+        && !(row["brand"] == "brain" && !brain)
+        && !(row["id"] == "actions.assistant" && !ai && !brain)
+        && !(row["id"] == "scope-ai" && !ai)
+        && !(row["id"] == "scope-brain" && !brain));
+    for row in &mut rows {
+        if row["operation"] == "note" { row["value"] = row["filePath"].clone(); }
+    }
+    json!(rows)
+}
+
 #[test]
 fn frozen_content_composition_ranking_and_source_gates_match() -> Result<()> {
     let r = reference()?;
@@ -173,19 +192,20 @@ fn frozen_content_composition_ranking_and_source_gates_match() -> Result<()> {
             let query = p[1].as_str().unwrap();
             let filter = p.get(2).and_then(Value::as_str).unwrap_or("all");
             let category = p.get(3).and_then(Value::as_str).unwrap_or("all");
+            let expected = current_content_reference(&c, &case["result"]);
             let indexed = c.indexed_content(route, query, filter, category)?;
-            if json!(indexed) != case["result"] {
+            if json!(indexed) != expected {
                 errors.push(format!(
                     "indexed {name} {route} {query:?} {filter}: {}",
-                    difference(&json!(indexed), &case["result"], "$")
+                    difference(&json!(indexed), &expected, "$")
                 ));
             }
             match c.content(route, query, filter, category) {
                 Ok(rows) => {
-                    if json!(rows) != case["result"] {
+                    if json!(rows) != expected {
                         errors.push(format!(
                             "{name} {route} {query:?} {filter}: {}",
-                            difference(&json!(rows), &case["result"], "$")
+                            difference(&json!(rows), &expected, "$")
                         ));
                     }
                 }

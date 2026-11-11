@@ -362,3 +362,12 @@ fn daemon_owned_software_open_is_refused_by_the_ui() {
         assert!(entry["proposal"].as_str().is_some_and(|s| !s.is_empty()));
     }
 }
+
+#[test]
+fn legacy_brain_query_opens_the_existing_brain_scope_with_the_literal_query() {
+    let mut params = row("legacy-action", json!("project notes"));
+    params["row"]["action"] = json!("brain-query");
+    let (act, keep, view) = planned(params);
+    assert!(matches!(act, Act::View) && keep);
+    assert_eq!(view.unwrap().query.as_deref(), Some("# project notes"));
+}
