@@ -2,6 +2,7 @@
 """Build only the app-scoped style module for the pacman-managed Thunar."""
 
 import json
+import argparse
 import nacre_state as _state
 from pathlib import Path
 import subprocess
@@ -73,4 +74,5 @@ def install():
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(description=__doc__).parse_args()
     install()

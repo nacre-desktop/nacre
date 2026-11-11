@@ -2,6 +2,7 @@
 """Seed native Dolphin defaults once; preserve subsequent user edits."""
 
 import importlib.util
+import argparse
 import os
 from pathlib import Path
 import subprocess
@@ -109,4 +110,5 @@ def install():
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(description=__doc__).parse_args()
     install()

@@ -967,7 +967,7 @@ fn tmux_child(
     if chat {
         child.push_str(" --chat-directory");
     }
-    child
+    ai_core::hold_failed_tmux_command(&child)
 }
 fn worktree_args(root: &Path, destination: &Path, task: &str, has_head: bool) -> Vec<String> {
     let mut args = vec![
@@ -1342,6 +1342,8 @@ pub fn run(args: &[String]) -> Result<i32> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::io::Write;
+    use std::os::unix::fs::PermissionsExt;
     use tempfile::tempdir;
 
     const CURRENT_ID: &str = "7b7db928-7582-4a1e-91b2-e6b601ca8a2d";
@@ -1649,16 +1651,58 @@ mod tests {
                 .contains_key("ai-p-claude-profile-work-1")
         );
         assert!(running_sessions_for("p", "work", "ai-p-claude-default-1\t/repo").is_empty());
-        assert!(tmux_child(
-            "/tmp/helper with spaces",
-            "new",
-            "p",
-            "/my repo",
-            "work",
-            None,
-            true
+        let directory = tempdir().unwrap();
+        let fake = directory.path().join("fake ' claude");
+        fs::write(
+            &fake,
+            "#!/bin/sh\ntest \"$NACRE_AI_CLAUDE_TMUX_CHILD\" = 1 || exit 99\nprintf '%s\\0' \"$@\"\nexit 37\n",
         )
-        .contains("--path '/my repo'"));
+        .unwrap();
+        fs::set_permissions(&fake, fs::Permissions::from_mode(0o755)).unwrap();
+        let id = "7b7db928-7582-4a1e-91b2-e6b601ca8a2d";
+        let command = tmux_child(
+            &fake.to_string_lossy(),
+            "resume",
+            "project ' one",
+            "/my repo/with ' quote",
+            "work account",
+            Some(id),
+            true,
+        );
+        let mut process = Command::new("/bin/sh")
+            .arg("-c")
+            .arg(command)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .spawn()
+            .unwrap();
+        process.stdin.take().unwrap().write_all(b"\n").unwrap();
+        let output = process.wait_with_output().unwrap();
+        assert_eq!(output.status.code(), Some(37));
+        let expected = [
+            "nacre-ai-claude",
+            "resume",
+            "--project",
+            "project ' one",
+            "--path",
+            "/my repo/with ' quote",
+            "--account",
+            "work account",
+            "--thread-id",
+            id,
+            "--chat-directory",
+        ]
+        .join("\0");
+        let expected = format!("{expected}\0");
+        assert!(output.stdout.starts_with(expected.as_bytes()));
+        let prompt = crate::i18n::tr(
+            "ai.ui.could-not-open-the-task-press-enter-to-return",
+            "Could not open the task. Press Enter to return. ",
+        );
+        assert!(output
+            .stdout
+            .windows(prompt.len())
+            .any(|part| part == prompt.as_bytes()));
     }
 
     #[test]

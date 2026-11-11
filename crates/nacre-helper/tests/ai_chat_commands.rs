@@ -155,8 +155,6 @@ print(json.dumps(sys.argv[1:]))
         whole_id.split('-').map(str::len).collect::<Vec<_>>(),
         [8, 4, 4, 4, 12]
     );
-    let child = tmux_args[4].as_str().unwrap();
-    assert!(child.contains(&format!("--thread-id '{whole_id}'")));
     let claude_args: Vec<String> = serde_json::from_slice(&result.stdout).unwrap();
     assert!(claude_args
         .windows(2)

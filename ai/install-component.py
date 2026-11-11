@@ -2,6 +2,7 @@
 """Install optional AI code; preserve accounts, conversation runtimes and workers."""
 
 import datetime as dt
+import argparse
 import importlib.util
 from pathlib import Path
 import shutil
@@ -12,6 +13,7 @@ HOME = Path.home()
 
 
 def main():
+    argparse.ArgumentParser(description=__doc__).parse_args()
     target = HOME / ".local/share/nacre/ai/application"
     backup = (
         HOME

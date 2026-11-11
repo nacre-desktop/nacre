@@ -963,6 +963,7 @@ fn run_inner(args: &[String]) -> Result<i32> {
                         .join(" ")
                 )
             };
+            let command = ai_core::hold_failed_tmux_command(&command);
             use std::os::unix::process::CommandExt;
             let error = Command::new("tmux")
                 .args(["new-session", "-A", "-s", &session, &command])

@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 """Install a complete checksum-pinned official Codex package, without changing auth."""
 
+import argparse
 import hashlib
 from pathlib import Path
 import platform
 import tarfile
 import tempfile
 import urllib.request
+
+argparse.ArgumentParser(description=__doc__).parse_args()
 
 VERSION = "0.159.2"
 SHA256 = "9e2d29a713b94478b240dec2f10e11324cd05fad76dc43e7c639bdf8a1337a6b"

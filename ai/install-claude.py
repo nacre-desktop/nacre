@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Install the isolated Claude session-history SDK; CLI/auth remain separate."""
 
+import argparse
+import sys
 from pathlib import Path
 import subprocess
-import sys
+
+argparse.ArgumentParser(description=__doc__).parse_args()
 
 root = Path.home() / ".local/share/nacre/ai/claude-sdk"
 subprocess.run([sys.executable, "-m", "venv", str(root)], check=True)

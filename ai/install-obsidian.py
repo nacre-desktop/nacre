@@ -2,6 +2,7 @@
 """Install a checksum-pinned official Obsidian AppImage for this user only."""
 
 import hashlib
+import argparse
 from pathlib import Path
 import platform
 import subprocess
@@ -45,6 +46,7 @@ def extract_verified(image, root):
 
 
 def main():
+    argparse.ArgumentParser(description=__doc__).parse_args()
     if platform.system() != "Linux" or platform.machine() != "x86_64":
         raise SystemExit("This pinned installer targets Linux x86_64")
     root = Path.home() / ".local/share/nacre/ai/obsidian" / VERSION

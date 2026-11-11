@@ -2,9 +2,12 @@
 """Expose user tools before Bash's noninteractive return, with a dated backup."""
 
 import datetime as dt
+import argparse
 from pathlib import Path
 import shutil
 import subprocess
+
+argparse.ArgumentParser(description=__doc__).parse_args()
 
 target = Path.home() / ".bashrc"
 text = target.read_text()

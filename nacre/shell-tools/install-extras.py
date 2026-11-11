@@ -2,6 +2,7 @@
 """Own the native shortcut routes without replacing personal compositor config."""
 
 from pathlib import Path
+import argparse
 from nacre_i18n import tr
 import datetime as dt
 import subprocess
@@ -59,4 +60,5 @@ def install():
 
 
 if __name__ == "__main__":
+    argparse.ArgumentParser(description=__doc__).parse_args()
     install()

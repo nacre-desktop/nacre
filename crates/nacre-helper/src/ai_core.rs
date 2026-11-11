@@ -280,6 +280,24 @@ pub fn prepare_provider_launch() {
     let _ = nix::sys::stat::umask(nix::sys::stat::Mode::from_bits_truncate(0o077));
 }
 
+pub(crate) fn launch_failure_prompt() -> String {
+    crate::i18n::tr(
+        "ai.ui.could-not-open-the-task-press-enter-to-return",
+        "Could not open the task. Press Enter to return. ",
+    )
+}
+
+/// tmux clients can exit successfully after a failed pane; hold inside the pane.
+pub(crate) fn hold_failed_tmux_command(command: &str) -> String {
+    let quote = |text: &str| format!("'{}'", text.replace('\'', "'\\''"));
+    // Keep the provider's process group foreground so tmux observes its cwd.
+    let script = format!(
+        "if [ -t 0 ]; then set -m; fi; {command} || {{ nacre_ai_status=$?; printf '\\n%s' {}; IFS= read -r nacre_ai_reply; exit \"$nacre_ai_status\"; }}",
+        quote(&launch_failure_prompt())
+    );
+    format!("/bin/sh -c {}", quote(&script))
+}
+
 /// Resolve Codex's configured shared SQLite history directory without reading databases.
 pub fn shared_history_home() -> Result<PathBuf> {
     let home = home()?;

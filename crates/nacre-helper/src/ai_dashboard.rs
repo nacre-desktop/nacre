@@ -1,6 +1,7 @@
 //! Native entry point for the standalone Nacre AI terminal dashboard.
 use crate::{ai_core, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use clap::Parser;
 use std::{
     env, fs,
     io::{self, IsTerminal, Read, Write},
@@ -422,7 +423,13 @@ pub(crate) fn launcher_new(provider: &str, _project_id: &str) -> Result<()> {
     if !matches!(provider, "codex" | "claude") {
         return Err("Unknown AI provider".into());
     }
-    let args = vec!["new".into(), "--agent".into(), provider.into()];
+    let args = vec![
+        "window".into(),
+        "--worker-command".into(),
+        "new".into(),
+        "--agent".into(),
+        provider.into(),
+    ];
     launch_task("nacre-ai", &args, "New chat")
 }
 
@@ -788,22 +795,33 @@ pub(crate) fn provider_list(
     for item in &mut items {
         item["project"] = project.clone();
         item["agent"] = serde_json::json!(agent);
-        item["account"] = item
-            .get("account")
-            .and_then(serde_json::Value::as_str)
-            .map_or_else(
-                || serde_json::json!(account),
-                |value| serde_json::json!(value),
-            );
+        item["account"] = if agent == "codex" && item.get("shared_history").is_some() {
+            // History ownership does not choose the login for a resumed chat.
+            serde_json::json!(account)
+        } else {
+            item.get("account")
+                .and_then(serde_json::Value::as_str)
+                .map_or_else(
+                    || serde_json::json!(account),
+                    |value| serde_json::json!(value),
+                )
+        };
     }
     Ok(items)
 }
 
 pub(crate) fn collect_history<F: Fn() -> bool>(
     account_override: Option<&str>,
+    project_id: Option<&str>,
     cancelled: F,
 ) -> Result<(Vec<serde_json::Value>, Vec<serde_json::Value>, Vec<String>)> {
-    let projects = configured_projects()?;
+    let mut projects = configured_projects()?;
+    if let Some(id) = project_id {
+        projects.retain(|project| project["id"].as_str() == Some(id));
+        if projects.is_empty() {
+            return Err("Project is not registered".into());
+        }
+    }
     let mut records = Vec::new();
     let mut errors = Vec::new();
     for project in &projects {
@@ -880,15 +898,20 @@ where
     Ok((records, warnings))
 }
 
-pub(crate) fn history(command: &str, account_override: Option<&str>) -> Result<()> {
-    if let Some(status) = launch_niri_history(command, account_override)? {
+pub(crate) fn history(command: &str, args: &[String]) -> Result<()> {
+    let child_args = [vec![command.to_owned()], args.to_vec()].concat();
+    if let Some(status) = launch_niri_worker(&child_args)? {
         return if status.success() {
             Ok(())
         } else {
             Err("History worker did not finish successfully".into())
         };
     }
-    let (records, _, errors) = collect_history(account_override, || false)?;
+    let (records, _, errors) = collect_history(
+        argument(args, "--account").as_deref(),
+        argument(args, "--project").as_deref(),
+        || false,
+    )?;
     if command == "latest" && !errors.is_empty() {
         return Err(format!("Cannot establish the latest task while a history source is unavailable; use Load chat. {}", errors.join("; ")).into());
     }
@@ -926,10 +949,7 @@ pub(crate) fn history(command: &str, account_override: Option<&str>) -> Result<(
     Ok(())
 }
 
-fn launch_niri_history(
-    action: &str,
-    account_override: Option<&str>,
-) -> Result<Option<std::process::ExitStatus>> {
+fn launch_niri_worker(args: &[String]) -> Result<Option<std::process::ExitStatus>> {
     if !env::var("NACRE_COMPOSITOR").is_ok_and(|compositor| compositor == "niri") {
         return Ok(None);
     }
@@ -984,10 +1004,7 @@ fn launch_niri_history(
         .arg("--")
         .arg(env::current_exe()?)
         .arg("nacre-ai")
-        .arg(action);
-    if let Some(account) = account_override {
-        runner.args(["--account", account]);
-    }
+        .args(args);
     Ok(Some(runner.status()?))
 }
 
@@ -1127,17 +1144,28 @@ fn resume_record_with_tmux(item: &serde_json::Value, tmux: &std::path::Path) -> 
             ai_core::full_access(),
             history_home,
         );
-        let delta = ai_core::environment_delta("codex", Some(account))?;
+        let delta = ai_core::local_environment_delta(Some(account))?;
         let mut command = Command::new(executable);
         command.args(args);
         let code_home = delta["set"]["CODEX_HOME"].as_str().unwrap_or("").to_owned();
         if !code_home.is_empty() {
             command.env("CODEX_HOME", &code_home);
         }
+        command.env_remove("NACRE_AI_HISTORY_HOME");
+        let configured = Command::new(home().join(".local/bin/nacre-ai-chat"))
+            .arg("configure")
+            .env("CODEX_HOME", &code_home)
+            .env_remove("NACRE_AI_HISTORY_HOME")
+            .status()?;
+        if !configured.success() {
+            return Err("Could not configure account-scoped Codex history".into());
+        }
         if let Some(history_home) = history_home {
             command.env("NACRE_AI_HISTORY_HOME", history_home);
         }
-        prepare_codex(command.get_program().to_string_lossy().as_ref(), &code_home)?;
+        if history_home.is_none() {
+            prepare_codex(command.get_program().to_string_lossy().as_ref(), &code_home)?;
+        }
         let status = command.status()?;
         if !status.success() {
             return Err("Could not resume Codex task".into());
@@ -1367,17 +1395,33 @@ fn launch_general_chat(account: &str) -> Result<i32> {
 fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
     let project_id = argument(args, "--project");
     let agent = argument(args, "--agent").unwrap_or(ai_core::default_assistant()?);
-    let account = argument(args, "--account");
+    let account = ai_core::effective_account(&agent, argument(args, "--account").as_deref())?;
+    let projects = configured_projects()?;
     let project = if command_name == "new" && project_id.is_none() {
-        configured_projects()?
+        projects
             .into_iter()
             .next()
             .ok_or("General chat unavailable")?
-    } else {
-        configured_projects()?
+    } else if project_id.is_some() {
+        projects
             .into_iter()
             .find(|project| project["id"].as_str() == project_id.as_deref())
             .ok_or("Project is not registered")?
+    } else {
+        let labels = projects
+            .iter()
+            .skip(1)
+            .map(|project| {
+                project["label"]
+                    .as_str()
+                    .or(project["id"].as_str())
+                    .unwrap_or("Project")
+            })
+            .collect::<Vec<_>>();
+        let Some(index) = select("Projects", &labels, true)? else {
+            return Ok(0);
+        };
+        projects[index + 1].clone()
     };
     let path = project["path"].as_str().ok_or("Project path is missing")?;
     let label = project["label"]
@@ -1436,7 +1480,7 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
             "--path",
             path,
             "--account",
-            account.as_deref().unwrap_or(""),
+            &account,
         ]);
         if project["chat_directory"] == true {
             command.arg("--chat-directory");
@@ -1450,7 +1494,7 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
                 "--path".into(),
                 path.into(),
                 "--account".into(),
-                account.unwrap_or_default(),
+                account,
             ];
             if project["chat_directory"] == true {
                 remote.push("--chat-directory".into());
@@ -1472,7 +1516,6 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
         return Ok(status.code().unwrap_or(1));
     }
     if let Some(host) = project["host"].as_str() {
-        let account = ai_core::effective_account("codex", account.as_deref())?;
         let helper = project["remote_helper"]
             .as_str()
             .unwrap_or("$HOME/.local/bin/nacre-ai-remote");
@@ -1488,7 +1531,6 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
         )?;
         return Ok(status.status.code().unwrap_or(1));
     }
-    let account = ai_core::effective_account("codex", account.as_deref())?;
     let delta = ai_core::local_environment_delta(Some(&account))?;
     let mut command = Command::new(home().join(".local/bin/codex"));
     let mut args = vec![
@@ -1555,6 +1597,8 @@ fn dashboard(account_override: Option<&str>) -> Result<()> {
             Some(0) => {
                 let agent = ai_core::default_assistant()?;
                 let mut args = vec![
+                    "window".into(),
+                    "--worker-command".into(),
                     "new".into(),
                     "--project".into(),
                     "general-chat".into(),
@@ -1567,14 +1611,18 @@ fn dashboard(account_override: Option<&str>) -> Result<()> {
                 launch_task("nacre-ai", &args, "New chat")?;
             }
             Some(1) => {
-                let mut args = vec!["latest".into()];
+                let mut args = vec!["window".into(), "--worker-command".into(), "latest".into()];
                 if let Some(account) = account_override {
                     args.extend(["--account".into(), account.into()]);
                 }
                 launch_task("nacre-ai", &args, "Load chat")?;
             }
             Some(2) => {
-                let mut args = vec!["sessions".into()];
+                let mut args = vec![
+                    "window".into(),
+                    "--worker-command".into(),
+                    "sessions".into(),
+                ];
                 if let Some(account) = account_override {
                     args.extend(["--account".into(), account.into()]);
                 }
@@ -2080,7 +2128,85 @@ fn settings() -> Result<()> {
     }
 }
 
+#[derive(Parser)]
+struct WorkerWindow {
+    #[arg(long, value_parser = ["new", "latest", "sessions", "shell"])]
+    worker_command: String,
+    #[arg(long)]
+    project: Option<String>,
+    #[arg(long, value_parser = ["codex", "claude"])]
+    agent: Option<String>,
+    #[arg(long)]
+    account: Option<String>,
+}
+
+fn worker_window(args: &[String]) -> Result<i32> {
+    let options = match WorkerWindow::try_parse_from(
+        std::iter::once("nacre-ai window".to_owned()).chain(args.iter().cloned()),
+    ) {
+        Ok(options) => options,
+        Err(error) => {
+            error.print()?;
+            return Ok(error.exit_code());
+        }
+    };
+    set_terminal_title(if options.worker_command == "new" {
+        "New chat"
+    } else {
+        "Load chat"
+    });
+    let mut child_args = vec![options.worker_command.clone()];
+    for (flag, value) in [
+        ("--project", options.project),
+        ("--agent", options.agent),
+        ("--account", options.account),
+    ] {
+        if let Some(value) = value {
+            child_args.extend([flag.into(), value]);
+        }
+    }
+    let status = match launch_niri_worker(&child_args)? {
+        Some(status) => status,
+        None => Command::new(env::current_exe()?)
+            .arg("nacre-ai")
+            .args(child_args)
+            .status()?,
+    };
+    Ok(status.code().unwrap_or(1))
+}
+
+fn window_result(result: Result<i32>) -> Result<i32> {
+    let code = match result {
+        Ok(code) => code,
+        Err(error) => {
+            eprintln!("nacre-ai: {error}");
+            1
+        }
+    };
+    if code != 0 && io::stdin().is_terminal() {
+        print!("{}", ai_core::launch_failure_prompt());
+        io::stdout().flush()?;
+        let mut line = String::new();
+        io::stdin().read_line(&mut line)?;
+    }
+    Ok(code)
+}
+
 pub fn run(args: &[String]) -> Result<i32> {
+    if args.first().is_some_and(|arg| arg == "window")
+        && !args.iter().any(|arg| arg == "--help" || arg == "-h")
+    {
+        return window_result(worker_window(&args[1..]));
+    }
+    let result = run_inner(args);
+    if args.first().is_some_and(|arg| arg == "resume-record") {
+        window_result(result)
+    } else {
+        result
+    }
+}
+
+fn run_inner(args: &[String]) -> Result<i32> {
     if args.iter().any(|arg| arg == "--help" || arg == "-h") {
         print!(
             "usage: nacre-ai [-h] [--project PROJECT] [--agent {{codex,claude}}]\n                [--account ACCOUNT]\n                [{{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}]\n\nLaunch independent local or SSH Codex tasks, sessions, and the personal vault.\n\npositional arguments:\n  {{dashboard,new,latest,sessions,shell,brain,login,projects,window,account-login,settings}}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --agent {{codex,claude}}\n  --account ACCOUNT     Account profile override; Codex accounts share chats\n                        and keep separate logins\n"
@@ -2167,9 +2293,7 @@ pub fn run(args: &[String]) -> Result<i32> {
                 std::path::Path::new("tmux"),
             )?;
         }
-        "latest" | "sessions" => {
-            history(command, argument(&args[index..], "--account").as_deref())?
-        }
+        "latest" | "sessions" => history(command, &args[index..])?,
         "new" | "shell" => return run_project(command, &args[index..]),
         "login" => {
             let login_args = &args[index..];

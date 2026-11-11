@@ -13,6 +13,7 @@ history. Those entries are not a live queue and have not been rewritten here.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
+| N0171 | [Native AI launch compatibility](0171-native-ai-launch.md) | Implementing; dev-1 validation pending | Restore terminal launch contracts and visible failure, reset local Codex environment, guard installer argv. No live switch. |
 | N0168 | [Shrink reference fixtures](0168-reference-fixtures.md) | Done; full dev-1 desktop CI passed | Fixtures 43.28 → 9.88 MB; 24 orphaned captures removed; all 2,728 active cases retained. |
 | N0170 | [Stack stream startup](0170-stack-stream-startup.md) | Validated; full dev-1 desktop CI passed after rebase onto N0168 | Collection subscription and received state survive capability probes. Deploy the corrected helper and restart the daemon; no live changes made. |
 | N0159 | [Repository root and evidence cleanup](0159-root-tidy.md) | Done; full dev-1 desktop, package and disposable-HOME update checks passed | Configs consolidated; raw evidence removed; installed paths preserved. |
