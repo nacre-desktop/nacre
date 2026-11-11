@@ -52,7 +52,7 @@ fn plan_with_cpu_preparation(
                 let worker =
                     std::thread::scope(|scope| scope.spawn(move || preparation.prepare()).join());
                 match worker {
-                    Ok(Ok(())) => {}
+                    Ok(Ok(_)) => {}
                     Ok(Err(error)) => {
                         return Err(format!(
                             "{}: CPU worker preparation failed: {error}",
