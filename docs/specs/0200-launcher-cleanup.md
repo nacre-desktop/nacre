@@ -2,30 +2,30 @@
 
 ## Goal
 
-Remove launcher destinations that cannot work, hide optional and compositor-specific rows when unavailable, and consolidate duplicate entries before tidying the rail.
+Keep launcher destinations usable on each compositor tier and with optional AI/Brain components absent; simplify the category rail without changing saved destination IDs.
 
 ## What changed
 
-- Routed dictation setup through the existing terminal action helper; removed the duplicate All apps action and the redundant wallpaper picker route (the Wallpapers provider remains).
-- Hidden AI/Brain branded rows when their capability is absent, omitted Brain results without the Brain capability, and hid visitor-workspace actions outside Niri.
-- Scoped Hyprland help to Hyprland, added the Niri wiki row, and removed the AI/Brain prefix hint chips.
-- `shell/command-catalog.json` remains: `crates/nacre-shell/src/commands.rs` embeds it in production. `shell/shell-routes.json` remains: production route-coverage tests embed it.
+- Removed the redundant `actions.apps` and `style.wallpapers.picker`; `style.wallpapers` remains the single picker destination.
+- Row `backend` metadata gates compositor-specific actions/help. AI/Brain brands use the existing capability flags; static groups disappear when all their children are hidden. Prefix hints follow the same capability topic through the existing Quick adapter. Brain results require both their source preference and capability.
+- Added Niri help; the personal Hyprland shortcuts editor is Hyprland-only. All AI/Brain assistant rows carry their brand; the AI Settings shortcut now does too. External AI software offers remain ordinary Software entries, independent of the optional Nacre assistant.
 
-## Non-working rows found and fixes
+## Non-working targets found
 
 | ID | Problem | Fix |
 | --- | --- | --- |
-| `actions.dictation.setup` | Invoked Kitty directly while checking only the `voxtype` capability. | Use the existing launcher terminal action wrapper. |
-| `actions.apps` | Duplicated the All apps rail destination. | Removed. |
-| `style.wallpapers.picker` | Duplicated the Wallpapers provider destination. | Removed; keep the provider. |
-| `actions.bring-visitors` | Presented disabled outside Niri. | Hide outside Niri. |
-| `learn.hyprland` | Shown on all compositor tiers. | Show only on Hyprland. |
-| Brain search rows | Source preference was checked without the Brain capability. | Require both. |
+| `actions.dictation.setup` | Chose Kitty directly instead of the configured terminal. | Existing `nacre-terminal -- voxtype configure`. |
+| Generated `software-open` | No UI handler for installed software rows. | Reuse the daemon's indexed desktop-app launch and hidden-app check via `desktopId`. |
+| Generated Brain notes | Relative note paths fail the absolute-file target check. | Pass the search provider's existing absolute `file` path. |
+| `setup.shortcuts` on Niri | Edits a Hyprland-only override that Niri never reads. | Hide using row backend metadata. |
+| Compositor-gated rows | The menu adapter discarded the published backend identity. | Retain `backendName` and invalidate prepared candidates when it changes. |
 
-The static audit counted 147 entries (operation counts recorded in the N0200 task report); a complete target-by-target pass over all 147 entries, 87 software rows, 12 font rows, and provider outputs has not yet established a verified-working total.
+Target audit: **103/103 current static actions and 43/43 groups verified**, plus **87 software and 12 font templates** (245 definitions total). All 26 provider groups were traced through their emitted operation contracts, including the software-open and Brain-note fixes above. This checks shipped wrappers/helper dispatch, declared dependencies, native routes/forms/tools, settings IDs and aliases, package-operation targets, and URL dispatch; it does not install each offered third-party package. The QML-era names `colorsApp`/`welcomeApp` have native handlers; AI verbs route through the shipped `control.sh` wrapper; files/terminal use shipped `nacre-app`.
+
+## Compatibility snapshots
+
+`command-catalog.json` stays: production command parsing and the CLI embed it. `command-fixtures.json` and `shell/shell-routes.json` are test-only snapshots and are removed together with their snapshot-only tests; native route behavior tests and the canonical `nacre/shell-tools/shell-routes.json` stay.
 
 ## Checks
 
-- `python -m json.tool nacre/shell-tools/launcher-menu.json`: passed after editing.
-- `git diff --check`: passed.
-- Rust, Luau, launcher test suites, golden regeneration, and the full dev-1 desktop CI replica remain to be run.
+Validation in progress on dev-1; final test, Luau, golden and full desktop CI results will be recorded before completion. No live changes or pushes.

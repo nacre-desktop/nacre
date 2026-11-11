@@ -574,11 +574,6 @@ fn map_pearls(mut call: Call) -> Result<Call, Reply> {
     Ok(call)
 }
 #[cfg(test)]
-fn fixture_catalog() -> serde_json::Value {
-    serde_json::from_str(include_str!("../../../shell/command-fixtures.json"))
-        .expect("compiled fixture catalog")
-}
-#[cfg(test)]
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
@@ -832,24 +827,6 @@ mod tests {
                 bad.args.push(Value::Null);
                 assert!(c.validate(&bad).is_err());
             }
-        }
-    }
-    #[test]
-    fn audited_cli_and_shortcut_ingress_fixtures_use_catalog_routes() {
-        let c = catalog().unwrap();
-        let f = fixture_catalog();
-        assert_eq!(f["audited_cli_locations"].as_array().unwrap().len(), 30);
-        assert_eq!(f["shortcuts"].as_array().unwrap().len(), 12);
-        for row in f["calls"].as_array().unwrap() {
-            let call = Call {
-                version: 1,
-                id: 1,
-                target: row["target"].as_str().unwrap().into(),
-                method: row["method"].as_str().unwrap().into(),
-                args: row["args"].as_array().unwrap().clone(),
-                output: None,
-            };
-            assert!(c.validate(&call).is_ok(), "{row}");
         }
     }
 }
