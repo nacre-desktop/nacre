@@ -1,6 +1,6 @@
 # N0173 — Timing-independent test acceptance
 
-Status: validating on the shared build host. Product code unchanged.
+Status: complete; repeated load checks and the full desktop CI passed. Product code unchanged.
 
 Default tests check behavior rather than how often a loaded host schedules a
 debug build. The workspace switch checks advancing frame deadlines, monotonic
@@ -34,4 +34,36 @@ files are introduced.
 
 ## Validation
 
-Pending: matched repeated runs under CPU load, full desktop CI, integration.
+Repeated fresh test processes in the same disposable Arch container (8 CPUs,
+16 GiB), with `nice -n 10 stress-ng --cpu N --cpu-method matrixprod` running
+concurrently. Rust binaries used an exact filter and `--exact --nocapture`;
+the runner rejected filters selecting zero tests. Cargo used `--locked -j2`.
+
+| Test | CPU workers | Before failures/runs | After failures/runs |
+| --- | --- | --- | --- |
+| `workspace_switch_ticks_every_refresh_at_120_hz_in_both_directions` | 10 | 41/50 | 0/50 |
+| Same workspace test | 6 | 0/50 | 0/50 |
+| `current_scene_picker_dispatches_once_on_pointer_release` | 6 | 0/50 | 0/50 |
+| `a_dropped_daemon_link_reopens_the_worker_and_resyncs` | 6 | 0/50 | 0/50 |
+| `daemon_owned_session_completes_notifies_and_restores_dnd_after_a_restart` | 6 | 0/50 | 0/50 |
+| `search_quality_gate_on_2000_synthetic_notes` (unchanged) | 6 | 0/50 | 0/50 |
+| `synthetic_vault_dry_run_then_all_is_idempotent_and_preserves_content` | 6 | 0/10 | 0/10 |
+| `brain/tests/browser-load.mjs` | 6 | 0/10 | 0/10 |
+
+All 41 failures at ten workers were frame-count assertions, with no VM guard
+failures. An exploratory sixteen-worker baseline produced 48 frame-count failures
+and two Bead 50 ms VM safety-budget failures in 50 runs; that overload is separate
+from the matched proof and the product safety budget remains unchanged. Other
+historically reported failures were not reproduced in the six-worker baseline.
+
+The baseline was `238f4f76c`; the test patch was rebased unchanged onto the
+published AI launch fixes before final CI (`ad2a83994`). Every command from the
+`desktop` job in `.github/workflows/check.yml` passed in the Arch container:
+formatting, Clippy, workspace tests (helper 1,004 passed/3 ignored; shell 871
+passed/4 ignored), feature builds, Luau/product checks, cargo-deny, translations,
+`tools/check.py`, AUR gallery and the explicit ignored raster-memory regression.
+The Python suites passed 406 tools tests (one skip), 146 AI, 54 Brain and 377
+shell-tools tests. The unchanged package restore fixture additionally passed
+50/50 runs with six CPU stress workers. Raw evidence remains outside tracked files.
+
+Product lines: +0/-0. Test lines: +111/-23 (net +88); no duplicate implementation remains.
