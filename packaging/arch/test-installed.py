@@ -16,7 +16,9 @@ import sys
 import tempfile
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument("--compositor", choices=("hyprland", "niri", "both"), required=True)
+parser.add_argument(
+    "--compositor", choices=("nacre-niri", "hyprland", "niri", "both"), required=True
+)
 backend = parser.parse_args().compositor
 home = Path.home()
 assert (
@@ -155,7 +157,7 @@ base = (
     "--profile",
     "default",
     "--compositor",
-    "hyprland" if backend == "hyprland" else "niri",
+    backend if backend in {"nacre-niri", "hyprland"} else "niri",
     "--layout",
     "no",
     "--with",
@@ -221,12 +223,15 @@ assert not any(
     for path in directory.iterdir()
 ), "Package setup must not enable foundation units"
 print("Native daemon/controller aliases and manual-only vendor units are prepared.")
-if backend in {"niri", "both"}:
+if backend in {"nacre-niri", "niri", "both"}:
     sys.path.insert(0, "/usr/share/nacre/tools")
     from package_niri import validate, command
 
-    validate(home / ".config/nacre/niri/config.kdl")
-    launch = command(home / ".config/nacre/niri/config.kdl")
+    niri_compositor = "nacre-niri" if backend == "nacre-niri" else "niri"
+    validate(home / ".config/nacre/niri/config.kdl", compositor=niri_compositor)
+    launch = command(
+        home / ".config/nacre/niri/config.kdl", compositor=niri_compositor
+    )
     parsed = subprocess.run(
         [*launch[:2], "-n", *launch[2:]], text=True, capture_output=True, timeout=15
     )
@@ -234,7 +239,15 @@ if backend in {"niri", "both"}:
     assert "Command Line:" in parsed.stdout and "--session --config" in parsed.stdout, (
         parsed.stdout + parsed.stderr
     )
-    assert Path("/usr/share/wayland-sessions/nacre-session-niri.desktop").is_file()
+    session_name = (
+        "nacre-niri-fork.desktop"
+        if backend == "nacre-niri"
+        else "nacre-session-niri.desktop"
+    )
+    assert Path("/usr/share/wayland-sessions", session_name).is_file()
+    if backend == "nacre-niri":
+        assert Path("/usr/bin/nacre-niri").is_file()
+        assert run("pacman", "-Qoq", "/usr/bin/nacre-niri").stdout.strip() == "nacre-niri"
     assert (home / ".config/systemd/user/nacre-niri.target").is_file()
     appearance = (home / ".config/nacre/niri/desktop.kdl").read_text()
     assert "focus-ring { width 3; }" in appearance

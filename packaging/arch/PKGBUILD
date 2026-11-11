@@ -52,7 +52,7 @@ check() {
 package_nacre() {
   license=('GPL-3.0-only' 'MIT' 'MIT-CMU' 'BSD-3-Clause' 'IJG' 'Zlib' 'OFL-1.1' 'Apache-2.0' 'Unicode-3.0')
   depends=('python' 'python-pillow' 'orient=0.1.0dev6' 'xdg-desktop-portal' 'uwsm' 'fish' 'kitty' 'fastfetch' 'dolphin' 'kio-extras' 'qt6ct' 'breeze' 'kconfig' 'kcolorscheme' 'gtk3' 'hypridle' 'hyprlock' 'grim' 'slurp' 'wl-clipboard' 'libnotify' 'brightnessctl' 'ffmpeg' 'fontconfig' 'freetype2' 'libraqm' 'libjpeg-turbo' 'lcms2' 'librsvg' 'qt6-imageformats' 'ddcutil' 'wtype' 'papirus-icon-theme' 'networkmanager' 'bluez' 'pipewire' 'wireplumber' 'xdg-utils' 'rofi' 'kwallet-pam' 'polkit-gnome' 'cliphist' 'qt6-base' 'glibc' 'python-gobject' 'libgweather-4' 'geoclue' 'bash' 'jq' 'qt6-declarative' 'libgcc' 'libstdc++' 'glib2' 'gcc-libs' 'libxkbcommon' 'gdk-pixbuf2' 'libpipewire' 'mpv')
-  optdepends=('nacre-session-niri: Nacre session and dependencies for Niri' 'nacre-session-hyprland: Nacre session and dependencies for Hyprland' 'nacre-session-nacre-niri: Nacre login session using nacre-niri' 'nacre-niri-hover: optional Niri overview hover titles' 'nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
+  optdepends=('nacre-session-niri: Nacre session and dependencies for Niri' 'nacre-session-hyprland: Nacre session and dependencies for Hyprland' 'nacre-session-nacre-niri: Nacre login session using nacre-niri' 'nacre-ai: optional assistant workspace' 'nacre-brain: optional private Markdown knowledge library')
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
 }

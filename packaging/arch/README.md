@@ -228,55 +228,26 @@ AUR registration is currently paused. Binary distribution can proceed independen
 through a signed pacman repository. Never copy another account's authentication
 to publish.
 
-## Niri companion
+## Tier 1 nacre-niri
 
-`nacre-niri-hover` is a separate package base, so building or installing core Nacre
-does not require Rust. Its recipe pins both the Nacre patch revision and official
-Niri26.04 commit. Runtime/build dependency names remain in `packages.json`.
-Generate it from a reviewed, published Nacre commit:
+The niri component builds `nacre-niri` from the exact fork revision pinned in
+`packaging/arch/niri/recipe.py`. It stages the fork's own `packaging/arch/PKGBUILD`
+and its session wrapper/desktop file, setting only its supported `_commit`
+override. There is no separate Nacre compositor recipe or hover patch.
 
 ```sh
-python packaging/arch/niri/recipe.py --revision HEAD --output /tmp/nacre-niri-hover-build/PKGBUILD
-cd /tmp/nacre-niri-hover-build
+python packaging/arch/niri/recipe.py --output /tmp/nacre-niri-build/PKGBUILD
+cd /tmp/nacre-niri-build
 makepkg --printsrcinfo > .SRCINFO
-makepkg
+extra-x86_64-build
 namcap PKGBUILD ./*.pkg.tar.zst
 ```
 
-Use the clean-chroot process above for release builds. All normal Niri features
-are retained, including D-Bus/systemd and screencasting. `check()` runs the native
-protocol regression test; before distributing the archive, extract it to a private
-directory and run `tools/tests/verify_niri_overview_hover.py --binary
-/path/to/extracted/usr/lib/nacre/niri/niri --output /path/to/package-hover-proof.json`
-from a Wayland desktop. This separately verifies the *packaged* binary against
-the current production title bar, real pointer input and legacy stream clients.
-It does not verify cold login or hardware-specific behavior.
-
-The recipe disables makepkg's C/C++ LTO injection: GCC LTO objects in PipeWire's
-C shims cannot be linked by Rust's `lld`. Niri's own Rust thin-LTO, default
-features and ordinary strip/debug processing stay enabled.
-
-The package owns only `/usr/lib/nacre/niri`, `/usr/bin/nacre-niri-hover` and its license/
-patch notices. It depends on distribution Niri for its existing resources and
-session support. No system Niri binary, session entry or per-user configuration
-is overwritten. The source-prepared Nacre Niri session selects this companion first; package setup
-currently uses stock Niri;
-`nacre-niri` also runs it directly for nested testing. Stock Niri remains available.
-Pacman-owned files are validated using their owner, permissions, pinned source,
-protocol and executable version. Private source builds instead require matching
-binary/patch hashes and nested verification proof. Arch's normal strip/debug split
-remains enabled and does not invalidate the system receipt.
-
-Installation makes hover metadata available to every user running the companion;
-the current Nacre shell negotiates it once per connection, with stock-stream
-fallback and `NACRE_NIRI_HOVER_STREAM=0` as an explicit opt-out. Do not advertise
-the full Niri setup wizard until its separate setup contract is ready. Publishing
-this recipe does not publish an AUR package or host signed binaries.
-
-For a fresh prepared session, `prepare --stock-niri` persists an explicit stock
-selection even if the companion is installed. Existing prepared sessions can
-disable the companion by creating `~/.local/share/nacre/niri-on-pc/session/stock-niri`
-before the next login; removing that marker restores automatic companion selection.
+The fork installs `/usr/bin/nacre-niri` beside stock `/usr/bin/niri` and depends
+on stock `niri>=26.04`; it neither provides nor conflicts with `niri`. Setup
+recommends `nacre-niri` with `nacre-session-nacre-niri`. Stock Niri and Hyprland
+remain selectable, including combinations. Native hover/overview metadata comes
+from the fork; stock sessions use the existing protocol fallback.
 
 ## Namcap diagnostic review
 

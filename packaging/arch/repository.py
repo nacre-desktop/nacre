@@ -5,6 +5,7 @@ import argparse
 from functools import cmp_to_key
 import hashlib
 import html
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -40,7 +41,7 @@ def package_info(path):
 
 def verify_artifacts(root, artifacts):
     sessions = json.loads((root / "packaging/sessions.json").read_text())
-    expected = {"nacre", "nacre-ai", "nacre-brain", "orient"} | {
+    expected = {"nacre", "nacre-ai", "nacre-brain", "orient", "nacre-niri"} | {
         definition["package"] for definition in sessions.values()
     }
     lock = json.loads((root / "dependencies.lock.json").read_text())["orient"]
@@ -51,9 +52,17 @@ def verify_artifacts(root, artifacts):
     )
     if source is None:
         raise ValueError("Core recipe must pin its exact published source")
+    spec = importlib.util.spec_from_file_location(
+        "fork_recipe", root / "packaging/arch/niri/recipe.py"
+    )
+    fork = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fork)
+    fork_recipe = artifacts / "niri/PKGBUILD"
+    if not fork_recipe.read_text().startswith(f"_commit={fork.SOURCE}\n"):
+        raise ValueError("Fork recipe must pin the reviewed source")
     paths = {}
     records = {}
-    for directory in ("nacre", "orient"):
+    for directory in ("nacre", "orient", "niri"):
         for path in sorted((artifacts / directory).glob("*.pkg.tar.zst")):
             if path.is_symlink():
                 raise ValueError("Package archive must be a regular file")
@@ -69,9 +78,10 @@ def verify_artifacts(root, artifacts):
                 raise ValueError("Archive filename and metadata disagree")
             if name != "orient":
                 build = run("bsdtar", "-xOf", str(path), ".BUILDINFO")
-                if "pkgbuild_sha256sum = " + digest(recipe) not in build.splitlines():
+                tested_recipe = fork_recipe if name == "nacre-niri" else recipe
+                if "pkgbuild_sha256sum = " + digest(tested_recipe) not in build.splitlines():
                     raise ValueError(
-                        "Archive does not match the tested Core recipe: " + name
+                        "Archive does not match the tested recipe: " + name
                     )
             paths[name] = path
             records[name] = dict(
@@ -93,7 +103,7 @@ def verify_artifacts(root, artifacts):
         != required_orient.split("=", 1)[1]
     ):
         raise ValueError("Orient package and Core engine lock disagree")
-    for name in expected - {"nacre", "orient"}:
+    for name in expected - {"nacre", "orient", "nacre-niri"}:
         if (
             "nacre=" + core["version"].rsplit("-", 1)[0]
             not in records[name]["dependencies"]
@@ -102,10 +112,10 @@ def verify_artifacts(root, artifacts):
     proof = artifacts / "installed-runtime.log"
     if (
         not proof.is_file()
-        or proof.read_text().splitlines().count("FRESH_USER_PACKAGE_PROOF_OK") != 3
+        or proof.read_text().splitlines().count("FRESH_USER_PACKAGE_PROOF_OK") != 4
     ):
         raise ValueError(
-            "Require passing installed-runtime proof for all three session selections"
+            "Require passing installed-runtime proof for all four session selections"
         )
     return paths, records, source.group(1)
 

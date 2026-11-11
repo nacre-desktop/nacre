@@ -50,8 +50,9 @@ jobs:
             pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
             pacman -U --noconfirm /work/orient/orient-[0-9]*.pkg.tar.zst \
               /work/nacre/nacre-[0-9]*.pkg.tar.zst /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
-              /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst /work/nacre/nacre-session-{niri,hyprland}-[0-9]*.pkg.tar.zst
-            for backend in niri hyprland both; do
+              /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst /work/nacre/nacre-session-{niri,hyprland,nacre-niri}-[0-9]*.pkg.tar.zst \
+              /work/niri/nacre-niri-[0-9]*.pkg.tar.zst
+            for backend in nacre-niri niri hyprland both; do
               useradd -m "nacre-package-test-$backend"
               runuser -u "nacre-package-test-$backend" -- python /work/test-installed.py --compositor "$backend"
             done
@@ -98,6 +99,11 @@ jobs:
             printf "nacre-package-test-delivery ALL=(ALL) NOPASSWD: /usr/bin/pacman\n" > /etc/sudoers.d/nacre-delivery
             chmod 440 /etc/sudoers.d/nacre-delivery
             printf "y\n" | runuser -u nacre-package-test-delivery -- python /source/packaging/arch/test-delivery.py
+            pacman -R --noconfirm nacre-session-niri niri
+            useradd -m nacre-package-test-delivery-nacre-niri
+            printf "nacre-package-test-delivery-nacre-niri ALL=(ALL) NOPASSWD: /usr/bin/pacman\n" > /etc/sudoers.d/nacre-delivery-nacre-niri
+            chmod 440 /etc/sudoers.d/nacre-delivery-nacre-niri
+            printf "y\n" | runuser -u nacre-package-test-delivery-nacre-niri -- python /source/packaging/arch/test-delivery.py --compositor nacre-niri
           ' 2>&1 | tee "$RUNNER_TEMP/delivery.log"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()

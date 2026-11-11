@@ -85,7 +85,7 @@ jobs:
             fi
           fi
           python3 packaging/arch/recipe.py --source-root package-source --revision HEAD --output "$work/nacre/PKGBUILD"
-          cp packaging/arch/niri/PKGBUILD "$work/niri/"
+          python3 packaging/arch/niri/recipe.py --output "$work/niri/PKGBUILD"
           cp packaging/arch/test-installed.py "$work/test-installed.py"
           # As in Orient's distribution checks, devtools needs systemd as PID1.
           container=$(docker run --detach --privileged --cgroupns=host --tmpfs /run --tmpfs /tmp \
@@ -115,6 +115,10 @@ jobs:
               --symlink usr/bin /bin --symlink usr/lib /lib --symlink usr/lib64 /lib64 \
               --ro-bind /fixture-proc /proc --dev /dev /usr/bin/true
             rm -rf --one-file-system /var/tmp/nacre-namespace-probe
+            # Every split-package build needs the fork session dependency.
+            cd /work/niri
+            sudo -u builder extra-x86_64-build 2>&1 | tee /work/niri.log
+            namcap /work/niri/PKGBUILD /work/niri/nacre-niri-[0-9]*.pkg.tar.zst > /work/niri-namcap.log 2>&1
             if [[ "$PACKAGE_COMPONENT" != niri ]]; then
               if [[ "$USE_RELEASED_ORIENT" != true ]]; then
                 cd /work/orient
@@ -129,13 +133,10 @@ jobs:
               arch-nspawn /var/tmp/nacre-package-build/root pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
               cd /work/nacre
               sudo -u builder makechrootpkg -c -r /var/tmp/nacre-package-build \
-                -I /work/orient/orient-[0-9]*.pkg.tar.zst 2>&1 | tee /work/nacre.log
+                -I /work/orient/orient-[0-9]*.pkg.tar.zst \
+                -I /work/niri/nacre-niri-[0-9]*.pkg.tar.zst 2>&1 | tee /work/nacre.log
               sudo -u builder makepkg --printsrcinfo > /work/nacre/.SRCINFO
               namcap /work/nacre/*.pkg.tar.zst > /work/namcap.log 2>&1
-            fi
-            if [[ "$PACKAGE_COMPONENT" != core ]]; then
-              cd /work/niri
-              sudo -u builder extra-x86_64-build 2>&1 | tee /work/niri.log
             fi
             shopt -s nullglob
             archives=(/work/{orient,nacre,niri}/*.pkg.tar.zst)
@@ -159,8 +160,9 @@ jobs:
                 /work/nacre/nacre-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst \
-                /work/nacre/nacre-session-{niri,hyprland}-[0-9]*.pkg.tar.zst
-              for backend in niri hyprland both; do
+                /work/nacre/nacre-session-{nacre-niri,niri,hyprland}-[0-9]*.pkg.tar.zst \
+                /work/niri/nacre-niri-[0-9]*.pkg.tar.zst
+              for backend in nacre-niri niri hyprland both; do
                 account="nacre-package-test-$backend"
                 useradd -m "$account"
                 runuser -u "$account" -- python /work/test-installed.py --compositor "$backend"

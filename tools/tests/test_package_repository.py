@@ -66,14 +66,14 @@ class RepositoryTests(unittest.TestCase):
             json.dumps(
                 {
                     name: {"package": "nacre-session-" + name}
-                    for name in ("niri", "hyprland")
+                    for name in ("nacre-niri", "niri", "hyprland")
                 }
             )
         )
         (self.root / "dependencies.lock.json").write_text(
             '{"orient":{"version":"0.1.0-dev.6"}}'
         )
-        for name in ("nacre", "orient"):
+        for name in ("nacre", "orient", "niri"):
             (self.artifacts / name).mkdir(parents=True)
         (self.artifacts / "nacre/PKGBUILD").write_text(
             "source=('nacre::git+https://github.com/nacre-desktop/nacre.git#commit="
@@ -82,8 +82,14 @@ class RepositoryTests(unittest.TestCase):
         )
         (self.artifacts / "nacre/.SRCINFO").write_text("pkgbase = nacre\n")
         (self.artifacts / "installed-runtime.log").write_text(
-            "FRESH_USER_PACKAGE_PROOF_OK\n" * 3
+            "FRESH_USER_PACKAGE_PROOF_OK\n" * 4
         )
+        (self.root / "packaging/arch/niri").mkdir()
+        shutil.copy2(ROOT / "packaging/arch/niri/recipe.py", self.root / "packaging/arch/niri/recipe.py")
+        fork_spec = importlib.util.spec_from_file_location("fixture_fork", ROOT / "packaging/arch/niri/recipe.py")
+        fork = importlib.util.module_from_spec(fork_spec)
+        fork_spec.loader.exec_module(fork)
+        (self.artifacts / "niri/PKGBUILD").write_text(f"_commit={fork.SOURCE}\n# fixture\n")
         self.recipe_digest = hashlib.sha256(
             (self.artifacts / "nacre/PKGBUILD").read_bytes()
         ).hexdigest()
@@ -105,11 +111,11 @@ class RepositoryTests(unittest.TestCase):
             ]
             (folder / ".PKGINFO").write_text("\n".join(info) + "\n")
             (folder / ".BUILDINFO").write_text(
-                "pkgbuild_sha256sum = " + self.recipe_digest + "\n"
+                "pkgbuild_sha256sum = " + (hashlib.sha256((self.artifacts / "niri/PKGBUILD").read_bytes()).hexdigest() if name == "nacre-niri" else self.recipe_digest) + "\n"
             )
             path = (
                 self.artifacts
-                / ("orient" if name == "orient" else "nacre")
+                / ("orient" if name == "orient" else "niri" if name == "nacre-niri" else "nacre")
                 / f"{name}-{version}-x86_64.pkg.tar.zst"
             )
             subprocess.run(
@@ -135,23 +141,26 @@ class RepositoryTests(unittest.TestCase):
         for name in (
             "nacre-ai",
             "nacre-brain",
+            "nacre-session-nacre-niri",
             "nacre-session-niri",
             "nacre-session-hyprland",
         ):
             self.archive(name, version + "-1", ("nacre=" + version,))
+        if not list((self.artifacts / "niri").glob("*.pkg.tar.zst")):
+            self.archive("nacre-niri", "26.04.r3079.g1028c5b9-1", ("niri>=26.04",))
         if not list((self.artifacts / "orient").glob("*.pkg.tar.zst")):
             self.archive("orient", "0.1.0dev6-1")
 
     def test_missing_runtime_proof_and_wrong_recipe_are_rejected(self):
         proof = self.artifacts / "installed-runtime.log"
         proof.write_text("FRESH_USER_PACKAGE_PROOF_OK\n")
-        with self.assertRaisesRegex(ValueError, "all three"):
+        with self.assertRaisesRegex(ValueError, "all four"):
             repository.verify_artifacts(self.root, self.artifacts)
-        proof.write_text("FRESH_USER_PACKAGE_PROOF_OK\n" * 3)
+        proof.write_text("FRESH_USER_PACKAGE_PROOF_OK\n" * 4)
         (self.artifacts / "nacre/PKGBUILD").write_text(
             (self.artifacts / "nacre/PKGBUILD").read_text() + "# changed recipe\n"
         )
-        with self.assertRaisesRegex(ValueError, "tested Core recipe"):
+        with self.assertRaisesRegex(ValueError, "tested recipe"):
             repository.verify_artifacts(self.root, self.artifacts)
 
     def test_orient_stays_separate_and_its_tested_version_is_required(self):
@@ -163,6 +172,11 @@ class RepositoryTests(unittest.TestCase):
             '{"orient":{"version":"0.1.0-dev.7"}}'
         )
         with self.assertRaisesRegex(ValueError, "separately tested Orient"):
+            repository.verify_artifacts(self.root, self.artifacts)
+
+    def test_fork_recipe_must_keep_the_reviewed_pin(self):
+        (self.artifacts / "niri/PKGBUILD").write_text("_commit=" + "b" * 40 + "\n")
+        with self.assertRaisesRegex(ValueError, "reviewed source"):
             repository.verify_artifacts(self.root, self.artifacts)
 
     def test_signed_repository_retains_previous_cut_and_refuses_tampering(self):
