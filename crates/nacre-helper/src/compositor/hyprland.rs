@@ -287,7 +287,7 @@ pub fn parse_event(line: &str) -> Value {
     Value::Object(event)
 }
 pub fn capabilities() -> Value {
-    json!({"stableWorkspaceIndices":true,"globalWorkspaces":true,"perOutputWorkspaces":false,"scrollingLayout":false,"floatingPlacement":true,"pinWindow":true,"windowCapture":true,"windowHide":true,"windowTrash":true,"scratchpad":true,"windowGroups":true,"windowForceKill":true,"pseudoTiling":true,"layoutSplit":true,"keymaps":true,"nonConsumingShortcuts":true,"bindingIntrospection":true,"monitorMirroring":true,"fullscreenState":true})
+    json!({"stableWorkspaceIndices":true,"globalWorkspaces":true,"perOutputWorkspaces":false,"scrollingLayout":false,"floatingPlacement":true,"pinWindow":true,"windowCapture":false,"windowHide":true,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":true,"pseudoTiling":true,"layoutSplit":true,"keymaps":true,"nonConsumingShortcuts":true,"bindingIntrospection":true,"monitorMirroring":false,"fullscreenState":true})
 }
 pub fn valid_window_id(value: &Value) -> bool {
     value.as_str().is_some_and(|value| {
@@ -714,6 +714,25 @@ impl<T: Transport> Backend<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn capability_bits_match_implemented_hyprland_paths() {
+        let capabilities = capabilities();
+        let mut advertised = capabilities
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter_map(|(name, value)| (value == true).then_some(name.as_str()))
+            .collect::<Vec<_>>();
+        advertised.sort_unstable();
+        let mut supported = vec![
+            "stableWorkspaceIndices", "globalWorkspaces", "floatingPlacement",
+            "pinWindow", "windowHide", "windowGroups", "windowForceKill",
+            "pseudoTiling", "layoutSplit", "keymaps", "nonConsumingShortcuts",
+            "bindingIntrospection", "fullscreenState",
+        ];
+        supported.sort_unstable();
+        assert_eq!(advertised, supported);
+    }
     #[test]
     fn shortcut_source_discovery_keeps_hyprland_lua_paths() -> crate::Result<()> {
         let home = tempfile::tempdir()?;

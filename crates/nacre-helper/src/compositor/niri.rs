@@ -514,6 +514,52 @@ mod tests {
         );
     }
     #[test]
+    fn stock_capability_bits_match_implemented_paths() {
+        let capabilities = capabilities();
+        let mut advertised = capabilities
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter_map(|(name, value)| (value == true).then_some(name.as_str()))
+            .collect::<Vec<_>>();
+        advertised.sort_unstable();
+        let mut implemented = vec![
+            "perOutputWorkspaces", "scrollingLayout", "floatingPlacement",
+            "nativeWindowScreenshot", "windowGroups", "monitorConfiguration",
+            "nightLightController",
+        ];
+        implemented.sort_unstable();
+        assert_eq!(advertised, implemented);
+    }
+    #[test]
+    fn nacre_niri_probe_adds_only_native_supported_capabilities() {
+        let capabilities = capabilities_with_native(niri_transport::NacreCapabilities {
+            scratchpad: true,
+            window_pinning: true,
+            force_close: true,
+            monitor_workspace_actions: true,
+            window_restore: true,
+            launch_workspace: true,
+            ..Default::default()
+        });
+        let mut advertised = capabilities
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter_map(|(name, value)| (value == true).then_some(name.as_str()))
+            .collect::<Vec<_>>();
+        advertised.sort_unstable();
+        let mut implemented = vec![
+            "perOutputWorkspaces", "scrollingLayout", "floatingPlacement",
+            "nativeWindowScreenshot", "windowGroups", "monitorConfiguration",
+            "nightLightController", "pinWindow", "windowHide",
+            "windowForceCloseWayland", "windowRestore", "monitorWorkspaceActions",
+            "launchWorkspace",
+        ];
+        implemented.sort_unstable();
+        assert_eq!(advertised, implemented);
+    }
+    #[test]
     fn daemon_edge_lane_forwards_trigger_and_matching_exit_events() {
         assert!(is_edge_event(&json!({"type":"edge-triggered"})));
         assert!(is_edge_event(&json!({"type":"edge-left"})));
