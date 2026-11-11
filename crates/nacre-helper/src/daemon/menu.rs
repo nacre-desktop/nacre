@@ -2922,7 +2922,21 @@ mod tests {
         state.loaded.context.snapshot = json!({"capabilities":{"packages":true}});
         let result = state.query(serde_json::from_value(json!({
             "query":"","mode":"apps","route":"software.discover"}))?)?;
-        let id = result["order"][0].as_str().unwrap();
+        let expected_id = nacre_menu::model::stable(
+            state
+                .loaded
+                .context
+                .software_rows("software.discover")
+                .iter()
+                .find(|row| row["operation"] == "software-open")
+                .ok_or("Missing generated software-open row")?,
+        );
+        let id = result["items"]
+            .as_object()
+            .unwrap()
+            .keys()
+            .find(|id| **id == expected_id)
+            .ok_or("Missing software-open result")?;
         let request: MenuActivate = serde_json::from_value(json!({
             "id":id,"activation":result["items"][id]["activation"],"catalog_rev":state.rev}))?;
         assert_eq!(
