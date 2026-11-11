@@ -16,6 +16,46 @@ use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
+
+fn compositor_label(
+    environment: &BTreeMap<String, String>,
+    niri_version: Option<&str>,
+) -> Option<String> {
+    match crate::niri_session_gate::compositor(environment) {
+        "hyprland" => Some("Hyprland".into()),
+        "niri" if niri_version.is_some_and(crate::niri_identity::is_nacre_niri_version) => {
+            Some("nacre-niri".into())
+        }
+        "niri" if niri_version.is_some() => Some("niri".into()),
+        _ => None,
+    }
+}
+
+fn running_niri_version() -> Option<String> {
+    let output = std::process::Command::new("niri")
+        .args(["msg", "--json", "version"])
+        .output()
+        .ok()?;
+    output
+        .status
+        .success()
+        .then(|| running_version_text(&String::from_utf8_lossy(&output.stdout)))?
+}
+
+fn running_version_text(output: &str) -> Option<String> {
+    serde_json::from_str::<Value>(output)
+        .ok()
+        .and_then(|value| {
+            value.as_str().map(str::to_owned).or_else(|| {
+                value
+                    .get("compositor")
+                    .or_else(|| value.get("Version"))
+                    .or_else(|| value.get("version"))?
+                    .as_str()
+                    .map(str::to_owned)
+            })
+        })
+}
 use tokio::{task::JoinHandle, time::MissedTickBehavior};
 
 pub const TOPIC: &str = "dashboard.system";
@@ -197,9 +237,16 @@ fn host_state(sources: &Sources, now_ms: u64) -> Option<SystemHost> {
     let uptime = read(sources.proc.join("uptime"))
         .and_then(|t| t.split_whitespace().next()?.parse::<f64>().ok())
         .filter(|u| u.is_finite() && *u >= 0.0 && *u < 1e12);
+    let environment: BTreeMap<String, String> = std::env::vars().collect();
+    let compositor = match crate::compositor::backend::select(&environment) {
+        Ok("niri") => compositor_label(&environment, running_niri_version().as_deref()),
+        Ok(_) => compositor_label(&environment, None),
+        Err(_) => None,
+    };
     let host = SystemHost {
         user: sources.user.clone().and_then(|u| clean(u, 64)),
         os: os.and_then(|o| clean(o, 128)),
+        compositor,
         kernel: read(sources.proc.join("sys/kernel/osrelease")).and_then(|k| clean(k, 128)),
         uptime_s: uptime.map(|u| u as u64),
         boot_ms: uptime.and_then(|u| now_ms.checked_sub((u * 1000.0) as u64)),
@@ -208,6 +255,7 @@ fn host_state(sources: &Sources, now_ms: u64) -> Option<SystemHost> {
         != SystemHost {
             user: None,
             os: None,
+            compositor: None,
             kernel: None,
             uptime_s: None,
             boot_ms: None,
@@ -433,6 +481,43 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn compositor_label_uses_shared_backend_selection_and_niri_identity() {
+        let running_version = running_version_text(
+            r#"{"cli":"26.04 (8ed0da4)","compositor":"26.04 (nacre-niri daa117cf)"}"#,
+        )
+        .expect("compositor version field");
+        assert_eq!(
+            compositor_label(
+                &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
+                Some(&running_version)
+            ),
+            Some("nacre-niri".into())
+        );
+        assert_eq!(
+            compositor_label(
+                &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
+                Some("niri 26.04 (8ed0da4)"),
+            ),
+            Some("niri".into())
+        );
+        assert_eq!(
+            compositor_label(
+                &BTreeMap::from([("HYPRLAND_INSTANCE_SIGNATURE".into(), "instance".into())]),
+                None,
+            ),
+            Some("Hyprland".into())
+        );
+        assert_eq!(running_version_text("not json"), None);
+        assert_eq!(
+            compositor_label(
+                &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
+                None,
+            ),
+            None
+        );
+    }
 
     fn proc_fixture(stat: &str, dev: &str) -> Result<tempfile::TempDir> {
         let dir = tempfile::tempdir()?;

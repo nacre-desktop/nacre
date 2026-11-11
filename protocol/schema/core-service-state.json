@@ -2695,6 +2695,15 @@
           "minLength": 1,
           "maxLength": 128
         },
+        "compositor": {
+          "description": "Product name of the running compositor.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 32
+        },
         "kernel": {
           "description": "Kernel release, for example `6.12.1-arch1-1`.",
           "type": [

@@ -908,6 +908,10 @@ pub struct SystemHost {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 128))]
     pub os: Option<String>,
+    /// Product name of the running compositor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 32))]
+    pub compositor: Option<String>,
     /// Kernel release, for example `6.12.1-arch1-1`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(min = 1, max = 128))]
