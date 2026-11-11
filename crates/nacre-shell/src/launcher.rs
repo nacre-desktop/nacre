@@ -596,6 +596,7 @@ impl QueryActor {
                     let mut preference_stamp: Option<SourceStamp> = None;
                     let mut newest = None;
                     loop {
+                        if thread_cancelled.load(std::sync::atomic::Ordering::Acquire) { break; }
                         let task = if let Some(task) = newest.take() {
                             task
                         } else {
