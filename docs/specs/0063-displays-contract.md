@@ -122,8 +122,9 @@ for compositor work (the same class N0053 left there on purpose).
   topic pending with the same deadline); busy while pending; a wrong-token revert does nothing; the right-token revert (the exact
   command the armed unit runs after its wait) restores the layout and clears the countdown on the client; manual revert; confirm
   persists to `desktop.json` `compositorDisplays`; extend-left positions; a refused arming leaves the fake niri untouched.
-* The Hyprland apply path is the unchanged controller code covered by its frozen references
-  (`desktop-settings-controller-reference.json`, both backends); N0063 only adds Hyprland row parsing to its unit tests. A live
+* At N0063 acceptance, the unchanged Hyprland apply path was covered by frozen controller references
+  for both backends. N0156 retired that parity harness; N0168 removed its orphaned captures.
+  N0063 only added Hyprland row parsing to its unit tests. A live
   Hyprland check was **not** done (no owner machine is touched).
 * The 20 s wait itself is not slept in tests: the unit's argv is asserted and its action is run directly.
 

@@ -51,9 +51,11 @@ fn frozen_cache_pngs_stamps_modes_and_publication_guards() -> Result<()> {
                     .to_string_lossy(),
                 format!("{:x}.png", Sha256::digest(stamp.as_bytes()))
             );
+            let png = fs::read(&output)?;
+            assert_eq!(Some(png.len() as u64), case["png_len"].as_u64());
             assert_eq!(
-                fs::read(&output)?,
-                STANDARD.decode(case["png"].as_str().ok_or("Missing PNG")?)?,
+                format!("{:x}", Sha256::digest(&png)),
+                case["png_sha256"].as_str().ok_or("Missing PNG digest")?,
                 "{}",
                 case["name"]
             );

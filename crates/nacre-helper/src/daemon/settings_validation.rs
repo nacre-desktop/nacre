@@ -469,11 +469,13 @@ mod tests {
         let cases = reference["cases"].as_array().unwrap();
         assert_eq!(cases.len(), 2258);
         for (index, case) in cases.iter().enumerate() {
+            let setting = &reference["settings"][case["setting"].as_u64().unwrap() as usize];
+            let value = &reference["values"][case["value"].as_u64().unwrap() as usize];
             assert_eq!(
-                valid_value(&case["setting"], &case["value"]),
+                valid_value(setting, value),
                 case["valid"].as_bool().unwrap(),
                 "case {index}: {}",
-                case["setting"]["id"]
+                setting["id"]
             );
         }
     }

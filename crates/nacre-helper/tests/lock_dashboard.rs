@@ -1,6 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use nacre_helper::{image_text::Font, Result};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::{
     io::{Read, Write},
     path::Path,
@@ -248,15 +249,17 @@ fn integer_ellipse_rounding_and_avatar_geometry_match_frozen_pillow() -> Result<
                 }
             }
         };
-        let expected = STANDARD.decode(case["pixels"].as_str().ok_or("Missing pixels")?)?;
         let actual = image.into_raw();
-        assert!(
-            actual == expected,
-            "Geometry differs {} size{} radius{}: {} samples",
+        assert_eq!(Some(actual.len() as u64), case["pixels_len"].as_u64());
+        assert_eq!(
+            format!("{:x}", Sha256::digest(&actual)),
+            case["pixels_sha256"]
+                .as_str()
+                .ok_or("Missing pixel digest")?,
+            "Geometry differs {} size{} radius{}",
             case["operation"],
             case["size"],
-            case["radius"],
-            actual.iter().zip(&expected).filter(|(a, b)| a != b).count()
+            case["radius"]
         );
     }
     Ok(())

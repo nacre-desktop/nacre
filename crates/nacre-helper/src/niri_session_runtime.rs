@@ -1282,11 +1282,26 @@ mod tests {
         }
         Ok(())
     }
-    #[test]
-    fn enabled_monitor_actions_prepare_owned_workspace_and_binding_includes() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
+    // Store repeated frozen file contents once; expand before the existing assertions.
+    fn preparation_reference() -> Result<Value> {
+        let mut reference: Value = serde_json::from_str(include_str!(
             "../tests/fixtures/niri-session-preparation-reference.json"
         ))?;
+        let texts = reference["texts"].as_array().unwrap().clone();
+        for case in reference["cases"].as_array_mut().unwrap() {
+            for file in case["observed"]["files"]
+                .as_object_mut()
+                .unwrap()
+                .values_mut()
+            {
+                file["text"] = texts[file["text"].as_u64().unwrap() as usize].clone();
+            }
+        }
+        Ok(reference)
+    }
+    #[test]
+    fn enabled_monitor_actions_prepare_owned_workspace_and_binding_includes() -> Result<()> {
+        let reference = preparation_reference()?;
         let case = reference["cases"]
             .as_array()
             .unwrap()
@@ -1381,9 +1396,7 @@ mod tests {
         custom: Option<&str>,
         fail_with_custom: bool,
     ) -> Result<(tempfile::TempDir, usize)> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-session-preparation-reference.json"
-        ))?;
+        let reference = preparation_reference()?;
         let case = &reference["cases"][0];
         let mut profile = case["profile"].clone();
         profile["workspaceNames"] = value!(["One", "Two", "Three"]);
@@ -1575,9 +1588,7 @@ mod tests {
 
     #[test]
     fn staged_refresh_validates_before_replacing_the_prepared_config() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-session-preparation-reference.json"
-        ))?;
+        let reference = preparation_reference()?;
         let case = &reference["cases"][0];
         let frozen_backend = crate::test_support::legacy_compositor_backend()?;
         let backend = frozen_backend.path().canonicalize()?;
@@ -1635,9 +1646,7 @@ mod tests {
 
     #[test]
     fn frozen_preparation_bytes_modes_and_partial_failure_writes() -> Result<()> {
-        let reference: Value = serde_json::from_str(include_str!(
-            "../tests/fixtures/niri-session-preparation-reference.json"
-        ))?;
+        let reference = preparation_reference()?;
         let frozen_backend = crate::test_support::legacy_compositor_backend()?;
         let backend = frozen_backend.path().canonicalize()?;
         for case in reference["cases"]
