@@ -498,6 +498,9 @@ class NiriTransportTests(unittest.TestCase):
         self.assertEqual(compositor.select_backend({}), "hyprland")
         self.assertEqual(compositor.select_backend({"NIRI_SOCKET": "/fixture"}), "niri")
         self.assertEqual(
+            compositor.select_backend({"NACRE_COMPOSITOR": "nacre-niri"}), "niri"
+        )
+        self.assertEqual(
             compositor.select_backend(
                 {"NIRI_SOCKET": "/fixture", "HYPRLAND_INSTANCE_SIGNATURE": "fixture"}
             ),

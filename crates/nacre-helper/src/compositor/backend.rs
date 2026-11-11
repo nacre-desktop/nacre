@@ -12,7 +12,7 @@ pub fn select(environment: &BTreeMap<String, String>) -> Result<&'static str> {
     if !explicit.is_empty() {
         return match explicit.as_str() {
             "hyprland" => Ok("hyprland"),
-            "niri" => Ok("niri"),
+            "niri" | "nacre-niri" => Ok("niri"),
             _ => Err(Error {
                 kind: "ValueError",
                 message: "Unknown NACRE_COMPOSITOR backend".into(),
@@ -606,6 +606,10 @@ mod tests {
             assert_eq!(backend.name(), name);
         }
         assert!(select(&BTreeMap::from([("NACRE_COMPOSITOR".into(), "bad".into())])).is_err());
+        assert_eq!(
+            select(&BTreeMap::from([("NACRE_COMPOSITOR".into(), "nacre-niri".into())]))?,
+            "niri"
+        );
         Ok(())
     }
 }

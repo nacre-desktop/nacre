@@ -863,7 +863,7 @@ class PackageSetupTests(unittest.TestCase):
             json.dumps(
                 {
                     "revision": "fixture",
-                    "compositors": ["hyprland", "niri"],
+                    "compositors": ["hyprland", "niri", "nacre-niri"],
                     "vendor_user_units": True,
                 }
             )
@@ -922,7 +922,8 @@ class PackageSetupTests(unittest.TestCase):
                 patch.object(releases, "subprocess") as processes,
             ):
                 self.assertEqual(
-                    setup.supported_compositors(root), ["hyprland", "niri"]
+                    setup.supported_compositors(root),
+                    ["nacre-niri", "hyprland", "niri"],
                 )
                 record = releases.deploy_package(
                     root, profile, {"layout": "no"}, "niri"
@@ -1142,6 +1143,16 @@ class PackageSetupTests(unittest.TestCase):
                 self.assertIn("niri>=26.04", requested)
                 self.assertIn("orient", requested)
                 self.assertFalse(any("hyprland" in value for value in requested))
+                setup.missing_packages(root, profile, "nacre-niri")
+                requested = query.call_args.args[0]
+                self.assertIn("nacre-session-nacre-niri", requested)
+                self.assertIn("nacre-niri", requested)
+                self.assertFalse(any("nacre-session-niri" == value for value in requested))
+                setup.missing_packages(root, profile, ["nacre-niri", "niri"])
+                requested = query.call_args.args[0]
+                self.assertIn("nacre-session-nacre-niri", requested)
+                self.assertIn("nacre-session-niri", requested)
+                self.assertIn("niri>=26.04", requested)
                 setup.missing_packages(root, profile, ["hyprland", "niri"])
                 self.assertIn("nacre-session-hyprland", query.call_args.args[0])
 

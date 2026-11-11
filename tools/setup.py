@@ -73,9 +73,12 @@ def supported_compositors(root):
             continue
         if backend is not None and backend.supported(root):
             choices.append(name)
-    return list(
-        dict.fromkeys(name for name in choices if name in metadata["compositors"])
+    available = dict.fromkeys(
+        name for name in choices if name in metadata["compositors"]
     )
+    # The fork is the Tier 1 Nacre session; keep stock Niri and Hyprland
+    # available after it for existing installations and explicit selections.
+    return sorted(available, key=lambda name: name != "nacre-niri")
 
 
 def ask(label, default):
@@ -126,7 +129,12 @@ def selection(args, root, home, interactive):
             tr(
                 "setup.prompt.compositor",
                 "Compositor ({choices})",
-                {"choices": ", ".join(choices)},
+                {
+                    "choices": ", ".join(
+                        f"{name} (recommended)" if name == "nacre-niri" else name
+                        for name in choices
+                    )
+                },
             ),
             detected,
         )

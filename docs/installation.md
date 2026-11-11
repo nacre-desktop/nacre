@@ -156,22 +156,23 @@ and managed files you edited. The plan lists each kept file.
 own wallpapers are never touched. Run `systemctl --user daemon-reload`
 afterwards.
 
-## Choosing Hyprland or niri
+## Choosing a compositor
 
-The packaged setup supports **Hyprland** and **niri 26.04**. It defaults to the
-current desktop when supported; you can choose explicitly:
+The packaged setup recommends **nacre-niri** (Nacre's Niri fork), with stock
+**niri 26.04** and **Hyprland** also available. It defaults to the current
+desktop when supported; you can choose explicitly:
 
 ```sh
+nacre setup --compositor nacre-niri
 nacre setup --compositor niri
-# Prepare both logins, with Niri as the primary selection:
-nacre setup --compositor niri --also-compositor hyprland
+# Prepare the fork and Hyprland logins:
+nacre setup --compositor nacre-niri --also-compositor hyprland
 ```
 
-The wizard offers a primary compositor and optional additional compositors.
-`nacre-session-niri` and `nacre-session-hyprland` contain their login entries and
-depend on the corresponding compositor and portal backend. Core does not force
-installation of another compositor. Pacman recognizes installed compatible
-packages/providers, so an existing Niri installation is reused. Orient remains
+The wizard lists nacre-niri first as the recommended choice. Existing saved
+choices of `niri` or `hyprland` remain valid. The fork can be installed beside
+stock Niri; selecting both Niri sessions keeps both login entries available.
+Each session package depends on its compositor and portal backend. Orient remains
 a separately installed engine package required by Nacre.
 
 Niri setup creates a separate configuration under `~/.config/nacre/niri` and the
@@ -195,25 +196,6 @@ manual lock/password unlock and logout. Explicit lock requests are handled by a
 session-owned Hypridle service; automatic idle/suspend locking is not enabled by
 this preparation. Validate manual unlock before adding that policy. Keep the
 plain Niri session available.
-
-### Niri hover companion
-
-The optional `nacre-niri-hover` package adds window titles when hovering in native
-niri overview. Install its matching tested archive before preparing niri:
-
-```sh
-sudo pacman -U nacre-niri-hover-*.pkg.tar.zst
-```
-
-It installs under `/usr/lib/nacre/niri`, alongside `/usr/bin/niri`, without
-replacing the distribution's compositor. The source development preparation tool
-selects it automatically. The package setup currently uses stock Niri; installing
-the companion does not switch the packaged login to it. Without a packaged or already verified private
-companion, source preparation builds and verifies one, requiring Rust and niri
-development libraries. Its `--stock-niri` option skips the companion; overview
-still works, but hover titles do not. The companion does not establish a complete
-login, unlock, idle or screen-sharing test. Package details are in the
-[Arch guide](../packaging/arch/README.md#niri-companion).
 
 ## Updates
 

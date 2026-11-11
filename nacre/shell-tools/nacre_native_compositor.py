@@ -25,6 +25,8 @@ _environment = None
 def select_backend(environment=None):
     environment = os.environ if environment is None else environment
     explicit = environment.get("NACRE_COMPOSITOR", "").lower()
+    if explicit == "nacre-niri":
+        return "niri"
     if explicit:
         if explicit not in ("hyprland", "niri"):
             raise ValueError("Unknown NACRE_COMPOSITOR backend")
