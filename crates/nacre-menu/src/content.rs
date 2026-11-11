@@ -57,7 +57,7 @@ impl Context {
             .collect()
     }
     pub fn brain_rows(&self, query: &str) -> Vec<Value> {
-        if self.brain_query != query {
+        if self.brain_query != query || self.snapshot["capabilities"]["brain"] != true {
             return Vec::new();
         }
         self.notes
@@ -465,6 +465,7 @@ impl Context {
         let mut result: Vec<_> = model::children(route, self.rows())
             .into_iter()
             .map(|r| self.decorate(r))
+            .filter(|r| !yes(&r["hidden"]))
             .collect();
         result.extend(if route == "actions.saved" {
             self.workflow_rows("")

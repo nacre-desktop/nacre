@@ -231,6 +231,17 @@ impl Context {
             String::new()
         });
         let capability = text::field(row, "capability");
+        let backend = text::field(&self.compositor, "backendName");
+        let brand = text::field(row, "brand");
+        let hidden = (brand == "ai" && self.snapshot["capabilities"]["ai"] != true)
+            || (brand == "brain" && self.snapshot["capabilities"]["brain"] != true)
+            || (row["id"] == "actions.assistant"
+                && self.snapshot["capabilities"]["ai"] != true
+                && self.snapshot["capabilities"]["brain"] != true)
+            || (row["id"] == "actions.bring-visitors" && backend != "niri")
+            || (row["id"] == "learn.hyprland" && backend != "hyprland")
+            || (row["id"] == "learn.niri" && backend != "niri");
+        out["hidden"] = json!(hidden);
         let disabled = if capability == "niriWorkspaces" {
             self.compositor["backendName"] != "niri"
         } else {
@@ -353,7 +364,11 @@ impl Context {
         out
     }
     pub fn all_static(&self) -> Vec<Value> {
-        self.rows().iter().map(|r| self.decorate(r)).collect()
+        self.rows()
+            .iter()
+            .map(|r| self.decorate(r))
+            .filter(|r| !yes(&r["hidden"]))
+            .collect()
     }
     pub fn node(&self, id: &str) -> Option<Value> {
         self.rows()
