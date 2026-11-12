@@ -50,6 +50,8 @@ pub struct Host {
     dir: PathBuf,
     daemon: Option<PathBuf>,
     palette: PathBuf,
+    /// `nacre-helper`, whose `launch-app` starts apps in their own scope (N0216).
+    launcher: PathBuf,
 }
 static HOST: OnceLock<Host> = OnceLock::new();
 /// The presentation palette the shell last committed (B0056): an app starts with it, so it wears the wallpaper's colours
@@ -106,6 +108,7 @@ fn configure_host(
         dir: dir.into(),
         daemon,
         palette,
+        launcher: crate::prompt::helper_binary(),
     });
 }
 fn configure_child(
@@ -614,8 +617,7 @@ impl Host {
                     .ok()
             })
             .map_or_else(Stdio::null, Stdio::from);
-        let helper = crate::prompt::helper_binary();
-        let mut child = std::process::Command::new(helper)
+        let mut child = std::process::Command::new(&self.launcher)
             .arg("launch-app")
             .args(app)
             .stdin(Stdio::null())
@@ -1001,6 +1003,10 @@ mod tests {
     }
 
     fn host(dir: &Path, exe: &Path) -> Host {
+        // A fake launcher that drops `launch-app` and runs the app directly.
+        let launcher = dir.join("fake-launcher.sh");
+        std::fs::write(&launcher, "#!/bin/sh\nshift\nexec \"$@\"\n").unwrap();
+        std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
         Host {
             exe: exe.into(),
             command: dir.join("command.sock"),
@@ -1009,6 +1015,7 @@ mod tests {
             dir: dir.into(),
             daemon: Some("/run/fake/daemon.sock".into()),
             palette: "shell/palette.json".into(),
+            launcher,
         }
     }
     fn private_dir(name: &str) -> PathBuf {
