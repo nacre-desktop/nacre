@@ -111,6 +111,7 @@ def environment():
     for name in [
         "LD_LIBRARY_PATH",
         "QT_PLUGIN_PATH",
+        "QT_STYLE_OVERRIDE",
         "QML_IMPORT_PATH",
         "QML2_IMPORT_PATH",
         "GTK_MODULES",
@@ -118,20 +119,29 @@ def environment():
     ]:
         env.pop(name, None)
     env["QT_QPA_PLATFORMTHEME"] = "xdgdesktopportal"
-    env["QT_STYLE_OVERRIDE"] = "NacreDolphin"
-    # This directory contains only Nacre's uniquely named public-Qt style plugin.
-    env["QT_PLUGIN_PATH"] = str(HOME / ".local/share/nacre/dolphin-style")
+    plugin_path = HOME / ".local/share/nacre/dolphin-style"
+    if (plugin_path / "styles/libnacre-dolphin.so").is_file():
+        env["QT_STYLE_OVERRIDE"] = "NacreDolphin"
+        # This directory contains only Nacre's uniquely named public-Qt style plugin.
+        env["QT_PLUGIN_PATH"] = str(plugin_path)
     env["XDG_MENU_PREFIX"] = "arch-"
     return env
 
 
 def main():
+    if not shutil.which("dolphin"):
+        print(
+            "Dolphin is not installed. Install it or choose another file manager in Nacre app settings.",
+            file=sys.stderr,
+        )
+        return 127
     setup()
     if "--setup" in sys.argv:
-        return
+        return 0
     env = environment()
     os.execve("/usr/bin/dolphin", ["dolphin", *(sys.argv[1:] or [str(HOME)])], env)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -1579,6 +1579,15 @@ class ArchPackageLayoutTests(unittest.TestCase):
             self.assertIn(
                 "'" + name + "'", core.split("depends=", 1)[1].splitlines()[0]
             )
+        required = core.split("depends=", 1)[1].splitlines()[0]
+        optional = core.split("optdepends=", 1)[1].splitlines()[0]
+        for name in ("fish", "fastfetch", "dolphin", "kio-extras"):
+            self.assertNotIn("'" + name + "'", required)
+            self.assertIn("'" + name + ": ", optional)
+        self.assertIn("'kitty'", required)
+        self.assertIn(
+            "'hypridle'", rendered.split("package_nacre-session-niri()", 1)[1]
+        )
         for license_id in ("MIT", "MIT-CMU", "BSD-3-Clause", "IJG", "Zlib"):
             self.assertIn(
                 "'" + license_id + "'", core.split("license=", 1)[1].splitlines()[0]
@@ -1850,8 +1859,30 @@ class ArchPackageLayoutTests(unittest.TestCase):
             self.assertNotIn("quickshell", core_dependencies)
             self.assertNotIn("qt6-multimedia", core_dependencies)
             self.assertNotIn("qt6-multimedia-ffmpeg", core_dependencies)
+            self.assertNotIn("python-pillow", core_dependencies)
+            self.assertNotIn("fish", core_dependencies)
+            self.assertNotIn("fastfetch", core_dependencies)
+            self.assertNotIn("dolphin", core_dependencies)
+            self.assertNotIn("hypridle", core_dependencies)
+            self.assertNotIn("hyprlock", core_dependencies)
+            self.assertIn("kitty", core_dependencies)
             self.assertIn("qt6-base", core_dependencies)
             self.assertIn("qt6-declarative", core_dependencies)
+            package_map = json.loads(
+                (TOOLS.parent / "packaging/packages.json").read_text()
+            )["arch"]
+            self.assertTrue(
+                any(item.startswith("fish: ") for item in package_map["core_optional"])
+            )
+            self.assertTrue(
+                any(
+                    item.startswith("dolphin: ")
+                    for item in package_map["core_optional"]
+                )
+            )
+            self.assertNotIn("hypridle", package_map["core"])
+            self.assertIn("hypridle", package_map["session_niri"])
+            self.assertIn("hypridle", package_map["session_hyprland"])
             if (TOOLS.parent / "nacre/shell-tools/emoji-LICENSE.txt").is_file():
                 self.assertIn(Path("usr/share/licenses/nacre/emoji-LICENSE.txt"), owned)
             self.assertIn(Path("usr/share/nacre/nacre/shell-tools/nacre-helper"), owned)
@@ -1911,8 +1942,8 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (core / "deployment/core/.config/nacre/launcher.json").read_text()
                 )["favorites"],
             )
-            self.assertIn(
-                "shell fish --init-command",
+            self.assertNotIn(
+                "shell fish",
                 (
                     core / "deployment/core/.config/nacre/terminal/kitty.conf"
                 ).read_text(),

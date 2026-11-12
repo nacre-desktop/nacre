@@ -180,6 +180,11 @@ profile = json.loads((home / ".config/nacre/profile.json").read_text())
 assert profile["aiFullAccess"] is False and {"ai", "brain", "configs", "shell"} <= set(
     profile["components"]
 )
+kitty_config = home / ".config/nacre/terminal/kitty.conf"
+assert kitty_config.is_file() and "shell fish" not in kitty_config.read_text()
+if not shutil.which("dolphin"):
+    missing_dolphin = run("nacre-shell", "dolphin", success=False)
+    assert "Dolphin is not installed" in missing_dolphin.stderr
 keyboard = home / ".config/nacre/keyboard.lua"
 assert '"no"' in keyboard.read_text()
 assert '["input.kb_layout"] = "no"' in keyboard.read_text(), (

@@ -12,24 +12,24 @@ ROOT = Path(__file__).resolve().parents[2]
 
 class GraphicalEnvironmentTests(unittest.TestCase):
     def test_real_posix_shell_exports_toolkit_and_shared_cursor_contract(self):
-        result = subprocess.check_output(
-            [
-                "sh",
-                "-c",
-                '. "$1"; . "$2"; env',
-                "probe",
-                str(ROOT / "config/uwsm/env"),
-                str(ROOT / "config/uwsm/env-hyprland"),
-            ],
-            env={"PATH": os.defpath},
-            text=True,
-        )
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.check_output(
+                [
+                    "sh",
+                    "-c",
+                    '. "$1"; . "$2"; /usr/bin/env',
+                    "probe",
+                    str(ROOT / "config/uwsm/env"),
+                    str(ROOT / "config/uwsm/env-hyprland"),
+                ],
+                env={"PATH": directory, "QT_QPA_PLATFORMTHEME": "qt6ct"},
+                text=True,
+            )
         exported = dict(
             line.split("=", 1) for line in result.splitlines() if "=" in line
         )
         expected = {
             "QT_QPA_PLATFORM": "wayland;xcb",
-            "QT_QPA_PLATFORMTHEME": "qt6ct",
             "QT_WAYLAND_DISABLE_WINDOWDECORATION": "1",
             "GDK_BACKEND": "wayland,x11,*",
             "GDK_SCALE": "1",
@@ -40,6 +40,7 @@ class GraphicalEnvironmentTests(unittest.TestCase):
             "HYPRCURSOR_SIZE": "24",
         }
         self.assertEqual({name: exported.get(name) for name in expected}, expected)
+        self.assertNotIn("QT_QPA_PLATFORMTHEME", exported)
         for retired in [
             "XDG_CURRENT_DESKTOP",
             "XDG_SESSION_TYPE",
@@ -53,6 +54,24 @@ class GraphicalEnvironmentTests(unittest.TestCase):
             "QML_IMPORT_PATH",
         ]:
             self.assertNotIn(retired, exported)
+
+    def test_qt_theme_override_is_used_only_when_qt6ct_is_installed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            qt6ct = Path(directory) / "qt6ct"
+            qt6ct.write_text("#!/bin/sh\nexit 0\n")
+            qt6ct.chmod(0o755)
+            result = subprocess.check_output(
+                [
+                    "sh",
+                    "-c",
+                    '. "$1"; printf "%s" "${QT_QPA_PLATFORMTHEME-unset}"',
+                    "probe",
+                    str(ROOT / "config/uwsm/env"),
+                ],
+                env={"PATH": directory},
+                text=True,
+            )
+        self.assertEqual(result, "qt6ct")
 
 
 @unittest.skipUnless(shutil.which("fish"), "Fish unavailable")

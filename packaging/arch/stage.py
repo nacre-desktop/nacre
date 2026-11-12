@@ -240,8 +240,7 @@ def stage(root, destination, component, build):
         terminal = ".config/nacre/terminal/"
         text(
             terminal + "kitty.conf",
-            (root / "config/kitty/kitty.conf").read_text()
-            + "\nshell fish --init-command 'source \"$HOME/.config/nacre/terminal/greeting.fish\"'\n",
+            (root / "config/kitty/kitty.conf").read_text(),
         )
         copy(root / "config/kitty/greeting.fish", deploy / terminal / "greeting.fish")
         copy(

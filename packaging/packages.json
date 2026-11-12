@@ -2,52 +2,24 @@
   "arch": {
     "core": [
       "python",
-      "python-pillow",
       "orient",
-      "xdg-desktop-portal",
       "uwsm",
-      "fish",
       "kitty",
-      "fastfetch",
-      "dolphin",
-      "kio-extras",
-      "qt6ct",
-      "breeze",
-      "kconfig",
-      "kcolorscheme",
-      "gtk3",
-      "hypridle",
-      "hyprlock",
       "grim",
       "slurp",
       "wl-clipboard",
       "libnotify",
       "brightnessctl",
-      "ffmpeg",
       "fontconfig",
       "freetype2",
       "libraqm",
       "libjpeg-turbo",
       "lcms2",
-      "librsvg",
       "qt6-imageformats",
-      "ddcutil",
-      "wtype",
-      "papirus-icon-theme",
-      "networkmanager",
-      "bluez",
-      "pipewire",
-      "wireplumber",
       "xdg-utils",
-      "rofi",
-      "kwallet-pam",
-      "polkit-gnome",
       "cliphist",
       "qt6-base",
       "glibc",
-      "python-gobject",
-      "libgweather-4",
-      "geoclue",
       "bash",
       "jq",
       "qt6-declarative",
@@ -56,9 +28,34 @@
       "glib2",
       "gcc-libs",
       "libxkbcommon",
-      "gdk-pixbuf2",
-      "libpipewire",
-      "mpv"
+      "gdk-pixbuf2"
+    ],
+    "core_optional": [
+      "fish: interactive command line shell",
+      "fastfetch: system information display in terminals",
+      "dolphin: file manager for folders and archives",
+      "kio-extras: archive and network file support for Dolphin",
+      "qt6ct: Qt appearance settings for desktop apps",
+      "breeze: Breeze cursor theme for the desktop",
+      "kconfig: settings support for the Nacre Dolphin style",
+      "kcolorscheme: color support for the Nacre Dolphin style",
+      "gtk3: GTK applications using Nacre colors",
+      "networkmanager: Wi-Fi and network controls",
+      "bluez: Bluetooth device controls",
+      "pipewire: audio playback and capture",
+      "wireplumber: audio device management",
+      "librsvg: SVG image export tools",
+      "ddcutil: external monitor brightness controls",
+      "wtype: keyboard typing support for Niri",
+      "papirus-icon-theme: Papirus application icons",
+      "rofi: alternate application launcher and theme support",
+      "geoclue: location support for timezone updates",
+      "mpv: video wallpaper playback",
+      "nacre-session-niri: Nacre session and dependencies for Niri",
+      "nacre-session-hyprland: Nacre session and dependencies for Hyprland",
+      "nacre-session-nacre-niri: Nacre login session using nacre-niri",
+      "nacre-ai: optional assistant workspace",
+      "nacre-brain: optional private Markdown knowledge library"
     ],
     "ai": [
       "python",
@@ -105,13 +102,6 @@
       "sway",
       "swaybg"
     ],
-    "core_optional": [
-      "nacre-session-niri: Nacre session and dependencies for Niri",
-      "nacre-session-hyprland: Nacre session and dependencies for Hyprland",
-      "nacre-session-nacre-niri: Nacre login session using nacre-niri",
-      "nacre-ai: optional assistant workspace",
-      "nacre-brain: optional private Markdown knowledge library"
-    ],
     "ai_optional": [
       "nacre-brain: private knowledge helpers"
     ],
@@ -122,16 +112,30 @@
     "session_niri": [
       "niri>=26.04",
       "xwayland-satellite",
-      "xdg-desktop-portal-gnome"
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-gnome",
+      "hypridle",
+      "hyprlock",
+      "kwallet-pam",
+      "polkit-gnome"
     ],
     "session_nacre_niri": [
       "nacre-niri",
       "xwayland-satellite",
-      "xdg-desktop-portal-gnome"
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-gnome",
+      "hypridle",
+      "hyprlock",
+      "kwallet-pam",
+      "polkit-gnome"
     ],
     "session_hyprland": [
       "hyprland>=0.56.2",
-      "xdg-desktop-portal-hyprland"
+      "xdg-desktop-portal",
+      "xdg-desktop-portal-hyprland",
+      "hypridle",
+      "hyprlock",
+      "polkit-gnome"
     ]
   }
 }

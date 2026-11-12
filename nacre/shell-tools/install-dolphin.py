@@ -5,6 +5,7 @@ import importlib.util
 import argparse
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 
@@ -12,18 +13,16 @@ ROOT = Path(__file__).resolve().parent
 
 
 def install():
-    subprocess.run(
-        [
-            "pacman",
-            "-Q",
-            "dolphin",
-            "kio-extras",
-            "qt6ct",
-            "breeze",
-            "papirus-icon-theme",
-        ],
-        check=True,
+    if not shutil.which("dolphin"):
+        print("Dolphin is not installed; skipping file-manager setup.")
+        return
+    style_dependencies = ("kconfig", "kcolorscheme")
+    available = subprocess.run(
+        ["pacman", "-Q", *style_dependencies], capture_output=True
     )
+    if available.returncode:
+        print("Dolphin style packages are missing; skipping file-manager setup.")
+        return
     spec = importlib.util.spec_from_file_location(
         "dolphin_files", ROOT / "dolphin-files.py"
     )

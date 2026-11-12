@@ -1,35 +1,98 @@
 # N0407 — Package dependency review after the QML shell's retirement
 
-Status: planned (release lead, 2026-11-11). Starts after N0406 lands, because both edit
-`packaging/packages.json` and the generated PKGBUILD.
+Status: implementation and acceptance in progress (release lead, 2026-11-12). N0406
+landed before this review. Owner's 2026-11-12 decision is authoritative: Kitty stays
+required; Fish, Fastfetch and Dolphin become optional apps.
 
-The `nacre` core package hard-depends on 58 packages, which a fresh v0.1 install pulls
-in whether or not the user needs them. Several date from the QML shell or from the
-owner's personal setup. Examples: `qt6-declarative`, `qt6ct`, `breeze`, `kconfig`,
-`kcolorscheme`, `dolphin` with `kio-extras`, `rofi`, `fish`, `kitty`, `fastfetch`,
-`hypridle`/`hyprlock` on niri, `kwallet-pam`, `polkit-gnome`, `libgweather-4` and
-`geoclue`. Source checks still install Qt for the Dolphin style plugin and the SDDM
-greeter.
+The original `nacre` core package declared 58 hard dependencies. The table records
+each dependency's installed use on main (`a0aaf12a`) and its verdict. “Optdepend”
+means absence is already handled by a hidden capability, fallback, or clear error;
+“move” puts a session integration with that session package.
 
-Do this:
-1. Make a table with one row per `core` dependency: which installed file or route uses
-   it (file:line on main), what breaks without it, and the verdict: **keep** (needed
-   for the core shell to start and work), **optdepend** (an app or integration that
-   already handles its absence, such as a missing executable or a hidden item), **move**
-   (belongs to a session, AI, Brain or greeter package), or **drop** (nothing uses it).
-2. Apply the verdicts in `packaging/packages.json` and the recipe, with optdepends
-   descriptions in plain words. Where a feature crashes or shows dead UI when its
-   dependency is missing, fix it or keep the dependency. Don't add new fallback code
-   to justify an optdepend. If the Shell lead's N0206 (optional extras) covers a case,
-   reuse its pattern.
-3. `fish`, `kitty`, `fastfetch` and `dolphin` are Nacre's default apps, not shell
-   requirements. Recommend keep or optdepend for each in the report; the owner decides
-   what v0.1 ships as defaults.
+| Dependency | Installed use and absence behavior (source:line on main) | Verdict |
+|---|---|---|
+| `python` | Setup and installed helpers run Python (`packaging/arch/stage.py:197`). | keep |
+| `python-pillow` | Pillow imports are in tests; runtime image decoding is native (`nacre/shell-tools/tests/test_colors_backend.py:13`, `crates/nacre-shell/src/wallpaper_decode.rs:130`). | drop |
+| `orient` | Palette CLI and engine version use the locked engine (`packaging/arch/recipe.py:40-43`, `packaging/arch/test-installed.py:96`). | keep |
+| `xdg-desktop-portal` | Session portal infrastructure, paired with each compositor portal backend (`packaging/packages.json:122-135`). | move |
+| `uwsm` | Starts the managed Niri session and wraps session apps (`config/uwsm/sessions/nacre-niri.desktop:4`, `config/niri/bindings.kdl:8`). | keep |
+| `fish` | Optional shell config and greeting (`config/fish/conf.d/90-nacre.fish:1`, `config/kitty/greeting.fish:2`). Kitty now uses its normal login shell when Fish is absent. | optdepend |
+| `kitty` | Default terminal route and private terminal profile (`crates/nacre-helper/src/launchers.rs:43,106-111`). | keep |
+| `fastfetch` | Fish greeting invokes it (`config/kitty/greeting.fish:4`); no terminal startup requires that greeting. | optdepend |
+| `dolphin` | File route invokes its wrapper (`nacre/shell-tools/control.sh:11`, `nacre/shell-tools/dolphin-files.py:133`); missing app now returns a clear install/choose message before seeding. `TryExec` hides the desktop entry (`nacre/desktop/org.kde.dolphin.desktop:6-7`). | optdepend |
+| `kio-extras` | Dolphin archive/network handlers; no core route calls it (`nacre/shell-tools/install-dolphin.py:16-19`). | optdepend |
+| `qt6ct` | Optional Qt appearance for desktop apps (`config/uwsm/env:3`); the session leaves Qt's platform theme unset when qt6ct is absent. | optdepend |
+| `breeze` | Optional cursor theme (`config/uwsm/env:11`); an absent theme uses the desktop default. | optdepend |
+| `kconfig` | Dolphin style plugin uses KDE settings libraries (`nacre/shell-tools/install-dolphin.py:64-69`). | optdepend |
+| `kcolorscheme` | Dolphin style plugin uses KDE color libraries (`nacre/shell-tools/install-dolphin.py:65-69`). | optdepend |
+| `gtk3` | Palette publishes GTK settings as files; GTK is needed only by GTK apps (`crates/nacre-helper/src/classic_state.rs:733-768`). | optdepend |
+| `hypridle` | Idle service is installed by each compositor session (`tools/package_niri.py:389-398`, `tools/package_hyprland.py:38`). | move |
+| `hyprlock` | Idle lock command and Niri lock route (`config/hypr/hypridle.conf:3`, `config/uwsm/niri-session-bin/loginctl:5-8`). | move |
+| `grim` | Screenshot actions and capture control (`config/niri/bindings.kdl:15-16`, `crates/nacre-helper/src/daemon/control_center.rs:200-203`). | keep |
+| `slurp` | Screenshot selection (`config/niri/bindings.kdl:15-16`, `crates/nacre-helper/src/daemon/control_center.rs:200-203`). | keep |
+| `wl-clipboard` | Screenshot copy and Niri clipboard watcher (`config/niri/bindings.kdl:15-16`, `tools/package_niri.py:329`). | keep |
+| `libnotify` | Screenshot and shell actions send user notices (`config/niri/bindings.kdl:15-16`, `config/hypr/scripts/window-close.sh:14`). | keep |
+| `brightnessctl` | Hardware key fallback when the daemon reports unavailable (`config/niri/bindings.kdl:9-12`). | keep |
+| `ffmpeg` | Media generation is check/smoke tooling; runtime video playback uses libmpv (`tools/wallpaper_video_smoke.py:7`, `crates/nacre-shell/src/bin/bead-wallpaper-video/mpv.rs:2-4`). | drop |
+| `fontconfig` | Native font discovery and fallback (`crates/nacre-shell/src/font_sources.rs:166-186`). | keep |
+| `freetype2` | Font rasterization and glyph loading (`crates/nacre-helper/src/image_text.rs:35,55,115`). | keep |
+| `libraqm` | Text shaping FFI used for rendered text (`crates/nacre-helper/src/image_text.rs:17,42-68`). | keep |
+| `libjpeg-turbo` | Native JPEG decode/compress (`crates/nacre-helper/Cargo.toml:58`, `crates/nacre-shell/Cargo.toml:13`). | keep |
+| `lcms2` | Color-managed image stack and system image plugins (`crates/nacre-shell/src/wallpaper_decode.rs:130-137`). | keep |
+| `librsvg` | Logo rasterization reports a clear missing-tool message (`crates/nacre-helper/src/branding.rs:231-236`). | optdepend |
+| `qt6-imageformats` | Image plugins for the retained SDDM QML greeter (`nacre/login/Main.qml:60`, `nacre/login/Logo.qml:30`). | keep |
+| `ddcutil` | External monitor brightness is capability-gated (`crates/nacre-helper/src/light_devices.rs:192,366`, `crates/nacre-helper/src/daemon/bar_services.rs:65`). | optdepend |
+| `wtype` | Optional Niri keyboard typing maintenance route (`nacre/shell-tools/maintenance.py:242`); reports when unavailable. | optdepend |
+| `papirus-icon-theme` | Optional icon base with Adwaita/hicolor fallback (`crates/nacre-helper/src/file_icons.rs:44,71-89`). | optdepend |
+| `networkmanager` | Network topic reports service unavailable and retains stale state when absent (`crates/nacre-helper/src/daemon/network.rs:147-171`). | optdepend |
+| `bluez` | Bluetooth state reads BlueZ and degrades when the service is absent (`crates/nacre-helper/src/daemon/bluetooth.rs:292,575`). | optdepend |
+| `pipewire` | Audio controls are hidden when the PipeWire socket is missing (`crates/nacre-helper/src/daemon/control_center.rs:164-194`). | optdepend |
+| `wireplumber` | Software controls check its unit before offering audio actions (`crates/nacre-helper/src/software_actions.rs:102`). | optdepend |
+| `xdg-utils` | File, URL and library actions call `xdg-open` (`crates/nacre-helper/src/launcher_workflows.rs:473,526,544`). | keep |
+| `rofi` | Optional palette target; no launcher route requires Rofi (`tools/nacre_modules.py:25`, `nacre/shell-tools/theme-targets.json:70-76`). | optdepend |
+| `kwallet-pam` | PAM wallet startup is generated for Niri sessions (`tools/package_niri.py:337`). | move |
+| `polkit-gnome` | Authentication agent starts with Niri and Hyprland (`tools/package_niri.py:328`, `config/hypr/conf/autostart.lua:10`). | move |
+| `cliphist` | Niri clipboard watcher and clipboard history actions (`tools/package_niri.py:329`, `crates/nacre-helper/src/desktop_extras.rs:186-209`). | keep |
+| `qt6-base` | Qt widgets for Dolphin style and the retained SDDM greeter (`nacre/shell-tools/install-dolphin.py:47-68`, `nacre/login/Main.qml:22`). | keep |
+| `glibc` | C runtime for packaged native executables (`packaging/arch/stage.py:161-176`). | keep |
+| `python-gobject` | No shipped core runtime imports GI after QML retirement; it remains in AI/Brain lists (`packaging/packages.json:48,65-78`). | drop |
+| `libgweather-4` | No installed core route uses it after QML retirement; the old entry is only in the package map (`packaging/packages.json:49`). | drop |
+| `geoclue` | Optional timezone location lookup (`nacre/shell-tools/timezone.py:23,310`); timezone setup works without location. | optdepend |
+| `bash` | Installed helpers and compositor scripts use Bash (`nacre/shell-tools/control.sh:1`, `config/hypr/scripts/window-trash.sh:1`). | keep |
+| `jq` | Compositor scripts parse JSON with jq (`config/hypr/scripts/window-trash.sh:50-58`). | keep |
+| `qt6-declarative` | Qt Quick modules for the retained SDDM QML greeter (`nacre/login/Main.qml:22`). | keep |
+| `libgcc` | Runtime library for packaged native code (`crates/nacre-helper/Cargo.toml:58`, `packaging/arch/test-installed.py:96-103`). | keep |
+| `libstdc++` | C++ runtime for the Dolphin style plugin (`nacre/shell-tools/install-dolphin.py:52-68`). | keep |
+| `glib2` | GLib types used by the GDK Pixbuf image decoder (`crates/nacre-shell/Cargo.toml:15`, `crates/nacre-shell/src/wallpaper_decode.rs:130-137`). | keep |
+| `gcc-libs` | GCC/C++ runtime for packaged native executables and the style plugin (`nacre/shell-tools/install-dolphin.py:52-68`). | keep |
+| `libxkbcommon` | Wayland keyboard handling in the Bead shell (`crates/nacre-shell/Cargo.toml:27-32`). | keep |
+| `gdk-pixbuf2` | Runtime wallpaper image decoding (`crates/nacre-shell/Cargo.toml:15`, `crates/nacre-shell/src/wallpaper_decode.rs:130-137`). | keep |
+| `libpipewire` | No direct runtime link remains; installing optional PipeWire brings its client library (`crates/nacre-helper/src/diagnostics.rs:121-130`, `crates/nacre-helper/src/software_actions.rs:102`). | drop |
+| `mpv` | Video helper dynamically loads libmpv and reports when it is absent (`crates/nacre-shell/src/bin/bead-wallpaper-video/mpv.rs:2-4,94-101`). | optdepend |
 
-Acceptance: the N0401 VM gate passes on all three tiers with the reduced set; the full
-dev-1 desktop CI and the package proofs (`test-installed.py` for each session) pass;
-the report lists the before and after dependency counts and install size
-(`pacman -Qi` installed size for the closure in a clean container).
+Qt note: `qt6-base`, `qt6-declarative`, and `qt6-imageformats` remain required for the
+retained SDDM greeter; the greeter itself is unchanged. Dolphin-specific Qt/KDE packages
+(`kconfig`, `kcolorscheme`) are optional with Dolphin. `qt6ct` and Breeze are optional
+desktop appearance packages.
 
-Not covered: the dependencies of the AI and Brain packages, the build and check lists
-(CI-only), and the SDDM greeter's own packaging.
+## Applied changes
+
+- Core hard dependencies: 58 → 28. Of the original set, 20 are optdepends, 5 move
+  to session packages, and 5 are dropped as unused, indirect, or check-only.
+- `kitty` remains required; `fish`, `fastfetch`, and `dolphin` are optional with plain
+  descriptions. Niri and Hyprland session packages now own their portal, idle, lock and
+  authentication integrations.
+- Kitty's generated profile no longer forces Fish. Dolphin setup skips with a clear
+  message if Dolphin or its optional style packages are absent; its app route already
+  gives an actionable missing-app message and its desktop entry has `TryExec`.
+- The session exports the `qt6ct` theme only when its plugin package is present.
+- Final acceptance evidence, core closure installed size, and commit are added after
+  dev-1 package tests and all three VM tiers complete.
+
+Acceptance: focused dev-1 package/setup tests pass in one fresh container; lean test
+packages pass every stage of `packaging/arch/test-vm.py` for `nacre-niri`, `niri`, and
+`hyprland`; the dev-1 desktop CI job passes; report dependency counts and `pacman -Qi`
+installed size for the core closure.
+
+Not covered: AI and Brain dependencies, build/check dependency lists, or SDDM greeter
+packaging. Temporary duplicate paths: none introduced by N0407.
