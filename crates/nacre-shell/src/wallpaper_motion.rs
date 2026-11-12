@@ -96,7 +96,16 @@ pub(crate) fn preview_allowed(store: &Json, services: &Services, reduced: bool) 
 /// QML `NacreWallpaperScene`: an output is covered when a window of its active workspace is
 /// fullscreen or (with `pauseCovered`) not floating; fullscreen also hides it entirely.
 /// A locked or sleeping session hides every output.
-fn inputs(windows: &Windows, services: &Services, prefs: Prefs) -> BTreeMap<String, Inputs> {
+fn covered_for_overview(covered: bool, overview_open: bool) -> bool {
+    covered && !overview_open
+}
+
+fn inputs(
+    windows: &Windows,
+    services: &Services,
+    prefs: Prefs,
+    overview_open: bool,
+) -> BTreeMap<String, Inputs> {
     let base = Inputs {
         on_battery: services.battery.on_battery,
         user_paused: prefs.paused,
@@ -130,8 +139,8 @@ fn inputs(windows: &Windows, services: &Services, prefs: Prefs) -> BTreeMap<Stri
                 covered |= full || !window.floating;
             }
             let mut input = base;
-            input.hidden |= fullscreen;
-            input.covered = covered;
+            input.hidden |= fullscreen && !overview_open;
+            input.covered = covered_for_overview(covered, overview_open);
             (output.name.clone(), input)
         })
         .collect()
@@ -140,11 +149,16 @@ fn inputs(windows: &Windows, services: &Services, prefs: Prefs) -> BTreeMap<Stri
 /// B0193 `pause_on` fullscreen/lock for the desktop widget layer: the output has a fullscreen
 /// window on its active workspace, or the session is locked or sleeping (the same derivation
 /// that hides the motion wallpaper).
-pub(crate) fn output_hidden(windows: &Windows, services: &Services, output: &str) -> bool {
-    let all = inputs(windows, services, Prefs::default());
+pub(crate) fn output_hidden(
+    windows: &Windows,
+    services: &Services,
+    output: &str,
+    overview_open: bool,
+) -> bool {
+    let all = inputs(windows, services, Prefs::default(), false);
     all.get(output)
         .or_else(|| all.get(ANY))
-        .is_some_and(|input| input.hidden)
+        .is_some_and(|input| covered_for_overview(input.hidden, overview_open))
 }
 
 fn event_wait(wait: Duration, source_active: bool) -> Duration {
@@ -165,6 +179,8 @@ pub(crate) struct Deps {
     pub picker: Option<Arc<dyn Source>>,
     pub backend: Option<Arc<dyn Backend>>,
     pub desktop: Option<Arc<Desktop>>,
+    /// Niri overview state; absent on compositors without an overview.
+    pub overview: Option<Arc<dyn Source>>,
 }
 pub(crate) struct Controller {
     stop: mpsc::Sender<Msg>,
@@ -215,6 +231,12 @@ impl Controller {
         if let Some(desktop) = &deps.desktop {
             let poke = poke.clone();
             subscriptions.push(Box::new(desktop.subscribe(move |_| poke())));
+        }
+        if let Some(overview) = &deps.overview {
+            let poke = poke.clone();
+            if let Ok(sub) = overview.subscribe(Arc::new(move |_| poke())) {
+                subscriptions.push(Box::new(sub));
+            }
         }
         let supervisor =
             supervisor::Supervisor::start(supervisor::Config::new(renderer), log_event);
@@ -301,8 +323,15 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
                 .as_ref()
                 .map(|d| d.snapshot())
                 .unwrap_or_default();
+            let overview_open = deps.overview.as_ref().is_some_and(|source| {
+                source.snapshot().data["overviewOpen"].as_bool() == Some(true)
+            });
             let now = start.elapsed().as_millis() as u64;
-            let decision = group.step(&prefs.policy(), &inputs(&windows, &services, prefs), now);
+            let decision = group.step(
+                &prefs.policy(),
+                &inputs(&windows, &services, prefs, overview_open),
+                now,
+            );
             let state = (
                 decision.decoder,
                 decision.render.into_iter().collect::<Vec<_>>(),
@@ -457,21 +486,36 @@ mod tests {
             window("a2", false, None),
             window("b1", true, None),
         ];
-        let map = inputs(&windows, &Services::default(), Prefs::default());
+        let map = inputs(&windows, &Services::default(), Prefs::default(), false);
         assert!(map["A"].covered && !map["A"].hidden);
         assert!(!map["B"].covered, "a floating window does not cover");
         windows.windows.push(window("b1", true, Some(true)));
-        let map = inputs(&windows, &Services::default(), Prefs::default());
+        let map = inputs(&windows, &Services::default(), Prefs::default(), false);
         assert!(
             map["B"].covered && map["B"].hidden,
             "fullscreen hides the output"
         );
         windows.windows = vec![window("a2", false, None)];
-        let map = inputs(&windows, &Services::default(), Prefs::default());
+        let map = inputs(&windows, &Services::default(), Prefs::default(), false);
         assert!(
             !map["A"].covered,
             "a window on an inactive workspace is not covering"
         );
+    }
+
+    #[test]
+    fn overview_keeps_covered_wallpaper_animating_then_restores_pause() {
+        let mut windows = desktop();
+        windows.windows.push(window("a1", false, Some(true)));
+        let services = Services::default();
+
+        let covered = inputs(&windows, &services, Prefs::default(), false);
+        assert!(covered["A"].covered && covered["A"].hidden);
+        let overview = inputs(&windows, &services, Prefs::default(), true);
+        assert!(!overview["A"].covered);
+        assert!(!overview["A"].hidden);
+        let closed = inputs(&windows, &services, Prefs::default(), false);
+        assert!(closed["A"].covered && closed["A"].hidden);
     }
 
     #[test]
@@ -484,11 +528,16 @@ mod tests {
             paused: true,
             pause_covered: true,
         };
-        let map = inputs(&desktop(), &services, prefs);
+        let map = inputs(&desktop(), &services, prefs, false);
         for input in map.values() {
             assert!(input.on_battery && input.hidden && input.user_paused && input.stopped);
         }
-        let none = inputs(&Windows::default(), &Services::default(), Prefs::default());
+        let none = inputs(
+            &Windows::default(),
+            &Services::default(),
+            Prefs::default(),
+            false,
+        );
         assert_eq!(none.keys().collect::<Vec<_>>(), [ANY]);
     }
 
@@ -498,33 +547,41 @@ mod tests {
     fn widgets_pause_on_fullscreen_or_lock_per_output() {
         let mut windows = desktop();
         let services = Services::default();
-        assert!(!output_hidden(&windows, &services, "A"));
+        assert!(!output_hidden(&windows, &services, "A", false));
         windows.windows.push(window("a1", false, Some(false)));
         assert!(
-            !output_hidden(&windows, &services, "A"),
+            !output_hidden(&windows, &services, "A", false),
             "tiled is not covered"
         );
         windows.windows.push(window("a2", true, Some(true)));
         assert!(
-            !output_hidden(&windows, &services, "A"),
+            !output_hidden(&windows, &services, "A", false),
             "inactive workspace"
         );
         windows.windows.push(window("b1", false, Some(true)));
-        assert!(output_hidden(&windows, &services, "B"));
+        assert!(output_hidden(&windows, &services, "B", false));
         assert!(
-            !output_hidden(&windows, &services, "A"),
+            !output_hidden(&windows, &services, "B", true),
+            "visible desktop widgets resume in the overview"
+        );
+        assert!(
+            !output_hidden(&windows, &services, "A", false),
             "other output stays live"
         );
         let mut locked = Services::default();
         locked.session.locked = true;
-        assert!(output_hidden(&desktop(), &locked, "A") && output_hidden(&desktop(), &locked, "B"));
+        assert!(
+            output_hidden(&desktop(), &locked, "A", false)
+                && output_hidden(&desktop(), &locked, "B", false)
+        );
         locked.session.locked = false;
         locked.session.sleeping = true;
-        assert!(output_hidden(&desktop(), &locked, "A"));
+        assert!(output_hidden(&desktop(), &locked, "A", false));
         assert!(!output_hidden(
             &Windows::default(),
             &Services::default(),
-            "A"
+            "A",
+            false
         ));
     }
 
@@ -649,6 +706,7 @@ mod tests {
                 picker: None,
                 backend: None,
                 desktop: None,
+                overview: None,
             },
             move || {
                 let mut p = std::process::Command::new("sh");

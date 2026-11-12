@@ -1,5 +1,7 @@
 # Nacre specifications
 
+| N0304 | [Dynamic wallpaper in Niri overview](0304-overview-wallpaper.md) | In progress | Keep video motion and visible desktop widget animations active in stock niri and nacre-niri overview; covered pause outside overview remains intact. |
+
 ## Current status — 2026-11-10
 
 | N0210 | [Launcher works end to end](0210-launcher-works.md) | N0210 fixes complete; two unrelated whole-shell app tests remain red | Empty scopes, stale activation retry, theme bundle apply, Bead B0233 caret pin/test, and installed executable check completed. Whole shell binary: 875 passed, 2 unrelated app tests failed, 4 ignored. |

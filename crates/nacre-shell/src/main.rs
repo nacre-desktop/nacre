@@ -1180,6 +1180,11 @@ fn start(
     }
     // B0046: motion wallpaper control; the decoder runs in `bead-wallpaper-video`.
     if let Some(wallpaper) = wallpaper_consumer.take() {
+        let overview = _ui_provider.as_ref().and_then(|client| {
+            client.topic("compositor").ok().map(|topic| {
+                std::sync::Arc::new(topic) as std::sync::Arc<dyn bead::core::source::Source>
+            })
+        });
         _motion_wallpaper = wallpaper_motion::Controller::start(wallpaper_motion::Deps {
             picker: wallpaper.picker(),
             wallpaper,
@@ -1187,6 +1192,7 @@ fn start(
                 .clone()
                 .map(|b| b as std::sync::Arc<dyn bead::backends::Backend>),
             desktop: shared_desktop.clone(),
+            overview,
         });
     }
     if let Some(entry) = ui {

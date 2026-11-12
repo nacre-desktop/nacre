@@ -2099,7 +2099,12 @@ impl Runtime {
         else {
             return false;
         };
-        crate::wallpaper_motion::output_hidden(&backend.snapshot(), &desktop.snapshot(), output)
+        crate::wallpaper_motion::output_hidden(
+            &backend.snapshot(),
+            &desktop.snapshot(),
+            output,
+            on("bead.overview.open"),
+        )
     }
     /// Tell the canvas when its output is covered or visible again. While covered the host
     /// sends no further projections, so the canvas rebuilds nothing and drops its seconds
