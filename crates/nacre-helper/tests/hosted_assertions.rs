@@ -251,9 +251,8 @@ fn tabs_and_preferences_reject_invalid_values() {
     ] {
         assert!(dashboard_data::validate(&json!({"tabs":value})).is_err());
     }
-    for value in [json!(0), json!(181), json!(true), json!("25")] {
-        assert!(dashboard_data::validate(&json!({"focusMinutes":value})).is_err());
-    }
+    let migrated = dashboard_data::validate(&json!({"focusMinutes":25})).unwrap();
+    assert!(migrated.get("focusMinutes").is_none());
     assert!(dashboard_data::validate(&json!({"calendarFile":"relative.ics"})).is_err());
     assert!(dashboard_data::validate(&json!({"homeZone":"bad/zone"})).is_err());
 }

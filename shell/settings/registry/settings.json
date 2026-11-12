@@ -2617,6 +2617,106 @@
       "editorOwned": true
     },
     {
+      "id": "panels/dashboard/media.editor.lyrics",
+      "page": "panels/dashboard/media",
+      "section": "panels/dashboard/media.editor",
+      "key": "lyrics",
+      "labelId": "settings.registry.panels.dashboard.editor.lyrics.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.lyrics.description",
+      "type": "boolean",
+      "store": {
+        "id": "dashboard",
+        "key": [
+          "lyrics"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "panels/dashboard/media.editor.albumPalette",
+      "page": "panels/dashboard/media",
+      "section": "panels/dashboard/media.editor",
+      "key": "albumPalette",
+      "labelId": "settings.registry.panels.dashboard.editor.albumPalette.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.albumPalette.description",
+      "type": "boolean",
+      "store": {
+        "id": "dashboard",
+        "key": [
+          "albumPalette"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "panels/dashboard/home-time.editor.homeZone",
+      "page": "panels/dashboard/home-time",
+      "section": "panels/dashboard/home-time.editor",
+      "key": "homeZone",
+      "labelId": "settings.registry.panels.dashboard.editor.homeZone.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.homeZone.description",
+      "type": "string",
+      "store": {
+        "id": "dashboard",
+        "key": [
+          "homeZone"
+        ]
+      },
+      "default": "",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "panels/dashboard/home-time.editor.homeCity",
+      "page": "panels/dashboard/home-time",
+      "section": "panels/dashboard/home-time.editor",
+      "key": "homeCity",
+      "labelId": "settings.registry.panels.dashboard.editor.homeCity.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.homeCity.description",
+      "type": "string",
+      "store": {
+        "id": "dashboard",
+        "key": [
+          "homeCity"
+        ]
+      },
+      "default": "",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
+      "id": "panels/dashboard/calendar-focus.editor.calendarFile",
+      "page": "panels/dashboard/calendar-focus",
+      "section": "panels/dashboard/calendar-focus.editor",
+      "key": "calendarFile",
+      "labelId": "settings.registry.panels.dashboard.editor.calendarFile.label",
+      "descriptionId": "settings.registry.panels.dashboard.editor.calendarFile.description",
+      "type": "string",
+      "store": {
+        "id": "dashboard",
+        "key": [
+          "calendarFile"
+        ]
+      },
+      "default": "",
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "editorOwned": true
+    },
+    {
       "id": "panels/top-bar.panel.clockFormat",
       "page": "panels/top-bar",
       "section": "panels/top-bar.panel",

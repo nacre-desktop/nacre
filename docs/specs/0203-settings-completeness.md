@@ -18,7 +18,7 @@ registry is now canonical at `shell/settings/registry/`.
 | `windows-workspaces.workspaces.workspaceCount`, `workspaceNames`, `workspaceIcons`; `panels/top-bar.panel.clockFormat`, `.tray`; `power.hardware.alerts` | Verified the Niri profile policy, workspace row renderer, bar readers and battery-alert behavior. Enabled these; gated workspace profile controls on `niriWorkspaces`. |
 | `apps.startup.startup` | Profile validation and startup execution work, but the Settings editor marks startup lists unavailable (`settings.rs` entity type guard). Kept it planned until a supported editor exists. |
 | Planned rows with no reader: `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `privacy.history.{notification,clipboard,screenshot,aiChat}Retention`, `power.saver.batterySaver`, `power.idle.{dim,sleep}`, `power.hardware.{lid,button}`, `wallpaper.motion.lockWallpaper`, `colors.palette.automatic` | Confirmed no reader; removed registry records and translations. These are listed below for future selection. |
-| Other untraced panel controls: `panels/dashboard.media.editor.{lyrics,albumPalette}`, `panels/dashboard.home-time.editor.{homeZone,homeCity}`, `panels/dashboard.calendar-focus.editor.{calendarFile,focusMinutes}` | Traced all 25 current `panels/*` setting rows. These six controls have no setting reader and were removed. `weatherPhotos`, dashboard extras `enabled/order`, and the other remaining panel controls have readers. |
+| Dashboard preferences: `lyrics`, `albumPalette`, `homeZone`, `homeCity`, `calendarFile`, `focusMinutes` | The five settings before `focusMinutes` have readers in media metadata, dashboard home-time preferences and calendar loading, so restored them. `albumPalette` had a stored value but media metadata hard-coded false; now the existing reader honours the stored boolean. `focusMinutes` has no settings reader: the dashboard focus card and launcher timer use their own fixed choices, and reminders do not consume this preference. Removed it and its stale navigation aliases; legacy `dashboard.json` values are ignored. |
 | `launcher/entries.editor`, `system.backup`, `system.restore` | No matching action handler exists; removed the three broken action rows and their translations. `lock-login.preview`, `system.updates`, and `appearance.fonts.installed` are hidden by the existing `None` dispatch; `lock-login.idle-policy` remains planned and filtered, so none renders as a dead row. |
 
 ## Candidate features (not in v0.1)
@@ -28,11 +28,11 @@ registry is now canonical at `shell/settings/registry/`.
 - `privacy.history.notificationRetention`, `clipboardRetention`, `screenshotRetention`, `aiChatRetention`
 - `power.saver.batterySaver`, `power.idle.dim`, `power.idle.sleep`, `power.hardware.lid`, `power.hardware.button`
 - `wallpaper.motion.lockWallpaper`, `colors.palette.automatic`
-- Removed dashboard preferences with no reader: `lyrics`, `albumPalette`, `homeZone`, `homeCity`, `calendarFile`, `focusMinutes`
+- `panels/dashboard/calendar-focus.editor.focusMinutes` (the dashboard card and launcher use fixed timer choices; reminders have no reader for this preference).
 
 ## Verdict counts
 
-- Settings: 138 unique rows after copy merge; 112 active reader-backed rows, 1 retained planned row (`apps.startup.startup`), and 25 removed rows (4 dead visible, 15 planned without readers, 6 dead dashboard preferences). No known partial/mislabeled findings remain unresolved.
+- Settings: 138 unique rows after copy merge; 117 active reader-backed rows, 1 retained planned row (`apps.startup.startup`), and 20 removed rows (4 dead visible, 15 planned without readers, 1 dashboard preference without a reader). The other five dashboard controls are restored or wired. No known partial/mislabeled findings remain unresolved.
 - Actions: 32 audited; 25 live, 3 intentionally hidden unavailable actions, 1 planned hidden action, and 3 broken rows removed.
 
 ## Checks

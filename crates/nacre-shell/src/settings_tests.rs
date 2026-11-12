@@ -709,6 +709,24 @@ fn settings_window_goldens() {
             "",
             1.,
         ),
+        (
+            "settings-dashboard-media-1",
+            "panels/dashboard/media",
+            "",
+            1.,
+        ),
+        (
+            "settings-dashboard-home-time-1",
+            "panels/dashboard/home-time",
+            "",
+            1.,
+        ),
+        (
+            "settings-dashboard-calendar-focus-1",
+            "panels/dashboard/calendar-focus",
+            "",
+            1.,
+        ),
     ] {
         let (settings, _) = fixture(desktop.clone());
         let mut model = settings.project(&stores(page, search));

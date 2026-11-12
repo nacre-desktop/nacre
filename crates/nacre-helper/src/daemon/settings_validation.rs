@@ -487,7 +487,7 @@ mod tests {
         ))
         .unwrap();
         let cases = reference["cases"].as_array().unwrap();
-        assert_eq!(cases.len(), 1852);
+        assert_eq!(cases.len(), 1922);
         for (index, case) in cases.iter().enumerate() {
             let setting = &reference["settings"][case["setting"].as_u64().unwrap() as usize];
             let value = &reference["values"][case["value"].as_u64().unwrap() as usize];

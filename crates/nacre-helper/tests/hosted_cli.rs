@@ -75,7 +75,10 @@ fn cli_and_service_results_match_across_repeated_native_operations() {
         ("dashboard-data", vec!["read"], Value::Null),
         (
             "dashboard-data",
-            vec!["preferences", r#"{"focusMinutes":30}"#],
+            vec![
+                "preferences",
+                r#"{"homeZone":"Europe/Oslo","homeCity":"Oslo"}"#,
+            ],
             Value::Null,
         ),
         ("menu-backend", vec!["convert", "invalid"], Value::Null),

@@ -82,7 +82,7 @@ fn metadata(hub: &Shared) -> Option<Value> {
     Some(
         json!({"title":title,"artist":artist,"album":player["album"],
         "duration":player["length_ms"].as_u64().unwrap_or(0) as f64 / 1000.0,
-        "art":"","lyrics":settings["data"]["lyrics"].as_bool().unwrap_or(true),"palette":false,"mode":"dark"}),
+        "art":"","lyrics":settings["data"]["lyrics"].as_bool().unwrap_or(true),"palette":settings["data"]["albumPalette"].as_bool().unwrap_or(true),"mode":"dark"}),
     )
 }
 fn project(data: Value) -> DashboardMediaState {
@@ -273,7 +273,7 @@ mod tests {
         tokio::task::LocalSet::new().run_until(async {
             let hub = super::super::hub::Hub::new("media-test".into(), false, std::time::Duration::from_millis(16)).shared();
             initial(&hub).unwrap();
-            hub.borrow_mut().publish(SETTINGS, json!({"error":null,"data":{"lyrics":true}})).unwrap();
+            hub.borrow_mut().publish(SETTINGS, json!({"error":null,"data":{"lyrics":true,"albumPalette":false}})).unwrap();
             hub.borrow_mut().publish(super::super::dashboard_player::TOPIC, json!({"health":{"available":true},"active":"p","players":{"items":{"p":{"title":"Song","artist":"Artist","album":"Album","identity":"Player","length_ms":1000}}}})).unwrap();
             let calls = Rc::new(std::cell::RefCell::new(Vec::new()));
             let release = Rc::new(tokio::sync::Notify::new());
@@ -299,6 +299,7 @@ mod tests {
                 while calls.borrow().is_empty() {tokio::task::yield_now().await;}
             }).await.unwrap();
             assert!(*player_interest.borrow());
+            assert_eq!(calls.borrow()[0]["palette"], false);
             hub.borrow_mut().remove_client(client);
             tokio::time::timeout(std::time::Duration::from_secs(1), async {
                 while *player_interest.borrow() {tokio::task::yield_now().await;}
@@ -309,13 +310,14 @@ mod tests {
             tokio::time::timeout(std::time::Duration::from_secs(1), async {
                 while !*player_interest.borrow() {tokio::task::yield_now().await;}
             }).await.unwrap();
-            hub.borrow_mut().publish(SETTINGS, json!({"error":null,"data":{"lyrics":false}})).unwrap();
+            hub.borrow_mut().publish(SETTINGS, json!({"error":null,"data":{"lyrics":false,"albumPalette":true}})).unwrap();
             release.notify_one();
             tokio::time::timeout(std::time::Duration::from_secs(1), async {
                 while hub.borrow().snapshot(TOPIC).unwrap()["key"] != "disabled" {tokio::task::yield_now().await;}
             }).await.unwrap();
             assert_eq!(calls.borrow().len(), 2);
             assert_eq!(calls.borrow()[1]["lyrics"], false);
+            assert_eq!(calls.borrow()[1]["palette"], true);
             hub.borrow_mut().remove_client(client);
             tokio::time::timeout(std::time::Duration::from_secs(1), async {
                 while *player_interest.borrow() {tokio::task::yield_now().await;}

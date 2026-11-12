@@ -420,8 +420,6 @@
     "panels/dashboard#panels/dashboard.editor.homeCity": "panels/dashboard/home-time#homeCity",
     "panels/dashboard#calendarFile": "panels/dashboard/calendar-focus#calendarFile",
     "panels/dashboard#panels/dashboard.editor.calendarFile": "panels/dashboard/calendar-focus#calendarFile",
-    "panels/dashboard#focusMinutes": "panels/dashboard/calendar-focus#focusMinutes",
-    "panels/dashboard#panels/dashboard.editor.focusMinutes": "panels/dashboard/calendar-focus#focusMinutes",
     "keyboard-mouse#keyboard-mouse.pointer.naturalScroll": "keyboard-mouse#keyboard-mouse.touchpad.naturalScroll"
   }
 }

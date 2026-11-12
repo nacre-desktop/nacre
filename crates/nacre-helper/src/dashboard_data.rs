@@ -77,7 +77,7 @@ pub fn validate(data: &Value) -> Result<Value> {
             Value::Object(_) => unreachable!(),
         })
     })?;
-    let mut result = json!({"tabs":PAGES,"homeZone":"","homeCity":"","calendarFile":"","lyrics":true,"albumPalette":true,"focusMinutes":25});
+    let mut result = json!({"tabs":PAGES,"homeZone":"","homeCity":"","calendarFile":"","lyrics":true,"albumPalette":true});
     let paths = Paths::environment()?;
     for (key, value) in data {
         match key.as_str() {
@@ -122,15 +122,8 @@ pub fn validate(data: &Value) -> Result<Value> {
                     .into());
                 }
             }
-            "focusMinutes" => {
-                if value.as_u64().is_none_or(|v| !(1..=180).contains(&v)) {
-                    return Err(tr(
-                        "helper.dashboard-data.focus-duration-must-be1-180minutes",
-                        "Focus duration must be1–180minutes",
-                    )
-                    .into());
-                }
-            }
+            // Ignore the retired setting so old dashboard.json files remain readable.
+            "focusMinutes" => continue,
             "homeZone" | "homeCity" | "calendarFile" => {
                 let text = value
                     .as_str()
