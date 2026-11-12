@@ -453,13 +453,18 @@ pub(crate) fn launcher_action(action: &str) -> Result<()> {
     launch_task(command, &args, title)
 }
 
-fn launch_background(mut command: Command) -> Result<()> {
-    crate::compositor::niri_transport::apply_launch_token(&mut command);
-    launch_background_at(&mut command, &home())
+fn launch_background(command: Command) -> Result<()> {
+    launch_background_at(&command, &home())
 }
 
-fn launch_background_at(command: &mut Command, home: &std::path::Path) -> Result<()> {
-    use std::os::unix::process::CommandExt;
+fn launch_background_at(command: &Command, home: &std::path::Path) -> Result<()> {
+    let argv = std::iter::once(command.get_program().to_string_lossy().into_owned())
+        .chain(
+            command
+                .get_args()
+                .map(|arg| arg.to_string_lossy().into_owned()),
+        )
+        .collect::<Vec<_>>();
     let directory = home.join(".local/state/nacre/ai");
     fs::create_dir_all(&directory)?;
     fs::set_permissions(&directory, fs::Permissions::from_mode(0o700))?;
@@ -468,12 +473,14 @@ fn launch_background_at(command: &mut Command, home: &std::path::Path) -> Result
         .append(true)
         .mode(0o600)
         .open(directory.join("launcher.log"))?;
-    command
+    let mut child = crate::process::scope_command(&argv)?
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::from(log.try_clone()?))
         .stderr(std::process::Stdio::from(log))
-        .process_group(0)
         .spawn()?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
     Ok(())
 }
 
@@ -2712,11 +2719,34 @@ mod tests {
     }
 
     #[test]
+    #[allow(unsafe_code)]
     fn background_gui_diagnostics_go_to_a_private_log() -> Result<()> {
+        let _guard = crate::process::SCOPE_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
         let fixture = tempfile::tempdir()?;
+        let bin = fixture.path().join("bin");
+        fs::create_dir(&bin)?;
+        let runner = bin.join("systemd-run");
+        fs::write(
+            &runner,
+            "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$NACRE_AI_SCOPE_LOG\"\nwhile [ \"$1\" != env ]; do shift; done\nexec \"$@\"\n",
+        )?;
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&runner, fs::Permissions::from_mode(0o700))?;
+        let old_path = env::var_os("PATH");
+        env::set_var(
+            "PATH",
+            std::env::join_paths(
+                std::iter::once(bin)
+                    .chain(std::env::split_paths(&old_path.clone().unwrap_or_default())),
+            )?,
+        );
+        let scope_log = fixture.path().join("scope-argv");
+        env::set_var("NACRE_AI_SCOPE_LOG", &scope_log);
         let mut child = Command::new("sh");
         child.args(["-c", "printf visible; printf diagnostic >&2"]);
-        launch_background_at(&mut child, fixture.path())?;
+        launch_background_at(&child, fixture.path())?;
         let log = fixture.path().join(".local/state/nacre/ai/launcher.log");
         let until = std::time::Instant::now() + std::time::Duration::from_secs(2);
         while std::time::Instant::now() < until {
@@ -2730,8 +2760,15 @@ mod tests {
         let metadata = fs::metadata(&log)?;
         assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
         let contents = fs::read_to_string(log)?;
-        assert!(contents.contains("visible"));
+        assert!(contents.contains("visible"), "launcher log: {contents:?}");
         assert!(contents.contains("diagnostic"));
+        let scope_argv = fs::read_to_string(scope_log)?;
+        assert!(scope_argv.lines().any(|arg| arg == "--user"));
+        assert!(scope_argv.lines().any(|arg| arg == "--scope"));
+        if let Some(path) = old_path {
+            env::set_var("PATH", path);
+        }
+        env::remove_var("NACRE_AI_SCOPE_LOG");
         Ok(())
     }
 

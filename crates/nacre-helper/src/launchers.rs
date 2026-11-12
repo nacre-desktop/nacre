@@ -1374,36 +1374,11 @@ impl StartupDriver for StartupRuntime {
         which(program)
     }
     fn launch(&mut self, argv: &[String]) -> Result<()> {
-        let runner = find_program("systemd-run").ok_or("systemd-run is unavailable")?;
-        let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
-        let token = env::var_os("NIRI_SOCKET").and_then(|socket| {
-            crate::compositor::niri_transport::prepare_launch(Path::new(&socket), Some(&unit), None)
-        });
-        let command = startup_scope_argv(argv, &unit, token.as_deref());
-        drop(process::spawn_detached_quiet(&runner, &command)?);
-        Ok(())
+        process::launch_app_detached(argv)
     }
     fn pause(&mut self, duration: Duration) {
         thread::sleep(duration);
     }
-}
-
-fn startup_scope_argv(argv: &[String], unit: &str, token: Option<&str>) -> Vec<String> {
-    let mut command = vec![
-        "--user".into(),
-        "--scope".into(),
-        "--collect".into(),
-        "--quiet".into(),
-    ];
-    if let Some(token) = token {
-        command.extend([
-            format!("--unit={unit}"),
-            format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
-            format!("--setenv=DESKTOP_STARTUP_ID={token}"),
-        ]);
-    }
-    command.extend(argv.iter().cloned());
-    command
 }
 
 fn run_startup(profile: &Value, driver: &mut impl StartupDriver) -> Result<i32> {
@@ -1917,36 +1892,6 @@ mod tests {
         assert_eq!(claims.iter().filter(|claim| claim.is_some()).count(), 1);
         Ok(())
     }
-    #[test]
-    fn startup_scope_registers_only_with_a_prepared_token() {
-        let argv = vec!["example-browser".into(), "literal $HOME".into()];
-        assert_eq!(
-            startup_scope_argv(&argv, "nacre-app-startup.scope", None),
-            [
-                "--user",
-                "--scope",
-                "--collect",
-                "--quiet",
-                "example-browser",
-                "literal $HOME"
-            ]
-        );
-        assert_eq!(
-            startup_scope_argv(&argv, "nacre-app-startup.scope", Some("fresh-token")),
-            [
-                "--user",
-                "--scope",
-                "--collect",
-                "--quiet",
-                "--unit=nacre-app-startup.scope",
-                "--setenv=XDG_ACTIVATION_TOKEN=fresh-token",
-                "--setenv=DESKTOP_STARTUP_ID=fresh-token",
-                "example-browser",
-                "literal $HOME"
-            ]
-        );
-    }
-
     #[test]
     fn startup_plan_retains_workspace_targets_and_client_matching() -> Result<()> {
         let profile = json!({"workspaceNames":["", "Work"]});

@@ -805,12 +805,6 @@ fn open_extension(paths: &Paths, id: &str, action: Option<&str>) -> Result<Value
     }
     let root = directory(paths).join(id);
     let manifest = tree(&root)?;
-    let mut args = vec![
-        "--user".to_string(),
-        "--scope".into(),
-        "--collect".into(),
-        "--quiet".into(),
-    ];
     let item = manifest["actions"]
         .as_array()
         .and_then(|actions| actions.iter().find(|item| item["id"] == action))
@@ -818,26 +812,17 @@ fn open_extension(paths: &Paths, id: &str, action: Option<&str>) -> Result<Value
             "helper.software-library.extension-action-is-no-longer-available",
             "Extension action is no longer available",
         ))?;
-    args.extend([
-        "--".into(),
-        "env".into(),
-        "-u".into(),
-        "LD_LIBRARY_PATH".into(),
-        "-u".into(),
-        "QML_IMPORT_PATH".into(),
-        "-u".into(),
-        "QML2_IMPORT_PATH".into(),
-        "-u".into(),
-        "QT_PLUGIN_PATH".into(),
-        "-u".into(),
-        "NACRE_LIB_DIR".into(),
-    ]);
-    args.extend(item["command"].as_array().unwrap().iter().map(|arg| {
-        arg.as_str()
-            .unwrap()
-            .replace("{home}", paths.home.to_str().unwrap_or(""))
-    }));
-    process::spawn_detached_quiet("systemd-run", &args)?;
+    let command = item["command"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|arg| {
+            arg.as_str()
+                .unwrap()
+                .replace("{home}", paths.home.to_str().unwrap_or(""))
+        })
+        .collect::<Vec<_>>();
+    process::launch_app_detached(&command)?;
     Ok(json!({"message":tr("helper.software-library.extension-opened", "Extension opened")}))
 }
 fn theme_import(paths: &Paths, input: &str) -> Result<Value> {

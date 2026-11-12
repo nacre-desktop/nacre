@@ -1,11 +1,7 @@
 //! Desktop actions used by control.sh and lightweight shell services.
 use crate::{compositor::backend::Backend, i18n::tr, paths::Paths, Result};
 use serde_json::{json, Value};
-use std::{
-    collections::BTreeSet,
-    process::{Command, Stdio},
-    time::Duration,
-};
+use std::{collections::BTreeSet, process::Command, time::Duration};
 
 fn run(program: &str, args: &[&str]) -> Result<String> {
     let arguments = args
@@ -22,18 +18,10 @@ fn run(program: &str, args: &[&str]) -> Result<String> {
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_owned())
 }
 fn launch(args: &[String]) -> Result<()> {
-    let token = crate::compositor::niri_transport::prepare_current_launch();
-    let mut command = Command::new("uwsm");
-    command
-        .args(crate::compositor::niri_transport::uwsm_app_args(
-            args,
-            token.as_deref(),
-        ))
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    Ok(())
+    let argv = std::iter::once("uwsm".to_owned())
+        .chain(crate::compositor::niri_transport::uwsm_app_args(args, None))
+        .collect::<Vec<_>>();
+    crate::process::launch_app_detached(&argv)
 }
 fn launch_args(name: &str, paths: &Paths) -> Option<Vec<String>> {
     let home = paths.home.to_string_lossy();

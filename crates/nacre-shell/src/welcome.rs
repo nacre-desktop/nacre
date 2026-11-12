@@ -238,25 +238,12 @@ pub(crate) fn in_dirs(name: &str, path: &std::ffi::OsStr) -> bool {
 
 /// Start `program args` detached from this process (own group, no stdio); true when it started.
 pub(crate) fn detach(program: &str, args: &[&str]) -> bool {
-    use std::os::unix::process::CommandExt;
-    let Ok(mut child) = std::process::Command::new(program)
-        .args(args)
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .process_group(0)
-        .spawn()
-    else {
-        return false;
-    };
-    // Reap it when it exits; the window may outlive the child.
-    let _ = std::thread::Builder::new()
-        .name("bead-welcome-reap".into())
-        .stack_size(64 * 1024)
-        .spawn(move || {
-            let _ = child.wait();
-        });
-    true
+    crate::launcher_actions::launch_app(
+        &std::iter::once(program.to_owned())
+            .chain(args.iter().map(|arg| (*arg).to_owned()))
+            .collect::<Vec<_>>(),
+    )
+    .is_ok()
 }
 
 /// The Welcome window as a framework `WindowSpec`: one factory, one deep-link mapping.

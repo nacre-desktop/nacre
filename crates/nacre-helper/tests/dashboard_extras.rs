@@ -111,7 +111,7 @@ impl Drop for Daemon {
     }
 }
 
-const TOOLS: [(&str, &str); 5] = [
+const TOOLS: [(&str, &str); 6] = [
     (
         "cliphist",
         r#"d="$FAKE_DIR/clip"; t=$(printf '\t')
@@ -142,6 +142,10 @@ codex) echo '{"rows":["Codex · Default","codex · 5h: 12% used · resets Mon 12
 claude) [ -f "$FAKE_DIR/claude-fail" ] && exit 1; echo '{"rows":["Claude Code · Default","5 hour: 3% used","Cached report: now"]}' ;;
 esac
 "#,
+    ),
+    (
+        "systemd-run",
+        "printf '%s\\n' \"$@\" >> \"$FAKE_DIR/scope-argv\"\nwhile [ \"$#\" -gt 0 ] && [ \"$1\" != -- ] && [ \"${1#-}\" != \"$1\" ]; do shift; done\n[ \"$#\" -eq 0 ] || [ \"$1\" != -- ] || shift\nexec \"$@\"\n",
     ),
 ];
 
@@ -757,6 +761,9 @@ fn screenshots_list_only_safe_recent_images_and_open_through_the_viewer() -> Res
     wait_for("viewer", || {
         lines(&daemon.root().join("fake/opened")).trim() == paths[0]
     })?;
+    let scope_argv = lines(&daemon.root().join("fake/scope-argv"));
+    assert!(scope_argv.lines().any(|arg| arg == "--user"));
+    assert!(scope_argv.lines().any(|arg| arg == "--scope"));
     assert_eq!(
         client.err("screenshots.open", json!({"id":"s0000000000000000"}))?,
         "stale_revision"

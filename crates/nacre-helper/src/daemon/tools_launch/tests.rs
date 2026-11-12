@@ -6,11 +6,33 @@ use std::{os::unix::fs::PermissionsExt, time::Duration};
 struct Fixture {
     dir: tempfile::TempDir,
     hub: Shared,
+    old_path: Option<std::ffi::OsString>,
 }
 impl Fixture {
+    #[allow(unsafe_code)]
     fn new(programs: &[&str]) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let log = dir.path().join("log");
+        let scope_log = dir.path().join("scope-argv");
+        let runner = dir.path().join("systemd-run");
+        std::fs::write(
+            &runner,
+            format!(
+                "#!/bin/sh\nprintf '%s\\n' \"$@\" > '{}'\nwhile [ \"$1\" != env ]; do shift; done\nexec \"$@\"\n",
+                scope_log.display()
+            ),
+        )
+        .unwrap();
+        std::fs::set_permissions(&runner, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let old_path = std::env::var_os("PATH");
+        std::env::set_var(
+            "PATH",
+            std::env::join_paths(
+                std::iter::once(dir.path().to_path_buf())
+                    .chain(std::env::split_paths(&old_path.clone().unwrap_or_default())),
+            )
+            .unwrap(),
+        );
         for program in programs {
             let path = dir.path().join(program);
             std::fs::write(
@@ -38,7 +60,7 @@ impl Fixture {
             .service("capabilities", "running", 0)
             .unwrap();
         hub.borrow_mut().updates_wake = Some(std::sync::Arc::new(tokio::sync::Notify::new()));
-        Self { dir, hub }
+        Self { dir, hub, old_path }
     }
     async fn launch(&self, params: Value) -> Result<Value, Failure> {
         dispatch(self.hub.clone(), params).await
@@ -56,9 +78,13 @@ impl Fixture {
         String::new()
     }
 }
+#[allow(unsafe_code)]
 impl Drop for Fixture {
     fn drop(&mut self) {
         set_env(None);
+        if let Some(path) = self.old_path.take() {
+            std::env::set_var("PATH", path);
+        }
     }
 }
 fn run<F: std::future::Future>(future: F) -> F::Output {
@@ -70,7 +96,11 @@ fn run<F: std::future::Future>(future: F) -> F::Output {
 }
 
 #[test]
+#[allow(unsafe_code)]
 fn each_tool_starts_exactly_its_command() {
+    let _guard = crate::process::SCOPE_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
     run(async {
         let f = Fixture::new(&[
             "pavucontrol",
@@ -110,12 +140,19 @@ fn each_tool_starts_exactly_its_command() {
                 json!({"launched":true})
             );
             assert_eq!(f.log(), line, "{tool}");
+            let scope = std::fs::read_to_string(f.dir.path().join("scope-argv")).unwrap();
+            assert!(scope.lines().any(|arg| arg == "--user"), "{tool}");
+            assert!(scope.lines().any(|arg| arg == "--scope"), "{tool}");
         }
     });
 }
 
 #[test]
+#[allow(unsafe_code)]
 fn only_named_tools_start_and_missing_programs_are_unavailable() {
+    let _guard = crate::process::SCOPE_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
     run(async {
         let f = Fixture::new(&["pavucontrol", "kitty", "pkexec", "systemctl"]);
         for params in [
@@ -156,7 +193,11 @@ fn only_named_tools_start_and_missing_programs_are_unavailable() {
 }
 
 #[test]
+#[allow(unsafe_code)]
 fn updater_exit_notifies_the_dashboard_refresh_service() {
+    let _guard = crate::process::SCOPE_TEST_LOCK
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
     run(async {
         let f = Fixture::new(&[]);
         let wake = f.hub.borrow().updates_wake.clone().unwrap();

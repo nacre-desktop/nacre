@@ -238,24 +238,7 @@ pub async fn open(
                 true,
             )
         })?;
-    let token =
-        tokio::task::spawn_blocking(crate::compositor::niri_transport::prepare_current_launch)
-            .await
-            .ok()
-            .flatten();
-    let mut command = tokio::process::Command::new("xdg-open");
-    command.arg(path);
-    if let Some(token) = token {
-        command
-            .env("XDG_ACTIVATION_TOKEN", &token)
-            .env("DESKTOP_STARTUP_ID", token);
-    }
-    let mut child = command
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .process_group(0)
-        .spawn()
+    crate::process::launch_app_detached(&["xdg-open".into(), path.to_string_lossy().into_owned()])
         .map_err(|_| {
             failure(
                 ErrorCode::Unavailable,
@@ -263,9 +246,5 @@ pub async fn open(
                 true,
             )
         })?;
-    // Reap the viewer launcher without bounding the application it starts.
-    tokio::task::spawn_local(async move {
-        let _ = child.wait().await;
-    });
     Ok(json!({"changed":false}))
 }

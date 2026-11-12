@@ -17,6 +17,9 @@ use std::{
 fn state(paths: &Paths) -> PathBuf {
     paths.state.join("shell/extras")
 }
+fn launch_note(path: &Path) -> Result<()> {
+    crate::process::launch_app_detached(&["xdg-open".into(), path.to_string_lossy().into_owned()])
+}
 fn run_command(args: &[&str], input: Option<&[u8]>) -> Result<Vec<u8>> {
     let mut command = Command::new(args.first().ok_or("Missing command")?);
     command
@@ -699,44 +702,17 @@ fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
     let item = records.get(key).ok_or("Saved chat no longer exists")?;
     if !terminal {
         let title = clean(item["title"].as_str().unwrap_or("Nacre chat"));
-        let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
-        let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
-        let mut command = Command::new("systemd-run");
-        command.args(["--user", "--scope", "--collect", "--quiet"]);
-        if let Some(token) = token {
-            command.args([
-                format!("--unit={unit}"),
-                format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
-                format!("--setenv=DESKTOP_STARTUP_ID={token}"),
-            ]);
-        }
-        command
-            .args([
-                "env",
-                "-u",
-                "LD_LIBRARY_PATH",
-                "-u",
-                "QML_IMPORT_PATH",
-                "-u",
-                "QML2_IMPORT_PATH",
-                "-u",
-                "QT_PLUGIN_PATH",
-                "-u",
-                "NACRE_LIB_DIR",
-                "kitty",
-                "--class",
-                "nacre-ai-task",
-                "--title",
-                &title,
-                "--",
-                "nacre-desktop-extras",
-                "resume-terminal",
-                key,
-            ])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()?;
+        crate::process::launch_app_detached(&[
+            "kitty".into(),
+            "--class".into(),
+            "nacre-ai-task".into(),
+            "--title".into(),
+            title,
+            "--".into(),
+            "nacre-desktop-extras".into(),
+            "resume-terminal".into(),
+            key.into(),
+        ])?;
         return Ok(());
     }
     let project = &item["project"];
@@ -1000,26 +976,17 @@ pub fn run(args: &[String]) -> Result<i32> {
                         && file.is_file() =>
                 {
                     if action == "note" {
-                        let mut command = Command::new("xdg-open");
-                        command.arg(file);
-                        crate::compositor::niri_transport::apply_launch_token(&mut command);
-                        command
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .spawn()?;
+                        launch_note(&file)?;
                     } else {
                         let token = uuid::Uuid::new_v4().simple().to_string();
                         save(
                             &directory.join("brain-focus.json"),
                             &json!({"path":file.strip_prefix(&root)?.to_string_lossy(),"token":token,"created":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64()}),
                         )?;
-                        let mut command = Command::new("nacre-shell");
-                        command.arg("brain");
-                        crate::compositor::niri_transport::apply_launch_token(&mut command);
-                        command
-                            .stdout(Stdio::null())
-                            .stderr(Stdio::null())
-                            .spawn()?;
+                        crate::process::launch_app_detached(&[
+                            "nacre-shell".into(),
+                            "brain".into(),
+                        ])?;
                     }
                     Ok(json!(true))
                 }
@@ -1098,6 +1065,49 @@ pub fn run(args: &[String]) -> Result<i32> {
 mod tests {
     use super::*;
     use std::os::unix::fs::PermissionsExt;
+
+    #[test]
+    #[allow(unsafe_code)]
+    fn note_opener_uses_a_transient_scope() -> Result<()> {
+        let _guard = crate::process::SCOPE_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let root = tempfile::tempdir()?;
+        let runner = root.path().join("systemd-run");
+        let log = root.path().join("scope-argv");
+        fs::write(
+            &runner,
+            "#!/bin/sh\nprintf '%s\\n' \"$@\" > \"$NACRE_DESKTOP_SCOPE_LOG\"\n",
+        )?;
+        fs::write(root.path().join("xdg-open"), "#!/bin/sh\nexit 0\n")?;
+        fs::set_permissions(&runner, fs::Permissions::from_mode(0o700))?;
+        fs::set_permissions(
+            root.path().join("xdg-open"),
+            fs::Permissions::from_mode(0o700),
+        )?;
+        let old_path = env::var_os("PATH");
+        env::set_var(
+            "PATH",
+            std::env::join_paths(
+                std::iter::once(root.path().to_path_buf())
+                    .chain(std::env::split_paths(&old_path.clone().unwrap_or_default())),
+            )?,
+        );
+        env::set_var("NACRE_DESKTOP_SCOPE_LOG", &log);
+        launch_note(Path::new("/tmp/nacre-test-note.md"))?;
+        let until = std::time::Instant::now() + Duration::from_secs(2);
+        while std::time::Instant::now() < until && !log.is_file() {
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        let argv = fs::read_to_string(log)?;
+        assert!(argv.lines().any(|arg| arg == "--user"));
+        assert!(argv.lines().any(|arg| arg == "--scope"));
+        if let Some(path) = old_path {
+            env::set_var("PATH", path);
+        }
+        env::remove_var("NACRE_DESKTOP_SCOPE_LOG");
+        Ok(())
+    }
 
     #[test]
     fn native_collection_shortcut_titles_are_translated() {

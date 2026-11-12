@@ -578,23 +578,34 @@ impl Host {
     /// second process that loses the race exits at once.
     fn spawn(&self, name: &str, args: &[Value], output: Option<&str>) -> Result<(), String> {
         use std::os::unix::process::CommandExt;
-        let mut command = std::process::Command::new(&self.exe);
-        command.arg("--app").arg(name);
+        let mut app = vec![self.exe.to_string_lossy().into_owned()];
+        app.extend(["--app".into(), name.into()]);
         for arg in args.iter().filter_map(Value::as_str) {
-            command.arg(arg);
+            app.push(arg.into());
         }
         if let Some(output) = output.filter(|_| name == "chat") {
-            command.arg("--output").arg(output);
+            app.extend(["--output".into(), output.into()]);
         }
-        command
-            .arg("--command-socket")
-            .arg(self.socket(name))
-            .arg("--host-socket")
-            .arg(&self.command)
-            .arg("--palette")
-            .arg(live_palette_file(&self.dir).unwrap_or_else(|| self.palette.clone()));
+        app.extend([
+            "--command-socket".into(),
+            self.socket(name).to_string_lossy().into_owned(),
+        ]);
+        app.extend([
+            "--host-socket".into(),
+            self.command.to_string_lossy().into_owned(),
+        ]);
+        app.extend([
+            "--palette".into(),
+            live_palette_file(&self.dir)
+                .unwrap_or_else(|| self.palette.clone())
+                .to_string_lossy()
+                .into_owned(),
+        ]);
         if let Some(daemon) = &self.daemon {
-            command.arg("--daemon-socket").arg(daemon);
+            app.extend([
+                "--daemon-socket".into(),
+                daemon.to_string_lossy().into_owned(),
+            ]);
         }
         // Harness only: keep an app's profile output (BEAD_APP_LOG_DIR) instead of discarding it.
         let stdout = std::env::var_os("BEAD_APP_LOG_DIR")
@@ -603,13 +614,17 @@ impl Host {
                     .ok()
             })
             .map_or_else(Stdio::null, Stdio::from);
-        let mut child = command
+        let helper = crate::prompt::helper_binary();
+        let mut child = std::process::Command::new(helper)
+            .arg("launch-app")
+            .args(app)
             .stdin(Stdio::null())
             .stdout(stdout)
+            .stderr(Stdio::null())
             .process_group(0)
             .spawn()
             .map_err(|e| format!("{name}: {e}"))?;
-        // Reap it when it exits; the closing app leaves no zombie in the shell. A panel app also
+        // Reap the scoped-launch bridge when it exits; closing the app leaves no zombie. A panel app also
         // describes its body to the frame (B0056) from its own `bead.panel state` reply, and the
         // description goes with the process.
         let socket = (name == "chat").then(|| self.socket(name));

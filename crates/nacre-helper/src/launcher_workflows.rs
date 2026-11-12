@@ -387,40 +387,7 @@ fn launch(args: &[String], cwd: Option<&Path>) -> Result<()> {
     {
         return Err("Install the selected application before using this action".into());
     }
-    let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
-    let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
-    let mut command = std::process::Command::new("systemd-run");
-    command.args(["--user", "--scope", "--collect", "--quiet"]);
-    if let Some(token) = token {
-        command.args([
-            format!("--unit={unit}"),
-            format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
-            format!("--setenv=DESKTOP_STARTUP_ID={token}"),
-        ]);
-    }
-    command.args([
-        "env",
-        "-u",
-        "LD_LIBRARY_PATH",
-        "-u",
-        "QML_IMPORT_PATH",
-        "-u",
-        "QML2_IMPORT_PATH",
-        "-u",
-        "QT_PLUGIN_PATH",
-        "-u",
-        "NACRE_LIB_DIR",
-    ]);
-    command.args(args);
-    if let Some(path) = cwd {
-        command.current_dir(path);
-    }
-    command
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()?;
-    Ok(())
+    process::launch_app_at_detached(args, cwd)
 }
 fn workspace(paths: &Paths, entry: &Value) -> Result<Value> {
     let directory = Path::new(

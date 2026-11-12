@@ -30,11 +30,13 @@ class TerminalApplicationTests(unittest.TestCase):
                 f"open({str(log)!r},'w').write(json.dumps(sys.argv[1:]))\n"
             )
             terminal.chmod(0o755)
+            scope_args = root / "scope-argv.json"
             # Launches go through a transient `systemd-run --user --scope`; the fake
             # drops its own options and runs the wrapped command (env ... kitty ...).
             runner = commands / "systemd-run"
             runner.write_text(
-                "#!/usr/bin/python3\nimport os,sys\nargs=sys.argv[1:]\n"
+                "#!/usr/bin/python3\nimport json,os,sys\nargs=sys.argv[1:]\n"
+                f"open({str(scope_args)!r},'w').write(json.dumps(args))\n"
                 "while args and args[0].startswith('--'):\n    args.pop(0)\n"
                 "os.execvp(args[0], args)\n"
             )
@@ -92,6 +94,10 @@ class TerminalApplicationTests(unittest.TestCase):
             args = json.loads(log.read_text())
             self.assertEqual(args[-2:], ["printf", "literal space; $(not run)"])
             self.assertIn(str(home), args)
+            scope_argv = json.loads(scope_args.read_text())
+            self.assertIn("--user", scope_argv)
+            self.assertIn("--scope", scope_argv)
+            self.assertIn("--collect", scope_argv)
             other = app.with_name("other.desktop")
             other.write_text("unrelated\n")
             result, value = cli("remove", ident)

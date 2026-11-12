@@ -481,10 +481,12 @@ pub fn launch_webapp(id: &str) -> Result<()> {
     } else {
         arguments.extend(["nacre-app".into(), "browser".into(), url.into()]);
     }
-    let token = crate::compositor::niri_transport::prepare_current_launch();
-    let command =
-        crate::compositor::niri_transport::uwsm_app_args(&arguments[2..], token.as_deref());
-    process::spawn_detached("uwsm", &command)?;
+    let mut command = vec!["uwsm".into()];
+    command.extend(crate::compositor::niri_transport::uwsm_app_args(
+        &arguments[2..],
+        None,
+    ));
+    process::launch_app_detached(&command)?;
     Ok(())
 }
 

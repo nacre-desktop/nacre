@@ -510,7 +510,7 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
     // does not kill the terminal.
     let mut command = vec!["kitty".to_string()];
     command.extend(args);
-    crate::brain_launch::launch_app(&command)?;
+    crate::process::launch_app(&command)?;
     Ok(
         json!({"message":tr("software.actions.opened","Review and confirm the action in the terminal")}),
     )

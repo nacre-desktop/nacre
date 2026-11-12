@@ -245,7 +245,7 @@ fn launch(paths: &Paths, id: &str) -> Result<Value> {
     }
     let args = terminal_command(row, &paths.home);
     // Own scope (and launch token), so a daemon restart does not kill the app.
-    crate::brain_launch::launch_app(&args)?;
+    crate::process::launch_app(&args)?;
     Ok(json!({"message":tr("software.tui.opened","Terminal app opened")}))
 }
 pub fn execute(paths: &Paths, action: &str, id: &str, input: Option<Value>) -> Result<Value> {

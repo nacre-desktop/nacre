@@ -56,6 +56,24 @@ fn run() -> Result<i32> {
         _ => arguments.next().ok_or("Expected a helper command")?,
     };
     let mut arguments: Vec<String> = arguments.collect();
+    if tool == "launch-app" {
+        use std::os::unix::process::ExitStatusExt;
+        let cwd = if arguments.first().is_some_and(|arg| arg == "--cwd") {
+            if arguments.len() < 4 || arguments[2] != "--" {
+                return Err("Invalid launch-app working directory".into());
+            }
+            let cwd = std::path::PathBuf::from(arguments[1].clone());
+            arguments.drain(..3);
+            Some(cwd)
+        } else {
+            None
+        };
+        let mut child = nacre_helper::process::launch_app_at(&arguments, cwd.as_deref())?;
+        let status = child.wait()?;
+        return Ok(status
+            .code()
+            .unwrap_or_else(|| -status.signal().unwrap_or(1)));
+    }
     if tool == "nacre-ai" {
         return nacre_helper::ai_dashboard::run(&arguments);
     }

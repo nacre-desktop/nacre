@@ -13,9 +13,7 @@ use std::{
     cell::RefCell,
     collections::BTreeMap,
     ffi::OsString,
-    os::unix::process::CommandExt,
     path::{Path, PathBuf},
-    process::Stdio,
 };
 
 pub const METHOD: &str = "tools.launch";
@@ -141,18 +139,16 @@ pub async fn dispatch(hub: Shared, params: Value) -> Result<Value, Failure> {
     if needs.iter().any(|other| env.find(other).is_none()) {
         return Err(missing());
     }
-    let mut child = std::process::Command::new(path);
-    child
-        .args(args)
-        .env_remove("NOTIFY_SOCKET")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .process_group(0);
-    let mut child = child.spawn().map_err(|_| {
+    let argv = std::iter::once(path.to_string_lossy().into_owned())
+        .chain(
+            args.into_iter()
+                .map(|arg| arg.to_string_lossy().into_owned()),
+        )
+        .collect::<Vec<_>>();
+    let mut child = crate::process::launch_app_quiet(&argv).map_err(|_| {
         failure(ErrorCode::Io, "The tool could not be started", true).dispatch_state(false)
     })?;
-    // The program belongs to the session now; reaping it keeps the daemon free of zombies.
+    // The program belongs to its user scope; reaping the launcher keeps the daemon free of zombies.
     let updates_wake = (request.tool == Tool::Updates)
         .then(|| hub.borrow().updates_wake.clone())
         .flatten();

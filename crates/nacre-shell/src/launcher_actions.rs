@@ -107,6 +107,29 @@ pub(crate) fn confirmed_argv(kind: &str) -> Option<Vec<String>> {
 pub(crate) fn spawn_detached(argv: &[String]) -> Result<(), String> {
     spawn(argv, None, None)
 }
+pub(crate) fn launch_app(argv: &[String]) -> Result<(), String> {
+    launch_app_at(argv, None)
+}
+pub(crate) fn launch_app_at(argv: &[String], cwd: Option<PathBuf>) -> Result<(), String> {
+    if argv.is_empty() {
+        return Err("Empty application command".into());
+    }
+    let helper = crate::prompt::helper_binary();
+    let mut command = bead::services::process::command(&helper);
+    command.arg("launch-app");
+    if let Some(cwd) = cwd {
+        command.arg("--cwd").arg(cwd).arg("--");
+    }
+    command
+        .args(argv)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    command
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("{}: {e}", argv[0]))
+}
 fn run(argv: Vec<String>) -> Act {
     Act::Run {
         argv,
@@ -607,6 +630,9 @@ fn copy(text: &str) -> Result<(), String> {
     }
 }
 fn spawn(argv: &[String], dir: Option<PathBuf>, input: Option<String>) -> Result<(), String> {
+    if input.is_none() {
+        return launch_app_at(argv, dir);
+    }
     let mut command = bead::services::process::command(&argv[0]);
     command
         .args(&argv[1..])

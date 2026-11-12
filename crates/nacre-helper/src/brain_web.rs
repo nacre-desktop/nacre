@@ -1555,7 +1555,7 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
         } else {
             let exe = env::current_exe()?;
             let exe = exe.to_str().ok_or("Invalid helper path")?;
-            brain_launch::launch_app(
+            crate::process::launch_app(
                 &[exe, "brain-control", "action", name, &value].map(str::to_owned),
             )?;
         }

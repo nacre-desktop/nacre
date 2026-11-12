@@ -20,9 +20,9 @@ fn state() -> Result<PathBuf> {
 }
 
 fn launch(argv: &[String]) -> Result<()> {
-    let (program, args) = argv.split_first().ok_or("Empty Brain launch command")?;
-    let mut child = crate::process::spawn_detached_quiet(program, args)
-        .map_err(|error| launch_error_message(program, &error))?;
+    let program = argv.first().ok_or("Empty Brain launch command")?;
+    let mut child =
+        crate::process::launch_app(argv).map_err(|error| launch_error_message(program, &error))?;
     thread::spawn(move || {
         let _ = child.wait();
     });
@@ -31,34 +31,6 @@ fn launch(argv: &[String]) -> Result<()> {
 
 fn launch_error_message(program: &str, error: &dyn std::fmt::Display) -> String {
     format!("Could not start {program}: {error}")
-}
-
-pub(crate) fn launch_app(argv: &[String]) -> Result<()> {
-    let unit = format!("nacre-app-{}.scope", uuid::Uuid::new_v4());
-    let token = crate::compositor::niri_transport::prepare_inherited_launch(Some(&unit));
-    let mut command = vec![
-        "systemd-run".into(),
-        "--user".into(),
-        "--scope".into(),
-        "--collect".into(),
-        "--quiet".into(),
-    ];
-    if let Some(token) = token {
-        command.push(format!("--unit={unit}"));
-        command.push(format!("--setenv=XDG_ACTIVATION_TOKEN={token}"));
-        command.push(format!("--setenv=DESKTOP_STARTUP_ID={token}"));
-    }
-    command.extend([
-        "env".into(),
-        "-u".into(),
-        "LD_LIBRARY_PATH".into(),
-        "-u".into(),
-        "QML_IMPORT_PATH".into(),
-        "-u".into(),
-        "QT_PLUGIN_PATH".into(),
-    ]);
-    command.extend_from_slice(argv);
-    launch(&command)
 }
 
 fn run_output(
@@ -459,7 +431,7 @@ pub fn bootstrap_existing_browser() -> Result<()> {
     if !brain_auth::browser_ready(&state, brain_web::port()?)? {
         let handoff = brain_auth::refresh_bootstrap(&state, brain_web::port()?, true)?;
         // Own scope: a daemon restart must not kill the browser (KillMode=control-group).
-        launch_app(&browser_command(&handoff, true)?)?;
+        launch(&browser_command(&handoff, true)?)?;
     }
     Ok(())
 }
@@ -564,7 +536,7 @@ fn ensure_brain(focus: bool) -> Result<()> {
             .ok()
             .and_then(|v| v.get("id").and_then(Value::as_i64));
         let open = brain_auth::refresh_bootstrap(&state, brain_web::port()?, false)?;
-        launch_app(&browser_command(&open, false)?)?;
+        launch(&browser_command(&open, false)?)?;
         launched = true;
         for _ in 0..100 {
             window = brain_window()?;
@@ -742,13 +714,13 @@ pub fn action(name: &str, value: &str) -> Result<()> {
             }
             Ok(())
         }
-        "notes" => launch_app(&[
+        "notes" => launch(&[
             "env".into(),
             "NACRE_BRAIN_VIEW=notes".into(),
             "nacre-ai".into(),
             "brain".into(),
         ]),
-        "tasks" | "new" | "resume" => launch_app(&[
+        "tasks" | "new" | "resume" => launch(&[
             home()?
                 .join(".local/bin/nacre-shell")
                 .to_string_lossy()
@@ -762,7 +734,7 @@ pub fn action(name: &str, value: &str) -> Result<()> {
                 "obsidian://open?path={}",
                 percent_encode(&path.to_string_lossy())
             );
-            launch_app(&["obsidian".into(), uri])
+            launch(&["obsidian".into(), uri])
         }
         _ => Err("Unknown Brain action".into()),
     }
