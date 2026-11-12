@@ -1,269 +1,64 @@
 # Install Nacre
 
-Use an updated Arch or CachyOS system and the signed binary repository below.
-Setup can install the selected Wayland compositor if it is missing, or prepare
-Nacre alongside an existing session. **No AUR package or source build is required.**
-The desktop shell uses Bead, with Nacre's views in Luau. Hyprland uses Lua
-configuration and UWSM manages the login session. The SDDM greeter still uses
-QtQuick. Avoid partial system upgrades.
+Nacre 0.1.0 is a preview for updated Arch Linux and CachyOS systems. Install it
+from the signed binary repository; an AUR helper or source build is not needed.
+Kitty is the only required default app. Fish, Fastfetch, Dolphin and other app
+integrations are optional extras.
 
-## Development repository
+## Install
 
-The signed repository is available from the
-[package index](https://nacre-desktop.github.io/nacre/);
-this is a development preview, with Niri still experimental.
+Open the [package index](https://nacre-desktop.github.io/nacre/) and follow its
+current bootstrap instructions. The installer configures a separate signed
+repository and installs Nacre and its Orient dependency. Save and review the
+installer before running it. Run it as your ordinary user; it requests sudo for
+the repository setup and package transaction, then starts `nacre setup` as you.
 
-The installer URL stays the same as updates are released. It installs the latest
-verified snapshot shown in the package index, so there is no version number to
-substitute in the commands. Configure the repository once; existing users can
-go straight to [Updates](#updates).
+Setup offers three compositor choices:
 
-The installer configures a separate, signed pacman repository and installs core
-Nacre, including its independently released Orient dependency. Save and review
-it first:
+1. **nacre-niri** — recommended; Nacre's Niri fork with all shell features.
+2. **Stock niri** — the core shell, with fork-only features hidden or reduced.
+3. **Hyprland** — the core shell, with fork-only features hidden or reduced.
 
-```sh
-sudo pacman -Syu --needed curl gnupg
-curl --fail --location https://nacre-desktop.github.io/nacre/install-arch.sh -o /tmp/nacre-install-arch.sh
-less /tmp/nacre-install-arch.sh
-bash /tmp/nacre-install-arch.sh --plan
-bash /tmp/nacre-install-arch.sh
-```
+You can prepare more than one session. The setup wizard asks which sessions to
+use and whether to enable the optional AI and Brain extras. It keeps an existing
+profile and prepares the next login; it does not restart your current desktop.
+Log out and choose the Nacre session at the login screen. See the
+[compositor compatibility table](compatibility.md) before choosing a tier.
 
-Run as your ordinary desktop user. The script requests sudo for the public key,
-repository configuration and pacman transaction, then starts `nacre setup` as
-that user. It verifies signing fingerprint
-`886CBE272BA30B44DBB55F66714CFAAC876C349E`; package **and database** signatures
-are required. It backs up pacman.conf before adding its dedicated include. It
-does not replace Arch/CachyOS repositories or their package signatures.
-
-The wizard asks only which compositor(s) to use and whether to enable AI tools
-(Nacre AI and Brain). Enter `niri,hyprland` to prepare both, with the first as
-primary. It inherits the system keyboard, keeps an existing profile, and seeds
-a bundled wallpaper, useful launcher favorites and a window border width of 3.
-Niri scales that logical width for each display; saved border widths remain
-intact. Keyboard and profile
-overrides remain available through command-line options and Settings.
-
-Missing dependencies are installed through pacman. Routine provider defaults
-follow the configured repository priority. Pacman's transaction approval remains
-interactive. You need a
-working network and a normal local user login. If there is no display manager,
-log out of any existing graphical session and start the prepared login from a
-TTY with `nacre session niri` or `nacre session hyprland`. An existing login
-manager can use the packaged Nacre session entries.
-
-## Arch packages and setup
-
-Install the separate Orient engine and Nacre core archives from the same tested
-release. In the directory containing the archives:
-
-```sh
-sudo pacman -U orient-*.pkg.tar.zst nacre-0*.pkg.tar.zst nacre-session-niri-*.pkg.tar.zst
-# Optional, if you want both apps:
-sudo pacman -U nacre-ai-*.pkg.tar.zst nacre-brain-*.pkg.tar.zst
-nacre setup
-```
-
-Pacman installs shared code and resolves repository dependencies. Run setup as
-your ordinary user, without sudo. Binary installation needs no compiler, npm or
-Python package downloads. The wizard inherits the keyboard layout, asks for
-compositor(s), optional AI tools and optional modules, then asks before applying.
-`nacre setup --plan` shows the complete private file plan, each path with its
-module. A custom profile is a
-validated JSON file; see
-[configuration](configuration.md).
-
-For an explicit preview or unattended application:
-
-```sh
-nacre setup --non-interactive --profile default --compositor hyprland --layout us --plan
-nacre setup --non-interactive --profile default --compositor hyprland --layout us --yes
-```
-
-`--plan` writes no configuration and never installs packages. `--yes` applies
-the file plan. Interactive setup offers the missing packages through pacman;
-non-interactive setup requires `--install-deps` to do that. The package transaction
-uses a full system upgrade and retains pacman's normal confirmation prompt.
-Configure the Nacre package repository before asking setup to install Nacre
-session or optional packages; they are not in Arch's official repositories. Without a layout, setup uses
-system XKB settings, falling back to US. Existing private keyboard overrides are
-preserved. Omitting `--profile` retains an installed profile; `--profile default`
-selects the public default with five workspaces and no startup apps or app routes.
-Optional app installation never signs in, downloads models or creates notes.
-
-Local edits and foreign runtime links stop deployment before cutover. A failed
-apply restores its snapshot. Package setup prepares the next login; it does not
-restart your running desktop or certify it as tested. Save work, log out and
-select **Nacre (Hyprland)** or **Nacre (niri)** for the prepared compositor. Open
-Welcome with `nacre-welcome`, the launcher with Super+Space and Settings with
-Super+I. Check keyboard, displays, audio, network and lock/unlock.
-
-## Modules: what setup touches
-
-By default setup writes only Nacre's own files: `~/.config/nacre`,
-`~/.local/state/nacre`, `~/.local/share/nacre`, the `nacre-*` commands, desktop
-entries and user units (module `core`) and the login session wiring (module
-`session`). Everything that changes another app is an optional module, off on a
-new install:
-
-| Module | Files |
-| --- | --- |
-| `hypr-config` | `~/.config/hypr`, `~/.config/uwsm` (always on for the Hyprland session) |
-| `theming-kitty`, `theming-fish`, `theming-gtk`, `theming-rofi`, `theming-fastfetch` | that app's `~/.config` directory |
-| `xdg-open` | `~/.local/bin/xdg-open`, which routes links and files through Nacre |
-| `dolphin-override` | Dolphin's desktop entry and the FileManager1 D-Bus service |
-| `wallpapers` | demo wallpapers in `~/Pictures/Wallpapers` |
-
-`ai` and `brain` are profile components: `nacre module enable ai` switches the
-profile and redeploys, like `nacre setup --with ai`. Updating an existing
-installation keeps the modules it already uses.
-
-```sh
-nacre module list
-nacre module enable theming-kitty --plan   # show the files, change nothing
-nacre module enable theming-kitty
-nacre module disable theming-kitty
-nacre setup --module xdg-open              # enable a module during setup
-nacre status --files                       # every path Nacre owns, with its module
-```
-
-Enabling a module may replace a file you already have, such as
-`~/.config/kitty/kitty.conf`; the plan says so and Nacre keeps the original.
-Disabling the module removes its files and puts your original back. A file you
-edited after enabling stays, with your original beside it as `*.pre-nacre`.
-
-## Uninstall
-
-```sh
-nacre uninstall --plan          # list what would be removed, restored and kept
-nacre uninstall                 # asks before changing anything
-nacre uninstall --purge         # also remove Nacre's settings and state
-sudo pacman -R nacre            # then remove the packages
-```
-
-Uninstall removes exactly the files Nacre's manifest records as written by
-setup and still unchanged, restores any file it replaced, removes its runtime
-links and drops what setup regenerates (its install receipts and
-`~/.cache/nacre`). It keeps everything you authored or changed: files in
-`~/.config/nacre` and `~/.local/state/nacre` that setup did not write (such as
-`niri/custom.kdl`, the widget layout, plugins, settings and recovery snapshots)
-and managed files you edited. The plan lists each kept file.
-
-`--purge` also removes `~/.config/nacre`, `~/.local/state/nacre` and
-`~/.cache/nacre`; the plan lists every file. Chats, AI and Brain data in
-`~/.local/share/nacre` stay unless you add `--purge-data`. Brain notes and your
-own wallpapers are never touched. Run `systemctl --user daemon-reload`
-afterwards.
-
-## Choosing a compositor
-
-The packaged setup recommends **nacre-niri** (Nacre's Niri fork), with stock
-**niri 26.04** and **Hyprland** also available. It defaults to the current
-desktop when supported; you can choose explicitly:
-
-```sh
-nacre setup --compositor nacre-niri
-nacre setup --compositor niri
-# Prepare the fork and Hyprland logins:
-nacre setup --compositor nacre-niri --also-compositor hyprland
-```
-
-The wizard lists nacre-niri first as the recommended choice. Existing saved
-choices of `niri` or `hyprland` remain valid. The fork can be installed beside
-stock Niri; selecting both Niri sessions keeps both login entries available.
-Each session package depends on its compositor and portal backend. Orient remains
-a separately installed engine package required by Nacre.
-
-Niri setup creates a separate configuration under `~/.config/nacre/niri` and the
-package supplies a **Nacre (niri)** entry at the login screen. It preserves the
-existing `~/.config/niri` configuration, so a plain Niri/Noctalia session remains
-available. No prior Nacre/Hyprland installation, source checkout or compiler is
-required. Read [TTY recovery](recovery.md#recover-from-a-tty), save work, log out
-and select **Nacre (niri)**. UWSM owns this session; do not start a second Niri
-service alongside it.
-
-The wizard validates the new Niri configuration before applying it and keeps a
-rollback snapshot. It does not restart the current desktop. Nacre services start
-only in the selected Nacre Niri session. Put private Niri overrides in
-`~/.config/nacre/niri/custom.kdl`; repeat setup preserves that file, the keyboard
-choice and existing palette/display settings. It leaves common Fish, Kitty,
-Fastfetch and UWSM configuration alone when preparing Niri.
-
-Niri remains experimental: installation preparation is not a complete hardware
-acceptance test. Check first login, launcher, keyboard, displays, audio, network,
-manual lock/password unlock and logout. Explicit lock requests are handled by a
-session-owned Hypridle service; automatic idle/suspend locking is not enabled by
-this preparation. Validate manual unlock before adding that policy. Keep the
-plain Niri session available.
+The first setup also offers the optional app integrations. You can add them
+later. AI and Brain are optional too; enabling either does not sign in, download
+models or create notes.
 
 ## Updates
 
-With the development repository configured, normal system updates include Nacre
-and its dependencies:
+Run:
 
 ```sh
 nacre update
-pacman -Q nacre
 ```
 
-`nacre update` and the Updates item in the bar run the same full-system updater.
-After packages update, both show the private setup plan and ask before applying
-changes. There is no need to download the installer again.
+This runs the normal system update, including packages and configured AUR or
+Flatpak updates. AUR recipe review is enabled by default. After package changes,
+Nacre shows the private setup plan and asks before applying it. The bar's Updates
+item uses the same updater. Review the package summary and log in again if the
+compositor or shell needs a restart.
 
-The update pipeline promotes source only after Source CI, clean stock-Arch
-builds and all three installed-runtime setup checks pass. Development archives
-have increasing snapshot versions. A failed commit leaves the last passing cut
-available; older package files are retained across repository refreshes. Orient
-is fetched from its independent signed release and checked against Nacre's
-engine lock, rather than rebuilt under the same package version.
+## Uninstall
 
-Program files belong to pacman; private settings belong to the user. Setup
-reviews per-user changes, preserves seeded preferences and refuses conflicting
-local edits. `nacre status` shows the current setup; `nacre rollback` restores the
-previous private-file snapshot and refuses to overwrite later edits. It cannot
-undo a pacman upgrade: retain matching prior archives for a package downgrade.
-See [recovery and troubleshooting](recovery.md).
-
-AUR publication is optional and separate. The binary repository needs no AUR
-helper, source compiler or npm on the
-user's machine. Stable release promotion remains separate from this experimental
-development channel; a passing headless build does not certify hardware login,
-locking or screen sharing.
-
-## Source installation
-
-Source check commands are in the [development checks guide](development/ci.md). Clone
-the repository and initialize its pinned Orient dependency:
+Review the removal plan, then purge Nacre's private settings and state if you
+want a clean removal. Remove Nacre's installed packages afterward:
 
 ```sh
-git clone --recurse-submodules https://github.com/nacre-desktop/nacre.git
-cd nacre
-npm ci --ignore-scripts
-python3 nacre/shell-tools/provision.py
-cargo build --locked --release -j2 -p nacre-shell --bins
-./install.sh --profile default
-./install.sh --profile default --prepare /tmp/nacre-preview
+nacre uninstall --plan
+nacre uninstall --purge
 ```
 
-The first install command prints a plan. `--prepare` stages an empty destination
-without changing the running desktop. From a supported Hyprland session, apply a
-committed, checked candidate with `./install.sh --profile default --apply`.
-For optional apps, add `--with ai` and/or `--with brain`. Source deployment uses
-live health checks and rollback; package setup only prepares files for next login.
+The plan lists files that will be removed, restored and kept. Purge removes
+Nacre's settings, state and cache. It does not remove your AI chats or Brain
+data. Remove any other installed Nacre packages through pacman if you want all
+session components removed. Remove the selected session and extras packages
+alongside the core package. Repository configuration and its trust key can also
+be removed separately.
 
-Source `install.py --code-only` updates migrate an older shell selection to
-Bead and replace the old failure fallback with recovery to a previous healthy
-Bead build. They retain the previous build until the candidate passes health
-checks. Package setup stages a matched executable and Luau tree for the next
-login without restarting the current session. See [shell recovery](recovery.md).
-
-## Shell migration
-
-Nacre ships the Bead shell. Source updates with `install.py --code-only` activate
-a checked Bead copy and replace the old failure action with recovery to a
-previous healthy Bead. Only after successful activation do they archive the old
-shell source and recognized legacy launch scripts. Shared runtime tools remain
-under `~/.local/share/nacre/shell/tools`; the SDDM greeter remains QtQuick.
-Offline package setup prepares Bead and its recovery units for the next login.
-See [recovery](recovery.md) for rollback and journal commands.
+See [recovery and troubleshooting](recovery.md) if setup or removal reports a
+problem.
