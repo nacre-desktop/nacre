@@ -1,6 +1,7 @@
 # N0169 — idle shell memory
 
-Status: implemented; final dev-1 batch running. Laptop acceptance is held
+Status: implemented; ten-minute comparison deferred to the desktop TEST host.
+Laptop acceptance is held
 by the coordinator; performance follow-ups belong to Platform.
 
 The real `shell/` and a private daemon run under headless labwc/pixman with
@@ -39,7 +40,9 @@ software decoding costs roughly 80–90 MiB in a separate helper, not the main P
 Valid short diagnostics, **not ten-minute acceptance**, use common Nacre
 `c5184888`, Bead `7ea19860` → `8a34629e`; the pushed `ed03c8ee` preserves both
 framework patches exactly after a trivial CI/dead-code-annotation rebase.
-The current main also includes later launcher/product changes outside this unit.
+The final exact-revision diagnostics use candidate `c23bb121`/`ed03c8ee`
+(binary SHA-256 `853b63c9…`); controls use the same production base and helpers.
+Published main also includes later launcher/product changes outside this unit.
 
 | Main process, MiB | Anon before → after | SHM before → after | File before → after | PSS before → after |
 | --- | ---: | ---: | ---: | ---: |
@@ -47,6 +50,8 @@ The current main also includes later launcher/product changes outside this unit.
 | Static, picker reopen closed | 112.7 → 64.1 | 20.7 → 20.7 | 78.1 → 78.7 | 211.5 → 163.4 |
 | Video, ready | 37.6 → 37.9 | 20.7 → 20.7 | 23.2 → 23.0 | 81.5 → 81.5 |
 | Video, 30 s after interactions | 114.9 → 69.9 | 20.7 → 20.7 | 78.7 → 78.5 | 214.3 → 169.0 |
+| Final static, picker closed | 131.3 → 65.2 | 20.7 → 20.7 | 79.2 → 79.7 | 231.2 → 165.5 |
+| Final video, 30 s after interactions | 112.9 → 59.6 | 20.7 → 20.7 | 79.3 → 78.4 | 212.9 → 158.7 |
 
 First-hover control/candidate is 7.36/12.07 ms (+4.71 ms); reopen is
 7.68/11.42 ms (+3.74 ms). Steady inside-hover medians stay near 2 ms; picker
@@ -54,16 +59,23 @@ body pixels match. The coordinator accepted this trade-off on 2026-11-12.
 **Follow-up:** verify live journal markers after deploy: 120 Hz target, gaps
 ≤12 ms. Headless timings do not certify physical presentation smoothness.
 
-The final batch targets five alternating pairs per wallpaper mode, with 600 s
-idle before and after dashboard, launcher and picker interactions. It samples
-checkpoints rather than sixty-second windows. Current final-batch result: pending.
+The single final batch completed two short memory A/B pairs with full monitor
+coverage and matching pixels. Its control hover trace lacked four first-open
+timings (16/20), so the automatic 600-second campaign did not start. Per the
+coordinator decision, measurement stopped: no ten-minute samples or five-pair
+medians are claimed. The desktop TEST host must repeat the 600-second before/after
+dashboard, launcher and picker sequence; the absolute laptop gate stays owner-held.
+Final retained CPU raster charges fell from 54,820,478 to 85,542 bytes; prepared
+frame metadata fell from 94,636 to 18,338 bytes in the static pair. SHM mapping
+counts stayed 18/18 static and 20/20 video. Allocator variance makes the short
+PSS deltas supporting evidence rather than a steady-state acceptance result.
 
 | Ten-minute checkpoint | Before | After |
 | --- | --- | --- |
-| Static, initial idle | Pending | Pending |
-| Static, after interactions | Pending | Pending |
-| Video, initial idle | Pending | Pending |
-| Video, after interactions | Pending | Pending |
+| Static, initial idle | Deferred | Deferred |
+| Static, after interactions | Deferred | Deferred |
+| Video, initial idle | Deferred | Deferred |
+| Video, after interactions | Deferred | Deferred |
 
 ## Guards and validation
 
@@ -76,18 +88,19 @@ init-managed containers use six CPUs, 12 GiB and 2,048 PIDs, under the remote
 slot runner. The monitor reads host `/proc` once per second without periodic
 Docker daemon calls. No swap reset, cache drop or kernel setting was used.
 
-| Valid short arm | Measured SwapPss, KiB | Global swap-in, bytes |
-| --- | ---: | ---: |
-| Static control | 0 | 77,824 |
-| Static candidate | 0 | 8,192 |
-| Video control | 0 | 53,248 |
-| Video candidate | 0 | 90,112 |
+| Final short arm | Measured SwapPss, KiB | Global swap-in, bytes | Minimum available RAM, KiB |
+| --- | ---: | ---: | ---: |
+| Static control | 0 | 4,096 | 111,784,328 |
+| Static candidate | 0 | 0 | 112,875,396 |
+| Video control | 0 | 16,384 | 108,174,584 |
+| Video candidate | 0 | 0 | 114,479,784 |
 
-Short-arm minimum available RAM was 105,998,432 KiB; UI_ERROR=0, failed routes=0,
-static pixels matched and both video outputs produced frames. Final-batch guard
-values: pending. Earlier strict-1-MiB failures and missing-monitor captures are
-excluded; they are not final medians. Generated JPEG/video entropy is a fixture
-choice, not a guarantee that every photograph compresses equally.
+Earlier accepted short static control/candidate swap-in was 77,824/8,192 bytes;
+video was 53,248/90,112 bytes; all measured SwapPss values were zero and minimum
+available RAM was 105,998,432 KiB. Both final pairs had UI_ERROR=0, failed routes=0,
+matching pixels and video frames. Earlier strict-1-MiB failures and missing-monitor
+captures are excluded. Generated JPEG/video entropy is a fixture choice, not a
+guarantee that every photograph compresses equally.
 
 Hosted Bead CI run `43158252740` passed on `ed03c8ee`; the complete Ubuntu
 workflow and strict renderer feature checks are green. Full Nacre
