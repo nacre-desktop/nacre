@@ -97,7 +97,9 @@ class UpdateFailureTests(unittest.TestCase):
 
 
 class UpdateSetupFlowTests(unittest.TestCase):
-    def run_script(self, decline_setup=False, fail_packages=False, nacre_installed=True):
+    def run_script(
+        self, decline_setup=False, fail_packages=False, nacre_installed=True
+    ):
         temporary = tempfile.TemporaryDirectory(prefix="nacre-update-flow-")
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
@@ -114,25 +116,22 @@ class UpdateSetupFlowTests(unittest.TestCase):
                 f'if [[ "{int(decline_setup)}" == 1 && "$*" == *"Apply these setup changes?"* ]]; then exit 1; fi\n'
                 "exit 0"
             ),
-            "paru": (
-                f'echo "paru:$*" >> "{log}"\n'
-                f'exit {7 if fail_packages else 0}'
-            ),
+            "paru": (f'echo "paru:$*" >> "{log}"\nexit {7 if fail_packages else 0}'),
             "pacman": (
                 f'echo "pacman:$*" >> "{log}"\n'
                 'if [[ "$1" == -Qq ]]; then\n'
                 '  if [[ "${2:-}" == nacre ]]; then\n'
                 '    [[ "${NO_NACRE:-}" != 1 ]] || exit 1\n'
-                '    echo nacre; exit 0\n'
-                '  fi\n'
+                "    echo nacre; exit 0\n"
+                "  fi\n"
                 '  [[ "${NO_NACRE:-}" == 1 ]] || printf "nacre\\n"\n'
                 '  printf "niri\\norient\\n"; exit 0\n'
-                'fi\n'
+                "fi\n"
                 f'count=$(cat "{counter}" 2>/dev/null || echo 0); count=$((count + 1)); echo "$count" > "{counter}"\n'
                 'for package in "${@:2}"; do\n'
                 '  if [[ "$package" == nacre && "${NO_NACRE:-}" == 1 ]]; then continue; fi\n'
                 '  if [[ "$count" == 1 ]]; then printf "%s 1\\n" "$package"; else printf "%s 2\\n" "$package"; fi\n'
-                'done'
+                "done"
             ),
             "nacre": (
                 f'echo "nacre:$*" >> "{log}"\n'
@@ -178,7 +177,9 @@ class UpdateSetupFlowTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = log.read_text().splitlines()
         plan = calls.index("nacre:setup --plan")
-        prompt = next(i for i, line in enumerate(calls) if "Apply these setup changes?" in line)
+        prompt = next(
+            i for i, line in enumerate(calls) if "Apply these setup changes?" in line
+        )
         apply = calls.index("nacre:setup")
         self.assertLess(plan, prompt)
         self.assertLess(prompt, apply)
@@ -188,7 +189,9 @@ class UpdateSetupFlowTests(unittest.TestCase):
             "Changed packages:\nnacre 1 -> 2\nniri 1 -> 2\norient 1 -> 2",
             result.stdout,
         )
-        self.assertIn("Log out and back in to use the updated compositor.", result.stdout)
+        self.assertIn(
+            "Log out and back in to use the updated compositor.", result.stdout
+        )
 
     def test_declined_setup_plan_does_not_apply(self):
         result, log = self.run_script(decline_setup=True)
@@ -201,7 +204,9 @@ class UpdateSetupFlowTests(unittest.TestCase):
     def test_package_failure_skips_setup(self):
         result, log = self.run_script(fail_packages=True)
         self.assertEqual(result.returncode, 7)
-        self.assertFalse(any(line.startswith("nacre:") for line in log.read_text().splitlines()))
+        self.assertFalse(
+            any(line.startswith("nacre:") for line in log.read_text().splitlines())
+        )
 
     def test_unmanaged_nacre_skips_setup_review(self):
         result, log = self.run_script(nacre_installed=False)
