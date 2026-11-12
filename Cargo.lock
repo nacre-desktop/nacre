@@ -371,7 +371,7 @@ dependencies = [
  "bead-core",
  "bead-kit",
  "bead-render",
- "bead-services 0.1.0 (git+https://github.com/nacre-desktop/bead?rev=ed5d1b8fc814b5f0a2dda23dac4dda3ff4c62849)",
+ "bead-services",
  "bead-ui",
  "bead-wayland",
  "bead-widgets",
@@ -424,22 +424,6 @@ dependencies = [
  "tiny-skia",
  "vello",
  "wgpu",
-]
-
-[[package]]
-name = "bead-services"
-version = "0.1.0"
-source = "git+https://github.com/nacre-desktop/bead?rev=ed03c8ee22e506a9e634e919b0b2da6ae30c054c#ed03c8ee22e506a9e634e919b0b2da6ae30c054c"
-dependencies = [
- "futures-util",
- "libc",
- "notify",
- "pipewire",
- "serde",
- "serde_json",
- "system-tray",
- "tokio",
- "zbus",
 ]
 
 [[package]]
@@ -511,7 +495,7 @@ dependencies = [
  "bead-backends",
  "bead-core",
  "bead-render",
- "bead-services 0.1.0 (git+https://github.com/nacre-desktop/bead?rev=ed5d1b8fc814b5f0a2dda23dac4dda3ff4c62849)",
+ "bead-services",
  "calloop",
  "image",
  "libc",
@@ -2507,7 +2491,7 @@ version = "0.1.0-dev.2"
 dependencies = [
  "async-io",
  "base64 0.23.1",
- "bead-services 0.1.0 (git+https://github.com/nacre-desktop/bead?rev=ed03c8ee22e506a9e634e919b0b2da6ae30c054c)",
+ "bead-services",
  "chrono",
  "chrono-tz",
  "clap",
