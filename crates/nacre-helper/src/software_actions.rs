@@ -506,17 +506,11 @@ pub fn open(paths: &Paths, id: &str) -> Result<Value> {
         id.into(),
     ];
     let _ = paths;
-    if let Some(token) = crate::compositor::niri_transport::prepare_current_launch() {
-        let mut command = vec![
-            format!("XDG_ACTIVATION_TOKEN={token}"),
-            format!("DESKTOP_STARTUP_ID={token}"),
-            "kitty".into(),
-        ];
-        command.extend(args);
-        process::spawn_detached_quiet("env", &command)?;
-    } else {
-        process::spawn_detached_quiet("kitty", &args)?;
-    }
+    // Own scope (and launch token) via the shared launcher, so a daemon restart
+    // does not kill the terminal.
+    let mut command = vec!["kitty".to_string()];
+    command.extend(args);
+    crate::brain_launch::launch_app(&command)?;
     Ok(
         json!({"message":tr("software.actions.opened","Review and confirm the action in the terminal")}),
     )

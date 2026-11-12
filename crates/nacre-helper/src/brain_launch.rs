@@ -458,7 +458,8 @@ pub fn bootstrap_existing_browser() -> Result<()> {
     let state = state()?;
     if !brain_auth::browser_ready(&state, brain_web::port()?)? {
         let handoff = brain_auth::refresh_bootstrap(&state, brain_web::port()?, true)?;
-        launch(&browser_command(&handoff, true)?)?;
+        // Own scope: a daemon restart must not kill the browser (KillMode=control-group).
+        launch_app(&browser_command(&handoff, true)?)?;
     }
     Ok(())
 }
@@ -563,7 +564,7 @@ fn ensure_brain(focus: bool) -> Result<()> {
             .ok()
             .and_then(|v| v.get("id").and_then(Value::as_i64));
         let open = brain_auth::refresh_bootstrap(&state, brain_web::port()?, false)?;
-        launch(&browser_command(&open, false)?)?;
+        launch_app(&browser_command(&open, false)?)?;
         launched = true;
         for _ in 0..100 {
             window = brain_window()?;

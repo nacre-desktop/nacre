@@ -1,5 +1,5 @@
 //! Owned terminal app entries, literal argv and the shared versioned state boundary.
-use crate::{files, i18n::tr, menu_registry, paths::Paths, process, state, Result};
+use crate::{files, i18n::tr, menu_registry, paths::Paths, state, Result};
 use serde_json::{json, Value};
 use std::{
     collections::HashSet,
@@ -244,16 +244,8 @@ fn launch(paths: &Paths, id: &str) -> Result<Value> {
         return Err("Install the selected terminal and command first".into());
     }
     let args = terminal_command(row, &paths.home);
-    if let Some(token) = crate::compositor::niri_transport::prepare_current_launch() {
-        let mut command = vec![
-            format!("XDG_ACTIVATION_TOKEN={token}"),
-            format!("DESKTOP_STARTUP_ID={token}"),
-        ];
-        command.extend(args);
-        process::spawn_detached_quiet("env", &command)?;
-    } else {
-        process::spawn_detached_quiet(&args[0], &args[1..])?;
-    }
+    // Own scope (and launch token), so a daemon restart does not kill the app.
+    crate::brain_launch::launch_app(&args)?;
     Ok(json!({"message":tr("software.tui.opened","Terminal app opened")}))
 }
 pub fn execute(paths: &Paths, action: &str, id: &str, input: Option<Value>) -> Result<Value> {
