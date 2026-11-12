@@ -1,13 +1,18 @@
 """Settings activation shares one shell and never shells out page arguments."""
 
+import json
 import importlib.machinery
 import importlib.util
 from pathlib import Path
 import subprocess
+import sys
+import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "tools"))
+import ui_shell_switch
 loader = importlib.machinery.SourceFileLoader(
     "settings_launcher", str(ROOT / "bin/nacre-settings")
 )
@@ -49,11 +54,70 @@ class SettingsLauncherTests(unittest.TestCase):
         entry = (ROOT / "nacre/desktop/nacre-settings.desktop").read_text()
         self.assertIn("Exec=nacre-settings\n", entry)
         self.assertIn("Terminal=false", entry)
-        registry = settings.navigation()
+        def no_launcher(_home):
+            return None
+
+        registry = settings.navigation(home=ROOT, launcher_resolver=no_launcher)
         for page in [row["id"] for row in registry["pages"]] + list(
             registry["aliases"]
         ):
-            self.assertTrue(settings.valid_route(page))
-        self.assertTrue(settings.valid_route("panels/dashboard#pages"))
+            self.assertTrue(
+                settings.valid_route(page, home=ROOT, launcher_resolver=no_launcher)
+            )
+        self.assertTrue(
+            settings.valid_route(
+                "panels/dashboard#pages", home=ROOT, launcher_resolver=no_launcher
+            )
+        )
         for route in ["../desktop", "missing", "colors;bad", "panels#x$(id)"]:
-            self.assertFalse(settings.valid_route(route))
+            self.assertFalse(
+                settings.valid_route(route, home=ROOT, launcher_resolver=no_launcher)
+            )
+
+    def test_source_install_uses_active_snapshot_in_temporary_home(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            home = Path(temporary)
+            builds = home / ".local/share/nacre/bead"
+            active = builds / "aaa-active" / "launch"
+            newer = builds / "zzz-newer" / "launch"
+            active.parent.mkdir(parents=True)
+            newer.parent.mkdir(parents=True)
+            active.touch()
+            newer.touch()
+
+            for launcher, page in (
+                (active, "source-active"), (newer, "source-newer")
+            ):
+                registry = launcher.parent / "shell/settings/registry/navigation.json"
+                registry.parent.mkdir(parents=True)
+                registry.write_text(
+                    json.dumps({"pages": [{"id": page}], "aliases": {}})
+                )
+
+            env = {
+                "XDG_CONFIG_HOME": str(home / ".config"),
+                "XDG_STATE_HOME": str(home / ".local/state"),
+            }
+            exec_start = (
+                f"{{ path={active}; argv[]={active} start ; ignore_errors=no ; }}"
+            )
+            with (
+                patch.object(ui_shell_switch.UiShell, "loaded", return_value=True),
+                patch.object(
+                    ui_shell_switch.UiShell,
+                    "props",
+                    return_value={"ExecStart": exec_start},
+                ),
+            ):
+                def resolve(selected_home):
+                    return settings.active_launcher(selected_home, environ=env)
+                self.assertTrue(
+                    settings.valid_route(
+                        "source-active", home=home, launcher_resolver=resolve
+                    )
+                )
+                self.assertFalse(
+                    settings.valid_route(
+                        "source-newer", home=home, launcher_resolver=resolve
+                    )
+                )

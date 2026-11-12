@@ -3,6 +3,7 @@
 
 import argparse
 import importlib
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -10,13 +11,48 @@ import time
 import re
 
 
-# The portable navigation registry is the route authority in source and installs.
-def navigation():
-    candidates = [
-        Path(__file__).resolve().parents[1]
-        / "shell/settings/registry/navigation.json",
-        Path("/usr/lib/nacre/ui-shell/shell/settings/registry/navigation.json"),
-    ]
+# The active launcher selects the source-installed Bead snapshot; package and
+# checkout paths remain fallbacks when no managed Bead shell is active.
+def active_launcher(home=None, *, environ=None):
+    tools = next(
+        (
+            parent / "tools"
+            for parent in Path(__file__).resolve().parents
+            if (parent / "tools/ui_shell_switch.py").is_file()
+        ),
+        None,
+    )
+    if tools is None:
+        return None
+    if str(tools) not in sys.path:
+        sys.path.insert(0, str(tools))
+    import ui_shell_switch
+
+    home = Path(home or Path.home())
+    state_home = Path(
+        (environ or os.environ).get("XDG_STATE_HOME", home / ".local/state")
+    )
+    return ui_shell_switch.UiShell(home, state_home / "nacre", environ=environ).active_launcher()
+
+
+def navigation(home=None, *, launcher_resolver=active_launcher):
+    candidates = []
+    try:
+        launcher = launcher_resolver(home)
+        if launcher:
+            candidates.append(
+                Path(launcher).resolve().parent
+                / "shell/settings/registry/navigation.json"
+            )
+    except (OSError, RuntimeError, subprocess.SubprocessError):
+        pass
+    candidates.extend(
+        [
+            Path(__file__).resolve().parents[1]
+            / "shell/settings/registry/navigation.json",
+            Path("/usr/lib/nacre/ui-shell/shell/settings/registry/navigation.json"),
+        ]
+    )
     for path in candidates:
         if path.is_file():
             import json
@@ -25,19 +61,18 @@ def navigation():
     raise RuntimeError("The Settings registry is not installed")
 
 
-def valid_route(route):
+def valid_route(route, home=None, *, launcher_resolver=active_launcher):
     if not route:
         return True
     if len(route) > 256 or not re.fullmatch(
         r"[a-z0-9/-]+(?:#[a-zA-Z0-9._/-]+)?", route
     ):
         return False
-    registry = navigation()
+    registry = navigation(home, launcher_resolver=launcher_resolver)
     page = route.split("#", 1)[0]
     return page in registry.get("aliases", {}) or any(
         row["id"] == page for row in registry["pages"]
     )
-
 
 def compositor():
     for directory in (
