@@ -2,7 +2,7 @@
 //! reference. The values are the ones QML's `NacreSettingsCapabilities` computed, taken from what
 //! the daemon already publishes (`compositor`, `settings.store.desktop`, `settings.store.profile`)
 //! plus three probes made once per daemon start: input devices, `powerprofilesctl` and `pacman`.
-//! A flag the registry names but QML never defined (`batterySaver`, `cursorShake`) is absent, which
+//! A flag the registry names but QML never defined (`batterySaver`) is absent, which
 //! consumers evaluate as false, exactly as QML did.
 //!
 //! N0051 adds `bluetooth` (the `bluetooth` topic lists an adapter) and `battery` (a laptop battery
@@ -158,6 +158,7 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
             matches!(backend, "hyprland" | "niri"),
         ),
         ("input.touchpadSpeed".into(), niri),
+        ("cursorShake".into(), capability("cursorShake")),
     ]);
     if capability("workspaceCollections") {
         flags.insert("workspaceCollections".into(), true);

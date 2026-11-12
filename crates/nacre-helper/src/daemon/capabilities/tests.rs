@@ -134,6 +134,7 @@ fn flags_follow_the_compositor_and_the_stores() {
         .unwrap();
     let niri = flags(&probe, &hub.borrow());
     assert!(!niri.contains_key("workspaceCollections"));
+    assert!(!niri["cursorShake"]);
     assert!(niri["niriWorkspaces"] && niri["niriFixedWorkspaces"] && niri["input.touchpadSpeed"]);
     assert!(niri["input.controls"] && niri["ai"] && !niri["brain"]);
     assert!(niri["desktop.gapsIn"] && niri["desktop.blur"] && !niri["desktop.shadow"]);
@@ -141,8 +142,10 @@ fn flags_follow_the_compositor_and_the_stores() {
 
     let mut fork_niri = compositor("niri", json!(["gapsIn", "blur"]));
     fork_niri["capabilities"]["workspaceCollections"] = json!(true);
+    fork_niri["capabilities"]["cursorShake"] = json!(true);
     hub.borrow_mut().publish("compositor", fork_niri).unwrap();
-    assert!(flags(&probe, &hub.borrow())["workspaceCollections"]);
+    let fork_flags = flags(&probe, &hub.borrow());
+    assert!(fork_flags["workspaceCollections"] && fork_flags["cursorShake"]);
 
     hub.borrow_mut()
         .publish("compositor", compositor("hyprland", json!(["shadow"])))
@@ -158,6 +161,7 @@ fn flags_follow_the_compositor_and_the_stores() {
         !hypr["niriWorkspaces"] && !hypr["niriFixedWorkspaces"] && !hypr["input.touchpadSpeed"]
     );
     assert!(hypr["input.controls"] && hypr["windowCapture"] && hypr["panelDragging"]);
+    assert!(!hypr["cursorShake"]);
     assert!(hypr["desktop.shadow"] && !hypr["desktop.gapsIn"]);
     // Every flag the registry's conditions name and QML defined is published.
     for name in [
@@ -173,12 +177,13 @@ fn flags_follow_the_compositor_and_the_stores() {
         "niriFixedWorkspaces",
         "input.controls",
         "input.touchpadSpeed",
+        "cursorShake",
         "bluetooth",
         "battery",
     ] {
         assert!(hypr.contains_key(name), "{name}");
     }
-    assert_eq!(hypr.len(), 22);
+    assert_eq!(hypr.len(), 23);
 }
 
 #[test]

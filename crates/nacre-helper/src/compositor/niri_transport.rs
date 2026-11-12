@@ -51,6 +51,7 @@ pub struct NacreCapabilities {
     pub monitor_workspace_actions: bool,
     pub window_restore: bool,
     pub launch_workspace: bool,
+    pub cursor_shake: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -60,7 +61,7 @@ impl NacreCapabilities {
         }
         let features = object.get("NacreCapabilities")?.as_object()?;
         // Nacre capabilities are additive across concurrent native features.
-        // Older peers omit the three new optional fields, which default false.
+        // Older peers omit optional fields, which default false.
         if features.values().any(|value| !value.is_boolean()) {
             return None;
         }
@@ -100,6 +101,10 @@ impl NacreCapabilities {
                 .unwrap_or(false),
             launch_workspace: features
                 .get("launch_workspace")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            cursor_shake: features
+                .get("cursor_shake")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
         })
@@ -472,7 +477,8 @@ mod tests {
             "force_close": true,
             "monitor_workspace_actions": true,
             "window_restore": true,
-            "launch_workspace": true
+            "launch_workspace": true,
+            "cursor_shake": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -488,6 +494,7 @@ mod tests {
                 monitor_workspace_actions: true,
                 window_restore: true,
                 launch_workspace: true,
+                cursor_shake: true,
             })
         );
         assert_eq!(
