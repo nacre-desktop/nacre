@@ -117,6 +117,8 @@ const OPTIONS: &[(&str, &str)] = &[
     ("keyRepeatDelay", "input.repeat_delay"),
     ("keyRepeatRate", "input.repeat_rate"),
     ("mouseSpeed", "input.sensitivity"),
+    ("mouseScrollSpeed", "input.scroll_factor"),
+    ("scrollSpeed", "input.touchpad.scroll_factor"),
     ("mouseAcceleration", "input.accel_profile"),
     ("mouseLeftHanded", "input.left_handed"),
     ("mouseNaturalScroll", "input.natural_scroll"),
@@ -744,6 +746,14 @@ mod tests {
         supported.sort_unstable();
         assert_eq!(advertised, supported);
     }
+    #[test]
+    fn desktop_scroll_preferences_map_to_hyprland_inputs() -> crate::Result<()> {
+        let rendered = render_desktop(&json!({"mouseScrollSpeed":2.25,"scrollSpeed":0.75}))?;
+        assert!(rendered.contains("[\"input.scroll_factor\"]=2.25"));
+        assert!(rendered.contains("[\"input.touchpad.scroll_factor\"]=0.75"));
+        Ok(())
+    }
+
     #[test]
     fn shortcut_source_discovery_keeps_hyprland_lua_paths() -> crate::Result<()> {
         let home = tempfile::tempdir()?;

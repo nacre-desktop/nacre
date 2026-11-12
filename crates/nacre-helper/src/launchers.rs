@@ -262,23 +262,10 @@ pub fn app(arguments: &[String]) -> Result<i32> {
     Err(format!("{}: {error}", argv[0]).into())
 }
 
-fn settings_registry(paths: &Paths) -> Result<Value> {
-    let relative = std::path::Path::new("nacre/shell-tools/settings-registry/navigation.json");
-    let mut root = std::env::current_dir().unwrap_or_default();
-    loop {
-        let candidate = root.join(relative);
-        if candidate.is_file() {
-            return Ok(serde_json::from_slice(&fs::read(candidate)?)?);
-        }
-        if !root.pop() {
-            break;
-        }
-    }
-    let installed = paths.assets().join("settings-registry/navigation.json");
-    if installed.is_file() {
-        return Ok(serde_json::from_slice(&fs::read(installed)?)?);
-    }
-    Err("The Settings registry is not installed".into())
+fn settings_registry(_paths: &Paths) -> Result<Value> {
+    Ok(serde_json::from_str(include_str!(
+        "../../../shell/settings/registry/navigation.json"
+    ))?)
 }
 
 fn valid_settings_route(paths: &Paths, route: &str) -> Result<bool> {
@@ -1714,7 +1701,7 @@ mod tests {
         let paths =
             Paths::new(env!("CARGO_MANIFEST_DIR").to_owned() + "/../../tests/fixtures/empty-home");
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../nacre/shell-tools/settings-registry/navigation.json");
+            .join("../../shell/settings/registry/navigation.json");
         assert!(root.is_file());
         assert!(valid_settings_route(&paths, "sound")?);
         assert!(valid_settings_route(&paths, "panels/dashboard#pages")?);

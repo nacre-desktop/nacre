@@ -122,8 +122,8 @@ def references(root):
                 identifiers(item)
 
     for relative in (
-        "nacre/shell-tools/settings-registry/settings.json",
-        "nacre/shell-tools/settings-registry/navigation.json",
+        "shell/settings/registry/settings.json",
+        "shell/settings/registry/navigation.json",
         "nacre/shell-tools/theme-targets.json",
     ):
         path = root / relative

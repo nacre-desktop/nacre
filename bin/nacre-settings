@@ -14,9 +14,8 @@ import re
 def navigation():
     candidates = [
         Path(__file__).resolve().parents[1]
-        / "nacre/shell-tools/settings-registry/navigation.json",
-        Path.home()
-        / ".local/share/nacre/shell/tools/settings-registry/navigation.json",
+        / "shell/settings/registry/navigation.json",
+        Path("/usr/lib/nacre/ui-shell/shell/settings/registry/navigation.json"),
     ]
     for path in candidates:
         if path.is_file():

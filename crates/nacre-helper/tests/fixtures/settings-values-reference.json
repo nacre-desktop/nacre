@@ -107,33 +107,7 @@
         "capability": "panelDragging"
       }
     },
-    {
-      "id": "panels.lips.lipSize",
-      "page": "panels",
-      "section": "panels.lips",
-      "key": "lipSize",
-      "labelId": "settings.registry.panels.lips.lipSize.label",
-      "descriptionId": "settings.registry.panels.lips.lipSize.description",
-      "type": "integer",
-      "store": {
-        "id": "desktop",
-        "key": [
-          "lipSize"
-        ]
-      },
-      "default": 48,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 24,
-        "max": 96,
-        "step": 4
-      },
-      "unit": "px",
-      "backend": "planned",
-      "unavailableId": "settings.registry.panels.lipSize.unavailable"
-    },
+    null,
     {
       "id": "panels.lips.hoverDelay",
       "page": "panels",
@@ -235,27 +209,7 @@
       "synonyms": [],
       "advanced": false
     },
-    {
-      "id": "panels/bottom.panel.enabled",
-      "page": "panels/bottom",
-      "section": "panels/bottom.panel",
-      "key": "enabled",
-      "labelId": "settings.registry.panels.bottom.panel.enabled.label",
-      "descriptionId": "settings.registry.panels.bottom.panel.enabled.description",
-      "type": "boolean",
-      "store": {
-        "id": "desktop",
-        "key": [
-          "bottomPanel"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.panels.bottom.unavailable"
-    },
+    null,
     {
       "id": "panels/dashboard/pages.editor.pages",
       "page": "panels/dashboard/pages",
@@ -467,66 +421,8 @@
         }
       ]
     },
-    {
-      "id": "colors.palette.mode",
-      "page": "colors",
-      "section": "colors.palette",
-      "key": "mode",
-      "labelId": "settings.registry.colors.palette.mode.label",
-      "descriptionId": "settings.registry.colors.palette.mode.description",
-      "type": "enum",
-      "store": {
-        "id": "colors",
-        "key": [
-          "ui",
-          "modeChoice"
-        ]
-      },
-      "default": "dark",
-      "apply": "instant",
-      "synonyms": [
-        "light",
-        "dark"
-      ],
-      "advanced": false,
-      "options": [
-        {
-          "value": "light",
-          "labelId": "settings.registry.colors.mode.light"
-        },
-        {
-          "value": "dark",
-          "labelId": "settings.registry.colors.mode.dark"
-        },
-        {
-          "value": "wallpaper",
-          "labelId": "settings.registry.colors.mode.wallpaper"
-        }
-      ],
-      "adapter": "color-mode"
-    },
-    {
-      "id": "colors.palette.automatic",
-      "page": "colors",
-      "section": "colors.palette",
-      "key": "automatic",
-      "labelId": "settings.registry.colors.palette.automatic.label",
-      "descriptionId": "settings.registry.colors.palette.automatic.description",
-      "type": "boolean",
-      "store": {
-        "id": "colors",
-        "key": [
-          "schedule",
-          "enabled"
-        ]
-      },
-      "default": false,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.schedule.unavailable"
-    },
+    null,
+    null,
     {
       "id": "colors.palette.style",
       "page": "colors",
@@ -636,8 +532,7 @@
       "advanced": false,
       "visibleWhen": {
         "capability": "brain"
-      },
-      "dependsOn": "launcher.interface.nativePalette"
+      }
     },
     {
       "id": "launcher.sources.files",
@@ -660,8 +555,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.calculator",
@@ -684,8 +578,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.actions",
@@ -708,8 +601,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.ai",
@@ -735,8 +627,7 @@
       "advanced": false,
       "visibleWhen": {
         "capability": "ai"
-      },
-      "dependsOn": "launcher.interface.nativePalette"
+      }
     },
     {
       "id": "launcher.web.engine",
@@ -769,8 +660,7 @@
           "value": "brave",
           "labelId": "settings.registry.launcher.engine.option.brave"
         }
-      ],
-      "dependsOn": "launcher.interface.nativePalette"
+      ]
     },
     {
       "id": "launcher/favorites.list.favorites",
@@ -936,157 +826,11 @@
       "unavailableId": "settings.registry.power.profiles.unavailable",
       "dependsOn": "power.profiles.enabled"
     },
-    {
-      "id": "power.saver.batterySaver",
-      "page": "power",
-      "section": "power.saver",
-      "key": "batterySaver",
-      "labelId": "settings.registry.power.saver.enabled.label",
-      "descriptionId": "settings.registry.power.saver.enabled.description",
-      "type": "boolean",
-      "store": {
-        "id": "power",
-        "key": [
-          "saver",
-          "enabled"
-        ]
-      },
-      "default": false,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.saver.unavailable",
-      "visibleWhen": {
-        "capability": "batterySaver"
-      }
-    },
-    {
-      "id": "power.idle.dim",
-      "page": "power",
-      "section": "power.idle",
-      "key": "dim",
-      "labelId": "settings.registry.power.idle.dim.label",
-      "descriptionId": "settings.registry.power.idle.dim.description",
-      "type": "integer",
-      "store": {
-        "id": "power",
-        "key": [
-          "idle",
-          "dim"
-        ]
-      },
-      "default": 5,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 1,
-        "max": 60,
-        "step": 1
-      },
-      "unit": "min",
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.idle.unavailable"
-    },
-    {
-      "id": "power.idle.sleep",
-      "page": "power",
-      "section": "power.idle",
-      "key": "sleep",
-      "labelId": "settings.registry.power.idle.sleep.label",
-      "descriptionId": "settings.registry.power.idle.sleep.description",
-      "type": "integer",
-      "store": {
-        "id": "power",
-        "key": [
-          "idle",
-          "sleep"
-        ]
-      },
-      "default": 30,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 1,
-        "max": 60,
-        "step": 1
-      },
-      "unit": "min",
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.idle.unavailable"
-    },
-    {
-      "id": "power.hardware.lid",
-      "page": "power",
-      "section": "power.hardware",
-      "key": "lid",
-      "labelId": "settings.registry.power.hardware.lid.label",
-      "descriptionId": "settings.registry.power.hardware.lid.description",
-      "type": "enum",
-      "store": {
-        "id": "power",
-        "key": [
-          "lid"
-        ]
-      },
-      "default": "suspend",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "options": [
-        {
-          "value": "suspend",
-          "labelId": "settings.registry.power.lid.option.suspend"
-        },
-        {
-          "value": "lock",
-          "labelId": "settings.registry.power.lid.option.lock"
-        },
-        {
-          "value": "nothing",
-          "labelId": "settings.registry.power.lid.option.nothing"
-        }
-      ],
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.hardware.unavailable"
-    },
-    {
-      "id": "power.hardware.button",
-      "page": "power",
-      "section": "power.hardware",
-      "key": "button",
-      "labelId": "settings.registry.power.hardware.button.label",
-      "descriptionId": "settings.registry.power.hardware.button.description",
-      "type": "enum",
-      "store": {
-        "id": "power",
-        "key": [
-          "button"
-        ]
-      },
-      "default": "lock",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "options": [
-        {
-          "value": "lock",
-          "labelId": "settings.registry.power.button.option.lock"
-        },
-        {
-          "value": "suspend",
-          "labelId": "settings.registry.power.button.option.suspend"
-        },
-        {
-          "value": "menu",
-          "labelId": "settings.registry.power.button.option.menu"
-        }
-      ],
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.hardware.unavailable"
-    },
+    null,
+    null,
+    null,
+    null,
+    null,
     {
       "id": "power.hardware.alerts",
       "page": "power",
@@ -1280,27 +1024,7 @@
       "synonyms": [],
       "advanced": false
     },
-    {
-      "id": "wallpaper.motion.lockWallpaper",
-      "page": "wallpaper",
-      "section": "wallpaper.motion",
-      "key": "lockWallpaper",
-      "labelId": "settings.registry.wallpaper.motion.lockWallpaper.label",
-      "descriptionId": "settings.registry.wallpaper.motion.lockWallpaper.description",
-      "type": "string",
-      "store": {
-        "id": "wallpaper-picker",
-        "key": [
-          "lockWallpaper"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.wallpaper.lock-planned"
-    },
+    null,
     {
       "id": "appearance.fonts.interfaceFont",
       "page": "appearance",
@@ -1901,25 +1625,7 @@
       "backend": "planned",
       "unavailableId": "settings.registry.ui.unavailable"
     },
-    {
-      "id": "windows-workspaces.overview.nativeOverview",
-      "page": "windows-workspaces",
-      "section": "windows-workspaces.overview",
-      "key": "nativeOverview",
-      "labelId": "settings.registry.windows-workspaces.overview.nativeOverview.label",
-      "descriptionId": "settings.registry.windows-workspaces.overview.nativeOverview.description",
-      "type": "boolean",
-      "store": {
-        "id": "desktop",
-        "key": [
-          "nativeOverview"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false
-    },
+    null,
     {
       "id": "windows-workspaces.overview.livePreviews",
       "page": "windows-workspaces",
@@ -1939,7 +1645,6 @@
       "synonyms": [],
       "advanced": false,
       "unavailableId": "settings.registry.windows.capture-unavailable",
-      "dependsOn": "windows-workspaces.overview.nativeOverview",
       "visibleWhen": {
         "capability": "windowCapture"
       }
@@ -2325,185 +2030,15 @@
       "advanced": false,
       "editorOwned": true
     },
-    {
-      "id": "panels/dashboard/media.editor.lyrics",
-      "page": "panels/dashboard/media",
-      "section": "panels/dashboard/media.editor",
-      "key": "lyrics",
-      "labelId": "settings.registry.panels.dashboard.editor.lyrics.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.lyrics.description",
-      "type": "boolean",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "lyrics"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/media.editor.albumPalette",
-      "page": "panels/dashboard/media",
-      "section": "panels/dashboard/media.editor",
-      "key": "albumPalette",
-      "labelId": "settings.registry.panels.dashboard.editor.albumPalette.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.albumPalette.description",
-      "type": "boolean",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "albumPalette"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/home-time.editor.homeZone",
-      "page": "panels/dashboard/home-time",
-      "section": "panels/dashboard/home-time.editor",
-      "key": "homeZone",
-      "labelId": "settings.registry.panels.dashboard.editor.homeZone.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.homeZone.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "homeZone"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/home-time.editor.homeCity",
-      "page": "panels/dashboard/home-time",
-      "section": "panels/dashboard/home-time.editor",
-      "key": "homeCity",
-      "labelId": "settings.registry.panels.dashboard.editor.homeCity.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.homeCity.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "homeCity"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/calendar-focus.editor.calendarFile",
-      "page": "panels/dashboard/calendar-focus",
-      "section": "panels/dashboard/calendar-focus.editor",
-      "key": "calendarFile",
-      "labelId": "settings.registry.panels.dashboard.editor.calendarFile.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.calendarFile.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "calendarFile"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/calendar-focus.editor.focusMinutes",
-      "page": "panels/dashboard/calendar-focus",
-      "section": "panels/dashboard/calendar-focus.editor",
-      "key": "focusMinutes",
-      "labelId": "settings.registry.panels.dashboard.editor.focusMinutes.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.focusMinutes.description",
-      "type": "integer",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "focusMinutes"
-        ]
-      },
-      "default": 25,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "launcher.interface.nativePalette",
-      "page": "launcher",
-      "section": "launcher.interface",
-      "key": "nativePalette",
-      "labelId": "settings.registry.launcher.interface.nativePalette.label",
-      "descriptionId": "settings.registry.launcher.interface.nativePalette.description",
-      "type": "boolean",
-      "default": true,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "nativePalette"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.nativeClipboard",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "nativeClipboard",
-      "labelId": "settings.registry.privacy.history.nativeClipboard.label",
-      "descriptionId": "settings.registry.privacy.history.nativeClipboard.description",
-      "type": "boolean",
-      "default": true,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "nativeClipboard"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false
-    },
-    {
-      "id": "panels/top-bar.panel.modules",
-      "page": "panels/top-bar",
-      "section": "panels/top-bar.panel",
-      "key": "modules",
-      "labelId": "settings.registry.panels.top-bar.panel.modules.label",
-      "descriptionId": "settings.registry.panels.top-bar.panel.modules.description",
-      "type": "array",
-      "default": [],
-      "store": {
-        "id": "desktop",
-        "key": [
-          "modules"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "advanced": false
-    },
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
     {
       "id": "panels/top-bar.panel.clockFormat",
       "page": "panels/top-bar",
@@ -2546,114 +2081,10 @@
       "unavailableId": "settings.registry.ui.unavailable",
       "advanced": false
     },
-    {
-      "id": "privacy.history.notificationRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "notificationRetention",
-      "labelId": "settings.registry.privacy.history.notificationRetention.label",
-      "descriptionId": "settings.registry.privacy.history.notificationRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "notificationRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.clipboardRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "clipboardRetention",
-      "labelId": "settings.registry.privacy.history.clipboardRetention.label",
-      "descriptionId": "settings.registry.privacy.history.clipboardRetention.description",
-      "type": "integer",
-      "default": 7,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "clipboardRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.screenshotRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "screenshotRetention",
-      "labelId": "settings.registry.privacy.history.screenshotRetention.label",
-      "descriptionId": "settings.registry.privacy.history.screenshotRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "screenshotRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.aiChatRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "aiChatRetention",
-      "labelId": "settings.registry.privacy.history.aiChatRetention.label",
-      "descriptionId": "settings.registry.privacy.history.aiChatRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "aiChatRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
+    null,
+    null,
+    null,
+    null,
     {
       "id": "colors/app-theming.targets.gtk3",
       "page": "colors/app-theming",
@@ -3411,34 +2842,7 @@
       ],
       "entityType": "navigation-hidden"
     },
-    {
-      "id": "keyboard-mouse.mouse.shakeCursor",
-      "page": "keyboard-mouse",
-      "section": "keyboard-mouse.mouse",
-      "key": "shakeCursor",
-      "type": "boolean",
-      "default": false,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "shakeCursor"
-        ]
-      },
-      "labelId": "settings.registry.keyboard-mouse.mouse.shakeCursor.label",
-      "descriptionId": "settings.registry.keyboard-mouse.mouse.shakeCursor.description",
-      "apply": "instant",
-      "advanced": false,
-      "synonyms": [
-        "shake mouse",
-        "find pointer",
-        "cursor enlargement"
-      ],
-      "backend": "planned",
-      "visibleWhen": {
-        "capability": "cursorShake"
-      },
-      "unavailableId": "settings.registry.keyboard-mouse.shake-planned"
-    },
+    null,
     {
       "id": "system.packages.aurReview",
       "page": "system",
@@ -4788,25 +4192,6 @@
     {"setting":3,"value":11,"valid":false},
     {"setting":3,"value":12,"valid":false},
     {"setting":3,"value":2,"valid":true},
-    {"setting":4,"value":0,"valid":false},
-    {"setting":4,"value":1,"valid":false},
-    {"setting":4,"value":2,"valid":false},
-    {"setting":4,"value":3,"valid":false},
-    {"setting":4,"value":4,"valid":false},
-    {"setting":4,"value":5,"valid":false},
-    {"setting":4,"value":6,"valid":false},
-    {"setting":4,"value":7,"valid":false},
-    {"setting":4,"value":8,"valid":false},
-    {"setting":4,"value":9,"valid":false},
-    {"setting":4,"value":10,"valid":false},
-    {"setting":4,"value":11,"valid":false},
-    {"setting":4,"value":12,"valid":false},
-    {"setting":4,"value":13,"valid":true},
-    {"setting":4,"value":14,"valid":true},
-    {"setting":4,"value":15,"valid":true},
-    {"setting":4,"value":16,"valid":false},
-    {"setting":4,"value":17,"valid":false},
-    {"setting":4,"value":18,"valid":false},
     {"setting":5,"value":0,"valid":false},
     {"setting":5,"value":1,"valid":false},
     {"setting":5,"value":2,"valid":false},
@@ -4882,20 +4267,6 @@
     {"setting":9,"value":11,"valid":false},
     {"setting":9,"value":12,"valid":false},
     {"setting":9,"value":2,"valid":true},
-    {"setting":10,"value":0,"valid":false},
-    {"setting":10,"value":1,"valid":true},
-    {"setting":10,"value":2,"valid":true},
-    {"setting":10,"value":3,"valid":false},
-    {"setting":10,"value":4,"valid":false},
-    {"setting":10,"value":5,"valid":false},
-    {"setting":10,"value":6,"valid":false},
-    {"setting":10,"value":7,"valid":false},
-    {"setting":10,"value":8,"valid":false},
-    {"setting":10,"value":9,"valid":false},
-    {"setting":10,"value":10,"valid":false},
-    {"setting":10,"value":11,"valid":false},
-    {"setting":10,"value":12,"valid":false},
-    {"setting":10,"value":2,"valid":true},
     {"setting":11,"value":0,"valid":false},
     {"setting":11,"value":1,"valid":false},
     {"setting":11,"value":2,"valid":false},
@@ -4993,37 +4364,6 @@
     {"setting":13,"value":65,"valid":true},
     {"setting":13,"value":66,"valid":true},
     {"setting":13,"value":67,"valid":true},
-    {"setting":14,"value":0,"valid":false},
-    {"setting":14,"value":1,"valid":false},
-    {"setting":14,"value":2,"valid":false},
-    {"setting":14,"value":3,"valid":false},
-    {"setting":14,"value":4,"valid":false},
-    {"setting":14,"value":5,"valid":false},
-    {"setting":14,"value":6,"valid":false},
-    {"setting":14,"value":7,"valid":false},
-    {"setting":14,"value":8,"valid":false},
-    {"setting":14,"value":9,"valid":false},
-    {"setting":14,"value":10,"valid":false},
-    {"setting":14,"value":11,"valid":false},
-    {"setting":14,"value":12,"valid":false},
-    {"setting":14,"value":68,"valid":true},
-    {"setting":14,"value":69,"valid":true},
-    {"setting":14,"value":68,"valid":true},
-    {"setting":14,"value":37,"valid":true},
-    {"setting":15,"value":0,"valid":false},
-    {"setting":15,"value":1,"valid":true},
-    {"setting":15,"value":2,"valid":true},
-    {"setting":15,"value":3,"valid":false},
-    {"setting":15,"value":4,"valid":false},
-    {"setting":15,"value":5,"valid":false},
-    {"setting":15,"value":6,"valid":false},
-    {"setting":15,"value":7,"valid":false},
-    {"setting":15,"value":8,"valid":false},
-    {"setting":15,"value":9,"valid":false},
-    {"setting":15,"value":10,"valid":false},
-    {"setting":15,"value":11,"valid":false},
-    {"setting":15,"value":12,"valid":false},
-    {"setting":15,"value":1,"valid":true},
     {"setting":16,"value":0,"valid":false},
     {"setting":16,"value":1,"valid":false},
     {"setting":16,"value":2,"valid":false},
@@ -5287,92 +4627,6 @@
     {"setting":29,"value":84,"valid":true},
     {"setting":29,"value":83,"valid":true},
     {"setting":29,"value":85,"valid":true},
-    {"setting":30,"value":0,"valid":false},
-    {"setting":30,"value":1,"valid":true},
-    {"setting":30,"value":2,"valid":true},
-    {"setting":30,"value":3,"valid":false},
-    {"setting":30,"value":4,"valid":false},
-    {"setting":30,"value":5,"valid":false},
-    {"setting":30,"value":6,"valid":false},
-    {"setting":30,"value":7,"valid":false},
-    {"setting":30,"value":8,"valid":false},
-    {"setting":30,"value":9,"valid":false},
-    {"setting":30,"value":10,"valid":false},
-    {"setting":30,"value":11,"valid":false},
-    {"setting":30,"value":12,"valid":false},
-    {"setting":30,"value":1,"valid":true},
-    {"setting":31,"value":0,"valid":false},
-    {"setting":31,"value":1,"valid":false},
-    {"setting":31,"value":2,"valid":false},
-    {"setting":31,"value":3,"valid":false},
-    {"setting":31,"value":4,"valid":true},
-    {"setting":31,"value":5,"valid":false},
-    {"setting":31,"value":6,"valid":false},
-    {"setting":31,"value":7,"valid":false},
-    {"setting":31,"value":8,"valid":false},
-    {"setting":31,"value":9,"valid":false},
-    {"setting":31,"value":10,"valid":false},
-    {"setting":31,"value":11,"valid":false},
-    {"setting":31,"value":12,"valid":false},
-    {"setting":31,"value":22,"valid":true},
-    {"setting":31,"value":4,"valid":true},
-    {"setting":31,"value":86,"valid":true},
-    {"setting":31,"value":3,"valid":false},
-    {"setting":31,"value":87,"valid":false},
-    {"setting":31,"value":88,"valid":false},
-    {"setting":32,"value":0,"valid":false},
-    {"setting":32,"value":1,"valid":false},
-    {"setting":32,"value":2,"valid":false},
-    {"setting":32,"value":3,"valid":false},
-    {"setting":32,"value":4,"valid":true},
-    {"setting":32,"value":5,"valid":false},
-    {"setting":32,"value":6,"valid":false},
-    {"setting":32,"value":7,"valid":false},
-    {"setting":32,"value":8,"valid":false},
-    {"setting":32,"value":9,"valid":false},
-    {"setting":32,"value":10,"valid":false},
-    {"setting":32,"value":11,"valid":false},
-    {"setting":32,"value":12,"valid":false},
-    {"setting":32,"value":89,"valid":true},
-    {"setting":32,"value":4,"valid":true},
-    {"setting":32,"value":86,"valid":true},
-    {"setting":32,"value":3,"valid":false},
-    {"setting":32,"value":87,"valid":false},
-    {"setting":32,"value":88,"valid":false},
-    {"setting":33,"value":0,"valid":false},
-    {"setting":33,"value":1,"valid":false},
-    {"setting":33,"value":2,"valid":false},
-    {"setting":33,"value":3,"valid":false},
-    {"setting":33,"value":4,"valid":false},
-    {"setting":33,"value":5,"valid":false},
-    {"setting":33,"value":6,"valid":false},
-    {"setting":33,"value":7,"valid":false},
-    {"setting":33,"value":8,"valid":false},
-    {"setting":33,"value":9,"valid":false},
-    {"setting":33,"value":10,"valid":false},
-    {"setting":33,"value":11,"valid":false},
-    {"setting":33,"value":12,"valid":false},
-    {"setting":33,"value":90,"valid":true},
-    {"setting":33,"value":90,"valid":true},
-    {"setting":33,"value":91,"valid":true},
-    {"setting":33,"value":92,"valid":true},
-    {"setting":34,"value":0,"valid":false},
-    {"setting":34,"value":1,"valid":false},
-    {"setting":34,"value":2,"valid":false},
-    {"setting":34,"value":3,"valid":false},
-    {"setting":34,"value":4,"valid":false},
-    {"setting":34,"value":5,"valid":false},
-    {"setting":34,"value":6,"valid":false},
-    {"setting":34,"value":7,"valid":false},
-    {"setting":34,"value":8,"valid":false},
-    {"setting":34,"value":9,"valid":false},
-    {"setting":34,"value":10,"valid":false},
-    {"setting":34,"value":11,"valid":false},
-    {"setting":34,"value":12,"valid":false},
-    {"setting":34,"value":91,"valid":true},
-    {"setting":34,"value":91,"valid":true},
-    {"setting":34,"value":90,"valid":true},
-    {"setting":34,"value":93,"valid":true},
     {"setting":35,"value":0,"valid":false},
     {"setting":35,"value":1,"valid":true},
     {"setting":35,"value":2,"valid":true},
@@ -5496,20 +4750,6 @@
     {"setting":42,"value":11,"valid":false},
     {"setting":42,"value":12,"valid":false},
     {"setting":42,"value":2,"valid":true},
-    {"setting":43,"value":0,"valid":false},
-    {"setting":43,"value":1,"valid":false},
-    {"setting":43,"value":2,"valid":false},
-    {"setting":43,"value":3,"valid":false},
-    {"setting":43,"value":4,"valid":false},
-    {"setting":43,"value":5,"valid":false},
-    {"setting":43,"value":6,"valid":false},
-    {"setting":43,"value":7,"valid":true},
-    {"setting":43,"value":8,"valid":true},
-    {"setting":43,"value":9,"valid":false},
-    {"setting":43,"value":10,"valid":false},
-    {"setting":43,"value":11,"valid":false},
-    {"setting":43,"value":12,"valid":false},
-    {"setting":43,"value":7,"valid":true},
     {"setting":44,"value":0,"valid":false},
     {"setting":44,"value":1,"valid":false},
     {"setting":44,"value":2,"valid":false},
@@ -5926,20 +5166,6 @@
     {"setting":68,"value":33,"valid":true},
     {"setting":68,"value":34,"valid":true},
     {"setting":68,"value":35,"valid":true},
-    {"setting":69,"value":0,"valid":false},
-    {"setting":69,"value":1,"valid":true},
-    {"setting":69,"value":2,"valid":true},
-    {"setting":69,"value":3,"valid":false},
-    {"setting":69,"value":4,"valid":false},
-    {"setting":69,"value":5,"valid":false},
-    {"setting":69,"value":6,"valid":false},
-    {"setting":69,"value":7,"valid":false},
-    {"setting":69,"value":8,"valid":false},
-    {"setting":69,"value":9,"valid":false},
-    {"setting":69,"value":10,"valid":false},
-    {"setting":69,"value":11,"valid":false},
-    {"setting":69,"value":12,"valid":false},
-    {"setting":69,"value":2,"valid":true},
     {"setting":70,"value":0,"valid":false},
     {"setting":70,"value":1,"valid":true},
     {"setting":70,"value":2,"valid":true},
@@ -6254,144 +5480,6 @@
     {"setting":87,"value":11,"valid":false},
     {"setting":87,"value":12,"valid":false},
     {"setting":87,"value":2,"valid":true},
-    {"setting":88,"value":0,"valid":false},
-    {"setting":88,"value":1,"valid":true},
-    {"setting":88,"value":2,"valid":true},
-    {"setting":88,"value":3,"valid":false},
-    {"setting":88,"value":4,"valid":false},
-    {"setting":88,"value":5,"valid":false},
-    {"setting":88,"value":6,"valid":false},
-    {"setting":88,"value":7,"valid":false},
-    {"setting":88,"value":8,"valid":false},
-    {"setting":88,"value":9,"valid":false},
-    {"setting":88,"value":10,"valid":false},
-    {"setting":88,"value":11,"valid":false},
-    {"setting":88,"value":12,"valid":false},
-    {"setting":88,"value":2,"valid":true},
-    {"setting":89,"value":0,"valid":false},
-    {"setting":89,"value":1,"valid":true},
-    {"setting":89,"value":2,"valid":true},
-    {"setting":89,"value":3,"valid":false},
-    {"setting":89,"value":4,"valid":false},
-    {"setting":89,"value":5,"valid":false},
-    {"setting":89,"value":6,"valid":false},
-    {"setting":89,"value":7,"valid":false},
-    {"setting":89,"value":8,"valid":false},
-    {"setting":89,"value":9,"valid":false},
-    {"setting":89,"value":10,"valid":false},
-    {"setting":89,"value":11,"valid":false},
-    {"setting":89,"value":12,"valid":false},
-    {"setting":89,"value":2,"valid":true},
-    {"setting":90,"value":0,"valid":false},
-    {"setting":90,"value":1,"valid":false},
-    {"setting":90,"value":2,"valid":false},
-    {"setting":90,"value":3,"valid":false},
-    {"setting":90,"value":4,"valid":false},
-    {"setting":90,"value":5,"valid":false},
-    {"setting":90,"value":6,"valid":false},
-    {"setting":90,"value":7,"valid":true},
-    {"setting":90,"value":8,"valid":true},
-    {"setting":90,"value":9,"valid":false},
-    {"setting":90,"value":10,"valid":false},
-    {"setting":90,"value":11,"valid":false},
-    {"setting":90,"value":12,"valid":false},
-    {"setting":90,"value":7,"valid":true},
-    {"setting":91,"value":0,"valid":false},
-    {"setting":91,"value":1,"valid":false},
-    {"setting":91,"value":2,"valid":false},
-    {"setting":91,"value":3,"valid":false},
-    {"setting":91,"value":4,"valid":false},
-    {"setting":91,"value":5,"valid":false},
-    {"setting":91,"value":6,"valid":false},
-    {"setting":91,"value":7,"valid":true},
-    {"setting":91,"value":8,"valid":true},
-    {"setting":91,"value":9,"valid":false},
-    {"setting":91,"value":10,"valid":false},
-    {"setting":91,"value":11,"valid":false},
-    {"setting":91,"value":12,"valid":false},
-    {"setting":91,"value":7,"valid":true},
-    {"setting":92,"value":0,"valid":false},
-    {"setting":92,"value":1,"valid":false},
-    {"setting":92,"value":2,"valid":false},
-    {"setting":92,"value":3,"valid":false},
-    {"setting":92,"value":4,"valid":false},
-    {"setting":92,"value":5,"valid":false},
-    {"setting":92,"value":6,"valid":false},
-    {"setting":92,"value":7,"valid":true},
-    {"setting":92,"value":8,"valid":true},
-    {"setting":92,"value":9,"valid":false},
-    {"setting":92,"value":10,"valid":false},
-    {"setting":92,"value":11,"valid":false},
-    {"setting":92,"value":12,"valid":false},
-    {"setting":92,"value":7,"valid":true},
-    {"setting":93,"value":0,"valid":false},
-    {"setting":93,"value":1,"valid":false},
-    {"setting":93,"value":2,"valid":false},
-    {"setting":93,"value":3,"valid":true},
-    {"setting":93,"value":4,"valid":true},
-    {"setting":93,"value":5,"valid":true},
-    {"setting":93,"value":6,"valid":false},
-    {"setting":93,"value":7,"valid":false},
-    {"setting":93,"value":8,"valid":false},
-    {"setting":93,"value":9,"valid":false},
-    {"setting":93,"value":10,"valid":false},
-    {"setting":93,"value":11,"valid":false},
-    {"setting":93,"value":12,"valid":false},
-    {"setting":93,"value":112,"valid":true},
-    {"setting":94,"value":0,"valid":false},
-    {"setting":94,"value":1,"valid":true},
-    {"setting":94,"value":2,"valid":true},
-    {"setting":94,"value":3,"valid":false},
-    {"setting":94,"value":4,"valid":false},
-    {"setting":94,"value":5,"valid":false},
-    {"setting":94,"value":6,"valid":false},
-    {"setting":94,"value":7,"valid":false},
-    {"setting":94,"value":8,"valid":false},
-    {"setting":94,"value":9,"valid":false},
-    {"setting":94,"value":10,"valid":false},
-    {"setting":94,"value":11,"valid":false},
-    {"setting":94,"value":12,"valid":false},
-    {"setting":94,"value":2,"valid":true},
-    {"setting":95,"value":0,"valid":false},
-    {"setting":95,"value":1,"valid":true},
-    {"setting":95,"value":2,"valid":true},
-    {"setting":95,"value":3,"valid":false},
-    {"setting":95,"value":4,"valid":false},
-    {"setting":95,"value":5,"valid":false},
-    {"setting":95,"value":6,"valid":false},
-    {"setting":95,"value":7,"valid":false},
-    {"setting":95,"value":8,"valid":false},
-    {"setting":95,"value":9,"valid":false},
-    {"setting":95,"value":10,"valid":false},
-    {"setting":95,"value":11,"valid":false},
-    {"setting":95,"value":12,"valid":false},
-    {"setting":95,"value":2,"valid":true},
-    {"setting":96,"value":0,"valid":false},
-    {"setting":96,"value":1,"valid":false},
-    {"setting":96,"value":2,"valid":false},
-    {"setting":96,"value":3,"valid":false},
-    {"setting":96,"value":4,"valid":false},
-    {"setting":96,"value":5,"valid":false},
-    {"setting":96,"value":6,"valid":false},
-    {"setting":96,"value":7,"valid":false},
-    {"setting":96,"value":8,"valid":false},
-    {"setting":96,"value":9,"valid":true},
-    {"setting":96,"value":10,"valid":false},
-    {"setting":96,"value":11,"valid":true},
-    {"setting":96,"value":12,"valid":true},
-    {"setting":96,"value":9,"valid":true},
-    {"setting":96,"value":24,"valid":true},
-    {"setting":96,"value":25,"valid":true},
-    {"setting":96,"value":26,"valid":true},
-    {"setting":96,"value":27,"valid":true},
-    {"setting":96,"value":28,"valid":true},
-    {"setting":96,"value":29,"valid":true},
-    {"setting":96,"value":30,"valid":true},
-    {"setting":96,"value":31,"valid":true},
-    {"setting":96,"value":32,"valid":true},
-    {"setting":96,"value":33,"valid":true},
-    {"setting":96,"value":34,"valid":true},
-    {"setting":96,"value":35,"valid":true},
     {"setting":97,"value":0,"valid":false},
     {"setting":97,"value":1,"valid":false},
     {"setting":97,"value":2,"valid":false},
@@ -6420,82 +5508,6 @@
     {"setting":98,"value":11,"valid":false},
     {"setting":98,"value":12,"valid":false},
     {"setting":98,"value":2,"valid":true},
-    {"setting":99,"value":0,"valid":false},
-    {"setting":99,"value":1,"valid":false},
-    {"setting":99,"value":2,"valid":false},
-    {"setting":99,"value":3,"valid":false},
-    {"setting":99,"value":4,"valid":true},
-    {"setting":99,"value":5,"valid":false},
-    {"setting":99,"value":6,"valid":false},
-    {"setting":99,"value":7,"valid":false},
-    {"setting":99,"value":8,"valid":false},
-    {"setting":99,"value":9,"valid":false},
-    {"setting":99,"value":10,"valid":false},
-    {"setting":99,"value":11,"valid":false},
-    {"setting":99,"value":12,"valid":false},
-    {"setting":99,"value":89,"valid":true},
-    {"setting":99,"value":4,"valid":true},
-    {"setting":99,"value":130,"valid":true},
-    {"setting":99,"value":3,"valid":false},
-    {"setting":99,"value":131,"valid":false},
-    {"setting":99,"value":88,"valid":false},
-    {"setting":100,"value":0,"valid":false},
-    {"setting":100,"value":1,"valid":false},
-    {"setting":100,"value":2,"valid":false},
-    {"setting":100,"value":3,"valid":false},
-    {"setting":100,"value":4,"valid":true},
-    {"setting":100,"value":5,"valid":false},
-    {"setting":100,"value":6,"valid":false},
-    {"setting":100,"value":7,"valid":false},
-    {"setting":100,"value":8,"valid":false},
-    {"setting":100,"value":9,"valid":false},
-    {"setting":100,"value":10,"valid":false},
-    {"setting":100,"value":11,"valid":false},
-    {"setting":100,"value":12,"valid":false},
-    {"setting":100,"value":132,"valid":true},
-    {"setting":100,"value":4,"valid":true},
-    {"setting":100,"value":130,"valid":true},
-    {"setting":100,"value":3,"valid":false},
-    {"setting":100,"value":131,"valid":false},
-    {"setting":100,"value":88,"valid":false},
-    {"setting":101,"value":0,"valid":false},
-    {"setting":101,"value":1,"valid":false},
-    {"setting":101,"value":2,"valid":false},
-    {"setting":101,"value":3,"valid":false},
-    {"setting":101,"value":4,"valid":true},
-    {"setting":101,"value":5,"valid":false},
-    {"setting":101,"value":6,"valid":false},
-    {"setting":101,"value":7,"valid":false},
-    {"setting":101,"value":8,"valid":false},
-    {"setting":101,"value":9,"valid":false},
-    {"setting":101,"value":10,"valid":false},
-    {"setting":101,"value":11,"valid":false},
-    {"setting":101,"value":12,"valid":false},
-    {"setting":101,"value":89,"valid":true},
-    {"setting":101,"value":4,"valid":true},
-    {"setting":101,"value":130,"valid":true},
-    {"setting":101,"value":3,"valid":false},
-    {"setting":101,"value":131,"valid":false},
-    {"setting":101,"value":88,"valid":false},
-    {"setting":102,"value":0,"valid":false},
-    {"setting":102,"value":1,"valid":false},
-    {"setting":102,"value":2,"valid":false},
-    {"setting":102,"value":3,"valid":false},
-    {"setting":102,"value":4,"valid":true},
-    {"setting":102,"value":5,"valid":false},
-    {"setting":102,"value":6,"valid":false},
-    {"setting":102,"value":7,"valid":false},
-    {"setting":102,"value":8,"valid":false},
-    {"setting":102,"value":9,"valid":false},
-    {"setting":102,"value":10,"valid":false},
-    {"setting":102,"value":11,"valid":false},
-    {"setting":102,"value":12,"valid":false},
-    {"setting":102,"value":89,"valid":true},
-    {"setting":102,"value":4,"valid":true},
-    {"setting":102,"value":130,"valid":true},
-    {"setting":102,"value":3,"valid":false},
-    {"setting":102,"value":131,"valid":false},
-    {"setting":102,"value":88,"valid":false},
     {"setting":103,"value":0,"valid":false},
     {"setting":103,"value":1,"valid":true},
     {"setting":103,"value":2,"valid":true},
@@ -6958,20 +5970,6 @@
     {"setting":129,"value":33,"valid":true},
     {"setting":129,"value":34,"valid":true},
     {"setting":129,"value":35,"valid":true},
-    {"setting":130,"value":0,"valid":false},
-    {"setting":130,"value":1,"valid":true},
-    {"setting":130,"value":2,"valid":true},
-    {"setting":130,"value":3,"valid":false},
-    {"setting":130,"value":4,"valid":false},
-    {"setting":130,"value":5,"valid":false},
-    {"setting":130,"value":6,"valid":false},
-    {"setting":130,"value":7,"valid":false},
-    {"setting":130,"value":8,"valid":false},
-    {"setting":130,"value":9,"valid":false},
-    {"setting":130,"value":10,"valid":false},
-    {"setting":130,"value":11,"valid":false},
-    {"setting":130,"value":12,"valid":false},
-    {"setting":130,"value":1,"valid":true},
     {"setting":131,"value":0,"valid":false},
     {"setting":131,"value":1,"valid":false},
     {"setting":131,"value":2,"valid":false},

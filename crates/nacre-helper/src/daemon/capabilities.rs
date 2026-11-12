@@ -2,8 +2,8 @@
 //! reference. The values are the ones QML's `NacreSettingsCapabilities` computed, taken from what
 //! the daemon already publishes (`compositor`, `settings.store.desktop`, `settings.store.profile`)
 //! plus three probes made once per daemon start: input devices, `powerprofilesctl` and `pacman`.
-//! A flag the registry names but QML never defined (`batterySaver`) is absent, which
-//! consumers evaluate as false, exactly as QML did.
+//! Registry flags absent from the active capability contract, including `batterySaver`,
+//! are absent and consumers evaluate them as false, exactly as QML did.
 //!
 //! N0051 adds `bluetooth` (the `bluetooth` topic lists an adapter) and `battery` (a laptop battery
 //! in `/sys/class/power_supply`, probed with the rest) and `capabilities.refresh`, which probes

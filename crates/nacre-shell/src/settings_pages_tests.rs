@@ -593,10 +593,7 @@ async fn lock_login_privacy_and_power_pages_write_the_stores_and_call_the_lock()
         "toggle"
     );
     let privacy = items(&settings.project(&stores("privacy")));
-    assert_eq!(
-        row(&privacy, "privacy.history.nativeClipboard")["kind"],
-        "toggle"
-    );
+    assert!(privacy.iter().any(|r| r["id"] == "privacy.notifications"));
     // Clearing the notification history is an action row that asks again first.
     let clear = row(&privacy, "privacy.notifications");
     assert_eq!(clear["options"][0]["id"], "do:confirm|clear-history");

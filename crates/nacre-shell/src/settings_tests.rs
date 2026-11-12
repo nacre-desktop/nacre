@@ -136,6 +136,36 @@ fn every_settings_page_renders_without_visible_translation_keys() {
 }
 
 #[test]
+fn capability_gates_collection_wallpapers_and_niri_workspace_preferences() {
+    for (flag, present) in [(false, false), (true, true)] {
+        let (settings, _) = fixture_with(
+            json!({}),
+            &[(
+                "capabilities",
+                json!({"flags": {
+                    "workspaceCollections": flag,
+                    "niriWorkspaces": flag
+                }}),
+            )],
+        );
+        let wallpaper = items(&settings.project(&stores("wallpaper", "")));
+        assert_eq!(
+            wallpaper
+                .iter()
+                .any(|row| row["id"] == "wallpaper.collection.collectionWallpapers"),
+            present
+        );
+        let workspaces = items(&settings.project(&stores("windows-workspaces", "")));
+        assert_eq!(
+            workspaces
+                .iter()
+                .any(|row| row["id"] == "windows-workspaces.workspaces.workspaceCount"),
+            present
+        );
+    }
+}
+
+#[test]
 fn appearance_rows_follow_the_registry_types_and_the_store_with_nacre_defaults() {
     let (settings, _) =
         fixture(json!({"textSize": 14, "frameSheen": false, "monoFont": "Fira Code"}));
@@ -432,7 +462,6 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     );
     assert_eq!(row(&panels, "panels.lips.hoverDelay")["kind"], "number");
     // `backend: planned` settings are hidden, like QML outside development.
-    assert!(panels.iter().all(|r| r["id"] != "panels.lips.lipSize"));
     assert!(
         panels
             .iter()
@@ -441,16 +470,15 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     let top = items(&settings.project(&stores("panels/top-bar", "")));
     assert_eq!(row(&top, "panels/top-bar.panel.enabled")["checked"], false);
     assert_eq!(row(&top, "panels/top-bar.panel.enabled")["enabled"], true);
-    for planned in ["modules", "clockFormat", "tray"] {
-        assert!(
-            top.iter()
-                .all(|r| r["id"] != format!("panels/top-bar.panel.{planned}"))
-        );
-    }
+    assert!(
+        top.iter()
+            .any(|r| r["id"] == "panels/top-bar.panel.clockFormat")
+    );
+    assert!(top.iter().any(|r| r["id"] == "panels/top-bar.panel.tray"));
     let win = items(&settings.project(&stores("windows-workspaces", "")));
     assert!(
         win.iter()
-            .all(|r| r["id"] != "windows-workspaces.workspaces.workspaceCount")
+            .any(|r| r["id"] == "windows-workspaces.workspaces.workspaceCount")
     );
     assert!(
         win.iter()
@@ -494,7 +522,7 @@ fn enum_rows_are_segments_to_four_options_and_a_drop_down_beyond() {
 /// B0058 slice 2: launcher, apps and the dashboard sub-pages.
 #[test]
 fn launcher_apps_and_dashboard_pages_follow_the_registry() {
-    let (settings, _) = fixture(json!({"nativePalette": true}));
+    let (settings, _) = fixture(json!({}));
     let launcher = items(&settings.project(&stores("launcher", "")));
     assert_eq!(row(&launcher, "launcher.sidebar.order")["reorder"], true);
     assert_eq!(row(&launcher, "launcher.sidebar.hidden")["reorder"], false);

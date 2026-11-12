@@ -6,7 +6,7 @@ pub fn descriptors() -> &'static [Value] {
     static REGISTRY: OnceLock<Value> = OnceLock::new();
     REGISTRY.get_or_init(|| {
         serde_json::from_str(include_str!(
-            "../../../../nacre/shell-tools/settings-registry/settings.json"
+            "../../../../shell/settings/registry/settings.json"
         ))
         .expect("checked-in Settings registry")
     })["settings"]
@@ -461,13 +461,33 @@ mod tests {
     }
 
     #[test]
+    fn ui_and_helper_load_the_same_registry_files() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+        for (name, embedded) in [
+            (
+                "settings.json",
+                include_str!("../../../../shell/settings/registry/settings.json"),
+            ),
+            (
+                "navigation.json",
+                include_str!("../../../../shell/settings/registry/navigation.json"),
+            ),
+        ] {
+            assert_eq!(
+                std::fs::read(root.join("../../shell/settings/registry").join(name)).unwrap(),
+                embedded.as_bytes()
+            );
+        }
+    }
+
+    #[test]
     fn frozen_javascript_values_match_exactly() {
         let reference: Value = serde_json::from_str(include_str!(
             "../../tests/fixtures/settings-values-reference.json"
         ))
         .unwrap();
         let cases = reference["cases"].as_array().unwrap();
-        assert_eq!(cases.len(), 2258);
+        assert_eq!(cases.len(), 1852);
         for (index, case) in cases.iter().enumerate() {
             let setting = &reference["settings"][case["setting"].as_u64().unwrap() as usize];
             let value = &reference["values"][case["value"].as_u64().unwrap() as usize];

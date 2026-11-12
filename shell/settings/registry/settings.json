@@ -2,12 +2,6 @@
   "version": 1,
   "sections": [
     {
-      "id": "launcher.interface",
-      "page": "launcher",
-      "labelId": "settings.registry.launcher.interface.label",
-      "order": -1
-    },
-    {
       "id": "colors.bundles",
       "page": "colors",
       "labelId": "software.bundle.title",
@@ -159,15 +153,6 @@
       "page": "power",
       "labelId": "settings.registry.power.profiles.label",
       "order": 0
-    },
-    {
-      "id": "power.saver",
-      "page": "power",
-      "labelId": "settings.registry.power.saver.label",
-      "order": 1,
-      "visibleWhen": {
-        "capability": "batterySaver"
-      }
     },
     {
       "id": "power.idle",
@@ -655,33 +640,6 @@
       }
     },
     {
-      "id": "panels.lips.lipSize",
-      "page": "panels",
-      "section": "panels.lips",
-      "key": "lipSize",
-      "labelId": "settings.registry.panels.lips.lipSize.label",
-      "descriptionId": "settings.registry.panels.lips.lipSize.description",
-      "type": "integer",
-      "store": {
-        "id": "desktop",
-        "key": [
-          "lipSize"
-        ]
-      },
-      "default": 48,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 24,
-        "max": 96,
-        "step": 4
-      },
-      "unit": "px",
-      "backend": "planned",
-      "unavailableId": "settings.registry.panels.lipSize.unavailable"
-    },
-    {
       "id": "panels.lips.hoverDelay",
       "page": "panels",
       "section": "panels.lips",
@@ -781,27 +739,6 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false
-    },
-    {
-      "id": "panels/bottom.panel.enabled",
-      "page": "panels/bottom",
-      "section": "panels/bottom.panel",
-      "key": "enabled",
-      "labelId": "settings.registry.panels.bottom.panel.enabled.label",
-      "descriptionId": "settings.registry.panels.bottom.panel.enabled.description",
-      "type": "boolean",
-      "store": {
-        "id": "desktop",
-        "key": [
-          "bottomPanel"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.panels.bottom.unavailable"
     },
     {
       "id": "panels/dashboard/pages.editor.pages",
@@ -1015,66 +952,6 @@
       ]
     },
     {
-      "id": "colors.palette.mode",
-      "page": "colors",
-      "section": "colors.palette",
-      "key": "mode",
-      "labelId": "settings.registry.colors.palette.mode.label",
-      "descriptionId": "settings.registry.colors.palette.mode.description",
-      "type": "enum",
-      "store": {
-        "id": "colors",
-        "key": [
-          "ui",
-          "modeChoice"
-        ]
-      },
-      "default": "dark",
-      "apply": "instant",
-      "synonyms": [
-        "light",
-        "dark"
-      ],
-      "advanced": false,
-      "options": [
-        {
-          "value": "light",
-          "labelId": "settings.registry.colors.mode.light"
-        },
-        {
-          "value": "dark",
-          "labelId": "settings.registry.colors.mode.dark"
-        },
-        {
-          "value": "wallpaper",
-          "labelId": "settings.registry.colors.mode.wallpaper"
-        }
-      ],
-      "adapter": "color-mode"
-    },
-    {
-      "id": "colors.palette.automatic",
-      "page": "colors",
-      "section": "colors.palette",
-      "key": "automatic",
-      "labelId": "settings.registry.colors.palette.automatic.label",
-      "descriptionId": "settings.registry.colors.palette.automatic.description",
-      "type": "boolean",
-      "store": {
-        "id": "colors",
-        "key": [
-          "schedule",
-          "enabled"
-        ]
-      },
-      "default": false,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.schedule.unavailable"
-    },
-    {
       "id": "colors.palette.style",
       "page": "colors",
       "section": "colors.palette",
@@ -1183,8 +1060,7 @@
       "advanced": false,
       "visibleWhen": {
         "capability": "brain"
-      },
-      "dependsOn": "launcher.interface.nativePalette"
+      }
     },
     {
       "id": "launcher.sources.files",
@@ -1207,8 +1083,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.calculator",
@@ -1231,8 +1106,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.actions",
@@ -1255,8 +1129,7 @@
         "prefix",
         "search"
       ],
-      "advanced": false,
-      "dependsOn": "launcher.interface.nativePalette"
+      "advanced": false
     },
     {
       "id": "launcher.sources.ai",
@@ -1282,8 +1155,7 @@
       "advanced": false,
       "visibleWhen": {
         "capability": "ai"
-      },
-      "dependsOn": "launcher.interface.nativePalette"
+      }
     },
     {
       "id": "launcher.web.engine",
@@ -1316,8 +1188,7 @@
           "value": "brave",
           "labelId": "settings.registry.launcher.engine.option.brave"
         }
-      ],
-      "dependsOn": "launcher.interface.nativePalette"
+      ]
     },
     {
       "id": "launcher/favorites.list.favorites",
@@ -1484,157 +1355,6 @@
       "dependsOn": "power.profiles.enabled"
     },
     {
-      "id": "power.saver.batterySaver",
-      "page": "power",
-      "section": "power.saver",
-      "key": "batterySaver",
-      "labelId": "settings.registry.power.saver.enabled.label",
-      "descriptionId": "settings.registry.power.saver.enabled.description",
-      "type": "boolean",
-      "store": {
-        "id": "power",
-        "key": [
-          "saver",
-          "enabled"
-        ]
-      },
-      "default": false,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.saver.unavailable",
-      "visibleWhen": {
-        "capability": "batterySaver"
-      }
-    },
-    {
-      "id": "power.idle.dim",
-      "page": "power",
-      "section": "power.idle",
-      "key": "dim",
-      "labelId": "settings.registry.power.idle.dim.label",
-      "descriptionId": "settings.registry.power.idle.dim.description",
-      "type": "integer",
-      "store": {
-        "id": "power",
-        "key": [
-          "idle",
-          "dim"
-        ]
-      },
-      "default": 5,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 1,
-        "max": 60,
-        "step": 1
-      },
-      "unit": "min",
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.idle.unavailable"
-    },
-    {
-      "id": "power.idle.sleep",
-      "page": "power",
-      "section": "power.idle",
-      "key": "sleep",
-      "labelId": "settings.registry.power.idle.sleep.label",
-      "descriptionId": "settings.registry.power.idle.sleep.description",
-      "type": "integer",
-      "store": {
-        "id": "power",
-        "key": [
-          "idle",
-          "sleep"
-        ]
-      },
-      "default": 30,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "range": {
-        "min": 1,
-        "max": 60,
-        "step": 1
-      },
-      "unit": "min",
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.idle.unavailable"
-    },
-    {
-      "id": "power.hardware.lid",
-      "page": "power",
-      "section": "power.hardware",
-      "key": "lid",
-      "labelId": "settings.registry.power.hardware.lid.label",
-      "descriptionId": "settings.registry.power.hardware.lid.description",
-      "type": "enum",
-      "store": {
-        "id": "power",
-        "key": [
-          "lid"
-        ]
-      },
-      "default": "suspend",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "options": [
-        {
-          "value": "suspend",
-          "labelId": "settings.registry.power.lid.option.suspend"
-        },
-        {
-          "value": "lock",
-          "labelId": "settings.registry.power.lid.option.lock"
-        },
-        {
-          "value": "nothing",
-          "labelId": "settings.registry.power.lid.option.nothing"
-        }
-      ],
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.hardware.unavailable"
-    },
-    {
-      "id": "power.hardware.button",
-      "page": "power",
-      "section": "power.hardware",
-      "key": "button",
-      "labelId": "settings.registry.power.hardware.button.label",
-      "descriptionId": "settings.registry.power.hardware.button.description",
-      "type": "enum",
-      "store": {
-        "id": "power",
-        "key": [
-          "button"
-        ]
-      },
-      "default": "lock",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "options": [
-        {
-          "value": "lock",
-          "labelId": "settings.registry.power.button.option.lock"
-        },
-        {
-          "value": "suspend",
-          "labelId": "settings.registry.power.button.option.suspend"
-        },
-        {
-          "value": "menu",
-          "labelId": "settings.registry.power.button.option.menu"
-        }
-      ],
-      "backend": "planned",
-      "unavailableId": "settings.registry.power.hardware.unavailable"
-    },
-    {
       "id": "power.hardware.alerts",
       "page": "power",
       "section": "power.hardware",
@@ -1652,7 +1372,6 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "backend": "planned",
       "unavailableId": "settings.registry.power.alerts.unavailable"
     },
     {
@@ -1826,27 +1545,6 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false
-    },
-    {
-      "id": "wallpaper.motion.lockWallpaper",
-      "page": "wallpaper",
-      "section": "wallpaper.motion",
-      "key": "lockWallpaper",
-      "labelId": "settings.registry.wallpaper.motion.lockWallpaper.label",
-      "descriptionId": "settings.registry.wallpaper.motion.lockWallpaper.description",
-      "type": "string",
-      "store": {
-        "id": "wallpaper-picker",
-        "key": [
-          "lockWallpaper"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.wallpaper.lock-planned"
     },
     {
       "id": "appearance.fonts.interfaceFont",
@@ -2401,8 +2099,10 @@
         "max": 10,
         "step": 1
       },
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable"
+      "unavailableId": "settings.registry.ui.unavailable",
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      }
     },
     {
       "id": "windows-workspaces.workspaces.workspaceNames",
@@ -2423,8 +2123,10 @@
       "synonyms": [],
       "advanced": false,
       "entityType": "text-list",
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable"
+      "unavailableId": "settings.registry.ui.unavailable",
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      }
     },
     {
       "id": "windows-workspaces.workspaces.workspaceIcons",
@@ -2445,27 +2147,32 @@
       "synonyms": [],
       "advanced": false,
       "entityType": "text-list",
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable"
+      "unavailableId": "settings.registry.ui.unavailable",
+      "visibleWhen": {
+        "capability": "niriWorkspaces"
+      }
     },
     {
-      "id": "windows-workspaces.overview.nativeOverview",
-      "page": "windows-workspaces",
-      "section": "windows-workspaces.overview",
-      "key": "nativeOverview",
-      "labelId": "settings.registry.windows-workspaces.overview.nativeOverview.label",
-      "descriptionId": "settings.registry.windows-workspaces.overview.nativeOverview.description",
+      "id": "wallpaper.collection.collectionWallpapers",
+      "page": "wallpaper",
+      "section": "wallpaper.collection",
+      "key": "collectionWallpapers",
+      "labelId": "settings.registry.wallpaper.collection.collectionWallpapers.label",
+      "descriptionId": "settings.registry.wallpaper.collection.collectionWallpapers.description",
       "type": "boolean",
       "store": {
         "id": "desktop",
         "key": [
-          "nativeOverview"
+          "collectionWallpapers"
         ]
       },
-      "default": true,
+      "default": false,
       "apply": "instant",
       "synonyms": [],
-      "advanced": false
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "workspaceCollections"
+      }
     },
     {
       "id": "windows-workspaces.overview.livePreviews",
@@ -2486,7 +2193,6 @@
       "synonyms": [],
       "advanced": false,
       "unavailableId": "settings.registry.windows.capture-unavailable",
-      "dependsOn": "windows-workspaces.overview.nativeOverview",
       "visibleWhen": {
         "capability": "windowCapture"
       }
@@ -2622,9 +2328,6 @@
         "all": [
           {
             "capability": "input.controls"
-          },
-          {
-            "capability": "input.touchpadSpeed"
           },
           {
             "capability": "touchpad"
@@ -2914,185 +2617,6 @@
       "editorOwned": true
     },
     {
-      "id": "panels/dashboard/media.editor.lyrics",
-      "page": "panels/dashboard/media",
-      "section": "panels/dashboard/media.editor",
-      "key": "lyrics",
-      "labelId": "settings.registry.panels.dashboard.editor.lyrics.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.lyrics.description",
-      "type": "boolean",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "lyrics"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/media.editor.albumPalette",
-      "page": "panels/dashboard/media",
-      "section": "panels/dashboard/media.editor",
-      "key": "albumPalette",
-      "labelId": "settings.registry.panels.dashboard.editor.albumPalette.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.albumPalette.description",
-      "type": "boolean",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "albumPalette"
-        ]
-      },
-      "default": true,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/home-time.editor.homeZone",
-      "page": "panels/dashboard/home-time",
-      "section": "panels/dashboard/home-time.editor",
-      "key": "homeZone",
-      "labelId": "settings.registry.panels.dashboard.editor.homeZone.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.homeZone.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "homeZone"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/home-time.editor.homeCity",
-      "page": "panels/dashboard/home-time",
-      "section": "panels/dashboard/home-time.editor",
-      "key": "homeCity",
-      "labelId": "settings.registry.panels.dashboard.editor.homeCity.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.homeCity.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "homeCity"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/calendar-focus.editor.calendarFile",
-      "page": "panels/dashboard/calendar-focus",
-      "section": "panels/dashboard/calendar-focus.editor",
-      "key": "calendarFile",
-      "labelId": "settings.registry.panels.dashboard.editor.calendarFile.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.calendarFile.description",
-      "type": "string",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "calendarFile"
-        ]
-      },
-      "default": "",
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "panels/dashboard/calendar-focus.editor.focusMinutes",
-      "page": "panels/dashboard/calendar-focus",
-      "section": "panels/dashboard/calendar-focus.editor",
-      "key": "focusMinutes",
-      "labelId": "settings.registry.panels.dashboard.editor.focusMinutes.label",
-      "descriptionId": "settings.registry.panels.dashboard.editor.focusMinutes.description",
-      "type": "integer",
-      "store": {
-        "id": "dashboard",
-        "key": [
-          "focusMinutes"
-        ]
-      },
-      "default": 25,
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false,
-      "editorOwned": true
-    },
-    {
-      "id": "launcher.interface.nativePalette",
-      "page": "launcher",
-      "section": "launcher.interface",
-      "key": "nativePalette",
-      "labelId": "settings.registry.launcher.interface.nativePalette.label",
-      "descriptionId": "settings.registry.launcher.interface.nativePalette.description",
-      "type": "boolean",
-      "default": true,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "nativePalette"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.nativeClipboard",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "nativeClipboard",
-      "labelId": "settings.registry.privacy.history.nativeClipboard.label",
-      "descriptionId": "settings.registry.privacy.history.nativeClipboard.description",
-      "type": "boolean",
-      "default": true,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "nativeClipboard"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "advanced": false
-    },
-    {
-      "id": "panels/top-bar.panel.modules",
-      "page": "panels/top-bar",
-      "section": "panels/top-bar.panel",
-      "key": "modules",
-      "labelId": "settings.registry.panels.top-bar.panel.modules.label",
-      "descriptionId": "settings.registry.panels.top-bar.panel.modules.description",
-      "type": "array",
-      "default": [],
-      "store": {
-        "id": "desktop",
-        "key": [
-          "modules"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "advanced": false
-    },
-    {
       "id": "panels/top-bar.panel.clockFormat",
       "page": "panels/top-bar",
       "section": "panels/top-bar.panel",
@@ -3109,7 +2633,6 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
       "unavailableId": "settings.registry.ui.unavailable",
       "advanced": false
     },
@@ -3130,116 +2653,7 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
       "unavailableId": "settings.registry.ui.unavailable",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.notificationRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "notificationRetention",
-      "labelId": "settings.registry.privacy.history.notificationRetention.label",
-      "descriptionId": "settings.registry.privacy.history.notificationRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "notificationRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.clipboardRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "clipboardRetention",
-      "labelId": "settings.registry.privacy.history.clipboardRetention.label",
-      "descriptionId": "settings.registry.privacy.history.clipboardRetention.description",
-      "type": "integer",
-      "default": 7,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "clipboardRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.screenshotRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "screenshotRetention",
-      "labelId": "settings.registry.privacy.history.screenshotRetention.label",
-      "descriptionId": "settings.registry.privacy.history.screenshotRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "screenshotRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
-      "advanced": false
-    },
-    {
-      "id": "privacy.history.aiChatRetention",
-      "page": "privacy",
-      "section": "privacy.history",
-      "key": "aiChatRetention",
-      "labelId": "settings.registry.privacy.history.aiChatRetention.label",
-      "descriptionId": "settings.registry.privacy.history.aiChatRetention.description",
-      "type": "integer",
-      "default": 30,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "aiChatRetention"
-        ]
-      },
-      "apply": "instant",
-      "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "range": {
-        "min": 1,
-        "max": 365,
-        "step": 1
-      },
-      "unit": "days",
       "advanced": false
     },
     {
@@ -4091,34 +3505,6 @@
       "entityType": "navigation-hidden"
     },
     {
-      "id": "keyboard-mouse.mouse.shakeCursor",
-      "page": "keyboard-mouse",
-      "section": "keyboard-mouse.mouse",
-      "key": "shakeCursor",
-      "type": "boolean",
-      "default": false,
-      "store": {
-        "id": "desktop",
-        "key": [
-          "shakeCursor"
-        ]
-      },
-      "labelId": "settings.registry.keyboard-mouse.mouse.shakeCursor.label",
-      "descriptionId": "settings.registry.keyboard-mouse.mouse.shakeCursor.description",
-      "apply": "instant",
-      "advanced": false,
-      "synonyms": [
-        "shake mouse",
-        "find pointer",
-        "cursor enlargement"
-      ],
-      "backend": "planned",
-      "visibleWhen": {
-        "capability": "cursorShake"
-      },
-      "unavailableId": "settings.registry.keyboard-mouse.shake-planned"
-    },
-    {
       "id": "system.packages.aurReview",
       "page": "system",
       "section": "system.packages",
@@ -4296,14 +3682,6 @@
       "adapter": "brain"
     },
     {
-      "id": "launcher/entries.editor",
-      "page": "launcher/entries",
-      "section": "launcher/entries.list",
-      "labelId": "settings.registry.ui.entries",
-      "descriptionId": "settings.registry.launcher.entries.description",
-      "adapter": "launcher-entries"
-    },
-    {
       "id": "lock-login.preview",
       "page": "lock-login",
       "section": "lock-login.widgets",
@@ -4326,24 +3704,6 @@
       "labelId": "settings.registry.system.updates.label",
       "descriptionId": "settings.registry.system.updates.description",
       "adapter": "updates"
-    },
-    {
-      "id": "system.backup",
-      "page": "system",
-      "section": "system.about",
-      "labelId": "settings.registry.system.backup.label",
-      "descriptionId": "settings.registry.system.backup.description",
-      "adapter": "settings-backup",
-      "backend": "planned"
-    },
-    {
-      "id": "system.restore",
-      "page": "system",
-      "section": "system.about",
-      "labelId": "settings.registry.system.restore.label",
-      "descriptionId": "settings.registry.system.restore.description",
-      "adapter": "settings-restore",
-      "backend": "planned"
     },
     {
       "id": "power.profiles.retry",
