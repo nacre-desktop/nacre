@@ -22,7 +22,7 @@ history. Those entries are not a live queue and have not been rewritten here.
 
 | Order | Spec | Status | Authorized next action |
 | --- | --- | --- | --- |
-| N0169 | [Idle shell memory](0169-shell-memory.md) | Investigating | Matched dual-output static/video heap attribution and ten-minute idle measurements on dev-1; preserve smooth transitions. |
+| N0169 | [Idle shell memory](0169-shell-memory.md) | Implemented; live audit pending | Diagnostic dual-output CPU anonymous PSS 112.7 → 64.1 MiB after picker close; final ten-minute batch in progress. |
 | N0171 | [Native AI launch compatibility](0171-native-ai-launch.md) | Validated; full dev-1 desktop checks and release-helper parity passed | Restore terminal launch contracts and visible failure, reset local Codex environment, guard installer argv. No live switch. |
 | N0173 | [Timing-independent tests](0173-deflake-timing-tests.md) | Done; full dev-1 desktop CI and repeated load checks passed | Workspace failures 41/50 → 0/50 under ten CPU workers; preserve behavior checks and make speed gates opt-in. Product unchanged. |
 | N0172 | [Dashboard CPU warm sample](0172-dashboard-cpu-warm-sample.md) | Done; dev-1 desktop CI stages passed; one load flake isolated | First System-tab sample has CPU immediately; no idle poller. One 2 s AI RPC check timed out under load, then passed alone. TEST captures skipped after SSH timeout. |
