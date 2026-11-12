@@ -258,7 +258,7 @@ impl Focus {
                 true
             }
             DashboardExtrasCall::FocusStop(_) if current.live() => {
-                self.finish(hub, current, FocusStatus::Idle).await?;
+                self.finish(hub, current, FocusStatus::Idle, false).await?;
                 true
             }
             DashboardExtrasCall::FocusPause(_)
@@ -270,18 +270,30 @@ impl Focus {
     }
 
     /// End a live session and restore Do Not Disturb only if this session turned it
-    /// on and it is still on. Keep the persisted claim until restoration succeeds;
-    /// the transition gate keeps our settings change from releasing it mid-finish.
+    /// on and it is still on. Preserve the claim through the first restore failure;
+    /// expiry may abandon restoration after a failed readiness-driven retry.
     async fn finish(
         &self,
         hub: &Shared,
         current: State,
         status: FocusStatus,
+        abandon_restore: bool,
     ) -> std::result::Result<(), Failure> {
-        let restore = current.owns_dnd;
-        let previous = current.previous_dnd;
-        if restore && notifications::dnd(hub).await? {
-            notifications::set_dnd_inner(hub, previous).await?;
+        let restore = async {
+            if current.owns_dnd && notifications::dnd(hub).await? {
+                notifications::set_dnd_inner(hub, current.previous_dnd).await?;
+            }
+            Ok::<(), Failure>(())
+        }
+        .await;
+        if let Err(error) = restore {
+            if !abandon_restore {
+                return Err(error);
+            }
+            tracing::warn!(
+                ?error,
+                "Focus completed without restoring Do Not Disturb after retry"
+            );
         }
         let mut next = current;
         next.status = status;
@@ -295,7 +307,7 @@ impl Focus {
     }
 
     /// Return whether completion must wait for a settings/readiness change.
-    async fn expired(&self, hub: &Shared) -> bool {
+    async fn expired(&self, hub: &Shared, abandon_restore: bool) -> bool {
         let _turn = self.gate.lock().await;
         self.reload(hub);
         let current = self.state.borrow().clone();
@@ -305,7 +317,10 @@ impl Focus {
         {
             return false;
         }
-        if let Err(error) = self.finish(hub, current, FocusStatus::Done).await {
+        if let Err(error) = self
+            .finish(hub, current, FocusStatus::Done, abandon_restore)
+            .await
+        {
             tracing::warn!(?error, "Focus completion deferred until settings recover");
             return true;
         }
@@ -356,7 +371,16 @@ impl Focus {
                 }
             };
             tokio::select! {
-                _ = sleep => deferred = self.expired(&hub).await,
+                _ = sleep => {
+                    deferred = self.expired(&hub, false).await;
+                    // Readiness or terminal failure may predate expiry; no new
+                    // event is needed to drive the final retry in a settled service.
+                    let settled = hub.borrow().services.get("settings")
+                        .is_some_and(|s| s["status"] == "running" || s["status"] == "disabled");
+                    if deferred && settled {
+                        deferred = self.expired(&hub, true).await;
+                    }
+                },
                 _ = self.wake.notified() => {},
                 names = watch.next() => {
                     if names?.iter().any(|n| n == FILE) {
@@ -365,14 +389,21 @@ impl Focus {
                         deferred = false;
                     }
                 },
-                notice = notices.recv() => match notice {
-                    Ok(Notice::Changed { topic, .. }) if topic == "settings.store.desktop" || topic == "daemon" => {
-                        deferred = false;
-                        self.dnd_changed(&hub).await
+                notice = notices.recv() => {
+                    match notice {
+                        Ok(Notice::Changed { topic, .. }) if topic == "settings.store.desktop" || topic == "daemon" => {},
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {},
+                        Ok(_) => continue,
+                        Err(_) => return Err("Daemon notices ended".into()),
                     }
-                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => deferred = false,
-                    Ok(_) => {}
-                    Err(_) => return Err("Daemon notices ended".into()),
+                    self.dnd_changed(&hub).await;
+                    // Other daemon changes must not spend the retry while settings
+                    // is still starting or recovering through its supervisor.
+                    let settled = hub.borrow().services.get("settings")
+                        .is_some_and(|s| s["status"] == "running" || s["status"] == "disabled");
+                    if deferred && settled {
+                        deferred = self.expired(&hub, true).await;
+                    }
                 },
             }
         }
@@ -456,6 +487,10 @@ mod tests {
                     .unwrap();
                 hub.borrow_mut().settings = Some(settings);
                 hub.borrow_mut().service("settings", "starting", 0).unwrap();
+                hub.borrow_mut()
+                    .service("notifications", "disabled", 5)
+                    .unwrap();
+                assert!(hub.borrow().notifications.is_none());
                 let focus = Focus::new(paths);
                 let state = State {
                     status: FocusStatus::Running,
@@ -513,5 +548,71 @@ mod tests {
                 let _ = compositor.await;
             })
             .await;
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn expired_session_completes_when_settings_remain_unavailable() {
+        let logs = crate::daemon::test_logs::captured_logs();
+        for initial_status in ["starting", "running", "disabled"] {
+            let home = tempfile::tempdir().unwrap();
+            let paths = Paths::new(home.path());
+            std::fs::create_dir_all(&paths.state).unwrap();
+            let hub = Hub::new(
+                "focus-unavailable-test".into(),
+                false,
+                Duration::from_millis(16),
+            )
+            .shared();
+            hub.borrow_mut()
+                .service("settings", initial_status, 0)
+                .unwrap();
+            hub.borrow_mut()
+                .service("notifications", "disabled", 5)
+                .unwrap();
+            let focus = Focus::new(paths);
+            let state = State {
+                status: FocusStatus::Running,
+                total_ms: 60_000,
+                deadline_ms: wall_ms() - 5_000,
+                remaining_ms: 0,
+                previous_dnd: false,
+                owns_dnd: true,
+                daemon: true,
+            };
+            focus.save(&state).unwrap();
+            let mut run = Box::pin(focus.clone().run(hub.clone()));
+            assert!(tokio::time::timeout(Duration::from_secs(1), run.as_mut())
+                .await
+                .is_err());
+            if initial_status == "starting" {
+                assert_eq!(
+                    *focus.state.borrow(),
+                    state,
+                    "first failure must retain the claim"
+                );
+                // Neither unrelated startup signals nor a transient restart spends the retry.
+                for (service, status) in [("network-watch", "starting"), ("settings", "restarting")]
+                {
+                    hub.borrow_mut().service(service, status, 1).unwrap();
+                    assert!(tokio::time::timeout(Duration::from_secs(1), run.as_mut())
+                        .await
+                        .is_err());
+                    assert_eq!(*focus.state.borrow(), state);
+                }
+                // The supervisor has exhausted its budget; no settings recovery follows.
+                hub.borrow_mut().service("settings", "disabled", 5).unwrap();
+            }
+            assert!(tokio::time::timeout(Duration::from_secs(6), run.as_mut())
+                .await
+                .is_err());
+            let saved = State::parse(&crate::state::read_strict(&focus.path(), json!({})).unwrap())
+                .unwrap();
+            assert_eq!(saved.status, FocusStatus::Done);
+            assert!(!saved.owns_dnd);
+            assert_eq!(hub.borrow().snapshot(TOPIC).unwrap()["status"], "done");
+            assert!(notifications::dnd(&hub).await.is_err());
+        }
+        assert!(String::from_utf8_lossy(&logs.0.lock().unwrap())
+            .contains("Focus completed without restoring Do Not Disturb after retry"));
     }
 }

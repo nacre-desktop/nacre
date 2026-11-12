@@ -94,3 +94,34 @@ Follow-up evidence (fresh Arch containers, same limits and focused policy):
   passed on the first attempt (library: 1005 passed, 3 ignored; all integration
   binaries passed). Per-unit target peaked below 7 GB and was deleted with the
   source export inside the validation container.
+
+## Follow-up: permanent DND settings failure
+
+Notification ownership is not a prerequisite for focus's DND claim: start sets
+`ownsDnd` from the previous desktop setting, and `notifications::dnd` reads only
+`hub.settings` and the settings service status. Mako/dunst, tier 2, or disabled
+managed notifications alone cannot strand completion. The readiness regression
+now keeps notification ingress absent and its service disabled throughout.
+
+Permanent **settings** failure can strand it: the independent settings supervisor
+stops after five failures, while focus still loads its persisted running claim.
+After an initial restoration failure, retry on a daemon/settings change once
+settings is running or terminally disabled. Wait through `starting`/`restarting`
+to preserve recovery from the original startup race. If settings was already
+running or disabled at expiry, make the final retry immediately; no later signal
+is needed (a running service can still have an unreadable desktop store).
+On another restoration failure, warn, persist `done`, clear the claim, and send
+the normal completion notice. DND may remain on when the writer is unavailable.
+Persistence failures still propagate. No retry polling loop or sleep is added.
+
+The paused-clock regression covers disabled settings before/after expiry and an
+already-running service with an unavailable DND reader. Unrelated startup and transient restart
+signals must retain the claim.
+
+Validation: the new regression fails against the pre-fallback actor (`Running`
+instead of `Done`); both focus unit tests pass with the fix. Fmt, helper clippy
+with warnings denied, all 14 dashboard/notification integration tests, and both
+restart tests **50/50** beside six CPU workers pass. The full helper package also
+passes on its first `timeout 900` run with `--test-threads=6` (library: 1006 passed,
+3 ignored). Raw evidence stays in `.lead/`; the per-unit build export/target and
+owned container were removed.
