@@ -203,17 +203,13 @@ With the development repository configured, normal system updates include Nacre
 and its dependencies:
 
 ```sh
-sudo pacman -Syu
+nacre update
 pacman -Q nacre
 ```
 
-There is no need to download the installer again. When an update calls for
-refreshing the per-user configuration, review and apply it with:
-
-```sh
-nacre setup --plan
-nacre setup
-```
+`nacre update` and the Updates item in the bar run the same full-system updater.
+After packages update, both show the private setup plan and ask before applying
+changes. There is no need to download the installer again.
 
 The update pipeline promotes source only after Source CI, clean stock-Arch
 builds and all three installed-runtime setup checks pass. Development archives

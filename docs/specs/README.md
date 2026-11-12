@@ -4,7 +4,7 @@
 
 | N0400 | Release pipeline audit (findings in the [v0.1 checklist](../v0.1-checklist.md)) | Done 2026-11-11 | No publish since October: package builds skip `[no-publish]` commits by design, Source checks has had no runner since Oct 29, and the Tier 1 fork was not packaged. |
 | N0401 | [Fresh-Arch VM install gate](0401-fresh-arch-vm-gate.md) | Phase A done; harness next | dev-1 QEMU/KVM with virgl renders native niri and Hyprland; the October snapshot installs, runs and fails the removal check. |
-| N0403 | `nacre update` | In progress | One update path: extend the existing interactive updater with the setup plan/apply review; `nacre update` runs it. |
+| N0403 | [`nacre update`](0403-nacre-update.md) | Integrated 2026-11-12; focused dev-1 checks passed | One update path: the bar's existing updater adds the `nacre setup` plan/apply review (package installs only) and a package-change summary; `nacre update` runs it. +61 product lines. |
 | N0406 | [Tier 1 nacre-niri package and setup choice](0406-tier1-nacre-niri-package.md) | Integrated 2026-11-12; package runtime proof waits for N0408 | Builds the fork at r3079 from its own recipe, retires the upstream-niri hover companion (about −2,390 lines), and setup offers nacre-niri first. |
 | N0408 | Orient release matching the engine lock | Planned; owner publishes | The signed `arch-0.1.0dev6-1` was built from Orient `17bf36ef`, but the lock pins `3efe8d1e` (4 API commits later). Bump Orient to 0.1.0-dev.7 at the locked source, release it, then update Nacre's lock. |
 | N0407 | [Package dependency review](0407-package-dependency-review.md) | Planned; after N0406 | Sort each of the 58 core dependencies into keep, optional, move or drop, then prove the smaller set in the VM gate. |

@@ -5,7 +5,8 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import nullcontext
+from contextlib import nullcontext, redirect_stderr
+from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -18,6 +19,46 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_update_dispatches_through_the_existing_updates_tool_route(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
+            helper.parent.mkdir(parents=True)
+            helper.touch()
+            with (
+                patch.object(m, "HOME", home),
+                patch.object(m.sys, "argv", ["nacre", "update"]),
+                patch.object(m.subprocess, "call", return_value=0) as call,
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    m.main()
+            self.assertEqual(raised.exception.code, 0)
+            call.assert_called_once_with(
+                [
+                    str(home / ".local/share/nacre/shell/tools/nacre-helper"),
+                    "menu-cli",
+                    "tool",
+                    "updates",
+                ]
+            )
+
+    def test_update_without_setup_helper_prints_setup_hint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            errors = StringIO()
+            with (
+                patch.object(m, "HOME", Path(directory)),
+                patch.object(m.sys, "argv", ["nacre", "update"]),
+                patch.object(m.subprocess, "call") as call,
+                redirect_stderr(errors),
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    m.main()
+            self.assertEqual(raised.exception.code, 1)
+            self.assertEqual(
+                errors.getvalue(), "Run nacre setup first; then nacre update.\n"
+            )
+            call.assert_not_called()
+
     def test_automatic_recovery_retries_only_a_busy_release_lock(self):
         import ui_shell_switch
 

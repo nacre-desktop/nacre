@@ -21,6 +21,17 @@ if python3 "$script_dir/updates.py" --needs-host; then
         /usr/bin/bash "$script_dir/updates.sh"
     exit 0
 fi
+if (( EUID == 0 )); then
+    printf 'Run nacre update as your desktop user, without sudo.\n' >&2
+    exit 1
+fi
+package_snapshot() {
+    local -a packages=()
+    mapfile -t packages < <(
+        pacman -Qq | awk '/^nacre/ || $0 == "niri" || $0 == "hyprland" || $0 == "orient"'
+    )
+    if ((${#packages[@]})); then pacman -Q "${packages[@]}"; fi
+}
 if command -v gum >/dev/null; then
     palette="$HOME/.config/nacre/colors"
     accent=$(cat "$palette/primary" 2>/dev/null || printf '#808080')
@@ -30,6 +41,8 @@ else
     read -r -p 'Update system packages now? [y/N] ' answer
     [[ "$answer" == [yY] ]] || exit 0
 fi
+step="recording installed Nacre package versions"
+before_packages=$(package_snapshot)
 step="package update preflight"
 python3 "$script_dir/updates.py" --preflight
 step="system package update"
@@ -44,10 +57,52 @@ else
     printf 'Starting pacman for the explicitly confirmed system package update.\n' >&2
     sudo pacman -Syu
 fi
+step="recording updated Nacre package versions"
+after_packages=$(package_snapshot)
 step="Flatpak update"
 if command -v flatpak >/dev/null; then
     printf 'Starting flatpak for the explicitly confirmed Flatpak update.\n' >&2
     flatpak update
+fi
+step="Nacre setup plan"
+if pacman -Qq nacre >/dev/null 2>&1; then
+    nacre setup --plan
+    if command -v gum >/dev/null; then
+        palette="$HOME/.config/nacre/colors"
+        accent=$(cat "$palette/primary" 2>/dev/null || printf '#808080')
+        text=$(cat "$palette/onprimary" 2>/dev/null || printf '#ffffff')
+        if gum confirm --selected.background="$accent" --selected.foreground="$text" 'Apply these setup changes?'; then
+            step="Nacre setup apply"
+            nacre setup
+        else
+            printf 'Setup changes were left for later. Run nacre setup to apply them.\n'
+        fi
+    else
+        read -r -p 'Apply these setup changes? [y/N] ' answer
+        if [[ "$answer" == [yY] ]]; then
+            step="Nacre setup apply"
+            nacre setup
+        else
+            printf 'Setup changes were left for later. Run nacre setup to apply them.\n'
+        fi
+    fi
+else
+    printf 'Nacre is not installed from its package; skipping the setup review.\n'
+fi
+changed_packages=$(join -a1 -a2 -e 'not-installed' -o 0,1.2,2.2 \
+    <(sort <<<"$before_packages") <(sort <<<"$after_packages") |
+    awk '$2 != $3 {print $1" "$2" -> "$3}')
+if [[ -n "$changed_packages" ]]; then
+    printf 'Changed packages:\n%s\n' "$changed_packages"
+else
+    printf 'no Nacre package changes\n'
+fi
+if grep -Eq \
+    '^(niri|hyprland|nacre-niri|nacre-session-(niri|hyprland|nacre-niri)) ' \
+    <<<"$changed_packages"; then
+    printf 'Log out and back in to use the updated compositor.\n'
+elif grep -Eq '^nacre ' <<<"$changed_packages"; then
+    printf 'Restart the shell with: nacre restart\n'
 fi
 step="update status refresh"
 python3 "$HOME/.local/share/nacre/shell/tools/updates.py" --refresh

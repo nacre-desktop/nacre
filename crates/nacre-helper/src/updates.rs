@@ -432,6 +432,7 @@ mod script_contract_tests {
     #[test]
     fn explicit_upgrade_failure_keeps_step_exit_and_skipreview() -> crate::Result<()> {
         let root = tempfile::tempdir()?;
+        fs::set_permissions(root.path(), fs::Permissions::from_mode(0o755))?;
         executable(
             root.path(),
             "python3",
@@ -439,11 +440,28 @@ mod script_contract_tests {
         )?;
         executable(root.path(), "gum", "exit 0")?;
         executable(root.path(), "paru", "printf '%s\\n' \"$*\"; exit 7")?;
-        let output = Command::new("bash")
-            .arg(
-                std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .join("../../nacre/shell-tools/updates.sh"),
-            )
+        executable(
+            root.path(),
+            "pacman",
+            "[[ \"$1\" == -Qq ]] && echo nacre || echo 'nacre 1.0'",
+        )?;
+        let script = root.path().join("updates.sh");
+        fs::copy(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("../../nacre/shell-tools/updates.sh"),
+            &script,
+        )?;
+        fs::set_permissions(&script, fs::Permissions::from_mode(0o644))?;
+        let uid = Command::new("id").arg("-u").output()?;
+        let mut command = if String::from_utf8_lossy(&uid.stdout).trim() == "0" {
+            let mut command = Command::new("setpriv");
+            command.args(["--reuid=65534", "--regid=65534", "--clear-groups", "bash"]);
+            command
+        } else {
+            Command::new("bash")
+        };
+        let output = command
+            .arg(script)
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
             .stdin(std::process::Stdio::null())

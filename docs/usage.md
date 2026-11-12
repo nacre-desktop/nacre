@@ -419,6 +419,9 @@ weather illustrations matching the condition and time of day. With city photos
 off, these local illustrations need no image downloads. Requests stop when
 Weather is hidden.
 
+Run `nacre update`, or choose Updates in the bar, to update system and Nacre
+packages, review the private setup plan, and apply changes after confirmation.
+
 Software groups app browsing, themes and extensions. **Apps** offers optional
 category chips for browsers, communication, games, creative tools, office and
 reading, development, network and utilities. Typing still searches everything,
