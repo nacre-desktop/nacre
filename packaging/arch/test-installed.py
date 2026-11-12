@@ -315,10 +315,7 @@ assert {
     "nacre-terminal",
     "org.kde.dolphin",
 } <= set(favorites)
-assert (
-    "shell fish --init-command"
-    in (home / ".config/nacre/terminal/kitty.conf").read_text()
-)
+assert "shell fish" not in (home / ".config/nacre/terminal/kitty.conf").read_text()
 run(
     "python",
     "-c",
