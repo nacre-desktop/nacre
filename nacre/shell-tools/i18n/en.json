@@ -414,7 +414,7 @@
   "helper.menu-backend.this-recording-belongs-to-another-controller": "This recording belongs to another controller",
   "helper.menu-backend.try-a-conversion-such-as-10-km-to-miles": "Try a conversion such as 10 km to miles",
   "helper.menu-backend.type-at-least-two-characters-to-search-packages": "Type at least two characters to search packages",
-  "helper.menu-backend.type-two-or-more-characters-to-find-files": "Type two or more characters to find files",
+  "helper.menu-backend.type-two-or-more-characters-to-find-files": "Search these folders; type two or more characters to find files",
   "helper.menu-backend.unknown-configuration-route": "Unknown configuration route",
   "helper.menu-backend.unknown-menu-tool": "Unknown menu tool",
   "helper.menu-backend.unknown-nacre-reminder": "Unknown Nacre reminder",

@@ -396,7 +396,7 @@
   "helper.menu-backend.this-recording-belongs-to-another-controller": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
   "helper.menu-backend.try-a-conversion-such-as-10-km-to-miles": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
   "helper.menu-backend.type-at-least-two-characters-to-search-packages": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
-  "helper.menu-backend.type-two-or-more-characters-to-find-files": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
+  "helper.menu-backend.type-two-or-more-characters-to-find-files": "nacre/shell-tools/menu-backend.py: helper UI hint shown with file search roots; not a command identifier.",
   "helper.menu-backend.unknown-configuration-route": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
   "helper.menu-backend.unknown-menu-tool": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
   "helper.menu-backend.unknown-nacre-reminder": "nacre/shell-tools/menu-backend.py: helper UI message; not a command identifier.",
