@@ -16,8 +16,10 @@ def array(values):
 def render(root, revision, sequence=None):
     mapping = json.loads((root / "packaging/packages.json").read_text())["arch"]
     lock = json.loads((root / "dependencies.lock.json").read_text())["orient"]
-    version = (root / "VERSION").read_text().strip().replace("-dev.", "dev")
-    if "-dev." in (root / "VERSION").read_text() and sequence is not None:
+    source_version = (root / "VERSION").read_text().strip()
+    is_development = "-dev." in source_version
+    version = source_version.replace("-dev.", "dev")
+    if is_development and sequence is not None:
         version += ".r" + str(sequence) + ".g" + revision[:12]
     sources = [
         f"nacre::git+https://github.com/nacre-desktop/nacre.git#commit={revision}",

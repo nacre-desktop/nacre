@@ -1,9 +1,9 @@
-name: Publish development preview
+name: Publish release
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing tested development tag
+        description: Existing tested release tag
         required: true
         type: string
 permissions:
@@ -25,12 +25,12 @@ jobs:
           python - <<'PY'
           import os, pathlib, re
           tag = os.environ["RELEASE_TAG"]
-          if not re.fullmatch(r"v0[.][0-9]+[.][0-9]+-dev[.][0-9]+", tag):
-              raise SystemExit("Only development-preview tags can be published")
+          if not re.fullmatch(r"v0[.][0-9]+[.][0-9]+(?:-dev[.][0-9]+)?", tag):
+              raise SystemExit("Tag must be v0.x.y or v0.x.y-dev.N")
           if tag != "v" + pathlib.Path("VERSION").read_text().strip():
               raise SystemExit("Tag and source VERSION disagree")
           PY
-      - name: Publish prerelease
+      - name: Publish release
         run: |
           python - <<'PYTHON'
           import os, pathlib, re
@@ -39,11 +39,16 @@ jobs:
           match = re.search(r"^## " + re.escape(version) + r"\s*\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
           if not match or not match.group(1).strip():
               raise SystemExit("Changelog entry missing for " + version)
-          notes = "Development preview; installation and packaging are still being refined.\n\n" + match.group(1).strip() + "\n"
+          prefix = "Development preview; installation and packaging are still being refined.\n\n" if "-dev." in version else "Public preview\n\n"
+          notes = prefix + match.group(1).strip() + "\n"
           pathlib.Path("/tmp/release-notes.md").write_text(notes)
           PYTHON
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             gh release edit "$RELEASE_TAG" --notes-file /tmp/release-notes.md
           else
-            gh release create "$RELEASE_TAG" --verify-tag --prerelease --latest=false --title "$RELEASE_TAG" --notes-file /tmp/release-notes.md
+            if [[ "$RELEASE_TAG" == *-dev.* ]]; then
+              gh release create "$RELEASE_TAG" --verify-tag --prerelease --latest=false --title "$RELEASE_TAG" --notes-file /tmp/release-notes.md
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --latest --title "$RELEASE_TAG" --notes-file /tmp/release-notes.md
+            fi
           fi

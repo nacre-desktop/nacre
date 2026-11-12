@@ -1636,6 +1636,20 @@ class ArchPackageLayoutTests(unittest.TestCase):
         self.assertIn(".r12.gbbbbbbbbbbbb", newer)
         self.assertIn("orient=0.1.0dev7", newer)
 
+    def test_public_arch_release_has_no_development_snapshot_suffix(self):
+        recipe = load(TOOLS.parent / "packaging/arch/recipe.py", "setup_arch_recipe")
+        original_read_text = Path.read_text
+
+        def release_version(path, *args, **kwargs):
+            if path == TOOLS.parent / "VERSION":
+                return "0.1.0\n"
+            return original_read_text(path, *args, **kwargs)
+
+        with patch.object(Path, "read_text", release_version):
+            rendered = recipe.render(TOOLS.parent, "a" * 40, 12)
+        self.assertIn("pkgver=0.1.0\n", rendered)
+        self.assertNotIn(".r12.g", rendered)
+
     def test_split_packages_have_no_file_collisions_and_ship_native_artifacts(self):
         stage = load(TOOLS.parent / "packaging/arch/stage.py", "test_arch_stage")
         with tempfile.TemporaryDirectory() as folder:

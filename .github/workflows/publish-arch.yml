@@ -94,7 +94,9 @@ jobs:
           import json, pathlib, subprocess, tempfile
           folder = pathlib.Path('site/arch/dev/x86_64')
           receipt = json.loads((folder/'release.json').read_text())
-          tag = 'arch-dev-' + receipt['packages']['nacre']['version']
+          version = receipt['packages']['nacre']['version']
+          development = 'dev' in version
+          tag = ('arch-dev-' if development else 'arch-') + version
           if subprocess.run(['gh','release','view',tag], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
               with tempfile.TemporaryDirectory() as temporary:
                   subprocess.run(['gh','release','download',tag,'--pattern','release.json','--dir',temporary], check=True)
@@ -107,7 +109,8 @@ jobs:
               # This tag records publication on main, including its packaging
               # controls. The signed receipt records the exact compiled source.
               # GITHUB_TOKEN cannot tag an older workflow-changing commit.
-              subprocess.run(['gh','release','create',tag,'--target','main','--prerelease','--latest=false','--title','Nacre Arch development '+receipt['packages']['nacre']['version'],'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. The tag records publication state; the exact compiled source is '+receipt['sourceRevision']+'. Source and installed-runtime proof are linked in signed release.json.',*[str(path) for path in files]], check=True)
+              title = ('Nacre Arch development ' if development else 'Nacre Arch ') + version
+              subprocess.run(['gh','release','create',tag,'--target','main','--prerelease','--latest=false','--title',title,'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. The tag records publication state; the exact compiled source is '+receipt['sourceRevision']+'. Source and installed-runtime proof are linked in signed release.json.',*[str(path) for path in files]], check=True)
           PY
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         if: steps.candidate.outputs.eligible == 'true'
