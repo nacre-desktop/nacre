@@ -30,6 +30,15 @@ class TerminalApplicationTests(unittest.TestCase):
                 f"open({str(log)!r},'w').write(json.dumps(sys.argv[1:]))\n"
             )
             terminal.chmod(0o755)
+            # Launches go through a transient `systemd-run --user --scope`; the fake
+            # drops its own options and runs the wrapped command (env ... kitty ...).
+            runner = commands / "systemd-run"
+            runner.write_text(
+                "#!/usr/bin/python3\nimport os,sys\nargs=sys.argv[1:]\n"
+                "while args and args[0].startswith('--'):\n    args.pop(0)\n"
+                "os.execvp(args[0], args)\n"
+            )
+            runner.chmod(0o755)
             env = {
                 **os.environ,
                 "HOME": str(home),
