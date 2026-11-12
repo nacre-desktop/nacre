@@ -17,6 +17,20 @@ the preceding chat unit. Neither change alters client timeouts or transport code
 The daemon session fixture waits for an actual `READY=1` notification with a
 60-second hang bound, replacing the load-sensitive 20-second startup allowance.
 
+## N0303 — daemon READY with held backends
+
+The two readiness integration tests now always verify READY with silent D-Bus
+fixtures; a named 30-second hang guard prevents stalled CI. The two-second READY
+and socket latency budgets run only with `NACRE_TEST_PERF=1`, matching the
+opt-in pattern above. Lock-content and all-backend tests retain their
+service/socket behavior checks.
+
+Phase-1 dev-1 comparison (`951278f51` before N0209 → `a0aaf12ae`; 20 runs each;
+min/median/max READY ms; debug pinned to four CPUs; shared-host load present):
+- Lock-content release: 16/20, 101/293/1646 → 19/20, 99/105/1799; debug: 5/20, 836/1269/1924 → 17/20, 634/696/1906.
+- Every-backend-hangs release: 13/20, 75/960/1851 → 15/20, 75/83/1897; debug: 16/20, 450/550/1871 → 20/20, 460/474/487.
+- Both revisions flaked under the two-second bound, so hosted CI checks ordering/behavior while strict latency stays opt-in; no production readiness ordering changed.
+
 The migration's 2,000-note content, privacy, idempotence and sequential/all tree
 equivalence checks remain in the default suite. Its two 60-second limits move to
 the ignored `synthetic_vault_migration_performance` test. Brain's browser-load
