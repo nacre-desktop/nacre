@@ -6,14 +6,9 @@ use std::collections::BTreeMap;
 pub const TOPIC: &str = "settings.store.widgets";
 
 fn window_state_path() -> Option<std::path::PathBuf> {
-    std::env::var_os("XDG_STATE_HOME")
-        .map(std::path::PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("HOME")
-                .map(std::path::PathBuf::from)
-                .map(|home| home.join(".local/state"))
-        })
-        .map(|state| state.join("nacre/widgets-window.json"))
+    crate::state::shell_dir()
+        .ok()
+        .map(|state| state.join("widgets-window.json"))
 }
 
 fn restored_window_size(path: &std::path::Path) -> Option<(u32, u32)> {
@@ -43,13 +38,7 @@ fn save_window_size(path: &std::path::Path, (width, height): (u32, u32)) -> std:
 
 /// Read the active presentation poster for the Widgets app's wallpaper preview fallback.
 pub(crate) fn presentation_wallpaper_path() -> Option<String> {
-    let state = std::env::var_os("XDG_STATE_HOME")
-        .map(std::path::PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("HOME")
-                .map(std::path::PathBuf::from)
-                .map(|home| home.join(".local/state"))
-        })?;
+    let state = crate::state::state_home().ok()?;
     presentation_wallpaper_path_from(&state)
 }
 

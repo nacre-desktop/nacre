@@ -555,6 +555,7 @@ fn start(
                 Err(_) => eprintln!("OSD_SHADOW_PREWARM failed"),
             }
         });
+    state::migrate()?;
     *ui_started = true;
     let mut forced_safe_mode = false;
     if let Ok(path) = state::File::path()
