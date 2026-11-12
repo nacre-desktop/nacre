@@ -69,6 +69,19 @@ fn sanitized(path: &str) -> String {
     }
     name
 }
+/// A session belongs to `directory` when its FIRST recorded cwd is that folder.
+/// Later records may run elsewhere (extra working folders, `cd` into a repo), so
+/// only the start folder proves ownership; every cwd must still be absolute.
+fn started_in(records: &[Value], directory: &Path) -> bool {
+    let mut cwds = records
+        .iter()
+        .filter_map(|record| record.get("cwd").and_then(Value::as_str))
+        .peekable();
+    let first_matches = cwds.peek().is_none_or(|first| {
+        normalized_workspace(Path::new(first)) == normalized_workspace(directory)
+    });
+    first_matches && cwds.all(|cwd| Path::new(cwd).is_absolute())
+}
 fn normalized_workspace(directory: &Path) -> PathBuf {
     use unicode_normalization::UnicodeNormalization;
     let resolved = fs::canonicalize(directory).unwrap_or_else(|_| directory.to_path_buf());
@@ -348,14 +361,7 @@ pub fn messages(config: &Path, session_id: &str, directory: &Path) -> Result<Vec
     let path = project.join(format!("{session_id}.jsonl"));
     reject_linked_ancestors(&project)?;
     let records = jsonl(&path);
-    if records
-        .iter()
-        .filter_map(|record| record.get("cwd").and_then(Value::as_str))
-        .any(|cwd| {
-            !Path::new(cwd).is_absolute()
-                || normalized_workspace(Path::new(cwd)) != normalized_workspace(directory)
-        })
-    {
+    if !started_in(&records, directory) {
         return Err(err(
             "Claude session directory does not match its recorded workspace",
         ));
@@ -590,16 +596,12 @@ fn matching_running_session(
 }
 fn project_directories(root: &Path, chat_directory: bool) -> Vec<PathBuf> {
     if chat_directory {
+        // Chat folders are 32-hex names; a chat started from inside another chat
+        // folder nests one level deeper, so scan two levels (no symlinks followed).
         let mut paths = vec![root.to_path_buf()];
-        if let Ok(entries) = fs::read_dir(root) {
-            paths.extend(entries.flatten().filter_map(|entry| {
-                let name = entry.file_name();
-                (entry.file_type().is_ok_and(|kind| kind.is_dir())
-                    && name
-                        .to_str()
-                        .is_some_and(|s| s.len() == 32 && s.bytes().all(|b| b.is_ascii_hexdigit())))
-                .then(|| entry.path())
-            }));
+        for child in hex_directories(root) {
+            paths.extend(hex_directories(&child));
+            paths.push(child);
         }
         return paths;
     }
@@ -623,6 +625,22 @@ fn project_directories(root: &Path, chat_directory: bool) -> Vec<PathBuf> {
     } else {
         paths
     }
+}
+fn hex_directories(directory: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(directory) else {
+        return Vec::new();
+    };
+    entries
+        .flatten()
+        .filter_map(|entry| {
+            let name = entry.file_name();
+            (entry.file_type().is_ok_and(|kind| kind.is_dir())
+                && name
+                    .to_str()
+                    .is_some_and(|s| s.len() == 32 && s.bytes().all(|b| b.is_ascii_hexdigit())))
+            .then(|| entry.path())
+        })
+        .collect()
 }
 fn parse_worktree_list(listing: &str) -> Vec<PathBuf> {
     listing
@@ -752,14 +770,7 @@ fn history(
             if !valid_session_records(&records, &id) {
                 continue;
             }
-            if records
-                .iter()
-                .filter_map(|record| record.get("cwd").and_then(Value::as_str))
-                .any(|cwd| {
-                    !Path::new(cwd).is_absolute()
-                        || normalized_workspace(Path::new(cwd)) != normalized_workspace(directory)
-                })
-            {
+            if !started_in(&records, directory) {
                 continue;
             }
             let title = title_from(&records);
@@ -1371,6 +1382,50 @@ mod tests {
         let transcript = transcript.replace("/fixture", &cwd.to_string_lossy());
         fs::write(project.join(format!("{id}.jsonl")), transcript).unwrap();
         project
+    }
+
+    #[test]
+    fn sessions_that_later_change_folder_stay_listed_and_nested_chat_folders_are_scanned() {
+        let temp = tempdir().unwrap();
+        let config = temp.path().join("claude");
+        let root = temp.path().join("chats");
+        // A chat started from inside another chat folder: <root>/<hex>/<hex>.
+        let chat = root.join("0".repeat(32)).join("a".repeat(32));
+        fs::create_dir_all(&chat).unwrap();
+        let project = put_fixture(&config, &chat, "current", CURRENT_ID);
+        let transcript = project.join(format!("{CURRENT_ID}.jsonl"));
+        // A later record ran in an extra working folder (e.g. the Brain vault).
+        let mut later: Value = serde_json::from_str(
+            fs::read_to_string(&transcript)
+                .unwrap()
+                .lines()
+                .last()
+                .unwrap(),
+        )
+        .unwrap();
+        later["cwd"] = json!(temp.path().join("Nacre-Brain").to_string_lossy());
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&transcript)
+            .unwrap()
+            .write_all(format!("{later}\n").as_bytes())
+            .unwrap();
+        let rows = history(&config, &root, true, &BTreeMap::new()).unwrap();
+        assert!(rows.iter().any(|row| row["id"] == CURRENT_ID), "{rows:?}");
+        assert!(!messages(&config, CURRENT_ID, &chat).unwrap().is_empty());
+        // A session that STARTED elsewhere still does not belong to this folder.
+        let other = temp.path().join("elsewhere");
+        let foreign = put_fixture(&config, &other, "current", CURRENT_ID);
+        fs::copy(
+            foreign.join(format!("{CURRENT_ID}.jsonl")),
+            project.join(format!("{CURRENT_ID}.jsonl")),
+        )
+        .unwrap();
+        assert!(!history(&config, &root, true, &BTreeMap::new())
+            .unwrap()
+            .iter()
+            .any(|row| row["id"] == CURRENT_ID));
+        assert!(messages(&config, CURRENT_ID, &chat).is_err());
     }
 
     #[test]
