@@ -1,8 +1,9 @@
 //! Managed notification ownership and restart behavior on a private session bus.
+use nacre_protocol::{Message, Mirror};
 use serde_json::Value;
 use std::{
     fs,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader, Read, Write},
     os::unix::{
         fs::PermissionsExt,
         net::{UnixListener, UnixStream},
@@ -253,7 +254,7 @@ fn notifications_snapshot(home: &Path) -> Value {
         .arg("notifications")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null());
+        .stderr(Stdio::piped());
     if let Some(address) = std::env::var_os("DBUS_SESSION_BUS_ADDRESS") {
         command.env("DBUS_SESSION_BUS_ADDRESS", address);
     }
@@ -263,21 +264,36 @@ fn notifications_snapshot(home: &Path) -> Value {
             .expect("start isolated notifications observer"),
     );
     let stdout = child.0.stdout.take().expect("observer stdout");
+    let mut stderr = child.0.stderr.take().expect("observer stderr");
+    let errors = thread::spawn(move || {
+        let mut text = String::new();
+        stderr
+            .read_to_string(&mut text)
+            .expect("read observer stderr");
+        text
+    });
     let (send, receive) = mpsc::channel();
-    thread::spawn(move || {
+    let reader = thread::spawn(move || {
+        let mut mirror = Mirror::default();
         for line in BufReader::new(stdout).lines() {
             let Ok(line) = line else { break };
-            if line.contains("\"t\":\"snap\"") {
-                let _ = send.send(line);
-                break;
+            let message: Message = serde_json::from_str(&line).expect("observer protocol JSON");
+            mirror.receive(&message);
+            if let Some((_, state)) = mirror.topics.get("notifications") {
+                if state["health"]["available"] == true {
+                    let _ = send.send(serde_json::json!({"topic":"notifications","data":state}));
+                    break;
+                }
             }
         }
     });
-    let line = receive
-        .recv_timeout(Duration::from_secs(8))
-        .expect("notification snapshot deadline");
-    child.stop();
-    serde_json::from_str(&line).expect("valid notification snapshot")
+    let line = receive.recv_timeout(Duration::from_secs(8));
+    let status = child.stop();
+    reader.join().expect("observer stdout reader");
+    let stderr = errors.join().expect("observer stderr reader");
+    line.unwrap_or_else(|error| {
+        panic!("notification snapshot failed: {error}; observer {status}; stderr:\n{stderr}")
+    })
 }
 
 fn call_dnd(home: &Path, enabled: bool) -> Value {
@@ -460,7 +476,8 @@ fn managed_notifications_private_bus() {
         .expect("run fixture on a private D-Bus session");
     assert!(
         output.status.success(),
-        "private-bus child failed:\n{}\n{}",
+        "private-bus child failed ({}):\n{}\n{}",
+        output.status,
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
@@ -698,7 +715,8 @@ fn managed_notifications_takeover_private_bus() {
         .expect("run fixture on a private D-Bus session");
     assert!(
         output.status.success(),
-        "private-bus child failed:\n{}\n{}",
+        "private-bus child failed ({}):\n{}\n{}",
+        output.status,
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );

@@ -58,3 +58,39 @@ Raw logs and harnesses remain in the worktree's `.lead/`, not committed.
 Focused checks follow the current CI policy; hosted CI remains the deployment
 gate for the lead's push. No live changes, publication or temporary product
 alternatives. Build-host source export, target and owned container cleaned up.
+
+## Follow-up: notification subscription EOF
+
+Main at `325ee2f5` intermittently failed `managed_notifications_private_bus`:
+its watcher reached EOF before a snapshot. This is a **separate ordering bug**
+from the focus/settings race above and is fixed in a separate follow-up commit.
+After restart the fixture waits for the Freedesktop bus name, but
+`notifications::run` previously acquired that name before publishing its first
+Hub topic. A subscription in that interval receives nonretryable `UnknownTopic`;
+`ctl watch` exits, and the fixture's reader reports `Disconnected`. Unrelated
+system-bus activation warnings do not explain this path.
+
+Publish the existing unavailable baseline, including restored history, before
+D-Bus connection/name acquisition. The existing ready publication then updates
+that same subscription. The observer consumes snapshots and patches with
+`Mirror` until health is available before using the notification API again.
+Capture observer stderr, join both reader threads, and include observer and
+private-bus child exit status in failures. No timeouts were increased, sleeps
+added, or new product background work introduced.
+
+Follow-up evidence (fresh Arch containers, same limits and focused policy):
+
+- Unmodified producer: notification test **50/50** beside six CPU workers; the
+  narrow race did not occur naturally in this run.
+- Temporary scheduler yields widened only the post-acquisition/pre-publication
+  interval, beside the same six workers. Old producer failed with observer
+  **exit status 1, `Unknown topic`**, then channel EOF; corrected producer passed
+  the identical experiment. Instrumentation exists only in `.lead/` evidence.
+- Uninstrumented candidate: notification restart **50/50** and focus restart
+  **50/50**, alternating beside six CPU workers.
+- Forced focus/settings readiness test, `cargo fmt --check`, and
+  `cargo clippy --locked -j2 -p nacre-helper --all-targets -- -D warnings`: passed.
+- `timeout 900 nice -n 10 cargo test --locked -j2 -p nacre-helper -- --test-threads=6`:
+  passed on the first attempt (library: 1005 passed, 3 ignored; all integration
+  binaries passed). Per-unit target peaked below 7 GB and was deleted with the
+  source export inside the validation container.

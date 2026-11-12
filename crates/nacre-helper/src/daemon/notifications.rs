@@ -709,6 +709,9 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
         if cache_dirty {
             retry_at(&mut dirty, SAVE_RETRY);
         }
+        // Name ownership is visible before bus setup finishes. Seed the real
+        // baseline first so watchers in that interval can subscribe.
+        publish(&hub, &model, &storage, &ingress, false, true)?;
         let connection = match zbus::connection::Builder::session()?
             .max_queued(64)
             .build()
@@ -733,7 +736,6 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                 // Another server owns the name (for example the QML shell). Stay
                 // up and try again, still without queueing, once it is released.
                 ingress.ready.store(false, Ordering::Release);
-                publish(&hub, &model, &storage, &ingress, false, true)?;
                 hub.borrow_mut().service("notifications", "refused", 0)?;
                 rows = model
                     .persisted_rows()?

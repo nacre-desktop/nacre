@@ -2,7 +2,7 @@
 
 ## Current status — 2026-11-10
 
-| N0209 | [Focus restart completion race](0209-focus-restart-race.md) | Validated locally; ready for lead review | Preserve the DND claim through settings startup; original 43/50 → fixed 50/50 under CPU load. Focused fmt/clippy and full helper tests with six threads passed. |
+| N0209 | [Focus and notification startup races](0209-focus-restart-race.md) | Follow-up validated locally; ready for lead review | Retain the DND claim until settings is ready; publish the notification baseline before bus ownership. Both restart tests 50/50 under CPU load; focused fmt/clippy and full helper tests with six threads passed. |
 | N0400 | Release pipeline audit (findings in the [v0.1 checklist](../v0.1-checklist.md)) | Done 2026-11-11 | No publish since October: package builds skip `[no-publish]` commits by design, Source checks has had no runner since Oct 29, and the Tier 1 fork was not packaged. |
 | N0401 | [Fresh-Arch VM install gate](0401-fresh-arch-vm-gate.md) | Harness on main 2026-11-12; gate red on the purge check | `packaging/arch/test-vm.py`: all three tiers install from a signed local repo, start a session and render, then fail only because `~/.local/state/bead` survives uninstall (N0402). |
 | N0402 | Namespaced shell state and a clean purge | Planned | Nacre's shell keeps runtime state in the generic `~/.local/state/bead` (crates/nacre-shell/src/state.rs:38), so `nacre uninstall --purge` cannot remove it without touching other Bead apps. Move it under a Nacre-owned path with a one-time migration. |
