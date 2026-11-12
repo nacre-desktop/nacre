@@ -79,6 +79,13 @@ mod workspace_rows;
 use bead::render::{Palette, Primitive, Rect, Scene, Slide};
 use bead::wayland::{Options, run};
 use std::path::{Path, PathBuf};
+
+fn migrate_before_startup(migrate: impl FnOnce() -> Result<(), Box<dyn std::error::Error>>) {
+    if let Err(error) = migrate() {
+        eprintln!("STATE_MIGRATION failed error={error}");
+    }
+}
+
 fn main() {
     memory_policy::configure();
     std::panic::set_hook(Box::new(|_| {
@@ -555,7 +562,7 @@ fn start(
                 Err(_) => eprintln!("OSD_SHADOW_PREWARM failed"),
             }
         });
-    state::migrate()?;
+    migrate_before_startup(state::migrate);
     *ui_started = true;
     let mut forced_safe_mode = false;
     if let Ok(path) = state::File::path()
@@ -1619,3 +1626,16 @@ mod tests {
 mod host_context_tests;
 #[cfg(test)]
 mod widget_flex_tests;
+
+#[cfg(test)]
+mod migration_startup_tests {
+    #[test]
+    fn migration_error_does_not_abort_startup() {
+        let proceeded = std::cell::Cell::new(false);
+        super::migrate_before_startup(|| {
+            Err(std::io::Error::other("legacy state unavailable").into())
+        });
+        proceeded.set(true);
+        assert!(proceeded.get());
+    }
+}
