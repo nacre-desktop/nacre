@@ -157,7 +157,55 @@ impl Context {
             .filter(|v| yes(v))
             .unwrap_or(&self.wallpapers["palettes"]);
         let tr = |id, fallback| self.tr(id, fallback, json!({}));
-        array(themes).iter().map(|theme|{let active=self.wallpapers["appearancePreferences"]["palettePreset"]==theme["id"];let colors=theme.get("swatches").filter(|v|yes(v)).cloned().unwrap_or_else(||json!(["primary","secondary","tertiary"].iter().map(|k|theme["modes"]["dark"][k].clone()).filter(yes).collect::<Vec<_>>()));self.value_row("software.themes",&hash(&text::field(theme,"id")),&text::field(theme,"name"),"software-theme",theme["id"].clone(),"palette",&tr("software.theme.description","Use this palette throughout your desktop and applications"),json!({"theme":true,"bundle":theme["bundle"]==true,"wallpapers":theme.get("wallpapers").cloned().unwrap_or(json!([])),"modeNames":theme.get("modeNames").cloned().unwrap_or(json!({})),"credit":text::field(theme,"credit"),"upstreamCredit":text::field(&theme["upstream"],"credit"),"website":text::field(&theme["upstream"],"url"),"colors":colors,"themeModes":theme.get("modes").cloned().unwrap_or(json!({})),"surface":theme["surface"].as_str().filter(|s|!s.is_empty()).or_else(||theme["modes"]["dark"]["surface"].as_str().filter(|s|!s.is_empty())).unwrap_or("#151515"),"group":text::field(theme,"group"),"checked":active,"status":if active{tr("ui.menu-context.status.in-use","In use")}else{String::new()},"aliases":[tr("software.theme.alias","theme colors palette")]}))}).collect()
+        array(themes)
+            .iter()
+            .map(|theme| {
+                let active = self.wallpapers["appearancePreferences"]["palettePreset"] == theme["id"];
+                let colors = theme
+                    .get("swatches")
+                    .filter(|value| yes(value))
+                    .cloned()
+                    .unwrap_or_else(|| {
+                        json!(["primary", "secondary", "tertiary"]
+                            .iter()
+                            .map(|key| theme["modes"]["dark"][key].clone())
+                            .filter(yes)
+                            .collect::<Vec<_>>())
+                    });
+                let is_bundle = theme["bundle"] == true;
+                let mut extra = json!({
+                    "theme": true,
+                    "bundle": is_bundle,
+                    "wallpapers": theme.get("wallpapers").cloned().unwrap_or(json!([])),
+                    "modeNames": theme.get("modeNames").cloned().unwrap_or(json!({})),
+                    "credit": text::field(theme, "credit"),
+                    "upstreamCredit": text::field(&theme["upstream"], "credit"),
+                    "website": text::field(&theme["upstream"], "url"),
+                    "colors": colors,
+                    "themeModes": theme.get("modes").cloned().unwrap_or(json!({})),
+                    "surface": theme["surface"].as_str().filter(|s| !s.is_empty())
+                        .or_else(|| theme["modes"]["dark"]["surface"].as_str().filter(|s| !s.is_empty()))
+                        .unwrap_or("#151515"),
+                    "group": text::field(theme, "group"),
+                    "checked": active,
+                    "status": if active { tr("ui.menu-context.status.in-use", "In use") } else { String::new() },
+                    "aliases": [tr("software.theme.alias", "theme colors palette")]
+                });
+                if is_bundle {
+                    extra["bundleScope"] = json!("all");
+                }
+                self.value_row(
+                    "software.themes",
+                    &hash(&text::field(theme, "id")),
+                    &text::field(theme, "name"),
+                    "software-theme",
+                    theme["id"].clone(),
+                    "palette",
+                    &tr("software.theme.description", "Use this palette throughout your desktop and applications"),
+                    extra,
+                )
+            })
+            .collect()
     }
     pub fn extension_rows(&self) -> Vec<Value> {
         let tr = |id, fallback| self.tr(id, fallback, json!({}));

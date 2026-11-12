@@ -89,7 +89,6 @@ fn quick_buttons_keep_their_control_ids_and_unknown_updates_stay_hidden() -> Res
 }
 
 #[test]
-#[ignore = "Bead TextInput caret geometry defect; run explicitly to reproduce N0210b"]
 fn launcher_prefix_caret_stays_inside_the_search_input() -> Result<()> {
     for text in [">", "> app search"] {
         let mut h = harness("", 0.)?;

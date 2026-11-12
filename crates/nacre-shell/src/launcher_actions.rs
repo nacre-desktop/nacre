@@ -396,15 +396,19 @@ fn act(row: &MenuUiRow) -> Result<(Act, bool, Option<MenuView>), Option<&'static
         "software-theme" if word(text) && row.bundle != Some(true) => stay(theme(
             json!({"palettePreset": text, "paletteMode": row.theme_mode.as_deref().unwrap_or("dark")}),
         )),
-        "software-theme" if word(text) => match row.bundle_scope.as_deref() {
-            Some(scope) if word(scope) => done(work(
-                "software-library",
-                "bundle-apply",
-                text,
-                json!({"mode": row.theme_mode.as_deref().unwrap_or("dark"), "scope": scope}),
-            )),
-            _ => bad,
-        },
+        "software-theme"
+            if row.bundle == Some(true) && word(text.strip_prefix("bundle:").unwrap_or(text)) =>
+        {
+            match row.bundle_scope.as_deref() {
+                Some(scope) if word(scope) => done(work(
+                    "software-library",
+                    "bundle-apply",
+                    text,
+                    json!({"mode": row.theme_mode.as_deref().unwrap_or("dark"), "scope": scope}),
+                )),
+                _ => bad,
+            }
+        }
         "palette-mode" if matches!(text, "light" | "dark" | "auto") => {
             stay(daemon("appearance.set_mode", json!({"mode": text})))
         }

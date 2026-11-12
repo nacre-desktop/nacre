@@ -83,6 +83,36 @@ fn published_rows_map_to_the_operations_bead_can_do_and_refuse_the_rest() {
     );
 }
 
+#[test]
+fn theme_bundle_rows_dispatch_to_bundle_apply() {
+    let (act, keep_open, _) = planned(json!({
+        "catalog_rev": 1,
+        "row": {
+            "id": "nacre-menu:software.themes.rose-pine",
+            "kind": "action",
+            "name": "Rosé Pine",
+            "operation": "software-theme",
+            "value": "bundle:rose-pine",
+            "bundle": true,
+            "bundleScope": "all",
+            "disabled": false
+        }
+    }));
+    match act {
+        Act::Run { argv, input, .. } => {
+            assert!(argv.len() >= 3);
+            assert_eq!(
+                &argv[argv.len() - 3..],
+                ["software-library", "bundle-apply", "bundle:rose-pine"]
+            );
+            let payload: Value = serde_json::from_str(input.as_deref().unwrap()).unwrap();
+            assert_eq!(payload["scope"], "all");
+        }
+        other => panic!("theme bundle should run bundle-apply, got {other:?}"),
+    }
+    assert!(!keep_open);
+}
+
 /// B0197 acceptance: every action row the launcher can show (the whole Nacre catalogue and
 /// one row per provider operation) resolves to a route Bead serves. The only refusals are the
 /// listed form gaps, and each resolved route is one Bead or the daemon actually publishes.

@@ -153,6 +153,19 @@ fn frozen_provider_functions_keep_full_rows_and_optional_fields() -> Result<()> 
     Ok(())
 }
 
+#[test]
+fn theme_bundle_rows_include_the_scope_required_by_the_launcher() -> Result<()> {
+    let r = reference()?;
+    let mut c = context(&r, "populated")?;
+    c.library["themes"] = json!([{"id":"bundle:rose-pine","name":"Rosé Pine","bundle":true}]);
+    let rows = c.provider("software.themes", "")?;
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["operation"], "software-theme");
+    assert_eq!(rows[0]["value"], "bundle:rose-pine");
+    assert_eq!(rows[0]["bundleScope"], "all");
+    Ok(())
+}
+
 // Retain the original capture and hash; normalize only the intentional N0200 changes.
 fn current_content_reference(c: &Context, original: &Value) -> Value {
     let mut rows = original.as_array().unwrap().clone();

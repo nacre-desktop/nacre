@@ -1166,7 +1166,127 @@ impl Menu {
         Some(expanded)
     }
     pub fn activate(&self, id: &str) -> source::Result<MenuActivated> {
+        for attempt in 0..2 {
+            match self.activate_once(id) {
+                Err(error) if error.code == "stale_revision" && attempt == 0 => {
+                    self.refresh_for_activation(id)?;
+                }
+                result => return result,
+            }
+        }
+        unreachable!("the launcher activation retry is bounded to one retry")
+    }
+
+    fn refresh_for_activation(&self, id: &str) -> source::Result<()> {
+        let source = self.source.as_ref().ok_or_else(|| {
+            source::Error::new(
+                "unavailable",
+                &tr("bead.launcher.service-unavailable", &[]),
+                true,
+            )
+        })?;
+        let (request, previous_stamp) = {
+            let view = self.view.borrow();
+            (
+                view.result_request
+                    .clone()
+                    .or_else(|| view.request.clone())
+                    .ok_or_else(|| {
+                        source::Error::new(
+                            "stale_revision",
+                            &tr("bead.launcher.changed", &[]),
+                            true,
+                        )
+                    })?,
+                view.result_stamp.clone(),
+            )
+        };
+        let before = source.snapshot();
+        if !before.connected
+            || previous_stamp
+                .as_ref()
+                .is_some_and(|stamp| stamp.0 != before.epoch)
+        {
+            return Err(source::Error::new(
+                "stale_revision",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
+        }
+        let params = json!({"query":request.0,"mode":request.1,
+            "route":if request.2.is_empty(){Json::Null}else{json!(request.2)}});
+        let reply =
+            self.runtime
+                .block_on(query(source.as_ref(), params, Duration::from_secs(3)))?;
+        let prepared = prepare_for(reply, &request)?;
+        let snapshot = source.snapshot();
+        if snapshot.epoch != before.epoch {
+            return Err(source::Error::new(
+                "stale_revision",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
+        }
+        let stamp = (
+            snapshot.epoch.clone(),
+            snapshot.revision,
+            snapshot.connected,
+        );
+        if !snapshot.connected {
+            return Err(source::Error::new(
+                "stale_revision",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
+        }
+        let favorites = self
+            .query_actor
+            .as_ref()
+            .and_then(|actor| actor.favorites.lock().ok().map(|ids| ids.clone()))
+            .unwrap_or_default();
+        let mut rows = prepared.rows;
+        for row in &mut rows {
+            let row_id = favorite_id(row);
+            row["favorite"] = Json::Bool(favorites.contains(&row_id));
+            row["favoriteId"] = Json::String(row_id);
+        }
+        if !rows
+            .iter()
+            .any(|row| row["id"].as_str() == Some(id) && row["disabled"] != true)
+        {
+            return Err(source::Error::new(
+                "unavailable",
+                &tr("bead.launcher.result-unavailable", &[]),
+                true,
+            ));
+        }
+        let mut view = self.view.borrow_mut();
+        view.request = Some(request.clone());
+        view.result_request = Some(request);
+        view.stamp = Some(stamp.clone());
+        view.result_stamp = Some(stamp);
+        view.pending = None;
+        view.pending_navigation.clear();
+        view.rows = Arc::new(rows);
+        view.actions = prepared.actions;
+        view.catalog_rev = prepared.catalog_rev;
+        view.total = prepared.total;
+        view.conversion = prepared.conversion;
+        view.message = prepared.message;
+        view.error.clear();
+        view.grid = None;
+        Ok(())
+    }
+
+    fn activate_once(&self, id: &str) -> source::Result<MenuActivated> {
         let view = self.view.borrow();
+        if !view.pending_navigation.is_empty() || view.result_request != view.request {
+            return Err(source::Error::new(
+                "busy",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
+        }
         let current = self.source.as_ref().map(|source| source.snapshot());
         let current_stamp = current.as_ref().map(|snapshot| {
             (
@@ -1177,9 +1297,6 @@ impl Menu {
         });
         if !current.as_ref().is_some_and(|snapshot| snapshot.connected)
             || view.result_stamp != current_stamp
-            || view.pending.is_some()
-            || !view.pending_navigation.is_empty()
-            || view.result_request != view.request
         {
             return Err(source::Error::new(
                 "stale_revision",
@@ -1236,7 +1353,6 @@ impl Menu {
             Ok(result) => {
                 if result.keep_open {
                     let mut view = self.view.borrow_mut();
-                    view.request = None;
                     view.grid = None;
                     view.pending_navigation.clear();
                 }
@@ -2848,10 +2964,12 @@ mod tests {
         assert_eq!(engine.called.lock().unwrap().len(), 1);
     }
     #[test]
-    fn daemon_stale_revision_drops_the_rows_and_queries_again_like_qml() {
+    fn repeated_activation_refreshes_and_retries_a_stale_catalog_once() {
         struct Engine {
             publisher: source::Publisher,
             queries: std::sync::atomic::AtomicUsize,
+            catalog_rev: std::sync::atomic::AtomicU64,
+            activations: std::sync::Mutex<Vec<Json>>,
         }
         impl Source for Engine {
             fn snapshot(&self) -> Arc<source::Snapshot> {
@@ -2865,16 +2983,37 @@ mod tests {
                     if method == "menu.query" {
                         self.queries
                             .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                        return Ok(fixture_reply(
+                        let mut result = fixture_reply(
                             params["query"].as_str().unwrap_or(""),
                             vec![json!({"id":"chosen","name":"Fixture"})],
+                        );
+                        result["catalog_rev"] =
+                            json!(self.catalog_rev.load(std::sync::atomic::Ordering::SeqCst));
+                        return Ok(result);
+                    }
+                    if method == "menu.groups" {
+                        return Ok(json!({"catalog_rev":1,"groups":[]}));
+                    }
+                    if method == "menu.preferences" {
+                        return Ok(json!({"favorites":[],"hidden":[],"recent":[],"usage":{}}));
+                    }
+                    assert_eq!(method, "menu.activate");
+                    if params["catalog_rev"]
+                        != json!(self.catalog_rev.load(std::sync::atomic::Ordering::SeqCst))
+                    {
+                        return Err(source::Error::new(
+                            "stale_revision",
+                            "Catalog changed; query again",
+                            true,
                         ));
                     }
-                    Err(source::Error::new(
-                        "stale_revision",
-                        "Catalog changed; query again",
-                        true,
-                    ))
+                    self.activations.lock().unwrap().push(params);
+                    if self.activations.lock().unwrap().len() == 1 {
+                        self.catalog_rev
+                            .store(2, std::sync::atomic::Ordering::SeqCst);
+                        self.publisher.publish(json!({})).unwrap();
+                    }
+                    Ok(json!({"keep_open":true}))
                 })
             }
             fn reconnect(&self) -> source::Reply<'_> {
@@ -2887,16 +3026,20 @@ mod tests {
         let engine = Arc::new(Engine {
             publisher: source::Publisher::new("test".into(), json!({})).unwrap(),
             queries: Default::default(),
+            catalog_rev: std::sync::atomic::AtomicU64::new(1),
+            activations: Default::default(),
         });
         let menu = Menu::new(Some(engine.clone())).unwrap();
         project_wait(&menu, &Stores::default()).unwrap();
-        let before = engine.queries.load(std::sync::atomic::Ordering::SeqCst);
-        let error = menu.activate("chosen").err().unwrap();
-        assert_eq!(error.code, "stale_revision");
-        assert!(menu.view.borrow().result_stamp.is_none());
-        project_wait(&menu, &Stores::default()).unwrap();
-        assert!(engine.queries.load(std::sync::atomic::Ordering::SeqCst) > before);
-        assert!(menu.view.borrow().rows.iter().any(|r| r["id"] == "chosen"));
+        menu.activate("chosen").unwrap();
+        menu.activate("chosen").unwrap();
+        let activations = engine.activations.lock().unwrap();
+        assert_eq!(activations.len(), 2);
+        assert!(activations.iter().all(|request| request["id"] == "chosen"));
+        assert_eq!(activations[0]["catalog_rev"], 1);
+        assert_eq!(activations[1]["catalog_rev"], 2);
+        assert!(engine.queries.load(std::sync::atomic::Ordering::SeqCst) >= 2);
+        assert!(menu.view.borrow().error.is_empty());
     }
     #[test]
     fn live_memory_mirrors_only_bounded_scalar_view_state() {

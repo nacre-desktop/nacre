@@ -2,7 +2,7 @@
 
 ## Current status — 2026-11-10
 
-| N0210 | [Launcher works end to end](0210-launcher-works.md) | Implemented; ready for lead review; Bead caret and listed runtime gaps remain | Empty `?`, `#`, `:` defaults and stale files hint fixed; private daemon sweep recorded 496 activations (316 ran, 64 opened, 41 handled, 51 gated, 22 errors, 2 info, 0 no-op). |
+| N0210 | [Launcher works end to end](0210-launcher-works.md) | N0210 fixes complete; two unrelated whole-shell app tests remain red | Empty scopes, stale activation retry, theme bundle apply, Bead B0233 caret pin/test, and installed executable check completed. Whole shell binary: 875 passed, 2 unrelated app tests failed, 4 ignored. |
 | N0204 | [AI panel Tidy](0204-ai-panel-tidy.md) | Implemented; ready for lead review | Approved option A, visible running state and Quick chat; 23 chat + 8 runtime tests, 14 reviewed goldens at scale 1/1.5, fmt/clippy/static/Luau checks passed on dev-1. Local commit only; +162 product lines. |
 | N0209 | [Focus and notification startup races](0209-focus-restart-race.md) | Follow-up validated locally; ready for lead review | Preserve startup DND restoration; finish with a warning after a final failed settings retry. Notification baseline precedes bus ownership. Both restart tests 50/50 under load; focused fmt/clippy and full helper tests with six threads passed. |
 | N0303 | [Daemon READY timing checks](0173-deflake-timing-tests.md) | Implemented | Held-bus READY behavior remains in default CI with a 30-second hang guard; strict READY/socket latency gates use `NACRE_TEST_PERF=1`. |
