@@ -47,9 +47,16 @@ step="package update preflight"
 python3 "$script_dir/updates.py" --preflight
 step="system package update"
 if command -v paru >/dev/null; then
-    printf '\nUpdating packages without opening the AUR file-review screen.\n'
+    helper="${NACRE_HELPER_BINARY:-$HOME/.local/share/nacre/shell/tools/nacre-helper}"
+    aur_mode=$("$helper" tool aur-review policy 2>/dev/null | python3 -c 'import json, sys; print(json.load(sys.stdin)["mode"])' 2>/dev/null || true)
     printf 'Starting paru for the explicitly confirmed system package update.\n' >&2
-    paru -Syu --skipreview
+    if [[ "$aur_mode" == native ]]; then
+        printf 'AUR review mode: native (skipreview).\n'
+        paru -Syu --skipreview
+    else
+        printf 'AUR review mode: required.\n'
+        paru -Syu
+    fi
 elif command -v yay >/dev/null; then
     printf 'Starting yay for the explicitly confirmed system package update.\n' >&2
     yay -Syu

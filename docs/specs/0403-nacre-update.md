@@ -6,7 +6,8 @@ Status: integrated 2026-11-12. Focused checks passed on dev-1 (updater 12 tests,
 
 `nacre update` delegates to the same existing `updates.sh` path as the bar.
 That updater retains its namespace handoff, package confirmation, preflight,
-`paru -Syu --skipreview` / `yay -Syu` / `sudo pacman -Syu` choice, Flatpak step,
+policy-controlled `paru -Syu` AUR review / `yay -Syu` / `sudo pacman -Syu`
+choice, Flatpak step,
 and status refresh. It refuses root execution, records versions of installed
 `^nacre` packages plus `niri`, `hyprland` and `orient`, then streams `nacre setup
 --plan` and always asks whether to apply when the `nacre` package is installed.

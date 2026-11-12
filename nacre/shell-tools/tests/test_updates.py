@@ -57,8 +57,9 @@ class UpdateFailureTests(unittest.TestCase):
             root.chmod(0o777)
             for name, body in {
                 "gum": "exit 0",
-                "python3": '[[ "$*" == *--needs-host ]] && exit 1; exit 0',
+                "python3": '[[ "$*" == *--needs-host ]] && exit 1; [[ "$*" == *--preflight* ]] && exit 0; exec /usr/bin/python3 "$@"',
                 "paru": 'printf "%s\\n" "$*"; exit 7',
+                "nacre-helper": 'echo \'{"mode":"native"}\'',
                 "pacman": '[[ "$1" == -Qq ]] && echo nacre || echo "nacre 1"',
                 "nacre": 'echo "$*" >> "$CALL_LOG"',
                 "flatpak": "exit 0",
@@ -84,6 +85,7 @@ class UpdateFailureTests(unittest.TestCase):
                     os.environ,
                     PATH=str(root) + ":/usr/bin:/bin",
                     CALL_LOG=str(root / "calls"),
+                    NACRE_HELPER_BINARY=str(root / "nacre-helper"),
                 ),
                 stdin=subprocess.DEVNULL,
                 timeout=10,
@@ -98,7 +100,11 @@ class UpdateFailureTests(unittest.TestCase):
 
 class UpdateSetupFlowTests(unittest.TestCase):
     def run_script(
-        self, decline_setup=False, fail_packages=False, nacre_installed=True
+        self,
+        decline_setup=False,
+        fail_packages=False,
+        nacre_installed=True,
+        aur_mode='{"mode":"required"}',
     ):
         temporary = tempfile.TemporaryDirectory(prefix="nacre-update-flow-")
         self.addCleanup(temporary.cleanup)
@@ -110,7 +116,7 @@ class UpdateSetupFlowTests(unittest.TestCase):
         log = root / "calls"
         counter = root / "package-queries"
         bodies = {
-            "python3": 'case "$*" in *--needs-host) exit 1;; *--preflight|*--refresh) exit 0;; esac',
+            "python3": 'case "$*" in *--needs-host) exit 1;; *--preflight*|*--refresh*) exit 0;; esac; exec /usr/bin/python3 "$@"',
             "gum": (
                 f'echo "gum:$*" >> "{log}"\n'
                 f'if [[ "{int(decline_setup)}" == 1 && "$*" == *"Apply these setup changes?"* ]]; then exit 1; fi\n'
@@ -138,6 +144,10 @@ class UpdateSetupFlowTests(unittest.TestCase):
                 'if [[ "$*" == "setup --plan" ]]; then echo "plan shown"; else echo "setup applied"; fi'
             ),
             "flatpak": "exit 0",
+            "nacre-helper": (
+                f"[[ '{aur_mode}' == unreadable ]] && exit 1\n"
+                f"printf '%s\\n' '{aur_mode}'"
+            ),
         }
         for name, body in bodies.items():
             executable = tools / name
@@ -152,6 +162,7 @@ class UpdateSetupFlowTests(unittest.TestCase):
             PATH=str(tools) + ":/usr/bin:/bin",
             HOME=str(root),
             CALL_LOG=str(log),
+            NACRE_HELPER_BINARY=str(tools / "nacre-helper"),
         )
         if not nacre_installed:
             env["NO_NACRE"] = "1"
@@ -217,6 +228,19 @@ class UpdateSetupFlowTests(unittest.TestCase):
             "Nacre is not installed from its package; skipping the setup review.",
             result.stdout,
         )
+
+    def test_paru_follows_aur_review_policy_and_defaults_to_review(self):
+        for policy, expected_args, expected_mode in (
+            ('{"mode":"native"}', "paru:-Syu --skipreview", "native (skipreview)"),
+            ('{"mode":"required"}', "paru:-Syu", "required"),
+            ("not-json", "paru:-Syu", "required"),
+            ("unreadable", "paru:-Syu", "required"),
+        ):
+            with self.subTest(policy=policy):
+                result, log = self.run_script(aur_mode=policy)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(expected_args, log.read_text().splitlines())
+                self.assertIn(f"AUR review mode: {expected_mode}.", result.stdout)
 
 
 class UpdateRuntimeTests(unittest.TestCase):

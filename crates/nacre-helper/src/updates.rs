@@ -436,8 +436,9 @@ mod script_contract_tests {
         executable(
             root.path(),
             "python3",
-            "case \"$*\" in *--needs-host) exit 1;; *--preflight) exit 0;; esac",
+            "case \"$*\" in *--needs-host) exit 1;; *--preflight*) exit 0;; esac; exec /usr/bin/python3 \"$@\"",
         )?;
+        executable(root.path(), "nacre-helper", "printf '{\"mode\":\"native\"}\\n'")?;
         executable(root.path(), "gum", "exit 0")?;
         executable(root.path(), "paru", "printf '%s\\n' \"$*\"; exit 7")?;
         executable(
@@ -464,6 +465,7 @@ mod script_contract_tests {
             .arg(script)
             .env("PATH", format!("{}:/usr/bin:/bin", root.path().display()))
             .env("HOME", root.path())
+            .env("NACRE_HELPER_BINARY", root.path().join("nacre-helper"))
             .stdin(std::process::Stdio::null())
             .output()?;
         assert_eq!(output.status.code(), Some(7));
