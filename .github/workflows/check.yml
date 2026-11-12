@@ -15,6 +15,10 @@ jobs:
   desktop:
     if: github.ref == 'refs/heads/main'
     runs-on: ${{ fromJSON(vars.NACRE_CI_RUNNER || '["self-hosted","linux","nacre-ci"]') }}
+    env:
+      # Hosted runners have about 14 GB free; incremental state and full debuginfo overflow it.
+      CARGO_INCREMENTAL: 0
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
     container:
       image: ghcr.io/archlinux/archlinux:latest
       # Bubblewrap supplies an inner disposable filesystem/user namespace.
