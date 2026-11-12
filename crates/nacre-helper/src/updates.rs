@@ -438,7 +438,11 @@ mod script_contract_tests {
             "python3",
             "case \"$*\" in *--needs-host) exit 1;; *--preflight*) exit 0;; esac; exec /usr/bin/python3 \"$@\"",
         )?;
-        executable(root.path(), "nacre-helper", "printf '{\"mode\":\"native\"}\\n'")?;
+        executable(
+            root.path(),
+            "nacre-helper",
+            "printf '{\"mode\":\"native\"}\\n'",
+        )?;
         executable(root.path(), "gum", "exit 0")?;
         executable(root.path(), "paru", "printf '%s\\n' \"$*\"; exit 7")?;
         executable(
