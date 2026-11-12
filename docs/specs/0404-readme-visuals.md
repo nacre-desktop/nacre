@@ -1,6 +1,6 @@
 # N0404 — README visuals, phase 1
 
-Phase 1 adds README visuals to Bead, Orient, and nacre-niri. Nacre’s own README remains for phase 2, near the v0.1 cut after the Shell lead’s visible changes land.
+Status: phase 1 done 2026-11-13 for Bead and Orient (both on their main branches). The nacre-niri captures below were rejected in review: near-empty terminals with unreadable text that do not show the fork's features. They are redone in phase 2 with real window content, readable fonts and the Nacre shell running on the fork. Nacre’s own README visuals are also phase 2, near the v0.1 cut after the Shell lead’s visible changes land.
 
 | Repo | Captured visual | Method |
 | --- | --- | --- |
