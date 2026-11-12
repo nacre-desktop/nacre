@@ -75,7 +75,8 @@ local function filtered(s)
 end
 
 local function groups(s)
-  if s["extras.available"] == false then return {} end
+  -- Only the overview renders workspace groups; skip the full filtered() pass elsewhere.
+  if s["extras.available"] == false or s["extras.kind"] ~= "overview" then return {} end
   local visible, by_id, result, workspaces = filtered(s), {}, {}, {}
   for _, ws in ipairs(s["extras.workspaces"] or {}) do
     local entry = { id = ws.id, index = ws.index, name = ws.name or "", output = ws.output,
@@ -189,6 +190,7 @@ local exports = {
     end,
     ["extras.filtered"] = filtered,
     ["extras.wallpaper.backdrop"] = function(s)
+      if s["extras.kind"] ~= "wallpaper" then return "" end
       for _, item in ipairs(filtered(s)) do
         if item.selected then
           local path=item.preview and item.preview~="" and item.preview or item.thumbnail or ""
