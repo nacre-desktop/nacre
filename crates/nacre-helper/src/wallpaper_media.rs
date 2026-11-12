@@ -2488,6 +2488,11 @@ mod thumbnail_cache_tests {
         let digest = "a".repeat(64);
         write_engine_identity_cache(&cache, crate::orient::engine_id(), &initial, &digest);
         fs::write(&executable, b"other executable bytes")?;
+        // Two same-size writes can land in one timestamp tick; force a later mtime.
+        fs::File::options()
+            .write(true)
+            .open(&executable)?
+            .set_modified(std::time::SystemTime::now() + Duration::from_secs(2))?;
         let changed = ExecutableIdentity::from_metadata(&fs::metadata(&executable)?);
         assert_eq!(initial.size, changed.size);
         assert_ne!(initial, changed);
