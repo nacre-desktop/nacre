@@ -1634,7 +1634,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
         newer = recipe.render(TOOLS.parent, "b" * 40, 12)
         self.assertIn(".r11.gaaaaaaaaaaaa", older)
         self.assertIn(".r12.gbbbbbbbbbbbb", newer)
-        self.assertIn("orient=0.1.0dev6", newer)
+        self.assertIn("orient=0.1.0dev7", newer)
 
     def test_split_packages_have_no_file_collisions_and_ship_native_artifacts(self):
         stage = load(TOOLS.parent / "packaging/arch/stage.py", "test_arch_stage")

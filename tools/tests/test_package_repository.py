@@ -71,7 +71,7 @@ class RepositoryTests(unittest.TestCase):
             )
         )
         (self.root / "dependencies.lock.json").write_text(
-            '{"orient":{"version":"0.1.0-dev.6"}}'
+            '{"orient":{"version":"0.1.0-dev.7"}}'
         )
         for name in ("nacre", "orient", "niri"):
             (self.artifacts / name).mkdir(parents=True)
@@ -158,7 +158,7 @@ class RepositoryTests(unittest.TestCase):
         for path in (self.artifacts / "nacre").glob("*.pkg.tar.zst"):
             path.unlink()
         version = f"0.1.0dev2.r{sequence}.gaaaaaaaaaaaa"
-        self.archive("nacre", version + "-1", ("orient=0.1.0dev6",))
+        self.archive("nacre", version + "-1", ("orient=0.1.0dev7",))
         for name in (
             "nacre-ai",
             "nacre-brain",
@@ -170,7 +170,7 @@ class RepositoryTests(unittest.TestCase):
         if not list((self.artifacts / "niri").glob("*.pkg.tar.zst")):
             self.archive("nacre-niri", "26.04.r3079.g1028c5b9-1", ("niri>=26.04",))
         if not list((self.artifacts / "orient").glob("*.pkg.tar.zst")):
-            self.archive("orient", "0.1.0dev6-1")
+            self.archive("orient", "0.1.0dev7-1")
 
     def test_missing_runtime_proof_and_wrong_recipe_are_rejected(self):
         proof = self.artifacts / "installed-runtime.log"
@@ -188,9 +188,9 @@ class RepositoryTests(unittest.TestCase):
         paths, records, source = repository.verify_artifacts(self.root, self.artifacts)
         self.assertEqual(source, "a" * 40)
         self.assertIn("orient", paths)
-        self.assertIn("orient=0.1.0dev6", records["nacre"]["dependencies"])
+        self.assertIn("orient=0.1.0dev7", records["nacre"]["dependencies"])
         (self.root / "dependencies.lock.json").write_text(
-            '{"orient":{"version":"0.1.0-dev.7"}}'
+            '{"orient":{"version":"0.1.0-dev.8"}}'
         )
         with self.assertRaisesRegex(ValueError, "separately tested Orient"):
             repository.verify_artifacts(self.root, self.artifacts)
