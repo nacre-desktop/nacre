@@ -54,12 +54,12 @@ Focused checks passed in fresh dev-1 containers through the shared slot helper
 - Ruff 0.16.10 `format --check` / `check`, and `python tools/compositor_boundary.py`: passed.
 
 The fake-service refresh timing asserted 300 ms on a shared debug runner and
-failed at 1,262 ms in comparison and 657 ms in isolation. Following N0173, that
-unchanged speed threshold now requires `NACRE_TEST_PERF=1`. Normal tests still
-require completion within two seconds, cached content on the first projection,
-the 30 ms cached-frame guard, and actions while refresh is pending. No product
-timeouts changed. The final run measured 12 ms cached first-frame and 167 ms
-refresh; this unit makes no controlled performance claim.
+failed at 1,262 ms in comparison and 657 ms in isolation. Following N0173, the
+refresh budget and 30 ms cached-frame budget require `NACRE_TEST_PERF=1`. Normal
+tests still require completion within two seconds, cached content on the first
+projection, and actions while refresh is pending. No product timeouts changed.
+The final run measured 12 ms cached first-frame and 167 ms refresh; this unit
+makes no controlled performance claim.
 
 Product delta: +293 / −131 lines, net +162. The additional adapter keeps the
 pinned framework's cached/windowed layout while removing reserved Copy space;
