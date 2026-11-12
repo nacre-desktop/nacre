@@ -356,7 +356,8 @@ fn select_with<S: AsRef<str>>(
         }
         io::stdout().flush()?;
         if graphic {
-            kitty_logo(&png_logo, y + 1, x + 12)?;
+            // The logo takes the three rows at the left; the title sits at x + 12.
+            kitty_logo(&png_logo, y, x)?;
             io::stdout().flush()?;
         }
         match terminal.key()? {
