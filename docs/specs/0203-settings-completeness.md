@@ -2,8 +2,9 @@
 
 ## Goal
 
-For v0.1, every visible setting must have a reader that matches its label; dead
-controls and hidden planned records must not remain in the registry. The shell
+For v0.1, every visible setting must have a reader that matches its label. Dead
+controls are removed; planned records assigned to upcoming feature units remain hidden
+until those readers land. The shell
 registry is now canonical at `shell/settings/registry/`.
 
 ## Audit findings and fixes
@@ -17,22 +18,27 @@ registry is now canonical at `shell/settings/registry/`.
 | `appearance.fonts.monoFont`; `date-time-language.locale.weatherLocation`; `panels/top-bar.panel.workspaceWindowHints`; `panels/dashboard.pages.editor.pages` | Narrowed the descriptions to Kitty terminals, city lookup, the active workspace, and core dashboard pages respectively. The active weather description ID is the city-only hint; the reader does not parse coordinates. |
 | `windows-workspaces.workspaces.workspaceCount`, `workspaceNames`, `workspaceIcons`; `panels/top-bar.panel.clockFormat`, `.tray`; `power.hardware.alerts` | Verified the Niri profile policy, workspace row renderer, bar readers and battery-alert behavior. Enabled these; gated workspace profile controls on `niriWorkspaces`. |
 | `apps.startup.startup` | Profile validation and startup execution work, but the Settings editor marks startup lists unavailable (`settings.rs` entity type guard). Kept it planned until a supported editor exists. |
-| Planned rows with no reader: `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `privacy.history.{notification,clipboard,screenshot,aiChat}Retention`, `power.saver.batterySaver`, `power.idle.{dim,sleep}`, `power.hardware.{lid,button}`, `wallpaper.motion.lockWallpaper`, `colors.palette.automatic` | Confirmed no reader; removed registry records and translations. These are listed below for future selection. |
+| Planned rows with no reader: `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `privacy.history.{notification,clipboard,screenshot,aiChat}Retention`, `power.saver.batterySaver`, `power.idle.{dim,sleep}`, `power.hardware.{lid,button}`, `wallpaper.motion.lockWallpaper`, `colors.palette.automatic` | Confirmed no v0.1 reader. Per owner decision, restored all 15 registry rows and translations with `backend: planned`; they remain hidden while N0211–N0214 build their readers. |
 | Dashboard preferences: `lyrics`, `albumPalette`, `homeZone`, `homeCity`, `calendarFile`, `focusMinutes` | The five settings before `focusMinutes` have readers in media metadata, dashboard home-time preferences and calendar loading, so restored them. `albumPalette` had a stored value but media metadata hard-coded false; now the existing reader honours the stored boolean. `focusMinutes` has no settings reader: the dashboard focus card and launcher timer use their own fixed choices, and reminders do not consume this preference. Removed it and its stale navigation aliases; legacy `dashboard.json` values are ignored. |
 | `launcher/entries.editor`, `system.backup`, `system.restore` | No matching action handler exists; removed the three broken action rows and their translations. `lock-login.preview`, `system.updates`, and `appearance.fonts.installed` are hidden by the existing `None` dispatch; `lock-login.idle-policy` remains planned and filtered, so none renders as a dead row. |
 
-## Candidate features (not in v0.1)
+## Planned, being built (N0211–N0214)
+
+These records are hidden with `backend: planned` until their readers land:
 
 - `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`
 - `keyboard-mouse.mouse.shakeCursor`
 - `privacy.history.notificationRetention`, `clipboardRetention`, `screenshotRetention`, `aiChatRetention`
 - `power.saver.batterySaver`, `power.idle.dim`, `power.idle.sleep`, `power.hardware.lid`, `power.hardware.button`
 - `wallpaper.motion.lockWallpaper`, `colors.palette.automatic`
+
+## Candidate features (not in v0.1)
+
 - `panels/dashboard/calendar-focus.editor.focusMinutes` (the dashboard card and launcher use fixed timer choices; reminders have no reader for this preference).
 
 ## Verdict counts
 
-- Settings: 138 unique rows after copy merge; 117 active reader-backed rows, 1 retained planned row (`apps.startup.startup`), and 20 removed rows (4 dead visible, 15 planned without readers, 1 dashboard preference without a reader). The other five dashboard controls are restored or wired. No known partial/mislabeled findings remain unresolved.
+- Settings: 138 unique rows after copy merge; 117 active reader-backed rows, 16 planned rows (including `apps.startup.startup`), and 5 removed rows (4 dead visible and 1 dashboard preference without a reader). The other five dashboard controls are restored or wired. No known partial/mislabeled findings remain unresolved.
 - Actions: 32 audited; 25 live, 3 intentionally hidden unavailable actions, 1 planned hidden action, and 3 broken rows removed.
 
 ## Checks
