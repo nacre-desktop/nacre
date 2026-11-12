@@ -1024,7 +1024,7 @@ class PackageSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root, home, profile = self.niri_fixture(folder)
             (home / ".config/fish").unlink()
-            (root / "packaging").mkdir()
+            (root / "packaging").mkdir(exist_ok=True)
             shutil.copy2(
                 TOOLS.parent / "packaging/sessions.json",
                 root / "packaging/sessions.json",
