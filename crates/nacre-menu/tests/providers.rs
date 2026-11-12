@@ -198,6 +198,14 @@ fn frozen_content_composition_ranking_and_source_gates_match() -> Result<()> {
             let query = p[1].as_str().unwrap();
             let filter = p.get(2).and_then(Value::as_str).unwrap_or("all");
             let category = p.get(3).and_then(Value::as_str).unwrap_or("all");
+            let scope = nacre_menu::model::scope(query);
+            // N0210 deliberately adds defaults for empty optional scopes; those
+            // rows are asserted directly in visibility.rs instead of frozen QML.
+            let empty_optional_scope = scope["text"].as_str() == Some("")
+                && matches!(scope["kind"].as_str(), Some("ai" | "brain"));
+            if empty_optional_scope {
+                continue;
+            }
             let expected = current_content_reference(&c, &case["result"]);
             let indexed = c.indexed_content(route, query, filter, category)?;
             if json!(indexed) != expected {

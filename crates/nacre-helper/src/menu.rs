@@ -183,13 +183,15 @@ pub fn search_files(query: &str) -> Result<Value> {
         )
         .into());
     }
-    if query.trim().chars().count() < 2 {
-        return Ok(
-            json!({"rows":[],"message":tr("helper.menu-backend.type-two-or-more-characters-to-find-files","Type two or more characters to find files")}),
-        );
-    }
     let paths = Paths::environment()?;
     let roots = crate::launcher_workflows::roots(&paths)?;
+    if query.trim().chars().count() < 2 {
+        let rows = file_root_rows(&roots);
+        return Ok(json!({"rows":rows,"message":tr(
+            "helper.menu-backend.type-two-or-more-characters-to-find-files",
+            "Search these folders; type two or more characters to find files"
+        )}));
+    }
     if roots.is_empty() {
         return Ok(json!({"rows":[]}));
     }
@@ -229,6 +231,20 @@ pub fn search_files(query: &str) -> Result<Value> {
         }
     }
     Ok(json!({"rows":rows}))
+}
+
+fn file_root_rows(roots: &[std::path::PathBuf]) -> Vec<Value> {
+    roots
+        .iter()
+        .filter(|path| path.is_dir())
+        .map(|path| {
+            let name = path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("Folder");
+            json!({"id":path.to_string_lossy(),"name":name,"path":path})
+        })
+        .collect()
 }
 pub fn convert_units(expression: &str) -> Result<Value> {
     if expression.chars().count() > 256
@@ -622,6 +638,17 @@ pub fn execute(arguments: &[String], input: Option<Value>) -> Result<Option<Valu
 #[cfg(test)]
 mod cache_tests {
     use super::*;
+    #[test]
+    fn empty_file_search_offers_existing_roots_as_openable_rows() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let documents = home.path().join("Documents");
+        std::fs::create_dir(&documents)?;
+        let rows = file_root_rows(&[documents.clone(), home.path().join("Missing")]);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["name"], "Documents");
+        assert_eq!(rows[0]["path"], documents.to_string_lossy().as_ref());
+        Ok(())
+    }
     #[test]
     fn frozen_cache_hit_stamp_expiry_clock_and_force_contracts() -> Result<()> {
         let reference: Value =

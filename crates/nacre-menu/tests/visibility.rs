@@ -43,6 +43,28 @@ fn optional_rows_and_empty_static_groups_follow_capabilities() -> Result<()> {
 }
 
 #[test]
+fn empty_prefix_scopes_show_useful_defaults_and_keep_optional_gates() -> Result<()> {
+    let mut c = context()?;
+    c.snapshot = json!({"capabilities":{"ai":true,"brain":true}});
+    c.can_ask = true;
+    let ai = c.content("home", "?", "all", "all")?;
+    assert!(ai.iter().any(|row| row["value"] == "new"));
+    assert!(ai.iter().any(|row| row["value"] == "resume"));
+    assert!(ai.iter().any(|row| row["value"] == "load"));
+    assert!(ai
+        .iter()
+        .any(|row| row["operation"] == "scope" && row["value"] == "? "));
+    c.snapshot["capabilities"]["ai"] = json!(false);
+    assert!(c.content("home", "?", "all", "all")?.is_empty());
+
+    c.snapshot["capabilities"]["brain"] = json!(true);
+    assert!(!c.content("home", "#", "all", "all")?.is_empty());
+    c.snapshot["capabilities"]["brain"] = json!(false);
+    assert!(c.content("home", "#", "all", "all")?.is_empty());
+    Ok(())
+}
+
+#[test]
 fn backend_rows_are_hidden_instead_of_disabled() -> Result<()> {
     let mut c = context()?;
     for backend in ["niri", "hyprland", ""] {

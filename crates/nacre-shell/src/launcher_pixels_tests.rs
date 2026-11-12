@@ -89,6 +89,53 @@ fn quick_buttons_keep_their_control_ids_and_unknown_updates_stay_hidden() -> Res
 }
 
 #[test]
+#[ignore = "Bead TextInput caret geometry defect; run explicitly to reproduce N0210b"]
+fn launcher_prefix_caret_stays_inside_the_search_input() -> Result<()> {
+    for text in [">", "> app search"] {
+        let mut h = harness("", 0.)?;
+        let input = h
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.input.as_deref() == Some("launcher.search.text"))
+            .expect("launcher search input");
+        let rect = bead::ui::rect(&input.draw);
+        let clicked = h
+            .session
+            .click(rect.x + 30., rect.y + rect.h / 2.)?
+            .expect("click updates the launcher");
+        h.session.commit(clicked);
+        let mut scene = h
+            .session
+            .key(text, false)?
+            .expect("typing updates the launcher");
+        h.session.decorate_inputs(&mut scene)?;
+        let caret = scene
+            .primitives
+            .iter()
+            .rev()
+            .find_map(|primitive| match primitive {
+                bead::render::Primitive::Rounded { rect, .. }
+                    if rect.w <= 1.5 && (10.0..50.0).contains(&rect.h) =>
+                {
+                    Some(*rect)
+                }
+                _ => None,
+            })
+            .expect("focused text input caret");
+        assert!(
+            caret.x >= rect.x && caret.x <= rect.x + rect.w,
+            "{text:?}: {caret:?} outside {rect:?}"
+        );
+        assert!(
+            caret.y >= rect.y && caret.y + caret.h <= rect.y + rect.h,
+            "{text:?}: caret must remain inside input bounds: {caret:?} vs {rect:?}"
+        );
+    }
+    Ok(())
+}
+
+#[test]
 fn real_launcher_grid_results_and_scrolled_pixels_match_accepted_markup() -> Result<()> {
     for (name, query, scroll) in [
         ("grid", "", 0.),

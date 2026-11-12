@@ -817,10 +817,9 @@ impl Engine {
             order.push(id.clone());
             items.insert(id, item);
         }
-        let message = self.loaded.context.previews["providerMessages"]
-            [scoped["text"].as_str().unwrap_or("")]
-        .as_str()
-        .map(str::to_owned);
+        // Provider terms are not globally unique: ":" and Home both have an
+        // empty term. Only expose provider feedback while its scope is active.
+        let message = provider_message(&self.loaded.context, &scoped);
         let result = MenuQueryResult {
             query: request.query,
             mode: request.mode,
@@ -2052,6 +2051,15 @@ fn conversion_query(term: &str) -> bool {
     term.split(|c: char| !c.is_ascii_alphanumeric() && c != '_')
         .any(|word| matches!(word, "to" | "in"))
 }
+fn provider_message(context: &nacre_menu::context::Context, scoped: &Value) -> Option<String> {
+    if matches!(scoped["kind"].as_str(), Some("files" | "brain")) {
+        context.previews["providerMessages"][scoped["text"].as_str().unwrap_or("")]
+            .as_str()
+            .map(str::to_owned)
+    } else {
+        None
+    }
+}
 fn provider_request(context: &Context, request: &MenuQuery) -> Option<(String, String)> {
     if request.mode == "palette" || request.route.as_deref() == Some("palette") {
         return None;
@@ -2215,6 +2223,23 @@ pub fn preferences_client(arguments: &[String], input: Option<Value>) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn provider_hint_is_not_reused_by_home_or_another_empty_scope() -> Result<()> {
+        let mut state = engine()?;
+        state.loaded.context.previews["providerMessages"] =
+            json!({"":"Type two or more characters to find files"});
+        let files = provider_message(&state.loaded.context, &model::scope(":"));
+        let home = provider_message(&state.loaded.context, &model::scope(""));
+        let actions = provider_message(&state.loaded.context, &model::scope(">"));
+        assert_eq!(
+            files.as_deref(),
+            Some("Type two or more characters to find files")
+        );
+        assert_eq!(home, None);
+        assert_eq!(actions, None);
+        Ok(())
+    }
 
     #[test]
     fn qml_presentation_keeps_context_fields_without_shipping_the_application_index() -> Result<()>

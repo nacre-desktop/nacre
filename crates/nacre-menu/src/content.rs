@@ -331,15 +331,41 @@ impl Context {
         match kind {
             "files" => return Ok(self.file_results(term)),
             "calculator" => return Ok(Vec::new()),
-            "brain" => return Ok(self.brain_rows(term)),
+            "brain" => {
+                if term.is_empty() {
+                    let mut rows: Vec<_> = self
+                        .all_static()
+                        .into_iter()
+                        .filter(|row| row["brand"] == "brain")
+                        .collect();
+                    rows.extend(self.brain_rows(term));
+                    return Ok(rows);
+                }
+                return Ok(self.brain_rows(term));
+            }
             "ai" => {
-                return Ok(
-                    if term.is_empty() || self.snapshot["capabilities"]["ai"] != true {
-                        Vec::new()
-                    } else {
-                        vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask,"reason":if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]
-                    },
-                )
+                if self.snapshot["capabilities"]["ai"] != true {
+                    return Ok(Vec::new());
+                }
+                if term.is_empty() {
+                    let mut rows: Vec<_> = self
+                        .all_static()
+                        .into_iter()
+                        .filter(|row| row["brand"] == "ai")
+                        .collect();
+                    rows.push(self.value_row(
+                        "actions.assistant",
+                        "question",
+                        &tr("ui.menu-context.label.ask-nacre-ai", "Ask Nacre AI"),
+                        "scope",
+                        json!("? "),
+                        "chat",
+                        "Ask: type your question",
+                        json!({"brand":"ai","searchQuery":"? "}),
+                    ));
+                    return Ok(rows);
+                }
+                return Ok(vec![self.value_row("actions.assistant","question",&tr("ui.menu-context.label.ask-nacre-ai","Ask Nacre AI"),"ask",json!(term),"chat",term,json!({"brand":"ai","disabled":!self.can_ask,"reason":if !self.can_ask{tr("launcher.disabled.an-assistant-task-or-unsent-draft-is-active-open-nacre-ai-instead","An assistant task or unsent draft is active; open Nacre AI instead")}else{String::new()}}))]);
             }
             "help" => {
                 let mut rows = Vec::new();
