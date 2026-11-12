@@ -29,7 +29,7 @@ actions in `crates/nacre-shell/src/backends/{niri,hyprland}.rs`.
 | Hyprland | `windowGroups`, `windowForceKill`, `pseudoTiling`, `layoutSplit` | Hyprland helper command dispatcher: `crates/nacre-helper/src/compositor/hyprland.rs:600-654`; shell capabilities/action handling in `crates/nacre-shell/src/backends/hyprland.rs`. |
 | Hyprland | `keymaps`, `nonConsumingShortcuts`, `bindingIntrospection` | Binding inventory, parsing, and action query: `crates/nacre-helper/src/compositor/hyprland.rs:314-369,654`; Settings capability publication uses the compositor flags. |
 | Hyprland | `windowTrash`, `scratchpad`, `monitorMirroring` | **Removed from advertised true bits.** The shell backend returns `Unsupported` for these actions (`crates/nacre-shell/src/backends/hyprland.rs:284-295`). |
-| Hyprland | `windowCapture` | **Decision pending runtime evidence.** The explicit `backend.windowCapture` action is unsupported (`crates/nacre-shell/src/backends/hyprland.rs:284-295`), while overview previews use the shell capture hub (`crates/nacre-shell/src/extras.rs:351,468-489`) and Settings hides `windows-workspaces.overview.livePreviews` when this bit is false (`shell/settings/registry/settings.json:2471-2492`). The screenshot check could not run because the desktop TEST host is unreachable. Keep the current false value until the nested overview capture is observed. |
+| Hyprland | `windowCapture` | Retained `true` from main because the Hyprland overview could not be started in the authorized headless smoke. Overview previews use the shell capture hub (`crates/nacre-shell/src/extras.rs:351,468-489`) and Settings hides `windows-workspaces.overview.livePreviews` when this bit is false (`shell/settings/registry/settings.json:2471-2492`). The explicit `backend.windowCapture` action remains unsupported (`crates/nacre-shell/src/backends/hyprland.rs:284-295`); this capability does not establish that action's support. Preview behavior is undecided pending a Hyprland screenshot. |
 
 The helper's stock-niri capability map is `crates/nacre-helper/src/compositor/niri.rs:27-28`;
 native Nacre flags are selectively overlaid at lines 30-48. Missing or unsupported
@@ -47,40 +47,52 @@ hide/restore use separate helper routes.
 
 ## Tier-2 runtime smoke
 
-Status: not run. The desktop TEST host did not accept SSH (`ssh -F ~/.ssh/config -o ConnectTimeout=5 desktop hostname` timed out on 2026-11-12). No private session was started and no screenshots are committed. The N0300 harness remains on dev-1; copy the needed files into `~/nacre-lead/n0301` on the desktop when reachable, and preserve N0300 unchanged.
+Status: headless, software-rendered first pass on dev-1. The desktop TEST host
+pass follows when that host is back. Sessions used private HOME/XDG/runtime and
+activation-free D-Bus. Product fonts were copied from the read-only N0300 cache
+to each private HOME after matching the `font-assets.json` sizes and SHA-256
+hashes; `fc-cache` ran. Screenshots and raw logs stay under `.lead/smoke/` and
+are not committed. The Niri renderer probe did not find `llvmpipe` or `swrast`
+in process mappings, so software-GL renderer confirmation is a failure despite
+the Mesa software-rendering environment being set.
 
 | Check | Stock niri | Hyprland |
 | --- | --- | --- |
-| Bar idle; workspace switch | BLOCKED: desktop unreachable | BLOCKED: desktop unreachable |
-| Launcher, app placement; dashboard | BLOCKED | BLOCKED |
-| Overview focus/workspace controls and preview fallback | BLOCKED | BLOCKED |
-| Settings dead controls; wallpaper collection hidden | BLOCKED | BLOCKED |
-| Collections/workspace-stack UI absent | BLOCKED | BLOCKED |
-| Widgets add/drag and desktop layer | BLOCKED | BLOCKED |
-| Detach and panel drag behavior/hidden | BLOCKED | BLOCKED |
-| Keybind hints; OSD/notification | BLOCKED | BLOCKED |
-| Lock/unlock | SKIPPED: no safe nested session | SKIPPED: no safe nested session |
-| UI_ERROR / RPC errors / Unsupported log counts | BLOCKED | BLOCKED |
+| Bar idle; workspace switch | PASS: `bar-idle.png`, `workspace-switching.png`; compositor dispatches acknowledged | BLOCKED: nested compositor did not start after two attempts |
+| Launcher/app placement; dashboard | PASS: launcher and dashboard captured; FAIL: Widgets app route reported zero compositor clients | BLOCKED |
+| Overview controls and preview fallback | PASS: overview opened; focus/workspace controls were not pointer-driven; no live preview conclusion | BLOCKED: no overview screenshot |
+| Settings pages; Wallpaper collection controls | Pages opened; FAIL: Wallpaper still shows the Collections section while `workspaceCollections=false` | BLOCKED |
+| Collections/workspace-stack UI | PASS: overview screenshot has workspaces and no collections/stack UI | BLOCKED |
+| Widgets app, desktop widget and drag | FAIL: Widgets app had zero clients and UI add/drag was not completed; PASS: private layout write rendered the desktop clock in `desktop-widget.png`, with `desktop-widgets.*` layer-bake log entries and `bead-dev` background surface | BLOCKED |
+| Detachable panels and panel drag | FAIL: Settings > Panels shows “Your desktop edges — This section is not available in Bead yet”; drag not attempted without an input seat | BLOCKED |
+| Key hints, OSD and notification | Key hints opened but showed “No matching shortcuts”; OSD skipped (no hardware trigger); notification bubble visible in `notification.png` | BLOCKED |
+| Lock/unlock | SKIPPED: no safe private credential/input path configured | SKIPPED: compositor did not start |
+| UI_ERROR / RPC errors / Unsupported | shell 0 / 0 / 0; daemon 0 / 0 / 0 | No shell/daemon started |
 
-No screenshots or raw logs are included. Shell-lead UI checks to carry into the
-runtime pass: hide unsupported scratchpad controls with `scratchpad`; hide trash
-controls with `windowTrash`; gate native mirror settings with `monitorMirroring`;
-settle the Settings live-preview gate with the Hyprland overview screenshot. The
-explicit `backend.windowCapture` route is registered by `crates/nacre-shell/src/reload.rs:4613-4618`
-and dispatched at `:4653`; no Luau callsite was found, so there is no exact UI
-entry to name yet. If previews render on Hyprland, keep `windowCapture` true for
-the capture-hub setting and ask Shell to hide the unsupported `backend.windowCapture`
-action where offered. Keep the single capability bit; this unit does not add a
-second flag because the action currently has no discovered UI caller. Collections
-should continue to use `workspaceCollections`.
+Hyprland exited before creating its IPC socket on both attempts. Exact output:
+`Hyprland was launched with superuser privileges, but the privileges check is not omitted. Hint: Use the --i-am-really-stupid flag to omit that check.`
+The second attempt also timed out waiting for the nested Hyprland IPC socket.
+No further Hyprland attempt was made. `windowCapture` remains true as on main;
+preview behavior is undecided until the overview can be captured.
+
+### For the Shell lead
+
+- Hide Wallpaper collection management (`wallpaper.collection`) when `workspaceCollections` is false; the Niri screenshot still shows that section.
+- Hide “Your desktop edges” detachable-panel controls when `nativePanelDrag` is false.
+- Hide empty keybind hints when `keymaps`/`bindingIntrospection` is false; Niri showed “No matching shortcuts”.
+- Keep scratchpad, trash and monitor-mirroring controls gated by `scratchpad`, `windowTrash` and `monitorMirroring` respectively; all three are false on Hyprland.
+- Keep the overview live-preview setting visible under Hyprland's current `windowCapture=true`; runtime preview behavior remains undecided.
+- Hide the explicit `backend.windowCapture` action where offered: the Hyprland backend rejects it. The route is registered in `crates/nacre-shell/src/reload.rs:4613-4618` and dispatched at `:4653`; no Luau callsite was found to name a specific menu entry.
+- Widgets app launch returned zero clients; the private settings write rendered a desktop clock, but UI add and drag remain unverified without pointer input.
+- Verified product font files were installed, yet screenshots still display truncated ligature text in several icon slots; verify the shell's icon-font selection.
 
 ## Validation and scope
 
 Regression tests enumerate every advertised-true boolean for stock niri and
-Hyprland against the implemented-path set. Nacre-niri uses the stock test plus
-the probe-gated fork overlay; its runtime coverage is pending the desktop host.
-The Hyprland test catches the base-commit mismatch because four unsupported
-actions were previously advertised true.
+Hyprland as review snapshots. When a bit changes, verify its handler in
+`crates/nacre-shell/src/backends/{niri,hyprland}.rs`. Nacre-niri uses the stock
+snapshot plus the probe-gated fork overlay. The Hyprland snapshot test fails on
+the base commit because four unsupported actions were advertised true.
 
 No UI/Luau files changed. Runtime evidence, full CI and publication status are
 recorded in the unit report.

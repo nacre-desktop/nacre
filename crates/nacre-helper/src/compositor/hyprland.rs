@@ -287,7 +287,7 @@ pub fn parse_event(line: &str) -> Value {
     Value::Object(event)
 }
 pub fn capabilities() -> Value {
-    json!({"stableWorkspaceIndices":true,"globalWorkspaces":true,"perOutputWorkspaces":false,"scrollingLayout":false,"floatingPlacement":true,"pinWindow":true,"windowCapture":false,"windowHide":true,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":true,"pseudoTiling":true,"layoutSplit":true,"keymaps":true,"nonConsumingShortcuts":true,"bindingIntrospection":true,"monitorMirroring":false,"fullscreenState":true})
+    json!({"stableWorkspaceIndices":true,"globalWorkspaces":true,"perOutputWorkspaces":false,"scrollingLayout":false,"floatingPlacement":true,"pinWindow":true,"windowCapture":true,"windowHide":true,"windowTrash":false,"scratchpad":false,"windowGroups":true,"windowForceKill":true,"pseudoTiling":true,"layoutSplit":true,"keymaps":true,"nonConsumingShortcuts":true,"bindingIntrospection":true,"monitorMirroring":false,"fullscreenState":true})
 }
 pub fn valid_window_id(value: &Value) -> bool {
     value.as_str().is_some_and(|value| {
@@ -730,6 +730,7 @@ mod tests {
             "globalWorkspaces",
             "floatingPlacement",
             "pinWindow",
+            "windowCapture",
             "windowHide",
             "windowGroups",
             "windowForceKill",
