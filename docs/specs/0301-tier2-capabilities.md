@@ -78,6 +78,7 @@ preview behavior is undecided until the overview can be captured.
 ### For the Shell lead
 
 - Hide Wallpaper collection management (`wallpaper.collection`) when `workspaceCollections` is false; the Niri screenshot still shows that section.
+- Keep workspace collection/stack UI absent under `workspaceCollections=false`; the Niri overview showed no collection or stack controls.
 - Hide “Your desktop edges” detachable-panel controls when `nativePanelDrag` is false.
 - Hide empty keybind hints when `keymaps`/`bindingIntrospection` is false; Niri showed “No matching shortcuts”.
 - Keep scratchpad, trash and monitor-mirroring controls gated by `scratchpad`, `windowTrash` and `monitorMirroring` respectively; all three are false on Hyprland.
