@@ -7,8 +7,7 @@
 | N0403 | `nacre update` | In progress | One update path: extend the existing interactive updater with the setup plan/apply review; `nacre update` runs it. |
 | N0406 | Tier 1 nacre-niri package and setup choice | In progress; full dev-1 CI running | Build the fork at r3079 from its own recipe, retire the upstream-niri hover companion, and offer nacre-niri first in setup. |
 | N0407 | [Package dependency review](0407-package-dependency-review.md) | Planned; after N0406 | Sort each of the 58 core dependencies into keep, optional, move or drop, then prove the smaller set in the VM gate. |
-| N0200 | [Launcher cleanup](0200-launcher-cleanup.md) | In progress; full audit and validation pending | Remove dead and duplicate launcher rows, gate optional/compositor-specific actions, and reduce the category rail. |
-| N0200 | [Launcher cleanup](0200-launcher-cleanup.md) | Target audit complete; validation in progress | Remove dead and duplicate launcher rows, gate optional/compositor-specific actions, and reduce the category rail. |
+| N0200 | [Launcher cleanup](0200-launcher-cleanup.md) | Done (a39304a0); dev-1 desktop CI passed except 4 known wallpaper load flakes (isolated reruns pass; N0208) | 245 launcher definitions verified; dead/duplicate rows removed, AI/Brain and compositor-specific rows hidden when unavailable, QML route snapshots deleted. 7-category rail held for owner approval (needs protocol-first + pin bump). |
 | N0174 | [Daemon restart reconnect](0174-daemon-restart-reconnect.md) | Done; full dev-1 desktop CI passed | Recover permanent and leased subscriptions, identify successful reconnects once, and keep the compositor watcher on the shared permanent topic path. The restart regression passed in the 871-test workspace suite. |
 
 Live: Nacre `6c67f792` with Bead `7ea19860`, in active daily use and not yet released. Nacre runs on nacre-niri, its own niri compositor fork, with Bead as its native shell.
