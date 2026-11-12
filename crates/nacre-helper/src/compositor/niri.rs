@@ -525,8 +525,12 @@ mod tests {
             .collect::<Vec<_>>();
         advertised.sort_unstable();
         let mut implemented = vec![
-            "perOutputWorkspaces", "scrollingLayout", "floatingPlacement",
-            "nativeWindowScreenshot", "windowGroups", "monitorConfiguration",
+            "perOutputWorkspaces",
+            "scrollingLayout",
+            "floatingPlacement",
+            "nativeWindowScreenshot",
+            "windowGroups",
+            "monitorConfiguration",
             "nightLightController",
         ];
         implemented.sort_unstable();
@@ -552,10 +556,18 @@ mod tests {
             .collect::<Vec<_>>();
         advertised.sort_unstable();
         let mut implemented = vec![
-            "perOutputWorkspaces", "scrollingLayout", "floatingPlacement",
-            "nativeWindowScreenshot", "windowGroups", "monitorConfiguration",
-            "nightLightController", "pinWindow", "windowHide",
-            "windowForceCloseWayland", "windowRestore", "monitorWorkspaceActions",
+            "perOutputWorkspaces",
+            "scrollingLayout",
+            "floatingPlacement",
+            "nativeWindowScreenshot",
+            "windowGroups",
+            "monitorConfiguration",
+            "nightLightController",
+            "pinWindow",
+            "windowHide",
+            "windowForceCloseWayland",
+            "windowRestore",
+            "monitorWorkspaceActions",
             "launchWorkspace",
         ];
         implemented.sort_unstable();

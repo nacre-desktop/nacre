@@ -726,10 +726,19 @@ mod tests {
             .collect::<Vec<_>>();
         advertised.sort_unstable();
         let mut supported = vec![
-            "stableWorkspaceIndices", "globalWorkspaces", "floatingPlacement",
-            "pinWindow", "windowHide", "windowGroups", "windowForceKill",
-            "pseudoTiling", "layoutSplit", "keymaps", "nonConsumingShortcuts",
-            "bindingIntrospection", "fullscreenState",
+            "stableWorkspaceIndices",
+            "globalWorkspaces",
+            "floatingPlacement",
+            "pinWindow",
+            "windowHide",
+            "windowGroups",
+            "windowForceKill",
+            "pseudoTiling",
+            "layoutSplit",
+            "keymaps",
+            "nonConsumingShortcuts",
+            "bindingIntrospection",
+            "fullscreenState",
         ];
         supported.sort_unstable();
         assert_eq!(advertised, supported);
