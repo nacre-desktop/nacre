@@ -20,14 +20,14 @@ features. Some shared features use a fallback or have reduced behavior.
 | **Panels** | | | |
 | Open and close motion | Yes | Partly: uses client-owned motion fallback | Partly: uses client-owned motion fallback |
 | Detach panels | Yes | Partly: uses prepared-window fallback path | Partly: native detach needs confirmation |
-| Panel drag setting | Partly: setting hidden; cue still | No (hidden) | Yes |
+| Panel drag setting | Yes (built in, no setting needed) | No (hidden) | Yes |
 | Edge cues | Yes | No (hidden) | No (hidden) |
 | **Overview** | | | |
-| Window and workspace focus | Yes | Partly: focus action runtime unconfirmed | Partly: focus action runtime unconfirmed |
+| Window and workspace focus | Yes | Yes (not yet checked in a session) | Yes (not yet checked in a session) |
 | Live previews | Partly: capture needs backend support | Partly: icons replace live previews | Yes |
 | Hover title and highlight | Yes | Partly: native hover stream unavailable | Partly: hover behavior unconfirmed here |
 | **Settings** | | | |
-| Compositor-specific options | Yes | Partly: unsupported choices are hidden | Partly: controls lack capability gates |
+| Compositor-specific options | Yes | Partly: unsupported choices are hidden | Partly: some options may not apply |
 
 The fresh-Arch VM gate checks install, session startup, rendered output and
 purge for each tier. It last ran on 2026-11-12. The recorded results confirm
