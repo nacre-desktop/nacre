@@ -572,7 +572,7 @@ pub fn chat(
             let chat = crate::chat::Chat::new(
                 Some(client.clone()),
                 Arc::new(topic),
-                crate::chat::system_meter(),
+                crate::chat::system_meter,
             )
             .with_memory(memory.clone());
             crate::reload::Runtime::panel_session(session, open)

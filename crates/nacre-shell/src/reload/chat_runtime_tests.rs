@@ -180,7 +180,7 @@ async fn typing_shift_enter_and_enter_send_the_exact_text_once() {
         if matches!(
             runtime.session.stores.get("chat.can_new"),
             Some(bead::core::Value::Bool(true))
-        ) && matches!(runtime.session.stores.get("chat.heading"), Some(bead::core::Value::Text(t)) if t.starts_with("Claude"))
+        ) && matches!(runtime.session.stores.get("chat.subtitle"), Some(bead::core::Value::Text(t)) if t.starts_with("Claude"))
         {
             break;
         }
@@ -281,7 +281,7 @@ async fn typing_shift_enter_and_enter_send_the_exact_text_once() {
 fn pin_controls_only_outside_dismissal() {
     let _guard = serial();
     let (_, chat) = crate::chat::tests::offline(json!({"available":true,"channels":{}}));
-    let mut runtime = runtime(chat);
+    let mut runtime = runtime_section(chat, "launcher");
     assert!(runtime.outside_dismiss());
     step(&mut runtime, UiEvent::PanelDetached(true));
     assert!(
@@ -289,14 +289,14 @@ fn pin_controls_only_outside_dismissal() {
             .session
             .view_nodes()
             .iter()
-            .any(|n| n.id == "chat.pin")
+            .any(|n| n.id == "chat.header.pin")
     );
     step(&mut runtime, UiEvent::PanelDetached(false));
     let pin = runtime
         .session
         .view_nodes()
         .iter()
-        .find(|n| n.id == "chat.pin")
+        .find(|n| n.id == "chat.header.pin")
         .expect("pin button");
     let r = match &pin.draw {
         bead::render::Primitive::Rounded { rect, .. } => *rect,

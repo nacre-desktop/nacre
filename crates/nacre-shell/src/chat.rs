@@ -19,6 +19,7 @@ use serde_json::{Value as Json, json};
 use std::{
     cell::RefCell,
     collections::BTreeMap,
+    hash::{Hash, Hasher},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -37,6 +38,129 @@ const MAX_QUESTIONS: usize = 4;
 
 type Notify = Arc<dyn Fn(bead::wayland::UiEvent) + Send + Sync>;
 
+// Keep the framework's Markdown and window caches, but reserve no message-action
+// strip: Copy lives in the label band. Code-copy buttons retain their own strip.
+struct CompactTranscript {
+    inner: Transcript,
+    measure: Transcript,
+    heights: BTreeMap<String, (u64, f32, f32)>,
+    rows: BTreeMap<String, (f32, f32, f32)>,
+}
+impl CompactTranscript {
+    fn new(style: Style, meter: fn() -> Meter) -> Self {
+        Self {
+            inner: Transcript::new(style.clone(), meter()),
+            measure: Transcript::new(style, meter()),
+            heights: BTreeMap::new(),
+            rows: BTreeMap::new(),
+        }
+    }
+    fn meter(&self) -> &Meter {
+        self.inner.meter()
+    }
+    fn style(&self) -> &Style {
+        self.inner.style()
+    }
+    fn release(&mut self) {
+        self.inner.release();
+        self.measure.release();
+        self.heights.clear();
+        self.rows.clear();
+    }
+    fn layout(&mut self, entries: &[Entry]) -> f32 {
+        self.inner.layout(entries);
+        let scale = &self.inner.style().scale;
+        let (gap, strip) = (scale.md, scale.xxl + 3.5 * scale.xs);
+        let (mut original, mut compact) = (0., 0.);
+        self.rows.clear();
+        for entry in entries {
+            let mut hash = std::collections::hash_map::DefaultHasher::new();
+            (
+                &entry.text,
+                &entry.label,
+                &entry.fill,
+                entry.markdown,
+                &entry.code_action,
+            )
+                .hash(&mut hash);
+            let hash = hash.finish();
+            let cached = self
+                .heights
+                .entry(entry.key.clone())
+                .or_insert((!hash, 0., 0.));
+            if cached.0 != hash {
+                let height = self.measure.layout(std::slice::from_ref(entry));
+                let code = entry.markdown && !markdown::code_blocks(&entry.text).is_empty();
+                *cached = (hash, height, height - if code { 0. } else { strip });
+            }
+            self.rows
+                .insert(entry.key.clone(), (original, compact, cached.2));
+            original += cached.1 + gap;
+            compact += cached.2 + gap;
+        }
+        self.heights.retain(|key, _| self.rows.contains_key(key));
+        (compact - gap).max(0.)
+    }
+    fn window(&mut self, scroll: f32, height: f32, entries: &[Entry]) -> Vec<Json> {
+        let overscan = self.inner.style().overscan;
+        let (low, high) = (scroll - overscan, scroll + height + overscan);
+        let first = self
+            .rows
+            .values()
+            .filter(|(_, top, h)| top + h >= low && *top <= high)
+            .map(|(original, _, _)| *original)
+            .reduce(f32::min)
+            .unwrap_or(0.);
+        let last = self
+            .rows
+            .iter()
+            .filter(|(_, (_, top, h))| top + h >= low && *top <= high)
+            .map(|(key, (original, _, _))| original + self.heights[key].1)
+            .reduce(f32::max)
+            .unwrap_or(first);
+        let mut cells = self.inner.window(first, last - first, entries);
+        cells.retain_mut(|cell| {
+            let id = cell["id"].as_str().unwrap_or_default();
+            let Some((key, index)) = id.rsplit_once(':') else {
+                return false;
+            };
+            let Some(&(original, top, h)) = self.rows.get(key) else {
+                return false;
+            };
+            if top + h < low || top > high {
+                return false;
+            }
+            let key = key.to_owned();
+            let bubble = index == "0";
+            cell["y"] = json!(cell["y"].as_f64().unwrap_or_default() + f64::from(top - original));
+            cell["message"] = json!(key);
+            if bubble {
+                cell["h"] = json!(h);
+            }
+            true
+        });
+        let scale = &self.inner.style().scale;
+        let button = scale.xxl;
+        let mut ordered = Vec::with_capacity(cells.len() * 2);
+        for cell in cells {
+            // Keep each hover action adjacent to its message in keyboard order.
+            let copy = cell["id"].as_str().unwrap().ends_with(":0").then(|| {
+                let key = cell["message"].as_str().unwrap();
+                json!({
+                    "id": format!("{key}:copy"), "message": key, "k": "button",
+                    "a": format!("copy:{key}"), "t": tr("bead.panel.chat-copy", &[]),
+                    "x": self.inner.style().width - button - scale.xs,
+                    "y": cell["y"].as_f64().unwrap() + f64::from(scale.xs),
+                    "w": button, "h": button, "s": scale.caption,
+                })
+            });
+            ordered.push(cell);
+            ordered.extend(copy);
+        }
+        ordered
+    }
+}
+
 // ---- geometry ----------------------------------------------------------------
 
 /// Panel geometry as multiples of the shared size scale; nothing here names a pixel.
@@ -44,9 +168,7 @@ struct Metrics {
     edge: f64,
     gap: f64,
     button: f64,
-    tabs: f64,
-    top: f64,
-    tools: f64,
+    header: f64,
     inner: f32,
     body: f32,
     info: f32,
@@ -64,19 +186,16 @@ impl Metrics {
         );
         let edge = md + xs;
         let button = 2. * md + 2.5 * xs;
-        let tabs = edge * 3.875;
-        let top = tabs + button + md + 0.5 * xs;
+        let header = f64::from((scale.body * 1.4).ceil() + (scale.caption * 1.4).ceil()) + xs / 4.;
         Self {
             edge,
             gap: sm,
             button,
-            tabs,
-            top,
-            tools: button + sm - 1. + f64::from(scale.caption) * 1.4,
+            header,
             inner: (width - 2. * edge) as f32,
             body: scale.body,
             info: scale.caption,
-            composer_min: 25. * xs,
+            composer_min: button + sm,
             composer_max: 40. * xs,
             question_min: 20. * xs,
             question_max: 60. * xs,
@@ -124,7 +243,7 @@ struct Ticker {
 pub struct Chat {
     source: Arc<dyn Source>,
     client: Option<Client>,
-    transcript: RefCell<Transcript>,
+    transcript: RefCell<CompactTranscript>,
     metrics: Metrics,
     st: RefCell<St>,
     notify: RefCell<Option<Notify>>,
@@ -313,7 +432,7 @@ impl Chat {
             && stores.get("bead.focused") == Some(&Value::Text("chat.search".into()))
     }
 
-    pub fn new(client: Option<Client>, source: Arc<dyn Source>, meter: Meter) -> Self {
+    pub fn new(client: Option<Client>, source: Arc<dyn Source>, meter: fn() -> Meter) -> Self {
         let launcher_cache_path = if cfg!(test) {
             None
         } else {
@@ -322,12 +441,13 @@ impl Chat {
         let cached_launcher = launcher_cache_path
             .as_deref()
             .and_then(Self::load_launcher_cache);
-        let style = Style::new(WIDTH as f32 - 32., SANS, MONO);
+        let mut style = Style::new(WIDTH as f32, SANS, MONO);
         let metrics = Metrics::new(WIDTH, &style.scale);
+        style.width = metrics.inner;
         Self {
             source,
             client,
-            transcript: RefCell::new(Transcript::new(style, meter)),
+            transcript: RefCell::new(CompactTranscript::new(style, meter)),
             metrics,
             st: RefCell::new(St {
                 launcher: cached_launcher,
@@ -819,7 +939,6 @@ impl Chat {
             out.insert("chat.height".into(), number(height));
             out.insert("chat.edge".into(), number(self.metrics.edge));
             out.insert("chat.button".into(), number(self.metrics.button));
-            out.insert("chat.top".into(), number(self.metrics.top));
             out.insert("chat.inner".into(), number(f64::from(self.metrics.inner)));
             if !handoff && stores.get("bead.focused").is_none() {
                 out.insert("bead.focused".into(), text("chat.search"));
@@ -858,7 +977,12 @@ impl Chat {
         let unit = f64::from(scale.xs);
         let height = (f64::from(st.viewport.1) - 150.).clamp(105. * unit, 202.5 * unit);
         let bottom = height - m.edge;
-        let composer_h = meter.height(&draft, SANS, m.body, m.inner - 2. * scale.md) as f64
+        let composer_h = meter.height(
+            &draft,
+            SANS,
+            m.body,
+            m.inner - scale.md - m.button as f32 - scale.xs,
+        ) as f64
             + 2. * f64::from(scale.md);
         let composer = composer_h.clamp(m.composer_min, m.composer_max);
         let actions_top = bottom - m.button;
@@ -957,7 +1081,7 @@ impl Chat {
         if status_h > 0. {
             floor = status_top - 8.;
         }
-        let transcript_top = m.top + m.tools + 1.5 * f64::from(scale.sm);
+        let transcript_top = m.edge + m.header + f64::from(scale.xs);
         let transcript_h = (floor + m.gap - 10. - transcript_top).max(60.);
         drop(transcript);
 
@@ -986,7 +1110,7 @@ impl Chat {
                     .into(),
                     text: message.text.clone(),
                     markdown: !user,
-                    actions: vec![(tr("bead.panel.chat-copy", &[]), format!("copy:{ordinal}"))],
+                    actions: Vec::new(),
                     code_action: Some((tr("bead.panel.chat-copy-code", &[]), "code".into())),
                 });
             }
@@ -1030,14 +1154,21 @@ impl Chat {
         let title = state
             .as_ref()
             .map_or_else(|| tr("bead.panel.chat-new", &[]), |s| s.title.clone());
-        let heading = format!(
+        let subtitle = format!(
             "{} · {}",
             if provider.is_empty() {
                 tr("bead.panel.chat-assistant", &[])
             } else {
                 provider
             },
-            title
+            tr(
+                if busy {
+                    "bead.panel.launcher-running"
+                } else {
+                    "bead.panel.launcher-idle"
+                },
+                &[]
+            )
         );
         let trimmed = draft.trim();
         let placeholder = if in_workspace {
@@ -1058,11 +1189,10 @@ impl Chat {
         set("chat.cells", Value::list(visible));
         set("chat.edge", number(m.edge));
         set("chat.button", number(m.button));
-        set("chat.tabs", number(m.tabs));
-        set("chat.top", number(m.top));
         set("chat.inner", number(f64::from(m.inner)));
         set("chat.empty", Value::Bool(cells_empty));
-        set("chat.heading", text(heading));
+        set("chat.title", text(title));
+        set("chat.subtitle", text(subtitle));
         set("chat.status", text(status_text));
         set("chat.status_error", Value::Bool(is_error));
         set("chat.status_top", number(status_top));
@@ -1128,6 +1258,10 @@ impl Chat {
     /// daemon call is the published method, sent once and never retried.
     pub fn act(&self, arg: &str, stores: &Stores) -> Outcome {
         let mut out = Outcome::default();
+        if stores.get("chat.menu.open") == Some(&Value::Bool(true)) {
+            out.stores
+                .insert("chat.menu.open".into(), Value::Bool(false));
+        }
         let value = |key: &str| match stores.get(key) {
             Some(Value::Text(s)) => s.clone(),
             _ => String::new(),
