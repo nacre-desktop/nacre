@@ -28,7 +28,7 @@ fi
 package_snapshot() {
     local -a packages=()
     mapfile -t packages < <(
-        pacman -Qq | awk '/^nacre/ || $0 == "niri" || $0 == "hyprland" || $0 == "orient"'
+        pacman -Qq | awk '/^(nacre.*|niri|hyprland|orient)$/'
     )
     if ((${#packages[@]})); then pacman -Q "${packages[@]}"; fi
 }
