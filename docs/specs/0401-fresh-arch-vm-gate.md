@@ -1,7 +1,8 @@
 # N0401 — Fresh-Arch VM install gate
 
-Status: phase A done 2026-11-11; phase B harness implemented, release acceptance
-blocked by runtime state surviving purge (N0402), 2026-11-12.
+Status: phase A done 2026-11-11; phase B harness on main 2026-11-12. The purge
+failure below is fixed by N0402 (niri tier passes every stage); the all-tier rerun
+runs with N0407.
 
 v0.1 ships only when a fresh Arch Linux VM can install Nacre from a signed repository,
 start a working session on each tier, and remove it again. This unit builds that check.
