@@ -49,22 +49,30 @@ local function unwrapped_selection(s, target, count, current)
   return position+delta
 end
 
+local function includes(kind, query, item, s)
+  if kind == "overview" then
+    return ((tostring(item.title or "").." "..tostring(item.app_id or "")):lower()):find(query,1,true) ~= nil
+  elseif kind == "keybindings" then
+    return ((tostring(item.key or "").." "..tostring(item.description or "")):lower()):find(query,1,true) ~= nil
+  elseif kind == "wallpaper" then
+    return wallpaper_item_matches(item,s)
+  end
+  return true
+end
+
+local function source_rows(s)
+  local kind = s["extras.kind"]
+  return kind, tostring(s["extras.query"] or ""):lower(),
+    kind == "overview" and (s["extras.windows"] or {}) or (s["extras.rows"] or {})
+end
+
 local function filtered(s)
-  local kind, query = s["extras.kind"], tostring(s["extras.query"] or ""):lower()
-  local source = kind == "overview" and (s["extras.windows"] or {}) or (s["extras.rows"] or {})
+  local kind, query, source = source_rows(s)
   local out, selection = {}, normalized_selection(s)
   for _, source_item in ipairs(source) do
-    local include = true
-    if kind == "overview" then
-      include = ((tostring(source_item.title or "").." "..tostring(source_item.app_id or "")):lower()):find(query,1,true) ~= nil
-    elseif kind == "keybindings" then
-      include = ((tostring(source_item.key or "").." "..tostring(source_item.description or "")):lower()):find(query,1,true) ~= nil
-    elseif kind == "wallpaper" then
-      include = wallpaper_item_matches(source_item,s)
-    end
     -- Palette rows arrive already filtered and ordered by menu.query. Luau must not
     -- change the engine's query semantics, ranking, or result order.
-    if include then
+    if includes(kind, query, source_item, s) then
       local item = {}; for k, v in pairs(source_item) do item[k] = v end
       item.selection_index = #out+1
       item.selected = kind ~= "keybindings" and item.selection_index == selection
@@ -72,6 +80,15 @@ local function filtered(s)
     end
   end
   return out
+end
+
+-- True as soon as one row matches; avoids copying every row just to count them.
+local function any_match(s)
+  local kind, query, source = source_rows(s)
+  for _, item in ipairs(source) do
+    if includes(kind, query, item, s) then return true end
+  end
+  return false
 end
 
 local function groups(s)
@@ -204,7 +221,7 @@ local exports = {
     end,
     ["extras.groups"] = groups,
     ["extras.empty"] = function(s)
-      return s["extras.kind"] == "keybindings" and s["extras.available"] ~= false and #filtered(s) == 0
+      return s["extras.kind"] == "keybindings" and s["extras.available"] ~= false and not any_match(s)
     end,
     ["extras.empty_message"] = function(s)
       if s["extras.available"] == false then
@@ -213,7 +230,7 @@ local exports = {
       end
       if s["extras.kind"] == "wallpaper" then
         if s["extras.wallpaper.loading"] == true then return "Loading wallpapers…" end
-        if #filtered(s) == 0 then return #(s["extras.rows"] or {}) == 0 and "No wallpapers available" or "No matching wallpapers" end
+        if not any_match(s) then return #(s["extras.rows"] or {}) == 0 and "No wallpapers available" or "No matching wallpapers" end
       end
       if s["extras.kind"] == "keybindings" then return "No matching shortcuts" end
       return "No matching items"
