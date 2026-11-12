@@ -5,7 +5,7 @@ use std::os::unix::{fs::OpenOptionsExt, process::CommandExt};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env, fs,
-    io::Read,
+    io::{Read, Seek, SeekFrom},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
@@ -14,6 +14,10 @@ use std::{
 
 const MAX_FILE: u64 = 64 * 1024 * 1024;
 const MAX_LINE: usize = 4 * 1024 * 1024;
+/// Transcripts above MAX_FILE are read as a head window (start folder, first
+/// prompt) plus a tail window (recent messages, titles, last prompt).
+const HEAD_WINDOW: u64 = 4 * 1024 * 1024;
+const TAIL_WINDOW: u64 = 32 * 1024 * 1024;
 const MAX_SESSIONS: usize = 500;
 const MAX_OUTPUT: usize = 1024 * 1024;
 const MAX_ROSTER: u64 = 1024 * 1024;
@@ -131,7 +135,7 @@ fn reject_linked_ancestors(path: &Path) -> Result<()> {
 fn read_file(path: &Path) -> Result<Option<Vec<u8>>> {
     read_file_limited(path, MAX_FILE)
 }
-fn read_file_limited(path: &Path, limit: u64) -> Result<Option<Vec<u8>>> {
+fn open_private(path: &Path) -> Result<Option<(fs::File, u64)>> {
     reject_linked_ancestors(path)?;
     let file = match fs::OpenOptions::new()
         .read(true)
@@ -146,10 +150,16 @@ fn read_file_limited(path: &Path, limit: u64) -> Result<Option<Vec<u8>>> {
     if !metadata.is_file() || metadata.file_type().is_symlink() || metadata.nlink() != 1 {
         return Err(err("Claude session data is not a private regular file"));
     }
-    if metadata.len() > limit {
+    Ok(Some((file, metadata.len())))
+}
+fn read_file_limited(path: &Path, limit: u64) -> Result<Option<Vec<u8>>> {
+    let Some((file, len)) = open_private(path)? else {
+        return Ok(None);
+    };
+    if len > limit {
         return Err(err("Claude session data exceeds the size limit"));
     }
-    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    let mut bytes = Vec::with_capacity(len as usize);
     file.take(limit + 1)
         .read_to_end(&mut bytes)
         .map_err(|_| err("Could not read Claude session data"))?;
@@ -157,6 +167,39 @@ fn read_file_limited(path: &Path, limit: u64) -> Result<Option<Vec<u8>>> {
         return Err(err("Claude session data exceeds the size limit"));
     }
     Ok(Some(bytes))
+}
+/// Whole transcript up to MAX_FILE; above it, the head and tail windows joined on
+/// line boundaries, so long-running chats stay listed and loadable.
+fn read_transcript(path: &Path) -> Result<Option<Vec<u8>>> {
+    let Some((mut file, len)) = open_private(path)? else {
+        return Ok(None);
+    };
+    let read_error = |_| err("Could not read Claude session data");
+    if len <= MAX_FILE {
+        let mut bytes = Vec::with_capacity(len as usize);
+        file.take(MAX_FILE)
+            .read_to_end(&mut bytes)
+            .map_err(read_error)?;
+        return Ok(Some(bytes));
+    }
+    let mut head = Vec::new();
+    (&mut file)
+        .take(HEAD_WINDOW)
+        .read_to_end(&mut head)
+        .map_err(read_error)?;
+    head.truncate(head.iter().rposition(|b| *b == b'\n').map_or(0, |i| i + 1));
+    file.seek(SeekFrom::Start(len.saturating_sub(TAIL_WINDOW)))
+        .map_err(read_error)?;
+    let mut tail = Vec::new();
+    file.take(TAIL_WINDOW)
+        .read_to_end(&mut tail)
+        .map_err(read_error)?;
+    let start = tail
+        .iter()
+        .position(|b| *b == b'\n')
+        .map_or(tail.len(), |i| i + 1);
+    head.extend_from_slice(&tail[start..]);
+    Ok(Some(head))
 }
 fn valid_schema_marker(value: &Value) -> bool {
     for marker in ["schemaVersion", "formatVersion"] {
@@ -170,7 +213,7 @@ fn valid_schema_marker(value: &Value) -> bool {
     true
 }
 fn jsonl(path: &Path) -> Vec<Value> {
-    let Ok(Some(bytes)) = read_file(path) else {
+    let Ok(Some(bytes)) = read_transcript(path) else {
         return Vec::new();
     };
     let mut records = Vec::new();
@@ -1385,6 +1428,33 @@ mod tests {
     }
 
     #[test]
+    fn chats_above_the_whole_file_limit_stay_listed_and_loadable() {
+        let temp = tempdir().unwrap();
+        let config = temp.path().join("claude");
+        let chat = temp.path().join("chat");
+        fs::create_dir_all(&chat).unwrap();
+        let project = put_fixture(&config, &chat, "current", CURRENT_ID);
+        let transcript = project.join(format!("{CURRENT_ID}.jsonl"));
+        let text = fs::read_to_string(&transcript).unwrap();
+        // Sparse padding pushes the transcript past MAX_FILE without disk cost.
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&transcript)
+            .unwrap()
+            .set_len(MAX_FILE + TAIL_WINDOW + 1024)
+            .unwrap();
+        fs::OpenOptions::new()
+            .append(true)
+            .open(&transcript)
+            .unwrap()
+            .write_all(format!("\n{text}").as_bytes())
+            .unwrap();
+        let rows = history(&config, &chat, true, &BTreeMap::new()).unwrap();
+        assert!(rows.iter().any(|row| row["id"] == CURRENT_ID), "{rows:?}");
+        assert!(!messages(&config, CURRENT_ID, &chat).unwrap().is_empty());
+    }
+
+    #[test]
     fn sessions_that_later_change_folder_stay_listed_and_nested_chat_folders_are_scanned() {
         let temp = tempdir().unwrap();
         let config = temp.path().join("claude");
@@ -1894,6 +1964,24 @@ mod file_limits {
         assert!(read_file(&link).is_err());
         assert!(read_file(temp.path()).is_err());
         assert_eq!(fs::read_to_string(path).unwrap(), "synthetic marker");
+    }
+    #[test]
+    fn transcripts_above_the_whole_file_limit_keep_head_and_tail_records() {
+        use std::io::Write;
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("long.jsonl");
+        let mut file = fs::File::create(&path).unwrap();
+        file.write_all(b"{\"first\":true}\n").unwrap();
+        // A sparse middle far beyond MAX_FILE (no disk cost).
+        file.set_len(MAX_FILE + TAIL_WINDOW + 1024).unwrap();
+        let mut file = fs::OpenOptions::new().append(true).open(&path).unwrap();
+        file.write_all(b"\n{\"last\":true}\n").unwrap();
+        assert_eq!(
+            jsonl(&path),
+            vec![json!({"first":true}), json!({"last":true})]
+        );
+        // The whole-file reader keeps refusing oversized files.
+        assert!(read_file(&path).is_err());
     }
     #[test]
     fn oversized_records_are_skipped_without_hiding_later_valid_rows() {
