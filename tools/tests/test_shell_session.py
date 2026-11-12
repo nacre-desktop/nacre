@@ -15,7 +15,7 @@ class GraphicalEnvironmentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.check_output(
                 [
-                    "sh",
+                    "/bin/sh",
                     "-c",
                     '. "$1"; . "$2"; /usr/bin/env',
                     "probe",
@@ -62,7 +62,7 @@ class GraphicalEnvironmentTests(unittest.TestCase):
             qt6ct.chmod(0o755)
             result = subprocess.check_output(
                 [
-                    "sh",
+                    "/bin/sh",
                     "-c",
                     '. "$1"; printf "%s" "${QT_QPA_PLATFORMTHEME-unset}"',
                     "probe",

@@ -1574,13 +1574,14 @@ class ArchPackageLayoutTests(unittest.TestCase):
             "libraqm",
             "libjpeg-turbo",
             "lcms2",
-            "librsvg",
         ):
             self.assertIn(
                 "'" + name + "'", core.split("depends=", 1)[1].splitlines()[0]
             )
         required = core.split("depends=", 1)[1].splitlines()[0]
         optional = core.split("optdepends=", 1)[1].splitlines()[0]
+        self.assertNotIn("'librsvg'", required)
+        self.assertIn("'librsvg: SVG image export tools'", optional)
         for name in ("fish", "fastfetch", "dolphin", "kio-extras"):
             self.assertNotIn("'" + name + "'", required)
             self.assertIn("'" + name + ": ", optional)

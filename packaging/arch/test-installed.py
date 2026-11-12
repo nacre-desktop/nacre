@@ -115,7 +115,6 @@ for package in (
     "libraqm",
     "libjpeg-turbo",
     "lcms2",
-    "librsvg",
 ):
     run("pacman", "-Q", package)
 for name in (
