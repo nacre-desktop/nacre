@@ -784,7 +784,7 @@
         ]
       },
       "observed": {
-        "stdout": "{\"backend\": \"hyprland\", \"capabilities\": {\"stableWorkspaceIndices\": true, \"globalWorkspaces\": true, \"perOutputWorkspaces\": false, \"scrollingLayout\": false, \"floatingPlacement\": true, \"pinWindow\": true, \"windowCapture\": false, \"windowHide\": true, \"windowTrash\": false, \"scratchpad\": false, \"windowGroups\": true, \"windowForceKill\": true, \"pseudoTiling\": true, \"layoutSplit\": true, \"keymaps\": true, \"nonConsumingShortcuts\": true, \"bindingIntrospection\": true, \"monitorMirroring\": false, \"fullscreenState\": true}}\n",
+        "stdout": "{\"backend\": \"hyprland\", \"capabilities\": {\"stableWorkspaceIndices\": true, \"globalWorkspaces\": true, \"perOutputWorkspaces\": false, \"scrollingLayout\": false, \"floatingPlacement\": true, \"pinWindow\": true, \"windowCapture\": true, \"windowHide\": true, \"windowTrash\": false, \"scratchpad\": false, \"windowGroups\": true, \"windowForceKill\": true, \"pseudoTiling\": true, \"layoutSplit\": true, \"keymaps\": true, \"nonConsumingShortcuts\": true, \"bindingIntrospection\": true, \"monitorMirroring\": false, \"fullscreenState\": true}}\n",
         "stderr": "",
         "exit": 0,
         "calls": []
