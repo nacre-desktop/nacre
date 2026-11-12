@@ -1,6 +1,6 @@
 # N0402 — Nacre-owned shell state
 
-Status: implementation; focused and niri VM gates pending.
+Status: complete on branch `release/n0402-state`.
 
 Panel state, surface recovery (`ui/`), UI health JSON/locks and widget window
 geometry belong in `$XDG_STATE_HOME/nacre/shell` (default
@@ -14,16 +14,34 @@ concurrent startup. Existing destinations leave both entries intact with one
 conflict log line per entry. Failures preserve the source; interrupted migration
 can resume. Sync the directory chain before moving and both parents afterward.
 Remove `bead/` only when empty, preserving unrelated framework apps.
+Migration errors are logged and do not prevent shell startup.
 The migration is temporary: delete 30 days after release, planned release
 2026-11-12, expiry **2026-12-12** (adjust with the actual release date).
 
 Purge already covers `.local/state/nacre` in `tools/nacre_modules.py:292-297`;
-uninstall is unchanged. No framework changes, services or UI changes.
-At pinned Bead `ed03c8ee22e5`, Rust/Luau contains no fixed XDG state path:
-`crates/bead-ui/src/session.rs:248-249` accepts Nacre's recovery path, and
-`crates/bead-core/src/recovery.rs:33-37` writes below its supplied parent.
+uninstall is unchanged. At pinned Bead `ed03c8ee22e5`, UI recovery accepts the
+caller path (`crates/bead-ui/src/session.rs:248-249`, saved at `:275-277`) and
+crash history uses the path passed to `Run::begin`
+(`crates/bead-core/src/recovery.rs:180-190,218`). Nacre supplies both paths:
+`crates/nacre-shell/src/reload.rs:33` for `ui/`, and
+`crates/nacre-shell/src/main.rs:576-577` for `ui-health*`. Bead has no fixed
+state path writer at this revision.
 
-Tests use a subprocess with a temporary XDG_STATE_HOME, checking absent state,
-legacy state, existing destinations and unrelated Bead data. Focused tests,
-formatting and clippy run in one fresh dev-1 container; a fresh niri VM proves
-purge leftovers without an allowlist change. Hosted CI remains the full gate.
+The migration test uses a subprocess with temporary `XDG_STATE_HOME`; it covers
+empty state, old-only state, conflicts, symlinks, interrupted-write temps and
+unrelated Bead data. A main-binary test injects a migration error and confirms
+startup proceeds. Focused state/widget tests, formatting and clippy passed on
+f8cf445a; the follow-up state and startup-error tests passed on 81af639a.
+
+The VM-only Nacre packages used `CARGO_PROFILE_RELEASE_LTO=false`,
+`CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, `CARGO_BUILD_JOBS=4`,
+`RUST_MIN_STACK=16777216`, and `MAKEFLAGS=-j4`. For the helper compile, the
+temporary PKGBUILD used `-j1` after a `-j2` lean-profile attempt aborted under
+the 12 GiB container cap. The repository release profile is unchanged.
+
+The niri VM stages were: prepare PASS (88.8s), inventory PASS (0.8s),
+repository PASS (1.9s), bootstrap-plan PASS (0.1s), bootstrap-install PASS
+(236.2s), setup PASS (114.5s), session PASS (30.7s), update SKIP (0.2s),
+uninstall PASS (4.8s), package-removal PASS (5.0s), leftovers PASS (0.3s).
+The test package archives, VM evidence and logs remain under the task's ignored
+`.lead/evidence/`; temporary dev-1 files and containers were removed.
