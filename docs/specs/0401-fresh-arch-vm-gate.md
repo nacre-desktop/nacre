@@ -1,6 +1,7 @@
 # N0401 — Fresh-Arch VM install gate
 
-Status: phase A (feasibility) done 2026-11-11; phase B (the harness) not started.
+Status: phase A done 2026-11-11; phase B harness implemented, release acceptance
+blocked by runtime state surviving purge (N0402), 2026-11-12.
 
 v0.1 ships only when a fresh Arch Linux VM can install Nacre from a signed repository,
 start a working session on each tier, and remove it again. This unit builds that check.
@@ -61,3 +62,35 @@ under 15 minutes per tier. The harness is at most about 300 lines. The Clasp gre
 (C0003) may reuse the boot part.
 
 Not covered: performance, multiple monitors, the greeter and physical GPUs.
+
+## Phase B result (2026-11-12)
+
+Core and all session splits were built from main `0716a15020b0`, with native
+Orient built from the locked `3efe8d1e7fb5` source and the reviewed `1028c5b919ab`
+fork archive. Fresh verified Arch cloud overlays ran on KVM/virgl, 4 vCPU/6 GiB.
+The harness uses the publisher's bootstrap rendering, a throwaway signed guest
+repository, and baseline inventories that include its login/network fixtures.
+
+| Tier | Bootstrap/setup | TTY1, outputs, shell, journal, image | Purge inventory | Time |
+|---|---|---|---|---|
+| nacre-niri | PASS | PASS | FAIL: Bead state remains | 7m36s |
+| niri | PASS | PASS | FAIL: Bead state remains | 9m44s |
+| hyprland | PASS | PASS | FAIL: Bead state remains | 8m49s |
+
+Uninstall plan/purge and package removal exit successfully, but Nacre creates
+unrecorded `~/.local/state/bead/ui-health-*` and `bead/ui/*` files. They survive
+purge: `crates/nacre-shell/src/state.rs:38-46` selects the generic Bead state
+directory, `crates/nacre-shell/src/main.rs:560-570` writes recovery state beside it, while
+`tools/nacre_modules.py:292-297` purges only Nacre-owned directories. The gate
+rejects this residue; it is not allowlisted. The safe N0402 fix must scope all
+Nacre UI/recovery persistence under Nacre-owned state, preserving other Bead
+apps and launched apps' XDG environment. This exceeds the allowed small
+setup/uninstall-only fix; no product patch was applied.
+
+The cut predates N0403, so update is SKIP. Main advanced during the build/proof;
+the next unblocked cut must include its no-op update check. Screenshots and raw
+stage logs remain outside Git. The full hosted CI gate remains with integration;
+this unit passed Ruff and 12 focused driver/repository tests in a fresh Arch
+container. Mirror timeouts required an isolated Niri retry; the VM fixture uses
+alternate official mirrors and serial package downloads, with signature checks
+unchanged.

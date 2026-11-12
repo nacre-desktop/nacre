@@ -124,6 +124,7 @@ or credential directories. Repeat with separate users for `hyprland` and `both`;
 the package workflow performs all three in a runtime-only Arch image. Test the terminal wizard through a real TTY too;
 confirm cancellation creates no configuration, then confirm apply. Cold-login graphical validation needs a VM/Wayland session and is a
 separate gate; headless configuration success is not proof of desktop rendering.
+`test-vm.py` runs the [fresh-Arch VM gate](../../docs/specs/0401-fresh-arch-vm-gate.md) for one tier against package archives or a repository root, recording stage times and a screenshot.
 
 ## Tested development publication
 

@@ -200,6 +200,14 @@ def fetch_previous(destination):
     return True
 
 
+def render_bootstrap(root):
+    bootstrap = (root / "packaging/arch/bootstrap.sh").read_text()
+    if "@NACRE_PACMAN_FRONTEND@" in bootstrap:
+        frontend = (root / "tools/package_transaction.py").read_text() + "\nmain()\n"
+        bootstrap = bootstrap.replace("@NACRE_PACMAN_FRONTEND@", shlex.quote(frontend))
+    return bootstrap
+
+
 def build(root, artifacts, output, fingerprint, revision, run_id, previous=None):
     if (
         not re.fullmatch(r"[0-9A-F]{40}", fingerprint)
@@ -309,11 +317,7 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
     )
     sign(checksums, fingerprint)
     shutil.copy2(root / "packaging/keys/nacre-repo.asc", output / "nacre-repo.asc")
-    bootstrap = (root / "packaging/arch/bootstrap.sh").read_text()
-    if "@NACRE_PACMAN_FRONTEND@" in bootstrap:
-        frontend = (root / "tools/package_transaction.py").read_text() + "\nmain()\n"
-        bootstrap = bootstrap.replace("@NACRE_PACMAN_FRONTEND@", shlex.quote(frontend))
-    (output / "install-arch.sh").write_text(bootstrap)
+    (output / "install-arch.sh").write_text(render_bootstrap(root))
     sign(output / "install-arch.sh", fingerprint)
     links = "\n".join(
         '<li><a href="arch/dev/x86_64/'
