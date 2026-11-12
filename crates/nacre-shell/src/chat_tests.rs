@@ -16,6 +16,21 @@ const FRAME_HEIGHT: u32 = 714;
 pub(crate) fn serial() -> std::sync::MutexGuard<'static, ()> {
     SERIAL.lock().unwrap_or_else(|p| p.into_inner())
 }
+#[test]
+fn running_indicator_ticker_starts_stops_and_uses_fast_period_only_while_working() {
+    let _guard = serial();
+    let (_, chat) = offline(json!({"available":true,"channels":{}}));
+    *chat.notify.borrow_mut() = Some(Arc::new(|_| {}));
+    chat.st.borrow_mut().launcher = Some(json!({"chats":[{"state":"running"}]}));
+    chat.project(&Stores::default());
+    assert_eq!(chat.ticker.borrow().as_ref().unwrap().period, PULSE_TICK);
+    chat.st.borrow_mut().launcher = Some(json!({"chats":[{"state":"saved"}]}));
+    let idle = chat.project(&Stores::default());
+    assert_eq!(chat.ticker.borrow().as_ref().unwrap().period, HEARTBEAT);
+    assert_eq!(idle["launcher.pulse"], number(0.));
+    chat.project(&stores(&[("panel.open", Value::Bool(false))]));
+    assert!(chat.ticker.borrow().is_none());
+}
 pub(crate) fn root() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell")
 }
@@ -889,6 +904,7 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
 
     let mut cached = Chat::load_launcher_cache(&cache).expect("cold fetch wrote cache");
     cached["chats"][0]["title"] = json!("Saved cache title");
+    cached["chats"][0]["state"] = json!("running");
     Chat::save_launcher_cache(&cache, &cached);
     let warm_source = lab_source(&lab).await;
     let warm_started = std::time::Instant::now();
@@ -901,6 +917,8 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
     };
     assert_eq!(rows.len(), 12);
     assert_eq!(rows[0]["title"], "Saved cache title");
+    assert_eq!(rows[0]["state"], "idle");
+    assert_eq!(first["launcher.pulse"], number(0.));
     if std::env::var("NACRE_TEST_PERF").as_deref() == Ok("1") {
         assert!(
             first_frame_ms < 30,

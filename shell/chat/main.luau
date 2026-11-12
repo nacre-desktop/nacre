@@ -164,6 +164,7 @@ else
         gap=T.spacing.xs,row_height=ROW,model=ui.bind("launcher.chats"),key="key",render=function(item)
             local inset=T.spacing.xs
             local active=item.state=="running"
+            local pulse=active and ui.animate("chat.running-pulse:"..item.key,get("launcher.pulse") or 0,.2,"out-cubic") or 0
             return kit.Button{id="chat-row",width=INNER,height=ROW,padding=inset,radius=T.radii.small,fill="surface",
                 hover_fill="surfaceContainerHigh",selected_fill="surfaceContainerHigh",selected=item.key==get("launcher.selected"),aria_label=item.title,
                 on_activate=get("launcher.can_open") and action("launcher:open:"..item.key) or nil,
@@ -174,7 +175,7 @@ else
                             aria_label=ui.tr("bead.panel.launcher-resume"),on_activate=get("launcher.can_latest") and action("launcher:latest") or nil,
                             ui.Text{text=ui.tr("bead.prompt.continue"),width=ui.text_width(ui.tr("bead.prompt.continue"),T.fonts.sans,CAPTION)+2*T.spacing.xs,height=META_H,font_size=CAPTION,text_align="center",color="primary"}} or nil},
                     ui.Row{id="meta",width=INNER-2*inset,height=META_H,gap=T.spacing.xs,align="center",
-                        ui.Box{id="running-dot",width=T.spacing.xs,height=T.spacing.xs,radius=T.radii.full,fill=active and "primary" or "outlineVariant"},
+                        ui.Box{id="running-dot",width=T.spacing.xs,height=T.spacing.xs,radius=T.radii.full,fill=active and ui.alpha("primary",.55+.45*pulse) or "outlineVariant"},
                         ui.Text{id="details",text=item.provider.." · "..(active and ui.tr("bead.panel.launcher-running") or ui.tr("bead.panel.launcher-idle")).." · "..item.lastActivityLabel,
                             width=INNER-2*inset-T.spacing.sm,height=META_H,font_size=CAPTION,color="onSurfaceVariant"}}}}
         end})

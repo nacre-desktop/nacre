@@ -29,7 +29,8 @@ pub const WIDTH: f64 = 470.;
 const SANS: &str = "IBM Plex Sans";
 const MONO: &str = "JetBrainsMono Nerd Font";
 const HEARTBEAT: Duration = Duration::from_secs(10);
-const LAUNCHER_REFRESH: Duration = Duration::from_secs(60);
+const PULSE_TICK: Duration = Duration::from_millis(50);
+const LAUNCHER_REFRESH: Duration = Duration::from_secs(10);
 const LAUNCHER_CACHE_LIMIT: usize = 64 * 1024;
 const LAUNCHER_CACHE_ROWS: usize = 30;
 const OPEN: &str = "ai.chat.open";
@@ -239,6 +240,7 @@ struct St {
 }
 struct Ticker {
     _stop: std::sync::mpsc::Sender<()>,
+    period: Duration,
 }
 pub struct Chat {
     source: Arc<dyn Source>,
@@ -363,6 +365,8 @@ impl Chat {
                         "key" | "title" | "provider" | "state" | "lastActivity"
                     )
                 });
+                // Cached activity is not current liveness evidence.
+                object.insert("state".into(), json!("saved"));
             }
         }
         Some(data)
@@ -586,17 +590,24 @@ impl Chat {
         })
     }
     /// The open heartbeat: one wake per interval while the panel is shown.
-    fn tick(&self, live: bool) {
+    fn tick(&self, live: bool, working: bool) {
         let mut ticker = self.ticker.borrow_mut();
         if !live {
             *ticker = None;
             return;
         }
-        let Some(notify) = self.notify.borrow().clone().filter(|_| ticker.is_none()) else {
+        let period = if working { PULSE_TICK } else { self.heartbeat };
+        if ticker
+            .as_ref()
+            .is_some_and(|current| current.period == period)
+        {
+            return;
+        }
+        *ticker = None;
+        let Some(notify) = self.notify.borrow().clone() else {
             return;
         };
         let (stop, wait) = std::sync::mpsc::channel::<()>();
-        let period = self.heartbeat;
         let spawned = std::thread::Builder::new()
             .name("chat-heartbeat".into())
             .stack_size(128 * 1024)
@@ -608,7 +619,10 @@ impl Chat {
                 }
             });
         if spawned.is_ok() {
-            *ticker = Some(Ticker { _stop: stop });
+            *ticker = Some(Ticker {
+                _stop: stop,
+                period,
+            });
         }
     }
 
@@ -715,14 +729,26 @@ impl Chat {
     /// and the answer fields; a hidden panel drops its caches and projects nothing.
     pub fn project(&self, stores: &Stores) -> BTreeMap<String, Value> {
         let open = stores.get("panel.open") != Some(&Value::Bool(false));
-        self.tick(open);
         if !open {
+            self.tick(false, false);
             let mut st = self.st.borrow_mut();
             st.parsed = None;
             self.transcript.borrow_mut().release();
             return BTreeMap::new();
         }
         self.poll();
+        let launcher_visible =
+            !matches!(stores.get("chat.section"), Some(Value::Text(section)) if section == "chat");
+        let working = self
+            .st
+            .borrow()
+            .launcher
+            .as_ref()
+            .and_then(|value| value["chats"].as_array())
+            .is_some_and(|rows| {
+                launcher_visible && rows.iter().any(|row| row["state"] == "running")
+            });
+        self.tick(true, working);
         let handoff = std::mem::take(&mut self.st.borrow_mut().launcher_handoff);
         let section = match stores.get("chat.section") {
             Some(Value::Text(s)) => s.clone(),
@@ -847,6 +873,16 @@ impl Chat {
                 })
                 .collect();
             out.insert("launcher.chats".into(), Value::list(rows));
+            let pulse = if working {
+                let phase = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs_f64();
+                (0.5 + 0.5 * (phase * std::f64::consts::TAU / 1.6).sin()).clamp(0., 1.)
+            } else {
+                0.
+            };
+            out.insert("launcher.pulse".into(), number(pulse));
             let selected_provider = match stores.get("launcher.provider") {
                 Some(Value::Text(v)) if matches!(v.as_str(), "claude" | "codex") => v.clone(),
                 _ => data["defaultProvider"]

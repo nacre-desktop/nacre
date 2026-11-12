@@ -2549,6 +2549,7 @@ dependencies = [
  "unicode-casefold",
  "unicode-general-category",
  "unicode-normalization",
+ "unicode-width 0.2.2",
  "ureq",
  "uuid",
  "wait-timeout",

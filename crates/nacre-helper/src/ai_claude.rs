@@ -21,6 +21,9 @@ const TAIL_WINDOW: u64 = 32 * 1024 * 1024;
 const MAX_SESSIONS: usize = 500;
 const MAX_OUTPUT: usize = 1024 * 1024;
 const MAX_ROSTER: u64 = 1024 * 1024;
+/// A prompt/progress record without a tool in flight is no longer considered
+/// active after this much transcript silence (for example, after a crash).
+const WORKING_STALE_AFTER: Duration = Duration::from_secs(5 * 60);
 const HELP: &str = "usage: nacre-ai-claude [-h] [--project PROJECT] [--path PATH]\n                       [--account ACCOUNT] [--thread-id THREAD_ID]\n                       [--chat-directory] [--tmux]\n                       {new,resume,list,login}\n\nLaunch Claude tasks and read native session metadata using Anthropic's SDK.\n\npositional arguments:\n  {new,resume,list,login}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --path PATH\n  --account ACCOUNT\n  --thread-id THREAD_ID\n  --chat-directory\n  --tmux\n";
 
 fn err(message: impl Into<String>) -> Error {
@@ -233,6 +236,86 @@ fn jsonl(path: &Path) -> Vec<Value> {
         records.push(value);
     }
     records
+}
+fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>) -> bool {
+    let (mut awaiting_reply, mut tools_in_flight) = (false, BTreeSet::<String>::new());
+    for record in records {
+        match record.get("type").and_then(Value::as_str) {
+            Some("user") => {
+                let blocks = record["message"]["content"].as_array();
+                let mut tool_result = false;
+                if let Some(blocks) = blocks {
+                    for block in blocks {
+                        match block["type"].as_str() {
+                            Some("tool_result") => {
+                                tool_result = true;
+                                if let Some(id) = block["tool_use_id"].as_str() {
+                                    tools_in_flight.remove(id);
+                                }
+                            }
+                            Some("text")
+                                if block["text"]
+                                    .as_str()
+                                    .is_some_and(|text| !text.trim().is_empty()) =>
+                            {
+                                awaiting_reply = true;
+                            }
+                            _ => {}
+                        }
+                    }
+                } else if record["message"]["content"]
+                    .as_str()
+                    .is_some_and(|text| !text.trim().is_empty())
+                {
+                    awaiting_reply = true;
+                }
+                if tool_result {
+                    awaiting_reply = true;
+                }
+            }
+            Some("assistant") => {
+                let blocks = record["message"]["content"].as_array();
+                let mut has_tool_use = false;
+                if let Some(blocks) = blocks {
+                    for block in blocks {
+                        if block["type"] == "tool_use" {
+                            has_tool_use = true;
+                            if let Some(id) = block["id"].as_str() {
+                                tools_in_flight.insert(id.to_owned());
+                            }
+                        }
+                    }
+                }
+                if has_tool_use {
+                    awaiting_reply = true;
+                } else {
+                    // A null stop reason is an intermediate/partial message.
+                    // Older records omit the field and represent complete turns.
+                    let stop_reason = record["message"].get("stop_reason");
+                    let turn_ended = stop_reason.is_none()
+                        || stop_reason
+                            .is_some_and(|reason| !reason.is_null() && reason != "tool_use");
+                    awaiting_reply = !turn_ended;
+                    if turn_ended {
+                        // The bounded reader can omit an older tool result.
+                        // A completed turn is authoritative even across that gap.
+                        tools_in_flight.clear();
+                    }
+                }
+            }
+            Some("progress" | "hook_progress" | "hook") => awaiting_reply = true,
+            _ => {}
+        }
+    }
+    if !tools_in_flight.is_empty() {
+        return true;
+    }
+    if !awaiting_reply {
+        return false;
+    }
+    modified
+        .and_then(|time| time.elapsed().ok())
+        .is_some_and(|age| age <= WORKING_STALE_AFTER)
 }
 fn content_text(message: &Value) -> String {
     match message.get("content") {
@@ -830,9 +913,10 @@ fn history(
                 .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                 .map(|d| d.as_millis() as f64 / 1000.0)
                 .unwrap_or(0.0);
+            let working = transcript_working(&records, meta.modified().ok());
             let cwd = cwd.unwrap_or_else(|| directory.to_string_lossy().into_owned());
             accepted += 1;
-            let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude"});
+            let row = json!({"id":id,"title":title,"updated_at":modified,"cwd":cwd,"state":"saved","session":null,"agent":"claude","_working":working});
             if output
                 .get(&id)
                 .and_then(|old| old["updated_at"].as_f64())
@@ -859,13 +943,15 @@ fn history(
         if let Some((name, _)) = running.iter().find(|(name, _)| name.ends_with(&suffix)) {
             matched.insert(name.clone());
             row["session"] = json!(name);
-            row["state"] = json!("running");
+            if row["_working"] == true {
+                row["state"] = json!("running");
+            }
         }
     }
     let mut cwd_rows = BTreeMap::<String, usize>::new();
     let mut cwd_sessions = BTreeMap::<String, Vec<String>>::new();
     for row in &rows {
-        if row["state"] != "running" {
+        if row["session"].is_null() {
             *cwd_rows
                 .entry(row["cwd"].as_str().unwrap_or("").into())
                 .or_default() += 1;
@@ -880,7 +966,7 @@ fn history(
         }
     }
     for row in &mut rows {
-        if row["state"] == "running" {
+        if !row["session"].is_null() {
             continue;
         }
         let cwd = row["cwd"].as_str().unwrap_or("");
@@ -890,7 +976,14 @@ fn history(
             let name = &cwd_sessions[cwd][0];
             matched.insert(name.clone());
             row["session"] = json!(name);
-            row["state"] = json!("running");
+            if row["_working"] == true {
+                row["state"] = json!("running");
+            }
+        }
+    }
+    for row in &mut rows {
+        if let Some(object) = row.as_object_mut() {
+            object.remove("_working");
         }
     }
     Ok(rows)
@@ -1567,7 +1660,7 @@ mod tests {
             .as_str()
             .unwrap()
             .starts_with(root.to_str().unwrap()));
-        assert_eq!(row["state"], "running");
+        assert_eq!(row["state"], "saved");
         assert_eq!(
             row["session"],
             format!("ai-chat-claude-profile-work-{CURRENT_ID}")
@@ -1583,6 +1676,89 @@ mod tests {
         let old_cwd = old_cwd.to_string_lossy().into_owned();
         assert_eq!(old[0]["cwd"].as_str(), Some(old_cwd.as_str()));
         assert_eq!(old[0]["title"], "Fixture previous prompt");
+    }
+
+    #[test]
+    fn transcript_busy_state_tracks_prompts_tools_turn_ends_progress_and_staleness() {
+        let recent = Some(std::time::SystemTime::now());
+        let records = |jsonl: &str| {
+            jsonl
+                .lines()
+                .map(|line| serde_json::from_str::<Value>(line).unwrap())
+                .collect::<Vec<_>>()
+        };
+        assert!(transcript_working(
+            &records(r#"{"type":"user","message":{"content":"prompt"}}"#),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-1","content":"done"}]}}"#
+            ),
+            recent
+        ));
+        assert!(!transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"answer"}],"stop_reason":"end_turn"}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"thinking"}],"stop_reason":null}}
+{"type":"progress","data":{"type":"hook_progress"}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"user","message":{"content":"prompt"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"partial"}],"stop_reason":null}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"tool-1","content":"done"}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"partial final"}],"stop_reason":null}}"#
+            ),
+            recent
+        ));
+        assert!(!transcript_working(
+            &records(
+                r#"{"type":"user","message":{"content":"prompt"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"answer"}],"stop_reason":"end_turn"}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"user","message":{"content":"prompt"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"answer"}],"stop_reason":"end_turn"}}
+{"type":"hook_progress","hookName":"Stop"}"#
+            ),
+            recent
+        ));
+        assert!(!transcript_working(
+            &records(r#"{"type":"user","message":{"content":"prompt"}}"#),
+            Some(std::time::SystemTime::now() - WORKING_STALE_AFTER - Duration::from_secs(1))
+        ));
+        // A stale unresolved tool call remains active because work is still in flight.
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"tool_use","id":"tool-1"}],"stop_reason":"tool_use"}}"#
+            ),
+            Some(std::time::SystemTime::now() - WORKING_STALE_AFTER - Duration::from_secs(1))
+        ));
     }
 
     #[test]

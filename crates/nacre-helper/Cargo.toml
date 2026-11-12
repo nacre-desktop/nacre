@@ -42,6 +42,7 @@ clap = { version = "4", features = ["derive"] }
 unicode-normalization = "=0.1.24"
 unicode-casefold = "0.2"
 unicode-general-category = "=1.1.0"
+unicode-width = "0.2.2"
 ureq = "3"
 uuid = { version = "1", features = ["v4"] }
 nvml-wrapper = "0.13"

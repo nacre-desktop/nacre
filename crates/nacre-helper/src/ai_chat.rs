@@ -5,12 +5,16 @@ use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     env, fs,
-    io::{BufRead, Read, Write},
+    io::{BufRead, Read, Seek, SeekFrom, Write},
     os::unix::fs::{MetadataExt, OpenOptionsExt, PermissionsExt},
     path::{Path, PathBuf},
     process::Command,
     time::Duration,
 };
+
+const ROLLOUT_TAIL_LIMIT: u64 = 1024 * 1024;
+const ROLLOUT_LINE_LIMIT: usize = 256 * 1024;
+const ROLLOUT_STALE_AFTER: Duration = Duration::from_secs(5 * 60);
 
 const HELP: &str = r#"usage: nacre-ai-chat [-h] [--thread-id THREAD_ID] [--project PROJECT]
                      [--path PATH] [--chat-directory] [--account ACCOUNT]
@@ -253,6 +257,100 @@ fn running(project: &str, account: &str) -> Result<BTreeMap<String, String>> {
     }
     Ok(rows)
 }
+fn rollout_working(path: Option<&str>) -> bool {
+    let Some(path) = path.map(Path::new) else {
+        return false;
+    };
+    if !path.is_absolute()
+        || !path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with("rollout-") && name.ends_with(".jsonl"))
+        || ai_core::reject_symlink_chain(path).is_err()
+    {
+        return false;
+    }
+    let Ok(file) = fs::OpenOptions::new()
+        .read(true)
+        .custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK)
+        .open(path)
+    else {
+        return false;
+    };
+    let Ok(meta) = file.metadata() else {
+        return false;
+    };
+    if !meta.is_file() || meta.file_type().is_symlink() || meta.nlink() != 1 {
+        return false;
+    }
+    let mut file = file;
+    let start = meta.len().saturating_sub(ROLLOUT_TAIL_LIMIT);
+    if file.seek(SeekFrom::Start(start)).is_err() {
+        return false;
+    }
+    let mut bytes = Vec::new();
+    if file
+        .take(ROLLOUT_TAIL_LIMIT)
+        .read_to_end(&mut bytes)
+        .is_err()
+    {
+        return false;
+    }
+    if start > 0 {
+        let Some(newline) = bytes.iter().position(|byte| *byte == b'\n') else {
+            return false;
+        };
+        bytes.drain(..=newline);
+    }
+    let mut awaiting = false;
+    let mut calls = BTreeSet::<String>::new();
+    for line in bytes
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty() && line.len() <= ROLLOUT_LINE_LIMIT)
+    {
+        let Ok(record) = serde_json::from_slice::<Value>(line) else {
+            continue;
+        };
+        let kind = record["type"].as_str().unwrap_or("");
+        let payload = &record["payload"];
+        match (kind, payload["type"].as_str().unwrap_or("")) {
+            ("event_msg", "task_started") => awaiting = true,
+            ("event_msg", "task_complete" | "turn_aborted") => {
+                awaiting = false;
+                calls.clear();
+            }
+            ("response_item", "message") if payload["role"] == "user" => awaiting = true,
+            ("response_item", "message")
+                if payload["role"] == "assistant" && payload["phase"] == "final_answer" =>
+            {
+                awaiting = false;
+                calls.clear();
+            }
+            ("response_item", "function_call" | "custom_tool_call") => {
+                awaiting = true;
+                if let Some(id) = payload["call_id"].as_str() {
+                    calls.insert(id.to_owned());
+                }
+            }
+            ("response_item", "function_call_output" | "custom_tool_call_output") => {
+                if let Some(id) = payload["call_id"].as_str() {
+                    calls.remove(id);
+                }
+                awaiting = true;
+            }
+            _ => {}
+        }
+    }
+    if !calls.is_empty() {
+        return true;
+    }
+    awaiting
+        && meta
+            .modified()
+            .ok()
+            .and_then(|time| time.elapsed().ok())
+            .is_some_and(|age| age <= ROLLOUT_STALE_AFTER)
+}
 fn chat_records(threads: &[Value], sessions: &BTreeMap<String, String>) -> Vec<Value> {
     let mut out = Vec::new();
     let mut matched = BTreeSet::new();
@@ -265,11 +363,14 @@ fn chat_records(threads: &[Value], sessions: &BTreeMap<String, String>) -> Vec<V
         if let Some(s) = &session {
             matched.insert(s.clone());
         }
-        out.push(json!({"id":t.get("id"),"title":label(t.get("name").and_then(Value::as_str).filter(|value|!value.is_empty()).or_else(||t.get("preview").and_then(Value::as_str).filter(|value|!value.is_empty())).unwrap_or("New task")),"state":if session.is_some(){"running"}else{"saved"},"session":session,"updated_at":t.get("updatedAt").unwrap_or(&json!(0)),"cwd":t.get("cwd")}));
+        let working = session.is_some() && rollout_working(t.get("path").and_then(Value::as_str));
+        out.push(json!({"id":t.get("id"),"title":label(t.get("name").and_then(Value::as_str).filter(|value|!value.is_empty()).or_else(||t.get("preview").and_then(Value::as_str).filter(|value|!value.is_empty())).unwrap_or("New task")),"state":if working{"running"}else{"saved"},"session":session,"updated_at":t.get("updatedAt").unwrap_or(&json!(0)),"cwd":t.get("cwd")}));
     }
     for (s, p) in sessions {
         if !matched.contains(s) {
-            out.push(json!({"id":null,"title":"New task","state":"running","session":s,"updated_at":0,"cwd":p}));
+            // A live pane without an app-server rollout path is open but its
+            // provider work cannot be established; fail closed to Idle.
+            out.push(json!({"id":null,"title":"New task","state":"saved","session":s,"updated_at":0,"cwd":p}));
         }
     }
     out
@@ -1048,9 +1149,19 @@ mod tests {
     }
     #[test]
     fn records_keep_identity_and_match_running_worktree() {
+        let temp = tempfile::tempdir().unwrap();
+        let rollout = temp
+            .path()
+            .join("rollout-2026-11-12T10-00-00-thread-one.jsonl");
+        fs::write(
+            &rollout,
+            r#"{"type":"event_msg","payload":{"type":"task_started"}}
+{"type":"response_item","payload":{"type":"function_call","call_id":"call-1"}}"#,
+        )
+        .unwrap();
         let threads = vec![
-            json!({"id":"one","name":"Fix stream lag","cwd":"/repo/one"}),
-            json!({"id":"two","name":"Fix stream lag","cwd":"/repo/two"}),
+            json!({"id":"one","name":"Fix stream lag","cwd":"/repo/one","path":rollout}),
+            json!({"id":"two","name":"Fix stream lag","cwd":"/repo/two","path":rollout}),
             json!({"id":"three","preview":"Check settings","cwd":"/repo/three"}),
         ];
         let sessions = BTreeMap::from([(
@@ -1060,6 +1171,7 @@ mod tests {
         let rows = chat_records(&threads, &sessions);
         assert_eq!(rows[0]["state"], "running");
         assert_eq!(rows[1]["state"], "saved");
+        assert!(rows[1]["session"].is_null());
         assert_eq!(rows[2]["title"], "Check settings");
         assert_eq!(
             rows.iter()
@@ -1067,6 +1179,53 @@ mod tests {
                 .collect::<Vec<_>>(),
             ["one", "two", "three"]
         );
+    }
+    #[test]
+    fn codex_rollout_tail_distinguishes_turn_end_tools_and_stale_prompts() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("rollout-test.jsonl");
+        assert!(!rollout_working(None));
+        fs::write(
+            &path,
+            r#"{"type":"response_item","payload":{"type":"message","role":"user","content":[]}}"#,
+        )
+        .unwrap();
+        assert!(rollout_working(path.to_str()));
+        fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH)
+            .unwrap();
+        assert!(!rollout_working(path.to_str()));
+        fs::write(
+            &path,
+            r#"{"type":"response_item","payload":{"type":"function_call","call_id":"call-1"}}"#,
+        )
+        .unwrap();
+        fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH)
+            .unwrap();
+        assert!(rollout_working(path.to_str()));
+        fs::write(&path, r#"{"type":"response_item","payload":{"type":"function_call","call_id":"call-1"}}
+{"type":"response_item","payload":{"type":"function_call_output","call_id":"call-1","output":"done"}}
+{"type":"response_item","payload":{"type":"message","role":"assistant","phase":"final_answer","content":[]}}"#).unwrap();
+        assert!(!rollout_working(path.to_str()));
+        fs::write(&path, r#"{"type":"event_msg","payload":{"type":"task_started"}}
+{"type":"response_item","payload":{"type":"message","role":"assistant","phase":"final_answer","content":[]}}"#).unwrap();
+        assert!(!rollout_working(path.to_str()));
+        let mut large = format!(
+            "{{\"type\":\"ignored\",\"pad\":\"{}\"}}\n",
+            "x".repeat(1_100_000)
+        );
+        large.push_str(
+            r#"{"type":"response_item","payload":{"type":"custom_tool_call","call_id":"call-2"}}"#,
+        );
+        fs::write(&path, large).unwrap();
+        assert!(rollout_working(path.to_str()));
     }
     #[test]
     fn chat_directory_discovery_ignores_links_and_nonchat_dirs() {

@@ -2,9 +2,10 @@
 use crate::{ai_core, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use clap::Parser;
+use nix::libc;
 use std::{
     env, fs,
-    io::{self, IsTerminal, Read, Write},
+    io::{self, IsTerminal, Write},
     os::unix::fs::{OpenOptionsExt, PermissionsExt},
     path::PathBuf,
     process::{Command, Stdio},
@@ -21,8 +22,49 @@ const DASHBOARD_OPTIONS: [&str; 6] = [
 
 struct Terminal {
     original: nix::sys::termios::Termios,
+    previous_signals: [libc::sighandler_t; 4],
 }
+
+#[allow(unsafe_code)]
+static mut SIGNAL_TERMIOS: std::mem::MaybeUninit<libc::termios> = std::mem::MaybeUninit::uninit();
+const TERMINAL_SIGNALS: [libc::c_int; 4] =
+    [libc::SIGINT, libc::SIGTERM, libc::SIGHUP, libc::SIGQUIT];
+
+// One dashboard owns stdin. The snapshot is written before installing handlers;
+// the handler only uses async-signal-safe terminal/output/signal operations.
+#[allow(unsafe_code)]
+extern "C" fn cleanup_terminal_signal(signal: libc::c_int) {
+    let modes = b"\x1b[?1006l\x1b[?1000l\x1b[?25h\x1b[?1049l";
+    unsafe {
+        libc::tcsetattr(
+            libc::STDIN_FILENO,
+            libc::TCSAFLUSH,
+            std::ptr::addr_of!(SIGNAL_TERMIOS).cast::<libc::termios>(),
+        );
+        libc::write(libc::STDOUT_FILENO, modes.as_ptr().cast(), modes.len());
+        libc::signal(signal, libc::SIG_DFL);
+        libc::raise(signal);
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Input {
+    Byte(u8),
+    Up,
+    Down,
+    Home,
+    End,
+    PageUp,
+    PageDown,
+    Enter,
+    WheelUp,
+    WheelDown,
+    Click { x: usize, y: usize },
+    Ignored,
+}
+
 impl Terminal {
+    #[allow(unsafe_code)]
     fn enter() -> Result<Self> {
         use std::os::fd::AsFd;
         let input = io::stdin();
@@ -30,38 +72,96 @@ impl Terminal {
             return Err("nacre-ai requires an interactive terminal".into());
         }
         let original = nix::sys::termios::tcgetattr(input.as_fd())?;
+        let mut signal_original = std::mem::MaybeUninit::<libc::termios>::uninit();
+        if unsafe { libc::tcgetattr(libc::STDIN_FILENO, signal_original.as_mut_ptr()) } == -1 {
+            return Err(io::Error::last_os_error().into());
+        }
         let mut raw = original.clone();
         nix::sys::termios::cfmakeraw(&mut raw);
         nix::sys::termios::tcsetattr(input.as_fd(), nix::sys::termios::SetArg::TCSAFLUSH, &raw)?;
-        print!("\x1b[?1049h\x1b[?25l");
+        unsafe { std::ptr::addr_of_mut!(SIGNAL_TERMIOS).write(signal_original) };
+        let previous_signals = TERMINAL_SIGNALS.map(|signal| unsafe {
+            libc::signal(
+                signal,
+                cleanup_terminal_signal as *const () as libc::sighandler_t,
+            )
+        });
+        let terminal = Self {
+            original,
+            previous_signals,
+        };
+        print!("\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h");
         io::stdout().flush()?;
-        Ok(Self { original })
+        Ok(terminal)
     }
-    fn key(&self) -> Result<u8> {
-        let mut byte = [0];
-        io::stdin().read_exact(&mut byte)?;
-        if byte[0] == 27 {
-            use std::os::fd::AsFd;
-            let input = io::stdin();
+    fn key(&self) -> Result<Input> {
+        use std::os::fd::{AsFd, AsRawFd};
+        let input = io::stdin();
+        let fd = input.as_fd().as_raw_fd();
+        let byte = read_terminal_byte(fd)?;
+        if byte != 27 {
+            return Ok(match byte {
+                b'\n' | b'\r' => Input::Enter,
+                byte => Input::Byte(byte),
+            });
+        }
+        {
             let mut events = [nix::poll::PollFd::new(
                 input.as_fd(),
                 nix::poll::PollFlags::POLLIN,
             )];
             if nix::poll::poll(&mut events, nix::poll::PollTimeout::from(60u16))? > 0 {
-                let mut sequence = [0; 2];
-                if io::stdin().read_exact(&mut sequence).is_ok() && sequence[0] == b'[' {
-                    return Ok(match sequence[1] {
-                        b'A' => 0x81,
-                        b'B' => 0x82,
-                        _ => 27,
-                    });
+                let mut sequence = Vec::with_capacity(16);
+                for _ in 0..16 {
+                    let mut ready = [nix::poll::PollFd::new(
+                        input.as_fd(),
+                        nix::poll::PollFlags::POLLIN,
+                    )];
+                    if nix::poll::poll(&mut ready, nix::poll::PollTimeout::from(30u16))? == 0 {
+                        break;
+                    }
+                    let next = match read_terminal_byte(fd) {
+                        Ok(next) => next,
+                        Err(_) => break,
+                    };
+                    sequence.push(next);
+                    if sequence.len() > 1
+                        && sequence.as_slice() != b"[<"
+                        && (0x40..=0x7e).contains(&next)
+                    {
+                        break;
+                    }
+                }
+                if let Some(input) = decode_sequence(&sequence) {
+                    return Ok(input);
+                } else if !sequence.is_empty() {
+                    return Ok(Input::Ignored);
                 }
             }
         }
-        Ok(byte[0])
+        Ok(Input::Byte(27))
+    }
+}
+
+#[allow(unsafe_code)]
+fn read_terminal_byte(fd: std::os::fd::RawFd) -> io::Result<u8> {
+    let mut byte = [0u8; 1];
+    loop {
+        let read = unsafe { libc::read(fd, byte.as_mut_ptr().cast(), byte.len()) };
+        if read == 1 {
+            return Ok(byte[0]);
+        }
+        if read == 0 {
+            return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+        }
+        let error = io::Error::last_os_error();
+        if error.kind() != io::ErrorKind::Interrupted {
+            return Err(error);
+        }
     }
 }
 impl Drop for Terminal {
+    #[allow(unsafe_code)]
     fn drop(&mut self) {
         use std::os::fd::AsFd;
         let _ = nix::sys::termios::tcsetattr(
@@ -69,8 +169,65 @@ impl Drop for Terminal {
             nix::sys::termios::SetArg::TCSAFLUSH,
             &self.original,
         );
-        print!("\x1b[?25h\x1b[?1049l");
-        let _ = io::stdout().flush();
+        let mut output = io::stdout();
+        let _ = output.write_all(b"\x1b[?1006l\x1b[?1000l\x1b[?25h\x1b[?1049l");
+        let _ = output.flush();
+        for (signal, previous) in TERMINAL_SIGNALS.into_iter().zip(self.previous_signals) {
+            unsafe {
+                libc::signal(signal, previous);
+            }
+        }
+    }
+}
+
+fn decode_sequence(sequence: &[u8]) -> Option<Input> {
+    if sequence.first() == Some(&b'[') && sequence.get(1) == Some(&b'<') {
+        let text = std::str::from_utf8(sequence).ok()?;
+        let mut fields = text.get(2..text.len().checked_sub(1)?)?.split(';');
+        let button = fields.next()?.parse::<usize>().ok()?;
+        let x = fields.next()?.parse::<usize>().ok()?;
+        let y = fields.next()?.parse::<usize>().ok()?;
+        return match button {
+            64 => Some(Input::WheelUp),
+            65 => Some(Input::WheelDown),
+            0 if sequence.last() != Some(&b'm') => Some(Input::Click { x, y }),
+            _ => Some(Input::Ignored),
+        };
+    }
+    if let [b'O', key] = sequence {
+        return match key {
+            b'A' => Some(Input::Up),
+            b'B' => Some(Input::Down),
+            b'H' => Some(Input::Home),
+            b'F' => Some(Input::End),
+            b'M' => Some(Input::Enter),
+            _ => None,
+        };
+    }
+    let text = std::str::from_utf8(sequence).ok()?.strip_prefix('[')?;
+    let final_key = text.as_bytes().last().copied()?;
+    let mut fields = text.get(..text.len() - 1)?.split(';');
+    let first = fields.next()?;
+    let code = if first.is_empty() {
+        1
+    } else {
+        first.split(':').next()?.parse::<u32>().ok()?
+    };
+    // Kitty can report key releases as modifier:event-type. They must never
+    // activate the next picker after the press opened it.
+    if fields.next().and_then(|field| field.split(':').nth(1)) == Some("3") {
+        return Some(Input::Ignored);
+    }
+    match (final_key, code) {
+        (b'A', 1) | (b'u', 57419) => Some(Input::Up),
+        (b'B', 1) | (b'u', 57420) => Some(Input::Down),
+        (b'H', 1) | (b'~', 1 | 7) | (b'u', 57423) => Some(Input::Home),
+        (b'F', 1) | (b'~', 4 | 8) | (b'u', 57424) => Some(Input::End),
+        (b'~', 5) | (b'u', 57421) => Some(Input::PageUp),
+        (b'~', 6) | (b'u', 57422) => Some(Input::PageDown),
+        (b'u', 13 | 57414) => Some(Input::Enter),
+        (b'u', 0..=127) => Some(Input::Byte(code as u8)),
+        _ => None,
     }
 }
 
@@ -155,8 +312,60 @@ fn put(y: usize, x: usize, text: &str, style: &str, width: usize) {
     if width == 0 {
         return;
     }
-    let clipped = text.chars().take(width).collect::<String>();
-    print!("\x1b[{};{}H{}{}\x1b[0m", y + 1, x + 1, style, clipped);
+    let mut clipped = String::new();
+    let mut cells = 0;
+    for character in text.chars() {
+        let character_width = unicode_width::UnicodeWidthChar::width(character).unwrap_or(0);
+        if cells + character_width > width {
+            break;
+        }
+        clipped.push(character);
+        cells += character_width;
+    }
+    let padding = width.saturating_sub(cells);
+    print!(
+        "\x1b[{};{}H{}{}{}\x1b[0m",
+        y + 1,
+        x + 1,
+        style,
+        clipped,
+        " ".repeat(padding)
+    );
+}
+
+fn display_cells(text: &str) -> usize {
+    unicode_width::UnicodeWidthStr::width(text)
+}
+
+#[allow(unsafe_code)]
+fn logo_columns(path: &PathBuf) -> usize {
+    let Some((pixel_width, pixel_height)) = image::image_dimensions(path).ok() else {
+        return 12;
+    };
+    let mut size = libc::winsize {
+        ws_row: 0,
+        ws_col: 0,
+        ws_xpixel: 0,
+        ws_ypixel: 0,
+    };
+    let cell = unsafe {
+        if libc::ioctl(libc::STDOUT_FILENO, libc::TIOCGWINSZ, &mut size) == 0
+            && size.ws_col > 0
+            && size.ws_row > 0
+            && size.ws_xpixel > 0
+            && size.ws_ypixel > 0
+        {
+            Some((
+                size.ws_xpixel as usize / size.ws_col as usize,
+                size.ws_ypixel as usize / size.ws_row as usize,
+            ))
+        } else {
+            None
+        }
+    };
+    let (cell_width, cell_height) = cell.unwrap_or((1, 2));
+    (pixel_width as usize * 3 * cell_height)
+        .div_ceil(pixel_height.max(1) as usize * cell_width.max(1))
 }
 
 fn set_terminal_title(title: &str) {
@@ -166,7 +375,7 @@ fn set_terminal_title(title: &str) {
     }
 }
 
-fn kitty_logo(path: &PathBuf, y: usize, x: usize) -> Result<()> {
+fn kitty_logo(path: &PathBuf, y: usize, x: usize, columns: usize) -> Result<()> {
     let encoded = BASE64.encode(fs::read(path)?);
     print!("\x1b7\x1b[{};{}H", y + 1, x + 1);
     let chunks = encoded.as_bytes().chunks(4096);
@@ -175,7 +384,7 @@ fn kitty_logo(path: &PathBuf, y: usize, x: usize) -> Result<()> {
         let more = usize::from(index + 1 < count);
         let fields = if index == 0 {
             format!(
-                "a=T,f=100,r=3,C=1,q=2,i={},p=1,m={more}",
+                "a=T,f=100,r=3,c={columns},C=1,q=2,i={},p=1,m={more}",
                 std::process::id()
             )
         } else {
@@ -242,31 +451,62 @@ fn select_with<S: AsRef<str>>(
         }
         let (height, width) = terminal_size();
         let box_width = 62usize.min(16usize.max(width.saturating_sub(6)));
-        let x = 1usize.max(width.saturating_sub(box_width) / 2);
         let y = 1usize.max(5usize.min(height / 7));
         let accent = "\x1b[34m";
         print!("\x1b[H\x1b[2J");
-        if graphic {
-            put(
-                y + 1,
-                x + 12,
-                &crate::i18n::tr("ai.ui.nacre-ai", "Nacre AI"),
-                "\x1b[34;1m",
-                box_width.saturating_sub(12),
-            );
+        let brand_title = crate::i18n::tr("ai.ui.nacre-ai", "Nacre AI");
+        let mut logo_lines = fs::read_to_string(&text_logo)
+            .unwrap_or_else(|_| String::from("\nNacre\n"))
+            .lines()
+            .take(3)
+            .map(|line| {
+                line.chars()
+                    .filter(|character| !character.is_control())
+                    .collect()
+            })
+            .collect::<Vec<_>>();
+        while logo_lines.len() < 3 {
+            logo_lines.push(String::new());
+        }
+        let text_logo_width = logo_lines
+            .iter()
+            .map(|line| display_cells(line))
+            .max()
+            .unwrap_or(0);
+        let logo_width = if graphic {
+            logo_columns(&png_logo)
         } else {
-            let logo = fs::read_to_string(&text_logo).unwrap_or_else(|_| String::from("\nNacre\n"));
-            let mut lines = logo.lines().take(3).map(clean).collect::<Vec<_>>();
-            while lines.len() < 3 {
-                lines.push(String::new());
-            }
-            lines[1].push_str("   Nacre AI");
-            for (offset, line) in lines.iter().enumerate() {
-                put(y + offset, x, line, "\x1b[34;1m", box_width);
+            text_logo_width
+        };
+        let block_width = box_width
+            .max(
+                logo_width
+                    .saturating_add(3)
+                    .saturating_add(display_cells(&brand_title)),
+            )
+            .min(width.saturating_sub(2));
+        let x = width.saturating_sub(block_width) / 2;
+        let title_x = x.saturating_add(logo_width).saturating_add(3);
+        if !graphic {
+            for (offset, line) in logo_lines.iter().enumerate() {
+                put(y + offset, x, line, "\x1b[34;1m", block_width);
             }
         }
-        put(y + 4, x, &"─".repeat(box_width), accent, box_width);
-        put(y + 6, x + 2, &title, "\x1b[2m", box_width.saturating_sub(2));
+        put(
+            y + 1,
+            title_x,
+            &brand_title,
+            "\x1b[34;1m",
+            block_width.saturating_sub(title_x.saturating_sub(x)),
+        );
+        put(y + 4, x, &"─".repeat(block_width), accent, block_width);
+        put(
+            y + 6,
+            x + 2,
+            &title,
+            "\x1b[2m",
+            block_width.saturating_sub(2),
+        );
         let header_lines = header
             .map(|header| {
                 header
@@ -281,7 +521,7 @@ fn select_with<S: AsRef<str>>(
                 x + 2,
                 &clean(line),
                 "\x1b[2m",
-                box_width.saturating_sub(2),
+                block_width.saturating_sub(2),
             );
         }
         let top = y + 8 + header_lines.len();
@@ -300,17 +540,17 @@ fn select_with<S: AsRef<str>>(
                 localized_row(caption)
             );
             if active {
-                put(top + row * row_height, x, &text, "\x1b[44;1m", box_width);
+                put(top + row * row_height, x, &text, "\x1b[44;1m", block_width);
             } else {
-                put(top + row * row_height, x, &text, "\x1b[37m", box_width);
+                put(top + row * row_height, x, &text, "\x1b[37m", block_width);
             }
             if let Some(detail) = details.and_then(|entries| entries.get(*index)) {
                 put(
                     top + row * row_height + 1,
-                    x + 5,
-                    &clean(detail),
-                    "\x1b[2m",
-                    box_width.saturating_sub(5),
+                    x,
+                    &format!("     {}", clean(detail)),
+                    if active { "\x1b[44;2m" } else { "\x1b[2m" },
+                    block_width,
                 );
             }
         }
@@ -329,7 +569,7 @@ fn select_with<S: AsRef<str>>(
                     back_text
                 ),
                 if back_active { "\x1b[44;1m" } else { "\x1b[2m" },
-                box_width,
+                block_width,
             );
         }
         if choices.len() > 10 || !query.is_empty() {
@@ -338,7 +578,7 @@ fn select_with<S: AsRef<str>>(
                 x + 2,
                 &format!("⌕ {query}"),
                 accent,
-                box_width.saturating_sub(2),
+                block_width.saturating_sub(2),
             );
         }
         if matches.is_empty()
@@ -351,17 +591,17 @@ fn select_with<S: AsRef<str>>(
                 x + 2,
                 &crate::i18n::tr("ai.ui.no-matching-tasks", "No matching tasks"),
                 "\x1b[2m",
-                box_width.saturating_sub(2),
+                block_width.saturating_sub(2),
             );
         }
         io::stdout().flush()?;
         if graphic {
-            // The logo takes the three rows at the left; the title sits at x + 12.
-            kitty_logo(&png_logo, y, x)?;
+            // The logo takes three rows at the left; title placement uses its cell width.
+            kitty_logo(&png_logo, y, x, logo_width)?;
             io::stdout().flush()?;
         }
         match terminal.key()? {
-            b'\n' | b'\r' => {
+            Input::Enter => {
                 if let Some(index) = matches.get(selected) {
                     if back && matches!(choices[*index].as_str(), "Back" | "← Back") {
                         return Ok(None);
@@ -372,28 +612,68 @@ fn select_with<S: AsRef<str>>(
                     return Ok(None);
                 }
             }
-            3 => return Ok(None),
-            0x81 => selected = (selected + matches.len().saturating_sub(1)) % matches.len().max(1),
-            0x82 => selected = (selected + 1) % matches.len().max(1),
-            b'k' if query.is_empty() => {
+            Input::Byte(3) => return Ok(None),
+            Input::Up | Input::WheelUp => {
                 selected = (selected + matches.len().saturating_sub(1)) % matches.len().max(1)
             }
-            b'j' if query.is_empty() => selected = (selected + 1) % matches.len().max(1),
-            127 | 8 => {
+            Input::Down | Input::WheelDown => selected = (selected + 1) % matches.len().max(1),
+            Input::Home => selected = 0,
+            Input::End => selected = matches.len().saturating_sub(1),
+            Input::PageUp => selected = selected.saturating_sub(room.max(1)),
+            Input::PageDown => {
+                selected = selected
+                    .saturating_add(room.max(1))
+                    .min(matches.len().saturating_sub(1))
+            }
+            Input::Click {
+                x: mouse_x,
+                y: mouse_y,
+            } if mouse_x > x
+                && mouse_x <= x + block_width
+                && mouse_y > top
+                && (mouse_y <= top + room * row_height
+                    || (back && mouse_y == height.saturating_sub(4) + 1)) =>
+            {
+                if back && mouse_y == height.saturating_sub(4) + 1 {
+                    return Ok(None);
+                }
+                let row = mouse_y.saturating_sub(top + 1) / row_height;
+                if start + row < matches.len() {
+                    selected = start + row;
+                    if let Some(index) = matches.get(selected) {
+                        if back && matches!(choices[*index].as_str(), "Back" | "← Back") {
+                            return Ok(None);
+                        }
+                        if *index < rows.len() {
+                            return Ok(Some(*index));
+                        }
+                        return Ok(None);
+                    }
+                }
+            }
+            Input::Byte(b'k') if query.is_empty() => {
+                selected = (selected + matches.len().saturating_sub(1)) % matches.len().max(1)
+            }
+            Input::Byte(b'j') if query.is_empty() => {
+                selected = (selected + 1) % matches.len().max(1)
+            }
+            Input::Byte(127 | 8) => {
                 query.pop();
                 selected = 0;
             }
-            byte if choices.len() > 10 && (byte.is_ascii_graphic() || byte == b' ') => {
+            Input::Byte(byte)
+                if choices.len() > 10 && (byte.is_ascii_graphic() || byte == b' ') =>
+            {
                 query.push((byte as char).to_ascii_lowercase());
                 selected = 0;
             }
-            27 => {
+            Input::Byte(27) => {
                 if escape_cancels(&mut query) {
                     return Ok(None);
                 }
                 selected = 0;
             }
-            _ => {}
+            Input::Ignored | Input::Click { .. } | Input::Byte(_) => {}
         }
     }
 }
@@ -638,7 +918,11 @@ fn history_row(index: usize, item: &serde_json::Value) -> (String, String) {
         format!("{:02}  {title}", index + 1),
         format!(
             "{project} · {host} · {agent} · {account} · {}",
-            item["state"].as_str().unwrap_or("saved")
+            if item["state"] == "running" {
+                "Running"
+            } else {
+                "Idle"
+            }
         ),
     )
 }
@@ -1950,16 +2234,17 @@ fn prompt_project_name() -> Result<Option<String>> {
         );
         io::stdout().flush()?;
         match terminal.key()? {
-            b'\n' | b'\r' if back_selected => return Ok(None),
-            b'\n' | b'\r' if !name.trim().is_empty() => return Ok(Some(name.trim().to_owned())),
-            b'\t' => back_selected = !back_selected,
-            27 | 3 => return Ok(None),
-            127 | 8 if !back_selected => {
+            Input::Enter if back_selected => return Ok(None),
+            Input::Enter if !name.trim().is_empty() => return Ok(Some(name.trim().to_owned())),
+            Input::Byte(b'\t') => back_selected = !back_selected,
+            Input::Byte(27 | 3) => return Ok(None),
+            Input::Byte(127 | 8) if !back_selected => {
                 name.pop();
             }
-            byte if !back_selected
-                && (byte.is_ascii_graphic() || byte == b' ')
-                && name.len() < 64 =>
+            Input::Byte(byte)
+                if !back_selected
+                    && (byte.is_ascii_graphic() || byte == b' ')
+                    && name.len() < 64 =>
             {
                 name.push(byte as char)
             }
@@ -2374,6 +2659,70 @@ fn run_inner(args: &[String]) -> Result<i32> {
 mod tests {
     use super::*;
     #[test]
+    fn terminal_panic_child() {
+        if env::var_os("NACRE_TEST_TERMINAL_PANIC").is_none() {
+            return;
+        }
+        assert!(std::panic::catch_unwind(|| {
+            let _terminal = Terminal::enter().unwrap();
+            panic!("test terminal unwinding");
+        })
+        .is_err());
+    }
+
+    #[test]
+    fn panic_restores_terminal_modes() -> Result<()> {
+        use std::io::Read;
+        use wait_timeout::ChildExt;
+        let home = tempfile::tempdir()?;
+        let pair = nix::pty::openpty(None, None)?;
+        let mut master = fs::File::from(pair.master);
+        let slave = fs::File::from(pair.slave);
+        let original = nix::sys::termios::tcgetattr(&slave)?;
+        let mut child = Command::new(env::current_exe()?)
+            .args([
+                "--exact",
+                "ai_dashboard::tests::terminal_panic_child",
+                "--nocapture",
+            ])
+            .env("NACRE_TEST_TERMINAL_PANIC", "1")
+            .env("HOME", home.path())
+            .stdin(Stdio::from(slave.try_clone()?))
+            .stdout(Stdio::from(slave.try_clone()?))
+            .stderr(Stdio::from(slave.try_clone()?))
+            .spawn()?;
+        let status = match child.wait_timeout(std::time::Duration::from_secs(30))? {
+            Some(status) => status,
+            None => {
+                child.kill()?;
+                child.wait()?;
+                return Err("terminal panic child timed out".into());
+            }
+        };
+        assert!(status.success());
+        assert_eq!(nix::sys::termios::tcgetattr(&slave)?, original);
+        drop(slave);
+        let mut output = String::new();
+        match master.read_to_string(&mut output) {
+            Err(error) if error.raw_os_error() != Some(libc::EIO) => return Err(error.into()),
+            _ => {}
+        }
+        assert!(output.contains("\x1b[?1006l\x1b[?1000l"));
+        Ok(())
+    }
+
+    #[test]
+    fn keyboard_protocol_releases_and_modified_navigation() {
+        assert_eq!(decode_sequence(b"[\xc3\xa9"), None);
+        assert_eq!(decode_sequence(b"[13;1:3u"), Some(Input::Ignored));
+        assert_eq!(decode_sequence(b"[1;5:1B"), Some(Input::Down));
+        assert_eq!(decode_sequence(b"[6;2~"), Some(Input::PageDown));
+        assert_eq!(decode_sequence(b"OM"), Some(Input::Enter));
+        assert_eq!(decode_sequence(b"[113u"), Some(Input::Byte(b'q')));
+        assert_eq!(display_cells(" ▄界"), 4);
+    }
+
+    #[test]
     fn labels_drop_terminal_controls() {
         assert_eq!(clean(" A\x1b[31m  B\nC "), "A[31m BC");
     }
@@ -2706,7 +3055,7 @@ mod tests {
         assert_eq!(title, "01  Camera work");
         assert_eq!(
             details,
-            "Public demo · builder · Claude Code · team · running"
+            "Public demo · builder · Claude Code · team · Running"
         );
     }
 

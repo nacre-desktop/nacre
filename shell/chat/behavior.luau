@@ -14,7 +14,7 @@ return {stores={
     ["chat.busy"]=false,["chat.workspace"]=false,["chat.can_new"]=false,["chat.can_workspace"]=false,
     ["chat.can_send"]=false,["chat.can_reply"]=false,["chat.can_stop"]=false,
     ["chat.provider"]="",
-    ["launcher.chats"]={},["launcher.provider"]="",
+    ["launcher.chats"]={},["launcher.provider"]="",["launcher.pulse"]=0,
     ["launcher.search"]="",["launcher.selected"]="",["launcher.warning"]="",["launcher.empty_state"]="",
     ["launcher.quick_chat"]=false,["launcher.can_new"]=false,["launcher.can_open"]=false,["launcher.can_latest"]=false,["launcher.scroll"]=0,
 },actions={

@@ -900,8 +900,7 @@ fn existing_chat_window_with_proc(
         })
         .map(|(id, _)| id.clone())
         .collect::<Vec<_>>();
-    let remote_running = item["project"]["host"].as_str().is_some()
-        && item["state"] == "running"
+    let remote_open = item["project"]["host"].as_str().is_some()
         && item["session"]
             .as_str()
             .is_some_and(|session| !session.is_empty());
@@ -923,7 +922,6 @@ fn existing_chat_window_with_proc(
             }
         }
         if item["project"]["host"].as_str().is_none()
-            && item["state"] == "running"
             && matches!(item["agent"].as_str(), Some("claude" | "codex"))
             && item["session"].as_str().is_some_and(|session| {
                 crate::window_chat_title::has_tmux_session(pid, proc, uid, session)
@@ -932,8 +930,7 @@ fn existing_chat_window_with_proc(
             return Some(id.clone());
         }
     }
-    (remote_running && unique_title && matching_titles.len() == 1)
-        .then(|| matching_titles[0].clone())
+    (remote_open && unique_title && matching_titles.len() == 1).then(|| matching_titles[0].clone())
 }
 
 #[cfg(test)]
@@ -1062,9 +1059,15 @@ mod tests {
         let item = json!({"id":"thread-claude","title":"Claude chat","state":"running","session":"nacre-chat-claude-1","agent":"claude","project":{"id":"demo","path":"/repo"}});
         let snapshot = json!({"windows":{"niri-window:46":{"appId":"nacre-ai-task","title":"Claude chat","pid":100}}});
         let paths = crate::paths::Paths::new(fixture.path());
-        for agent in ["claude", "codex"] {
+        for (agent, state) in [
+            ("claude", "running"),
+            ("claude", "saved"),
+            ("codex", "running"),
+            ("codex", "saved"),
+        ] {
             let mut item = item.clone();
             item["agent"] = json!(agent);
+            item["state"] = json!(state);
             assert_eq!(
                 existing_chat_window_with_proc(
                     &snapshot,
