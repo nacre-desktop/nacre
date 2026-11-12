@@ -305,13 +305,26 @@ impl Client {
         loop {
             if let Some((_, state)) = self.mirror.topics.get(topic) {
                 if check(state) {
+                    self.reader
+                        .get_ref()
+                        .set_read_timeout(Some(Duration::from_secs(20)))?;
                     return Ok(state.clone());
                 }
             }
             if Instant::now() > deadline {
                 return Err(format!("Timed out waiting for {topic}: {what}").into());
             }
-            self.pump()?;
+            self.reader.get_ref().set_read_timeout(Some(
+                deadline
+                    .saturating_duration_since(Instant::now())
+                    .max(Duration::from_millis(1)),
+            ))?;
+            self.pump().map_err(|error| {
+                format!(
+                    "Failed waiting for {topic}: {what}; last state: {:?}; read error or timeout: {error}",
+                    self.mirror.topics.get(topic)
+                )
+            })?;
         }
     }
     fn state(&self, topic: &str) -> Value {
@@ -536,7 +549,7 @@ fn daemon_owned_session_completes_notifies_and_restores_dnd_after_a_restart() ->
         .unwrap();
         fs::write(
             root.join("state/nacre/dashboard-focus.json"),
-            focus_file(true, unix_s() + 1.5, true).to_string(),
+            focus_file(true, unix_s() - 5.0, true).to_string(),
         )
         .unwrap();
     })?;
@@ -549,7 +562,9 @@ fn daemon_owned_session_completes_notifies_and_restores_dnd_after_a_restart() ->
         (done["owns_dnd"].clone(), done["total_s"].clone()),
         (json!(false), json!(60))
     );
-    client.until(DESKTOP, "dnd restored", |s| !dnd(s))?;
+    client.until(DESKTOP, "dnd restored", |s| {
+        s["error"].is_null() && s["data"]["dnd"] == false
+    })?;
     wait_for("notification", || {
         lines(&daemon.root().join("fake/notified")).contains("Focus complete")
     })?;

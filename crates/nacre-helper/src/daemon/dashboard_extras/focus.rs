@@ -270,8 +270,8 @@ impl Focus {
     }
 
     /// End a live session and restore Do Not Disturb only if this session turned it
-    /// on and it is still on. Ownership is cleared first, so our own settings change
-    /// is never mistaken for the user turning DND off.
+    /// on and it is still on. Keep the persisted claim until restoration succeeds;
+    /// the transition gate keeps our settings change from releasing it mid-finish.
     async fn finish(
         &self,
         hub: &Shared,
@@ -280,6 +280,9 @@ impl Focus {
     ) -> std::result::Result<(), Failure> {
         let restore = current.owns_dnd;
         let previous = current.previous_dnd;
+        if restore && notifications::dnd(hub).await? {
+            notifications::set_dnd_inner(hub, previous).await?;
+        }
         let mut next = current;
         next.status = status;
         if status == FocusStatus::Idle {
@@ -288,14 +291,11 @@ impl Focus {
         next.remaining_ms = 0;
         next.deadline_ms = 0;
         next.owns_dnd = false;
-        self.commit(hub, next)?;
-        if restore && notifications::dnd(hub).await.unwrap_or(false) {
-            notifications::set_dnd_inner(hub, previous).await?;
-        }
-        Ok(())
+        self.commit(hub, next)
     }
 
-    async fn expired(&self, hub: &Shared) {
+    /// Return whether completion must wait for a settings/readiness change.
+    async fn expired(&self, hub: &Shared) -> bool {
         let _turn = self.gate.lock().await;
         self.reload(hub);
         let current = self.state.borrow().clone();
@@ -303,12 +303,14 @@ impl Focus {
             || !current.daemon
             || current.deadline_ms > wall_ms()
         {
-            return;
+            return false;
         }
-        if self.finish(hub, current, FocusStatus::Done).await.is_err() {
-            tracing::warn!("Focus completion could not restore Do Not Disturb");
+        if let Err(error) = self.finish(hub, current, FocusStatus::Done).await {
+            tracing::warn!(?error, "Focus completion deferred until settings recover");
+            return true;
         }
         notify_complete().await;
+        false
     }
 
     /// The user turning DND off ends our claim on it, as QML's focus-release did.
@@ -335,6 +337,7 @@ impl Focus {
             self.paths.state.clone(),
             WatchFlags::CLOSE_WRITE | WatchFlags::MOVED_TO,
         )])?;
+        let mut deferred = false;
         loop {
             let (running, daemon, deadline) = {
                 let state = self.state.borrow();
@@ -345,7 +348,7 @@ impl Focus {
                 )
             };
             let sleep = async {
-                if running && daemon {
+                if running && daemon && !deferred {
                     let left = Duration::from_millis(deadline.saturating_sub(wall_ms()));
                     tokio::time::sleep(left.min(TICK)).await;
                 } else {
@@ -353,19 +356,22 @@ impl Focus {
                 }
             };
             tokio::select! {
-                _ = sleep => self.expired(&hub).await,
+                _ = sleep => deferred = self.expired(&hub).await,
                 _ = self.wake.notified() => {},
                 names = watch.next() => {
                     if names?.iter().any(|n| n == FILE) {
                         let _turn = self.gate.lock().await;
                         self.reload(&hub);
+                        deferred = false;
                     }
                 },
                 notice = notices.recv() => match notice {
-                    Ok(Notice::Changed { topic, .. }) if topic == "settings.store.desktop" => {
+                    Ok(Notice::Changed { topic, .. }) if topic == "settings.store.desktop" || topic == "daemon" => {
+                        deferred = false;
                         self.dnd_changed(&hub).await
                     }
-                    Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => deferred = false,
+                    Ok(_) => {}
                     Err(_) => return Err("Daemon notices ended".into()),
                 },
             }
@@ -388,5 +394,124 @@ async fn notify_complete() {
         .kill_on_drop(true);
     if let Ok(mut child) = command.spawn() {
         let _ = tokio::time::timeout(Duration::from_secs(5), child.wait()).await;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::daemon::{compositor_control, hub::Hub, settings};
+
+    #[tokio::test(start_paused = true)]
+    async fn expired_session_retains_dnd_until_settings_are_ready() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let home = tempfile::tempdir().unwrap();
+                let paths = Paths::new(home.path());
+                std::fs::create_dir_all(&paths.config).unwrap();
+                std::fs::create_dir_all(&paths.state).unwrap();
+                std::fs::write(
+                    paths.config.join("desktop.json"),
+                    r#"{"version":3,"dnd":true}"#,
+                )
+                .unwrap();
+                let hub = Hub::new(
+                    "focus-restart-test".into(),
+                    false,
+                    Duration::from_millis(16),
+                )
+                .shared();
+                let socket = home.path().join("niri.sock");
+                let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+                let compositor = tokio::task::spawn_local(async move {
+                    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+                    loop {
+                        let (stream, _) = listener.accept().await.unwrap();
+                        let mut stream = BufReader::new(stream);
+                        let mut request = String::new();
+                        while stream.read_line(&mut request).await.unwrap() > 0 {
+                            let reply = match request.trim() {
+                                "\"Outputs\"" => json!({"Ok":{"Outputs":{}}}),
+                                "\"Workspaces\"" => json!({"Ok":{"Workspaces":[]}}),
+                                "\"Windows\"" => json!({"Ok":{"Windows":[]}}),
+                                _ => json!({"Err":"Unsupported fixture request"}),
+                            };
+                            stream
+                                .get_mut()
+                                .write_all(format!("{reply}\n").as_bytes())
+                                .await
+                                .unwrap();
+                            request.clear();
+                        }
+                    }
+                });
+                let environment = std::collections::BTreeMap::from([
+                    ("NACRE_COMPOSITOR".into(), "niri".into()),
+                    ("NIRI_SOCKET".into(), socket.to_str().unwrap().into()),
+                ]);
+                hub.borrow_mut().compositor =
+                    Some(compositor_control::Control::new(paths.clone(), environment));
+                let settings = settings::Service::load(hub.clone(), paths.clone(), None)
+                    .await
+                    .unwrap();
+                hub.borrow_mut().settings = Some(settings);
+                hub.borrow_mut().service("settings", "starting", 0).unwrap();
+                let focus = Focus::new(paths);
+                let state = State {
+                    status: FocusStatus::Running,
+                    total_ms: 60_000,
+                    deadline_ms: wall_ms() - 5_000,
+                    remaining_ms: 0,
+                    previous_dnd: false,
+                    owns_dnd: true,
+                    daemon: true,
+                };
+                focus.save(&state).unwrap();
+                let mut notices = hub.borrow().observe();
+                let mut run = Box::pin(focus.clone().run(hub.clone()));
+                // Virtual time forces expiry while the settings service is unavailable.
+                assert!(tokio::time::timeout(Duration::from_secs(1), run.as_mut())
+                    .await
+                    .is_err());
+                let saved =
+                    State::parse(&crate::state::read_strict(&focus.path(), json!({})).unwrap())
+                        .unwrap();
+                assert_eq!(
+                    saved, state,
+                    "failed restoration must retain the persisted claim"
+                );
+                assert_eq!(focus.state.borrow().status, FocusStatus::Running);
+                assert!(notifications::dnd(&hub).await.is_err());
+                tokio::time::resume();
+                hub.borrow_mut().service("settings", "running", 0).unwrap();
+                tokio::time::timeout(Duration::from_secs(5), async {
+                    loop {
+                        tokio::select! {
+                            result = run.as_mut() => panic!("focus stopped: {result:?}"),
+                            notice = notices.recv() => { notice.unwrap(); }
+                        }
+                        if focus.state.borrow().status == FocusStatus::Done {
+                            break;
+                        }
+                    }
+                })
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "focus: {:?}; desktop: {:?}",
+                        focus.state.borrow(),
+                        hub.borrow().snapshot("settings.desktop")
+                    )
+                });
+                assert!(!notifications::dnd(&hub).await.unwrap());
+                let saved =
+                    State::parse(&crate::state::read_strict(&focus.path(), json!({})).unwrap())
+                        .unwrap();
+                assert_eq!(saved.status, FocusStatus::Done);
+                assert!(!saved.owns_dnd);
+                compositor.abort();
+                let _ = compositor.await;
+            })
+            .await;
     }
 }
