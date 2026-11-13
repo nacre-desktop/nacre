@@ -506,6 +506,8 @@ async fn niri(
                     bytes=line(&mut reader,&mut partial)=>{
                         let event:Value=serde_json::from_slice(&bytes?.ok_or("Compositor event stream ended")?)?;
                         let keyboard_changed=niri_keyboard(&event,&mut keyboard)?;
+                        // NN0036: nacre-niri reports the lock keys; the OSD stops reading the LED once it hears this.
+                        if let Some(on)=event["KeyboardLockStateChanged"]["caps_lock"].as_bool() {super::osd::capslock(&hub,Some(on));}
                         let normalized=state.apply(&event)?;
                         if hub.borrow().services.contains_key("niri-widths") {
                             hub.borrow_mut().niri_width_source.update(&state.windows,&event)?;
@@ -712,6 +714,8 @@ pub async fn run(
         "niri" => niri(hub.clone(), control, environment, ready).await,
         _ => hyprland(hub.clone(), control, ready).await,
     };
+    // NN0036: until a new stream reports Caps Lock, the OSD reads the LED again.
+    super::osd::capslock(&hub, None);
     if result.is_err() {
         let mut last = hub
             .borrow()

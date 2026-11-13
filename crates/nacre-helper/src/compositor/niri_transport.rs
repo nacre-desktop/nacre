@@ -52,6 +52,7 @@ pub struct NacreCapabilities {
     pub window_restore: bool,
     pub launch_workspace: bool,
     pub cursor_shake: bool,
+    pub keyboard_lock_state: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -105,6 +106,10 @@ impl NacreCapabilities {
                 .unwrap_or(false),
             cursor_shake: features
                 .get("cursor_shake")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            keyboard_lock_state: features
+                .get("keyboard_lock_state")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
         })
@@ -478,7 +483,8 @@ mod tests {
             "monitor_workspace_actions": true,
             "window_restore": true,
             "launch_workspace": true,
-            "cursor_shake": true
+            "cursor_shake": true,
+            "keyboard_lock_state": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -495,6 +501,7 @@ mod tests {
                 window_restore: true,
                 launch_workspace: true,
                 cursor_shake: true,
+                keyboard_lock_state: true,
             })
         );
         assert_eq!(

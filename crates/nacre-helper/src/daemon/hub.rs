@@ -110,6 +110,8 @@ pub struct Hub {
     pub helper_lanes: [Rc<tokio::sync::Mutex<()>>; 6],
     pub niri_width_source: super::widths::Source,
     pub compositor: Option<super::compositor_control::Control>,
+    /// NN0036: Caps Lock as the compositor event stream reports it (`osd::capslock`).
+    pub caps_lock: tokio::sync::watch::Sender<Option<bool>>,
     pub settings: Option<Rc<super::settings::Service>>,
     pub ai_chat: Option<Rc<super::ai_chat::Host>>,
     /// QML's bounded previous-wallpaper stack, updated only when the active
@@ -184,6 +186,7 @@ impl Hub {
             helper_lanes: std::array::from_fn(|_| Rc::new(tokio::sync::Mutex::new(()))),
             niri_width_source: super::widths::Source::default(),
             compositor: None,
+            caps_lock: tokio::sync::watch::channel(None).0,
             settings: None,
             ai_chat: None,
             wallpaper_history: super::behaviours::WallpaperHistory::default(),

@@ -113,11 +113,83 @@ impl Fixture {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn absent_capslock_led_does_not_schedule_a_safety_poll_when_watched() {
-    let fallback = Duration::from_millis(500);
-    assert!(cap_ticker(false, true, fallback).is_none());
-    assert!(cap_ticker(true, true, fallback).is_some());
-    assert!(cap_ticker(false, false, fallback).is_some());
+async fn the_fallback_tick_follows_the_caps_lock_source() {
+    let tick = Duration::from_millis(500);
+    let period = |compositor, led, watched| {
+        cap_ticker(compositor, led, watched, tick).map(|ticker| ticker.period())
+    };
+    // NN0036: the compositor reports Caps Lock and inotify covers night light.
+    assert_eq!(period(true, true, true), None);
+    assert_eq!(period(true, false, true), None);
+    // A known LED is read every tick; without one a slower tick looks for one.
+    assert_eq!(period(false, true, true), Some(tick));
+    assert_eq!(period(false, false, true), Some(tick * REDISCOVER));
+    // Unwatched night-light records keep the full tick.
+    assert_eq!(period(true, false, false), Some(tick));
+    assert_eq!(period(false, false, false), Some(tick));
+}
+
+#[test]
+fn capslock_prefers_the_lowest_input_led() {
+    let root = tempfile::tempdir().unwrap();
+    for name in [
+        "input12::capslock",
+        "platform::capslock",
+        "input3::capslock",
+        "input2::numlock",
+    ] {
+        std::fs::create_dir(root.path().join(name)).unwrap();
+    }
+    assert_eq!(
+        find_capslock(root.path()),
+        Some(root.path().join("input3::capslock/brightness"))
+    );
+}
+
+/// sysfs sends no inotify events for LED devices, so an unplugged keyboard's LED is replaced by
+/// the next read itself, here by a keyboard plugged in while the first one was still there.
+#[tokio::test(flavor = "current_thread")]
+async fn an_unplugged_capslock_led_is_replaced_by_rediscovery() {
+    let mut f = Fixture::new();
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(session(f.hub.clone(), f.env(), None));
+            f.running().await;
+            std::fs::create_dir_all(f.path("leds/input12::capslock")).unwrap();
+            f.set("leds/input12::capslock/brightness", "1\n");
+            f.none().await;
+            std::fs::remove_dir_all(f.path("leds/input3::capslock")).unwrap();
+            let e = f.next().await;
+            assert_eq!((e.kind, e.value), (OsdKind::Capslock, Some(1.0)));
+            task.abort();
+        })
+        .await;
+}
+
+/// NN0036: with nacre-niri the compositor reports Caps Lock and the LED is not read; when its
+/// stream ends the LED takes over again from a silent baseline.
+#[tokio::test(flavor = "current_thread")]
+async fn compositor_reported_capslock_replaces_the_led() {
+    let mut f = Fixture::new();
+    capslock(&f.hub, Some(false));
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(session(f.hub.clone(), f.env(), None));
+            f.running().await;
+            f.set("leds/input3::capslock/brightness", "1\n");
+            tokio::time::sleep(Duration::from_millis(700)).await;
+            assert_eq!(f.events(), vec![]);
+            capslock(&f.hub, Some(true));
+            let e = f.next().await;
+            assert_eq!((e.kind, e.value), (OsdKind::Capslock, Some(1.0)));
+            capslock(&f.hub, None);
+            f.none().await;
+            f.set("leds/input3::capslock/brightness", "0\n");
+            let e = f.next().await;
+            assert_eq!((e.kind, e.value), (OsdKind::Capslock, Some(0.0)));
+            task.abort();
+        })
+        .await;
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -125,13 +197,11 @@ async fn nightlight_state_watch_wakes_on_atomic_record_replace() {
     tokio::task::LocalSet::new()
         .run_until(async {
             let root = tempfile::tempdir().unwrap();
-            let leds = root.path().join("leds");
             let state = root.path().join("state");
-            std::fs::create_dir_all(&leds).unwrap();
             std::fs::create_dir_all(&state).unwrap();
             let record = state.join("control-tools.json");
             std::fs::write(&record, "{\"enabled\":false,\"owner\":\"\"}").unwrap();
-            let mut watcher = Some(watch_inputs(&leds, std::slice::from_ref(&record)).unwrap());
+            let mut watcher = Some(watch_inputs(std::slice::from_ref(&record)).unwrap());
             let changed = tokio::task::spawn_local(async move { next_watch(&mut watcher).await });
             tokio::task::yield_now().await;
             let temporary = state.join("control-tools.json.tmp");

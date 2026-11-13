@@ -46,6 +46,7 @@ This file tracks current and historical Nacre work units. Add one row per unit: 
 | N0411 | [Pre-cut fixes](0411-pre-cut-fixes.md) | Done 2026-11-13 (02fdb00a) | Cut-rehearsal F1–F4 and installer hardening H1–H9 (single pinned key, undo steps, piped input approves only the transaction, review on for every profile). |
 | N0412 | [Keyring package](0412-keyring-package.md) | Done 2026-11-13 (35973074) | nacre-keyring re-delivers a renewed signing key; publish fails within 90 days of subkey expiry (expires 2027-10-14). |
 | N0413 | [Branding assets](0413-branding-assets.md) | Done 2026-11-13 (3c387912) | Owner-picked logo in assets/branding, README headers (Nacre, Orient, nacre-niri), social preview PNG for the owner; in-product branding is Platform's N0315. |
+| NN0036 | [Caps Lock OSD from the compositor event stream](nn0036-keyboard-lock-ipc.md) | Implemented 2026-11-13 | nacre-niri `KeyboardLockStateChanged` on the Nacre streams; the daemon's compositor service feeds the OSD, which stops reading the LED. The stock niri/Hyprland fallback re-discovers an unplugged LED (2 s) and prefers the lowest `inputN`. |
 
 ## Historical units
 
@@ -220,4 +221,3 @@ This file tracks current and historical Nacre work units. Add one row per unit: 
 | NN0021 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | NN0023 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | NN0025 | [N0154 Bead versus QML benchmark](../research/bead-vs-qml-shell-benchmark-20261110.md) | Historical reference | Mentioned in the earlier queue or handoff notes. |
-| NN0036 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |

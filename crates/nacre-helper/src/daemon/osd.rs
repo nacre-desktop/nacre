@@ -328,6 +328,14 @@ pub fn volume(hub: &Shared, level: f64, muted: bool, label: &str, device: &str) 
     report(hub, event);
 }
 
+/// NN0036: Caps Lock as the compositor reports it (nacre-niri `KeyboardLockStateChanged`),
+/// `None` once its event stream ends. While it is `Some` the session never reads the LED.
+pub fn capslock(hub: &Shared, on: Option<bool>) {
+    hub.borrow()
+        .caps_lock
+        .send_if_modified(|current| std::mem::replace(current, on) != on);
+}
+
 /// `keyboard_light.adjust` reply level and maximum (raw steps).
 pub fn keyboard(hub: &Shared, level: i64, max: i64) {
     if let (Ok(max), true) = (u32::try_from(max), level >= 0 && max > 0) {
@@ -463,21 +471,34 @@ fn read_flag(path: &Path) -> Option<bool> {
     }
 }
 
+/// Every keyboard's LED shows the same compositor state; prefer the lowest `inputN` (the
+/// keyboard registered first, normally the built-in one) so a hot-plugged keyboard is not
+/// picked over it. A plain name sort put `input12` before `input3`.
 fn find_capslock(leds: &Path) -> Option<PathBuf> {
-    let mut found = std::fs::read_dir(leds)
+    std::fs::read_dir(leds)
         .ok()?
         .filter_map(|entry| entry.ok())
-        .filter(|entry| entry.file_name().to_string_lossy().ends_with("::capslock"))
-        .map(|entry| entry.path().join("brightness"))
-        .collect::<Vec<_>>();
-    found.sort();
-    found.into_iter().next()
+        .filter_map(|entry| {
+            let name = entry.file_name().into_string().ok()?;
+            let index = name
+                .strip_suffix("::capslock")?
+                .strip_prefix("input")
+                .and_then(|index| index.parse::<u64>().ok())
+                .unwrap_or(u64::MAX);
+            Some(((index, name), entry.path().join("brightness")))
+        })
+        .min()
+        .map(|(_, path)| path)
 }
 
 /// N0067: one caps-lock LED read (discovery included), run off the async thread.
 type CapsRead = (Option<PathBuf>, Option<bool>);
 fn read_caps(leds: PathBuf, known: Option<PathBuf>) -> CapsRead {
-    let path = known.or_else(|| find_capslock(&leds));
+    if let Some(value) = known.as_deref().and_then(read_flag) {
+        return (known, Some(value));
+    }
+    // No LED yet, or the known one vanished (its keyboard was unplugged): discover again.
+    let path = find_capslock(&leds);
     let value = path.as_deref().and_then(read_flag);
     (path.filter(|_| value.is_some()), value)
 }
@@ -522,10 +543,7 @@ fn read_night(records: &[PathBuf]) -> bool {
     })
 }
 
-fn watch_inputs(
-    leds: &Path,
-    night: &[PathBuf],
-) -> crate::Result<super::dashboard_extras::watch::Watch> {
+fn watch_inputs(night: &[PathBuf]) -> crate::Result<super::dashboard_extras::watch::Watch> {
     use rustix::fs::inotify::WatchFlags;
     let flags = WatchFlags::CLOSE_WRITE
         | WatchFlags::CREATE
@@ -537,7 +555,6 @@ fn watch_inputs(
     let dirs: BTreeSet<_> = night
         .iter()
         .filter_map(|path| path.parent().map(Path::to_owned))
-        .chain(std::iter::once(leds.to_owned()))
         .collect();
     super::dashboard_extras::watch::Watch::new(dirs.into_iter().map(|dir| (dir, flags)).collect())
 }
@@ -552,23 +569,27 @@ fn night_changed(names: &[OsString], records: &[PathBuf]) -> bool {
         })
 }
 
-fn cap_led_changed(names: &[OsString]) -> bool {
-    names.is_empty()
-        || names
-            .iter()
-            .any(|name| name.to_string_lossy().ends_with("::capslock"))
-}
-
+/// Without a known LED the tick only re-discovers one (sysfs sends no inotify events for LED
+/// devices): 2 s at the production 500 ms tick.
+const REDISCOVER: u32 = 4;
+/// The fallback tick: it reads the LED (or looks for one) unless the compositor reports Caps
+/// Lock, and polls night light when its records cannot be watched.
 fn cap_ticker(
+    compositor: bool,
     has_caps_led: bool,
     watches_inputs: bool,
     fallback: Duration,
 ) -> Option<tokio::time::Interval> {
-    (has_caps_led || !watches_inputs).then(|| {
-        let mut ticker = tokio::time::interval_at(Instant::now() + fallback, fallback);
-        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        ticker
-    })
+    let period = if !watches_inputs || (!compositor && has_caps_led) {
+        fallback
+    } else if !compositor {
+        fallback * REDISCOVER
+    } else {
+        return None;
+    };
+    let mut ticker = tokio::time::interval_at(Instant::now() + period, period);
+    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    Some(ticker)
 }
 
 async fn next_watch(
@@ -709,14 +730,21 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
     refresh_audio(&hub, &env).await?;
     let mut sink = read_node(&env.wpctl, SINK).await;
     let mut source = read_node(&env.wpctl, SOURCE).await;
-    let (mut capslock_path, mut caps) = {
-        let (leds, known) = (env.leds.clone(), None);
-        crate::process::offload(move || read_caps(leds, known))
-            .await
-            .unwrap_or((None, None))
+    // NN0036: while the compositor reports Caps Lock the LED is never read.
+    let mut lock_keys = hub.borrow().caps_lock.subscribe();
+    let reported = *lock_keys.borrow_and_update();
+    let mut compositor = reported.is_some();
+    let (mut capslock_path, mut caps) = match reported {
+        Some(on) => (None, Some(on)),
+        None => {
+            let (leds, known) = (env.leds.clone(), None);
+            crate::process::offload(move || read_caps(leds, known))
+                .await
+                .unwrap_or((None, None))
+        }
     };
     let mut caps_job = None;
-    let mut input_watch = watch_inputs(&env.leds, &env.night).ok();
+    let mut input_watch = watch_inputs(&env.night).ok();
     let mut night = read_night(&env.night);
     let mut profile = match &system {
         Some(system) => active_profile(system).await,
@@ -725,7 +753,12 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
 
     let mut pending = Pending::default();
     let (mut dirty_sink, mut dirty_source, mut audio_at) = (false, false, None::<Instant>);
-    let mut ticker = cap_ticker(capslock_path.is_some(), input_watch.is_some(), env.tick);
+    let mut ticker = cap_ticker(
+        compositor,
+        capslock_path.is_some(),
+        input_watch.is_some(),
+        env.tick,
+    );
     loop {
         tokio::select! {
             line = lines.next() => {
@@ -782,7 +815,9 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                 }
             }
             _ = next_cap_tick(&mut ticker) => {
-                start_caps(&mut caps_job, &env.leds, &capslock_path);
+                if !compositor {
+                    start_caps(&mut caps_job, &env.leds, &capslock_path);
+                }
                 if input_watch.is_none() {
                     let next = read_night(&env.night);
                     if next != night {
@@ -805,17 +840,17 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                                 night = next;
                             }
                         }
-                        if capslock_path.is_none() && cap_led_changed(&names) {
-                            start_caps(&mut caps_job, &env.leds, &capslock_path);
-                        }
                     }
                     Err(_) => {
                         input_watch = None;
-                        ticker = cap_ticker(capslock_path.is_some(), false, env.tick);
+                        ticker = cap_ticker(compositor, capslock_path.is_some(), false, env.tick);
                     }
                 }
             }
             Some((path, value)) = caps_done(&mut caps_job) => {
+                if compositor {
+                    continue; // a read started before the compositor reported
+                }
                 let had_path = capslock_path.is_some();
                 capslock_path = path;
                 if let Some(next) = value {
@@ -828,11 +863,38 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                 }
                 if had_path != capslock_path.is_some() {
                     ticker = cap_ticker(
+                        false,
                         capslock_path.is_some(),
                         input_watch.is_some(),
                         env.tick,
                     );
                 }
+            }
+            Ok(()) = lock_keys.changed() => {
+                let reported = *lock_keys.borrow_and_update();
+                match reported {
+                    // The first compositor report is a silent baseline, like the first LED read.
+                    Some(next) => {
+                        if compositor && caps.is_some_and(|before| before != next) {
+                            let mut event = OsdEvent::new(OsdKind::Capslock, now_ms());
+                            event.value = Some(f64::from(u8::from(next)));
+                            pending.add(event);
+                        }
+                        caps = Some(next);
+                    }
+                    // The stream ended: back to the LED, from a silent baseline.
+                    None => {
+                        caps = None;
+                        start_caps(&mut caps_job, &env.leds, &capslock_path);
+                    }
+                }
+                compositor = reported.is_some();
+                ticker = cap_ticker(
+                    compositor,
+                    capslock_path.is_some(),
+                    input_watch.is_some(),
+                    env.tick,
+                );
             }
             () = next_or_pending(&mut power) => {
                 if let Some(system) = &system {
