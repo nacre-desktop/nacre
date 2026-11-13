@@ -1806,6 +1806,13 @@ impl Menu {
                 }),
             ),
         ]);
+        if let Some(Value::Text(group)) = stores.get("launcher.chooser")
+            && !group.is_empty()
+            && (view.result_request.as_ref().is_some_and(|accepted| accepted != &request)
+                || !view.rows.iter().any(|row| row["id"] == *group))
+        {
+            delta.insert("launcher.chooser".into(), Value::Text(String::new()));
+        }
         if stores.get("launcher.result_query").is_some() {
             delta.insert(
                 "launcher.result_query".into(),

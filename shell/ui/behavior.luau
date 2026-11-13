@@ -32,6 +32,7 @@ return {
       if slot then s["launcher.form.v"..slot]=value end
     end,
     navigate = function(s,id)
+      s["launcher.chooser"]=""
       s["launcher.engine_route"]=(id=="apps" or id=="actions" or id=="plugins") and "" or id
       s["launcher.route"]=(id=="actions") and id or "apps"
       s["launcher.mode"]=(id=="actions") and "search" or "apps"

@@ -41,6 +41,7 @@ fn panel_visibility_changes(open: bool, launcher: bool) -> BTreeMap<String, bead
     if open && launcher {
         // Reopening starts at the results, never inside a form left open (B0199).
         changes.extend(crate::launcher_form::close());
+        changes.insert("launcher.chooser".into(), bead::core::Value::Text(String::new()));
     }
     changes
 }
@@ -8280,11 +8281,7 @@ impl SceneSource for Runtime {
         if let (Some(menu), Some(id)) = (self.launcher.clone(), launcher_id) {
             self.actions.authorize("select_app")?;
             if menu.is_value_group(&id) {
-                self.session.update(BTreeMap::from([
-                    ("launcher.selection".into(), bead::core::Value::Text(id.clone())),
-                    ("launcher.chooser".into(), bead::core::Value::Text(id)),
-                ]))?;
-                let scene = self.launcher_chooser_focus(0, false)?;
+                let scene = self.launcher_open_chooser(&id)?;
                 return self.finish_scene(scene);
             }
             if matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(group)) if !group.is_empty()) {

@@ -16,6 +16,28 @@ fn key_id(key: &str) -> String {
 }
 
 impl Runtime {
+    pub(super) fn launcher_open_chooser(&mut self, group: &str) -> Result<Option<Scene>, Box<dyn Error>> {
+        let target = match self.session.stores.get("launcher.apps") {
+            Some(Value::List(rows)) => rows.iter().find(|row| row["id"] == group)
+                .and_then(|row| row["choices"].as_array())
+                .and_then(|choices| choices.iter().find(|choice| choice["checked"] == true).or_else(|| choices.first()))
+                .and_then(|choice| choice["id"].as_str()).unwrap_or("").to_owned(),
+            _ => String::new(),
+        };
+        let scene = self.session.update(BTreeMap::from([
+            ("launcher.selection".into(), Value::Text(group.into())),
+            ("launcher.chooser".into(), Value::Text(group.into())),
+            ("launcher.focus_zone".into(), Value::Text("chooser".into())),
+        ]))?.ok_or("chooser produced no scene")?;
+        // Interactive nodes become current only on commit; use the staged layer ID.
+        let focus = scene.layers.iter().find(|layer| layer.id.ends_with(&format!("choice-{target}")))
+            .ok_or("chooser option missing from scene")?.id.clone();
+        Ok(self.session.update(BTreeMap::from([
+            ("bead.focused".into(), Value::Text(focus)),
+            ("bead.focus_visible".into(), Value::Bool(true)),
+        ]))?)
+    }
+
     pub(super) fn launcher_chooser_focus(&mut self, step: i32, close: bool) -> Result<Option<Scene>, Box<dyn Error>> {
         let group = match self.session.stores.get("launcher.chooser") {
             Some(Value::Text(id)) => id.clone(),
