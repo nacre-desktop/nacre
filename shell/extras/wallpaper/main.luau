@@ -223,15 +223,19 @@ local controls=ui.Row{id="wallpaper-controls",position="absolute",left=0,top=too
       ui.Text{text="Add",width=T.wallpaper.add_label_width,height=T.wallpaper.add_label_height,font_size=T.palette.description_font,color=ui.alpha("onSurface",.4)}}}}
 
 local nav_title=selected and selected.title or ""
+-- Children are collected without holes: a nil in the middle of a table constructor ends the child list.
+local nav_children={nav_button("previous",ui.tr("bead.dashboard.wallpaper-previous"),"chevron_left","extras.prev")}
+if can_pause then
+  nav_children[#nav_children+1]=nav_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),paused and "play_arrow" or "pause","extras.do","wallpaper:pause")
+end
+nav_children[#nav_children+1]=ui.Text{id="selected-title",width=math.min(T.wallpaper.nav_title_max_width,width-T.wallpaper.nav_title_reserved_width),height=T.wallpaper.nav_title_height,text=nav_title,
+    font_size=T.wallpaper.nav_font,text_align="center",color=(carousel or spotlight) and "onSurface" or T.wallpaper.photo_ink}
+nav_children[#nav_children+1]=nav_button("next",ui.tr("bead.dashboard.wallpaper-next"),"chevron_right","extras.next")
+nav_children[#nav_children+1]=nav_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle","extras.do","wallpaper:shuffle")
 local nav=ui.Row{id="wallpaper-navigation",position="absolute",left=0,
   top=nav_y,
   width=width,height=T.wallpaper.nav_height,gap=T.wallpaper.nav_gap,align="center",justify="center",
-  nav_button("previous",ui.tr("bead.dashboard.wallpaper-previous"),"chevron_left","extras.prev"),
-  can_pause and nav_button("pause",ui.tr(paused and "bead.dashboard.wallpaper-resume" or "bead.dashboard.wallpaper-pause"),paused and "play_arrow" or "pause","extras.do","wallpaper:pause") or nil,
-  ui.Text{id="selected-title",width=math.min(T.wallpaper.nav_title_max_width,width-T.wallpaper.nav_title_reserved_width),height=T.wallpaper.nav_title_height,text=nav_title,
-    font_size=T.wallpaper.nav_font,text_align="center",color=(carousel or spotlight) and "onSurface" or T.wallpaper.photo_ink},
-  nav_button("next",ui.tr("bead.dashboard.wallpaper-next"),"chevron_right","extras.next"),
-  nav_button("shuffle",ui.tr("bead.dashboard.wallpaper-shuffle"),"shuffle","extras.do","wallpaper:shuffle")}
+  table.unpack(nav_children)}
 
 local backdrop=layout=="hexagons" and ui.Image{id="gallery-backdrop",position="absolute",left=0,top=0,width=width,height=height,
   visible=ui.bind("extras.wallpaper.backdrop_visible"),icon=ui.bind("extras.wallpaper.backdrop"),image_fit="cover",aria_label="Selected wallpaper preview"} or nil
