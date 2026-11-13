@@ -1,7 +1,6 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod active_wallpaper;
 pub mod ai_chat;
-pub mod attach;
 pub mod audio_peak;
 pub mod audio_spectrum;
 pub mod bar_services;

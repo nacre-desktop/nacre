@@ -365,7 +365,7 @@ pub fn player_key(method: &str) -> Result<()> {
     })
 }
 fn usage() -> i32 {
-    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl key-step METHOD JSON\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl attach\nnacrectl ui TARGET METHOD [ARGS...]");
+    println!("nacrectl status\nnacrectl call [--timeout MS] METHOD [JSON]\nnacrectl call --list\nnacrectl key-step METHOD JSON\nnacrectl brain open|capture\nnacrectl watch TOPIC\nnacrectl ui TARGET METHOD [ARGS...]");
     0
 }
 pub fn run(arguments: &[String]) -> Result<i32> {
@@ -404,9 +404,6 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         .enable_all()
         .max_blocking_threads(2)
         .build()?;
-    if matches!(arguments, [command] if command == "attach") {
-        return runtime.block_on(super::attach::run());
-    }
     if let [command, topic] = arguments {
         if command == "watch" {
             let probe = Message::Sub {
@@ -448,11 +445,7 @@ pub fn run(arguments: &[String]) -> Result<i32> {
                 _ => return Err("Expected call METHOD [JSON]".into()),
             }
         }
-        _ => {
-            return Err(
-                "Expected status, call, brain, watch, attach or ui; use nacrectl --help".into(),
-            )
-        }
+        _ => return Err("Expected status, call, brain, watch or ui; use nacrectl --help".into()),
     };
     if !list {
         Message::Call {
