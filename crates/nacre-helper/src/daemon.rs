@@ -37,6 +37,7 @@ pub mod notifications;
 pub mod notify;
 pub mod osd;
 pub mod pill_controls;
+pub mod power_policy;
 pub mod serve_bridge;
 pub mod session;
 pub mod session_policy;
@@ -521,6 +522,9 @@ async fn serve(
     let behaviour_services = if managed_behaviours && !counter.safe {
         let (rotation_hub, rotation_paths) = (hub.clone(), paths.clone());
         let (power_hub, alerts_hub, alerts_paths) = (hub.clone(), hub.clone(), paths.clone());
+        let power_paths = paths.clone();
+        let power_policy_hub = hub.clone();
+        let power_policy_paths = paths.clone();
         let (lock_hub, lock_paths) = (hub.clone(), paths.clone());
         let retention_paths = paths.clone();
         let services = vec![
@@ -530,7 +534,10 @@ async fn serve(
                 move || behaviours::run_rotation(rotation_hub.clone(), rotation_paths.clone()),
             )),
             tokio::task::spawn_local(supervisor::run("power-profile", hub.clone(), move || {
-                behaviours::run_power_profile(power_hub.clone())
+                behaviours::run_power_profile(power_hub.clone(), power_paths.clone())
+            })),
+            tokio::task::spawn_local(supervisor::run("power-policy", hub.clone(), move || {
+                power_policy::run(power_policy_hub.clone(), power_policy_paths.clone())
             })),
             tokio::task::spawn_local(supervisor::run("battery-alerts", hub.clone(), move || {
                 behaviours::run_battery_alerts(alerts_hub.clone(), alerts_paths.clone())

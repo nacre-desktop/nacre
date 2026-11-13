@@ -14,6 +14,7 @@ pub const DESKTOP: &str = "settings.store.desktop";
 pub const DASHBOARD: &str = "settings.store.dashboard";
 pub const PROFILE: &str = "settings.store.profile";
 pub const LAUNCHER_LAYOUT: &str = "settings.store.launcher-layout";
+pub const POWER: &str = "settings.store.power";
 /// Read by the motion wallpaper controller (`wallpaper_motion`), not by `Prefs`.
 pub const WALLPAPER_PICKER: &str = "settings.store.wallpaper-picker";
 /// Nacre's `NacreDashboardRegistry.core` order, the default of `dashboard.tabs`.
@@ -302,6 +303,86 @@ impl Prefs {
 
 pub type Apply = Arc<dyn Fn(&Prefs) + Send + Sync>;
 
+/// Battery saver temporarily reduces motion without changing the saved desktop preference.
+pub(crate) fn effective_reduced_motion(user: bool, saver_on_battery: bool) -> bool {
+    user || saver_on_battery
+}
+
+pub(crate) fn battery_saver_active(power: &Json, on_battery: bool) -> bool {
+    on_battery && power.pointer("/data/saver/enabled").and_then(Json::as_bool) == Some(true)
+}
+
+/// Combines the saved animation preference with battery saver for one process. Binding keeps
+/// the two live inputs subscribed for the policy's lifetime; saved preferences are never edited.
+type MotionSources = (Arc<dyn Source>, Arc<dyn Source>);
+#[derive(Clone)]
+pub(crate) struct MotionPolicy {
+    user: Arc<std::sync::atomic::AtomicBool>,
+    saver: Arc<std::sync::atomic::AtomicBool>,
+    subscriptions: Arc<Mutex<Vec<Subscription>>>,
+    _sources: Arc<Mutex<Vec<MotionSources>>>,
+}
+fn apply_motion(user: &std::sync::atomic::AtomicBool, saver: &std::sync::atomic::AtomicBool) {
+    bead::core::animation::set_reduced_motion(effective_reduced_motion(
+        user.load(std::sync::atomic::Ordering::Acquire),
+        saver.load(std::sync::atomic::Ordering::Acquire),
+    ));
+}
+impl MotionPolicy {
+    pub(crate) fn new() -> Self {
+        Self {
+            user: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            saver: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            subscriptions: Arc::new(Mutex::new(Vec::new())),
+            _sources: Arc::new(Mutex::new(Vec::new())),
+        }
+    }
+    fn apply(&self) {
+        apply_motion(&self.user, &self.saver);
+    }
+    pub(crate) fn apply_user(&self, reduced: bool) {
+        self.user
+            .store(reduced, std::sync::atomic::Ordering::Release);
+        self.apply();
+    }
+    pub(crate) fn bind(&self, power: Arc<dyn Source>, battery: Arc<dyn Source>) {
+        let callback = {
+            let user = self.user.clone();
+            let saver = self.saver.clone();
+            let power = Arc::downgrade(&power);
+            let battery = Arc::downgrade(&battery);
+            Arc::new(move |_| {
+                let (Some(power), Some(battery)) = (power.upgrade(), battery.upgrade()) else {
+                    return;
+                };
+                let active = battery_saver_active(
+                    &power.snapshot().data,
+                    battery.snapshot().data["on_battery"].as_bool() == Some(true),
+                );
+                saver.store(active, std::sync::atomic::Ordering::Release);
+                apply_motion(&user, &saver);
+            }) as Callback
+        };
+        if let Ok(subscription) = power.subscribe(callback.clone()) {
+            self.subscriptions
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push(subscription);
+        }
+        if let Ok(subscription) = battery.subscribe(callback.clone()) {
+            self.subscriptions
+                .lock()
+                .unwrap_or_else(|p| p.into_inner())
+                .push(subscription);
+        }
+        self._sources
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .push((power.clone(), battery));
+        callback(power.snapshot());
+    }
+}
+
 pub struct Service {
     _subscriptions: Vec<Subscription>,
 }
@@ -397,6 +478,17 @@ impl Service {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn battery_saver_reduces_motion_temporarily_and_restores_user_choice() {
+        assert!(effective_reduced_motion(false, true));
+        assert!(!effective_reduced_motion(false, false));
+        assert!(effective_reduced_motion(true, false));
+        let power = json!({"data":{"saver":{"enabled":true}}});
+        assert!(battery_saver_active(&power, true));
+        assert!(!battery_saver_active(&power, false));
+        assert!(!battery_saver_active(&Json::Null, true));
+    }
 
     fn store_doc(id: &str, data: Json) -> Json {
         json!({"store": id, "rev": 1, "exists": true, "data": data, "dirty": false})

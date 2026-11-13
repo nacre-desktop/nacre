@@ -1873,7 +1873,8 @@ fn topics_for_goldens() -> Vec<(&'static str, Json)> {
             "capabilities",
             caps(
                 json!({"input.controls": true, "touchpad": true, "input.touchpadSpeed": true,
-            "powerProfiles": true, "packages": true, "ai": true, "brain": true, "battery": true, "bluetooth": true}),
+            "powerProfiles": true, "batterySaver": true, "powerIdle": true, "powerHardware": true,
+            "packages": true, "ai": true, "brain": true, "battery": true, "bluetooth": true}),
             ),
         ),
         (
@@ -1938,7 +1939,8 @@ fn topics_for_goldens() -> Vec<(&'static str, Json)> {
             store(
                 "power",
                 1,
-                json!({"profiles": {"enabled": true, "ac": "performance"}}),
+                json!({"profiles": {"enabled": true, "ac": "performance"}, "saver": {"enabled": true},
+                    "idle": {"dim": 5, "sleep": 15}, "hardware": {"lid": "suspend", "button": "menu"}}),
             ),
         ),
         ("settings.store.profile", store("profile", 1, json!({}))),

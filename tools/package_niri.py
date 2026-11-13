@@ -237,6 +237,23 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         add(config / Path(name).name, text)
         if name.endswith(".kdl"):
             includes.append(Path(name).name)
+    existing_power_policy = home / config / "power-policy.kdl"
+    add(
+        config / "power-policy.kdl",
+        existing_power_policy.read_text()
+        if existing_power_policy.is_file()
+        else (
+            "// Safe until the daemon loads the saved power.json policy.\n"
+            'binds { XF86PowerOff repeat=false allow-when-locked=true { spawn "loginctl" "lock-session"; }; }\n'
+            'switch-events { lid-close { spawn "true"; }; }\n'
+        ),
+    )
+    includes.append("power-policy.kdl")
+    existing_power_idle = home / ".config/nacre/power-idle.conf"
+    add(
+        Path(".config/nacre/power-idle.conf"),
+        existing_power_idle.read_text() if existing_power_idle.is_file() else "",
+    )
     keyboard_path = home / config / "keyboard.kdl"
     add(
         config / "keyboard.kdl",
@@ -370,7 +387,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         ".config/systemd/user/nacre-niri.target",
         "[Unit]\nDescription=Nacre Niri session services\n"
         "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
-        "Wants=nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service\n",
+        "Wants=nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service nacre-power-key.service\n",
     )
     # Niri discards startup children's stdout/stderr. A oneshot records failures
     # in the journal and waits for the existing graphical-session ordering.
@@ -389,7 +406,8 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         config / "hypridle.conf",
         "general {\n    lock_cmd = pidof hyprlock || hyprlock -c "
         + shlex.quote(str(home / lock))
-        + "\n}\n",
+        + "\n    before_sleep_cmd = loginctl lock-session\n}\n"
+        "source = ~/.config/nacre/power-idle.conf\n",
     )
     add(
         ".config/systemd/user/nacre-niri-lock.service",

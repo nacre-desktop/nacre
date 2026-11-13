@@ -282,6 +282,13 @@ pub fn spec(
                         .ok()
                 })
                 .flatten();
+            let power_settings = (page == Page::Today)
+                .then(|| {
+                    choice
+                        .open_named(crate::prefs::POWER, "power-settings")
+                        .ok()
+                })
+                .flatten();
             let summary_updates = (page == Page::Today)
                 .then(|| choice.open_named("dashboard.updates", "updates").ok())
                 .flatten();
@@ -306,6 +313,7 @@ pub fn spec(
                     .with_player(player)
                     .with_overview(system, wallpaper, summary_updates)
                     .with_wallpaper_settings(wallpaper_settings)
+                    .with_power_settings(power_settings)
                     .with_video_desktop(
                         (page == Page::Today)
                             .then(|| owner.get().cloned())
@@ -528,6 +536,7 @@ pub struct Dashboard {
     system: Option<Arc<dyn Source>>,
     wallpaper: Option<Arc<dyn Source>>,
     wallpaper_settings: Option<Arc<dyn Source>>,
+    power_settings: Option<Arc<dyn Source>>,
     summary_updates: Option<Arc<dyn Source>>,
     raster_scale: std::cell::Cell<f64>,
     poster: std::cell::RefCell<Option<Poster>>,
@@ -576,6 +585,7 @@ impl Dashboard {
             system: None,
             wallpaper: None,
             wallpaper_settings: None,
+            power_settings: None,
             summary_updates: None,
             raster_scale: std::cell::Cell::new(2.),
             poster: Default::default(),
@@ -661,6 +671,10 @@ impl Dashboard {
     }
     pub fn with_wallpaper_settings(mut self, settings: Option<Arc<dyn Source>>) -> Self {
         self.wallpaper_settings = settings;
+        self
+    }
+    pub fn with_power_settings(mut self, settings: Option<Arc<dyn Source>>) -> Self {
+        self.power_settings = settings;
         self
     }
     pub fn with_clock(mut self, clock: Option<Arc<dyn Source>>) -> Self {
@@ -811,6 +825,9 @@ impl Dashboard {
             subscriptions.push(source.subscribe(callback.clone())?);
         }
         if let Some(settings) = &self.wallpaper_settings {
+            subscriptions.push(settings.subscribe(callback.clone())?);
+        }
+        if let Some(settings) = &self.power_settings {
             subscriptions.push(settings.subscribe(callback.clone())?);
         }
         if let Some(clock) = &self.clock {
@@ -1452,9 +1469,20 @@ impl Dashboard {
             let settings = self.wallpaper_settings.as_ref()?.snapshot();
             let services = self.desktop.as_ref()?.snapshot();
             let reduced = self.prefs().is_none_or(|p| p.reduce_motion);
+            let saver_on_battery = self.power_settings.as_ref().is_some_and(|power| {
+                crate::prefs::battery_saver_active(
+                    &power.snapshot().data,
+                    services.battery.on_battery,
+                )
+            });
             if !settings.connected
                 || !Self::wallpaper_settings_valid(&settings.data)
-                || !crate::wallpaper_motion::preview_allowed(&settings.data, &services, reduced)
+                || !crate::wallpaper_motion::preview_allowed(
+                    &settings.data,
+                    &services,
+                    reduced,
+                    saver_on_battery,
+                )
                 || w == 0
                 || h == 0
             {

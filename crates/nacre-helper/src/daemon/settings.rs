@@ -303,6 +303,13 @@ impl Service {
             request.key.last().ok_or_else(denied)?.clone(),
             request.value,
         );
+        if request.store == "power" && !validation::power_idle_valid(&data) {
+            return Err(failure(
+                ErrorCode::InvalidRequest,
+                "Dim time must be less than sleep time when both are enabled",
+                false,
+            ));
+        }
         let previous = store.snapshot.clone();
         let previous_deadline = store.deadline;
         store.snapshot.data = data;
@@ -1201,6 +1208,44 @@ mod tests {
         assert_eq!(after["rev"], before["rev"]);
         assert_eq!(after["data"], before["data"]);
         assert!(!paths.config.join("desktop.json").exists());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn power_idle_rejects_invalid_order_without_changing_the_store() {
+        let (_home, _paths, _hub, service) = fixture().await;
+        let before = service
+            .get(SettingsGet {
+                store: "power".into(),
+            })
+            .await
+            .unwrap();
+        let first = service
+            .set(SettingsSet {
+                store: "power".into(),
+                key: vec!["idle".into(), "sleep".into()],
+                value: json!(30),
+                rev: before["rev"].as_u64().unwrap(),
+            })
+            .await
+            .unwrap();
+        let error = service
+            .set(SettingsSet {
+                store: "power".into(),
+                key: vec!["idle".into(), "dim".into()],
+                value: json!(30),
+                rev: first["rev"].as_u64().unwrap(),
+            })
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::InvalidRequest);
+        let after = service
+            .get(SettingsGet {
+                store: "power".into(),
+            })
+            .await
+            .unwrap();
+        assert_eq!(after["rev"], first["rev"]);
+        assert_eq!(after["data"], first["data"]);
     }
     fn replace_config_root_with_foreign_link(home: &std::path::Path, paths: &Paths) {
         let foreign = home.join("foreign-config");

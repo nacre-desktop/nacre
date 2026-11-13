@@ -48,6 +48,7 @@ struct Prefs {
     mode: Mode,
     paused: bool,
     pause_covered: bool,
+    battery_saver: bool,
 }
 impl Default for Prefs {
     fn default() -> Self {
@@ -55,6 +56,7 @@ impl Default for Prefs {
             mode: Mode::Full,
             paused: false,
             pause_covered: true,
+            battery_saver: false,
         }
     }
 }
@@ -70,6 +72,7 @@ impl Prefs {
             },
             paused: data.get("paused").and_then(Json::as_bool) == Some(true),
             pause_covered: data.get("pauseCovered").and_then(Json::as_bool) != Some(false),
+            battery_saver: false,
         }
     }
     fn policy(&self) -> Config {
@@ -81,13 +84,23 @@ impl Prefs {
     }
 }
 
+pub(crate) fn battery_saver_enabled(power: &Json) -> bool {
+    crate::prefs::battery_saver_active(power, true)
+}
+
 /// A visible preview is not covered by windows behind the dashboard. Battery,
 /// explicit pause, still mode and session suspension apply just as on desktop.
-pub(crate) fn preview_allowed(store: &Json, services: &Services, reduced: bool) -> bool {
+pub(crate) fn preview_allowed(
+    store: &Json,
+    services: &Services,
+    reduced: bool,
+    saver_on_battery: bool,
+) -> bool {
     let prefs = Prefs::decode(store);
     !reduced
         && !prefs.paused
         && prefs.mode != Mode::Still
+        && !saver_on_battery
         && !(prefs.mode == Mode::Battery && services.battery.on_battery)
         && !services.session.locked
         && !services.session.sleeping
@@ -109,7 +122,7 @@ fn inputs(
     let base = Inputs {
         on_battery: services.battery.on_battery,
         user_paused: prefs.paused,
-        stopped: prefs.mode == Mode::Still,
+        stopped: prefs.mode == Mode::Still || (prefs.battery_saver && services.battery.on_battery),
         hidden: services.session.locked || services.session.sleeping,
         ..Inputs::default()
     };
@@ -177,6 +190,8 @@ pub(crate) struct Deps {
     pub wallpaper: Arc<crate::wallpaper::Consumer>,
     /// `settings.store.wallpaper-picker`; absent means Nacre's defaults.
     pub picker: Option<Arc<dyn Source>>,
+    /// `settings.store.power`; absent means battery saver is disabled.
+    pub power: Option<Arc<dyn Source>>,
     pub backend: Option<Arc<dyn Backend>>,
     pub desktop: Option<Arc<Desktop>>,
     /// Niri overview state; absent on compositors without an overview.
@@ -221,6 +236,12 @@ impl Controller {
         if let Some(picker) = &deps.picker {
             let poke = poke.clone();
             if let Ok(sub) = picker.subscribe(Arc::new(move |_| poke())) {
+                subscriptions.push(Box::new(sub));
+            }
+        }
+        if let Some(power) = &deps.power {
+            let poke = poke.clone();
+            if let Ok(sub) = power.subscribe(Arc::new(move |_| poke())) {
                 subscriptions.push(Box::new(sub));
             }
         }
@@ -280,10 +301,14 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
     let mut sent: Option<(Decoder, Vec<String>)> = None;
     let mut renderer_state = None;
     loop {
-        let prefs = deps
+        let mut prefs = deps
             .picker
             .as_ref()
             .map_or_else(Prefs::default, |p| Prefs::decode(&p.snapshot().data));
+        prefs.battery_saver = deps
+            .power
+            .as_ref()
+            .is_some_and(|power| battery_saver_enabled(&power.snapshot().data));
         let wanted = deps.wallpaper.motion();
         if wanted != source {
             supervisor.send(Command::Source {
@@ -421,29 +446,37 @@ mod tests {
     fn preview_follows_motion_power_and_session_policy() {
         let mut services = Services::default();
         let full = json!({"data":{"motionMode":"full","pauseCovered":true}});
-        assert!(preview_allowed(&full, &services, false));
-        assert!(!preview_allowed(&full, &services, true));
+        assert!(preview_allowed(&full, &services, false, false));
+        assert!(!preview_allowed(&full, &services, true, false));
+        assert!(!preview_allowed(&full, &services, false, true));
         for data in [json!({"paused":true}), json!({"motionMode":"still"})] {
-            assert!(!preview_allowed(&json!({"data":data}), &services, false));
+            assert!(!preview_allowed(
+                &json!({"data":data}),
+                &services,
+                false,
+                false
+            ));
         }
         services.battery.on_battery = true;
-        assert!(preview_allowed(&full, &services, false));
+        assert!(preview_allowed(&full, &services, false, false));
         assert!(!preview_allowed(
             &json!({"data":{"motionMode":"battery"}}),
             &services,
+            false,
             false
         ));
         services.battery.on_battery = false;
         assert!(preview_allowed(
             &json!({"data":{"motionMode":"battery"}}),
             &services,
+            false,
             false
         ));
         services.session.locked = true;
-        assert!(!preview_allowed(&full, &services, false));
+        assert!(!preview_allowed(&full, &services, false, false));
         services.session.locked = false;
         services.session.sleeping = true;
-        assert!(!preview_allowed(&full, &services, false));
+        assert!(!preview_allowed(&full, &services, false, false));
     }
 
     #[test]
@@ -455,11 +488,18 @@ mod tests {
             Prefs {
                 mode: Mode::Battery,
                 paused: true,
-                pause_covered: false
+                pause_covered: false,
+                battery_saver: false,
             }
         );
         let wrong = json!({"data":{"motionMode":3,"paused":"yes","pauseCovered":"no"}});
         assert_eq!(Prefs::decode(&wrong), Prefs::default());
+        assert!(!battery_saver_enabled(
+            &json!({"data":{"saver":{"enabled":"yes"}}})
+        ));
+        assert!(battery_saver_enabled(
+            &json!({"data":{"saver":{"enabled":true}}})
+        ));
         assert!(
             Prefs {
                 mode: Mode::Battery,
@@ -527,6 +567,7 @@ mod tests {
             mode: Mode::Still,
             paused: true,
             pause_covered: true,
+            battery_saver: false,
         };
         let map = inputs(&desktop(), &services, prefs, false);
         for input in map.values() {
@@ -539,6 +580,34 @@ mod tests {
             false,
         );
         assert_eq!(none.keys().collect::<Vec<_>>(), [ANY]);
+    }
+
+    #[test]
+    fn battery_saver_stops_motion_only_on_battery_and_restores_on_ac() {
+        let mut services = Services::default();
+        let prefs = Prefs {
+            battery_saver: true,
+            ..Prefs::default()
+        };
+        services.battery.on_battery = true;
+        assert!(
+            inputs(&desktop(), &services, prefs, false)
+                .values()
+                .all(|i| i.stopped)
+        );
+        services.battery.on_battery = false;
+        assert!(
+            inputs(&desktop(), &services, prefs, false)
+                .values()
+                .all(|i| !i.stopped)
+        );
+        let disabled = Prefs::default();
+        services.battery.on_battery = true;
+        assert!(
+            inputs(&desktop(), &services, disabled, false)
+                .values()
+                .all(|i| !i.stopped)
+        );
     }
 
     /// B0193: the desktop widget layer pauses (pause_on fullscreen/lock) exactly while the
@@ -704,6 +773,7 @@ mod tests {
             Deps {
                 wallpaper: wallpaper.clone(),
                 picker: None,
+                power: None,
                 backend: None,
                 desktop: None,
                 overview: None,

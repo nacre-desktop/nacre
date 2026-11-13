@@ -683,6 +683,9 @@ fn run() -> Result<i32> {
             }
         };
     }
+    if tool == "idle-brightness" {
+        return nacre_helper::idle_brightness::run(&arguments);
+    }
     if tool == "light-devices" {
         return light_devices::run(&arguments);
     }

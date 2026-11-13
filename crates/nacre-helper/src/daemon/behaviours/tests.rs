@@ -862,7 +862,7 @@ async fn power_profile_applies_once_per_source_and_setting_change() {
     let (hub, client) = (hub.clone(), client.clone());
     LocalSet::new()
         .run_until(async {
-            let task = tokio::task::spawn_local(power_profile(hub, client));
+            let task = tokio::task::spawn_local(power_profile(hub, client, None));
             eventually(|| *sets.lock().unwrap() == ["balanced"]).await;
             // Unrelated bus traffic does not reapply.
             upower.set(false, 2, 70.0).await;
@@ -895,7 +895,7 @@ async fn power_profile_offers_performance_when_the_daemon_has_it() {
     let (hub, client, sets) = (power.hub.clone(), power.client.clone(), power.sets.clone());
     LocalSet::new()
         .run_until(async {
-            let task = tokio::task::spawn_local(power_profile(hub, client));
+            let task = tokio::task::spawn_local(power_profile(hub, client, None));
             eventually(|| *sets.lock().unwrap() == ["performance"]).await;
             task.abort();
         })

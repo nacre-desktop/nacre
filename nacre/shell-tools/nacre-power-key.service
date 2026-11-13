@@ -1,11 +1,11 @@
 [Unit]
-Description=Desktop power button locks without triggering logind shutdown
+Description=Route lid and power button events through the user session
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/systemd-inhibit --no-ask-password --what=handle-power-key --who=Nacre-desktop --why=Hyprland-handles-short-power-press --mode=block /usr/bin/sleep infinity
+ExecStart=/usr/bin/systemd-inhibit --no-ask-password --what=handle-power-key:handle-lid-switch --who=Nacre-desktop --why=Compositor-handles-lid-and-power-events --mode=block /usr/bin/sleep infinity
 Restart=on-failure
 RestartSec=5
 

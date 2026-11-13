@@ -16,6 +16,11 @@ spec = importlib.util.spec_from_file_location(
 )
 package_niri = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(package_niri)
+hyprland_spec = importlib.util.spec_from_file_location(
+    "package_hyprland_session", ROOT / "tools/package_hyprland.py"
+)
+package_hyprland = importlib.util.module_from_spec(hyprland_spec)
+hyprland_spec.loader.exec_module(package_hyprland)
 session_spec = importlib.util.spec_from_file_location(
     "package_sessions_under_test", ROOT / "tools/package_sessions.py"
 )
@@ -24,6 +29,70 @@ session_spec.loader.exec_module(package_sessions)
 
 
 class NacreNiriSessionTests(unittest.TestCase):
+    def test_packagers_preserve_generated_power_policies_and_seed_safe_files(self):
+        profile = {
+            "workspaceCount": 1,
+            "workspaceNames": ["one"],
+            "routes": [],
+            "brainWorkspace": None,
+            "windowTrashBindings": False,
+        }
+        keyboard = {"layout": "us", "model": "", "variant": "", "options": ""}
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            home = base / "home"
+            home.mkdir()
+
+            def niri_files(output):
+                return package_niri.files(
+                    ROOT, home, profile, keyboard, output, {}, validate_config=False
+                )
+
+            niri_policy_path = Path(".config/nacre/niri/power-policy.kdl")
+            generated = niri_files(base / "generated")
+            safe_policy = generated[niri_policy_path].read_text()
+            self.assertIn('lid-close { spawn "true"; }', safe_policy)
+            self.assertIn('spawn "loginctl" "lock-session"', safe_policy)
+            self.assertNotIn('spawn "systemctl" "suspend"', safe_policy)
+            idle_path = Path(".config/nacre/power-idle.conf")
+            self.assertEqual(generated[idle_path].read_text(), "")
+
+            configured_policy = (
+                '// Generated policy\nswitch-events { lid-close { spawn "true"; }; }\n'
+            )
+            configured_idle = "listener { timeout = 600 on-timeout = true }\n"
+            (home / niri_policy_path).parent.mkdir(parents=True, exist_ok=True)
+            (home / niri_policy_path).write_text(configured_policy)
+            (home / idle_path).write_text(configured_idle)
+            preserved = niri_files(base / "preserved")
+            self.assertEqual(preserved[niri_policy_path].read_text(), configured_policy)
+            self.assertEqual(preserved[idle_path].read_text(), configured_idle)
+
+            hypr_home = base / "hypr-home"
+            hypr_home.mkdir()
+            hypr_idle_path = Path(".config/nacre/power-idle.conf")
+            hypr_config = Path(".config/hypr/hypridle.conf")
+            common = {hypr_config: ROOT / "config/hypr/hypridle.conf"}
+
+            def hypr_files(output):
+                return package_hyprland.files(
+                    ROOT, hypr_home, profile, keyboard, output, common
+                )
+
+            fresh_hypr = hypr_files(base / "hypr-fresh")
+            self.assertEqual(fresh_hypr[hypr_idle_path].read_text(), "")
+            self.assertIn(
+                "source = ~/.config/nacre/power-idle.conf",
+                fresh_hypr[hypr_config].read_text(),
+            )
+            configured_hypr_idle = "listener { timeout = 900 on-timeout = true }\n"
+            (hypr_home / hypr_idle_path).parent.mkdir(parents=True, exist_ok=True)
+            (hypr_home / hypr_idle_path).write_text(configured_hypr_idle)
+            preserved_hypr = hypr_files(base / "hypr-preserved")
+            self.assertEqual(
+                preserved_hypr[hypr_idle_path].read_text(), configured_hypr_idle
+            )
+
     def test_prepared_wrapper_keeps_fork_selected_for_offline_queries(self):
         wrapper = (ROOT / "config/uwsm/niri-session-bin/niri").read_text()
         self.assertIn('if [ "${NACRE_NIRI_FORK:-0}" = 1 ]', wrapper)

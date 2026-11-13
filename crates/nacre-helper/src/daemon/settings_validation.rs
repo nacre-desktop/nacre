@@ -147,7 +147,23 @@ pub fn document(store: &str, data: &Value) -> bool {
     document_with_developer(store, data, developer_mode())
 }
 
+pub fn power_idle_minutes(data: &Value, key: &str) -> u64 {
+    data["idle"][key]
+        .as_f64()
+        .filter(|n| n.is_finite() && n.fract() == 0.0 && (0.0..=60.0).contains(n))
+        .unwrap_or(0.0) as u64
+}
+
+pub fn power_idle_valid(data: &Value) -> bool {
+    let dim = power_idle_minutes(data, "dim");
+    let sleep = power_idle_minutes(data, "sleep");
+    dim == 0 || sleep == 0 || dim < sleep
+}
+
 fn document_with_developer(store: &str, data: &Value, developer: bool) -> bool {
+    if store == "power" && !power_idle_valid(data) {
+        return false;
+    }
     if store == "widgets" {
         return data.as_object().is_some_and(|object| {
             object.len() == 1
@@ -498,5 +514,18 @@ mod tests {
                 setting["id"]
             );
         }
+    }
+
+    #[test]
+    fn power_idle_defaults_and_cross_field_order_are_validated() {
+        assert!(power_idle_valid(&json!({})));
+        assert!(power_idle_valid(&json!({"idle":{"dim":0,"sleep":5}})));
+        assert!(power_idle_valid(&json!({"idle":{"dim":5,"sleep":30}})));
+        assert!(!power_idle_valid(&json!({"idle":{"dim":30,"sleep":30}})));
+        assert!(!power_idle_valid(&json!({"idle":{"dim":31,"sleep":30}})));
+        assert_eq!(power_idle_minutes(&json!({"idle":{"dim":5.0}}), "dim"), 5);
+        assert!(!power_idle_valid(
+            &json!({"idle":{"dim":30.0,"sleep":30.0}})
+        ));
     }
 }

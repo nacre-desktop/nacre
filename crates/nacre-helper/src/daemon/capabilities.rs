@@ -2,7 +2,7 @@
 //! reference. The values are the ones QML's `NacreSettingsCapabilities` computed, taken from what
 //! the daemon already publishes (`compositor`, `settings.store.desktop`, `settings.store.profile`)
 //! plus three probes made once per daemon start: input devices, `powerprofilesctl` and `pacman`.
-//! Registry flags absent from the active capability contract, including `batterySaver`,
+//! Registry flags absent from the active capability contract,
 //! are absent and consumers evaluate them as false, exactly as QML did.
 //!
 //! N0051 adds `bluetooth` (the `bluetooth` topic lists an adapter) and `battery` (a laptop battery
@@ -40,6 +40,7 @@ const DEVICES_LIMIT: u64 = 1024 * 1024;
 pub struct Env {
     /// `/proc/bus/input/devices`
     pub devices: PathBuf,
+    pub paths: crate::paths::Paths,
     /// `/sys/class/power_supply`
     pub power_supply: PathBuf,
     pub powerprofilesctl: String,
@@ -49,6 +50,7 @@ impl Env {
     fn production() -> Self {
         Self {
             devices: "/proc/bus/input/devices".into(),
+            paths: crate::paths::Paths::environment().expect("daemon home paths"),
             power_supply: "/sys/class/power_supply".into(),
             powerprofilesctl: "powerprofilesctl".into(),
             which: Arc::new(|program| {
@@ -65,6 +67,7 @@ impl Env {
 /// What does not change while the daemon runs.
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 struct Probe {
+    niri_idle: bool,
     touchpad: bool,
     battery: bool,
     packages: bool,
@@ -106,7 +109,18 @@ fn probe(env: &Env) -> Probe {
     let power_profiles = (env.which)(&env.powerprofilesctl) && run(&["get"]).is_some();
     let performance_profile =
         power_profiles && run(&["list"]).is_some_and(|list| list.contains("performance"));
+    let niri_idle = env
+        .paths
+        .home
+        .join(".config/systemd/user/nacre-niri-lock.service")
+        .is_file()
+        || crate::niri_session_gate::allowed(
+            "idle",
+            &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
+            &env.paths,
+        );
     Probe {
+        niri_idle,
         touchpad,
         battery: laptop_battery(&env.power_supply),
         packages: (env.which)("pacman"),
@@ -120,6 +134,11 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
     let capability = |name: &str| compositor["capabilities"][name] == true;
     let backend = compositor["backend"].as_str().unwrap_or("");
     let niri = backend == "niri";
+    let session_power = matches!(backend, "hyprland" | "niri")
+        && hub
+            .services
+            .get("behaviours")
+            .is_some_and(|state| state["status"] == "running");
     let store = |id: &str| {
         hub.snapshot_ref(&format!("settings.store.{id}"))
             .map_or(Value::Null, |store| store["data"].clone())
@@ -145,6 +164,12 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
         ("performanceProfile".into(), probe.performance_profile),
         ("touchpad".into(), probe.touchpad),
         ("battery".into(), probe.battery),
+        ("batterySaver".into(), probe.battery && session_power),
+        (
+            "powerIdle".into(),
+            session_power && (backend == "hyprland" || niri && probe.niri_idle),
+        ),
+        ("powerHardware".into(), session_power),
         ("bluetooth".into(), bluetooth),
         ("panelDragging".into(), capability("nativePanelDrag")),
         ("windowCapture".into(), capability("windowCapture")),
@@ -240,6 +265,7 @@ async fn run_with(hub: Shared, env: Env) -> Result<()> {
                 &mut notices,
                 &[
                     "compositor",
+                    "daemon",
                     "bluetooth",
                     "settings.store.desktop",
                     "settings.store.profile",

@@ -1065,7 +1065,7 @@ class PackageSetupTests(unittest.TestCase):
                     ),
                     (
                         "niri",
-                        "nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service",
+                        "nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service nacre-power-key.service",
                     ),
                 ):
                     target = home / f".config/systemd/user/nacre-{name}.target"

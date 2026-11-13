@@ -50,6 +50,11 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
             ".config/nacre/hypridle.local.conf",
             (root / "tools/defaults/hypridle.conf").read_text(),
         )
+    managed_idle = home / ".config/nacre/power-idle.conf"
+    add(
+        ".config/nacre/power-idle.conf",
+        managed_idle.read_text() if managed_idle.is_file() else "",
+    )
     return result
 
 

@@ -13,6 +13,7 @@ fn env(dir: &std::path::Path, devices: &str, profiles: &str, pacman: bool) -> En
     std::fs::set_permissions(&ctl, std::fs::Permissions::from_mode(0o755)).unwrap();
     Env {
         devices: dir.join("devices"),
+        paths: crate::paths::Paths::new(dir),
         power_supply: dir.join("power_supply"),
         powerprofilesctl: ctl.display().to_string(),
         which: Arc::new(move |program| {
@@ -52,6 +53,7 @@ fn probes_read_devices_power_profiles_and_pacman() {
     assert_eq!(
         p,
         Probe {
+            niri_idle: false,
             touchpad: true,
             battery: true,
             packages: true,
@@ -71,6 +73,7 @@ fn probes_read_devices_power_profiles_and_pacman() {
     assert_eq!(
         p,
         Probe {
+            niri_idle: false,
             touchpad: false,
             battery: false,
             packages: false,
@@ -86,6 +89,55 @@ fn probes_read_devices_power_profiles_and_pacman() {
 }
 
 #[test]
+fn niri_idle_requires_packaged_lock_service_or_verified_source_unlock() {
+    let dir = tempfile::tempdir().unwrap();
+    let env = env(dir.path(), "", "exit 1\n", false);
+    assert!(!probe(&env).niri_idle);
+    let acceptance = env.paths.config.join("niri-on-pc/acceptance.json");
+    std::fs::create_dir_all(acceptance.parent().unwrap()).unwrap();
+    std::fs::write(
+        &acceptance,
+        r#"{"phase":"nacre","backendReady":true,"unlockVerified":false}"#,
+    )
+    .unwrap();
+    assert!(!probe(&env).niri_idle);
+    std::fs::write(
+        &acceptance,
+        r#"{"phase":"nacre","backendReady":true,"unlockVerified":true}"#,
+    )
+    .unwrap();
+    assert!(probe(&env).niri_idle);
+    std::fs::remove_file(acceptance).unwrap();
+    let unit = dir
+        .path()
+        .join(".config/systemd/user/nacre-niri-lock.service");
+    std::fs::create_dir_all(unit.parent().unwrap()).unwrap();
+    std::fs::write(unit, "[Service]\n").unwrap();
+    assert!(probe(&env).niri_idle);
+}
+
+#[test]
+fn power_controls_require_their_daemon_reader_authority() {
+    let hub = hub();
+    hub.borrow_mut()
+        .publish("compositor", compositor("hyprland", json!([])))
+        .unwrap();
+    let probe = Probe {
+        battery: true,
+        ..Probe::default()
+    };
+    for flag in ["batterySaver", "powerIdle", "powerHardware"] {
+        assert!(!flags(&probe, &hub.borrow())[flag]);
+    }
+    hub.borrow_mut()
+        .service("behaviours", "running", 0)
+        .unwrap();
+    for flag in ["batterySaver", "powerIdle", "powerHardware"] {
+        assert!(flags(&probe, &hub.borrow())[flag]);
+    }
+}
+
+#[test]
 fn flags_follow_the_compositor_and_the_stores() {
     let hub = hub();
     let probe = Probe {
@@ -98,6 +150,7 @@ fn flags_follow_the_compositor_and_the_stores() {
     assert!(!flags_now["niriWorkspaces"] && !flags_now["input.controls"] && !flags_now["ai"]);
 
     assert!(!flags_now["bluetooth"] && !flags_now["battery"]);
+    assert!(!flags_now["batterySaver"] && !flags_now["powerIdle"] && !flags_now["powerHardware"]);
     // A battery is a probe; Bluetooth follows the topic: an adapter must be listed.
     let bluetooth = |available: bool, adapters: Value| json!({"health":{"available":available,"stale":false},"adapters":{"items":{},"order":adapters},"devices":{"items":{},"order":[]}});
     hub.borrow_mut()
@@ -118,6 +171,9 @@ fn flags_follow_the_compositor_and_the_stores() {
     };
     assert!(flags(&battery, &hub.borrow())["battery"]);
     hub.borrow_mut()
+        .service("behaviours", "running", 0)
+        .unwrap();
+    hub.borrow_mut()
         .publish("compositor", compositor("niri", json!(["gapsIn", "blur"])))
         .unwrap();
     hub.borrow_mut()
@@ -137,6 +193,16 @@ fn flags_follow_the_compositor_and_the_stores() {
     assert!(!niri["cursorShake"]);
     assert!(niri["niriWorkspaces"] && niri["niriFixedWorkspaces"] && niri["input.touchpadSpeed"]);
     assert!(niri["input.controls"] && niri["ai"] && !niri["brain"]);
+    assert!(!niri["powerIdle"]);
+    assert!(
+        flags(
+            &Probe {
+                niri_idle: true,
+                ..probe
+            },
+            &hub.borrow()
+        )["powerIdle"]
+    );
     assert!(niri["desktop.gapsIn"] && niri["desktop.blur"] && !niri["desktop.shadow"]);
     assert!(!niri["windowCapture"] && !niri["panelDragging"]);
 
@@ -180,10 +246,16 @@ fn flags_follow_the_compositor_and_the_stores() {
         "cursorShake",
         "bluetooth",
         "battery",
+        "batterySaver",
+        "powerIdle",
+        "powerHardware",
     ] {
         assert!(hypr.contains_key(name), "{name}");
     }
-    assert_eq!(hypr.len(), 23);
+    assert!(hypr["powerIdle"] && hypr["powerHardware"]);
+    assert!(!hypr["batterySaver"]);
+    assert!(flags(&battery, &hub.borrow())["batterySaver"]);
+    assert_eq!(hypr.len(), 26);
 }
 
 #[test]

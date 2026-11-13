@@ -723,6 +723,13 @@ fn start(
     // daemon, older daemon) every default is Nacre's, so nothing changes.
     let frame_gate = gate.clone();
     let frame_config = frame_config::load(Path::new("shell"));
+    let motion_policy = prefs::MotionPolicy::new();
+    let power_settings = _ui_provider
+        .as_ref()
+        .and_then(|client| client.view_topic(prefs::POWER).ok());
+    let battery_status = _ui_provider
+        .as_ref()
+        .and_then(|client| client.view_topic("battery").ok());
     {
         let gate = gate.clone();
         placement::on_external_change(Box::new(move || gate.notify()));
@@ -742,8 +749,9 @@ fn start(
             {
                 let gate = gate.clone();
                 let edge_route = edge_route.clone();
+                let motion_policy = motion_policy.clone();
                 std::sync::Arc::new(move |p: &prefs::Prefs| {
-                    bead::core::animation::set_reduced_motion(p.reduce_motion);
+                    motion_policy.apply_user(p.reduce_motion);
                     theme::apply(p);
                     placement::set_sheen(p.frame_sheen);
                     // The live frame first: the gate's watchers rebuild from it.
@@ -1178,6 +1186,9 @@ fn start(
     if let Some(desktop) = &shared_desktop {
         let _ = desktop_owner.set(desktop.clone());
     }
+    if let (Some(power), Some(battery)) = (&power_settings, &battery_status) {
+        motion_policy.bind(power.clone(), battery.clone());
+    }
     // B0046: motion wallpaper control; the decoder runs in `bead-wallpaper-video`.
     if let Some(wallpaper) = wallpaper_consumer.take() {
         let overview = _ui_provider.as_ref().and_then(|client| {
@@ -1187,6 +1198,7 @@ fn start(
         });
         _motion_wallpaper = wallpaper_motion::Controller::start(wallpaper_motion::Deps {
             picker: wallpaper.picker(),
+            power: power_settings.clone(),
             wallpaper,
             backend: shared_backend
                 .clone()

@@ -988,6 +988,10 @@ def deploy(code_only=False, retire_niri_experiment=False):
         HOME / ".config/systemd/user/nacre-niri-widths.service",
     )
     subprocess.run(["python3", str(ROOT / "idle-policy.py")], check=True)
+    power_idle = HOME / ".config/nacre/power-idle.conf"
+    power_idle.parent.mkdir(parents=True, exist_ok=True)
+    power_idle.touch(exist_ok=True)
+    power_idle.chmod(0o600)
     idle_dropin = HOME / ".config/systemd/user/hypridle.service.d/nacre.conf"
     idle_dropin.parent.mkdir(parents=True, exist_ok=True)
     idle_dropin.write_text(

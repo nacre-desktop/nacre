@@ -140,7 +140,11 @@
       "order": 11,
       "prototype": true,
       "visibleWhen": {
-        "capability": "battery"
+        "any": [
+          {"capability": "battery"},
+          {"capability": "powerIdle"},
+          {"capability": "powerHardware"}
+        ]
       },
       "enterAction": "power-refresh"
     },

@@ -30,6 +30,8 @@ use tokio::{
 };
 use zbus::zvariant::{OwnedValue, Value as Variant};
 
+mod battery_saver;
+
 const UPOWER: &str = "org.freedesktop.UPower";
 const UPOWER_PATH: &str = "/org/freedesktop/UPower";
 const DISPLAY_DEVICE: &str = "/org/freedesktop/UPower/devices/DisplayDevice";
@@ -746,7 +748,11 @@ async fn profile_service(system: &zbus::Connection) -> Option<(zbus::Proxy<'stat
 
 /// QML `NacrePowerPolicy`: apply the configured profile for the power source once per
 /// change; no retry after a failure until the source or the setting changes.
-pub async fn power_profile(hub: Shared, system: zbus::Connection) -> Result<()> {
+pub async fn power_profile(
+    hub: Shared,
+    system: zbus::Connection,
+    paths: Option<Paths>,
+) -> Result<()> {
     let mut notices = hub.borrow().observe();
     let mut events = signals(
         &system,
@@ -756,13 +762,30 @@ pub async fn power_profile(hub: Shared, system: zbus::Connection) -> Result<()> 
     )
     .await?;
     let (mut applied, mut previous) = (String::new(), None::<bool>);
+    let mut saver_applied = None;
     loop {
         let battery = on_battery(&system).await.unwrap_or(false);
         if previous.is_some_and(|before| before != battery) {
             applied.clear();
         }
         previous = Some(battery);
-        let desired = desired_profile(settings_data(&hub, "power").await.as_ref(), battery);
+        let preferences = settings_data(&hub, "power").await;
+        if let Some(paths) = &paths {
+            let saver = battery
+                && preferences
+                    .as_ref()
+                    .is_some_and(|p| p["saver"]["enabled"] == true);
+            let key = (saver, battery_saver::output_key(&hub));
+            if saver_applied.as_ref() != Some(&key) {
+                match battery_saver::update(&hub, paths, saver).await {
+                    Ok(()) => saver_applied = Some(key),
+                    Err(error) => {
+                        tracing::warn!(%error, "Battery saver output preference could not be applied")
+                    }
+                }
+            }
+        }
+        let desired = desired_profile(preferences.as_ref(), battery);
         if desired.is_empty() {
             applied.clear();
         } else if desired != applied
@@ -779,7 +802,7 @@ pub async fn power_profile(hub: Shared, system: zbus::Connection) -> Result<()> 
         }
         tokio::select! {
             event = events.next() => { event.ok_or("System bus event stream ended")?; }
-            result = changed(&mut notices, &["settings.store.power"]) => result?,
+            result = changed(&mut notices, &["settings.store.power", "compositor"]) => result?,
         }
     }
 }
@@ -1103,8 +1126,8 @@ pub async fn battery_alerts(
 pub async fn run_rotation(hub: Shared, paths: Paths) -> Result<()> {
     rotation(hub, paths, Env::system()?).await
 }
-pub async fn run_power_profile(hub: Shared) -> Result<()> {
-    power_profile(hub, zbus::Connection::system().await?).await
+pub async fn run_power_profile(hub: Shared, paths: Paths) -> Result<()> {
+    power_profile(hub, zbus::Connection::system().await?, Some(paths)).await
 }
 pub async fn run_battery_alerts(hub: Shared, paths: Paths) -> Result<()> {
     battery_alerts(

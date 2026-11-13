@@ -31,13 +31,14 @@ use std::{
 pub const APPS: [&str; 6] = ["settings", "chat", "colors", "welcome", "prompt", "widgets"];
 
 /// Topics every app follows: Nacre's text catalog and the settings that shape the look.
-const TOPICS: [&str; 6] = [
+const TOPICS: [&str; 7] = [
     "daemon",
     "i18n",
     prefs::DESKTOP,
     prefs::DASHBOARD,
     prefs::PROFILE,
     prefs::LAUNCHER_LAYOUT,
+    prefs::POWER,
 ];
 
 pub struct Host {
@@ -844,6 +845,7 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
     // The look follows the owner's settings like the shell's: motion, text style, frame size.
     let panel_gate = crate::shell_control::Gate::new();
     let prefs_gate = panel_gate.clone();
+    let motion_policy = prefs::MotionPolicy::new();
     let (first, first_seen) = std::sync::mpsc::sync_channel::<()>(1);
     let _prefs = client.as_ref().and_then(|client| {
         prefs::Service::start_with(
@@ -851,17 +853,28 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
             topic(client, prefs::DASHBOARD)?,
             topic(client, prefs::PROFILE),
             topic(client, prefs::LAUNCHER_LAYOUT),
-            Arc::new(move |p: &prefs::Prefs| {
-                prefs_gate.apply(p);
-                bead::core::animation::set_reduced_motion(p.reduce_motion);
-                crate::theme::apply(p);
-                placement::set_sheen(p.frame_sheen);
-                placement::Frame::set_current(placement::Frame::from_settings(&p.frame_settings()));
-                let _ = first.try_send(());
-            }),
+            {
+                let motion_policy = motion_policy.clone();
+                Arc::new(move |p: &prefs::Prefs| {
+                    prefs_gate.apply(p);
+                    motion_policy.apply_user(p.reduce_motion);
+                    crate::theme::apply(p);
+                    placement::set_sheen(p.frame_sheen);
+                    placement::Frame::set_current(placement::Frame::from_settings(
+                        &p.frame_settings(),
+                    ));
+                    let _ = first.try_send(());
+                })
+            },
         )
         .ok()
     });
+    if let Some(client) = &client
+        && let (Some(power), Ok(battery)) =
+            (topic(client, prefs::POWER), client.view_topic("battery"))
+    {
+        motion_policy.bind(power, battery);
+    }
     let mut options = Options {
         namespace: format!("nacre-app-{name}"),
         command_socket,

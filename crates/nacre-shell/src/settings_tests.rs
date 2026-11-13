@@ -166,6 +166,52 @@ fn capability_gates_collection_wallpapers_and_niri_workspace_preferences() {
 }
 
 #[test]
+fn power_controls_follow_their_backend_capabilities() {
+    for (capable, expected) in [(false, false), (true, true)] {
+        let (settings, _) = fixture_with(
+            json!({}),
+            &[(
+                "capabilities",
+                json!({"flags": {
+                    "battery": true,
+                    "batterySaver": capable,
+                    "powerIdle": capable,
+                    "powerHardware": capable
+                }}),
+            )],
+        );
+        let rows = items(&settings.project(&stores("power", "")));
+        for id in [
+            "power.saver.batterySaver",
+            "power.idle.dim",
+            "power.idle.sleep",
+            "power.hardware.lid",
+            "power.hardware.button",
+        ] {
+            assert_eq!(rows.iter().any(|row| row["id"] == id), expected, "{id}");
+        }
+    }
+    // Desktop sessions still need idle and hardware controls without a battery.
+    let (settings, _) = fixture_with(
+        json!({}),
+        &[(
+            "capabilities",
+            json!({"flags": {
+                "battery": false, "powerIdle": true, "powerHardware": true
+            }}),
+        )],
+    );
+    let rows = items(&settings.project(&stores("power", "")));
+    assert!(rows.iter().any(|row| row["id"] == "power.idle.dim"));
+    assert!(rows.iter().any(|row| row["id"] == "power.hardware.button"));
+    assert!(
+        !rows
+            .iter()
+            .any(|row| row["id"] == "power.saver.batterySaver")
+    );
+}
+
+#[test]
 fn appearance_rows_follow_the_registry_types_and_the_store_with_nacre_defaults() {
     let (settings, _) =
         fixture(json!({"textSize": 14, "frameSheen": false, "monoFont": "Fira Code"}));
