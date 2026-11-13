@@ -174,15 +174,18 @@ images are a listed gap); the worker socket is a new local trust boundary (0600,
 frames, the same handler validation as HTTP); Ask keeps its explicit opt-in before any Claude call;
 the semantic search worker stays optional and off by default.
 
-## 5. Open questions for the owner
+## 5. Owner decisions (2026-11-13)
 
-1. Direction: A (rail), B (canvas floor), or the recommended mix (A's rail and pages, B's graph)?
-2. Without a GPU, is "open on the local graph with a banner, full graph one click away" right, or
-   should the full graph stay the default at reduced quality?
-3. Drop the old Connections view (world cards, confidence) in phase 2, or keep it as a page?
-4. Ask the Brain: keep the opt-in toggle in the app's Ask panel, or move it to Settings only?
-5. Should the graph include worlds/areas as hub nodes (Obsidian "folders") or stay notes-only with
-   worlds as colour and filter (designed and rendered: notes-only)?
+"Mix looks good, I think all of it looks good really":
+
+1. Direction: the recommended mix. A's side rail and plain pages for Overview, Search and the note
+   reader; B's full-window graph; the reader beside the note's neighbourhood graph on wide windows.
+2. Without a GPU the graph opens on the note's neighbourhood with a banner and an "Open full graph"
+   action (the full graph on CPU stays a labelled simplified mode, never the default).
+3. The old Connections view (world cards, confidence) is removed once the graph lands (phase 2).
+4. The "Ask the Brain" opt-in switch lives in the app, next to Ask.
+5. The graph shows notes only, coloured by world; worlds and areas are the filter and legend, not
+   hub nodes.
 
 ## 6. Evidence (design only)
 
