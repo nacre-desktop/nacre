@@ -1385,7 +1385,11 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
         )
     );
     // DND is a plain toggle (no chevron); the Notifications heading opens the in-panel list.
-    assert!(!node_ids(&h).iter().any(|i| i.contains("tile-dnd.detail-open")));
+    assert!(
+        !node_ids(&h)
+            .iter()
+            .any(|i| i.contains("tile-dnd.detail-open"))
+    );
     let (x, y) = centre(&h, "notices-title");
     h.script([Input::Click { x, y }, Input::Release])?;
     assert_eq!(
