@@ -20,9 +20,6 @@ pub fn policy(paths: &Paths) -> Result<Value> {
             .filter(|s| ["required", "native"].contains(s))
             .ok_or("Invalid registered AUR review policy")?;
         (mode, "registered-profile-setting")
-    } else if profile["id"].as_str().is_some_and(|id| id != "default") {
-        // Preserve pre-existing custom profile behavior without identifying an account or host.
-        ("native", "legacy-custom-profile-default")
     } else {
         ("required", "general-profile-default")
     };
@@ -864,7 +861,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn registered_policy_reports_provenance_and_retains_any_legacy_custom_profile() -> Result<()> {
+    fn registered_policy_reports_provenance_and_reviews_every_profile_by_default() -> Result<()> {
         let root = tempfile::tempdir()?;
         let paths = Paths::new(root.path());
         assert_eq!(policy(&paths)?["mode"], "required");
@@ -876,8 +873,8 @@ mod tests {
             ),
             (
                 json!({"id":"studio-profile"}),
-                "native",
-                "legacy-custom-profile-default",
+                "required",
+                "general-profile-default",
             ),
             (
                 json!({"id":"studio-profile","aurReview":"required"}),
