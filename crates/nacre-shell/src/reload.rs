@@ -6080,6 +6080,16 @@ impl SceneSource for Runtime {
     }
     fn stage(&mut self, mut event: UiEvent) -> Result<Option<Scene>, Box<dyn Error>> {
         let now = std::time::Instant::now();
+        if self.launcher.is_some()
+            && matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(id)) if !id.is_empty())
+            && matches!(&event, UiEvent::Command { command, .. } if command == "escape")
+        {
+            let scene = self.session.update(BTreeMap::from([(
+                "launcher.chooser".into(),
+                bead::core::Value::Text(String::new()),
+            )]))?;
+            return self.finish_scene(scene);
+        }
         if self
             .reattach_hover_grace_until
             .is_some_and(|deadline| now >= deadline)
@@ -6529,7 +6539,10 @@ impl SceneSource for Runtime {
                     && self
                         .session
                         .focused_action()
-                        .is_some_and(|(_, action, _)| action == "launcher.quick")
+                        .is_some_and(|(_, action, _)| {
+                            action == "launcher.quick"
+                                || (self.launcher.is_some() && action == "select_app")
+                        })
                 {
                     event = UiEvent::Command {
                         command: "enter".into(),
@@ -8267,6 +8280,13 @@ impl SceneSource for Runtime {
         };
         if let (Some(menu), Some(id)) = (&self.launcher, launcher_id) {
             self.actions.authorize("select_app")?;
+            if menu.is_value_group(&id) {
+                let scene = self.session.update(BTreeMap::from([
+                    ("launcher.selection".into(), bead::core::Value::Text(id.clone())),
+                    ("launcher.chooser".into(), bead::core::Value::Text(id)),
+                ]))?;
+                return self.finish_scene(scene);
+            }
             let changes = match menu.activate(&id) {
                 Ok(result)
                     if let Some(launch) = crate::key_routes::activation_view(&result) =>
@@ -8274,7 +8294,14 @@ impl SceneSource for Runtime {
                     self.open_launcher(launch, false, None)?;
                     return self.finish_scene(None);
                 }
-                Ok(result) => crate::launcher::activation_changes(result),
+                Ok(result) => {
+                    let mut changes = crate::launcher::activation_changes(result);
+                    changes.insert(
+                        "launcher.chooser".into(),
+                        bead::core::Value::Text(String::new()),
+                    );
+                    changes
+                }
                 Err(error) => std::collections::BTreeMap::from([(
                     "launcher.error".into(),
                     bead::core::Value::Text(error.message),

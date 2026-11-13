@@ -5,6 +5,7 @@ return {
     ["launcher.mode"]="apps", ["launcher.error"]="", ["launcher.pending"]=false, ["launcher.icon_placeholder"]=false, ["launcher.result_count"]=0, ["launcher.total_count"]=0,
     ["launcher.rail.scroll"]=0, ["launcher.rail.order"]={}, ["launcher.rail.hidden"]={}, ["launcher.groups"]={},
     ["launcher.selection"] = "", ["launcher.route"] = "apps", ["launcher.engine_route"]="",
+    ["launcher.chooser"]="", ["launcher.icon_tint"]=.35,
     ["launcher.focus_zone"]="search",
     ["launcher.focus_template"]="",
     ["launcher.search.text"] = "", ["launcher.result_query"] = "", ["launcher.scroll.y"] = 0,
@@ -18,7 +19,7 @@ return {
     ["launcher.form.v1"]="", ["launcher.form.v2"]="", ["launcher.form.v3"]="", ["launcher.form.v4"]="",
   },
   actions = {
-    select_app = function(s,id) s["launcher.selection"] = id end,
+    select_app = function(s,id) s["launcher.selection"] = id s["launcher.chooser"]="" end,
     toggle_favorite = function(s,id) s["launcher.selection"] = id end,
     ["launcher.quick"] = function(_) end,
     -- B0208: `>plugin` mode; the host installs, enables and updates (spec 0203 plugin state).

@@ -26,6 +26,29 @@ local function HintRow()
     end
     return ui.Row{id="hints",position="absolute",right=34,top=535,height=24,gap=6,visible=ui.bind("launcher.hints"),table.unpack(chips)}
 end
+local function Chooser()
+    local id=ui.resolve_for_check(ui.bind("launcher.chooser"))
+    if id=="" then return ui.Box{visible=false,width=0,height=0} end
+    local group
+    for _,item in ipairs(ui.resolve_for_check(ui.bind("launcher.apps"))) do
+        if item.id==id then group=item break end
+    end
+    if not group then return ui.Box{visible=false,width=0,height=0} end
+    local options={}
+    for _,choice in ipairs(group.choices or {}) do
+        options[#options+1]=kit.Button{id="choice-"..choice.id,width="fill",height=36,padding=6,radius=7,
+            fill=choice.checked and ui.tint("surfaceContainer","primary",.13) or "transparent",
+            aria_label=choice.name..(choice.checked and ". selected" or ""),on_activate=ui.action("select_app",choice.id),
+            ui.Row{width="fill",height=36,align="center",gap=8,
+                ui.Text{text=choice.checked and "check" or "",width=18,height=20,family="Material Symbols Rounded",font_size=16,color="primary"},
+                ui.Text{text=choice.name,grow=1,height=22,font_size=13.333,color="onSurface"}}
+        }
+    end
+    return kit.Card{id="value-chooser",position="absolute",right=8,top=2,width=300,gap=4,padding=8,
+        radius=10,fill="surfaceContainerHigh",border_width=1,border_color="outlineVariant",
+        ui.Text{id="chooser-title",text=group.name,height=24,font_size=13.333,color="onSurfaceVariant"},
+        table.unpack(options)}
+end
 local has_detail = ui.resolve_for_check(ui.bind("launcher.has_detail"))
 local detail_only = has_detail and ui.resolve_for_check(ui.bind("launcher.result_count")) == 0
 local detail = ui.Box{visible=false,height=0}
@@ -66,7 +89,7 @@ local body={
             ui.resolve_for_check(ui.bind("launcher.plugin.active")) and Plugins()
                 or detail_only and ui.Box{grow=1} or ui.resolve_for_check(ui.bind("launcher.grid"))
                 and ui.Box{id="grid-host",grow=1,AppGrid{}}
-                or ui.Box{id="results-host",grow=1,Results{}},
+                or ui.Box{id="results-host",grow=1,Results{},Chooser()},
             ui.Box{height=10},
         },
         show_quick and ui.Box{width=M.quick_width+M.quick_gap,height=0,shrink=0} or nil,

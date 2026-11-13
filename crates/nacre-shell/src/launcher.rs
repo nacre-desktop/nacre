@@ -198,6 +198,12 @@ fn prepare(reply: Json, expected_query: Option<&str>) -> source::Result<Prepared
         if let Some(checked) = item.checked {
             row["checked"] = Json::Bool(checked);
         }
+        if let Some(choices) = item.presentation.as_ref().and_then(|value| value.get("choices")) {
+            row["choices"] = choices.clone();
+        }
+        if item.presentation.as_ref().is_some_and(|value| value["toggle"] == true) {
+            row["toggle"] = Json::Bool(true);
+        }
         rows.push(row);
     }
     Ok(Prepared {
@@ -1166,6 +1172,19 @@ impl Menu {
         Some(expanded)
     }
     pub fn activate(&self, id: &str) -> source::Result<MenuActivated> {
+        let choice_group = {
+            let view = self.view.borrow();
+            view.rows.iter().find_map(|row| {
+                row["choices"]
+                    .as_array()?
+                    .iter()
+                    .any(|choice| choice["id"].as_str() == Some(id))
+                    .then(|| row["id"].as_str().unwrap_or_default().to_owned())
+            })
+        };
+        if let Some(group) = choice_group {
+            return self.activate_choice(&group, id);
+        }
         for attempt in 0..2 {
             match self.activate_once(id) {
                 Err(error) if error.code == "stale_revision" && attempt == 0 => {
@@ -1175,6 +1194,97 @@ impl Menu {
             }
         }
         unreachable!("the launcher activation retry is bounded to one retry")
+    }
+
+    pub(crate) fn is_value_group(&self, id: &str) -> bool {
+        self.view.borrow().rows.iter().any(|row| {
+            row["id"] == id
+                && row["disabled"] != true
+                && row["choices"].as_array().is_some_and(|choices| !choices.is_empty())
+        })
+    }
+
+    fn activate_choice(&self, group: &str, id: &str) -> source::Result<MenuActivated> {
+        let (source, before) = {
+            let view = self.view.borrow();
+            if !view.rows.iter().any(|row| {
+                row["id"] == group
+                    && row["disabled"] != true
+                    && row["choices"].as_array().is_some_and(|choices| {
+                        choices.iter().any(|choice| choice["id"] == id)
+                    })
+            }) {
+                return Err(source::Error::new(
+                    "unavailable",
+                    &tr("bead.launcher.result-unavailable", &[]),
+                    true,
+                ));
+            }
+            let source = self.source.as_ref().ok_or_else(|| {
+                source::Error::new(
+                    "unavailable",
+                    &tr("bead.launcher.service-unavailable", &[]),
+                    true,
+                )
+            })?;
+            (source.clone(), source.snapshot())
+        };
+        let params = json!({"query":"","mode":"apps","route":group,"presentation":true});
+        let reply = self.runtime.block_on(query(source.as_ref(), params, Duration::from_secs(3)))?;
+        let prepared = prepare_for(reply, &(String::new(), "apps".into(), group.into()))?;
+        let _row = prepared
+            .rows
+            .iter()
+            .find(|row| row["id"] == id && row["disabled"] != true)
+            .ok_or_else(|| {
+                source::Error::new(
+                    "stale_revision",
+                    &tr("bead.launcher.changed", &[]),
+                    true,
+                )
+            })?;
+        let activation = prepared.actions.get(id).cloned().ok_or_else(|| {
+            source::Error::new(
+                "unavailable",
+                &tr("bead.launcher.no-activation", &[]),
+                false,
+            )
+        })?;
+        let current = source.snapshot();
+        if !current.connected
+            || current.epoch != before.epoch
+            || current.revision != before.revision
+        {
+            return Err(source::Error::new(
+                "stale_revision",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
+        }
+        let request = MenuActivate {
+            id: id.into(),
+            activation,
+            catalog_rev: prepared.catalog_rev,
+        };
+        request.validate().map_err(|_| invalid_menu())?;
+        let result = self
+            .runtime
+            .block_on(source.call(
+                "menu.activate".into(),
+                serde_json::to_value(request).map_err(|_| invalid_menu())?,
+                Duration::from_secs(3),
+            ))
+            .and_then(|reply| {
+                let result: MenuActivated =
+                    serde_json::from_value(reply).map_err(|_| invalid_menu())?;
+                result.validate().map_err(|_| invalid_menu())?;
+                Ok(result)
+            })?;
+        let mut view = self.view.borrow_mut();
+        view.request = None;
+        view.result_request = None;
+        view.grid = None;
+        Ok(result)
     }
 
     fn refresh_for_activation(&self, id: &str) -> source::Result<()> {
@@ -1213,7 +1323,7 @@ impl Menu {
                 true,
             ));
         }
-        let params = json!({"query":request.0,"mode":request.1,
+        let params = json!({"query":request.0,"mode":request.1,"presentation":true,
             "route":if request.2.is_empty(){Json::Null}else{json!(request.2)}});
         let reply =
             self.runtime
@@ -1571,7 +1681,7 @@ impl Menu {
                 && matches!(stores.get("launcher.total_count"), Some(Value::Number(_)));
             if self.source.is_some() {
                 let _query = bead::core::profile::Span::new("menu_query_schedule");
-                let mut params = json!({"query":request.0,"mode":request.1,
+                let mut params = json!({"query":request.0,"mode":request.1,"presentation":true,
                     "route":if request.2.is_empty(){Json::Null}else{json!(request.2)}});
                 if limited {
                     params["limit"] = json!(64);
@@ -1906,6 +2016,17 @@ mod tests {
                 ("launcher.scroll.y".into(), Value::Number(0.)),
             ]))
             .unwrap()
+    }
+    #[test]
+    fn prepared_rows_retain_toggle_and_value_choice_presentation() {
+        let reply = fixture_reply(
+            "",
+            vec![json!({"id":"style.appearance","name":"Appearance","kind":"group",
+                "presentation":{"toggle":true,"choices":[{"id":"style.appearance.dark","name":"Dark","checked":true}]}})],
+        );
+        let prepared = prepare(reply, Some("")).unwrap();
+        assert_eq!(prepared.rows[0]["toggle"], true);
+        assert_eq!(prepared.rows[0]["choices"][0]["id"], "style.appearance.dark");
     }
     fn project_wait(
         menu: &Menu,

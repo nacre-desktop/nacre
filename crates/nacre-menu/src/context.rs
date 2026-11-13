@@ -248,6 +248,27 @@ impl Context {
         } else {
             String::new()
         });
+        let is_toggle = matches!(
+            row["state"].as_str(),
+            Some("setting" | "dnd" | "night-light" | "stay-awake" | "mute" | "mic-mute" | "wifi" | "bluetooth")
+        );
+        if is_toggle {
+            out["toggle"] = json!(true);
+        }
+        if row["kind"] == "group" {
+            let choices: Vec<_> = model::children(&text::field(row, "id"), self.rows())
+                .iter()
+                .filter(|child| self.visible(child))
+                .map(|child| {
+                    let selected = self.checked(child) == Some(true);
+                    json!({"id":child["id"],"name":child["label"],"checked":selected})
+                })
+                .collect();
+            if let Some(choice) = choices.iter().find(|choice| choice["checked"] == true) {
+                out["status"] = choice["name"].clone();
+                out["choices"] = json!(choices);
+            }
+        }
         let capability = text::field(row, "capability");
         if !self.visible(row) {
             out["hidden"] = json!(true);
@@ -385,5 +406,42 @@ impl Context {
             .iter()
             .find(|r| r["id"] == id)
             .map(|r| self.decorate(r))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn value_groups_expose_the_selected_child_and_choices() {
+        let rows = json!([
+            {"id":"style.appearance","kind":"group","label":"Light and dark"},
+            {"id":"style.appearance.light","kind":"action","label":"Light","state":"palette-mode","value":"light"},
+            {"id":"style.appearance.dark","kind":"action","label":"Dark","state":"palette-mode","value":"dark"},
+            {"id":"style.more","kind":"group","label":"More"}
+        ]);
+        let mut context = Context::new(json!({"rows":rows}), json!({}), "en", 0.0).unwrap();
+        context.wallpapers["appearancePreferences"] = json!({"paletteMode":"dark"});
+
+        let appearance = context.node("style.appearance").unwrap();
+        assert_eq!(appearance["status"], "Dark");
+        assert_eq!(appearance["choices"].as_array().unwrap().len(), 2);
+        assert_eq!(appearance["choices"][1]["checked"], true);
+        assert!(context.node("style.more").unwrap().get("choices").is_none());
+    }
+
+    #[test]
+    fn setting_rows_are_marked_as_toggles_independent_of_locale() {
+        let rows = json!([
+            {"id":"style","kind":"group","label":"Style"},
+            {"id":"style.shadows","kind":"action","label":"Window shadows","state":"setting","value":"windowShadows"}
+        ]);
+        let mut context = Context::new(json!({"rows":rows}), json!({}), "en", 0.0).unwrap();
+        context.settings["windowShadows"] = json!(false);
+        let toggle = context.node("style.shadows").unwrap();
+        assert_eq!(toggle["toggle"], true);
+        assert_eq!(toggle["checked"], false);
+        assert_eq!(toggle["status"], "Off");
     }
 }
