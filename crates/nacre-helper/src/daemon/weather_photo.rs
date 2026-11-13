@@ -1,6 +1,9 @@
 //! City photos are leased by topic subscription, with cancellable async network work.
 mod fetch;
-use super::{behaviours, hub::Shared};
+use super::{
+    behaviours,
+    hub::{Notice, Shared},
+};
 use crate::{paths::Paths, Result};
 use futures_util::future::LocalBoxFuture;
 pub use nacre_protocol::weather_photo::TOPIC;
@@ -27,6 +30,19 @@ fn publish(
         })?,
     )?;
     Ok(())
+}
+/// Notices that can change this producer's inputs; the rest are skipped
+/// before touching any snapshot.
+fn relevant(
+    notice: &std::result::Result<Notice, tokio::sync::broadcast::error::RecvError>,
+) -> bool {
+    match notice {
+        Ok(Notice::Changed { topic, .. }) => {
+            topic == super::weather::TOPIC || topic == "settings.store.dashboard-extras"
+        }
+        Ok(_) => false,
+        Err(_) => true,
+    }
 }
 pub fn initial(hub: &Shared) -> Result<()> {
     publish(hub, false, Status::Disabled, None, None)
@@ -69,7 +85,7 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
         while !*interest.borrow() {
             tokio::select! {
                 result = interest.changed() => result?,
-                result = notices.recv() => { let _ = result; let consent = enabled(&hub); publish(&hub, consent, if consent {Status::Idle} else {Status::Disabled}, None, None)?; }
+                result = notices.recv() => { if !relevant(&result) { continue; } let consent = enabled(&hub); publish(&hub, consent, if consent {Status::Idle} else {Status::Disabled}, None, None)?; }
             }
         }
         // Unknown session state is paused: no request before the first logind reading.
@@ -82,11 +98,14 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
         let mut attempted: Option<Location> = None;
         let mut pending: Option<LocalBoxFuture<'static, Result<fetch::Photo>>> = None;
         let mut current = None;
+        let mut entered = false;
         while *interest.borrow() {
             tokio::select! {
                 biased;
                 result = interest.changed() => {result?; if !*interest.borrow() {break;}},
-                result = notices.recv() => {let _ = result;},
+                // The first pass reads the leased inputs at once, without waiting for a notice.
+                _ = std::future::ready(()), if !entered => {entered = true;},
+                result = notices.recv() => { if !relevant(&result) { continue; } },
                 state = async {session.as_mut().expect("session").next().await}, if session.is_some() => {paused = state?;},
                 result = async {pending.as_mut().expect("pending").await}, if pending.is_some() => {
                     pending = None;

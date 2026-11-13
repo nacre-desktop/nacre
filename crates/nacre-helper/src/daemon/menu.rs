@@ -1497,14 +1497,13 @@ async fn run_inner(
                         if changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}
                     },
                     Ok(super::hub::Notice::Changed{topic,..}) if topic=="compositor"=>{
-                        let snapshot=hub.borrow().snapshot("compositor");
-                        if let Some(snapshot)=snapshot {let changed=compositor_inputs(&mut engine.loaded.context,&snapshot);engine.prepare_queries().await?;if changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}}
+                        let changed={let hub=hub.borrow();hub.snapshot_ref("compositor").map(|snapshot|compositor_inputs(&mut engine.loaded.context,snapshot))};
+                        if let Some(changed)=changed {engine.prepare_queries().await?;if changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}}
                     },
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(_))=>{
                         tracing::warn!("Launcher missed state updates; resynchronizing current inputs");
                         let capabilities_changed=capability_inputs(&mut engine.loaded.context,hub.borrow().snapshot_ref("capabilities").unwrap_or(&Value::Null));
-                        let snapshot=hub.borrow().snapshot("compositor");
-                        let backend_changed=snapshot.as_ref().is_some_and(|snapshot|compositor_inputs(&mut engine.loaded.context,snapshot));
+                        let backend_changed={let hub=hub.borrow();hub.snapshot_ref("compositor").is_some_and(|snapshot|compositor_inputs(&mut engine.loaded.context,snapshot))};
                         engine.prepare_queries().await?;
                         if capabilities_changed || backend_changed {hub.borrow_mut().publish_transition("menu",engine.status())?;}
                     },

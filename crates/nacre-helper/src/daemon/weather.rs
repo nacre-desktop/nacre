@@ -279,8 +279,13 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
     loop {
         tokio::select! {
             _ = timer.tick() => pending = true,
-            notice = notices.recv() => {
-                if notice.is_err() {pending = true;}
+            notice = notices.recv() => match notice {
+                // Only the weather settings and a finished refresh (lane
+                // released after a Busy start) matter here.
+                Ok(super::hub::Notice::Changed { topic, .. })
+                    if topic == "settings.store.desktop" || topic == TOPIC => {}
+                Ok(_) => continue,
+                Err(_) => pending = true,
             },
         }
         let current = weather_settings(&settings_snapshot(&hub));
