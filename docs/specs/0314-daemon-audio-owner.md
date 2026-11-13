@@ -50,28 +50,44 @@ Not daemon paths, left alone: `pactl` in `launcher_workflows.rs` (audio reset wo
   peak math, `audio_spectrum.rs` the analyser, leases and projection. A stream without a
   target follows the default device, so the spectrum no longer reopens on a sink switch.
 
-Topic contracts are unchanged (fixtures and schemas untouched). Stream ids stay
+Topic contracts are unchanged (fixtures and schemas untouched). Sources are `Audio/Source` and
+`Audio/Source/Virtual` nodes (EasyEffects or noise suppression can be the default), as pactl
+listed them; sink monitors stay out. Stream ids stay
 `sink-input:<id>`/`source-output:<id>`: pipewire-pulse's indices were the PipeWire object
 ids. Device volumes are read from node `Props` (linear); `readback.perceptual_volume` is
 the cube root as before, now to 4 decimals instead of pactl's `/65536`.
 
 Behaviour differences worth knowing: `audio.adjust_volume` now snaps to whole percent like
 `audio.step` (it shared no caller with a finer delta); the client connects at daemon start
-and stays connected (idle cost is zero wakeups; the shell subscribes `audio` permanently
-after N0227 anyway), where the old `pactl subscribe` ran only under a lease.
+and stays connected (the shell subscribes `audio` permanently after N0227 anyway), where the
+old `pactl subscribe` ran only under a lease. With no PipeWire server the client retries
+with backoff up to every 8 s.
 
-## Measurements (dev-1 container, private PipeWire 1.6.11 + WirePlumber + pipewire-pulse, null sink)
+## Measurements (dev-1, `nacre-ci/arch-nacre:current` plus pipewire, wireplumber, pipewire-pulse; null sink)
 
-Release daemons before (origin/main a415f9b3) and after, each alone with a fake niri socket
-and one client subscribed to `audio` + `osd`; `.lead/n0314/measure.py`.
+Release daemons from origin/main 111f3bb3b (before) and the same base plus N0314 (after),
+run alternately, each alone with a fake niri socket and one client subscribed to `audio` +
+`osd` (`.lead/n0314/measure.py`; two runs each, values per run).
 
 | | before | after |
 | --- | --- | --- |
-| child processes while an audio lease is held | `pactl subscribe` (+ a one-shot per change) | none |
-| threads at start | 5 | 3 |
-| idle 60 s: context switches/s, CPU | 5.75/s, 0.33 % | 7.2/s, 0.28 % (within noise; the client is event-driven) |
-| 10 external `wpctl set-volume` changes: OSD latency median, CPU, ctx switches | 94.7 ms, 4.0 % of a core, 656 | 31.5 ms, 0.46 %, 105 |
-| 10 `audio.step` key steps on the fast socket: OSD latency median, CPU, ctx switches | 1.0 ms, 5.5 % of a core, 680 | 0.4 ms, 0.0 %, 120 |
+| child processes while `audio` is subscribed | `pactl subscribe` (+ up to ten one-shots per change) | none |
+| threads | 3 (main, `nacre-audio-step`, fast lane) | 3 (main, `nacre-audio`, fast lane) |
+| idle 60 s: context switches/s | 7.07, 7.03 | 7.00, 6.93 |
+| idle 60 s: CPU | 0.27 %, 0.30 % | 0.32 %, 0.28 % |
+| idle 60 s: switches on the audio thread | 0, 0 | 0, 0 |
+| 10 external `wpctl set-volume` changes: OSD latency median | 95.3 ms, 95.3 ms | 31.1 ms, 31.3 ms |
+| same: CPU, context switches | 4.0 %, 3.6 %; 641, 632 | 0.23 %, 0.0 %; 97, 97 |
+| 10 `audio.step` key steps on the fast socket: OSD latency median | 0.8 ms, 0.9 ms | 0.5 ms, 0.5 ms |
+| same: CPU, context switches | 5.0 %, 5.7 %; 671, 686 | 0.0 %, 0.0 %; 126, 121 |
+
+Idle wakeups: the first measurement (5.75 → 7.23/s, on another base) was run-to-run noise.
+Per thread, every idle switch in both daemons is on the main thread (~420 per 60 s); under
+`strace -f` the `nacre-audio` thread made no system call in a 60 s idle window. The main
+thread's wakeups are the 500 ms caps-lock LED tick, each spawning a short-lived read thread
+on that base (133 clones in 60 s; N0311's offload-thread reuse, now on main, keeps one): the
+harness's fake niri reports no lock state, so NN0036's compositor path is not taken. That is
+N0305/NN0036 territory, not the audio client.
 
 The external-change latency is the 25 ms coalescing window plus one server round trip; the
 old path spawned up to ten processes per change. Both daemons ended the step sequence at the
@@ -86,18 +102,27 @@ same linear level (0.421875 = 75 % perceptual), so the step math is unchanged.
 - `control_center`, `pill_controls`, `fast` tests assert the commands sent to a fake handle;
   `osd` tests lost their `wpctl`/`pactl` scripts; `tests/daemon.rs` asserts an audio lease
   spawns nothing; the memory harness's spectrum phase is lease-only without a server.
+- Run on dev-1 in `nacre-ci/arch-nacre:current` with the vendored cargo set, on main 09c152aac:
+  `cargo fmt --check`, `cargo clippy -p nacre-helper -p nacre-protocol --all-targets -- -D
+  warnings`, `cargo test -p nacre-protocol` (121 passed) and `cargo test -p nacre-helper
+  --no-fail-fast` passed, except `tests/desktop_settings.rs`, which needs the
+  `desktop-settings-test` example that CI builds first (`--examples`) and this job did not.
+  `live_pipewire_roundtrip` passed against PipeWire, WirePlumber and pipewire-pulse with a
+  null sink and an `Audio/Source/Virtual` null source as the default source. On the previous
+  base (dev-2), the memory harness (`memory::`) and the nacre-shell audio consumers
+  (`nacre_source`, `audio_runtime`, `status_views`, `control_center`: 158) passed.
 
-## For the Shell lead (N0227): what the bar pills read from the in-process Desktop
+## For the Shell lead: what N0227's daemon-backed pills read
 
-| Shell field (bead `Snapshot`) | Daemon topic | Note |
+N0227 (on main) moved the bar audio pill, the desktop sound widget and the volume OSD to daemon
+topics. Compared field by field with what this client publishes:
+
+| Shell reader | Reads | Published here |
 | --- | --- | --- |
-| `audio.volume`, `audio.muted`, `audio.default_sink` | `audio`: `default_output` + `nodes.items[id].readback.{perceptual_volume,muted}`, `name` is the description | covered |
-| `audio.mic_volume`, `audio.mic_muted` (OSD) | `audio`: `default_input` likewise | covered |
-| `battery.{available,percentage,charging,on_battery}` | `battery` | covered |
-| `network.{connected,wireless_enabled,name,strength}` | `network`: `primary_connection`, `connections`, `access_points[].strength/active` | derivable |
-| `bluetooth.{powered,connected_devices}` | `bluetooth`: `adapters[].powered`, `devices[].connected` | covered |
-| `session.{locked,sleeping}` (wallpaper_motion pause) | `session` (record) | confirm the record carries lock and sleep; otherwise a two-field topic is cheap |
-| MPRIS `Player.{track_id,art_url,position_at}` | `dashboard.player` has `art_path`, `position_updated_ms`; no `track_id` | shell does not read `track_id` today |
-| `clock`, `date` | none | local to the shell |
+| `reload/bar_daemon.rs` (bar audio pill, sound widget), `status_views.rs` (sound page) | `audio`: `health.{available,stale}`, `default_output`/`default_input`, `nodes.items[id].{kind,name,ready,volume,muted}`, `readback.{perceptual_volume,muted}` | all; same contract as before |
+| `notice_service.rs` (OSD) | `osd` events `volume`/`microphone`/`output`: `value`, `muted`, `label`, `device` | all, from the default nodes and from every step |
+| `bar_routes.rs` (scroll, right-click) | `audio.adjust_volume {delta}`, `audio.toggle_mute {}` | both; `adjust_volume` now shows the volume OSD at once instead of via the `pactl` echo |
+| Media (dashboard, launcher) | `dashboard.player` | not N0314 (MPRIS, unchanged) |
 
-Nothing was added to the daemon topics: no field was missing for a pill.
+No audio field is missing for Shell. N0227's open requests are outside audio and unchanged:
+P1, logind `locked`/`sleeping` not published; P2, no tray tooltip description.
