@@ -513,6 +513,41 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
 }
 
 #[test]
+fn launcher_panel_origin_stays_put_while_keyboard_focus_crosses_zones() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let colors = bead::render::Palette::read(&root().join("palette.json"))?;
+    let attachment = crate::placement::Attachment::Attached(bead::core::Edge::Bottom);
+    let mut runtime = keyboard_runtime("")?.with_frame(attachment, &colors)?;
+    let positioner = crate::placement::Frame::default().positioner(attachment);
+    let mut origins = Vec::new();
+    for command in ["right", "right", "left", "left", "right"] {
+        let scene = runtime
+            .stage(UiEvent::Command {
+                command: command.into(),
+                shift: false,
+            })?
+            .expect("focus moves produce a scene");
+        runtime.commit();
+        let body = crate::placement::body(&scene);
+        assert_eq!(
+            (body.w, body.h),
+            (1100., 590.),
+            "panel body after {command}"
+        );
+        origins.push(positioner(&scene, None, (1920, 1200)));
+    }
+    assert_eq!(
+        runtime.session.stores.get("launcher.focus_zone"),
+        Some(&Value::Text("content".into()))
+    );
+    assert!(
+        origins.iter().all(|origin| origin == &origins[0]),
+        "panel origin moved with keyboard focus: {origins:?}"
+    );
+    Ok(())
+}
+
+#[test]
 fn launcher_entering_loading_content_focuses_the_first_result_when_it_arrives() -> Result<()> {
     for query in ["empty", "a"] {
         let gate = std::sync::Arc::new(tokio::sync::Notify::new());
