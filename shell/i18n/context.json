@@ -479,6 +479,8 @@
   "bead.panel.control-edit-title": "Bead control center: heading of the tile editor page.",
   "bead.panel.control-empty": "Bead control center: message shown when the tile grid has no available tile.",
   "bead.panel.control-keyboard": "Bead control center: name of the full-width keyboard backlight slider tile, shown under its icon and in the edit lists.",
+  "bead.panel.control-output-device": "Bead control center: accessible name of the 28 px button at the end of the volume row that opens the sound page (output device list).",
+  "bead.panel.control-mic-unmute": "Bead control center: accessible name of the mic button at the end of the brightness row while the microphone is muted; pressing it unmutes.",
   "bead.panel.control-mic": "Bead control center: name of the microphone mute toggle tile, shown under its icon and in the edit lists.",
   "bead.panel.control-mic-volume": "Bead control center: name of the full-width microphone volume slider tile, shown under its icon and in the edit lists.",
   "bead.panel.control-mode-auto": "Bead control center: appearance tile state, the colour mode that follows the wallpaper or time of day.",

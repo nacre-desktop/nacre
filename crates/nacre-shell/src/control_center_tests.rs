@@ -1350,9 +1350,16 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
             .unwrap_or_else(|| panic!("no node {part}"));
         (node.action.clone(), node.action_arg.clone())
     };
-    // As in QML, the Wi-Fi tile opens its page (the switch lives there); a toggle tile still toggles.
+    // D4: the Wi-Fi tile's main press toggles and its split chevron opens the page; a toggle tile toggles.
     assert_eq!(
         action(&h, "tile-network.main"),
+        (
+            Some("cc.do".into()),
+            Some(Value::Text("toggle:network.wifi".into()))
+        )
+    );
+    assert_eq!(
+        action(&h, "tile-network.detail-open"),
         (Some("detail".into()), Some(Value::Text("network".into())))
     );
     assert_eq!(
@@ -1363,7 +1370,7 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
         )
     );
     assert_eq!(
-        action(&h, "tile-clipboard.main"),
+        action(&h, "tile-clipboard"),
         (
             Some("cc.do".into()),
             Some(Value::Text("open:clipboard".into()))
@@ -1377,8 +1384,9 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
             Some(Value::Text("set:audio.output:50".into()))
         )
     );
-    // A tile with an in-panel page opens it without leaving the panel.
-    let (x, y) = centre(&h, "tile-dnd.detail-open");
+    // DND is a plain toggle (no chevron); the Notifications heading opens the in-panel list.
+    assert!(!node_ids(&h).iter().any(|i| i.contains("tile-dnd.detail-open")));
+    let (x, y) = centre(&h, "notices-title");
     h.script([Input::Click { x, y }, Input::Release])?;
     assert_eq!(
         h.session.stores.get("cc.page"),
@@ -1386,7 +1394,7 @@ fn tiles_dispatch_host_actions_and_the_detail_page_opens_in_place() -> bead_test
     );
     assert_eq!(
         h.session.stores.get("cc.detail"),
-        Some(&Value::Text("dnd".into()))
+        Some(&Value::Text("notifications".into()))
     );
     Ok(())
 }
@@ -1882,7 +1890,7 @@ fn unsupported_tiles_hide_and_catalog_order_is_the_unsaved_default() -> bead_tes
         )
         .y
     };
-    assert!(y("tile-volume.toggle") < y("tile-mic-volume.toggle"));
+    assert!(y("tile-volume.toggle") < y("tile-brightness.toggle"));
     golden("default-order", &mut h, 1.)?;
     let Value::List(items) = out["cc.src"].clone() else {
         panic!()

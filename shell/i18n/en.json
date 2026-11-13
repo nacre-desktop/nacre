@@ -509,6 +509,8 @@
   "bead.panel.control-edit-title": "Edit controls",
   "bead.panel.control-empty": "No controls are available. Use Edit to add some.",
   "bead.panel.control-keyboard": "Keyboard backlight",
+  "bead.panel.control-output-device": "Output device",
+  "bead.panel.control-mic-unmute": "Unmute microphone",
   "bead.panel.control-mic": "Mic mute",
   "bead.panel.control-mic-volume": "Microphone volume",
   "bead.panel.control-mode-auto": "Auto",

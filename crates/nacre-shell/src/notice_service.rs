@@ -99,7 +99,7 @@ pub fn hover_key(name: &str, arg: &Value) -> Option<String> {
     Some(text.split('|').take(2).collect::<Vec<_>>().join("|"))
 }
 
-fn time_str(age_ms: u64) -> String {
+pub(crate) fn time_str(age_ms: u64) -> String {
     let s = age_ms / 1000;
     match s {
         0..60 => "now".into(),

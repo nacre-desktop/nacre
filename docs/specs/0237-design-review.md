@@ -100,3 +100,48 @@ keeps the 120 Hz cadence. Reduced motion: Bead snaps every `ui.animate` to its t
 
 Palette-tinted monochrome icon, `kit.Badge`, attention pulse, animation restart/`from`, the D16
 easing names, Orient `warn`/`good` roles. Stand-ins are marked in the code and above.
+
+## D4 control panel overview (N0238)
+
+Scope: the control panel's home page in `shell/control/` (Luau on Bead kit components, palette roles only).
+Rust only where the view needs data (`crates/nacre-shell/src/control_center.rs`).
+
+What changed
+- Sliders first: Volume and Brightness are 56 px rows (`slider_row`, radius 16, `surfaceContainer`) with a mute
+  icon button at the left, the stepped kit slider, the value 38 px wide and a 28 px end button: the output
+  device (opens the sound page) on Volume, the microphone mute on Brightness (`mic_off` in `error` while muted).
+  The Mic mute tile is deleted (replaced by that button); Mic volume stays in the registry but out of the default
+  layout (the sound page already has the input level).
+- Tiles: 2 × 2, 64 px, `kit.ToggleTile`; `primaryContainer` when on. The main press toggles; only Wi-Fi,
+  Bluetooth and Power mode (tiles with a detail page) keep the split chevron. DND is a plain toggle; the
+  Notifications heading opens the full in-panel list instead of DND's chevron.
+- Chips (`chip()`, 36 px pills, wrap by measured width): the appearance segment (Light | Dark | Auto in one
+  pill), Night light (hidden on stock niri as before), Screenshot, Pick colour, Clipboard, Updates with a count
+  badge from `dashboard.updates` (`cc.updates`), plus Record, Displays, Wallpaper, Next wallpaper and
+  Notifications when added. Buttons and `chip=true` toggles are chips; the edit page orders chips in the same
+  list as the tiles (one saved order).
+- Notifications: heading row (16 px/600, DND and Clear chips at 30 px) then 72 px rows (`notice_row`): app icon
+  in a 28 px `surfaceContainerHighest` square, "app · time" caption (`when` from `created_ms`, same
+  `time_str` as the toasts), 600-weight title, one body line, × dismiss (`dismiss:notifications:<id>|<rev>`,
+  history rows are forgotten). The same row is used by the notifications page and the windowed peek list.
+- Section ids `sliders`, `tiles`, `chips`, `notices` under `home` are stable scroll targets for D5.
+- Strings: `bead.panel.control-output-device`, `bead.panel.control-mic-unmute` (shell catalog + context).
+
+Known gaps (listed in `.lead/kit-asks.md`, forwarded to the Bead lead)
+- Brighter primary container: an Orient tone (`palette.rs` dark container L 0.35 → 0.40), not a shell change;
+  lands with an Orient commit + submodule bump + `shell/palette.json` refresh (D17 or its own unit).
+- Kit tile keeps radius 24 and 13.3 px/500 labels (ask: tile tokens); the × on notification rows is always drawn
+  (ask: hover-only children); plain toggles have no long-press detail path (ask: secondary activation).
+- Per-app grouping after 3 notifications is not implemented (D9 shares the row; one later unit).
+- Motion: the panel's open/close curves are unchanged (D5/D16); no per-frame allocation was added (the home
+  page is a static tree; chips wrap at build time).
+
+Motion evidence (dev-2, `frame_cost_bench` release, CPU renderer, scale 1.5, 120 Hz slide of the real
+`control/main.luau` route; candidate vs origin/main base): open total p50/p95/max 0.688/0.752/3.34 ms vs
+0.682/0.733/3.36 ms; close 0.314/0.404/0.42 ms vs 0.327/0.416/0.56 ms; 79 prims both. The panel's slide path is
+untouched by D4, so the nested desktop PANEL_SLIDE capture is deferred to D5 (the unit that changes the motion);
+the laptop live audit by the lead stays the gate.
+
+Evidence: `.lead/renders/` in the worktree (before = previous goldens, after = real-renderer PNGs in dark and
+light, hover, pressed and focus states; README there). Goldens updated: control-overview, control-detail,
+control-default-order, control-n0046-overview, control-notifications-*, control-unsupported (1× and 1.5×).

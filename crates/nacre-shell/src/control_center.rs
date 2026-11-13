@@ -17,7 +17,7 @@ use serde_json::{Value as Json, json};
 use std::{cell::RefCell, collections::BTreeMap, sync::Arc, time::Duration};
 
 /// Topics a tile source may read; the panel leases each for as long as it is open.
-pub const TOPICS: [&str; 9] = [
+pub const TOPICS: [&str; 10] = [
     "audio",
     "controls",
     "network",
@@ -27,6 +27,7 @@ pub const TOPICS: [&str; 9] = [
     "battery",
     "notifications",
     "displays",
+    "dashboard.updates",
 ];
 /// The VPN tile's source; its profile list and `switch` verb feed the dock page (N0062).
 const VPN: &str = "vpn.state";
@@ -924,6 +925,10 @@ impl ControlCenter {
     /// Only the home summary limits rows; the notification dropdown must scroll them all.
     fn notices(&self) -> Vec<(String, Value)> {
         let data = self.data("notifications").filter(|d| healthy(d));
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
         let rows: Vec<Json> = ["active", "history"]
             .into_iter()
             .flat_map(|kind| {
@@ -940,6 +945,8 @@ impl ControlCenter {
                         let mut row = json!({
                             "id": id.as_str()?, "app": item["app_name"].as_str().unwrap_or(""),
                             "summary": item["summary"].as_str().unwrap_or(""), "body": item["body"].as_str().unwrap_or(""),
+                            "rev": item["revision"].as_u64().unwrap_or(0),
+                            "when": crate::notice_service::time_str(now.saturating_sub(item["created_ms"].as_u64().unwrap_or(now))),
                         });
                         let icon = crate::notice_service::icon_fields(
                             item["icon"].as_str(),
@@ -1166,6 +1173,21 @@ impl ControlCenter {
             "switch" if source == VPN => self.vpn_switch(rest),
             "clear" if source == "notifications" => {
                 self.begin(source, "notifications.clear", json!({"scope": "history"}));
+            }
+            // The row's dismiss button: `dismiss:notifications:<id>|<revision>`; a history row is forgotten.
+            "dismiss" if source == "notifications" => {
+                if let Some((id, rev)) = rest.split_once('|')
+                    && let Ok(rev) = rev.parse::<u64>()
+                {
+                    let forget = self
+                        .data("notifications")
+                        .is_none_or(|d| !d["active"]["items"][id].is_object());
+                    self.begin(
+                        source,
+                        "notifications.dismiss",
+                        json!({"id": id, "revision": rev, "forget": forget}),
+                    );
+                }
             }
             // The QML gear: open the Settings window, closing the dock as `openSettings` does.
             // `open:settings[:page]` (the gear, Wallpaper) and `open:clipboard`.
@@ -1414,6 +1436,16 @@ impl ControlCenter {
                 }),
             ),
             ("cc.battery_estimate".into(), text(estimate)),
+            // The Updates chip badge: the published dashboard count, never a provider.
+            (
+                "cc.updates".into(),
+                Value::Number(
+                    self.data("dashboard.updates")
+                        .filter(|d| healthy(d))
+                        .and_then(|d| d["count"].as_u64())
+                        .unwrap_or(0) as f64,
+                ),
+            ),
             // B0067: the dock is as tall as the framed viewport (QML: the sidebar keeps the full frame height).
             (
                 "cc.max_height".into(),

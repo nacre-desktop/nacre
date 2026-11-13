@@ -87,115 +87,186 @@ local function message()
     return {ui.Text{id="message",text=text~="" and text or ui.tr("bead.panel.control-readonly"),width=INNER,height=CAPTION*3,font_size=CAPTION,
         color=text~="" and "error" or "onSurfaceVariant"},CAPTION*3}
 end
+-- Design review D4 (N0238) geometry: 56 px slider rows with a 28 px end button, 64 px tiles two per row,
+-- 36 px chips that wrap, and 72 px notification rows. Sections carry stable ids (sliders, tiles, chips,
+-- notices) so a later unit (D5) can scroll the grown peek to them.
+local TILE_GAP,END,CHIP_H=T.spacing.compact,28,36
+local function act(t,verb) return ui.action("cc.do",verb..":"..t.source) end
+-- A 28 px circle at the end of a slider row (the output device on volume, mic mute on brightness).
+local function end_button(id,icon,label,action,ink)
+    return kit.IconButton{id=id,text=icon,aria_label=label,width=END,height=END,padding=0,radius=T.radii.full,shrink=0,
+        font_size=T.icons.medium*4/3,fill="surface",hover_fill="surfaceContainerHighest",color=ink or "onSurfaceVariant",on_activate=action}
+end
+-- Level row: icon button (mute) at the left, the stepped slider, the value 38 px wide, then `tail` (an end button).
+local function slider_row(t,w,h,tail)
+    local s=t.source and src[t.source] or {}
+    local label=ui.tr(t.label)
+    local armed=s.set==true
+    local tail_w=tail and END+T.spacing.sm or 0
+    local slider_w=w-T.spacing.lg-HEAD-T.spacing.sm*2-48-tail_w-T.spacing.md
+    local slider_props={id="level",width=slider_w,value=s.value or 0,min=0,max=100,step=5,label=label,enabled=armed,
+        on_change=armed and "cc.do" or nil,change_arg=function(n) return "set:"..t.source..":"..n end,
+        echo_value=type(s.value_steps)=="number" and s.value_steps>0 and function(n) return math.floor(n/100*s.value_steps+.5)/s.value_steps*100 end or nil,
+        pointer_format={prefix="set:"..t.source..":",precision=3},
+        local_label=s.status and s.status~="" and {id="../value",format={prefix="",suffix="%",precision=0}} or nil}
+    return ui.Row{id="tile-"..t.id,width=w,height=h,radius=T.radii.medium,fill="surfaceContainer",padding_left=T.spacing.lg,padding_right=T.spacing.md,gap=T.spacing.sm,align="center",
+        kit.IconButton{id="toggle",text=s.icon or t.icon,aria_label=label,width=HEAD,height=HEAD,padding=0,radius=T.radii.full,shrink=0,font_size=17*4/3,
+            fill="transparent",hover_fill=ui.alpha("onSurface",.08),color="primary",on_activate=s.toggle and act(t,"toggle") or nil},
+        kit.Slider(slider_props),
+        ui.Text{id="value",text=kit.SliderValue(slider_props,s.status or ""),width=48,height=20,shrink=0,text_align="right",font_size=CAPTION,color="onSurfaceVariant"},
+        tail}
+end
+-- The appearance segment: Light | Dark | Auto in one pill (QML NacreControlAppearance), 4 px inside, 2 px between.
+local function segment(t,h)
+    local s=src[t.source] or {}
+    local modes={{"light","light_mode","bead.panel.control-mode-light"},{"dark","dark_mode","bead.panel.control-mode-dark"},
+        {"auto","brightness_auto","bead.panel.control-mode-auto"}}
+    local inset,between,icon=T.spacing.xs,T.spacing.hairline,T.icons.medium*4/3
+    local row={id="tile-"..t.id,height=h,padding=inset,gap=between,radius=T.radii.full,fill="surfaceContainer",align="center",shrink=0}
+    local w=2*inset+(#modes-1)*between
+    for i,m in ipairs(modes) do
+        local picked=s.mode==m[1]
+        local name=ui.tr(m[3])
+        local text_w=textw(name,CAPTION)
+        local seg=T.spacing.compact*2+icon+T.spacing.xs+text_w
+        w=w+seg
+        row[i]=kit.Button{id="mode-"..m[1],width=seg,height=h-2*inset,padding=0,radius=T.radii.full,selected=picked,
+            fill=picked and "primaryContainer" or "transparent",hover_fill=picked and "primaryContainer" or ui.alpha("onSurface",.06),aria_label=name,
+            on_activate=s.toggle and ui.action("cc.do","choose:"..t.source..":"..m[1]) or nil,
+            ui.Row{id="mode-row-"..m[1],width=seg,height=h-2*inset,gap=T.spacing.xs,align="center",justify="center",
+                glyph("mode-icon-"..m[1],m[2],picked and "onPrimaryContainer" or "onSurfaceVariant",icon),
+                ui.Text{id="mode-label-"..m[1],text=name,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,
+                    color=picked and "onPrimaryContainer" or "onSurface"}}}
+    end
+    row.width=w
+    return ui.Row(row),w
+end
+-- A chip: icon, label and an optional count badge in a pill; `on` fills it with the primary container.
+local function chip(id,label,icon,action,on,count,h)
+    h=h or CHIP_H
+    local armed=action~=nil
+    local ink,icon_ink=on and "onPrimaryContainer" or "onSurface",on and "onPrimaryContainer" or "onSurfaceVariant"
+    local icon_px=T.icons.medium*4/3
+    -- 500-weight labels run a little wider than the estimate ("Wallpaper")
+    local text_w=textw(label,CAPTION)+T.spacing.xs
+    local w=T.spacing.compact+icon_px+T.spacing.xs+text_w+T.spacing.lg
+    local badge
+    if count and count>0 then
+        local text=tostring(count)
+        local bw=math.max(15,textw(text,T.text.caption)+4)
+        badge=ui.Box{id="badge",position="absolute",left=T.spacing.compact+icon_px-bw+6,top=(h-icon_px)/2-5,width=bw,height=15,radius=T.radii.full,fill="primary",
+            ui.Text{id="count",text=text,width=bw,height=15,text_align="center",font_size=T.text.caption,font_weight=600,color="onPrimary"}}
+    end
+    return kit.Button{id=id,width=w,height=h,padding=0,shrink=0,radius=T.radii.full,selected=on,
+        fill=ui.alpha(on and "primaryContainer" or "surfaceContainer",armed and 1 or .4),hover_fill=on and "primaryContainer" or "surfaceContainerHigh",
+        aria_label=label,on_activate=action,
+        ui.Row{id=id.."-row",width=w,height=h,padding_left=T.spacing.compact,gap=T.spacing.xs,align="center",
+            glyph(id.."-icon",icon,icon_ink,icon_px),
+            ui.Text{id=id.."-label",text=label,width=text_w,height=18,shrink=0,font_size=CAPTION,font_weight=500,color=ink}},
+        badge},w
+end
 local function build_tile(t,w,h,embedded)
     local s=t.source and src[t.source] or {}
     local label=ui.tr(t.label)
-    local function act(verb) return ui.action("cc.do",verb..":"..t.source) end
     local opener
     if t.dock and not embedded then opener=ui.action("detail",t.dock)
     elseif t.view and views[t.view] then opener=ui.action("view.open",t.view)
     elseif t.page then opener=ui.action("detail",t.id) end
-    local id="tile-"..t.id
     if t.kind=="slider" then
-        return kit.SliderTile{id=id,width=w,height=h,on_detail=opener,detail_label=label,icon=s.icon or t.icon,label=label,caption=s.label~="" and s.label or nil,detail=s.status,value=s.value or 0,
-            on_toggle=s.toggle and act("toggle") or nil,on_change=s.set and "cc.do" or nil,
-            echo_value=type(s.value_steps)=="number" and s.value_steps>0 and function(n) return math.floor(n/100*s.value_steps+.5)/s.value_steps*100 end or nil,
-            change_arg=function(n) return "set:"..t.source..":"..n end,
-            pointer_format={prefix="set:"..t.source..":",precision=3}}
-    elseif t.kind=="segmented" then
-        -- Light | Dark | Auto as one control (QML NacreControlAppearance): a raised pill, 4 px inside, 2 px between the three
-        -- segments; the daemon names the mode that is set.
-        local modes={{"light","light_mode","bead.panel.control-mode-light"},{"dark","dark_mode","bead.panel.control-mode-dark"},
-            {"auto","brightness_auto","bead.panel.control-mode-auto"}}
-        local inset,between=T.spacing.xs,T.spacing.hairline
-        local seg=(w-2*inset-(#modes-1)*between)/#modes
-        local row={id=id,width=w,height=h,padding=inset,gap=between,radius=h/2,fill="surfaceContainer",align="center"}
-        for i,m in ipairs(modes) do
-            local picked=s.mode==m[1]
-            local name=ui.tr(m[3])
-            row[i]=kit.Button{id="mode-"..m[1],width=seg,height=h-2*inset,padding=0,radius=18,selected=picked,
-                fill=picked and "primaryContainer" or "transparent",hover_fill=picked and "primaryContainer" or ui.alpha("onSurface",.06),aria_label=name,
-                on_activate=s.toggle and ui.action("cc.do","choose:"..t.source..":"..m[1]) or nil,
-                ui.Row{id="mode-row-"..m[1],width=seg,height=h-2*inset,gap=6,align="center",justify="center",
-                    glyph("mode-icon-"..m[1],m[2],picked and "onPrimaryContainer" or "onSurfaceVariant",13*4/3),
-                    ui.Text{id="mode-label-"..m[1],text=name,width=(utf8.len(name) or 4)*8+4,height=22,shrink=0,font_size=CAPTION,
-                        color=picked and "onPrimaryContainer" or "onSurface"}}}
+        local tail
+        if t.id=="volume" and not embedded then
+            tail=end_button("device","speaker",ui.tr("bead.panel.control-output-device"),opener)
+        elseif t.id=="brightness" and not embedded then
+            local mic=src["audio.input"]
+            if mic and mic.available then
+                -- the mic is an input: its mute lives at the end of the brightness row, red while muted
+                tail=end_button("mic",mic.on and "mic_off" or "mic",mic.on and ui.tr("bead.panel.control-mic-unmute") or ui.tr("bead.panel.control-mic"),
+                    mic.toggle and ui.action("cc.do","toggle:audio.input") or nil,mic.on and "error" or nil)
+            end
         end
-        return ui.Row(row)
-    elseif t.kind=="link" then
-        -- Link tiles open their dock page or their local choice list.
-        local choosing=not t.dock and s.choices and #s.choices>0
-        return kit.LinkTile{id=id,width=w,height=h,icon=s.icon or t.icon,label=label,detail=s.status,on=s.on==true,
-            on_activate=choosing and ui.action("detail",t.id) or opener}
+        return slider_row(t,w,h,tail)
+    elseif t.kind=="segmented" then
+        return segment(t,h)
     elseif t.kind=="button" then
-        return kit.ButtonTile{id=id,width=w,height=h,icon=t.icon,label=label,on_activate=t.open and ui.action("cc.do","open:"..t.open) or s.press and act("press") or opener}
+        return chip("tile-"..t.id,label,t.icon,t.open and ui.action("cc.do","open:"..t.open) or s.press and act(t,"press") or opener,false,
+            t.id=="updates" and get("cc.updates") or nil,h)
+    elseif t.chip then
+        return chip("tile-"..t.id,label,s.icon or t.icon,s.toggle and act(t,"toggle") or opener,s.on==true,nil,h)
     end
-    -- A navigation tile (QML `navigation`) opens its page on every press; the chevron is the same opener.
-    local nav=t.navigate and opener or nil
-    -- the mic switch shares its source with the microphone slider, so its words are On/Off, not the level
-    local detail=t.onoff and (s.on and ui.tr("bead.common.on") or ui.tr("bead.common.off")) or s.status
-    return kit.ToggleTile{id=id,width=w,height=h,icon=s.icon or t.icon,label=label,detail=detail,on=s.on==true,
-        on_activate=nav or (s.toggle and act("toggle") or opener),on_detail=nav or (s.toggle and opener or nil),
+    -- A tile: the main press toggles (or opens the page when it cannot); only tiles with a detail page
+    -- (Wi-Fi, Bluetooth, Power mode) get the split chevron.
+    local split=(t.dock or t.navigate) and opener or nil
+    return kit.ToggleTile{id="tile-"..t.id,width=w,height=h,icon=s.icon or t.icon,label=label,detail=s.status,on=s.on==true,
+        on_activate=(t.navigate or not s.toggle) and opener or act(t,"toggle"),on_detail=split,
         detail_label=ui.tr("bead.panel.control-details",{name=label})}
 end
-local NOTICE_H=70
+local NOTICE_H=72
 local function noticeIcon(n)
-    if n.icon_path and n.icon_path~="" then return ui.Image{id="app-icon",icon=n.icon_path,width=28,height=28,aria_label=n.app} end
-    return ui.Image{id="app-icon",path="notifications/fallback.themed.svg",width=28,height=28,aria_label=n.app}
+    local px=T.icons.medium*4/3
+    local image
+    if n.icon_path and n.icon_path~="" then image=ui.Image{id="app-icon",icon=n.icon_path,width=px,height=px,aria_label=n.app}
+    else image=ui.Image{id="app-icon",path="notifications/fallback.themed.svg",width=px,height=px,aria_label=n.app} end
+    return ui.Box{id="app-tile",width=END,height=END,radius=T.radii.small,fill="surfaceContainerHighest",shrink=0,padding=(END-px)/2,image}
 end
-local function notice_card(n)
-    return kit.Card{id="notice-"..n.id,width=INNER,height=NOTICE_H,shrink=0,padding=T.spacing.sm,gap=0,padding_left=T.spacing.md,
-        ui.Row{id="notice-content",width="fill",height=54,gap=T.spacing.sm,align="center",
-            noticeIcon(n),
-            ui.Column{id="notice-text",grow=1,gap=0,
-                ui.Text{id="app",text=n.app,width="fill",height=16,font_size=CAPTION,color="onSurfaceVariant"},
-                ui.Text{id="summary",text=n.summary,width="fill",height=22,font_size=BODY,color="onSurface"},
-                ui.Text{id="body",text=n.body,width="fill",height=16,font_size=CAPTION,color="onSurfaceVariant"}}}}
+-- A notification row: app glyph in a tinted square, "app · time", the title, one line of body, and a dismiss button.
+local function notice_row(n)
+    local caption=n.when and n.when~="" and n.app.." · "..n.when or n.app
+    local text_w=INNER-T.spacing.md*2-END-T.spacing.compact*2-END
+    return ui.Row{id="notice-"..n.id,width=INNER,height=NOTICE_H,shrink=0,radius=T.radii.medium,fill="surfaceContainer",
+        padding_left=T.spacing.md,padding_right=T.spacing.md,gap=T.spacing.compact,align="center",
+        noticeIcon(n),
+        ui.Column{id="notice-text",width=text_w,gap=0,
+            ui.Text{id="app",text=caption,width=text_w,height=16,font_size=CAPTION,color="onSurfaceVariant"},
+            ui.Text{id="summary",text=n.summary,width=text_w,height=20,font_size=BODY,font_weight=600,color="onSurface"},
+            ui.Text{id="body",text=n.body,width=text_w,height=16,font_size=CAPTION,color="onSurfaceVariant"}},
+        kit.IconButton{id="dismiss",text="close",aria_label=ui.tr("bead.notifications.dismiss"),width=END,height=END,padding=0,radius=T.radii.full,shrink=0,
+            font_size=T.icons.medium*4/3,fill="transparent",hover_fill="surfaceContainerHighest",color="onSurfaceVariant",
+            on_activate=n.rev~=nil and ui.action("cc.do","dismiss:notifications:"..n.id.."|"..n.rev) or nil}}
 end
 local function notices_empty()
     local text=get("cc.notice_ready") and ui.tr("bead.panel.control-notices-empty") or ui.tr("bead.panel.control-notices-loading")
     local height=popup and 22 or CAPTION*2
     return {ui.Text{id="notices-empty",text=text,width=INNER,height=height,font_size=popup and BODY or CAPTION,color="onSurfaceVariant"},height}
 end
--- QML `ActionButton` (compact): a 34 px pill, 12 pt glyph and a caption-size label, `primary` while selected, dimmed to 40 %
--- while it cannot act. The label's width is an estimate (the layout cannot measure text).
-local function pill(id,label,icon,action,selected)
-    local armed=action~=nil
-    local ink=selected and "onPrimary" or "onSurface"
-    local text_w=textw(label,CAPTION)
-    local w=T.spacing.xl+text_w+(icon and 22 or 0)
-    local inside={id=id.."-row",width=w,height=34,gap=T.spacing.xs,align="center",justify="center"}
-    if icon then inside[#inside+1]=glyph(id.."-icon",icon,ink,T.icons.small*4/3) end
-    inside[#inside+1]=ui.Text{id=id.."-label",text=label,width=text_w,height=18,shrink=0,font_size=CAPTION,color=ink}
-    return kit.Button{id=id,width=w,height=34,padding=0,shrink=0,radius=T.radii.full,
-        fill=ui.alpha(selected and "primary" or "surfaceContainerHigh",armed and 1 or .4),aria_label=label,on_activate=action,
-        ui.Row(inside)}
-end
--- The notification summary under the tiles (the QML history popup in the full sidebar): the title with the DND and
--- Clear pills, then the newest two entries; limit 0 supplies only the heading
--- and status text for the windowed popup list.
+-- The notification section under the chips: the title with the DND and Clear chips, then the newest entries;
+-- limit 0 supplies only the heading and status text for the windowed popup list.
 local function notices(limit,page)
     local list=get("cc.notices")
     local clear=get("cc.notice_clear")
     local dnd=src["notifications.dnd"]
-    local row={id="notices-head",width=INNER,height=34,gap=T.spacing.sm+2,align="center"}
-    row[#row+1]=ui.Text{id="notices-title",text=page and "" or ui.tr("bead.panel.control-notifications"),height=HEAD,grow=1,shrink=1,
-        font_size=T.text.title*4/3,color="onSurface"}
+    local head_h=CHIP_H-6
+    local row={id="notices-head",width=INNER,height=head_h,gap=T.spacing.sm,align="center"}
+    local title=ui.tr("bead.panel.control-notifications")
+    -- the heading opens the full in-panel list (DND lost its chevron: it is a plain toggle)
+    row[#row+1]=page and ui.Text{id="notices-title",text="",height=head_h,grow=1,shrink=1,font_size=BODY,color="onSurface"}
+        or kit.Button{id="notices-title",height=head_h,grow=1,shrink=1,padding=0,radius=T.radii.small,fill="transparent",hover_fill=ui.alpha("onSurface",.06),
+            aria_label=title,on_activate=ui.action("detail","notifications"),
+            ui.Text{id="label",text=title,width="fill",height=head_h,font_size=BODY,font_weight=600,color="onSurface"}}
     local on=dnd~=nil and dnd.on==true
-    row[#row+1]=pill("notices-dnd",ui.tr("bead.panel.control-pill-dnd"),on and "do_not_disturb_on" or "notifications_active",
-        dnd and dnd.toggle and ui.action("cc.do","toggle:notifications.dnd") or nil,on)
-    row[#row+1]=pill("notices-clear",ui.tr("bead.panel.control-pill-clear"),nil,
-        clear and ui.action("cc.do","clear:notifications") or nil,false)
-    local items={{ui.Row(row),34}}
+    row[#row+1]=chip("notices-dnd",ui.tr("bead.panel.control-pill-dnd"),on and "do_not_disturb_on" or "notifications_active",
+        dnd and dnd.toggle and ui.action("cc.do","toggle:notifications.dnd") or nil,on,nil,head_h)
+    row[#row+1]=chip("notices-clear",ui.tr("bead.panel.control-pill-clear"),"clear_all",clear and ui.action("cc.do","clear:notifications") or nil,false,nil,head_h)
+    local items={{ui.Row(row),head_h}}
     local note=get("cc.notice_note")
     if note and note~="" then
         table.insert(items,{kit.Paragraph{id="notices-window",text=note,width=INNER,font_size=CAPTION,color="onSurfaceVariant"},CAPTION*2})
     end
     if #list==0 then table.insert(items,notices_empty()) end
     for i,n in ipairs(list) do
-        if not limit or i<=limit then table.insert(items,{notice_card(n),NOTICE_H}) end
+        if not limit or i<=limit then table.insert(items,{notice_row(n),NOTICE_H}) end
     end
     return items
+end
+-- Chips wrap into lines by their measured widths.
+local function chip_lines(nodes)
+    local lines,line,used={},nil,0
+    for _,c in ipairs(nodes) do
+        if not line or used+TILE_GAP+c[2]>INNER then line={} table.insert(lines,line) used=c[2] else used=used+TILE_GAP+c[2] end
+        table.insert(line,c[1])
+    end
+    local rows={}
+    for i,l in ipairs(lines) do rows[i]={ui.Row(table.move(l,1,#l,1,{id="line-"..i,width=INNER,height=CHIP_H,gap=TILE_GAP})),CHIP_H} end
+    return rows
 end
 local function home()
     local status_w=INNER-3*HEAD-3*STATUS_GAP
@@ -214,31 +285,39 @@ local function home()
         tool("edit","edit",ui.tr("bead.panel.control-edit"),ui.action("begin",table.concat(order,",")),page=="edit"),
         tool("settings","settings",ui.tr("bead.panel.control-settings"),ui.action("cc.do","open:settings")),
         tool("power","power_settings_new",ui.tr("bead.panel.control-power"),views.session and ui.action("view.open","session") or nil,false)}
-    local list={}
+    -- Supported but temporarily unavailable controls keep their place under a veil.
+    local function veiled(t,w,h,node,radius)
+        if usable(t) then return node end
+        return ui.Box{id="dim-"..t.id,width=w,height=h,node,
+            ui.Box{id="veil",position="absolute",left=0,top=0,width=w,height=h,radius=radius or T.radii.medium,fill=ui.alpha("surface",0.6)}}
+    end
+    local sliders,tiles,chips={},{},{}
     for _,id in ipairs(order) do
         local t=reg.by_id[id]
         if t and supported(t) then
-            local ok=usable(t)
-            -- Supported but temporarily unavailable tiles retain their explanatory state.
-            table.insert(list,{size=t.size,build=function(w,h)
-                local tile=build_tile(t,w,h)
-                if ok then return tile end
-                return ui.Box{id="dim-"..t.id,width=w,height=h,tile,
-                    ui.Box{id="veil",position="absolute",left=0,top=0,width=w,height=h,radius=T.radii.medium,fill=ui.alpha("surface",0.6)}}
-            end})
+            if t.kind=="slider" then
+                local h=reg.layout.sizes.full.height
+                table.insert(sliders,{veiled(t,INNER,h,build_tile(t,INNER,h)),h})
+            elseif t.kind=="button" or t.kind=="segmented" or t.chip then
+                local node,w=build_tile(t,0,CHIP_H)
+                table.insert(chips,{veiled(t,w,CHIP_H,node,T.radii.full),w})
+            else
+                table.insert(tiles,{size="half",build=function(w,h) return veiled(t,w,h,build_tile(t,w,h)) end})
+            end
         end
     end
     local items={{ui.Row(status),HEAD}}
-    if #list==0 then
+    if #sliders==0 and #tiles==0 and #chips==0 then
         table.insert(items,{ui.Text{id="empty",text=ui.tr("bead.panel.control-empty"),width=INNER,height=CAPTION*3,font_size=CAPTION,color="onSurfaceVariant"},CAPTION*3})
-    else
-        local grid,height=kit.TileGrid{id="grid",width=INNER,gap=GAP,sizes=reg.layout.sizes,tiles=list}
+    end
+    if #sliders>0 then table.insert(items,{stack("sliders",sliders,TILE_GAP)}) end
+    if #tiles>0 then
+        local grid,height=kit.TileGrid{id="tiles",width=INNER,gap=TILE_GAP,sizes=reg.layout.sizes,tiles=tiles}
         table.insert(items,{grid,height})
     end
-    -- the history sits 12 px under its toolbar (QML `NacreHistoryPopup`)
-    local group,height=stack("notices",notices(2,false),T.spacing.md)
-    table.insert(items,{group,height})
-    return stack("home",items,T.spacing.xl)
+    if #chips>0 then table.insert(items,{stack("chips",chip_lines(chips),TILE_GAP)}) end
+    table.insert(items,{stack("notices",notices(2,false),TILE_GAP)})
+    return stack("home",items,T.spacing.md)
 end
 local function row_button(id,icon,label,detail,action,sub)
     local ink=sub and "onSurfaceVariant" or "onSurface"
@@ -308,7 +387,7 @@ local function notifications_page()
     local height=math.max(1,get("cc.max_height")-TOP-PAD)
     local list=require("bead.widgets.kit.virtual-list"){id="history-scroll",scroll=ui.bind("cc.scroll"),
         width=INNER,height=height,model=ui.bind("cc.notices"),key="id",row_height=NOTICE_H,gap=T.spacing.md,
-        before=prefix,before_height=prefix_height,before_gap=#get("cc.notices")>0 and T.spacing.md or 0,render=notice_card}
+        before=prefix,before_height=prefix_height,before_gap=#get("cc.notices")>0 and T.spacing.md or 0,render=notice_row}
     return list,height
 end
 local function detail()
@@ -368,7 +447,7 @@ if popup then
     local visible=math.min(available,list_height)
     local list=require("bead.widgets.kit.virtual-list"){id="scroll",scroll=ui.bind("cc.scroll"),
         width=INNER,height=visible,model=ui.bind("cc.notices"),key="id",row_height=NOTICE_H,gap=GAP,
-        before=prefix,before_height=prefix_height,before_gap=prefix_gap,render=notice_card}
+        before=prefix,before_height=prefix_height,before_gap=prefix_gap,render=notice_row}
     body,content=stack("history-content",{heading,{list,visible}},GAP)
 elseif page=="edit" then body,content=edit()
 elseif page=="catalog" then body,content=catalog()
@@ -376,6 +455,8 @@ elseif page=="detail" then body,content=detail()
 else body,content=home() end
 local max=get("cc.max_height")
 -- B0067: the dock is as tall as the framed viewport (the QML sidebar keeps the full frame height); long pages scroll.
+-- D16: "ease" is the kit's EaseOut, the closest curve to the review's out-cubic open / in-cubic close until the
+-- named easing tokens land (Bead B0263); D5 retargets the peek into this surface.
 local height=popup and math.min(max,content+TOP+PAD) or max
 local inner=body
 if content+TOP+PAD>max then
