@@ -65,4 +65,6 @@ On `4ed5ad01f` (fade fix): fmt, strict clippy, video 10, shell `wallpaper` 56, p
 
 Video main sources unchanged through `4e598a1fb`. Instrumented binaries: main `99f1bf72`,
 N0307 `ef5c174c` (desktop) / `68c49459` (SHM runs). Raw evidence and the harness stay in
-`.lead/`; the desktop was cleaned and its grant removed. Lead lands; no push.
+`.lead/`; the desktop was cleaned and its grant removed.
+
+Acceptance (Platform, 2026-11-13): main showed 121 of 900 frames (~4 fps of a 30 fps clip) on each head, so its lower absolute CPU meant dropped frames. N0307 shows all 900 at a steady 33.3 ms: player CPU +3.2 points (3.40 → 6.57% of a core) and compositor +0.3 points (0.20 → 0.50%) for 7.4× more shown frames, about 4× less player CPU per shown frame. If the owner later wants lower video-wallpaper CPU, the lever is a frame-rate cap for video wallpapers (e.g. 30/24/15 fps, or "match the video, capped"); not built here.
