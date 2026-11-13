@@ -184,7 +184,7 @@ fn reading_away_stops_following_until_the_bottom_is_reached_again() {
     let visible = cells(&out);
     assert!(visible.len() < 100, "{} cells materialized", visible.len());
     assert!(visible.iter().all(|c| c["y"].as_f64().unwrap() < 1500.));
-    // At the bottom: following resumes; "Latest" does the same.
+    // At the bottom: following resumes.
     let current_bottom = f64::from(
         (num(&out, "chat.extent") as f32 - num(&out, "chat.transcript_height") as f32).max(0.),
     );
@@ -198,14 +198,6 @@ fn reading_away_stops_following_until_the_bottom_is_reached_again() {
     let away_from_bottom = current_bottom - 10.;
     let out = chat.project(&stores(&[("chat.scroll", Value::Number(away_from_bottom))]));
     assert_eq!(num(&out, "chat.scroll"), away_from_bottom);
-    chat.act("latest", &stores(&[]));
-    let out = chat.project(&stores(&[("chat.scroll", Value::Number(away_from_bottom))]));
-    assert!(
-        (num(&out, "chat.scroll")
-            - (num(&out, "chat.extent") - num(&out, "chat.transcript_height")))
-        .abs()
-            < 0.01
-    );
 }
 
 #[test]
@@ -414,7 +406,6 @@ fn welcome(boot: u32) -> Message {
         "ai.launcher.list",
         "ai.launcher.open",
         "ai.launcher.new",
-        "ai.launcher.latest",
         "ai.launcher.action",
     ] {
         methods.insert(
@@ -804,7 +795,6 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let launcher = Stores::default();
     let first = chat.project(&launcher);
     assert_eq!(first["launcher.can_new"], Value::Bool(true));
-    assert_eq!(first["launcher.can_latest"], Value::Bool(true));
     assert_eq!(call_with_timeout(&mut lab).await.0, "ai.launcher.list");
     let listed = until(
         &chat,
@@ -814,11 +804,9 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     )
     .await;
     assert_eq!(listed["launcher.can_new"], Value::Bool(true));
-    assert_eq!(listed["launcher.can_latest"], Value::Bool(true));
     let populated = chat.st.borrow().launcher.clone();
     chat.st.borrow_mut().launcher.as_mut().unwrap()["chats"] = json!([]);
     let empty = chat.project(&launcher);
-    assert_eq!(empty["launcher.can_latest"], Value::Bool(true));
     assert!(!string(&empty, "launcher.empty_state").is_empty());
     chat.st.borrow_mut().launcher = populated;
     let Value::List(rows) = &listed["launcher.chats"] else {
@@ -829,6 +817,10 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     assert!(
         rows[0].get("project").is_none(),
         "project labels stay out of rows"
+    );
+    assert_eq!(
+        rows[0]["group"], "Running",
+        "the first running row heads its group"
     );
     assert!(!rows[0]["lastActivityLabel"].as_str().unwrap().is_empty());
 
@@ -869,6 +861,34 @@ async fn launcher_lists_searches_opens_focuses_and_starts_quick_chat_on_demand()
     let back = chat.act("launcher:back", &launcher);
     assert_eq!(back.stores["chat.section"], Value::Text("launcher".into()));
     assert_eq!(back.stores["launcher.quick_chat"], Value::Bool(false));
+    // D7: Enter in the launcher's composer sends the draft with the launcher's provider.
+    let ask = launcher_stores(&[
+        ("launcher.provider", Value::Text("codex".into())),
+        ("chat.draft", Value::Text("hello".into())),
+    ]);
+    let sent = chat.act("launcher:quick-chat", &ask);
+    assert_eq!(sent.stores["chat.draft"], Value::Text(String::new()));
+    let mut seen = Vec::new();
+    while seen.len() < 2 {
+        let call = call_with_timeout(&mut lab).await;
+        if call.0 != "ai.launcher.list" {
+            seen.push(call);
+        }
+    }
+    seen.sort_by(|a, b| a.0.cmp(&b.0));
+    assert_eq!(
+        seen,
+        [
+            (
+                "ai.chat.provider".to_owned(),
+                json!({"channel":"","provider":"codex"})
+            ),
+            (
+                "ai.chat.send".to_owned(),
+                json!({"channel":"","text":"hello","attachments":[]})
+            ),
+        ]
+    );
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -926,7 +946,6 @@ async fn launcher_cache_is_first_frame_and_refreshes_while_actions_stay_availabl
         );
     }
     assert_eq!(first["launcher.can_new"], Value::Bool(true));
-    assert_eq!(first["launcher.can_latest"], Value::Bool(true));
     warm_chat.act("launcher:new", &launcher);
     let mut saw_list = false;
     let mut saw_new = false;
@@ -1013,7 +1032,6 @@ fn unavailable_launcher_does_not_claim_empty_history() {
     let projected = chat.project(&Stores::default());
     assert!(!string(&projected, "launcher.warning").is_empty());
     assert_eq!(string(&projected, "launcher.empty_state"), "");
-    assert_eq!(projected["launcher.can_latest"], Value::Bool(false));
 }
 
 #[test]
@@ -1131,8 +1149,10 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             "chat.header.logo",
             "chat.header.title",
             "chat.header.pin",
-            "chat.start-actions.new-chat",
-            "chat.start-actions.quick-chat",
+            "chat.compose",
+            "chat.composer",
+            "chat.actions.send",
+            "chat.secondary.new-chat",
             "chat.header.provider.claude",
             "chat.header.provider.codex",
             "chat.search",
@@ -1150,7 +1170,7 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             |node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:new")
         ));
         assert!(nodes.iter().any(
-            |node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:latest")
+            |node| matches!(&node.action_arg, Some(Value::Text(arg)) if arg == "launcher:quick-chat")
         ));
         assert!(
             !nodes
@@ -1196,6 +1216,14 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
             }
         }
         golden("launcher", &mut regular, scale)?;
+        if scale == 1. {
+            // D7: the same launcher on the Orient light fixture.
+            golden(
+                "launcher-light",
+                &mut harness_in(projected.clone(), 1., LIGHT)?,
+                1.,
+            )?;
+        }
         let mut detached_projection = projected.clone();
         detached_projection.insert("view.detached".into(), Value::Bool(true));
         let mut detached = harness(detached_projection, scale)?;
@@ -1279,7 +1307,7 @@ async fn missing_ai_shows_the_not_installed_state_and_calls_nothing() -> bead_te
         for id in [
             "chat.header.provider",
             "chat.search",
-            "chat.start-actions",
+            "chat.compose",
             "chat.secondary",
         ] {
             assert!(!shown(id), "{id} needs Nacre AI");
@@ -1318,6 +1346,13 @@ fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::R
             .expect("message bubble");
         let bubble_id = bubble.id.clone();
         let rect = bubble.bounds;
+        let card = regular
+            .scene()
+            .layers
+            .iter()
+            .find(|layer| layer.id == "chat.compose")
+            .expect("composer card")
+            .bounds;
         let composer = regular
             .scene()
             .layers
@@ -1329,7 +1364,7 @@ fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::R
             .scene()
             .layers
             .iter()
-            .find(|layer| layer.id == "chat.send")
+            .find(|layer| layer.id == "chat.actions.send")
             .expect("send button")
             .bounds;
         let actions = regular
@@ -1340,12 +1375,12 @@ fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::R
             .expect("composer actions")
             .bounds;
         assert!(
-            send.x >= composer.x
-                && send.y >= composer.y
-                && send.x + send.w <= composer.x + composer.w
-                && send.y + send.h <= composer.y + composer.h
+            send.x >= card.x
+                && send.y >= card.y
+                && send.x + send.w <= card.x + card.w
+                && send.y + send.h <= card.y + card.h
         );
-        assert!(actions.y >= composer.y + composer.h);
+        assert!(actions.y >= composer.y + composer.h && actions.y + actions.h <= card.y + card.h);
         regular.script([Input::Pointer {
             x: rect.x + rect.w / 2.,
             y: rect.y + rect.h / 2.,
@@ -1438,10 +1473,18 @@ fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::R
 // ---- goldens and the streaming frame budget ----------------------------------
 
 pub(crate) fn harness(out: BTreeMap<String, Value>, scale: f32) -> bead_test::Result<Harness> {
+    harness_in(out, scale, "palette.json")
+}
+const LIGHT: &str = "tests/fixtures/palette-light.json";
+fn harness_in(
+    out: BTreeMap<String, Value>,
+    scale: f32,
+    palette: &str,
+) -> bead_test::Result<Harness> {
     Harness::load(
         &root(),
         Path::new("chat/main.luau"),
-        &root().join("palette.json"),
+        &root().join(palette),
         out,
         bead_test::Config {
             width: FRAME_WIDTH,
@@ -1598,7 +1641,7 @@ fn chat_states_match_goldens() -> bead_test::Result<()> {
             let (_s, chat) = offline(data.clone());
             let mut out = chat.project(&stores(&[("chat.draft", Value::Text((*draft).into()))]));
             out.insert("chat.draft".into(), Value::Text((*draft).into()));
-            let mut h = harness(out, scale)?;
+            let mut h = harness(out.clone(), scale)?;
             // A composer, transcript and (for approval) question rows exist as nodes.
             let ids: Vec<String> = h
                 .session
@@ -1612,6 +1655,10 @@ fn chat_states_match_goldens() -> bead_test::Result<()> {
                 *name == "approval"
             );
             golden(name, &mut h, scale)?;
+            if scale == 1. && *name == "conversation" {
+                let mut light = harness_in(out, 1., LIGHT)?;
+                golden("conversation-light", &mut light, 1.)?;
+            }
         }
     }
     Ok(())

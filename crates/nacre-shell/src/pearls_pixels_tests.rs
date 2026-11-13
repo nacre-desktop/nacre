@@ -31,11 +31,7 @@ fn chat_scene_state(scale: f32, detached: bool) -> Result<Scene> {
     out.insert("panel.open".into(), Value::Bool(true));
     out.insert("launcher.chats".into(), Value::list(vec![serde_json::json!({"key":"demo","title":"Fix the build","provider":"Codex","state":"idle","lastActivityLabel":"2 hr ago"})]));
     out.insert("launcher.selected".into(), Value::Text("demo".into()));
-    for key in [
-        "launcher.can_new",
-        "launcher.can_latest",
-        "launcher.can_open",
-    ] {
+    for key in ["launcher.can_new", "launcher.can_open"] {
         out.insert(key.into(), Value::Bool(true));
     }
     out.insert("view.detached".into(), bead::core::Value::Bool(detached));

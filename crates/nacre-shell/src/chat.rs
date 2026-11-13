@@ -72,6 +72,8 @@ impl CompactTranscript {
         self.inner.layout(entries);
         let scale = &self.inner.style().scale;
         let (gap, strip) = (scale.md, scale.xxl + 3.5 * scale.xs);
+        // D7: a message without a label has no label band either (kit ask 1).
+        let band = scale.md + scale.xs + 1.;
         let (mut original, mut compact) = (0., 0.);
         self.rows.clear();
         for entry in entries {
@@ -92,7 +94,12 @@ impl CompactTranscript {
             if cached.0 != hash {
                 let height = self.measure.layout(std::slice::from_ref(entry));
                 let code = entry.markdown && !markdown::code_blocks(&entry.text).is_empty();
-                *cached = (hash, height, height - if code { 0. } else { strip });
+                let unlabeled = if entry.label.is_empty() { band } else { 0. };
+                *cached = (
+                    hash,
+                    height,
+                    height - if code { 0. } else { strip } - unlabeled,
+                );
             }
             self.rows
                 .insert(entry.key.clone(), (original, compact, cached.2));
@@ -119,6 +126,36 @@ impl CompactTranscript {
             .map(|(key, (original, _, _))| original + self.heights[key].1)
             .reduce(f32::max)
             .unwrap_or(first);
+        // D7 stand-ins until the kit transcript aligns and labels per entry (kit ask 1):
+        // an unlabeled message (the user's own) drops its label band, and a one-line one
+        // hugs the right edge; code blocks sit in a `surface` block; captions are variant.
+        let (width, pad, xs, band) = {
+            let s = &self.inner.style().scale;
+            (self.inner.style().width, s.md, s.xs, s.md + s.xs + 1.)
+        };
+        // Only the window's own user messages are measured, not the whole history.
+        let narrow: BTreeMap<&str, Option<f32>> = entries
+            .iter()
+            .filter(|entry| {
+                entry.label.is_empty()
+                    && self
+                        .rows
+                        .get(&entry.key)
+                        .is_some_and(|(_, top, h)| top + h >= low && *top <= high)
+            })
+            .map(|entry| {
+                let single = !entry.text.contains('\n');
+                let style = self.inner.style();
+                let text = self
+                    .inner
+                    .meter()
+                    .width(&entry.text, &style.sans, style.scale.body);
+                (
+                    entry.key.as_str(),
+                    (single && text + 2. * pad < width).then_some(text + 2. * pad),
+                )
+            })
+            .collect();
         let mut cells = self.inner.window(first, last - first, entries);
         cells.retain_mut(|cell| {
             let id = cell["id"].as_str().unwrap_or_default();
@@ -131,12 +168,31 @@ impl CompactTranscript {
             if top + h < low || top > high {
                 return false;
             }
+            let unlabeled = narrow.get(key).copied();
+            let (bubble, label) = (index == "0", index == "1");
+            if unlabeled.is_some() && label {
+                return false;
+            }
             let key = key.to_owned();
-            let bubble = index == "0";
-            cell["y"] = json!(cell["y"].as_f64().unwrap_or_default() + f64::from(top - original));
+            let lift = if unlabeled.is_some() && !bubble {
+                band
+            } else {
+                0.
+            };
+            cell["y"] =
+                json!(cell["y"].as_f64().unwrap_or_default() + f64::from(top - original - lift));
             cell["message"] = json!(key);
             if bubble {
                 cell["h"] = json!(h);
+            }
+            if let Some(Some(w)) = unlabeled {
+                cell["w"] = json!(if bubble { w } else { w - 2. * pad });
+                cell["x"] = json!(width - w + if bubble { 0. } else { pad });
+            }
+            if label {
+                cell["c"] = json!("onSurfaceVariant");
+            } else if !bubble && cell["b"] == "surfaceContainerHigh" {
+                cell["b"] = json!("surface");
             }
             true
         });
@@ -147,10 +203,14 @@ impl CompactTranscript {
             // Keep each hover action adjacent to its message in keyboard order.
             let copy = cell["id"].as_str().unwrap().ends_with(":0").then(|| {
                 let key = cell["message"].as_str().unwrap();
+                let x = match narrow.get(key) {
+                    Some(Some(w)) => width - w - button - xs,
+                    _ => width - button - xs,
+                };
                 json!({
                     "id": format!("{key}:copy"), "message": key, "k": "button",
                     "a": format!("copy:{key}"), "t": tr("bead.panel.chat-copy", &[]),
-                    "x": self.inner.style().width - button - scale.xs,
+                    "x": x,
                     "y": cell["y"].as_f64().unwrap() + f64::from(scale.xs),
                     "w": button, "h": button, "s": scale.caption,
                 })
@@ -310,6 +370,25 @@ fn number(value: f64) -> Value {
 }
 fn text(value: impl Into<String>) -> Value {
     Value::Text(value.into())
+}
+/// The launcher's rows for a search: running chats first (the D7 "Running" group), then the
+/// daemon's order (newest first).
+fn launcher_rows(data: &Json, query: &str) -> Vec<Json> {
+    let mut rows: Vec<Json> = data["chats"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|row| {
+            query.is_empty()
+                || ["title", "provider"]
+                    .into_iter()
+                    .filter_map(|k| row[k].as_str())
+                    .any(|value| value.to_lowercase().contains(query))
+        })
+        .collect();
+    rows.sort_by_key(|row| row["state"] != "running");
+    rows
 }
 fn provider_name(provider: Provider) -> &'static str {
     match provider {
@@ -793,7 +872,7 @@ impl Chat {
         }
         out.insert("chat.section".into(), text(section.clone()));
         self.remember("chat.section", &section);
-        let labels = ["bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.chat-send", "bead.panel.chat-attach", "bead.panel.chat-screenshot", "bead.panel.chat-latest", "bead.panel.chat-refresh", "bead.panel.chat-codex", "bead.panel.chat-claude"]
+        let labels = ["bead.panel.chat-new", "bead.panel.chat-workspace", "bead.panel.launcher-new-in-project", "bead.panel.chat-codex", "bead.panel.chat-claude"]
             .into_iter().map(|id| {
                 let label = tr(id, &[]);
                 let transcript = self.transcript.borrow();
@@ -833,21 +912,12 @@ impl Chat {
                 Some(Value::Text(s)) => s.to_lowercase(),
                 _ => String::new(),
             };
-            let chats = data["chats"].as_array().cloned().unwrap_or_default();
-            let filtered: Vec<Json> = chats
-                .into_iter()
-                .filter(|row| {
-                    query.is_empty()
-                        || ["title", "provider"]
-                            .into_iter()
-                            .filter_map(|k| row[k].as_str())
-                            .any(|value| value.to_lowercase().contains(&query))
-                })
-                .collect();
+            let filtered = launcher_rows(&data, &query);
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap_or_default()
                 .as_secs_f64();
+            let mut group = "";
             let rows: Vec<Json> = filtered
                 .iter()
                 .map(|row| {
@@ -885,12 +955,22 @@ impl Chat {
                             &[("count", &((age / 86400.).floor() as u64).to_string())],
                         )
                     };
+                    let next = if state == "running" {
+                        "bead.panel.launcher-running"
+                    } else if age < 86400. {
+                        "bead.panel.launcher-today"
+                    } else {
+                        "bead.panel.launcher-earlier"
+                    };
+                    let heading = (next != group).then(|| tr(next, &[]));
+                    group = next;
                     let mut item = row.clone();
                     if let Some(obj) = item.as_object_mut() {
                         obj.remove("project");
                         obj.insert("provider".into(), json!(provider));
                         obj.insert("state".into(), json!(state));
                         obj.insert("lastActivityLabel".into(), json!(last));
+                        obj.insert("group".into(), json!(heading.unwrap_or_default()));
                     }
                     item
                 })
@@ -972,10 +1052,6 @@ impl Chat {
             );
             let action_pending = st.pending.iter().any(|p| p.call == Call::LauncherAction);
             out.insert(
-                "launcher.can_latest".into(),
-                Value::Bool(!action_pending && self.ready("ai.launcher.latest").is_some()),
-            );
-            out.insert(
                 "launcher.can_new".into(),
                 Value::Bool(
                     !action_pending
@@ -1036,16 +1112,11 @@ impl Chat {
         let unit = f64::from(scale.xs);
         let height = (f64::from(st.viewport.1) - 150.).clamp(105. * unit, 202.5 * unit);
         let bottom = height - m.edge;
-        let composer_h = meter.height(
-            &draft,
-            SANS,
-            m.body,
-            m.inner - scale.md - m.button as f32 - scale.xs,
-        ) as f64
+        let composer_h = meter.height(&draft, SANS, m.body, m.inner - 2. * scale.md) as f64
             + 2. * f64::from(scale.md);
         let composer = composer_h.clamp(m.composer_min, m.composer_max);
-        let actions_top = bottom - m.button;
-        let composer_top = actions_top - m.gap - composer;
+        // D7: one card holds the field (top) and its action row (bottom), `gap` inside each edge.
+        let composer_top = bottom - m.gap - m.button - f64::from(scale.xs) - composer - m.gap;
         let mut floor = composer_top - m.gap;
 
         // Approval / question card.
@@ -1151,20 +1222,19 @@ impl Chat {
             for (ordinal, message) in &channel.messages {
                 let user = message.role == Role::User;
                 texts.insert(ordinal.clone(), message.text.clone());
+                // D7: yours in primary-container without a caption, the assistant's in
+                // container-high captioned with the provider (no per-message time in the topic).
                 entries.push(Entry {
                     key: ordinal.clone(),
-                    label: tr(
-                        if user {
-                            "bead.panel.chat-you"
-                        } else {
-                            "bead.panel.chat-title"
-                        },
-                        &[],
-                    ),
-                    fill: if user {
-                        "secondaryContainer"
+                    label: if user {
+                        String::new()
                     } else {
-                        "surfaceContainer"
+                        provider_name(channel.state.provider).to_lowercase()
+                    },
+                    fill: if user {
+                        "primaryContainer"
+                    } else {
+                        "surfaceContainerHigh"
                     }
                     .into(),
                     text: message.text.clone(),
@@ -1262,7 +1332,6 @@ impl Chat {
         set("chat.question_extent", number(f64::from(qextent)));
         set("chat.composer_top", number(composer_top));
         set("chat.composer_height", number(composer));
-        set("chat.actions_top", number(actions_top));
         set("chat.busy", Value::Bool(busy));
         set("chat.workspace", Value::Bool(in_workspace));
         set("chat.can_new", Value::Bool(methods_ok && !busy));
@@ -1315,6 +1384,25 @@ impl Chat {
     }
     /// Run one view action. Stores to change and text to copy are returned; every
     /// daemon call is the published method, sent once and never retried.
+    fn send(
+        &self,
+        draft: &str,
+        state: Option<&nacre_protocol::ai_chat::AiState>,
+        out: &mut Outcome,
+    ) {
+        if draft.trim().is_empty() || state.is_none_or(|s| s.in_workspace) {
+            return;
+        }
+        if draft.chars().count() > nacre_protocol::ai_chat::MAX_SEND_CHARS {
+            self.st.borrow_mut().message = "bead.panel.chat-too-long".into();
+            return;
+        }
+        let params = json!({"channel": "", "text": draft, "attachments": []});
+        if self.begin(Call::Send, "ai.chat.send", params, self.waker()) {
+            out.stores.insert("chat.draft".into(), text(""));
+            self.st.borrow_mut().follow = true;
+        }
+    }
     pub fn act(&self, arg: &str, stores: &Stores) -> Outcome {
         let mut out = Outcome::default();
         if stores.get("chat.menu.open") == Some(&Value::Bool(true)) {
@@ -1352,20 +1440,24 @@ impl Chat {
                         self.waker(),
                     );
                 }
-                "latest" => {
-                    self.begin(
-                        Call::LauncherAction,
-                        "ai.launcher.latest",
-                        json!({}),
-                        self.waker(),
-                    );
-                }
                 "quick-chat" => {
                     out.stores.insert("chat.section".into(), text("chat"));
                     out.stores
                         .insert("launcher.quick_chat".into(), Value::Bool(true));
                     out.stores
                         .insert("bead.focused".into(), text("chat.composer"));
+                    // D7: the launcher composer's text goes straight out with the chosen provider.
+                    let provider = value("launcher.provider");
+                    if matches!(provider.as_str(), "codex" | "claude")
+                        && state.as_ref().is_some_and(|s| {
+                            provider_name(s.default_provider).to_lowercase() != provider
+                        })
+                    {
+                        self.plain("ai.chat.provider", json!({"provider": provider}));
+                    }
+                    if !value("chat.draft").trim().is_empty() {
+                        self.send(&value("chat.draft"), state.as_ref(), &mut out);
+                    }
                 }
                 "back" => {
                     out.stores.insert("chat.section".into(), text("launcher"));
@@ -1392,18 +1484,7 @@ impl Chat {
                         .launcher
                         .clone()
                         .unwrap_or_else(|| json!({}));
-                    let rows = launcher["chats"].as_array().cloned().unwrap_or_default();
-                    let query = value("launcher.search").to_lowercase();
-                    let rows: Vec<Json> = rows
-                        .into_iter()
-                        .filter(|row| {
-                            query.is_empty()
-                                || ["title", "provider"]
-                                    .into_iter()
-                                    .filter_map(|k| row[k].as_str())
-                                    .any(|s| s.to_lowercase().contains(&query))
-                        })
-                        .collect();
+                    let rows = launcher_rows(&launcher, &value("launcher.search").to_lowercase());
                     let selected = value("launcher.selected");
                     let index = rows
                         .iter()
@@ -1450,21 +1531,7 @@ impl Chat {
                     Value::Bool(stores.get("chat.pinned") != Some(&Value::Bool(true))),
                 );
             }
-            "send" => {
-                let draft = value("chat.draft");
-                if draft.trim().is_empty() || state.as_ref().is_none_or(|s| s.in_workspace) {
-                    return out;
-                }
-                if draft.chars().count() > nacre_protocol::ai_chat::MAX_SEND_CHARS {
-                    self.st.borrow_mut().message = "bead.panel.chat-too-long".into();
-                    return out;
-                }
-                let params = json!({"channel": "", "text": draft, "attachments": []});
-                if self.begin(Call::Send, "ai.chat.send", params, self.waker()) {
-                    out.stores.insert("chat.draft".into(), text(""));
-                    self.st.borrow_mut().follow = true;
-                }
-            }
+            "send" => self.send(&value("chat.draft"), state.as_ref(), &mut out),
             "stop" => self.plain("ai.chat.cancel", json!({})),
             "new" if !busy => {
                 self.plain("ai.chat.new", json!({}));
@@ -1523,7 +1590,6 @@ impl Chat {
                         .nth(index.parse().ok()?)
                 });
             }
-            "latest" => self.st.borrow_mut().follow = true,
             "section" if matches!(rest, "launcher" | "chat") => {
                 out.stores.insert("chat.section".into(), text(rest));
                 if rest == "launcher" {
