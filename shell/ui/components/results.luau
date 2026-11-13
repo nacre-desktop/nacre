@@ -14,7 +14,7 @@ local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string
     return ui.Box{id="result-wrap",width="fill",height=M.result_row_height,
       kit.Button{id="result",width="fill",height="fill",radius=10,padding_left=12,padding_right=toggle and 82 or 42,padding_top=8,padding_bottom=8,fill="transparent",selected=item.selected,
         selected_fill=ui.tint("surface","onSurface",.09),hover_fill=ui.tint("surface","onSurface",.04),
-        on_activate=not item.disabled and activate or nil,aria_label=item.name..(item.status and (". "..item.status) or ""),
+        on_activate=activate,aria_label=item.name..(item.status and (". "..item.status) or ""),
         ui.Box{position="absolute",left=0,top=9,width=3,height=37,radius=1.5,fill="primary",visible=item.selected},
         ui.Row{gap=11,align="center",grow=1,
             type(item.emoji)=="string" and item.emoji~="" and ui.Text{text=item.emoji,font_size=24,width=M.result_icon,height=M.result_icon} or Icon(item,M.result_icon),
