@@ -145,3 +145,78 @@ the laptop live audit by the lead stays the gate.
 Evidence: `.lead/renders/` in the worktree (before = previous goldens, after = real-renderer PNGs in dark and
 light, hover, pressed and focus states; README there). Goldens updated: control-overview, control-detail,
 control-default-order, control-n0046-overview, control-notifications-*, control-unsupported (1× and 1.5×).
+
+## D7 Nacre AI sidebar (N0240)
+
+Scope: the AI sidebar's launcher and conversation in `shell/chat/main.luau` (Bead kit components, palette
+roles and size-scale tokens); Rust only where the view needs data (`crates/nacre-shell/src/chat.rs`). The views
+stay plain functions of the `chat.*` / `launcher.*` stores so the D8 app can host them. The N0218 running/idle
+states and the N0234 not-installed state behave as before.
+
+What changed
+- Composer first: a composer card ("Ask Codex…", attach, send) under the header. Enter or send starts the quick
+  chat with the header's provider (`ai.chat.provider` when it differs) and sends the text (`ai.chat.send`); an
+  empty Enter just opens the quick chat. The New chat / Quick chat pair is gone; "New chat in project" is a chip
+  at the bottom left, Brain and Settings are bottom-right icon buttons with tooltips.
+- Header: logo, "Nacre AI" 600, the provider as one segmented pill (chosen one `primary`), pin as a round icon
+  button (`primary` while pinned).
+- Rows: 8 px dot (`success` + 25 % halo + the N0218 pulse while running, `outlineVariant` idle), title 500, a
+  time caption, mono outlined provider chip, "Open" (`primary`) on running rows. Running / Today (< 24 h) /
+  Earlier groups come from the adapter (`group` on each group's first row; running rows sort first, stable
+  otherwise, keyboard selection uses the same order). Headings are sentence case (the mockup uppercases them;
+  the north-star "no uppercase in the shell" wins). The newest row's Continue chip (`ai.launcher.latest`) is
+  removed: the composer and Open replace it.
+- Messages: yours in `primaryContainer`, no caption, one-line ones right-aligned; the assistant's in
+  `surfaceContainerHigh` captioned with the provider; code blocks on `surface`.
+- Composer: one `surfaceContainerHigh` card (radius 16): field on top, attach and phone left, stop (`error`
+  glyph, only while working) beside send. Scroll-to-latest is removed (following resumes at the bottom as
+  before). Attach and phone stay disabled: `ai.chat` has no such actions yet.
+- Conversation header: back, title 500, a `success` working dot before the subtitle while busy, overflow.
+- Keyboard unchanged: focus opens on the search field (Enter opens the selected row, Up/Down move it); the
+  composer is one Shift+Tab away. Icon buttons and send draw the focus ring; the composer shows its caret only
+  (`focus_ring=false`, as before).
+
+Motion
+- Panel open 240 ms `ease` (cubic out), close 160 ms (Bead's accelerate curve via `return_duration`); was
+  400 ms ease-in-out / 180 ms. `-- D16:` marks the swap to out-quint. Edge growth, `fade=false`, `reveal` and
+  the detach/dock path are unchanged. Reduced motion: Bead already snaps panel and `ui.animate` motion.
+- Frame cost (dev-2, `frame_cost_bench` release, CPU tree renderer, scale 1.5, 120 Hz slide of the real
+  `chat/main.luau` launcher via a temporary bench route; base = origin/main's view on the same binary): open
+  29 frames, total p50/p95/max 0.165/0.281/2.888 ms (base 48 frames, 0.168/0.920/2.201); close 19 frames
+  0.294/0.383/0.436 ms (base 22 frames, 0.284/0.317/0.410); 55 vs 44 primitives. No per-frame allocation added
+  (the transcript stand-in measures only visible user messages). The nested-desktop PANEL_SLIDE max_gap
+  capture was not run; the lead's laptop live audit is the gate.
+
+Accessibility: text >= 4.5:1 and icons >= 3:1 in both fixture palettes (stop `error` on
+`surfaceContainerHighest` 4.7 / 4.7, captions on `surfaceContainerHigh` 7.7 / 7.1, Open 12.7 / 5.2). The idle
+dot and chip outline (`outlineVariant`, 1.8:1) are decorative; state is also in the heading and Open text.
+
+Asks (forwarded by the lead; stand-ins marked in the code)
+- Bead: transcript entries with per-entry alignment, max width and no label band (stand-in `CompactTranscript`;
+  multi-line user messages stay full width until then); attention pulse (header dot is static; shared with
+  N0237); D16 `out-quint`; `kit.PillButton{ink=...}` and a default focus ring on icon-only pill buttons (stop is
+  a hand-built `kit.Button`); `kit.Tag{mono=true}` (stand-in: outlined Box + mono Text).
+- Platform (D8): per-message time (assistant caption), real projects (the helper sends the legacy constant
+  `project: "general-chat"`, so the adapter keeps stripping it; the view prefixes `project ·` once present),
+  the quick chat's working directory (the mockup's folder chip), attachment and remote-device actions.
+
+Known gaps: the search field stays (the mockup has none; it is the filter and keyboard path). When the chat
+worker has not published its state yet (first open after login), Enter in the launcher opens the quick chat
+with the text left in its composer instead of sending it.
+
+Evidence
+- Goldens (looked at each): `chat-{launcher,launcher-detached,launcher-warning-tooltip,conversation,code,
+  approval,empty,missing}-{1,1.5}`, new `chat-{launcher,conversation}-light-1`, `pearl-*-{1,1.5}` (they render
+  the chat launcher). Other goldens unchanged.
+- dev-2 (arch-nacre, rustfmt 1.10), rebased tree: fmt --check, clippy `-p nacre-shell --all-targets -D
+  warnings`, whole `nacre-shell` binary (928 passed, 4 ignored), Luau analyzer `--check-generated`, i18n,
+  compositor boundary. `real_prompt_wire_sequence_and_stock_compositor_fallback` failed once under host load in
+  an earlier run and passed three times isolated (as in N0237).
+- New test: Enter in the launcher composer sends `ai.chat.provider` and `ai.chat.send` with the text.
+- Before/after PNGs with notes (hover, pressed, focus, pinned, busy, idle, groups, not-installed, dark and
+  light): the unit worktree's `.lead/renders/README.md` (not committed).
+
+Strings: new `bead.panel.{chat-ask,chat-phone,launcher-today,launcher-earlier,launcher-open,
+launcher-new-in-project}`; removed with their controls `bead.panel.{chat-you,chat-latest,chat-screenshot,
+launcher-resume,launcher-quick-chat}` (shell catalog + context; no registry ids, `nacre/shell-tools/i18n`
+untouched).
