@@ -116,8 +116,18 @@ pub fn launcher(call: &Call) -> Option<Result<Launch, &'static str>> {
                 _ => launch(query, None, true),
             }
         }
-        "menu" => menu_route(arg(0).unwrap_or_default())
-            .and_then(|route| launch(arg(1).unwrap_or_default(), Some(&route), false)),
+        "menu" => menu_route(arg(0).unwrap_or_default()).and_then(|route| {
+            if route == "learn.shortcuts" {
+                Ok(Launch {
+                    query: String::new(),
+                    route: None,
+                    toggle: false,
+                    target_view: Some("keybindings".into()),
+                })
+            } else {
+                launch(arg(1).unwrap_or_default(), Some(&route), false)
+            }
+        }),
         "clipboard" => launch("", Some("actions.clipboard"), true),
         "mode" => match arg(0).unwrap_or_default() {
             "apps" => launch("", None, true),
@@ -263,12 +273,14 @@ mod tests {
         for (route, id) in [
             ("actions.emoji", "actions.emoji"),
             ("actions.capture", "actions.capture"),
-            ("learn.shortcuts", "learn.shortcuts"),
             ("power", "power"),
         ] {
             let l = routed("menu", &[route, ""]);
             assert_eq!((l.route.as_deref(), l.toggle), (Some(id), false));
         }
+        let shortcuts = routed("menu", &["learn.shortcuts", ""]);
+        assert_eq!(shortcuts.target_view.as_deref(), Some("keybindings"));
+        assert_eq!(shortcuts.route, None);
         assert_eq!(
             routed("mode", &["clipboard"]).route.as_deref(),
             Some("actions.clipboard")

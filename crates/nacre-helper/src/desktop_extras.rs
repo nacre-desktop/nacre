@@ -907,6 +907,43 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
 
 fn translated_collection_description(description: &str) -> String {
     match description {
+        "ai-sidebar" => "Open the AI sidebar".into(),
+        "brightness-down" => "Lower screen brightness".into(),
+        "brightness-up" => "Raise screen brightness".into(),
+        "browser" => "Open browser".into(),
+        "clipboard" => "Open clipboard history".into(),
+        "close" => "Close window".into(),
+        "cycle-window" => "Cycle windows".into(),
+        "detach-panel" => "Detach panel".into(),
+        "emoji" => "Choose emoji".into(),
+        "files" => "Open files".into(),
+        "float" => "Toggle floating window".into(),
+        "focus" => "Focus window".into(),
+        "fullscreen" => "Toggle fullscreen".into(),
+        "group" => "Toggle window group".into(),
+        "group-cycle" => "Cycle window group".into(),
+        "keyboard-down" => "Lower keyboard backlight".into(),
+        "keyboard-up" => "Raise keyboard backlight".into(),
+        "launcher" => "Open launcher".into(),
+        "lock" => "Lock screen".into(),
+        "maximize" => "Maximize window".into(),
+        "mic-mute" => "Mute microphone".into(),
+        "move-workspace" => "Move window to workspace".into(),
+        "mute" => "Mute audio".into(),
+        "next-workspace" => "Focus next workspace".into(),
+        "overview" => "Show window overview".into(),
+        "palette" => "Open command palette".into(),
+        "power" => "Open power menu".into(),
+        "previous-workspace" => "Focus previous workspace".into(),
+        "save-screenshot" => "Save screenshot".into(),
+        "screenshot" => "Capture screenshot".into(),
+        "settings" => "Open settings".into(),
+        "shortcuts" => "Keyboard shortcuts".into(),
+        "terminal" => "Open terminal".into(),
+        "volume-down" => "Lower volume".into(),
+        "volume-up" => "Raise volume".into(),
+        "wallpaper" => "Choose wallpaper".into(),
+        "workspace" => "Focus workspace".into(),
         "collection-next" => crate::i18n::tr(
             "shortcuts.description.next-collection",
             "Focus the next collection",
@@ -1119,6 +1156,14 @@ mod tests {
             translated_collection_description("collection-move-previous"),
             "Move the window to the previous collection"
         );
+        assert_eq!(
+            translated_collection_description("workspace"),
+            "Focus workspace"
+        );
+        assert_eq!(
+            translated_collection_description("ai-sidebar"),
+            "Open the AI sidebar"
+        );
     }
 
     #[test]
@@ -1169,7 +1214,7 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .any(|r| r["key"] == "SUPER+Mod5+Q" && r["description"] == "close window"));
+            .any(|r| r["key"] == "SUPER+Mod5+Q" && r["description"] == "Close window"));
         Ok(())
     }
 

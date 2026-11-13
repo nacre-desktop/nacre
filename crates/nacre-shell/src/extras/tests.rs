@@ -2476,6 +2476,49 @@ fn long_shortcut_lists_materialize_only_the_viewport() -> bead_test::Result<()> 
     Ok(())
 }
 
+#[test]
+fn live_shortcuts_topic_shape_renders_in_keybindings_view() -> bead_test::Result<()> {
+    let mut items = serde_json::Map::new();
+    let mut order = Vec::new();
+    for index in 0..91 {
+        let id = format!("k{index}");
+        order.push(id.clone());
+        items.insert(
+            id,
+            json!({"key":format!("SUPER+{index}"),"description":format!("Shortcut action {index}")}),
+        );
+    }
+    let topic =
+        json!({"health":{"available":true,"stale":false},"items":{"items":items,"order":order}});
+    let rows = shortcut_rows(&topic);
+    assert_eq!(rows.len(), 91);
+    assert_eq!(rows[0]["key"], "SUPER+0");
+    assert_eq!(rows[90]["description"], "Shortcut action 90");
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let mut h = bead_test::Harness::load(
+        &root,
+        std::path::Path::new("extras/main.luau"),
+        &root.join("palette.json"),
+        BTreeMap::from([
+            ("panel.open".into(), Value::Bool(true)),
+            ("extras.kind".into(), Value::Text("keybindings".into())),
+            ("extras.rows".into(), Value::list(rows)),
+        ]),
+        bead_test::Config {
+            width: 1280,
+            height: 1000,
+            scale: 1.,
+        },
+    )?;
+    h.render()?;
+    assert!(h.scene().primitives.iter().any(|primitive|
+        matches!(primitive, bead::render::Primitive::Text { text, .. } if text == "SUPER+0")));
+    assert!(h.scene().primitives.iter().any(|primitive|
+        matches!(primitive, bead::render::Primitive::Text { text, .. } if text == "Shortcut action 0")));
+    Ok(())
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn previews_lease_only_while_open_and_with_the_setting_and_attach_the_newest_thumbnail() {
     use bead::wayland::{CaptureHub, CapturePreview};

@@ -583,8 +583,7 @@ impl Extras {
                     let open = matches!(stores.get("panel.open"), Some(Value::Bool(true)));
                     self.attach_previews(&mut windows, open, wake.clone());
                 } else if self.kind == Kind::Keybindings {
-                    rows = ordered(&data["items"]["items"], &data["items"]["order"])
-                        .map(|(id, row)| json!({"id":id,"key":row["key"].as_str().unwrap_or_default(),"description":row["description"].as_str().unwrap_or_default()})).collect();
+                    rows = shortcut_rows(data);
                 } else if self.kind == Kind::Wallpaper {
                     wallpaper_active_path = data["current"]["motion"]["path"]
                         .as_str()
@@ -1532,6 +1531,13 @@ fn ordered<'a>(items: &'a Json, order: &'a Json) -> impl Iterator<Item = (&'a st
         .flatten()
         .take(2048)
         .filter_map(move |id| Some((id.as_str()?, items.get(id.as_str()?)?)))
+}
+fn shortcut_rows(data: &Json) -> Vec<Json> {
+    ordered(&data["items"]["items"], &data["items"]["order"])
+        .map(|(id, row)| {
+            json!({"id":id,"key":row["key"].as_str().unwrap_or_default(),"description":row["description"].as_str().unwrap_or_default()})
+        })
+        .collect()
 }
 pub(crate) fn parse_wallpaper_handle(handle: &str) -> Option<(&str, &str)> {
     let (field, rest) = handle.split_once(':')?;
