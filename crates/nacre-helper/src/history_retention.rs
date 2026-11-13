@@ -3,14 +3,16 @@
 use crate::{paths::Paths, Result};
 use serde_json::{json, Value};
 use std::{
-    fs,
+    env, fs,
     os::unix::fs::MetadataExt,
-    path::Path,
+    path::{Path, PathBuf},
     process::Command,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 const DAY: u64 = 24 * 60 * 60;
+const CHAT_SCAN_DEPTH: usize = 8;
+const CHAT_SCAN_LIMIT: usize = 10_000;
 
 fn days(paths: &Paths, key: &str, default: u64) -> u64 {
     fs::read(paths.config.join("desktop.json"))
@@ -54,16 +56,30 @@ fn safe_dir_within_home(home: &Path, path: &Path) -> bool {
 }
 
 fn chat_last_activity(path: &Path) -> Option<SystemTime> {
-    walkdir::WalkDir::new(path)
+    let mut latest = None;
+    for (index, item) in walkdir::WalkDir::new(path)
         .follow_links(false)
-        .max_depth(8)
+        .max_depth(CHAT_SCAN_DEPTH)
         .into_iter()
-        .take(10_000)
-        .filter_map(std::result::Result::ok)
-        .filter(|entry| entry.file_type().is_file())
-        .filter_map(|entry| entry.metadata().ok()?.modified().ok())
-        .max()
-        .or_else(|| fs::symlink_metadata(path).ok()?.modified().ok())
+        .enumerate()
+    {
+        // An incomplete scan cannot establish that the chat is inactive.
+        if index + 1 >= CHAT_SCAN_LIMIT {
+            return None;
+        }
+        let entry = item.ok()?;
+        if entry.depth() == CHAT_SCAN_DEPTH
+            && entry.file_type().is_dir()
+            && fs::read_dir(entry.path()).ok()?.next().is_some()
+        {
+            return None;
+        }
+        if entry.file_type().is_file() {
+            let modified = entry.metadata().ok()?.modified().ok()?;
+            latest = Some(latest.map_or(modified, |seen: SystemTime| seen.max(modified)));
+        }
+    }
+    latest.or_else(|| fs::symlink_metadata(path).ok()?.modified().ok())
 }
 
 fn old_chat(path: &Path, days: u64, now: SystemTime) -> bool {
@@ -112,11 +128,13 @@ pub fn record_screenshot(paths: &Paths, path: &Path) -> Result<()> {
     crate::state::write(&index, &json!(rows))
 }
 
-fn prune_screenshots(paths: &Paths, now: SystemTime) -> Result<usize> {
-    prune_screenshots_with(
-        paths,
-        now,
-        |path| matches!(Command::new("gio").args(["trash", "--"]).arg(path).status(), Ok(status) if status.success()),
+fn desktop_trash(path: &Path) -> bool {
+    matches!(
+        Command::new("gio")
+            .args(["trash", "--"])
+            .arg(path)
+            .status(),
+        Ok(status) if status.success()
     )
 }
 
@@ -173,13 +191,94 @@ fn chat_id(name: &str) -> bool {
             .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
 }
 
-fn prune_ai_chats(paths: &Paths, now: SystemTime) -> Result<usize> {
+#[derive(Debug, PartialEq, Eq)]
+struct TmuxPane {
+    name: String,
+    cwd: PathBuf,
+}
+
+fn parse_tmux_panes(listing: &str) -> Option<Vec<TmuxPane>> {
+    listing
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let (name, cwd) = line.split_once('\t')?;
+            (!name.is_empty() && !cwd.is_empty()).then(|| TmuxPane {
+                name: name.to_owned(),
+                cwd: PathBuf::from(cwd),
+            })
+        })
+        .collect()
+}
+
+fn tmux_panes() -> Option<Vec<TmuxPane>> {
+    let available = env::var_os("PATH").is_some_and(|path| {
+        env::split_paths(&path).any(|directory| directory.join("tmux").is_file())
+    });
+    if !available {
+        return None;
+    }
+    let mut command = Command::new("tmux");
+    command.args([
+        "list-panes",
+        "-a",
+        "-F",
+        "#{session_name}\t#{pane_current_path}",
+    ]);
+    let output = crate::process::capture(command, None, Duration::from_secs(4)).ok()?;
+    if !output.status.success() {
+        return String::from_utf8_lossy(&output.stderr)
+            .to_ascii_lowercase()
+            .contains("no server running")
+            .then(Vec::new);
+    }
+    parse_tmux_panes(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn chat_has_live_tmux(path: &Path, panes: &[TmuxPane]) -> bool {
+    let id = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("");
+    let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    panes.iter().any(|pane| {
+        fs::canonicalize(&pane.cwd).unwrap_or_else(|_| pane.cwd.clone()) == target
+            || pane.name.starts_with("ai-") && pane.name.ends_with(&format!("-{id}"))
+    })
+}
+
+fn prune_ai_chats(
+    paths: &Paths,
+    now: SystemTime,
+    trash: &mut impl FnMut(&Path) -> bool,
+) -> Result<usize> {
     let root = paths.home.join(".local/share/nacre/ai/chats");
     let days = days(paths, "aiChatRetention", 0);
     if days == 0 {
         return Ok(0);
     }
     if !safe_dir_within_home(&paths.home, &root) {
+        return Ok(0);
+    }
+    let Some(panes) = tmux_panes() else {
+        tracing::warn!("Could not list tmux panes; skipping AI chat retention");
+        return Ok(0);
+    };
+    prune_ai_chats_with(paths, now, trash, &panes)
+}
+
+fn prune_ai_chats_with(
+    paths: &Paths,
+    now: SystemTime,
+    trash: &mut impl FnMut(&Path) -> bool,
+    panes: &[TmuxPane],
+) -> Result<usize> {
+    let root = paths.home.join(".local/share/nacre/ai/chats");
+    if !safe_dir_within_home(&paths.home, &root) {
+        return Ok(0);
+    }
+    let days = days(paths, "aiChatRetention", 0);
+    if days == 0 {
         return Ok(0);
     }
     let entries = match fs::read_dir(&root) {
@@ -205,14 +304,15 @@ fn prune_ai_chats(paths: &Paths, now: SystemTime) -> Result<usize> {
         if saved_chat_path(paths, &path) {
             continue;
         }
-        match fs::remove_dir_all(&path) {
-            Ok(()) => {
-                removed += 1;
-                tracing::info!(directory=%path.display(), "Pruned expired Nacre AI chat");
-            }
-            Err(error) => {
-                tracing::warn!(directory=%path.display(), %error, "Could not prune expired Nacre AI chat")
-            }
+        if chat_has_live_tmux(&path, panes) {
+            tracing::info!(directory=%path.display(), "Keeping open Nacre AI chat");
+            continue;
+        }
+        if trash(&path) {
+            removed += 1;
+            tracing::info!(directory=%path.display(), "Moved expired Nacre AI chat to Trash");
+        } else {
+            tracing::warn!(directory=%path.display(), "Could not move expired Nacre AI chat to Trash");
         }
     }
     Ok(removed)
@@ -254,8 +354,9 @@ fn saved_chat_path(paths: &Paths, path: &Path) -> bool {
 }
 
 pub fn prune(paths: &Paths, now: SystemTime) -> Result<()> {
-    let screenshots = prune_screenshots(paths, now)?;
-    let chats = prune_ai_chats(paths, now)?;
+    let mut trash = desktop_trash;
+    let screenshots = prune_screenshots_with(paths, now, &mut trash)?;
+    let chats = prune_ai_chats(paths, now, &mut trash)?;
     if screenshots + chats > 0 {
         tracing::info!(screenshots, chats, "History retention pass completed");
     }
@@ -406,13 +507,27 @@ mod tests {
         let owned = root.join("0123456789abcdef0123456789abcdef");
         let unrelated = root.join("provider-history");
         fs::create_dir(&owned)?;
+        fs::write(owned.join("user-notes.txt"), b"keep this user file")?;
         fs::create_dir(&unrelated)?;
+        let trash = home.path().join("Trash");
+        fs::create_dir(&trash)?;
+        let moved = trash.join(owned.file_name().ok_or("Missing chat ID")?);
         assert_eq!(
-            prune_ai_chats(&paths, SystemTime::now() + Duration::from_secs(400 * DAY))?,
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(400 * DAY),
+                &mut |path| fs::rename(path, trash.join(path.file_name().unwrap())).is_ok(),
+                &[],
+            )?,
             1
         );
         assert!(unrelated.exists());
         assert!(!owned.exists());
+        assert!(moved.exists());
+        assert_eq!(
+            fs::read(moved.join("user-notes.txt"))?,
+            b"keep this user file"
+        );
         fs::write(
             paths.config.join("desktop.json"),
             br#"{"aiChatRetention":0}"#,
@@ -420,7 +535,12 @@ mod tests {
         let forever = root.join("fedcba9876543210fedcba9876543210");
         fs::create_dir(&forever)?;
         assert_eq!(
-            prune_ai_chats(&paths, SystemTime::now() + Duration::from_secs(400 * DAY))?,
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(400 * DAY),
+                &mut |_| panic!("zero retention must not trash chats"),
+                &[],
+            )?,
             0
         );
         assert!(forever.exists());
@@ -444,7 +564,12 @@ mod tests {
         fs::create_dir(&outside)?;
         std::os::unix::fs::symlink(external.path(), nacre.join("chats"))?;
         assert_eq!(
-            prune_ai_chats(&paths, SystemTime::now() + Duration::from_secs(3 * DAY))?,
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(3 * DAY),
+                &mut |_| panic!("symlinked root must not trash chats"),
+                &[],
+            )?,
             0
         );
         assert!(outside.exists());
@@ -466,10 +591,155 @@ mod tests {
         }
         let saved_file = paths.state.join("shell/extras/chats.json");
         crate::state::write(&saved_file, &Value::Object(records))?;
+        let mut called = false;
         assert_eq!(
-            prune_ai_chats(&paths, SystemTime::now() + Duration::from_secs(3 * DAY))?,
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(3 * DAY),
+                &mut |_| {
+                    called = true;
+                    false
+                },
+                &[],
+            )?,
             0
         );
+        assert!(!called);
+        Ok(())
+    }
+
+    #[test]
+    fn expired_chat_trash_failure_keeps_the_working_directory() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"aiChatRetention":1}"#,
+        )?;
+        let root = paths.home.join(".local/share/nacre/ai/chats");
+        fs::create_dir_all(&root)?;
+        let chat = root.join("0123456789abcdef0123456789abcdef");
+        fs::create_dir(&chat)?;
+        fs::write(chat.join("user-notes.txt"), b"keep this file")?;
+        let now = SystemTime::now() + Duration::from_secs(3 * DAY);
+        let mut called = false;
+        assert_eq!(
+            prune_ai_chats_with(
+                &paths,
+                now,
+                &mut |_| {
+                    called = true;
+                    false
+                },
+                &[]
+            )?,
+            0
+        );
+        assert!(called);
+        assert!(chat.is_dir());
+        assert_eq!(fs::read(chat.join("user-notes.txt"))?, b"keep this file");
+        Ok(())
+    }
+
+    #[test]
+    fn active_tmux_chat_is_preserved_by_session_name_or_pane_cwd() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let chat = home.path().join("0123456789abcdef0123456789abcdef");
+        fs::create_dir(&chat)?;
+        let by_cwd =
+            parse_tmux_panes(&format!("ai-demo-claude-default-7\t{}", chat.display())).unwrap();
+        let by_id = parse_tmux_panes(&format!(
+            "ai-demo-codex-profile-work-resume-{}\t/tmp",
+            chat.file_name().unwrap().to_string_lossy()
+        ))
+        .unwrap();
+        let unrelated = parse_tmux_panes("ai-demo-codex-default-resume-other\t/tmp").unwrap();
+        assert!(chat_has_live_tmux(&chat, &by_cwd));
+        assert!(chat_has_live_tmux(&chat, &by_id));
+        assert!(!chat_has_live_tmux(&chat, &unrelated));
+        assert!(parse_tmux_panes("malformed-live-pane").is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn ai_pruning_keeps_chat_with_entries_over_the_activity_scan_limit() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"aiChatRetention":1}"#,
+        )?;
+        let root = paths.home.join(".local/share/nacre/ai/chats");
+        fs::create_dir_all(&root)?;
+        let chat = root.join("0123456789abcdef0123456789abcdef");
+        fs::create_dir(&chat)?;
+        for index in 0..CHAT_SCAN_LIMIT {
+            fs::write(chat.join(format!("entry-{index}")), b"")?;
+        }
+        let status = Command::new("touch")
+            .args(["-d", "@1"])
+            .arg(&chat)
+            .status()?;
+        assert!(status.success());
+        let mut called = false;
+        assert_eq!(
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(3 * DAY),
+                &mut |_| {
+                    called = true;
+                    true
+                },
+                &[],
+            )?,
+            0
+        );
+        assert!(!called);
+        assert!(chat.is_dir());
+        Ok(())
+    }
+
+    #[test]
+    fn ai_pruning_keeps_chat_with_entries_beyond_activity_scan_depth() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"aiChatRetention":1}"#,
+        )?;
+        let root = paths.home.join(".local/share/nacre/ai/chats");
+        fs::create_dir_all(&root)?;
+        let chat = root.join("0123456789abcdef0123456789abcdef");
+        fs::create_dir(&chat)?;
+        let mut deep = chat.clone();
+        for index in 0..=CHAT_SCAN_DEPTH {
+            deep.push(format!("level-{index}"));
+            fs::create_dir(&deep)?;
+        }
+        fs::write(deep.join("active.txt"), b"active")?;
+        let status = Command::new("touch")
+            .args(["-d", "@1"])
+            .arg(&chat)
+            .status()?;
+        assert!(status.success());
+        let mut called = false;
+        assert_eq!(
+            prune_ai_chats_with(
+                &paths,
+                SystemTime::now() + Duration::from_secs(3 * DAY),
+                &mut |_| {
+                    called = true;
+                    true
+                },
+                &[],
+            )?,
+            0
+        );
+        assert!(!called);
+        assert!(chat.is_dir());
         Ok(())
     }
 

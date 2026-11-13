@@ -396,7 +396,7 @@
  "settings.registry.privacy.clipboard.description": "Clear retained clipboard content.",
  "settings.registry.privacy.clipboard.label": "Clipboard history",
  "settings.registry.privacy.description": "Online lookups and the history you keep.",
- "settings.registry.privacy.history.aiChatRetention.description": "Days to keep Nacre AI chat folders; 0 keeps everything. Saved, pinned and starred chats are retained. Existing chats are kept until you choose a limit.",
+ "settings.registry.privacy.history.aiChatRetention.description": "Days before untouched Nacre AI chat folders, and the files in them, move to Trash; 0 keeps everything. Saved, pinned, starred and open chats are kept.",
  "settings.registry.privacy.history.aiChatRetention.label": "AI chat retention",
  "settings.registry.privacy.history.clipboardRetention.description": "Days to keep clipboard history. Pinned items are never removed; 0 keeps everything.",
  "settings.registry.privacy.history.clipboardRetention.label": "Clipboard retention",
