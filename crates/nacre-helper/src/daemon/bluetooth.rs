@@ -1042,7 +1042,9 @@ async fn run_on(
     });
     hub.borrow_mut().bluetooth = Some(service.clone());
     let bus = zbus::fdo::DBusProxy::new(&connection).await?;
-    let mut owners = bus.receive_name_owner_changed().await?;
+    let mut owners = bus
+        .receive_name_owner_changed_with_args(&[(0, BLUEZ)])
+        .await?;
     let bluez: zbus::names::BusName<'_> = BLUEZ.try_into()?;
     let rule = zbus::MatchRule::builder()
         .msg_type(zbus::message::Type::Signal)

@@ -573,7 +573,15 @@ async fn session(
         .build()
         .await?;
     let dbus = zbus::fdo::DBusProxy::new(&connection).await?;
-    let mut owners = dbus.receive_name_owner_changed().await?;
+    // Only MPRIS names: arg0namespace matches "org.mpris.MediaPlayer2.*".
+    let owner_rule = zbus::MatchRule::builder()
+        .msg_type(zbus::message::Type::Signal)
+        .sender("org.freedesktop.DBus")?
+        .interface("org.freedesktop.DBus")?
+        .member("NameOwnerChanged")?
+        .arg0ns(PREFIX.trim_end_matches('.'))?
+        .build();
+    let mut owners = zbus::MessageStream::for_match_rule(owner_rule, &connection, Some(16)).await?;
     let rule = zbus::MatchRule::builder()
         .msg_type(zbus::message::Type::Signal)
         .path(PATH)?
@@ -614,13 +622,9 @@ async fn session(
                 let _ = reply.send(s.call(call).await);
             }
             Some(change) = owners.next() => {
-                let args = change.args()?;
-                let name = args.name().as_str().to_owned();
+                let (name, _old, new): (String, String, String) = change?.body().deserialize()?;
                 if name.starts_with(PREFIX) {
-                    match args.new_owner().as_ref() {
-                        Some(owner) => s.refresh(&name, owner.to_string()).await,
-                        None => s.model.remove(&name),
-                    }
+                    if new.is_empty() { s.model.remove(&name) } else { s.refresh(&name, new).await }
                     s.retain_art().await;
                     s.publish()?;
                 }

@@ -78,14 +78,15 @@ pub(super) async fn signals(
                 .boxed_local(),
         );
     }
-    streams.push(
-        zbus::fdo::DBusProxy::new(connection)
-            .await?
-            .receive_name_owner_changed()
-            .await?
-            .map(|_| ())
-            .boxed_local(),
-    );
+    let bus = zbus::fdo::DBusProxy::new(connection).await?;
+    for sender in senders {
+        streams.push(
+            bus.receive_name_owner_changed_with_args(&[(0, *sender)])
+                .await?
+                .map(|_| ())
+                .boxed_local(),
+        );
+    }
     Ok(streams)
 }
 

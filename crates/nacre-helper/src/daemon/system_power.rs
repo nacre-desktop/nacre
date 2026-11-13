@@ -1,6 +1,6 @@
 //! UPower and power-profiles-daemon readback topics.
 use super::{
-    behaviours::{proxy, signals, PROFILE_SERVICES},
+    behaviours::{signals, PROFILE_SERVICES},
     hub::Shared,
 };
 use crate::Result;
@@ -66,28 +66,52 @@ async fn timed<T>(future: impl std::future::Future<Output = zbus::Result<T>>) ->
         .ok()
 }
 
-async fn battery(system: &zbus::Connection) -> BatteryState {
-    let (Some(device), Some(root)) = (
-        timed(proxy(
-            system,
-            UPOWER,
-            DISPLAY,
-            "org.freedesktop.UPower.Device",
-        ))
-        .await,
-        timed(proxy(system, UPOWER, UPOWER_PATH, UPOWER)).await,
-    ) else {
-        return empty_battery();
+/// One `GetAll` per interface instead of a round trip per property.
+async fn all_properties(
+    system: &zbus::Connection,
+    destination: &str,
+    path: &str,
+    interface: &str,
+) -> HashMap<String, OwnedValue> {
+    let proxy = async {
+        zbus::fdo::PropertiesProxy::builder(system)
+            .destination(destination.to_owned())?
+            .path(path.to_owned())?
+            .build()
+            .await
     };
-    let (present, kind, percentage, state, empty, full, on_battery) = tokio::join!(
-        timed(device.get_property::<bool>("IsPresent")),
-        timed(device.get_property::<u32>("Type")),
-        timed(device.get_property::<f64>("Percentage")),
-        timed(device.get_property::<u32>("State")),
-        timed(device.get_property::<i64>("TimeToEmpty")),
-        timed(device.get_property::<i64>("TimeToFull")),
-        timed(root.get_property::<bool>("OnBattery")),
+    let Some(proxy) = timed(proxy).await else {
+        return HashMap::new();
+    };
+    let Ok(interface) = zbus::names::InterfaceName::try_from(interface) else {
+        return HashMap::new();
+    };
+    timed(async { proxy.get_all(interface).await.map_err(zbus::Error::from) })
+        .await
+        .unwrap_or_default()
+}
+
+fn take<T: TryFrom<OwnedValue>>(
+    properties: &mut HashMap<String, OwnedValue>,
+    key: &str,
+) -> Option<T> {
+    properties
+        .remove(key)
+        .and_then(|value| T::try_from(value).ok())
+}
+
+async fn battery(system: &zbus::Connection) -> BatteryState {
+    let (mut device, mut root) = tokio::join!(
+        all_properties(system, UPOWER, DISPLAY, "org.freedesktop.UPower.Device"),
+        all_properties(system, UPOWER, UPOWER_PATH, UPOWER),
     );
+    let present: Option<bool> = take(&mut device, "IsPresent");
+    let kind: Option<u32> = take(&mut device, "Type");
+    let percentage: Option<f64> = take(&mut device, "Percentage");
+    let state: Option<u32> = take(&mut device, "State");
+    let empty: Option<i64> = take(&mut device, "TimeToEmpty");
+    let full: Option<i64> = take(&mut device, "TimeToFull");
+    let on_battery: Option<bool> = take(&mut root, "OnBattery");
     let charging = match state {
         Some(1) => Some(true),
         Some(2..=4) => Some(false),
@@ -111,18 +135,15 @@ async fn battery(system: &zbus::Connection) -> BatteryState {
 
 async fn profiles(system: &zbus::Connection) -> PowerProfilesState {
     for (name, path) in PROFILE_SERVICES {
-        let Some(service) = timed(proxy(system, name, path, name)).await else {
+        let mut properties = all_properties(system, name, path, name).await;
+        if properties.is_empty() {
             continue;
-        };
-        let (active, available, degraded, holds) = tokio::join!(
-            timed(service.get_property::<String>("ActiveProfile")),
-            timed(
-                service
-                    .get_property::<Vec<std::collections::HashMap<String, OwnedValue>>>("Profiles")
-            ),
-            timed(service.get_property::<String>("PerformanceDegraded")),
-            timed(service.get_property::<Vec<HashMap<String, OwnedValue>>>("ActiveProfileHolds")),
-        );
+        }
+        let active: Option<String> = take(&mut properties, "ActiveProfile");
+        let available: Option<Vec<HashMap<String, OwnedValue>>> = take(&mut properties, "Profiles");
+        let degraded: Option<String> = take(&mut properties, "PerformanceDegraded");
+        let holds: Option<Vec<HashMap<String, OwnedValue>>> =
+            take(&mut properties, "ActiveProfileHolds");
         let Some(active) = active.filter(|a| EntityId(a.clone()).valid()) else {
             continue;
         };

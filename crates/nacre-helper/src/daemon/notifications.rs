@@ -626,7 +626,10 @@ async fn wait_name_released(ingress: &Ingress) -> bool {
     let watch = async {
         let connection = zbus::Connection::session().await.ok()?;
         let dbus = zbus::fdo::DBusProxy::new(&connection).await.ok()?;
-        let mut owners = dbus.receive_name_owner_changed().await.ok()?;
+        let mut owners = dbus
+            .receive_name_owner_changed_with_args(&[(0, bus::NAME)])
+            .await
+            .ok()?;
         let name = zbus::names::BusName::try_from(bus::NAME).ok()?;
         while dbus.name_has_owner(name.clone()).await.ok()? {
             loop {
@@ -750,7 +753,10 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
             }
         };
         let dbus = zbus::fdo::DBusProxy::new(&bus.connection).await?;
-        let mut owners = dbus.receive_name_owner_changed().await?;
+        // Only senders leaving the bus matter (new_owner == "").
+        let mut owners = dbus
+            .receive_name_owner_changed_with_args(&[(2, "")])
+            .await?;
         ingress.ready.store(true, Ordering::Release);
         publish(&hub, &model, &storage, &ingress, true, true)?;
         hub.borrow_mut().service("notifications", "running", 0)?;
