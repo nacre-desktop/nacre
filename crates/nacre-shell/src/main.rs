@@ -1271,9 +1271,7 @@ fn start(
                         let history = notification_history.ok_or(
                             "--notification-bus requires --notification-history (private state)",
                         )?;
-                        runtime
-                            .with_notifications(socket, history)?
-                            .with_shared_desktop(desktop::start_services(), false)?
+                        runtime.with_notifications(socket, history)?
                     } else {
                         runtime
                     };

@@ -1581,44 +1581,6 @@ fn audio_core_disconnect_retains_last_good_until_recovery() -> Result<()> {
 }
 
 #[test]
-fn audio_legacy_preview_remains_unchanged() -> Result<()> {
-    crate::i18n::init();
-    let initial = BTreeMap::from([
-        ("panel.open".into(), Value::Bool(true)),
-        (
-            "bead.desktop.audio.device".into(),
-            Value::Text("Speakers".into()),
-        ),
-        ("bead.desktop.audio.label".into(), Value::Text("50%".into())),
-        ("bead.desktop.audio.percent".into(), Value::Number(50.)),
-        ("bead.desktop.audio".into(), Value::Text("volume_up".into())),
-    ]);
-    let h = Harness::load(
-        &root(),
-        Path::new("sound/main.luau"),
-        &root().join("palette.json"),
-        initial,
-        Config {
-            width: 420,
-            height: 320,
-            scale: 1.,
-        },
-    )?;
-    let actions = h
-        .session
-        .view_nodes()
-        .iter()
-        .filter_map(|node| node.action.as_deref())
-        .collect::<Vec<_>>();
-    assert!(actions.contains(&"services.audio"));
-    assert!(actions.contains(&"services.audio.volume"));
-    assert!(h.scene().primitives.iter().any(|primitive| matches!(primitive,
-        bead::render::Primitive::Text { text, .. } if text == "Drag or use arrow keys to adjust volume"
-    )));
-    Ok(())
-}
-
-#[test]
 fn core_sound_without_client_has_visible_read_only_factory() -> Result<()> {
     let palette_path = root().join("palette.json");
     let colors = bead::render::Palette::read(&palette_path)?;

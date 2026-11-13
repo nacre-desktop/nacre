@@ -662,7 +662,8 @@ fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it(
         })
         .err()
         .ok_or("fixture has no audio endpoint")?;
-    assert!(error.to_string().contains("audio unavailable"));
+    // N0227: no in-process audio path; without daemon routes the scroll is refused.
+    assert!(error.to_string().contains("unknown desktop action"));
     assert_eq!(
         events.lock().unwrap().len(),
         1,

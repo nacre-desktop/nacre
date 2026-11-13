@@ -4258,6 +4258,8 @@ impl Runtime {
             {
                 Some(Route::Mute)
             }
+            // The non-popout pill and the desktop sound widget's Mute button activate it.
+            ("services.audio", _) if press => Some(Route::Mute),
             ("services.tray", _) if press => {
                 let menu = self
                     .daemon_tray
@@ -5914,12 +5916,8 @@ impl SceneSource for Runtime {
                     prepare_panel: self.bar
                         && (node.action.as_deref() == Some("view.open")
                             || node.action.as_deref() == Some("status.pill.open")
-                            || node.action.as_deref()
-                                == Some(if self.launcher_trigger {
-                                    "launcher.open"
-                                } else {
-                                    "services.audio"
-                                })),
+                            || (self.launcher_trigger
+                                && node.action.as_deref() == Some("launcher.open"))),
                     prepare_view: if self.bar && node.action.as_deref() == Some("view.open") {
                         if let Some(bead::core::Value::Text(view)) = &node.action_arg {
                             Some(view.clone())
