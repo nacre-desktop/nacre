@@ -1267,6 +1267,8 @@ impl Publisher {
         colors: &Map<String, Value>,
         selected: &str,
     ) -> Result<()> {
+        // Lock and login show the same still (N0213 `lockWallpaper`).
+        let still = crate::lock_config::lock_image(&self.paths, Path::new(selected));
         if theme_target_enabled(&self.paths, "lock")? {
             let preferences = match state::read(&self.paths.config.join("desktop.json"), json!({}))
             {
@@ -1285,7 +1287,7 @@ impl Publisher {
                 &self.paths,
                 &self.assets,
                 colors,
-                Path::new(selected),
+                &still,
                 &preferences,
                 &self.paths.tools().join("nacre-helper"),
                 &monitors,
@@ -1297,12 +1299,12 @@ impl Publisher {
                 .ok_or("Invalid lock config root")?;
             atomic_write(&config_root.join("hypr/hyprlock.conf"), &config)?;
         }
-        if !selected.is_empty() && theme_target_enabled(&self.paths, "login")? {
+        if theme_target_enabled(&self.paths, "login")? {
             let policy = crate::login_appearance::Policy::environment()?;
             if let Err(error) = crate::login_appearance::publish(
                 &self.paths,
                 &Value::Object(colors.clone()),
-                Path::new(selected),
+                &still,
                 Some(&self.paths.state.join("shell/login-preview")),
                 None,
                 &policy,
@@ -1311,6 +1313,14 @@ impl Publisher {
             }
         }
         Ok(())
+    }
+    /// Rebuild lock and login appearance after a lock-wallpaper preference change.
+    pub fn refresh_lock_login(&mut self) -> Result<()> {
+        let _guard = publication_lock(&self.paths)?;
+        let scheme = state::read(&self.paths.state.join("scheme.json"), json!({}))?;
+        let colors = validated_colors(&scheme, &self.assets)?;
+        let selected = self.selected(None)?;
+        self.publish_lock_login(&colors, &selected)
     }
     pub fn publish_target_manifest(&self) -> Result<()> {
         let manifest: Value =

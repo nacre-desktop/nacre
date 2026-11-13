@@ -61,6 +61,10 @@ pub struct Prefs {
     pub ai_sidebar_enabled: bool,
     pub lip_hover_delay: u32,
     pub click_edge_menus: bool,
+    /// N0213 `lipSize`: every edge handle's length along its edge in pixels (24..96, else 48).
+    pub lip_size: u32,
+    /// N0213 `modules`: the default top-bar instances to show; empty shows them all.
+    pub bar_modules: Vec<String>,
     /// `interfaceFont` / `monoFont`: empty means Nacre's default family.
     pub interface_font: String,
     pub mono_font: String,
@@ -186,6 +190,8 @@ impl Prefs {
                 .filter(|v| v.fract() == 0.)
                 .map_or(350, |v| v.clamp(0., 800.) as u32),
             click_edge_menus: flag("clickEdgeMenus") == Some(true),
+            lip_size: number("lipSize", 48, 24, 96) as u32,
+            bar_modules: strings(desktop.get("modules"), false),
             interface_font: family("interfaceFont"),
             mono_font: family("monoFont"),
             text_offset: size - BODY_SIZE,
@@ -281,6 +287,15 @@ impl Prefs {
                 Bool(self.collection_wallpapers_enabled),
             ),
             ("bar.clock.twelve".into(), Bool(self.clock_12h)),
+            (
+                "bar.modules".into(),
+                bead::core::Value::list(
+                    self.bar_modules
+                        .iter()
+                        .map(|m| json!({ "id": m }))
+                        .collect(),
+                ),
+            ),
         ]
         .into()
     }
@@ -571,6 +586,7 @@ mod tests {
         assert!(d.frame_left && d.frame_right && d.frame_bottom && d.frame_top);
         assert!(d.ai_sidebar_enabled && !d.click_edge_menus);
         assert_eq!(d.lip_hover_delay, 350);
+        assert_eq!(d.lip_size, 48);
         assert_eq!(d.frame_settings().width, 10.);
         // Wrong types and non-integer delays mean unset; toggles are `!== false`.
         let odd = Prefs::decode(
@@ -590,6 +606,22 @@ mod tests {
         assert!(!set.frame_left && !set.frame_right && !set.frame_bottom && !set.frame_top);
         assert_eq!(set.lip_hover_delay, 0);
         assert!(set.click_edge_menus && !set.ai_sidebar_enabled);
+        assert_eq!(
+            Prefs::decode(&json!({"lipSize": 72}), &Json::Null).lip_size,
+            72
+        );
+        assert_eq!(
+            Prefs::decode(&json!({"lipSize": 12}), &Json::Null).lip_size,
+            24
+        );
+        assert_eq!(
+            Prefs::decode(&json!({"lipSize": 140}), &Json::Null).lip_size,
+            96
+        );
+        assert_eq!(
+            Prefs::decode(&json!({"lipSize": "wide"}), &Json::Null).lip_size,
+            48
+        );
         // The delay is clamped to 0..800 and the sizes to sane bounds.
         let extreme = Prefs::decode(
             &json!({"lipHoverDelay": 5000, "frameWidth": 9999, "frameRounding": -4}),
@@ -667,6 +699,33 @@ mod tests {
             &Json::Null,
         );
         assert_eq!(many.workspace_icons.len(), MAX_LIST);
+    }
+
+    #[test]
+    fn top_bar_module_selection_is_published_as_instance_ids() {
+        let defaults = Prefs::default();
+        assert!(
+            defaults.bar_modules.is_empty(),
+            "empty selection keeps defaults"
+        );
+        assert_eq!(
+            defaults.bar_stores()["bar.modules"],
+            bead::core::Value::list(Vec::new())
+        );
+
+        let selected = Prefs::decode(
+            &json!({"modules": ["launcher", "clock", "wifi"]}),
+            &Json::Null,
+        );
+        assert_eq!(selected.bar_modules, ["launcher", "clock", "wifi"]);
+        assert_eq!(
+            selected.bar_stores()["bar.modules"],
+            bead::core::Value::list(vec![
+                json!({"id": "launcher"}),
+                json!({"id": "clock"}),
+                json!({"id": "wifi"}),
+            ])
+        );
     }
     struct Fake(Publisher);
     impl Fake {

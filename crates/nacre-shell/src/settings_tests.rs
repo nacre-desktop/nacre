@@ -301,6 +301,8 @@ fn notifications_page_and_search_use_the_same_registry_data() {
 
 const DESKTOP: &str = "settings.store.desktop";
 const APPS: &str = "settings.store.apps";
+const PROFILE: &str = "settings.store.profile";
+const WALLPAPER_PICKER: &str = "settings.store.wallpaper-picker";
 
 /// A real client against a fake daemon: reads the store, writes with the revision
 /// fence, and follows an outside edit.
@@ -340,21 +342,42 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
             proto: 1,
             min: 1,
             boot: "settings-boot".into(),
-            topics: [(DESKTOP.to_string(), 1), (APPS.to_string(), 1)].into(),
+            topics: [
+                (DESKTOP.to_string(), 1),
+                (APPS.to_string(), 1),
+                (PROFILE.to_string(), 1),
+                (WALLPAPER_PICKER.to_string(), 1),
+            ]
+            .into(),
             methods,
             frame_ms: None,
         };
         framing::write(&mut writer, &welcome).await.unwrap();
         let mut seq = 0;
+        let mut docs = BTreeMap::from([
+            (
+                "desktop".to_owned(),
+                doc("desktop", 3, json!({"dnd":false})),
+            ),
+            (
+                "apps".to_owned(),
+                doc("apps", 3, json!({"browser":["a","b","c"]})),
+            ),
+            (
+                "profile".to_owned(),
+                doc("profile", 3, json!({"startup":[]})),
+            ),
+            (
+                "wallpaper-picker".to_owned(),
+                doc("wallpaper-picker", 3, json!({"lockWallpaper":""})),
+            ),
+        ]);
         while let Ok(Some(message)) = reader.next().await {
             match message {
                 Message::Sub { topics } => {
                     for topic in topics {
-                        let data = if topic == APPS {
-                            doc("apps", 3, json!({"browser": ["a", "b", "c"]}))
-                        } else {
-                            doc("desktop", 3, json!({"dnd": false}))
-                        };
+                        let store = topic.strip_prefix("settings.store.").unwrap();
+                        let data = docs.get(store).unwrap().clone();
                         let snap = Message::Snap { topic, seq, data };
                         framing::write(&mut writer, &snap).await.unwrap();
                     }
@@ -364,7 +387,7 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
                         let reply = Reply::Ok {
                             ok: json!({
                                 "boot":"settings-boot",
-                                "topics":[DESKTOP, APPS],
+                                "topics":[DESKTOP, APPS, PROFILE, WALLPAPER_PICKER],
                                 "methods":status_methods,
                             }),
                         };
@@ -375,34 +398,58 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
                     }
                     assert_eq!(m, METHOD);
                     calls_tx.send(p.clone()).unwrap();
+                    let store = p["store"].as_str().unwrap();
+                    let key = p["key"][0].as_str().unwrap();
+                    let document = docs.get_mut(store).unwrap();
+                    document["data"][key] = p["value"].clone();
+                    document["rev"] = json!(4);
                     let reply = Reply::Ok {
                         ok: json!({"rev": 4}),
                     };
                     framing::write(&mut writer, &Message::Ret { id, reply })
                         .await
                         .unwrap();
-                    {
-                        seq += 1;
-                        let snap = Message::Snap {
-                            topic: DESKTOP.into(),
-                            seq,
-                            data: doc("desktop", 4, json!({"dnd": true})),
-                        };
-                        framing::write(&mut writer, &snap).await.unwrap();
-                    }
+                    seq += 1;
+                    let snap = Message::Snap {
+                        topic: format!("settings.store.{store}"),
+                        seq,
+                        data: document.clone(),
+                    };
+                    framing::write(&mut writer, &snap).await.unwrap();
                 }
                 _ => {}
             }
         }
     });
-    let client = Client::start(Config::new(socket, vec![DESKTOP.into(), APPS.into()])).unwrap();
+    let client = Client::start(Config::new(
+        socket,
+        vec![
+            DESKTOP.into(),
+            APPS.into(),
+            PROFILE.into(),
+            WALLPAPER_PICKER.into(),
+        ],
+    ))
+    .unwrap();
     for _ in 0..500 {
         if client.snapshot().connected && client.status().boot.is_some() {
             break;
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
-    let settings = Settings::new(Some(client.clone()), &root()).unwrap();
+    let settings = Settings::new(Some(client.clone()), &root())
+        .unwrap()
+        .with_startup_choices(&[
+            (
+                "Browser",
+                json!({"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]}),
+            ),
+            (
+                "Files",
+                json!({"label":"Files","workspace":1,"argv":["files"],"classes":["Files"]}),
+            ),
+        ])
+        .with_lock_wallpapers(&[("/wallpapers/lock.png", "Lock scene")]);
     let woken = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counter = woken.clone();
     settings.subscribe(Arc::new(move || {
@@ -474,6 +521,108 @@ async fn store_read_write_round_trip_over_the_wire_and_live_updates() {
         calls.recv().await.unwrap(),
         json!({"store":"apps","key":["browser"],"value":["b","a","c"],"rev":3})
     );
+    // The lock picker writes only a catalogue ID to wallpaper-picker and can restore the
+    // empty value that means “follow the current desktop wallpaper”.
+    let wallpaper_page = stores("wallpaper", "");
+    for _ in 0..500 {
+        let model = settings.project(&wallpaper_page);
+        if model["settings.writable"] == Value::Bool(true) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    settings.act("do:lock-wallpaper|/wallpapers/lock.png", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"wallpaper-picker","key":["lockWallpaper"],"value":"/wallpapers/lock.png","rev":3})
+    );
+    for _ in 0..10 {
+        settings.project(&wallpaper_page);
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settings.act("do:lock-wallpaper|", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"wallpaper-picker","key":["lockWallpaper"],"value":"","rev":4})
+    );
+    for _ in 0..10 {
+        settings.project(&wallpaper_page);
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settings.act(
+        "do:list-add|panels/top-bar.panel.modules|launcher",
+        "",
+        wake(),
+    );
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"desktop","key":["modules"],"value":["launcher"],"rev":4})
+    );
+    for _ in 0..10 {
+        settings.project(&stores("panels/top-bar", ""));
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    let startup_page = stores("apps", "");
+    settings.project(&startup_page);
+    settings.act("do:list-add|apps.startup.startup|g0i0", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"profile","key":["startup"],"value":[{"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]}],"rev":3})
+    );
+    for _ in 0..10 {
+        settings.project(&startup_page);
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settings.act("do:list-add|apps.startup.startup|g0i1", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"profile","key":["startup"],"value":[
+            {"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]},
+            {"label":"Files","workspace":1,"argv":["files"],"classes":["Files"]}
+        ],"rev":4})
+    );
+    for _ in 0..10 {
+        settings.project(&startup_page);
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settings.act("set:apps.startup.startup|down:0", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"profile","key":["startup"],"value":[
+            {"label":"Files","workspace":1,"argv":["files"],"classes":["Files"]},
+            {"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]}
+        ],"rev":4})
+    );
+    for _ in 0..10 {
+        settings.project(&startup_page);
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    settings.act("set:apps.startup.startup|rm:0", "", wake());
+    assert_eq!(
+        tokio::time::timeout(Duration::from_secs(3), calls.recv())
+            .await
+            .unwrap()
+            .unwrap(),
+        json!({"store":"profile","key":["startup"],"value":[{"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]}],"rev":4})
+    );
     // The window is closed: leases and subscriptions go with it.
     drop(settings);
     client.stop().await.unwrap();
@@ -502,6 +651,10 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     let (settings, _) =
         fixture(json!({"topBarEnabled": false, "frameWidth": 12, "language": "nb"}));
     let panels = items(&settings.project(&stores("panels", "")));
+    let lip_size = row(&panels, "panels.lips.lipSize");
+    assert_eq!(lip_size["kind"], "number");
+    assert_eq!(lip_size["number"], 48);
+    assert_eq!(lip_size["unit"], "px");
     assert_eq!(
         row(&panels, "panels.lips.detachablePanels")["kind"],
         "toggle"
@@ -514,6 +667,11 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
             .any(|r| r["id"] == "link:panels/top-bar" && r["kind"] == "link")
     );
     let top = items(&settings.project(&stores("panels/top-bar", "")));
+    assert_eq!(row(&top, "panels/top-bar.panel.modules")["kind"], "list");
+    assert_eq!(
+        row(&top, "panels/top-bar.panel.modules")["choice_editor"],
+        true
+    );
     assert_eq!(row(&top, "panels/top-bar.panel.enabled")["checked"], false);
     assert_eq!(row(&top, "panels/top-bar.panel.enabled")["enabled"], true);
     assert!(
@@ -554,6 +712,8 @@ fn enum_rows_are_segments_to_four_options_and_a_drop_down_beyond() {
         "set:date-time-language.locale.language|1"
     );
     let colors = items(&settings.project(&stores("colors", "")));
+    assert_eq!(row(&colors, "colors.palette.automatic")["kind"], "toggle");
+    assert_eq!(row(&colors, "colors.palette.automatic")["checked"], false);
     let source = row(&colors, "colors.palette.source");
     assert_eq!(source["kind"], "select");
     assert_eq!(source["options"].as_array().unwrap().len(), 31);
@@ -593,8 +753,14 @@ fn launcher_apps_and_dashboard_pages_follow_the_registry() {
     assert_eq!(browser["kind"], "list");
     assert_eq!(browser["items"][0]["label"], "google-chrome-stable");
     assert_eq!(browser["items"][0]["down"], "apps.defaults.browser|down:0");
-    // `startup` is planned: hidden, and so is its empty section.
-    assert!(apps.iter().all(|r| r["id"] != "section:apps.startup"));
+    // Startup apps use the same ordered list editor; choices are fetched from the installed app catalog.
+    assert_eq!(row(&apps, "apps.startup.startup")["kind"], "list");
+    assert_eq!(row(&apps, "apps.startup.startup")["reorder"], true);
+    let wallpaper = items(&settings.project(&stores("wallpaper", "")));
+    assert_eq!(
+        row(&wallpaper, "wallpaper.motion.lockWallpaper")["kind"],
+        "picker"
+    );
     let pages = items(&settings.project(&stores("panels/dashboard/pages", "")));
     assert_eq!(
         row(&pages, "panels/dashboard/pages.editor.pages")["reorder"],
@@ -708,7 +874,22 @@ pub(crate) fn golden(name: &str, h: &mut Harness) {
             Default::default(),
             &std::env::temp_dir().join(format!("bead-{name}-diff")),
         )
-        .unwrap();
+        .unwrap_or_else(|error| panic!("{name}: {error}"));
+}
+
+/// Keep the real section and row together when capturing an editor below the page fold.
+fn focus_setting(model: &mut BTreeMap<String, Value>, id: &str) {
+    let selected = row(&items(model), id).clone();
+    let mut section = nested_items(model)
+        .into_iter()
+        .find(|section| {
+            section["rows"]
+                .as_array()
+                .is_some_and(|rows| rows.iter().any(|row| row["id"] == id))
+        })
+        .expect("setting section");
+    section["rows"] = json!([selected]);
+    model.insert("settings.items".into(), Value::list(vec![section]));
 }
 
 #[test]
@@ -717,6 +898,7 @@ fn settings_window_goldens() {
         json!({"textSize": 14, "frameSheen": false, "monoFont": "Fira Code", "dnd": true});
     for (name, page, search, scale) in [
         ("settings-appearance-1", "appearance", "", 1.),
+        ("settings-colors-1", "colors", "", 1.),
         ("settings-appearance-1.5", "appearance", "", 1.5),
         ("settings-notifications-1", "notifications", "", 1.),
         ("settings-search-1", "appearance", "font", 1.),
@@ -776,12 +958,55 @@ fn settings_window_goldens() {
     ] {
         let (settings, _) = fixture(desktop.clone());
         let mut model = settings.project(&stores(page, search));
+        if page == "colors" {
+            focus_setting(&mut model, "colors.palette.automatic");
+        }
         // Goldens show the enabled look a connected daemon gives.
         model.insert("settings.writable".into(), Value::Bool(true));
         model.insert("settings.search".into(), Value::Text(search.into()));
         let mut h = harness(model, 960, 640, scale);
         golden(name, &mut h);
     }
+    let (settings, _) = fixture_with(
+        json!({}),
+        &[(
+            "settings.store.profile",
+            doc(
+                "profile",
+                1,
+                json!({"startup":[
+                    {"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]},
+                    {"label":"Files","workspace":1,"argv":["files"],"classes":["Files"]}
+                ]}),
+            ),
+        )],
+    );
+    let settings = settings.with_startup_choices(&[
+        (
+            "Browser",
+            json!({"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]}),
+        ),
+        (
+            "Files",
+            json!({"label":"Files","workspace":1,"argv":["files"],"classes":["Files"]}),
+        ),
+    ]);
+    let mut model = settings.project(&stores("apps", ""));
+    focus_setting(&mut model, "apps.startup.startup");
+    model.insert("settings.writable".into(), Value::Bool(true));
+    let mut h = harness(model, 960, 640, 1.);
+    golden("settings-apps-startup-chooser-1", &mut h);
+
+    let (settings, _) = fixture(json!({}));
+    let settings = settings.with_lock_wallpapers(&[
+        ("/wallpapers/night.jpg", "Night sky"),
+        ("/wallpapers/forest.mp4", "Forest motion"),
+    ]);
+    let mut model = settings.project(&stores("wallpaper", ""));
+    focus_setting(&mut model, "wallpaper.motion.lockWallpaper");
+    model.insert("settings.writable".into(), Value::Bool(true));
+    let mut h = harness(model, 960, 640, 1.);
+    golden("settings-wallpaper-lock-chooser-1", &mut h);
 }
 
 /// Every row kind of the form kit, including the states a real page rarely shows

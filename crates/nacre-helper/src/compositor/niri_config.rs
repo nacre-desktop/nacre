@@ -90,6 +90,11 @@ pub fn keyboard(values: &Value) -> Result<String> {
     Ok(result)
 }
 pub fn desktop(preferences: &Value) -> Result<String> {
+    desktop_with(preferences, false)
+}
+/// `cursor_shake`: the running compositor advertises `NacreCapabilities.cursor_shake`. Only
+/// then may `shakeCursor` write `cursor { shake-to-enlarge }`; stock niri rejects the node.
+pub fn desktop_with(preferences: &Value, cursor_shake: bool) -> Result<String> {
     let preferences = preferences
         .as_object()
         .ok_or_else(|| invalid("Invalid compositor toggle"))?;
@@ -265,6 +270,9 @@ pub fn desktop(preferences: &Value) -> Result<String> {
     }
     if !input.is_empty() || preferences.contains_key("followMouse") {
         lines.push(format!("input {{\n    {}\n}}", input.join("\n    ")));
+    }
+    if cursor_shake && preferences.get("shakeCursor") == Some(&Value::Bool(true)) {
+        lines.push("cursor {\n    shake-to-enlarge\n}".into());
     }
     Ok(lines.join("\n") + "\n")
 }
@@ -653,6 +661,19 @@ mod input_settings_tests {
 
 #[cfg(test)]
 mod input_node_regression {
+    #[test]
+    fn cursor_shake_needs_the_setting_and_the_compositor_capability() {
+        use super::{desktop, desktop_with};
+        let on = serde_json::json!({"shakeCursor": true});
+        assert!(desktop_with(&on, true)
+            .unwrap()
+            .contains("cursor {\n    shake-to-enlarge\n}"));
+        // Stock or older niri would reject the unknown node; an off setting writes nothing.
+        assert!(!desktop(&on).unwrap().contains("cursor"));
+        let off = serde_json::json!({"shakeCursor": false});
+        assert!(!desktop_with(&off, true).unwrap().contains("cursor"));
+    }
+
     #[test]
     fn layout_scroll_and_touchpad_share_one_input_node() {
         let output = super::desktop(&serde_json::json!({"keyboardLayouts":"no","naturalScroll":true,"touchpadEnabled":false})).unwrap();

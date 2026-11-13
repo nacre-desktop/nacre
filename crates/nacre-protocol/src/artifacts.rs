@@ -513,6 +513,7 @@ pub fn menu_transcripts() -> BTreeMap<String, String> {
         filter: None,
         category: None,
         presentation: None,
+        startup: None,
     };
     let mut cases = vec![(
         "menu-apps",

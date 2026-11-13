@@ -3,6 +3,7 @@
 This file tracks current and historical Nacre work units. Add one row per unit: link its spec, record the newest status, and keep a short outcome or next step in Notes.
 
 ## Current status
+| N0213 | [Appearance, panels and startup settings](0213-appearance-panels-settings.md) | Implemented; focused dev-1 checks passed (helper 1081, shell 901, Luau); ready for lead review | Live palette schedule, edge handle size, top-bar module selection, startup app editor, lock/login wallpaper and capability-gated pointer enlargement. |
 | N0227 | [Shell stops running its own system clients](0227-shell-daemon-clients.md) | Implemented; dev-1 fmt, clippy, whole shell binary (891 passed) and Luau analyzer passed; ready for lead review | Bar pills already read daemon topics; Nacre starts Bead `Desktop` without the PipeWire client and deletes the in-process audio actions, legacy sound panel, services probe and OSD glue (net -286 code lines); `services.audio` activation now routes to `audio.toggle_mute`. The bus lane stays for the clock: request B1 to Bead (clock-only lane), P1/P2 to Platform (publish logind lock/sleep; tray tooltip description). |
 | N0211 | [Power settings](0211-power-settings.md) | Implemented; ready for lead review | Reversible battery saver, idle dim/sleep and user-session lid/power-button policy; helper 1,045 and shell 887 tests passed. Local commits only. |
 | N0307 | [Wallpaper output pacing](0307-wallpaper-output-pacing.md) | Landed (Platform-approved); desktop GL jitter 100 → 0.3 ms p95, all 900 frames on both heads | Per-output video callbacks (GL opacity fades keep drawing while paused). Picker predecode/prefetch cover every output size. GL player CPU 3.4 → 6.6% for ~7.4× more shown frames. |
@@ -204,7 +205,6 @@ This file tracks current and historical Nacre work units. Add one row per unit: 
 | N0173 | [Timing-independent tests](0173-deflake-timing-tests.md) | Done; full dev-1 desktop CI and repeated load checks passed | Workspace failures 41/50 → 0/50 under ten CPU workers; preserve behavior checks and make speed gates opt-in. Product unchanged. |
 | N0208 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | N0211 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
-| N0213 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | N0218c |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | N0221 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | N0300 | [Noctalia versus Nacre benchmark](../research/noctalia-vs-nacre-benchmark-20261112.md) | Measured 2026-11-12–13; three 30-minute desktop runs per arm | Noctalia 5.4.1 versus Nacre 382f36de on stock/fork niri; AMD GPU/PPT, memory, CPU, startup and context-switch tables. Private fixture and power-noise limits recorded; no product changes. |

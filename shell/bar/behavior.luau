@@ -9,7 +9,7 @@ return {stores={["bead.desktop.wallpaper.luma"]={},["widgets.undo"]={},["widgets
     ["widgets.drag.app_origin_x"]=0,["widgets.drag.app_origin_y"]=0,["widgets.drag.app_origin_valid"]=false,
     ["widgets.drag.app_width"]=0,["widgets.drag.app_height"]=0,["widgets.drag.target_output_id"]="",
     ["widgets.group"]="",["widgets.layout"]={},["widgets.rev"]=0,["widgets.outputs"]={},["widgets.screen_width"]=0,["widgets.screen_height"]=0,["widgets.screen_origin_x"]=0,["widgets.screen_origin_y"]=0,["widgets.screen_id"]="",["bar.height"]=50,["bar.notifications.count"]=0,["bar.launcher"]=false,["bar.popouts"]=false,["bar.reconnecting"]=false,["bar.recording"]=false,["bar.recording.elapsed"]="",["bar.workspace.enabled"]=true,["bar.tray.enabled"]=true,["bar.window.focus.enabled"]=true,["bar.workspace.origins"]={},["bar.collections"]={},["bar.collection.current"]="",["bar.collection.connection"]="",["bar.collection.enabled"]=false,["bar.collection.wallpapers.enabled"]=false,["bar.collection.height"]=260,["collection.draft"]="",["collection.operation"]="",["collection.target"]="",["collection.scroll"]=0,["bar.dashboard.enabled"]=true,
-    ["bar.tray.visible"]=false,["bar.workspace.count"]=6,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,
+    ["bar.tray.visible"]=false,["bar.workspace.count"]=6,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,["bar.modules"]={},
     ["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
     ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
     ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",

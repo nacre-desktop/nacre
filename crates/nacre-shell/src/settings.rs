@@ -171,6 +171,164 @@ fn clean_text(text: &str) -> Option<String> {
     (text.chars().count() <= MAX_TEXT && !text.chars().any(char::is_control)).then(|| text.into())
 }
 
+fn startup_choices(reply: Json) -> Option<Vec<(String, Json)>> {
+    let order = reply["order"].as_array()?;
+    if order.len() > MAX_ITEMS * 32 || !reply["items"].is_object() {
+        return None;
+    }
+    Some(
+        order
+            .iter()
+            .filter_map(|id| {
+                let id = id.as_str()?;
+                let item = reply["items"].get(id)?;
+                if item["kind"] != "app" || item["disabled"] == true {
+                    return None;
+                }
+                let app = &item["presentation"]["startup"];
+                let label = app["label"].as_str()?.trim();
+                if label.is_empty() || label.len() > MAX_TEXT || label.chars().any(char::is_control)
+                {
+                    return None;
+                }
+                let argv = app["argv"]
+                    .as_array()?
+                    .iter()
+                    .map(|arg| arg.as_str().map(str::to_owned))
+                    .collect::<Option<Vec<_>>>()?;
+                if argv.is_empty() || argv.len() > 32 || argv.iter().any(|arg| arg.contains('\0')) {
+                    return None;
+                }
+                let classes = app["classes"]
+                    .as_array()?
+                    .iter()
+                    .map(|class| class.as_str().map(str::to_owned))
+                    .collect::<Option<Vec<_>>>()?;
+                if classes.len() > 32
+                    || classes
+                        .iter()
+                        .any(|class| class.is_empty() || class.len() > 200 || class.contains('\0'))
+                {
+                    return None;
+                }
+                Some((
+                    label.to_owned(),
+                    json!({"label":label,"workspace":1,"argv":argv,"classes":classes}),
+                ))
+            })
+            .collect(),
+    )
+}
+
+fn startup_choice(state: &State, token: &str) -> Option<Json> {
+    let (generation, index) = token.strip_prefix('g')?.split_once('i')?;
+    let generation = generation.parse::<u64>().ok()?;
+    let index = index.parse::<usize>().ok()?;
+    (generation == state.startup_choices_generation)
+        .then(|| {
+            state
+                .startup_choices
+                .get(index)
+                .map(|(_, value)| value.clone())
+        })
+        .flatten()
+}
+
+#[cfg(test)]
+mod startup_choice_tests {
+    use super::{State, startup_choice, startup_choices};
+    use serde_json::json;
+
+    #[test]
+    fn installed_app_choices_keep_only_bounded_startup_records() {
+        let result = startup_choices(json!({
+            "order":["valid","bad-command","bad-class"],
+            "items":{
+                "valid":{"kind":"app","presentation":{"startup":{"label":"Browser","argv":["browser","--profile=work"],"classes":["Browser"]}}},
+                "bad-command":{"kind":"app","presentation":{"startup":{"label":"Broken","argv":[],"classes":[]}}},
+                "bad-class":{"kind":"app","presentation":{"startup":{"label":"Unsafe","argv":["app"],"classes":[""]}}}
+            }
+        }));
+        assert_eq!(
+            result,
+            Some(vec![(
+                "Browser".into(),
+                json!({
+                    "label":"Browser","workspace":1,"argv":["browser","--profile=work"],"classes":["Browser"]
+                })
+            )])
+        );
+    }
+
+    #[test]
+    fn stale_picker_generation_cannot_select_a_new_result_at_the_same_index() {
+        let reply = |name| {
+            json!({"order":["app"],"items":{"app":{"kind":"app",
+            "presentation":{"startup":{"label":name,"argv":[name],"classes":[name]}}}}})
+        };
+        let mut state = State::default();
+        state.accept_startup_catalogue(Some(reply("Old result")));
+        let old_token = format!("g{}i0", state.startup_choices_generation);
+        state.accept_startup_catalogue(Some(reply("New result")));
+        assert_eq!(startup_choice(&state, &old_token), None);
+        let current_token = format!("g{}i0", state.startup_choices_generation);
+        assert_eq!(
+            startup_choice(&state, &current_token).unwrap()["label"],
+            "New result"
+        );
+    }
+
+    #[test]
+    fn failed_startup_catalogue_can_be_retried_for_the_same_query() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+        let settings = super::Settings::new(None, &root).unwrap();
+        settings.state.borrow_mut().startup_choices_query = "browser".into();
+        settings.state.borrow_mut().startup_choices_attempted = Some("boot".into());
+        settings.state.borrow_mut().accept_startup_catalogue(None);
+        let setting = settings
+            .registry
+            .setting("apps.startup.startup")
+            .unwrap()
+            .clone();
+        assert!(
+            settings
+                .after_row(&setting, true, &settings.state.borrow())
+                .iter()
+                .any(|row| row["id"] == "startup.retry")
+        );
+        settings.do_op("retry-startup", std::sync::Arc::new(|| {}));
+        let state = settings.state.borrow();
+        assert!(!state.startup_choices_failed);
+        assert_eq!(state.startup_choices_attempted, None);
+        assert_eq!(state.startup_choices_query, "browser");
+        assert!(settings.after_row(&setting, true, &state).is_empty());
+    }
+
+    #[test]
+    fn failed_wallpaper_catalogue_can_be_retried_for_the_same_boot() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+        let settings = super::Settings::new(None, &root).unwrap();
+        settings.state.borrow_mut().lock_catalogue_attempted = Some("boot".into());
+        settings.state.borrow_mut().accept_wallpaper_catalogue(None);
+        let setting = settings
+            .registry
+            .setting("wallpaper.motion.lockWallpaper")
+            .unwrap()
+            .clone();
+        assert!(
+            settings
+                .after_row(&setting, true, &settings.state.borrow())
+                .iter()
+                .any(|row| row["id"] == "lock-wallpaper.retry")
+        );
+        settings.do_op("retry-wallpapers", std::sync::Arc::new(|| {}));
+        let state = settings.state.borrow();
+        assert!(!state.lock_catalogue_failed);
+        assert_eq!(state.lock_catalogue_attempted, None);
+        assert!(settings.after_row(&setting, true, &state).is_empty());
+    }
+}
+
 #[derive(Default)]
 struct State {
     pending: Option<CallTicket>,
@@ -226,6 +384,62 @@ struct State {
     /// The Displays page: the chosen primary output and its countdown wake (B0089).
     display_primary: String,
     display_ticker: Option<displays::Ticker>,
+    /// Trusted installed-app choices for the startup list. The menu query keeps command data
+    /// in its bounded presentation payload; Settings stores only the validated launch record.
+    startup_choices: Vec<(String, Json)>,
+    startup_choices_fetch: Option<(String, CallTicket)>,
+    startup_choices_attempted: Option<String>,
+    startup_choices_query: String,
+    startup_choices_generation: u64,
+    startup_choices_failed: bool,
+    lock_wallpapers: Vec<Json>,
+    lock_catalogue_fetch: Option<(String, CallTicket)>,
+    lock_catalogue_attempted: Option<String>,
+    lock_catalogue_loaded: bool,
+    lock_catalogue_failed: bool,
+}
+impl State {
+    fn accept_startup_catalogue(&mut self, reply: Option<Json>) {
+        self.startup_choices_generation = self.startup_choices_generation.wrapping_add(1);
+        match reply.and_then(startup_choices) {
+            Some(choices) => {
+                self.startup_choices = choices;
+                self.startup_choices_failed = false;
+            }
+            None => {
+                self.startup_choices.clear();
+                self.startup_choices_failed = true;
+            }
+        }
+    }
+    fn accept_wallpaper_catalogue(&mut self, reply: Option<Json>) {
+        match reply
+            .and_then(|reply| {
+                serde_json::from_value::<nacre_protocol::wallpaper::WallpaperCatalogue>(reply).ok()
+            })
+            .filter(|catalogue| catalogue.validate().is_ok())
+        {
+            Some(catalogue) => {
+                self.lock_wallpapers = catalogue
+                    .entries
+                    .into_iter()
+                    .filter(|entry| !entry.id.is_empty())
+                    .map(|entry| json!({"value":entry.id,"label":entry.title}))
+                    .collect();
+                self.lock_catalogue_failed = false;
+            }
+            None => self.lock_catalogue_failed = true,
+        }
+    }
+    fn retry_startup_catalogue(&mut self) {
+        self.startup_choices_failed = false;
+        self.startup_choices_attempted = None;
+        self.startup_choices_generation = self.startup_choices_generation.wrapping_add(1);
+    }
+    fn retry_wallpaper_catalogue(&mut self) {
+        self.lock_catalogue_failed = false;
+        self.lock_catalogue_attempted = None;
+    }
 }
 type Wake = Arc<dyn Fn() + Send + Sync>;
 type Opened = BTreeMap<String, (Arc<dyn Source>, Option<Subscription>)>;
@@ -349,6 +563,25 @@ impl Settings {
                 .collect();
             state.layouts_asked = true;
         }
+        self
+    }
+    #[cfg(test)]
+    pub fn with_startup_choices(self, choices: &[(&str, Json)]) -> Self {
+        self.state.borrow_mut().startup_choices = choices
+            .iter()
+            .map(|(label, value)| ((*label).into(), value.clone()))
+            .collect();
+        self
+    }
+    #[cfg(test)]
+    pub fn with_lock_wallpapers(self, choices: &[(&str, &str)]) -> Self {
+        let mut state = self.state.borrow_mut();
+        state.lock_wallpapers = choices
+            .iter()
+            .map(|(value, label)| json!({"value":value,"label":label}))
+            .collect();
+        state.lock_catalogue_loaded = true;
+        drop(state);
         self
     }
     #[cfg(test)]
@@ -525,6 +758,138 @@ impl Settings {
             state.wallpaper_catalogue = Some((id, ticket));
         }
     }
+    fn fetch_startup_choices(&self, page: &str, searching: bool) {
+        if page != "apps" || searching {
+            return;
+        }
+        let Some(client) = self.client.as_ref() else {
+            return;
+        };
+        let status = client.status();
+        let Some(boot) = status.boot.clone() else {
+            return;
+        };
+        let query = self.state.borrow().pick.trim().to_owned();
+        let mut state = self.state.borrow_mut();
+        if state
+            .startup_choices_fetch
+            .as_ref()
+            .is_some_and(|(old, _)| old != &boot)
+            || state
+                .startup_choices_attempted
+                .as_ref()
+                .is_some_and(|old| old != &boot)
+            || state.startup_choices_query != query
+        {
+            state.startup_choices_fetch = None;
+            state.startup_choices.clear();
+            state.startup_choices_attempted = None;
+            state.startup_choices_failed = false;
+            state.startup_choices_query = query.clone();
+            state.startup_choices_generation = state.startup_choices_generation.wrapping_add(1);
+        }
+        if let Some((requested, ticket)) = &mut state.startup_choices_fetch
+            && let Some(reply) = ticket.try_take()
+        {
+            let requested = requested.clone();
+            state.startup_choices_fetch = None;
+            if requested == boot {
+                state.accept_startup_catalogue(reply.ok());
+            }
+        }
+        if state.startup_choices_fetch.is_some()
+            || state.startup_choices_attempted.as_ref() == Some(&boot)
+        {
+            return;
+        }
+        let Some((call_boot, timeout)) = self.ready_for("menu.query") else {
+            return;
+        };
+        let Some(wake) = self.wake.borrow().clone() else {
+            return;
+        };
+        if call_boot != boot {
+            return;
+        }
+        if let Ok(ticket) = client.begin_call(
+            "menu.query".into(),
+            json!({"query":query,"mode":"apps","route":"apps","limit":64,"presentation":true,"startup":true}),
+            timeout,
+            CallGuard { boot: boot.clone(), version: 1 },
+            Some(wake),
+        ) {
+            state.startup_choices_attempted = Some(boot.clone());
+            state.startup_choices_fetch = Some((boot, ticket));
+        }
+    }
+    fn fetch_lock_wallpapers(&self, page: &str, searching: bool) {
+        if page != "wallpaper" || searching {
+            return;
+        }
+        let mut state = self.state.borrow_mut();
+        if !state.lock_catalogue_loaded {
+            state.lock_wallpapers = crate::wallpaper_catalogue_cache::load()
+                .unwrap_or_default()
+                .into_iter()
+                .filter_map(|entry| {
+                    let id = entry["id"].as_str()?;
+                    Some(json!({"value":id,"label":entry["title"].as_str().unwrap_or(id)}))
+                })
+                .collect();
+            state.lock_catalogue_loaded = true;
+        }
+        let Some(client) = self.client.as_ref() else {
+            return;
+        };
+        let status = client.status();
+        let Some(boot) = status.boot.clone() else {
+            return;
+        };
+        if state
+            .lock_catalogue_fetch
+            .as_ref()
+            .is_some_and(|(old, _)| old != &boot)
+        {
+            state.lock_catalogue_fetch = None;
+            state.lock_catalogue_attempted = None;
+        }
+        if let Some((requested, ticket)) = &mut state.lock_catalogue_fetch
+            && let Some(reply) = ticket.try_take()
+        {
+            let requested = requested.clone();
+            state.lock_catalogue_fetch = None;
+            if requested == boot {
+                state.accept_wallpaper_catalogue(reply.ok());
+            }
+        }
+        if state.lock_catalogue_fetch.is_some()
+            || state.lock_catalogue_attempted.as_ref() == Some(&boot)
+        {
+            return;
+        }
+        let Some((call_boot, timeout)) = self.ready_for("wallpaper.catalogue") else {
+            return;
+        };
+        let Some(wake) = self.wake.borrow().clone() else {
+            return;
+        };
+        if call_boot != boot {
+            return;
+        }
+        if let Ok(ticket) = client.begin_call(
+            "wallpaper.catalogue".into(),
+            json!({"ids": []}),
+            timeout,
+            CallGuard {
+                boot: boot.clone(),
+                version: 1,
+            },
+            Some(wake),
+        ) {
+            state.lock_catalogue_attempted = Some(boot.clone());
+            state.lock_catalogue_fetch = Some((boot, ticket));
+        }
+    }
     /// `(rev, data, readable)` of a store document.
     fn document(&self, store: &str) -> (u64, Json, bool) {
         let Some(source) = self
@@ -616,7 +981,7 @@ impl Settings {
             && !self.app_theme(setting)
             && !Self::input_adapter(setting))
             || setting.get("backend").is_some()
-            || matches!(setting["entityType"].as_str(), Some("entry" | "startup"))
+            || setting["entityType"] == "entry"
             || (setting.get("editorOwned").is_some()
                 && setting["type"] == "array"
                 && !self.registry.ordered.iter().any(|o| o == id))
@@ -707,6 +1072,23 @@ impl Settings {
             }
             Some("string") => {
                 let text = shown.as_str().unwrap_or("").to_owned();
+                if id == "wallpaper.motion.lockWallpaper" {
+                    row["kind"] = "picker".into();
+                    let mut items = vec![
+                        json!({"id":"do:lock-wallpaper|", "label":tr("bead.settings.wallpaper-current", &[]), "selected":text.is_empty()}),
+                    ];
+                    let query = state.pick.trim().to_lowercase();
+                    items.extend(state.lock_wallpapers.iter().filter(|choice| {
+                        query.is_empty() || choice["label"].as_str().unwrap_or("").to_lowercase().contains(&query)
+                    }).take(MAX_RESULTS).filter_map(|choice| {
+                        let value = choice["value"].as_str()?;
+                        Some(json!({"id":format!("do:lock-wallpaper|{value}"), "label":choice["label"], "selected":value == text}))
+                    }));
+                    row["items"] = items.into();
+                    row["placeholder"] = tr("bead.settings.wallpaper-pick", &[]).into();
+                    row["empty"] = tr("bead.settings.no-results", &[]).into();
+                    return row;
+                }
                 row["kind"] = "text".into();
                 row["text"] = if text.is_empty() {
                     tr("bead.settings.default-value", &[])
@@ -727,13 +1109,40 @@ impl Settings {
                     .take(MAX_ITEMS)
                     .enumerate()
                     .map(|(i, v)| {
+                        let label = self
+                            .registry
+                            .array(setting, "choices")
+                            .find(|choice| choice["value"] == *v)
+                            .map(|choice| self.registry.text(choice, "labelId"))
+                            .or_else(|| v.as_str().map(String::from))
+                            .or_else(|| v["label"].as_str().map(str::to_owned))
+                            .unwrap_or_else(|| v.to_string());
                         json!({"id": format!("{id}|rm:{i}"), "up": format!("{id}|up:{i}"),
                             "down": format!("{id}|down:{i}"),
-                            "label": v.as_str().map(String::from).unwrap_or_else(|| v.to_string())})
+                            "label": label})
                     })
                     .collect();
                 row["reorder"] = self.registry.ordered.iter().any(|o| o == id).into();
+                row["choice_editor"] =
+                    (setting.get("choices").is_some() || id == "apps.startup.startup").into();
                 row["items"] = items.into();
+                let choice_query = state.pick.trim().to_lowercase();
+                row["choices"] = self.registry.array(setting, "choices").filter_map(|choice| {
+                    let value = choice["value"].clone();
+                    let label = choice["label"].as_str().map(str::to_owned)
+                        .unwrap_or_else(|| self.registry.text(choice, "labelId"));
+                    (choice_query.is_empty() || label.to_lowercase().contains(&choice_query)).then(||
+                        json!({"id": format!("do:list-add|{id}|{}", value.as_str().unwrap_or("")),
+                            "label": label,
+                            "selected": shown.as_array().is_some_and(|values| values.contains(&value))})
+                    )
+                }).take(MAX_RESULTS).collect::<Vec<_>>().into();
+                if id == "apps.startup.startup" {
+                    row["choices"] = state.startup_choices.iter().enumerate().map(|(i, (label, value))| {
+                        json!({"id": format!("do:list-add|{id}|g{}i{i}", state.startup_choices_generation), "label": label,
+                            "selected": shown.as_array().is_some_and(|values| values.contains(value))})
+                    }).collect::<Vec<_>>().into();
+                }
             }
             _ => {
                 row["kind"] = "help".into();
@@ -941,6 +1350,8 @@ impl Settings {
         self.retain(&wanted);
         self.refresh_caps();
         self.fetch_wallpaper_thumbnail(&page, searching);
+        self.fetch_startup_choices(&page, searching);
+        self.fetch_lock_wallpapers(&page, searching);
         let notice = self.settle();
         self.fetch(&page);
         let items = if searching {
@@ -1037,6 +1448,15 @@ impl Settings {
                     state.notice.clear();
                     state.status_asked = false;
                     state.shortcuts_asked = false;
+                    match self.page_for(payload).as_str() {
+                        "apps" => {
+                            state.retry_startup_catalogue();
+                        }
+                        "wallpaper" => {
+                            state.retry_wallpaper_catalogue();
+                        }
+                        _ => {}
+                    }
                 }
                 return BTreeMap::from([
                     ("settings.page".into(), Value::Text(self.page_for(payload))),
@@ -1132,7 +1552,11 @@ impl Settings {
                         list.swap(from, to);
                         Json::Array(list.clone())
                     })
-                } else if how == "add" && list.len() < MAX_ITEMS {
+                } else if how == "add"
+                    && list.len() < MAX_ITEMS
+                    && setting.get("choices").is_none()
+                    && setting["entityType"] != "startup"
+                {
                     clean_text(edit_text).filter(|t| !t.is_empty()).map(|t| {
                         list.push(Json::String(t));
                         Json::Array(list.clone())

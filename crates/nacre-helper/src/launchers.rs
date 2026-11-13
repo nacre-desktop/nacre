@@ -1406,7 +1406,7 @@ fn run_startup(profile: &Value, driver: &mut impl StartupDriver) -> Result<i32> 
 }
 
 #[derive(Clone)]
-struct StartupEntry {
+pub(crate) struct StartupEntry {
     label: String,
     workspace: i64,
     argv: Vec<String>,
@@ -1420,7 +1420,7 @@ fn workspace_count(profile: &Value) -> i64 {
         .unwrap_or(6)
 }
 
-fn validate_startup(row: &Value, count: i64) -> Result<StartupEntry> {
+pub(crate) fn validate_startup(row: &Value, count: i64) -> Result<StartupEntry> {
     if !row.as_object().is_some_and(|value| {
         value.len() == 4
             && ["label", "workspace", "argv", "classes"]

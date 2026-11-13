@@ -102,6 +102,8 @@ pub fn command(text: &str) -> Vec<String> {
 #[derive(Clone)]
 pub struct Entry {
     pub data: std::sync::Arc<Value>,
+    /// Optional startup window class from the trusted desktop entry.
+    pub startup_class: Option<String>,
     pub hidden: bool,
     pub path: PathBuf,
     /// Malformed non-comment lines, reported without discarding valid fields.
@@ -160,6 +162,13 @@ pub fn parse(id: &str, text: &str, message_locale: &str) -> Entry {
     }
     finish(group, &mut values, &mut data);
     let get = |name: &str| data.get(name).cloned().unwrap_or_default();
+    let startup_class = data
+        .get("StartupWMClass")
+        .map(String::as_str)
+        .filter(|value| {
+            !value.is_empty() && value.len() <= 128 && !value.chars().any(char::is_control)
+        })
+        .map(str::to_owned);
     let list = |name: &str| {
         get(name)
             .split(';')
@@ -168,6 +177,7 @@ pub fn parse(id: &str, text: &str, message_locale: &str) -> Entry {
             .collect::<Vec<_>>()
     };
     Entry {
+        startup_class,
         data: std::sync::Arc::new(
             json!({"id":id,"name":get("Name"),"genericName":get("GenericName"),"comment":get("Comment"),"icon":get("Icon"),"categories":list("Categories"),"keywords":list("Keywords"),"command":command(&get("Exec")),"workingDirectory":get("Path"),"runInTerminal":get("Terminal")=="true","noDisplay":get("NoDisplay")=="true"}),
         ),

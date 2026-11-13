@@ -45,6 +45,9 @@ pub fn capabilities_with_native(native: niri_transport::NacreCapabilities) -> Va
     if native.launch_workspace {
         result["launchWorkspace"] = json!(true);
     }
+    if native.cursor_shake {
+        result["cursorShake"] = json!(true);
+    }
     result
 }
 pub fn capabilities_for_socket(socket: &Path) -> Value {
@@ -546,6 +549,7 @@ mod tests {
             monitor_workspace_actions: true,
             window_restore: true,
             launch_workspace: true,
+            cursor_shake: true,
             ..Default::default()
         });
         let mut advertised = capabilities
@@ -569,6 +573,7 @@ mod tests {
             "windowRestore",
             "monitorWorkspaceActions",
             "launchWorkspace",
+            "cursorShake",
         ];
         implemented.sort_unstable();
         assert_eq!(advertised, implemented);

@@ -9,13 +9,17 @@ local drag_phase=ui.resolve_for_check(ui.bind("widgets.drag.phase"))
 local dragging=ui.resolve_for_check(ui.bind("widgets.drag.active"))==true
     and (drag_phase=="dragging" or drag_phase=="settle")
 local editing=ui.resolve_for_check(ui.bind("widgets.editing"))
+local width=ui.resolve_for_check(ui.bind("bead.viewport.width"))
+local selected_modules=ui.resolve_for_check(ui.bind("bar.modules"))
 local document=(dragging and drag_layout and drag_layout[1]) or (editing and draft[1]) or saved[1]
-    or widgets.default(ui.resolve_for_check(ui.bind("bead.viewport.width")))
+    or widgets.default(width)
+if not dragging and not editing then
+    document=widgets.default(width,selected_modules,document)
+end
 local canonical=widgets.normalise(document)
 document=widgets.project(canonical,ui.resolve_for_check(ui.bind("bead.viewport.width")))
 local render=widgets.renderer(document)
 local layout=document.hosts.top_bar
-local width=ui.resolve_for_check(ui.bind("bead.viewport.width"))
 local regions=widgets.bar_regions(layout)
 local flow,placed=widgets.bar_layout(layout,render,width)
 -- The recording stop button (only while recording) sits before the tray, as QML put it first in the status column.

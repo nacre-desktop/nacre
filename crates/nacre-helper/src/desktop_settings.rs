@@ -63,7 +63,12 @@ pub fn validate(key: &str, value: &Value, developer: bool) -> Result<Value> {
 }
 fn validate_with(defaults: &Value, key: &str, value: &Value, developer: bool) -> Result<Value> {
     if defaults.get(key).is_none() {
-        return Err("Unknown setting".into());
+        // Registry rows without a QML default (N0212, N0213) keep the registry's value contract.
+        use crate::daemon::settings_validation as registry;
+        return registry::descriptor("desktop", &[key.into()])
+            .filter(|setting| registry::value_with_developer(setting, value, developer))
+            .map(|_| value.clone())
+            .ok_or_else(|| "Unknown setting".into());
     }
     let range = match key {
         "gapsIn" => (0, 30),
@@ -550,6 +555,7 @@ impl<R: Runtime> Settings<R> {
                     || INPUT_KEYS.contains(&key)
                     || key == "scrollSpeed"
                     || key == "mouseScrollSpeed"
+                    || key == "shakeCursor"
                 {
                     let projection = if matches!(key, "scrollSpeed" | "mouseScrollSpeed") {
                         data.clone()
@@ -1103,5 +1109,18 @@ mod legacy_status_output_tests {
             legacy_status_output(on),
             json!({"data":{"collectionWallpapers":true}})
         );
+    }
+}
+
+#[cfg(test)]
+mod registry_fallback_tests {
+    #[test]
+    fn registry_only_lip_size_uses_its_range_contract() {
+        assert_eq!(
+            super::validate("lipSize", &serde_json::json!(48), false).unwrap(),
+            serde_json::json!(48)
+        );
+        assert!(super::validate("lipSize", &serde_json::json!(20), false).is_err());
+        assert!(super::validate("lipSize", &serde_json::json!(48.5), false).is_err());
     }
 }

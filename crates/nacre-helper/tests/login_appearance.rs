@@ -199,16 +199,18 @@ fn actual_cli_publishes_private_state_with_python_absent_and_refuses_invalid_pal
         &source,
         &STANDARD.decode(fixture["inputs"]["rgb"].as_str().ok_or("Missing image")?)?,
     )?;
+    let lock_wallpaper = home.join("lock-wallpaper.png");
+    image::RgbImage::from_pixel(3, 3, image::Rgb([17, 201, 43])).save(&lock_wallpaper)?;
+    fs::create_dir_all(&paths.config)?;
+    fs::write(
+        paths.config.join("wallpaper-picker.json"),
+        json!({"lockWallpaper":lock_wallpaper}).to_string(),
+    )?;
     let colors = json!({"surface":"aabbcc","surfaceContainer":"aabbcc","primary":"aabbcc","secondary":"aabbcc","tertiary":"aabbcc","primaryFixed":"aabbcc","onSurface":"aabbcc","onSurfaceVariant":"aabbcc","error":"aabbcc"});
     fs::create_dir_all(&paths.state)?;
     fs::write(
         paths.state.join("scheme.json"),
         json!({"colours":colors}).to_string(),
-    )?;
-    fs::create_dir_all(paths.state.join("wallpaper"))?;
-    fs::write(
-        paths.state.join("wallpaper/last.txt"),
-        source.to_string_lossy().as_bytes(),
     )?;
     let environment = |command: &mut Command| {
         command
@@ -240,6 +242,39 @@ fn actual_cli_publishes_private_state_with_python_absent_and_refuses_invalid_pal
     assert!(output.stderr.is_empty());
     let preview = paths.state.join("shell/login-preview");
     let before = fs::read(preview.join("theme.conf"))?;
+    assert_eq!(
+        image::open(preview.join("background.png"))?
+            .to_rgb8()
+            .get_pixel(0, 0)
+            .0,
+        [17, 201, 43]
+    );
+    let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
+    command
+        .args(["login-appearance", "--publish"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    environment(&mut command);
+    let mut child = command.spawn()?;
+    child.stdin.take().ok_or("Missing stdin")?.write_all(
+        json!({"home":home,"colors":colors,"wallpaper":source})
+            .to_string()
+            .as_bytes(),
+    )?;
+    let output = child.wait_with_output()?;
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        image::open(preview.join("background.png"))?
+            .to_rgb8()
+            .get_pixel(0, 0)
+            .0,
+        [17, 201, 43]
+    );
     let mut command = Command::new(env!("CARGO_BIN_EXE_nacre-helper"));
     command
         .args(["login-appearance", "--publish"])

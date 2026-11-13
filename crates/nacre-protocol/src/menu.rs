@@ -39,6 +39,9 @@ pub struct MenuQuery {
     /// Include existing view metadata for the compatibility QML view.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub presentation: Option<bool>,
+    /// Include bounded trusted desktop-entry launch data for startup app selection.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub startup: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -305,6 +308,7 @@ impl MenuQueryResult {
             filter: None,
             category: None,
             presentation: None,
+            startup: None,
         };
         request.validate()?;
         if self.message.as_ref().is_some_and(|s| !text(s, 4096, true))

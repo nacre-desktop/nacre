@@ -71,6 +71,30 @@ pub fn valid_value(setting: &Value, value: &Value) -> bool {
         {
             return false;
         }
+        // The session runner refuses the whole list for one bad row (10 = its workspace cap).
+        // Keep the frozen JavaScript corpus exact for planned rows: they remain generic arrays
+        // until a consumer exists. Apply the stronger contracts only once the backend is live.
+        let live = setting["backend"] != "planned";
+        if live
+            && entity == "startup"
+            && (items.len() > 64
+                || items
+                    .iter()
+                    .any(|row| crate::launchers::validate_startup(row, 10).is_err()))
+        {
+            return false;
+        }
+        // A closed list (top-bar modules): known values only, each once.
+        if live {
+            if let Some(choices) = setting["choices"].as_array() {
+                let mut seen = std::collections::BTreeSet::new();
+                if !items.iter().all(|item| {
+                    choices.iter().any(|c| &c["value"] == item) && seen.insert(item.to_string())
+                }) {
+                    return false;
+                }
+            }
+        }
     }
     if let Some(range) = setting.get("range") {
         // All registry ranges currently have numeric types; no JS coercion is needed.
@@ -96,7 +120,7 @@ fn developer_mode() -> bool {
     std::env::var("NACRE_DEVELOPER_MODE").is_ok_and(|value| value == "1")
 }
 
-fn value_with_developer(setting: &Value, value: &Value, developer: bool) -> bool {
+pub(crate) fn value_with_developer(setting: &Value, value: &Value, developer: bool) -> bool {
     valid_value(setting, value)
         || developer
             && value == "pseudo"
@@ -474,6 +498,29 @@ mod tests {
                 Some(&json!({}))
             ));
         }
+    }
+
+    #[test]
+    fn startup_entries_and_top_bar_modules_are_validated_as_closed_lists() {
+        let startup = descriptor("profile", &["startup".into()]).unwrap();
+        let row = json!({"label":"Browser","workspace":1,"argv":["browser"],"classes":["Browser"]});
+        assert!(valid_value(startup, &json!([row.clone()])));
+        assert!(valid_value(startup, &json!([])));
+        let mut extra = row.clone();
+        extra["unexpected"] = json!(true);
+        assert!(!valid_value(startup, &json!([extra])));
+        let mut invalid_workspace = row.clone();
+        invalid_workspace["workspace"] = json!(0);
+        assert!(!valid_value(startup, &json!([invalid_workspace])));
+        let mut invalid_argv = row;
+        invalid_argv["argv"] = json!([]);
+        assert!(!valid_value(startup, &json!([invalid_argv])));
+
+        let modules = descriptor("desktop", &["modules".into()]).unwrap();
+        assert!(valid_value(modules, &json!(["launcher", "clock"])));
+        assert!(valid_value(modules, &json!([])));
+        assert!(!valid_value(modules, &json!(["unknown"])));
+        assert!(!valid_value(modules, &json!(["clock", "clock"])));
     }
 
     #[test]

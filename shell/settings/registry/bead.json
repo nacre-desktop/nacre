@@ -25,6 +25,7 @@
   "displays"
  ],
  "orderedLists": [
+  "apps.startup.startup",
   "panels/dashboard/pages.editor.pages",
   "panels/dashboard/extras.editor.enabled",
   "panels/dashboard/extras.editor.order",

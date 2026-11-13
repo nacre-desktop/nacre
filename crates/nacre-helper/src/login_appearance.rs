@@ -208,10 +208,14 @@ pub fn run(arguments: &[String]) -> Result<i32> {
         } else {
             Paths::environment()?
         };
+        let wallpaper = crate::lock_config::lock_image(
+            &paths,
+            Path::new(request["wallpaper"].as_str().ok_or("Missing wallpaper")?),
+        );
         publish(
             &paths,
             &request["colors"],
-            Path::new(request["wallpaper"].as_str().ok_or("Missing wallpaper")?),
+            &wallpaper,
             request["preview"].as_str().map(Path::new),
             request["public"].as_str().map(Path::new),
             &Policy::environment()?,
@@ -219,11 +223,16 @@ pub fn run(arguments: &[String]) -> Result<i32> {
     } else {
         let paths = Paths::environment()?;
         let scheme = crate::state::read(&paths.state.join("scheme.json"), Value::Null)?;
-        let wallpaper = fs::read_to_string(paths.state.join("wallpaper/last.txt"))?;
+        let wallpaper = match fs::read_to_string(paths.state.join("wallpaper/last.txt")) {
+            Ok(wallpaper) => wallpaper,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => String::new(),
+            Err(error) => return Err(error.into()),
+        };
+        let wallpaper = crate::lock_config::lock_image(&paths, Path::new(wallpaper.trim()));
         publish(
             &paths,
             &scheme["colours"],
-            Path::new(wallpaper.trim()),
+            &wallpaper,
             None,
             None,
             &Policy::environment()?,

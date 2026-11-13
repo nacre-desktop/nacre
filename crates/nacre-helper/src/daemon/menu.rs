@@ -211,6 +211,70 @@ fn presentation(row: &Value) -> Value {
             .collect(),
     )
 }
+fn startup_presentation(row: &Value, entries: &BTreeMap<String, desktop::Entry>) -> Option<Value> {
+    let entry = entries.get(row["id"].as_str()?)?;
+    let label = entry.data["name"].as_str().filter(|value| {
+        !value.is_empty() && value.len() <= 200 && !value.chars().any(char::is_control)
+    })?;
+    let command = entry.data["command"].as_array()?;
+    if command.is_empty() || command.len() > 32 {
+        return None;
+    }
+    let command = command
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .filter(|value| value.len() <= 256 && !value.chars().any(char::is_control))
+                .map(str::to_owned)
+        })
+        .collect::<Option<Vec<_>>>()?;
+    if command[0].is_empty() {
+        return None;
+    }
+    let executable_class = Path::new(&command[0]).file_name()?.to_str()?.to_owned();
+    let terminal = entry.data["runInTerminal"] == true;
+    let directory = entry.data["workingDirectory"].as_str().unwrap_or("");
+    let argv = if terminal {
+        let mut argv = vec!["kitty".to_owned()];
+        if !directory.is_empty() {
+            argv.extend(["--directory".into(), directory.into()]);
+        }
+        argv.push("--".into());
+        argv.extend(command.iter().cloned());
+        argv
+    } else if !directory.is_empty() {
+        vec![
+            "gio".into(),
+            "launch".into(),
+            entry.path.to_string_lossy().into_owned(),
+        ]
+    } else {
+        command
+    };
+    if argv.len() > 32
+        || argv
+            .iter()
+            .any(|argument| argument.len() > 1024 || argument.chars().any(char::is_control))
+    {
+        return None;
+    }
+    let fallback_class = if terminal { "kitty" } else { &executable_class };
+    let class = entry.startup_class.as_deref().unwrap_or(fallback_class);
+    if class.is_empty() {
+        return None;
+    }
+    let mut classes = vec![class.to_owned()];
+    if !terminal && entry.startup_class.is_none() {
+        let raw_id = row["id"].as_str()?;
+        let app_id = raw_id.strip_suffix(".desktop").unwrap_or(raw_id);
+        if app_id.len() <= 200 && !classes.iter().any(|class| class == app_id) {
+            classes.push(app_id.to_owned());
+        }
+    }
+    let value = json!({"label":label,"argv":argv,"classes":classes});
+    (serde_json::to_vec(&value).ok()?.len() <= 2048).then_some(value)
+}
 fn read_json(path: &Path) -> Result<Value> {
     let s = read_text(path)?;
     if s.is_empty() {
@@ -754,9 +818,13 @@ impl Engine {
         let total = rows.len().min(u32::MAX as usize) as u32;
         let mut items = BTreeMap::new();
         let mut order = Vec::new();
-        for row in rows
-            .into_iter()
-            .take(request.limit.unwrap_or(2048) as usize)
+        for row in rows.into_iter().take(request.limit.unwrap_or(2048).min(
+            if request.startup == Some(true) {
+                64
+            } else {
+                2048
+            },
+        ) as usize)
         {
             let id = model::stable(&row);
             if text::field(&row, "id").is_empty() || items.contains_key(&id) {
@@ -775,6 +843,17 @@ impl Engine {
             digest.update(&encoded);
             let token = format!("{:x}", digest.finalize());
             let string = |field| row.get(field).and_then(Value::as_str).map(str::to_owned);
+            let presentation = if request.presentation == Some(true) {
+                let mut view = presentation(&row);
+                if request.startup == Some(true) && row["kind"] == "app" {
+                    if let Some(startup) = startup_presentation(&row, &self.loaded.entries) {
+                        view["startup"] = startup;
+                    }
+                }
+                Some(view)
+            } else {
+                None
+            };
             let item = MenuItem {
                 name: row["name"]
                     .as_str()
@@ -792,7 +871,7 @@ impl Engine {
                 reason: string("reason"),
                 disabled: row["disabled"] == true,
                 activation: Some(token.clone()),
-                presentation: (request.presentation == Some(true)).then(|| presentation(&row)),
+                presentation,
             };
             if !self.tickets.contains_key(&token) {
                 let bytes = encoded.len();
@@ -2277,6 +2356,55 @@ mod tests {
             json!({"id":"file-1","file":true,"filePath":"/public/fixture.txt","operation":"open-file","value":"/public/fixture.txt"})
         );
         Ok(())
+    }
+
+    #[test]
+    fn startup_query_adds_only_bounded_trusted_desktop_launch_data() -> Result<()> {
+        let mut state = engine()?;
+        let app = json!({"id":"fixture","name":"Fixture Browser","comment":"","icon":"application-x-executable","keywords":[],"command":["fixture-browser","--new-window"],"runInTerminal":false,"noDisplay":false});
+        state.loaded.context.all_apps = vec![std::sync::Arc::new(app)];
+        state.loaded.context.visible_apps = state.loaded.context.all_apps.clone();
+        state.loaded.context.inputs_changed();
+        // The desktop scanner strips `.desktop` from IDs before adding entries to the catalog.
+        let mut entry = desktop::parse("fixture", "[Desktop Entry]\nType=Application\nName=Fixture Browser\nExec=fixture-browser --new-window\n", "en");
+        entry.path = PathBuf::from("/usr/share/applications/fixture.desktop");
+        state.loaded.entries.insert("fixture".into(), entry);
+
+        let result = state.query(serde_json::from_value(
+            json!({"query":"","mode":"apps","route":"apps","presentation":true,"startup":true}),
+        )?)?;
+        let id = result["order"][0].as_str().unwrap();
+        assert_eq!(
+            result["items"][id]["presentation"]["startup"],
+            json!({"label":"Fixture Browser","argv":["fixture-browser","--new-window"],"classes":["fixture-browser", "fixture"]})
+        );
+        let result = state.query(serde_json::from_value(
+            json!({"query":"","mode":"apps","route":"apps","presentation":true}),
+        )?)?;
+        let id = result["order"][0].as_str().unwrap();
+        assert!(result["items"][id]["presentation"].get("startup").is_none());
+        let missing = BTreeMap::new();
+        assert!(startup_presentation(&json!({"id":"untrusted.desktop"}), &missing).is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn startup_projection_preserves_terminal_and_desktop_directory_launch_semantics() {
+        let mut terminal = desktop::parse("terminal.desktop", "[Desktop Entry]\nType=Application\nName=Terminal app\nExec=fixture-tui --flag\nTerminal=true\nPath=/tmp/project\n", "en");
+        terminal.path = PathBuf::from("/usr/share/applications/terminal.desktop");
+        let entries = BTreeMap::from([("terminal.desktop".into(), terminal)]);
+        assert_eq!(
+            startup_presentation(&json!({"id":"terminal.desktop"}), &entries).unwrap(),
+            json!({"label":"Terminal app","argv":["kitty","--directory","/tmp/project","--","fixture-tui","--flag"],"classes":["kitty"]})
+        );
+
+        let mut cwd = desktop::parse("cwd.desktop", "[Desktop Entry]\nType=Application\nName=CWD app\nExec=fixture-gui\nPath=/tmp/project\n", "en");
+        cwd.path = PathBuf::from("/usr/share/applications/cwd.desktop");
+        let entries = BTreeMap::from([("cwd.desktop".into(), cwd)]);
+        assert_eq!(
+            startup_presentation(&json!({"id":"cwd.desktop"}), &entries).unwrap(),
+            json!({"label":"CWD app","argv":["gio","launch","/usr/share/applications/cwd.desktop"],"classes":["fixture-gui", "cwd"]})
+        );
     }
 
     #[test]

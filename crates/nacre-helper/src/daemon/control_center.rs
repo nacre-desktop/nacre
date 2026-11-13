@@ -912,6 +912,154 @@ async fn read_appearance(hub: &Shared) -> Option<Appearance> {
     Some(Appearance { mode })
 }
 
+// ------------------------------------------------------- palette schedule
+
+/// Fallback day when today's forecast has no sun times: 07:00 to 19:00.
+const DAY: (u32, u32) = (7 * 60, 19 * 60);
+/// Re-check at least this often: a sleep does not count suspended time.
+const SCHEDULE_RECHECK_MIN: u32 = 15;
+
+/// `(light, minutes until the next boundary)` at `minute` of the day for a `(rise, set)` day.
+fn scheduled(minute: u32, (rise, set): (u32, u32)) -> (bool, u32) {
+    if minute < rise {
+        (false, rise - minute)
+    } else if minute < set {
+        (true, set - minute)
+    } else {
+        (false, 24 * 60 - minute + rise)
+    }
+}
+/// Identify the last boundary, including nights that cross midnight. A machine can sleep
+/// through a whole night and wake in the same light/dark phase on a different day.
+fn schedule_phase(today: &str, minute: u32, day: (u32, u32)) -> (String, bool) {
+    let date = chrono::NaiveDate::parse_from_str(today, "%Y-%m-%d").expect("local calendar date");
+    let boundary_date = if minute < day.0 {
+        date.pred_opt().unwrap_or(date)
+    } else {
+        date
+    };
+    (boundary_date.to_string(), scheduled(minute, day).0)
+}
+/// Today's sunrise and sunset (minutes of the day) from the published forecast, else [`DAY`].
+fn sun_times(weather: Option<&Value>, today: &str) -> (u32, u32) {
+    let minutes = |time: &Value| {
+        let (hour, minute) = time.as_str()?.rsplit('T').next()?.split_once(':')?;
+        let (hour, minute) = (
+            hour.parse::<u32>().ok()?,
+            minute.get(..2)?.parse::<u32>().ok()?,
+        );
+        (hour < 24 && minute < 60).then_some(hour * 60 + minute)
+    };
+    weather
+        .and_then(|data| data["current"]["days"]["items"].as_object())
+        .and_then(|days| days.values().find(|day| day["date"] == today))
+        .and_then(|day| Some((minutes(&day["sunrise"])?, minutes(&day["sunset"])?)))
+        .filter(|(rise, set)| rise < set)
+        .unwrap_or(DAY)
+}
+fn schedule_position(weather: Option<&Value>, now: chrono::DateTime<chrono::Utc>) -> (String, u32) {
+    use chrono::Timelike;
+    let local = weather
+        .and_then(|data| data["current"]["timezone"].as_str())
+        .and_then(|zone| zone.parse::<chrono_tz::Tz>().ok())
+        .map(|zone| {
+            let now = now.with_timezone(&zone);
+            (
+                now.format("%Y-%m-%d").to_string(),
+                now.hour() * 60 + now.minute(),
+            )
+        });
+    local.unwrap_or_else(|| {
+        let now = now.with_timezone(&chrono::Local);
+        (
+            now.format("%Y-%m-%d").to_string(),
+            now.hour() * 60 + now.minute(),
+        )
+    })
+}
+fn lock_wallpaper_selection(hub: &Shared) -> String {
+    hub.borrow()
+        .snapshot("settings.store.wallpaper-picker")
+        .and_then(|store| store["data"]["lockWallpaper"].as_str().map(str::to_owned))
+        .unwrap_or_default()
+}
+/// N0213 `colors.schedule.enabled`: light from sunrise to sunset and dark at night, through the
+/// control centre's mode switch. Only switching the schedule on (or a daemon start) and a
+/// sunrise or sunset change the mode, so a manual choice holds until the next boundary.
+pub async fn run_palette_schedule(hub: Shared) -> Result<()> {
+    let env = env().map_err(|_| "Control environment is unavailable")?;
+    let mut notices = hub.borrow().observe();
+    let mut last = None;
+    loop {
+        let enabled = behaviours::settings_data(&hub, "colors")
+            .await
+            .is_some_and(|data| data["schedule"]["enabled"] == true);
+        let mut wait = None;
+        if enabled {
+            let weather = hub.borrow().snapshot(super::weather::TOPIC);
+            let (today, minute) = schedule_position(weather.as_ref(), chrono::Utc::now());
+            let day = sun_times(weather.as_ref(), &today);
+            let (light, next) = scheduled(minute, day);
+            let phase = schedule_phase(&today, minute, day);
+            if last.as_ref() != Some(&phase) {
+                let (env, mode) = (
+                    env.clone(),
+                    if light {
+                        AppearanceMode::Light
+                    } else {
+                        AppearanceMode::Dark
+                    },
+                );
+                match blocking(move || set_appearance(&env, mode)).await {
+                    Ok(()) => last = Some(phase),
+                    Err(_) => {
+                        tracing::warn!("Scheduled palette mode change failed; retrying later")
+                    }
+                }
+            }
+            wait = Some(Duration::from_secs(
+                u64::from(next.min(SCHEDULE_RECHECK_MIN)) * 60,
+            ));
+        } else {
+            last = None;
+        }
+        let sleep = async {
+            match wait {
+                Some(wait) => tokio::time::sleep(wait).await,
+                None => std::future::pending().await,
+            }
+        };
+        tokio::select! {
+            () = sleep => {}
+            result = behaviours::changed(&mut notices, &["settings.store.colors", super::weather::TOPIC]) => result?,
+        }
+    }
+}
+
+/// Apply `wallpaper-picker.lockWallpaper` to the generated lock and login stills.
+pub async fn run_lock_wallpaper_refresh(hub: Shared) -> Result<()> {
+    let mut notices = hub.borrow().observe();
+    let mut last: Option<String> = None;
+    loop {
+        let selected = lock_wallpaper_selection(&hub);
+        if last.as_deref() != Some(&selected) {
+            match tokio::task::spawn_blocking(|| {
+                crate::classic_state::Publisher::environment()?.refresh_lock_login()
+            })
+            .await
+            {
+                Ok(Ok(())) => {}
+                Ok(Err(error)) => {
+                    tracing::warn!(%error, "Lock wallpaper appearance refresh failed")
+                }
+                Err(error) => tracing::warn!(%error, "Lock wallpaper appearance worker failed"),
+            }
+            last = Some(selected);
+        }
+        behaviours::changed(&mut notices, &["settings.store.wallpaper-picker"]).await?;
+    }
+}
+
 // --------------------------------------------------------- next wallpaper
 
 /// The QML `advanceRotation(true)`: the next wallpaper of the configured kind, shuffled or in

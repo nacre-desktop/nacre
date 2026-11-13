@@ -2,7 +2,7 @@
 use crate::{i18n::tr, json, paths::Paths, Result};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
-use std::{fs, path::Path};
+use std::{fs, os::unix::fs::MetadataExt, path::Path};
 pub fn panel_key(monitor: &Value) -> Result<String> {
     let mut values = Map::new();
     for key in ["height", "name", "transform", "width"] {
@@ -360,6 +360,79 @@ pub fn monitor_layout(
         }
     }
 }
+/// N0213: the still image the lock (Hyprlock today, `clasp lock --wallpaper` later) and the
+/// login export show. `wallpaper-picker.json` `lockWallpaper` names a library wallpaper; empty,
+/// missing or unusable keeps the desktop's still. A scene or video becomes its cached poster
+/// frame (`~/.cache/nacre/wallpaper-media/<hash>.png`), a regular user-owned file.
+pub fn lock_image(paths: &Paths, desktop: &Path) -> std::path::PathBuf {
+    let media = match crate::wallpaper_media::Media::new(paths.clone(), paths.assets()) {
+        Ok(media) => media,
+        Err(_) => return std::path::PathBuf::new(),
+    };
+    let chosen = media.settings().ok().and_then(|settings| {
+        settings["lockWallpaper"]
+            .as_str()
+            .filter(|path| !path.is_empty())
+            .map(str::to_owned)
+    });
+    if let Some(chosen) = chosen {
+        match lock_static_image(paths, &media, Path::new(&chosen)) {
+            Ok(image) => return image,
+            Err(error) => {
+                eprintln!("Lock wallpaper unavailable, using the desktop wallpaper: {error}")
+            }
+        }
+    }
+    lock_static_image(paths, &media, desktop).unwrap_or_else(|error| {
+        eprintln!("Desktop lock wallpaper unavailable: {error}");
+        std::path::PathBuf::new()
+    })
+}
+
+fn lock_static_image(
+    paths: &Paths,
+    media: &crate::wallpaper_media::Media,
+    source: &Path,
+) -> Result<std::path::PathBuf> {
+    let item = media.describe(source)?;
+    let poster = Path::new(
+        item["poster"]
+            .as_str()
+            .ok_or("Missing lock wallpaper poster")?,
+    );
+    // Hyprlock and the login export read these directly; anything else (gif, ...) becomes a PNG.
+    if poster
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| {
+            matches!(
+                extension.to_ascii_lowercase().as_str(),
+                "png" | "jpg" | "jpeg" | "webp"
+            )
+        })
+        && fs::symlink_metadata(poster).is_ok_and(|metadata| {
+            metadata.file_type().is_file() && metadata.uid() == nix::unistd::getuid().as_raw()
+        })
+    {
+        return Ok(poster.canonicalize()?);
+    }
+    let source_bytes = fs::read(poster)?;
+    let key = format!("{:x}", Sha256::digest(&source_bytes));
+    let cache = paths.cache.join("wallpaper-media");
+    fs::create_dir_all(&cache)?;
+    let output = cache.join(format!("lock-{key}.png"));
+    let valid = fs::symlink_metadata(&output).is_ok_and(|metadata| {
+        metadata.file_type().is_file()
+            && metadata.len() > 0
+            && metadata.uid() == nix::unistd::getuid().as_raw()
+    });
+    if !valid {
+        let image = orient_decoder::load_rgba_oriented(poster)?;
+        let png = orient_decoder::encode_rgba_png(&image, 6)?;
+        crate::files::atomic(&output, &png)?;
+    }
+    Ok(output)
+}
 pub fn prepare_config(
     paths: &Paths,
     assets: &Path,
@@ -460,7 +533,7 @@ pub(crate) fn publish(
         paths,
         &paths.assets(),
         scheme["colours"].as_object().ok_or("Missing lock colors")?,
-        Path::new(&image),
+        &lock_image(paths, Path::new(&image)),
         preferences,
         &paths.tools().join("nacre-helper"),
         &monitors,
@@ -474,4 +547,155 @@ pub(crate) fn publish(
         body.as_bytes(),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_user_png(path: &Path) -> Result<()> {
+        let metadata = fs::symlink_metadata(path)?;
+        assert!(metadata.file_type().is_file());
+        assert_eq!(metadata.uid(), nix::unistd::getuid().as_raw());
+        assert_eq!(path.extension().and_then(|ext| ext.to_str()), Some("png"));
+        image::ImageReader::open(path)?.into_dimensions()?;
+        Ok(())
+    }
+
+    #[test]
+    fn lock_image_resolves_static_user_owned_images_and_falls_back_to_desktop() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        let desktop = home.path().join("desktop.jpg");
+        let chosen = home.path().join("lock.jpg");
+        image::RgbImage::from_pixel(4, 4, image::Rgb([10, 20, 30])).save(&desktop)?;
+        image::RgbImage::from_pixel(4, 4, image::Rgb([40, 50, 60])).save(&chosen)?;
+        let picker = paths.config.join("wallpaper-picker.json");
+        // A user-owned still Hyprlock can read is used as is.
+        let fallback = lock_image(&paths, &desktop);
+        assert_eq!(fallback, fs::canonicalize(&desktop)?);
+        fs::write(&picker, br#"{"lockWallpaper":""}"#)?;
+        assert_eq!(lock_image(&paths, &desktop), fallback);
+        fs::write(&picker, json::encode(&json!({"lockWallpaper": chosen}))?)?;
+        assert_eq!(lock_image(&paths, &desktop), fs::canonicalize(&chosen)?);
+        fs::write(
+            &picker,
+            json::encode(&json!({"lockWallpaper": home.path().join("missing.png")}))?,
+        )?;
+        assert_eq!(lock_image(&paths, &desktop), fallback);
+        fs::remove_file(&chosen)?;
+        assert_eq!(lock_image(&paths, &desktop), fallback);
+        Ok(())
+    }
+
+    #[test]
+    fn lock_image_uses_first_gif_frame_as_a_static_png() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        let desktop = home.path().join("desktop.png");
+        image::RgbImage::new(4, 4).save(&desktop)?;
+        let gif_path = home.path().join("animated.gif");
+        {
+            let file = fs::File::create(&gif_path)?;
+            let mut encoder = gif::Encoder::new(file, 2, 2, &[255, 0, 0, 0, 255, 0])?;
+            encoder.write_frame(&gif::Frame::from_indexed_pixels(2, 2, vec![0; 4], None))?;
+            encoder.write_frame(&gif::Frame::from_indexed_pixels(2, 2, vec![1; 4], None))?;
+        }
+        fs::write(
+            paths.config.join("wallpaper-picker.json"),
+            json::encode(&json!({"lockWallpaper": gif_path}))?,
+        )?;
+        let resolved = lock_image(&paths, &desktop);
+        assert_ne!(resolved, fs::canonicalize(&gif_path)?);
+        assert_user_png(&resolved)?;
+        assert_eq!(
+            image::open(&resolved)?.to_rgb8().get_pixel(0, 0).0,
+            [255, 0, 0]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn lock_image_uses_cached_video_frame_as_a_static_png() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        let desktop = home.path().join("desktop.png");
+        image::RgbImage::new(4, 4).save(&desktop)?;
+        let video = home.path().join("clip.mp4");
+        fs::write(&video, b"video test source")?;
+        let video = fs::canonicalize(video)?;
+        let metadata = fs::metadata(&video)?;
+        let nanos =
+            i128::from(metadata.mtime()) * 1_000_000_000 + i128::from(metadata.mtime_nsec());
+        let key = format!(
+            "{:x}",
+            Sha256::digest(format!("{}{}{}", video.display(), metadata.len(), nanos).as_bytes())
+        );
+        let poster = paths
+            .cache
+            .join("wallpaper-media")
+            .join(format!("{key}.png"));
+        fs::create_dir_all(poster.parent().ok_or("missing poster cache directory")?)?;
+        image::RgbImage::from_pixel(4, 4, image::Rgb([0, 0, 255])).save(&poster)?;
+        fs::write(
+            paths.config.join("wallpaper-picker.json"),
+            json::encode(&json!({"lockWallpaper": video}))?,
+        )?;
+        let resolved = lock_image(&paths, &desktop);
+        assert_ne!(resolved, video);
+        assert_eq!(resolved, poster.canonicalize()?);
+        assert_user_png(&resolved)?;
+        assert_eq!(
+            image::open(&resolved)?.to_rgb8().get_pixel(0, 0).0,
+            [0, 0, 255]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn lock_background_config_uses_the_resolved_lock_image() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let assets = home.path().join("assets");
+        fs::create_dir_all(&assets)?;
+        fs::write(
+            assets.join("hyprlock.conf.in"),
+            "background {\n    path = {{wallpaper}}\n}\n",
+        )?;
+        let source = home.path().join("selected.png");
+        image::RgbImage::new(4, 4).save(&source)?;
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("wallpaper-picker.json"),
+            json::encode(&json!({"lockWallpaper": source}))?,
+        )?;
+        let lock = lock_image(&paths, home.path().join("desktop.jpg").as_path());
+        assert_user_png(&lock)?;
+        let colors = [
+            "primary",
+            "onSurface",
+            "surfaceContainer",
+            "onPrimary",
+            "error",
+        ]
+        .into_iter()
+        .map(|key| (key.into(), json!("#ffffff")))
+        .collect();
+        let config = render(
+            &assets,
+            &paths,
+            &colors,
+            &lock.to_string_lossy(),
+            &json!({"lockMedia": false}),
+            &home.path().join("nacre-helper"),
+            &[],
+            None,
+            None,
+        )?;
+        assert!(config.contains(&format!("path = {}", lock.display())));
+        Ok(())
+    }
 }

@@ -133,6 +133,19 @@ fn method_bounds_and_future_optional_fields_keep_v1_compatible() {
 }
 
 #[test]
+fn startup_query_is_an_optional_bounded_opt_in() {
+    let query: MenuQuery = serde_json::from_value(json!({
+        "query":"firefox","mode":"apps","route":"apps",
+        "presentation":true,"startup":true
+    }))
+    .unwrap();
+    query.validate().unwrap();
+    assert_eq!(query.startup, Some(true));
+    let regular: MenuQuery = serde_json::from_value(json!({"query":"firefox"})).unwrap();
+    assert_eq!(regular.startup, None);
+}
+
+#[test]
 fn menu_groups_golden_decodes_into_the_published_types() {
     let files = artifacts::generate();
     for line in files["protocol/fixtures/menu-groups.jsonl"].lines() {

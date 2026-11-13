@@ -1167,3 +1167,77 @@ fn the_topic_is_produced_only_while_subscribed_and_follows_changes() {
         task.abort();
     });
 }
+
+#[test]
+fn palette_schedule_is_light_from_sunrise_to_sunset() {
+    let day = (7 * 60, 19 * 60);
+    assert_eq!(scheduled(6 * 60 + 59, day), (false, 1));
+    assert_eq!(scheduled(7 * 60, day), (true, 12 * 60));
+    assert_eq!(scheduled(18 * 60 + 30, day), (true, 30));
+    // After sunset the next boundary is tomorrow's sunrise.
+    assert_eq!(scheduled(19 * 60, day), (false, 12 * 60));
+    assert_eq!(scheduled(23 * 60, day), (false, 8 * 60));
+}
+
+#[test]
+fn palette_schedule_keeps_a_manual_choice_across_midnight_but_expires_after_sleep() {
+    assert_eq!(
+        schedule_phase("2027-01-14", 20 * 60, DAY),
+        schedule_phase("2027-01-15", 6 * 60, DAY)
+    );
+    assert_ne!(
+        schedule_phase("2027-01-14", 10 * 60, DAY),
+        schedule_phase("2027-01-15", 10 * 60, DAY)
+    );
+    assert_ne!(
+        schedule_phase("2027-01-15", 6 * 60, DAY),
+        schedule_phase("2027-01-15", 7 * 60, DAY)
+    );
+}
+
+#[test]
+fn palette_schedule_reads_todays_sun_times_or_keeps_seven_to_seven() {
+    let weather = json!({"current":{"days":{"items":{
+        "day-1":{"date":"2027-01-14","sunrise":"2027-01-14T09:10","sunset":"2027-01-14T15:20"},
+        "day-2":{"date":"2027-01-15","sunrise":"2027-01-15T09:08","sunset":"2027-01-15T15:23"}},
+        "order":["day-1","day-2"]}}});
+    assert_eq!(sun_times(Some(&weather), "2027-01-15"), (548, 923));
+    assert_eq!(sun_times(Some(&weather), "2027-02-01"), DAY);
+    assert_eq!(sun_times(None, "2027-01-15"), DAY);
+    // A polar day without a sunset (or a reversed pair) falls back as well.
+    let polar = json!({"current":{"days":{"items":{"d":{"date":"2027-06-21","sunrise":"2027-06-21T00:00","sunset":null}}}}});
+    assert_eq!(sun_times(Some(&polar), "2027-06-21"), DAY);
+}
+
+#[test]
+fn palette_schedule_uses_the_weather_locations_calendar_and_clock() {
+    let weather = json!({"current":{"timezone":"Europe/Oslo"}});
+    let utc = chrono::DateTime::parse_from_rfc3339("2027-01-14T23:30:00Z")
+        .unwrap()
+        .with_timezone(&chrono::Utc);
+    assert_eq!(
+        schedule_position(Some(&weather), utc),
+        ("2027-01-15".into(), 30)
+    );
+}
+
+#[test]
+fn lock_wallpaper_refresh_tracks_only_the_selected_image() {
+    let hub = Hub::new(
+        "lock-wallpaper-test".into(),
+        false,
+        Duration::from_millis(1),
+    )
+    .shared();
+    assert_eq!(lock_wallpaper_selection(&hub), "");
+    hub.borrow_mut()
+        .publish(
+            "settings.store.wallpaper-picker",
+            json!({"data":{"lockWallpaper":"/home/user/Pictures/lock.png"}}),
+        )
+        .unwrap();
+    assert_eq!(
+        lock_wallpaper_selection(&hub),
+        "/home/user/Pictures/lock.png"
+    );
+}

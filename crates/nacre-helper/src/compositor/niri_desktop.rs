@@ -70,6 +70,10 @@ pub trait Runtime {
     fn monitors(&mut self, timeout: Duration) -> Result<Value>;
     fn validate(&mut self, path: &Path, timeout: Duration) -> Result<()>;
     fn reload(&mut self, timeout: Duration) -> Result<Value>;
+    /// The running compositor advertises `cursor_shake` (stock niri does not).
+    fn cursor_shake(&mut self) -> bool {
+        false
+    }
 }
 pub struct Configuration {
     pub home: PathBuf,
@@ -206,7 +210,13 @@ impl Configuration {
                 .map_err(io_error)?;
         }
         temporary
-            .write_all(niri_config::desktop(&values)?.as_bytes())
+            .write_all(
+                niri_config::desktop_with(
+                    &values,
+                    values.get("shakeCursor") == Some(&Value::Bool(true)) && runtime.cursor_shake(),
+                )?
+                .as_bytes(),
+            )
             .map_err(io_error)?;
         let monitors = match values
             .get("compositorDisplays")
@@ -324,6 +334,12 @@ pub struct Native<'a> {
     pub backend: &'a mut super::niri_actions::Backend<super::niri_transport::Connection>,
 }
 impl Runtime for Native<'_> {
+    fn cursor_shake(&mut self) -> bool {
+        self.backend
+            .transport
+            .nacre_capabilities(Duration::from_millis(500))
+            .cursor_shake
+    }
     fn monitors(&mut self, timeout: Duration) -> Result<Value> {
         self.backend
             .query_bounded("monitors", timeout.as_secs_f64(), 4 * 1024 * 1024)

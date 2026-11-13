@@ -671,9 +671,7 @@
         "max": 96,
         "step": 4
       },
-      "unit": "px",
-      "backend": "planned",
-      "unavailableId": "settings.registry.panels.lipSize.unavailable"
+      "unit": "px"
     },
     {
       "id": "panels.lips.hoverDelay",
@@ -1026,9 +1024,7 @@
       "default": false,
       "apply": "instant",
       "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.colors.schedule.unavailable"
+      "advanced": false
     },
     {
       "id": "colors.palette.style",
@@ -1800,9 +1796,7 @@
       "default": "",
       "apply": "instant",
       "synonyms": [],
-      "advanced": false,
-      "backend": "planned",
-      "unavailableId": "settings.registry.wallpaper.lock-planned"
+      "advanced": false
     },
     {
       "id": "appearance.fonts.interfaceFont",
@@ -2783,9 +2777,7 @@
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "entityType": "startup",
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable"
+      "entityType": "startup"
     },
     {
       "id": "date-time-language.locale.language",
@@ -2991,9 +2983,53 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
-      "advanced": false
+      "advanced": false,
+      "choices": [
+        {
+          "value": "launcher",
+          "labelId": "settings.registry.panels.top-bar.modules.launcher"
+        },
+        {
+          "value": "workspaces",
+          "labelId": "settings.registry.panels.top-bar.modules.workspaces"
+        },
+        {
+          "value": "title",
+          "labelId": "settings.registry.panels.top-bar.modules.title"
+        },
+        {
+          "value": "updates",
+          "labelId": "settings.registry.panels.top-bar.modules.updates"
+        },
+        {
+          "value": "sound",
+          "labelId": "settings.registry.panels.top-bar.modules.sound"
+        },
+        {
+          "value": "wifi",
+          "labelId": "settings.registry.panels.top-bar.modules.wifi"
+        },
+        {
+          "value": "bluetooth",
+          "labelId": "settings.registry.panels.top-bar.modules.bluetooth"
+        },
+        {
+          "value": "battery",
+          "labelId": "settings.registry.panels.top-bar.modules.battery"
+        },
+        {
+          "value": "notifications",
+          "labelId": "settings.registry.panels.top-bar.modules.notifications"
+        },
+        {
+          "value": "clock",
+          "labelId": "settings.registry.panels.top-bar.modules.clock"
+        },
+        {
+          "value": "power",
+          "labelId": "settings.registry.panels.top-bar.modules.power"
+        }
+      ]
     },
     {
       "id": "panels/top-bar.panel.clockFormat",

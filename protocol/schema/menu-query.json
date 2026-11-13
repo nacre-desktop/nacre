@@ -54,6 +54,13 @@
         "boolean",
         "null"
       ]
+    },
+    "startup": {
+      "description": "Include bounded trusted desktop-entry launch data for startup app selection.",
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }

@@ -25,6 +25,7 @@ struct FrameState {
     ai: bool,
     delay: u32,
     click: bool,
+    lip_size: u32,
     config: FrameConfig,
     /// The parent owns these lips; child app backdrops only preserve their input.
     parent_lips: Option<Vec<LipConfig>>,
@@ -363,6 +364,7 @@ impl Gate {
             frame: Mutex::new(FrameState {
                 ai: true,
                 delay: 350,
+                lip_size: 48,
                 ..Default::default()
             }),
             watchers: Mutex::new(Vec::new()),
@@ -399,6 +401,10 @@ impl Gate {
                         || (l.opens == "assistant" && crate::app::configured()))
             })
             .cloned()
+            .map(|mut lip| {
+                lip.length = frame.lip_size as f32;
+                lip
+            })
             .collect()
     }
     fn frame_lock(&self) -> std::sync::MutexGuard<'_, FrameState> {
@@ -426,12 +432,14 @@ impl Gate {
         let settings = p.frame_settings();
         let frame_changed = {
             let mut frame = self.frame_lock();
-            let moved = frame.settings != Some(settings);
+            let moved = frame.settings != Some(settings) || frame.lip_size != p.lip_size;
             frame.settings = Some(settings);
             frame.ai = p.ai_sidebar_enabled;
-            let lips = (frame.delay, frame.click) != (p.lip_hover_delay, p.click_edge_menus);
+            let lips = (frame.delay, frame.click, frame.lip_size)
+                != (p.lip_hover_delay, p.click_edge_menus, p.lip_size);
             frame.delay = p.lip_hover_delay;
             frame.click = p.click_edge_menus;
+            frame.lip_size = p.lip_size;
             changed |= lips;
             moved
         };
@@ -535,12 +543,17 @@ impl ShellControl for Gate {
             .config
             .lips
             .iter()
+            .cloned()
+            .map(|mut lip| {
+                lip.length = frame.lip_size as f32;
+                lip
+            })
             .filter(|l| {
                 (frame.views.contains(&l.opens)
                     || (l.opens == "assistant" && crate::app::configured()))
                     && self.panel_allowed(&l.opens)
             })
-            .filter_map(|l| configured_lip(l, geometry))
+            .filter_map(|l| configured_lip(&l, geometry))
             .collect();
         EdgeChrome {
             reserved: [
@@ -562,8 +575,13 @@ impl ShellControl for Gate {
             EdgeChrome {
                 lips: lips
                     .iter()
+                    .cloned()
+                    .map(|mut lip| {
+                        lip.length = frame.lip_size as f32;
+                        lip
+                    })
                     .filter(|l| self.panel_allowed(&l.opens))
-                    .filter_map(|l| configured_lip(l, geometry))
+                    .filter_map(|l| configured_lip(&l, geometry))
                     .collect(),
                 external_source: self.native_edge_source.load(SeqCst) && !frame.click,
                 ..Default::default()
@@ -684,7 +702,7 @@ mod tests {
         // The assistant lip is hidden: no such view exists yet.
         assert_eq!(ids(&chrome), [("dashboard", 50.), ("controls", 10.)]);
         assert_eq!((chrome.hover_delay_ms, chrome.click_to_open), (350, false));
-        assert!(chrome.lips.iter().all(|l| l.length > 0.));
+        assert!(chrome.lips.iter().all(|l| l.length == 48.));
     }
 
     #[test]
@@ -710,6 +728,18 @@ mod tests {
             ids(&strip.edge_chrome()),
             [("dashboard", 10.), ("controls", 10.)]
         );
+    }
+
+    #[test]
+    fn lip_size_updates_edge_handle_lengths_live() {
+        let gate = gate_with(json!({"lipSize": 72}));
+        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 72.));
+        let variant = gate.decoration_variant();
+        gate.apply(&Prefs::decode(&json!({"lipSize": 24}), &json!(null)));
+        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 24.));
+        assert_ne!(gate.decoration_variant(), variant);
+        gate.apply(&Prefs::decode(&json!({"lipSize": 96}), &json!(null)));
+        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 96.));
     }
 
     #[test]

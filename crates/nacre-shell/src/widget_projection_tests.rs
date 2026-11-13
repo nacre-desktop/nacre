@@ -2,7 +2,7 @@
 //! Widget layouts project onto each output without rewriting the saved document.
 use bead::core::Value;
 use bead_test::{Config, Harness, Result};
-use serde_json::Value as Json;
+use serde_json::{Value as Json, json};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -69,6 +69,52 @@ fn default_content_preset_projection_keeps_exact_pixels_at_narrow_width() -> Res
         serde_json::to_value(&explicit.scene().primitives)?,
         serde_json::to_value(&implicit.scene().primitives)?,
         "projecting the default content preset must preserve its rendered pixels"
+    );
+    Ok(())
+}
+
+#[test]
+fn top_bar_modules_filter_live_and_preserve_custom_saved_items() -> Result<()> {
+    let mut document: Json = serde_json::from_str(include_str!("../tests/widgets-default.json"))?;
+    document["preset"] = json!("My saved layout");
+    let custom = json!({"iid":"custom-title","widget":"title","host":"top_bar",
+        "slot":{"region":"right","start":2,"span":1},"settings":{}});
+    document["hosts"]["top_bar"]["instances"]
+        .as_array_mut()
+        .unwrap()
+        .push(custom);
+    let baseline = projected_bar(640, document.clone())?;
+    let mut live = projected_bar(640, document.clone())?;
+
+    live.update(BTreeMap::from([(
+        "bar.modules".into(),
+        Value::list(vec![json!({"id":"title"})]),
+    )]))?;
+    std::thread::sleep(std::time::Duration::from_millis(240));
+    live.update(BTreeMap::new())?;
+
+    let mut filtered = document.clone();
+    filtered["hosts"]["top_bar"]["instances"]
+        .as_array_mut()
+        .unwrap()
+        .retain(|item| item["iid"] == "title" || item["iid"] == "custom-title");
+    let expected = projected_bar(640, filtered)?;
+    assert_eq!(
+        serde_json::to_value(&expected.scene().primitives)?,
+        serde_json::to_value(&live.scene().primitives)?,
+        "selected defaults should hide other modules while retaining custom geometry"
+    );
+
+    live.update(BTreeMap::from([(
+        "bar.modules".into(),
+        Value::list(Vec::new()),
+    )]))?;
+    std::thread::sleep(std::time::Duration::from_millis(240));
+    live.update(BTreeMap::new())?;
+    assert_eq!(
+        serde_json::to_value(&baseline.scene().primitives)?,
+        serde_json::to_value(&live.scene().primitives)?,
+        "an empty selection should restore every default module"
     );
     Ok(())
 }

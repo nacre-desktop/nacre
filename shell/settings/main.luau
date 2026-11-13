@@ -119,8 +119,12 @@ function row(item)
     elseif k=="device" then
         return kit.DeviceRow{id="device",title=item.title,detail=item.detail,icon=item.icon,enabled=on,buttons=item.buttons,slider=item.slider,on_action="settings.do"}
     elseif k=="picker" then
-        return kit.PickerList{id="picker",label=item.label,placeholder=item.placeholder,enabled=on,items=item.items,empty=item.empty,more=item.more,
+        local picker=kit.PickerList{id="picker",label=item.label,placeholder=item.placeholder,enabled=on,items=item.items,empty=item.empty,more=item.more,
             field=ui.bind("settings.pick.text"),on_pick="settings.do"}
+        if item.description and item.description~="" then
+            table.insert(picker.children,2,kit.HelpText{id="description",text=item.description})
+        end
+        return picker
     elseif k=="secret" then
         return kit.SecretRow{id="secret",label=item.label,enabled=on,field=ui.bind("settings.secret"),revealed=ui.bind("settings.reveal"),
             on_toggle=act("do:reveal"),on_join=act(item.join),on_cancel=act(item.cancel),join_label=item.join_label,cancel_label=item.cancel_label,
@@ -146,10 +150,23 @@ function row(item)
             editing=item.editing,field=ui.bind("settings.edit.text"),on_edit=act("edit:"..id),on_save=act("set:"..id),on_cancel=act("cancel"),
             save_label=ui.tr("bead.settings.save"),cancel_label=ui.tr("bead.common.cancel")}
     elseif k=="list" then
-        node=kit.ListEditor{id="list",label=item.label,enabled=on,items=item.items,editing=item.editing,field=ui.bind("settings.edit.text"),
-            on_edit=act("edit:"..id),on_save=act("set:"..id.."|add"),on_cancel=act("cancel"),on_remove="settings.do",remove_prefix="set:",reorder=item.reorder,up_label=ui.tr("bead.settings.move-up"),down_label=ui.tr("bead.settings.move-down"),
-            add_label=ui.tr("bead.settings.add"),remove_label=ui.tr("bead.settings.remove"),
+        local has_choices=item.choice_editor or #(item.choices or {})>0
+        local editor=kit.ListEditor{id="list",label=item.label,enabled=on,items=item.items,editing=item.editing,field=ui.bind("settings.edit.text"),
+            on_edit=not has_choices and act("edit:"..id) or nil,on_save=not has_choices and act("set:"..id.."|add") or nil,on_cancel=act("cancel"),on_remove="settings.do",remove_prefix="set:",reorder=item.reorder,up_label=ui.tr("bead.settings.move-up"),down_label=ui.tr("bead.settings.move-down"),
+            add_label=not has_choices and ui.tr("bead.settings.add") or "",remove_label=ui.tr("bead.settings.remove"),
             save_label=ui.tr("bead.settings.save"),cancel_label=ui.tr("bead.common.cancel")}
+        if has_choices then
+            -- The catalogue picker replaces the list's free-text Add control.
+            for i=#editor.children,1,-1 do
+                if editor.children[i].props.id=="add" then table.remove(editor.children,i) end
+            end
+            table.insert(editor.children,2,kit.HelpText{id="description",text=item.description or ""})
+            return ui.Column{id="list-with-choices",width="fill",shrink=0,gap=sp.xs,editor,
+                kit.PickerList{id="list-choices",label=ui.tr("bead.settings.add"),enabled=on,
+                    placeholder=ui.tr("bead.settings.choice-filter"),
+                    items=item.choices,empty=ui.tr("bead.settings.no-results"),field=ui.bind("settings.pick.text"),on_pick="settings.do"}}
+        end
+        node=editor
     else
         return kit.HelpText{id="help",text=item.label}
     end

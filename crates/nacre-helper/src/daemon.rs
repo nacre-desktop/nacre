@@ -526,7 +526,8 @@ async fn serve(
         let power_policy_hub = hub.clone();
         let power_policy_paths = paths.clone();
         let (lock_hub, lock_paths) = (hub.clone(), paths.clone());
-        let retention_paths = paths.clone();
+        let (retention_paths, schedule_hub, lock_wallpaper_hub) =
+            (paths.clone(), hub.clone(), hub.clone());
         let services = vec![
             tokio::task::spawn_local(supervisor::run(
                 "wallpaper-rotation",
@@ -549,6 +550,16 @@ async fn serve(
                 "history-retention",
                 hub.clone(),
                 move || crate::history_retention::run(retention_paths.clone()),
+            )),
+            tokio::task::spawn_local(supervisor::run(
+                "palette-schedule",
+                hub.clone(),
+                move || control_center::run_palette_schedule(schedule_hub.clone()),
+            )),
+            tokio::task::spawn_local(supervisor::run(
+                "lock-wallpaper-refresh",
+                hub.clone(),
+                move || control_center::run_lock_wallpaper_refresh(lock_wallpaper_hub.clone()),
             )),
         ];
         hub.borrow_mut().service("behaviours", "running", 0)?;

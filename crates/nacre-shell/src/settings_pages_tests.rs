@@ -315,9 +315,23 @@ async fn current_scene_uses_bounded_catalogue_thumbnail_for_large_original() {
         })
     })
     .await;
-    assert_eq!(
-        l.call().await,
-        ("wallpaper.catalogue".into(), json!({"ids":[original]}))
+    let mut hydrated = false;
+    for _ in 0..3 {
+        let call = l.call().await;
+        assert_eq!(call.0, "wallpaper.catalogue");
+        if call.1["ids"] == json!([original]) {
+            hydrated = true;
+            break;
+        }
+        assert_eq!(
+            call.1,
+            json!({"ids": []}),
+            "only the lock picker metadata query may precede thumbnail hydration"
+        );
+    }
+    assert!(
+        hydrated,
+        "the current scene must request only its selected wallpaper thumbnail"
     );
     let model_items = items(&model);
     let scene = row(&model_items, "wallpaper-scene");

@@ -1176,8 +1176,39 @@ impl Settings {
 
     /// Rows that follow a registry setting: the keyboard layout picker.
     pub(super) fn after_row(&self, setting: &Json, editable: bool, state: &State) -> Vec<Json> {
+        let mut rows = Vec::new();
+        if setting["id"] == "apps.startup.startup" && state.startup_choices_failed {
+            let retry = editable && self.can("menu.query");
+            rows.push(actions(
+                "startup.retry",
+                &tr("bead.settings.catalogue-failed", &[]),
+                "",
+                vec![opt(
+                    "do:retry-startup".into(),
+                    &tr("bead.settings.retry", &[]),
+                    false,
+                    retry,
+                )],
+                retry,
+            ));
+        }
+        if setting["id"] == "wallpaper.motion.lockWallpaper" && state.lock_catalogue_failed {
+            let retry = editable && self.can("wallpaper.catalogue");
+            rows.push(actions(
+                "lock-wallpaper.retry",
+                &tr("bead.settings.catalogue-failed", &[]),
+                "",
+                vec![opt(
+                    "do:retry-wallpapers".into(),
+                    &tr("bead.settings.retry", &[]),
+                    false,
+                    retry,
+                )],
+                retry,
+            ));
+        }
         if setting["adapter"] != "keyboard-layout" || !Self::input_adapter(setting) {
-            return Vec::new();
+            return rows;
         }
         let can = editable && self.document("software-input").2 && self.can(super::METHOD);
         let current = self.layout_list();
@@ -1208,7 +1239,7 @@ impl Settings {
         } else {
             tr("bead.settings.layout-none", &[])
         };
-        vec![
+        rows.extend([
             json!({"id": "layout.picker", "kind": "picker", "enabled": can,
                 "label": tr("bead.settings.layout-pick", &[]),
                 "placeholder": tr("bead.settings.layout-filter", &[]),
@@ -1226,7 +1257,8 @@ impl Settings {
                 )],
                 can && !current.is_empty(),
             ),
-        ]
+        ]);
+        rows
     }
     /// The info row of the layout setting: the chosen ids, or the system default.
     pub(super) fn layout_row(&self, setting: &Json, mut row: Json) -> Json {
@@ -1522,6 +1554,78 @@ impl Settings {
             return changes;
         }
         match op {
+            "retry-startup" => {
+                let mut state = self.state.borrow_mut();
+                if state.startup_choices_failed {
+                    state.retry_startup_catalogue();
+                    drop(state);
+                    wake();
+                }
+            }
+            "retry-wallpapers" => {
+                let mut state = self.state.borrow_mut();
+                if state.lock_catalogue_failed {
+                    state.retry_wallpaper_catalogue();
+                    drop(state);
+                    wake();
+                }
+            }
+            "lock-wallpaper" => {
+                let setting_id = "wallpaper.motion.lockWallpaper";
+                let Some(setting) = self.registry.setting(setting_id) else {
+                    return changes;
+                };
+                let value = if b.is_empty() {
+                    a.to_owned()
+                } else {
+                    format!("{a}|{b}")
+                };
+                let available = value.is_empty()
+                    || self
+                        .state
+                        .borrow()
+                        .lock_wallpapers
+                        .iter()
+                        .any(|choice| choice["value"].as_str() == Some(&value));
+                if available
+                    && self.registry.editable("wallpaper")
+                    && self.document("wallpaper-picker").2
+                {
+                    self.submit(setting, json!(value), wake);
+                }
+            }
+            "list-add" => {
+                let Some(setting) = self.registry.setting(a) else {
+                    return changes;
+                };
+                let value = if a == "apps.startup.startup" {
+                    startup_choice(&self.state.borrow(), b)
+                } else {
+                    setting["choices"].as_array().and_then(|choices| {
+                        choices
+                            .iter()
+                            .find(|choice| choice["value"].as_str() == Some(b))
+                            .map(|choice| choice["value"].clone())
+                    })
+                };
+                let Some(value) = value else {
+                    return changes;
+                };
+                let page = setting["page"].as_str().unwrap_or("");
+                let store = setting["store"]["id"].as_str().unwrap_or("");
+                if setting["type"] != "array"
+                    || !self.registry.editable(page)
+                    || !self.document(store).2
+                {
+                    return changes;
+                }
+                let current = self.current(setting);
+                let mut values = current.as_array().cloned().unwrap_or_default();
+                if values.len() < MAX_ITEMS && !values.contains(&value) {
+                    values.push(value);
+                    self.submit(setting, Json::Array(values), wake);
+                }
+            }
             "confirm" => self.state.borrow_mut().confirm = a.into(),
             "cancel" => {
                 let mut state = self.state.borrow_mut();
