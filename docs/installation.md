@@ -26,6 +26,14 @@ It trusts only the signing key with fingerprint
 signed database. The [package index](https://nacre-desktop.github.io/nacre/)
 lists the current release.
 
+Optionally, verify the installer's signature with that key before running it:
+
+```sh
+curl --fail --location --output-dir /tmp --remote-name-all https://nacre-desktop.github.io/nacre/{install-arch.sh.sig,nacre-repo.asc}
+gpg --dearmor -o /tmp/nacre-repo.gpg /tmp/nacre-repo.asc && gpg --show-keys /tmp/nacre-repo.asc  # must show the fingerprint above
+gpgv --keyring /tmp/nacre-repo.gpg /tmp/install-arch.sh.sig /tmp/nacre-install-arch.sh
+```
+
 Setup offers three compositor choices:
 
 1. **nacre-niri** — recommended; Nacre's Niri fork with all shell features.
