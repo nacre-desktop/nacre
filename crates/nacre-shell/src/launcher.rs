@@ -1307,9 +1307,11 @@ impl Menu {
     }
 
     pub(crate) fn is_toggle(&self, id: &str) -> bool {
-        self.view.borrow().rows.iter().any(|row| {
-            row["id"] == id && row["toggle"] == true && row["disabled"] != true
-        })
+        self.view
+            .borrow()
+            .rows
+            .iter()
+            .any(|row| row["id"] == id && row["toggle"] == true && row["disabled"] != true)
     }
 
     fn activate_choice(&self, group: &str, id: &str) -> source::Result<MenuActivated> {
