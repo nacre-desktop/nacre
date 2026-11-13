@@ -2553,7 +2553,6 @@ version = "0.1.0-dev.2"
 dependencies = [
  "regex",
  "serde_json",
- "sha2",
 ]
 
 [[package]]
