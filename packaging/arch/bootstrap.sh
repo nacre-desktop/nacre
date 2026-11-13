@@ -36,8 +36,19 @@ if pacman-conf --repo-list | grep -Fxq nacre-dev && ! grep -Fxq "$include" /etc/
   exit 1
 fi
 curl --fail --show-error --silent --location --proto '=https' "$repository/nacre-repo.asc" --output "$work/nacre-repo.asc"
-actual=$(gpg --homedir "$work/gnupg" --batch --with-colons --show-keys "$work/nacre-repo.asc" | awk -F: '$1=="fpr" {print $10; exit}')
-[[ $actual == "$fingerprint" ]] || { echo 'Package signing fingerprint mismatch.' >&2; exit 1; }
+keys=$(gpg --homedir "$work/gnupg" --batch --with-colons --show-keys "$work/nacre-repo.asc")
+actual=$(awk -F: '$1=="fpr" {print $10; exit}' <<<"$keys")
+# pacman-key --add imports every key in the file: accept only the single pinned one.
+[[ $(grep -c '^pub:' <<<"$keys") == 1 && $actual == "$fingerprint" ]] || { echo 'Package signing key file is not the single pinned key.' >&2; exit 1; }
+undo() {
+  cat >&2 <<UNDO
+Nacre was not installed. The repository and its key stay configured; to undo that run:
+  sudo sed -i '\#^$include\$#d' /etc/pacman.conf
+  sudo rm /etc/pacman.d/nacre-dev.conf
+  sudo pacman-key --delete $fingerprint
+UNDO
+  exit 1
+}
 sudo pacman-key --add "$work/nacre-repo.asc"
 sudo pacman-key --lsign-key "$fingerprint"
 sudo install -m 644 "$work/nacre-dev.conf" /etc/pacman.d/nacre-dev.conf
@@ -46,8 +57,8 @@ if ! grep -Fxq "$include" /etc/pacman.conf; then
   printf '\n%s\n' "$include" | sudo tee -a /etc/pacman.conf >/dev/null
 fi
 if ! command -v python3 >/dev/null; then
-  sudo pacman -Syu --needed python
+  sudo pacman -Syu --needed python || undo
 fi
 # The publisher embeds the same provider-aware transaction code used by setup.
-python3 -c @NACRE_PACMAN_FRONTEND@ nacre
+python3 -c @NACRE_PACMAN_FRONTEND@ nacre || undo
 exec nacre setup
