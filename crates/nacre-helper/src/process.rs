@@ -17,9 +17,11 @@ pub(crate) fn configure_daemon_allocator() {
     #[allow(unsafe_code)]
     // SAFETY: called during single-threaded daemon startup, with a valid glibc
     // parameter. Keep the default 128 KiB threshold static: its dynamic growth
-    // otherwise moves later raster buffers into persistent thread arenas.
+    // otherwise moves later raster buffers into persistent thread arenas. One
+    // arena: short-lived helper threads otherwise each keep a heap of slack.
     unsafe {
         nix::libc::mallopt(nix::libc::M_MMAP_THRESHOLD, 128 * 1024);
+        nix::libc::mallopt(nix::libc::M_ARENA_MAX, 1);
     }
 }
 
