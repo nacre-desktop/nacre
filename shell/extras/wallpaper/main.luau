@@ -94,12 +94,13 @@ local function button(id,label,active,request)
       text=label,font_size=T.palette.description_font,text_align="center",color=active and "onPrimary" or "onSurface"}}
 end
 local function nav_button(id,label,glyph,action,request)
-  local fill=count>0 and "surfaceContainerHigh" or ui.alpha("surfaceContainerHigh",T.wallpaper.disabled_opacity)
-  local ink=count>0 and "onSurface" or ui.alpha("onSurface",T.wallpaper.disabled_opacity)
+  local enabled=id=="pause" or count>0
+  local fill=enabled and "surfaceContainerHigh" or ui.alpha("surfaceContainerHigh",T.wallpaper.disabled_opacity)
+  local ink=enabled and "onSurface" or ui.alpha("onSurface",T.wallpaper.disabled_opacity)
   if spotlight then fill=ui.alpha("surfaceContainerHigh",T.wallpaper.spotlight_pill_opacity) end
   return kit.Button{id=id,aria_label=label,width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,padding=0,
     radius=T.panel.close_radius,fill=fill,hover_fill=fill,
-    activate_on_release=true,focus_on_pointer=false,on_activate=count>0 and ui.action(action,request) or nil,
+    activate_on_release=true,focus_on_pointer=false,on_activate=enabled and ui.action(action,request) or nil,
     ui.Row{width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,align="center",justify="center",
       ui.Text{text=glyph,width=T.wallpaper.nav_icon_width,height=T.wallpaper.nav_icon_height,family="Material Symbols Rounded",font_size=T.wallpaper.nav_icon_font,color=ink}}}
 end
