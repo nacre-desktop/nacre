@@ -1014,7 +1014,11 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
                         .view_nodes()
                         .iter()
                         .filter(|node| node.action.is_some())
-                        .map(|node| (node.id.clone(), node.action.clone(), node.action_arg.clone()))
+                        .map(|node| (
+                            node.id.clone(),
+                            node.action.clone(),
+                            node.action_arg.clone()
+                        ))
                         .collect::<Vec<_>>()
                 )
             })?;

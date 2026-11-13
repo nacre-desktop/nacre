@@ -28,10 +28,7 @@ fn unavailable() -> BTreeMap<String, Value> {
     BTreeMap::from([
         (KEYS[0].into(), Value::Text("wifi_off".into())),
         (KEYS[1].into(), Value::Text("bluetooth_disabled".into())),
-        (
-            KEYS[2].into(),
-            Value::Text("battery_unknown".into()),
-        ),
+        (KEYS[2].into(), Value::Text("battery_unknown".into())),
         (KEYS[3].into(), Value::Text(String::new())),
         (KEYS[4].into(), Value::Number(3.)),
         (KEYS[5].into(), Value::Text("volume_mute".into())),
