@@ -98,6 +98,9 @@ assert not shutil.which("fish"), "Fish is optional and absent in the core instal
 assert not shutil.which("fastfetch"), (
     "Fastfetch is optional and absent in the core install"
 )
+ai_installed = (
+    subprocess.run(["pacman", "-Q", "nacre-ai"], capture_output=True).returncode == 0
+)
 metadata = json.loads(Path("/usr/share/nacre/package.json.installed").read_text())
 config_root = Path("/usr/share/nacre/config")
 for name in (
@@ -163,8 +166,7 @@ base = (
     backend if backend in {"nacre-niri", "hyprland"} else "niri",
     "--layout",
     "no",
-    "--with",
-    "ai",
+    *(("--with", "ai") if ai_installed else ()),
     "--with",
     "brain",
 )
@@ -180,7 +182,10 @@ run(*base, "--yes")
 status = json.loads(run("nacre", "status").stdout)
 assert status["status"] == "prepared", status
 profile = json.loads((home / ".config/nacre/profile.json").read_text())
-assert profile["aiFullAccess"] is False and {"ai", "brain", "configs", "shell"} <= set(
+required_components = {"brain", "configs", "shell"}
+if ai_installed:
+    required_components.add("ai")
+assert profile["aiFullAccess"] is False and required_components <= set(
     profile["components"]
 )
 kitty_config = home / ".config/nacre/terminal/kitty.conf"
@@ -197,7 +202,7 @@ keyboard_hash = digest(keyboard)
 for relative in (
     ".local/share/nacre/shell/tools",
     ".local/share/nacre/brain",
-    ".local/share/nacre/ai/application",
+    *((".local/share/nacre/ai/application",) if ai_installed else ()),
     ".config/systemd/user/timers.target.wants/nacre-brain-check.timer",
 ):
     path = home / relative
@@ -321,9 +326,6 @@ assert {
 } <= set(favorites)
 assert "shell fish" not in (home / ".config/nacre/terminal/kitty.conf").read_text()
 ai_wrapper = home / ".local/bin/nacre-ai"
-ai_installed = (
-    subprocess.run(["pacman", "-Q", "nacre-ai"], capture_output=True).returncode == 0
-)
 ai_controller_check = (
     "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); "
     "from nacre_ai_controller import load; "
