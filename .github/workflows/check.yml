@@ -143,18 +143,9 @@ jobs:
           export NACRE_ORIENT_BINARY="$PWD/deps/orient/target/release/orient"
           export NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper"
           dbus-run-session -- xvfb-run -a /tmp/check-env/bin/python tools/check.py
-      - name: Native AUR review gallery
-        run: NACRE_HELPER_BINARY="$PWD/target/release/nacre-helper" /tmp/check-env/bin/python tools/capture-aur-review.py --output /tmp/nacre-aur-review
       - name: Daemon raster memory regression
         run: |
           NACRE_MEMORY_BINARY="$PWD/target/release/nacre-helper" cargo test -j2 --locked -p nacre-helper --test daemon memory:: -- --ignored --nocapture
-      - name: Native gallery evidence
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: native-gallery
-          path: /tmp/nacre-aur-review
-          retention-days: 7
       - name: Save Arch packages
         if: always()
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4

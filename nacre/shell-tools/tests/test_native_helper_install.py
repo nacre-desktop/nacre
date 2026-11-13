@@ -51,7 +51,7 @@ class NativeHelperInstallTests(unittest.TestCase):
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",
                 "compositor_backends/niri_widths.py",
-                "weather.py",
+                "idle-policy.py",
                 "nacre-helper",
                 "private.json",
             ):
@@ -69,7 +69,7 @@ class NativeHelperInstallTests(unittest.TestCase):
                 "compositor_backends/hyprland.py",
                 "compositor_backends/niri.py",
                 "compositor_backends/niri_widths.py",
-                "weather.py",
+                "idle-policy.py",
                 "nacre-helper",
                 "private.json",
             ):

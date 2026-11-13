@@ -334,19 +334,8 @@ assert {
     "org.kde.dolphin",
 } <= set(favorites)
 assert "command -v fish" in (home / ".config/nacre/terminal/kitty.conf").read_text()
-ai_controller_check = (
-    "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); "
-    "from nacre_ai_controller import load; "
-    "assert load()['default_assistant']() in ('codex','claude')"
-)
-if ai_installed:
-    run("python", "-c", ai_controller_check)
-elif ai_wrapper.exists():
-    missing_controller = run("python", "-c", ai_controller_check, success=False)
-    assert "Nacre AI controller is missing; install the optional AI tools" in (
-        missing_controller.stdout + missing_controller.stderr
-    )
-else:
+# The native nacre-ai --help below proves the optional controller when installed.
+if not ai_installed:
     assert not ai_wrapper.exists(), "Setup created a wrapper without nacre-ai"
 print(
     "Real UWSM argument parsing, inherited keyboard syntax, and default wallpaper/favorites/terminal pass."

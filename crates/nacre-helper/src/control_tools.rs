@@ -65,12 +65,13 @@ fn owned_record(owner: &str, enabled: bool) -> Value {
 fn save_record(path: &std::path::Path, owner: &str, enabled: bool) -> Result<()> {
     crate::state::write(path, &owned_record(owner, enabled))
 }
-fn screenshot_error(paths: &crate::paths::Paths, result: Result<i32>) -> String {
+fn screenshot_error(result: Result<i32>) -> String {
     match result {
-        Ok(code) => format!(
-            "Command '['python3', '{}', 'region']' returned non-zero exit status {code}.",
-            paths.tools().join("screenshot.py").display()
-        ),
+        Ok(code) => {
+            format!(
+                "Command '['nacre-screenshot', 'region']' returned non-zero exit status {code}."
+            )
+        }
         Err(error) => error.to_string(),
     }
 }
@@ -337,7 +338,7 @@ pub fn run(args: &[String]) -> Result<i32> {
             if result.as_ref().is_ok_and(|code| *code == 0) {
                 Ok(0)
             } else {
-                let error = screenshot_error(&crate::paths::Paths::environment()?, result);
+                let error = screenshot_error(result);
                 println!("{}", crate::json::encode(&json!({"error":error}))?);
                 Ok(1)
             }
@@ -560,15 +561,11 @@ mod tests {
     }
     #[test]
     fn screenshot_failure_keeps_the_control_tools_error_envelope() {
-        let paths = crate::paths::Paths::new("/fixture/home");
         assert_eq!(
-            screenshot_error(&paths, Ok(1)),
-            "Command '['python3', '/fixture/home/.local/share/nacre/shell/tools/screenshot.py', 'region']' returned non-zero exit status 1."
+            screenshot_error(Ok(1)),
+            "Command '['nacre-screenshot', 'region']' returned non-zero exit status 1."
         );
-        assert_eq!(
-            screenshot_error(&paths, Err("grim failed".into())),
-            "grim failed"
-        );
+        assert_eq!(screenshot_error(Err("grim failed".into())), "grim failed");
     }
     #[test]
     fn color_picker_failure_uses_the_control_tools_json_error_envelope() {

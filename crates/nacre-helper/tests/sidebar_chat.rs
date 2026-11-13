@@ -280,11 +280,12 @@ impl Fixture {
         extras_ready_socket
             .set_read_timeout(Some(Duration::from_secs(60)))
             .unwrap();
+        // The native workspace handoff launches kitty through a transient scope.
+        executable(&tools.join("kitty"), "#!/bin/sh\nexit 0\n");
         executable(
-            &tools.join("desktop-extras.py"),
+            &tools.join("systemd-run"),
             r##"#!/usr/bin/python3
 import json, os, socket, sys
-data = json.load(sys.stdin)
 log = os.environ['FAKE_PROVIDER_LOG']
 pid = None
 for line in open(log, encoding='utf-8'):
@@ -293,7 +294,7 @@ for line in open(log, encoding='utf-8'):
         if row.get('kind') == 'pid': pid = row['pid']
     except ValueError: pass
 with open(os.environ['FAKE_EXTRAS_LOG'], 'a', encoding='utf-8') as f:
-    f.write(json.dumps({'action':'resume','argv':sys.argv[1:],'key':data.get('key'),'provider_closed':not os.path.exists('/proc/' + str(pid))}) + '\n')
+    f.write(json.dumps({'argv':sys.argv[-3:-1],'key':sys.argv[-1],'provider_closed':not os.path.exists('/proc/' + str(pid))}) + '\n')
 socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ['FAKE_EXTRAS_SOCKET'])
 "##,
         );
@@ -348,7 +349,7 @@ socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM).sendto(b'completed', os.environ
             .env_clear()
             .env("HOME", self.home.path())
             .env("XDG_RUNTIME_DIR", &self.runtime)
-            .env("PATH", "/usr/bin:/bin")
+            .env("PATH", format!("{}:/usr/bin:/bin", self.tools.display()))
             .env("FAKE_PROVIDER_LOG", &self.log)
             .env("FAKE_TURN_STATE", &self.turn_state)
             .env("FAKE_PROVIDER_COUNT", &self.provider_count)
@@ -1203,7 +1204,10 @@ fn native_workspace_handoff_closes_provider_before_resume_and_blocks_reconnect()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
     assert_eq!(extras.len(), 1);
-    assert_eq!(extras[0]["argv"], json!(["resume"]));
+    assert_eq!(
+        extras[0]["argv"],
+        json!(["nacre-desktop-extras", "resume-terminal"])
+    );
     assert_eq!(extras[0]["key"].as_str().unwrap().len(), 24);
     assert_eq!(extras[0]["provider_closed"], true);
     assert_eq!(fixture.provider_pids().len(), original_pids);

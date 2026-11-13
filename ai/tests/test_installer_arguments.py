@@ -10,7 +10,6 @@ ROOT = Path(__file__).resolve().parents[2]
 INSTALLERS = (
     "ai/install-component.py",
     "ai/install-codex.py",
-    "ai/install-claude.py",
     "ai/install-obsidian.py",
     "ai/configure-remote-shell.py",
     "nacre/shell-tools/install-thunar.py",

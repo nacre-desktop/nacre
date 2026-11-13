@@ -2,7 +2,9 @@
 
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -38,6 +40,23 @@ from native_media_subset import install
 
 media = install(load("wallpaper-media"))
 publisher = load("classic-state")
+
+
+def welcome(home, action, value):
+    """Run the native Welcome state helper (bin/nacre-welcome-state) for one HOME."""
+    binary = os.environ.get(
+        "NACRE_HELPER_BINARY", str(ROOT.parents[1] / "target/debug/nacre-helper")
+    )
+    env = dict(os.environ, HOME=str(home))
+    for key in ("XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"):
+        env.pop(key, None)
+    return subprocess.run(
+        [binary, "welcome", action, json.dumps(value)],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
 
 
 class WelcomeDemoTests(unittest.TestCase):
@@ -111,7 +130,6 @@ class WelcomeDemoTests(unittest.TestCase):
             self.assertTrue(Path(entries[1]["path"]).is_file())
 
     def test_private_scene_choices_and_missing_file_fallback(self):
-        welcome = load("welcome")
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             paths = []
@@ -119,11 +137,10 @@ class WelcomeDemoTests(unittest.TestCase):
                 path = home / f"scene-{index}.png"
                 Image.new("RGB", (32, 32), (index * 60, 40, 80)).save(path)
                 paths.append(str(path))
-            welcome.set_demo_wallpapers(home, paths)
-            self.assertEqual(welcome.preferences(home)["demoWallpapers"], paths)
-            self.assertEqual(
-                (home / ".config/nacre/welcome.json").stat().st_mode & 0o777, 0o600
-            )
+            self.assertEqual(welcome(home, "set-demo-wallpapers", paths).returncode, 0)
+            config = home / ".config/nacre/welcome.json"
+            self.assertEqual(json.loads(config.read_text())["demoWallpapers"], paths)
+            self.assertEqual(config.stat().st_mode & 0o777, 0o600)
             with (
                 patch.object(media, "HOME", home),
                 patch.object(
@@ -139,8 +156,9 @@ class WelcomeDemoTests(unittest.TestCase):
                 self.assertEqual([item["path"] for item in media.demo_scenes()], paths)
                 Path(paths[0]).unlink()
                 self.assertTrue(all(item["license"] for item in media.demo_scenes()))
-            with self.assertRaises(ValueError):
-                welcome.set_demo_wallpapers(home, [paths[1]] * 4)
+            self.assertNotEqual(
+                welcome(home, "set-demo-wallpapers", [paths[1]] * 4).returncode, 0
+            )
 
     def test_snapshot_and_restore_exact_palette_keep_unrelated_preferences(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -192,11 +210,7 @@ class WelcomeDemoTests(unittest.TestCase):
                     media,
                     "demo_module",
                     side_effect=lambda name: (
-                        publisher
-                        if name == "classic-state"
-                        else load("welcome")
-                        if name == "welcome"
-                        else art
+                        publisher if name == "classic-state" else art
                     ),
                 ),
             ):
@@ -273,11 +287,7 @@ class WelcomeDemoTests(unittest.TestCase):
                     media,
                     "demo_module",
                     side_effect=lambda name: (
-                        publisher
-                        if name == "classic-state"
-                        else load("welcome")
-                        if name == "welcome"
-                        else art
+                        publisher if name == "classic-state" else art
                     ),
                 ),
                 patch.object(publisher, "apply_palette") as publish,

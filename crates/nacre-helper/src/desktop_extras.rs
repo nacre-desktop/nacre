@@ -707,7 +707,7 @@ pub(crate) fn chat_list(paths: &Paths) -> Result<Value> {
     save(&state(paths).join("chats.json"), &value)?;
     Ok(Value::Array(value.as_object().unwrap().iter().map(|(key,item)|json!({"key":key,"id":item["id"],"title":item["title"],"agent":item["agent"],"account":item["account"].as_str().filter(|s|!s.is_empty()).unwrap_or("Default"),"state":item["state"].as_str().unwrap_or("saved")})).collect()))
 }
-fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
+pub(crate) fn resume(paths: &Paths, key: &str, terminal: bool) -> Result<()> {
     let records = crate::state::read_strict(&state(paths).join("chats.json"), json!({}))?;
     let item = records.get(key).ok_or("Saved chat no longer exists")?;
     if !terminal {

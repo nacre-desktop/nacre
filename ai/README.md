@@ -46,9 +46,8 @@ original account until they exit. Claude Code histories remain account-specific.
 The standalone native `nacre-ai-chat` and `nacre-ai-claude` helpers provide title,
 thread and session metadata operations. Claude history and sidebar text restore
 read local session files directly; this path does not require
-`claude_agent_sdk` or the venv from `ai/install-claude.py`. The retained Python
-rollback sidebar still uses that optional dependency. Upstream history formats
-are fixture-tested; unsupported or malformed history is left untouched.
+`claude_agent_sdk`. Upstream history formats are fixture-tested; unsupported or
+malformed history is left untouched.
 
 Claude chats use tmux when it is installed, including local chats. Closing the
 terminal detaches the client; reopening a running chat attaches to the same

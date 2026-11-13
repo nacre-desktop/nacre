@@ -168,29 +168,8 @@ fn workspace(shared: &Arc<Mutex<Shared>>) -> Result<()> {
         state.status = "Continue this chat in the workspace, or start a new chat here.".into();
         state.update();
     }
-    // N0025 owns desktop adapters. Keep the established resume boundary here.
-    let script = crate::paths::Paths::environment()?
-        .assets()
-        .join("desktop-extras.py");
-    let mut child = Command::new("python3")
-        .arg(script)
-        .arg("resume")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()?;
-    if let Some(mut input) = child.stdin.take() {
-        input.write_all(serde_json::to_string(&json!({"key":key}))?.as_bytes())?;
-    }
-    use wait_timeout::ChildExt;
-    match child.wait_timeout(Duration::from_secs(30))? {
-        Some(status) if status.success() => {}
-        _ => {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err("Could not open chat in workspace".into());
-        }
-    }
+    crate::desktop_extras::resume(&crate::paths::Paths::environment()?, &key, false)
+        .map_err(|_| "Could not open chat in workspace")?;
     Ok(())
 }
 

@@ -65,6 +65,20 @@ RETIRED_HELPERS = (
     "pearl-state",
     "pearl-window",
     "compositor",
+    "sidebar-chat",
+    "composer",
+    "nacre_ai_controller",
+    "desktop-extras",
+    "welcome",
+    "control-tools",
+    "screenshot",
+    "desktop-actions",
+    "device-actions",
+    "device-location",
+    "display-recover",
+    "maintenance",
+    "weather",
+    "timezone",
 )
 RETIRED_NIRI = ("niri-session-runtime", "niri-acceptance-monitor", "niri-preview")
 MANAGED_UNITS = (
