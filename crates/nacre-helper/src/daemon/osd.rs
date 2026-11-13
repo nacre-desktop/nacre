@@ -545,9 +545,10 @@ fn watch_inputs(
 fn night_changed(names: &[OsString], records: &[PathBuf]) -> bool {
     names.is_empty()
         || names.iter().any(|name| {
-            records
-                .iter()
-                .any(|path| path.file_name().is_some_and(|file| file == name.as_os_str()))
+            records.iter().any(|path| {
+                path.file_name()
+                    .is_some_and(|file| file == name.as_os_str())
+            })
         })
 }
 

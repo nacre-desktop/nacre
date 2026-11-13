@@ -9,7 +9,7 @@
 | N0220 | [Panel stays open after reattach](0220-panel-reattach-hover.md) | Implemented; ready for lead review | A bounded 450 ms reattach hover grace covers the dock reveal; pointer enter cancels it and later leaves keep the 130 ms close delay. |
 | N0304 | [Dynamic wallpaper in Niri overview](0304-overview-wallpaper.md) | In progress | Keep video motion and visible desktop widget animations active in stock niri and nacre-niri overview; covered pause outside overview remains intact. |
 | N0305 | [Daemon idle wakeups](0305-daemon-idle-wakeups.md) | Partial; idle CPU unchanged within noise (0.41 → 0.45%); NVML retry logs 3 → 1 | Caps Lock 500 ms poll remains; follow-up NN0036 moves it to a compositor event. |
-| N0306 | [Daemon interaction CPU](0306-daemon-interaction-cpu.md) | Implemented; dev-1 full desktop CI and hosted CI pending | Use a fixed lossless PNG filter for lock-content snapshots; headless daemon CPU 6.55% → 2.62% of one core (three-run medians); pixel-equivalence test passes. |
+| N0306 | [Daemon interaction CPU](0306-daemon-interaction-cpu.md) | Formatting fix-forward committed; hosted CI rerun pending | Fixed lossless lock-content PNG filter; daemon CPU 6.55% → 2.62% of one core. Hosted run 43403352568 stopped at inherited N0305 rustfmt; formatter-only correction included here. |
 
 ## Current status — 2026-11-10
 

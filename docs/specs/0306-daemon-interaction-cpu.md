@@ -1,6 +1,6 @@
 # N0306 — daemon interaction CPU
 
-**Status:** Implementation complete; focused dev-1 validation passed; hosted CI pending.
+**Status:** Formatting fix-forward committed; focused dev-1 validation passed; hosted CI rerun pending.
 
 ## Goal and change
 
@@ -58,4 +58,6 @@ OSD timer changes were left untouched.
   3 ignored.
 - `cargo clippy --release --locked -j2 -p nacre-helper --lib -- -D warnings`:
   passed with no warnings; `cargo fmt --all -- --check`: passed.
-- Hosted CI run: pending.
+- Hosted CI run `43403352568` reached the desktop job but failed at `cargo fmt
+  --check` on N0305's `osd.rs`; the formatter-only correction is in the
+  fix-forward commit. The full job stopped before clippy/tests.
