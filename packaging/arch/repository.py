@@ -172,7 +172,7 @@ def fetch_previous(destination):
     fingerprint = (ROOT / "packaging/keys/nacre-repo.fingerprint").read_text().strip()
     if previous["schema"] != 1 or previous["fingerprint"] != fingerprint:
         raise ValueError("Repository signing identity changed")
-    names = {"nacre", "nacre-ai", "nacre-brain", "orient"} | {
+    names = {"nacre", "nacre-ai", "nacre-brain", "nacre-niri", "orient"} | {
         item["package"]
         for item in json.loads((ROOT / "packaging/sessions.json").read_text()).values()
     }
@@ -327,8 +327,17 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
         + "</a></li>"
         for name, record in sorted(records.items())
     )
+    title = (
+        "Nacre development packages"
+        if "dev" in records["nacre"]["version"]
+        else "Nacre packages"
+    )
     (output / "index.html").write_text(
-        '<!doctype html><meta charset="utf-8"><title>Nacre development packages</title><h1>Nacre development packages</h1><p>Tested Arch/CachyOS preview packages; x86_64 only. Orient is a separate dependency. Save and review <a href="install-arch.sh">the Arch installer</a> before running it. Updates use pacman -Syu.</p><p>Signing fingerprint: <code>'
+        '<!doctype html><meta charset="utf-8"><title>'
+        + title
+        + "</title><h1>"
+        + title
+        + '</h1><p>Tested Arch/CachyOS preview packages; x86_64 only. Orient is a separate dependency. Save and review <a href="install-arch.sh">the Arch installer</a> before running it. Updates use pacman -Syu.</p><p>Signing fingerprint: <code>'
         + fingerprint
         + "</code></p><ul>"
         + links

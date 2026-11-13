@@ -154,10 +154,10 @@ class RepositoryTests(unittest.TestCase):
             )
             return path
 
-    def make_packages(self, sequence):
+    def make_packages(self, sequence, version=None):
         for path in (self.artifacts / "nacre").glob("*.pkg.tar.zst"):
             path.unlink()
-        version = f"0.1.0dev2.r{sequence}.gaaaaaaaaaaaa"
+        version = version or f"0.1.0dev2.r{sequence}.gaaaaaaaaaaaa"
         self.archive("nacre", version + "-1", ("orient=0.1.0dev7",))
         for name in (
             "nacre-ai",
@@ -271,6 +271,34 @@ class RepositoryTests(unittest.TestCase):
                 self.assertTrue(
                     (second / "arch/dev/x86_64" / old_archive.name).is_file()
                 )
+                self.assertIn(
+                    "<title>Nacre development packages</title>",
+                    (second / "index.html").read_text(),
+                )
+                # The next publication must accept every family build() retains.
+                served = second / "arch/dev/x86_64"
+                with patch.object(
+                    repository,
+                    "urlopen",
+                    lambda request, timeout: (
+                        served / request.full_url.rsplit("/", 1)[1]
+                    ).open("rb"),
+                ):
+                    self.assertTrue(repository.fetch_previous(self.base / "fetched"))
+                self.make_packages(3, "0.1.0")
+                repository.build(
+                    self.root,
+                    self.artifacts,
+                    self.base / "public",
+                    fingerprint,
+                    "a" * 40,
+                    "126",
+                )
+                self.assertIn(
+                    "<title>Nacre packages</title><h1>Nacre packages</h1>",
+                    (self.base / "public/index.html").read_text(),
+                )
+                self.make_packages(3)
                 old_archive.write_bytes(old_archive.read_bytes() + b"tampered")
                 with self.assertRaisesRegex(ValueError, "checksum changed"):
                     repository.build(
