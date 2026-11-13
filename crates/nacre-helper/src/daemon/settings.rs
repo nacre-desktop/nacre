@@ -778,8 +778,33 @@ impl Service {
     }
 
     async fn refresh(&self) -> Result<()> {
+        self.refresh_named(&[]).await.map(drop)
+    }
+
+    /// Re-read the stores whose file `names` were touched (all when empty).
+    /// Returns true when every store was re-read: a store directory appeared
+    /// or vanished, or the inotify queue overflowed. Other names (temp files
+    /// of atomic writes) are ignored.
+    async fn refresh_named(&self, names: &[Option<std::ffi::OsString>]) -> Result<bool> {
         let mut stores = self.stores.lock().await;
-        for store in stores.values_mut() {
+        let is_directory = |name: &std::ffi::OsString| {
+            stores.values().any(|s| {
+                s.path
+                    .ancestors()
+                    .skip(1)
+                    .any(|dir| dir.file_name() == Some(name.as_os_str()))
+            })
+        };
+        let all = names.is_empty()
+            || names
+                .iter()
+                .any(|name| name.as_ref().is_none_or(is_directory));
+        for store in stores.values_mut().filter(|store| {
+            all || names
+                .iter()
+                .flatten()
+                .any(|name| store.path.file_name() == Some(name.as_os_str()))
+        }) {
             let path = store.path.clone();
             let schema = store.schema;
             let lease = self.writer_lease.clone();
@@ -820,7 +845,7 @@ impl Service {
             self.publish(store)?;
             self.durable_changed.notify_waiters();
         }
-        Ok(())
+        Ok(all)
     }
 
     async fn flush(&self) -> Result<()> {
@@ -1092,7 +1117,7 @@ pub async fn run(
         tokio::select! {
             _ = service.changed.notified() => {},
             _ = timer => service.flush().await?,
-            result = watcher.changed() => { result?; service.refresh().await?; watcher.rearm(&service).await?; },
+            names = watcher.changed() => if service.refresh_named(&names?).await? { watcher.rearm(&service).await?; },
         }
     }
 }
@@ -1134,17 +1159,29 @@ impl Watcher {
         }
         Ok(())
     }
-    async fn changed(&self) -> Result<()> {
-        let mut buffer = [0u8; 8192];
+    /// File names of one batch of events; `None` for an event without a
+    /// name (watched directory removed, queue overflow).
+    async fn changed(&self) -> Result<Vec<Option<std::ffi::OsString>>> {
+        use std::os::unix::ffi::OsStrExt;
+        let mut buffer = [std::mem::MaybeUninit::<u8>::uninit(); 8192];
         loop {
             let mut ready = self.fd.readable().await?;
             match ready.try_io(|fd| {
-                rustix::io::read(fd.get_ref(), &mut buffer).map_err(std::io::Error::from)
-            }) {
-                Ok(result) => {
-                    result?;
-                    return Ok(());
+                let mut reader = rustix::fs::inotify::Reader::new(fd.get_ref(), &mut buffer);
+                let mut names = Vec::new();
+                loop {
+                    let event = reader.next().map_err(std::io::Error::from)?;
+                    names.push(
+                        event
+                            .file_name()
+                            .map(|name| std::ffi::OsStr::from_bytes(name.to_bytes()).to_owned()),
+                    );
+                    if reader.is_buffer_empty() {
+                        return Ok(names);
+                    }
                 }
+            }) {
+                Ok(result) => return Ok(result?),
                 Err(_) => continue,
             }
         }
@@ -2158,11 +2195,12 @@ mod tests {
         let temporary = paths.config.join("replacement.json");
         std::fs::write(&temporary, "{\"enabled\":true}").unwrap();
         std::fs::rename(temporary, path).unwrap();
-        tokio::time::timeout(Duration::from_secs(2), watcher.changed())
+        let names = tokio::time::timeout(Duration::from_secs(2), watcher.changed())
             .await
             .unwrap()
             .unwrap();
-        service.refresh().await.unwrap();
+        // The temp file's events are ignored; only the named store is re-read.
+        assert!(!service.refresh_named(&names).await.unwrap());
         assert_eq!(
             service
                 .get(SettingsGet {
