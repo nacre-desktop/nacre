@@ -294,6 +294,43 @@ class InstallModuleTests(unittest.TestCase):
             )
         self.assertFalse((self.home / ".local/share/nacre").exists())
 
+    def test_purge_removes_known_legacy_shell_state_only(self):
+        legacy = self.home / ".local/state/bead"
+        (legacy / "ui/nested").mkdir(parents=True)
+        known = (
+            "panels.json",
+            "pearls.json",
+            "chat-pearls.json",
+            "pearls.json.unreadable",
+            "chat-pearls.json.unreadable",
+            "pearls.json.123.tmp",
+            "chat-pearls.json.456.tmp",
+            "panels.tmp-123",
+            ".ui-123-0.tmp",
+            "ui-health.json",
+            "ui-health.lock",
+            "ui-health-release.json",
+        )
+        for name in known:
+            (legacy / name).write_text("stale")
+        (legacy / "ui/nested/surface.json").write_text("stale")
+        (legacy / "another-app.json").write_text("preserve")
+        with contextlib.redirect_stdout(io.StringIO()) as output:
+            nacre_modules.main(
+                ["uninstall", "--purge", "--plan"], self.home, configure.ROOT
+            )
+        plan = output.getvalue()
+        for name in (*known, "ui"):
+            self.assertIn(f"remove (--purge): ~/.local/state/bead/{name}", plan)
+        self.assertNotIn("another-app.json", plan)
+        self.assertTrue((legacy / "another-app.json").is_file())
+        with contextlib.redirect_stdout(io.StringIO()):
+            nacre_modules.main(
+                ["uninstall", "--purge", "--yes"], self.home, configure.ROOT
+            )
+        self.assertEqual(list(legacy.iterdir()), [legacy / "another-app.json"])
+        self.assertEqual((legacy / "another-app.json").read_text(), "preserve")
+
     def test_upgrading_an_existing_install_keeps_its_modules(self):
         configure.apply(self.home, configure.ROOT)
         everything = nacre_modules.resolve(self.home, nacre_modules.EXTRAS)

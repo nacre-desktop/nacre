@@ -45,3 +45,12 @@ repository PASS (1.9s), bootstrap-plan PASS (0.1s), bootstrap-install PASS
 uninstall PASS (4.8s), package-removal PASS (5.0s), leftovers PASS (0.3s).
 The test package archives, VM evidence and logs remain under the task's ignored
 `.lead/evidence/`; temporary dev-1 files and containers were removed.
+
+## N0402b — upgraded pearl state and purge
+
+Migration also moves `pearls.json`, `chat-pearls.json`, their `.unreadable`
+side files, and `<name>.<pid>.tmp` saves. As before, `RENAME_NOREPLACE`
+preserves both copies on conflict. `uninstall --purge` removes only the known
+legacy shell entries (including the owned `ui/` tree) under `state/bead`, lists
+them in its plan, and removes that directory only when empty; unknown entries
+remain. The migration remains temporary and expires **2026-12-12** with N0402.

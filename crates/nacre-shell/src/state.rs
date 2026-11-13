@@ -51,6 +51,11 @@ pub fn shell_dir() -> Result<PathBuf, String> {
 // shortcut: 2026-12-12, delete migration 30 days after the N0402 release.
 pub fn migrate() -> Result<(), Box<dyn std::error::Error>> {
     use std::{ffi::CString, os::unix::ffi::OsStrExt};
+    fn pearl_temp(name: &str, layout: &str) -> bool {
+        name.strip_prefix(&format!("{layout}."))
+            .and_then(|suffix| suffix.strip_suffix(".tmp"))
+            .is_some_and(|pid| !pid.is_empty() && pid.bytes().all(|b| b.is_ascii_digit()))
+    }
     let root = state_home()?;
     let old = root.join("bead");
     let mut sources = vec![root.join("nacre/widgets-window.json")];
@@ -61,11 +66,17 @@ pub fn migrate() -> Result<(), Box<dyn std::error::Error>> {
                 let name = entry.file_name();
                 let name = name.to_string_lossy();
                 if name == "panels.json"
+                    || name == "pearls.json"
+                    || name == "chat-pearls.json"
+                    || name == "pearls.json.unreadable"
+                    || name == "chat-pearls.json.unreadable"
                     || name == "ui"
                     || name == "ui-health.json"
                     || name == "ui-health.lock"
                     || name.starts_with("ui-health-")
                     || name.starts_with("panels.tmp-")
+                    || pearl_temp(&name, "pearls.json")
+                    || pearl_temp(&name, "chat-pearls.json")
                     || (name.starts_with(".ui-") && name.ends_with(".tmp"))
                 {
                     sources.push(entry.path());
@@ -232,6 +243,12 @@ mod tests {
         std::fs::write(old.join("ui/surface.json"), "surface").unwrap();
         for name in [
             "panels.json",
+            "pearls.json",
+            "chat-pearls.json",
+            "pearls.json.unreadable",
+            "chat-pearls.json.unreadable",
+            "pearls.json.123.tmp",
+            "chat-pearls.json.456.tmp",
             "ui-health.json",
             "ui-health-release.json",
             "ui-health-release.lock",
@@ -270,8 +287,28 @@ mod tests {
             std::fs::read_to_string(new.join("panels.json")).unwrap(),
             "panels.json"
         );
+        for name in [
+            "pearls.json",
+            "chat-pearls.json",
+            "pearls.json.unreadable",
+            "chat-pearls.json.unreadable",
+            "pearls.json.123.tmp",
+            "chat-pearls.json.456.tmp",
+        ] {
+            assert_eq!(std::fs::read_to_string(new.join(name)).unwrap(), name);
+        }
         assert!(old.join("ui").is_dir() && new.join("ui/surface.json").is_file());
         assert!(old.join("unrelated").is_file());
+
+        for (name, content) in [
+            ("pearls.json", "old pearls"),
+            ("chat-pearls.json", "old chat"),
+        ] {
+            std::fs::write(old.join(name), content).unwrap();
+            migrate().unwrap();
+            assert_eq!(std::fs::read_to_string(old.join(name)).unwrap(), content);
+            assert_eq!(std::fs::read_to_string(new.join(name)).unwrap(), name);
+        }
     }
     #[test]
     fn failed_release_history_does_not_poison_a_known_good_release() {

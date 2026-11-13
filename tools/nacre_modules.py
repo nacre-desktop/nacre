@@ -269,6 +269,41 @@ GENERATED = (
 )
 # Snapshot trees are listed as one kept entry each.
 COLLAPSED = (".local/state/nacre/backups", ".local/state/nacre/releases")
+LEGACY_BEAD_STATE = ".local/state/bead"
+
+
+def _legacy_shell_state_files(home):
+    """Files owned by the Nacre shell migration in the former Bead state dir."""
+    root = Path(home) / LEGACY_BEAD_STATE
+    if root.is_symlink():
+        return []
+    if not root.is_dir():
+        return []
+    found = []
+    for entry in root.iterdir():
+        name = entry.name
+        pearl = name in (
+            "pearls.json",
+            "chat-pearls.json",
+            "pearls.json.unreadable",
+            "chat-pearls.json.unreadable",
+        ) or any(
+            name.startswith(f"{layout}.")
+            and name.endswith(".tmp")
+            and name[len(layout) + 1 : -4].isdigit()
+            for layout in ("pearls.json", "chat-pearls.json")
+        )
+        known = (
+            name in ("panels.json", "ui", "ui-health.json", "ui-health.lock")
+            or name.startswith(("ui-health-", "panels.tmp-"))
+            or (name.startswith(".ui-") and name.endswith(".tmp"))
+            or pearl
+        )
+        if not known:
+            continue
+        relative = f"{LEGACY_BEAD_STATE}/{name}"
+        found.append(relative)
+    return sorted(found)
 
 
 def _files_under(home, directory):
@@ -318,6 +353,7 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
                 continue  # Restored or moved beside an edited file.
             kept.add(next((c for c in COLLAPSED if _under(path, [c])), path))
     removed_purge = [p for d in purged for p in _files_under(home, d)]
+    legacy_purge = _legacy_shell_state_files(home) if purge else []
     if apply:
         apply_removal(home, actions, snapshot=False)
         for path, _ in link_actions:
@@ -333,6 +369,15 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
         for directory in purged:
             shutil.rmtree(home / directory)
             _prune(home, Path(directory))
+        for path in legacy_purge:
+            target = home / path
+            if target.is_dir() and not target.is_symlink():
+                shutil.rmtree(target)
+            elif target.exists() or target.is_symlink():
+                target.unlink()
+        legacy_root = home / LEGACY_BEAD_STATE
+        with contextlib.suppress(OSError):
+            legacy_root.rmdir()
         # Empty folders left by removed runtime links hold no data.
         share = home / OWN_DIRS[2]
         for folder, _dirs, _names in os.walk(share, topdown=False):
@@ -344,7 +389,7 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
         generated=generated,
         kept=sorted(kept),
         purged=purged,
-        purged_files=removed_purge,
+        purged_files=sorted((*removed_purge, *legacy_purge)),
     )
 
 
