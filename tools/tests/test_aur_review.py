@@ -69,17 +69,19 @@ class AurReviewTests(unittest.TestCase):
         )
 
     def test_general_review_refuses_background_install_before_any_external_tool(self):
-        self.profile.write_text(json.dumps({"version": 1, "id": "default"}))
-        result = self.run_helper("software-package", "install", "sample-editor")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("visible terminal", result.stderr)
-        self.assertFalse(self.log.exists())
+        # Every profile reviews by default; only aurReview "native" opts out.
+        for profile_id in ["default", "studio-profile"]:
+            self.profile.write_text(json.dumps({"version": 1, "id": profile_id}))
+            result = self.run_helper("software-package", "install", "sample-editor")
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("visible terminal", result.stderr)
+            self.assertFalse(self.log.exists())
 
     def test_declared_native_personal_flow_retains_exact_existing_manager_arguments(
         self,
     ):
         for profile in [
-            {"version": 1, "id": "studio-profile"},
+            {"version": 1, "id": "studio-profile", "aurReview": "native"},
             {"version": 1, "id": "default", "aurReview": "native"},
         ]:
             self.profile.write_text(json.dumps(profile))
