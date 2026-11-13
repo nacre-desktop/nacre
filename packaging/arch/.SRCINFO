@@ -183,6 +183,7 @@ pkgname = nacre
 	optdepends = nacre-session-nacre-niri: Nacre login session using nacre-niri
 	optdepends = nacre-ai: optional assistant workspace
 	optdepends = nacre-brain: optional private Markdown knowledge library
+	optdepends = wlr-randr: refresh-rate step of the battery saver on Hyprland
 
 pkgname = nacre-ai
 	pkgdesc = Optional assistant workspace (no bundled providers or accounts)

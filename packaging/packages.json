@@ -55,7 +55,8 @@
       "nacre-session-hyprland: Nacre session and dependencies for Hyprland",
       "nacre-session-nacre-niri: Nacre login session using nacre-niri",
       "nacre-ai: optional assistant workspace",
-      "nacre-brain: optional private Markdown knowledge library"
+      "nacre-brain: optional private Markdown knowledge library",
+      "wlr-randr: refresh-rate step of the battery saver on Hyprland"
     ],
     "ai": [
       "python",
