@@ -188,6 +188,7 @@ async fn lab_with_activation_behavior(
                 },
             );
         }
+        methods.remove("daemon.status");
         let registry_methods = methods.clone();
         let registry_topics = offered_topics.keys().cloned().collect::<Vec<_>>();
         framing::write(
