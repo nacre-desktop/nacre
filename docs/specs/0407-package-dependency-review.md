@@ -68,7 +68,7 @@ means absence is already handled by a hidden capability, fallback, or clear erro
 | `gcc-libs` | GCC/C++ runtime for packaged native executables and the style plugin (`nacre/shell-tools/install-dolphin.py:52-68`). | keep |
 | `libxkbcommon` | Wayland keyboard handling in the Bead shell (`crates/nacre-shell/Cargo.toml:27-32`). | keep |
 | `gdk-pixbuf2` | Runtime wallpaper image decoding (`crates/nacre-shell/Cargo.toml:15`, `crates/nacre-shell/src/wallpaper_decode.rs:130-137`). | keep |
-| `libpipewire` | No direct runtime link remains; installing optional PipeWire brings its client library (`crates/nacre-helper/src/diagnostics.rs:121-130`, `crates/nacre-helper/src/software_actions.rs:102`). | drop |
+| `libpipewire` | No direct runtime link remains; installing optional PipeWire brings its client library (`crates/nacre-helper/src/diagnostics.rs:121-130`, `crates/nacre-helper/src/software_actions.rs:102`). | drop; N0417 restored it: since N0314 `nacre-helper` (and `nacre-shell` via bead-services) link `libpipewire-0.3.so.0` |
 | `mpv` | Video helper dynamically loads libmpv and reports when it is absent (`crates/nacre-shell/src/bin/bead-wallpaper-video/mpv.rs:2-4,94-101`). | optdepend |
 
 Qt note: `qt6-base`, `qt6-declarative`, and `qt6-imageformats` remain required for the

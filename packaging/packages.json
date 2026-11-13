@@ -28,7 +28,8 @@
       "glib2",
       "gcc-libs",
       "libxkbcommon",
-      "gdk-pixbuf2"
+      "gdk-pixbuf2",
+      "libpipewire"
     ],
     "core_optional": [
       "fish: interactive command line shell",
