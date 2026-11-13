@@ -228,19 +228,8 @@ pub fn render_monitors(monitors: &Value) -> Result<String> {
             .filter(|value| truthy(value) && **value != "none")
             .cloned()
             .unwrap_or(json!(""));
-        // Live rows carry VRR and the current format; keep them so a mode change
-        // does not reset them. shortcut: hyprctl rows report VRR only as on/off
-        // and no HDR state, extend when Hyprland exposes the configured values.
-        let mut kept = String::new();
-        if let Some(vrr) = monitor.get("vrr").and_then(Value::as_bool) {
-            kept.push_str(&format!(",vrr={}", u8::from(vrr)));
-        }
-        if let Some(format) = monitor.get("currentFormat").and_then(Value::as_str) {
-            let deep = format.contains("2101010") || format.contains("16161616");
-            kept.push_str(&format!(",bitdepth={}", if deep { 10 } else { 8 }));
-        }
         lines.push(format!(
-            "hl.monitor({{output={},mode={},scale={scale},position={},transform={},mirror={}{kept}}})",
+            "hl.monitor({{output={},mode={},scale={scale},position={},transform={},mirror={}}})",
             lua(get("name")?)?,
             lua(&json!(format!(
                 "{}x{}@{:.3}",
@@ -258,6 +247,42 @@ pub fn render_monitors(monitors: &Value) -> Result<String> {
         ));
     }
     Ok(lines.join("\n"))
+}
+/// wlr-output-management commits only the mode; Hyprland retains its complete
+/// matching monitor rule, including wildcard/description HDR and VRR settings.
+pub fn monitor_mode_args(monitors: &Value) -> Result<Vec<String>> {
+    let mut args = Vec::new();
+    for row in monitors
+        .as_array()
+        .ok_or_else(|| invalid("Invalid output records"))?
+    {
+        let name = row["name"]
+            .as_str()
+            .filter(|name| !name.is_empty())
+            .ok_or_else(|| invalid("Invalid output name"))?;
+        let width = row["width"]
+            .as_u64()
+            .filter(|n| *n > 0)
+            .ok_or_else(|| invalid("Invalid output width"))?;
+        let height = row["height"]
+            .as_u64()
+            .filter(|n| *n > 0)
+            .ok_or_else(|| invalid("Invalid output height"))?;
+        let hz = row["refreshRate"]
+            .as_f64()
+            .filter(|hz| hz.is_finite() && *hz > 0.0)
+            .ok_or_else(|| invalid("Invalid output rate"))?;
+        args.extend([
+            "--output".into(),
+            name.into(),
+            "--mode".into(),
+            format!("{width}x{height}@{hz:.3}Hz"),
+        ]);
+    }
+    if args.is_empty() {
+        return Err(invalid("No output modes"));
+    }
+    Ok(args)
 }
 pub fn parse_event(line: &str) -> Value {
     let (name, data) = line.split_once(">>").unwrap_or((line, ""));
@@ -728,13 +753,19 @@ impl<T: Transport> Backend<T> {
 mod tests {
     use super::*;
     #[test]
-    fn live_monitor_rows_keep_vrr_and_bit_depth_across_a_mode_change() {
-        let row = json!({"name":"DP-1","width":1920,"height":1080,"refreshRate":60.0,"scale":1.0,
-            "x":0,"y":0,"transform":0,"vrr":true,"currentFormat":"XRGB2101010"});
+    fn mode_changes_leave_color_vrr_and_geometry_to_the_existing_rule() {
+        let row = json!({"name":"DP-1","width":1920,"height":1080,"refreshRate":59.94,
+            "vrr":true,"currentFormat":"XRGB2101010","cm":"hdr","scale":1.5});
         assert_eq!(
-            render_monitors(&json!([row])).unwrap(),
-            "hl.monitor({output=\"DP-1\",mode=\"1920x1080@60.000\",scale=1.0,position=\"0x0\",transform=0,mirror=\"\",vrr=1,bitdepth=10})"
+            monitor_mode_args(&json!([row])).unwrap(),
+            ["--output", "DP-1", "--mode", "1920x1080@59.940Hz"]
         );
+        for row in [
+            json!({}),
+            json!({"name":"DP-1","width":0,"height":1080,"refreshRate":60}),
+        ] {
+            assert!(monitor_mode_args(&json!([row])).is_err());
+        }
     }
     #[test]
     fn advertised_capability_bits_match_reviewed_hyprland_snapshot() {

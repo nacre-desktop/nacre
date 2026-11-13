@@ -743,6 +743,7 @@ impl FakeUpower {
 }
 
 struct Profiles {
+    fail: bool,
     active: Arc<Mutex<String>>,
     sets: Arc<Mutex<Vec<String>>>,
     performance: bool,
@@ -754,9 +755,13 @@ impl Profiles {
         self.active.lock().unwrap().clone()
     }
     #[zbus(property)]
-    fn set_active_profile(&mut self, profile: String) {
+    fn set_active_profile(&mut self, profile: String) -> zbus::fdo::Result<()> {
         self.sets.lock().unwrap().push(profile.clone());
+        if self.fail {
+            return Err(zbus::fdo::Error::Failed("fixture failure".into()));
+        }
         *self.active.lock().unwrap() = profile;
+        Ok(())
     }
     #[zbus(property)]
     fn profiles(&self) -> Vec<HashMap<String, Variant<'static>>> {
@@ -793,6 +798,7 @@ async fn power_fixture(performance: bool, prefs: Value) -> Power {
     let upower = FakeUpower::new(&bus, false, 2, 80.0).await;
     let sets = Arc::new(Mutex::new(Vec::new()));
     let profiles = Profiles {
+        fail: false,
         active: Arc::new(Mutex::new("power-saver".into())),
         sets: sets.clone(),
         performance,
@@ -880,6 +886,46 @@ async fn power_profile_applies_once_per_source_and_setting_change() {
             change_power(service, "enabled", json!(false)).await;
             quiet().await;
             assert_eq!(sets.lock().unwrap().len(), 3);
+            task.abort();
+        })
+        .await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn failed_power_profile_waits_for_an_input_change() {
+    let power = power_fixture(
+        false,
+        json!({"version":1,"enabled":true,"ac":"balanced","battery":"power-saver"}),
+    )
+    .await;
+    power
+        ._profiles
+        .object_server()
+        .interface::<_, Profiles>(PROFILE_SERVICES[0].1)
+        .await
+        .unwrap()
+        .get_mut()
+        .await
+        .fail = true;
+    LocalSet::new()
+        .run_until(async {
+            let task = tokio::task::spawn_local(power_profile(
+                power.hub.clone(),
+                power.client.clone(),
+                None,
+            ));
+            eventually(|| power.sets.lock().unwrap().len() == 1).await;
+            for generation in 1..=3 {
+                power
+                    .hub
+                    .borrow_mut()
+                    .publish("compositor", json!({"generation":generation}))
+                    .unwrap();
+                quiet().await;
+            }
+            assert_eq!(*power.sets.lock().unwrap(), ["balanced"]);
+            power.upower.set(true, 2, 70.0).await;
+            eventually(|| power.sets.lock().unwrap().len() == 2).await;
             task.abort();
         })
         .await;

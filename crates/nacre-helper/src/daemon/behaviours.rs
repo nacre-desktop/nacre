@@ -792,9 +792,14 @@ pub async fn power_profile(
         {
             if let Some((service, performance)) = profile_service(&system).await {
                 if desired != "performance" || performance {
-                    match service.set_property("ActiveProfile", desired.clone()).await {
-                        Ok(()) => applied = desired,
-                        Err(_) => tracing::warn!("The power profile could not be applied"),
+                    // A failed write waits for a source/setting change too.
+                    applied = desired.clone();
+                    if service
+                        .set_property("ActiveProfile", desired.clone())
+                        .await
+                        .is_err()
+                    {
+                        tracing::warn!("The power profile could not be applied");
                     }
                 }
             }

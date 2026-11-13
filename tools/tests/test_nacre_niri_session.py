@@ -56,6 +56,13 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertNotIn('spawn "systemctl" "suspend"', safe_policy)
             idle_path = Path(".config/nacre/power-idle.conf")
             self.assertEqual(generated[idle_path].read_text(), "")
+            # Packaged niri must remain manual-lock-only before unlock acceptance.
+            idle_config = generated[
+                Path(".config/nacre/niri/hypridle.conf")
+            ].read_text()
+            self.assertNotIn("before_sleep_cmd", idle_config)
+            self.assertNotIn("source =", idle_config)
+            self.assertIn("lock_cmd =", idle_config)
 
             configured_policy = (
                 '// Generated policy\nswitch-events { lid-close { spawn "true"; }; }\n'

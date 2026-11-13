@@ -134,13 +134,9 @@ pub(super) async fn update(hub: &Shared, paths: &Paths, active: bool) -> Result<
                 crate::files::atomic(&path, &serde_json::to_vec(&journal)?)?;
             }
             if !changes.is_empty() {
-                // Both adapters validate through their existing config generators;
-                // niri's output transaction rolls back a partially applied change.
-                backend.action(
-                    "configure_monitors",
-                    &[json!(changes)],
-                    &json!({"timeout":5}),
-                )?;
+                // Hyprland uses a mode-only output transaction so HDR, VRR and
+                // other configured monitor fields cannot be reset by live rows.
+                backend.set_monitor_modes(&json!(changes), Duration::from_secs(5))?;
             }
             let after = serde_json::to_vec(&journal)?;
             if after != before {

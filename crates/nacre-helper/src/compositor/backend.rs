@@ -474,6 +474,26 @@ impl Backend {
             Self::Niri(backend) => backend.actions.execute(name, args, kwargs),
         }
     }
+    /// Change only modes, retaining the compositor's configured color/VRR policy.
+    pub fn set_monitor_modes(&mut self, rows: &Value, timeout: Duration) -> Result<Value> {
+        match self {
+            Self::Hyprland(_) => {
+                let args = hyprland::monitor_mode_args(rows)?;
+                crate::process::checked("wlr-randr", &args, None, timeout).map_err(|error| {
+                    Error {
+                        kind: "RuntimeError",
+                        message: error.to_string(),
+                    }
+                })?;
+                Ok(Value::Null)
+            }
+            Self::Niri(backend) => backend.actions.execute(
+                "configure_monitors",
+                std::slice::from_ref(rows),
+                &json!({"timeout":timeout.as_secs_f64()}),
+            ),
+        }
+    }
     pub fn config_path(&self, kind: &str) -> Result<std::path::PathBuf> {
         match self {
             Self::Hyprland(backend) => backend.config_path(kind),

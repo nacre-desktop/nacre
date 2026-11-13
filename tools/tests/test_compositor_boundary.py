@@ -47,6 +47,8 @@ class CompositorBoundaryTests(unittest.TestCase):
                 "picker.sh": "#!/bin/sh\nhyprctl clients -j\n",
                 "niri.py": 'command=["niri","msg","windows"]\n',
                 "niri.sh": "#!/bin/sh\nniri msg windows\n",
+                "output.py": 'command=["wlr-randr","--output","DP-1","--mode","1920x1080@60Hz"]\n',
+                "output.sh": "#!/bin/sh\nwlr-randr --output DP-1 --mode 1920x1080@60Hz\n",
                 "version.py": 'command=["Hyprland","--version"]\n',
             }
             for name, text in samples.items():

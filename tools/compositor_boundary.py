@@ -29,10 +29,10 @@ EXCLUDED = {
     ".venv",
     ".research",
 }
-NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown", "niri"}
+NATIVE_PROGRAMS = {"hyprctl", "Hyprland", "hyprshutdown", "niri", "wlr-randr"}
 TEXT_NATIVE = re.compile(r"\bhl\.(?:dsp|dispatch|config|monitor|window_rule|bind)\b")
 SHELL_NATIVE = re.compile(
-    r"(?<![\w.-])(?:hyprctl|Hyprland|hyprshutdown|niri)(?=$|[\s\"'])"
+    r"(?<![\w.-])(?:hyprctl|Hyprland|hyprshutdown|niri|wlr-randr)(?=$|[\s\"'])"
 )
 
 
