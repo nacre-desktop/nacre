@@ -31,19 +31,26 @@ pub(crate) fn launcher_icon_tint(palette: &bead::render::Palette) -> Option<f64>
     let base = palette.get("onSurfaceVariant").ok()?;
     let accent = palette.get("primary").ok()?;
     let surface = palette.get("surface").ok()?;
-    (0..=7).rev().map(|step| f64::from(step) / 20.).find(|amount| {
-        let ink = std::array::from_fn(|i| {
-            (f64::from(base[i]) * (1. - amount) + f64::from(accent[i]) * amount).round() as u8
-        });
-        icon_contrast(ink, surface) >= 3.
-    })
+    (0..=7)
+        .rev()
+        .map(|step| f64::from(step) / 20.)
+        .find(|amount| {
+            let ink = std::array::from_fn(|i| {
+                (f64::from(base[i]) * (1. - amount) + f64::from(accent[i]) * amount).round() as u8
+            });
+            icon_contrast(ink, surface) >= 3.
+        })
 }
 
 fn icon_contrast(a: [u8; 4], b: [u8; 4]) -> f64 {
     let luma = |color: [u8; 4]| {
         let linear = color.map(|channel| {
             let c = f64::from(channel) / 255.;
-            if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+            if c <= 0.04045 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
         });
         0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
     };
@@ -57,30 +64,51 @@ mod tests {
 
     #[test]
     fn launcher_glyphs_contrast_in_every_demo_palette() {
-        let demos: serde_json::Value = serde_json::from_str(include_str!("../../../shell/welcome/demo/palettes.json")).unwrap();
+        let demos: serde_json::Value =
+            serde_json::from_str(include_str!("../../../shell/welcome/demo/palettes.json"))
+                .unwrap();
         for scene in demos["scenes"].as_array().unwrap() {
             for mode in ["dark", "light"] {
                 for (personality, colors) in scene["palettes"][mode].as_object().unwrap() {
-                    let roles = colors.as_object().unwrap().iter().map(|(role, hex)| {
-                        let rgb = u32::from_str_radix(hex.as_str().unwrap().trim_start_matches('#'), 16).unwrap();
-                        (role.clone(), [(rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8, 255])
-                    }).collect();
+                    let roles = colors
+                        .as_object()
+                        .unwrap()
+                        .iter()
+                        .map(|(role, hex)| {
+                            let rgb = u32::from_str_radix(
+                                hex.as_str().unwrap().trim_start_matches('#'),
+                                16,
+                            )
+                            .unwrap();
+                            (
+                                role.clone(),
+                                [(rgb >> 16) as u8, (rgb >> 8) as u8, rgb as u8, 255],
+                            )
+                        })
+                        .collect();
                     let palette = bead::render::Palette(std::sync::Arc::new(roles));
                     let amount = launcher_icon_tint(&palette).expect("safe blend");
                     let base = palette.get("onSurfaceVariant").unwrap();
                     let accent = palette.get("primary").unwrap();
-                    let ink = std::array::from_fn(|i| (f64::from(base[i]) * (1. - amount) + f64::from(accent[i]) * amount).round() as u8);
+                    let ink = std::array::from_fn(|i| {
+                        (f64::from(base[i]) * (1. - amount) + f64::from(accent[i]) * amount).round()
+                            as u8
+                    });
                     let surface = palette.get("surface").unwrap();
                     assert!(icon_contrast(ink, surface) >= 3., "{mode}/{personality}");
-                    assert!(icon_contrast(accent, surface) >= 3., "selected rail {mode}/{personality}");
+                    assert!(
+                        icon_contrast(accent, surface) >= 3.,
+                        "selected rail {mode}/{personality}"
+                    );
                 }
             }
         }
-        let palette = bead::render::Palette(std::sync::Arc::new(std::collections::BTreeMap::from([
-            ("onSurfaceVariant".into(), [120,120,120,255]),
-            ("primary".into(), [255,255,255,255]),
-            ("surface".into(), [255,255,255,255]),
-        ])));
+        let palette =
+            bead::render::Palette(std::sync::Arc::new(std::collections::BTreeMap::from([
+                ("onSurfaceVariant".into(), [120, 120, 120, 255]),
+                ("primary".into(), [255, 255, 255, 255]),
+                ("surface".into(), [255, 255, 255, 255]),
+            ])));
         assert!(launcher_icon_tint(&palette).unwrap() < 0.35);
     }
 }

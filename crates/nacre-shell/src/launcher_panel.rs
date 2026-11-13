@@ -61,9 +61,14 @@ pub fn spec(
             let source = source.connect().map_err(|e| e.to_string())?;
             let mut runtime = crate::reload::Runtime::panel_session(session, open);
             if let Some(amount) = crate::theme::launcher_icon_tint(&colors) {
-                runtime.session.stores = runtime.session.stores.reconcile(&std::collections::BTreeMap::from([
-                    ("launcher.icon_tint".into(), bead::core::Value::Number(amount)),
-                ])).map_err(|e| e.to_string())?;
+                runtime.session.stores = runtime
+                    .session
+                    .stores
+                    .reconcile(&std::collections::BTreeMap::from([(
+                        "launcher.icon_tint".into(),
+                        bead::core::Value::Number(amount),
+                    )]))
+                    .map_err(|e| e.to_string())?;
             }
             runtime
                 .with_trace(trace)

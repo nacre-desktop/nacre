@@ -133,11 +133,13 @@ impl bead::core::source::Source for KeyboardFixture {
                     params["query"].as_str().unwrap_or_default(),
                     ["light", "dark", "auto"]
                         .into_iter()
-                        .map(|choice| serde_json::json!({
-                            "id":format!("style.appearance.{choice}"),
-                            "name":choice,
-                            "kind":"action"
-                        }))
+                        .map(|choice| {
+                            serde_json::json!({
+                                "id":format!("style.appearance.{choice}"),
+                                "name":choice,
+                                "kind":"action"
+                            })
+                        })
                         .collect(),
                 )
             } else {
@@ -305,8 +307,8 @@ fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Resu
         calls.clone(),
         Some(toggle_gate.clone()),
     ));
-    let mut runtime = crate::reload::Runtime::new(harness("", 0.)?.session)
-        .with_launcher(Some(source))?;
+    let mut runtime =
+        crate::reload::Runtime::new(harness("", 0.)?.session).with_launcher(Some(source))?;
     runtime.isolate_state(
         &std::env::temp_dir().join(format!("n0221e-chooser-{}", std::process::id())),
     );
@@ -317,7 +319,10 @@ fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Resu
     runtime.commit();
     keyboard_settle(&mut runtime)?;
 
-    assert_eq!(runtime.session.stores.get("launcher.mode"), Some(&Value::Text("search".into())));
+    assert_eq!(
+        runtime.session.stores.get("launcher.mode"),
+        Some(&Value::Text("search".into()))
+    );
     let focus_item = |runtime: &mut crate::reload::Runtime, item: &str| -> Result<()> {
         let id = runtime
             .session
@@ -340,8 +345,10 @@ fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Resu
         backspace: false,
     })?;
     runtime.commit();
-    assert!(matches!(runtime.session.stores.get("launcher.apps"),Some(Value::List(rows))
-        if rows.iter().any(|row| row["id"]=="style.animations" && row["checked"]==true)));
+    assert!(
+        matches!(runtime.session.stores.get("launcher.apps"),Some(Value::List(rows))
+        if rows.iter().any(|row| row["id"]=="style.animations" && row["checked"]==true))
+    );
     toggle_gate.notify_one();
 
     focus_item(&mut runtime, "style.appearance")?;
@@ -356,29 +363,55 @@ fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Resu
         "chooser starts at the checked choice"
     );
     keyboard_command(&mut runtime, "down")?;
-    assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text("style.appearance.auto".into()));
+    assert_eq!(
+        runtime.session.focused_action().unwrap().2,
+        Value::Text("style.appearance.auto".into())
+    );
     keyboard_command(&mut runtime, "up")?;
-    assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text("style.appearance.dark".into()));
+    assert_eq!(
+        runtime.session.focused_action().unwrap().2,
+        Value::Text("style.appearance.dark".into())
+    );
     keyboard_command(&mut runtime, "escape")?;
-    assert_eq!(runtime.session.stores.get("launcher.chooser"), Some(&Value::Text(String::new())));
-    assert_eq!(runtime.session.stores.get("panel.open"), Some(&Value::Bool(true)));
+    assert_eq!(
+        runtime.session.stores.get("launcher.chooser"),
+        Some(&Value::Text(String::new()))
+    );
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(true))
+    );
 
     focus_item(&mut runtime, "style.appearance")?;
     keyboard_command(&mut runtime, "enter")?;
     keyboard_command(&mut runtime, "down")?;
     keyboard_command(&mut runtime, "enter")?;
-    assert_eq!(runtime.session.stores.get("panel.open"), Some(&Value::Bool(true)));
-    assert_eq!(runtime.session.stores.get("launcher.chooser"), Some(&Value::Text(String::new())));
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(true))
+    );
+    assert_eq!(
+        runtime.session.stores.get("launcher.chooser"),
+        Some(&Value::Text(String::new()))
+    );
     let calls = calls.lock().unwrap();
-    assert!(calls.iter().any(|(method, params)| {
-        method == "menu.query" && params["route"] == "style.appearance" && params["presentation"] == true
-    }), "choice activation refreshes its group to obtain a current ticket");
-    assert!(calls.iter().any(|(method, params)| {
-        method == "menu.activate"
-            && params["id"] == "style.appearance.auto"
-            && params["activation"] == "fixture:style.appearance.auto"
-            && params["catalog_rev"] == 1
-    }), "Enter activates the selected choice's fresh ticket");
+    assert!(
+        calls.iter().any(|(method, params)| {
+            method == "menu.query"
+                && params["route"] == "style.appearance"
+                && params["presentation"] == true
+        }),
+        "choice activation refreshes its group to obtain a current ticket"
+    );
+    assert!(
+        calls.iter().any(|(method, params)| {
+            method == "menu.activate"
+                && params["id"] == "style.appearance.auto"
+                && params["activation"] == "fixture:style.appearance.auto"
+                && params["catalog_rev"] == 1
+        }),
+        "Enter activates the selected choice's fresh ticket"
+    );
     Ok(())
 }
 

@@ -198,10 +198,18 @@ fn prepare(reply: Json, expected_query: Option<&str>) -> source::Result<Prepared
         if let Some(checked) = item.checked {
             row["checked"] = Json::Bool(checked);
         }
-        if let Some(choices) = item.presentation.as_ref().and_then(|value| value.get("choices")) {
+        if let Some(choices) = item
+            .presentation
+            .as_ref()
+            .and_then(|value| value.get("choices"))
+        {
             row["choices"] = choices.clone();
         }
-        if item.presentation.as_ref().is_some_and(|value| value["toggle"] == true) {
+        if item
+            .presentation
+            .as_ref()
+            .is_some_and(|value| value["toggle"] == true)
+        {
             row["toggle"] = Json::Bool(true);
         }
         rows.push(row);
@@ -824,20 +832,40 @@ struct PendingToggle {
     completion: Arc<std::sync::Mutex<Option<source::Result<MenuActivated>>>>,
 }
 
-async fn call_activation(source: &dyn Source, request: MenuActivate) -> source::Result<MenuActivated> {
+async fn call_activation(
+    source: &dyn Source,
+    request: MenuActivate,
+) -> source::Result<MenuActivated> {
     request.validate().map_err(|_| invalid_menu())?;
-    let reply = source.call("menu.activate".into(), serde_json::to_value(request).map_err(|_| invalid_menu())?, Duration::from_secs(3)).await?;
+    let reply = source
+        .call(
+            "menu.activate".into(),
+            serde_json::to_value(request).map_err(|_| invalid_menu())?,
+            Duration::from_secs(3),
+        )
+        .await?;
     let result: MenuActivated = serde_json::from_value(reply).map_err(|_| invalid_menu())?;
     result.validate().map_err(|_| invalid_menu())?;
     Ok(result)
 }
 
 fn set_toggle(rows: &mut Arc<Vec<Json>>, id: &str, checked: bool) -> bool {
-    let Some(index) = rows.iter().position(|row| row["id"] == id) else { return false; };
-    if rows[index]["checked"].as_bool() == Some(checked) { return false; }
+    let Some(index) = rows.iter().position(|row| row["id"] == id) else {
+        return false;
+    };
+    if rows[index]["checked"].as_bool() == Some(checked) {
+        return false;
+    }
     let row = &mut Arc::make_mut(rows)[index];
     row["checked"] = json!(checked);
-    row["status"] = json!(tr(if checked { "bead.common.on" } else { "bead.common.off" }, &[]));
+    row["status"] = json!(tr(
+        if checked {
+            "bead.common.on"
+        } else {
+            "bead.common.off"
+        },
+        &[]
+    ));
     true
 }
 
@@ -1198,17 +1226,32 @@ impl Menu {
     }
     /// Return a painted optimistic frame while the existing actor sends the toggle.
     pub fn toggle(&self, id: &str) -> source::Result<bool> {
-        let before = self.view.borrow().rows.iter().find(|row| row["id"] == id && row["toggle"] == true)
+        let before = self
+            .view
+            .borrow()
+            .rows
+            .iter()
+            .find(|row| row["id"] == id && row["toggle"] == true)
             .and_then(|row| row["checked"].as_bool());
-        let Some(before) = before else { return Ok(false); };
+        let Some(before) = before else {
+            return Ok(false);
+        };
         if self.pending_toggle.borrow().is_some() {
-            return Err(source::Error::new("busy", &tr("bead.launcher.changed", &[]), true));
+            return Err(source::Error::new(
+                "busy",
+                &tr("bead.launcher.changed", &[]),
+                true,
+            ));
         }
         let request = self.activation_request(id)?;
         let actor = self.query_actor.as_ref().ok_or_else(invalid_menu)?;
         let source = self.source.as_ref().ok_or_else(invalid_menu)?.clone();
         let completion = Arc::new(std::sync::Mutex::new(None));
-        *self.pending_toggle.borrow_mut() = Some(PendingToggle { id:id.into(), before, completion:completion.clone() });
+        *self.pending_toggle.borrow_mut() = Some(PendingToggle {
+            id: id.into(),
+            before,
+            completion: completion.clone(),
+        });
         {
             let mut view = self.view.borrow_mut();
             set_toggle(&mut view.rows, id, !before);
@@ -1229,7 +1272,9 @@ impl Menu {
         let choice_group = {
             let view = self.view.borrow();
             view.rows.iter().find_map(|row| {
-                if row["disabled"] == true { return None; }
+                if row["disabled"] == true {
+                    return None;
+                }
                 row["choices"]
                     .as_array()?
                     .iter()
@@ -1255,7 +1300,9 @@ impl Menu {
         self.view.borrow().rows.iter().any(|row| {
             row["id"] == id
                 && row["disabled"] != true
-                && row["choices"].as_array().is_some_and(|choices| !choices.is_empty())
+                && row["choices"]
+                    .as_array()
+                    .is_some_and(|choices| !choices.is_empty())
         })
     }
 
@@ -1264,18 +1311,16 @@ impl Menu {
         let source = self.source.as_ref().ok_or_else(invalid_menu)?;
         let before = source.snapshot();
         let params = json!({"query":"","mode":"apps","route":group,"presentation":true});
-        let reply = self.runtime.block_on(query(source.as_ref(), params, Duration::from_secs(3)))?;
+        let reply =
+            self.runtime
+                .block_on(query(source.as_ref(), params, Duration::from_secs(3)))?;
         let prepared = prepare_for(reply, &(String::new(), "apps".into(), group.into()))?;
         let _row = prepared
             .rows
             .iter()
             .find(|row| row["id"] == id && row["disabled"] != true)
             .ok_or_else(|| {
-                source::Error::new(
-                    "stale_revision",
-                    &tr("bead.launcher.changed", &[]),
-                    true,
-                )
+                source::Error::new("stale_revision", &tr("bead.launcher.changed", &[]), true)
             })?;
         let activation = prepared.actions.get(id).cloned().ok_or_else(|| {
             source::Error::new(
@@ -1300,7 +1345,9 @@ impl Menu {
             activation,
             catalog_rev: prepared.catalog_rev,
         };
-        let result = self.runtime.block_on(call_activation(source.as_ref(), request))?;
+        let result = self
+            .runtime
+            .block_on(call_activation(source.as_ref(), request))?;
         let mut view = self.view.borrow_mut();
         view.request = None;
         view.grid = None;
@@ -1463,7 +1510,10 @@ impl Menu {
 
     fn activate_once(&self, id: &str) -> source::Result<MenuActivated> {
         let request = self.activation_request(id)?;
-        let result = self.runtime.block_on(call_activation(self.source.as_ref().unwrap().as_ref(), request));
+        let result = self.runtime.block_on(call_activation(
+            self.source.as_ref().unwrap().as_ref(),
+            request,
+        ));
         match result {
             Ok(result) => {
                 if result.keep_open {
@@ -1491,7 +1541,10 @@ impl Menu {
         stores: &Stores,
     ) -> Result<BTreeMap<String, Value>, bead::ui::Diagnostic> {
         let _profile = bead::core::profile::Span::new("source_projection");
-        let finished = self.pending_toggle.borrow().as_ref()
+        let finished = self
+            .pending_toggle
+            .borrow()
+            .as_ref()
             .and_then(|pending| pending.completion.lock().ok()?.take());
         if let Some(result) = finished {
             let pending = self.pending_toggle.borrow_mut().take().unwrap();
@@ -1817,7 +1870,10 @@ impl Menu {
         ]);
         if let Some(Value::Text(group)) = stores.get("launcher.chooser")
             && !group.is_empty()
-            && (view.result_request.as_ref().is_some_and(|accepted| accepted != &request)
+            && (view
+                .result_request
+                .as_ref()
+                .is_some_and(|accepted| accepted != &request)
                 || !view.rows.iter().any(|row| row["id"] == *group))
         {
             delta.insert("launcher.chooser".into(), Value::Text(String::new()));
@@ -2056,12 +2112,17 @@ mod tests {
     fn prepared_rows_retain_toggle_and_value_choice_presentation() {
         let reply = fixture_reply(
             "",
-            vec![json!({"id":"style.appearance","name":"Appearance","kind":"group",
-                "presentation":{"toggle":true,"choices":[{"id":"style.appearance.dark","name":"Dark","checked":true}]}})],
+            vec![
+                json!({"id":"style.appearance","name":"Appearance","kind":"group",
+                "presentation":{"toggle":true,"choices":[{"id":"style.appearance.dark","name":"Dark","checked":true}]}}),
+            ],
         );
         let prepared = prepare(reply, Some("")).unwrap();
         assert_eq!(prepared.rows[0]["toggle"], true);
-        assert_eq!(prepared.rows[0]["choices"][0]["id"], "style.appearance.dark");
+        assert_eq!(
+            prepared.rows[0]["choices"][0]["id"],
+            "style.appearance.dark"
+        );
     }
     fn project_wait(
         menu: &Menu,

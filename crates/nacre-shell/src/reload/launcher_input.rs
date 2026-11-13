@@ -16,51 +16,109 @@ fn key_id(key: &str) -> String {
 }
 
 impl Runtime {
-    pub(super) fn launcher_open_chooser(&mut self, group: &str) -> Result<Option<Scene>, Box<dyn Error>> {
+    pub(super) fn launcher_open_chooser(
+        &mut self,
+        group: &str,
+    ) -> Result<Option<Scene>, Box<dyn Error>> {
         let target = match self.session.stores.get("launcher.apps") {
-            Some(Value::List(rows)) => rows.iter().find(|row| row["id"] == group)
+            Some(Value::List(rows)) => rows
+                .iter()
+                .find(|row| row["id"] == group)
                 .and_then(|row| row["choices"].as_array())
-                .and_then(|choices| choices.iter().find(|choice| choice["checked"] == true).or_else(|| choices.first()))
-                .and_then(|choice| choice["id"].as_str()).unwrap_or("").to_owned(),
+                .and_then(|choices| {
+                    choices
+                        .iter()
+                        .find(|choice| choice["checked"] == true)
+                        .or_else(|| choices.first())
+                })
+                .and_then(|choice| choice["id"].as_str())
+                .unwrap_or("")
+                .to_owned(),
             _ => String::new(),
         };
-        let scene = self.session.update(BTreeMap::from([
-            ("launcher.selection".into(), Value::Text(group.into())),
-            ("launcher.chooser".into(), Value::Text(group.into())),
-            ("launcher.focus_zone".into(), Value::Text("chooser".into())),
-        ]))?.ok_or("chooser produced no scene")?;
+        let scene = self
+            .session
+            .update(BTreeMap::from([
+                ("launcher.selection".into(), Value::Text(group.into())),
+                ("launcher.chooser".into(), Value::Text(group.into())),
+                ("launcher.focus_zone".into(), Value::Text("chooser".into())),
+            ]))?
+            .ok_or("chooser produced no scene")?;
         // Interactive nodes become current only on commit; use the staged layer ID.
-        let focus = scene.layers.iter().find(|layer| layer.id.ends_with(&format!("choice-{target}")))
-            .ok_or("chooser option missing from scene")?.id.clone();
+        let focus = scene
+            .layers
+            .iter()
+            .find(|layer| layer.id.ends_with(&format!("choice-{target}")))
+            .ok_or("chooser option missing from scene")?
+            .id
+            .clone();
         Ok(self.session.update(BTreeMap::from([
             ("bead.focused".into(), Value::Text(focus)),
             ("bead.focus_visible".into(), Value::Bool(true)),
         ]))?)
     }
 
-    pub(super) fn launcher_chooser_focus(&mut self, step: i32, close: bool) -> Result<Option<Scene>, Box<dyn Error>> {
+    pub(super) fn launcher_chooser_focus(
+        &mut self,
+        step: i32,
+        close: bool,
+    ) -> Result<Option<Scene>, Box<dyn Error>> {
         let group = match self.session.stores.get("launcher.chooser") {
             Some(Value::Text(id)) => id.clone(),
             _ => return Ok(None),
         };
         let choices = match self.session.stores.get("launcher.apps") {
-            Some(Value::List(rows)) => rows.iter().find(|row| row["id"] == group)
-                .and_then(|row| row["choices"].as_array()).cloned().unwrap_or_default(),
+            Some(Value::List(rows)) => rows
+                .iter()
+                .find(|row| row["id"] == group)
+                .and_then(|row| row["choices"].as_array())
+                .cloned()
+                .unwrap_or_default(),
             _ => Vec::new(),
         };
         let focused = self.session.focused_action().map(|(_, _, arg)| arg);
-        let index = choices.iter().position(|choice| focused.as_ref() == Some(&Value::Text(choice["id"].as_str().unwrap_or_default().into())))
+        let index = choices
+            .iter()
+            .position(|choice| {
+                focused.as_ref()
+                    == Some(&Value::Text(
+                        choice["id"].as_str().unwrap_or_default().into(),
+                    ))
+            })
             .map(|index| (index as i32 + step).rem_euclid(choices.len() as i32) as usize)
-            .or_else(|| choices.iter().position(|choice| choice["checked"] == true)).unwrap_or(0);
-        let target = if close { group.as_str() } else { choices.get(index).and_then(|choice| choice["id"].as_str()).unwrap_or("") };
-        let node = self.session.view_nodes().iter().find(|node| node.action.as_deref() == Some("select_app")
-            && node.action_arg == Some(Value::Text(target.into()))).map(|node| node.id.clone());
+            .or_else(|| choices.iter().position(|choice| choice["checked"] == true))
+            .unwrap_or(0);
+        let target = if close {
+            group.as_str()
+        } else {
+            choices
+                .get(index)
+                .and_then(|choice| choice["id"].as_str())
+                .unwrap_or("")
+        };
+        let node = self
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| {
+                node.action.as_deref() == Some("select_app")
+                    && node.action_arg == Some(Value::Text(target.into()))
+            })
+            .map(|node| node.id.clone());
         let mut changes = BTreeMap::from([
-            ("bead.focused".into(), Value::Text(node.unwrap_or_else(|| "launcher.search".into()))),
+            (
+                "bead.focused".into(),
+                Value::Text(node.unwrap_or_else(|| "launcher.search".into())),
+            ),
             ("bead.focus_visible".into(), Value::Bool(true)),
-            ("launcher.focus_zone".into(), Value::Text(if close { "content" } else { "chooser" }.into())),
+            (
+                "launcher.focus_zone".into(),
+                Value::Text(if close { "content" } else { "chooser" }.into()),
+            ),
         ]);
-        if close { changes.insert("launcher.chooser".into(), Value::Text(String::new())); }
+        if close {
+            changes.insert("launcher.chooser".into(), Value::Text(String::new()));
+        }
         Ok(self.session.update(changes)?)
     }
 }

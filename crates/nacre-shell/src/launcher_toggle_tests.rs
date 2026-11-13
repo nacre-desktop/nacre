@@ -62,20 +62,34 @@ impl Source for ToggleSource {
         Box::pin(async move {
             match method.as_str() {
                 "menu.query" => Ok(self.query_result(&params)),
-                "menu.groups" => Ok(json!({"catalog_rev":self.publisher.snapshot().revision,"groups":[]})),
-                "menu.preferences" => Ok(json!({"favorites":[],"hidden":[],"recent":[],"usage":{}})),
+                "menu.groups" => {
+                    Ok(json!({"catalog_rev":self.publisher.snapshot().revision,"groups":[]}))
+                }
+                "menu.preferences" => {
+                    Ok(json!({"favorites":[],"hidden":[],"recent":[],"usage":{}}))
+                }
                 "menu.activate" => {
-                    self.started.send(()).map_err(|_| source::Error::new("internal", "test receiver closed", false))?;
+                    self.started.send(()).map_err(|_| {
+                        source::Error::new("internal", "test receiver closed", false)
+                    })?;
                     self.release.notified().await;
                     if self.fail.load(Ordering::SeqCst) {
-                        Err(source::Error::new("unavailable", "fixture toggle failed", true))
+                        Err(source::Error::new(
+                            "unavailable",
+                            "fixture toggle failed",
+                            true,
+                        ))
                     } else {
                         self.checked.store(true, Ordering::SeqCst);
                         self.publisher.publish(json!({"checked":true}))?;
                         Ok(json!({"keep_open":true}))
                     }
                 }
-                _ => Err(source::Error::new("unavailable", "unexpected fixture method", false)),
+                _ => Err(source::Error::new(
+                    "unavailable",
+                    "unexpected fixture method",
+                    false,
+                )),
             }
         })
     }
@@ -132,7 +146,12 @@ fn first_row(stores: &Stores) -> &Json {
     }
 }
 
-fn project_until(menu: &Menu, stores: &mut Stores, checked: bool, error: bool) -> BTreeMap<String, Value> {
+fn project_until(
+    menu: &Menu,
+    stores: &mut Stores,
+    checked: bool,
+    error: bool,
+) -> BTreeMap<String, Value> {
     let deadline = std::time::Instant::now() + Duration::from_secs(2);
     while std::time::Instant::now() < deadline {
         let delta = menu.project(stores).expect("launcher projection");
@@ -143,9 +162,9 @@ fn project_until(menu: &Menu, stores: &mut Stores, checked: bool, error: bool) -
             _ => continue,
         };
         if rows.first().is_some_and(|row| row["checked"] == checked)
-            && delta.get("launcher.error").is_some_and(|value| {
-                matches!(value, Value::Text(message) if message.is_empty() != error)
-            })
+            && delta.get("launcher.error").is_some_and(
+                |value| matches!(value, Value::Text(message) if message.is_empty() != error),
+            )
             && delta.get("launcher.pending") != Some(&Value::Bool(true))
         {
             return delta;
@@ -158,9 +177,12 @@ fn project_until(menu: &Menu, stores: &mut Stores, checked: bool, error: bool) -
 fn wait_for_toggle_reply(menu: &Menu) {
     let deadline = std::time::Instant::now() + Duration::from_secs(2);
     while std::time::Instant::now() < deadline {
-        if menu.pending_toggle.borrow().as_ref().is_some_and(|pending| {
-            pending.completion.lock().unwrap().is_some()
-        }) {
+        if menu
+            .pending_toggle
+            .borrow()
+            .as_ref()
+            .is_some_and(|pending| pending.completion.lock().unwrap().is_some())
+        {
             return;
         }
         std::thread::sleep(Duration::from_millis(1));
@@ -174,7 +196,9 @@ fn toggle_projects_optimistically_blocks_duplicates_then_confirms_from_query() {
     let mut stores = stores();
 
     assert!(menu.toggle(ID).unwrap());
-    started.recv_timeout(Duration::from_secs(2)).expect("toggle dispatch started");
+    started
+        .recv_timeout(Duration::from_secs(2))
+        .expect("toggle dispatch started");
     let optimistic = menu.project(&stores).unwrap();
     let rows = match &optimistic["launcher.apps"] {
         Value::List(rows) => rows,
@@ -188,7 +212,10 @@ fn toggle_projects_optimistically_blocks_duplicates_then_confirms_from_query() {
     wait_for_toggle_reply(&menu);
     let confirmed = project_until(&menu, &mut stores, true, false);
     assert_eq!(first_row(&stores)["checked"], true);
-    assert_eq!(confirmed.get("launcher.error"), Some(&Value::Text(String::new())));
+    assert_eq!(
+        confirmed.get("launcher.error"),
+        Some(&Value::Text(String::new()))
+    );
 }
 
 #[test]
@@ -197,7 +224,9 @@ fn failed_toggle_rolls_back_and_surfaces_daemon_error() {
     let mut stores = stores();
 
     assert!(menu.toggle(ID).unwrap());
-    started.recv_timeout(Duration::from_secs(2)).expect("toggle dispatch started");
+    started
+        .recv_timeout(Duration::from_secs(2))
+        .expect("toggle dispatch started");
     let optimistic = menu.project(&stores).unwrap();
     let optimistic_rows = match &optimistic["launcher.apps"] {
         Value::List(rows) => rows,
@@ -211,7 +240,10 @@ fn failed_toggle_rolls_back_and_surfaces_daemon_error() {
     stores = stores.reconcile(&failure).unwrap();
     stores.commit(failure.clone()).unwrap();
     assert_eq!(first_row(&stores)["checked"], false);
-    assert_eq!(failure.get("launcher.error"), Some(&Value::Text("fixture toggle failed".into())));
+    assert_eq!(
+        failure.get("launcher.error"),
+        Some(&Value::Text("fixture toggle failed".into()))
+    );
 }
 
 #[test]

@@ -41,7 +41,10 @@ fn panel_visibility_changes(open: bool, launcher: bool) -> BTreeMap<String, bead
     if open && launcher {
         // Reopening starts at the results, never inside a form left open (B0199).
         changes.extend(crate::launcher_form::close());
-        changes.insert("launcher.chooser".into(), bead::core::Value::Text(String::new()));
+        changes.insert(
+            "launcher.chooser".into(),
+            bead::core::Value::Text(String::new()),
+        );
     }
     changes
 }
@@ -6085,9 +6088,12 @@ impl SceneSource for Runtime {
             && matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(id)) if !id.is_empty())
             && matches!(&event, UiEvent::Command { command, .. } if matches!(command.as_str(), "escape" | "up" | "down" | "tab" | "backtab"))
         {
-            let UiEvent::Command { command, shift } = &event else { unreachable!() };
+            let UiEvent::Command { command, shift } = &event else {
+                unreachable!()
+            };
             let backwards = *shift || matches!(command.as_str(), "up" | "backtab");
-            let scene = self.launcher_chooser_focus(if backwards { -1 } else { 1 }, command == "escape")?;
+            let scene =
+                self.launcher_chooser_focus(if backwards { -1 } else { 1 }, command == "escape")?;
             return self.finish_scene(scene);
         }
         if self
@@ -6536,13 +6542,10 @@ impl SceneSource for Runtime {
             }
             if let UiEvent::Key { text, .. } = &event {
                 if text == " "
-                    && self
-                        .session
-                        .focused_action()
-                        .is_some_and(|(_, action, _)| {
-                            action == "launcher.quick"
-                                || (self.launcher.is_some() && action == "select_app")
-                        })
+                    && self.session.focused_action().is_some_and(|(_, action, _)| {
+                        action == "launcher.quick"
+                            || (self.launcher.is_some() && action == "select_app")
+                    })
                 {
                     event = UiEvent::Command {
                         command: "enter".into(),
@@ -8284,7 +8287,8 @@ impl SceneSource for Runtime {
                 let scene = self.launcher_open_chooser(&id)?;
                 return self.finish_scene(scene);
             }
-            if matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(group)) if !group.is_empty()) {
+            if matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(group)) if !group.is_empty())
+            {
                 self.launcher_chooser_focus(0, true)?;
             }
             let result = match menu.toggle(&id) {
@@ -8296,9 +8300,7 @@ impl SceneSource for Runtime {
                 Err(error) => Err(error),
             };
             let changes = match result {
-                Ok(result)
-                    if let Some(launch) = crate::key_routes::activation_view(&result) =>
-                {
+                Ok(result) if let Some(launch) = crate::key_routes::activation_view(&result) => {
                     self.open_launcher(launch, false, None)?;
                     return self.finish_scene(None);
                 }
@@ -8558,16 +8560,17 @@ impl SceneSource for Runtime {
         }
         let mut scene = match event {
             UiEvent::WallpaperPalette(values) => {
-                let palette = bead::render::Palette(std::sync::Arc::new(values.into_iter().collect()));
+                let palette =
+                    bead::render::Palette(std::sync::Arc::new(values.into_iter().collect()));
                 if self.session.stores.get("launcher.icon_tint").is_some()
                     && let Some(amount) = crate::theme::launcher_icon_tint(&palette)
                 {
-                    self.session.stores = self.session.stores.reconcile(&BTreeMap::from([
-                        ("launcher.icon_tint".into(), bead::core::Value::Number(amount)),
-                    ]))?;
+                    self.session.stores = self.session.stores.reconcile(&BTreeMap::from([(
+                        "launcher.icon_tint".into(),
+                        bead::core::Value::Number(amount),
+                    )]))?;
                 }
-                self.session
-                    .set_runtime_palette(palette)?
+                self.session.set_runtime_palette(palette)?
             }
             UiEvent::Model(mut values) => {
                 if values.remove(WALLPAPER_LUMA_POKE).is_some() {

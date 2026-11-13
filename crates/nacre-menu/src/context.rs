@@ -219,7 +219,16 @@ impl Context {
         out["checked"] = json!(checked == Some(true));
         let is_toggle = matches!(
             row["state"].as_str(),
-            Some("setting" | "dnd" | "night-light" | "stay-awake" | "mute" | "mic-mute" | "wifi" | "bluetooth")
+            Some(
+                "setting"
+                    | "dnd"
+                    | "night-light"
+                    | "stay-awake"
+                    | "mute"
+                    | "mic-mute"
+                    | "wifi"
+                    | "bluetooth"
+            )
         );
         out["status"] = json!(if row["state"] == "updates" {
             if yes(&self.updates["count"]) {
@@ -254,13 +263,23 @@ impl Context {
             let children = if row["provider"] == "accents" {
                 self.provider(&id, "").unwrap_or_default()
             } else {
-                model::children(&id, self.rows()).into_iter().filter(|child| self.visible(child)
-                    && matches!(child["state"].as_str(), Some("palette-mode" | "personality" | "background" | "power-profile")))
+                model::children(&id, self.rows())
+                    .into_iter()
+                    .filter(|child| {
+                        self.visible(child)
+                            && matches!(
+                                child["state"].as_str(),
+                                Some(
+                                    "palette-mode" | "personality" | "background" | "power-profile"
+                                )
+                            )
+                    })
                     .map(|child| {
                         let mut choice = self.localized(child);
                         choice["checked"] = json!(self.checked(child) == Some(true));
                         choice
-                    }).collect()
+                    })
+                    .collect()
             };
             let choices: Vec<_> = children.iter().map(|child| {
                 json!({"id":child["id"],"name":child["label"],"checked":child["checked"]})
@@ -456,6 +475,12 @@ mod tests {
         assert_eq!(group["status"], "Green");
         assert_eq!(group["choices"][1]["checked"], true);
         context.wallpapers["selectedAccent"] = json!("missing");
-        assert_eq!(context.node("style.accents").unwrap()["choices"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            context.node("style.accents").unwrap()["choices"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
     }
 }
