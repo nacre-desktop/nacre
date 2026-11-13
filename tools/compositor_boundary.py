@@ -17,6 +17,9 @@ BACKEND_FILES = {
     # Session lifecycle owns starting/validating the native compositor, not IPC.
     # Packaged session lifecycle validates/starts Niri; it performs no native IPC.
     "tools/package_niri.py",
+    # The benchmark harness starts and queries its own private nested Niri.
+    "tools/bench/noctalia/bench.py",
+    "tools/bench/noctalia/stage.sh",
 }
 EXCLUDED = {
     ".git",
