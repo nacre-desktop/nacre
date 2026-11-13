@@ -157,15 +157,18 @@ impl Predecoder {
         self.signal.lock().target.clone()
     }
 
+    fn release(&self) {
+        let mut state = self.signal.lock();
+        state.target = None;
+        state.desired = None;
+        state.pending = None;
+        state.cached = None;
+        self.signal.changed.notify_all();
+    }
+
     fn register_target(&self, boot: String, pair: Arc<ActiveWallpaper>, width: u32, height: u32) {
         if width == 0 || height == 0 {
-            let mut state = self.signal.lock();
-            state.target = None;
-            state.desired = None;
-            state.pending = None;
-            state.cached = None;
-            self.signal.changed.notify_all();
-            return;
+            return self.release();
         }
         let target = PredecodeTarget {
             boot,
@@ -556,37 +559,73 @@ fn raster_pair(template: &ActiveWallpaper, id: &str) -> Option<ActiveWallpaper> 
 #[derive(Default)]
 pub(crate) struct Preview {
     state: Mutex<PreviewState>,
-    predecode: Predecoder,
+    /// N0307: one per output, so a second output of another size is not left to a cold decode.
+    predecode: Mutex<BTreeMap<String, Arc<Predecoder>>>,
     prefetch: crate::wallpaper_prefetch::Prefetch,
     changed: Mutex<Option<Arc<dyn Fn() + Send + Sync>>>,
 }
 impl Preview {
-    /// B0171: decode the catalogue's still images to display size in the background.
-    /// Returns false while no output size is known yet (the caller retries on a later wake).
+    /// B0171: decode the catalogue's still images to every output's display size in the
+    /// background. Returns false while no output size is known yet (the caller retries later).
     pub(crate) fn prefetch(&self, ids: &[String], active: Option<usize>) -> bool {
-        let Some(target) = self.predecode.target() else {
-            return false;
-        };
-        let pairs = crate::wallpaper_prefetch::nearest_first(ids, active)
+        let targets: Vec<_> = self
+            .predecoders()
             .iter()
-            .filter_map(|id| raster_pair(&target.pair, id))
+            .filter_map(|predecoder| predecoder.target())
             .collect();
-        self.prefetch.start(pairs, target.width, target.height);
+        if targets.is_empty() {
+            return false;
+        }
+        let jobs = crate::wallpaper_prefetch::nearest_first(ids, active)
+            .iter()
+            .flat_map(|id| {
+                targets.iter().filter_map(move |target| {
+                    raster_pair(&target.pair, id).map(|pair| (pair, target.width, target.height))
+                })
+            })
+            .collect();
+        self.prefetch.start(jobs);
         true
     }
     pub(crate) fn cancel_prefetch(&self) {
         self.prefetch.cancel();
     }
 
+    fn predecoders(&self) -> Vec<Arc<Predecoder>> {
+        let predecoders = self.predecode.lock().unwrap_or_else(|p| p.into_inner());
+        predecoders.values().cloned().collect()
+    }
+
+    fn predecoder(&self, output: &str) -> Arc<Predecoder> {
+        let mut predecoders = self.predecode.lock().unwrap_or_else(|p| p.into_inner());
+        predecoders
+            .entry(output.into())
+            .or_insert_with(|| {
+                let predecoder = Arc::new(Predecoder::default());
+                let repaint = self
+                    .changed
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner())
+                    .clone();
+                *predecoder
+                    .signal
+                    .repaint
+                    .lock()
+                    .unwrap_or_else(|p| p.into_inner()) = repaint;
+                predecoder
+            })
+            .clone()
+    }
+
     fn set_changed(&self, changed: Arc<dyn Fn() + Send + Sync>) {
-        let repaint = changed.clone();
-        *self.changed.lock().unwrap_or_else(|p| p.into_inner()) = Some(changed);
-        *self
-            .predecode
-            .signal
-            .repaint
-            .lock()
-            .unwrap_or_else(|p| p.into_inner()) = Some(repaint);
+        *self.changed.lock().unwrap_or_else(|p| p.into_inner()) = Some(changed.clone());
+        for predecoder in self.predecoders() {
+            *predecoder
+                .signal
+                .repaint
+                .lock()
+                .unwrap_or_else(|p| p.into_inner()) = Some(changed.clone());
+        }
     }
 
     #[cfg(test)]
@@ -670,17 +709,19 @@ impl Preview {
         });
         state.selected = selected.clone();
         drop(state);
-        self.predecode.clear();
-        if let Some(selection) = selected
-            && let Some(mut target) = self.predecode.target()
-            && target.boot == selection.boot
-        {
-            if let Some(pair) = &selection.optimistic_pair {
-                target.pair = Arc::new(pair.clone());
-            } else if let Some(pair) = self.known_pair(&selection, target.width, target.height) {
-                target.pair = Arc::new(pair);
+        for predecoder in self.predecoders() {
+            predecoder.clear();
+            if let Some(selection) = &selected
+                && let Some(mut target) = predecoder.target()
+                && target.boot == selection.boot
+            {
+                if let Some(pair) = &selection.optimistic_pair {
+                    target.pair = Arc::new(pair.clone());
+                } else if let Some(pair) = self.known_pair(selection, target.width, target.height) {
+                    target.pair = Arc::new(pair);
+                }
+                predecoder.submit(selection.clone(), target);
             }
-            self.predecode.submit(selection, target);
         }
         if let Some(changed) = self
             .changed
@@ -704,7 +745,9 @@ impl Preview {
         }
         state.selected = None;
         drop(state);
-        self.predecode.clear_generation(generation);
+        for predecoder in self.predecoders() {
+            predecoder.clear_generation(generation);
+        }
         true
     }
     pub(crate) fn generation_for(&self, boot: &str, id: &str) -> Option<u64> {
@@ -806,18 +849,21 @@ impl Preview {
     fn register_target(
         &self,
         selection: Option<PreviewSelection>,
+        output: &str,
         boot: String,
         pair: Arc<ActiveWallpaper>,
         width: u32,
         height: u32,
-    ) {
-        self.predecode.register_target(boot, pair, width, height);
+    ) -> Arc<Predecoder> {
+        let predecoder = self.predecoder(output);
+        predecoder.register_target(boot, pair, width, height);
         if let Some(selection) = selection
-            && let Some(target) = self.predecode.target()
+            && let Some(target) = predecoder.target()
             && target.boot == selection.boot
         {
-            self.predecode.submit(selection, target);
+            predecoder.submit(selection, target);
         }
+        predecoder
     }
 }
 fn valid_local_path(path: &str) -> bool {
@@ -1060,8 +1106,9 @@ impl Consumer {
                 .or_else(|| self.preview.known_pair(selection, width, height))
         });
         let target_pair = known_pair.clone().unwrap_or_else(|| pair.as_ref().clone());
-        self.preview.register_target(
+        let predecoder = self.preview.register_target(
             selection.clone(),
+            &output,
             boot.clone(),
             Arc::new(target_pair),
             width,
@@ -1069,8 +1116,7 @@ impl Consumer {
         );
         let cached = selection_waiting.and_then(|selection| {
             known_pair.as_ref().and_then(|known_pair| {
-                self.preview
-                    .predecode
+                predecoder
                     .take_optimistic(selection, known_pair, width, height)
                     .or_else(|| Preview::cached_pair_raster(known_pair, width, height))
             })
@@ -1092,13 +1138,7 @@ impl Consumer {
             if selection_waiting.is_some() {
                 None
             } else {
-                self.preview.predecode.take_confirmed(
-                    selection,
-                    &boot,
-                    pair.as_ref(),
-                    width,
-                    height,
-                )
+                predecoder.take_confirmed(selection, &boot, pair.as_ref(), width, height)
             }
         });
         let optimistic = cached.is_some();
@@ -1422,6 +1462,7 @@ impl bead::wayland::WallpaperProvider for Consumer {
     fn discarded(&self, _output: &str, _revision: u64) {}
     fn output_removed(&self, output: &str) {
         crate::wallpaper_luma::remove(output);
+        self.preview.predecoder(output).release();
         if let Ok(mut visibility) = self.visibility.lock() {
             visibility.remove(output);
         }
@@ -2463,7 +2504,8 @@ mod tests {
         assert!(optimistic.signal.lock().cached.is_none());
         drop(optimistic);
 
-        let mut state = preview.predecode.signal.lock();
+        let output = preview.predecoder("HEADLESS-1");
+        let mut state = output.signal.lock();
         state.desired = Some(job.key.clone());
         state.pending = Some(job);
         state.cached = Some(CachedPredecode {
@@ -2482,16 +2524,16 @@ mod tests {
             selection.requested_at
         );
         assert!(
-            preview.predecode.signal.lock().cached.is_some(),
+            output.signal.lock().cached.is_some(),
             "duplicate activation preserves prepared pixels"
         );
         assert!(
-            preview.predecode.signal.lock().pending.is_some(),
+            output.signal.lock().pending.is_some(),
             "duplicate activation does not cancel the in-flight decode"
         );
         assert!(preview.cancel(generation));
-        assert!(preview.predecode.signal.lock().cached.is_none());
-        assert!(preview.predecode.signal.lock().pending.is_none());
+        assert!(output.signal.lock().cached.is_none());
+        assert!(output.signal.lock().pending.is_none());
 
         let predecoder = Predecoder::default();
         let key = confirmed_predecode_key(&selection, &active, 2, 1).unwrap();
@@ -2520,6 +2562,50 @@ mod tests {
         assert!(confirmed_predecode_key(&selection, &active, 2, 1).is_none());
         drop(preview);
         drop(predecoder);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn a_selection_is_predecoded_for_every_output_size() {
+        let root = std::env::temp_dir().join(format!(
+            "bead-wallpaper-predecode-outputs-{}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&root).unwrap();
+        let path = root.join("selected.png");
+        image::RgbImage::from_pixel(4, 2, image::Rgb([9, 9, 9]))
+            .save(&path)
+            .unwrap();
+        let path = path.to_string_lossy().into_owned();
+        let mut active = pair(7);
+        active.path = path.clone();
+        active.file_identity =
+            WallpaperFileIdentity::from_metadata(&std::fs::symlink_metadata(&path).unwrap());
+        let outputs = [("DP-1", 4, 2), ("eDP-1", 2, 1)];
+        let preview = Preview::default();
+        for (output, width, height) in outputs {
+            let pair = Arc::new(active.clone());
+            preview.register_target(None, output, "boot-a".into(), pair, width, height);
+        }
+        preview.select("boot-a".into(), path.clone(), "image".into(), None);
+        let selection = preview.selected().unwrap();
+        for (output, width, height) in outputs {
+            let predecoder = preview.predecoder(output);
+            let (guard, _) = predecoder
+                .signal
+                .changed
+                .wait_timeout_while(predecoder.signal.lock(), Duration::from_secs(2), |state| {
+                    state.cached.is_none() && state.running
+                })
+                .unwrap();
+            drop(guard);
+            let rgba = predecoder.take_confirmed(&selection, "boot-a", &active, width, height);
+            assert_eq!(
+                rgba.map(|rgba| rgba.len()),
+                Some(width as usize * height as usize * 4)
+            );
+        }
+        drop(preview);
         let _ = std::fs::remove_dir_all(root);
     }
 

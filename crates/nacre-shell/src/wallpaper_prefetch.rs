@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-//! B0171: while the picker is open, decode every catalogue image to the output's display size
+//! B0171: while the picker is open, decode every catalogue image to each output's display size
 //! once, so the first selection of any wallpaper is a cache hit instead of a 400 ms+ decode.
 use nacre_protocol::wallpaper::ActiveWallpaper;
 use std::sync::{
@@ -15,10 +15,11 @@ pub(crate) struct Prefetch {
 }
 
 impl Prefetch {
-    /// Replace any earlier plan; `pairs` are decoded in order, skipping cached entries.
-    pub(crate) fn start(&self, pairs: Vec<ActiveWallpaper>, width: u32, height: u32) {
+    /// Replace any earlier plan; `jobs` (pair, width, height) are decoded in order, skipping
+    /// cached entries.
+    pub(crate) fn start(&self, jobs: Vec<(ActiveWallpaper, u32, u32)>) {
         let mine = self.epoch.fetch_add(1, Ordering::AcqRel) + 1;
-        if pairs.is_empty() {
+        if jobs.is_empty() {
             return;
         }
         let (epoch, gate) = (self.epoch.clone(), self.gate.clone());
@@ -32,7 +33,7 @@ impl Prefetch {
                 }
                 // Give the newly populated picker scene a frame before background decoding.
                 std::thread::sleep(std::time::Duration::from_millis(100));
-                for pair in pairs {
+                for (pair, width, height) in jobs {
                     if epoch.load(Ordering::Acquire) != mine {
                         return;
                     }
