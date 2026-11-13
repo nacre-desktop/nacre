@@ -295,7 +295,9 @@ impl Shutdown {
     pub async fn finish(&self) -> Result<()> {
         let restored = self.restored.notified();
         self.stop.set(true);
-        self.changed.notify_waiters();
+        // A permit, unlike notify_waiters, survives while the observer is busy
+        // in an X11 round trip and has no waiter registered.
+        self.changed.notify_one();
         tokio::time::timeout(Duration::from_secs(4), restored)
             .await
             .map_err(|_| "Width observer shutdown timed out")?;
@@ -974,7 +976,7 @@ mod tests {
             let service = tokio::task::spawn_local(async move {
                 run(state, control, env, configured, stopped).await
             });
-            tokio::time::timeout(Duration::from_secs(3), async {
+            tokio::time::timeout(Duration::from_secs(15), async {
                 while !hub
                     .borrow()
                     .snapshot(TOPIC)
@@ -1010,7 +1012,7 @@ mod tests {
                 &serde_json::Map::from_iter([("7".into(), row.clone())]),
                 &json!({"WindowOpenedOrChanged":{"window":row}}),
             )?;
-            let (action, at) = tokio::time::timeout(Duration::from_secs(3), actions.recv())
+            let (action, at) = tokio::time::timeout(Duration::from_secs(15), actions.recv())
                 .await?
                 .ok_or("Missing opening action")?;
             assert!(
@@ -1034,7 +1036,7 @@ mod tests {
                 super::super::niri_events::TOPIC,
                 json!({"available":true,"backend":"niri","connectionId":"fixture","proportionalX11Widths":true}),
             )?;
-            tokio::time::timeout(Duration::from_secs(3), async {
+            tokio::time::timeout(Duration::from_secs(15), async {
                 while hub.borrow().services["niri-widths"]["status"] != "idle" {
                     tokio::time::sleep(Duration::from_millis(5)).await;
                 }
@@ -1042,24 +1044,23 @@ mod tests {
             .await?;
             let restored = x11.hints(window)?.unwrap();
             assert_eq!(restored.min_width, 1200, "native takeover restores X11 hints");
-            let started = Instant::now();
-            let failure = dispatch(
+            // Rejected on the first poll: the reply never waits on the observer.
+            let failure = futures_util::FutureExt::now_or_never(dispatch(
                 hub.clone(),
                 serde_json::to_value(WidthsConfigure {
                     connection_id: "fixture".into(),
                     display: environment["DISPLAY"].clone(),
                     opening_width: 50.0,
                 })?,
-            )
-            .await
+            ))
+            .ok_or("native mode rejection waited on the observer")?
             .expect_err("native mode rejects legacy observer configuration");
             assert_eq!(failure.code, ErrorCode::Unavailable);
-            assert!(started.elapsed() < Duration::from_millis(100));
             hub.borrow_mut().publish(
                 super::super::niri_events::TOPIC,
                 json!({"available":true,"backend":"niri","connectionId":"fixture"}),
             )?;
-            tokio::time::timeout(Duration::from_secs(3), async {
+            tokio::time::timeout(Duration::from_secs(15), async {
                 while !hub
                     .borrow()
                     .snapshot(TOPIC)

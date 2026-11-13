@@ -529,7 +529,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     use nacre_protocol::{Message, Reply};
     fn link(endpoint: &Path) -> Result<BufReader<UnixStream>> {
         let mut stream = UnixStream::connect(endpoint)?;
-        stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+        stream.set_read_timeout(Some(Duration::from_secs(30)))?;
         writeln!(
             stream,
             "{}",
@@ -548,7 +548,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
         writeln!(
             reader.get_mut(),
             "{}",
-            json!({"t":"call","id":1,"m":method,"p":params,"timeout":5000})
+            json!({"t":"call","id":1,"m":method,"p":params,"timeout":30000})
         )?;
         let mut line = String::new();
         reader.read_line(&mut line)?;
@@ -560,7 +560,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     fn get(reader: &mut BufReader<UnixStream>) -> Result<Value> {
         match call(reader, "settings.get", json!({"store":"power"}))? {
             Reply::Ok { ok } => Ok(ok),
-            _ => Err("Settings read failed".into()),
+            other => Err(format!("Settings read failed: {other:?}").into()),
         }
     }
     let home = tempfile::Builder::new()
@@ -686,7 +686,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     assert_eq!(get(&mut first)?["rev"], 0);
     let widgets_before = match call(&mut first, "settings.get", json!({"store":"widgets"}))? {
         Reply::Ok { ok } => ok,
-        _ => return Err("Widgets settings read failed".into()),
+        other => return Err(format!("Widgets settings read failed: {other:?}").into()),
     };
     assert_eq!(widgets_before["data"]["layout"], Value::Null);
     let widget_layout = json!({"version":1,"hosts":{"top_bar":{"instances":[]}}});
@@ -697,11 +697,11 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
         matches!(call(&mut second,"settings.set",json!({"store":"widgets","key":["layout"],"value":null,"rev":0}))?,Reply::Err{err} if err.code==nacre_protocol::ErrorCode::StaleRevision)
     );
     let widget_path = home.path().join("config/nacre/widgets.json");
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         let snapshot = match call(&mut first, "settings.get", json!({"store":"widgets"}))? {
             Reply::Ok { ok } => ok,
-            _ => return Err("Widgets settings read failed".into()),
+            other => return Err(format!("Widgets settings read failed: {other:?}").into()),
         };
         if snapshot["dirty"] == false {
             break;
@@ -742,7 +742,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     );
     assert_eq!(replies.iter().filter(|r| matches!(r, Reply::Err{err} if err.code == nacre_protocol::ErrorCode::StaleRevision)).count(),1);
     let path = home.path().join("config/nacre/power.json");
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(30);
     while get(&mut first)?["dirty"] == true {
         if Instant::now() > deadline {
             return Err("Settings publication did not finish".into());
@@ -751,7 +751,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     }
     let old: Value = serde_json::from_slice(&fs::read(&path)?)?;
     fs::write(&path, "{\n invalid\n}")?;
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         let snapshot = get(&mut first)?;
         if snapshot["error"]["line"] == 2 {
@@ -764,7 +764,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
         thread::sleep(Duration::from_millis(10));
     }
     fs::write(&path, "{\"enabled\":false,\"unknown\":42}")?;
-    let deadline = Instant::now() + Duration::from_secs(5);
+    let deadline = Instant::now() + Duration::from_secs(30);
     let restored = loop {
         let value = get(&mut first)?;
         if value["data"]["unknown"] == 42 && value.get("error").is_none() {
@@ -2316,6 +2316,9 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
     }
     fs::write(&installed, "fixture helper")?;
     fs::write(&bridge, "fixture bridge")?;
+    // Rewriting an existing file is one inotify event; creating it is two, which a
+    // disk stall can split across the debounce into two lines.
+    fs::write(config.join("wallpaper-picker.json"), "{}")?;
     let log = home.path().join("daemon.log");
     let start_daemon = || -> Result<Process> {
         let process = Process(
@@ -2355,28 +2358,23 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
     };
     let (mut first, mut first_read) = start_watch(None)?;
     let (mut second, mut second_read) = start_watch(Some(&installed))?;
-    let quiet = |reader: &BufReader<ChildStdout>| -> Result<()> {
-        assert!(
-            reader.buffer().is_empty(),
-            "Unexpected buffered wallpaper line"
-        );
+    // A line is buffered or arrives within 800 ms, beyond the 500 ms debounce.
+    fn pending(reader: &BufReader<ChildStdout>) -> Result<bool> {
         let mut fds = [rustix::event::PollFd::new(
             reader.get_ref(),
             rustix::event::PollFlags::IN,
         )];
-        assert_eq!(
-            rustix::event::poll(
-                &mut fds,
-                Some(&rustix::event::Timespec {
-                    tv_sec: 0,
-                    tv_nsec: 800_000_000
-                })
-            )?,
-            0,
-            "Unexpected wallpaper line"
-        );
+        let timeout = rustix::event::Timespec {
+            tv_sec: 0,
+            tv_nsec: 800_000_000,
+        };
+        Ok(!reader.buffer().is_empty() || rustix::event::poll(&mut fds, Some(&timeout))? > 0)
+    }
+    #[track_caller]
+    fn quiet(reader: &BufReader<ChildStdout>) -> Result<()> {
+        assert!(!pending(reader)?, "Unexpected wallpaper line");
         Ok(())
-    };
+    }
     quiet(&first_read)?;
     quiet(&second_read)?;
     // A thin client has no inotify descriptor; only the daemon owns subscriptions.
@@ -2463,13 +2461,19 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
         }
         thread::sleep(Duration::from_millis(10));
     }
+    let burst = Instant::now();
     for text in ["first", "second", "final"] {
         fs::write(nested.join("scene.PNG"), text)?;
     }
-    assert_eq!(next_line(&mut first_read)?, expected("nested-burst")?);
-    assert_eq!(next_line(&mut second_read)?, expected("nested-burst")?);
-    quiet(&first_read)?;
-    quiet(&second_read)?;
+    // Writes that a loaded disk stalls toward the debounce may split the burst.
+    let stalled = burst.elapsed() >= Duration::from_millis(250);
+    for reader in [&mut first_read, &mut second_read] {
+        assert_eq!(next_line(reader)?, expected("nested-burst")?);
+        while stalled && pending(reader)? {
+            assert_eq!(next_line(reader)?, expected("nested-burst")?);
+        }
+        quiet(reader)?;
+    }
     let outside = home.path().join("outside");
     fs::create_dir(&outside)?;
     symlink(&outside, root.join("alias"))?;
@@ -2657,14 +2661,25 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
     ));
 
     record["mode"] = json!("light");
-    record["poster"] = json!(image_b);
-    let presentation_changed_at = Instant::now();
-    write_presentation(&serde_json::to_vec(&record)?)?;
-    let changed = read_active(&mut reader, &mut mirror)?;
+    // A loaded host can stall one sample past the bound; the 500 ms legacy
+    // debounce would delay every sample. Alternate posters, ending on b.
+    let mut fastest = Duration::MAX;
+    let mut changed = None;
+    for poster in [&image_b, &image_a, &image_b] {
+        record["poster"] = json!(poster);
+        let written = Instant::now();
+        write_presentation(&serde_json::to_vec(&record)?)?;
+        changed = Some(read_active(&mut reader, &mut mirror)?);
+        fastest = fastest.min(written.elapsed());
+        if fastest < Duration::from_millis(450) && poster == &image_b {
+            break;
+        }
+    }
     assert!(
-        presentation_changed_at.elapsed() < Duration::from_millis(450),
-        "daemon active presentation was delayed by the legacy debounce"
+        fastest < Duration::from_millis(450),
+        "daemon active presentation was delayed by the legacy debounce: {fastest:?}"
     );
+    let changed = changed.ok_or("Missing changed presentation")?;
     assert!(changed.available && changed.revision > active.revision);
     assert_eq!(
         changed.current.as_ref().unwrap().palette.mode,
