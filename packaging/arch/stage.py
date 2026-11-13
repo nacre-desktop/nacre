@@ -14,6 +14,7 @@ def stage(root, destination, component, build):
         "core",
         "ai",
         "brain",
+        "keyring",
         *("session-" + name for name in sessions),
     }:
         raise ValueError("Unknown package component: " + component)
@@ -306,6 +307,14 @@ def stage(root, destination, component, build):
                 root / sessions[name]["desktop"],
                 destination / "usr/share/wayland-sessions" / desktop_name,
             )
+    elif component == "keyring":
+        # pacman-key --populate nacre re-imports this on every upgrade (key renewal).
+        keys = root / "packaging/keys"
+        keyrings = destination / "usr/share/pacman/keyrings"
+        copy(keys / "nacre-repo.asc", keyrings / "nacre.gpg")
+        fingerprint = (keys / "nacre-repo.fingerprint").read_text().strip()
+        (keyrings / "nacre-trusted").write_text(fingerprint + ":4:\n")
+        (keyrings / "nacre-revoked").write_text("")
     elif component == "ai":
         # Brain templates belong to nacre-brain, avoiding split-package conflicts.
         copy(root / "ai", shared / "ai")

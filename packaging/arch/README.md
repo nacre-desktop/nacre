@@ -195,9 +195,12 @@ revocation certificate in a secure offline/OS key store. GitHub receives only an
 expiring signing subkey as `ARCH_REPO_SIGNING_KEY`, never the certification key.
 No key values belong in commands, logs or Git history.
 
-Track signing-subkey and certificate expiry. Renew or replace the signing subkey
-before expiry, publish its updated public certificate, and arrange trusted-key
-refresh for existing installations before retiring the old signing key. A
+Track signing-subkey and certificate expiry. `nacre` depends on `nacre-keyring`,
+which ships `packaging/keys/nacre-repo.asc` as a pacman keyring and runs
+`pacman-key --populate nacre` on every install/upgrade, so a renewed public key
+reaches installed systems through an ordinary update. Publication refuses a
+signing subkey that expires within 90 days. The renewal runbook is
+[spec 0412](../../docs/specs/0412-keyring-package.md). A
 primary-key change also requires a deliberately reviewed bootstrap fingerprint
 change and trust transition. Revocation/recovery must not disable pacman
 signature checks. Stable-channel promotion and AUR publication are separate
@@ -216,10 +219,10 @@ fresh-user/desktop checks pass:
    Review the dependency versions and source hashes. Build again in a clean
    chroot if any source or dependency changed.
 4. Clone `ssh://aur@aur.archlinux.org/nacre.git` into a separate directory.
-   Copy only PKGBUILD and any required recipe support files; this recipe has
-   no install hooks or patches. Run `makepkg --printsrcinfo > .SRCINFO` there.
+   Copy only PKGBUILD and `nacre-keyring.install` (written beside it by
+   `recipe.py`); there are no patches. Run `makepkg --printsrcinfo > .SRCINFO` there.
 5. Run `namcap PKGBUILD` and inspect `.SRCINFO`, then commit and push those two
-   files to the AUR. The single package base exposes all five split packages.
+   files to the AUR. The single package base exposes all of its split packages.
    Do not push package binaries, caches, private profiles or build artifacts.
 6. For compiler-free end-user installs, separately distribute tested signed
    binaries through an Arch repository or release artifacts. AUR submission

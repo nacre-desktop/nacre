@@ -54,6 +54,7 @@ def render(root, revision, sequence=None):
         "nacre",
         "nacre-ai",
         "nacre-brain",
+        "nacre-keyring",
         *(definition["package"] for definition in sessions.values()),
     ]
     session_functions = ""
@@ -123,7 +124,7 @@ check() {{
 
 package_nacre() {{
   license={array(core_licenses)}
-  depends={array(core)}
+  depends={array([*core, "nacre-keyring"])}
   optdepends={array(mapping["core_optional"])}
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" core "$srcdir/artifacts"
@@ -146,6 +147,15 @@ package_nacre-brain() {{
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" brain "$srcdir/artifacts"
 }}
+
+package_nacre-keyring() {{
+  pkgdesc='Nacre repository signing key for pacman (keeps the key current)'
+  arch=('any')
+  depends=()
+  install=nacre-keyring.install
+  cd "$srcdir/nacre"
+  python packaging/arch/stage.py "$PWD" "$pkgdir" keyring "$srcdir/artifacts"
+}}
 {session_functions}"""
 
 
@@ -165,3 +175,6 @@ if __name__ == "__main__":
         ["git", "-C", str(args.source_root), "rev-list", "--count", revision], text=True
     ).strip()
     args.output.write_text(render(args.source_root, revision, sequence))
+    # makepkg reads install= scripts from the PKGBUILD's own directory.
+    install = args.source_root / "packaging/arch/nacre-keyring.install"
+    args.output.with_name(install.name).write_bytes(install.read_bytes())

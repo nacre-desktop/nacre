@@ -1595,6 +1595,17 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
         self.assertNotIn("-m installer", rendered)
         self.assertNotIn("--wheel", rendered)
+        # Core pulls the keyring so a renewed key rides on every update.
+        self.assertIn("'nacre-keyring'", core.split("depends=", 1)[1].splitlines()[0])
+        keyring = rendered.split("package_nacre-keyring() {", 1)[1].split("}", 1)[0]
+        for line in ("arch=('any')", "depends=()", "install=nacre-keyring.install"):
+            self.assertIn("\n  " + line + "\n", keyring)
+        self.assertIn(
+            "'nacre-keyring'", rendered.split("pkgname=", 1)[1].split("\n")[0]
+        )
+        self.assertTrue(
+            (TOOLS.parent / "packaging/arch/nacre-keyring.install").is_file()
+        )
 
     def test_native_candidate_seeds_palette_and_lock_assets_offline(self):
         build = load(TOOLS.parent / "packaging/arch/build.py", "native_arch_build")
@@ -1702,6 +1713,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                 "core",
                 "ai",
                 "brain",
+                "keyring",
                 "session-niri",
                 "session-nacre-niri",
                 "session-hyprland",
@@ -1756,6 +1768,17 @@ class ArchPackageLayoutTests(unittest.TestCase):
             )
             self.assertNotIn(Path("usr/bin/orient"), owned)
             self.assertIn(Path("usr/bin/nacre_shell"), owned)
+            keyrings = base / "keyring/usr/share/pacman/keyrings"
+            keys = TOOLS.parent / "packaging/keys"
+            self.assertEqual(
+                (keyrings / "nacre.gpg").read_bytes(),
+                (keys / "nacre-repo.asc").read_bytes(),
+            )
+            self.assertEqual(
+                (keyrings / "nacre-trusted").read_text(),
+                (keys / "nacre-repo.fingerprint").read_text().strip() + ":4:\n",
+            )
+            self.assertEqual((keyrings / "nacre-revoked").read_text(), "")
             self.assertFalse((base / "core/usr/share/nacre/nacre/shell").exists())
             self.assertFalse(
                 (
