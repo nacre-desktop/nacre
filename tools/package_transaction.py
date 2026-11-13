@@ -44,11 +44,11 @@ def transaction(packages):
         for name in packages
     ):
         raise ValueError("Invalid package dependency")
+    # sudo's own VAR=value form survives any env_reset policy for ALL rules.
     return run(
         [
-            "/usr/bin/env",
-            "LC_ALL=C",
             "sudo",
+            "LC_ALL=C",
             "pacman",
             "-Syu",
             "--needed",
@@ -67,7 +67,7 @@ def run(command):
         os.execvp(command[0], command)
     pending = b""
     prompt = b""
-    manual = False
+    manual = proceed = False
     input_open = True
 
     # A real pseudo-terminal preserves sudo, pacman's preview/approval, keyboard
@@ -93,7 +93,11 @@ def run(command):
                     prompt = b""
                     manual = False
                 else:
-                    manual = bool(re.search(rb"\[[Yy]/[Nn]\]\s*$", uncolored(prompt)))
+                    plain = uncolored(prompt)
+                    manual = bool(re.search(rb"\[[Yy]/[Nn]\]\s*$", plain))
+                    proceed = bool(
+                        re.search(rb"Proceed with installation\? \[Y/n\]\s*$", plain)
+                    )
             if 0 in readable:
                 data = os.read(0, 65536)
                 if not data:
@@ -103,14 +107,15 @@ def run(command):
                 else:
                     pending += data
             if not interactive and manual:
-                if b"\n" in pending:
+                answer = None
+                if proceed and b"\n" in pending:
                     answer, pending = pending.split(b"\n", 1)
+                elif not proceed or not input_open:
+                    # Piped input approves only pacman's transaction; key imports,
+                    # removals, conflicts and an EOF are declined.
+                    answer = b"n"
+                if answer is not None:
                     os.write(fd, answer + b"\n")
-                    manual = False
-                    prompt = b""
-                elif not input_open:
-                    # No unattended approval: an EOF cancels this question.
-                    os.write(fd, b"n\n")
                     manual = False
                     prompt = b""
     finally:

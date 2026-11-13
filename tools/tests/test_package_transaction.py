@@ -42,6 +42,8 @@ print(":: There are 4 providers available for libfixture:", flush=True)
 print("1) fixture 2) fixture 3) fixture 4) fixture", flush=True)
 print("Enter a number (default=1): ", end="", flush=True)
 assert input() == "1"
+print(":: Import PGP key 1234, \"Fixture\"? [Y/n] ", end="", flush=True)
+assert input() == "n", "Piped input answered a non-transaction prompt"
 print("Proceed with installation? [Y/n] ", end="", flush=True)
 assert input() == os.environ.get("EXPECTED", "n"), "Incorrect transaction approval"
 print("PROVIDER_ONLY_OK", flush=True)
