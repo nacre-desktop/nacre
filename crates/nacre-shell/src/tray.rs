@@ -259,6 +259,7 @@ mod view_tests {
         let session =
             bead::ui::Session::new(root, "tray/main.luau".into(), palette, colors, fallback);
         let desktop = bead::services::Desktop::start_config(bead::services::Config {
+            tray_watcher: false,
             audio: false,
             bus: false,
         });

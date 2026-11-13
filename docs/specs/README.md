@@ -1,5 +1,6 @@
 # Nacre specifications
 
+| N0223 | [Scroll bars and smooth scrolling adoption](0223-scroll-adoption.md) | Implemented; ready for lead review | Adopt Bead 5c0e3136 overlay bars and smooth scrolling; launcher navigation and edge-aligned control-center actions remain intact. |
 | N0220 | [Panel stays open after reattach](0220-panel-reattach-hover.md) | Implemented; ready for lead review | A bounded 450 ms reattach hover grace covers the dock reveal; pointer enter cancels it and later leaves keep the 130 ms close delay. |
 | N0304 | [Dynamic wallpaper in Niri overview](0304-overview-wallpaper.md) | In progress | Keep video motion and visible desktop widget animations active in stock niri and nacre-niri overview; covered pause outside overview remains intact. |
 

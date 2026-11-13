@@ -1204,6 +1204,7 @@ fn bar_hover_prewarms_once_retires_on_leave_and_reuses_the_warm_destination() {
     runtime = runtime
         .with_shared_desktop(
             bead::services::Desktop::start_config(bead::services::Config {
+                tray_watcher: false,
                 audio: false,
                 bus: false,
             }),
@@ -1469,6 +1470,7 @@ fn completed_drag_retirement_rearms_hover_after_pointer_leaves_drop_bounds() {
     runtime = runtime
         .with_shared_desktop(
             bead::services::Desktop::start_config(bead::services::Config {
+                tray_watcher: false,
                 audio: false,
                 bus: false,
             }),

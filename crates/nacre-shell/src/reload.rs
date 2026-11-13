@@ -9609,6 +9609,15 @@ impl SceneSource for Runtime {
             } => self.session.ime(preedit, commit, before, after)?,
             UiEvent::Command { command, shift } => {
                 match command.as_str() {
+                    "page-up" | "page-down" | "home" | "end"
+                        if self.settings.is_some()
+                            || self.dashboard.is_some()
+                            || self.chat.is_some()
+                            || !self.dock_status.is_empty() =>
+                    {
+                        self.session
+                            .scroll_key(&command, shift, Some(self.pointer_at))?
+                    }
                     "clipboard-copy" | "clipboard-cut" => {
                         if let Some(text) = self.session.selected_text() {
                             self.wakeup

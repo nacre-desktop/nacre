@@ -30,6 +30,7 @@
     "title": 14,
     "headline": 18
   },
+  "scrollbar": {"color": "onSurfaceVariant", "hover_color": "primary"},
   "icons": {
     "small": 12,
     "medium": 15,

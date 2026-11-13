@@ -155,7 +155,7 @@ if layout=="carousel" then
     local x=(strip_w-card_w)/2+(item.carousel_offset or 0)*(card_w+T.wallpaper.card_gap)
     children[#children+1]=card(item,card_w,card_h,x,0,item.selected,nil)
   end
-  body=ui.Scroll{id="carousel-strip",position="absolute",left=(width-strip_w)/2,top=body_y,width=strip_w,height=card_h,
+  body=ui.Scroll{id="carousel-strip",scrollbar=false,position="absolute",left=(width-strip_w)/2,top=body_y,width=strip_w,height=card_h,
     scroll=ui.bind("extras.wallpaper.carousel_scroll"),ui.Box{width=strip_w,height=card_h,shrink=0,table.unpack(children)}}
 elseif layout=="spotlight" then
   local hero_width=math.min(body_w*(count>1 and T.wallpaper.spotlight_multiple_fraction or T.wallpaper.spotlight_single_fraction),T.wallpaper.spotlight_max,body_h*T.wallpaper.spotlight_aspect_ratio)
@@ -179,7 +179,7 @@ elseif layout=="spotlight" then
     local y=(hero_height-card_h)/2
     if distance<side_slots+1 then area[#area+1]=card(item,card_w,card_h,x,y,item.selected,nil) end
   end
-  body=ui.Scroll{id="spotlight-strip",position="absolute",left=T.wallpaper.content_inset,top=hero_y,width=body_w,height=hero_height,scroll=ui.bind("extras.wallpaper.carousel_scroll"),
+  body=ui.Scroll{id="spotlight-strip",scrollbar=false,position="absolute",left=T.wallpaper.content_inset,top=hero_y,width=body_w,height=hero_height,scroll=ui.bind("extras.wallpaper.carousel_scroll"),
     ui.Box{width=body_w,height=hero_height,shrink=0,table.unpack(area)}}
 else
   local area_w=width-T.wallpaper.content_inset*2
