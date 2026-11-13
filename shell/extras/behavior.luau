@@ -192,6 +192,7 @@ local exports = {
     ["extras.wallpaper.revision"] = 0,
     ["extras.wallpaper.resource_revision"] = 0,
     ["extras.wallpaper.loading"] = false,
+    ["extras.wallpaper.can_pause"] = false, ["extras.wallpaper.paused"] = false,
     ["extras.wallpaper.selection_id"] = "",
     ["extras.wallpaper.carousel_scroll"] = 0, ["extras.wallpaper.carousel_position"] = 1,
     ["extras.viewport.width"] = 1440, ["extras.viewport.height"] = 900,

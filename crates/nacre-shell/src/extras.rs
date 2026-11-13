@@ -1178,6 +1178,11 @@ impl Extras {
                     return;
                 };
                 let snapshot = settings.snapshot();
+                if !snapshot.connected
+                    || snapshot.data.get("error").is_some_and(|error| !error.is_null())
+                {
+                    return;
+                }
                 let Some(rev) = snapshot.data["rev"].as_u64() else {
                     return;
                 };

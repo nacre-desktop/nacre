@@ -556,6 +556,17 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
             .all(|entry| entry["thumbnail"] == "" && entry["preview"] == ""),
         "ids:[] provides all metadata without materializing cache paths"
     );
+    wallpaper.act("wallpaper:shuffle", &stores, wake.clone());
+    let (method, params) = tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(method, "wallpaper.activate");
+    assert!(
+        ["/fixture/current.jpg", "/fixture/next.jpg", "/fixture/next.mp4", "/fixture/animated.gif"]
+            .contains(&params["id"].as_str().unwrap()),
+        "shuffle activates a catalogue entry"
+    );
     wallpaper.act("wallpaper:activate:/fixture/next.mp4", &stores, wake);
     assert_eq!(
         tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
@@ -2617,6 +2628,13 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
         assert_eq!(params["value"]["future"], "preserve");
         wallpaper.state.borrow_mut().action = None;
     }
+    wallpaper.act("wallpaper:pause", &Stores::default(), wake);
+    let (method, params) = lab.calls.recv().await.unwrap();
+    assert_eq!(method, "settings.provider");
+    assert_eq!(params["store"], "wallpaper-picker");
+    assert_eq!(params["rev"], 3);
+    assert_eq!(params["value"]["paused"], false);
+    assert_eq!(params["value"]["future"], "preserve");
 }
 
 #[tokio::test(flavor = "current_thread")]

@@ -9,6 +9,7 @@ use bead::{
     core::{Value, source::Source},
     services::ipc::Call,
 };
+use nacre_protocol::menu::{MenuActivated, MenuView};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -94,6 +95,16 @@ pub fn route_view(route: &str) -> Option<Launch> {
         toggle: false,
         target_view: Some(view.into()),
     })
+}
+
+/// A menu group activation can select a shell view instead of another launcher route.
+pub fn activation_view(result: &MenuActivated) -> Option<Launch> {
+    result
+        .view
+        .as_ref()?
+        .route
+        .as_deref()
+        .and_then(route_view)
 }
 
 /// `None` is not a launcher-family route; `Some(Err)` is one Bead refuses.
@@ -346,5 +357,19 @@ mod tests {
         // No query and no route opens on Home, as the QML does.
         let home = routed("launcher", &[""]).model();
         assert_eq!(home["launcher.engine_route"], Value::Text("home".into()));
+    }
+
+    #[test]
+    fn wallpaper_group_activation_opens_the_picker_view() {
+        let launch = activation_view(&MenuActivated {
+            keep_open: true,
+            view: Some(MenuView {
+                route: Some("style.wallpapers".into()),
+                ..MenuView::default()
+            }),
+        })
+        .unwrap();
+        assert_eq!(launch.target_view.as_deref(), Some("wallpaper"));
+        assert_eq!(launch.route, None);
     }
 }

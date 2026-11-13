@@ -856,6 +856,7 @@
   "bead.dashboard.wallpaper-next": "Today hero wallpaper control: Next wallpaper.",
   "bead.dashboard.wallpaper-pause": "Today hero wallpaper control: Pause wallpaper.",
   "bead.dashboard.wallpaper-resume": "Today hero wallpaper control: Resume wallpaper.",
+  "bead.extras.wallpaper-shuffle": "Wallpaper picker navigation control: Shuffle wallpaper.",
   "bead.dashboard.wallpaper-static": "Today hero wallpaper control: Static wallpaper.",
   "bead.widgets.battery-title": "Widgets app sidebar and page title for Battery.",
   "bead.widgets.battery-description": "One-line description shown below Battery and in the widget list.",

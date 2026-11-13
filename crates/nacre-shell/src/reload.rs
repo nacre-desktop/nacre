@@ -8268,6 +8268,12 @@ impl SceneSource for Runtime {
         if let (Some(menu), Some(id)) = (&self.launcher, launcher_id) {
             self.actions.authorize("select_app")?;
             let changes = match menu.activate(&id) {
+                Ok(result)
+                    if let Some(launch) = crate::key_routes::activation_view(&result) =>
+                {
+                    self.open_launcher(launch, false, None)?;
+                    return self.finish_scene(None);
+                }
                 Ok(result) => crate::launcher::activation_changes(result),
                 Err(error) => std::collections::BTreeMap::from([(
                     "launcher.error".into(),
