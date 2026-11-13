@@ -294,6 +294,25 @@ class InstallModuleTests(unittest.TestCase):
             )
         self.assertFalse((self.home / ".local/share/nacre").exists())
 
+    def test_purge_removes_theme_outputs_the_palette_rewrote(self):
+        configure.apply(self.home, configure.ROOT)
+        lock = ".config/hypr/hyprlock.conf"  # recorded by package setup
+        self.assertIn(lock, nacre_modules.theme_outputs())
+        target = self.home / lock
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("first lock screen\n")
+        state = nacre_modules.read(self.home)
+        state.setdefault("files", {})[lock] = {
+            "module": "session",
+            "sha256": configure.digest(target),
+        }
+        nacre_modules.write(self.home, state)
+        target.write_text("rewritten by a palette publish\n")
+        kept = dict(nacre_modules.uninstall(self.home)["actions"])
+        self.assertEqual(kept[lock], "keep-edited")
+        purged = dict(nacre_modules.uninstall(self.home, purge=True)["actions"])
+        self.assertEqual(purged[lock], "remove")
+
     def test_purge_unlinks_a_symlinked_own_directory_without_emptying_it(self):
         target = self.home / "dotfiles/nacre"
         target.mkdir(parents=True)

@@ -155,8 +155,22 @@ def _expected(path, receipt, files):
     return receipt.get(path) or files.get(path, {}).get("sha256")
 
 
-def removal_plan(home, paths):
-    """Classify removal of manifest paths; edited files are kept, never lost."""
+def theme_outputs():
+    """Files every palette publish rewrites, so their digest drifts without a user edit."""
+    targets = (
+        Path(__file__).resolve().parents[1] / "nacre/shell-tools/theme-targets.json"
+    )
+    return {
+        path
+        for target in json.loads(targets.read_text())["targets"]
+        for path in target["outputs"]
+    }
+
+
+def removal_plan(home, paths, regenerated=()):
+    """Classify removal of manifest paths; edited files are kept, never lost.
+
+    Paths in regenerated count as Nacre's own however their digest drifted."""
     from configure import digest
 
     home = Path(home)
@@ -171,7 +185,7 @@ def removal_plan(home, paths):
             actions.append((path, "keep-edited"))  # A user link is never followed.
         elif not dest.exists():
             actions.append((path, "restore" if original else "absent"))
-        elif digest(dest) == _expected(path, receipt, files):
+        elif path in regenerated or digest(dest) == _expected(path, receipt, files):
             actions.append((path, "restore" if original else "remove"))
         else:
             actions.append((path, "keep-edited"))
@@ -331,7 +345,10 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
         if (home / d).exists()
     ]
     actions = removal_plan(
-        home, [path for path in owned(home) if not _under(path, purged)]
+        home,
+        [path for path in owned(home) if not _under(path, purged)],
+        # Purge also takes theme outputs the palette rewrote after install.
+        theme_outputs() if purge else (),
     )
     link_file = home / ".local/state/nacre/package-links.json"
     links = _state().read_json_file(link_file) if link_file.is_file() else {}
