@@ -25,8 +25,6 @@ local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string
         },
         value_group and ui.Text{id="chevron",position="absolute",right=10,top=17,width=20,height=20,text="chevron_right",family="Material Symbols Rounded",font_size=18,color="onSurfaceVariant"} or nil,
       },
-      toggle and ui.Text{id="toggle-state",position="absolute",right=67,top=19,width=34,height=18,text=item.status,font_size=11.333,text_align="right",color="onSurfaceVariant"} or nil,
-      toggle and kit.Switch{id="toggle-switch",position="absolute",right=10,top=14,width=44,height=28,checked=item.checked,aria_label=item.name..". "..item.status,on_activate=not item.disabled and ui.action("select_app",item.id) or nil} or nil,
       ui.Button{id="favorite",position="absolute",right=value_group and 38 or 12,top=16,width=23,height=23,radius=7,padding=0,
         visible=not toggle and (item.favorite or item.selected or M.hovered(item.id)),
         aria_label=item.favorite and ui.tr("bead.launcher.favorite-remove") or ui.tr("bead.launcher.favorite-add"),
@@ -34,6 +32,9 @@ local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string
         on_activate=ui.action("toggle_favorite",item.id),
         ui.Image{path=item.favorite and "ui/components/assets/favorite-1.themed.svg" or "ui/components/assets/favorite-0.themed.svg",width=11*4/3,height=11*4/3},
       },
+      -- Optional children stay last: a nil in the middle of the child list ends it.
+      toggle and ui.Text{id="toggle-state",position="absolute",right=67,top=19,width=34,height=18,text=item.status,font_size=11.333,text_align="right",color="onSurfaceVariant"} or nil,
+      toggle and kit.Switch{id="toggle-switch",position="absolute",right=10,top=14,width=44,height=28,checked=item.checked,aria_label=item.name..". "..item.status,on_activate=not item.disabled and ui.action("select_app",item.id) or nil} or nil,
     }
 end)
 return ui.component("Results",{},function(_)
