@@ -3,11 +3,11 @@ use super::{
     compositor_control::Control,
     hub::{failure, Notice, Shared},
 };
-use crate::{json as legacy_json, paths::Paths, process, session_watch, Result};
+use crate::{json as legacy_json, paths::Paths, session_watch, Result};
 use futures_util::StreamExt;
 use nacre_protocol::{Capability, ErrorCode, Failure, Method, Reply};
 use serde_json::{json, Value};
-use std::{collections::BTreeMap, fs, process::Command, time::Duration};
+use std::{collections::BTreeMap, fs, time::Duration};
 use tokio::sync::{mpsc, oneshot};
 
 pub struct Check {
@@ -256,26 +256,9 @@ impl Observer {
                 };
             }
             Err(error) if error.dispatched == Some(false) => {}
-            Err(_) => {
-                tracing::warn!("Session UI provider is unavailable");
-                return Ok(String::new());
-            }
+            Err(_) => tracing::warn!("Session UI provider is unavailable"),
         }
-        let executable = self.paths.share.join("shell/bin/qs");
-        crate::process::offload(move || -> Result<String> {
-            let mut command = Command::new(executable);
-            command.args(["-c", "nacre", "ipc", "call", "nacre", "state"]);
-            match process::capture(command, None, Duration::from_secs(5)) {
-                Ok(output) if output.status.success() => {
-                    Ok(String::from_utf8(output.stdout)?.trim().to_owned())
-                }
-                _ => {
-                    tracing::warn!("Session legacy UI state is unavailable");
-                    Ok(String::new())
-                }
-            }
-        })
-        .await?
+        Ok(String::new())
     }
     async fn wallet(&mut self) -> Result<&'static str> {
         if self.wallet.is_none() {
