@@ -8550,10 +8550,16 @@ impl SceneSource for Runtime {
         }
         let mut scene = match event {
             UiEvent::WallpaperPalette(values) => {
+                let palette = bead::render::Palette(std::sync::Arc::new(values.into_iter().collect()));
+                if self.session.stores.get("launcher.icon_tint").is_some()
+                    && let Some(amount) = crate::theme::launcher_icon_tint(&palette)
+                {
+                    self.session.stores = self.session.stores.reconcile(&BTreeMap::from([
+                        ("launcher.icon_tint".into(), bead::core::Value::Number(amount)),
+                    ]))?;
+                }
                 self.session
-                    .set_runtime_palette(bead::render::Palette(std::sync::Arc::new(
-                        values.into_iter().collect(),
-                    )))?
+                    .set_runtime_palette(palette)?
             }
             UiEvent::Model(mut values) => {
                 if values.remove(WALLPAPER_LUMA_POKE).is_some() {

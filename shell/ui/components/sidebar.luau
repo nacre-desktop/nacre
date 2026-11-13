@@ -1,5 +1,6 @@
 -- SPDX-License-Identifier: GPL-3.0-only
 local ui = require("bead.ui")
+local tone=require("./icon-tone")
 local Entry = ui.component("NavigationEntry", {item={id="string",name="string",icon="string",selected="boolean"}}, function(p)
     return ui.Button {
         id="entry", height=37, radius=9, padding=0, color="onSurface",
@@ -9,7 +10,7 @@ local Entry = ui.component("NavigationEntry", {item={id="string",name="string",i
         on_activate=p.item.id=="widgets" and ui.action("launcher.app","widgets") or ui.action("navigate",p.item.id),
         ui.Box{position="absolute",left=0,top=8,width=3,height="60%",radius=1.5,fill="primary",visible=p.item.selected},
         ui.Row{grow=1,gap=10,align="center",padding_left=11,
-            ui.Text{text=p.item.icon,family="Material Symbols Rounded",font_size=20,width=20,height=28},
+            ui.Text{text=p.item.icon,family="Material Symbols Rounded",font_size=20,width=20,height=28,color=p.item.selected and "primary" or tone()},
             ui.Text{text=p.item.name,font_size=14,grow=1},
         },
     }

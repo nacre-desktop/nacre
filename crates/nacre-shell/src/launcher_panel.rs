@@ -59,7 +59,13 @@ pub fn spec(
             );
             let quick = source.quick().map_err(|e| e.to_string())?;
             let source = source.connect().map_err(|e| e.to_string())?;
-            crate::reload::Runtime::panel_session(session, open)
+            let mut runtime = crate::reload::Runtime::panel_session(session, open);
+            if let Some(amount) = crate::theme::launcher_icon_tint(&colors) {
+                runtime.session.stores = runtime.session.stores.reconcile(&std::collections::BTreeMap::from([
+                    ("launcher.icon_tint".into(), bead::core::Value::Number(amount)),
+                ])).map_err(|e| e.to_string())?;
+            }
+            runtime
                 .with_trace(trace)
                 .with_frame(
                     crate::placement::Attachment::Attached(Edge::Bottom),
