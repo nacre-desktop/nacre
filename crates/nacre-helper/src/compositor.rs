@@ -27,6 +27,19 @@ use std::{
     time::Duration,
 };
 
+/// Whether the niri config reachable from the session's root config includes `file`,
+/// so that a config reload activates it.
+pub(crate) fn niri_config_includes(
+    paths: &crate::paths::Paths,
+    env: &std::collections::BTreeMap<String, String>,
+    file: &Path,
+) -> bool {
+    let want = std::fs::canonicalize(file).unwrap_or_else(|_| file.to_path_buf());
+    niri_bindings::source_files(&niri_bindings::loader(paths, env), &paths.home)
+        .iter()
+        .any(|path| std::fs::canonicalize(path).unwrap_or_else(|_| path.clone()) == want)
+}
+
 pub enum CaptureWindow {
     Hyprland(Value),
     Niri(Option<u64>),

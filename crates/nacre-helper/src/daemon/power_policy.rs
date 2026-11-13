@@ -119,6 +119,26 @@ fn write_policy(paths: &Paths, data: &Value) -> Result<(bool, bool)> {
     Ok((idle, hyprland || niri))
 }
 
+/// Whether the compositor config on disk loads Nacre's power policy. After an upgrade
+/// the include only appears at the next session start; until then a reload would keep
+/// the old bindings, so lid and button actions must not be offered or held.
+pub(crate) fn policy_included(
+    paths: &Paths,
+    backend: &str,
+    env: &std::collections::BTreeMap<String, String>,
+) -> bool {
+    match backend {
+        "niri" => crate::compositor::niri_config_includes(
+            paths,
+            env,
+            &paths.config.join("niri/power-policy.kdl"),
+        ),
+        "hyprland" => fs::read_to_string(paths.home.join(".config/hypr/hyprland.lua"))
+            .is_ok_and(|text| text.contains("load_private(\"power\")")),
+        _ => false,
+    }
+}
+
 fn systemctl(verb: &str, unit: &str) -> Result<()> {
     crate::process::checked(
         "systemctl",
@@ -153,7 +173,14 @@ fn apply_with(
         } else {
             "hypridle.service"
         };
-        if let Err(error) = service("restart", idle_service) {
+        // Only an idle daemon systemd runs is restarted: an `exec-once hypridle` copy is
+        // not a unit, and starting the unit beside it would double the lock/suspend listeners.
+        if service("is-active", idle_service).is_err() {
+            tracing::info!(
+                idle_service,
+                "Idle daemon is not a running user unit; new idle times apply at next login"
+            );
+        } else if let Err(error) = service("restart", idle_service) {
             tracing::warn!(%error, idle_service, "Idle service did not restart cleanly");
             // Never leave the session able to suspend without its lock hook.
             if let Err(error) = service("start", idle_service) {
@@ -202,6 +229,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
             let backend = crate::compositor::backend::select(&environment)
                 .unwrap_or("hyprland")
                 .to_owned();
+            let included = policy_included(&paths, &backend, &environment);
             let apply_paths = paths.clone();
             let apply_data = data.clone();
             let applied = tokio::task::spawn_blocking(move || {
@@ -216,7 +244,7 @@ pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
                 Ok(reload) => {
                     last_applied = Some(next);
                     let control = { hub.borrow().compositor.clone() };
-                    let mut bindings_ready = control.is_some();
+                    let mut bindings_ready = control.is_some() && included;
                     if let (true, Some(control)) = (reload, control) {
                         if let Err(error) = control
                             .with(|backend| {
@@ -343,17 +371,65 @@ mod tests {
             Err("fixture failure".into())
         })
         .unwrap());
+        // Not a running user unit (e.g. `exec-once hypridle`): systemd must not start a second one.
         assert_eq!(
             calls,
-            [
-                ("restart".to_owned(), "hypridle.service".to_owned()),
-                ("start".to_owned(), "hypridle.service".to_owned())
-            ]
+            [("is-active".to_owned(), "hypridle.service".to_owned())]
         );
         assert!(!apply_with(&paths, &data, "hyprland", |_, _| panic!(
             "unchanged idle service"
         ))
         .unwrap());
+    }
+
+    #[test]
+    fn a_running_idle_unit_restarts_and_recovers_when_restart_fails() {
+        let home = tempfile::tempdir().unwrap();
+        let paths = Paths::new(home.path());
+        let data = json!({"idle":{"dim":1,"sleep":2}});
+        let mut calls = Vec::new();
+        apply_with(&paths, &data, "hyprland", |verb, unit| {
+            calls.push((verb.to_owned(), unit.to_owned()));
+            if verb == "is-active" {
+                Ok(())
+            } else {
+                Err("fixture failure".into())
+            }
+        })
+        .unwrap();
+        let verbs: Vec<_> = calls.iter().map(|(verb, _)| verb.as_str()).collect();
+        assert_eq!(verbs, ["is-active", "restart", "start"]);
+    }
+
+    #[test]
+    fn hardware_actions_wait_for_the_session_to_include_the_policy() {
+        let home = tempfile::tempdir().unwrap();
+        let paths = Paths::new(home.path());
+        let env = std::collections::BTreeMap::new();
+        let hypr = home.path().join(".config/hypr/hyprland.lua");
+        fs::create_dir_all(hypr.parent().unwrap()).unwrap();
+        fs::write(&hypr, "load_private(\"host\")\n").unwrap();
+        assert!(!policy_included(&paths, "hyprland", &env));
+        fs::write(&hypr, "load_private(\"power\")\nload_private(\"host\")\n").unwrap();
+        assert!(policy_included(&paths, "hyprland", &env));
+
+        let policy = paths.config.join("niri/power-policy.kdl");
+        fs::create_dir_all(policy.parent().unwrap()).unwrap();
+        fs::write(&policy, niri_policy(&json!({}))).unwrap();
+        let root = home.path().join("session/config.kdl");
+        fs::create_dir_all(root.parent().unwrap()).unwrap();
+        fs::write(&root, "binds {\n}\n").unwrap();
+        let env = std::collections::BTreeMap::from([(
+            "NIRI_CONFIG".to_owned(),
+            root.to_string_lossy().into_owned(),
+        )]);
+        assert!(!policy_included(&paths, "niri", &env));
+        fs::write(
+            &root,
+            format!("include \"{}\"\nbinds {{\n}}\n", policy.display()),
+        )
+        .unwrap();
+        assert!(policy_included(&paths, "niri", &env));
     }
 
     #[test]

@@ -54,6 +54,8 @@ fn probes_read_devices_power_profiles_and_pacman() {
         p,
         Probe {
             niri_idle: false,
+            niri_power_policy: false,
+            hyprland_power_policy: false,
             touchpad: true,
             battery: true,
             packages: true,
@@ -74,6 +76,8 @@ fn probes_read_devices_power_profiles_and_pacman() {
         p,
         Probe {
             niri_idle: false,
+            niri_power_policy: false,
+            hyprland_power_policy: false,
             touchpad: false,
             battery: false,
             packages: false,
@@ -124,6 +128,7 @@ fn power_controls_require_their_daemon_reader_authority() {
         .unwrap();
     let probe = Probe {
         battery: true,
+        hyprland_power_policy: true,
         ..Probe::default()
     };
     for flag in ["batterySaver", "powerIdle", "powerHardware"] {
@@ -135,6 +140,12 @@ fn power_controls_require_their_daemon_reader_authority() {
     for flag in ["batterySaver", "powerIdle", "powerHardware"] {
         assert!(flags(&probe, &hub.borrow())[flag]);
     }
+    // Before the session loads the power include, lid and button actions are not offered.
+    let stale = Probe {
+        hyprland_power_policy: false,
+        ..probe
+    };
+    assert!(!flags(&stale, &hub.borrow())["powerHardware"]);
 }
 
 #[test]
@@ -252,7 +263,17 @@ fn flags_follow_the_compositor_and_the_stores() {
     ] {
         assert!(hypr.contains_key(name), "{name}");
     }
-    assert!(hypr["powerIdle"] && hypr["powerHardware"]);
+    // Lid and button actions also need the session to load the power include.
+    assert!(hypr["powerIdle"] && !hypr["powerHardware"]);
+    assert!(
+        flags(
+            &Probe {
+                hyprland_power_policy: true,
+                ..probe
+            },
+            &hub.borrow()
+        )["powerHardware"]
+    );
     assert!(!hypr["batterySaver"]);
     assert!(flags(&battery, &hub.borrow())["batterySaver"]);
     assert_eq!(hypr.len(), 26);

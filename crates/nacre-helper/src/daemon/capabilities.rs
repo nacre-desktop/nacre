@@ -68,6 +68,9 @@ impl Env {
 #[derive(Clone, Copy, Default, Debug, PartialEq, Eq)]
 struct Probe {
     niri_idle: bool,
+    /// The compositor config on disk loads Nacre's power policy (per backend).
+    niri_power_policy: bool,
+    hyprland_power_policy: bool,
     touchpad: bool,
     battery: bool,
     packages: bool,
@@ -115,8 +118,13 @@ fn probe(env: &Env) -> Probe {
         &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
         &env.paths,
     );
+    let environment: BTreeMap<String, String> = std::env::vars().collect();
+    let included =
+        |backend| super::power_policy::policy_included(&env.paths, backend, &environment);
     Probe {
         niri_idle,
+        niri_power_policy: included("niri"),
+        hyprland_power_policy: included("hyprland"),
         touchpad,
         battery: laptop_battery(&env.power_supply),
         packages: (env.which)("pacman"),
@@ -165,7 +173,15 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
             "powerIdle".into(),
             session_power && (backend == "hyprland" || niri && probe.niri_idle),
         ),
-        ("powerHardware".into(), session_power),
+        (
+            "powerHardware".into(),
+            session_power
+                && if niri {
+                    probe.niri_power_policy
+                } else {
+                    probe.hyprland_power_policy
+                },
+        ),
         ("bluetooth".into(), bluetooth),
         ("panelDragging".into(), capability("nativePanelDrag")),
         ("windowCapture".into(), capability("windowCapture")),
