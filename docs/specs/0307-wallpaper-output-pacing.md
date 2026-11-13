@@ -1,53 +1,57 @@
 # N0307 — wallpaper output pacing
 
-Status: dev-1 validated; GL/VAAPI and live acceptance pending; Platform reviews before landing.
+Status: Platform accepted the scheduling design and swap-report decision; follow-up
+checks pass. Repeated SHM CPU confirmation and GL/VAAPI acceptance remain pending.
 
-Symptom: the owner reports uneven motion on an external output but smooth laptop motion,
-with both outputs near 120 Hz on one GPU. The physical cause is not yet confirmed.
+Symptom: uneven external-output wallpaper motion, with both owner outputs near
+120 Hz on one Intel GPU. The physical cause still needs the lead's laptop audit.
 
-Source diagnosis: mpv wakeups draw every output in vector order, while pending callbacks
-suppress draws. The default early render target can block that same event loop before
-another output gets its slot. EGL already requests nonblocking swaps. Shared-context GPU
-serialization remains unproven. There was no `report_swap` call: doubled reporting is ruled out.
+Source evidence: mpv wakeups drew outputs in vector order; an outstanding callback
+could postpone an output's latest frame. EGL already requests nonblocking swaps;
+shared-context GPU serialization remains unproven. Baseline never called `report_swap`.
+The first callback design then rearmed on every playing vblank without checking stale,
+causing idle callbacks/empty commits; post-draw acknowledgements also added callbacks.
 
-Fix: bootstrap the first image, then draw each dirty output only in its own callback.
-Rearm callbacks without rendering unchanged images, retaining the latest available frame.
-Set `video-timing-offset=0` only on the Wayland player; preview keeps its original timing.
-Drain queued frames before synchronous pause/release control and suppress unchanged play
-writes. First-frame acknowledgement, fade, protocol, SHM buffers and N0304 policy remain intact.
+Fix: bootstrap once, then coalesce to the latest frame in each output's callback.
+Request a slot only for stale visible playback; acknowledge only the first draw.
+No new frame means no callback request. Fade timers mark undrawn work; paused/covered
+outputs request nothing. Keep the accepted frame drain before pause/release, play-state
+cache, and player-only `video-timing-offset=0`. Protocol and N0304 policy are unchanged.
 
-Review deviation: keep optional swap reporting disabled. Introducing callback-delayed
-reports into the synchronous control path can add a 200 ms flip wait; Platform must review
-this deviation. See the [render contract](https://github.com/mpv-player/mpv/blob/master/include/mpv/render.h)
+Platform accepted leaving optional swap reporting disabled: mpv uses default `video-sync`,
+not `display-*`, so `report_swap` does not drive timing. Introducing callback-delayed
+reports can add a 200 ms synchronous flip wait. See the [render contract](https://github.com/mpv-player/mpv/blob/master/include/mpv/render.h)
 and [VO handshake](https://github.com/mpv-player/mpv/blob/master/video/out/vo_libmpv.c).
 
-Matched A30/B30/A60/B60: one 30 s sample each, Arch container, pixman headless Sway,
-1920×1080 synthetic H.264, identical `--hwdec=vaapi --render=shm` flags.
-H1 = 3440×1440 scale 1; H2 = 2880×1800 scale 1.5; both advertised 120 Hz.
-Intervals are mean/p95/max milliseconds. U = unique mpv render targets; D = decoder returns.
+Dev-1 matched main/candidate, 30 s each: Arch, headless pixman Sway, synthetic
+1920×1080 H.264; identical `--hwdec=vaapi --render=shm` flags (software fallback).
+H1 = 3440×1440 scale 1; H2 = 2880×1800 scale 1.5; advertised 120 Hz; feedback refresh 0.
+Intervals below are mean/p95/max ms. U = unique render targets; D = decoded returns.
 
-| fps/output | Before intervals | After intervals | U/D before → after | Duplicates/gap before → after |
+| fps/output | Main intervals | N0307 intervals | U/D main → N0307 | Duplicates/gap main → N0307 |
 | --- | --- | --- | --- | --- |
-| 30/H1 | 126.37/246.31/435.26 | 100.71/101.27/483.30 | 231/809 → 298/882 | 6/578 → 0/584 |
-| 30/H2 | 126.37/246.30/435.26 | 100.71/101.27/483.30 | 233/809 → 298/882 | 4/576 → 0/584 |
-| 60/H1 | 104.41/100.67/1127.64 | 98.76/104.32/195.65 | 286/1654 → 304/1798 | 1/1368 → 0/1494 |
-| 60/H2 | 104.41/100.67/1127.64 | 98.76/104.32/195.65 | 287/1654 → 304/1798 | 0/1367 → 0/1494 |
+| 30/H1 | 107.42/133.02/166.02 | 105.41/110.61/114.03 | 280/900 → 284/899 | 0/620 → 0/615 |
+| 30/H2 | 107.42/133.02/166.02 | 105.54/110.61/114.03 | 280/900 → 284/899 | 0/620 → 0/615 |
+| 60/H1 | 100.32/104.43/108.79 | 101.61/108.27/112.67 | 299/1801 → 295/1800 | 0/1502 → 0/1505 |
+| 60/H2 | 100.32/104.43/108.79 | 101.73/108.94/112.67 | 299/1801 → 295/1800 | 0/1502 → 0/1505 |
 
-Gap = decoded count minus unique targets in the wall-clock sample: boundary-sensitive
-coverage deficit, not a pixel-verified drop counter. Refresh feedback was 0 (unknown).
-Player CPU (100% = one core): 30 fps **114.90 → 140.13%**; 60 fps **138.33 → 147.70%**.
-Software rendering is saturated around 8–10 presentations/s. CPU rose alongside throughput;
-30 fps p95 improved but max worsened; 60 fps max improved but p95 slightly worsened.
-This is scheduling/fallback evidence, not proof of the owner's GPU fix or its CPU guard.
+Gap is decoded minus unique render targets: a boundary-sensitive coverage deficit,
+not pixel-verified drops. Software rendering saturates near 10 presentations/s.
+Player CPU (one core = 100%): 30 fps 138.70 → 139.40%; 60 fps 149.07 → 147.27%.
+Voluntary switches/s: 709.33 → 721.97 (30); 1041.56 → 1071.43 (60).
+Compositor CPU: 0.07 → 0.17% at both rates. The 30 fps CPU difference is +0.70 pp;
+three alternating pairs were queued to quantify noise, but dev-1 became unreachable.
+Cadence is mixed at 60 fps; these SHM results do not establish GPU acceptance.
 
-Checks: local rustfmt; Arch `cargo fmt --all --check`, strict all-target shell clippy,
-`cargo test -p nacre-shell --locked -j2` (shell 893 passed/4 ignored; video 8 passed;
-preview integration passed), compositor boundary, and all 23 SHM smoke checks passed.
-Preview's first run exposed the overly broad timing override; scoping it fixed that failure.
-Pause/release smoke CPU was 0%; source switch, first frame, resume and retained image passed.
+Checks: local rustfmt; Arch `cargo fmt --all --check`; strict all-target shell clippy;
+`cargo test -p nacre-shell --locked -j2` (shell 893 passed/4 ignored, video 9, decode 3,
+preview integration 1); focused video/preview tests; compositor boundary; all 23 SHM
+smoke checks pass. Pause/release CPU 0%; first-frame/source-switch/resume checks pass.
 
-Base `8e6f4ae05`, dev build, line-table debug, no incremental; instrumented binary hashes
-start `99f1bf72` (before) / `996eecec` (after). Full provenance, traces and harness stay in `.lead/`.
-Four dev-1 containers used; owned containers, sessions, source and 7 GiB target cleaned.
-GL/VAAPI is ready for a separately granted desktop window; no desktop capture ran.
-The lead's laptop live audit remains the acceptance gate. No push or publication.
+Main player sources unchanged through `4e598a1fb`; binary hashes start `99f1bf72`
+(main) / `68c49459` (N0307). Raw evidence and deferred GPU harness remain in `.lead/`.
+Run 6 exports evidence and deletes its source/5.4 GiB target on exit; completion is
+unverified while dev-1 is unreachable. No desktop access occurred in this follow-up:
+the grant file was absent. GL/VAAPI needs three alternating pairs in one private
+120 Hz labwc session, checking jitter, both CPUs and player switches/s. Lead reviews
+before landing; laptop audit remains the live gate. No push or publication.

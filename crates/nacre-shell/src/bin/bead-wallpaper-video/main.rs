@@ -102,7 +102,7 @@ fn report_hwdec(player: &mpv::Player, reported: &mut bool) {
     }
 }
 
-/// Size and scale a surface for its next frame and ask for its frame callback.
+/// Size a surface and request the initial frame acknowledgement when needed.
 fn place(
     viewport: Option<&WpViewport>,
     logical: (i32, i32),
@@ -110,6 +110,7 @@ fn place(
     surface: &wl_surface::WlSurface,
     qh: &QueueHandle<Engine>,
     generation: u64,
+    first_frame: bool,
 ) {
     if let Some(viewport) = viewport {
         viewport.set_destination(logical.0.max(1), logical.1.max(1));
@@ -117,13 +118,20 @@ fn place(
     } else {
         surface.set_buffer_scale(scale.max(1));
     }
-    surface.frame(qh, Frame(surface.clone(), generation));
+    if first_frame {
+        surface.frame(qh, Frame(surface.clone(), generation));
+    }
 }
 
 /// A decoded-frame wakeup may bootstrap an output, but cannot steal its next
 /// presentation slot from the compositor callback. Dirty state coalesces to latest.
 fn draw_due(stale: bool, pending: bool, shown: bool, callback: bool) -> bool {
     stale && !pending && (!shown || callback)
+}
+
+/// Empty callbacks do not advance video; only undrawn work needs another slot.
+fn request_due(stale: bool, pending: bool, playing: bool, wanted: bool) -> bool {
+    stale && !pending && playing && wanted
 }
 
 struct Out {
@@ -460,7 +468,7 @@ impl Engine {
     }
 
     /// Bootstrap once; subsequent frames belong to each output's callback, not mpv's
-    /// wakeup order. Keep callbacks alive without re-rendering an unchanged video frame.
+    /// wakeup order. Request slots only while an output has undrawn work.
     fn schedule(&mut self, index: usize) -> bool {
         let drawn = self.draw(index, false);
         self.request_frame(index);
@@ -472,9 +480,12 @@ impl Engine {
         if self.player.is_some()
             && out.configured
             && out.shown
-            && out.pending.is_none()
-            && wants(&self.render, &out.name)
-            && (self.decoder == Decoder::Play || out.fade.is_some())
+            && request_due(
+                out.stale,
+                out.pending.is_some(),
+                self.decoder == Decoder::Play,
+                wants(&self.render, &out.name),
+            )
         {
             let surface = out.layer.wl_surface();
             surface.frame(&self.qh, Frame(surface.clone(), self.source_generation));
@@ -514,8 +525,9 @@ impl Engine {
         let surface = out.layer.wl_surface().clone();
         let opacity_available =
             matches!(&*gl, GlPath::Ready(context) if context.has_opacity_fade());
+        let first_frame = !out.first_frame;
         let begin_fade =
-            !out.first_frame && (out.alpha.is_some() || player.is_gl() && opacity_available);
+            first_frame && (out.alpha.is_some() || player.is_gl() && opacity_available);
         if begin_fade && out.alpha.is_none() {
             out.opacity = FADE_START;
         }
@@ -548,6 +560,7 @@ impl Engine {
                 &surface,
                 qh,
                 *source_generation,
+                first_frame,
             );
             if !gl.swap(window) {
                 return false;
@@ -593,6 +606,7 @@ impl Engine {
                 &surface,
                 qh,
                 *source_generation,
+                first_frame,
             );
             if out.buffers[i].attach_to(&surface).is_err() {
                 return false;
@@ -603,8 +617,8 @@ impl Engine {
         }
         out.shown = true;
         out.stale = false;
-        out.pending = Some(Instant::now());
-        if !out.first_frame {
+        out.pending = first_frame.then(Instant::now);
+        if first_frame {
             out.first_frame = true;
             out.first_frame_pending = Some(*source_generation);
             if begin_fade {
@@ -1222,8 +1236,23 @@ mod tests {
         assert!(!draw_due(true, false, true, false));
         // B consumes the latest frame in its own slot, not the older wakeup frame.
         assert!(draw_due(true, false, true, true));
-        // Unchanged frames only rearm callbacks, without GL/SHM rendering.
+        // An unchanged frame neither draws nor requests another callback.
         assert!(!draw_due(false, false, true, true));
+    }
+
+    #[test]
+    fn callbacks_are_requested_only_for_undrawn_visible_playback() {
+        assert!(request_due(true, false, true, true));
+        assert!(
+            !request_due(true, true, true, true),
+            "one pending slot is enough"
+        );
+        assert!(!request_due(true, false, false, true), "paused");
+        assert!(!request_due(true, false, true, false), "covered");
+        // A callback draws the latest frame and clears stale; its acknowledgement
+        // must not start a perpetual frame/empty-commit loop.
+        assert!(draw_due(true, false, true, true));
+        assert!(!request_due(false, false, true, true), "no new frame");
     }
 
     fn parse(args: &[&str]) -> Result<Options, &'static str> {
