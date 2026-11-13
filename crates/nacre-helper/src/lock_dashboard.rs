@@ -1,7 +1,10 @@
 //! Existing prepared lock textures, independent of authentication and QML.
 use crate::{image_paint as paint, image_text::FontBook, json, paths::Paths, process, Result};
 use chrono::{DateTime, FixedOffset, Local, NaiveDateTime, Timelike};
-use image::{Rgba, RgbaImage};
+use image::{
+    codecs::png::{CompressionType, FilterType, PngEncoder},
+    ExtendedColorType, ImageEncoder, Rgba, RgbaImage,
+};
 use serde_json::{json, Map, Value};
 use sha2::{Digest, Sha256};
 use std::{
@@ -1162,6 +1165,17 @@ pub fn render(
     Painter::new(data, colors, wallpaper, artwork, paths, monitor, context)?.render()
 }
 
+fn encode_dashboard_png(picture: &RgbaImage) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    PngEncoder::new_with_quality(&mut bytes, CompressionType::Fast, FilterType::Sub).write_image(
+        picture.as_raw(),
+        picture.width(),
+        picture.height(),
+        ExtendedColorType::Rgba8,
+    )?;
+    Ok(bytes)
+}
+
 pub fn publish(
     data: &Value,
     colors: &Map<String, Value>,
@@ -1215,7 +1229,7 @@ pub fn publish_with_context(
             Some(monitor),
             context,
         )?;
-        let raw = orient_decoder::encode_rgba_png(&picture, 2)?;
+        let raw = encode_dashboard_png(&picture)?;
         let fingerprint = format!("{:x}", Sha256::digest(&raw));
         let path = ready.join(format!("dashboard-{key}-{}.png", &fingerprint[..16]));
         if !path.exists() {
@@ -1290,6 +1304,22 @@ pub fn publish_with_context(
 #[cfg(test)]
 mod background_cache_tests {
     use super::*;
+
+    #[test]
+    fn fast_dashboard_png_encoding_preserves_raster_pixels() -> Result<()> {
+        let picture = RgbaImage::from_fn(37, 23, |x, y| {
+            Rgba([
+                (x * 7) as u8,
+                (y * 11) as u8,
+                ((x + y) * 5) as u8,
+                ((x * 3 + y * 13) % 256) as u8,
+            ])
+        });
+        let bytes = encode_dashboard_png(&picture)?;
+        let decoded = image::load_from_memory(&bytes)?.to_rgba8();
+        assert_eq!(decoded.as_raw(), picture.as_raw());
+        Ok(())
+    }
 
     #[test]
     fn reuses_pixel_identical_background_and_recovers_bad_cache() -> Result<()> {
