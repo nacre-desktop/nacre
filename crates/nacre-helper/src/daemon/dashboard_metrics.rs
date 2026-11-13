@@ -220,7 +220,7 @@ impl Metrics {
 }
 
 /// The host card's static facts, read once per subscription.
-fn host_state(sources: &Sources, now_ms: u64) -> Option<SystemHost> {
+fn host_state(sources: &Sources, now_ms: u64, niri_version: Option<&str>) -> Option<SystemHost> {
     let read = |path: PathBuf| fs::read_to_string(path).ok();
     let field = |text: &str, name: &str| {
         text.lines().find_map(|line| {
@@ -245,7 +245,7 @@ fn host_state(sources: &Sources, now_ms: u64) -> Option<SystemHost> {
         .filter(|u| u.is_finite() && *u >= 0.0 && *u < 1e12);
     let environment: BTreeMap<String, String> = std::env::vars().collect();
     let compositor = match crate::compositor::backend::select(&environment) {
-        Ok("niri") => compositor_label(&environment, running_niri_version().as_deref()),
+        Ok("niri") => compositor_label(&environment, niri_version),
         Ok(_) => compositor_label(&environment, None),
         Err(_) => None,
     };
@@ -429,10 +429,19 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
     // Keep a one-time baseline so the first subscribed sample can publish a
     // CPU rate immediately. No reads repeat while the topic is idle.
     let mut cpu_baseline = read_cpu(&sources);
+    // The running compositor version cannot change: read it off the executor
+    // on the first subscription, again only while it is unknown.
+    let mut niri_version = None;
     loop {
         publish_idle(&hub)?;
         while !*interest.borrow() {
             interest.changed().await?;
+        }
+        if niri_version.is_none() {
+            niri_version = crate::process::offload(running_niri_version)
+                .await
+                .ok()
+                .flatten();
         }
         let mut metrics = Metrics {
             cpu: cpu_baseline,
@@ -442,7 +451,7 @@ pub async fn run(hub: Shared, sources: Sources) -> Result<()> {
             .duration_since(std::time::UNIX_EPOCH)
             .map_or(0, |d| d.as_millis() as u64);
         let mut latest = Latest {
-            host: host_state(&sources, now_ms),
+            host: host_state(&sources, now_ms, niri_version.as_deref()),
             ..Latest::default()
         };
         let mut listing: Option<JoinHandle<Result<Value>>> = None;
@@ -769,7 +778,7 @@ mod tests {
             etc: dir.path().into(),
             user: Some("fixture".into()),
         };
-        let host = host_state(&sources, 1_800_000_000_000).expect("host");
+        let host = host_state(&sources, 1_800_000_000_000, None).expect("host");
         assert_eq!(host.user.as_deref(), Some("fixture"));
         assert_eq!(host.os.as_deref(), Some("Fixture Linux 1"));
         assert_eq!(host.kernel.as_deref(), Some("6.12.1-fixture"));
@@ -784,6 +793,7 @@ mod tests {
                 ..sources.clone()
             },
             5,
+            None,
         )
         .expect("os only");
         assert_eq!(host.os.as_deref(), Some("Plain"));
@@ -795,7 +805,8 @@ mod tests {
                 user: None,
                 ..sources
             },
-            5
+            5,
+            None,
         )
         .is_none());
         Ok(())
