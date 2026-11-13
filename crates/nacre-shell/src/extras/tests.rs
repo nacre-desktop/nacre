@@ -563,8 +563,13 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
         .unwrap();
     assert_eq!(method, "wallpaper.activate");
     assert!(
-        ["/fixture/current.jpg", "/fixture/next.jpg", "/fixture/next.mp4", "/fixture/animated.gif"]
-            .contains(&params["id"].as_str().unwrap()),
+        [
+            "/fixture/current.jpg",
+            "/fixture/next.jpg",
+            "/fixture/next.mp4",
+            "/fixture/animated.gif"
+        ]
+        .contains(&params["id"].as_str().unwrap()),
         "shuffle activates a catalogue entry"
     );
     wallpaper.act("wallpaper:activate:/fixture/next.mp4", &stores, wake);

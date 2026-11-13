@@ -1024,10 +1024,7 @@ impl Extras {
                 "extras.wallpaper.loading".into(),
                 Value::Bool(state.catalogue.is_some()),
             );
-            values.insert(
-                "extras.wallpaper.can_pause".into(),
-                Value::Bool(can_pause),
-            );
+            values.insert("extras.wallpaper.can_pause".into(), Value::Bool(can_pause));
             values.insert(
                 "extras.wallpaper.paused".into(),
                 Value::Bool(paused.unwrap_or(false)),
@@ -1174,32 +1171,11 @@ impl Extras {
         }
         if self.kind == Kind::Wallpaper {
             if request == "wallpaper:pause" {
-                let Some(settings) = &self.wallpaper_settings else {
-                    return;
-                };
-                let snapshot = settings.snapshot();
-                if !snapshot.connected
-                    || snapshot.data.get("error").is_some_and(|error| !error.is_null())
-                {
-                    return;
+                if let Some(params) = self.wallpaper_preference("paused", |value| {
+                    json!(!value.as_bool().unwrap_or(false))
+                }) {
+                    state.action = self.begin("settings.provider", params, Some(wake));
                 }
-                let Some(rev) = snapshot.data["rev"].as_u64() else {
-                    return;
-                };
-                let mut value = snapshot.data["data"].clone();
-                let Some(document) = value.as_object_mut() else {
-                    return;
-                };
-                document.insert("version".into(), json!(1));
-                document.insert(
-                    "paused".into(),
-                    json!(!document.get("paused").and_then(Json::as_bool).unwrap_or(false)),
-                );
-                state.action = self.begin(
-                    "settings.provider",
-                    json!({"store":"wallpaper-picker","value":value,"rev":rev}),
-                    Some(wake),
-                );
                 return;
             }
             let (key, value) = if let Some(value) = request.strip_prefix("wallpaper:kind:") {
@@ -1215,7 +1191,7 @@ impl Extras {
             } else {
                 return;
             };
-            let Some(params) = self.wallpaper_preference(key, value) else {
+            let Some(params) = self.wallpaper_preference(key, |_| json!(value)) else {
                 return;
             };
             // Picker-only fields are helper-owned, not Settings registry descriptors.
@@ -1464,7 +1440,7 @@ impl Extras {
         self.state.borrow().image_bytes
     }
 
-    fn wallpaper_preference(&self, key: &str, value: &str) -> Option<Json> {
+    fn wallpaper_preference(&self, key: &str, update: impl FnOnce(&Json) -> Json) -> Option<Json> {
         let snapshot = self.wallpaper_settings.as_ref()?.snapshot();
         if !snapshot.connected || snapshot.data.get("error").is_some_and(|e| !e.is_null()) {
             return None;
@@ -1475,7 +1451,8 @@ impl Extras {
         // The published wallpaper-picker v1 state schema has keepVersion=false:
         // snapshots omit it, but settings.provider requires it on every write.
         document.insert("version".into(), json!(1));
-        document.insert(key.into(), json!(value));
+        let value = update(document.get(key).unwrap_or(&Json::Null));
+        document.insert(key.into(), value);
         Some(json!({"store":"wallpaper-picker","value":data,"rev":rev}))
     }
 }

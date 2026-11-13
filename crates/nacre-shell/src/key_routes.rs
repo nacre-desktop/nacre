@@ -99,12 +99,7 @@ pub fn route_view(route: &str) -> Option<Launch> {
 
 /// A menu group activation can select a shell view instead of another launcher route.
 pub fn activation_view(result: &MenuActivated) -> Option<Launch> {
-    result
-        .view
-        .as_ref()?
-        .route
-        .as_deref()
-        .and_then(route_view)
+    result.view.as_ref()?.route.as_deref().and_then(route_view)
 }
 
 /// `None` is not a launcher-family route; `Some(Err)` is one Bead refuses.
