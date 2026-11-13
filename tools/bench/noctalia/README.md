@@ -43,14 +43,15 @@ sorted by thread, library and symbol; the staged Nacre binaries keep their
 symbols). The container gets `CAP_PERFMON` and `perf` a file capability. These
 arms are diagnostic: sampling perturbs CPU, so keep them out of the rows.
 
-Both container steps use the prebuilt `nacre-ci/arch-nacre:current` image (N0415)
-under `~/nacre-lead/platform-slot-run.sh`. `stage` checks the commit out to
-`~/nacre-lead/n0308/src` on the host, mounts it read-only at `/workspace`, and
-installs only what the image lacks for Noctalia: meson, ninja, nlohmann-json,
-stb, wireplumber, libqalculate, libical, jemalloc, wlr-randr. Cargo fetches
-crates itself for now: the read-only N0415 vendor set lacks Bead's `protocols/`
-directory, which `bead-wayland` includes from outside its crate. `run` installs
-only labwc, the PipeWire daemon and Noctalia's runtime libraries. `deps/orient` is
+Both container steps use the prebuilt `nacre-ci/arch-nacre-session:current`
+image (N0415: arch-nacre plus labwc, niri, Mesa, PipeWire and WirePlumber) under
+`~/nacre-lead/platform-slot-run.sh`. `stage` checks the commit out to
+`~/nacre-lead/n0308/src` on the host, mounts it read-only at `/workspace` with
+Nacre's read-only cargo vendor set at `/.cargo` (refreshed first with
+`ci-image cache` when `Cargo.lock` has no set yet), and installs only what the
+image lacks for Noctalia's build (meson, ninja, nlohmann-json, stb,
+libqalculate, libical, jemalloc, wlr-randr). `run` installs only Noctalia's
+runtime libraries. `deps/orient` is
 private; on a host without GitHub access unpack it into `src/deps/orient` first
 (`git -C ~/Projects/orient archive <rev> | ssh dev-2 tar -x -C nacre-lead/n0308/src/deps/orient`).
 

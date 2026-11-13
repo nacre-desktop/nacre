@@ -4,8 +4,9 @@
 #   host.sh stage NACRE_COMMIT              build host: Noctalia + Nacre build container -> ROOT/stage
 #   host.sh run PROFILE SEQUENCE [NAME]     build host: software-rendering container -> ROOT/out/NAME
 #     BENCH_PERF=1 also perf-records shell and daemon over the interaction (diagnostic arms)
-# Containers use the prebuilt nacre-ci/arch-nacre image (N0415); stage installs only Noctalia's
-# packages, run only the session packages.
+# Containers use the prebuilt nacre-ci/arch-nacre-session image (N0415: arch-nacre plus labwc,
+# PipeWire and the session tools); stage mounts Nacre's read-only cargo vendor set and installs
+# only Noctalia's build packages, run only Noctalia's runtime libraries.
 #   host.sh desktop PROFILE SEQUENCE [NAME] desktop TEST host: AMD node, shared lock -> ROOT/out/NAME
 # ROOT defaults to ~/nacre-lead/n0308 and names the containers; this script lives in ROOT/harness.
 set -euo pipefail
@@ -15,7 +16,8 @@ task=$(basename "$root")
 step=${1:?stage|run|desktop}
 mkdir -p "$root"
 chmod go-w "$root"  # the Nacre daemon refuses state under a group- or world-writable directory
-image=nacre-ci/arch-nacre:current
+image=nacre-ci/arch-nacre-session:current
+prelude=
 docker_run=("$HOME/nacre-lead/platform-slot-run.sh" docker run --rm --init --pids-limit 2048
   --cpus=6 --memory=10g --volume "$root:/task" --volume "$here:/harness:ro"
   --env "OWNER=$(id -u):$(id -g)")
@@ -36,21 +38,23 @@ case "$step" in
     # git -C ~/Projects/orient archive REV | ssh HOST tar -x -C nacre-lead/n0308/src/deps/orient
     git -C "$src" submodule update -q --init --recursive 2> /dev/null \
       || [[ -f "$src/deps/orient/Cargo.toml" ]] || { echo "deps/orient missing" >&2; exit 1; }
-    # shortcut: crates come from the network; N0415's read-only vendor set lacks Bead's protocols/
-    # (bead-wayland includes ../../protocols/*.xml); mount it at /.cargo once ci-image vendors them.
-    command=("${docker_run[@]}" --name "$name" --volume "$src:/workspace:ro" "$image"
-      bash /harness/stage.sh /task/stage "$commit" "$(id -u):$(id -g)")
+    cache=$HOME/nacre-lead/cargo-cache/nacre-$(sha256sum "$src/Cargo.lock" | cut -c1-16)
+    # A missing vendor set is refreshed in the detached script (ci-image takes a slot itself).
+    printf -v prelude '[[ -f %q ]] || CI_REPO=nacre %q cache %q local\n' \
+      "$cache/config.toml" "$HOME/nacre-lead/bin/ci-image" "$src"
+    command=("${docker_run[@]}" --name "$name" --volume "$src:/workspace:ro"
+      --volume "$cache:/.cargo:ro" "$image" bash /harness/stage.sh /task/stage "$commit"
+      "$(id -u):$(id -g)")
     ;;
   run)
     profile=${2:?short|full}
     sequence=${3:?e.g. nacre,noctalia,noctalia,nacre}
     out=${4:-$(date -u +%Y%m%dT%H%MZ)}
     name=$task-run-$out
-    # Not in the image (reported to the Release lead): the session's labwc and PipeWire daemon,
-    # Noctalia's runtime libraries and its notification sounds.
-    inner='pacman -Syu --noconfirm --needed labwc pipewire pipewire-audio wireplumber \
-        sound-theme-freedesktop libsecret libsodium sdbus-cpp libwebp libjxl libsndfile \
-        libqalculate libxml2 md4c tomlplusplus libical jemalloc polkit ${BENCH_PERF:+perf} \
+    # Not in the image (reported to the Release lead): Noctalia's runtime libraries.
+    inner='pacman -Syu --noconfirm --needed pipewire-audio sound-theme-freedesktop libsecret \
+        libsodium sdbus-cpp libwebp libjxl libsndfile libqalculate libxml2 md4c tomlplusplus \
+        libical jemalloc polkit ${BENCH_PERF:+perf} \
       && { [[ -z ${BENCH_PERF:-} ]] || setcap cap_perfmon+ep /usr/bin/perf; } \
       && groupadd -g "${OWNER#*:}" bench && useradd -u "${OWNER%:*}" -g bench -M bench \
       && install -d -o bench -g bench /task/out /tmp/bench \
@@ -83,6 +87,7 @@ script=$root/$name.sh
 [[ -e "$script" && ! -e "$root/$name.exit" ]] && { echo "already running: $name" >&2; exit 1; }
 {
   echo '#!/usr/bin/env bash'
+  printf '%s' "$prelude"
   printf 'PLATFORM_LOCK_WAIT=14400 nice -n 10'
   printf ' %q' "${command[@]}"
   printf ' > %q 2>&1\n' "$root/$name.log"

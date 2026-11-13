@@ -38,7 +38,13 @@ Row notes:
   direction only.
 - **dev-2**: llvmpipe for niri and Noctalia, pixman for labwc, CPU raster for
   Nacre; Noctalia pays its GL work in CPU there and maps llvmpipe into its PSS.
-  The 60 s rest of `short` makes its growth "memory kept after first use".
+  The 60 s rest of `short` makes its growth "memory kept after first use". The
+  shared host swapped (2.5 GiB host-wide swap-in during one Nacre arm, none in
+  the measured trees); both Nacre runs still agree within 0.1 point on CPU.
+  Nacre's launch was 0.016 s and 0.507 s (the slow one under that swap-in), so
+  its median launch cell means nothing here. These runs used
+  `nacre-ci/arch-nacre` plus in-job packages; the harness now uses
+  `nacre-ci/arch-nacre-session`, which carries the same packages.
 - **Desktop 3/3 pending**: the six `chunk` arms are staged at 26fd8a62e on the
   desktop, but the desktop rule (swap < 64 MiB) blocks them: the owner's
   session holds 2.6 GiB in zram after a game session. They start with
@@ -88,9 +94,6 @@ against 17-18 ms, no late frames) and package power (within noise).
 5. **Dashboard open stalls.** In every Nacre run on both hosts, 2-3 of 5
    dashboard opens have one 54-97 ms gap between composited frames; the
    launcher has none and Noctalia's control center has none.
-6. **Launch on dev-2.** Bar listed after 0.262 s against 0.159 s with software
-   rendering; on the desktop Nacre lists its bar first (0.018 s against
-   0.131 s), so this is CPU-bound start-up cost, not GL initialisation.
 
 ## Method (N0308)
 

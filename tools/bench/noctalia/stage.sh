@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build the pinned Noctalia and the Nacre checkout at /workspace into one stage dir.
-# Runs as root in the prebuilt nacre-ci/arch-nacre image (host.sh stage); writes only STAGE.
+# Runs as root in the prebuilt nacre-ci/arch-nacre-session image with Nacre's read-only cargo
+# vendor set at /.cargo (host.sh stage); writes only STAGE.
 #   stage.sh STAGE NACRE_COMMIT [UID:GID]
 set -euo pipefail
 stage=${1:?stage dir}
