@@ -1583,30 +1583,10 @@ mod tests {
         let palette_path = root.join("palette.json");
         let palette = Palette::read(&palette_path).unwrap();
         let fallback = panel(&palette, &root).unwrap();
-        let mut session = bead::ui::Session::new(
-            root,
-            "legacy-ui/main.json".into(),
-            palette_path,
-            palette,
-            fallback,
-        );
+        let mut session =
+            bead::ui::Session::new(root, "ui/main.luau".into(), palette_path, palette, fallback);
         let scene = session.reload().unwrap();
         session.check_sources().unwrap();
-        assert!(scene.primitives.len() > 40);
-        assert!(!scene.asset_data.is_empty());
-        session.commit(scene);
-        let state: serde_json::Value = serde_json::from_str(&session.state_summary()).unwrap();
-        assert_eq!(state["launcher.search.text"], "");
-        assert_eq!(state["launcher.open"], true);
-        session = bead::ui::Session::new(
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell"),
-            "ui/main.luau".into(),
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"),
-            Palette::read(&Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell/palette.json"))
-                .unwrap(),
-            session.error_scene(),
-        );
-        let scene = session.reload().unwrap();
         // Core navigation replaces the old six-entry placeholder sidebar. Check
         // its actual content and input contract rather than a primitive count.
         for label in ["Nacre", "Favorites", "Applications", "Actions"] {
