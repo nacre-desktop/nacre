@@ -385,3 +385,76 @@ Evidence
 
 Strings and settings: none added or removed. Kit asks: none required (optional `kit.Monogram` noted in the unit
 worktree's `.lead/kit-asks.md`).
+
+## D10 toasts and the pill OSD (N0243)
+
+Scope: the notification toasts (`shell/notifications/main.luau`) and the OSD (`shell/osd/`), Luau on Bead kit
+components with palette roles; Rust only for the surfaces' geometry and the OSD hold
+(`notice_views.rs`, `notice_service.rs`). Keyboard behaviour (toasts take pointer input, no keyboard focus; the
+OSD is click-through for the compatibility owner) and reduced motion (the kit's) are unchanged.
+
+What changed
+- Toast header: the title (16 px/600) leads, "app · time" (13.3 px, `onSurfaceVariant`, at most 40 % of the
+  header) sits on the right, then the expand and dismiss buttons (28 px, transparent, `surfaceContainerHighest`
+  on hover, the N0238 row's dismiss style). The app glyph sits in the N0238 rows' 28 px `surfaceContainerHighest`
+  tile and the caption uses the same `time_str`, so a toast and its control-panel row read the same. A collapsed
+  title that needs more than two lines ends in an ellipsis and earns the expand button; the accessible name keeps
+  the full text.
+- Toast body 13.3 px in `onSurfaceVariant`; actions are 30 px chips (500 weight, 14 px side padding, measured
+  with `ui.text_width`), the first filled `primaryContainer`/`onPrimaryContainer`, the rest
+  `surfaceContainerHigh` (`surfaceContainerHighest` on hover). Actions stay behind expand as before (QML
+  behaviour). Card: 380 wide (was 400), radius 18, padding 12/12/12/14, gap 8, `surfaceContainer`.
+- OSD: every kind (volume, output, microphone, brightness, keyboard backlight, night light, power profile, Caps
+  Lock) is one 336 x 60 pill (was 60, 68 or 76 tall): the glyph in a 36 px `surfaceContainerHigh` circle
+  (`primary`; `onSurfaceVariant` when muted or off; `success` for the power-saver leaf via the new `tint` field in
+  `kinds.luau`), the title at 14.7 px/600, the 8 px gradient bar (`surfaceContainerHighest` track) under it on
+  level kinds with the detail inline ("Volume · Headphones", ellipsized, dropped when only a stub would fit), the
+  detail on its own line for the others, and the value at 16 px/600 on the right without "%" (IBM Plex Sans
+  digits are tabular: 600 units each). The value column always fits "100", so the bar never changes length while
+  the level moves. Fill `surfaceContainer` (was `surface`) with the existing 1 px outline at 28 %.
+- OSD placement: bottom-centre with its lower edge 96 px above the output edge (a positioner in
+  `notice_views::osd`; before, only its 32 px shadow margin sat below it). Hold 1.2 s (was QML's 2 s).
+
+Known gaps
+- Size: 336 x 60 instead of the review's 360 x 64. Bead prewarms and permanently caches the OSD shadow only for
+  396 x 120 (336 x 60, radius 30) and 396 x 136 at scale 1.5 (B0156: a cold shadow raster at 1.5x cost a
+  dropped first frame); any other pill re-rasterises its shadow through the evictable template cache. The
+  review's size waits on kit ask 4.
+- No toast shadow: Bead draws shadows for `Panel` nodes only, so cards keep their 1 px `outlineVariant` border
+  (kit ask 2). The expand and close icons are always drawn, not on hover only (kit ask 3, same as N0238).
+- The review's "stack shifts 180 ms" is not animated: rows jump to their new offsets (kit ask 5).
+- No press scale (.97) on chips: the kit has no press feedback for buttons (kit ask 6, D16/D5).
+- No QML side-by-side: the QML OSD and toasts are retired; the review's mockup is the reference.
+
+Motion (design review "Timings for 120 Hz")
+- OSD: open 160 ms with a 12 px rise and the fade (was 150 ms, 4 px); close `return_duration=.2`, which the kit
+  caps at .75 x open = 120 ms with its accelerate curve (was 105 ms); the level tweens 120 ms out-cubic (was
+  130), still snapping on the first visible frame (B0207).
+- Toasts: open 220 ms sliding 24 px from the right with the fade (was a 160 ms fade in place); close
+  `return_duration=.2`, capped at 165 ms (was 112 ms). Open curve: the kit's EaseOut (out-cubic) for the review's
+  out-quint; `-- D16:` markers in both views for the B0263 easing tokens; the close cap is kit ask 1.
+- Both are interruptible as before (the kit retargets a reversed slide); no per-frame allocation or relayout was
+  added (the views build once per model change; the slide is the presenter's pose).
+- `frame_cost_bench` with the OSD and toast routes added for the run (dev-2, release, CPU renderer, scale 1.5,
+  120 Hz poses; candidate vs origin/main `shell/`; total per frame p50/p95/max): OSD open 19 frames
+  0.149/0.520/0.565 ms vs 18 frames 0.168/0.524/0.559 ms, close 14 frames 0.150/0.415/0.592 vs 13 frames
+  0.168/0.450/0.541; toast open 26 frames 0.141/0.638/0.935 vs 19 frames 0.200/1.092/1.216, close 20 frames
+  0.140/0.147/0.653 vs 13 frames 0.200/0.831/0.832. Every frame stays far inside the 8.33 ms budget; the surfaces
+  shrink (OSD 600 x 186 px, toast 666 x 272 px at 1.5).
+- Nested 120 Hz capture (`PANEL_SLIDE ... max_gap_ms`): not run. The desktop TEST host held 2.5 GiB of swap
+  (gate: under 64 MiB, the same gate N0308's desktop arms wait on); a swap reset is the lead's call. The lead's
+  laptop live audit stays the gate.
+
+Evidence
+- Before/after real-renderer PNGs (dark and light; every OSD kind; the review's toast and a stack with a long
+  title, a critical and a title-only toast; hover on each chip, expand and dismiss; Tab focus; open-motion frames)
+  with notes: the unit worktree's `.lead/renders/` (not committed).
+- Goldens updated (looked at each): `notification`, `notification-scroll-{top,bottom,reversed}`, `osd`,
+  `osd-{volume,volume-low,volume-muted,volume-clamped,output,microphone,brightness,keyboard,night-light,power-profile,capslock}-1`.
+- Tests follow the view: OSD values without "%", the inline detail texts ("· Speakers"), the toast canvas 444
+  wide, and the B0207 first-frame test compares against the settled fill instead of a hard-coded track width.
+
+Strings and settings: none added or removed. Kit asks (forwarded by the lead; unit worktree `.lead/kit-asks.md`):
+1 a close longer than 0.75 x open (`Motion::transition` cap), 2 `shadow=true` on any surface node, 3 hover-only
+children, 4 caller-supplied shadow prewarm (replaces the hard-coded OSD shapes in bead-render), 5 animated list
+reflow for the toast stack, 6 press feedback on kit buttons.
