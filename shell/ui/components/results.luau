@@ -20,7 +20,7 @@ local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string
             type(item.emoji)=="string" and item.emoji~="" and ui.Text{text=item.emoji,font_size=24,width=M.result_icon,height=M.result_icon} or Icon(item,M.result_icon),
             ui.Column{width=width,gap=3,justify="center",
                 Lines{id="name",text=item.name,width=width,font_size=M.result_title_font,line_height=M.result_title_height,max_lines=1,color=item.disabled and "onSurfaceVariant" or "onSurface"},
-                Lines{id="description",text=value_group and (item.status or item.description) or item.description,width=width,font_size=M.result_description_font,line_height=M.result_description_height,max_lines=2,color="onSurfaceVariant"},
+                Lines{id="description",text=value_group and (item.status and item.status~="" and item.status or item.description) or item.description,width=width,font_size=M.result_description_font,line_height=M.result_description_height,max_lines=2,color="onSurfaceVariant"},
             },
         },
         value_group and ui.Text{id="chevron",position="absolute",right=10,top=17,width=20,height=20,text="chevron_right",family="Material Symbols Rounded",font_size=18,color="onSurfaceVariant"} or nil,

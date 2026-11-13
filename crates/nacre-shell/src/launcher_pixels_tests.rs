@@ -310,8 +310,14 @@ fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Resu
     runtime.isolate_state(
         &std::env::temp_dir().join(format!("n0221e-chooser-{}", std::process::id())),
     );
+    runtime.stage(UiEvent::Model(BTreeMap::from([
+        ("launcher.engine_route".into(), Value::Text("style".into())),
+        ("launcher.mode".into(), Value::Text("apps".into())),
+    ])))?;
+    runtime.commit();
     keyboard_settle(&mut runtime)?;
 
+    assert_eq!(runtime.session.stores.get("launcher.mode"), Some(&Value::Text("search".into())));
     let focus_item = |runtime: &mut crate::reload::Runtime, item: &str| -> Result<()> {
         let id = runtime
             .session

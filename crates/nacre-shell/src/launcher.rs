@@ -832,11 +832,13 @@ async fn call_activation(source: &dyn Source, request: MenuActivate) -> source::
     Ok(result)
 }
 
-fn set_toggle(rows: &mut Arc<Vec<Json>>, id: &str, checked: bool) {
-    if let Some(row) = Arc::make_mut(rows).iter_mut().find(|row| row["id"] == id) {
-        row["checked"] = json!(checked);
-        row["status"] = json!(tr(if checked { "bead.common.on" } else { "bead.common.off" }, &[]));
-    }
+fn set_toggle(rows: &mut Arc<Vec<Json>>, id: &str, checked: bool) -> bool {
+    let Some(index) = rows.iter().position(|row| row["id"] == id) else { return false; };
+    if rows[index]["checked"].as_bool() == Some(checked) { return false; }
+    let row = &mut Arc::make_mut(rows)[index];
+    row["checked"] = json!(checked);
+    row["status"] = json!(tr(if checked { "bead.common.on" } else { "bead.common.off" }, &[]));
+    true
 }
 
 pub struct Menu {
@@ -1258,6 +1260,7 @@ impl Menu {
     }
 
     fn activate_choice(&self, group: &str, id: &str) -> source::Result<MenuActivated> {
+        self.activation_request(group)?;
         let source = self.source.as_ref().ok_or_else(invalid_menu)?;
         let before = source.snapshot();
         let params = json!({"query":"","mode":"apps","route":group,"presentation":true});
@@ -1517,10 +1520,15 @@ impl Menu {
             mode = route.clone();
             restored_route = true;
         }
+        let engine_route = text("launcher.engine_route");
+        if mode == "apps" && (engine_route == "style" || engine_route.starts_with("style.")) {
+            mode = "search".into();
+            restored_route = true;
+        }
         let request = (
             text("launcher.search.text"),
             if mode.is_empty() { "apps".into() } else { mode },
-            text("launcher.engine_route"),
+            engine_route,
         );
         let restore_mode = restored_route.then(|| request.1.clone());
         let mut selection = text("launcher.selection");
@@ -1739,8 +1747,9 @@ impl Menu {
             view.request = Some(request.clone());
             view.stamp = stamp;
         }
-        if let Some(pending) = self.pending_toggle.borrow().as_ref() {
-            set_toggle(&mut view.rows, &pending.id, !pending.before);
+        if let Some(pending) = self.pending_toggle.borrow().as_ref()
+            && set_toggle(&mut view.rows, &pending.id, !pending.before)
+        {
             view.grid = None;
         }
         let reset_selection = reply_applied
