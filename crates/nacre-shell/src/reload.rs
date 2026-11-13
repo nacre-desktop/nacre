@@ -6082,12 +6082,11 @@ impl SceneSource for Runtime {
         let now = std::time::Instant::now();
         if self.launcher.is_some()
             && matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(id)) if !id.is_empty())
-            && matches!(&event, UiEvent::Command { command, .. } if command == "escape")
+            && matches!(&event, UiEvent::Command { command, .. } if matches!(command.as_str(), "escape" | "up" | "down" | "tab" | "backtab"))
         {
-            let scene = self.session.update(BTreeMap::from([(
-                "launcher.chooser".into(),
-                bead::core::Value::Text(String::new()),
-            )]))?;
+            let UiEvent::Command { command, shift } = &event else { unreachable!() };
+            let backwards = *shift || matches!(command.as_str(), "up" | "backtab");
+            let scene = self.launcher_chooser_focus(if backwards { -1 } else { 1 }, command == "escape")?;
             return self.finish_scene(scene);
         }
         if self
@@ -8278,16 +8277,28 @@ impl SceneSource for Runtime {
         } else {
             None
         };
-        if let (Some(menu), Some(id)) = (&self.launcher, launcher_id) {
+        if let (Some(menu), Some(id)) = (self.launcher.clone(), launcher_id) {
             self.actions.authorize("select_app")?;
             if menu.is_value_group(&id) {
-                let scene = self.session.update(BTreeMap::from([
+                self.session.update(BTreeMap::from([
                     ("launcher.selection".into(), bead::core::Value::Text(id.clone())),
                     ("launcher.chooser".into(), bead::core::Value::Text(id)),
                 ]))?;
+                let scene = self.launcher_chooser_focus(0, false)?;
                 return self.finish_scene(scene);
             }
-            let changes = match menu.activate(&id) {
+            if matches!(self.session.stores.get("launcher.chooser"), Some(bead::core::Value::Text(group)) if !group.is_empty()) {
+                self.launcher_chooser_focus(0, true)?;
+            }
+            let result = match menu.toggle(&id) {
+                Ok(true) => {
+                    let scene = self.session.update(BTreeMap::new())?;
+                    return self.finish_scene(scene);
+                }
+                Ok(false) => menu.activate(&id),
+                Err(error) => Err(error),
+            };
+            let changes = match result {
                 Ok(result)
                     if let Some(launch) = crate::key_routes::activation_view(&result) =>
                 {

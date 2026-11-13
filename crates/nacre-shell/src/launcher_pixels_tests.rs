@@ -89,6 +89,8 @@ fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
 struct KeyboardFixture(
     crate::launcher::Fixture,
     Option<std::sync::Arc<tokio::sync::Notify>>,
+    std::sync::Arc<std::sync::Mutex<Vec<(String, serde_json::Value)>>>,
+    Option<std::sync::Arc<tokio::sync::Notify>>,
 );
 impl bead::core::source::Source for KeyboardFixture {
     fn reconnect(&self) -> bead::core::source::Reply<'_> {
@@ -107,8 +109,40 @@ impl bead::core::source::Source for KeyboardFixture {
         self.0.subscribe(callback)
     }
     fn invoke(&self, method: String, params: serde_json::Value) -> bead::core::source::Reply<'_> {
+        let calls = self.2.clone();
+        let toggle_gate = self.3.clone();
         Box::pin(async move {
-            let mut reply = self.0.invoke(method.clone(), params.clone()).await?;
+            if method == "menu.query" && params["route"] == "style.appearance" {
+                calls.lock().unwrap().push((method.clone(), params.clone()));
+            }
+            if method == "menu.activate"
+                && params["id"]
+                    .as_str()
+                    .is_some_and(|id| id.starts_with("style."))
+            {
+                let is_toggle = params["id"] == "style.animations";
+                calls.lock().unwrap().push((method, params));
+                if is_toggle && let Some(gate) = toggle_gate {
+                    gate.notified().await;
+                    return Ok(serde_json::json!({"keep_open":true}));
+                }
+                return Ok(serde_json::json!({"keep_open":true}));
+            }
+            let mut reply = if method == "menu.query" && params["route"] == "style.appearance" {
+                crate::launcher::fixture_reply(
+                    params["query"].as_str().unwrap_or_default(),
+                    ["light", "dark", "auto"]
+                        .into_iter()
+                        .map(|choice| serde_json::json!({
+                            "id":format!("style.appearance.{choice}"),
+                            "name":choice,
+                            "kind":"action"
+                        }))
+                        .collect(),
+                )
+            } else {
+                self.0.invoke(method.clone(), params.clone()).await?
+            };
             if method == "menu.query" {
                 if params["route"] == "home" {
                     if let Some(gate) = &self.1 {
@@ -172,6 +206,8 @@ fn keyboard_runtime_gated(
     let source = std::sync::Arc::new(KeyboardFixture(
         crate::launcher::Fixture::new(serde_json::json!({"queries":queries,"groups":groups}))?,
         gate,
+        std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
+        None,
     ));
     let mut runtime =
         crate::reload::Runtime::new(harness(query, 0.)?.session).with_launcher(Some(source))?;
@@ -239,6 +275,104 @@ fn keyboard_focus(runtime: &mut crate::reload::Runtime, id: &str) -> Result<()> 
     if let Some(scene) = runtime.session.focus_id(id)? {
         runtime.session.commit(scene);
     }
+    Ok(())
+}
+
+#[test]
+fn launcher_value_group_chooser_supports_keyboard_and_fresh_activation() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let toggle_gate = std::sync::Arc::new(tokio::sync::Notify::new());
+    let rows = vec![
+        serde_json::json!({"id":"style.animations","name":"Animations","kind":"action","icon":"animation","checked":false,"status":"Off","presentation":{"toggle":true}}),
+        serde_json::json!({"id":"style.appearance","name":"Light and dark","kind":"action","icon":"contrast","status":"Dark","presentation":{"choices":[
+            {"id":"style.appearance.light","name":"Light","checked":false},
+            {"id":"style.appearance.dark","name":"Dark","checked":true},
+            {"id":"style.appearance.auto","name":"Automatic","checked":false}
+        ]}}),
+    ];
+    let reply = crate::launcher::fixture_reply("", rows);
+    let groups = match crate::launcher::fixture_groups() {
+        Value::List(groups) => groups
+            .iter()
+            .map(|row| serde_json::json!({"id":row["id"],"label":row["name"],"icon":row["icon"]}))
+            .collect::<Vec<_>>(),
+        _ => unreachable!(),
+    };
+    let source = std::sync::Arc::new(KeyboardFixture(
+        crate::launcher::Fixture::new(serde_json::json!({"queries":{"":reply},"groups":groups}))?,
+        None,
+        calls.clone(),
+        Some(toggle_gate.clone()),
+    ));
+    let mut runtime = crate::reload::Runtime::new(harness("", 0.)?.session)
+        .with_launcher(Some(source))?;
+    runtime.isolate_state(
+        &std::env::temp_dir().join(format!("n0221e-chooser-{}", std::process::id())),
+    );
+    keyboard_settle(&mut runtime)?;
+
+    let focus_item = |runtime: &mut crate::reload::Runtime, item: &str| -> Result<()> {
+        let id = runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| {
+                node.action.as_deref() == Some("select_app")
+                    && node.action_arg == Some(Value::Text(item.into()))
+            })
+            .expect("launcher item is rendered")
+            .id
+            .clone();
+        keyboard_focus(runtime, &id)
+    };
+
+    // Space enters the same optimistic toggle path as a pointer activation.
+    focus_item(&mut runtime, "style.animations")?;
+    runtime.stage(UiEvent::Key {
+        text: " ".into(),
+        backspace: false,
+    })?;
+    runtime.commit();
+    assert!(matches!(runtime.session.stores.get("launcher.apps"),Some(Value::List(rows))
+        if rows.iter().any(|row| row["id"]=="style.animations" && row["checked"]==true)));
+    toggle_gate.notify_one();
+
+    focus_item(&mut runtime, "style.appearance")?;
+    keyboard_command(&mut runtime, "enter")?;
+    assert_eq!(
+        runtime.session.stores.get("launcher.chooser"),
+        Some(&Value::Text("style.appearance".into()))
+    );
+    assert_eq!(
+        runtime.session.focused_action().unwrap().2,
+        Value::Text("style.appearance.dark".into()),
+        "chooser starts at the checked choice"
+    );
+    keyboard_command(&mut runtime, "down")?;
+    assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text("style.appearance.auto".into()));
+    keyboard_command(&mut runtime, "up")?;
+    assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text("style.appearance.dark".into()));
+    keyboard_command(&mut runtime, "escape")?;
+    assert_eq!(runtime.session.stores.get("launcher.chooser"), Some(&Value::Text(String::new())));
+    assert_eq!(runtime.session.stores.get("panel.open"), Some(&Value::Bool(true)));
+
+    focus_item(&mut runtime, "style.appearance")?;
+    keyboard_command(&mut runtime, "enter")?;
+    keyboard_command(&mut runtime, "down")?;
+    keyboard_command(&mut runtime, "enter")?;
+    assert_eq!(runtime.session.stores.get("panel.open"), Some(&Value::Bool(true)));
+    assert_eq!(runtime.session.stores.get("launcher.chooser"), Some(&Value::Text(String::new())));
+    let calls = calls.lock().unwrap();
+    assert!(calls.iter().any(|(method, params)| {
+        method == "menu.query" && params["route"] == "style.appearance" && params["presentation"] == true
+    }), "choice activation refreshes its group to obtain a current ticket");
+    assert!(calls.iter().any(|(method, params)| {
+        method == "menu.activate"
+            && params["id"] == "style.appearance.auto"
+            && params["activation"] == "fixture:style.appearance.auto"
+            && params["catalog_rev"] == 1
+    }), "Enter activates the selected choice's fresh ticket");
     Ok(())
 }
 

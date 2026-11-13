@@ -15,6 +15,34 @@ fn key_id(key: &str) -> String {
     key.bytes().map(|byte| format!("{byte:02x}")).collect()
 }
 
+impl Runtime {
+    pub(super) fn launcher_chooser_focus(&mut self, step: i32, close: bool) -> Result<Option<Scene>, Box<dyn Error>> {
+        let group = match self.session.stores.get("launcher.chooser") {
+            Some(Value::Text(id)) => id.clone(),
+            _ => return Ok(None),
+        };
+        let choices = match self.session.stores.get("launcher.apps") {
+            Some(Value::List(rows)) => rows.iter().find(|row| row["id"] == group)
+                .and_then(|row| row["choices"].as_array()).cloned().unwrap_or_default(),
+            _ => Vec::new(),
+        };
+        let focused = self.session.focused_action().map(|(_, _, arg)| arg);
+        let index = choices.iter().position(|choice| focused.as_ref() == Some(&Value::Text(choice["id"].as_str().unwrap_or_default().into())))
+            .map(|index| (index as i32 + step).rem_euclid(choices.len() as i32) as usize)
+            .or_else(|| choices.iter().position(|choice| choice["checked"] == true)).unwrap_or(0);
+        let target = if close { group.as_str() } else { choices.get(index).and_then(|choice| choice["id"].as_str()).unwrap_or("") };
+        let node = self.session.view_nodes().iter().find(|node| node.action.as_deref() == Some("select_app")
+            && node.action_arg == Some(Value::Text(target.into()))).map(|node| node.id.clone());
+        let mut changes = BTreeMap::from([
+            ("bead.focused".into(), Value::Text(node.unwrap_or_else(|| "launcher.search".into()))),
+            ("bead.focus_visible".into(), Value::Bool(true)),
+            ("launcher.focus_zone".into(), Value::Text(if close { "content" } else { "chooser" }.into())),
+        ]);
+        if close { changes.insert("launcher.chooser".into(), Value::Text(String::new())); }
+        Ok(self.session.update(changes)?)
+    }
+}
+
 // Selection, virtualization scroll and focus must enter the same staged frame.
 // Repeat's keyed path is already used by the launcher's hover/favorite controls.
 pub(super) fn project_focus(stores: &Stores, changes: &mut BTreeMap<String, Value>) {

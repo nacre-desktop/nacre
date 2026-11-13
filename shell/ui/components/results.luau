@@ -7,9 +7,9 @@ local Icon=require("./item-icon")
 local Lines=require("./text-lines")
 local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string",selected="boolean",description="string",favorite="boolean",favoriteId="string"}},function(p)
     local item=p.item
-    local width=M.content_width(ui.resolve_for_check(ui.bind("bead.viewport.width")),ui.resolve_for_check(ui.bind("launcher.quick_allowed")))-12-42-M.result_icon-11
     local toggle=item.toggle==true
     local value_group=type(item.choices)=="table" and #item.choices>0
+    local width=M.content_width(ui.resolve_for_check(ui.bind("bead.viewport.width")),ui.resolve_for_check(ui.bind("launcher.quick_allowed")))-12-(toggle and 110 or value_group and 72 or 42)-M.result_icon-11
     local activate=ui.action("select_app",item.id)
     return ui.Box{id="result-wrap",width="fill",height=M.result_row_height,
       kit.Button{id="result",width="fill",height="fill",radius=10,padding_left=12,padding_right=toggle and 82 or 42,padding_top=8,padding_bottom=8,fill="transparent",selected=item.selected,
@@ -27,7 +27,7 @@ local Row=ui.component("ResultRow",{item={id="string",name="string",icon="string
       },
       toggle and ui.Text{id="toggle-state",position="absolute",right=67,top=19,width=34,height=18,text=item.status,font_size=11.333,text_align="right",color="onSurfaceVariant"} or nil,
       toggle and kit.Switch{id="toggle-switch",position="absolute",right=10,top=14,width=44,height=28,checked=item.checked,aria_label=item.name..". "..item.status,on_activate=not item.disabled and ui.action("select_app",item.id) or nil} or nil,
-      ui.Button{id="favorite",position="absolute",right=12,top=16,width=23,height=23,radius=7,padding=0,
+      ui.Button{id="favorite",position="absolute",right=value_group and 38 or 12,top=16,width=23,height=23,radius=7,padding=0,
         visible=not toggle and (item.favorite or item.selected or M.hovered(item.id)),
         aria_label=item.favorite and ui.tr("bead.launcher.favorite-remove") or ui.tr("bead.launcher.favorite-add"),
         fill="transparent",justify="center",align="center",

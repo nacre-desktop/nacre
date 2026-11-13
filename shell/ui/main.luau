@@ -38,7 +38,7 @@ local function Chooser()
     for _,choice in ipairs(group.choices or {}) do
         options[#options+1]=kit.Button{id="choice-"..choice.id,width="fill",height=36,padding=6,radius=7,
             fill=choice.checked and ui.tint("surfaceContainer","primary",.13) or "transparent",
-            aria_label=choice.name..(choice.checked and ". selected" or ""),on_activate=ui.action("select_app",choice.id),
+            aria_label=choice.name,selected=choice.checked,on_activate=ui.action("select_app",choice.id),
             ui.Row{width="fill",height=36,align="center",gap=8,
                 ui.Text{text=choice.checked and "check" or "",width=18,height=20,family="Material Symbols Rounded",font_size=16,color="primary"},
                 ui.Text{text=choice.name,grow=1,height=22,font_size=13.333,color="onSurface"}}

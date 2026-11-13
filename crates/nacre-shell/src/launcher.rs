@@ -818,11 +818,33 @@ pub struct NavigationGeometry {
     pub row_height: f64,
     pub viewport_height: f64,
 }
+struct PendingToggle {
+    id: String,
+    before: bool,
+    completion: Arc<std::sync::Mutex<Option<source::Result<MenuActivated>>>>,
+}
+
+async fn call_activation(source: &dyn Source, request: MenuActivate) -> source::Result<MenuActivated> {
+    request.validate().map_err(|_| invalid_menu())?;
+    let reply = source.call("menu.activate".into(), serde_json::to_value(request).map_err(|_| invalid_menu())?, Duration::from_secs(3)).await?;
+    let result: MenuActivated = serde_json::from_value(reply).map_err(|_| invalid_menu())?;
+    result.validate().map_err(|_| invalid_menu())?;
+    Ok(result)
+}
+
+fn set_toggle(rows: &mut Arc<Vec<Json>>, id: &str, checked: bool) {
+    if let Some(row) = Arc::make_mut(rows).iter_mut().find(|row| row["id"] == id) {
+        row["checked"] = json!(checked);
+        row["status"] = json!(tr(if checked { "bead.common.on" } else { "bead.common.off" }, &[]));
+    }
+}
+
 pub struct Menu {
     source: Option<Arc<dyn Source>>,
     runtime: tokio::runtime::Runtime,
     view: RefCell<View>,
     query_actor: Option<QueryActor>,
+    pending_toggle: RefCell<Option<PendingToggle>>,
     /// The inline form's helper submit in flight (B0199).
     form: Arc<crate::launcher_form::Run>,
 }
@@ -838,6 +860,7 @@ impl Menu {
                 .map_err(|e| e.to_string())?,
             view: RefCell::new(View::default()),
             query_actor,
+            pending_toggle: RefCell::default(),
             form: Arc::default(),
         })
     }
@@ -1171,10 +1194,40 @@ impl Menu {
         ]));
         Some(expanded)
     }
+    /// Return a painted optimistic frame while the existing actor sends the toggle.
+    pub fn toggle(&self, id: &str) -> source::Result<bool> {
+        let before = self.view.borrow().rows.iter().find(|row| row["id"] == id && row["toggle"] == true)
+            .and_then(|row| row["checked"].as_bool());
+        let Some(before) = before else { return Ok(false); };
+        if self.pending_toggle.borrow().is_some() {
+            return Err(source::Error::new("busy", &tr("bead.launcher.changed", &[]), true));
+        }
+        let request = self.activation_request(id)?;
+        let actor = self.query_actor.as_ref().ok_or_else(invalid_menu)?;
+        let source = self.source.as_ref().ok_or_else(invalid_menu)?.clone();
+        let completion = Arc::new(std::sync::Mutex::new(None));
+        *self.pending_toggle.borrow_mut() = Some(PendingToggle { id:id.into(), before, completion:completion.clone() });
+        {
+            let mut view = self.view.borrow_mut();
+            set_toggle(&mut view.rows, id, !before);
+            view.grid = None;
+        }
+        let wake = actor.wake.clone();
+        actor.runtime_handle.spawn(async move {
+            let result = call_activation(source.as_ref(), request).await;
+            *completion.lock().unwrap() = Some(result);
+            if let Some(callback) = wake.lock().ok().and_then(|slot| slot.clone()) {
+                callback(source.snapshot());
+            }
+        });
+        Ok(true)
+    }
+
     pub fn activate(&self, id: &str) -> source::Result<MenuActivated> {
         let choice_group = {
             let view = self.view.borrow();
             view.rows.iter().find_map(|row| {
+                if row["disabled"] == true { return None; }
                 row["choices"]
                     .as_array()?
                     .iter()
@@ -1205,30 +1258,8 @@ impl Menu {
     }
 
     fn activate_choice(&self, group: &str, id: &str) -> source::Result<MenuActivated> {
-        let (source, before) = {
-            let view = self.view.borrow();
-            if !view.rows.iter().any(|row| {
-                row["id"] == group
-                    && row["disabled"] != true
-                    && row["choices"].as_array().is_some_and(|choices| {
-                        choices.iter().any(|choice| choice["id"] == id)
-                    })
-            }) {
-                return Err(source::Error::new(
-                    "unavailable",
-                    &tr("bead.launcher.result-unavailable", &[]),
-                    true,
-                ));
-            }
-            let source = self.source.as_ref().ok_or_else(|| {
-                source::Error::new(
-                    "unavailable",
-                    &tr("bead.launcher.service-unavailable", &[]),
-                    true,
-                )
-            })?;
-            (source.clone(), source.snapshot())
-        };
+        let source = self.source.as_ref().ok_or_else(invalid_menu)?;
+        let before = source.snapshot();
         let params = json!({"query":"","mode":"apps","route":group,"presentation":true});
         let reply = self.runtime.block_on(query(source.as_ref(), params, Duration::from_secs(3)))?;
         let prepared = prepare_for(reply, &(String::new(), "apps".into(), group.into()))?;
@@ -1266,23 +1297,9 @@ impl Menu {
             activation,
             catalog_rev: prepared.catalog_rev,
         };
-        request.validate().map_err(|_| invalid_menu())?;
-        let result = self
-            .runtime
-            .block_on(source.call(
-                "menu.activate".into(),
-                serde_json::to_value(request).map_err(|_| invalid_menu())?,
-                Duration::from_secs(3),
-            ))
-            .and_then(|reply| {
-                let result: MenuActivated =
-                    serde_json::from_value(reply).map_err(|_| invalid_menu())?;
-                result.validate().map_err(|_| invalid_menu())?;
-                Ok(result)
-            })?;
+        let result = self.runtime.block_on(call_activation(source.as_ref(), request))?;
         let mut view = self.view.borrow_mut();
         view.request = None;
-        view.result_request = None;
         view.grid = None;
         Ok(result)
     }
@@ -1388,7 +1405,7 @@ impl Menu {
         Ok(())
     }
 
-    fn activate_once(&self, id: &str) -> source::Result<MenuActivated> {
+    fn activation_request(&self, id: &str) -> source::Result<MenuActivate> {
         let view = self.view.borrow();
         if !view.pending_navigation.is_empty() || view.result_request != view.request {
             return Err(source::Error::new(
@@ -1438,27 +1455,12 @@ impl Menu {
             catalog_rev: view.catalog_rev,
         };
         request.validate().map_err(|_| invalid_menu())?;
-        drop(view);
-        let source = self.source.as_ref().ok_or_else(|| {
-            source::Error::new(
-                "unavailable",
-                &tr("bead.launcher.service-unavailable", &[]),
-                true,
-            )
-        })?;
-        let result = self
-            .runtime
-            .block_on(source.call(
-                "menu.activate".into(),
-                serde_json::to_value(request).map_err(|_| invalid_menu())?,
-                Duration::from_secs(3),
-            ))
-            .and_then(|reply| {
-                let result: MenuActivated =
-                    serde_json::from_value(reply).map_err(|_| invalid_menu())?;
-                result.validate().map_err(|_| invalid_menu())?;
-                Ok(result)
-            });
+        Ok(request)
+    }
+
+    fn activate_once(&self, id: &str) -> source::Result<MenuActivated> {
+        let request = self.activation_request(id)?;
+        let result = self.runtime.block_on(call_activation(self.source.as_ref().unwrap().as_ref(), request));
         match result {
             Ok(result) => {
                 if result.keep_open {
@@ -1486,6 +1488,19 @@ impl Menu {
         stores: &Stores,
     ) -> Result<BTreeMap<String, Value>, bead::ui::Diagnostic> {
         let _profile = bead::core::profile::Span::new("source_projection");
+        let finished = self.pending_toggle.borrow().as_ref()
+            .and_then(|pending| pending.completion.lock().ok()?.take());
+        if let Some(result) = finished {
+            let pending = self.pending_toggle.borrow_mut().take().unwrap();
+            let mut view = self.view.borrow_mut();
+            if let Err(error) = result {
+                set_toggle(&mut view.rows, &pending.id, pending.before);
+                view.error = error.message;
+            }
+            view.request = None;
+            view.grid = None;
+        }
+
         let text = |key: &str| match stores.get(key) {
             Some(Value::Text(s)) => s.clone(),
             _ => String::new(),
@@ -1723,6 +1738,10 @@ impl Menu {
             }
             view.request = Some(request.clone());
             view.stamp = stamp;
+        }
+        if let Some(pending) = self.pending_toggle.borrow().as_ref() {
+            set_toggle(&mut view.rows, &pending.id, !pending.before);
+            view.grid = None;
         }
         let reset_selection = reply_applied
             && prior_result_request
@@ -3639,3 +3658,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "launcher_toggle_tests.rs"]
+mod toggle_tests;

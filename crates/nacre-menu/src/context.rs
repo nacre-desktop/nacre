@@ -169,7 +169,13 @@ impl Context {
             }
             "setting" => self.settings[value.as_str().unwrap_or("")] != false,
             "personality" => value.as_str() == Some(self.personality.as_str()),
-            "palette-mode" => self.wallpapers["appearancePreferences"]["paletteMode"] == *value,
+            "palette-mode" => {
+                if self.wallpapers["appearancePreferences"]["paletteAutoMode"] == true {
+                    value == "auto"
+                } else {
+                    self.wallpapers["appearancePreferences"]["paletteMode"] == *value
+                }
+            }
             "background" => {
                 yes(&self.wallpapers["appearancePreferences"]["paletteBackgroundFromWallpaper"])
                     == (value == "wallpaper")
@@ -211,6 +217,10 @@ impl Context {
             .map(|v| v["key"].clone())
             .unwrap_or(json!(""));
         out["checked"] = json!(checked == Some(true));
+        let is_toggle = matches!(
+            row["state"].as_str(),
+            Some("setting" | "dnd" | "night-light" | "stay-awake" | "mute" | "mic-mute" | "wifi" | "bluetooth")
+        );
         out["status"] = json!(if row["state"] == "updates" {
             if yes(&self.updates["count"]) {
                 self.tr(
@@ -222,19 +232,7 @@ impl Context {
                 tr("ui.menu-context.status.up-to-date", "Up to date")
             }
         } else if let Some(checked) = checked {
-            if matches!(
-                row["state"].as_str(),
-                Some(
-                    "setting"
-                        | "dnd"
-                        | "night-light"
-                        | "stay-awake"
-                        | "mute"
-                        | "mic-mute"
-                        | "wifi"
-                        | "bluetooth"
-                )
-            ) {
+            if is_toggle {
                 if checked {
                     tr("ui.menu-context.status.on", "On")
                 } else {
@@ -248,24 +246,29 @@ impl Context {
         } else {
             String::new()
         });
-        let is_toggle = matches!(
-            row["state"].as_str(),
-            Some("setting" | "dnd" | "night-light" | "stay-awake" | "mute" | "mic-mute" | "wifi" | "bluetooth")
-        );
         if is_toggle {
             out["toggle"] = json!(true);
         }
         if row["kind"] == "group" {
-            let choices: Vec<_> = model::children(&text::field(row, "id"), self.rows())
-                .iter()
-                .filter(|child| self.visible(child))
-                .map(|child| {
-                    let selected = self.checked(child) == Some(true);
-                    json!({"id":child["id"],"name":child["label"],"checked":selected})
-                })
-                .collect();
+            let id = text::field(row, "id");
+            let children = if row["provider"] == "accents" {
+                self.provider(&id, "").unwrap_or_default()
+            } else {
+                model::children(&id, self.rows()).into_iter().filter(|child| self.visible(child)
+                    && matches!(child["state"].as_str(), Some("palette-mode" | "personality" | "background" | "power-profile")))
+                    .map(|child| {
+                        let mut choice = self.localized(child);
+                        choice["checked"] = json!(self.checked(child) == Some(true));
+                        choice
+                    }).collect()
+            };
+            let choices: Vec<_> = children.iter().map(|child| {
+                json!({"id":child["id"],"name":child["label"],"checked":child["checked"]})
+            }).collect();
             if let Some(choice) = choices.iter().find(|choice| choice["checked"] == true) {
                 out["status"] = choice["name"].clone();
+            }
+            if !choices.is_empty() {
                 out["choices"] = json!(choices);
             }
         }
@@ -443,5 +446,16 @@ mod tests {
         assert_eq!(toggle["toggle"], true);
         assert_eq!(toggle["checked"], false);
         assert_eq!(toggle["status"], "Off");
+    }
+
+    #[test]
+    fn accent_group_uses_dynamic_palette_options() {
+        let mut context = Context::new(json!({"rows":[{"id":"style.accents","kind":"group","provider":"accents","label":"Accent choice"}]}), json!({}), "en", 0.).unwrap();
+        context.wallpapers = json!({"selectedAccent":"green","paletteOptions":[{"accent":"blue","name":"Blue"},{"accent":"green","name":"Green"}]});
+        let group = context.node("style.accents").unwrap();
+        assert_eq!(group["status"], "Green");
+        assert_eq!(group["choices"][1]["checked"], true);
+        context.wallpapers["selectedAccent"] = json!("missing");
+        assert_eq!(context.node("style.accents").unwrap()["choices"].as_array().unwrap().len(), 2);
     }
 }
