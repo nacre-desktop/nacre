@@ -4,6 +4,7 @@
 
 ## Current status — 2026-11-10
 
+| N0221a | [N0221 Launcher owner fixes](0221-launcher-overhaul.md#n0221a-owner-fixes) | Implemented; ready for lead review | Assistant labels, untranslated-text guard, active Niri overlay/include fixture, and scoped hand-off token/toast. Full shell passed; helper timing case passed in isolation. |
 | N0210 | [Launcher works end to end](0210-launcher-works.md) | N0210 fixes complete; two unrelated whole-shell app tests remain red | Empty scopes, stale activation retry, theme bundle apply, Bead B0233 caret pin/test, and installed executable check completed. Whole shell binary: 875 passed, 2 unrelated app tests failed, 4 ignored. |
 | N0218 | [AI activity and terminal dashboard](0218-ai-running-and-tui.md) | Implemented; ready for lead review | Transcript-based Running, idle session reuse, keyboard/mouse navigation and centered selectors; focused dev-1 checks passed. Local commit only. |
 | N0210 | [Launcher works end to end](0210-launcher-works.md) | Implemented; ready for lead review; Bead caret and listed runtime gaps remain | Empty `?`, `#`, `:` defaults and stale files hint fixed; private daemon sweep recorded 496 activations (316 ran, 64 opened, 41 handled, 51 gated, 22 errors, 2 info, 0 no-op). |

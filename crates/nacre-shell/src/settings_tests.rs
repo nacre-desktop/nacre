@@ -89,6 +89,53 @@ fn registry_loads_and_every_navigation_page_has_a_label_and_a_group() {
 }
 
 #[test]
+fn every_settings_page_renders_without_visible_translation_keys() {
+    let untranslated = |text: &str| {
+        ["ui.", "bead.", "helper.", "settings."]
+            .iter()
+            .any(|prefix| {
+                text.strip_prefix(prefix).is_some_and(|tail| {
+                    !tail.is_empty()
+                        && tail.bytes().all(|byte| {
+                            byte.is_ascii_lowercase()
+                                || byte.is_ascii_digit()
+                                || b".-".contains(&byte)
+                        })
+                })
+            })
+    };
+    let (navigator, _) = fixture(json!({}));
+    let nav = navigator.project(&stores("", ""));
+    let Value::List(pages) = &nav["settings.nav"] else {
+        panic!()
+    };
+    for page in pages.iter().filter(|page| page["kind"] == "page") {
+        let id = page["id"].as_str().unwrap();
+        let (settings, _) = fixture(json!({}));
+        let mut model = settings.project(&stores(id, ""));
+        model.insert("settings.writable".into(), Value::Bool(true));
+        let mut view = harness(model, 1280, 1000, 1.);
+        view.render().unwrap();
+        let visible: Vec<String> = view
+            .scene()
+            .primitives
+            .iter()
+            .filter_map(|primitive| {
+                if let bead::render::Primitive::Text { text, .. } = primitive {
+                    Some(text.to_string())
+                } else {
+                    None
+                }
+            })
+            .collect();
+        assert!(
+            visible.iter().all(|text| !untranslated(text)),
+            "{id}: {visible:?}"
+        );
+    }
+}
+
+#[test]
 fn appearance_rows_follow_the_registry_types_and_the_store_with_nacre_defaults() {
     let (settings, _) =
         fixture(json!({"textSize": 14, "frameSheen": false, "monoFont": "Fira Code"}));
