@@ -82,9 +82,37 @@ fn chat_last_activity(path: &Path) -> Option<SystemTime> {
     latest.or_else(|| fs::symlink_metadata(path).ok()?.modified().ok())
 }
 
-fn old_chat(path: &Path, days: u64, now: SystemTime) -> bool {
+/// Claude Code keeps a session's transcripts in `~/.claude/projects/<cwd with every
+/// non-alphanumeric byte replaced by '-'>`; chats nested in a chat folder extend that name.
+fn claude_project_name(path: &Path) -> String {
+    path.to_string_lossy()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect()
+}
+
+fn in_chat_project(project: &str, chat: &str) -> bool {
+    project == chat || project.starts_with(&format!("{chat}-"))
+}
+
+/// The chat's own files and the transcripts of every session started in it or below
+/// it: a running session's working directory files can be weeks old.
+fn chat_activity(home: &Path, path: &Path) -> Option<SystemTime> {
+    let mut latest = chat_last_activity(path)?;
+    let chat = claude_project_name(path);
+    if let Ok(projects) = fs::read_dir(home.join(".claude/projects")) {
+        for project in projects.flatten() {
+            if in_chat_project(&project.file_name().to_string_lossy(), &chat) {
+                latest = latest.max(chat_last_activity(&project.path())?);
+            }
+        }
+    }
+    Some(latest)
+}
+
+fn old_chat(home: &Path, path: &Path, days: u64, now: SystemTime) -> bool {
     days > 0
-        && chat_last_activity(path)
+        && chat_activity(home, path)
             .and_then(|modified| now.duration_since(modified).ok())
             .is_some_and(|age| age >= Duration::from_secs(days.saturating_mul(DAY)))
 }
@@ -235,16 +263,45 @@ fn tmux_panes() -> Option<Vec<TmuxPane>> {
     parse_tmux_panes(&String::from_utf8_lossy(&output.stdout))
 }
 
-fn chat_has_live_tmux(path: &Path, panes: &[TmuxPane]) -> bool {
-    let id = path
-        .file_name()
-        .and_then(|name| name.to_str())
-        .unwrap_or("");
+/// Nacre names AI sessions `ai-<project>-<agent>-<account>-<thread id>`.
+fn session_thread(name: &str) -> Option<&str> {
+    let id = name.get(name.len().checked_sub(36)?..)?;
+    (name.starts_with("ai-")
+        && id.split('-').map(str::len).eq([8, 4, 4, 4, 12])
+        && id.bytes().all(|b| b == b'-' || b.is_ascii_hexdigit()))
+    .then_some(id)
+}
+
+/// The Claude project of every live Nacre AI session, or None when one of them
+/// cannot be placed (e.g. a Codex thread): then no chat can be proven closed.
+fn live_session_projects(home: &Path, panes: &[TmuxPane]) -> Option<Vec<String>> {
+    let projects: Vec<_> = fs::read_dir(home.join(".claude/projects"))
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .collect();
+    let mut live = Vec::new();
+    for pane in panes.iter().filter(|pane| pane.name.starts_with("ai-")) {
+        let thread = session_thread(&pane.name)?;
+        let project = projects
+            .iter()
+            .find(|project| project.join(format!("{thread}.jsonl")).is_file())?;
+        live.push(project.file_name()?.to_string_lossy().into_owned());
+    }
+    Some(live)
+}
+
+fn chat_has_live_tmux(path: &Path, panes: &[TmuxPane], live_projects: &[String]) -> bool {
     let target = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let chat = claude_project_name(path);
     panes.iter().any(|pane| {
-        fs::canonicalize(&pane.cwd).unwrap_or_else(|_| pane.cwd.clone()) == target
-            || pane.name.starts_with("ai-") && pane.name.ends_with(&format!("-{id}"))
-    })
+        fs::canonicalize(&pane.cwd)
+            .unwrap_or_else(|_| pane.cwd.clone())
+            .starts_with(&target)
+    }) || live_projects
+        .iter()
+        .any(|project| in_chat_project(project, &chat))
 }
 
 fn prune_ai_chats(
@@ -281,6 +338,10 @@ fn prune_ai_chats_with(
     if days == 0 {
         return Ok(0);
     }
+    let Some(live_projects) = live_session_projects(&paths.home, panes) else {
+        tracing::warn!("A live AI session has no known chat folder; skipping AI chat retention");
+        return Ok(0);
+    };
     let entries = match fs::read_dir(&root) {
         Ok(entries) => entries,
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
@@ -296,7 +357,7 @@ fn prune_ai_chats_with(
             || !meta.is_dir()
             || meta.file_type().is_symlink()
             || meta.uid() != nix::unistd::getuid().as_raw()
-            || !old_chat(&path, days, now)
+            || !old_chat(&paths.home, &path, days, now)
         {
             continue;
         }
@@ -304,7 +365,7 @@ fn prune_ai_chats_with(
         if saved_chat_path(paths, &path) {
             continue;
         }
-        if chat_has_live_tmux(&path, panes) {
+        if chat_has_live_tmux(&path, panes, &live_projects) {
             tracing::info!(directory=%path.display(), "Keeping open Nacre AI chat");
             continue;
         }
@@ -643,22 +704,66 @@ mod tests {
     }
 
     #[test]
-    fn active_tmux_chat_is_preserved_by_session_name_or_pane_cwd() -> Result<()> {
+    fn active_tmux_chat_is_preserved_by_pane_cwd_or_session_transcript() -> Result<()> {
         let home = tempfile::tempdir()?;
         let chat = home.path().join("0123456789abcdef0123456789abcdef");
-        fs::create_dir(&chat)?;
-        let by_cwd =
-            parse_tmux_panes(&format!("ai-demo-claude-default-7\t{}", chat.display())).unwrap();
-        let by_id = parse_tmux_panes(&format!(
-            "ai-demo-codex-profile-work-resume-{}\t/tmp",
-            chat.file_name().unwrap().to_string_lossy()
+        let nested = chat.join("fedcba9876543210fedcba9876543210");
+        fs::create_dir_all(&nested)?;
+        let in_chat = parse_tmux_panes(&format!("shell\t{}", chat.display())).unwrap();
+        let in_nested = parse_tmux_panes(&format!("shell\t{}", nested.display())).unwrap();
+        let elsewhere = parse_tmux_panes(&format!("shell\t{}", home.path().display())).unwrap();
+        assert!(chat_has_live_tmux(&chat, &in_chat, &[]));
+        assert!(chat_has_live_tmux(&chat, &in_nested, &[]));
+        assert!(!chat_has_live_tmux(&chat, &elsewhere, &[]));
+
+        // A session whose pane moved to $HOME is still found through its transcript.
+        let thread = "5d0352a0-9307-4a5d-b687-2cc977fcbee7";
+        let project = home
+            .path()
+            .join(".claude/projects")
+            .join(claude_project_name(&nested));
+        fs::create_dir_all(&project)?;
+        fs::write(project.join(format!("{thread}.jsonl")), "{}\n")?;
+        let session = parse_tmux_panes(&format!(
+            "ai-general-chat-claude-default-{thread}\t{}",
+            home.path().display()
         ))
         .unwrap();
-        let unrelated = parse_tmux_panes("ai-demo-codex-default-resume-other\t/tmp").unwrap();
-        assert!(chat_has_live_tmux(&chat, &by_cwd));
-        assert!(chat_has_live_tmux(&chat, &by_id));
-        assert!(!chat_has_live_tmux(&chat, &unrelated));
+        let live = live_session_projects(home.path(), &session).unwrap();
+        assert!(chat_has_live_tmux(&chat, &session, &live));
+        assert!(!chat_has_live_tmux(
+            &home.path().join("00000000000000000000000000000000"),
+            &session,
+            &live
+        ));
+        // A live session that cannot be placed blocks the whole pass.
+        let unknown = parse_tmux_panes(&format!(
+            "ai-demo-codex-default-0b6f5f2e-1111-4222-8333-944445555666\t{}",
+            home.path().display()
+        ))
+        .unwrap();
+        assert!(live_session_projects(home.path(), &unknown).is_none());
         assert!(parse_tmux_panes("malformed-live-pane").is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn a_recent_transcript_keeps_a_chat_with_old_files() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let chat = home.path().join("0123456789abcdef0123456789abcdef");
+        fs::create_dir_all(&chat)?;
+        let old = fs::File::create(chat.join("notes.txt"))?;
+        let week_ago = SystemTime::now() - Duration::from_secs(8 * DAY);
+        old.set_modified(week_ago)?;
+        fs::File::open(&chat)?.set_modified(week_ago)?;
+        assert!(old_chat(home.path(), &chat, 7, SystemTime::now()));
+        let project = home
+            .path()
+            .join(".claude/projects")
+            .join(format!("{}-child", claude_project_name(&chat)));
+        fs::create_dir_all(&project)?;
+        fs::write(project.join("thread.jsonl"), "{}\n")?;
+        assert!(!old_chat(home.path(), &chat, 7, SystemTime::now()));
         Ok(())
     }
 
@@ -755,7 +860,7 @@ mod tests {
             .status()?;
         assert!(status.success());
         let now = SystemTime::now() + Duration::from_secs(29 * DAY);
-        assert!(!old_chat(&chat, 30, now));
+        assert!(!old_chat(home.path(), &chat, 30, now));
         Ok(())
     }
 

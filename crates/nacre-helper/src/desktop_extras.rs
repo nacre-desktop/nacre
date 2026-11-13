@@ -226,6 +226,7 @@ fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
     let _guard = crate::files::lock(&timestamps.with_extension("json.lock"))?;
     let mut known = read_clip_timestamps(&timestamps)?;
     let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let max_age = clip_history_age(paths);
     let mut live = HashSet::new();
     let mut remove = Vec::new();
     for row in rows {
@@ -237,7 +238,7 @@ fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
         }
         live.insert(id.to_owned());
         let created = *known.entry(id.to_owned()).or_insert(now);
-        if !should_expire_clip(created, now, false, clip_history_age(paths)) {
+        if !should_expire_clip(created, now, false, max_age) {
             continue;
         }
         let decoded = match run_command(&["cliphist", "decode"], Some(row.as_bytes())) {

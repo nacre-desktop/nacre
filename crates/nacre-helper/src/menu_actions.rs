@@ -75,7 +75,10 @@ fn screenshot_path(paths: &Paths, date: &str) -> Result<PathBuf> {
         .create_new(true)
         .mode(0o600)
         .open(&path)?;
-    crate::history_retention::record_screenshot(paths, &path)?;
+    // Retention bookkeeping must never cost the user the capture itself.
+    if let Err(error) = crate::history_retention::record_screenshot(paths, &path) {
+        tracing::warn!(file=%path.display(), %error, "Could not record screenshot for retention");
+    }
     Ok(path)
 }
 fn capture_message() -> String {
