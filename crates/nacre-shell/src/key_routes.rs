@@ -9,7 +9,7 @@ use bead::{
     core::{Value, source::Source},
     services::ipc::Call,
 };
-use nacre_protocol::menu::{MenuActivated, MenuView};
+use nacre_protocol::menu::MenuActivated;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -259,6 +259,7 @@ impl Brightness {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use nacre_protocol::menu::MenuView;
     use serde_json::json;
     fn call(method: &str, args: &[&str]) -> Call {
         crate::commands::from_strings(
