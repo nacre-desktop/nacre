@@ -98,23 +98,23 @@ impl Drop for TrayCleanup {
 async fn run_tray_inner(hub: Shared) -> Result<()> {
     use futures_lite::StreamExt;
     let connection = zbus::Connection::session().await?;
-    let owner_rule = zbus::MatchRule::builder()
-        .msg_type(zbus::message::Type::Signal)
-        .sender("org.freedesktop.DBus")?
-        .interface("org.freedesktop.DBus")?
-        .member("NameOwnerChanged")?
-        .build();
-    let mut owners = zbus::MessageStream::for_match_rule(owner_rule, &connection, Some(16)).await?;
+    // The watcher's owner changes, and names leaving the bus (registered items).
+    let bus = zbus::fdo::DBusProxy::new(&connection).await?;
+    let mut owners = bus
+        .receive_name_owner_changed_with_args(&[(0, WATCHER)])
+        .await?;
+    let mut lost = bus.receive_name_owner_changed_with_args(&[(2, "")]).await?;
     loop {
         let watcher_owner = match name_owner(&connection, WATCHER).await {
             Ok(owner) => owner,
             Err(_) => {
                 hub.borrow_mut().service("tray", "waiting", 0)?;
                 hub.borrow_mut().publish("tray", empty_tray(false))?;
-                let owner = owners.next().await.ok_or("Tray owner stream closed")??;
-                let (_name, _old, new): (String, String, String) = owner.body().deserialize()?;
-                if new.is_empty() {
-                    continue;
+                loop {
+                    let owner = owners.next().await.ok_or("Tray owner stream closed")?;
+                    if owner.args()?.new_owner().is_some() {
+                        break;
+                    }
                 }
                 continue;
             }
@@ -137,31 +137,35 @@ async fn run_tray_inner(hub: Shared) -> Result<()> {
         }
         register_tray_host(&connection, &watcher_owner).await?;
         hub.borrow_mut().service("tray", "running", 0)?;
-        publish_tray(&hub, &connection, &watcher_owner).await?;
+        let mut tray = Tray::default();
+        publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
         loop {
             tokio::select! {
                 signal = signals.next() => {
                     let _signal = signal.ok_or("Tray watcher signal stream closed")??;
-                    publish_tray(&hub, &connection, &watcher_owner).await?;
+                    publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
                 }
                 signal = item_signals.next() => {
                     let signal = signal.ok_or("Tray item signal stream closed")??;
-                    if let Some(sender) = signal.header().sender().map(|sender| sender.to_string()) {
-                        if registered_owners(&connection, &watcher_owner).await?.contains(&sender) {
-                            publish_tray(&hub, &connection, &watcher_owner).await?;
+                    // One GetAll for the signalling item only; the rest keep their rows.
+                    let sender = signal.header().sender().map(|sender| sender.to_string()).unwrap_or_default();
+                    if let Some(rows) = tray.items.get(&sender).cloned() {
+                        for (id, path) in rows {
+                            tray.rows.insert(id, item_row(&connection, &sender, &path).await);
                         }
+                        tray.publish(&hub)?;
                     }
                 }
                 owner = owners.next() => {
-                    let owner = owner.ok_or("Tray watcher owner stream closed")??;
-                    let (name, _old, _new): (String, String, String) = owner.body().deserialize()?;
-                    if name == WATCHER {
-                        hub.borrow_mut().service("tray", "waiting", 0)?;
-                        hub.borrow_mut().publish("tray", empty_tray(false))?;
-                        break;
-                    }
-                    if registered_names(&connection, &watcher_owner).await?.contains(&name) {
-                        publish_tray(&hub, &connection, &watcher_owner).await?;
+                    owner.ok_or("Tray watcher owner stream closed")?;
+                    hub.borrow_mut().service("tray", "waiting", 0)?;
+                    hub.borrow_mut().publish("tray", empty_tray(false))?;
+                    break;
+                }
+                gone = lost.next() => {
+                    let gone = gone.ok_or("Tray owner stream closed")?;
+                    if tray.names.contains(gone.args()?.name().as_str()) {
+                        publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
                     }
                 }
             }
@@ -954,45 +958,72 @@ async fn register_tray_host(connection: &zbus::Connection, owner: &str) -> Resul
     Ok(())
 }
 
-async fn registered_owners(
-    connection: &zbus::Connection,
-    watcher_owner: &str,
-) -> Result<std::collections::BTreeSet<String>> {
-    let mut owners = std::collections::BTreeSet::new();
-    for entry in registered_entries(connection, watcher_owner)
-        .await?
-        .into_iter()
-        .take(256)
-    {
-        if let Some((name, _)) = registered_parts(&entry) {
-            if let Ok(owner) = name_owner(connection, &name).await {
-                owners.insert(owner);
-            }
-        }
+/// The published tray plus what a per-item refresh needs: registered bus
+/// names, and for each owner its `(id, path)` rows.
+#[derive(Default)]
+struct Tray {
+    names: std::collections::BTreeSet<String>,
+    items: std::collections::BTreeMap<String, Vec<(String, String)>>,
+    rows: serde_json::Map<String, Value>,
+    order: Vec<String>,
+}
+impl Tray {
+    fn publish(&self, hub: &Shared) -> Result<()> {
+        hub.borrow_mut().publish(
+            "tray",
+            json!({"health":{"available":true,"stale":false},"items":{"items":self.rows,"order":self.order}}),
+        )?;
+        Ok(())
     }
-    Ok(owners)
 }
 
-async fn registered_names(
-    connection: &zbus::Connection,
-    watcher_owner: &str,
-) -> Result<std::collections::BTreeSet<String>> {
-    Ok(registered_entries(connection, watcher_owner)
-        .await?
-        .into_iter()
+/// One item's row from a single `GetAll` (missing or failing properties
+/// take their defaults, as the per-property reads did).
+async fn item_row(connection: &zbus::Connection, owner: &str, path: &str) -> Value {
+    let properties = async {
+        let proxy = zbus::fdo::PropertiesProxy::builder(connection)
+            .destination(owner.to_owned())?
+            .path(path.to_owned())?
+            .build()
+            .await?;
+        let interface =
+            zbus::names::InterfaceName::try_from(ITEM_IFACE).map_err(zbus::Error::from)?;
+        proxy.get_all(interface).await
+    };
+    let mut properties = properties.await.unwrap_or_default();
+    let mut text = |key: &str| -> Option<String> {
+        properties
+            .remove(key)
+            .and_then(|value| String::try_from(value).ok())
+    };
+    let title: String = text("Title")
+        .unwrap_or_default()
+        .chars()
         .take(256)
-        .filter_map(|entry| registered_parts(&entry).map(|(name, _)| name))
-        .collect())
+        .collect();
+    let status = text("Status").unwrap_or_else(|| "Active".into());
+    let icon = text("IconName").filter(|name| {
+        name.len() <= 256
+            && !name.is_empty()
+            && name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))
+    });
+    let item_is_menu = properties
+        .remove("ItemIsMenu")
+        .and_then(|value| bool::try_from(value).ok())
+        .unwrap_or(false);
+    json!({"title":title,"visible":status != "Passive","item_is_menu":item_is_menu,"attention":status == "NeedsAttention","icon":icon,"menu":{"items":{},"order":[]}})
 }
 
 async fn publish_tray(
     hub: &Shared,
     connection: &zbus::Connection,
     watcher_owner: &str,
+    tray: &mut Tray,
 ) -> Result<()> {
     let registered = registered_entries(connection, watcher_owner).await?;
-    let mut items = serde_json::Map::new();
-    let mut order = Vec::new();
+    *tray = Tray::default();
     for entry in registered.into_iter().take(256) {
         let Some((bus_name, path)) = registered_parts(&entry) else {
             continue;
@@ -1000,42 +1031,17 @@ async fn publish_tray(
         let Ok(owner) = name_owner(connection, &bus_name).await else {
             continue;
         };
-        let Ok(proxy) =
-            zbus::Proxy::new(connection, owner.as_str(), path.as_str(), ITEM_IFACE).await
-        else {
-            continue;
-        };
-        let title: String = proxy.get_property("Title").await.unwrap_or_default();
-        let title: String = title.chars().take(256).collect();
-        let status: String = proxy
-            .get_property("Status")
-            .await
-            .unwrap_or_else(|_| "Active".into());
-        let item_is_menu: bool = proxy.get_property("ItemIsMenu").await.unwrap_or(false);
-        let icon: Option<String> =
-            proxy
-                .get_property::<String>("IconName")
-                .await
-                .ok()
-                .filter(|name| {
-                    name.len() <= 256
-                        && !name.is_empty()
-                        && name
-                            .bytes()
-                            .all(|byte| byte.is_ascii_alphanumeric() || b"._-".contains(&byte))
-                });
         let id = tray_id(connection.server_guid().as_str(), &owner, &path);
-        if items.contains_key(&id) {
+        if tray.rows.contains_key(&id) {
             continue;
         }
-        order.push(id.clone());
-        items.insert(id, json!({"title":title,"visible":status != "Passive","item_is_menu":item_is_menu,"attention":status == "NeedsAttention","icon":icon,"menu":{"items":{},"order":[]}}));
+        tray.names.insert(bus_name);
+        tray.order.push(id.clone());
+        tray.rows
+            .insert(id.clone(), item_row(connection, &owner, &path).await);
+        tray.items.entry(owner).or_default().push((id, path));
     }
-    hub.borrow_mut().publish(
-        "tray",
-        json!({"health":{"available":true,"stale":false},"items":{"items":items,"order":order}}),
-    )?;
-    Ok(())
+    tray.publish(hub)
 }
 
 fn empty_tray(available: bool) -> Value {
@@ -1276,7 +1282,7 @@ mod tests {
 
     #[tokio::test(flavor = "current_thread")]
     async fn registered_item_owner_and_methods_are_checked_on_private_bus() -> crate::Result<()> {
-        let (_home, _bus, _watcher, _item, connection, actions) = private_fixture().await?;
+        let (_home, _bus, _watcher, item, connection, actions) = private_fixture().await?;
         let owner = name_owner(&connection, "org.example.Bar").await?;
         let watcher_owner = name_owner(&connection, WATCHER).await?;
         register_tray_host(&connection, &watcher_owner).await?;
@@ -1298,7 +1304,12 @@ mod tests {
         );
         let hub = crate::daemon::hub::Hub::new("fixture".into(), false, Duration::from_millis(1))
             .shared();
-        publish_tray(&hub, &connection, &name_owner(&connection, WATCHER).await?).await?;
+        let mut tray = Tray::default();
+        publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
+        let published = hub.borrow().snapshot("tray").ok_or("Missing tray")?;
+        assert_eq!(published["items"]["items"][&id]["title"], "Fixture item");
+        assert_eq!(published["items"]["items"][&id]["icon"], "fixture-icon");
+        assert!(tray.names.contains("org.example.Bar"));
         for (method, request) in [
             (
                 "tray.activate",
@@ -1359,6 +1370,17 @@ mod tests {
                 ("horizontal".into(), -2, 0),
             ]
         );
+        // A registered name leaving the bus reaches the tray's `arg2=''` owner match.
+        use futures_lite::StreamExt;
+        let mut lost = zbus::fdo::DBusProxy::new(&connection)
+            .await?
+            .receive_name_owner_changed_with_args(&[(2, "")])
+            .await?;
+        assert!(item.release_name("org.example.Bar").await?);
+        let gone = tokio::time::timeout(Duration::from_secs(5), lost.next())
+            .await?
+            .ok_or("Owner stream closed")?;
+        assert_eq!(gone.args()?.name().as_str(), "org.example.Bar");
         Ok(())
     }
 
