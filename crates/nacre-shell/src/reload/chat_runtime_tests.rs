@@ -409,10 +409,12 @@ fn unpinned_sidebar_leaves_with_grace_reentry_and_detached_exemption() {
         "detached panels stay open"
     );
     step(&mut runtime, UiEvent::PanelDetached(false));
-    let deadline = runtime
-        .session
-        .hover_close_deadline()
-        .expect("attached leave grace");
+    let deadline = runtime.wakeup_at().expect("reattach grace starts");
+    let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+    assert!(
+        remaining > Duration::from_millis(400) && remaining <= Duration::from_millis(450),
+        "dock animation outlasts the ordinary leave delay: {remaining:?}"
+    );
     std::thread::sleep(
         deadline.saturating_duration_since(std::time::Instant::now()) + Duration::from_millis(5),
     );
@@ -421,6 +423,34 @@ fn unpinned_sidebar_leaves_with_grace_reentry_and_detached_exemption() {
         runtime.session.stores.get("panel.open"),
         Some(&bead::core::Value::Bool(false))
     );
+}
+
+#[test]
+fn reattaching_under_the_pointer_cancels_transition_close_and_restores_normal_delay() {
+    let _guard = serial();
+    let (_, chat) = crate::chat::tests::offline(json!({"available":true,"channels":{}}));
+    let mut runtime = runtime(chat);
+    step(
+        &mut runtime,
+        UiEvent::Model(BTreeMap::from([
+            (
+                "bead.focused".into(),
+                bead::core::Value::Text(String::new()),
+            ),
+            ("panel.hover_opened".into(), bead::core::Value::Bool(true)),
+        ])),
+    );
+    step(&mut runtime, UiEvent::PanelDetached(true));
+    step(&mut runtime, UiEvent::PanelDetached(false));
+    step(&mut runtime, UiEvent::PointerRegion(true));
+    assert!(runtime.reattach_hover_grace_until.is_none());
+    assert!(runtime.session.hover_close_deadline().is_none());
+    step(&mut runtime, UiEvent::PointerRegion(false));
+    let deadline = runtime
+        .session
+        .hover_close_deadline()
+        .expect("later real leave closes normally");
+    assert!(deadline <= std::time::Instant::now() + Duration::from_millis(140));
 }
 
 #[test]

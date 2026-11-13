@@ -691,6 +691,7 @@ pub struct Runtime {
     dashboard_pearl_deadline: Option<std::time::Instant>,
     /// Scalar view animations wait for the panel's independent compositor slide.
     panel_animation_hold_until: Option<std::time::Instant>,
+    reattach_hover_grace_until: Option<std::time::Instant>,
     pending_panel_animation_duration: Option<std::time::Duration>,
     pending_panel_navigation: Option<String>,
     dashboard_subscription: Vec<bead::core::source::Subscription>,
@@ -2637,6 +2638,7 @@ impl Runtime {
             dashboard_pearl_animation: None,
             dashboard_pearl_deadline: None,
             panel_animation_hold_until: None,
+            reattach_hover_grace_until: None,
             pending_panel_animation_duration: None,
             pending_panel_navigation: None,
             dashboard_subscription: Vec::new(),
@@ -5372,11 +5374,16 @@ impl SceneSource for Runtime {
                     .map(|preview| preview.prepared_at + WIDGET_HOVER_PREVIEW_RENEW)
             })
             .flatten();
+        let hover_close = self.session.hover_close_deadline().map(|deadline| {
+            self.reattach_hover_grace_until
+                .map_or(deadline, |grace| deadline.max(grace))
+        });
         [
             send,
             hover,
             view_animation,
-            self.session.hover_close_deadline(),
+            hover_close,
+            self.reattach_hover_grace_until,
             self.dashboard_pearl_deadline,
         ]
         .into_iter()
@@ -6051,6 +6058,12 @@ impl SceneSource for Runtime {
     }
     fn stage(&mut self, mut event: UiEvent) -> Result<Option<Scene>, Box<dyn Error>> {
         let now = std::time::Instant::now();
+        if self
+            .reattach_hover_grace_until
+            .is_some_and(|deadline| now >= deadline)
+        {
+            self.reattach_hover_grace_until = None;
+        }
         if let UiEvent::PanelVisibility(open) = &event
             && let Some(duration) = self.session.motion_duration(*open)
         {
@@ -9417,6 +9430,9 @@ impl SceneSource for Runtime {
             UiEvent::PointerRegion(entered)
                 if self.session.stores.get("panel.hover_opened").is_some() =>
             {
+                if entered {
+                    self.reattach_hover_grace_until = None;
+                }
                 self.session.pointer_region(entered)?
             }
             UiEvent::PointerRegion(entered) => {
@@ -9486,10 +9502,21 @@ impl SceneSource for Runtime {
                     }
                 }
                 if self.session.stores.get("view.detached").is_some() {
-                    self.session.update(BTreeMap::from([(
+                    let reattaching = !detached
+                        && self.session.stores.get("view.detached")
+                            == Some(&bead::core::Value::Bool(true));
+                    let values = BTreeMap::from([(
                         "view.detached".into(),
                         bead::core::Value::Bool(detached),
-                    )]))?
+                    )]);
+                    if reattaching
+                        && self.session.stores.get("panel.hover_opened")
+                            == Some(&bead::core::Value::Bool(true))
+                    {
+                        self.reattach_hover_grace_until =
+                            Some(std::time::Instant::now() + std::time::Duration::from_millis(450));
+                    }
+                    self.session.update(values)?
                 } else {
                     self.session.relayout()?
                 }
