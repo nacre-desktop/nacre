@@ -231,7 +231,7 @@ fn all_popout_and_launcher_placement_masks_match_qml() -> Result<()> {
                     pair.pixels[out + width as usize * 4..out + width as usize * 8]
                         .copy_from_slice(&pixels.pixels[start..start + width as usize * 4]);
                 }
-                pair.save(&golden.join(format!("pair-{name}-{scale}.png")))?;
+                pair.save(&artifacts.join(format!("pair-{name}-{scale}.png")))?;
             }
         }
     }
