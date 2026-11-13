@@ -532,7 +532,7 @@ pub(super) async fn select(engine: &Path, path: &str) -> bool {
 
 /// `wallpaper-media session --watch`: logind lock and sleep state, as the QML used it.
 pub(super) struct Session {
-    _child: tokio::process::Child,
+    child: tokio::process::Child,
     lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
 }
 impl Session {
@@ -549,17 +549,23 @@ impl Session {
             .take()
             .ok_or("Missing session watcher output")?;
         Ok(Self {
-            _child: child,
+            child,
             lines: BufReader::new(stdout).lines(),
         })
     }
     /// True while the session is asleep or locked.
     pub(super) async fn next(&mut self) -> Result<bool> {
-        let line = self
-            .lines
-            .next_line()
-            .await?
-            .ok_or("Session watcher ended")?;
+        let Some(line) = self.lines.next_line().await? else {
+            use std::os::unix::process::ExitStatusExt;
+            // N0317: systemd stops the daemon by signalling its whole cgroup, so a watcher
+            // ended by SIGTERM means this daemon is stopping too: wait to be cancelled
+            // (TimeoutStopSec is 5 s) instead of reporting a failure.
+            let exit = tokio::time::timeout(Duration::from_secs(1), self.child.wait()).await;
+            if matches!(exit, Ok(Ok(status)) if status.signal() == Some(nix::libc::SIGTERM)) {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+            }
+            return Err("Session watcher ended".into());
+        };
         let state: Value = serde_json::from_str(&line)?;
         Ok(state["locked"] == true || state["sleeping"] == true)
     }

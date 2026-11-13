@@ -1205,3 +1205,34 @@ async fn missing_upower_is_not_ready_and_never_notifies() {
         })
         .await;
 }
+
+#[tokio::test(flavor = "current_thread")]
+async fn a_session_watcher_stopped_with_the_daemon_is_not_reported() {
+    use nix::sys::signal::{kill, Signal};
+    let dir = tempfile::tempdir().unwrap();
+    let engine = dir.path().join("engine");
+    std::fs::write(
+        &engine,
+        "#!/bin/sh\necho '{\"locked\":true,\"sleeping\":false}'\nexec sleep 30\n",
+    )
+    .unwrap();
+    std::fs::set_permissions(&engine, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
+    let pid = |session: &Session| nix::unistd::Pid::from_raw(session.child.id().unwrap() as i32);
+    // systemd's stop signal reaches the watcher too: wait for the daemon's own shutdown.
+    let mut session = Session::spawn(&engine).unwrap();
+    assert!(session.next().await.unwrap());
+    kill(pid(&session), Signal::SIGTERM).unwrap();
+    assert!(
+        tokio::time::timeout(Duration::from_millis(1500), session.next())
+            .await
+            .is_err()
+    );
+    // Any other end is still a failure the supervisor restarts.
+    let mut session = Session::spawn(&engine).unwrap();
+    assert!(session.next().await.unwrap());
+    kill(pid(&session), Signal::SIGKILL).unwrap();
+    assert!(tokio::time::timeout(Duration::from_secs(5), session.next())
+        .await
+        .unwrap()
+        .is_err());
+}
