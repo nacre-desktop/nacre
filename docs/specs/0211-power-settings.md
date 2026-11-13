@@ -19,11 +19,24 @@ in the registry and `power.json`; no root configuration or new system service.
   and restores it on activity. Displays without writable brightness remain unchanged.
   Existing private idle listeners and sleep-lock policy are preserved; there is
   no separate stored lock-on-idle boolean in this checkout (the row opens private policy).
-  Source Niri idle controls stay hidden until its existing password-unlock acceptance
-  gate passes; packaged Niri uses its installed lock service.
-- Lid and short power-button actions use compositor bindings with the existing
-  user-session hardware-event inhibitor. Suspend/lock remain available when locked.
-  Menu opens the existing power menu. No logind configuration is edited.
+  Niri idle controls (source and packaged) stay hidden until the existing
+  password-unlock acceptance gate passes; the packaged lock service handles
+  explicit lock requests only until then.
+- Short power-button actions use compositor bindings behind the existing
+  power-key inhibitor. Lid "suspend" stays with logind (so HandleLidSwitchDocked
+  keeps a docked laptop awake); only "lock" and "nothing" make the daemon hold a
+  `handle-lid-switch` inhibitor over D-Bus while the compositor binding acts.
+  Before the daemon writes a policy, the seeds equal the default (button locks,
+  lid left to logind). Hyprland matches switch binds by device name; the kernel
+  names every ACPI lid "Lid Switch". Suspend/lock remain available when locked;
+  "menu" falls back to suspend while hyprlock is running, since the menu cannot
+  open over the lock screen. No logind configuration is edited.
+- The idle service restarts (and the compositor reloads) only when the generated
+  file content changed, because hyprlock lives in the idle unit's cgroup; a failed
+  restart is started again rather than left stopped. Power loads before host so
+  host overrides still win. Saver failures retry only when their inputs change,
+  Hyprland mode changes keep VRR on/off and bit depth (not HDR or VRR modes 2/3),
+  and stale dim records for unplugged displays are dropped.
 
 Settings apply live; installing the new session include/unit wiring requires a
 session restart. The lead owns deployment and physical/live validation. No

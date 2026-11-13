@@ -52,5 +52,5 @@ load_private("desktop")
 -- Nacre native desktop shortcuts
 load_private("shortcuts")
 load_private("profile")
-load_private("host")
 load_private("power")
+load_private("host")

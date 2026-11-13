@@ -347,7 +347,7 @@ fn prepare_configuration_inner(
         fs::create_dir_all(power_policy.parent().ok_or("Invalid power policy path")?)?;
         fs::write(
             &power_policy,
-            "// Generated from power.json at daemon startup.\n",
+            crate::daemon::power_policy::niri_policy(&serde_json::json!({})),
         )?;
     }
     let generated = crate::compositor_config::render(&contract, &directory, "niri")?;
@@ -487,12 +487,14 @@ window-rule {
         "keyboard.kdl",
         "profile.kdl",
         "colors.kdl",
+        "power-policy.kdl",
         "host.kdl",
     ] {
-        let path = if name == "colors.kdl" {
-            palette_include(paths, &config)
-        } else {
-            config.join(name)
+        let path = match name {
+            "colors.kdl" => palette_include(paths, &config),
+            // Before host.kdl so the user's host override still wins.
+            "power-policy.kdl" => power_policy.clone(),
+            _ => config.join(name),
         };
         text.push_str(&format!(
             "include {}\n",
@@ -500,10 +502,6 @@ window-rule {
         ));
     }
     text.push_str("include \"desktop.kdl\"\n");
-    text.push_str(&format!(
-        "include {}\n",
-        json::encode(&power_policy.to_string_lossy())?
-    ));
     // N0103: after desktop.kdl, whose session-wide window rule (shadow, background blur)
     // would otherwise override the pearl and Widgets rules; user custom.kdl still comes last.
     text.push_str(&format!(

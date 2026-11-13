@@ -243,7 +243,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         existing_power_policy.read_text()
         if existing_power_policy.is_file()
         else (
-            "// Safe until the daemon loads the saved power.json policy.\n"
+            "// Default policy until the daemon loads power.json; the lid stays with logind.\n"
             'binds { XF86PowerOff repeat=false allow-when-locked=true { spawn "loginctl" "lock-session"; }; }\n'
             'switch-events { lid-close { spawn "true"; }; }\n'
         ),
