@@ -183,7 +183,7 @@ fn prepare(reply: Json, expected_query: Option<&str>) -> source::Result<Prepared
             .or(item.description)
             .unwrap_or_default();
         let mut row = json!({"id":id,"name":item.name,"kind":item.kind,
-            "description":description,"icon":item.icon.filter(|s|!s.is_empty()).unwrap_or_else(||"application-x-executable".into()),
+            "description":description,"icon":item.icon.unwrap_or_default(),
             "disabled":item.disabled});
         for (key, value) in [
             ("emoji", item.emoji),

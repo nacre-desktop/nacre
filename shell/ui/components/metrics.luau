@@ -25,8 +25,9 @@ M.grid_gap_x=6
 M.grid_gap_y=5
 M.quick_width=S.xl*13
 M.quick_gap=S.xl
-M.quick_top=S.xxl*3+S.md
-M.quick_height=S.huge*13-S.compact
+-- D11: the card's top lines up with the page title (the panel's 16 px top padding); its bottom edge is unchanged.
+M.quick_top=S.md+S.xs
+M.quick_height=S.huge*15-S.compact+S.xs
 M.quick_radius=T.radii.small+S.compact/2
 M.quick_padding=S.md+S.hairline/2
 M.button_radius=T.radii.small+S.hairline/2

@@ -318,3 +318,65 @@ so there is no nested PANEL_SLIDE capture for this unit; reduced motion is unaff
 - Light goldens for Settings: D17 (N0249); this unit's light evidence is the renders above.
 - Delete `shell/widgets/segment.luau` and the `link` branch's chevron when `kit.Segment` /
   `kit.LinkRow` land (asks 1 and 2).
+
+## D11 launcher polish (N0241)
+
+Scope: the launcher's content column, rail, tiles, result rows and Quick controls card in `shell/ui/` (Luau on
+Bead kit, palette roles and size tokens). Rust only where the row model needs it (`launcher.rs` icon default).
+The owner's N0221e picks (On/Off switches and choosers, wallpaper picker, tinted glyphs) and the N0219 keyboard
+zones are unchanged.
+
+What changed
+- One heading: the section title is dropped when it repeats the page title (`main.luau`; "Applications" twice
+  on All apps). Home ("Home" / "Favorites") and results ("Results" or the file hint) keep it, so the N0219
+  stationary first result row still holds across results states; the app grid starts 28 px higher.
+- Initial-circle fallback (`components/item-icon.luau`): a row without an icon is a circle of `surfaceContainer`
+  tinted 12 % toward `primary` with the name's first character in `primary`, 600 weight, 40 % of the icon size
+  (grid 36 px, results 30 px). Contrast 10.0:1 dark, 4.76:1 light. `launcher.rs` no longer substitutes the
+  `application-x-executable` theme icon for an empty icon (the generic grey tile the review flagged).
+- One selection cue: the tile, the result row and the rail entry keep the 3 px `primary` accent bar and their
+  existing subtle fill; the framework's selected border is off (`border_color="transparent"`). Bead's keyboard
+  focus ring (1 px `primary`) is unchanged, so focus stays visible.
+- Rail (D1 tint): glyphs 18 px (`T.icons.large`, was 20), muted `onSurfaceVariant` tinted by the N0221e
+  wallpaper tint (`icon-tone`), the selected glyph in `primary` and its label at 500.
+- Quick controls: the card's top is the page title's top (16 px, the panel's top padding; was 84 px); its bottom
+  edge is unchanged (`metrics.luau`).
+
+Known gaps
+- An icon name the theme cannot resolve still shows the generic fallback asset: resolving every row on the
+  source thread would cost theme scans (B0187 measured ~12 ms per miss); only empty icons get the circle.
+- The mockup's tile glyph is a 48 px rounded square; the review text asks for a circle like the pearls, and the
+  grid keeps its 36 px icon size.
+
+Bug fixes in this unit (separate commits)
+- B4 (Platform N0316 tier-2 smoke, "launcher jumps sideways on Left/Right"): not reproduced. The smoke's own
+  frames (`hypr-smoke2-02..04`, `niri-extra-30..35`, taken 300 ms after each key) show the panel body at the
+  same pixels (Hyprland: x 411-1508 in all three), and the positioner input does not depend on focus: the
+  committed scene's body stays 1100 x 590 and the bottom-attached origin is identical across
+  right/right/left/left/right (rail -> content -> rail -> content), now pinned by
+  `launcher_panel_origin_stays_put_while_keyboard_focus_crosses_zones`. The keys in that run landed inside a
+  1.2-1.3 s open slide (nested `PANEL_SLIDE ... max_gap_ms=1013.6`), the likeliest source of what was seen;
+  confirm on a live session.
+- N0309 (extras command palette): a `stale_revision` reply to `menu.activate` no longer shows "Action
+  unavailable; refresh and try again". The palette re-queries silently and retries the same row once with its
+  fresh activation ticket, like the launcher's one-shot retry; a second stale reply, a vanished row or a failed
+  query still shows the message. The retry is dropped if the query, route or daemon boot changes first (the
+  existing "no obsolete activation survives a new query/boot" rule). Test:
+  `palette_requeries_and_retries_a_stale_activation_once_without_a_message` (one and two stale replies).
+
+Motion
+- No transition changed: the launcher's bottom-edge reveal (0.3 s open, 0.18 s return, interruptible retarget)
+  and its frame contour are untouched; D11 only changes the static layout inside the panel, with no new
+  animation, per-frame allocation or relayout. Reduced motion behaves as before.
+
+Evidence
+- Before/after real-renderer PNGs (dark and light; grid and results; selected, hover, tile focus, rail focus)
+  with notes: the unit worktree's `.lead/renders/` (not committed).
+- Goldens updated (looked at each): `launcher-rows-{grid,results,scrolled}`, `launcher-two-line-{1,1.5}`,
+  `launcher-conversion`, `launcher-conversion-error`, `launcher-guidance`, and the launcher reveal fixtures
+  under `crates/nacre-shell/tests/fixtures/bead-layer-motion/reveal-goldens/`.
+- `files_hint_keeps_first_result_at_the_same_pixel_row` now starts from a results query: the grid no longer
+  has the reserved section line, results states still keep the first row on the same pixel row.
+
+Strings and settings: none added or removed. Kit asks: none required (optional `kit.Monogram` noted in the unit
+worktree's `.lead/kit-asks.md`).

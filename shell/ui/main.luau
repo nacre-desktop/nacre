@@ -74,24 +74,29 @@ if ui.resolve_for_check(ui.bind("launcher.form.kind"))~="" then
     panel[1]=Form{}
     return kit.Panel(panel)
 end
+local content={
+    ui.Text{text=ui.bind("launcher.route_title"),font_size=16,height=32},
+    ui.Text{text=ui.bind("launcher.subtitle"),color="onSurfaceVariant",font_size=13.333,height=20},
+    ui.Text{id="source-error",text=ui.bind("launcher.error"),visible=ui.bind("launcher.failed"),color="error",font_size=13.333,height=20},
+    detail,
+    ui.Text{id="no-results",text=ui.bind("launcher.empty_text"),visible=not plugin_active and ui.bind("launcher.empty"),color="onSurfaceVariant",font_size=13.333,height=20},
+    ui.resolve_for_check(ui.bind("launcher.plugin.active")) and Plugins()
+        or detail_only and ui.Box{grow=1} or ui.resolve_for_check(ui.bind("launcher.grid"))
+        and ui.Box{id="grid-host",grow=1,AppGrid{}}
+        or ui.Box{id="results-host",grow=1,Results{},Chooser()},
+    ui.Box{height=10},
+}
+-- D11: no section title that repeats the page title ("Applications" twice).
+if ui.resolve_for_check(ui.bind("launcher.subtitle"))==ui.resolve_for_check(ui.bind("launcher.route_title")) then
+    table.remove(content,2)
+end
 local body={
     ui.Row{grow=1,
         ui.memo("launcher.sidebar",{},function() return Sidebar{} end),
         ui.Box{width=18,height="fill",
             ui.Box{position="absolute",left=8,top=2,width=1,height="98%",fill="outlineVariant"},
         },
-        ui.Column{grow=1,gap=8,
-            ui.Text{text=ui.bind("launcher.route_title"),font_size=16,height=32},
-            ui.Text{text=ui.bind("launcher.subtitle"),color="onSurfaceVariant",font_size=13.333,height=20},
-            ui.Text{id="source-error",text=ui.bind("launcher.error"),visible=ui.bind("launcher.failed"),color="error",font_size=13.333,height=20},
-            detail,
-            ui.Text{id="no-results",text=ui.bind("launcher.empty_text"),visible=not plugin_active and ui.bind("launcher.empty"),color="onSurfaceVariant",font_size=13.333,height=20},
-            ui.resolve_for_check(ui.bind("launcher.plugin.active")) and Plugins()
-                or detail_only and ui.Box{grow=1} or ui.resolve_for_check(ui.bind("launcher.grid"))
-                and ui.Box{id="grid-host",grow=1,AppGrid{}}
-                or ui.Box{id="results-host",grow=1,Results{},Chooser()},
-            ui.Box{height=10},
-        },
+        ui.Column{grow=1,gap=8,table.unpack(content)},
         show_quick and ui.Box{width=M.quick_width+M.quick_gap,height=0,shrink=0} or nil,
     },
     show_quick and ui.memo("launcher.quick",{},function() return Quick{} end) or ui.Box{id="quick",position="absolute",visible=false,width=0,height=0},

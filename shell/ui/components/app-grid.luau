@@ -7,7 +7,7 @@ local Lines = require("./text-lines")
 local Tile = ui.component("AppTile", {item={id="string",name="string",icon="string",selected="boolean",favorite="boolean",favoriteId="string"}}, function(p)
     return ui.Box{id="tile-wrap",width="fill",height="fill",
         ui.Button {id="tile",height="fill",width="fill",radius=11,padding=0,
-            selected=p.item.selected,fill="transparent",color="onSurface",border_color="outlineVariant",
+            selected=p.item.selected,fill="transparent",color="onSurface",border_color="transparent",
             selected_fill=ui.tint("surface","onSurface",.09),hover_fill=ui.tint("surface","onSurface",.04),
             on_activate=ui.action("select_app",p.item.id),aria_label=p.item.name,
             ui.Box{position="absolute",left=0,top=10,width=3,height="70%",radius=1.5,fill="primary",visible=p.item.selected},

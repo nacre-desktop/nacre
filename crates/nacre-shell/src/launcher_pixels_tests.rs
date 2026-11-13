@@ -56,8 +56,9 @@ fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
     for scale in [1., 1.5] {
         let mut h = harness_at_scale("", 0., scale)?;
         let mut first_y = None;
+        // Results states only: the app grid drops its repeated section title (D11).
         for (query, message) in [
-            ("", ""),
+            ("a", ""),
             (
                 ":",
                 "Search these folders; type two or more characters to find files",
