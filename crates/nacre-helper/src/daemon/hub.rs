@@ -400,6 +400,7 @@ impl Hub {
             }
             if self.services.contains_key("ai-chat") {
                 methods.extend(super::ai_chat::methods());
+                methods.extend(super::ai_app::methods());
             }
             if self.settings.is_some() && self.topics.contains_key(nacre_protocol::i18n::TOPIC) {
                 methods.extend(super::i18n::methods());
@@ -1050,6 +1051,7 @@ mod tests {
             super::super::widths::methods(),
             super::super::active_wallpaper::methods(),
             super::super::ai_chat::methods(),
+            super::super::ai_app::methods(),
             super::super::dashboard_extras::methods(),
             super::super::dashboard_player::methods(),
             super::super::brain::methods(),

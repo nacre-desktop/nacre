@@ -701,16 +701,36 @@ pub(crate) fn launcher_open_record(item: &serde_json::Value, key: &str) -> Resul
 }
 
 pub(crate) fn launcher_new(provider: &str, _project_id: &str) -> Result<()> {
+    start_chat(provider, None, None, None)
+}
+
+/// Open the "New chat" terminal window; `thread_id` is Claude's caller-chosen
+/// session id (N0319), ignored by Codex.
+pub(crate) fn start_chat(
+    provider: &str,
+    project_id: Option<&str>,
+    account: Option<&str>,
+    thread_id: Option<&str>,
+) -> Result<()> {
     if !matches!(provider, "codex" | "claude") {
         return Err("Unknown AI provider".into());
     }
-    let args = vec![
+    let mut args = vec![
         "window".into(),
         "--worker-command".into(),
         "new".into(),
         "--agent".into(),
         provider.into(),
     ];
+    for (flag, value) in [
+        ("--project", project_id),
+        ("--account", account),
+        ("--thread-id", thread_id.filter(|_| provider == "claude")),
+    ] {
+        if let Some(value) = value {
+            args.extend([flag.into(), value.into()]);
+        }
+    }
     launch_task("nacre-ai", &args, "New chat")
 }
 
@@ -1777,6 +1797,10 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
         if project["chat_directory"] == true {
             command.arg("--chat-directory");
         }
+        let thread_id = argument(args, "--thread-id");
+        if let Some(id) = &thread_id {
+            command.args(["--thread-id", id]);
+        }
         if let Some(host) = project["host"].as_str() {
             let mut remote = vec![
                 "$HOME/.local/bin/nacre-ai-claude".into(),
@@ -1790,6 +1814,9 @@ fn run_project(command_name: &str, args: &[String]) -> Result<i32> {
             ];
             if project["chat_directory"] == true {
                 remote.push("--chat-directory".into());
+            }
+            if let Some(id) = &thread_id {
+                remote.extend(["--thread-id".into(), id.clone()]);
             }
             remote.push("--tmux".into());
             let status = run_remote(host, &remote, false)?;
@@ -1956,15 +1983,16 @@ fn set_preference(key: &str, value: serde_json::Value) -> Result<()> {
     )
 }
 
-fn accounts(agent: &str) -> Result<()> {
-    let root = PathBuf::from(env::var_os("HOME").unwrap_or_default())
+/// Profile names: `""` (the provider's own home) then the directories under
+/// the Nacre account root. Names only; nothing inside a profile is read.
+pub(crate) fn account_profiles(agent: &str) -> Vec<String> {
+    let root = home()
         .join(".local/share/nacre/ai")
         .join(if agent == "claude" {
             "claude-accounts"
         } else {
             "accounts"
         });
-    let active = ai_core::effective_account(agent, None)?;
     let mut profiles = vec![String::new()];
     if let Ok(entries) = fs::read_dir(root) {
         for entry in entries.flatten() {
@@ -1979,6 +2007,56 @@ fn accounts(agent: &str) -> Result<()> {
         }
     }
     profiles[1..].sort_by_key(|name| name.to_lowercase());
+    profiles
+}
+
+/// Login state by the CLI's exit code only (`codex login status`,
+/// `claude auth status`); its output is discarded, never parsed.
+pub(crate) fn login_status(agent: &str, account: &str) -> &'static str {
+    let status_args = if agent == "claude" {
+        ["auth", "status"]
+    } else {
+        ["login", "status"]
+    };
+    if Command::new(agent)
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_err()
+    {
+        return "not installed";
+    }
+    let Ok(delta) = ai_core::environment_delta(agent, Some(account)) else {
+        return "could not check login";
+    };
+    let mut command = Command::new(agent);
+    command
+        .args(status_args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    for (name, value) in [
+        ("CODEX_HOME", delta["set"]["CODEX_HOME"].as_str()),
+        (
+            "CLAUDE_CONFIG_DIR",
+            delta["set"]["CLAUDE_CONFIG_DIR"].as_str(),
+        ),
+    ] {
+        if let Some(value) = value {
+            command.env(name, value);
+        }
+    }
+    match command.status() {
+        Ok(status) if status.success() => "signed in",
+        Ok(_) => "not signed in",
+        Err(_) => "could not check login",
+    }
+}
+
+fn accounts(agent: &str) -> Result<()> {
+    let active = ai_core::effective_account(agent, None)?;
+    let mut profiles = account_profiles(agent);
     loop {
         let mut labels = profiles
             .iter()
@@ -2320,14 +2398,7 @@ fn create_project_at(
 
 fn setup_status() -> Vec<String> {
     let mut rows = Vec::new();
-    for (agent, label, command_args) in [
-        ("codex", "Codex", vec!["login", "status"]),
-        ("claude", "Claude Code", vec!["auth", "status"]),
-    ] {
-        if Command::new(agent).arg("--version").output().is_err() {
-            rows.push(format!("{label}: not installed"));
-            continue;
-        }
+    for (agent, label) in [("codex", "Codex"), ("claude", "Claude Code")] {
         let Ok(account) = ai_core::effective_account(agent, None) else {
             rows.push(format!("{label}: could not check login"));
             continue;
@@ -2337,29 +2408,10 @@ fn setup_status() -> Vec<String> {
         } else {
             &account
         };
-        let Ok(delta) = ai_core::environment_delta(agent, Some(&account)) else {
-            rows.push(format!("{label} · {account_label}: could not check login"));
-            continue;
-        };
-        let mut command = Command::new(agent);
-        command.args(command_args);
-        for (name, value) in [
-            ("CODEX_HOME", delta["set"]["CODEX_HOME"].as_str()),
-            (
-                "CLAUDE_CONFIG_DIR",
-                delta["set"]["CLAUDE_CONFIG_DIR"].as_str(),
-            ),
-        ] {
-            if let Some(value) = value {
-                command.env(name, value);
-            }
+        match login_status(agent, &account) {
+            "not installed" => rows.push(format!("{label}: not installed")),
+            state => rows.push(format!("{label} · {account_label}: {state}")),
         }
-        let state = match command.output() {
-            Ok(output) if output.status.success() => "signed in",
-            Ok(_) => "not signed in",
-            Err(_) => "could not check login",
-        };
-        rows.push(format!("{label} · {account_label}: {state}"));
     }
     let vault = env::var_os("NACRE_BRAIN")
         .map(PathBuf::from)
@@ -2431,6 +2483,8 @@ struct WorkerWindow {
     agent: Option<String>,
     #[arg(long)]
     account: Option<String>,
+    #[arg(long)]
+    thread_id: Option<String>,
 }
 
 fn worker_window(args: &[String]) -> Result<i32> {
@@ -2453,6 +2507,7 @@ fn worker_window(args: &[String]) -> Result<i32> {
         ("--project", options.project),
         ("--agent", options.agent),
         ("--account", options.account),
+        ("--thread-id", options.thread_id),
     ] {
         if let Some(value) = value {
             child_args.extend([flag.into(), value]);

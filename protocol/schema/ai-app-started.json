@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Started",
+  "type": "object",
+  "properties": {
+    "started": {
+      "type": "boolean"
+    },
+    "id": {
+      "description": "The chat id `ai.chats.list` will report, only for providers with\n`caller_session_id`; absent otherwise (the provider creates the id later).",
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^chat[0-9a-f]{16}$"
+    }
+  },
+  "required": [
+    "started"
+  ]
+}

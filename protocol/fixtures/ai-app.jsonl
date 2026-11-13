@@ -1,0 +1,21 @@
+{"t":"snap","topic":"ai.providers","seq":0,"data":{"providers":[{"id":"codex","label":"Codex","kind":"cli","capabilities":{"chat":true,"resume":true,"accounts":true,"usage":true,"models":false,"callerSessionId":false}},{"id":"claude","label":"Claude Code","kind":"cli","capabilities":{"chat":true,"resume":true,"accounts":true,"usage":true,"models":false,"callerSessionId":true}}]}}
+{"t":"snap","topic":"ai.projects","seq":0,"data":{"projects":[{"id":"general-chat","label":"General chat","path":"/home/user/.local/share/nacre/ai/chats"}]}}
+{"t":"snap","topic":"ai.accounts","seq":0,"data":{"accounts":[{"provider":"codex","id":"default","label":"Default","active":true,"status":"unknown"},{"provider":"claude","id":"default","label":"Default","active":true,"status":"unknown"}]}}
+{"t":"call","id":1,"m":"ai.projects.refresh","p":{}}
+{"t":"patch","topic":"ai.projects","base":0,"seq":1,"data":{"projects":[{"id":"general-chat","label":"General chat","path":"/home/user/.local/share/nacre/ai/chats"},{"id":"fixture","label":"Fixture","path":"/home/user/Projects/fixture"},{"id":"remote","label":"Remote","path":"/home/dev/remote","host":"dev-1"}]}}
+{"t":"ret","id":1,"ok":{"changed":true}}
+{"t":"call","id":2,"m":"ai.accounts.refresh","p":{}}
+{"t":"patch","topic":"ai.accounts","base":0,"seq":1,"data":{"accounts":[{"provider":"codex","id":"default","label":"Default","active":true,"status":"signed_in","checkedMs":1800000000000},{"provider":"claude","id":"default","label":"Default","active":true,"status":"missing","checkedMs":1800000000000}]}}
+{"t":"ret","id":2,"ok":{"changed":true}}
+{"t":"call","id":3,"m":"ai.chats.list","p":{"limit":2}}
+{"t":"ret","id":3,"ok":{"chats":[{"id":"chat0000000000000001","provider":"codex","project":"fixture","title":"Fixture chat","state":"running","updatedAt":1800000000.5,"account":"Default","session":"nacre-task-fixture","resumable":true},{"id":"chat0000000000000002","provider":"claude","project":"remote","host":"dev-1","title":"Remote chat","state":"saved","updatedAt":1799999000.0,"account":"Default"}],"total":3,"warning":""}}
+{"t":"call","id":4,"m":"ai.chats.start","p":{"provider":"codex","project":"fixture"}}
+{"t":"ret","id":4,"ok":{"started":true}}
+{"t":"call","id":8,"m":"ai.chats.start","p":{"provider":"claude","project":"fixture","account":"default"}}
+{"t":"ret","id":8,"ok":{"started":true,"id":"chat0000000000000003"}}
+{"t":"call","id":5,"m":"ai.chats.resume","p":{"id":"chat0000000000000001"}}
+{"t":"ret","id":5,"ok":{"ok":true,"focused":false}}
+{"t":"call","id":6,"m":"brain.search","p":{"query":"fixture"}}
+{"t":"ret","id":6,"ok":{"results":[{"title":"Fixture note","path":"projects/fixture.md","line":3,"snippet":"A fixture note"}]}}
+{"t":"call","id":7,"m":"brain.note","p":{"text":"Fixture finding\nSaved from a chat","source":"chat0000000000000001"}}
+{"t":"ret","id":7,"ok":{"path":"inbox/2026-11-13-fixture-finding.md"}}

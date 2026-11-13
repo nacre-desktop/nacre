@@ -166,6 +166,22 @@ pub struct AiProvider {
     pub lines: Vec<String>,
     #[schemars(range(min = 0, max = 9007199254740991_u64))]
     pub observed_ms: u64,
+    /// Structured quota windows when the provider reports them (N0319); absent otherwise.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[schemars(length(max = 5))]
+    pub windows: Vec<AiUsageWindow>,
+}
+/// One rate-limit window as the provider reports it; nothing is estimated.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AiUsageWindow {
+    #[schemars(length(min = 1, max = 64))]
+    pub label: String,
+    #[schemars(range(min = 0, max = 100))]
+    pub used_percent: f64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub resets_ms: Option<u64>,
 }
 /// Empty and unavailable until the first `ai.usage.refresh`; Codex quota needs a
 /// provider connection, so it is read only on request.
@@ -184,6 +200,13 @@ impl AiUsageState {
                     || p.lines.len() > MAX_USAGE_LINES
                     || p.lines.iter().any(|l| !text_valid(l, 256))
                     || !time_valid(p.observed_ms)
+                    || p.windows.len() > MAX_USAGE_LINES
+                    || p.windows.iter().any(|w| {
+                        w.label.is_empty()
+                            || !text_valid(&w.label, 64)
+                            || !(0.0..=100.0).contains(&w.used_percent)
+                            || w.resets_ms.is_some_and(|t| !time_valid(t))
+                    })
             })
         {
             return Err(invalid("Invalid AI usage state"));
@@ -466,7 +489,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
 
     let empty = json!({"health":{"available":false,"stale":false},"providers":entities(json!({}))});
     typed("ai.usage", &empty);
-    let usage = json!({"health":health,"providers":entities(json!({"codex":{"name":"Codex","lines":["codex · 5h: 12% used · resets Mon 12:00"],"observed_ms":1800000000000_u64},"claude":{"name":"Claude Code","lines":["5 hour: 3% used · resets Mon 11:00"],"observed_ms":1800000000000_u64}}))});
+    let usage = json!({"health":health,"providers":entities(json!({"codex":{"name":"Codex","lines":["codex · 5h: 12% used · resets Mon 12:00"],"observed_ms":1800000000000_u64,"windows":[{"label":"codex · 5h","usedPercent":12.0,"resetsMs":1800003600000_u64}]},"claude":{"name":"Claude Code","lines":["5 hour: 3% used · resets Mon 11:00"],"observed_ms":1800000000000_u64}}))});
     typed("ai.usage", &usage);
     let mut frames = vec![json!({"t":"snap","topic":"ai.usage","seq":0,"data":empty})];
     frames.extend(call(1, "ai.usage.refresh", json!({})));

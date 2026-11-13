@@ -5,7 +5,7 @@ use super::{down, ok, publish};
 use crate::daemon::hub::{failure, Shared};
 use nacre_protocol::{
     core_services::{Entities, EntityId},
-    dashboard_extras::{AiProvider, AiUsageState, MAX_USAGE_LINES},
+    dashboard_extras::{AiProvider, AiUsageState, AiUsageWindow, MAX_USAGE_LINES},
     ErrorCode, Failure,
 };
 use serde_json::{json, Value};
@@ -25,7 +25,7 @@ pub fn initial() -> AiUsageState {
     }
 }
 
-async fn rows(helper: &Path, agent: &str) -> Option<Vec<String>> {
+async fn rows(helper: &Path, agent: &str) -> Option<(Vec<String>, Vec<AiUsageWindow>)> {
     let mut child = tokio::process::Command::new(helper)
         .args(["nacre-ai-usage", "read", "--agent", agent])
         .stdin(std::process::Stdio::null())
@@ -47,14 +47,22 @@ async fn rows(helper: &Path, agent: &str) -> Option<Vec<String>> {
     }
     let value: Value = serde_json::from_slice(&output).ok()?;
     // The first row is the "<provider> · <account>" header the dashboard omits.
-    value["rows"].as_array().map(|rows| {
+    let rows = value["rows"].as_array().map(|rows| {
         rows.iter()
             .skip(1)
             .filter_map(Value::as_str)
             .map(|row| row.chars().filter(|c| !c.is_control()).take(256).collect())
             .take(MAX_USAGE_LINES)
             .collect()
-    })
+    })?;
+    let windows = value["windows"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|w| serde_json::from_value(w.clone()).ok())
+        .take(MAX_USAGE_LINES)
+        .collect();
+    Some((rows, windows))
 }
 
 pub async fn refresh(hub: &Shared, helper: &Path) -> std::result::Result<Value, Failure> {
@@ -75,7 +83,7 @@ pub async fn refresh(hub: &Shared, helper: &Path) -> std::result::Result<Value, 
     ] {
         let id = EntityId(key.into());
         match rows(helper, agent).await {
-            Some(lines) => {
+            Some((lines, windows)) => {
                 if !state.providers.items.contains_key(&id) {
                     state.providers.order.push(id.clone());
                 }
@@ -85,6 +93,7 @@ pub async fn refresh(hub: &Shared, helper: &Path) -> std::result::Result<Value, 
                         name: name.into(),
                         lines,
                         observed_ms: now,
+                        windows,
                     },
                 );
             }

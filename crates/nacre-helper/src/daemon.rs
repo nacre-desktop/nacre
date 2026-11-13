@@ -1,5 +1,6 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod active_wallpaper;
+pub mod ai_app;
 pub mod ai_chat;
 pub mod audio;
 pub mod audio_peak;
@@ -453,6 +454,7 @@ async fn serve(
     };
     if !counter.safe {
         brain::initial(&hub)?;
+        ai_app::initial(&hub)?;
     }
     let workers = workers::Workers::default();
     let width_shutdown = widths::Shutdown::default();

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ChatRef",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 20,
+      "pattern": "^chat[0-9a-f]{16}$"
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "id"
+  ]
+}

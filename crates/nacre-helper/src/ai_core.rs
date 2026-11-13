@@ -743,6 +743,14 @@ fn reset_time(value: &Value) -> String {
         .map(|d| d.with_timezone(&Local).format("%a %H:%M").to_string())
         .unwrap_or_else(|| "unknown".into())
 }
+/// The structured window beside a usage row; `resetsMs` only when the provider gave one.
+fn usage_window(label: &str, pct: f64, resets: &Value) -> Value {
+    let mut window = json!({"label":label,"usedPercent":pct.clamp(0.0, 100.0)});
+    if let Some(seconds) = resets.as_f64().filter(|s| s.is_finite() && *s >= 0.0) {
+        window["resetsMs"] = json!((seconds * 1000.0) as u64);
+    }
+    window
+}
 
 #[derive(Parser)]
 #[command(
@@ -872,6 +880,7 @@ fn usage(args: &[String]) -> Result<i32> {
             account
         }
     )];
+    let mut windows = Vec::new();
     if agent == "claude" {
         let data = read_private_json(&path);
         let Some(data) = data else {
@@ -891,6 +900,7 @@ fn usage(args: &[String]) -> Result<i32> {
                         pct,
                         reset_time(&w["resets_at"])
                     ));
+                    windows.push(usage_window(label, pct, &w["resets_at"]));
                 }
             }
         }
@@ -945,6 +955,11 @@ fn usage(args: &[String]) -> Result<i32> {
                                         "{ident} · {duration}: {pct}% used · resets {}",
                                         reset_time(&window["resetsAt"])
                                     ));
+                                    windows.push(usage_window(
+                                        &format!("{ident} · {duration}"),
+                                        pct,
+                                        &window["resetsAt"],
+                                    ));
                                 }
                             }
                         }
@@ -964,7 +979,7 @@ fn usage(args: &[String]) -> Result<i32> {
             Err(_) => rows.push("Usage unavailable — check login or try Refresh".into()),
         }
     }
-    println!("{}", json!({"rows":rows}));
+    println!("{}", json!({"rows":rows,"windows":windows}));
     Ok(0)
 }
 

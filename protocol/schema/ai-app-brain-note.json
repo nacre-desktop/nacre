@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BrainNote",
+  "type": "object",
+  "properties": {
+    "text": {
+      "description": "First line is the title, the rest the body.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 16384
+    },
+    "source": {
+      "description": "Free text such as the chat id the note came from.",
+      "type": "string",
+      "maxLength": 256,
+      "default": ""
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "text"
+  ]
+}

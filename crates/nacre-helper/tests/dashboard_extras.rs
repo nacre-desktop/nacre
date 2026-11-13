@@ -138,7 +138,7 @@ esac
     (
         "usage",
         r#"case "$4" in
-codex) echo '{"rows":["Codex · Default","codex · 5h: 12% used · resets Mon 12:00"]}' ;;
+codex) echo '{"rows":["Codex · Default","codex · 5h: 12% used · resets Mon 12:00"],"windows":[{"label":"codex · 5h","usedPercent":12,"resetsMs":1800003600000}]}' ;;
 claude) [ -f "$FAKE_DIR/claude-fail" ] && exit 1; echo '{"rows":["Claude Code · Default","5 hour: 3% used","Cached report: now"]}' ;;
 esac
 "#,
@@ -855,6 +855,13 @@ fn ai_usage_reads_on_request_and_keeps_last_good_rows_when_a_provider_fails() ->
         state["providers"]["items"]["codex"]["lines"],
         json!(["codex · 5h: 12% used · resets Mon 12:00"])
     );
+    assert_eq!(
+        state["providers"]["items"]["codex"]["windows"],
+        json!([{"label":"codex · 5h","usedPercent":12.0,"resetsMs":1800003600000_u64}])
+    );
+    assert!(state["providers"]["items"]["claude"]
+        .get("windows")
+        .is_none());
     assert_eq!(state["providers"]["items"]["claude"]["name"], "Claude Code");
     assert_eq!(
         state["providers"]["items"]["claude"]["lines"],

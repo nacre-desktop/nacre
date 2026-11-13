@@ -59,6 +59,9 @@ async fn dispatch(
         method @ ("brain.open" | "brain.capture") if !hub.borrow().safe => {
             super::brain::dispatch(hub, method, params)
         }
+        method if super::ai_app::handles(method) && !hub.borrow().safe => {
+            super::ai_app::dispatch(hub, method, params).await
+        }
         method @ ("tray.activate"
         | "tray.secondary_activate"
         | "tray.context_menu"

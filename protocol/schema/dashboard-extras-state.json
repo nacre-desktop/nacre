@@ -436,12 +436,50 @@
           "format": "uint64",
           "minimum": 0,
           "maximum": 9007199254740991
+        },
+        "windows": {
+          "description": "Structured quota windows when the provider reports them (N0319); absent otherwise.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AiUsageWindow"
+          },
+          "maxItems": 5
         }
       },
       "required": [
         "name",
         "lines",
         "observed_ms"
+      ]
+    },
+    "AiUsageWindow": {
+      "description": "One rate-limit window as the provider reports it; nothing is estimated.",
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "usedPercent": {
+          "type": "number",
+          "format": "double",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "resetsMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "label",
+        "usedPercent"
       ]
     },
     "BrainRecentState": {

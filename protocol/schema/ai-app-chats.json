@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Chats",
+  "type": "object",
+  "properties": {
+    "chats": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Chat"
+      },
+      "maxItems": 100
+    },
+    "total": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "warning": {
+      "type": "string",
+      "maxLength": 2048
+    }
+  },
+  "required": [
+    "chats",
+    "total",
+    "warning"
+  ],
+  "$defs": {
+    "Chat": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Stable record key; accepted by `ai.chats.resume`.",
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 20,
+          "pattern": "^chat[0-9a-f]{16}$"
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "project": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "host": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 253
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "state": {
+          "$ref": "#/$defs/ChatState"
+        },
+        "updatedAt": {
+          "description": "Provider timestamp, seconds since the epoch.",
+          "type": "number",
+          "format": "double"
+        },
+        "account": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "session": {
+          "description": "Running terminal session name as the provider list reports it.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "resumable": {
+          "description": "False for remote records: the daemon never opens SSH from a stored record.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "provider",
+        "project",
+        "title",
+        "state",
+        "updatedAt",
+        "account"
+      ]
+    },
+    "ChatState": {
+      "type": "string",
+      "enum": [
+        "running",
+        "saved"
+      ]
+    }
+  }
+}

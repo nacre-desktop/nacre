@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BrainHits",
+  "type": "object",
+  "properties": {
+    "results": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/BrainHit"
+      },
+      "maxItems": 50
+    }
+  },
+  "required": [
+    "results"
+  ],
+  "$defs": {
+    "BrainHit": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "path": {
+          "description": "Vault-relative note path.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "line": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 100000000
+        },
+        "snippet": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "title",
+        "path",
+        "line",
+        "snippet"
+      ]
+    }
+  }
+}

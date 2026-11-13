@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Providers",
+  "type": "object",
+  "properties": {
+    "providers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ProviderInfo"
+      },
+      "maxItems": 16
+    }
+  },
+  "required": [
+    "providers"
+  ],
+  "$defs": {
+    "ProviderInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48,
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "kind": {
+          "$ref": "#/$defs/ProviderKind"
+        },
+        "capabilities": {
+          "$ref": "#/$defs/Capabilities"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "capabilities"
+      ]
+    },
+    "ProviderKind": {
+      "oneOf": [
+        {
+          "description": "A terminal coding agent (Codex, Claude Code).",
+          "type": "string",
+          "const": "cli"
+        },
+        {
+          "description": "A model served on this machine; no adapter ships yet.",
+          "type": "string",
+          "const": "local"
+        }
+      ]
+    },
+    "Capabilities": {
+      "description": "One flag per app feature; the UI shows only what is true.",
+      "type": "object",
+      "properties": {
+        "chat": {
+          "type": "boolean"
+        },
+        "resume": {
+          "type": "boolean"
+        },
+        "accounts": {
+          "type": "boolean"
+        },
+        "usage": {
+          "type": "boolean"
+        },
+        "models": {
+          "description": "A model list is published. Neither CLI exposes one, so false today.",
+          "type": "boolean"
+        },
+        "callerSessionId": {
+          "description": "`ai.chats.start` can choose the thread id, so its reply carries `id`.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "chat",
+        "resume",
+        "accounts",
+        "usage",
+        "models",
+        "callerSessionId"
+      ]
+    }
+  }
+}

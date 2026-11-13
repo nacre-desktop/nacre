@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Projects",
+  "type": "object",
+  "properties": {
+    "projects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Project"
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "projects"
+  ],
+  "$defs": {
+    "Project": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "path": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "host": {
+          "description": "SSH host of a remote project; absent when local.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 253
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "path"
+      ]
+    }
+  }
+}

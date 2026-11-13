@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Accounts",
+  "type": "object",
+  "properties": {
+    "accounts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Account"
+      },
+      "maxItems": 64
+    }
+  },
+  "required": [
+    "accounts"
+  ],
+  "$defs": {
+    "Account": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48
+        },
+        "id": {
+          "description": "`default` for the provider's own home, else the profile directory name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 48,
+          "pattern": "^[a-z0-9][a-z0-9_-]*$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "active": {
+          "description": "Selected in the AI settings for this provider.",
+          "type": "boolean"
+        },
+        "status": {
+          "$ref": "#/$defs/AccountStatus"
+        },
+        "checkedMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "provider",
+        "id",
+        "label",
+        "active",
+        "status"
+      ]
+    },
+    "AccountStatus": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "signed_in",
+            "signed_out"
+          ]
+        },
+        {
+          "description": "Not checked since the daemon started.",
+          "type": "string",
+          "const": "unknown"
+        },
+        {
+          "description": "The provider CLI is not installed.",
+          "type": "string",
+          "const": "missing"
+        }
+      ]
+    }
+  }
+}

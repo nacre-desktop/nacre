@@ -751,7 +751,7 @@ async fn dispatch_launcher(
     }
 }
 
-async fn open_launcher_record(
+pub(super) async fn open_launcher_record(
     hub: Shared,
     item: Value,
     key: String,
@@ -795,7 +795,7 @@ fn find_local_launcher_record(rows: Vec<Value>, key: &str) -> Option<(Value, boo
     Some((rows.into_iter().nth(index)?, unique_title))
 }
 
-fn launcher_key(item: &Value) -> String {
+pub(super) fn launcher_key(item: &Value) -> String {
     let identity = item["id"]
         .as_str()
         .filter(|id| !id.is_empty())
