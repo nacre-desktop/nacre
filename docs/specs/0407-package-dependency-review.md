@@ -1,9 +1,9 @@
 # N0407 — Package dependency review after the QML shell's retirement
 
-Status: acceptance incomplete (release lead, 2026-11-13). N0406 landed before this
-review. Owner's 2026-11-12 decision is authoritative: Kitty stays required; Fish,
-Fastfetch and Dolphin become optional apps. Final VM runs skip the update stage because
-this candidate has no `nacre update` command; the acceptance requires every stage to pass.
+Status: done (release lead, 2026-11-13). N0406 landed before this review. Owner's
+2026-11-12 decision is authoritative: Kitty stays required; Fish, Fastfetch and Dolphin
+become optional apps. Follow-up review fixes verified the optional AI package case and
+made `nacre update` discoverable; the rebuilt niri VM passed every stage.
 
 The original `nacre` core package declared 58 hard dependencies. The table records
 each dependency's installed use on main (`a0aaf12a`) and its verdict. “Optdepend”
@@ -91,18 +91,23 @@ desktop appearance packages.
   screenshot assertion now reads PNG structure with the standard library instead of
   relying on Pillow from the core dependency closure.
 - Focused package/setup suites passed in one fresh Arch container:
-  `nice -n 10 python -m unittest test_setup test_package_repository test_package_transaction test_package_vm test_shell_session test_dolphin_files test_ui_shell_switch`
-  — 92 tests, `OK`. The LEAN package build used
+  `nice -n 10 python -m unittest test_setup test_package_repository test_package_transaction test_package_vm test_shell_session test_dolphin_files test_ui_shell_switch test_releases`
+  — 118 tests, `OK`. The LEAN package build used
   `CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 2 Cargo
-  jobs, and `RUST_MIN_STACK=33554432`; `makepkg` produced the `r3063` core and split
-  packages from source `b65bee95d56b5e715e466a2869efc6a7e8a1c221`. The build container
-  exited after packaging while copying the read-only fork archive; the fork package was
-  copied separately and all archives were used by the gates.
+  jobs, and `RUST_MIN_STACK=33554432`; `makepkg` produced the `r3068` core and split
+  packages from source `970f20cd3bdb5af2992debcf3ad90c7f1fead274`.
 - Installed-package proof passed four fresh users (`nacre-niri`, `niri`, `hyprland`,
   `both`) in a clean Arch container without compiler, Node/npm, Ruff, Git or pip. It
   confirms Fish and Fastfetch are absent, Kitty does not force Fish, and the missing
-  Dolphin route prints a clear message. The smoke check excludes the AI-controller
-  loader assertion; AI/Brain package behavior is outside this unit.
+  Dolphin route prints a clear message. The controller check is conditional on the
+  optional package. The failure was case (a): the core-only proof did not install
+  `nacre-ai`. Bootstrap installs `nacre` only (`bootstrap.sh:51-53`); the `nacre-ai`
+  split package stages the private wrapper (`stage.py:309-325`). A fresh core-only Arch
+  proof confirmed `pacman -Q nacre-ai` reports it absent; setup leaves AI unselected and
+  creates no `~/.local/bin/nacre-ai`, then the installed proof passes. If the package is
+  present, the test checks `default_assistant()`; if a wrapper exists without the
+  package, it requires the loader's explicit missing-tools message
+  (`nacre_ai_controller.py:13-27`). This is not a setup bug.
 - `pacman -Qi` core dependency closure: 199 packages, 1,270,993,289 bytes (1,212.11
   MiB). Direct core dependencies: 58 → 28; verdicts: 28 keep, 20 optdepend, 5 move,
   5 drop.
@@ -117,11 +122,19 @@ desktop appearance packages.
 - `ruff 0.16.10 format --check` and `ruff 0.16.10 check` passed on changed Python
   files; `python3 tools/compositor_boundary.py` passed. Full command output remains in
   the task logs on dev-1, not committed.
+- `tools/releases.py` lists `update` in the existing action choices (`:929-941`);
+  the early `update` dispatch remains before argparse (`:865-870`). Its help test and
+  existing dispatch tests passed in the focused suite. A rebuilt niri VM using the
+  `r3068` packages passed every stage, including `update` and leftovers:
 
-Acceptance: focused package/setup tests, installed-package proof and all required VM
-stages passed. The `update` stage is `SKIP` in all three tiers because the candidate
-does not provide that command. Owner/release lead must decide whether that expected
-not-applicable stage satisfies the all-stages-pass gate.
+  | Tier | Prepare | Inventory | Repository | Bootstrap plan | Bootstrap install | Setup | Session | Update | Uninstall | Package removal | Leftovers |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | `niri` follow-up | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS |
+
+Acceptance: dependency review, conditional AI-controller proof, focused tests, installed
+package proof, static checks, and the requested niri VM rerun passed. The earlier
+nacre-niri and hyprland runs recorded `update: SKIP` before help exposed the dispatcher;
+the follow-up rerun confirms the corrected niri stage.
 
 Not covered: AI and Brain dependencies, build/check dependency lists, or SDDM greeter
 packaging. Temporary duplicate paths: none introduced by N0407.
