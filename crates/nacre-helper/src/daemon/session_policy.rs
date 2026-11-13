@@ -454,6 +454,13 @@ pub fn initial_state(hub: &Shared) -> Result<()> {
     )?;
     Ok(())
 }
+/// N0320: in-daemon readers pause while locked or asleep, and until logind has been read.
+pub(super) fn locked_or_asleep(hub: &Shared) -> bool {
+    hub.borrow()
+        .snapshot(nacre_protocol::session::STATE_TOPIC)
+        .and_then(|data| serde_json::from_value::<nacre_protocol::session::SessionState>(data).ok())
+        .is_none_or(|state| state.revision == 0 || state.locked || state.sleeping)
+}
 /// Publish with the next revision, unless nothing changed since the last logind reading.
 fn publish_state(hub: &Shared, locked: bool, sleeping: bool) -> Result<()> {
     use nacre_protocol::session::{SessionState, STATE_TOPIC};

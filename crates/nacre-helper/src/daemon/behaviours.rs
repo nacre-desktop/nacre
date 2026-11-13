@@ -23,11 +23,7 @@ use std::{
     rc::Rc,
     time::Duration,
 };
-use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
-    process::Command,
-    time::Instant,
-};
+use tokio::{io::AsyncReadExt, process::Command, time::Instant};
 use zbus::zvariant::{OwnedValue, Value as Variant};
 
 mod battery_saver;
@@ -158,11 +154,14 @@ fn active_wallpaper_identity(hub: &Shared) -> Option<(bool, bool, u64)> {
         .map(|state| (state.available, state.stale, state.revision))
 }
 
+/// True for a wallpaper input change; false for a `session.state` change while `session`.
 async fn changed_wallpaper_state(
     notices: &mut tokio::sync::broadcast::Receiver<Notice>,
     hub: &Shared,
     identity: &mut Option<(bool, bool, u64)>,
-) -> Result<()> {
+    session: bool,
+) -> Result<bool> {
+    use nacre_protocol::session::STATE_TOPIC;
     loop {
         let topic = changed_topic(
             notices,
@@ -170,9 +169,16 @@ async fn changed_wallpaper_state(
                 "wallpaper.watch",
                 "settings.store.wallpaper-picker",
                 super::active_wallpaper::TOPIC,
+                STATE_TOPIC,
             ],
         )
         .await?;
+        if topic == STATE_TOPIC {
+            if session {
+                return Ok(false);
+            }
+            continue;
+        }
         if topic == super::active_wallpaper::TOPIC {
             let updated = active_wallpaper_identity(hub);
             if updated == *identity {
@@ -180,7 +186,7 @@ async fn changed_wallpaper_state(
             }
             *identity = updated;
         }
-        return Ok(());
+        return Ok(true);
     }
 }
 
@@ -450,8 +456,8 @@ impl Env {
             engine: std::env::current_exe()?,
             now_ms: Rc::new(now),
             sleep: Rc::new(|target| {
-                // One sleep to the deadline; wake-from-suspend re-plans through the
-                // session watcher. Nothing polls while idle.
+                // One sleep to the deadline; wake-from-suspend re-plans through
+                // `session.state`. Nothing polls while idle.
                 let wait = (target - now()).clamp(1, 86_400_000);
                 Box::pin(tokio::time::sleep(Duration::from_millis(wait as u64)))
             }),
@@ -530,47 +536,6 @@ pub(super) async fn select(engine: &Path, path: &str) -> bool {
         .any(|entry| entry["error"].is_null() && valid_entry(&entry) && entry["path"] == path)
 }
 
-/// `wallpaper-media session --watch`: logind lock and sleep state, as the QML used it.
-pub(super) struct Session {
-    child: tokio::process::Child,
-    lines: tokio::io::Lines<BufReader<tokio::process::ChildStdout>>,
-}
-impl Session {
-    pub(super) fn spawn(engine: &Path) -> Result<Self> {
-        let mut child = Command::new(engine)
-            .args(["wallpaper-media", "session", "--watch"])
-            .stdin(Stdio::null())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::null())
-            .kill_on_drop(true)
-            .spawn()?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or("Missing session watcher output")?;
-        Ok(Self {
-            child,
-            lines: BufReader::new(stdout).lines(),
-        })
-    }
-    /// True while the session is asleep or locked.
-    pub(super) async fn next(&mut self) -> Result<bool> {
-        let Some(line) = self.lines.next_line().await? else {
-            use std::os::unix::process::ExitStatusExt;
-            // N0317: systemd stops the daemon by signalling its whole cgroup, so a watcher
-            // ended by SIGTERM means this daemon is stopping too: wait to be cancelled
-            // (TimeoutStopSec is 5 s) instead of reporting a failure.
-            let exit = tokio::time::timeout(Duration::from_secs(1), self.child.wait()).await;
-            if matches!(exit, Ok(Ok(status)) if status.signal() == Some(nix::libc::SIGTERM)) {
-                tokio::time::sleep(Duration::from_secs(5)).await;
-            }
-            return Err("Session watcher ended".into());
-        };
-        let state: Value = serde_json::from_str(&line)?;
-        Ok(state["locked"] == true || state["sleeping"] == true)
-    }
-}
-
 /// QML `NacreWallpapers` rotation: every `rotationMinutes` after the last change,
 /// pick the next wallpaper of the configured kind (sequential or shuffled bag).
 /// Paused while asleep or locked and with fewer than two wallpapers; a failed
@@ -582,7 +547,6 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
     let (mut bag, mut key) = (Vec::<String>::new(), String::new());
     // `blocked`: fewer than two wallpapers; only a library or settings change retries.
     let (mut blocked, mut paused) = (false, false);
-    let mut session: Option<Session> = None;
     loop {
         let plan = read_plan(&hub, &paths, startup).await.ok();
         let active_wallpaper = hub
@@ -610,14 +574,8 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
         drop(pool);
         let watch_session = plan.as_ref().is_some_and(|plan| plan.enabled)
             || (active_wallpaper && settings_ready && pool_ready);
-        if watch_session && session.is_none() {
-            session = Some(Session::spawn(&env.engine)?);
-            // Fail closed until the new watcher reports its current lock/sleep state.
-            paused = true;
-        } else if !watch_session {
-            session = None;
-            paused = false;
-        }
+        // N0320: the daemon's `session.state`, paused until logind has been read.
+        paused = watch_session && super::session_policy::locked_or_asleep(&hub);
         super::active_wallpaper::set_rotation_readiness(&hub, pool_ready, paused)?;
         let due = plan.as_ref().map_or(i64::MAX, |plan| {
             (plan.anchor_ms.max(attempted) + plan.interval_ms).max(retry)
@@ -625,25 +583,11 @@ pub async fn rotation(hub: Shared, paths: Paths, env: Env) -> Result<()> {
         let armed = plan.as_ref().is_some_and(|plan| plan.enabled) && !paused && !blocked;
         tokio::select! {
             () = (env.sleep)(due), if armed => {}
-            result = changed_wallpaper_state(&mut notices, &hub, &mut active_identity) => {
-                result?;
-                blocked = false;
-                continue;
-            }
-            state = async { session.as_mut().expect("watcher").next().await }, if session.is_some() => {
-                paused = match state {
-                    Ok(paused) => paused,
-                    Err(error) => {
-                        // A dead logind watcher must not leave a stale enabled control.
-                        super::active_wallpaper::set_rotation_readiness(&hub, false, true)?;
-                        return Err(error);
-                    }
-                };
-                super::active_wallpaper::set_rotation_readiness(
-                    &hub,
-                    pool_ready,
-                    paused,
-                )?;
+            result = changed_wallpaper_state(&mut notices, &hub, &mut active_identity, watch_session) => {
+                // A lock or sleep change only re-reads the pause; it does not retry a small library.
+                if result? {
+                    blocked = false;
+                }
                 continue;
             }
         }

@@ -1,14 +1,14 @@
 //! City photos are leased by topic subscription, with cancellable async network work.
 mod fetch;
 use super::{
-    behaviours,
     hub::{Notice, Shared},
+    session_policy,
 };
 use crate::{paths::Paths, Result};
 use futures_util::future::LocalBoxFuture;
 pub use nacre_protocol::weather_photo::TOPIC;
 use nacre_protocol::weather_photo::{Asset, Location, State, Status};
-use std::{path::Path, rc::Rc};
+use std::rc::Rc;
 
 type Loader = Rc<dyn Fn(Paths, Location) -> LocalBoxFuture<'static, Result<fetch::Photo>>>;
 
@@ -38,7 +38,9 @@ fn relevant(
 ) -> bool {
     match notice {
         Ok(Notice::Changed { topic, .. }) => {
-            topic == super::weather::TOPIC || topic == "settings.store.dashboard-extras"
+            topic == super::weather::TOPIC
+                || topic == "settings.store.dashboard-extras"
+                || topic == nacre_protocol::session::STATE_TOPIC
         }
         Ok(_) => false,
         Err(_) => true,
@@ -57,15 +59,9 @@ fn enabled(hub: &Shared) -> bool {
     })
 }
 pub async fn run(hub: Shared, paths: Paths) -> Result<()> {
-    run_inner(
-        hub,
-        paths,
-        Rc::new(|p, l| Box::pin(fetch::load(p, l))),
-        true,
-    )
-    .await
+    run_inner(hub, paths, Rc::new(|p, l| Box::pin(fetch::load(p, l)))).await
 }
-async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool) -> Result<()> {
+async fn run_inner(hub: Shared, paths: Paths, load: Loader) -> Result<()> {
     let mut interest = hub.borrow_mut().watch_interest(TOPIC);
     let mut notices = hub.borrow().observe();
     hub.borrow_mut().service("weather-photo", "running", 0)?;
@@ -89,12 +85,7 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
             }
         }
         // Unknown session state is paused: no request before the first logind reading.
-        let mut session = if watch_session {
-            Some(behaviours::Session::spawn(Path::new("/proc/self/exe"))?)
-        } else {
-            None
-        };
-        let mut paused = watch_session;
+        let paused = || session_policy::locked_or_asleep(&hub);
         let mut attempted: Option<Location> = None;
         let mut pending: Option<LocalBoxFuture<'static, Result<fetch::Photo>>> = None;
         let mut current = None;
@@ -106,10 +97,9 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                 // The first pass reads the leased inputs at once, without waiting for a notice.
                 _ = std::future::ready(()), if !entered => {entered = true;},
                 result = notices.recv() => { if !relevant(&result) { continue; } },
-                state = async {session.as_mut().expect("session").next().await}, if session.is_some() => {paused = state?;},
                 result = async {pending.as_mut().expect("pending").await}, if pending.is_some() => {
                     pending = None;
-                    if enabled(&hub) && !paused {
+                    if enabled(&hub) && !paused() {
                         match result {
                             Ok(photo) if Some(&photo.location) == current.as_ref() => {
                                 publish(&hub, true, Status::Ready, current.clone(), Some(Asset {path:photo.path, checked:photo.checked, author:photo.author, license:photo.license, source:photo.source}))?;
@@ -126,7 +116,7 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                 current = location;
             }
             let consent = enabled(&hub);
-            if !consent || paused {
+            if !consent || paused() {
                 // Dropping the future drops/kills its curl child. No completion can publish.
                 pending = None;
                 attempted = None;
@@ -155,9 +145,8 @@ async fn run_inner(hub: Shared, paths: Paths, load: Loader, watch_session: bool)
                 pending = Some(load(paths.clone(), location));
             }
         }
-        // Cancel before returning to the unleased wait; do not keep a session watcher.
+        // Cancel before returning to the unleased wait.
         drop(pending);
-        drop(session);
     }
 }
 
@@ -173,6 +162,14 @@ mod tests {
             .publish(
                 "settings.store.dashboard-extras",
                 json!({"exists":true,"error":null,"data":{"weatherPhotos":value}}),
+            )
+            .unwrap();
+    }
+    fn session(hub: &Shared, revision: u64, locked: bool) {
+        hub.borrow_mut()
+            .publish(
+                nacre_protocol::session::STATE_TOPIC,
+                json!({"locked":locked,"sleeping":false,"preparing_sleep":false,"revision":revision}),
             )
             .unwrap();
     }
@@ -205,6 +202,7 @@ mod tests {
                 )
                 .shared();
                 initial(&hub)?;
+                session(&hub, 1, false);
                 hub.borrow_mut().publish(
                     super::super::weather::TOPIC,
                     json!({"current":{"location":"Harbour","latitude":60,"longitude":5}}),
@@ -221,7 +219,7 @@ mod tests {
                         std::future::pending().await
                     })
                 });
-                let task = tokio::task::spawn_local(run_inner(hub.clone(), paths, loader, false));
+                let task = tokio::task::spawn_local(run_inner(hub.clone(), paths, loader));
                 let (client, _) = hub.borrow_mut().add_client()?;
                 hub.borrow_mut().subscribe(client, &[TOPIC.into()], false)?;
                 until(|| hub.borrow().snapshot(TOPIC).unwrap()["status"] == "disabled").await;
@@ -297,6 +295,8 @@ mod tests {
                 };
                 place("Harbour");
                 consent(&hub, true);
+                // Unknown session state is paused, like a locked session.
+                super::super::session_policy::initial_state(&hub)?;
                 let calls = Rc::new(Cell::new(0));
                 let count = calls.clone();
                 let loader: Loader = Rc::new(move |_, _| {
@@ -307,13 +307,19 @@ mod tests {
                     hub.clone(),
                     Paths::new(home.path()),
                     loader,
-                    false,
                 ));
                 let (client, _) = hub.borrow_mut().add_client()?;
                 hub.borrow_mut().subscribe(client, &[TOPIC.into()], false)?;
+                until(|| hub.borrow().snapshot(TOPIC).unwrap()["status"] == "paused").await;
+                assert_eq!(calls.get(), 0);
+                session(&hub, 1, false);
                 until(|| calls.get() == 1).await;
                 place("Fjord");
                 until(|| calls.get() == 2).await;
+                session(&hub, 2, true);
+                until(|| hub.borrow().snapshot(TOPIC).unwrap()["status"] == "paused").await;
+                session(&hub, 3, false);
+                until(|| calls.get() == 3).await;
                 task.abort();
                 let _ = task.await;
                 Ok(())

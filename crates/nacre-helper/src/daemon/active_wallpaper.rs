@@ -788,7 +788,7 @@ pub fn initial(hub: &Shared) -> Result<()> {
 }
 
 /// Update readiness from the existing behavior worker's configured wallpaper pool and
-/// session watcher; history itself remains private to the Hub.
+/// `session.state` pause; history itself remains private to the Hub.
 pub(super) fn set_rotation_readiness(hub: &Shared, pool_ready: bool, sleeping: bool) -> Result<()> {
     hub.borrow_mut()
         .wallpaper_history

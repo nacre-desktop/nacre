@@ -397,87 +397,6 @@ impl Media {
         let path: OwnedObjectPath = manager.call("GetSession", &(display,))?;
         Ok(json!({"locked":locked,"path":path.as_str()}))
     }
-    pub fn watch_session() -> Result<i32> {
-        use std::io::Write;
-        use zbus::{
-            blocking::{Connection, MessageIterator},
-            message::Type,
-            zvariant::OwnedValue,
-            MatchRule,
-        };
-        let connection = Connection::system()?;
-        let rule = MatchRule::builder()
-            .msg_type(Type::Signal)
-            .sender("org.freedesktop.login1")?
-            .path_namespace("/org/freedesktop/login1")?
-            .build();
-        let messages = MessageIterator::for_match_rule(rule, &connection, Some(128))?;
-        let mut state = Self::session_on(&connection)?;
-        state["sleeping"] = json!(false);
-        let stdout = std::io::stdout();
-        let mut output = stdout.lock();
-        writeln!(output, "{}", json::dumps(&state, false)?)?;
-        output.flush()?;
-        for message in messages {
-            let message = message?;
-            let header = message.header();
-            let prior = state.clone();
-            let mut refresh = false;
-            if header
-                .interface()
-                .is_some_and(|v| v.as_str() == "org.freedesktop.login1.Manager")
-                && header
-                    .member()
-                    .is_some_and(|v| v.as_str() == "PrepareForSleep")
-            {
-                let (sleeping,): (bool,) = message.body().deserialize()?;
-                state["sleeping"] = json!(sleeping);
-            } else if header
-                .interface()
-                .is_some_and(|v| v.as_str() == "org.freedesktop.DBus.Properties")
-                && header
-                    .member()
-                    .is_some_and(|v| v.as_str() == "PropertiesChanged")
-            {
-                let (interface, mut changed, invalidated): (
-                    String,
-                    std::collections::HashMap<String, OwnedValue>,
-                    Vec<String>,
-                ) = message.body().deserialize()?;
-                if interface == "org.freedesktop.login1.Session"
-                    && header
-                        .path()
-                        .is_some_and(|v| Some(v.as_str()) == state["path"].as_str())
-                {
-                    if let Some(locked) = changed.remove("LockedHint") {
-                        state["locked"] = json!(bool::try_from(locked)?);
-                    }
-                    refresh = invalidated.iter().any(|v| v == "LockedHint");
-                } else if interface == "org.freedesktop.login1.User" {
-                    refresh = changed.contains_key("Display")
-                        || invalidated.iter().any(|v| v == "Display");
-                }
-            } else if header
-                .interface()
-                .is_some_and(|v| v.as_str() == "org.freedesktop.login1.Manager")
-                && header
-                    .member()
-                    .is_some_and(|v| v.as_str() == "SessionNew" || v.as_str() == "SessionRemoved")
-            {
-                refresh = true;
-            }
-            if refresh {
-                let sleeping = state["sleeping"].clone();
-                state = Self::session_on(&connection)?;
-                state["sleeping"] = sleeping;
-            }
-            if state != prior {
-                writeln!(output, "{}", json::dumps(&state, false)?)?;
-                output.flush()?;
-            }
-        }
-        Err("Logind session event stream closed".into())
-    }
     /// Preserve Pillow's mode-dependent thumbnail before converting to luminance.
     pub fn wallpaper_mode_pixels(path: &Path) -> Result<image::GrayImage> {
         use image::{DynamicImage, ImageDecoder, ImageFormat};
@@ -2295,7 +2214,6 @@ fn serve(media: &Media, cli: &mut crate::palette_cli::Cli) -> Result<i32> {
 pub fn run(args: &[String]) -> Result<i32> {
     let mut values = Vec::new();
     let mut stream = false;
-    let mut watch = false;
     let mut catalogue_ids = None;
     let mut reading_catalogue_ids = false;
     for arg in args {
@@ -2316,8 +2234,6 @@ pub fn run(args: &[String]) -> Result<i32> {
                 .push(arg.clone());
         } else if arg == "--stream-presentation" {
             stream = true;
-        } else if arg == "--watch" {
-            watch = true;
         } else {
             values.push(arg.clone());
         }
@@ -2358,12 +2274,6 @@ pub fn run(args: &[String]) -> Result<i32> {
     }
     if stream {
         std::env::set_var("NACRE_PRESENTATION_STREAM", "1");
-    }
-    if watch {
-        if action != "session" {
-            return Ok(argument_error("unrecognized arguments: --watch"));
-        }
-        return Media::watch_session();
     }
     if action == "serve" {
         let paths = Paths::environment()?;

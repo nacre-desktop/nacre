@@ -301,7 +301,7 @@ impl Fixture {
         let dir = home.path().join("engine");
         std::fs::create_dir_all(&dir).unwrap();
         let script = format!(
-            "#!/bin/sh\ndir='{}'\nst='{}'\ncase \"$2\" in\n  catalog) touch \"$dir/catalog-started\"; cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo \"$3\" > \"$st/last.txt\"; printf '{{\"path\":\"%s\",\"poster\":\"%s\",\"appliedAtMs\":%s}}' \"$3\" \"$3\" \"$(cat \"$dir/now\")\" > \"$st/media.json\"; echo '{}' | sed \"s|PATH|$3|g\" ;;\n  session) touch \"$dir/session-started\"; seen=0; while :; do [ -f \"$dir/session-end\" ] && exit 0; total=$(wc -l < \"$dir/session\"); [ \"$total\" -gt \"$seen\" ] && tail -n +$((seen+1)) \"$dir/session\" && seen=$total; sleep 0.05; done ;;\nesac\n",
+            "#!/bin/sh\ndir='{}'\nst='{}'\ncase \"$2\" in\n  catalog) touch \"$dir/catalog-started\"; cat \"$dir/catalog.json\" ;;\n  select) echo \"$3\" >> \"$dir/selects\"; [ -f \"$dir/fail\" ] && exit 1; echo \"$3\" > \"$st/last.txt\"; printf '{{\"path\":\"%s\",\"poster\":\"%s\",\"appliedAtMs\":%s}}' \"$3\" \"$3\" \"$(cat \"$dir/now\")\" > \"$st/media.json\"; echo '{}' | sed \"s|PATH|$3|g\" ;;\nesac\n",
             dir.display(),
             paths.state.join("wallpaper").display(),
             ENTRY
@@ -310,11 +310,6 @@ impl Fixture {
         std::fs::write(&engine, script).unwrap();
         std::fs::set_permissions(&engine, std::os::unix::fs::PermissionsExt::from_mode(0o755))
             .unwrap();
-        std::fs::write(
-            dir.join("session"),
-            "{\"locked\":false,\"sleeping\":false,\"path\":\"\"}\n",
-        )
-        .unwrap();
         let fixture = Self {
             _home: home,
             paths,
@@ -407,11 +402,22 @@ impl Fixture {
     }
 }
 
+/// What the daemon's `session.state` producer publishes after a logind reading.
+fn session_state(hub: &Shared, revision: u64, locked: bool, sleeping: bool) {
+    hub.borrow_mut()
+        .publish(
+            nacre_protocol::session::STATE_TOPIC,
+            json!({"locked":locked,"sleeping":sleeping,"preparing_sleep":sleeping,"revision":revision}),
+        )
+        .unwrap();
+}
+
 #[tokio::test(flavor = "current_thread")]
 async fn rotation_follows_interval_failure_retry_lock_and_library() {
     let fixture =
         Fixture::new(json!({"rotationEnabled":true,"rotationMinutes":5,"rotationShuffle":false}));
     let (hub, _settings) = hub_with_settings(&fixture.paths).await;
+    super::super::session_policy::initial_state(&hub).unwrap();
     LocalSet::new()
         .run_until(async {
             let task = tokio::task::spawn_local(rotation(
@@ -419,6 +425,10 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
                 fixture.paths.clone(),
                 fixture.env(),
             ));
+            // Paused until logind has been read.
+            quiet().await;
+            assert_eq!(fixture.armed.get(), None);
+            session_state(&hub, 1, false, false);
             fixture.parked(300_000).await;
             assert!(fixture.selects().is_empty());
             fixture.advance(300_000 - 1);
@@ -447,22 +457,16 @@ async fn rotation_follows_interval_failure_retry_lock_and_library() {
             eventually(|| fixture.selects().len() == 3).await;
             assert_eq!(fixture.selects()[2], "/w/c.png");
             fixture.parked(960_000).await;
-            // Locked sessions do not rotate; unlocking resumes at once.
-            let session = fixture.dir.join("session");
-            let append = |line: &str| {
-                use std::io::Write;
-                let mut file = std::fs::OpenOptions::new()
-                    .append(true)
-                    .open(&session)
-                    .unwrap();
-                writeln!(file, "{line}").unwrap();
-            };
-            append("{\"locked\":true,\"sleeping\":false,\"path\":\"\"}");
+            // Locked or sleeping sessions do not rotate; waking unlocked resumes at once.
+            session_state(&hub, 2, true, false);
             fixture.unarmed().await;
             fixture.advance(2_000_000);
             quiet().await;
             assert_eq!(fixture.selects().len(), 3);
-            append("{\"locked\":false,\"sleeping\":false,\"path\":\"\"}");
+            session_state(&hub, 3, false, true);
+            quiet().await;
+            assert_eq!((fixture.armed.get(), fixture.selects().len()), (None, 3));
+            session_state(&hub, 4, false, false);
             eventually(|| fixture.selects().len() == 4).await;
             assert_eq!(fixture.selects()[3], "/w/a.png", "sequential order wraps");
             fixture.parked(2_300_000).await;
@@ -524,6 +528,7 @@ async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
                 "current":null,"outputs":{}}),
         )
         .unwrap();
+    session_state(&hub, 1, false, false);
     LocalSet::new()
         .run_until(async {
             let task = tokio::task::spawn_local(rotation(
@@ -532,7 +537,6 @@ async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
                 fixture.env(),
             ));
             quiet().await;
-            assert!(!fixture.dir.join("session-started").exists());
             assert!(!fixture.dir.join("catalog-started").exists());
 
             hub.borrow_mut()
@@ -542,7 +546,6 @@ async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
                         "current":pair.clone(),"outputs":{"fixture":pair.clone()}}),
                 )
                 .unwrap();
-            eventually(|| fixture.dir.join("session-started").exists()).await;
             eventually(|| fixture.dir.join("catalog-started").exists()).await;
             eventually(|| {
                 hub.borrow()
@@ -565,57 +568,6 @@ async fn manual_navigation_readiness_tracks_active_and_unavailable_wallpaper() {
             })
             .await;
             task.abort();
-        })
-        .await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn ended_session_stream_clears_rotation_readiness() {
-    let fixture = Fixture::new(json!({"rotationEnabled":false,"rotationMinutes":5}));
-    let (hub, _settings) = hub_with_settings(&fixture.paths).await;
-    hub.borrow_mut()
-        .wallpaper_history
-        .committed(Some("/fixture/current.png"));
-    hub.borrow_mut()
-        .wallpaper_history
-        .set_selection_stable(true);
-    let pair = json!({
-        "revision":1,"palette_revision":1,"path":"/fixture/current.png",
-        "file_identity":{"device":"1","inode":"4","size":4,"mtime_sec":1,"mtime_nsec":0,"ctime_sec":1,"ctime_nsec":0},
-        "presentation":"crop",
-        "palette":{"mode":"dark","colours":{"background":"#102030","onSurface":"#f0f0f0","primary":"#22aa88"}}
-    });
-    hub.borrow_mut()
-        .publish(
-            super::super::active_wallpaper::TOPIC,
-            json!({"available":true,"stale":false,"previous_available":false,"revision":1,
-                "current":pair.clone(),"outputs":{"fixture":pair}}),
-        )
-        .unwrap();
-    LocalSet::new()
-        .run_until(async {
-            let task = tokio::task::spawn_local(rotation(
-                hub.clone(),
-                fixture.paths.clone(),
-                fixture.env(),
-            ));
-            eventually(|| fixture.dir.join("session-started").exists()).await;
-            eventually(|| {
-                hub.borrow()
-                    .snapshot(super::super::active_wallpaper::TOPIC)
-                    .is_some_and(|state| state["previous_available"] == true)
-            })
-            .await;
-
-            std::fs::write(fixture.dir.join("session-end"), "").unwrap();
-            eventually(|| task.is_finished()).await;
-            assert!(!hub
-                .borrow()
-                .snapshot(super::super::active_wallpaper::TOPIC)
-                .unwrap()["previous_available"]
-                .as_bool()
-                .unwrap_or(false));
-            assert!(task.await.unwrap().is_err());
         })
         .await;
 }
@@ -1204,35 +1156,4 @@ async fn missing_upower_is_not_ready_and_never_notifies() {
             task.abort();
         })
         .await;
-}
-
-#[tokio::test(flavor = "current_thread")]
-async fn a_session_watcher_stopped_with_the_daemon_is_not_reported() {
-    use nix::sys::signal::{kill, Signal};
-    let dir = tempfile::tempdir().unwrap();
-    let engine = dir.path().join("engine");
-    std::fs::write(
-        &engine,
-        "#!/bin/sh\necho '{\"locked\":true,\"sleeping\":false}'\nexec sleep 30\n",
-    )
-    .unwrap();
-    std::fs::set_permissions(&engine, std::os::unix::fs::PermissionsExt::from_mode(0o755)).unwrap();
-    let pid = |session: &Session| nix::unistd::Pid::from_raw(session.child.id().unwrap() as i32);
-    // systemd's stop signal reaches the watcher too: wait for the daemon's own shutdown.
-    let mut session = Session::spawn(&engine).unwrap();
-    assert!(session.next().await.unwrap());
-    kill(pid(&session), Signal::SIGTERM).unwrap();
-    assert!(
-        tokio::time::timeout(Duration::from_millis(1500), session.next())
-            .await
-            .is_err()
-    );
-    // Any other end is still a failure the supervisor restarts.
-    let mut session = Session::spawn(&engine).unwrap();
-    assert!(session.next().await.unwrap());
-    kill(pid(&session), Signal::SIGKILL).unwrap();
-    assert!(tokio::time::timeout(Duration::from_secs(5), session.next())
-        .await
-        .unwrap()
-        .is_err());
 }
