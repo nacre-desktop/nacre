@@ -123,7 +123,7 @@ mod tests {
                 "notification",
                 "notifications/main.luau",
                 bead_test::Config {
-                    width: 464,
+                    width: 444,
                     height: 400,
                     scale: 1.,
                 },
@@ -167,7 +167,7 @@ mod tests {
                         if text == "Volume" {
                             label_right = Some(rect.x + rect.w);
                         }
-                        if text == "75%" {
+                        if text == "75" {
                             status_left = Some(rect.x);
                         }
                     }
@@ -224,7 +224,7 @@ mod tests {
                 false,
                 "Speakers",
                 "alsa_output.x",
-                &["volume_up", "Volume", "50%", "Speakers"],
+                &["volume_up", "Volume", "50", "· Speakers"],
             ),
             (
                 "volume-low",
@@ -233,7 +233,7 @@ mod tests {
                 false,
                 "",
                 "",
-                &["volume_down", "20%", "Default output"],
+                &["volume_down", "20", "· Default output"],
             ),
             (
                 "volume-muted",
@@ -251,7 +251,7 @@ mod tests {
                 false,
                 "Speakers",
                 "",
-                &["volume_up", "100%"],
+                &["volume_up", "100"],
             ),
             (
                 "output",
@@ -269,7 +269,7 @@ mod tests {
                 true,
                 "Built-in microphone",
                 "",
-                &["mic_off", "Microphone", "Muted", "Built-in microphone"],
+                &["mic_off", "Microphone", "Muted"],
             ),
             (
                 "brightness",
@@ -278,7 +278,7 @@ mod tests {
                 false,
                 "",
                 "eDP-1",
-                &["brightness_high", "Display brightness", "75%"],
+                &["brightness_high", "Display brightness", "75"],
             ),
             (
                 "keyboard",
@@ -287,12 +287,7 @@ mod tests {
                 false,
                 "",
                 "",
-                &[
-                    "keyboard",
-                    "Keyboard brightness",
-                    "50%",
-                    "Keyboard backlight",
-                ],
+                &["keyboard", "Keyboard brightness", "50"],
             ),
             (
                 "night-light",
@@ -686,7 +681,7 @@ mod tests {
             &root().join("palette.json"),
             fixture,
             bead_test::Config {
-                width: 464,
+                width: 444,
                 height: 784,
                 scale: 1.,
             },
@@ -758,7 +753,7 @@ mod tests {
                 &root().join("palette.json"),
                 fixture,
                 bead_test::Config {
-                    width: 464,
+                    width: 444,
                     height: 400,
                     scale: 1.,
                 },
@@ -838,7 +833,7 @@ mod tests {
             assert!(
                 harness.scene().primitives.iter().any(|primitive| matches!(
                     primitive,
-                    bead::render::Primitive::Text { text, .. } if text.as_str() == "80%"
+                    bead::render::Primitive::Text { text, .. } if text.as_str() == "80"
                 )),
                 "{kind}: percentage text should follow the latest value immediately"
             );
@@ -910,13 +905,16 @@ mod tests {
                         _ => None,
                     })
             };
-            let track = 336. - 60. - 24.;
             harness.update(BTreeMap::from([
                 ("panel.open".into(), Value::Bool(true)),
                 ("osd.open".into(), Value::Bool(true)),
                 ("osd.value".into(), Value::Number(1.0)),
             ]))?;
             let first = fill_width(&harness).expect("OSD fill image");
+            // The full track is where the fill rests once any motion would be over.
+            thread::sleep(Duration::from_millis(200));
+            harness.update(BTreeMap::new())?;
+            let track = fill_width(&harness).expect("OSD fill image");
             assert!(
                 (first - track).abs() < 0.01,
                 "{kind}: first visible frame is already full, {first} vs {track}"

@@ -4,7 +4,8 @@
 -- `label` (the event label, else `fallback`) or `fallback` (an id) -- empty when none applies. `level` kinds draw a bar and a percentage; `toggle`
 -- kinds read `value` as on/off. A glyph is chosen by, in order: `muted`, the first `below`
 -- limit above the value, the first `match` whose patterns occur in the label and device
--- (case-insensitive), `by_label`, then `default`.
+-- (case-insensitive), `by_label`, then `default`. `tint` (event label to palette role) colours the glyph instead of
+-- `primary`, e.g. the power saver leaf in `success` (design review D10).
 return {
     volume={level=true,title="bead.osd.volume",detail={label=true,fallback="bead.osd.default-output"},
         glyph={muted="volume_off",below={{.010001,"volume_mute"},{.5,"volume_down"}},default="volume_up"}},
@@ -18,6 +19,6 @@ return {
     night_light={toggle=true,title="bead.osd.night-light",detail={state=true},glyph={default="bedtime"}},
     power_profile={title="bead.osd.power-mode",
         detail={by_label={["power-saver"]="bead.osd.power-saver",performance="bead.osd.performance"},fallback="bead.osd.balanced"},
-        glyph={by_label={["power-saver"]="eco",performance="bolt"},default="balance"}},
+        glyph={by_label={["power-saver"]="eco",performance="bolt"},default="balance"},tint={["power-saver"]="success"}},
     capslock={toggle=true,title="bead.osd.capslock",detail={state=true},glyph={default="keyboard_capslock"}},
 }

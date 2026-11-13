@@ -44,8 +44,8 @@ pub const ACTIONS: [&str; 10] = [
     "notifications.clear_popups",
     "notifications.osd",
 ];
-/// QML `NacreOsd.hideDelay` and `NacreOsdEvents` arming interval.
-const OSD_HIDE: Duration = Duration::from_millis(2000);
+/// The OSD's hold before it fades (design review D10: 1.2 s) and the QML `NacreOsdEvents` arming interval.
+const OSD_HIDE: Duration = Duration::from_millis(1200);
 const OSD_ARM: Duration = Duration::from_millis(400);
 const MAX_CALLS: usize = 16;
 
