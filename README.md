@@ -1,4 +1,4 @@
-<p align="center"><img src="assets/branding/nacre-avatar-transparent.png" width="160" alt="Nacre logo"></p>
+<p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/nacre-horizontal-dark.svg"><img src="assets/branding/nacre-horizontal.svg" width="320" alt="Nacre logo"></picture></p>
 <h1 align="center">Nacre</h1>
 <p align="center"><strong>NAY-ker</strong> · mother-of-pearl</p>
 <p align="center">A Wayland desktop that takes its colors from your wallpaper.</p>
