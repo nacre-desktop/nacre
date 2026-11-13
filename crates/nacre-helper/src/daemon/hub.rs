@@ -80,6 +80,8 @@ pub struct Hub {
     pub safe: bool,
     pub frame: Duration,
     topics: BTreeMap<String, Rc<Topic>>,
+    /// Last `(base seq, seq, diff)` computed per topic, reused across clients.
+    diffs: BTreeMap<String, (u64, u64, Diff)>,
     clients: BTreeMap<u64, Client>,
     next_client: u64,
     event_seq: BTreeMap<String, u64>,
@@ -161,6 +163,7 @@ impl Hub {
             safe,
             frame,
             topics: BTreeMap::new(),
+            diffs: BTreeMap::new(),
             clients: BTreeMap::new(),
             next_client: 0,
             event_seq: BTreeMap::new(),
@@ -244,9 +247,6 @@ impl Hub {
         if !self.topics.contains_key(topic) && self.topics.len() >= MAX_SUBSCRIPTIONS {
             return Err(failure(ErrorCode::Busy, "Topic limit reached", true));
         }
-        let bytes = serde_json::to_vec(&data)
-            .map_err(|_| failure(ErrorCode::Internal, "Topic encoding failed", false))?
-            .len();
         let old = self.topics.get(topic);
         if !force && old.is_some_and(|old| old.data == data) {
             return Ok(());
@@ -257,11 +257,16 @@ impl Hub {
                 .filter(|s| *s <= MAX_SAFE_INTEGER)
                 .ok_or_else(|| failure(ErrorCode::Internal, "Topic sequence exhausted", false))
         })?;
-        nacre_protocol::framing::encode(&Message::Snap {
+        // One encode validates the frame and sizes the topic (envelope included).
+        let message = Message::Snap {
             topic: topic.into(),
             seq,
-            data: data.clone(),
-        })?;
+            data,
+        };
+        let bytes = nacre_protocol::framing::encode(&message)?.len();
+        let Message::Snap { data, .. } = message else {
+            unreachable!("snap message")
+        };
         if self.topics.values().map(|t| t.bytes).sum::<usize>() - old.map_or(0, |t| t.bytes) + bytes
             > TOPIC_BYTES
         {
@@ -743,7 +748,25 @@ impl Hub {
             };
             let message = match &subscription.delivered {
                 Some(delivered) if !subscription.force => {
-                    match patch::diff(&delivered.data, &topic.data) {
+                    // Clients at the same base share one diff per publish
+                    // (never stored for per-client spectrum projections).
+                    let cached = self
+                        .diffs
+                        .get(name)
+                        .filter(|(base, seq, _)| *base == delivered.seq && *seq == topic.seq)
+                        .map(|(_, _, diff)| diff.clone());
+                    let diff = cached.unwrap_or_else(|| {
+                        let diff = patch::diff(&delivered.data, &topic.data);
+                        // A snapshot-sized diff is not kept: it would duplicate the topic.
+                        if name != super::audio_spectrum::TOPIC
+                            && !matches!(diff, Diff::Snapshot(_))
+                        {
+                            self.diffs
+                                .insert(name.clone(), (delivered.seq, topic.seq, diff.clone()));
+                        }
+                        diff
+                    });
+                    match diff {
                         Diff::Unchanged => {
                             subscription.considered = Some(topic.seq);
                             continue;
