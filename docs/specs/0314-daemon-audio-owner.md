@@ -124,5 +124,5 @@ topics. Compared field by field with what this client publishes:
 | `bar_routes.rs` (scroll, right-click) | `audio.adjust_volume {delta}`, `audio.toggle_mute {}` | both; `adjust_volume` now shows the volume OSD at once instead of via the `pactl` echo |
 | Media (dashboard, launcher) | `dashboard.player` | not N0314 (MPRIS, unchanged) |
 
-No audio field is missing for Shell. N0227's open requests are outside audio and unchanged:
-P1, logind `locked`/`sleeping` not published; P2, no tray tooltip description.
+No audio field is missing for Shell. N0227's two open requests were outside audio and have
+since landed in N0317: the `session.state` topic (logind lock and sleep) and tray tooltips.
