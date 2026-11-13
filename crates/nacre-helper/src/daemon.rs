@@ -522,6 +522,7 @@ async fn serve(
         let (rotation_hub, rotation_paths) = (hub.clone(), paths.clone());
         let (power_hub, alerts_hub, alerts_paths) = (hub.clone(), hub.clone(), paths.clone());
         let (lock_hub, lock_paths) = (hub.clone(), paths.clone());
+        let retention_paths = paths.clone();
         let services = vec![
             tokio::task::spawn_local(supervisor::run(
                 "wallpaper-rotation",
@@ -537,6 +538,11 @@ async fn serve(
             tokio::task::spawn_local(supervisor::run("lock-content", hub.clone(), move || {
                 lock_content::run_lock_content(lock_hub.clone(), lock_paths.clone())
             })),
+            tokio::task::spawn_local(supervisor::run(
+                "history-retention",
+                hub.clone(),
+                move || crate::history_retention::run(retention_paths.clone()),
+            )),
         ];
         hub.borrow_mut().service("behaviours", "running", 0)?;
         services

@@ -4,14 +4,17 @@ use regex::Regex;
 use serde_json::Value;
 use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 
-const RETENTION_SECONDS: i64 = 30 * 24 * 60 * 60;
-
-fn within_retention(row: &Value, now: i64) -> bool {
+fn within_retention(row: &Value, policy: &Value, now: i64) -> bool {
+    let days = policy["retentionDays"].as_u64().unwrap_or(30);
+    if days == 0 {
+        return true;
+    }
+    let retention_seconds = (days as i64).saturating_mul(24 * 60 * 60);
     // Old snapshots without a valid date cannot be aged reliably.
     row["time"]
         .as_str()
         .and_then(|stamp| chrono::DateTime::parse_from_rfc3339(stamp).ok())
-        .is_none_or(|stamp| stamp.timestamp() > now - RETENTION_SECONDS)
+        .is_none_or(|stamp| stamp.timestamp() > now.saturating_sub(retention_seconds))
 }
 
 const FIELDS: [&str; 8] = [
@@ -80,9 +83,18 @@ fn truthy(value: &Value) -> bool {
     }
 }
 pub(crate) fn policy(paths: &Paths) -> Result<Value> {
-    Ok(serde_json::from_slice(&fs::read(
-        paths.assets().join("notification-policy.json"),
-    )?)?)
+    let mut policy: Value =
+        serde_json::from_slice(&fs::read(paths.assets().join("notification-policy.json"))?)?;
+    policy["retentionDays"] = serde_json::json!(retention_days(paths));
+    Ok(policy)
+}
+
+fn retention_days(paths: &Paths) -> u64 {
+    let settings: Value = fs::read(paths.config.join("desktop.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    settings["notificationRetention"].as_u64().unwrap_or(30)
 }
 
 /// Apply the existing retention/feedback policy and the established display
@@ -92,7 +104,7 @@ pub(crate) fn display_rows(rows: &Value, policy: &Value, now: i64) -> Result<Vec
     let rows = rows.as_array().ok_or("Invalid notification history")?;
     let mut selected = Vec::new();
     for row in rows {
-        if !retained(row, policy)? || !within_retention(row, now) {
+        if !retained(row, policy)? || !within_retention(row, policy, now) {
             continue;
         }
         let source = row.as_object().ok_or("Invalid notification history")?;
@@ -128,13 +140,13 @@ pub fn load(path: &Path, policy: &Value) -> Result<Value> {
     })?;
     let mut result = Vec::new();
     for row in rows {
-        if retained(row, policy)? && within_retention(row, chrono::Utc::now().timestamp()) {
+        if retained(row, policy)? && within_retention(row, policy, chrono::Utc::now().timestamp()) {
             result.push(row.clone());
         }
     }
     if rows
         .iter()
-        .any(|row| !within_retention(row, chrono::Utc::now().timestamp()))
+        .any(|row| !within_retention(row, policy, chrono::Utc::now().timestamp()))
     {
         // Also remove expired snapshots from disk when history is opened.
         save(path, &Value::Array(result.clone()), policy)?;
@@ -216,14 +228,37 @@ mod retention_tests {
     use serde_json::json;
 
     #[test]
-    fn thirty_days_boundary_and_unknown_dates() {
+    fn notification_retention_boundary_zero_and_unknown_dates() {
         let now = 1_800_000_000;
         let row = |seconds| json!({"time": chrono::DateTime::from_timestamp(seconds, 0).unwrap().to_rfc3339()});
-        assert!(within_retention(&row(now - RETENTION_SECONDS + 1), now));
-        assert!(!within_retention(&row(now - RETENTION_SECONDS), now));
-        assert!(!within_retention(&row(now - RETENTION_SECONDS - 1), now));
-        assert!(within_retention(&json!({}), now));
-        assert!(within_retention(&json!({"time":"invalid"}), now));
+        let policy = json!({"retentionDays": 30});
+        assert!(within_retention(&row(now - 30 * 86400 + 1), &policy, now));
+        assert!(!within_retention(&row(now - 30 * 86400), &policy, now));
+        assert!(within_retention(&json!({}), &policy, now));
+        assert!(within_retention(&json!({"time":"invalid"}), &policy, now));
+        assert!(within_retention(
+            &row(now - 365 * 86400),
+            &json!({"retentionDays":0}),
+            now
+        ));
+    }
+
+    #[test]
+    fn configured_notification_retention_is_read_from_temporary_home() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"notificationRetention":9}"#,
+        )?;
+        assert_eq!(retention_days(&paths), 9);
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"notificationRetention":0}"#,
+        )?;
+        assert_eq!(retention_days(&paths), 0);
+        Ok(())
     }
 
     #[test]

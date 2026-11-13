@@ -137,7 +137,16 @@ fn clip_rows() -> Result<Vec<String>> {
             .collect(),
     )
 }
-const CLIP_HISTORY_AGE: u64 = 7 * 24 * 60 * 60;
+fn clip_history_age(paths: &Paths) -> u64 {
+    let settings: Value = fs::read(paths.config.join("desktop.json"))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    settings["clipboardRetention"]
+        .as_u64()
+        .unwrap_or(7)
+        .saturating_mul(24 * 60 * 60)
+}
 fn clip_timestamp_path(paths: &Paths) -> PathBuf {
     state(paths).join("clipboard-times.json")
 }
@@ -161,8 +170,8 @@ fn read_clip_timestamps(path: &Path) -> Result<BTreeMap<String, u64>> {
         Ok(BTreeMap::new())
     }
 }
-fn should_expire_clip(created: u64, now: u64, pinned: bool) -> bool {
-    !pinned && now.saturating_sub(created) >= CLIP_HISTORY_AGE
+fn should_expire_clip(created: u64, now: u64, pinned: bool, age: u64) -> bool {
+    age > 0 && !pinned && now.saturating_sub(created) >= age
 }
 fn record_clip_timestamp(paths: &Paths, row: &str) -> Result<()> {
     let (id, _) = row.split_once('\t').ok_or("Malformed clipboard row")?;
@@ -228,7 +237,7 @@ fn prune_clip_history(paths: &Paths, rows: &[String]) -> Result<()> {
         }
         live.insert(id.to_owned());
         let created = *known.entry(id.to_owned()).or_insert(now);
-        if !should_expire_clip(created, now, false) {
+        if !should_expire_clip(created, now, false, clip_history_age(paths)) {
             continue;
         }
         let decoded = match run_command(&["cliphist", "decode"], Some(row.as_bytes())) {
@@ -1226,11 +1235,27 @@ mod tests {
     }
 
     #[test]
-    fn clipboard_retention_is_seven_days_and_keeps_pins() {
+    fn clipboard_retention_uses_temporary_home_settings_and_keeps_pins() -> Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        fs::create_dir_all(&paths.config)?;
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"clipboardRetention":7}"#,
+        )?;
         let now = 1_800_000_000;
-        assert!(!should_expire_clip(now - CLIP_HISTORY_AGE + 1, now, false));
-        assert!(should_expire_clip(now - CLIP_HISTORY_AGE, now, false));
-        assert!(!should_expire_clip(now - CLIP_HISTORY_AGE * 4, now, true));
+        let age = clip_history_age(&paths);
+        assert!(!should_expire_clip(now - age + 1, now, false, age));
+        assert!(should_expire_clip(now - age, now, false, age));
+        assert!(!should_expire_clip(now - age * 4, now, true, age));
+        fs::write(
+            paths.config.join("desktop.json"),
+            br#"{"clipboardRetention":0}"#,
+        )?;
+        let age = clip_history_age(&paths);
+        assert_eq!(age, 0);
+        assert!(!should_expire_clip(now - 365 * 86400, now, false, age));
+        Ok(())
     }
 
     #[test]

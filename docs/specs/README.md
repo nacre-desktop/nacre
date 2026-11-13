@@ -1,5 +1,7 @@
 # Nacre specifications
 
+| N0212 | [History retention settings](0212-history-retention.md) | Implemented; focused dev-1 checks passed; ready for lead review | Make notification, clipboard, Nacre screenshot, and Nacre AI chat retention settings functional; `0` keeps forever. |
+
 | N0223 | [Scroll bars and smooth scrolling adoption](0223-scroll-adoption.md) | Implemented; ready for lead review | Adopt Bead 5c0e3136 overlay bars and smooth scrolling; launcher navigation and edge-aligned control-center actions remain intact. |
 | N0219 | [Launcher keyboard and search UX](0219-launcher-ux.md) | In progress | Keep search results stationary; support rail, content and quick-control keyboard navigation with caret-aware arrows; make the bar logo open Home/Favorites like Super+Space. |
 | N0219 | [Launcher keyboard and search UX](0219-launcher-ux.md) | Implemented; ready for lead review | Stable file hint, rail/content/quick keyboard focus with caret rules, and shared logo/Super+Space Home/Favorites opening. Dev-1: 118 focused tests and whole shell (892 passed, 4 ignored), fmt/clippy/Luau passed. Local commits only. |

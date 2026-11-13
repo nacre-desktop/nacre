@@ -75,6 +75,7 @@ fn screenshot_path(paths: &Paths, date: &str) -> Result<PathBuf> {
         .create_new(true)
         .mode(0o600)
         .open(&path)?;
+    crate::history_retention::record_screenshot(paths, &path)?;
     Ok(path)
 }
 fn capture_message() -> String {
@@ -460,7 +461,21 @@ mod capture_tests {
             for item in walkdir::WalkDir::new(home.path()) {
                 let item = item?;
                 if item.file_type().is_file() {
-                    files.insert(item.path().strip_prefix(home.path())?.to_str().ok_or("Invalid fixture path")?.into(), json!({"bytes":fs::read(item.path())?.iter().map(|b| format!("{b:02x}")).collect::<String>(), "mode":format!("0o{:o}", fs::metadata(item.path())?.permissions().mode() & 0o777)}));
+                    let relative = item
+                        .path()
+                        .strip_prefix(home.path())?
+                        .to_str()
+                        .ok_or("Invalid fixture path")?;
+                    let mut bytes = fs::read(item.path())?;
+                    if relative == ".local/state/nacre/shell/screenshot-history.json" {
+                        let mut index: Value = serde_json::from_slice(&bytes)?;
+                        for record in index.as_array_mut().ok_or("Invalid screenshot index")? {
+                            record["dev"] = json!(0);
+                            record["ino"] = json!(0);
+                        }
+                        bytes = crate::json::encode(&index)?.into_bytes();
+                    }
+                    files.insert(relative.into(), json!({"bytes":bytes.iter().map(|b| format!("{b:02x}")).collect::<String>(), "mode":format!("0o{:o}", fs::metadata(item.path())?.permissions().mode() & 0o777)}));
                 }
             }
             let mut expected = case["files"].clone();

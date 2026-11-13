@@ -151,6 +151,10 @@
         "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
           "bytes": "6669787475726520706e67",
           "mode": "0o644"
+        },
+        ".local/state/nacre/shell/screenshot-history.json": {
+          "bytes": "5b7b226e616d65223a202273637265656e73686f745f32303234303130325f3033303430355f3637383930312e706e67222c2022646576223a20302c2022696e6f223a20307d5d",
+          "mode": "0o644"
         }
       }
     },
@@ -197,6 +201,10 @@
       "files": {
         "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
           "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        },
+        ".local/state/nacre/shell/screenshot-history.json": {
+          "bytes": "5b7b226e616d65223a202273637265656e73686f745f32303234303130325f3033303430355f3637383930312e706e67222c2022646576223a20302c2022696e6f223a20307d5d",
           "mode": "0o644"
         }
       }
@@ -303,6 +311,10 @@
         "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
           "bytes": "6669787475726520706e67",
           "mode": "0o644"
+        },
+        ".local/state/nacre/shell/screenshot-history.json": {
+          "bytes": "5b7b226e616d65223a202273637265656e73686f745f32303234303130325f3033303430355f3637383930312e706e67222c2022646576223a20302c2022696e6f223a20307d5d",
+          "mode": "0o644"
         }
       }
     },
@@ -341,6 +353,10 @@
       "files": {
         "Pictures/Screenshots/screenshot_20240102_030405_678901.png": {
           "bytes": "6669787475726520706e67",
+          "mode": "0o644"
+        },
+        ".local/state/nacre/shell/screenshot-history.json": {
+          "bytes": "5b7b226e616d65223a202273637265656e73686f745f32303234303130325f3033303430355f3637383930312e706e67222c2022646576223a20302c2022696e6f223a20307d5d",
           "mode": "0o644"
         }
       }

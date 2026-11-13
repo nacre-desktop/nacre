@@ -3036,10 +3036,8 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
       "range": {
-        "min": 1,
+        "min": 0,
         "max": 365,
         "step": 1
       },
@@ -3063,10 +3061,8 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
       "range": {
-        "min": 1,
+        "min": 0,
         "max": 365,
         "step": 1
       },
@@ -3081,7 +3077,7 @@
       "labelId": "settings.registry.privacy.history.screenshotRetention.label",
       "descriptionId": "settings.registry.privacy.history.screenshotRetention.description",
       "type": "integer",
-      "default": 30,
+      "default": 0,
       "store": {
         "id": "desktop",
         "key": [
@@ -3090,10 +3086,8 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
       "range": {
-        "min": 1,
+        "min": 0,
         "max": 365,
         "step": 1
       },
@@ -3108,7 +3102,7 @@
       "labelId": "settings.registry.privacy.history.aiChatRetention.label",
       "descriptionId": "settings.registry.privacy.history.aiChatRetention.description",
       "type": "integer",
-      "default": 30,
+      "default": 0,
       "store": {
         "id": "desktop",
         "key": [
@@ -3117,10 +3111,8 @@
       },
       "apply": "instant",
       "synonyms": [],
-      "backend": "planned",
-      "unavailableId": "settings.registry.ui.unavailable",
       "range": {
-        "min": 1,
+        "min": 0,
         "max": 365,
         "step": 1
       },

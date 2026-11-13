@@ -41,6 +41,7 @@ pub mod diagnostics;
 pub mod diagnostics_native;
 pub mod file_icons;
 pub mod files;
+pub mod history_retention;
 pub mod i18n;
 pub mod image_paint;
 pub mod image_text;
