@@ -11,8 +11,8 @@ The [default profile](../config/profiles/default.json) has `version: 1`, six wor
 pearls, no startup apps and no app-to-workspace assignments. AI and Brain open on
 the current workspace unless `aiWorkspace` or `brainWorkspace` is set. The bar
 keeps extra occupied workspaces visible; scroll over the pearls to switch, or
-click a window symbol to focus it. Turn off **Show window symbols** in
-**Settings → Appearance → Workspace bar** for a quieter bar.
+click a window symbol to focus it. Turn off **Window hints** in
+**Settings → Panels → Top bar** for a quieter bar.
 
 Pass `--profile default` or `--profile /path/to/profile.json` to `nacre setup`.
 Source installs accept the same choices through `./install.sh --profile`.

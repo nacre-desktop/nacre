@@ -194,6 +194,23 @@ See [Niri's border configuration](https://niri-wm.github.io/niri/Configuration%3
 can [open as ordinary windows](detachable-panels.md): Super+Ctrl+D detaches the
 open panel. Hyprland also supports holding Super and dragging it away from the edge.
 
+## Widgets
+
+Super+Shift+W opens **Nacre Widgets**. Drag a style onto the bar or the desktop
+to add a copy; click a placed widget, or pick a copy in the list, to edit it.
+**Your widgets** lists the ones you have placed.
+
+Widgets are plugins: a folder with a `plugin.toml` manifest and Luau files.
+To add one, type `>plugin` in the launcher followed by a local folder or a git
+URL. The launcher shows the plugin's name and what it asks to read ("none beyond
+drawing" for a widget that only draws). Installed plugins go to
+`~/.local/share/nacre/plugins`; their on/off state is in
+`~/.config/nacre/plugins.json`. Bundled plugins start enabled and installed ones
+start disabled. A plugin can only read the data and send the actions its
+manifest declares, but this sandbox protects stability, not security: enable
+only plugins you trust. A plugin that fails to load or render is reported and
+switched off; the rest of the shell keeps running.
+
 ## Install modules
 
 `nacre module list` shows which optional parts are on: themed app configs
