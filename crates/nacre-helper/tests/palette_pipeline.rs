@@ -34,7 +34,7 @@ fn fixture() -> Result<Value> {
     let packed: Value = serde_json::from_slice(&raw)?;
     assert_eq!(
         packed["payload_sha256"],
-        "2deef3c487f3aa54744fac9087eab88313719be43e1adff4c83e9bf3ea1f1cae"
+        "a4b76c76f329562d70adb536aa11d896a66152a3c1cac67e473156dd25f793b6"
     );
     expanded(&packed["data"], &packed["strings"])
 }

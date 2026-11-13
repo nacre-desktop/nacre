@@ -25,7 +25,7 @@ class NacreBrandingTests(unittest.TestCase):
     def test_master_is_the_exact_approved_archive_artwork(self):
         self.assertEqual(
             hashlib.sha256(brand.MASTER.read_bytes()).hexdigest(),
-            "679c5ef56949cb64dc13e266831cb588b0b6b9e23fffcca65dc3d4aa9d83b42f",
+            "15edf5ad565d24f89c2b643afd66ef930956903f8fd283431cee56389f97e476",
         )
         master = ET.fromstring(brand.MASTER.read_text())
         symbolic = ET.fromstring(brand.templates()["symbolic"])

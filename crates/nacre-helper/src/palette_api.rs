@@ -296,12 +296,17 @@ pub fn call(module: &str, operation: &str, request: &Request) -> Result<Value> {
                 .map(|p| Paths::for_home(&p))
                 .transpose()?;
             Ok(json!(branding::text_logo(
-                &assets,
-                request
-                    .value(0, "variant")
-                    .and_then(Value::as_str)
-                    .unwrap_or("symbolic"),
-                paths.as_ref()
+                &branding::braille(
+                    &assets,
+                    request
+                        .value(0, "variant")
+                        .and_then(Value::as_str)
+                        .unwrap_or("full"),
+                    36,
+                    16,
+                    paths.as_ref()
+                )?,
+                None
             )?))
         }
         ("file-icons", "family") => {

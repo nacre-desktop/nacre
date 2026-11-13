@@ -164,6 +164,9 @@ fn frozen_terminal_function_cases_preserve_packets_files_and_stale_cleanup() -> 
                 if let Some(text) = input["text"].as_str() {
                     fs::write(art.join("nacre-text.txt"), text)?;
                 }
+                if let Some(text) = input["ans"].as_str() {
+                    fs::write(art.join("nacre-text.ans"), text)?;
+                }
                 fs::create_dir_all(paths.cache.join("terminal-logos"))?;
                 let output = terminal::render_with(
                     &paths,

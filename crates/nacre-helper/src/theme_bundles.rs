@@ -390,7 +390,12 @@ pub fn apply_with(
             .into_iter()
             .map(|(_, name)| paths.share.join("branding").join(name)),
     );
-    for name in ["nacre.png", "nacre-lock.png", "nacre-text.txt"] {
+    for name in [
+        "nacre.png",
+        "nacre-lock.png",
+        "nacre-text.txt",
+        "nacre-text.ans",
+    ] {
         outputs.push(paths.share.join("branding").join(name));
     }
     for app in crate::branding::APPLICATIONS {

@@ -1,7 +1,7 @@
 import QtQuick
+import "LogoData.js" as LogoData
 import "translation.js" as Translation
 import "messages.js" as Messages
-import "LogoData.js" as LogoData
 
 Item {
     id: root

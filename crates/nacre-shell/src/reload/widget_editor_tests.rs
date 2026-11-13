@@ -453,7 +453,7 @@ fn drag_visuals_are_quiet_and_drag_surfaces_are_layer_canvases() {
 
 #[test]
 fn the_owner_layout_migrates_pixel_identically() {
-    // Geometry from N0237 (D1 status cluster, power outside the pill); the hash pins the pixels.
+    // Geometry from N0237 (D1 status cluster, power outside the pill); the hash pins the pixels, including the N0315 logo.
     let expected = [
         ("launcher", 15., 32.),
         ("workspaces", 59., 10.),
@@ -481,7 +481,7 @@ fn the_owner_layout_migrates_pixel_identically() {
     });
     assert_eq!(
         (actual, hash),
-        (expected.to_vec(), 10663196099157510909),
+        (expected.to_vec(), 11302824993991032218),
         "N0237 bar geometry and pixels"
     );
 }

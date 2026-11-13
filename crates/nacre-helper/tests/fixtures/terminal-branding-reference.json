@@ -2522,6 +2522,332 @@
           "mode": 420
         }
       }
+    },
+    {
+      "operation": "render",
+      "input": {
+        "environment": {
+          "TERM": "xterm-256color",
+          "TMUX": "",
+          "NO_COLOR": "",
+          "COLORTERM": "truecolor",
+          "KITTY_PID": "",
+          "KITTY_WINDOW_ID": ""
+        },
+        "text": "⠀⠀⠀\n",
+        "prepare": false,
+        "ans": "\u001b[38;2;221;161;186m⣿⣿⣿\u001b[0m\n"
+      },
+      "observed": [
+        27,
+        91,
+        51,
+        56,
+        59,
+        50,
+        59,
+        50,
+        50,
+        49,
+        59,
+        49,
+        54,
+        49,
+        59,
+        49,
+        56,
+        54,
+        109,
+        226,
+        163,
+        191,
+        226,
+        163,
+        191,
+        226,
+        163,
+        191,
+        27,
+        91,
+        48,
+        109,
+        10
+      ],
+      "files": {
+        ".local/share/nacre/branding/nacre-text.ans": {
+          "bytes": [
+            27,
+            91,
+            51,
+            56,
+            59,
+            50,
+            59,
+            50,
+            50,
+            49,
+            59,
+            49,
+            54,
+            49,
+            59,
+            49,
+            56,
+            54,
+            109,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            27,
+            91,
+            48,
+            109,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre-text.txt": {
+          "bytes": [
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre.png": {
+          "bytes": [
+            102,
+            105,
+            120,
+            116,
+            117,
+            114,
+            101,
+            45,
+            105,
+            109,
+            97,
+            103,
+            101
+          ],
+          "mode": 420
+        }
+      }
+    },
+    {
+      "operation": "render",
+      "input": {
+        "environment": {
+          "TERM": "xterm-256color",
+          "TMUX": "",
+          "NO_COLOR": "1",
+          "COLORTERM": "truecolor",
+          "KITTY_PID": "",
+          "KITTY_WINDOW_ID": ""
+        },
+        "text": "⠀⠀⠀\n",
+        "prepare": false,
+        "ans": "\u001b[38;2;221;161;186m⣿⣿⣿\u001b[0m\n"
+      },
+      "observed": [
+        226,
+        160,
+        128,
+        226,
+        160,
+        128,
+        226,
+        160,
+        128,
+        10
+      ],
+      "files": {
+        ".local/share/nacre/branding/nacre-text.ans": {
+          "bytes": [
+            27,
+            91,
+            51,
+            56,
+            59,
+            50,
+            59,
+            50,
+            50,
+            49,
+            59,
+            49,
+            54,
+            49,
+            59,
+            49,
+            56,
+            54,
+            109,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            27,
+            91,
+            48,
+            109,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre-text.txt": {
+          "bytes": [
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre.png": {
+          "bytes": [
+            102,
+            105,
+            120,
+            116,
+            117,
+            114,
+            101,
+            45,
+            105,
+            109,
+            97,
+            103,
+            101
+          ],
+          "mode": 420
+        }
+      }
+    },
+    {
+      "operation": "render",
+      "input": {
+        "environment": {
+          "TERM": "xterm-256color",
+          "TMUX": "",
+          "NO_COLOR": "",
+          "COLORTERM": "",
+          "KITTY_PID": "",
+          "KITTY_WINDOW_ID": ""
+        },
+        "text": "⠀⠀⠀\n",
+        "prepare": false,
+        "ans": "\u001b[38;2;221;161;186m⣿⣿⣿\u001b[0m\n"
+      },
+      "observed": [
+        226,
+        160,
+        128,
+        226,
+        160,
+        128,
+        226,
+        160,
+        128,
+        10
+      ],
+      "files": {
+        ".local/share/nacre/branding/nacre-text.ans": {
+          "bytes": [
+            27,
+            91,
+            51,
+            56,
+            59,
+            50,
+            59,
+            50,
+            50,
+            49,
+            59,
+            49,
+            54,
+            49,
+            59,
+            49,
+            56,
+            54,
+            109,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            226,
+            163,
+            191,
+            27,
+            91,
+            48,
+            109,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre-text.txt": {
+          "bytes": [
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            226,
+            160,
+            128,
+            10
+          ],
+          "mode": 420
+        },
+        ".local/share/nacre/branding/nacre.png": {
+          "bytes": [
+            102,
+            105,
+            120,
+            116,
+            117,
+            114,
+            101,
+            45,
+            105,
+            109,
+            97,
+            103,
+            101
+          ],
+          "mode": 420
+        }
+      }
     }
   ]
 }

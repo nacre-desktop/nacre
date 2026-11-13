@@ -282,7 +282,15 @@ pub fn render_with<F: FnOnce() -> Result<Option<Value>>>(
             Err(error) => eprintln!("Terminal logo registration failed; using text: {error}"),
         }
     }
-    let fallback = paths.share.join("branding/nacre-text.txt");
+    let coloured = paths.share.join("branding/nacre-text.ans");
+    let fallback = if matches!(setting("COLORTERM"), "truecolor" | "24bit")
+        && setting("NO_COLOR").is_empty()
+        && coloured.is_file()
+    {
+        coloured
+    } else {
+        paths.share.join("branding/nacre-text.txt")
+    };
     let text = if fallback.is_file() {
         fs::read_to_string(fallback)?
     } else {

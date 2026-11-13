@@ -317,20 +317,47 @@ pub fn cached_png(text: &str, paths: &Paths, size: u32) -> Result<Vec<u8>> {
     }
     Ok(raw)
 }
-pub fn text_logo(assets: &Path, variant: &str, paths: Option<&Paths>) -> Result<String> {
-    let text = templates(assets)?[variant]
-        .as_str()
-        .ok_or("Missing branding variant")?
-        .replace("currentColor", "#ffffff");
-    let source = if let Some(paths) = paths {
-        image::load_from_memory(&cached_png(&text, paths, 96)?)?.to_rgba8()
+/// Braille rows of `variant` on a `columns` x `rows` cell grid, each with the row's position on
+/// the tertiary (0) -> secondary (1/2) -> primary (1) ramp. One raster with the roles painted as
+/// those greys gives both the shape and the ramp position: the full mark's overlays then mix to
+/// its in-between chamber steps, and the pearl counts as secondary.
+pub fn braille(
+    assets: &Path,
+    variant: &str,
+    columns: u32,
+    rows: u32,
+    paths: Option<&Paths>,
+) -> Result<Vec<(String, f64)>> {
+    let grey: Map<String, Value> = [
+        ("TERTIARY", "#000000"),
+        ("SECONDARY", "#808080"),
+        ("PRIMARY", "#ffffff"),
+        ("HIGHLIGHT", "#808080"),
+        ("AI_PRIMARY", "#ffffff"),
+        ("AI_SECONDARY", "#808080"),
+        ("ON_PRIMARY", "#808080"),
+    ]
+    .into_iter()
+    .map(|(key, value)| (key.into(), json!(value)))
+    .collect();
+    let text = paint_svg(
+        templates(assets)?[variant]
+            .as_str()
+            .ok_or("Missing branding variant")?,
+        &grey,
+    )?;
+    let side = (columns * 2).min(rows * 4);
+    let image = if let Some(paths) = paths {
+        image::load_from_memory(&cached_png(&text, paths, side)?)?.to_rgba8()
     } else {
-        raster(&text, 96)?
+        raster(&text, side)?
     };
-    let image = orient_decoder::resize_rgba(&source, (24, 12), orient_decoder::Filter::Lanczos)?;
-    let mut output = String::new();
-    for y in (0..12).step_by(4) {
-        for x in (0..24).step_by(2) {
+    let (left, top) = ((columns * 2 - side) / 2, (rows * 4 - side) / 2);
+    let mut output = Vec::new();
+    for row in 0..rows {
+        let mut line = String::new();
+        let (mut sum, mut count) = (0.0, 0.0);
+        for column in 0..columns {
             let mut bits = 0u32;
             for (dx, dy, bit) in [
                 (0, 0, 0),
@@ -342,13 +369,49 @@ pub fn text_logo(assets: &Path, variant: &str, paths: Option<&Paths>) -> Result<
                 (0, 3, 6),
                 (1, 3, 7),
             ] {
-                if image[(x + dx, y + dy)][3] >= 100 {
+                let (x, y) = (column * 2 + dx, row * 4 + dy);
+                if x < left || y < top || x - left >= side || y - top >= side {
+                    continue;
+                }
+                let pixel = image[(x - left, y - top)];
+                if pixel[3] >= 100 {
                     bits |= 1 << bit;
+                    sum += f64::from(pixel[0]) / 255.0;
+                    count += 1.0;
                 }
             }
-            output.push(char::from_u32(0x2800 + bits).ok_or("Invalid braille logo")?);
+            line.push(char::from_u32(0x2800 + bits).ok_or("Invalid braille logo")?);
         }
-        output.push('\n');
+        output.push((line, if count > 0.0 { sum / count } else { 0.5 }));
+    }
+    Ok(output)
+}
+/// Plain braille lines, or with `roles` each row in its live palette colour (truecolour SGR).
+pub fn text_logo(rows: &[(String, f64)], roles: Option<&Map<String, Value>>) -> Result<String> {
+    let mut output = String::new();
+    for (line, t) in rows {
+        let Some(roles) = roles else {
+            output.push_str(line);
+            output.push('\n');
+            continue;
+        };
+        let role = |name: &str| -> Result<[f64; 3]> {
+            Ok(orient_core::colour::rgb(
+                roles[name].as_str().ok_or("Missing branding role")?,
+            )?)
+        };
+        let (a, b, t) = if *t < 0.5 {
+            (role("TERTIARY")?, role("SECONDARY")?, t * 2.0)
+        } else {
+            (role("SECONDARY")?, role("PRIMARY")?, t * 2.0 - 1.0)
+        };
+        let mix = |i: usize| ((a[i] + (b[i] - a[i]) * t) * 255.0).round() as u8;
+        output.push_str(&format!(
+            "\x1b[38;2;{};{};{}m{line}\x1b[0m\n",
+            mix(0),
+            mix(1),
+            mix(2)
+        ));
     }
     Ok(output)
 }
@@ -376,13 +439,18 @@ pub fn publish(colors: &Map<String, Value>, paths: &Paths, assets: &Path) -> Res
     for (variant, name) in asset_names() {
         atomic(&folder.join(name), render(&variant)?.as_bytes())?;
     }
+    let rows = braille(assets, "full", 36, 16, Some(paths))?;
     atomic(
         &folder.join("nacre-text.txt"),
-        text_logo(assets, "symbolic", Some(paths))?.as_bytes(),
+        text_logo(&rows, None)?.as_bytes(),
+    )?;
+    atomic(
+        &folder.join("nacre-text.ans"),
+        text_logo(&rows, Some(&roles))?.as_bytes(),
     )?;
     atomic(
         &folder.join("nacre-ai-text.txt"),
-        text_logo(assets, "ai-symbolic", Some(paths))?.as_bytes(),
+        text_logo(&braille(assets, "ai-full", 12, 3, Some(paths))?, None)?.as_bytes(),
     )?;
     for app in std::iter::once("").chain(APPLICATIONS) {
         let name = if app.is_empty() {
@@ -531,15 +599,8 @@ pub fn prepare(colors: &Map<String, Value>, paths: &Paths, assets: &Path) -> Res
             512,
         )?;
     }
-    for variant in ["symbolic", "ai-symbolic"] {
-        cached_png(
-            &patterns[variant]
-                .as_str()
-                .ok_or("Missing symbolic branding")?
-                .replace("currentColor", "#ffffff"),
-            paths,
-            96,
-        )?;
+    for (variant, columns, rows) in [("full", 36, 16), ("ai-full", 12, 3)] {
+        braille(assets, variant, columns, rows, Some(paths))?;
     }
     Ok(())
 }
