@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import nullcontext, redirect_stderr
+from contextlib import nullcontext, redirect_stderr, redirect_stdout
 from io import StringIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -19,6 +19,17 @@ spec.loader.exec_module(m)
 
 
 class ReleaseTests(unittest.TestCase):
+    def test_help_lists_update_without_changing_early_dispatch(self):
+        output = StringIO()
+        with (
+            patch.object(m.sys, "argv", ["nacre", "--help"]),
+            redirect_stdout(output),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                m.main()
+        self.assertEqual(raised.exception.code, 0)
+        self.assertIn("nacre update checks desktop updates", output.getvalue())
+
     def test_update_dispatches_through_the_existing_updates_tool_route(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)

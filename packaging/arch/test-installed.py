@@ -320,17 +320,37 @@ assert {
     "org.kde.dolphin",
 } <= set(favorites)
 assert "shell fish" not in (home / ".config/nacre/terminal/kitty.conf").read_text()
+ai_wrapper = home / ".local/bin/nacre-ai"
+ai_installed = (
+    subprocess.run(["pacman", "-Q", "nacre-ai"], capture_output=True).returncode == 0
+)
+ai_controller_check = (
+    "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); "
+    "from nacre_ai_controller import load; "
+    "assert load()['default_assistant']() in ('codex','claude')"
+)
+if ai_installed:
+    run("python", "-c", ai_controller_check)
+elif ai_wrapper.exists():
+    missing_controller = run("python", "-c", ai_controller_check, success=False)
+    assert "Nacre AI controller is missing; install the optional AI tools" in (
+        missing_controller.stdout + missing_controller.stderr
+    )
+else:
+    assert not ai_wrapper.exists(), "Setup created a wrapper without nacre-ai"
 print(
     "Real UWSM argument parsing, inherited keyboard syntax, and default wallpaper/favorites/terminal pass."
 )
-for command in (
+commands = [
     ("nacre-welcome", "--help"),
-    ("nacre-ai", "--help"),
     ("nacre-brain", "--help"),
     ("nacre-brain-maintain", "--help"),
     ("orient", "--version"),
     ("nacre_shell", "scheme", "list", "--names"),
-):
+]
+if ai_installed:
+    commands.insert(1, ("nacre-ai", "--help"))
+for command in commands:
     run(*command)
     located = Path(shutil.which(command[0]))
     installed = Path("/usr/bin") / command[0]
