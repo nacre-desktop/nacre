@@ -24,6 +24,9 @@ const MAX_ROSTER: u64 = 1024 * 1024;
 /// A prompt/progress record without a tool in flight is no longer considered
 /// active after this much transcript silence (for example, after a crash).
 const WORKING_STALE_AFTER: Duration = Duration::from_secs(5 * 60);
+/// Post-turn ephemeral records are short-lived activity hints; expire them
+/// quickly so a single idle-transition record cannot keep a chat active.
+const EPHEMERAL_WORKING_STALE_AFTER: Duration = Duration::from_secs(30);
 const HELP: &str = "usage: nacre-ai-claude [-h] [--project PROJECT] [--path PATH]\n                       [--account ACCOUNT] [--thread-id THREAD_ID]\n                       [--chat-directory] [--tmux]\n                       {new,resume,list,login}\n\nLaunch Claude tasks and read native session metadata using Anthropic's SDK.\n\npositional arguments:\n  {new,resume,list,login}\n\noptions:\n  -h, --help            show this help message and exit\n  --project PROJECT\n  --path PATH\n  --account ACCOUNT\n  --thread-id THREAD_ID\n  --chat-directory\n  --tmux\n";
 
 fn err(message: impl Into<String>) -> Error {
@@ -238,7 +241,8 @@ fn jsonl(path: &Path) -> Vec<Value> {
     records
 }
 fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>) -> bool {
-    let (mut awaiting_reply, mut tools_in_flight) = (false, BTreeSet::<String>::new());
+    let (mut awaiting_reply, mut terminal_seen, mut post_turn_ephemeral, mut tools_in_flight) =
+        (false, false, false, BTreeSet::<String>::new());
     for record in records {
         match record.get("type").and_then(Value::as_str) {
             Some("user") => {
@@ -274,6 +278,7 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
                 }
             }
             Some("assistant") => {
+                post_turn_ephemeral = false;
                 let blocks = record["message"]["content"].as_array();
                 let mut has_tool_use = false;
                 if let Some(blocks) = blocks {
@@ -297,6 +302,7 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
                             .is_some_and(|reason| !reason.is_null() && reason != "tool_use");
                     awaiting_reply = !turn_ended;
                     if turn_ended {
+                        terminal_seen = true;
                         // The bounded reader can omit an older tool result.
                         // A completed turn is authoritative even across that gap.
                         tools_in_flight.clear();
@@ -304,6 +310,7 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
                 }
             }
             Some("progress" | "hook_progress" | "hook") => awaiting_reply = true,
+            Some("ephemeral") => post_turn_ephemeral = terminal_seen,
             _ => {}
         }
     }
@@ -311,7 +318,10 @@ fn transcript_working(records: &[Value], modified: Option<std::time::SystemTime>
         return true;
     }
     if !awaiting_reply {
-        return false;
+        return post_turn_ephemeral
+            && modified
+                .and_then(|time| time.elapsed().ok())
+                .is_some_and(|age| age <= EPHEMERAL_WORKING_STALE_AFTER);
     }
     modified
         .and_then(|time| time.elapsed().ok())
@@ -945,6 +955,8 @@ fn history(
             row["session"] = json!(name);
             if row["_working"] == true {
                 row["state"] = json!("running");
+            } else {
+                row["state"] = json!("idle");
             }
         }
     }
@@ -978,6 +990,8 @@ fn history(
             row["session"] = json!(name);
             if row["_working"] == true {
                 row["state"] = json!("running");
+            } else {
+                row["state"] = json!("idle");
             }
         }
     }
@@ -1660,7 +1674,7 @@ mod tests {
             .as_str()
             .unwrap()
             .starts_with(root.to_str().unwrap()));
-        assert_eq!(row["state"], "saved");
+        assert_eq!(row["state"], "idle");
         assert_eq!(
             row["session"],
             format!("ai-chat-claude-profile-work-{CURRENT_ID}")
@@ -1669,6 +1683,7 @@ mod tests {
         assert!(rows.iter().any(|row| row["id"] == raw_id));
 
         let old_cwd = temp.path().join("old cwd fallback");
+        let old_cwd_path = old_cwd.clone();
         let old_project = put_fixture(&config, &old_cwd, "previous", PREVIOUS_ID);
         let (_, previous) = fixture("previous");
         fs::write(old_project.join(format!("{PREVIOUS_ID}.jsonl")), previous).unwrap();
@@ -1676,6 +1691,13 @@ mod tests {
         let old_cwd = old_cwd.to_string_lossy().into_owned();
         assert_eq!(old[0]["cwd"].as_str(), Some(old_cwd.as_str()));
         assert_eq!(old[0]["title"], "Fixture previous prompt");
+
+        let fallback_session = "ai-chat-claude-profile-work-previous";
+        let fallback_running =
+            running_sessions_for("chat", "work", &format!("{fallback_session}\t{}", old_cwd));
+        let old = history(&config, &old_cwd_path, true, &fallback_running).unwrap();
+        assert_eq!(old[0]["session"], fallback_session);
+        assert_eq!(old[0]["state"], "idle");
     }
 
     #[test]
@@ -1737,6 +1759,34 @@ mod tests {
             &records(
                 r#"{"type":"user","message":{"content":"prompt"}}
 {"type":"assistant","message":{"content":[{"type":"text","text":"answer"}],"stop_reason":"end_turn"}}"#
+            ),
+            recent
+        ));
+        assert!(transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"synthetic answer"}],"stop_reason":"end_turn"}}
+{"type":"ephemeral","timestamp":"2026-11-13T01:00:00.000Z"}
+{"type":"ephemeral","timestamp":"2026-11-13T01:00:10.000Z"}"#
+            ),
+            recent
+        ));
+        assert!(!transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"synthetic answer"}],"stop_reason":"end_turn"}}
+{"type":"ephemeral","timestamp":"2026-11-13T01:00:00.000Z"}"#
+            ),
+            Some(
+                std::time::SystemTime::now()
+                    - EPHEMERAL_WORKING_STALE_AFTER
+                    - Duration::from_secs(1)
+            )
+        ));
+        assert!(!transcript_working(
+            &records(
+                r#"{"type":"assistant","message":{"content":[{"type":"text","text":"synthetic answer"}],"stop_reason":"end_turn"}}
+{"type":"system","subtype":"turn_duration","timestamp":"2026-11-13T01:00:00.000Z"}
+{"type":"permission-mode","timestamp":"2026-11-13T01:00:10.000Z"}
+{"type":"queue-operation","timestamp":"2026-11-13T01:00:11.000Z"}"#
             ),
             recent
         ));

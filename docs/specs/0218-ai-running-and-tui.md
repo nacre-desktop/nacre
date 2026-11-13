@@ -41,3 +41,24 @@ and the lead performs the owner's live audit. No live files changed.
 Product delta: +608 / −94 lines, net +514. The additions implement the two
 provider state machines, terminal protocol/signal handling and the pulse;
 the old input decoder and row drawing are replaced rather than retained.
+
+## N0218c — Claude busy record tail and idle session label
+
+Recent post-turn `ephemeral` records count as work for 30 seconds from transcript
+mtime; idle-transition metadata such as `system`, `permission-mode`, and
+`queue-operation` does not. The existing five-minute prompt/progress window and
+tool-call handling are unchanged. A live tmux match reports `idle` when its
+transcript is not working; history without a live session remains `saved`.
+
+Metadata-only inspection read the last 30 records of two named busy transcripts
+(193.5 MB and 19.8 MB) and three inactive transcripts (>10 minutes since their
+recorded write time), plus counted record types across those files. It found
+zero `ephemeral` records in all five, so no consecutive-ephemeral cadence was
+available to measure. The busy files contained 4,292 and 226
+`queue-operation` records; inactive samples contained 0, 2 and 112, so that type
+is excluded. The 30-second ephemeral window is a conservative cap, not a
+measured cadence; the incident report supplied the live-tool-call observation.
+All inspection output was limited to `type`, `subtype`, `timestamp` and file
+metadata; no transcript text was retained. Dashboard, daemon and shell consumers
+were checked: they branch on `running` or pass states through, so no consumer
+changes were required for explicit `idle`.
