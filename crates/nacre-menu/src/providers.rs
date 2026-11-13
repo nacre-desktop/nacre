@@ -59,7 +59,7 @@ impl Context {
         }
     }
     pub fn provider(&self, route: &str, query: &str) -> Result<Vec<Value>> {
-        let Some(node) = self.node(route) else {
+        let Some(node) = self.rows().iter().find(|node| node["id"] == route) else {
             return Ok(Vec::new());
         };
         let kind = node["provider"].as_str().unwrap_or("");
