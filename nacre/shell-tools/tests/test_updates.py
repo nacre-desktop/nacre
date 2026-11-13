@@ -105,6 +105,7 @@ class UpdateSetupFlowTests(unittest.TestCase):
         fail_packages=False,
         nacre_installed=True,
         aur_mode='{"mode":"required"}',
+        helper=None,
     ):
         temporary = tempfile.TemporaryDirectory(prefix="nacre-update-flow-")
         self.addCleanup(temporary.cleanup)
@@ -145,6 +146,7 @@ class UpdateSetupFlowTests(unittest.TestCase):
             ),
             "flatpak": "exit 0",
             "nacre-helper": (
+                '[[ "$*" == "aur-review policy" ]] || { echo "Unsupported helper" >&2; exit 2; }\n'
                 f"[[ '{aur_mode}' == unreadable ]] && exit 1\n"
                 f"printf '%s\\n' '{aur_mode}'"
             ),
@@ -162,8 +164,13 @@ class UpdateSetupFlowTests(unittest.TestCase):
             PATH=str(tools) + ":/usr/bin:/bin",
             HOME=str(root),
             CALL_LOG=str(log),
-            NACRE_HELPER_BINARY=str(tools / "nacre-helper"),
+            NACRE_HELPER_BINARY=str(helper or tools / "nacre-helper"),
+            XDG_CONFIG_HOME=str(root / ".config"),
         )
+        if helper:
+            profile = root / ".config/nacre/profile.json"
+            profile.parent.mkdir(parents=True)
+            profile.write_text('{"version": 1, "id": "default", "aurReview": "native"}')
         if not nacre_installed:
             env["NO_NACRE"] = "1"
         if os.geteuid() == 0 and shutil.which("setpriv"):
@@ -241,6 +248,16 @@ class UpdateSetupFlowTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertIn(expected_args, log.read_text().splitlines())
                 self.assertIn(f"AUR review mode: {expected_mode}.", result.stdout)
+
+    @unittest.skipUnless(
+        Path(os.environ.get("NACRE_HELPER_BINARY", "/nonexistent")).is_file(),
+        "Candidate native helper required",
+    )
+    def test_real_helper_policy_keeps_skipreview_for_native_profiles(self):
+        result, log = self.run_script(helper=os.environ["NACRE_HELPER_BINARY"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("paru:-Syu --skipreview", log.read_text().splitlines())
+        self.assertIn("AUR review mode: native (skipreview).", result.stdout)
 
 
 class UpdateRuntimeTests(unittest.TestCase):

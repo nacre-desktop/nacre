@@ -48,7 +48,7 @@ python3 "$script_dir/updates.py" --preflight
 step="system package update"
 if command -v paru >/dev/null; then
     helper="${NACRE_HELPER_BINARY:-$HOME/.local/share/nacre/shell/tools/nacre-helper}"
-    aur_mode=$("$helper" tool aur-review policy 2>/dev/null | python3 -c 'import json, sys; print(json.load(sys.stdin)["mode"])' 2>/dev/null || true)
+    aur_mode=$("$helper" aur-review policy 2>/dev/null | python3 -c 'import json, sys; print(json.load(sys.stdin)["mode"])' 2>/dev/null || true)
     printf 'Starting paru for the explicitly confirmed system package update.\n' >&2
     if [[ "$aur_mode" == native ]]; then
         printf 'AUR review mode: native (skipreview).\n'
