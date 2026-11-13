@@ -235,8 +235,7 @@ and configuration-error fields. Its monitors are keyed by name with a separate
 the existing fifteen-second readiness policy; `session.watch {}` acknowledges the
 daemon-owned observer. The compatibility `session-watch` command restores its
 old JSON shape and files. Its `watch` mode exits after acknowledgement instead
-of keeping another process alive; the on-failure compatibility unit remains for
-one release. A missing default/older daemon uses the direct runtime; explicit
+of keeping another process alive; N0312 removed the compatibility unit. A missing default/older daemon uses the direct runtime; explicit
 overrides never fall back, and safe mode never starts a second observer.
 `session.state` v1 (N0317, [spec](../specs/0317-daemon-start-hygiene.md)) is
 `{locked, sleeping, preparing_sleep, revision}` from logind: the display session's

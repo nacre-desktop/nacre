@@ -104,9 +104,6 @@ class ProfileTests(unittest.TestCase):
                 }
             )
             staging.prepare(ROOT, home, profile)
-            self.assertTrue(
-                (home / ".config/systemd/user/nacre-sidebar-ai.service").exists()
-            )
             self.assertTrue((home / ".local/share/nacre/brain/control.py").exists())
             self.assertFalse((home / "Documents").exists())
             self.assertIn(

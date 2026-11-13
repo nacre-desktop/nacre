@@ -81,12 +81,16 @@ RETIRED_HELPERS = (
     "timezone",
 )
 RETIRED_NIRI = ("niri-session-runtime", "niri-acceptance-monitor", "niri-preview")
-MANAGED_UNITS = (
-    "nacre-shell.service",
+# N0312: the daemon owns session policy and the power-key inhibitor; the
+# sidebar socket server had no consumer. Upgrades stop and remove these units.
+RETIRED_UNITS = (
     "nacre-sidebar-ai.service",
     "nacre-session-watch.service",
-    "nacre-niri-widths.service",
     "nacre-power-key.service",
+)
+MANAGED_UNITS = (
+    "nacre-shell.service",
+    "nacre-niri-widths.service",
     "hypridle.service",
     "nacre-daemon.socket",
     "nacre-daemon.service",
@@ -246,6 +250,18 @@ def archive_legacy_shell():
         pointer.write_text(str(backup.parent))
         pointer.chmod(0o600)
     return backup.parent if moves else None
+
+
+def retire_units():
+    """Stop, disable and remove the N0312 retired units, including dangling wants links."""
+    units = HOME / ".config/systemd/user"
+    for unit in RETIRED_UNITS:
+        # Separate calls: disable fails, and --now would skip the stop, once a
+        # package upgrade has removed the unit file behind a running unit.
+        for verb in ("stop", "disable"):
+            subprocess.run(["systemctl", "--user", verb, unit], capture_output=True)
+        (units / unit).unlink(missing_ok=True)
+        (units / "graphical-session.target.wants" / unit).unlink(missing_ok=True)
 
 
 def install_control_dispatcher():
@@ -984,19 +1000,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
     shell_service.parent.mkdir(parents=True, exist_ok=True)
     shell_service.unlink(missing_ok=True) if shell_service.is_symlink() else None
     shutil.copyfile(ROOT / "nacre-shell.service", shell_service)
-    chat_service = HOME / ".config/systemd/user/nacre-sidebar-ai.service"
-    chat_service.parent.mkdir(parents=True, exist_ok=True)
-    import importlib.util
-
-    profile_spec = importlib.util.spec_from_file_location(
-        "shell_profile", ROOT / "profile-policy.py"
-    )
-    profile_policy = importlib.util.module_from_spec(profile_spec)
-    profile_spec.loader.exec_module(profile_policy)
-    if "ai" in profile_policy.load(HOME)["components"]:
-        shutil.copyfile(ROOT / "nacre-sidebar-ai.service", chat_service)
-    observer = HOME / ".config/systemd/user/nacre-session-watch.service"
-    shutil.copyfile(ROOT / "nacre-session-watch.service", observer)
+    retire_units()
     shutil.copyfile(
         ROOT / "nacre-niri-widths.service",
         HOME / ".config/systemd/user/nacre-niri-widths.service",
@@ -1014,17 +1018,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
     subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
     subprocess.run(["python3", str(ROOT / "power-button-policy.py")], check=True)
     subprocess.run(
-        ["systemctl", "--user", "enable", "--now", "nacre-power-key.service"],
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
         ["systemctl", "--user", "enable", "hypridle.service"],
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["systemctl", "--user", "enable", "--now", "nacre-session-watch.service"],
         check=True,
         capture_output=True,
     )
@@ -1044,7 +1038,7 @@ def deploy(code_only=False, retire_niri_experiment=False):
     dbus = HOME / ".local/share/dbus-1/services/org.freedesktop.Notifications.service"
     dbus.parent.mkdir(parents=True, exist_ok=True)
     dbus.write_text(
-        "[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/systemctl --user start nacre-shell.service\nSystemdService=nacre-shell.service\n"
+        "[D-BUS Service]\nName=org.freedesktop.Notifications\nExec=/usr/bin/systemctl --user start nacre-daemon.service\nSystemdService=nacre-daemon.service\n"
     )
     subprocess.run(
         ["systemctl", "--user", "mask", "--now", "swaync.service", "waybar.service"],

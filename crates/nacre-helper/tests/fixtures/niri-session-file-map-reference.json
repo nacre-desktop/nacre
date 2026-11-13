@@ -14,7 +14,6 @@
     "nacre/desktop/nacre-ai.desktop",
     "nacre/desktop/nacre-brain.desktop",
     "nacre/desktop/nacre-settings.desktop",
-    "nacre/shell-tools/nacre-power-key.service",
     "nacre/shell-tools/nacre-niri-widths.service",
     "ai/systemd/nacre-brain-sync.service"
   ],
@@ -32,7 +31,6 @@
         ".local/bin/nacre-app": "bin/nacre-app",
         ".local/bin/orient": "bin/orient",
         ".local/share/applications/nacre-settings.desktop": "nacre/desktop/nacre-settings.desktop",
-        ".config/systemd/user/nacre-power-key.service": "nacre/shell-tools/nacre-power-key.service",
         ".config/systemd/user/nacre-niri-widths.service": "nacre/shell-tools/nacre-niri-widths.service"
       }
     },
@@ -56,7 +54,6 @@
         ".local/share/applications/nacre-settings.desktop": "nacre/desktop/nacre-settings.desktop",
         ".local/share/applications/nacre-brain.desktop": "nacre/desktop/nacre-brain.desktop",
         ".config/systemd/user/nacre-brain-sync.service": "ai/systemd/nacre-brain-sync.service",
-        ".config/systemd/user/nacre-power-key.service": "nacre/shell-tools/nacre-power-key.service",
         ".config/systemd/user/nacre-niri-widths.service": "nacre/shell-tools/nacre-niri-widths.service"
       }
     }

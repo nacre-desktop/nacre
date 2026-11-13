@@ -18,8 +18,6 @@ CORE_USER_UNITS = tuple(
     Path(".config/systemd/user") / name
     for name in (
         "nacre-shell.service",
-        "nacre-session-watch.service",
-        "nacre-power-key.service",
         "nacre-niri-widths.service",
         "nacre-daemon.service",
         "nacre-daemon.socket",

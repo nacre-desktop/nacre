@@ -36,10 +36,6 @@
       "widths unit\n",
       420
     ],
-    "nacre/shell-tools/nacre-sidebar-ai.service": [
-      "ai unit\n",
-      420
-    ],
     "brain/control.py": [
       "brain fixture\n",
       420
@@ -102,10 +98,6 @@
           "text": "shell unit\n",
           "mode": 420
         },
-        ".local/share/nacre/shell/tools/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
-          "mode": 420
-        },
         "installation.json": {
           "text": "{\n  \"version\": \"0.0.fixture\",\n  \"profile\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\"\n  ],\n  \"prepared\": true,\n  \"activated\": false\n}\n",
           "mode": 420
@@ -143,10 +135,6 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
-          "mode": 420
-        },
         ".local/bin/nacre-ai": {
           "text": "ai fixture\n",
           "mode": 448
@@ -169,10 +157,6 @@
         },
         ".local/share/nacre/shell/tools/nacre-shell.service": {
           "text": "shell unit\n",
-          "mode": 420
-        },
-        ".local/share/nacre/shell/tools/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
           "mode": 420
         },
         "installation.json": {
@@ -243,10 +227,6 @@
           "text": "shell unit\n",
           "mode": 420
         },
-        ".local/share/nacre/shell/tools/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
-          "mode": 420
-        },
         "installation.json": {
           "text": "{\n  \"version\": \"0.0.fixture\",\n  \"profile\": \"default\",\n  \"components\": [\n    \"configs\",\n    \"shell\",\n    \"brain\"\n  ],\n  \"prepared\": true,\n  \"activated\": false\n}\n",
           "mode": 420
@@ -289,10 +269,6 @@
           "text": "widths unit\n",
           "mode": 420
         },
-        ".config/systemd/user/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
-          "mode": 420
-        },
         ".local/bin/nacre-ai": {
           "text": "ai fixture\n",
           "mode": 448
@@ -323,10 +299,6 @@
         },
         ".local/share/nacre/shell/tools/nacre-shell.service": {
           "text": "shell unit\n",
-          "mode": 420
-        },
-        ".local/share/nacre/shell/tools/nacre-sidebar-ai.service": {
-          "text": "ai unit\n",
           "mode": 420
         },
         "installation.json": {

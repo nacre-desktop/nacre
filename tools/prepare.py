@@ -70,8 +70,6 @@ def _prepare_locked(repo, destination, profile, lease):
     units.mkdir(parents=True, exist_ok=True)
     shutil.copy2(repo / "nacre/shell-tools/nacre-shell.service", units)
     shutil.copy2(repo / "nacre/shell-tools/nacre-niri-widths.service", units)
-    if "ai" in profile["components"]:
-        shutil.copy2(repo / "nacre/shell-tools/nacre-sidebar-ai.service", units)
     if "brain" in profile["components"]:
         shutil.copytree(
             repo / "brain",

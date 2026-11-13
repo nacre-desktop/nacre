@@ -35,7 +35,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         ".config/systemd/user/nacre-hyprland.target",
         "[Unit]\nDescription=Nacre Hyprland session services\n"
         "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
-        "Wants=nacre-shell.service nacre-session-watch.service nacre-power-key.service hypridle.service\n",
+        "Wants=nacre-shell.service hypridle.service\n",
     )
     autostart = Path(".config/hypr/conf/autostart.lua")
     if autostart in result:

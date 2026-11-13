@@ -38,6 +38,7 @@ pub mod notifications;
 pub mod notify;
 pub mod osd;
 pub mod pill_controls;
+pub mod power_key;
 pub mod power_policy;
 pub mod serve_bridge;
 pub mod session;
@@ -107,6 +108,8 @@ async fn serve(
         }
     });
     helpers::cleanup()?;
+    // Held in every mode, safe mode included: a power press must never reach logind's poweroff.
+    let _power_key_inhibitor = power_key::inhibit().await;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().audio = Some(audio_handle.clone());
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;

@@ -158,12 +158,7 @@ def stage(root, destination, component, build):
         (destination / "usr/bin/nacre_shell").symlink_to(
             "../share/nacre/bin/nacre_shell"
         )
-        for name in (
-            "nacre-shell",
-            "nacre-session-watch",
-            "nacre-power-key",
-            "nacre-niri-widths",
-        ):
+        for name in ("nacre-shell", "nacre-niri-widths"):
             copy(
                 tools / (name + ".service"),
                 destination / "usr/lib/systemd/user" / (name + ".service"),
@@ -185,7 +180,7 @@ def stage(root, destination, component, build):
         for service, command in (
             (
                 "Notifications",
-                "/usr/bin/systemctl --user start nacre-shell.service\nSystemdService=nacre-shell.service",
+                "/usr/bin/systemctl --user start nacre-daemon.service\nSystemdService=nacre-daemon.service",
             ),
             ("FileManager1", "@NACRE_HOME@/.local/bin/nacre-shell dolphin --daemon"),
         ):
@@ -337,10 +332,6 @@ def stage(root, destination, component, build):
                 f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
                 True,
             )
-        copy(
-            tools / "nacre-sidebar-ai.service",
-            deploy / ".config/systemd/user/nacre-sidebar-ai.service",
-        )
         copy(
             root / "nacre/desktop/nacre-ai.desktop",
             shared / "nacre/desktop/nacre-ai.desktop",

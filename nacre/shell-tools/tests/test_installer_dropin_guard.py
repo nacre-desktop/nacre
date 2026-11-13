@@ -122,8 +122,6 @@ class InstallerDropinGuardTests(unittest.TestCase):
         names = (
             "fish_title.fish",
             "nacre-shell.service",
-            "nacre-sidebar-ai.service",
-            "nacre-session-watch.service",
             "nacre-niri-widths.service",
             "menu.sh",
             "control.sh",
@@ -235,6 +233,40 @@ class InstallerDropinGuardTests(unittest.TestCase):
             self.assertTrue(path.is_file(), path)
         self.assertFalse((self.dest / "bin/qs").exists())
         self.assertFalse((self.dest / "source").exists())
+
+    def test_upgrade_retires_session_units_and_activates_notifications_via_daemon(self):
+        wants = self.units / "graphical-session.target.wants"
+        wants.mkdir(parents=True)
+        for name in installer.RETIRED_UNITS:
+            self.put(self.units / name, "[Service]\nExecStart=/bin/true\n")
+            (wants / name).symlink_to(self.units / name)
+        # A package upgrade may already have removed the vendor unit behind a link.
+        (wants / "nacre-power-key.service").unlink()
+        (wants / "nacre-power-key.service").symlink_to(
+            "/nonexistent/usr/lib/systemd/user/nacre-power-key.service"
+        )
+        self.deploy_fixture(False)
+        log = self.systemctl_log.read_text()
+        reload = log.index("--user daemon-reload\n")
+        for name in installer.RETIRED_UNITS:
+            self.assertLess(log.index(f"--user stop {name}\n"), reload)
+            self.assertLess(log.index(f"--user disable {name}\n"), reload)
+            self.assertNotIn(f"enable --now {name}", log)
+            self.assertFalse((self.units / name).exists(), name)
+            self.assertFalse((wants / name).is_symlink(), name)
+        dangling = [
+            path
+            for path in self.units.rglob("*")
+            if path.is_symlink() and not path.exists()
+        ]
+        self.assertEqual(dangling, [])
+        self.assertTrue((self.units / "nacre-niri-widths.service").is_file())
+        activation = (
+            self.home
+            / ".local/share/dbus-1/services/org.freedesktop.Notifications.service"
+        )
+        self.assertIn("SystemdService=nacre-daemon.service\n", activation.read_text())
+        self.assertNotIn("nacre-shell.service", activation.read_text())
 
     def test_failed_bead_migration_preserves_legacy_files(self):
         source = self.put(self.dest / "source/shell.qml", "old shell bytes")

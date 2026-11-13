@@ -387,7 +387,7 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         ".config/systemd/user/nacre-niri.target",
         "[Unit]\nDescription=Nacre Niri session services\n"
         "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
-        "Wants=nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service nacre-power-key.service\n",
+        "Wants=nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service\n",
     )
     # Niri discards startup children's stdout/stderr. A oneshot records failures
     # in the journal and waits for the existing graphical-session ordering.

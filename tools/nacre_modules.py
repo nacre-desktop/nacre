@@ -80,7 +80,7 @@ def module_of(relative):
         if path == prefix.rstrip("/") or path.startswith(prefix):
             return name
     leaf = path.rsplit("/", 1)[-1]
-    if leaf.startswith(("nacre-ai", "nacre-sidebar-ai")):
+    if leaf.startswith("nacre-ai"):
         return "ai"
     if leaf.startswith("nacre-brain"):
         return "brain"

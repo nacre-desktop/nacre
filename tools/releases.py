@@ -130,9 +130,7 @@ def paths(repo):
             "nacre-daemon.service.d/60-nacre-ui-shell-daemon.conf",
             "nacre-ui-shell-fallback.service",
             "nacre-qml-windows.service",
-            "nacre-session-watch.service",
             "nacre-niri-widths.service",
-            "nacre-sidebar-ai.service",
             "nacre-brain.service",
             "nacre-brain-sync.service",
             "nacre-brain-sync.timer",
@@ -142,7 +140,6 @@ def paths(repo):
             "nacre-brain-consolidate.timer",
             "nacre-brain-curate.service",
             "nacre-brain-curate.timer",
-            "nacre-power-key.service",
         )
     ]
     result += [
@@ -288,7 +285,6 @@ def _restore_locked(release, record=None, force=False, *, lease):
         for service in (
             "nacre-shell.service",
             "nacre-brain.service",
-            "nacre-session-watch.service",
             "nacre-niri-widths.service",
         ):
             subprocess.run(
@@ -358,10 +354,6 @@ def _restore_locked(release, record=None, force=False, *, lease):
                 "nacre-brain.service",
             ],
             check=True,
-        )
-        subprocess.run(
-            ["systemctl", "--user", "start", "nacre-session-watch.service"],
-            capture_output=True,
         )
         subprocess.run(
             ["systemctl", "--user", "start", "nacre-niri-widths.service"],
@@ -540,7 +532,6 @@ def retire_native_runtimes(release):
 
 DESKTOP_SERVICES = (
     "nacre-shell.service",
-    "nacre-sidebar-ai.service",
     "nacre-brain.service",
 )
 

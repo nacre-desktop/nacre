@@ -6,7 +6,6 @@ import argparse
 import importlib.util
 from pathlib import Path
 import shutil
-import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME = Path.home()
@@ -62,10 +61,6 @@ def main():
                 )
             continue
         link.symlink_to(destination)
-    service = HOME / ".config/systemd/user/nacre-sidebar-ai.service"
-    service.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(ROOT / "nacre/shell-tools/nacre-sidebar-ai.service", service)
-    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
     print(
         "AI code installed. Existing accounts/workers preserved; provider setup is separate."
     )

@@ -571,7 +571,7 @@ class PackageSetupTests(unittest.TestCase):
         profile = {"components": ["configs", "shell"]}
         with patch.object(configure, "selected_profile", return_value=profile):
             files = configure.files(TOOLS.parent)
-        self.assertIn(Path(".config/systemd/user/nacre-power-key.service"), files)
+        self.assertNotIn(Path(".config/systemd/user/nacre-power-key.service"), files)
         self.assertIn(Path(".config/systemd/user/nacre-niri-widths.service"), files)
         self.assertEqual(package_runtime.vendor_units(TOOLS.parent), ())
 
@@ -1061,11 +1061,11 @@ class PackageSetupTests(unittest.TestCase):
                 for name, wants in (
                     (
                         "hyprland",
-                        "nacre-shell.service nacre-session-watch.service nacre-power-key.service hypridle.service",
+                        "nacre-shell.service hypridle.service",
                     ),
                     (
                         "niri",
-                        "nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service nacre-power-key.service",
+                        "nacre-shell.service nacre-niri-widths.service nacre-niri-lock.service",
                     ),
                 ):
                     target = home / f".config/systemd/user/nacre-{name}.target"
@@ -1843,10 +1843,7 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (base / "core" / relative).read_bytes(),
                     (TOOLS.parent / "nacre/shell-tools" / name).read_bytes(),
                 )
-            for component, name in (
-                ("ai", "nacre-sidebar-ai.service"),
-                ("brain", "nacre-brain.service"),
-            ):
+            for component, name in (("brain", "nacre-brain.service"),):
                 self.assertTrue(
                     (
                         base

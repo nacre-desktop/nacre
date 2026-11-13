@@ -102,9 +102,6 @@ def files(root=ROOT):
         for suffix in ("service", "timer"):
             name = f"{unit}.{suffix}"
             result[Path(".config/systemd/user") / name] = root / "ai/systemd" / name
-    result[Path(".config/systemd/user/nacre-power-key.service")] = (
-        root / "nacre/shell-tools/nacre-power-key.service"
-    )
     result[Path(".config/systemd/user/nacre-niri-widths.service")] = (
         root / "nacre/shell-tools/nacre-niri-widths.service"
     )
@@ -220,7 +217,6 @@ def idle_policy(home, root, migrate_idle):
 
 
 LEGACY_SYNC = {
-    ".config/systemd/user/nacre-power-key.service": "e4ea2240157898be3c3f4355a04985681df0d9cd1a72163f6f6f2316a8b3b200",
     ".local/bin/nacre-brain-sync": "b1f7eb81b42ab6c205fb3e9bf19df46371ef31bfe854c6d3e1d984b70ea0c799",
     ".config/systemd/user/nacre-brain-sync.service": "8ea45eb1bf5536819ba8fdbda31fa8cae115910db406b950abc3aa5c30ecbc83",
 }
@@ -368,11 +364,8 @@ def plan(
     for relative, previous in known.items():
         if Path(relative) in vendor:
             continue  # Package migration preserves edited HOME shadows with a warning.
-        if relative in {
-            ".config/systemd/user/nacre-shell.service",
-            ".config/systemd/user/nacre-session-watch.service",
-        }:
-            continue  # The shell installer owns these services independently.
+        if relative == ".config/systemd/user/nacre-shell.service":
+            continue  # The shell installer owns this service independently.
         if scope and Path(relative) not in scope:
             continue
         if Path(relative) in desired:

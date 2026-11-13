@@ -333,12 +333,10 @@ pub fn file_map(repo: &Path, profile: &Value) -> Result<BTreeMap<PathBuf, PathBu
             );
         }
     }
-    for name in ["nacre-power-key.service", "nacre-niri-widths.service"] {
-        files.insert(
-            Path::new(".config/systemd/user").join(name),
-            repo.join("nacre/shell-tools").join(name),
-        );
-    }
+    files.insert(
+        Path::new(".config/systemd/user").join("nacre-niri-widths.service"),
+        repo.join("nacre/shell-tools/nacre-niri-widths.service"),
+    );
     let components = profile["components"]
         .as_array()
         .ok_or("Invalid optional component list")?;
@@ -415,12 +413,6 @@ pub fn stage(
     let components = profile["components"]
         .as_array()
         .ok_or("Invalid optional component list")?;
-    if components.contains(&value!("ai")) {
-        copied(
-            &repo.join("nacre/shell-tools/nacre-sidebar-ai.service"),
-            &units.join("nacre-sidebar-ai.service"),
-        )?;
-    }
     if components.contains(&value!("brain")) {
         copy_tree(
             &repo.join("brain"),

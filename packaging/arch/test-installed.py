@@ -229,8 +229,6 @@ for name in ("nacre-daemon", "nacrectl"):
     assert public.is_symlink() and public.resolve(strict=True) == binary
 for name in (
     "nacre-shell.service",
-    "nacre-session-watch.service",
-    "nacre-power-key.service",
     "nacre-niri-widths.service",
     "nacre-daemon.socket",
     "nacre-daemon.service",
