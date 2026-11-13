@@ -3210,11 +3210,13 @@ impl Runtime {
         let projector = menu.clone();
         let initial = self.launcher_initial_projection.clone();
         self.session.set_projector(Box::new(move |stores| {
-            if initial.replace(false) {
+            let mut changes = if initial.replace(false) {
                 projector.project_initial(stores, std::time::Duration::from_millis(20))
             } else {
                 projector.project(stores)
-            }
+            }?;
+            launcher_input::project_focus(stores, &mut changes);
+            Ok(changes)
         }));
         self.session.set_projection_coalescing(true);
         self.session.stores = self
@@ -3261,6 +3263,7 @@ impl Runtime {
             if let Some(bead::core::Value::Text(query)) = stores.get("launcher.search.text") {
                 changes.extend(crate::plugins::launcher_values(&root, query));
             }
+            launcher_input::project_focus(stores, &mut changes);
             Ok(changes)
         }));
         self.actions.register("launcher.app", "launcher")?;
@@ -3974,8 +3977,12 @@ impl Runtime {
         output: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
         self.actions.authorize("launcher.open")?;
-        let wakeup = self.wakeup.as_ref().ok_or("launcher event channel unavailable")?;
-        if launch.toggle && showing
+        let wakeup = self
+            .wakeup
+            .as_ref()
+            .ok_or("launcher event channel unavailable")?;
+        if launch.toggle
+            && showing
             && (launch.target_view.is_some() || self.last_launch.as_ref() == Some(&launch))
         {
             self.last_launch = None;
@@ -3984,11 +3991,19 @@ impl Runtime {
             self.last_launch = Some(launch.clone());
             wakeup(UiEvent::ShellHidden(Some(false)));
             if let Some(view) = launch.target_view {
-                wakeup(UiEvent::CompanionSelect { view, output, toggle: false, center: None });
+                wakeup(UiEvent::CompanionSelect {
+                    view,
+                    output,
+                    toggle: false,
+                    center: None,
+                });
             } else {
                 let values = launch.model();
-                *self.launcher_memory.as_ref().ok_or("launcher view state unavailable")?
-                    .lock().map_err(|_| "launcher view state unavailable")? = values.clone();
+                if let Some(memory) = &self.launcher_memory {
+                    *memory
+                        .lock()
+                        .map_err(|_| "launcher view state unavailable")? = values.clone();
+                }
                 wakeup(UiEvent::CompanionVisibility(true));
                 wakeup(UiEvent::CompanionModel(values));
             }
@@ -4875,15 +4890,6 @@ impl Runtime {
         Ok(self)
     }
     fn finish_scene(&mut self, mut scene: Option<Scene>) -> Result<Option<Scene>, Box<dyn Error>> {
-        // A completed asynchronous query/navigation can replace the focused row.
-        if self.launcher.is_some()
-            && self.session.stores.get("launcher.focus_zone") == Some(&bead::core::Value::Text("content".into()))
-            && self.session.surrounding_text().is_none()
-            && self.session.focused_action().is_none_or(|(_, action, arg)|
-                action == "select_app" && Some(&arg) != self.session.stores.get("launcher.selection"))
-        {
-            scene = self.launcher_content_focus(false)?.or(scene);
-        }
         if std::mem::take(&mut self.host_release_pending) {
             // Native host handlers own this release. Re-stage from their
             // latest candidate so the final scene includes both the side
@@ -6501,17 +6507,73 @@ impl SceneSource for Runtime {
             return self.retire_widget_drag_on_other_output();
         }
         if self.launcher.is_some()
+            && self.session.stores.get("panel.open") == Some(&bead::core::Value::Bool(true))
             && self.session.stores.get("launcher.form.kind")
                 == Some(&bead::core::Value::Text(String::new()))
         {
-            if let UiEvent::Key { text, .. } = &event {
-                if text == " " && self.session.focused_action()
-                    .is_some_and(|(_, action, _)| action == "launcher.quick")
+            if let UiEvent::Model(values) = &event
+                && self.session.stores.get("launcher.focus_zone")
+                    == Some(&bead::core::Value::Text("content-pending".into()))
+            {
+                if self.session.stores.get("launcher.pending")
+                    == Some(&bead::core::Value::Bool(false))
+                    && matches!(self.session.stores.get("launcher.result_count"), Some(bead::core::Value::Number(count)) if *count > 0.)
                 {
-                    event = UiEvent::Command { command: "enter".into(), shift: false };
+                    let scene = self.launcher_content_focus(true, values.clone())?;
+                    return self.finish_scene(scene);
+                }
+                if self.session.stores.get("launcher.pending")
+                    == Some(&bead::core::Value::Bool(false))
+                {
+                    let mut values = values.clone();
+                    values.insert(
+                        "launcher.focus_zone".into(),
+                        bead::core::Value::Text("rail".into()),
+                    );
+                    let scene = self.session.update(values)?;
+                    return self.finish_scene(scene);
+                }
+            }
+            // Widgets is a native-app handoff, rather than a daemon menu category.
+            if matches!(&event, UiEvent::Command { command, .. } if command == "right")
+                && self
+                    .session
+                    .focused_action()
+                    .is_some_and(|(_, action, arg)| {
+                        action == "launcher.app" && arg == bead::core::Value::Text("widgets".into())
+                    })
+            {
+                event = UiEvent::Command {
+                    command: "enter".into(),
+                    shift: false,
+                };
+            }
+            if let UiEvent::Key { text, .. } = &event {
+                if text == " "
+                    && self
+                        .session
+                        .focused_action()
+                        .is_some_and(|(_, action, _)| action == "launcher.quick")
+                {
+                    event = UiEvent::Command {
+                        command: "enter".into(),
+                        shift: false,
+                    };
                 } else {
-                    self.session.focus_id("launcher.search")?;
-                    self.session.stores.commit(BTreeMap::from([("launcher.focus_zone".into(), bead::core::Value::Text("search".into()))]))?;
+                    // Route this key through the existing input editor; the scene remains staged.
+                    let focus = BTreeMap::from([
+                        (
+                            "bead.focused".into(),
+                            bead::core::Value::Text("launcher.search".into()),
+                        ),
+                        ("bead.focus_visible".into(), bead::core::Value::Bool(true)),
+                        (
+                            "launcher.focus_zone".into(),
+                            bead::core::Value::Text("search".into()),
+                        ),
+                    ]);
+                    self.session.update(focus.clone())?;
+                    self.session.stores.commit(focus)?;
                 }
             }
             if let UiEvent::Command { command, shift } = &event
@@ -8121,7 +8183,8 @@ impl SceneSource for Runtime {
                 _ => String::new(),
             };
             let call = crate::commands::from_strings("nacre".into(), "launcher".into(), &[query])?;
-            let launch = crate::key_routes::launcher(&call).ok_or("launcher route unavailable")??;
+            let launch =
+                crate::key_routes::launcher(&call).ok_or("launcher route unavailable")??;
             self.open_launcher(launch, false, None)?;
             return self.finish_scene(None);
         }
@@ -9163,9 +9226,14 @@ impl SceneSource for Runtime {
                             match crate::key_routes::launcher(call) {
                                 Some(Ok(launch)) => {
                                     let showing = request.context.panel_open
-                                        && request.context.panel_view.as_deref().unwrap_or("launcher")
+                                        && request
+                                            .context
+                                            .panel_view
+                                            .as_deref()
+                                            .unwrap_or("launcher")
                                             == launch.target_view.as_deref().unwrap_or("launcher");
-                                    let wallpaper_open = launch.target_view.as_deref() == Some("wallpaper");
+                                    let wallpaper_open =
+                                        launch.target_view.as_deref() == Some("wallpaper");
                                     self.open_launcher(launch, showing, call.output.clone())?;
                                     if wallpaper_open {
                                         eprintln!(
@@ -10064,6 +10132,15 @@ impl SceneSource for Runtime {
     fn commit(&mut self) -> bool {
         if let Some(scene) = self.pending.take() {
             self.session.commit(scene);
+            if self.launcher.is_some()
+                && self.session.stores.get("launcher.focus_zone")
+                    == Some(&bead::core::Value::Text("content-pending".into()))
+                && self.session.stores.get("launcher.pending")
+                    == Some(&bead::core::Value::Bool(false))
+                && let Some(wakeup) = &self.wakeup
+            {
+                wakeup(UiEvent::Model(BTreeMap::new()));
+            }
             if self.widget_drag_overlay && bead::core::profile::frame_trace() {
                 // B0210: the ghost's drawn origin per committed overlay scene (harness only).
                 if let Some(node) = self

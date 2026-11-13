@@ -103,7 +103,7 @@ impl Quick {
                     tr(reason_id, &[])
                 };
                 let pending = self.control.quick_pending(source);
-                json!({"id": id, "on": on, "enabled": available && toggle && !pending,
+                json!({"id": id, "on": on, "enabled": available && toggle && !pending, "pending": pending,
                 "label": tr(label_id, &[]), "reason": reason,
                 "status": if available { status } else { "—".into() }, "icon": icon})
             })

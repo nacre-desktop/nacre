@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Real launcher widgets against accepted-source goldens, not a DSL imitation.
-use bead::core::{Value, source::Source};
+use bead::core::Value;
 use bead_test::{Config, Harness, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -58,7 +58,10 @@ fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
         let mut first_y = None;
         for (query, message) in [
             ("", ""),
-            (":", "Search these folders; type two or more characters to find files"),
+            (
+                ":",
+                "Search these folders; type two or more characters to find files",
+            ),
             (":ab", ""),
         ] {
             h.update(BTreeMap::from([
@@ -66,7 +69,10 @@ fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
                 ("launcher.message".into(), Value::Text(message.into())),
             ]))?;
             h.render()?;
-            let row = h.session.view_nodes().iter()
+            let row = h
+                .session
+                .view_nodes()
+                .iter()
                 .find(|node| node.action.as_deref() == Some("select_app"))
                 .expect("first rendered result");
             let y = (bead::ui::rect(&row.draw).y * scale).round() as i32;
@@ -80,16 +86,50 @@ fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
     Ok(())
 }
 
-struct KeyboardFixture(crate::launcher::Fixture);
+struct KeyboardFixture(
+    crate::launcher::Fixture,
+    Option<std::sync::Arc<tokio::sync::Notify>>,
+);
 impl bead::core::source::Source for KeyboardFixture {
-    fn snapshot(&self) -> std::sync::Arc<bead::core::source::Snapshot> { self.0.snapshot() }
-    fn subscribe(&self, callback: bead::core::source::Callback) -> bead::core::source::Result<bead::core::source::Subscription> { self.0.subscribe(callback) }
+    fn reconnect(&self) -> bead::core::source::Reply<'_> {
+        self.0.reconnect()
+    }
+    fn stop(&self) -> bead::core::source::Reply<'_> {
+        self.0.stop()
+    }
+    fn snapshot(&self) -> std::sync::Arc<bead::core::source::Snapshot> {
+        self.0.snapshot()
+    }
+    fn subscribe(
+        &self,
+        callback: bead::core::source::Callback,
+    ) -> bead::core::source::Result<bead::core::source::Subscription> {
+        self.0.subscribe(callback)
+    }
     fn invoke(&self, method: String, params: serde_json::Value) -> bead::core::source::Reply<'_> {
         Box::pin(async move {
             let mut reply = self.0.invoke(method.clone(), params.clone()).await?;
             if method == "menu.query" {
+                if params["route"] == "home" {
+                    if let Some(gate) = &self.1 {
+                        gate.notified().await;
+                    }
+                    reply = crate::launcher::fixture_reply(
+                        params["query"].as_str().unwrap(),
+                        vec![
+                            serde_json::json!({"id":"home-first","name":"Favorite fixture","icon":"fixture"}),
+                        ],
+                    );
+                }
                 reply["mode"] = params["mode"].clone();
-                reply["route"] = params["route"].as_str().unwrap_or(if params["mode"] == "search" { "home" } else { "apps" }).into();
+                reply["route"] = params["route"]
+                    .as_str()
+                    .unwrap_or(if params["mode"] == "search" {
+                        "home"
+                    } else {
+                        "apps"
+                    })
+                    .into();
             }
             Ok(reply)
         })
@@ -97,39 +137,108 @@ impl bead::core::source::Source for KeyboardFixture {
 }
 
 fn keyboard_runtime(query: &str) -> Result<crate::reload::Runtime> {
-    use bead::wayland::{SceneSource, UiEvent};
+    keyboard_runtime_gated(query, None)
+}
+
+fn keyboard_runtime_gated(
+    query: &str,
+    gate: Option<std::sync::Arc<tokio::sync::Notify>>,
+) -> Result<crate::reload::Runtime> {
     let rows = (0..32).map(|index| serde_json::json!({"id":format!("key-{index}"),"name":format!("Key {index}"),"icon":"fixture"})).collect::<Vec<_>>();
-    let queries = ["", "a", "aa", "aaa", "ab", "> ", ">plugin "].into_iter()
-        .map(|query| (query.to_owned(), crate::launcher::fixture_reply(query, rows.clone())))
+    let queries = ["", "a", "aa", "aaa", "ab", "empty", "> ", ">plugin "]
+        .into_iter()
+        .map(|query| {
+            (
+                query.to_owned(),
+                crate::launcher::fixture_reply(
+                    query,
+                    if query == "empty" {
+                        Vec::new()
+                    } else {
+                        rows.clone()
+                    },
+                ),
+            )
+        })
         .collect::<serde_json::Map<_, _>>();
-    let Value::List(groups) = crate::launcher::fixture_groups() else { unreachable!() };
-    let groups = groups.iter().map(|row| serde_json::json!({"id":row["id"],"label":row["name"],"icon":row["icon"]})).collect::<Vec<_>>();
-    let source = std::sync::Arc::new(KeyboardFixture(crate::launcher::Fixture::new(serde_json::json!({"queries":queries,"groups":groups}))?));
-    let mut runtime = crate::reload::Runtime::new(harness(query, 0.)?.session).with_launcher(Some(source))?;
+    let Value::List(groups) = crate::launcher::fixture_groups() else {
+        unreachable!()
+    };
+    let mut groups = groups
+        .iter()
+        .map(|row| serde_json::json!({"id":row["id"],"label":row["name"],"icon":row["icon"]}))
+        .collect::<Vec<_>>();
+    groups.extend((0..4).map(|index| serde_json::json!({"id":format!("test-{index}"),"label":format!("Extra category {index}"),"icon":"apps"})));
+    let source = std::sync::Arc::new(KeyboardFixture(
+        crate::launcher::Fixture::new(serde_json::json!({"queries":queries,"groups":groups}))?,
+        gate,
+    ));
+    let mut runtime =
+        crate::reload::Runtime::new(harness(query, 0.)?.session).with_launcher(Some(source))?;
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let id = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    runtime.isolate_state(
+        &std::env::temp_dir().join(format!("n0219-keyboard-{}-{id}", std::process::id())),
+    );
+    keyboard_settle(&mut runtime)?;
+    Ok(runtime)
+}
+
+fn keyboard_settle(runtime: &mut crate::reload::Runtime) -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
     loop {
         runtime.stage(UiEvent::Model(BTreeMap::new()))?;
         runtime.commit();
-        if runtime.session.stores.get("launcher.pending") == Some(&Value::Bool(false)) { break; }
-        assert!(std::time::Instant::now() < deadline, "keyboard fixture did not settle");
+        if runtime.session.stores.get("launcher.pending") == Some(&Value::Bool(false))
+            && runtime.session.stores.get("launcher.focus_zone")
+                != Some(&Value::Text("content-pending".into()))
+        {
+            break;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "keyboard fixture did not settle"
+        );
         std::thread::sleep(std::time::Duration::from_millis(2));
     }
-    Ok(runtime)
+    assert_eq!(
+        runtime.session.stores.get("launcher.error"),
+        Some(&Value::Text(String::new()))
+    );
+    Ok(())
 }
 
 fn keyboard_command(runtime: &mut crate::reload::Runtime, command: &str) -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
-    if let Some(scene) = runtime.stage(UiEvent::Command { command: command.into(), shift: false })? {
-        if command != "escape" && let Some(Value::Text(id)) = runtime.session.stores.get("bead.focused") {
-            let node = runtime.session.view_nodes().iter().find(|node| &node.id == id).expect("visible focus target");
-            assert!(node.focus_ring, "focus ring enabled for {id}");
-            let bounds = bead::ui::rect(&node.draw);
-            assert!(scene.primitives.iter().any(|draw| matches!(draw,
+    let scene = runtime.stage(UiEvent::Command {
+        command: command.into(),
+        shift: false,
+    })?;
+    runtime.commit();
+    if let Some(scene) = scene
+        && command != "escape"
+        && let Some(Value::Text(id)) = runtime.session.stores.get("bead.focused")
+    {
+        let node = runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| &node.id == id)
+            .expect("visible focus target");
+        assert!(node.focus_ring, "focus ring enabled for {id}");
+        let bounds = bead::ui::rect(&node.draw);
+        assert!(scene.primitives.iter().any(|draw| matches!(draw,
                 bead::render::Primitive::Rounded { rect, fill: [0, 0, 0, 0], border: Some(_), .. } if *rect == bounds)),
                 "visible focus ring in {command} scene for {id}");
-        }
     }
-    runtime.commit();
+    Ok(())
+}
+
+fn keyboard_focus(runtime: &mut crate::reload::Runtime, id: &str) -> Result<()> {
+    if let Some(scene) = runtime.session.focus_id(id)? {
+        runtime.session.commit(scene);
+    }
     Ok(())
 }
 
@@ -141,21 +250,46 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
             keyboard_command(&mut runtime, "down")?;
             assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
             keyboard_command(&mut runtime, "right")?;
-            assert_eq!(runtime.session.focused_action().unwrap().1, "launcher.quick");
+            assert_eq!(
+                runtime.session.focused_action().unwrap().1,
+                "launcher.quick"
+            );
             keyboard_command(&mut runtime, "left")?;
             assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
         }
-        runtime.session.focus_id("launcher.search")?;
-        if !query.is_empty() { runtime.session.edit_key(bead::ui::input::EditKey::Home, false)?; }
+        keyboard_focus(&mut runtime, "launcher.search")?;
+        if !query.is_empty() {
+            runtime
+                .session
+                .edit_key(bead::ui::input::EditKey::Home, false)?;
+        }
         keyboard_command(&mut runtime, "left")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
         keyboard_command(&mut runtime, "up")?;
-        assert_eq!(runtime.session.stores.get("launcher.engine_route"), Some(&Value::Text("home".into())));
+        assert_eq!(
+            runtime.session.stores.get("launcher.engine_route"),
+            Some(&Value::Text("home".into()))
+        );
+        keyboard_settle(&mut runtime)?;
+        assert!(
+            runtime
+                .session
+                .view_nodes()
+                .iter()
+                .any(|node| node.action_arg == Some(Value::Text("home-first".into())))
+        );
         keyboard_command(&mut runtime, "down")?;
-        assert_eq!(runtime.session.stores.get("launcher.engine_route"), Some(&Value::Text(String::new())));
+        assert_eq!(
+            runtime.session.stores.get("launcher.engine_route"),
+            Some(&Value::Text(String::new()))
+        );
+        keyboard_settle(&mut runtime)?;
         keyboard_command(&mut runtime, "right")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
-        assert_eq!(runtime.session.stores.get("launcher.selection"), Some(&Value::Text("key-0".into())));
+        assert_eq!(
+            runtime.session.stores.get("launcher.selection"),
+            Some(&Value::Text("key-0".into()))
+        );
         keyboard_command(&mut runtime, "left")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
         keyboard_command(&mut runtime, "enter")?;
@@ -163,21 +297,144 @@ fn launcher_keyboard_moves_between_rail_grid_list_and_quick_controls() -> Result
         // Horizontal moves stay in content until its rightmost rendered column.
         for _ in 0..12 {
             keyboard_command(&mut runtime, "right")?;
-            if runtime.session.focused_action().unwrap().1 == "launcher.quick" { break; }
+            if runtime.session.focused_action().unwrap().1 == "launcher.quick" {
+                break;
+            }
+            assert_eq!(
+                Some(&runtime.session.focused_action().unwrap().2),
+                runtime.session.stores.get("launcher.selection")
+            );
         }
-        assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text("actions.controls.dnd".into()));
-        for (key, id) in [("down", "night-light"), ("down", "stay-awake"), ("up", "night-light")] {
+        assert_eq!(
+            runtime.session.focused_action().unwrap().2,
+            Value::Text("actions.controls.dnd".into())
+        );
+        for (key, id) in [
+            ("down", "night-light"),
+            ("down", "stay-awake"),
+            ("up", "night-light"),
+        ] {
             keyboard_command(&mut runtime, key)?;
-            assert_eq!(runtime.session.focused_action().unwrap().2, Value::Text(format!("actions.controls.{id}")));
+            assert_eq!(
+                runtime.session.focused_action().unwrap().2,
+                Value::Text(format!("actions.controls.{id}"))
+            );
         }
         let selected = runtime.session.stores.get("launcher.selection").cloned();
         keyboard_command(&mut runtime, "left")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
-        assert_eq!(runtime.session.stores.get("launcher.selection"), selected.as_ref());
+        assert_eq!(
+            runtime.session.stores.get("launcher.selection"),
+            selected.as_ref()
+        );
         keyboard_command(&mut runtime, "down")?;
         assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
         keyboard_command(&mut runtime, "up")?;
+        keyboard_command(&mut runtime, "escape")?;
+        assert_eq!(
+            runtime.session.stores.get("panel.open"),
+            Some(&Value::Bool(false))
+        );
     }
+    Ok(())
+}
+
+#[test]
+fn launcher_entering_loading_content_focuses_the_first_result_when_it_arrives() -> Result<()> {
+    for query in ["empty", "a"] {
+        let gate = std::sync::Arc::new(tokio::sync::Notify::new());
+        let mut runtime = keyboard_runtime_gated(query, Some(gate.clone()))?;
+        runtime
+            .session
+            .edit_key(bead::ui::input::EditKey::Home, false)?;
+        keyboard_command(&mut runtime, "left")?;
+        keyboard_command(&mut runtime, "up")?;
+        assert_eq!(
+            runtime.session.stores.get("launcher.pending"),
+            Some(&Value::Bool(true))
+        );
+        keyboard_command(&mut runtime, "right")?;
+        assert_eq!(
+            runtime.session.stores.get("launcher.focus_zone"),
+            Some(&Value::Text("content-pending".into()))
+        );
+        gate.notify_one();
+        keyboard_settle(&mut runtime)?;
+        assert_eq!(
+            runtime.session.focused_action().unwrap().2,
+            Value::Text("home-first".into())
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn launcher_content_focus_scrolls_with_results_and_rail_return_starts_at_the_first_item()
+-> Result<()> {
+    let mut runtime = keyboard_runtime("a")?;
+    for _ in 0..12 {
+        keyboard_command(&mut runtime, "down")?;
+        assert_eq!(
+            Some(&runtime.session.focused_action().unwrap().2),
+            runtime.session.stores.get("launcher.selection")
+        );
+    }
+    assert!(
+        matches!(runtime.session.stores.get("launcher.scroll.y"), Some(Value::Number(scroll)) if *scroll > 0.)
+    );
+    keyboard_command(&mut runtime, "left")?;
+    keyboard_command(&mut runtime, "right")?;
+    assert_eq!(
+        runtime.session.focused_action().unwrap().2,
+        Value::Text("key-0".into())
+    );
+    assert_eq!(
+        runtime.session.stores.get("launcher.scroll.y"),
+        Some(&Value::Number(0.))
+    );
+    Ok(())
+}
+
+#[test]
+fn launcher_rail_arrows_scroll_categories_into_view_before_entering_content() -> Result<()> {
+    let mut runtime = keyboard_runtime("")?;
+    use bead::wayland::{SceneSource, UiEvent};
+    runtime.stage(UiEvent::Model(BTreeMap::from([(
+        "launcher.rail.order".into(),
+        Value::list(
+            (0..4)
+                .map(|index| serde_json::json!({"id":format!("test-{index}")}))
+                .collect(),
+        ),
+    )])))?;
+    runtime.commit();
+    keyboard_command(&mut runtime, "left")?;
+    for _ in 0..16 {
+        keyboard_command(&mut runtime, "down")?;
+        keyboard_settle(&mut runtime)?;
+        let (id, _, arg) = runtime.session.focused_action().unwrap();
+        let node = runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.id == id)
+            .unwrap();
+        let rect = bead::ui::rect(&node.draw);
+        let clip = node.clip.expect("scrollable category rail");
+        assert!(rect.y >= clip.y - 0.5 && rect.y + rect.h <= clip.y + clip.h + 0.5);
+        if arg == Value::Text("power".into()) {
+            break;
+        }
+    }
+    assert_eq!(
+        runtime.session.focused_action().unwrap().2,
+        Value::Text("power".into())
+    );
+    assert!(
+        matches!(runtime.session.stores.get("launcher.rail.scroll"), Some(Value::Number(scroll)) if *scroll > 0.)
+    );
+    keyboard_command(&mut runtime, "right")?;
+    assert_eq!(runtime.session.focused_action().unwrap().1, "select_app");
     Ok(())
 }
 
@@ -186,29 +443,98 @@ fn launcher_typing_reaches_search_from_each_zone_and_arrows_respect_the_caret() 
     use bead::wayland::{SceneSource, UiEvent};
     let mut runtime = keyboard_runtime("")?;
     for action in ["navigate", "select_app", "launcher.quick"] {
-        let id = runtime.session.view_nodes().iter().find(|node| node.action.as_deref() == Some(action)).unwrap().id.clone();
-        runtime.session.focus_id(&id)?;
-        runtime.stage(UiEvent::Key { text: "a".into(), backspace: false })?;
+        let id = runtime
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.action.as_deref() == Some(action))
+            .unwrap()
+            .id
+            .clone();
+        keyboard_focus(&mut runtime, &id)?;
+        runtime.stage(UiEvent::Key {
+            text: "a".into(),
+            backspace: false,
+        })?;
         runtime.commit();
-        assert_eq!(runtime.session.stores.get("bead.focused"), Some(&Value::Text("launcher.search".into())));
+        assert_eq!(
+            runtime.session.stores.get("bead.focused"),
+            Some(&Value::Text("launcher.search".into()))
+        );
         assert!(runtime.session.surrounding_text().unwrap().0.ends_with('a'));
     }
-    runtime.session.update(BTreeMap::from([("launcher.search.text".into(), Value::Text("ab".into()))]))?;
-    runtime.session.edit_key(bead::ui::input::EditKey::End, false)?;
+    runtime.stage(UiEvent::Model(BTreeMap::from([(
+        "launcher.search.text".into(),
+        Value::Text("ab".into()),
+    )])))?;
+    runtime.commit();
+    let input = runtime
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.input.as_deref() == Some("launcher.search.text"))
+        .unwrap();
+    let rect = bead::ui::rect(&input.draw);
+    runtime.stage(UiEvent::Click {
+        x: rect.x + 20.,
+        y: rect.y + rect.h / 2.,
+    })?;
+    runtime.commit();
+    runtime
+        .session
+        .edit_key(bead::ui::input::EditKey::End, false)?;
     keyboard_command(&mut runtime, "left")?;
     assert_eq!(runtime.session.surrounding_text().unwrap().1, 1);
     keyboard_command(&mut runtime, "left")?;
     assert_eq!(runtime.session.surrounding_text().unwrap().1, 0);
     keyboard_command(&mut runtime, "right")?;
     assert_eq!(runtime.session.surrounding_text().unwrap().1, 1);
-    runtime.session.edit_key(bead::ui::input::EditKey::End, false)?;
+    runtime
+        .session
+        .edit_key(bead::ui::input::EditKey::End, false)?;
     keyboard_command(&mut runtime, "right")?;
     assert_eq!(runtime.session.surrounding_text().unwrap().1, 2);
-    runtime.session.edit_key(bead::ui::input::EditKey::Home, false)?;
+    runtime
+        .session
+        .edit_key(bead::ui::input::EditKey::Home, false)?;
     keyboard_command(&mut runtime, "left")?;
     assert_eq!(runtime.session.focused_action().unwrap().1, "navigate");
     keyboard_command(&mut runtime, "escape")?;
-    assert_eq!(runtime.session.stores.get("panel.open"), Some(&Value::Bool(false)));
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(false))
+    );
+    Ok(())
+}
+
+#[test]
+fn launcher_content_focus_does_not_replace_an_inline_form() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut runtime = keyboard_runtime("")?;
+    keyboard_command(&mut runtime, "right")?;
+    runtime.stage(UiEvent::Model(BTreeMap::from([(
+        "launcher.form.kind".into(),
+        Value::Text("reminder".into()),
+    )])))?;
+    runtime.commit();
+    let input = runtime
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| node.input.as_deref() == Some("launcher.form.v1"))
+        .expect("inline reminder form")
+        .id
+        .clone();
+    keyboard_focus(&mut runtime, &input)?;
+    runtime.stage(UiEvent::Key {
+        text: "5".into(),
+        backspace: false,
+    })?;
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("launcher.form.v1"),
+        Some(&Value::Text("5".into()))
+    );
     Ok(())
 }
 

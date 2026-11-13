@@ -28,7 +28,7 @@ local function row(item)
         border_width=item.on and 1 or 0,border_color=ui.alpha("primary",.45*opacity),
         hover_fill=ui.tint("surfaceContainerHigh","onSurface",ui.resolve_for_check(ui.bind("bead.pressed")) and M.pressed_opacity or M.hover_opacity),
         aria_label=item.label..". "..item.status..". "..item.reason,
-        on_activate=item.enabled and ui.resolve_for_check(ui.bind("panel.open")) and ui.action("launcher.quick",item.id) or nil,
+        on_activate=(item.enabled or item.pending) and ui.resolve_for_check(ui.bind("panel.open")) and ui.action("launcher.quick",item.id) or nil,
         ui.Text{id="icon",position="absolute",left=S.compact+S.hairline/2,top=S.sm-S.hairline,width=S.xxl,height=S.xxl,
             text=item.on and "check" or M.quick_icons[item.id],family="Material Symbols Rounded",font_size=T.icons.small*4/3,color=ink},
         ui.Text{id="label",position="absolute",left=label_left,top=S.sm,width=width-label_left-S.huge*2-S.sm,height=S.xxl,
