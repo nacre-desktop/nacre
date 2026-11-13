@@ -1172,7 +1172,7 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
     thread_names.sort();
     assert_eq!(
         thread_names,
-        vec!["nacre-audio-ste", "nacre-fast-daem", "nacre-helper"],
+        vec!["nacre-audio", "nacre-fast-daem", "nacre-helper"],
         "Remaining threads: {names:?}; log tail: {}",
         log.lines()
             .rev()
