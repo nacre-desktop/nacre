@@ -88,6 +88,14 @@ for name in ("nacre-daemon", "nacrectl"):
         assert parent.stat().st_uid == 0 and parent.stat().st_mode & 0o022 == 0
     assert run("pacman", "-Qoq", str(alias)).stdout.strip() == "nacre"
 assert "nacrectl status" in run("nacrectl", "--help").stdout
+# nacre-keyring ships the repository key and populated pacman's keyring with it.
+keyrings = Path("/usr/share/pacman/keyrings")
+for name in ("nacre.gpg", "nacre-trusted", "nacre-revoked"):
+    assert run("pacman", "-Qoq", str(keyrings / name)).stdout.strip() == "nacre-keyring"
+trusted = (keyrings / "nacre-trusted").read_text()
+assert len(trusted) == 44 and trusted.endswith(":4:\n"), trusted
+run("pacman-key", "--list-keys", trusted[:40])
+print("nacre-keyring installed and the repository key is in pacman's keyring.")
 assert run("pacman", "-Qoq", "/usr/bin/orient").stdout.strip() == "orient"
 assert run("pacman", "-Qoq", "/usr/bin/nacre_shell").stdout.strip() == "nacre"
 assert importlib.util.find_spec("nacre_shell") is None, (

@@ -55,6 +55,12 @@ assert (
     ).strip()
     == "nacre"
 )
+assert (
+    subprocess.check_output(
+        ["pacman", "-Qoq", "/usr/share/pacman/keyrings/nacre.gpg"], text=True
+    ).strip()
+    == "nacre-keyring"
+)
 version = subprocess.check_output(["pacman", "-Q", compositor], text=True)
 subprocess.run([*command, "--yes"], check=True)
 assert subprocess.check_output(["pacman", "-Q", compositor], text=True) == version
