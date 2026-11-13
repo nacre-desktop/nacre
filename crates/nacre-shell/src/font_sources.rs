@@ -2,7 +2,13 @@
 //! Native desktop font selection stays in the application, not Bead's dependency graph.
 use bead::render::{Primitive, Result, Scene};
 use skrifa::MetadataProvider;
-use std::{collections::BTreeSet, ffi::CString, path::PathBuf, time::Instant};
+use std::{
+    collections::BTreeSet,
+    ffi::CString,
+    path::PathBuf,
+    sync::{LazyLock, Mutex, MutexGuard},
+    time::Instant,
+};
 const OUTFIT: &[u8] = include_bytes!("../assets/fonts/Outfit-Variable.ttf");
 static OUTFIT_PATH: std::sync::OnceLock<std::result::Result<PathBuf, String>> =
     std::sync::OnceLock::new();
@@ -62,17 +68,18 @@ type Selection = (BTreeSet<(String, u16)>, BTreeSet<char>);
 unsafe extern "C" {
     fn FcWeightFromOpenType(weight: std::ffi::c_int) -> std::ffi::c_int;
 }
-pub struct Selector {
-    entries: bead::core::cache::Lru<Selection, Vec<PathBuf>>,
-    ascii: bool,
+type Selections = bead::core::cache::Lru<Selection, Vec<PathBuf>>;
+/// One cache for the process: panels rebuild their session on every open, and each fresh
+/// runtime and text meter would otherwise rerun Fontconfig for the same font set.
+// shortcut: fonts installed while the shell runs show up only after a reload clears this.
+static SELECTIONS: LazyLock<Mutex<Selections>> =
+    LazyLock::new(|| Mutex::new(Selections::new("font-selector", 512 * 1024)));
+fn selections() -> MutexGuard<'static, Selections> {
+    SELECTIONS.lock().unwrap_or_else(|p| p.into_inner())
 }
-impl Default for Selector {
-    fn default() -> Self {
-        Self {
-            entries: bead::core::cache::Lru::new("font-selector", 512 * 1024),
-            ascii: false,
-        }
-    }
+#[derive(Default)]
+pub struct Selector {
+    ascii: bool,
 }
 impl Selector {
     /// Select for printable ASCII as well, so the first typed query reuses the opening
@@ -82,7 +89,7 @@ impl Selector {
         self
     }
     pub fn clear(&mut self) {
-        self.entries.clear();
+        selections().clear();
     }
     pub fn select(&mut self, scene: &Scene) -> Result<Vec<PathBuf>> {
         let _profile = bead::core::profile::Span::new("font_select");
@@ -103,18 +110,15 @@ impl Selector {
         if self.ascii {
             chars.extend(' '..='~');
         }
-        let matched = self
-            .entries
+        let entries = selections();
+        if let Some(paths) = entries
             .keys()
             .find(|(f, c)| *f == families && c.is_superset(&chars))
-            .cloned();
-        if let Some(key) = matched {
-            return Ok(self
-                .entries
-                .get(&key)
-                .ok_or("font selection evicted")?
-                .clone());
+            .and_then(|key| entries.get(key))
+        {
+            return Ok(paths.clone());
         }
+        drop(entries);
         let paths = select_chars(scene, self.ascii)?;
         if families.len() <= 32 && chars.len() <= 4096 {
             let bytes = families
@@ -127,19 +131,18 @@ impl Selector {
                     .map(|p| p.as_os_str().len() + 32)
                     .sum::<usize>()
                 + 128;
+            let mut entries = selections();
             // Admission failure merely disables this optional acceleration.
-            let _ = self.entries.insert((families, chars), paths.clone(), bytes);
-            if self.entries.len() > 8 {
-                self.entries.pop_lru();
+            let _ = entries.insert((families, chars), paths.clone(), bytes);
+            if entries.len() > 32 {
+                entries.pop_lru();
             }
-        } else {
-            self.entries.clear();
         }
         Ok(paths)
     }
 }
 pub fn select(scene: &Scene) -> Result<Vec<PathBuf>> {
-    select_chars(scene, false)
+    Selector::default().select(scene)
 }
 fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
     let start = Instant::now();
@@ -201,12 +204,14 @@ fn select_chars(scene: &Scene, ascii: bool) -> Result<Vec<PathBuf>> {
             &mut needed,
         )?;
     }
-    println!(
-        "PROFILE stage=font_select ms={:.3} files={} faces={}",
-        start.elapsed().as_secs_f64() * 1000.,
-        paths.len(),
-        db.len()
-    );
+    if bead::core::profile::enabled() {
+        println!(
+            "PROFILE stage=font_select ms={:.3} files={} faces={}",
+            start.elapsed().as_secs_f64() * 1000.,
+            paths.len(),
+            db.len()
+        );
+    }
     Ok(paths.into_iter().collect())
 }
 fn load(
@@ -310,5 +315,44 @@ mod tests {
             center[0] > 210 && center[1] > 220 && center[2] > 215,
             "digit center pixel ({x},{y}) is not Outfit text color: {center:?}"
         );
+    }
+
+    #[test]
+    fn fresh_selectors_and_text_meters_reuse_one_font_selection() {
+        let family = "Nacre Font Cache Probe".to_owned();
+        let probe = vec![PathBuf::from("/nacre-font-cache-probe.ttf")];
+        let key = (
+            BTreeSet::from([(family.clone(), 400)]),
+            ('a'..='z').collect(),
+        );
+        selections().insert(key, probe.clone(), 64).unwrap();
+        let scene = Scene {
+            opacity: 1.,
+            motion: None,
+            resource_revision: 1,
+            asset_data: Default::default(),
+            clips: Default::default(),
+            layers: vec![],
+            prepared: Default::default(),
+            font_files: vec![],
+            width: 100.,
+            slide: None,
+            offset: (0., 0.),
+            bounds: Rect::new(0., 0., 100., 20.),
+            primitives: vec![Primitive::Text {
+                rect: Rect::new(0., 0., 100., 20.),
+                text: "cache".into(),
+                family,
+                size: 16.,
+                color: [0; 4],
+                weight: 400,
+                align: None,
+                shadow: None,
+            }],
+        };
+        // A panel reopened with a new runtime, and the session's text-meter picker, hit the
+        // shared entry instead of asking Fontconfig (which knows no such family).
+        assert_eq!(Selector::default().select(&scene).unwrap(), probe);
+        assert_eq!(select(&scene).unwrap(), probe);
     }
 }

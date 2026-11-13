@@ -149,11 +149,17 @@ fn capability_gates_collection_wallpapers_and_niri_workspace_preferences() {
             )],
         );
         let wallpaper = items(&settings.project(&stores("wallpaper", "")));
-        assert_eq!(
+        for id in [
+            "section:wallpaper.collection",
+            "wallpaper.collection.collectionWallpapers",
+        ] {
+            assert_eq!(wallpaper.iter().any(|row| row["id"] == id), present, "{id}");
+        }
+        // The wallpaper folder is not a desk collection: every compositor keeps it.
+        assert!(
             wallpaper
                 .iter()
-                .any(|row| row["id"] == "wallpaper.collection.collectionWallpapers"),
-            present
+                .any(|row| row["id"] == "wallpaper.collection.folder")
         );
         let workspaces = items(&settings.project(&stores("windows-workspaces", "")));
         assert_eq!(

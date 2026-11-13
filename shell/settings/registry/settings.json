@@ -186,7 +186,10 @@
       "id": "wallpaper.collection",
       "page": "wallpaper",
       "labelId": "settings.registry.wallpaper.collection.label",
-      "order": 1
+      "order": 1,
+      "visibleWhen": {
+        "capability": "workspaceCollections"
+      }
     },
     {
       "id": "wallpaper.rotation",
@@ -1610,7 +1613,7 @@
     {
       "id": "wallpaper.collection.folder",
       "page": "wallpaper",
-      "section": "wallpaper.collection",
+      "section": "wallpaper.rotation",
       "key": "folder",
       "labelId": "settings.registry.wallpaper.collection.folder.label",
       "descriptionId": "settings.registry.wallpaper.collection.folder.description",
