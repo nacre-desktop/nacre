@@ -1,4 +1,4 @@
-//! End-to-end checks for the Brain category resolver and writer parity.
+//! End-to-end checks for the Brain category resolver and writer.
 use std::{
     fs,
     io::Write,
@@ -44,86 +44,6 @@ fn note_path(output: &Output) -> PathBuf {
     );
     let text = String::from_utf8_lossy(&output.stdout);
     PathBuf::from(text.trim())
-}
-
-fn fields(note: &str) -> Vec<String> {
-    let header = nacre_helper::brain_discovery::header_fields(note);
-    ["worlds", "areas", "topics", "review"]
-        .into_iter()
-        .filter_map(|key| {
-            header
-                .get(key)
-                .and_then(serde_json::Value::as_str)
-                .map(|value| {
-                    let label = match key {
-                        "worlds" => "Worlds",
-                        "areas" => "Areas",
-                        "topics" => "Topics",
-                        _ => "Review",
-                    };
-                    format!("{label}: {value}")
-                })
-        })
-        .collect()
-}
-
-#[test]
-fn python_memory_and_native_note_share_canonical_headers() {
-    let root = tempfile::tempdir().unwrap();
-    let native_home = root.path().join("native-home");
-    let python_home = root.path().join("python-home");
-    fs::create_dir_all(&native_home).unwrap();
-    fs::create_dir_all(&python_home).unwrap();
-    let native_vault = native_home.join("brain");
-    let python_vault = python_home.join("brain");
-    let native = call(
-        &native_home,
-        &native_vault,
-        "nacre-brain",
-        &[
-            "note",
-            "--title",
-            "Desktop compositor notes",
-            "--source",
-            "taxonomy parity fixture",
-            "--world",
-            "desktop",
-            "--topic",
-            "QML Runtime",
-        ],
-        "A synthetic note about Nacre compositors.",
-    );
-    let native_note = fs::read_to_string(note_path(&native)).unwrap();
-
-    let writer = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../bin/nacre-ai-memory.py.rollback"
-    );
-    let python = Command::new("python3")
-        .args(["-c", "import argparse, importlib.machinery, importlib.util, json, sys; loader=importlib.machinery.SourceFileLoader('memory_writer', sys.argv[1]); spec=importlib.util.spec_from_loader(loader.name, loader); mod=importlib.util.module_from_spec(spec); loader.exec_module(mod); args=argparse.Namespace(title='Desktop compositor notes', source='taxonomy parity fixture', kind='inbox', confidence='reported', world=['desktop'], area=[], topic=['QML Runtime']); print(json.dumps(mod.remember(args, sys.stdin.read())))", writer])
-        .env_clear()
-        .env("HOME", &python_home)
-        .env("NACRE_BRAIN", &python_vault)
-        .env("NACRE_HELPER_BINARY", helper())
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map(|mut child| {
-            child.stdin.take().unwrap().write_all(b"A synthetic note about Nacre compositors.").unwrap();
-            child.wait_with_output().unwrap()
-        })
-        .unwrap();
-    assert!(
-        python.status.success(),
-        "{}",
-        String::from_utf8_lossy(&python.stderr)
-    );
-    let result: serde_json::Value = serde_json::from_slice(&python.stdout).unwrap();
-    let python_note = fs::read_to_string(result["path"].as_str().unwrap()).unwrap();
-    assert_eq!(fields(&native_note), fields(&python_note));
-    assert!(native_note.contains("Worlds: Nacre"));
-    assert!(native_note.contains("Areas: Desktop"));
 }
 
 #[test]
@@ -177,7 +97,6 @@ fn memory_topics_only_deduplicate_exact_category_slugs() {
         let home = root.path().join("home");
         let vault = root.path().join("vault");
         fs::create_dir_all(&home).unwrap();
-        let input = serde_json::json!({"world": worlds, "area": areas, "topic": topics});
         let mut args = vec![
             "nacre-ai-memory".to_owned(),
             "--title".to_owned(),
@@ -210,41 +129,6 @@ fn memory_topics_only_deduplicate_exact_category_slugs() {
             String::from_utf8_lossy(&native.stderr)
         );
         let native_json: serde_json::Value = serde_json::from_slice(&native.stdout).unwrap();
-
-        let writer = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../bin/nacre-ai-memory.py.rollback"
-        );
-        let python = Command::new("python3")
-            .args([
-                "-c",
-                "import argparse, importlib.machinery, importlib.util, json, sys; loader=importlib.machinery.SourceFileLoader('memory_writer', sys.argv[1]); spec=importlib.util.spec_from_loader(loader.name, loader); mod=importlib.util.module_from_spec(spec); loader.exec_module(mod); data=json.loads(sys.argv[2]); args=argparse.Namespace(title=sys.argv[3], source='taxonomy parity fixture', kind='checkpoints', confidence='reported', world=data['world'], area=data['area'], topic=data['topic']); print(json.dumps(mod.remember(args, sys.stdin.read())))",
-                writer,
-                &input.to_string(),
-                &format!("Topic case {index}"),
-            ])
-            .env_clear()
-            .env("HOME", &home)
-            .env("NACRE_BRAIN", &vault)
-            .env("NACRE_HELPER_BINARY", helper())
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
-            .map(|mut child| {
-                child.stdin.take().unwrap().write_all(b"Synthetic topic deduplication fixture.").unwrap();
-                child.wait_with_output().unwrap()
-            })
-            .unwrap();
-        assert!(
-            python.status.success(),
-            "{name}: {}",
-            String::from_utf8_lossy(&python.stderr)
-        );
-        let python_json: serde_json::Value = serde_json::from_slice(&python.stdout).unwrap();
-        for key in ["worlds", "areas", "topics"] {
-            assert_eq!(native_json[key], python_json[key], "{name}: {key} parity");
-        }
         assert_eq!(
             native_json["topics"],
             serde_json::json!(expected_topics),

@@ -67,9 +67,6 @@ def files(root=ROOT):
         "nacre-welcome-state",
         "nacre-brain",
         "nacre-brain-maintain",
-        "nacre-brain.py.rollback",
-        "nacre-brain-maintain.py.rollback",
-        "nacre-brain-sync.py.rollback",
         "nacre-brain-queue.py",
         "xdg-open",
     ):

@@ -1,13 +1,8 @@
 """Fresh installation uses public names without requiring private host aliases."""
 
-import importlib.machinery
-import importlib.util
-import os
 from pathlib import Path
 import subprocess
-import tempfile
 import unittest
-from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -81,26 +76,3 @@ class PublicNamesTests(unittest.TestCase):
                 # not application/runtime identifiers. Keep this data exception exact.
                 text = text.replace("siver" + "teh", "")
             self.assertFalse(any(word in text for word in forbidden), name)
-
-    def test_fresh_home_controller_roots_and_provider_profiles_are_canonical(self):
-        loader = importlib.machinery.SourceFileLoader(
-            "public_controller", str(ROOT / "bin/nacre-ai.py.rollback")
-        )
-        spec = importlib.util.spec_from_loader(loader.name, loader)
-        controller = importlib.util.module_from_spec(spec)
-        with (
-            tempfile.TemporaryDirectory() as directory,
-            patch.dict(os.environ, {"HOME": directory}, clear=True),
-        ):
-            loader.exec_module(controller)
-            home = Path(directory)
-            self.assertEqual(
-                controller.settings_path(), home / ".config/nacre/ai/projects.json"
-            )
-            self.assertEqual(
-                controller.preferences_path(), home / ".config/nacre/ai/settings.json"
-            )
-            self.assertEqual(
-                controller.general_chat()["path"],
-                str(home / ".local/share/nacre/ai/chats"),
-            )

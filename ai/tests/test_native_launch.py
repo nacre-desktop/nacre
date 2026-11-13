@@ -118,20 +118,16 @@ class NativeLaunchTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
 
-    def fixture(self, mode):
-        home = Path(tempfile.mkdtemp(prefix=mode + "-", dir=self.root))
+    def fixture(self):
+        home = Path(tempfile.mkdtemp(prefix="native-", dir=self.root))
         bindir = home / ".local/bin"
         tools = home / ".local/share/nacre/shell/tools"
         chats = home / ".local/share/nacre/ai/chats"
         chats.mkdir(parents=True)
         bindir.mkdir(parents=True)
         tools.mkdir(parents=True)
-        if mode == "python":
-            for name in ("nacre-ai", "nacre-ai-chat", "nacre-ai-claude"):
-                shutil.copy2(ROOT / "bin" / f"{name}.py.rollback", bindir / name)
-        else:
-            for name in ("nacre-ai", "nacre-ai-chat", "nacre-ai-claude"):
-                shutil.copy2(ROOT / "bin" / name, bindir / name)
+        for name in ("nacre-ai", "nacre-ai-chat", "nacre-ai-claude"):
+            shutil.copy2(ROOT / "bin" / name, bindir / name)
         for name in ("nacre_ai_core.py", "nacre_state.py", "nacre-state-files.json"):
             shutil.copy2(ROOT / "nacre/shell-tools" / name, tools / name)
         _write_executable(bindir / "codex", FAKE_CODEX)
@@ -247,131 +243,122 @@ class NativeLaunchTests(unittest.TestCase):
         finally:
             os.close(master)
 
-    def test_panel_load_chat_child_command_reaches_fake_codex_in_both_implementations(
-        self,
-    ):
-        for mode in ("native", "python"):
-            with self.subTest(mode=mode):
-                home, env, _chats, log, kitty_log = self.fixture(mode)
-                kitty_argv = ["--class", "nacre-ai-task", "--title", "Load chat"]
+    def test_panel_load_chat_child_command_reaches_fake_codex(self):
+        home, env, _chats, log, kitty_log = self.fixture()
+        kitty_argv = ["--class", "nacre-ai-task", "--title", "Load chat"]
+        kitty_argv += [
+            "--",
+            "nacre-ai",
+            "window",
+            "--worker-command",
+            "sessions",
+        ]
+        process, master, output, selected = self.run_tty(
+            ["kitty", *kitty_argv],
+            env,
+            home,
+            select_chat=True,
+        )
+        try:
+            self.assertTrue(selected, output)
+            self.assertEqual(json.loads(kitty_log.read_text()), kitty_argv)
+            self.assertTrue(log.exists(), output)
+            record = json.loads(log.read_text().splitlines()[-1])
+            self.assertEqual(record["argv"][0], "resume")
+            self.assertEqual(record["argv"][1], THREAD)
+            self.assertEqual(record["cwd"], str(home / ".local/share/nacre/ai/chats"))
+            self.assertEqual(
+                record["CODEX_HOME"],
+                str(home / ".local/share/nacre/ai/accounts/work"),
+            )
+            self.assertIsNone(record["NACRE_AI_HISTORY_HOME"])
+        finally:
+            self.stop(process, master)
+
+    def test_public_window_latest_and_new_launch_forms(self):
+        for action, child_args in (
+            ("latest", ["latest"]),
+            (
+                "new",
+                [
+                    "new",
+                    "--project",
+                    "general-chat",
+                    "--agent",
+                    "codex",
+                    "--account",
+                    "work",
+                ],
+            ),
+            ("new", ["new", "--agent", "codex"]),
+        ):
+            with self.subTest(action=action):
+                home, env, _chats, log, kitty_log = self.fixture()
+                kitty_argv = [
+                    "--class",
+                    "nacre-ai-task",
+                    "--title",
+                    "New chat" if action == "new" else "Load chat",
+                ]
                 kitty_argv += [
                     "--",
                     "nacre-ai",
                     "window",
                     "--worker-command",
-                    "sessions",
+                    *child_args,
                 ]
-                process, master, output, selected = self.run_tty(
-                    ["kitty", *kitty_argv],
-                    env,
-                    home,
-                    select_chat=True,
+                process, master, output, _ = self.run_tty(
+                    ["kitty", *kitty_argv], env, home
                 )
                 try:
-                    self.assertTrue(selected, output)
                     self.assertEqual(json.loads(kitty_log.read_text()), kitty_argv)
                     self.assertTrue(log.exists(), output)
-                    record = json.loads(log.read_text().splitlines()[-1])
-                    self.assertEqual(record["argv"][0], "resume")
-                    self.assertEqual(record["argv"][1], THREAD)
-                    self.assertEqual(
-                        record["cwd"], str(home / ".local/share/nacre/ai/chats")
-                    )
-                    self.assertEqual(
-                        record["CODEX_HOME"],
-                        str(home / ".local/share/nacre/ai/accounts/work"),
-                    )
-                    self.assertIsNone(record["NACRE_AI_HISTORY_HOME"])
-                finally:
-                    self.stop(process, master)
-
-    def test_public_window_latest_and_new_launch_forms(self):
-        for mode in ("native", "python"):
-            for action, child_args in (
-                ("latest", ["latest"]),
-                (
-                    "new",
-                    [
-                        "new",
-                        "--project",
-                        "general-chat",
-                        "--agent",
-                        "codex",
-                        "--account",
-                        "work",
-                    ],
-                ),
-                ("new", ["new", "--agent", "codex"]),
-            ):
-                with self.subTest(mode=mode, action=action):
-                    home, env, _chats, log, kitty_log = self.fixture(mode)
-                    kitty_argv = [
-                        "--class",
-                        "nacre-ai-task",
-                        "--title",
-                        "New chat" if action == "new" else "Load chat",
-                    ]
-                    kitty_argv += [
-                        "--",
-                        "nacre-ai",
-                        "window",
-                        "--worker-command",
-                        *child_args,
-                    ]
-                    process, master, output, _ = self.run_tty(
-                        ["kitty", *kitty_argv], env, home
-                    )
-                    try:
-                        self.assertEqual(json.loads(kitty_log.read_text()), kitty_argv)
-                        self.assertTrue(log.exists(), output)
-                        launched = json.loads(log.read_text().splitlines()[-1])
-                        if action == "latest":
-                            self.assertEqual(launched["argv"][0], "resume")
-                            self.assertIn(THREAD, launched["argv"])
-                        else:
-                            self.assertTrue(launched["argv"])
-                            self.assertIn("danger-full-access", launched["argv"])
-                    finally:
-                        self.stop(process, master)
-
-    def test_native_and_python_claude_resume_use_the_selected_account(self):
-        for mode in ("native", "python"):
-            with self.subTest(mode=mode):
-                home, env, chats, log, _kitty_log = self.fixture(mode)
-                env["FAKE_CLAUDE_HISTORY"] = "1"
-                process, master, output, _ = self.run_tty(
-                    [
-                        "nacre-ai-claude",
-                        "resume",
-                        "--project",
-                        "general-chat",
-                        "--path",
-                        str(chats),
-                        "--account",
-                        "work",
-                        "--thread-id",
-                        THREAD,
-                        "--chat-directory",
-                        "--tmux",
-                    ],
-                    env,
-                    home,
-                )
-                try:
-                    self.assertTrue(log.exists(), output)
                     launched = json.loads(log.read_text().splitlines()[-1])
-                    self.assertIn("--resume", launched["argv"])
-                    self.assertIn(THREAD, launched["argv"])
-                    self.assertEqual(
-                        launched["CLAUDE_CONFIG_DIR"],
-                        str(home / ".local/share/nacre/ai/claude-accounts/work"),
-                    )
-                    self.assertEqual(launched["cwd"], str(chats))
+                    if action == "latest":
+                        self.assertEqual(launched["argv"][0], "resume")
+                        self.assertIn(THREAD, launched["argv"])
+                    else:
+                        self.assertTrue(launched["argv"])
+                        self.assertIn("danger-full-access", launched["argv"])
                 finally:
                     self.stop(process, master)
 
-    def test_native_resume_record_matches_python_latest_for_default_codex(self):
-        home, env, chats, log, kitty_log = self.fixture("native")
+    def test_native_claude_resume_uses_the_selected_account(self):
+        home, env, chats, log, _kitty_log = self.fixture()
+        env["FAKE_CLAUDE_HISTORY"] = "1"
+        process, master, output, _ = self.run_tty(
+            [
+                "nacre-ai-claude",
+                "resume",
+                "--project",
+                "general-chat",
+                "--path",
+                str(chats),
+                "--account",
+                "work",
+                "--thread-id",
+                THREAD,
+                "--chat-directory",
+                "--tmux",
+            ],
+            env,
+            home,
+        )
+        try:
+            self.assertTrue(log.exists(), output)
+            launched = json.loads(log.read_text().splitlines()[-1])
+            self.assertIn("--resume", launched["argv"])
+            self.assertIn(THREAD, launched["argv"])
+            self.assertEqual(
+                launched["CLAUDE_CONFIG_DIR"],
+                str(home / ".local/share/nacre/ai/claude-accounts/work"),
+            )
+            self.assertEqual(launched["cwd"], str(chats))
+        finally:
+            self.stop(process, master)
+
+    def test_native_resume_record_for_default_codex(self):
+        home, env, chats, log, kitty_log = self.fixture()
         record = {
             "id": THREAD,
             "cwd": str(chats),
@@ -413,7 +400,7 @@ class NativeLaunchTests(unittest.TestCase):
         finally:
             self.stop(process, master)
 
-        home, env, chats, log, kitty_log = self.fixture("native")
+        home, env, chats, log, kitty_log = self.fixture()
         explicit_history = home / ".local/share/nacre/ai/accounts/work/history"
         explicit_history.mkdir(parents=True)
         record.update(
@@ -457,54 +444,34 @@ class NativeLaunchTests(unittest.TestCase):
         finally:
             self.stop(process, master)
 
-        home, env, _chats, log, _kitty_log = self.fixture("python")
-        settings = home / ".config/nacre/ai/settings.json"
-        values = json.loads(settings.read_text())
-        values["accounts"]["codex"] = ""
-        settings.write_text(json.dumps(values))
+    def test_provider_failure_remains_visible_until_enter(self):
+        home, env, _chats, _log, _kitty_log = self.fixture()
+        env["FAKE_PROVIDER_EXIT"] = "37"
         process, master, output, _ = self.run_tty(
-            ["nacre-ai", "latest", "--project", "general-chat"], env, home
+            [
+                "kitty",
+                "--class",
+                "nacre-ai-task",
+                "--title",
+                "Load chat",
+                "--",
+                "nacre-ai",
+                "window",
+                "--worker-command",
+                "latest",
+            ],
+            env,
+            home,
+            wait_for="Press Enter",
         )
         try:
-            self.assertTrue(log.exists(), output)
-            launched = json.loads(log.read_text().splitlines()[-1])
-            self.assertEqual(launched["argv"][0], "resume")
-            self.assertIn(THREAD, launched["argv"])
-            self.assertEqual(launched["CODEX_HOME"], str(home / ".codex"))
-            self.assertIsNone(launched["NACRE_AI_HISTORY_HOME"])
+            self.assertIn("N0171 provider failed", output)
+            self.assertIn("Press Enter", output)
+            self.assertIsNone(process.poll(), output)
+            os.write(master, b"\r")
+            process.wait(timeout=5)
         finally:
             self.stop(process, master)
-
-    def test_provider_failure_remains_visible_until_enter(self):
-        for mode in ("native", "python"):
-            with self.subTest(mode=mode):
-                home, env, _chats, _log, _kitty_log = self.fixture(mode)
-                env["FAKE_PROVIDER_EXIT"] = "37"
-                process, master, output, _ = self.run_tty(
-                    [
-                        "kitty",
-                        "--class",
-                        "nacre-ai-task",
-                        "--title",
-                        "Load chat",
-                        "--",
-                        "nacre-ai",
-                        "window",
-                        "--worker-command",
-                        "latest",
-                    ],
-                    env,
-                    home,
-                    wait_for="Press Enter",
-                )
-                try:
-                    self.assertIn("N0171 provider failed", output)
-                    self.assertIn("Press Enter", output)
-                    self.assertIsNone(process.poll(), output)
-                    os.write(master, b"\r")
-                    process.wait(timeout=5)
-                finally:
-                    self.stop(process, master)
 
     def test_tmux_provider_failures_remain_visible_until_enter(self):
         for provider, flag, marker, args in (
@@ -540,7 +507,7 @@ class NativeLaunchTests(unittest.TestCase):
             ),
         ):
             with self.subTest(provider=provider):
-                home, env, _chats, _log, _kitty_log = self.fixture("native")
+                home, env, _chats, _log, _kitty_log = self.fixture()
                 env[flag] = "37"
                 process, master, output, _ = self.run_tty(
                     args,
@@ -559,7 +526,7 @@ class NativeLaunchTests(unittest.TestCase):
                     self.stop(process, master)
 
     def test_window_and_resume_record_hold_failures_until_enter(self):
-        home, env, _chats, _log, _kitty_log = self.fixture("native")
+        home, env, _chats, _log, _kitty_log = self.fixture()
         projects = home / ".config/nacre/ai/projects.json"
         projects.write_text(json.dumps({"version": 999, "projects": []}))
         process, master, output, _ = self.run_tty(

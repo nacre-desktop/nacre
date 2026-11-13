@@ -23,11 +23,6 @@ def references(root):
         + list((root / "config/hypr/scripts").glob("*.sh"))
         + list((root / "brain/web").glob("*.js"))
         + list((root / "brain/web").glob("*.html"))
-        + (
-            [root / "bin/nacre-ai.py.rollback"]
-            if (root / "bin/nacre-ai.py.rollback").exists()
-            else []
-        )
     )
     for path in files:
         text = path.read_text()
@@ -37,7 +32,7 @@ def references(root):
             )
         )
         result.update(re.findall(r'nacre_message\s+"([^"]+)"', text))
-        if path.suffix == ".py" or path.name == "nacre-ai.py.rollback":
+        if path.suffix == ".py":
             for node in ast.walk(ast.parse(text)):
                 if isinstance(node, ast.Dict):
                     for key, value in zip(node.keys, node.values, strict=True):
