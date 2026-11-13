@@ -4,8 +4,7 @@
 
 For v0.1, every visible setting must have a reader that matches its label. Dead
 controls are removed; planned records assigned to upcoming feature units remain hidden
-until those readers land. The shell
-registry is now canonical at `shell/settings/registry/`.
+until those readers land. The shell registry is canonical at `shell/settings/registry/`.
 
 ## Audit findings and fixes
 
@@ -18,19 +17,17 @@ registry is now canonical at `shell/settings/registry/`.
 | `appearance.fonts.monoFont`; `date-time-language.locale.weatherLocation`; `panels/top-bar.panel.workspaceWindowHints`; `panels/dashboard.pages.editor.pages` | Narrowed the descriptions to Kitty terminals, city lookup, the active workspace, and core dashboard pages respectively. The active weather description ID is the city-only hint; the reader does not parse coordinates. |
 | `windows-workspaces.workspaces.workspaceCount`, `workspaceNames`, `workspaceIcons`; `panels/top-bar.panel.clockFormat`, `.tray`; `power.hardware.alerts` | Verified the Niri profile policy, workspace row renderer, bar readers and battery-alert behavior. Enabled these; gated workspace profile controls on `niriWorkspaces`. |
 | `apps.startup.startup` | Profile validation and startup execution work, but the Settings editor marks startup lists unavailable (`settings.rs` entity type guard). Kept it planned until a supported editor exists. |
-| Planned rows with no reader: `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `privacy.history.{notification,clipboard,screenshot,aiChat}Retention`, `power.saver.batterySaver`, `power.idle.{dim,sleep}`, `power.hardware.{lid,button}`, `wallpaper.motion.lockWallpaper`, `colors.palette.automatic` | Confirmed no v0.1 reader. Per owner decision, restored all 15 registry rows and translations with `backend: planned`; they remain hidden while N0211–N0214 build their readers. |
+| Planned rows with no reader: `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `privacy.history.{notification,clipboard,screenshot,aiChat}Retention`, `power.saver.batterySaver`, `power.idle.{dim,sleep}`, `power.hardware.{lid,button}`, `wallpaper.motion.lockWallpaper`, `colors.palette.automatic` | Confirmed no v0.1 reader. Per owner decision, restored all 15 rows and all label, description, option and unavailable translations with `backend: planned`; assigned them to N0211–N0213 below. |
 | Dashboard preferences: `lyrics`, `albumPalette`, `homeZone`, `homeCity`, `calendarFile`, `focusMinutes` | The five settings before `focusMinutes` have readers in media metadata, dashboard home-time preferences and calendar loading, so restored them. `albumPalette` had a stored value but media metadata hard-coded false; now the existing reader honours the stored boolean. `focusMinutes` has no settings reader: the dashboard focus card and launcher timer use their own fixed choices, and reminders do not consume this preference. Removed it and its stale navigation aliases; legacy `dashboard.json` values are ignored. |
 | `launcher/entries.editor`, `system.backup`, `system.restore` | No matching action handler exists; removed the three broken action rows and their translations. `lock-login.preview`, `system.updates`, and `appearance.fonts.installed` are hidden by the existing `None` dispatch; `lock-login.idle-policy` remains planned and filtered, so none renders as a dead row. |
 
-## Planned, being built (N0211–N0214)
+## Planned, being built
 
-These records are hidden with `backend: planned` until their readers land:
+These settings stay hidden with `backend: planned` until their assigned readers land:
 
-- `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`
-- `keyboard-mouse.mouse.shakeCursor`
-- `privacy.history.notificationRetention`, `clipboardRetention`, `screenshotRetention`, `aiChatRetention`
-- `power.saver.batterySaver`, `power.idle.dim`, `power.idle.sleep`, `power.hardware.lid`, `power.hardware.button`
-- `wallpaper.motion.lockWallpaper`, `colors.palette.automatic`
+- **N0211 — power:** `power.saver.batterySaver`, `power.idle.dim`, `power.idle.sleep`, `power.hardware.lid`, `power.hardware.button`
+- **N0212 — history retention:** `privacy.history.notificationRetention`, `clipboardRetention`, `screenshotRetention`, `aiChatRetention`
+- **N0213 — appearance, panels and startup:** `colors.palette.automatic`, `panels.lips.lipSize`, `panels/bottom.panel.enabled`, `panels/top-bar.panel.modules`, `keyboard-mouse.mouse.shakeCursor`, `wallpaper.motion.lockWallpaper`, `apps.startup.startup`
 
 ## Candidate features (not in v0.1)
 
@@ -43,8 +40,8 @@ These records are hidden with `backend: planned` until their readers land:
 
 ## Checks
 
-- Passed on dev-1 in one fresh N0203 container; `cargo fmt --check` and `cargo clippy -p nacre-helper -p nacre-shell --all-targets --locked -j2 -- -D warnings` succeeded.
-- `cargo test -p nacre-shell --bin nacre-shell settings_tests:: --locked -j2 -- --test-threads=2`: 17 passed with golden updates and 17 passed without updates. `settings_pages_tests::custom_page_goldens` updated 1 golden test; the full `settings_pages_tests::` suite passed 27 tests; the colors registry test passed 1.
-- `cargo test -p nacre-helper --lib daemon::settings_validation::tests:: --locked -j2 -- --test-threads=2`: 5 passed, including the UI/helper source assertion and frozen validator cases. The Hyprland scroll mapping test passed 1.
-- `cargo build -p nacre-shell --bin nacre-shell --locked -j2` passed. Pinned Luau 0.742 nonstrict analysis passed (`LUAU_ANALYZE_OK 189 modules`; existing advisory diagnostics remain); `python3 tools/i18n/check.py` passed with 1,710 owned messages.
-- Target directory stayed below 25 GiB (12 GiB at completion). No desktop TEST host or live desktop was used; no temporary duplicate source or harness remains.
+- In one fresh `n0200-build:latest` container: `cargo fmt --check`, `ruff check bin/nacre-settings nacre/shell-tools/tests/test_settings_launcher.py`, and `python3 tools/i18n/check.py` passed (1,763 messages). The temporary-HOME active-source snapshot test passed.
+- The N0221a every-page untranslated-text guard passed. Settings goldens updated and rechecked: `settings_tests::` passed 18 tests in both runs; only the three new dashboard page images were added. Reviewed all six existing changed settings goldens; the differences are the requested mono-font, launcher-source, active-workspace, top-bar reader, battery-alert, and dead-clipboard changes.
+- Helper checks passed: media tests (2), registry/validation tests (5), hosted preference and CLI tests (1 each), and the whole helper library (1,026 passed; 3 ignored). All six `test_software_*.py` suites passed (16 tests).
+- Both focused app-spawn tests passed. The whole shell binary passed (884 tests; 4 ignored). `cargo build` for helper and shell, focused clippy for both crates, and the Luau analyzer/generated SDK check passed (`LUAU_ANALYZE_OK 189 modules`).
+- Peak Cargo target use was 19,980,392 KiB, below the 25 GiB cap. No desktop TEST host or live desktop was used.
