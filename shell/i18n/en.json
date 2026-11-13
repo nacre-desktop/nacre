@@ -886,7 +886,7 @@
   "bead.dashboard.wallpaper-next": "Next wallpaper",
   "bead.dashboard.wallpaper-pause": "Pause wallpaper",
   "bead.dashboard.wallpaper-resume": "Resume wallpaper",
-  "bead.extras.wallpaper-shuffle": "Shuffle wallpaper",
+  "bead.dashboard.wallpaper-shuffle": "Shuffle wallpaper",
   "bead.dashboard.wallpaper-static": "Static wallpaper",
   "bead.widgets.battery-title": "Battery",
   "bead.widgets.battery-description": "Charge and health",
