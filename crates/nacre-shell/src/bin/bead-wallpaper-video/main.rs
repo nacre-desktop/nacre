@@ -120,6 +120,12 @@ fn place(
     surface.frame(qh, Frame(surface.clone(), generation));
 }
 
+/// A decoded-frame wakeup may bootstrap an output, but cannot steal its next
+/// presentation slot from the compositor callback. Dirty state coalesces to latest.
+fn draw_due(stale: bool, pending: bool, shown: bool, callback: bool) -> bool {
+    stale && !pending && (!shown || callback)
+}
+
 struct Out {
     output: wl_output::WlOutput,
     name: String,
@@ -264,7 +270,7 @@ impl Engine {
                 self.decoder = decoder;
                 self.reconcile();
                 for index in 0..self.outs.len() {
-                    self.draw(index);
+                    self.schedule(index);
                 }
             }
         }
@@ -294,6 +300,9 @@ impl Engine {
         let player = self.player.take()?;
         if player.is_gl() {
             self.bind_any();
+        }
+        if player.frame_ready() {
+            player.skip();
         }
         player.position()
     }
@@ -379,6 +388,9 @@ impl Engine {
             self.wake.clone(),
         )
         .and_then(|player| {
+            // Wayland callbacks provide the presentation slots. Keep this timing
+            // policy out of the preview stream, which has its own clock.
+            player.property("video-timing-offset", "0");
             player
                 .load(&path, fit, looped, self.resume_s)
                 .map(|()| player)
@@ -432,16 +444,47 @@ impl Engine {
             }
             let mut drawn = false;
             for index in 0..self.outs.len() {
-                drawn |= self.draw(index);
+                drawn |= self.schedule(index);
             }
-            if !drawn && let Some(player) = &self.player {
-                // Consume the frame so mpv keeps its clock moving.
+            if !drawn
+                && !self
+                    .outs
+                    .iter()
+                    .any(|out| out.pending.is_some() && wants(&self.render, &out.name))
+                && let Some(player) = &self.player
+            {
+                // No output has an upcoming slot (or bootstrap failed); keep mpv moving.
                 player.skip();
             }
         }
     }
 
-    fn draw(&mut self, index: usize) -> bool {
+    /// Bootstrap once; subsequent frames belong to each output's callback, not mpv's
+    /// wakeup order. Keep callbacks alive without re-rendering an unchanged video frame.
+    fn schedule(&mut self, index: usize) -> bool {
+        let drawn = self.draw(index, false);
+        self.request_frame(index);
+        drawn
+    }
+
+    fn request_frame(&mut self, index: usize) {
+        let out = &mut self.outs[index];
+        if self.player.is_some()
+            && out.configured
+            && out.shown
+            && out.pending.is_none()
+            && wants(&self.render, &out.name)
+            && (self.decoder == Decoder::Play || out.fade.is_some())
+        {
+            let surface = out.layer.wl_surface();
+            surface.frame(&self.qh, Frame(surface.clone(), self.source_generation));
+            out.layer.commit();
+            out.pending = Some(Instant::now());
+            self.arm_starve_timer();
+        }
+    }
+
+    fn draw(&mut self, index: usize, callback: bool) -> bool {
         if !self.frame_after_load {
             return false;
         }
@@ -458,7 +501,10 @@ impl Engine {
         let (Some(player), Some(out)) = (player.as_ref(), outs.get_mut(index)) else {
             return false;
         };
-        if !out.configured || !out.stale || out.pending.is_some() || !wants(render, &out.name) {
+        if !out.configured
+            || !draw_due(out.stale, out.pending.is_some(), out.shown, callback)
+            || !wants(render, &out.name)
+        {
             return false;
         }
         let (width, height) = out.pixels;
@@ -633,7 +679,7 @@ impl Engine {
         if self.player.as_ref().is_some_and(mpv::Player::is_gl) {
             for index in 0..self.outs.len() {
                 if self.outs[index].alpha.is_none() && self.outs[index].stale {
-                    self.draw(index);
+                    self.schedule(index);
                 }
             }
         }
@@ -859,7 +905,8 @@ impl Engine {
             self.starved = false;
             self.reconcile();
         }
-        self.draw(index);
+        self.draw(index, true);
+        self.request_frame(index);
     }
 
     fn remove_layer(&mut self, layer: &LayerSurface) {
@@ -986,7 +1033,7 @@ impl LayerShellHandler for Engine {
         out.configured = true;
         // A start that was waiting for a first output to put EGL on can go ahead now.
         self.reconcile();
-        self.draw(index);
+        self.schedule(index);
     }
 }
 delegate_registry!(Engine);
@@ -1162,6 +1209,22 @@ fn parse_args(args: impl IntoIterator<Item = String>) -> Result<Options, &'stati
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn outputs_take_latest_frame_only_in_their_own_slot() {
+        // Bootstrap both, then decoder events arrive while A and B have callbacks.
+        assert!(draw_due(true, false, false, false));
+        assert!(!draw_due(true, true, true, false));
+        // A's callback can render the latest frame; B's slot is still outstanding.
+        assert!(draw_due(true, false, true, true));
+        assert!(!draw_due(true, true, true, true));
+        // Another decoded frame must not draw A early, even after its callback.
+        assert!(!draw_due(true, false, true, false));
+        // B consumes the latest frame in its own slot, not the older wakeup frame.
+        assert!(draw_due(true, false, true, true));
+        // Unchanged frames only rearm callbacks, without GL/SHM rendering.
+        assert!(!draw_due(false, false, true, true));
+    }
 
     fn parse(args: &[&str]) -> Result<Options, &'static str> {
         parse_args(args.iter().map(|a| a.to_string()))

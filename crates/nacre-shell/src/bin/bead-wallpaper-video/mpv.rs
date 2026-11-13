@@ -6,6 +6,7 @@
 #![allow(non_camel_case_types, clippy::missing_safety_doc)]
 use bead_wallpaper::protocol::Fit;
 use std::{
+    cell::Cell,
     ffi::{CStr, CString, c_char, c_double, c_int, c_void},
     sync::Arc,
 };
@@ -172,6 +173,7 @@ pub struct Player {
     handle: *mut c_void,
     context: *mut c_void,
     gl: bool,
+    paused: Cell<bool>,
     // Keeps the wakeup target alive for the callbacks registered above.
     _wake: Arc<calloop::ping::Ping>,
 }
@@ -203,6 +205,7 @@ impl Player {
                 handle,
                 context: std::ptr::null_mut(),
                 gl: gl.is_some(),
+                paused: Cell::new(false),
                 _wake: wake_up,
             };
             // No user configuration, scripts, network helpers or playlist indirection.
@@ -327,7 +330,15 @@ impl Player {
         Ok(())
     }
     pub fn set_paused(&self, paused: bool) {
-        self.property("pause", if paused { "yes" } else { "no" });
+        let changed = self.paused.get() != paused;
+        // The core may be waiting for a frame held for a Wayland callback. Drain
+        // it before a synchronous control call, including paused redraws before stop.
+        if (paused || changed) && self.frame_ready() {
+            self.skip();
+        }
+        if changed && self.property("pause", if paused { "yes" } else { "no" }) {
+            self.paused.set(paused);
+        }
     }
     /// Stop demuxing and decoding while retaining libmpv and its render context.
     pub fn stop(&self) {
