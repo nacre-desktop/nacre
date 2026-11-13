@@ -367,7 +367,11 @@ def uninstall(home, *, purge=False, purge_data=False, apply=False):
                 target.unlink()
             _prune(home, Path(path))
         for directory in purged:
-            shutil.rmtree(home / directory)
+            target = home / directory
+            if target.is_symlink():
+                target.unlink()  # Never empty the directory a user linked here.
+            else:
+                shutil.rmtree(target)
             _prune(home, Path(directory))
         for path in legacy_purge:
             target = home / path

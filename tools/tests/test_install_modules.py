@@ -294,6 +294,18 @@ class InstallModuleTests(unittest.TestCase):
             )
         self.assertFalse((self.home / ".local/share/nacre").exists())
 
+    def test_purge_unlinks_a_symlinked_own_directory_without_emptying_it(self):
+        target = self.home / "dotfiles/nacre"
+        target.mkdir(parents=True)
+        (target / "widgets.json").write_bytes(b"{}")
+        (self.home / ".config/nacre").symlink_to(target)
+        with contextlib.redirect_stdout(io.StringIO()):
+            nacre_modules.main(
+                ["uninstall", "--purge", "--yes"], self.home, configure.ROOT
+            )
+        self.assertFalse((self.home / ".config/nacre").is_symlink())
+        self.assertEqual((target / "widgets.json").read_bytes(), b"{}")
+
     def test_purge_removes_known_legacy_shell_state_only(self):
         legacy = self.home / ".local/state/bead"
         (legacy / "ui/nested").mkdir(parents=True)
