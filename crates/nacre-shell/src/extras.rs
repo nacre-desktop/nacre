@@ -44,6 +44,15 @@ impl Kind {
 const PALETTE_MODE: &str = "palette";
 const PALETTE_ROUTE: &str = "palette";
 const CATALOGUE_PALETTE_CACHE_LIMIT: usize = 64;
+fn palette_activation(result: &MenuQueryResult, id: &str) -> Option<Json> {
+    let item = result.items.get(id).filter(|item| !item.disabled)?;
+    let token = item.activation.as_ref()?;
+    result
+        .order
+        .iter()
+        .any(|row| row == id)
+        .then(|| json!({"id":id,"activation":token,"catalog_rev":result.catalog_rev}))
+}
 struct Query {
     text: String,
     route: String,
@@ -56,6 +65,10 @@ struct State {
     wanted: Option<(String, String, String)>,
     result: Option<(String, MenuQueryResult)>,
     action: Option<CallTicket>,
+    /// The palette row of the first `menu.activate` attempt; a stale reply re-queries and
+    /// retries it once through `retry` (row, query it was made for), as the launcher does (N0309).
+    action_id: Option<String>,
+    retry: Option<(String, (String, String, String))>,
     refreshed: Option<String>,
     message: String,
     close: bool,
@@ -901,6 +914,10 @@ impl Extras {
             {
                 state.query = None; // cancellation: no obsolete activation can survive a new query/boot
                 state.result = None;
+                state.retry = state
+                    .retry
+                    .take()
+                    .filter(|(_, at)| wanted.as_ref() == Some(at));
                 state.wanted = wanted.clone();
                 state.message.clear();
                 if let Some((text, route, boot)) = wanted {
@@ -934,7 +951,17 @@ impl Extras {
                 state.query = None;
                 state.result = result.map(|r| (expected.2, r));
                 if state.result.is_none() {
+                    state.retry = None;
                     state.message = "Commands unavailable".into();
+                } else if let Some((id, _)) = state.retry.take() {
+                    state.action = state
+                        .result
+                        .as_ref()
+                        .and_then(|(_, result)| palette_activation(result, &id))
+                        .and_then(|params| self.begin("menu.activate", params, wake.clone()));
+                    if state.action.is_none() {
+                        state.message = "Action unavailable; refresh and try again".into();
+                    }
                 }
             }
             if let Some((stamp, result)) = &state.result
@@ -950,7 +977,19 @@ impl Extras {
             && let Some(reply) = ticket.try_take()
         {
             state.action = None;
+            let first_attempt = state.action_id.take();
             match reply {
+                Err(error)
+                    if error.code == "stale_revision"
+                        && first_attempt.is_some()
+                        && state.wanted.is_some() =>
+                {
+                    // Clearing `wanted` re-queries on the next projection, which then retries.
+                    state.retry = first_attempt.zip(state.wanted.take());
+                    if let Some(wake) = &wake {
+                        wake();
+                    }
+                }
                 Err(_) => state.message = "Action unavailable; refresh and try again".into(),
                 Ok(reply) if self.kind == Kind::Palette => {
                     if let Ok(result) = serde_json::from_value::<MenuActivated>(reply)
@@ -1266,20 +1305,16 @@ impl Extras {
             {
                 return;
             }
-            let Some(item) = result.items.get(id).filter(|i| !i.disabled) else {
+            let Some(params) = palette_activation(result, id) else {
                 return;
             };
-            let Some(token) = &item.activation else {
-                return;
-            };
-            (
-                "menu.activate",
-                json!({"id":id,"activation":token,"catalog_rev":result.catalog_rev}),
-            )
+            ("menu.activate", params)
         } else {
             return;
         };
         state.action = self.begin(method, params, Some(wake));
+        state.action_id = (method == "menu.activate" && state.action.is_some())
+            .then(|| request["activate:".len()..].to_owned());
         if state.action.is_none() {
             state.message = "Action unavailable".into();
         } else if method == "window.focus" || method == "workspace.activate" {

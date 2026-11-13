@@ -110,18 +110,19 @@ fn start_with_empty_wallpaper_catalogue(extras: &Extras) {
     state.catalogue_preloaded = false;
 }
 async fn lab_with_topics(requested_topics: Vec<String>) -> Lab {
-    lab_with_activation_behavior(requested_topics, false, false).await
+    lab_with_activation_behavior(requested_topics, false, false, 0).await
 }
 async fn lab_with_activation_gate(
     requested_topics: Vec<String>,
     gate_first_activation: bool,
 ) -> Lab {
-    lab_with_activation_behavior(requested_topics, gate_first_activation, false).await
+    lab_with_activation_behavior(requested_topics, gate_first_activation, false, 0).await
 }
 async fn lab_with_activation_behavior(
     requested_topics: Vec<String>,
     gate_first_activation: bool,
     fail_first_activation: bool,
+    stale_menu_activations: usize,
 ) -> Lab {
     use std::os::unix::fs::PermissionsExt;
     static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
@@ -156,6 +157,8 @@ async fn lab_with_activation_behavior(
     }
     let fail_activation = Arc::new(std::sync::atomic::AtomicBool::new(fail_first_activation));
     let fail_activation_for_server = fail_activation.clone();
+    let stale_menu_for_server =
+        Arc::new(std::sync::atomic::AtomicUsize::new(stale_menu_activations));
     let activation_wait_for_server = activation_wait.clone();
     tokio::spawn(async move {
         let (stream, _) = listener.accept().await.unwrap();
@@ -334,6 +337,22 @@ async fn lab_with_activation_behavior(
                                 false,
                             ),
                         }
+                    } else if m == "menu.activate"
+                        && stale_menu_for_server
+                            .try_update(
+                                std::sync::atomic::Ordering::AcqRel,
+                                std::sync::atomic::Ordering::Acquire,
+                                |n| n.checked_sub(1),
+                            )
+                            .is_ok()
+                    {
+                        Reply::Err {
+                            err: nacre_protocol::Failure::new(
+                                nacre_protocol::ErrorCode::StaleRevision,
+                                "Catalog changed; query again",
+                                true,
+                            ),
+                        }
                     } else {
                         Reply::Ok { ok }
                     };
@@ -483,6 +502,54 @@ async fn a_closed_panel_forgets_the_typed_query() {
         .unwrap();
     let model = palette.project(&closed, None);
     assert_eq!(model["extras.query"], Value::Text(String::new()));
+}
+#[tokio::test(flavor = "current_thread")]
+async fn palette_requeries_and_retries_a_stale_activation_once_without_a_message() {
+    // One stale reply is retried silently; a second one is reported instead of looping (N0309).
+    for stale in [1, 2] {
+        let mut lab = lab_with_activation_behavior(vec![], false, false, stale).await;
+        let palette = Extras::new(Kind::Palette, lab.client.clone()).unwrap();
+        let initial = stores("");
+        ready(&palette, &initial).await;
+        while lab.calls.try_recv().is_ok() {}
+        palette.act("activate:action", &initial, Arc::new(|| {}));
+        let mut calls = Vec::new();
+        let mut model = BTreeMap::new();
+        for _ in 0..400 {
+            model = palette.project(&initial, Some(Arc::new(|| {})));
+            while let Ok(call) = lab.calls.try_recv() {
+                calls.push(call);
+            }
+            if calls.len() == 3 && palette.state.borrow().action.is_none() {
+                break;
+            }
+            assert_eq!(model["extras.message"], Value::Text(String::new()));
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        let activation = json!({"id":"action","activation":"opaque-ticket","catalog_rev":7});
+        assert_eq!(
+            calls,
+            [
+                ("menu.activate".into(), activation.clone()),
+                (
+                    "menu.query".into(),
+                    json!({"query":"","mode":"palette","route":"palette"})
+                ),
+                ("menu.activate".into(), activation),
+            ]
+        );
+        let state = palette.state.borrow();
+        assert!(state.retry.is_none() && state.action_id.is_none());
+        if stale == 1 {
+            assert_eq!(model["extras.message"], Value::Text(String::new()));
+            assert_eq!(state.route.as_deref(), Some("actions.windows"));
+        } else {
+            assert_eq!(
+                model["extras.message"],
+                Value::Text("Action unavailable; refresh and try again".into())
+            );
+        }
+    }
 }
 #[tokio::test(flavor = "current_thread")]
 async fn palette_activates_a_typed_row_with_its_own_ticket() {
@@ -1153,7 +1220,8 @@ async fn wallpaper_latest_activation_survives_view_retirement() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn wallpaper_activation_error_is_reported_without_retry_and_boot_change_clears_state() {
-    let mut lab = lab_with_activation_behavior(vec!["wallpaper.active".into()], true, true).await;
+    let mut lab =
+        lab_with_activation_behavior(vec!["wallpaper.active".into()], true, true, 0).await;
     let extras = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     start_with_empty_wallpaper_catalogue(&extras);
     let queue = extras.wallpaper_actions.as_ref().unwrap().clone();
@@ -2657,7 +2725,8 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn failed_activation_retires_its_early_preview_outside_the_view() {
-    let mut lab = lab_with_activation_behavior(vec!["wallpaper.active".into()], false, true).await;
+    let mut lab =
+        lab_with_activation_behavior(vec!["wallpaper.active".into()], false, true, 0).await;
     let preview = Arc::new(crate::wallpaper::Preview::default());
     let generation = preview.select(
         "extras-boot".into(),
