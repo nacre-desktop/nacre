@@ -988,8 +988,14 @@ impl Producer {
             let mut next_outputs = BTreeMap::new();
             if let Some(base) = &state.current {
                 let compositor_state = compositor.as_ref().ok_or("Missing compositor state")?;
-                let desktop = crate::state::read(&paths.config.join("desktop.json"), json!({}))?;
-                let enabled = desktop["collectionWallpapers"] == true;
+                let enabled = match hub.borrow().snapshot_ref("settings.store.desktop") {
+                    Some(store) => store["data"]["collectionWallpapers"] == true,
+                    None => {
+                        crate::state::read(&paths.config.join("desktop.json"), json!({}))?
+                            ["collectionWallpapers"]
+                            == true
+                    }
+                };
                 let profiles = if enabled {
                     collection_wallpapers(paths)
                         .ok()
@@ -1093,11 +1099,30 @@ pub async fn outputs(
     producer: std::rc::Rc<std::cell::RefCell<Producer>>,
 ) -> Result<()> {
     let mut events = hub.borrow().observe();
+    // Window events change the compositor topic at keystroke rate; refresh
+    // only when the parts `refresh` reads differ.
+    let mut last = Value::Null;
     loop {
         match events.recv().await {
-            Ok(Notice::Changed { topic, .. })
-                if topic == "compositor" || topic == "settings.store.desktop" =>
-            {
+            Ok(Notice::Changed { topic, .. }) if topic == "compositor" => {
+                let inputs = {
+                    let hub = hub.borrow();
+                    let c = hub.snapshot_ref("compositor").unwrap_or(&Value::Null);
+                    json!([
+                        c["available"],
+                        c["outputs"]
+                            .as_object()
+                            .map(|o| o.keys().collect::<Vec<_>>()),
+                        c["focus"]["outputId"],
+                        c["collections"]
+                    ])
+                };
+                if inputs != last {
+                    last = inputs;
+                    producer.borrow_mut().refresh(&hub, &paths)?
+                }
+            }
+            Ok(Notice::Changed { topic, .. }) if topic == "settings.store.desktop" => {
                 producer.borrow_mut().refresh(&hub, &paths)?
             }
             Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
