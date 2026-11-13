@@ -1152,7 +1152,10 @@ async fn run(config: Config, shared: Arc<Shared>, mut commands: mpsc::Receiver<C
                                 },
                                 Message::Patch{topic,base,seq,data}=>{
                                     if !session.available.contains(&topic){continue;}
-                                    registry_dirty |= config.topics.iter().any(|name| name == "daemon");
+                                    // Only the registry topic itself signals new methods; any other
+                                    // patch (N0251: dashboard.system every second) must not re-read
+                                    // the whole method registry.
+                                    registry_dirty |= topic == "daemon";
                                     match apply_patch(&shared,&mut mirrors,&session.boot,&topic,base,seq,&data) {
                                         Ok(Applied::Resync)=>{
                                             if send(&shared,&mut session.writer,&Message::Resync{topics:vec![topic]}).await.is_err(){break;}
