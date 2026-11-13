@@ -1,8 +1,8 @@
 # Documentation
 
-- [User guides](installation.md): installation, configuration, usage, recovery and app setup.
-- [Keyboard shortcuts](keybindings.md): the everyday keys and how to change them.
-- [Theming](theming.md): colors from your wallpaper, app theming and Orient.
+- Start here: [Installation](installation.md), [First boot](first-boot.md), [Keyboard shortcuts](keybindings.md), [Troubleshooting](troubleshooting.md).
+- Guides: [Theming from a wallpaper](theming.md), [App theming](app-theming.md), [Widgets and Settings](widgets-and-settings.md), [Switching to Nacre](switching.md), [Detachable panels](detachable-panels.md), [Optional AI and Brain](optional-apps.md).
+- Reference: [Usage](usage.md) (generated shortcut tables), [Configuration and profiles](configuration.md), [Recovery](recovery.md).
 - [Compositor compatibility](compatibility.md): feature support across nacre-niri, stock niri and Hyprland.
 - [Development](development/ci.md): build and check the Nacre product shell.
 - [Architecture](architecture/foundation.md): system structure, services, protocol and licensing.
