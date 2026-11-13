@@ -80,6 +80,21 @@ fn menu_route(route: &str) -> Result<String, &'static str> {
     }
     Ok(resolve(route).unwrap_or(route).to_owned())
 }
+/// Menu routes Nacre shows in their own view rather than as a launcher list, whether a
+/// key binding or a launcher row opens them.
+pub fn route_view(route: &str) -> Option<Launch> {
+    let view = match route {
+        "learn.shortcuts" => "keybindings",
+        "style.wallpapers" => "wallpaper",
+        _ => return None,
+    };
+    Some(Launch {
+        query: String::new(),
+        route: None,
+        toggle: false,
+        target_view: Some(view.into()),
+    })
+}
 
 /// `None` is not a launcher-family route; `Some(Err)` is one Bead refuses.
 pub fn launcher(call: &Call) -> Option<Result<Launch, &'static str>> {
@@ -117,16 +132,10 @@ pub fn launcher(call: &Call) -> Option<Result<Launch, &'static str>> {
             }
         }
         "menu" => menu_route(arg(0).unwrap_or_default()).and_then(|route| {
-            if route == "learn.shortcuts" {
-                Ok(Launch {
-                    query: String::new(),
-                    route: None,
-                    toggle: false,
-                    target_view: Some("keybindings".into()),
-                })
-            } else {
-                launch(arg(1).unwrap_or_default(), Some(&route), false)
-            }
+            route_view(&route).map_or_else(
+                || launch(arg(1).unwrap_or_default(), Some(&route), false),
+                Ok,
+            )
         }),
         "clipboard" => launch("", Some("actions.clipboard"), true),
         "mode" => match arg(0).unwrap_or_default() {
@@ -281,6 +290,13 @@ mod tests {
         let shortcuts = routed("menu", &["learn.shortcuts", ""]);
         assert_eq!(shortcuts.target_view.as_deref(), Some("keybindings"));
         assert_eq!(shortcuts.route, None);
+        for route in ["wallpaper", "style.wallpapers"] {
+            let picker = routed("menu", &[route, ""]);
+            assert_eq!(
+                (picker.target_view.as_deref(), picker.route),
+                (Some("wallpaper"), None)
+            );
+        }
         assert_eq!(
             routed("mode", &["clipboard"]).route.as_deref(),
             Some("actions.clipboard")

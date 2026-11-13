@@ -999,6 +999,15 @@ impl Extras {
             values.insert("extras.query".into(), Value::Text(query));
         }
         if self.kind == Kind::Wallpaper {
+            let paused = self
+                .wallpaper_settings
+                .as_ref()
+                .and_then(|settings| settings.snapshot().data.get("data").cloned())
+                .and_then(|data| data.get("paused").and_then(Json::as_bool));
+            let can_pause = self.topic.as_ref().is_some_and(|topic| {
+                let current = &topic.snapshot().data["current"];
+                current["motion"]["path"].as_str().is_some()
+            });
             values.insert(
                 "extras.wallpaper.kind".into(),
                 Value::Text(wallpaper_kind.into()),
@@ -1014,6 +1023,14 @@ impl Extras {
             values.insert(
                 "extras.wallpaper.loading".into(),
                 Value::Bool(state.catalogue.is_some()),
+            );
+            values.insert(
+                "extras.wallpaper.can_pause".into(),
+                Value::Bool(can_pause),
+            );
+            values.insert(
+                "extras.wallpaper.paused".into(),
+                Value::Bool(paused.unwrap_or(false)),
             );
             values.insert(
                 "extras.wallpaper.resource_revision".into(),
@@ -1050,6 +1067,26 @@ impl Extras {
         values
     }
     pub fn act(&self, request: &str, stores: &Stores, wake: CallWake) {
+        if self.kind == Kind::Wallpaper && request == "wallpaper:shuffle" {
+            let boot = self.client.status().boot.clone();
+            let selected = {
+                let state = self.state.borrow();
+                (state.catalogue_boot == boot && !state.catalogue_result.is_empty()).then(|| {
+                    let now = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap_or_default()
+                        .subsec_nanos() as usize;
+                    state.catalogue_result[now % state.catalogue_result.len()]["id"]
+                        .as_str()
+                        .map(str::to_owned)
+                })
+            }
+            .flatten();
+            if let Some(id) = selected {
+                self.act(&format!("wallpaper:activate:{id}"), stores, wake);
+            }
+            return;
+        }
         if self.kind == Kind::Wallpaper
             && let Some(id) = request.strip_prefix("wallpaper:activate:")
         {
@@ -1136,6 +1173,30 @@ impl Extras {
             return;
         }
         if self.kind == Kind::Wallpaper {
+            if request == "wallpaper:pause" {
+                let Some(settings) = &self.wallpaper_settings else {
+                    return;
+                };
+                let snapshot = settings.snapshot();
+                let Some(rev) = snapshot.data["rev"].as_u64() else {
+                    return;
+                };
+                let mut value = snapshot.data["data"].clone();
+                let Some(document) = value.as_object_mut() else {
+                    return;
+                };
+                document.insert("version".into(), json!(1));
+                document.insert(
+                    "paused".into(),
+                    json!(!document.get("paused").and_then(Json::as_bool).unwrap_or(false)),
+                );
+                state.action = self.begin(
+                    "settings.provider",
+                    json!({"store":"wallpaper-picker","value":value,"rev":rev}),
+                    Some(wake),
+                );
+                return;
+            }
             let (key, value) = if let Some(value) = request.strip_prefix("wallpaper:kind:") {
                 if !matches!(value, "static" | "dynamic") {
                     return;

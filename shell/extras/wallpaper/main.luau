@@ -16,6 +16,8 @@ local rows=ui.resolve_for_check(ui.bind("extras.filtered")) or {}
 local count=#rows
 local selected
 for _,item in ipairs(rows) do if item.selected then selected=item; break end end
+local can_pause=ui.resolve_for_check(ui.bind("extras.wallpaper.can_pause"))==true
+local paused=ui.resolve_for_check(ui.bind("extras.wallpaper.paused"))==true
 local selection_index=selected and selected.selection_index or 1
 local carousel_position=ui.resolve_for_check(ui.bind("extras.wallpaper.carousel_position")) or 1
 local position_index=math.floor(carousel_position-1)%math.max(1,count)+1
@@ -91,13 +93,13 @@ local function button(id,label,active,request)
     ui.Text{position="absolute",left=0,top=(toolbar_h-line_h)/2,width="fill",height=line_h,
       text=label,font_size=T.palette.description_font,text_align="center",color=active and "onPrimary" or "onSurface"}}
 end
-local function nav_button(id,label,glyph,action)
+local function nav_button(id,label,glyph,action,request)
   local fill=count>0 and "surfaceContainerHigh" or ui.alpha("surfaceContainerHigh",T.wallpaper.disabled_opacity)
   local ink=count>0 and "onSurface" or ui.alpha("onSurface",T.wallpaper.disabled_opacity)
   if spotlight then fill=ui.alpha("surfaceContainerHigh",T.wallpaper.spotlight_pill_opacity) end
   return kit.Button{id=id,aria_label=label,width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,padding=0,
     radius=T.panel.close_radius,fill=fill,hover_fill=fill,
-    activate_on_release=true,focus_on_pointer=false,on_activate=count>0 and ui.action(action) or nil,
+    activate_on_release=true,focus_on_pointer=false,on_activate=count>0 and ui.action(action,request) or nil,
     ui.Row{width=T.wallpaper.nav_width,height=T.wallpaper.nav_height,align="center",justify="center",
       ui.Text{text=glyph,width=T.wallpaper.nav_icon_width,height=T.wallpaper.nav_icon_height,family="Material Symbols Rounded",font_size=T.wallpaper.nav_icon_font,color=ink}}}
 end
@@ -224,9 +226,11 @@ local nav=ui.Row{id="wallpaper-navigation",position="absolute",left=0,
   top=nav_y,
   width=width,height=T.wallpaper.nav_height,gap=T.wallpaper.nav_gap,align="center",justify="center",
   nav_button("previous","Previous wallpaper","chevron_left","extras.prev"),
+  can_pause and nav_button("pause",paused and "Play wallpaper" or "Pause wallpaper",paused and "play_arrow" or "pause","extras.do","wallpaper:pause") or nil,
   ui.Text{id="selected-title",width=math.min(T.wallpaper.nav_title_max_width,width-T.wallpaper.nav_title_reserved_width),height=T.wallpaper.nav_title_height,text=nav_title,
     font_size=T.wallpaper.nav_font,text_align="center",color=(carousel or spotlight) and "onSurface" or T.wallpaper.photo_ink},
-  nav_button("next","Next wallpaper","chevron_right","extras.next")}
+  nav_button("next","Next wallpaper","chevron_right","extras.next"),
+  nav_button("shuffle","Shuffle wallpaper","shuffle","extras.do","wallpaper:shuffle")}
 
 local backdrop=layout=="hexagons" and ui.Image{id="gallery-backdrop",position="absolute",left=0,top=0,width=width,height=height,
   visible=ui.bind("extras.wallpaper.backdrop_visible"),icon=ui.bind("extras.wallpaper.backdrop"),image_fit="cover",aria_label="Selected wallpaper preview"} or nil
