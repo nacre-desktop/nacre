@@ -220,7 +220,7 @@ class UiShell(f4.Switch):
                 f"cd {shlex.quote(str(version))}\n"
                 'case "${1:-}" in\n'
                 "check) test -x ./nacre-wallpaper-decode; "
-                "./bead-wallpaper-video --check; exec ./nacre-shell --help ;;\n"
+                "exec ./nacre-shell --help ;;\n"
                 "start) shift ;;\n"
                 '*) echo "usage: launch check|start" >&2; exit 2 ;;\nesac\n'
                 ': "${XDG_RUNTIME_DIR:?}"\n'
