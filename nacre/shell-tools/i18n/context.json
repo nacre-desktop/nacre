@@ -413,7 +413,6 @@
   "helper.screenshot.saved-to-pictures-screenshots-and-copied-to-clipboard": "nacre/shell-tools/screenshot.py: helper UI message; not a command identifier.",
   "helper.screenshot.unknown-screenshot-mode": "nacre/shell-tools/screenshot.py: helper UI message; not a command identifier.",
   "helper.session-watch.session-observer-ended": "nacre/shell-tools/session-watch.py: helper UI message; not a command identifier.",
-  "helper.shell-environment.wayland-display-is-not-ready": "crates/nacre-helper/src/shell_environment.rs: Wayland socket readiness; not a command identifier.",
   "helper.sidebar-chat.allow-once": "nacre/shell-tools/sidebar-chat.py: helper UI message; not a command identifier.",
   "helper.sidebar-chat.decline": "nacre/shell-tools/sidebar-chat.py: helper UI message; not a command identifier.",
   "helper.sidebar-chat.invalid-assistant-view-channel": "nacre/shell-tools/sidebar-chat.py: helper UI message; not a command identifier.",

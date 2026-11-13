@@ -12,10 +12,6 @@ def load(name):
         import native_file_icons
 
         return native_file_icons
-    if name == "kde-palette":
-        import native_kde_palette
-
-        return native_kde_palette
     spec = importlib.util.spec_from_file_location(name, ROOT / (name + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -77,11 +73,8 @@ class FileManagerTests(unittest.TestCase):
                 self.assertEqual(custom.read_text(), "custom artwork")
                 self.assertFalse(custom.is_symlink())
 
-    def test_custom_index_and_legacy_scheme_are_preserved(self):
+    def test_custom_index_is_preserved(self):
         icons = load("file-icons")
-        kde = load("kde-palette")
-        import json
-
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
             base = home / ".local/share/icons"
@@ -99,48 +92,3 @@ class FileManagerTests(unittest.TestCase):
                 self.assertEqual(
                     index.read_text(), "[Icon Theme]\nName=Custom user theme\n"
                 )
-            old = home / ".local/share/color-schemes/Custom.colors"
-            old.parent.mkdir(parents=True)
-            old.write_text("private custom scheme")
-            colors = json.loads((ROOT / "palette-presets.json").read_text())[0][
-                "modes"
-            ]["dark"]
-            kde.publish(home, colors, name)
-            self.assertEqual(old.read_text(), "private custom scheme")
-            self.assertTrue((old.parent / "Nacre.colors").is_file())
-
-    def test_kde_roles_preserve_user_settings_and_selection_contrast(self):
-        import configparser
-        import json
-
-        kde = load("kde-palette")
-        with tempfile.TemporaryDirectory() as directory:
-            home = Path(directory)
-            config = home / ".config/kdeglobals"
-            config.parent.mkdir(parents=True)
-            config.write_text(
-                "[General]\nTerminalApplication=kitty\n[UserSection]\nSetting=preserve\n"
-            )
-            presets = json.loads((ROOT / "palette-presets.json").read_text())
-            colors = next(p for p in presets if p["id"] == "ocean")["modes"]["dark"]
-            kde.publish(home, colors, "ExampleNacreIcons")
-            self.assertFalse(
-                (home / ".local/share/color-schemes/Custom.colors").exists()
-            )
-            parsed = configparser.ConfigParser(interpolation=None)
-            parsed.read(config)
-            self.assertEqual(parsed["General"]["ColorScheme"], "Nacre")
-            self.assertEqual(parsed["General"]["TerminalApplication"], "kitty")
-            self.assertEqual(parsed["UserSection"]["Setting"], "preserve")
-            self.assertEqual(
-                parsed["Colors:View"]["BackgroundNormal"], "#" + colors["surface"]
-            )
-            self.assertEqual(
-                parsed["Colors:Selection"]["ForegroundInactive"],
-                "#" + colors["onPrimary"],
-            )
-            self.assertEqual(
-                parsed["Colors:Selection"]["BackgroundAlternate"],
-                "#" + colors["primary"],
-            )
-            self.assertTrue((home / ".local/share/color-schemes/Nacre.colors").exists())

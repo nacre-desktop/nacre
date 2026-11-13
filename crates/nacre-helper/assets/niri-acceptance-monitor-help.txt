@@ -1,7 +1,0 @@
-usage: niri-acceptance-monitor.py [-h] [--seconds SECONDS]
-
-Private, bounded observation of a real Hyprland → niri → Hyprland cycle.
-
-options:
-  -h, --help         show this help message and exit
-  --seconds SECONDS

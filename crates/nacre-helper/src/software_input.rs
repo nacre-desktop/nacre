@@ -241,4 +241,19 @@ mod tests {
         assert!(preferences(&paths.config).is_err());
         Ok(())
     }
+    #[test]
+    fn invalid_or_failed_layout_changes_leave_no_preference() -> Result<()> {
+        // Hyprland fails before any IPC when its managed file is missing; skip inside niri.
+        let environment = std::env::vars().collect();
+        if crate::compositor::backend::select(&environment)? != "hyprland" {
+            return Ok(());
+        }
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        assert!(switch_layouts(&paths, "no\"; off").is_err());
+        let error = switch_layouts(&paths, "no").unwrap_err().to_string();
+        assert_eq!(error, "Managed desktop configuration is missing");
+        assert!(!paths.config.join("software-input.json").exists());
+        Ok(())
+    }
 }

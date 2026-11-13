@@ -586,36 +586,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
     );
     let mut packet = [0; 256];
     notifications.recv(&mut packet)?;
-    // Legacy QML save commands use the same daemon revision/cache and return
-    // only after publication, rather than racing its delayed writer on disk.
-    let publisher_path = home.path().join("config/nacre/control-center.json");
-    let mut publisher = command(home.path(), &source_path, &endpoint)
-        .args([
-            "state-file",
-            "save",
-            publisher_path.to_str().ok_or("Invalid test path")?,
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
-    writeln!(
-        publisher.stdin.take().ok_or("Missing publisher input")?,
-        "{}",
-        json!({"version":2,"tiles":["vpn"]})
-    )?;
-    let published = publisher.wait_with_output()?;
-    assert!(
-        published.status.success(),
-        "{}",
-        String::from_utf8_lossy(&published.stdout)
-    );
-    let saved: Value = serde_json::from_slice(&fs::read(&publisher_path)?)?;
-    assert_eq!(saved["tiles"], json!(["vpn"]));
     let mut first = link(&endpoint)?;
-    assert!(
-        matches!(call(&mut first,"settings.get",json!({"store":"control-center"}))?,Reply::Ok {ok} if ok["rev"]==1 && ok["dirty"]==false)
-    );
     let mut second = link(&endpoint)?;
     let desktop = command(home.path(), &source_path, &endpoint)
         .args(["desktop-settings", "set", "dnd", "true"])

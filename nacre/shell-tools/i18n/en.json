@@ -431,7 +431,6 @@
   "helper.screenshot.saved-to-pictures-screenshots-and-copied-to-clipboard": "Saved to Pictures/Screenshots and copied to clipboard",
   "helper.screenshot.unknown-screenshot-mode": "Unknown screenshot mode",
   "helper.session-watch.session-observer-ended": "Session observer ended",
-  "helper.shell-environment.wayland-display-is-not-ready": "Wayland display is not ready",
   "helper.sidebar-chat.allow-once": "Allow once",
   "helper.sidebar-chat.decline": "Decline",
   "helper.sidebar-chat.invalid-assistant-view-channel": "Invalid assistant view channel",

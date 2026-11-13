@@ -533,9 +533,8 @@ Caller loss never replays an admitted mutation or starts a fallback writer.
 `control-center`, `dashboard-extras`, and `battery-alerts`. It accepts their
 current document version and owned fields, retains unknown existing fields, and
 rejects other stores. It grants no arbitrary path, provider, or privileged write.
-The native `state-file` client uses the same revisions and waits for a durable
-snapshot before reporting success. An absent default socket permits standalone
-compatibility; connection, validation, and dispatched errors do not.
+Native clients (`owned_settings`, the settings controller) use the same revisions
+and wait for a durable snapshot before reporting success.
 
 `settings.set` also writes the `dashboard-extras` keys `enabled`, `order` and
 `weatherPhotos` (N0034); `enabled`/`order` accept at most 32 lowercase page
@@ -562,10 +561,8 @@ No other provider, root-owned store, or arbitrary filename is writable. Native
 read/modify/write operations check both the originating boot and revision, wait
 for durable publication, and route rollback through the same owner.
 
-Intended difference: with the daemon present, legacy `state-file save-id` bulk
-writes outside the three shell publisher stores are refused; validated `set-id`
-remains available. Provider-owned/read-only stores and unported tools retain
-their existing privilege boundaries; this step does not migrate all 72 stores.
+Provider-owned/read-only stores and unported tools retain their existing
+privilege boundaries; this step does not migrate all 72 stores.
 
 An accepted mutation advances the in-memory revision; it is not, by itself, a
 durable-success claim. A client that reports durable success must observe the

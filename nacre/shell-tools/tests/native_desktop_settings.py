@@ -26,9 +26,7 @@ PENDING = STATE.with_name(
 
 
 def publish_mono_font(family):
-    from nacre_native_config import _binary
-
-    subprocess.run([str(_binary()), "terminal-font", family], check=True)
+    """Recorded only; the runtime publishes the font natively (desktop_settings.rs)."""
 
 
 def monitor_state():

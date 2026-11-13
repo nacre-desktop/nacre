@@ -157,7 +157,7 @@ fn run() -> Result<i32> {
         );
     }
     let inherited_tokio_threads = std::env::var_os("TOKIO_WORKER_THREADS").is_some();
-    if !matches!(tool.as_str(), "shell-environment" | "ctl" | "daemon")
+    if !matches!(tool.as_str(), "ctl" | "daemon")
         && std::env::var_os("TOKIO_WORKER_THREADS").is_none()
     {
         // zbus's blocking compatibility API owns a Tokio runtime when Tokio is
@@ -205,20 +205,6 @@ fn run() -> Result<i32> {
     }
     if tool == "startup-apps" {
         return nacre_helper::launchers::startup_apps(&arguments);
-    }
-    if tool == "shell-environment" {
-        let initial: nacre_helper::shell_environment::Environment = std::env::vars().collect();
-        let environment = nacre_helper::shell_environment::environment(
-            initial.clone(),
-            std::time::Duration::from_secs(20),
-            None,
-        )?;
-        let updates: std::collections::BTreeMap<_, _> = environment
-            .into_iter()
-            .filter(|(key, value)| initial.get(key) != Some(value))
-            .collect();
-        println!("{}", serde_json::to_string(&updates)?);
-        return Ok(0);
     }
     if tool == "lock-info" {
         return nacre_helper::lock_info::run(&arguments);
@@ -301,9 +287,6 @@ fn run() -> Result<i32> {
         )?;
         return Ok(0);
     }
-    if tool == "file-icons" || tool == "lock-dashboard" {
-        return Ok(0);
-    }
     if tool == "nacre_shell" {
         return nacre_helper::palette_cli::run(&arguments);
     }
@@ -319,21 +302,11 @@ fn run() -> Result<i32> {
     if tool == "login-appearance" {
         return nacre_helper::login_appearance::run(&arguments);
     }
-    if tool == "terminal-font" {
-        let [family] = arguments.as_slice() else {
-            return Err("Expected a font family (empty resets to the default)".into());
-        };
-        nacre_helper::terminal_font::publish(&nacre_helper::paths::Paths::environment()?, family)?;
-        return Ok(0);
-    }
     if tool == "desktop-settings" {
         return nacre_helper::desktop_settings::run(&arguments);
     }
     if tool == "terminal-branding" {
         return nacre_helper::terminal_branding::run(&arguments);
-    }
-    if tool == "kde-palette" {
-        return nacre_helper::kde_palette::run(&arguments);
     }
     if tool == "compositor-compat" {
         return nacre_helper::compositor_compat::run(&arguments);
@@ -349,9 +322,6 @@ fn run() -> Result<i32> {
     }
     if tool == "niri-session-runtime" {
         return nacre_helper::niri_session_runtime::run(&arguments);
-    }
-    if tool == "niri-acceptance-monitor" {
-        return nacre_helper::niri_acceptance_monitor::run(&arguments);
     }
     if tool == "compositor-render" {
         if arguments.len() != 3 {
@@ -388,32 +358,6 @@ fn run() -> Result<i32> {
                 return Ok(1);
             }
         }
-    }
-    if tool == "input-preferences" {
-        let paths = nacre_helper::paths::Paths::environment()?;
-        let result = match arguments.as_slice() {
-            [operation] if operation == "state" => {
-                nacre_helper::software_input::preferences(&paths.config)
-            }
-            [operation, value] if operation == "layouts" => {
-                nacre_helper::software_input::switch_layouts(&paths, value)
-            }
-            [operation, value]
-                if operation == "touchpad" && (value == "true" || value == "false") =>
-            {
-                nacre_helper::software_input::switch_touchpad(&paths, value == "true")
-            }
-            _ => Err("Unknown input preference request".into()),
-        };
-        let (value, code) = match result {
-            Ok(data) => (serde_json::json!({"ok":true,"data":data}), 0),
-            Err(error) => (serde_json::json!({"ok":false,"error":error.to_string()}), 1),
-        };
-        println!("{}", json::encode(&value)?);
-        return Ok(code);
-    }
-    if tool == "state-file" {
-        return nacre_helper::state::run(&arguments);
     }
     if tool == "pearl-state" {
         return nacre_helper::pearl_state::run(&arguments);
