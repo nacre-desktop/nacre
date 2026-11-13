@@ -76,7 +76,10 @@
       "class": "^([Tt]hunar)$"
     },
     "name": "nacre-thunar-files",
-    "size": "70% 75%"
+    "size": [
+      "monitor_w*0.7",
+      "monitor_h*0.75"
+    ]
   },
   {
     "center": true,
@@ -97,6 +100,9 @@
       "class": "^nacre-widgets$"
     },
     "name": "nacre-widgets-window",
-    "size": "70% 75%"
+    "size": [
+      "monitor_w*0.7",
+      "monitor_h*0.75"
+    ]
   }
 ]

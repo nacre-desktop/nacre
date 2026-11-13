@@ -7,6 +7,6 @@ hl.window_rule({name="nacre-share-picker",match={class="^hyprland-share-picker$"
 hl.window_rule({name="nacre-picture-in-picture",match={title="^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$"},center=true,float=true,pin=true})
 hl.window_rule({name="nacre-native-controls",match={class="^nacre-control$"},center=true,float=true,size="720 500"})
 hl.config({xwayland={force_zero_scaling=true}})
-hl.window_rule({name="nacre-settings-bead",match={class="^nacre-settings$"},center=true,float=true})
-hl.window_rule({name="nacre-colors-bead",match={class="^nacre-colors$"},center=true,float=true})
+hl.window_rule({name="nacre-settings-bead",match={class="^nacre-settings$"},center=true,float=true,size={"min(max(monitor_w*0.75,720),1100)","min(max(monitor_h*0.8,540),800)"}})
+hl.window_rule({name="nacre-colors-bead",match={class="^nacre-colors$"},center=true,float=true,size={"1100","760"}})
 hl.window_rule({name="nacre-welcome-bead",match={class="^nacre-welcome$"},center=true,float=true})

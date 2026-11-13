@@ -265,6 +265,7 @@ pub(super) fn rule(row: &Value) -> Result<String> {
                 "fullscreen_state",
                 "suppress_event",
                 "no_initial_focus",
+                "size",
             ],
             &[],
         )?;

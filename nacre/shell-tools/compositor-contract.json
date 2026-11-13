@@ -1142,7 +1142,10 @@
         "effects": {
           "centered": true,
           "floating": true,
-          "size": "70% 75%"
+          "size": [
+            "monitor_w*0.7",
+            "monitor_h*0.75"
+          ]
         },
         "id": "nacre-thunar-files"
       },
@@ -1169,7 +1172,10 @@
         "effects": {
           "centered": true,
           "floating": true,
-          "size": "70% 75%"
+          "size": [
+            "monitor_w*0.7",
+            "monitor_h*0.75"
+          ]
         },
         "id": "nacre-widgets-window"
       }
@@ -1286,6 +1292,14 @@
           "centered": true,
           "floating": true
         },
+        "backend": {
+          "hyprland": {
+            "size": [
+              "min(max(monitor_w*0.75,720),1100)",
+              "min(max(monitor_h*0.8,540),800)"
+            ]
+          }
+        },
         "id": "nacre-settings-bead"
       },
       {
@@ -1296,6 +1310,14 @@
         "effects": {
           "centered": true,
           "floating": true
+        },
+        "backend": {
+          "hyprland": {
+            "size": [
+              "1100",
+              "760"
+            ]
+          }
         },
         "id": "nacre-colors-bead"
       },
