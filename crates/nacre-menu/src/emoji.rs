@@ -10,8 +10,16 @@ fn normalized(value: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+/// Only the four catalog fields that search returns; a cloned `Value` per entry cost ~3 MiB.
+#[derive(serde::Serialize)]
+struct Emoji {
+    value: String,
+    name: String,
+    category: String,
+    aliases: Vec<String>,
+}
 struct Entry {
-    data: Value,
+    data: Emoji,
     name: String,
     aliases: Vec<String>,
     haystack: String,
@@ -24,16 +32,23 @@ impl Index {
             array(&catalog["entries"])
                 .iter()
                 .map(|entry| {
-                    let name = normalized(entry["name"].as_str().unwrap_or(""));
-                    let mut aliases: Vec<_> = array(&entry["aliases"])
-                        .iter()
-                        .filter_map(Value::as_str)
-                        .map(normalized)
-                        .collect();
-                    aliases.push(entry["value"].as_str().unwrap_or("").to_owned());
+                    let text = |key: &str| entry[key].as_str().unwrap_or("").to_owned();
+                    let data = Emoji {
+                        value: text("value"),
+                        name: text("name"),
+                        category: text("category"),
+                        aliases: array(&entry["aliases"])
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_owned)
+                            .collect(),
+                    };
+                    let name = normalized(&data.name);
+                    let mut aliases: Vec<_> = data.aliases.iter().map(|a| normalized(a)).collect();
+                    aliases.push(data.value.clone());
                     let haystack = format!(
                         "{name} {} actions emoji {}",
-                        normalized(entry["category"].as_str().unwrap_or("")),
+                        normalized(&data.category),
                         aliases.join(" ")
                     );
                     let initials = name
@@ -41,7 +56,7 @@ impl Index {
                         .filter_map(|word| word.chars().next())
                         .collect();
                     Entry {
-                        data: entry.clone(),
+                        data,
                         name,
                         aliases,
                         haystack,
