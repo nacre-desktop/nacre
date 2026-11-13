@@ -1,5 +1,4 @@
 <p align="center"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/branding/nacre-horizontal-dark.svg"><img src="assets/branding/nacre-horizontal.svg" width="320" alt="Nacre logo"></picture></p>
-<h1 align="center">Nacre</h1>
 <p align="center"><strong>NAY-ker</strong> · mother-of-pearl</p>
 <p align="center">A Wayland desktop that takes its colors from your wallpaper.</p>
 <p align="center"><a href="docs/installation.md">Install</a> · <a href="docs/first-boot.md">First boot</a> · <a href="docs/keybindings.md">Keys</a> · <a href="docs/theming.md">Theming</a> · <a href="docs/troubleshooting.md">Help</a></p>
