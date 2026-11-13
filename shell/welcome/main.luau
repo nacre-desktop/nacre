@@ -8,12 +8,13 @@ local kit=require("bead.kit")
 local catalog=require("./catalog")
 local T=kit.tokens
 local sp,tx,rd,ic=T.spacing,T.text,T.radii,T.icons
+local M,motion=kit.metrics,ui.motion
 local function get(name) return ui.resolve_for_check(ui.bind(name)) end
 local function px(pt) return pt*4/3 end
 local function act(arg) return ui.action("welcome.do",arg) end
 local function go(name) return ui.action("go",name) end
 
-local page,guide=get("welcome.step"),get("welcome.guide")
+local page,guide,from=get("welcome.step"),get("welcome.guide"),get("welcome.from")
 local W,H=get("welcome.width"),get("welcome.height")
 -- Content box: the window minus 24 px side margins; the canvas also loses the header and footer.
 local CW=W-2*sp.xxl
@@ -35,7 +36,7 @@ local function para(id,s,pt,o)
     o=o or {}
     local size=px(pt)
     return ui.Text{id=id,text=s,font_size=size,height=textH(s,size,o.width or CW),shrink=0,
-        color=o.color or "onSurface",text_align=o.align,family=o.family}
+        color=o.color or "onSurface",text_align=o.align,family=o.family,font_weight=o.weight}
 end
 local function muted(id,s,pt,o)
     o=o or {}
@@ -107,8 +108,8 @@ function pages.welcome()
     return ui.Column{id="hero",width="fill",shrink=0,align="center",gap=sp.xxl,
         ui.Box{id="hero-top",width=1,height=math.max(18,CH*.12),shrink=0},
         logo("hero-logo",logoSize),
-        para("hero-name",ui.tr("bead.welcome.hero-name"),nameSize,{align="center"}),
-        para("hero-tagline",ui.tr("bead.welcome.hero-tagline"),tagSize,{align="center"}),
+        para("hero-name",ui.tr("bead.welcome.hero-name"),nameSize,{align="center",weight=600}),
+        muted("hero-tagline",ui.tr("bead.welcome.hero-tagline"),tagSize,{align="center"}),
         muted("hero-tour",ui.tr("bead.welcome.hero-tour"),11,{align="center"})}
 end
 -- Your colors: bundled scenes and baked palettes, ready before the first frame.
@@ -183,35 +184,90 @@ function pages.colors()
         muted("colors-intro",ui.tr("bead.welcome.colors-intro"),12),
         ui.Repeat{id="demo-view",model=ui.bind("welcome.demo"),key="id",render=demo})
 end
+-- A key as caps: `SUPER+SHIFT+S` -> Super, Shift, S (all-caps names are title-cased, a few are renamed
+-- such as RETURN -> Enter; mixed-case keys such as `XF86AudioMute` stay as the compositor wrote them).
+local keyNames={SUPER="Super",CTRL="Ctrl",RETURN="Enter",ESCAPE="Esc",PERIOD=".",COMMA=","}
+local function caps(key)
+    local out={}
+    for part in string.gmatch(key,"[^+]+") do
+        part=string.match(part,"^%s*(.-)%s*$")
+        local up=string.upper(part)
+        if part~="" then
+            out[#out+1]=keyNames[up] or ((#part>1 and part==up) and string.sub(part,1,1)..string.lower(string.sub(part,2)) or part)
+        end
+    end
+    return out
+end
+-- Key cap (kit ask: kit.KeyCap): mono caption on the highest container, 1 px outline.
+local function keycap(id,label)
+    local w=math.ceil(ui.text_width(label,T.fonts.mono,M.text.label))+2*sp.sm
+    return ui.Box{id=id,width=math.max(28,w),height=28,shrink=0,radius=6,fill="surfaceContainerHighest",
+        border_width=1,border_color=ui.alpha("outline",.6),
+        ui.Text{id="label",position="absolute",left=0,top=5,width=math.max(28,w),height=18,text=label,
+            family=T.fonts.mono,font_size=M.text.label,text_align="center",color="onSurface"}}
+end
+local TILE_H=96
+local function keyTile(item,width)
+    local keys={}
+    for i,label in ipairs(caps(item.key)) do keys[i]=keycap("key-"..i,label) end
+    keys.id="keys";keys.width="fill";keys.height=28;keys.shrink=0;keys.gap=6
+    return ui.Column{id=item.id,width=width,height=TILE_H,shrink=0,radius=M.radius.tile,fill="surfaceContainer",
+        padding=sp.lg+2,gap=sp.md,
+        ui.Text{id="title",width="fill",height=math.ceil(M.text.body*1.35),shrink=0,text=item.title,font_size=M.text.body,color="onSurface"},
+        ui.Row(keys)}
+end
+-- The rows bound to `ids` (a binding's `Nacre:<id>` action), first bind of each, in `ids` order.
+local function byAction(rows,ids)
+    local first,out={},{}
+    for _,row in ipairs(rows) do
+        if row.action and row.action~="" and not first[row.action] then first[row.action]=row end
+    end
+    for _,id in ipairs(ids) do
+        if first[id] then out[#out+1]=first[id] end
+    end
+    return out
+end
 function pages.shortcuts()
     local state=get("welcome.shortcuts.state")
     local note=state=="unavailable" and ui.tr("bead.welcome.shortcuts-unavailable")
         or (state=="empty" and ui.tr("bead.welcome.shortcuts-empty") or "")
-    local titleW=CW*.43-20
-    local keyW=CW*.57-28
-    local size=px(10.5)
-    local head={para("shortcuts-title",ui.tr("bead.welcome.shortcuts-title"),25),
-        muted("shortcuts-intro",ui.tr("bead.welcome.shortcuts-intro"),11)}
-    if note~="" then table.insert(head,muted("shortcuts-state",note,10.5)) end
-    local groups,order={},{}
-    for _,item in ipairs(get("welcome.shortcuts")) do
-        local group=item.group and item.group~="" and item.group or ui.tr(item.menu and "bead.welcome.shortcuts-apps" or "bead.welcome.shortcuts-other")
-        if not groups[group] then groups[group]={};table.insert(order,group) end
-        table.insert(groups[group],item)
+    local rows=get("welcome.shortcuts")
+    local want=catalog.shortcuts
+    local grid,panels=byAction(rows,want.grid),byAction(rows,want.panels)
+    -- Binds without Nacre titles (custom setups): fill the grid in the topic's order.
+    local used={}
+    for _,row in ipairs(grid) do used[row.id]=true end
+    for _,row in ipairs(panels) do used[row.id]=true end
+    for _,row in ipairs(rows) do
+        if #grid>=#want.grid then break end
+        if not used[row.id] and (row.group or "")=="" then grid[#grid+1]=row;used[row.id]=true end
     end
-    for index,group in ipairs(order) do
-        local children={para("group-title",group,13)}
-        for _,item in ipairs(groups[group]) do
-            local height=math.max(58,math.max(textH(item.title,size,titleW),textH(item.key,size,keyW))+24)
-            table.insert(children,ui.Row{id=item.id,width="fill",height=height,shrink=0,gap=6,radius=10,fill="surfaceContainer",
-                padding_left=14,padding_right=14,padding_top=12,
-                ui.Text{id="title",width=titleW,height=height-24,text=item.title,font_size=size,color="onSurface"},
-                ui.Text{id="key",width=1,grow=1,height=height-24,text=item.key,font_size=size,family="IBM Plex Mono",color="primary"}})
+    local cols=CW>=760 and 4 or 2
+    local gap=sp.md
+    local tw=math.floor((CW-(cols-1)*gap)/cols)
+    local function tiles(id,list)
+        local out={}
+        for i=1,#list,cols do
+            local line={id=id.."-"..math.ceil(i/cols),width="fill",height=TILE_H,shrink=0,gap=gap}
+            for j=i,math.min(#list,i+cols-1) do line[#line+1]=keyTile(list[j],tw) end
+            out[#out+1]=ui.Row(line)
         end
-        table.insert(head,column("shortcut-group-"..index,8,table.unpack(children)))
+        return column(id,gap,table.unpack(out))
     end
-    table.insert(head,muted("shortcuts-note",ui.tr("bead.welcome.shortcuts-note"),10))
-    return column("shortcuts",14,table.unpack(head))
+    local body={para("shortcuts-title",ui.tr("bead.welcome.shortcuts-title"),25),
+        muted("shortcuts-intro",ui.tr("bead.welcome.shortcuts-intro"),11)}
+    if note~="" then table.insert(body,muted("shortcuts-state",note,10.5)) end
+    if #grid>0 then table.insert(body,tiles("shortcut-grid",grid)) end
+    if #panels>0 then
+        table.insert(body,para("shortcuts-panels",ui.tr("bead.welcome.shortcuts-panels"),13))
+        table.insert(body,tiles("shortcut-panels",panels))
+    end
+    table.insert(body,ui.Row{id="shortcuts-more",width="fill",height=36,shrink=0,gap=sp.lg,align="center",
+        kit.Chip{id="shortcuts-all",text=ui.tr("bead.welcome.shortcuts-all"),icon="keyboard",on=false,
+            on_activate=act("route:settings:keyboard-mouse")},
+        ui.Text{id="shortcuts-note",text=ui.tr("bead.welcome.shortcuts-note"),width=1,grow=1,height=math.ceil(px(10)*1.4),
+            font_size=px(10),color="onSurfaceVariant"}})
+    return column("shortcuts",14,table.unpack(body))
 end
 function pages.apps()
     local items={}
@@ -261,7 +317,7 @@ function pages.help()
     return column("help",14,table.unpack(rows))
 end
 
--- Back / Skip tour, step dots, Next / Start using Nacre.
+-- Back / Skip tour, the step rail, Next / Start using Nacre.
 local steps=catalog.steps
 local index=0
 for i,name in ipairs(steps) do if name==page then index=i end end
@@ -274,17 +330,48 @@ local nextLabel,nextAction=ui.tr("bead.welcome.next"),nil
 if page=="ready" then nextLabel,nextAction=ui.tr("bead.welcome.start"),act("close")
 elseif page=="help" then nextLabel,nextAction=ui.tr("bead.welcome.back-to-finish"),go("ready")
 else nextAction=go(steps[index+1] or "ready") end
-local dots={}
-for i,name in ipairs(steps) do
-    table.insert(dots,kit.Button{id="step-"..name,width=10,height=10,shrink=0,padding=0,radius=5,fill="transparent",
-        hover_fill="transparent",aria_label=ui.tr("bead.welcome.step",{number=i,name=ui.tr(catalog.sections[name])}),on_activate=go(name),
-        ui.Box{id="dot",width=10,height=10,radius=5,fill=name==page and "primary" or "outline"}})
+-- Footer (design review 13): quiet Skip tour / Back, a rail of named step chips, primary Next with an arrow.
+local labelH=math.ceil(M.text.label*1.35)
+local function quiet(id,label,action)
+    -- text_width measures weight 400; the 500/600 labels paint a few percent wider.
+    local w=math.ceil(ui.text_width(label,ui.default_font_family,M.text.label)*1.08)
+    local width=w+2*sp.lg
+    return kit.Button{id=id,width=width,height=34,padding=0,radius=rd.full,shrink=0,position="absolute",left=0,top=15,
+        fill="transparent",hover_fill=ui.alpha("onSurface",.08),aria_label=label,on_activate=action,
+        ui.Row{id="content",width=width,height=34,align="center",justify="center",
+            ui.Text{id="label",text=label,width=w,height=labelH,font_size=M.text.label,font_weight=500,text_align="center",color="onSurfaceVariant"}}},width
 end
+local function primary(id,label,action)
+    local w=math.ceil(ui.text_width(label,ui.default_font_family,M.text.label)*1.08)
+    local glyph=ic.small*4/3
+    local width=w+6+glyph+2*sp.lg+2
+    return kit.Button{id=id,width=width,height=34,padding=0,radius=rd.full,shrink=0,position="absolute",right=0,top=15,
+        fill="primary",hover_fill=ui.tint("primary","onPrimary",.1),aria_label=label,on_activate=action,
+        ui.Row{id="content",width=width,height=34,align="center",justify="center",gap=6,
+            ui.Text{id="label",text=label,width=w,height=labelH,font_size=M.text.label,font_weight=600,text_align="center",color="onPrimary"},
+            ui.Text{id="icon",text="arrow_forward",family=T.fonts.icon,font_size=glyph,width=glyph+2,height=24,color="onPrimary"}}},width
+end
+local back,backW=quiet("back",backLabel,backAction)
+local nextButton,nextW=primary("next",nextLabel,nextAction)
+-- Chips name the steps; the current one fades to primaryContainer (dashboard dot timing). In a window
+-- too narrow for every name, the other steps show their number.
+local railW=CW-backW-nextW-2*sp.md
+local function chipW(label) return math.ceil(ui.text_width(label,ui.default_font_family,M.text.label))+2*sp.lg+sp.hairline end
+local named=-sp.sm
+for _,name in ipairs(steps) do named+=chipW(ui.tr(catalog.chips[name]))+sp.sm end
+local chips={id="rail",position="absolute",left=backW+sp.md,top=14,width=railW,height=36,gap=sp.sm,justify="center"}
+for i,name in ipairs(steps) do
+    local on=name==page
+    table.insert(chips,kit.Chip{id="step-"..name,text=(on or named<=railW) and ui.tr(catalog.chips[name]) or tostring(i),on=on,
+        fill=ui.mix("surfaceContainerHigh","primaryContainer",ui.animated("welcome.rail."..name,on and 1 or 0,motion.duration.switch,motion.curve.out_cubic)),
+        aria_label=ui.tr("bead.welcome.step",{number=i,name=ui.tr(catalog.sections[name])}),on_activate=go(name)})
+end
+-- Child order is the Tab order: Skip / Back, the steps, Next.
 local footer=ui.Column{id="footer",width="fill",height=64,shrink=0,
     rule("footer-rule",.3),
-    pill{id="back",label=backLabel,compact=true,pt=tx.caption,on=backAction,position="absolute",left=0,top=15},
-    ui.Row{id="dots",position="absolute",left=(CW-(#dots*10+(#dots-1)*10))/2,top=27,width=#dots*10+(#dots-1)*10,height=10,gap=10,table.unpack(dots)},
-    pill{id="next",label=nextLabel,selected=true,on=nextAction,position="absolute",right=0,top=15}}
+    back,
+    ui.Row(chips),
+    nextButton}
 
 local function section()
     return catalog.sections[page] and ui.tr(catalog.sections[page]) or ""
@@ -297,9 +384,18 @@ local header=ui.Column{id="header",width="fill",height=64,shrink=0,
             text_align="right",color="onSurfaceVariant"}},
     rule("header-rule",.35)}
 
+-- A page enters 24 px from the side it comes from (help counts as after Ready); the first page
+-- of a window does not move. Paint-only: the marker shifts the cached page, no Luau per frame.
+local function position(name) for i,n in ipairs(steps) do if n==name then return i end end return #steps+1 end
+local travel=(from=="" or from==page) and 0 or (position(page)>position(from) and 1 or -1)
 return ui.Column{id="welcome",width="100%",height="100%",fill="surface",
+    -- The wallpaper tint (design review 13): a primaryContainer glow from the top-left corner.
+    ui.Image{id="tint",path="welcome/assets/hero-tint.themed.svg",position="absolute",left=0,top=0,width=W,height=H,image_fit="fill"},
     header,
     ui.Column{id="body",width="fill",grow=1,padding_left=sp.xxl,padding_right=sp.xxl,padding_top=sp.md+sp.xs,padding_bottom=sp.md+sp.xs,
-        ui.Scroll{id="canvas",scroll=ui.bind("welcome.scroll"),grow=1,(pages[page] or pages.welcome)()},
+        ui.Scroll{id="canvas",scroll=ui.bind("welcome.scroll"),grow=1,
+            ui.Column{id="page",width="fill",shrink=0,
+                translate_x=ui.animated("welcome.page."..page,0,motion.duration.peek,motion.curve.out_cubic,travel*24),
+                (pages[page] or pages.welcome)()}},
         ui.Box{id="gap",width=1,height=sp.md+sp.xs,shrink=0},
         footer}}

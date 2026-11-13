@@ -77,6 +77,7 @@ fn items(rows: &Value) -> Entities<Shortcut> {
                 description: text("description", 256),
                 submap: some(text("submap", 64)),
                 menu: some(text("menu", 128)),
+                action: some(text("action", 64)),
             },
         );
     }

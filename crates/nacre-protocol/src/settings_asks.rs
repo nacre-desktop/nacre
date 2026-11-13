@@ -34,6 +34,10 @@ pub struct Shortcut {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(max = 128))]
     pub menu: Option<String>,
+    /// The Nacre action the binding is titled with (`Nacre:<id>`), such as `launcher`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(max = 64))]
+    pub action: Option<String>,
 }
 /// The `shortcuts` topic: the bindings of the running compositor, `SUPER` ones first.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
@@ -135,7 +139,8 @@ impl Shortcut {
             && text_ok(&self.key, 64)
             && text_ok(&self.description, 256)
             && self.submap.as_deref().is_none_or(|s| text_ok(s, 64))
-            && self.menu.as_deref().is_none_or(|s| text_ok(s, 128));
+            && self.menu.as_deref().is_none_or(|s| text_ok(s, 128))
+            && self.action.as_deref().is_none_or(|s| text_ok(s, 64));
         ok.then_some(()).ok_or_else(invalid)
     }
 }
@@ -339,6 +344,7 @@ mod tests {
             description: "Open".into(),
             submap: None,
             menu: Some("actions.emoji".into()),
+            action: Some("emoji".into()),
         };
         assert!(good.validate().is_ok());
         for bad in [
@@ -352,6 +358,10 @@ mod tests {
             },
             Shortcut {
                 key: "k".repeat(65),
+                ..good.clone()
+            },
+            Shortcut {
+                action: Some("a".repeat(65)),
                 ..good.clone()
             },
         ] {

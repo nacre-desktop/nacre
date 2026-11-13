@@ -215,7 +215,8 @@ fn rows(reply: &Json) -> Option<Vec<Json>> {
                 (!title.is_empty() && !key.is_empty()).then(|| {
                     json!({"id": id, "title": title, "key": key,
                         "group": clip(item["submap"].as_str().unwrap_or("")),
-                        "menu": item["menu"].is_string()})
+                        "menu": item["menu"].is_string(),
+                        "action": clip(item["action"].as_str().unwrap_or(""))})
                 })
             })
             .take(MAX_ROWS)
@@ -294,6 +295,7 @@ pub fn window_spec(
             .unwrap_or("welcome");
         BTreeMap::from([
             ("welcome.step".into(), Value::Text(page.into())),
+            ("welcome.from".into(), Value::Text(String::new())),
             ("welcome.guide".into(), Value::Text(String::new())),
         ])
     });

@@ -18,16 +18,24 @@ fn stores(page: &str) -> Stores {
         )]))
         .unwrap()
 }
+/// Rows as the niri helper publishes them (key order, translated titles, `Nacre:<id>` actions),
+/// plus one untitled spawn bind and one in a submap.
 fn rows_json() -> Vec<Json> {
     [
-        ("binding-0", "Find an application", "Super + Space"),
-        ("binding-1", "Open Settings", "Super + ,"),
-        ("binding-2", "Close a window", "Super + Q"),
-        ("binding-3", "Move focus", "Super + Arrow keys"),
-        ("binding-4", "Capture an area", "Super + Shift + S"),
+        ("k0", "Open the AI sidebar", "SUPER+A", "ai-sidebar", ""),
+        ("k1", "Open files", "SUPER+E", "files", ""),
+        ("k2", "Open settings", "SUPER+I", "settings", ""),
+        ("k3", "Close window", "SUPER+Q", "close", ""),
+        ("k4", "Open terminal", "SUPER+RETURN", "terminal", ""),
+        ("k5", "Open browser", "SUPER+SHIFT+B", "browser", ""),
+        ("k6", "Capture screenshot", "SUPER+SHIFT+S", "screenshot", ""),
+        ("k7", "Open launcher", "SUPER+SPACE", "launcher", ""),
+        ("k8", "Show window overview", "SUPER+TAB", "overview", ""),
+        ("k9", "nacrectl", "SUPER+O", "", ""),
+        ("k10", "Resize · Grow", "L", "", "Resize"),
     ]
     .into_iter()
-    .map(|(id, title, key)| json!({"id": id, "title": title, "key": key, "group": if id == "binding-2" || id == "binding-3" { "Windows" } else { "" }, "menu": id == "binding-0" || id == "binding-1"}))
+    .map(|(id, title, key, action, group)| json!({"id": id, "title": title, "key": key, "group": group, "menu": false, "action": action}))
     .collect()
 }
 fn text(model: &BTreeMap<String, Value>, key: &str) -> String {
@@ -119,9 +127,10 @@ fn shortcut_fixtures_keep_their_order_and_empty_state() {
     let Value::List(rows) = &model["welcome.shortcuts"] else {
         panic!()
     };
-    assert_eq!(rows.len(), 5);
-    assert_eq!(rows[0]["title"], "Find an application");
-    assert_eq!(rows[0]["key"], "Super + Space");
+    assert_eq!(rows.len(), 11);
+    assert_eq!(rows[0]["title"], "Open the AI sidebar");
+    assert_eq!(rows[0]["key"], "SUPER+A");
+    assert_eq!(rows[0]["action"], "ai-sidebar");
     let empty = Welcome::new(None).with_shortcuts(Vec::new());
     assert_eq!(
         text(
@@ -158,7 +167,7 @@ fn shortcuts_topic_updates_wake_the_window_and_preserve_submaps() {
     source
         .publish(json!({"health":{"available":true,"stale":false},"items":{
         "order":["settings","focus","empty"],"items":{
-            "settings":{"description":"Open Settings","key":"Super + ,","menu":"settings"},
+            "settings":{"description":"Open Settings","key":"Super + ,","menu":"settings","action":"settings"},
             "focus":{"description":"Move focus","key":"H J K L","submap":"Window navigation"},
             "empty":{"description":"No keys","key":""}}}}))
         .unwrap();
@@ -170,7 +179,9 @@ fn shortcuts_topic_updates_wake_the_window_and_preserve_submaps() {
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0]["title"], "Open Settings");
     assert_eq!(rows[0]["menu"], true);
+    assert_eq!(rows[0]["action"], "settings");
     assert_eq!(rows[1]["group"], "Window navigation");
+    assert_eq!(rows[1]["action"], "");
     assert!(woken.load(std::sync::atomic::Ordering::SeqCst) > 0);
     source.disconnect().unwrap();
     assert_eq!(
@@ -183,7 +194,13 @@ fn shortcuts_topic_updates_wake_the_window_and_preserve_submaps() {
     );
 }
 
-fn harness(model: BTreeMap<String, Value>, width: u32, height: u32, scale: f32) -> Harness {
+fn harness(
+    model: BTreeMap<String, Value>,
+    width: u32,
+    height: u32,
+    scale: f32,
+    palette: &str,
+) -> Harness {
     // The built-in English table is installed once per process; do not race another test to it.
     crate::i18n::init();
     let mut icons = BTreeMap::new();
@@ -205,7 +222,7 @@ fn harness(model: BTreeMap<String, Value>, width: u32, height: u32, scale: f32) 
     Harness::load_with_icons(
         &root(),
         Path::new("welcome/main.luau"),
-        &root().join("palette.json"),
+        &root().join(palette),
         model,
         HarnessConfig {
             width,
@@ -313,11 +330,75 @@ fn welcome_pages_match_goldens() {
         ),
     ] {
         let model = page_model(page, guide, ai, colors, size);
-        let mut h = harness(model, size.0, size.1, scale);
+        let mut h = harness(model, size.0, size.1, scale, "palette.json");
         if size == (1100, 800) && guide.is_empty() {
             assert_fits(&h, page);
         }
         golden(name, &mut h);
+    }
+    // Light scheme: the tint, the step rail and the key caps keep their palette roles.
+    for (name, page) in [
+        ("welcome-hero-light-1", "welcome"),
+        ("welcome-shortcuts-light-1", "shortcuts"),
+    ] {
+        let model = page_model(page, "", true, true, (1100, 800));
+        let mut h = harness(model, 1100, 800, 1., "tests/fixtures/palette-light.json");
+        golden(name, &mut h);
+    }
+}
+
+/// The key caps come from the topic by each bind's `Nacre:<id>` action: the first ten minutes in
+/// catalog order, four to a row, then the panels; the untitled Super+O and the submap row stay out.
+#[test]
+fn the_shortcut_grid_picks_binds_by_their_nacre_action() {
+    let model = page_model("shortcuts", "", true, true, (1100, 800));
+    let h = harness(model, 1100, 800, 1., "palette.json");
+    let texts: Vec<(String, f32, f32)> = h
+        .scene()
+        .primitives
+        .iter()
+        .filter_map(|p| match p {
+            bead::render::Primitive::Text { text, rect, .. } => {
+                Some((text.clone(), rect.x, rect.y))
+            }
+            _ => None,
+        })
+        .collect();
+    let at = |label: &str| {
+        texts
+            .iter()
+            .find(|(t, ..)| t == label)
+            .map(|(_, x, y)| (*x, *y))
+            .unwrap_or_else(|| panic!("{label} missing: {texts:?}"))
+    };
+    let mut above = 0.;
+    for row in [
+        [
+            "Open launcher",
+            "Open terminal",
+            "Open files",
+            "Open browser",
+        ],
+        [
+            "Close window",
+            "Show window overview",
+            "Capture screenshot",
+            "Open settings",
+        ],
+    ] {
+        let (mut left, y) = at(row[0]);
+        assert!(y > above, "{row:?}");
+        for title in &row[1..] {
+            let (x, other) = at(title);
+            assert!(x > left && other == y, "{title}");
+            left = x;
+        }
+        above = y;
+    }
+    assert!(at("Open the AI sidebar").1 > above);
+    assert!(at("Enter").1 > 0., "RETURN shows as Enter");
+    for absent in ["nacrectl", "Resize · Grow"] {
+        assert!(texts.iter().all(|(t, ..)| t != absent), "{absent}");
     }
 }
 
@@ -407,6 +488,11 @@ fn the_tour_navigates_and_closes_through_the_runtime() {
     assert_eq!(page(&runtime), "welcome");
     click(&mut runtime, "next");
     assert_eq!(page(&runtime), "colors");
+    // The page slides in from the side it came from.
+    assert_eq!(
+        runtime.session.stores.get("welcome.from"),
+        Some(&Value::Text("welcome".into()))
+    );
     click(&mut runtime, "back");
     assert_eq!(page(&runtime), "welcome");
     click(&mut runtime, "step-apps");

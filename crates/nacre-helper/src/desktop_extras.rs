@@ -835,7 +835,7 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
                                 .unwrap_or("");
                             let desc = row["flags"]["description"]
                                 .as_str()
-                                .and_then(|v| v.strip_prefix("Nacre:"))
+                                .filter(|v| v.starts_with("Nacre:"))
                                 .unwrap_or(if args.is_empty() {
                                     &action
                                 } else {
@@ -879,7 +879,7 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
             format!("{}+{key}", modifiers.join("+"))
         };
         let submap = binding["submap"].as_str().unwrap_or("");
-        let mut description = source
+        let titled = source
             .get(&(submap.into(), combo.clone()))
             .cloned()
             .unwrap_or_else(|| {
@@ -889,18 +889,17 @@ pub(crate) fn bindings_from(backend: &mut Backend, paths: &Paths) -> Result<Valu
                     .unwrap_or("")
                     .into()
             });
+        // A `Nacre:<id>` title names the action (Welcome picks its key caps by it).
+        let action = titled.strip_prefix("Nacre:").map(str::to_owned);
+        let mut description = action.clone().unwrap_or(titled);
         if niri {
-            description = description
-                .strip_prefix("Nacre:")
-                .unwrap_or(&description)
-                .to_owned();
             description = translated_collection_description(&description);
         }
         if !submap.is_empty() {
             description = format!("{submap} · {description}");
         }
         let route = menu_route(binding["arg"].as_str().unwrap_or(""));
-        result.push(json!({"key":combo,"description":description,"submap":submap,"menu":route}));
+        result.push(json!({"key":combo,"description":description,"submap":submap,"menu":route,"action":action}));
     }
     result.sort_by(|a, b| {
         (
@@ -1201,7 +1200,7 @@ mod tests {
         let paths = Paths::new(home.path());
         let root = home.path().join("config.kdl");
         fs::write(home.path().join("included.kdl"), "binds { Super+K hotkey-overlay-title=\"Earlier include\" { spawn \"old-tool\"; }; Super+Mod5+Q hotkey-overlay-title=\"Old native title\" { close-window; }; }\n")?;
-        fs::write(&root, "include \"included.kdl\"\nbinds { Super+K hotkey-overlay-title=\"Custom title\" { spawn \"nacrectl\" \"ui\" \"nacre\" \"menu\" \"learn.shortcuts\"; }; ISO_Level3_Shift+Super+Q { close-window; }; Super+T { spawn \"/usr/bin/custom-tool\" \"arg\"; }; }\n")?;
+        fs::write(&root, "include \"included.kdl\"\nbinds { Super+K hotkey-overlay-title=\"Custom title\" { spawn \"nacrectl\" \"ui\" \"nacre\" \"menu\" \"learn.shortcuts\"; }; ISO_Level3_Shift+Super+Q { close-window; }; Super+T { spawn \"/usr/bin/custom-tool\" \"arg\"; }; Super+E hotkey-overlay-title=\"Nacre:files\" { spawn \"files\"; }; }\n")?;
         let mut backend = Backend::new(
             paths.clone(),
             BTreeMap::from([
@@ -1210,7 +1209,20 @@ mod tests {
             ]),
         )?;
         let rows = bindings_from(&mut backend, &paths)?;
-        assert_eq!(rows.as_array().unwrap().len(), 3);
+        assert_eq!(rows.as_array().unwrap().len(), 4);
+        // A `Nacre:<id>` title is translated for display and kept as the action id.
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["key"] == "SUPER+E"
+                && r["description"] == "Open files"
+                && r["action"] == "files"));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["description"] == "Custom title" && r["action"].is_null()));
         assert!(rows
             .as_array()
             .unwrap()

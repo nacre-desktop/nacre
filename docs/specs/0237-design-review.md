@@ -546,3 +546,60 @@ Kit and platform asks (forwarded by the lead)
 4. Platform: optional `world` and `modified_ms` on `BrainNote`, vault path on `BrainRecentState`.
 5. Platform: a launchable player identity (`desktop_entry` or a `dashboard.media.player` setting) for an
    "Open Spotify" chip.
+
+## D14 Welcome (N0244)
+
+Scope (design review section 13, owner-approved): tinted hero, a named step rail instead of the five dots,
+primary Next with an arrow and a quiet Skip/Back, and a key-cap grid of the "first ten minutes" shortcuts plus
+the panel keys, all read from the live `shortcuts` topic. First-run behaviour, routes, deep links, Enter on Next
+and Escape are unchanged. Files: `shell/welcome/{main,catalog,behavior}.luau`, `shell/welcome/assets/hero-tint.themed.svg`,
+`crates/nacre-shell/src/welcome{,_tests}.rs`, `shell/i18n/{en,context}.json`, goldens `shell/tests/goldens/welcome-*.png`.
+
+What changed:
+- Tint: one themed SVG (`hero-tint.themed.svg`, a `@primaryContainer@` radial glow at 20 % / 0 % of the window,
+  75 % -> 19 % at 55 % -> 0, `image_fit="fill"`) under the whole window, matching the mockup's `--wall` stops in both
+  schemes (dark 0 % ~ #3d3a2a, light ~ #f1e9c4). It sits behind every page, so leaving the hero shows no pop.
+- Hero: wordmark IBM Plex Sans 600 (Manrope is not a shell font: owner default, kept), tagline `onSurfaceVariant`;
+  logo and sizes still follow the window height.
+- Footer: Skip tour / Back is quiet text (transparent, `onSurfaceVariant` 13/500, 8 % `onSurface` hover); Next is the
+  34 px `primary` pill, 13/600 label plus `arrow_forward` 16 px; the rail is `kit.Chip` per step (36 px, radius 18,
+  short names Welcome / Colors / Shortcuts / Apps / Ready, `primaryContainer` when current) centred between them,
+  node ids `step-<name>` kept. In a window too narrow for every name the other chips show their step number.
+- Shortcuts: 4 x 2 grid (2 columns under 760 px content) of 96 px `surfaceContainer` tiles (radius `metrics.radius.tile`)
+  with the topic's own title and key caps (`surfaceContainerHighest`, radius 6, 1 px `outline` 60 %, mono 13 px;
+  `SUPER+SHIFT+S` -> Super Shift S, all-caps names title-cased, RETURN -> Enter, ESCAPE -> Esc). Rows are picked by
+  the bind's `Nacre:<id>` action (`launcher, terminal, files, browser, close, overview, screenshot, settings`; then
+  panels `ai-sidebar, dashboard, control-panel`), first bind per action; binds without Nacre titles fill the grid in
+  topic order (custom setups still get keys). An "All shortcuts" chip opens Settings > Keyboard & mouse.
+  `overview` (Super+Tab) replaced `workspace` from the draft: workspace has ten binds and no single cap.
+- Data: `nacre-protocol` `Shortcut.action: Option<String>` (serde default, skipped when none, 64 chars), set by
+  `nacre-helper desktop_extras.rs` from the `Nacre:<id>` title before translation (niri and Hyprland), passed
+  through `daemon/shortcuts.rs` and `welcome.rs::rows()`. Additive; Platform should know.
+- Strings: added `bead.welcome.chip-{colors,shortcuts,apps,ready}`, `shortcuts-all`, `shortcuts-panels`;
+  removed `shortcuts-apps`, `shortcuts-other` (the grouped list is gone); `shortcuts-intro` reworded.
+
+Motion (design review 15; `ui.motion` tokens, sampled markers, no Luau or relayout per frame):
+- Step chip: fill mixes `surfaceContainerHigh` -> `primaryContainer` over `switch` (180 ms) out-cubic, both the old
+  and the new chip, retargeting from the current value when reversed.
+- Page: enters 24 px from the side it came from (`welcome.from`, set by `go`; help counts as after Ready) over
+  `peek` (200 ms) out-cubic via `translate_x`; the first page of a window and deep links do not move.
+- Reduced motion: both snap (`ui.animated` honours the policy).
+
+Owner defaults used (open questions): the dashboard cap needs Super+O titled `Nacre:dashboard` in the neutral
+compositor contract; that is a separate, droppable commit (contract, regenerated niri/Hyprland configs, "Open the
+dashboard" in the helper's niri titles, `test_bindings` migrating Super+O like the hardware keys). Without it the
+Panels row shows only the AI sidebar. No control-panel bind was added. The wordmark stays IBM Plex Sans 600.
+
+Evidence: goldens for every page (10 updated, light hero and shortcuts added) and a temporary render test of hover,
+focus, the first slide frame and 720 px states, looked at against the mockup (unit worktree `.lead/renders/`).
+Fixes from that review: Next hover uses `onPrimary` 10 % (the `onSurface` tint was invisible on cream), and the
+footer's child order makes Tab go Skip, steps, Next.
+
+Known gaps: no 120 Hz nested measurement of the page slide and chip fade yet (both are sampled markers: no Luau
+or relayout per frame); the mockup's page-content fade is not done (no container opacity in Bead; the slide alone
+carries the change); the large soft tint shows faint 8-bit banding arcs; chip focus rings use the framework's
+rounded rect, not the pill radius; press scale .97 waits for Bead.
+Kit asks: `kit.KeyCap{keys}` (the local `keycap` stand-in), gradient fill on `ui.Box` (the SVG stand-in), container
+opacity for page crossfades.
+
+Status: implemented; evidence and checks in the unit report.

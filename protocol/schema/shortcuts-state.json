@@ -143,6 +143,14 @@
             "null"
           ],
           "maxLength": 128
+        },
+        "action": {
+          "description": "The Nacre action the binding is titled with (`Nacre:<id>`), such as `launcher`.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
         }
       },
       "required": [

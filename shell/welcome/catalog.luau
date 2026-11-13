@@ -9,6 +9,17 @@ return {
         shortcuts="bead.welcome.section-shortcuts",apps="bead.welcome.section-apps",
         ready="bead.welcome.section-ready",help="bead.welcome.section-help",
     },
+    -- Short step names for the footer rail.
+    chips={
+        welcome="bead.welcome.section-welcome",colors="bead.welcome.chip-colors",
+        shortcuts="bead.welcome.chip-shortcuts",apps="bead.welcome.chip-apps",ready="bead.welcome.chip-ready",
+    },
+    -- Key caps on the shortcuts page, by the bindings' `Nacre:<id>` action: the first ten minutes,
+    -- then the panels (a panel without a titled bind is left out).
+    shortcuts={
+        grid={"launcher","terminal","files","browser","close","overview","screenshot","settings"},
+        panels={"ai-sidebar","dashboard","control-panel"},
+    },
     apps={
         {id="settings",icon="settings",route="settings",needs="welcome.can.settings",
             title="bead.welcome.app-settings-title",detail="bead.welcome.app-settings-detail"},

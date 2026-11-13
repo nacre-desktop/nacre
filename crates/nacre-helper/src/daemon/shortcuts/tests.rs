@@ -13,7 +13,7 @@ fn state(hub: &Shared) -> ShortcutsState {
 #[test]
 fn rows_become_bounded_display_text_in_order() {
     let rows = json!([
-        {"key":"SUPER+SPACE","description":"Launcher","submap":"","menu":""},
+        {"key":"SUPER+SPACE","description":"Launcher","submap":"","menu":"","action":"launcher"},
         {"key":"","description":"no key is skipped"},
         {"key":"SUPER+PERIOD","description":"Emoji\nlist","submap":"resize","menu":"actions.emoji"},
         {"key":"K".repeat(100),"description":"d".repeat(400)},
@@ -29,10 +29,12 @@ fn rows_become_bounded_display_text_in_order() {
         (launcher.submap.clone(), launcher.menu.clone()),
         (None, None)
     );
+    assert_eq!(launcher.action.as_deref(), Some("launcher"));
     let emoji = &all.items[&EntityId("k1".into())];
     assert_eq!(emoji.description, "Emoji list");
     assert_eq!(emoji.submap.as_deref(), Some("resize"));
     assert_eq!(emoji.menu.as_deref(), Some("actions.emoji"));
+    assert_eq!(emoji.action, None);
     let long = &all.items[&EntityId("k2".into())];
     assert_eq!(
         (long.key.chars().count(), long.description.chars().count()),
