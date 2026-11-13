@@ -237,7 +237,6 @@ impl Fixture {
         let projection = new_projection(&hub, &Cell::new(0))?;
         let task = tokio::task::spawn_local(observe_on_connection(
             hub.clone(),
-            Rc::new(Cell::new(0)),
             projection,
             client,
             ObserveHooks::default(),

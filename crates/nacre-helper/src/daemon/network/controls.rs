@@ -4,7 +4,7 @@ use nacre_protocol::{
     core_services::{CoreCall, CoreResult, NetworkState, NetworkTarget, VpnState, WifiSecurity},
     Capability, Method,
 };
-use serde_json::Value;
+use serde_json::{json, Value};
 use tokio::sync::{mpsc, oneshot};
 use zbus::zvariant::{OwnedObjectPath, OwnedValue};
 

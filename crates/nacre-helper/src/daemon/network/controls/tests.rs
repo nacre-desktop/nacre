@@ -1,4 +1,5 @@
 use super::*;
+use nacre_protocol::Id;
 use std::{
     io::{BufRead, BufReader},
     process::{Child, Command, Stdio},
@@ -515,7 +516,6 @@ impl Fixture {
         let (events_tx, events) = tokio::sync::mpsc::unbounded_channel();
         let task = tokio::task::spawn_local(observe_on_connection(
             hub.clone(),
-            Rc::new(Cell::new(0)),
             projection,
             client,
             ObserveHooks {
@@ -875,7 +875,7 @@ async fn network_controls_owner_replacement_never_replays() -> crate::Result<()>
         f.server = Fixture::server(&f.address, replacement.clone()).await?;
         let connection = zbus::connection::Builder::address(f.address.as_str())?.method_timeout(Duration::from_secs(2)).build().await?;
         let projection = new_projection(&f.hub, &Cell::new(1))?;
-        f.task = tokio::task::spawn_local(observe_on_connection(f.hub.clone(), Rc::new(Cell::new(0)), projection, connection, ObserveHooks::default()));
+        f.task = tokio::task::spawn_local(observe_on_connection(f.hub.clone(), projection, connection, ObserveHooks::default()));
         f.wait(|s| s.health.available).await;
         assert_ne!(old_device, f.device());
         assert_eq!(advertised(f.hub.borrow().welcome()).len(), 5);

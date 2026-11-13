@@ -15,7 +15,6 @@ pub mod framing;
 pub mod helpers;
 pub mod i18n;
 pub mod menu;
-pub mod network;
 pub mod notifications;
 pub mod osd;
 pub mod patch;
