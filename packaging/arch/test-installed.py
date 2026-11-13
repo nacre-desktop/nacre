@@ -166,7 +166,8 @@ base = (
     backend if backend in {"nacre-niri", "hyprland"} else "niri",
     "--layout",
     "no",
-    *(("--with", "ai") if ai_installed else ()),
+    "--with",
+    "ai",
     "--with",
     "brain",
 )
@@ -182,12 +183,12 @@ run(*base, "--yes")
 status = json.loads(run("nacre", "status").stdout)
 assert status["status"] == "prepared", status
 profile = json.loads((home / ".config/nacre/profile.json").read_text())
-required_components = {"brain", "configs", "shell"}
-if ai_installed:
-    required_components.add("ai")
-assert profile["aiFullAccess"] is False and required_components <= set(
-    profile["components"]
-)
+assert profile["aiFullAccess"] is False and {
+    "ai",
+    "brain",
+    "configs",
+    "shell",
+} <= set(profile["components"])
 kitty_config = home / ".config/nacre/terminal/kitty.conf"
 assert kitty_config.is_file() and "shell fish" not in kitty_config.read_text()
 if not shutil.which("dolphin"):
@@ -202,7 +203,7 @@ keyboard_hash = digest(keyboard)
 for relative in (
     ".local/share/nacre/shell/tools",
     ".local/share/nacre/brain",
-    *((".local/share/nacre/ai/application",) if ai_installed else ()),
+    ".local/share/nacre/ai/application",
     ".config/systemd/user/timers.target.wants/nacre-brain-check.timer",
 ):
     path = home / relative
