@@ -60,9 +60,22 @@ Behaviour differences worth knowing: `audio.adjust_volume` now snaps to whole pe
 and stays connected (idle cost is zero wakeups; the shell subscribes `audio` permanently
 after N0227 anyway), where the old `pactl subscribe` ran only under a lease.
 
-## Measurements (dev-1 container, private PipeWire + WirePlumber + pipewire-pulse, null sink)
+## Measurements (dev-1 container, private PipeWire 1.6.11 + WirePlumber + pipewire-pulse, null sink)
 
-TBD
+Release daemons before (origin/main a415f9b3) and after, each alone with a fake niri socket
+and one client subscribed to `audio` + `osd`; `.lead/n0314/measure.py`.
+
+| | before | after |
+| --- | --- | --- |
+| child processes while an audio lease is held | `pactl subscribe` (+ a one-shot per change) | none |
+| threads at start | 5 | 3 |
+| idle 60 s: context switches/s, CPU | 5.75/s, 0.33 % | 7.2/s, 0.28 % (within noise; the client is event-driven) |
+| 10 external `wpctl set-volume` changes: OSD latency median, CPU, ctx switches | 94.7 ms, 4.0 % of a core, 656 | 31.5 ms, 0.46 %, 105 |
+| 10 `audio.step` key steps on the fast socket: OSD latency median, CPU, ctx switches | 1.0 ms, 5.5 % of a core, 680 | 0.4 ms, 0.0 %, 120 |
+
+The external-change latency is the 25 ms coalescing window plus one server round trip; the
+old path spawned up to ten processes per change. Both daemons ended the step sequence at the
+same linear level (0.421875 = 75 % perceptual), so the step math is unchanged.
 
 ## Tests
 
