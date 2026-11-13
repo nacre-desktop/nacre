@@ -39,7 +39,7 @@ in the registry and `power.json`; no root configuration or new system service.
   file content changed, because hyprlock lives in the idle unit's cgroup; a failed
   restart is started again rather than left stopped. Power loads before host so
   host overrides still win. Saver failures retry only when their inputs change,
-  Hyprland saver mode changes use `wlr-randr>=0.5.0` mode-only transactions,
+  Hyprland saver mode changes use `wlr-randr>=0.5.0` mode-only transactions when it is installed (not a package dependency yet: Release decides; without it the saver skips the refresh-rate step once and logs),
   retaining the complete configured HDR, bit-depth and VRR rule (including
   description/wildcard matches), rather than reconstructing it from live rows.
   Stale dim records for unplugged displays are dropped.
