@@ -40,6 +40,8 @@ const WATCHER: &str = "org.kde.StatusNotifierWatcher";
 const WATCHER_PATH: &str = "/StatusNotifierWatcher";
 const WATCHER_IFACE: &str = "org.kde.StatusNotifierWatcher";
 const ITEM_IFACE: &str = "org.kde.StatusNotifierItem";
+/// SNI `ToolTip`: icon name, icon pixmaps (width, height, ARGB), title, description.
+type ToolTip = (String, Vec<(i32, i32, Vec<u8>)>, String, String);
 
 /// The lane brightness and keyboard-backlight writes share: a concurrent write fails `busy`.
 pub(super) fn brightness_lane() -> Arc<tokio::sync::Mutex<()>> {
@@ -1013,7 +1015,12 @@ async fn item_row(connection: &zbus::Connection, owner: &str, path: &str) -> Val
         .remove("ItemIsMenu")
         .and_then(|value| bool::try_from(value).ok())
         .unwrap_or(false);
-    json!({"title":title,"visible":status != "Passive","item_is_menu":item_is_menu,"attention":status == "NeedsAttention","icon":icon,"menu":{"items":{},"order":[]}})
+    let (_, _, tip, description) = properties
+        .remove("ToolTip")
+        .and_then(|value| ToolTip::try_from(value).ok())
+        .unwrap_or_default();
+    let tooltip = json!({"title":tip.chars().take(256).collect::<String>(),"description":description.chars().take(1024).collect::<String>()});
+    json!({"title":title,"tooltip":tooltip,"visible":status != "Passive","item_is_menu":item_is_menu,"attention":status == "NeedsAttention","icon":icon,"menu":{"items":{},"order":[]}})
 }
 
 async fn publish_tray(
@@ -1193,6 +1200,15 @@ mod tests {
         fn icon_name(&self) -> String {
             "fixture-icon".into()
         }
+        #[zbus(property)]
+        fn tool_tip(&self) -> ToolTip {
+            (
+                String::new(),
+                vec![(1, 1, vec![0; 4])],
+                "Fixture tip".into(),
+                "Two updates".into(),
+            )
+        }
         fn activate(&self, x: i32, y: i32) {
             self.0.lock().unwrap().push(("Activate".into(), x, y));
         }
@@ -1309,6 +1325,11 @@ mod tests {
         let published = hub.borrow().snapshot("tray").ok_or("Missing tray")?;
         assert_eq!(published["items"]["items"][&id]["title"], "Fixture item");
         assert_eq!(published["items"]["items"][&id]["icon"], "fixture-icon");
+        assert_eq!(
+            published["items"]["items"][&id]["tooltip"],
+            json!({"title":"Fixture tip","description":"Two updates"})
+        );
+        serde_json::from_value::<nacre_protocol::core_services::TrayState>(published.clone())?;
         assert!(tray.names.contains("org.example.Bar"));
         for (method, request) in [
             (

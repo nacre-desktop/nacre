@@ -649,9 +649,18 @@ pub struct TrayMenuEntry {
     /// Child IDs into the same menu map, not nested entity arrays.
     pub children: Vec<EntityId>,
 }
+/// The item's StatusNotifierItem `ToolTip` text; `description` may be empty.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct TrayTooltip {
+    pub title: String,
+    pub description: String,
+}
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct TrayItem {
     pub title: String,
+    /// N0317: empty strings when the item has no `ToolTip`; `title` stays the item's name.
+    #[serde(default)]
+    pub tooltip: TrayTooltip,
     pub visible: bool,
     pub item_is_menu: bool,
     pub attention: bool,

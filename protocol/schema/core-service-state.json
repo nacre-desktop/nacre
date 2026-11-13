@@ -1764,6 +1764,14 @@
         "title": {
           "type": "string"
         },
+        "tooltip": {
+          "description": "N0317: empty strings when the item has no `ToolTip`; `title` stays the item's name.",
+          "$ref": "#/$defs/TrayTooltip",
+          "default": {
+            "title": "",
+            "description": ""
+          }
+        },
         "visible": {
           "type": "boolean"
         },
@@ -1796,6 +1804,22 @@
         "item_is_menu",
         "attention",
         "menu"
+      ]
+    },
+    "TrayTooltip": {
+      "description": "The item's StatusNotifierItem `ToolTip` text; `description` may be empty.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "title",
+        "description"
       ]
     },
     "Entities_TrayMenuEntry": {

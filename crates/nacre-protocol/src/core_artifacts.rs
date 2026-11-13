@@ -226,7 +226,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
         (
             "tray",
             json!({"health":health,"items":entities(json!({"tray-1":{
-            "title":"Fixture tray","visible":true,"item_is_menu":true,"attention":false,"icon":"application-x-executable",
+            "title":"Fixture tray","tooltip":{"title":"Fixture tray","description":"Fixture status"},"visible":true,"item_is_menu":true,"attention":false,"icon":"application-x-executable",
             "menu":entities(json!({"menu-1":{"label":"Fixture entry","enabled":true,"visible":true,"separator":false,"checked":false,"children":[]}}))}}))}),
             vec![],
         ),
