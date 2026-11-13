@@ -19,7 +19,7 @@ use nacre_protocol::{
 use serde_json::Value;
 use std::{
     cell::RefCell,
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     ffi::OsString,
     path::{Path, PathBuf},
     process::Stdio,
@@ -522,6 +522,71 @@ fn read_night(records: &[PathBuf]) -> bool {
     })
 }
 
+fn watch_inputs(
+    leds: &Path,
+    night: &[PathBuf],
+) -> crate::Result<super::dashboard_extras::watch::Watch> {
+    use rustix::fs::inotify::WatchFlags;
+    let flags = WatchFlags::CLOSE_WRITE
+        | WatchFlags::CREATE
+        | WatchFlags::DELETE
+        | WatchFlags::MOVED_FROM
+        | WatchFlags::MOVED_TO
+        | WatchFlags::DELETE_SELF
+        | WatchFlags::MOVE_SELF;
+    let dirs: BTreeSet<_> = night
+        .iter()
+        .filter_map(|path| path.parent().map(Path::to_owned))
+        .chain(std::iter::once(leds.to_owned()))
+        .collect();
+    super::dashboard_extras::watch::Watch::new(dirs.into_iter().map(|dir| (dir, flags)).collect())
+}
+
+fn night_changed(names: &[OsString], records: &[PathBuf]) -> bool {
+    names.is_empty()
+        || names.iter().any(|name| {
+            records
+                .iter()
+                .any(|path| path.file_name().is_some_and(|file| file == name.as_os_str()))
+        })
+}
+
+fn cap_led_changed(names: &[OsString]) -> bool {
+    names.is_empty()
+        || names
+            .iter()
+            .any(|name| name.to_string_lossy().ends_with("::capslock"))
+}
+
+fn cap_ticker(
+    has_caps_led: bool,
+    watches_inputs: bool,
+    fallback: Duration,
+) -> Option<tokio::time::Interval> {
+    (has_caps_led || !watches_inputs).then(|| {
+        let mut ticker = tokio::time::interval_at(Instant::now() + fallback, fallback);
+        ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+        ticker
+    })
+}
+
+async fn next_watch(
+    watch: &mut Option<super::dashboard_extras::watch::Watch>,
+) -> crate::Result<Vec<OsString>> {
+    match watch {
+        Some(watch) => watch.next().await,
+        None => std::future::pending().await,
+    }
+}
+
+async fn next_cap_tick(ticker: &mut Option<tokio::time::Interval>) {
+    if let Some(ticker) = ticker {
+        let _ = ticker.tick().await;
+    } else {
+        std::future::pending().await
+    }
+}
+
 async fn active_profile(system: &zbus::Connection) -> Option<String> {
     tokio::time::timeout(Duration::from_secs(2), async {
         for (destination, path) in PROFILE_SERVICES {
@@ -643,10 +708,14 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
     refresh_audio(&hub, &env).await?;
     let mut sink = read_node(&env.wpctl, SINK).await;
     let mut source = read_node(&env.wpctl, SOURCE).await;
-    let mut capslock_path: Option<PathBuf> = None;
-    let mut caps: Option<bool> = None;
+    let (mut capslock_path, mut caps) = {
+        let (leds, known) = (env.leds.clone(), None);
+        crate::process::offload(move || read_caps(leds, known))
+            .await
+            .unwrap_or((None, None))
+    };
     let mut caps_job = None;
-    start_caps(&mut caps_job, &env.leds, &capslock_path);
+    let mut input_watch = watch_inputs(&env.leds, &env.night).ok();
     let mut night = read_night(&env.night);
     let mut profile = match &system {
         Some(system) => active_profile(system).await,
@@ -655,9 +724,7 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
 
     let mut pending = Pending::default();
     let (mut dirty_sink, mut dirty_source, mut audio_at) = (false, false, None::<Instant>);
-    let mut ticker = tokio::time::interval_at(Instant::now() + env.tick, env.tick);
-    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-    let mut count = 0u32;
+    let mut ticker = cap_ticker(capslock_path.is_some(), input_watch.is_some(), env.tick);
     loop {
         tokio::select! {
             line = lines.next() => {
@@ -713,10 +780,9 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                     }
                 }
             }
-            _ = ticker.tick() => {
-                count = count.wrapping_add(1);
+            _ = next_cap_tick(&mut ticker) => {
                 start_caps(&mut caps_job, &env.leds, &capslock_path);
-                if count.is_multiple_of(2) {
+                if input_watch.is_none() {
                     let next = read_night(&env.night);
                     if next != night {
                         let mut event = OsdEvent::new(OsdKind::NightLight, now_ms());
@@ -726,7 +792,30 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                     }
                 }
             }
+            changed = next_watch(&mut input_watch) => {
+                match changed {
+                    Ok(names) => {
+                        if night_changed(&names, &env.night) {
+                            let next = read_night(&env.night);
+                            if next != night {
+                                let mut event = OsdEvent::new(OsdKind::NightLight, now_ms());
+                                event.value = Some(f64::from(u8::from(next)));
+                                pending.add(event);
+                                night = next;
+                            }
+                        }
+                        if capslock_path.is_none() && cap_led_changed(&names) {
+                            start_caps(&mut caps_job, &env.leds, &capslock_path);
+                        }
+                    }
+                    Err(_) => {
+                        input_watch = None;
+                        ticker = cap_ticker(capslock_path.is_some(), false, env.tick);
+                    }
+                }
+            }
             Some((path, value)) = caps_done(&mut caps_job) => {
+                let had_path = capslock_path.is_some();
                 capslock_path = path;
                 if let Some(next) = value {
                     if caps.is_some_and(|before| before != next) {
@@ -735,6 +824,13 @@ pub async fn session(hub: Shared, env: Env, system: Option<zbus::Connection>) ->
                         pending.add(event);
                     }
                     caps = Some(next);
+                }
+                if had_path != capslock_path.is_some() {
+                    ticker = cap_ticker(
+                        capslock_path.is_some(),
+                        input_watch.is_some(),
+                        env.tick,
+                    );
                 }
             }
             () = next_or_pending(&mut power) => {

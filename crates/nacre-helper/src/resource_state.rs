@@ -194,24 +194,38 @@ pub fn nvidia_samples(ids: &[String]) -> BTreeMap<String, Value> {
             .name("nacre-nvml".into())
             .spawn(move || {
                 let mut library = None;
+                let mut library_missing = false;
                 for request in receive {
                     if request.deadline <= Instant::now() {
                         continue;
                     }
-                    let result = (|| -> Result<BTreeMap<String, Value>> {
-                        if library.is_none() {
-                            library = Some(Nvml::init()?);
-                        }
-                        let result = nvml_sample(
-                            library.as_ref().expect("Initialized NVML"),
-                            &request.ids,
-                            request.deadline,
-                        )?;
-                        if Instant::now() >= request.deadline {
-                            return Err("NVIDIA telemetry deadline expired".into());
-                        }
-                        Ok(result)
-                    })();
+                    let result: Result<BTreeMap<String, Value>> = if library_missing {
+                        Ok(BTreeMap::new())
+                    } else {
+                        let sampled = if let Some(library) = library.as_ref() {
+                            nvml_sample(library, &request.ids, request.deadline)
+                        } else {
+                            match Nvml::init() {
+                                Ok(nvml) => {
+                                    let result = nvml_sample(&nvml, &request.ids, request.deadline);
+                                    library = Some(nvml);
+                                    result
+                                }
+                                Err(error @ NvmlError::LibloadingError(_)) => {
+                                    // A missing NVML library will not appear during this
+                                    // daemon lifetime. Cache the absence after one probe.
+                                    library_missing = true;
+                                    Err(error.into())
+                                }
+                                Err(error) => Err(error.into()),
+                            }
+                        };
+                        sampled.and_then(|samples| {
+                            (Instant::now() < request.deadline)
+                                .then_some(samples)
+                                .ok_or_else(|| "NVIDIA telemetry deadline expired".into())
+                        })
+                    };
                     if request
                         .reply
                         .send(result.map_err(|error| error.to_string()))
@@ -604,6 +618,9 @@ mod tests {
         let samples = nvidia_samples(&["0000:01:00.0".into(), "0000:02:00.0".into()]);
         if mode != "ok" {
             assert!(samples.is_empty());
+            if mode == "missing" {
+                assert!(nvidia_samples(&["0000:01:00.0".into()]).is_empty());
+            }
             return;
         }
         assert_eq!(
@@ -632,7 +649,9 @@ mod tests {
             "{}",
             String::from_utf8_lossy(&build.stderr)
         );
-        for mode in ["ok", "fail", "stall"] {
+        let empty = directory.path().join("empty");
+        fs::create_dir(&empty)?;
+        for mode in ["ok", "fail", "stall", "missing"] {
             let mut command = std::process::Command::new(std::env::current_exe()?);
             command
                 .args([
@@ -640,10 +659,14 @@ mod tests {
                     "resource_state::tests::nvml_probe_child",
                     "--nocapture",
                 ])
-                .env("LD_LIBRARY_PATH", directory.path())
                 .env("NACRE_TEST_NVML_PROBE", mode)
                 .env_remove("NACRE_TEST_NVML_FAIL")
                 .env_remove("NACRE_TEST_NVML_STALL");
+            if mode == "missing" {
+                command.env("LD_LIBRARY_PATH", &empty);
+            } else {
+                command.env("LD_LIBRARY_PATH", directory.path());
+            }
             if mode == "fail" {
                 command.env("NACRE_TEST_NVML_FAIL", "1");
             }
@@ -656,6 +679,13 @@ mod tests {
                 "NVML {mode}: {}",
                 String::from_utf8_lossy(&result.stderr)
             );
+            if mode == "missing" {
+                let attempts = String::from_utf8_lossy(&result.stderr)
+                    .lines()
+                    .filter(|line| line.starts_with("NVIDIA telemetry:"))
+                    .count();
+                assert_eq!(attempts, 1, "missing NVML should be reported once");
+            }
         }
         Ok(())
     }

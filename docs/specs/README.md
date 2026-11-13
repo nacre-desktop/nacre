@@ -6,6 +6,7 @@
 
 | N0220 | [Panel stays open after reattach](0220-panel-reattach-hover.md) | Implemented; ready for lead review | A bounded 450 ms reattach hover grace covers the dock reveal; pointer enter cancels it and later leaves keep the 130 ms close delay. |
 | N0304 | [Dynamic wallpaper in Niri overview](0304-overview-wallpaper.md) | In progress | Keep video motion and visible desktop widget animations active in stock niri and nacre-niri overview; covered pause outside overview remains intact. |
+| N0305 | [Daemon idle wakeups](0305-daemon-idle-wakeups.md) | Partial; idle CPU unchanged within noise (0.41 → 0.45%); NVML retry logs 3 → 1 | Caps Lock 500 ms poll remains; follow-up NN0036 moves it to a compositor event. |
 
 ## Current status — 2026-11-10
 

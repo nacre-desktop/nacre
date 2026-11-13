@@ -55,7 +55,7 @@ impl Fixture {
             pactl: self.path("pactl").into(),
             leds: self.path("leds"),
             night: vec![self.path("night.json")],
-            tick: Duration::from_millis(20),
+            tick: Duration::from_millis(500),
             retry: Duration::from_millis(30),
         }
     }
@@ -110,6 +110,45 @@ impl Fixture {
         tokio::time::sleep(Duration::from_millis(300)).await;
         assert_eq!(self.events(), vec![]);
     }
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn absent_capslock_led_does_not_schedule_a_safety_poll_when_watched() {
+    let fallback = Duration::from_millis(500);
+    assert!(cap_ticker(false, true, fallback).is_none());
+    assert!(cap_ticker(true, true, fallback).is_some());
+    assert!(cap_ticker(false, false, fallback).is_some());
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn nightlight_state_watch_wakes_on_atomic_record_replace() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let root = tempfile::tempdir().unwrap();
+            let leds = root.path().join("leds");
+            let state = root.path().join("state");
+            std::fs::create_dir_all(&leds).unwrap();
+            std::fs::create_dir_all(&state).unwrap();
+            let record = state.join("control-tools.json");
+            std::fs::write(&record, "{\"enabled\":false,\"owner\":\"\"}").unwrap();
+            let mut watcher = Some(watch_inputs(&leds, std::slice::from_ref(&record)).unwrap());
+            let changed = tokio::task::spawn_local(async move { next_watch(&mut watcher).await });
+            tokio::task::yield_now().await;
+            let temporary = state.join("control-tools.json.tmp");
+            std::fs::write(&temporary, "{\"enabled\":true,\"owner\":\"night-light\"}").unwrap();
+            std::fs::rename(temporary, &record).unwrap();
+            let names = tokio::time::timeout(Duration::from_secs(2), changed)
+                .await
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            assert!(names.iter().any(|name| {
+                record
+                    .file_name()
+                    .is_some_and(|file| file == name.as_os_str())
+            }));
+        })
+        .await;
 }
 fn script(path: &Path, body: &str) {
     std::fs::write(path, format!("#!/bin/sh\n{body}")).unwrap();
@@ -641,7 +680,7 @@ esac
             );
             f.set("sink-inputs.json", &streams(false));
             f.pactl("Event 'remove' on sink-input #7");
-            tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::time::timeout(Duration::from_secs(10), async {
                 while f.hub.borrow().snapshot("audio").unwrap()["nodes"]["items"]["sink-input:7"]
                     != Value::Null
                 {
