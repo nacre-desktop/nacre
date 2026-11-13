@@ -120,6 +120,11 @@ struct Request {
 #[derive(Clone)]
 pub struct Requests(mpsc::Sender<Request>);
 pub fn methods() -> BTreeMap<String, Method> {
+    static CACHED: std::sync::LazyLock<BTreeMap<String, Method>> =
+        std::sync::LazyLock::new(build_methods);
+    CACHED.clone()
+}
+fn build_methods() -> BTreeMap<String, Method> {
     BTreeMap::from([(
         "niri.widths.configure".into(),
         Method {

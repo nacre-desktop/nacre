@@ -54,7 +54,7 @@ pub fn available_methods(hub: &super::hub::Hub) -> BTreeMap<String, Method> {
         BTreeMap::new()
     } else {
         let mut methods = methods();
-        if hub.snapshot("compositor").is_none_or(|topic| {
+        if hub.snapshot_ref("compositor").is_none_or(|topic| {
             topic["backend"] != "niri" || topic["capabilities"]["workspaceCollections"] != true
         }) {
             methods.remove("collection.action");

@@ -11,6 +11,11 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 
 pub fn methods() -> BTreeMap<String, Method> {
+    static CACHED: std::sync::LazyLock<BTreeMap<String, Method>> =
+        std::sync::LazyLock::new(build_methods);
+    CACHED.clone()
+}
+fn build_methods() -> BTreeMap<String, Method> {
     [
         (
             "niri.source",

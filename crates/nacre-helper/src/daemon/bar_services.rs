@@ -57,7 +57,7 @@ pub fn available_methods(hub: &super::hub::Hub) -> BTreeMap<String, Method> {
         .services
         .get("tray")
         .is_some_and(|state| state["status"] == "running");
-    let compositor = hub.snapshot("compositor").unwrap_or(Value::Null);
+    let compositor = hub.snapshot_ref("compositor").unwrap_or(&Value::Null);
     let has_outputs = compositor["available"] == true
         && compositor["outputs"]
             .as_object()

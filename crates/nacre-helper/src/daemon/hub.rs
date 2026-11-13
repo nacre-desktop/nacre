@@ -471,6 +471,21 @@ impl Hub {
         }
         methods
     }
+    /// Call deadline without building the full registry: provider methods
+    /// always carry `UI_CALL_TIMEOUT_MS` (see `methods`).
+    pub fn method_timeout(&self, method: &str) -> u32 {
+        if method != nacre_protocol::menu::UI_ACTIVATE
+            && self
+                .provider
+                .as_ref()
+                .is_some_and(|(_, methods)| methods.contains_key(method))
+        {
+            return nacre_protocol::UI_CALL_TIMEOUT_MS;
+        }
+        self.fixed_methods()
+            .get(method)
+            .map_or(1000, |registered| registered.timeout)
+    }
     pub fn welcome(&self) -> Message {
         Message::Welcome {
             proto: nacre_protocol::VERSION,
@@ -913,11 +928,7 @@ impl Hub {
             .ok_or_else(|| failure(ErrorCode::Internal, "UI call sequence exhausted", false))?;
         let id = Id::Text(format!("provider-{}", self.next_route));
         let (sender, receiver) = oneshot::channel();
-        let deadline_ms = timeout.unwrap_or_else(|| {
-            self.methods()
-                .get(method)
-                .map_or(1000, |registered| registered.timeout)
-        });
+        let deadline_ms = timeout.unwrap_or_else(|| self.method_timeout(method));
         if let Err(error) = self.enqueue(
             provider,
             Message::Call {

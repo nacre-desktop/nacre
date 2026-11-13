@@ -119,6 +119,11 @@ pub fn handles(method: &str) -> bool {
 }
 
 pub fn methods() -> BTreeMap<String, Method> {
+    static CACHED: std::sync::LazyLock<BTreeMap<String, Method>> =
+        std::sync::LazyLock::new(build_methods);
+    CACHED.clone()
+}
+fn build_methods() -> BTreeMap<String, Method> {
     let schema =
         |text: &str| serde_json::from_str::<Value>(text).expect("checked-in dashboard schema");
     let result = schema(include_str!(

@@ -17,6 +17,11 @@ const INTERVAL: Duration = Duration::from_secs(1800);
 static LANE: OnceLock<Arc<tokio::sync::Mutex<()>>> = OnceLock::new();
 
 pub fn methods() -> BTreeMap<String, Method> {
+    static CACHED: std::sync::LazyLock<BTreeMap<String, Method>> =
+        std::sync::LazyLock::new(build_methods);
+    CACHED.clone()
+}
+fn build_methods() -> BTreeMap<String, Method> {
     BTreeMap::from([(
         "dashboard.weather.refresh".into(),
         Method {

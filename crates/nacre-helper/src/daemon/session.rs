@@ -220,12 +220,7 @@ async fn call(
     transfer: super::helpers::Transfer,
 ) -> (Id, Reply) {
     let started = Instant::now();
-    let ms = timeout.unwrap_or_else(|| {
-        hub.borrow()
-            .methods()
-            .get(&method)
-            .map_or(1000, |m| m.timeout)
-    });
+    let ms = timeout.unwrap_or_else(|| hub.borrow().method_timeout(&method));
     let ui = method.starts_with("ui.");
     let network = matches!(
         method.as_str(),
