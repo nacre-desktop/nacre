@@ -394,26 +394,32 @@ fn lock_static_image(
     media: &crate::wallpaper_media::Media,
     source: &Path,
 ) -> Result<std::path::PathBuf> {
+    // Hyprlock and the login export read these directly; anything else (gif, ...) becomes a PNG.
+    let readable_still = |path: &Path| {
+        path.extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| {
+                matches!(
+                    extension.to_ascii_lowercase().as_str(),
+                    "png" | "jpg" | "jpeg" | "webp"
+                )
+            })
+            && fs::symlink_metadata(path).is_ok_and(|metadata| {
+                metadata.file_type().is_file() && metadata.uid() == nix::unistd::getuid().as_raw()
+            })
+    };
+    // A still is used as is without describing it: describe() writes previews and
+    // thumbnails, which lock and palette publication must not create as a side effect.
+    if readable_still(source) {
+        return Ok(source.canonicalize()?);
+    }
     let item = media.describe(source)?;
     let poster = Path::new(
         item["poster"]
             .as_str()
             .ok_or("Missing lock wallpaper poster")?,
     );
-    // Hyprlock and the login export read these directly; anything else (gif, ...) becomes a PNG.
-    if poster
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .is_some_and(|extension| {
-            matches!(
-                extension.to_ascii_lowercase().as_str(),
-                "png" | "jpg" | "jpeg" | "webp"
-            )
-        })
-        && fs::symlink_metadata(poster).is_ok_and(|metadata| {
-            metadata.file_type().is_file() && metadata.uid() == nix::unistd::getuid().as_raw()
-        })
-    {
+    if readable_still(poster) {
         return Ok(poster.canonicalize()?);
     }
     let source_bytes = fs::read(poster)?;
@@ -586,6 +592,8 @@ mod tests {
         assert_eq!(lock_image(&paths, &desktop), fallback);
         fs::remove_file(&chosen)?;
         assert_eq!(lock_image(&paths, &desktop), fallback);
+        // Resolving stills writes nothing (no previews or thumbnails in the media cache).
+        assert!(!paths.cache.join("wallpaper-media").exists());
         Ok(())
     }
 
