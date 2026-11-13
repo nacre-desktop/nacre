@@ -1430,6 +1430,7 @@
   "settings.registry.power.retry.label": "Retry",
   "settings.registry.power.saver.enabled.description": "Still wallpaper, fewer animations and a 60 Hz display preference.",
   "settings.registry.power.saver.enabled.label": "Battery saver",
+  "settings.registry.power.saver.label": "Energy saving",
   "settings.registry.power.saver.unavailable": "The battery-saver bundle is not available yet.",
   "settings.registry.privacy.clipboard.description": "Clear retained clipboard content.",
   "settings.registry.privacy.clipboard.label": "Clipboard history",

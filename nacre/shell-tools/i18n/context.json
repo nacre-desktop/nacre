@@ -1457,6 +1457,7 @@
   "settings.registry.power.retry.label": "Retry the power service probe.",
   "settings.registry.power.saver.enabled.description": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.power.saver.enabled.label": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.power.saver.label": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.power.saver.unavailable": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.privacy.clipboard.description": "Settings registry; page, row, section or action.",
   "settings.registry.privacy.clipboard.label": "Settings registry; page, row, section or action.",
