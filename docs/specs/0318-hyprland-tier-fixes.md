@@ -87,6 +87,6 @@ dependent, not this change. Orient `orient-decoder`: fmt, clippy `-D warnings`, 
 with the new one) and its integration tests pass.
 
 Desktop re-check of B3/B5 not run: the TEST host failed the swap gate (2.5 GiB zram swap used,
-MemAvailable 9.4 GiB, owner session active). The build and the N0318 scenario (per-click
-pointer round, then a held-pointer round, Settings/Colors/Widgets/Welcome sizes, overview) are
-staged there for a re-run.
+MemAvailable 9.4 GiB, owner session active). The N0318 harness and scenario (a per-click pointer
+round, then a round with one held pointer, Settings/Colors/Widgets/Welcome sizes, the overview)
+are kept with the N0316 evidence (`n0318/harness/`) for a re-run once the gate passes.
