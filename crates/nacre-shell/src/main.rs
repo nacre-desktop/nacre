@@ -155,9 +155,6 @@ fn start(
         return Ok(());
     }
 
-    if std::env::args().any(|arg| arg == "--services-ui-probe") {
-        return reload::private_service_proof();
-    }
     if std::env::args().any(|arg| arg == "--backend-probe") {
         return backends::probe::run();
     }
@@ -178,7 +175,6 @@ fn start(
     let started = std::time::Instant::now();
     let mut profile = false;
     let mut bar_panel = false;
-    let mut audio_panel = false;
     let mut launcher_panel = false;
     let mut core_views = false;
     let mut notification_bus = None;
@@ -234,7 +230,6 @@ fn start(
                     args.next().ok_or("--notification-history needs path")?,
                 ))
             }
-            "--audio-panel" => audio_panel = true,
             "--launcher-panel" => launcher_panel = true,
             "--core-views" => core_views = true,
             "--report" => {
@@ -370,7 +365,7 @@ fn start(
             "--palette" => palette = args.next().ok_or("--palette needs path")?.into(),
             "--help" | "-h" => {
                 println!(
-                    "nacre-shell [--bar [--audio-panel|--launcher-panel|--core-views] [--panel-renderer cpu|femtovg-gl]] [--menu-fixture FILE|--daemon-socket SOCKET] [--dashboard-fixtures DIR] [--ui-provider --command-socket SOCKET [--ui-notification-socket SOCKET]] [--notices [--notification-action-on-click]] [--ui ui/main.json|--panel|--animate] [--renderer cpu|femtovg-gl|femtovg|vello|auto] [--test-passive] [--memory-usage] [--surfaces 1..3] [--content-size] [--start-open] [--output NAME] [--background-blur] [--no-damage] [--argb] [--seconds N] [--palette PATH] [--namespace NAME]\nFeature 3 stateful UI preview. Auto keeps bars on CPU and warms panel GL lazily; other views use native GL with CPU fallback. UI accepts focus on demand; stress panels are click-through. Stop with Ctrl+C or SIGTERM."
+                    "nacre-shell [--bar [--launcher-panel|--core-views] [--panel-renderer cpu|femtovg-gl]] [--menu-fixture FILE|--daemon-socket SOCKET] [--dashboard-fixtures DIR] [--ui-provider --command-socket SOCKET [--ui-notification-socket SOCKET]] [--notices [--notification-action-on-click]] [--ui ui/main.json|--panel|--animate] [--renderer cpu|femtovg-gl|femtovg|vello|auto] [--test-passive] [--memory-usage] [--surfaces 1..3] [--content-size] [--start-open] [--output NAME] [--background-blur] [--no-damage] [--argb] [--seconds N] [--palette PATH] [--namespace NAME]\nFeature 3 stateful UI preview. Auto keeps bars on CPU and warms panel GL lazily; other views use native GL with CPU fallback. UI accepts focus on demand; stress panels are click-through. Stop with Ctrl+C or SIGTERM."
                 );
                 return Ok(());
             }
@@ -538,14 +533,11 @@ fn start(
         return Err("--notification-action-on-click requires --notices".into());
     }
     let notification_mode = notification_bus.is_some();
-    if notification_mode && (audio_panel || options.bar) {
-        return Err("notification service mode uses independent private notice/OSD surfaces; combine no bar/audio mode flags".into());
+    if notification_mode && options.bar {
+        return Err("notification service mode uses independent private notice/OSD surfaces; combine no bar mode flags".into());
     }
-    if launcher_panel && (!options.bar || audio_panel || notification_mode) {
+    if launcher_panel && (!options.bar || notification_mode) {
         return Err("--launcher-panel requires a bar and no other panel family".into());
-    }
-    if audio_panel && !options.bar {
-        return Err("--audio-panel requires --bar".into());
     }
     let _ = std::thread::Builder::new()
         .name("bead-osd-shadow-warm".into())
@@ -612,54 +604,6 @@ fn start(
             )?
             .decorations(),
         );
-    }
-    if legacy_sound_panel_enabled(audio_panel, core_views) {
-        let owner = desktop_owner.clone();
-        let panel_palette = palette.clone();
-        let panel_colors = colors.clone();
-        let fallback = sound::fallback(colors.get("surface")?);
-        let cold = fallback.clone();
-        options.panel_spec = Some(bead::wayland::PanelSpec {
-            position: Some(
-                placement::Frame::default()
-                    .positioner(placement::Attachment::Attached(bead::core::Edge::Right)),
-            ),
-            engages_decorations: true,
-            overlay: false,
-            retain_when_closed: false,
-            passive: false,
-            keyboard_focus: true,
-            text_focus_only: false,
-            initial_open: state::File::path()
-                .map_err(|e| -> Box<dyn std::error::Error> { e.into() })
-                .and_then(state::File::open)
-                .is_ok_and(|(_, saved)| {
-                    saved.get("panel.open") == Some(&bead::core::Value::Bool(true))
-                }),
-            fallback,
-            // This modest transient view does not amortize the native driver residency.
-            fallback_factory: None,
-            renderer: panel_renderer.unwrap_or(bead::render::RendererKind::Cpu),
-            factory: std::sync::Arc::new(move |open| {
-                let session = bead::ui::Session::new(
-                    "shell".into(),
-                    "sound/main.luau".into(),
-                    panel_palette.clone(),
-                    panel_colors.clone(),
-                    cold.clone(),
-                );
-                let desktop = owner.get().cloned().ok_or("bar services not ready")?;
-                reload::Runtime::panel_session(session, open)
-                    .with_trace(panel_trace)
-                    .with_frame(
-                        placement::Attachment::Attached(bead::core::Edge::Right),
-                        &panel_colors,
-                    )
-                    .and_then(|runtime| runtime.with_shared_desktop(desktop, false))
-                    .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
-                    .map_err(|e| e.to_string())
-            }),
-        });
     }
     if register_ui_provider && (!launcher_panel || menu_fixture.is_some()) {
         return Err("--ui-provider requires the bar launcher with its daemon Source".into());
@@ -1182,7 +1126,7 @@ fn start(
         app::set_focused_output(focused.clone());
         options.focused_output = Some(focused);
     }
-    let shared_desktop = options.bar.then(bead::services::Desktop::start);
+    let shared_desktop = options.bar.then(desktop::start_services);
     if let Some(desktop) = &shared_desktop {
         let _ = desktop_owner.set(desktop.clone());
     }
@@ -1329,7 +1273,7 @@ fn start(
                         )?;
                         runtime
                             .with_notifications(socket, history)?
-                            .with_shared_desktop(bead::services::Desktop::start(), false)?
+                            .with_shared_desktop(desktop::start_services(), false)?
                     } else {
                         runtime
                     };
@@ -1555,10 +1499,6 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
     })
 }
 
-fn legacy_sound_panel_enabled(audio_panel: bool, core_views: bool) -> bool {
-    audio_panel && !core_views
-}
-
 fn select_renderer(options: &mut Options, name: &str) -> Result<(), Box<dyn std::error::Error>> {
     use bead::render::RendererKind;
     options.auto_fallback = name == "auto";
@@ -1582,12 +1522,6 @@ fn select_renderer(options: &mut Options, name: &str) -> Result<(), Box<dyn std:
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn core_views_never_select_legacy_sound_factory() {
-        assert!(!legacy_sound_panel_enabled(true, true));
-        assert!(legacy_sound_panel_enabled(true, false));
-    }
 
     #[test]
     fn checked_in_ui_bundle_and_assets_are_complete() {

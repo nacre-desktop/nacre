@@ -110,7 +110,7 @@ pub fn window_spec(
     warm.set_viewport(size.0, size.1);
     let warm_runtime = crate::reload::Runtime::new(warm)
         .with_trace(trace)
-        .with_shared_desktop(bead::services::Desktop::start(), false)?
+        .with_shared_desktop(crate::desktop::start_services(), false)?
         .with_widget_app(client.clone().as_ref(), &root)?;
     let mut warm_runtime = warm_runtime;
     let fallback = warm_runtime
@@ -132,7 +132,7 @@ pub fn window_spec(
         session.set_viewport(size.0, size.1);
         crate::reload::Runtime::new(session)
             .with_trace(trace)
-            .with_shared_desktop(bead::services::Desktop::start(), false)
+            .with_shared_desktop(crate::desktop::start_services(), false)
             .and_then(|runtime| runtime.with_widget_app(client.as_ref(), &app_root))
             .map(|runtime| Box::new(runtime) as Box<dyn bead::wayland::SceneSource>)
             .map_err(|error| error.to_string())

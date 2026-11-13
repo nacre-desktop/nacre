@@ -4447,9 +4447,6 @@ impl Runtime {
         self.tray_menu = Some(menu);
         Ok(self)
     }
-    pub fn with_desktop(self) -> Result<Self, Box<dyn Error>> {
-        self.with_shared_desktop(bead::services::Desktop::start(), true)
-    }
     pub fn desktop_owner(&self) -> Option<std::sync::Arc<bead::services::Desktop>> {
         self.desktop.clone()
     }
@@ -4483,7 +4480,6 @@ impl Runtime {
         }
         for name in [
             "services.audio",
-            "services.audio.volume",
             "services.tray",
             "services.menu",
             "services.menu.open",
@@ -4516,24 +4512,6 @@ impl Runtime {
         let desktop = self.desktop.as_ref().ok_or("desktop unavailable")?;
         let snapshot = desktop.snapshot();
         let action = match name {
-            "services.audio.volume" => {
-                let bead::core::Value::Number(value) = arg else {
-                    return Err("volume requires a number".into());
-                };
-                return desktop
-                    .queue_volume((value / 100.).clamp(0., 1.))
-                    .map_err(|e| e.into());
-            }
-            "services.audio" => {
-                if let Some(delta) = delta {
-                    Action::Volume(
-                        (snapshot.audio.volume.ok_or("audio unavailable")? + delta.signum() * 0.05)
-                            .clamp(0., 1.),
-                    )
-                } else {
-                    Action::Mute(!snapshot.audio.muted.ok_or("audio unavailable")?)
-                }
-            }
             "services.tray" => {
                 if !self.tray_enabled {
                     return Err("tray producer unavailable".into());
@@ -8636,11 +8614,6 @@ impl SceneSource for Runtime {
                 }
                 self.desktop_revision = snapshot.revision;
                 let snapshot = self.with_daemon_tray(snapshot);
-                if self.notification_primary
-                    && let Some(owner) = &self.notifications
-                {
-                    owner.audio_changed(&snapshot.audio);
-                }
                 let mut values = if let Some(menu) = &mut self.tray_menu {
                     menu.values(&snapshot)
                 } else {
@@ -10745,133 +10718,6 @@ fn focused_title(
         || (String::new(), None),
         |window| (window.title.clone(), Some(window.id.clone())),
     )
-}
-
-/// Exercises actual bar hit testing and native service routes on explicit proof buses.
-pub fn private_service_proof() -> Result<(), Box<dyn Error>> {
-    if std::env::var("BEAD_PRIVATE_SERVICES_TEST").as_deref() != Ok("1") {
-        return Err("requires private proof environment".into());
-    }
-    let palette = bead::render::Palette::read(std::path::Path::new("shell/palette.json"))?;
-    let fallback = Scene {
-        opacity: 1.,
-        motion: None,
-        resource_revision: 0,
-        asset_data: Default::default(),
-        clips: Default::default(),
-        layers: Vec::new(),
-        prepared: Default::default(),
-        font_files: vec![],
-        width: 1920.,
-        slide: None,
-        primitives: vec![],
-        offset: (0., 0.),
-        bounds: bead::render::Rect::new(0., 0., 1920., 50.),
-    };
-    let mut session = bead::ui::Session::new(
-        "shell".into(),
-        "bar/main.luau".into(),
-        "shell/palette.json".into(),
-        palette,
-        fallback,
-    );
-    session.set_viewport(1920, 1200);
-    session.stores = session
-        .stores
-        .reconcile(&std::collections::BTreeMap::from([
-            (
-                "bead.focused_title".into(),
-                bead::core::Value::Text("Fixture title".into()),
-            ),
-            ("bead.workspaces".into(), bead::core::Value::list(vec![])),
-        ]))?;
-    let mut runtime = Runtime::new(session).with_desktop()?;
-    let desktop = runtime
-        .desktop
-        .as_ref()
-        .ok_or("proof desktop unavailable")?
-        .clone();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
-    while desktop.snapshot().audio.volume.is_none()
-        || desktop.snapshot().tray.iter().all(|t| t.menu.is_empty())
-    {
-        if std::time::Instant::now() > deadline {
-            return Err("proof services timeout".into());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(20));
-    }
-    runtime
-        .session
-        .update(crate::desktop::values(&desktop.snapshot(), ""))?;
-    runtime.stage(UiEvent::Reload)?;
-    runtime.commit();
-    fn position(runtime: &Runtime, action: &str) -> Result<(f32, f32), Box<dyn Error>> {
-        let node = runtime
-            .session
-            .view_nodes()
-            .iter()
-            .find(|n| n.action.as_deref() == Some(action))
-            .ok_or("action node missing")?;
-        let bead::render::Primitive::Rounded { rect, .. } = node.draw else {
-            return Err("action bounds missing".into());
-        };
-        Ok((rect.x + rect.w / 2., rect.y + rect.h / 2.))
-    }
-    let (x, y) = position(&runtime, "services.audio")?;
-    let previous = desktop
-        .snapshot()
-        .audio
-        .muted
-        .ok_or("proof mute unavailable")?;
-    runtime.stage(UiEvent::Click { x, y })?;
-    runtime.commit();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
-    while desktop.snapshot().audio.muted == Some(previous) {
-        if std::time::Instant::now() > deadline {
-            return Err("click mute not observed".into());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
-    let before = desktop
-        .snapshot()
-        .audio
-        .volume
-        .ok_or("proof volume unavailable")?;
-    runtime.stage(UiEvent::Scroll { x, y, delta: -1. })?;
-    runtime.commit();
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
-    while (desktop
-        .snapshot()
-        .audio
-        .volume
-        .ok_or("proof volume unavailable")?
-        - before)
-        .abs()
-        < 0.01
-    {
-        if std::time::Instant::now() > deadline {
-            return Err("scroll volume not observed".into());
-        }
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
-    runtime.stage(UiEvent::Desktop(desktop.snapshot()))?;
-    runtime.commit();
-    let (x, y) = position(&runtime, "services.tray")?;
-    runtime.stage(UiEvent::Click { x, y })?;
-    runtime.commit();
-    let item_menu = desktop.snapshot().tray[0].item_is_menu;
-    if !item_menu {
-        runtime.stage(UiEvent::ContextMenu { x, y })?;
-        runtime.commit();
-    }
-    let (x, y) = position(&runtime, "services.menu")?;
-    runtime.stage(UiEvent::Click { x, y })?;
-    runtime.commit();
-    assert!(runtime.menu_item.is_empty());
-    println!(
-        "BAR_SERVICE_ROUTES click_mute=true scroll_volume=true tray_activate_or_item_menu=true right_click_prepare=true menu_event=true item_is_menu={item_menu}"
-    );
-    Ok(())
 }
 
 #[cfg(test)]

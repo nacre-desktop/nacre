@@ -1200,7 +1200,6 @@ impl Notices for Service {
         publish(&self.shared);
         Ok(())
     }
-    fn audio_changed(&self, _: &bead::services::Audio) {}
     /// Normal feedback comes from daemon `osd` events (N0043); isolated previews use `preview`.
     fn feedback(&self, _: &[Json]) -> Result<Json, &'static str> {
         Err("the OSD shows daemon osd events only")

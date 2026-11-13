@@ -3,6 +3,17 @@ use bead::core::Value;
 use bead::services::Snapshot;
 use std::collections::BTreeMap;
 
+/// N0227: the daemon owns the PipeWire, NetworkManager, UPower and BlueZ clients; the bar
+/// pills read its topics (`reload/bar_daemon.rs`). Only the clock and login1 session state
+/// still come from Bead's bus thread, which cannot yet run without its device sensors.
+pub fn start_services() -> std::sync::Arc<bead::services::Desktop> {
+    bead::services::Desktop::start_config(bead::services::Config {
+        audio: false,
+        bus: true,
+        tray_watcher: false,
+    })
+}
+
 pub fn values(s: &Snapshot, menu_item: &str) -> BTreeMap<String, Value> {
     let audio = match (s.audio.volume, s.audio.muted) {
         (_, Some(true)) => "volume_off",

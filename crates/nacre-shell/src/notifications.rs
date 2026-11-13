@@ -127,7 +127,6 @@ pub trait Notices: Send + Sync {
     /// `key` is `id[|revision]` of the card under the pointer, or `osd`.
     fn hover(&self, key: &str, on: bool);
     fn action(&self, name: &str, arg: &Value) -> Result<(), String>;
-    fn audio_changed(&self, audio: &bead::services::Audio);
     fn feedback(&self, args: &[serde_json::Value]) -> Result<serde_json::Value, &'static str>;
     /// Harness-only OSD preview; it never asks the daemon to emit a device event.
     fn preview(&self, _args: &[serde_json::Value]) -> Result<serde_json::Value, &'static str> {
@@ -140,7 +139,6 @@ struct Shared {
     mirror: Mirror,
     wakeups: BTreeMap<u64, (Wakeup, bool)>,
     next: u64,
-    audio: Option<bead::services::Audio>,
 }
 pub struct Subscription {
     shared: std::sync::Weak<Mutex<Shared>>,
@@ -168,7 +166,6 @@ impl Owner {
             last: serde_json::json!({"rows":[],"popup_count":0,"history_count":0,"history_ready":false,"error":"","timers":[],"dnd":false,"osd":null}),
             wakeups: BTreeMap::new(),
             next: 0,
-            audio: None,
         }));
         let state = shared.clone();
         let (server, control, address): (Arc<dyn Source>, ControlFn, Option<String>) =
@@ -272,39 +269,6 @@ impl Notices for Owner {
             shared: Arc::downgrade(&self.shared),
             id,
         })
-    }
-    fn audio_changed(&self, audio: &bead::services::Audio) {
-        let previous = if let Ok(mut state) = self.shared.lock() {
-            state.audio.replace(audio.clone())
-        } else {
-            None
-        };
-        if let Some(previous) = previous {
-            for (channel, old, old_mute, new, muted) in [
-                (
-                    "volume",
-                    previous.volume,
-                    previous.muted,
-                    audio.volume,
-                    audio.muted,
-                ),
-                (
-                    "microphone",
-                    previous.mic_volume,
-                    previous.mic_muted,
-                    audio.mic_volume,
-                    audio.mic_muted,
-                ),
-            ] {
-                if old.is_some() && new.is_some() && (old != new || old_mute != muted) {
-                    let _ = self.control(Control::Osd {
-                        channel: channel.into(),
-                        value: new.unwrap_or(0.).clamp(0., 1.),
-                        muted: muted.unwrap_or(false),
-                    });
-                }
-            }
-        }
     }
     fn hover(&self, key: &str, value: bool) {
         if let Some(id) = key.split('|').next().and_then(|id| id.parse().ok()) {
