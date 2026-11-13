@@ -9,7 +9,7 @@ fn reference() -> Result<Value> {
         .read_to_end(&mut raw)?;
     assert_eq!(
         format!("{:x}", Sha256::digest(&raw)),
-        "3f00ad038253c7ad0e3e0e235dae0d5285a18397071aaeb9aeabf5d722eb840e"
+        "71eca6910e220237ab31746ddd58761113b5c607ceb019e6a43c0304addee89c"
     );
     Ok(serde_json::from_slice(&raw)?)
 }

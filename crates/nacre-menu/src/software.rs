@@ -182,7 +182,6 @@ impl Context {
                     "upstreamCredit": text::field(&theme["upstream"], "credit"),
                     "website": text::field(&theme["upstream"], "url"),
                     "colors": colors,
-                    "themeModes": theme.get("modes").cloned().unwrap_or(json!({})),
                     "surface": theme["surface"].as_str().filter(|s| !s.is_empty())
                         .or_else(|| theme["modes"]["dark"]["surface"].as_str().filter(|s| !s.is_empty()))
                         .unwrap_or("#151515"),
