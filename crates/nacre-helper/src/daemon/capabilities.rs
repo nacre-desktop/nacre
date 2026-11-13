@@ -109,16 +109,12 @@ fn probe(env: &Env) -> Probe {
     let power_profiles = (env.which)(&env.powerprofilesctl) && run(&["get"]).is_some();
     let performance_profile =
         power_profiles && run(&["list"]).is_some_and(|list| list.contains("performance"));
-    let niri_idle = env
-        .paths
-        .home
-        .join(".config/systemd/user/nacre-niri-lock.service")
-        .is_file()
-        || crate::niri_session_gate::allowed(
-            "idle",
-            &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
-            &env.paths,
-        );
+    // Packaged niri follows the same verified-unlock gate as source niri.
+    let niri_idle = crate::niri_session_gate::allowed(
+        "idle",
+        &BTreeMap::from([("XDG_CURRENT_DESKTOP".into(), "niri".into())]),
+        &env.paths,
+    );
     Probe {
         niri_idle,
         touchpad,

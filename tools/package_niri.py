@@ -400,14 +400,14 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         + str(root / "tools/package_niri.py")
         + " finalize\n",
     )
-    # Handle explicit loginctl lock requests. Idle/suspend policy is not enabled
-    # before the owner validates manual password unlock on the real hardware.
+    # Handle explicit loginctl lock requests only. Like source niri (the
+    # niri-session-gate idle condition), sleep-lock and idle listeners wait for
+    # the owner's verified password unlock on the real hardware.
     add(
         config / "hypridle.conf",
         "general {\n    lock_cmd = pidof hyprlock || hyprlock -c "
         + shlex.quote(str(home / lock))
-        + "\n    before_sleep_cmd = loginctl lock-session\n}\n"
-        "source = ~/.config/nacre/power-idle.conf\n",
+        + "\n}\n",
     )
     add(
         ".config/systemd/user/nacre-niri-lock.service",

@@ -89,7 +89,7 @@ fn probes_read_devices_power_profiles_and_pacman() {
 }
 
 #[test]
-fn niri_idle_requires_packaged_lock_service_or_verified_source_unlock() {
+fn niri_idle_requires_verified_unlock_even_with_the_packaged_lock_service() {
     let dir = tempfile::tempdir().unwrap();
     let env = env(dir.path(), "", "exit 1\n", false);
     assert!(!probe(&env).niri_idle);
@@ -113,7 +113,7 @@ fn niri_idle_requires_packaged_lock_service_or_verified_source_unlock() {
         .join(".config/systemd/user/nacre-niri-lock.service");
     std::fs::create_dir_all(unit.parent().unwrap()).unwrap();
     std::fs::write(unit, "[Service]\n").unwrap();
-    assert!(probe(&env).niri_idle);
+    assert!(!probe(&env).niri_idle);
 }
 
 #[test]
