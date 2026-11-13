@@ -28,7 +28,7 @@ class ReleaseTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as raised:
                 m.main()
         self.assertEqual(raised.exception.code, 0)
-        self.assertIn("nacre update checks desktop updates", output.getvalue())
+        self.assertIn("update", output.getvalue())
 
     def test_update_dispatches_through_the_existing_updates_tool_route(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -924,11 +924,7 @@ def main():
             subprocess.call([sys.executable, str(candidate), *sys.argv[2:]])
         )
     p = argparse.ArgumentParser(
-        epilog=(
-            "Package users: nacre setup [OPTIONS] prepares a login; nacre session "
-            "COMPOSITOR starts it from a TTY after logout.\n"
-            "nacre update checks desktop updates."
-        )
+        epilog="Package users: nacre setup [OPTIONS] prepares a login; nacre session COMPOSITOR starts it from a TTY after logout."
     )
     p.add_argument(
         "action",
@@ -941,6 +937,7 @@ def main():
             "check",
             "session",
             "restart",
+            "update",
         ],
     )
     p.add_argument("repo", nargs="?", type=Path)
