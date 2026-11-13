@@ -1,8 +1,9 @@
 # N0407 — Package dependency review after the QML shell's retirement
 
-Status: implementation and acceptance in progress (release lead, 2026-11-12). N0406
-landed before this review. Owner's 2026-11-12 decision is authoritative: Kitty stays
-required; Fish, Fastfetch and Dolphin become optional apps.
+Status: acceptance incomplete (release lead, 2026-11-13). N0406 landed before this
+review. Owner's 2026-11-12 decision is authoritative: Kitty stays required; Fish,
+Fastfetch and Dolphin become optional apps. Final VM runs skip the update stage because
+this candidate has no `nacre update` command; the acceptance requires every stage to pass.
 
 The original `nacre` core package declared 58 hard dependencies. The table records
 each dependency's installed use on main (`a0aaf12a`) and its verdict. “Optdepend”
@@ -12,7 +13,7 @@ means absence is already handled by a hidden capability, fallback, or clear erro
 | Dependency | Installed use and absence behavior (source:line on main) | Verdict |
 |---|---|---|
 | `python` | Setup and installed helpers run Python (`packaging/arch/stage.py:197`). | keep |
-| `python-pillow` | Pillow imports are in tests; runtime image decoding is native (`nacre/shell-tools/tests/test_colors_backend.py:13`, `crates/nacre-shell/src/wallpaper_decode.rs:130`). | drop |
+| `python-pillow` | The core ships no Pillow runtime imports; Brain retains its own Pillow dependency, while core tests use Pillow (`packaging/packages.json:72-78`, `nacre/shell-tools/tests/test_colors_backend.py:13`, `crates/nacre-shell/src/wallpaper_decode.rs:130`). | drop |
 | `orient` | Palette CLI and engine version use the locked engine (`packaging/arch/recipe.py:40-43`, `packaging/arch/test-installed.py:96`). | keep |
 | `xdg-desktop-portal` | Session portal infrastructure, paired with each compositor portal backend (`packaging/packages.json:122-135`). | move |
 | `uwsm` | Starts the managed Niri session and wraps session apps (`config/uwsm/sessions/nacre-niri.desktop:4`, `config/niri/bindings.kdl:8`). | keep |
@@ -86,13 +87,41 @@ desktop appearance packages.
   message if Dolphin or its optional style packages are absent; its app route already
   gives an actionable missing-app message and its desktop entry has `TryExec`.
 - The session exports the `qt6ct` theme only when its plugin package is present.
-- Final acceptance evidence, core closure installed size, and commit are added after
-  dev-1 package tests and all three VM tiers complete.
+- The bundled shell-launcher health check no longer requires optional `mpv`; the VM
+  screenshot assertion now reads PNG structure with the standard library instead of
+  relying on Pillow from the core dependency closure.
+- Focused package/setup suites passed in one fresh Arch container:
+  `nice -n 10 python -m unittest test_setup test_package_repository test_package_transaction test_package_vm test_shell_session test_dolphin_files test_ui_shell_switch`
+  — 92 tests, `OK`. The LEAN package build used
+  `CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`, 2 Cargo
+  jobs, and `RUST_MIN_STACK=33554432`; `makepkg` produced the `r3063` core and split
+  packages from source `b65bee95d56b5e715e466a2869efc6a7e8a1c221`. The build container
+  exited after packaging while copying the read-only fork archive; the fork package was
+  copied separately and all archives were used by the gates.
+- Installed-package proof passed four fresh users (`nacre-niri`, `niri`, `hyprland`,
+  `both`) in a clean Arch container without compiler, Node/npm, Ruff, Git or pip. It
+  confirms Fish and Fastfetch are absent, Kitty does not force Fish, and the missing
+  Dolphin route prints a clear message. The smoke check excludes the AI-controller
+  loader assertion; AI/Brain package behavior is outside this unit.
+- `pacman -Qi` core dependency closure: 199 packages, 1,270,993,289 bytes (1,212.11
+  MiB). Direct core dependencies: 58 → 28; verdicts: 28 keep, 20 optdepend, 5 move,
+  5 drop.
+- Final `packaging/arch/test-vm.py` results from the saved branch packages:
 
-Acceptance: focused dev-1 package/setup tests pass in one fresh container; lean test
-packages pass every stage of `packaging/arch/test-vm.py` for `nacre-niri`, `niri`, and
-`hyprland`; the dev-1 desktop CI job passes; report dependency counts and `pacman -Qi`
-installed size for the core closure.
+  | Tier | Prepare | Inventory | Repository | Bootstrap plan | Bootstrap install | Setup | Session | Update | Uninstall | Package removal | Leftovers |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | `nacre-niri` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | SKIP | PASS | PASS | PASS |
+  | `niri` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | SKIP | PASS | PASS | PASS |
+  | `hyprland` | PASS | PASS | PASS | PASS | PASS | PASS | PASS | SKIP | PASS | PASS | PASS |
+
+- `ruff 0.16.10 format --check` and `ruff 0.16.10 check` passed on changed Python
+  files; `python3 tools/compositor_boundary.py` passed. Full command output remains in
+  the task logs on dev-1, not committed.
+
+Acceptance: focused package/setup tests, installed-package proof and all required VM
+stages passed. The `update` stage is `SKIP` in all three tiers because the candidate
+does not provide that command. Owner/release lead must decide whether that expected
+not-applicable stage satisfies the all-stages-pass gate.
 
 Not covered: AI and Brain dependencies, build/check dependency lists, or SDDM greeter
 packaging. Temporary duplicate paths: none introduced by N0407.

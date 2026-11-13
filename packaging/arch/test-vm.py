@@ -276,7 +276,22 @@ systemctl --user is-active nacre-shell.service
             guest(environment + "grim /tmp/screenshot.png")
             copy("/tmp/screenshot.png", out / "screenshot.png", download=True)
             guest(
-                "python -c \"from PIL import Image,ImageStat; v=ImageStat.Stat(Image.open('/tmp/screenshot.png').convert('RGB')).var; print(v); assert sum(v)/3 > 1.0\""
+                "python - <<'PY'\n"
+                "from pathlib import Path\n"
+                "import struct, zlib\n"
+                "data = Path('/tmp/screenshot.png').read_bytes()\n"
+                "assert data.startswith(b'\\x89PNG\\r\\n\\x1a\\n')\n"
+                "width, height = struct.unpack('>II', data[16:24])\n"
+                "assert width > 1 and height > 1\n"
+                "offset, chunks = 8, []\n"
+                "while offset < len(data):\n"
+                "    size = struct.unpack('>I', data[offset:offset + 4])[0]\n"
+                "    kind = data[offset + 4:offset + 8]\n"
+                "    if kind == b'IDAT': chunks.append(data[offset + 8:offset + 8 + size])\n"
+                "    offset += size + 12\n"
+                "pixels = zlib.decompress(b''.join(chunks))\n"
+                "assert len(pixels) > height and len(set(pixels)) > 10\n"
+                "PY"
             )
             guest("systemctl --user is-active nacre-shell.service")
             finish("update")

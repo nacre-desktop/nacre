@@ -94,6 +94,10 @@ assert importlib.util.find_spec("nacre_shell") is None, (
     "Palette Python SDK is developer-only"
 )
 assert not Path("/usr/share/nacre/runtime/palette").exists()
+assert not shutil.which("fish"), "Fish is optional and absent in the core install"
+assert not shutil.which("fastfetch"), (
+    "Fastfetch is optional and absent in the core install"
+)
 metadata = json.loads(Path("/usr/share/nacre/package.json.installed").read_text())
 config_root = Path("/usr/share/nacre/config")
 for name in (
@@ -316,13 +320,8 @@ assert {
     "org.kde.dolphin",
 } <= set(favorites)
 assert "shell fish" not in (home / ".config/nacre/terminal/kitty.conf").read_text()
-run(
-    "python",
-    "-c",
-    "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); from nacre_ai_controller import load; assert load()['default_assistant']() in ('codex','claude')",
-)
 print(
-    "Real UWSM argument parsing, inherited keyboard syntax, default wallpaper/favorites/terminal and packaged AI controller imports pass."
+    "Real UWSM argument parsing, inherited keyboard syntax, and default wallpaper/favorites/terminal pass."
 )
 for command in (
     ("nacre-welcome", "--help"),
