@@ -331,6 +331,106 @@ mod tests {
         assert_eq!(loader(&paths, &explicit), custom);
         Ok(())
     }
+
+    #[test]
+    fn generated_nacre_niri_overlay_reads_generated_config_includes_and_custom_binds(
+    ) -> crate::Result<()> {
+        let home = tempfile::tempdir()?;
+        let paths = Paths::new(home.path());
+        let session = paths.share.join("niri-on-pc/session/config");
+        fs::create_dir_all(&session)?;
+        let custom = paths.config.join("niri/custom.kdl");
+        fs::create_dir_all(custom.parent().unwrap())?;
+        let mut root = String::new();
+        for name in [
+            "wallpaper.kdl",
+            "bindings.kdl",
+            "window-rules.kdl",
+            "keyboard.kdl",
+            "profile.kdl",
+            "colors.kdl",
+            "host.kdl",
+        ] {
+            root.push_str(&format!(
+                "include {}\n",
+                serde_json::to_string(&session.join(name).to_string_lossy())?
+            ));
+            fs::write(
+                session.join(name),
+                if name == "bindings.kdl" {
+                    "binds { Super+Space hotkey-overlay-title=\"Launcher\" { spawn \"nacre-menu\"; }; }\n"
+                } else {
+                    ""
+                },
+            )?;
+        }
+        root.push_str("include \"desktop.kdl\"\n");
+        root.push_str(&format!(
+            "include {}\n",
+            serde_json::to_string(&session.join("bead-pearls.kdl").to_string_lossy())?
+        ));
+        for name in [
+            "desktop.kdl",
+            "bead-pearls.kdl",
+            "workspaces.kdl",
+            "monitor-workspace-actions.kdl",
+            "workspace-visitors.kdl",
+        ] {
+            fs::write(
+                session.join(name),
+                if name == "workspaces.kdl" {
+                    "binds { Mod+1 { focus-workspace 1; }; }\n"
+                } else {
+                    ""
+                },
+            )?;
+        }
+        root.push_str("include \"workspaces.kdl\"\ninclude \"monitor-workspace-actions.kdl\"\ninclude \"workspace-visitors.kdl\"\n");
+        root.push_str(&format!(
+            "include {}\n",
+            serde_json::to_string(&custom.to_string_lossy())?
+        ));
+        fs::write(session.join("config.kdl"), root)?;
+        fs::write(&custom, "binds { Super+Space hotkey-overlay-title=\"Custom launcher\" { close-window; }; Super+K hotkey-overlay-title=\"Custom action\" { close-window; }; }\n")?;
+        // This is the actual Tier 1 loader: nacre-niri's overlay includes the
+        // generated session root, which in turn includes bindings and custom.kdl.
+        let overlay = session.join("nacre-niri.kdl");
+        fs::write(
+            &overlay,
+            "include \"config.kdl\"\nbinds { Super+Alt+H hotkey-overlay-title=\"Nacre:restore-current\" { restore-current-workspace-hidden-windows; }; }\n",
+        )?;
+        let environment =
+            BTreeMap::from([("NIRI_CONFIG".into(), overlay.to_string_lossy().into_owned())]);
+        let active = loader(&paths, &environment);
+        assert_eq!(active, overlay);
+        let (files, rows) = inventory(&active, home.path())?;
+        assert!(files.iter().any(|path| path == &overlay));
+        assert!(files.iter().any(|path| path == &session.join("config.kdl")));
+        assert!(files
+            .iter()
+            .any(|path| path == &session.join("bindings.kdl")));
+        assert!(files.iter().any(|path| path == &custom));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["keys"] == "SUPER+Space"
+                && row["flags"]["description"] == "Custom launcher"));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["keys"] == "SUPER+K" && row["flags"]["description"] == "Custom action"));
+        assert!(rows
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|row| row["keys"] == "SUPER+1"));
+        assert!(rows.as_array().unwrap().iter().any(|row| {
+            row["keys"] == "SUPER+ALT+H" && row["flags"]["description"] == "Nacre:restore-current"
+        }));
+        Ok(())
+    }
     #[test]
     fn empty_missing_invalid_and_cyclic_configs() -> crate::Result<()> {
         let home = tempfile::tempdir()?;
