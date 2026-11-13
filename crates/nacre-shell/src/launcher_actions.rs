@@ -40,6 +40,11 @@ pub(crate) enum Act {
         input: Option<String>,
         delay: bool,
     },
+    /// An external-app hand-off whose focus result the launcher cannot observe.
+    Handoff {
+        argv: Vec<String>,
+        label: String,
+    },
     /// A published daemon method; `delay` lets the launcher close before an interactive tool.
     Daemon {
         method: &'static str,
@@ -444,16 +449,16 @@ fn act(row: &MenuUiRow) -> Result<(Act, bool, Option<MenuView>), Option<&'static
         "focus" if !id.is_empty() && id.len() <= 128 => {
             done(daemon("window.focus", json!({"window": id})))
         }
-        "url" if web(text) => done(run(strings(&["xdg-open", text]))),
+        "url" if web(text) => done(handoff(row, &["xdg-open", text])),
         // Bead has no Brain explorer in the sidebar yet: a note opens like a file.
-        "open-file" | "note" if absolute(text) => done(run(strings(&["xdg-open", text]))),
+        "open-file" | "note" if absolute(text) => done(handoff(row, &["xdg-open", text])),
         "search-web" if !text.is_empty() => {
             let url = row
                 .web_url
                 .clone()
                 .filter(|u| web(u))
                 .unwrap_or_else(|| format!("https://duckduckgo.com/?q={}", encode(text)));
-            done(run(strings(&["nacre-app", "browser", &url])))
+            done(handoff(row, &["nacre-app", "browser", &url]))
         }
         "bring-visitors" => done(run(helper(&["monitor-workspaces", "bring"]))),
         "tool" => tool(text).map_or(bad, done),
@@ -790,6 +795,14 @@ pub(crate) async fn execute(act: Act, client: Option<Client>, shell: PathBuf) {
             }
             blocking(move || spawn(&argv, dir, input)).await
         }
+        Act::Handoff { argv, label } => {
+            let launched = blocking(move || launch_app_at(&argv, None)).await;
+            // The launcher cannot see whether the target app took focus, so always confirm.
+            if launched.is_ok() {
+                let _ = blocking(move || handoff_toast(&label)).await;
+            }
+            launched
+        }
         Act::Shell(call) => blocking(move || blocking_shell(shell, call)).await,
         Act::CopyClip(id) => call(&client, "clipboard.copy", json!({"id": id}))
             .await
@@ -878,6 +891,29 @@ pub(crate) async fn execute(act: Act, client: Option<Client>, shell: PathBuf) {
     if let Err(error) = result {
         eprintln!("UI_MENU_ACTION_FAILED {error}");
     }
+}
+
+fn handoff(row: &MenuUiRow, argv: &[&str]) -> Act {
+    let label = row.label.as_deref().filter(|label| !label.is_empty());
+    Act::Handoff {
+        argv: strings(argv),
+        label: label.unwrap_or(&row.name).into(),
+    }
+}
+
+fn handoff_toast(label: &str) -> Result<(), String> {
+    let mut command = bead::services::process::command("notify-send");
+    command
+        .arg("--app-name=Nacre")
+        .arg(format!("Opened {label}"))
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .process_group(0);
+    command
+        .spawn()
+        .map(|_| ())
+        .map_err(|error| format!("notify-send: {error}"))
 }
 
 #[cfg(test)]

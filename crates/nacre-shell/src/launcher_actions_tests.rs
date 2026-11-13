@@ -84,6 +84,17 @@ fn published_rows_map_to_the_operations_bead_can_do_and_refuse_the_rest() {
 }
 
 #[test]
+fn external_handoffs_keep_the_row_label() {
+    let (act, keep, _) = planned(
+        json!({"row":{"id":"guide","kind":"action","name":"Nacre guide",
+        "label":"Nacre guide","operation":"url","value":"https://example.invalid/guide","disabled":false},"catalog_rev":1}),
+    );
+    assert!(matches!(act, Act::Handoff { ref argv, ref label }
+        if argv == &["xdg-open", "https://example.invalid/guide"] && label == "Nacre guide"));
+    assert!(!keep);
+}
+
+#[test]
 fn theme_bundle_rows_dispatch_to_bundle_apply() {
     let (act, keep_open, _) = planned(json!({
         "catalog_rev": 1,
@@ -217,6 +228,13 @@ fn every_audited_supported_launcher_action_resolves_to_a_supported_route() {
                     );
                 }
             }
+            Act::Handoff { argv, .. } => assert!(
+                matches!(
+                    argv.first().map(String::as_str),
+                    Some("xdg-open" | "nacre-app")
+                ),
+                "{row}: invalid hand-off argv {argv:?}"
+            ),
             Act::Daemon { method, .. } => assert!(DAEMON_METHODS.contains(&method), "{method}"),
             Act::Toggle(source) => assert!(
                 [
@@ -350,12 +368,12 @@ fn search_uses_the_engine_url_and_encodes_the_fallback() {
     let mut params = row("search-web", json!("a b&c"));
     let (act, _, _) = planned(params.clone());
     assert!(
-        matches!(act, Act::Run { ref argv, .. } if argv == &["nacre-app", "browser", "https://duckduckgo.com/?q=a%20b%26c"])
+        matches!(act, Act::Handoff { ref argv, .. } if argv == &["nacre-app", "browser", "https://duckduckgo.com/?q=a%20b%26c"])
     );
     params["row"]["webUrl"] = json!("https://search.brave.com/search?q=a");
     let (act, _, _) = planned(params);
     assert!(
-        matches!(act, Act::Run { ref argv, .. } if argv[2] == "https://search.brave.com/search?q=a")
+        matches!(act, Act::Handoff { ref argv, .. } if argv[2] == "https://search.brave.com/search?q=a")
     );
 }
 

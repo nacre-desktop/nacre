@@ -157,11 +157,7 @@ pub fn scope_command_at(argv: &[String], cwd: Option<&std::path::Path>) -> Resul
     let mut command = Command::new("systemd-run");
     command.args(["--user", "--scope", "--collect", "--quiet"]);
     if let Some(token) = token {
-        command.args([
-            format!("--unit={unit}"),
-            format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
-            format!("--setenv=DESKTOP_STARTUP_ID={token}"),
-        ]);
+        command.args(scope_token_args(&unit, &token));
     }
     command.args([
         "env",
@@ -193,6 +189,14 @@ pub fn scope_command_at(argv: &[String], cwd: Option<&std::path::Path>) -> Resul
         command.current_dir(cwd);
     }
     Ok(command)
+}
+
+fn scope_token_args(unit: &str, token: &str) -> [String; 3] {
+    [
+        format!("--unit={unit}"),
+        format!("--setenv=XDG_ACTIVATION_TOKEN={token}"),
+        format!("--setenv=DESKTOP_STARTUP_ID={token}"),
+    ]
 }
 
 fn application_available(program: &str, cwd: Option<&std::path::Path>) -> bool {
@@ -370,6 +374,18 @@ mod tests {
         assert!(argv.lines().any(|arg| arg == "--collect"));
         assert!(argv.lines().any(|arg| arg == "kitty"));
         assert!(argv.lines().any(|arg| arg == "scope test"));
+    }
+
+    #[test]
+    fn scoped_app_launch_passes_activation_token_in_systemd_argv() {
+        assert_eq!(
+            scope_token_args("nacre-app-test.scope", "fresh-token"),
+            [
+                "--unit=nacre-app-test.scope",
+                "--setenv=XDG_ACTIVATION_TOKEN=fresh-token",
+                "--setenv=DESKTOP_STARTUP_ID=fresh-token",
+            ]
+        );
     }
 
     #[test]
