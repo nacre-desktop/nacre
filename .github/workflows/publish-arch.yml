@@ -110,7 +110,7 @@ jobs:
               # controls. The signed receipt records the exact compiled source.
               # GITHUB_TOKEN cannot tag an older workflow-changing commit.
               title = ('Nacre Arch development ' if development else 'Nacre Arch ') + version
-              subprocess.run(['gh','release','create',tag,'--target','main','--prerelease','--latest=false','--title',title,'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. The tag records publication state; the exact compiled source is '+receipt['sourceRevision']+'. Source and installed-runtime proof are linked in signed release.json.',*[str(path) for path in files]], check=True)
+              subprocess.run(['gh','release','create',tag,'--target','main',*(['--prerelease'] if development else []),'--latest=false','--title',title,'--notes','Tested Arch/CachyOS preview. Install through the signed pacman repository for dependency resolution and updates. The tag records publication state; the exact compiled source is '+receipt['sourceRevision']+'. Source and installed-runtime proof are linked in signed release.json.',*[str(path) for path in files]], check=True)
           PY
       - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
         if: steps.candidate.outputs.eligible == 'true'

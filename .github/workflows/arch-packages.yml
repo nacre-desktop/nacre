@@ -35,7 +35,8 @@ jobs:
     # Match source CI: Ubuntu24.04 denies nested Bubblewrap network setup.
     # Keep the parity sandbox intact rather than relaxing host protections.
     runs-on: ubuntu-22.04
-    timeout-minutes: 120
+    # 180 for the first hosted build with the nacre-niri fork package; set a real bound once measured.
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
