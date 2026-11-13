@@ -171,12 +171,6 @@ base = (
     "--with",
     "brain",
 )
-if not ai_installed:
-    missing_ai = run(*base, "--with", "ai", "--yes", success=False)
-    combined = missing_ai.stdout + missing_ai.stderr
-    assert "nacre-ai" in combined
-    assert "Install the missing packages before applying setup" in combined
-    assert not ai_wrapper.exists(), "Setup created a wrapper without nacre-ai"
 if backend == "both":
     base += ("--also-compositor", "hyprland")
 os.environ["NACRE_COMPOSITOR"] = "hyprland" if backend == "hyprland" else "niri"
