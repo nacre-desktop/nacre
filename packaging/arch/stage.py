@@ -241,7 +241,11 @@ def stage(root, destination, component, build):
         terminal = ".config/nacre/terminal/"
         text(
             terminal + "kitty.conf",
-            (root / "config/kitty/kitty.conf").read_text(),
+            (root / "config/kitty/kitty.conf").read_text()
+            # Fish is optional: greet with it when installed, else the login shell.
+            + "\nshell sh -c 'command -v fish >/dev/null && exec fish --init-command "
+            + '"source \\"$HOME/.config/nacre/terminal/greeting.fish\\""; '
+            + 'exec "${SHELL:-/bin/sh}" -l\'\n',
         )
         copy(root / "config/kitty/greeting.fish", deploy / terminal / "greeting.fish")
         copy(

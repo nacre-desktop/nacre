@@ -198,7 +198,7 @@ assert profile["aiFullAccess"] is False and required_components <= set(
     profile["components"]
 )
 kitty_config = home / ".config/nacre/terminal/kitty.conf"
-assert kitty_config.is_file() and "shell fish" not in kitty_config.read_text()
+assert kitty_config.is_file() and "command -v fish" in kitty_config.read_text()
 if not shutil.which("dolphin"):
     missing_dolphin = run("nacre-shell", "dolphin", success=False)
     assert "Dolphin is not installed" in missing_dolphin.stderr
@@ -333,7 +333,7 @@ assert {
     "nacre-terminal",
     "org.kde.dolphin",
 } <= set(favorites)
-assert "shell fish" not in (home / ".config/nacre/terminal/kitty.conf").read_text()
+assert "command -v fish" in (home / ".config/nacre/terminal/kitty.conf").read_text()
 ai_controller_check = (
     "import sys; sys.path.insert(0, '/usr/share/nacre/nacre/shell-tools'); "
     "from nacre_ai_controller import load; "

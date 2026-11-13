@@ -1966,8 +1966,8 @@ class ArchPackageLayoutTests(unittest.TestCase):
                     (core / "deployment/core/.config/nacre/launcher.json").read_text()
                 )["favorites"],
             )
-            self.assertNotIn(
-                "shell fish",
+            self.assertIn(
+                "command -v fish",
                 (
                     core / "deployment/core/.config/nacre/terminal/kitty.conf"
                 ).read_text(),
