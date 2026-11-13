@@ -1126,7 +1126,7 @@ fn start(
         app::set_focused_output(focused.clone());
         options.focused_output = Some(focused);
     }
-    let shared_desktop = options.bar.then(desktop::start_services);
+    let shared_desktop = options.bar.then(|| desktop::start_services(true));
     if let Some(desktop) = &shared_desktop {
         let _ = desktop_owner.set(desktop.clone());
     }

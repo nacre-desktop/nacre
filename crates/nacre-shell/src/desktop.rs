@@ -4,13 +4,13 @@ use bead::services::Snapshot;
 use std::collections::BTreeMap;
 
 /// N0227: the daemon owns the PipeWire, NetworkManager, UPower and BlueZ clients; the bar
-/// pills read its topics (`reload/bar_daemon.rs`). Nacre keeps Bead's bus lane for the
-/// local clock and login1 session state; that lane still also runs device sensors and the
-/// tray host until Bead provides the clock-only option (spec 0227, request B1).
-pub fn start_services() -> std::sync::Arc<bead::services::Desktop> {
+/// pills read its topics (`reload/bar_daemon.rs`). The clock has its own Bead worker (B0251).
+/// `bus` keeps Bead's system-bus lane only for wallpaper motion's login1 lock/sleep and
+/// on-battery gates, until the daemon publishes lock/sleep (spec 0227 P1, spec 0236).
+pub fn start_services(bus: bool) -> std::sync::Arc<bead::services::Desktop> {
     bead::services::Desktop::start_config(bead::services::Config {
         audio: false,
-        bus: true,
+        bus,
         tray_watcher: false,
     })
 }
