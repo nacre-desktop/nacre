@@ -1891,6 +1891,45 @@ fn legacy_state_distinguishes_named_views_on_one_host() -> Result<()> {
 }
 
 #[test]
+fn bar_logo_and_super_space_apply_the_same_home_favorites_request() -> Result<()> {
+    use bead::wayland::{CommandContext, Remote, SceneSource, UiEvent};
+    use std::sync::{Arc, Mutex};
+    let mut values = super::initial_models()?;
+    values.insert("bar.launcher".into(), Value::Bool(true));
+    let h = Harness::load(&root(), Path::new("bar/main.luau"), &root().join("palette.json"), values,
+        Config { width: 1920, height: 50, scale: 1. })?;
+    let logo = h.session.view_nodes().iter().find(|node| node.action.as_deref() == Some("launcher.open"))
+        .expect("bar logo launcher action");
+    let action = logo.action.clone().unwrap();
+    let argument = logo.action_arg.clone().unwrap();
+    assert_eq!(argument, Value::Text(String::new()));
+    let memory = crate::launcher::Memory::default();
+    let mut runtime = crate::reload::Runtime::new(h.session).with_launcher_trigger(memory.clone())?;
+    let events = Arc::new(Mutex::new(Vec::new()));
+    let output = events.clone();
+    runtime.services(Box::new(move |event| output.lock().unwrap().push(event)));
+    events.lock().unwrap().clear();
+    memory.lock().unwrap().insert("launcher.engine_route".into(), Value::Text("apps".into()));
+    runtime.stage(UiEvent::Action { name: action, argument })?;
+    let logo_state = memory.lock().unwrap().clone();
+    assert_eq!(logo_state["launcher.engine_route"], Value::Text("home".into()));
+    assert_eq!(logo_state["launcher.mode"], Value::Text("apps".into()));
+    assert_eq!(logo_state["launcher.search.text"], Value::Text(String::new()));
+    assert!(matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionVisibility(true), UiEvent::CompanionModel(model)] if model == &logo_state));
+    events.lock().unwrap().clear();
+    let (reply, received) = std::sync::mpsc::sync_channel(1);
+    runtime.stage(UiEvent::Remote(Arc::new(Remote {
+        call: crate::commands::from_strings("nacre".into(), "launcher".into(), &[String::new()])?,
+        reply,
+        context: CommandContext { panel_open: false, panel_configured: true, panel_view: None, hidden: false },
+    })))?;
+    assert!(received.recv_timeout(std::time::Duration::from_secs(1))?.error.is_none());
+    assert_eq!(*memory.lock().unwrap(), logo_state);
+    assert!(matches!(events.lock().unwrap().as_slice(), [UiEvent::ShellHidden(Some(false)), UiEvent::CompanionVisibility(true), UiEvent::CompanionModel(model)] if model == &logo_state));
+    Ok(())
+}
+
+#[test]
 fn owner_key_routes_open_the_launcher_with_routes_and_toggle_like_qml() -> Result<()> {
     use bead::wayland::{CommandContext, Remote, SceneSource, UiEvent};
     use std::sync::{Arc, Mutex};

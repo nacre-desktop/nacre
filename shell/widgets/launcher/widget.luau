@@ -16,7 +16,7 @@ local function render(props,settings,_data)
         else p.icon=style=="custom" and (settings.custom_path or "") or style=="arch" and "distributor-logo-archlinux" or "cachyos" end
         return ui.Image(p)
     end
-    local action=settings.action=="launcher" and ui.action("launcher.open")
+    local action=settings.action=="launcher" and ui.action("launcher.open","")
         or ui.action("view.open",settings.action=="dashboard" and "dashboard-today" or settings.route)
     if desktop then
         local favorites={}

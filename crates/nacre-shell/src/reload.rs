@@ -3967,6 +3967,34 @@ impl Runtime {
         self.wallpaper_warmer = Some(warmer);
         self
     }
+    fn open_launcher(
+        &mut self,
+        launch: crate::key_routes::Launch,
+        showing: bool,
+        output: Option<String>,
+    ) -> Result<(), Box<dyn Error>> {
+        self.actions.authorize("launcher.open")?;
+        let wakeup = self.wakeup.as_ref().ok_or("launcher event channel unavailable")?;
+        if launch.toggle && showing
+            && (launch.target_view.is_some() || self.last_launch.as_ref() == Some(&launch))
+        {
+            self.last_launch = None;
+            wakeup(UiEvent::CompanionVisibility(false));
+        } else {
+            self.last_launch = Some(launch.clone());
+            wakeup(UiEvent::ShellHidden(Some(false)));
+            if let Some(view) = launch.target_view {
+                wakeup(UiEvent::CompanionSelect { view, output, toggle: false, center: None });
+            } else {
+                let values = launch.model();
+                *self.launcher_memory.as_ref().ok_or("launcher view state unavailable")?
+                    .lock().map_err(|_| "launcher view state unavailable")? = values.clone();
+                wakeup(UiEvent::CompanionVisibility(true));
+                wakeup(UiEvent::CompanionModel(values));
+            }
+        }
+        Ok(())
+    }
     pub fn with_launcher_trigger(
         mut self,
         memory: crate::launcher::Memory,
@@ -8088,12 +8116,13 @@ impl SceneSource for Runtime {
             && name == "launcher.open"
             && self.launcher_trigger
         {
-            self.actions.authorize(name)?;
-            self.wakeup
-                .as_ref()
-                .ok_or("launcher event channel unavailable")?(
-                UiEvent::CompanionVisibility(true)
-            );
+            let query = match host_action.as_ref().map(|(_, _, arg)| arg) {
+                Some(bead::core::Value::Text(query)) => query.clone(),
+                _ => String::new(),
+            };
+            let call = crate::commands::from_strings("nacre".into(), "launcher".into(), &[query])?;
+            let launch = crate::key_routes::launcher(&call).ok_or("launcher route unavailable")??;
+            self.open_launcher(launch, false, None)?;
             return self.finish_scene(None);
         }
         if let Some((_, name, bead::core::Value::Text(app))) = &host_action
@@ -9133,58 +9162,11 @@ impl SceneSource for Runtime {
                         {
                             match crate::key_routes::launcher(call) {
                                 Some(Ok(launch)) => {
-                                    self.actions.authorize("launcher.open")?;
-                                    let wakeup = self
-                                        .wakeup
-                                        .as_ref()
-                                        .ok_or("launcher event channel unavailable")?;
                                     let showing = request.context.panel_open
-                                        && request
-                                            .context
-                                            .panel_view
-                                            .as_deref()
-                                            .unwrap_or("launcher")
+                                        && request.context.panel_view.as_deref().unwrap_or("launcher")
                                             == launch.target_view.as_deref().unwrap_or("launcher");
-                                    let wallpaper_open =
-                                        launch.target_view.as_deref() == Some("wallpaper");
-                                    if launch.toggle
-                                        && showing
-                                        && (launch.target_view.is_some()
-                                            || self.last_launch.as_ref() == Some(&launch))
-                                    {
-                                        self.last_launch = None;
-                                        wakeup(UiEvent::CompanionVisibility(false));
-                                    } else {
-                                        self.last_launch = Some(launch);
-                                        wakeup(UiEvent::ShellHidden(Some(false)));
-                                        if let Some(view) = self
-                                            .last_launch
-                                            .as_ref()
-                                            .and_then(|l| l.target_view.clone())
-                                        {
-                                            wakeup(UiEvent::CompanionSelect {
-                                                view,
-                                                output: call.output.clone(),
-                                                toggle: false,
-                                                center: None,
-                                            });
-                                        } else {
-                                            let values = self
-                                                .last_launch
-                                                .as_ref()
-                                                .expect("launch stored")
-                                                .model();
-                                            *self
-                                                .launcher_memory
-                                                .as_ref()
-                                                .ok_or("launcher view state unavailable")?
-                                                .lock()
-                                                .map_err(|_| "launcher view state unavailable")? =
-                                                values.clone();
-                                            wakeup(UiEvent::CompanionVisibility(true));
-                                            wakeup(UiEvent::CompanionModel(values));
-                                        }
-                                    }
+                                    let wallpaper_open = launch.target_view.as_deref() == Some("wallpaper");
+                                    self.open_launcher(launch, showing, call.output.clone())?;
                                     if wallpaper_open {
                                         eprintln!(
                                             "WALLPAPER_OPEN_REMOTE_ENQUEUED monotonic_ns={}",
