@@ -44,7 +44,7 @@ fn apply(
             .is_none_or(|connector| connected(root, connector))
     });
     let devices = if dim {
-        let found = light_devices::discover(&screens(root), root, run)?;
+        let found = light_devices::discover(&screens(root), root, Some(&paths.state), run)?;
         let devices: Vec<Value> = std::iter::once(&found["backlight"])
             .chain(found["ddc"].as_array().into_iter().flatten())
             .filter(|d| {

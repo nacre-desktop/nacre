@@ -40,7 +40,7 @@ pub fn note_keyboard(root: &Path, present: bool) {
 
 /// Blocking scan that records keyboard presence; run it off the async thread.
 pub fn refresh_keyboard(root: &Path) {
-    let found = discover(&[], root, &mut |_, _, _| Err("unused".into()));
+    let found = discover(&[], root, None, &mut |_, _, _| Err("unused".into()));
     if let Ok(found) = found {
         note_keyboard(root, !found["keyboard"].is_null());
     }
@@ -201,9 +201,53 @@ fn ddc_read(
     )?)
 }
 
+/// N0317: displays whose DDC/CI read failed, by EDID fingerprint, saved with the set of
+/// connected monitors they failed in. Any change to that set probes them again.
+const DDC_UNSUPPORTED: &str = "ddc-unsupported.json";
+
+fn monitor_set(root: &Path) -> Vec<String> {
+    let mut set: Vec<String> = entries(&root.join("class/drm"))
+        .into_iter()
+        .filter(|connector| {
+            connector
+                .file_name()
+                .is_some_and(|name| name.to_string_lossy().starts_with("card"))
+                && fs::read_to_string(connector.join("status"))
+                    .is_ok_and(|status| status.trim() == "connected")
+        })
+        .map(|connector| fingerprint(&connector))
+        .filter(|identity| !identity.is_empty())
+        .collect();
+    set.sort();
+    set
+}
+
+/// The current monitor set and the displays known to fail in exactly that set.
+fn ddc_unsupported(state: &Path, root: &Path) -> (Vec<String>, Vec<String>) {
+    let monitors = monitor_set(root);
+    let saved: Value = fs::read(state.join(DDC_UNSUPPORTED))
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .unwrap_or_default();
+    let failed = if saved["monitors"] == json!(monitors) {
+        saved["unsupported"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|identity| identity.as_str().map(str::to_owned))
+            .collect()
+    } else {
+        Vec::new()
+    };
+    (monitors, failed)
+}
+
+/// `ddc_state` (the daemon's state dir) skips displays whose DDC read already failed with the
+/// same monitors connected; `None` probes every display.
 pub fn discover(
     screens: &[Value],
     root: &Path,
+    ddc_state: Option<&Path>,
     run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
 ) -> Result<Value> {
     let backlight = entries(&root.join("class/backlight"))
@@ -219,6 +263,11 @@ pub fn discover(
     let valid_screen = Regex::new(r"\A[A-Za-z0-9_.-]{1,64}\z")?;
     let valid_bus = Regex::new(r"\Ai2c-(\d+)\z")?;
     let mut externals = Vec::new();
+    // Read only when displays are asked for (a full controls probe, an idle dim).
+    let mut unsupported = ddc_state
+        .filter(|_| !screens.is_empty())
+        .map(|state| ddc_unsupported(state, root));
+    let mut learned = false;
     for screen in screens {
         let Some(screen) = screen.as_str().filter(|name| valid_screen.is_match(name)) else {
             continue;
@@ -256,9 +305,30 @@ pub fn discover(
         if identity.is_empty() {
             continue;
         }
+        if unsupported
+            .as_ref()
+            .is_some_and(|(_, failed)| failed.contains(&identity))
+        {
+            continue;
+        }
         match ddc_read(*bus, run) {
             Ok((current, maximum)) => externals.push(json!({"kind":"ddc","screen":screen,"bus":bus,"connector":connector.file_name().unwrap_or_default().to_string_lossy(),"identity":identity,"current":current,"maximum":maximum})),
-            Err(error) => eprintln!("Display brightness discovery: {error}"),
+            Err(error) => match &mut unsupported {
+                Some((_, failed)) => {
+                    tracing::info!(screen, %error, "Display has no DDC/CI brightness; it is probed again when the connected monitors change");
+                    failed.push(identity);
+                    learned = true;
+                }
+                None => eprintln!("Display brightness discovery: {error}"),
+            },
+        }
+    }
+    if let (true, Some(state), Some((monitors, failed))) = (learned, ddc_state, &unsupported) {
+        let saved = json!({"monitors":monitors,"unsupported":failed});
+        if let Err(error) =
+            crate::files::atomic(&state.join(DDC_UNSUPPORTED), &serde_json::to_vec(&saved)?)
+        {
+            eprintln!("Display brightness cache: {error}");
         }
     }
     Ok(json!({"backlight":backlight,"keyboard":keyboard,"ddc":externals}))
@@ -390,6 +460,7 @@ pub fn execute(arguments: &[String], _input: Option<Value>) -> Result<Option<Val
             data.as_array()
                 .ok_or_else(|| message("invalid-display-list", "Invalid display list"))?,
             Path::new("/sys"),
+            None,
             &mut native_run,
         )?,
         "set" => write(
@@ -486,7 +557,7 @@ mod tests {
         device(root.path(), "backlight", "panel", 100, 50)?;
         device(root.path(), "leds", "device::kbd_backlight", 3, 1)?;
         device(root.path(), "leds", "input1::capslock", 1, 1)?;
-        let found = discover(&[json!("eDP-1")], root.path(), &mut |_, _, _| {
+        let found = discover(&[json!("eDP-1")], root.path(), None, &mut |_, _, _| {
             panic!("Discovery must not invoke a tool")
         })?;
         assert_eq!(found["backlight"]["current"], 50);
@@ -540,7 +611,7 @@ mod tests {
         fs::write(connector.join("status"), "connected")?;
         fs::write(connector.join("edid"), "fixture-edid")?;
         symlink(&bus, connector.join("ddc"))?;
-        let found = discover(&[json!("DP-1")], root.path(), &mut |_, _, _| {
+        let found = discover(&[json!("DP-1")], root.path(), None, &mut |_, _, _| {
             Ok("VCP 10 C 70 100\n".into())
         })?;
         assert_eq!(found["ddc"][0]["bus"], 4);
@@ -556,10 +627,57 @@ mod tests {
         fs::write(other.join("status"), "connected")?;
         fs::write(other.join("edid"), "fixture-edid")?;
         symlink(&bus, other.join("ddc"))?;
-        let found = discover(&[json!("DP-1")], root.path(), &mut |_, _, _| {
+        let found = discover(&[json!("DP-1")], root.path(), None, &mut |_, _, _| {
             panic!("Ambiguous monitor must not invoke a tool")
         })?;
         assert_eq!(found["ddc"], json!([]));
+        Ok(())
+    }
+
+    #[test]
+    fn failed_ddc_probe_is_cached_until_the_monitor_set_changes() -> Result<()> {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir()?;
+        let state = root.path().join("state");
+        let monitor = |name: &str, edid: &str, bus: u32| -> Result<()> {
+            let connector = root.path().join("class/drm").join(name);
+            let bus = root.path().join(format!("bus/i2c-{bus}"));
+            fs::create_dir_all(&connector)?;
+            fs::create_dir_all(&bus)?;
+            fs::write(connector.join("status"), "connected")?;
+            fs::write(connector.join("edid"), edid)?;
+            symlink(&bus, connector.join("ddc"))?;
+            Ok(())
+        };
+        monitor("card0-DP-1", "no-ddc-monitor", 12)?;
+        let screens = [json!("DP-1"), json!("HDMI-A-1")];
+        let mut probes = 0;
+        let mut no_ddc = |_: &str, _: &[String], _: Duration| -> Result<String> {
+            probes += 1;
+            Err("Command failed with exit status 1".into())
+        };
+        for _ in 0..3 {
+            let found = discover(&screens, root.path(), Some(&state), &mut no_ddc)?;
+            assert_eq!(found["ddc"], json!([]));
+        }
+        // Without the state dir (the CLI), every call probes.
+        discover(&screens, root.path(), None, &mut no_ddc)?;
+        assert_eq!(probes, 2);
+        // Another monitor joins: both are probed once more, and the working one is kept.
+        monitor("card0-HDMI-A-1", "ddc-monitor", 13)?;
+        let mut calls = Vec::new();
+        let mut mixed = |_: &str, args: &[String], _: Duration| -> Result<String> {
+            calls.push(args[1].clone());
+            match args[1].as_str() {
+                "13" => Ok("VCP 10 C 30 100\n".into()),
+                _ => Err("Command failed with exit status 1".into()),
+            }
+        };
+        for _ in 0..2 {
+            let found = discover(&screens, root.path(), Some(&state), &mut mixed)?;
+            assert_eq!(found["ddc"][0]["screen"], "HDMI-A-1");
+        }
+        assert_eq!(calls, ["12", "13", "13"]);
         Ok(())
     }
 }

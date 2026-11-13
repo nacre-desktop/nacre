@@ -499,7 +499,8 @@ fn light_run<'a>(env: &'a Env) -> impl FnMut(&str, &[String], Duration) -> Resul
 }
 fn set_keyboard(env: &Env, level: i64) -> std::result::Result<(i64, i64, bool), Failure> {
     let mut run = light_run(env);
-    let found = light_devices::discover(&[], &env.sys, &mut run).map_err(|_| action_error())?;
+    let found =
+        light_devices::discover(&[], &env.sys, None, &mut run).map_err(|_| action_error())?;
     let device = found
         .get("keyboard")
         .filter(|row| !row.is_null())
@@ -1152,7 +1153,13 @@ async fn scan_lights(env: &Env, probe: &Probe) -> Option<Value> {
     let bound = Duration::from_secs(if externals.is_empty() { 2 } else { 8 });
     let env = env.clone();
     let scan = crate::process::offload(move || {
-        let found = light_devices::discover(&externals, &env.sys, &mut light_run(&env)).ok();
+        let found = light_devices::discover(
+            &externals,
+            &env.sys,
+            Some(&env.paths.state),
+            &mut light_run(&env),
+        )
+        .ok();
         if let Some(found) = &found {
             light_devices::note_keyboard(&env.sys, !found["keyboard"].is_null());
         }

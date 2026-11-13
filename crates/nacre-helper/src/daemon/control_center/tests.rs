@@ -165,6 +165,7 @@ fn collect_now(f: &Fixture, probe: &Probe, prior: &ControlsState) -> ControlsSta
     let lights = light_devices::discover(
         &light_externals(&env, probe),
         &env.sys,
+        Some(&env.paths.state),
         &mut light_run(&env),
     )
     .ok();

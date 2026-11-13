@@ -678,7 +678,7 @@ fn set_keyboard_light_native(
     root: &Path,
     run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
 ) -> Result<(i64, i64, bool)> {
-    let discovered = light_devices::discover(&[], root, run)?;
+    let discovered = light_devices::discover(&[], root, None, run)?;
     let device = discovered
         .get("keyboard")
         .filter(|row| !row.is_null())
@@ -747,7 +747,7 @@ fn adjust_keyboard_light_native_with(
     before_write: &mut impl FnMut(i64, i64, i64) -> Result<()>,
     run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
 ) -> Result<Option<(i64, i64, bool)>> {
-    let discovered = light_devices::discover(&[], root, run)?;
+    let discovered = light_devices::discover(&[], root, None, run)?;
     let Some(device) = discovered.get("keyboard").filter(|row| !row.is_null()) else {
         return Ok(None);
     };
@@ -780,7 +780,7 @@ fn set_brightness_native(
     root: &Path,
     run: &mut impl FnMut(&str, &[String], Duration) -> Result<String>,
 ) -> Result<i64> {
-    let discovered = light_devices::discover(&[json!(screen)], root, run)?;
+    let discovered = light_devices::discover(&[json!(screen)], root, None, run)?;
     let internal = screen.to_ascii_lowercase().starts_with("edp")
         || screen.to_ascii_lowercase().starts_with("lvds");
     let device = if internal {
