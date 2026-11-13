@@ -51,7 +51,6 @@ rustix = { version = "1.1", features = ["fs", "param", "process", "event", "syst
 niri-ipc = "26.4.0"
 fancy-regex = "0.16"
 wayland-client = "0.31"
-wayland-protocols-wlr = { version = "0.3", features = ["client"] }
 x11rb = { version = "=0.13.2", default-features = false }
 roxmltree = "=0.21.1"
 fontconfig = "=0.11.0"
@@ -60,7 +59,7 @@ html-escape = "=0.2.13"
 turbojpeg = { version = "=1.5.1", default-features = false, features = ["cmake"] }
 gif = "0.14"
 include_dir = "0.7"
-toml = "0.9"
+toml = "1"
 zip = { version = "9", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
