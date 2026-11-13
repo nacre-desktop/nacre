@@ -368,6 +368,11 @@ Motion
 - No transition changed: the launcher's bottom-edge reveal (0.3 s open, 0.18 s return, interruptible retarget)
   and its frame contour are untouched; D11 only changes the static layout inside the panel, with no new
   animation, per-frame allocation or relayout. Reduced motion behaves as before.
+- `frame_cost_bench` (dev-2, release, CPU renderer, scale 1.5, 120 Hz slide of the real `ui/main.luau` route;
+  candidate vs origin/main `shell/`): open total p50/p95/max 0.734/0.863/3.07 ms vs 0.707/0.808/3.13 ms, close
+  0.582/0.710/0.748 ms vs 0.592/0.653/0.739 ms, 30 vs 31 primitives. The slide path is untouched, so the nested
+  desktop PANEL_SLIDE capture is left to D5/D16 (the units that change panel motion); the lead's laptop live
+  audit stays the gate.
 
 Evidence
 - Before/after real-renderer PNGs (dark and light; grid and results; selected, hover, tile focus, rail focus)
