@@ -13,6 +13,7 @@ from unittest.mock import Mock, patch
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "tools"))
 import ui_shell_switch
+
 loader = importlib.machinery.SourceFileLoader(
     "settings_launcher", str(ROOT / "bin/nacre-settings")
 )
@@ -54,6 +55,7 @@ class SettingsLauncherTests(unittest.TestCase):
         entry = (ROOT / "nacre/desktop/nacre-settings.desktop").read_text()
         self.assertIn("Exec=nacre-settings\n", entry)
         self.assertIn("Terminal=false", entry)
+
         def no_launcher(_home):
             return None
 
@@ -85,9 +87,7 @@ class SettingsLauncherTests(unittest.TestCase):
             active.touch()
             newer.touch()
 
-            for launcher, page in (
-                (active, "source-active"), (newer, "source-newer")
-            ):
+            for launcher, page in ((active, "source-active"), (newer, "source-newer")):
                 registry = launcher.parent / "shell/settings/registry/navigation.json"
                 registry.parent.mkdir(parents=True)
                 registry.write_text(
@@ -109,8 +109,10 @@ class SettingsLauncherTests(unittest.TestCase):
                     return_value={"ExecStart": exec_start},
                 ),
             ):
+
                 def resolve(selected_home):
                     return settings.active_launcher(selected_home, environ=env)
+
                 self.assertTrue(
                     settings.valid_route(
                         "source-active", home=home, launcher_resolver=resolve

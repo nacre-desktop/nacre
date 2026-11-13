@@ -32,7 +32,9 @@ def active_launcher(home=None, *, environ=None):
     state_home = Path(
         (environ or os.environ).get("XDG_STATE_HOME", home / ".local/state")
     )
-    return ui_shell_switch.UiShell(home, state_home / "nacre", environ=environ).active_launcher()
+    return ui_shell_switch.UiShell(
+        home, state_home / "nacre", environ=environ
+    ).active_launcher()
 
 
 def navigation(home=None, *, launcher_resolver=active_launcher):
@@ -73,6 +75,7 @@ def valid_route(route, home=None, *, launcher_resolver=active_launcher):
     return page in registry.get("aliases", {}) or any(
         row["id"] == page for row in registry["pages"]
     )
+
 
 def compositor():
     for directory in (
