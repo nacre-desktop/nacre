@@ -427,7 +427,7 @@ The migration references are removal-only or negative/provenance tests; no
 shipped shell launch path invokes that runtime. This inventory includes the
 explicit N0157 exclusion rather than silently treating it as deleted.
 
-### Historical documentation and reference evidence (39)
+### Historical documentation and reference evidence (38)
 
 - `assets/screenshots/settings-review/README.md`
 - `docs/architecture/foundation.md`
