@@ -158,7 +158,8 @@ class RepositoryTests(unittest.TestCase):
         for path in (self.artifacts / "nacre").glob("*.pkg.tar.zst"):
             path.unlink()
         version = version or f"0.1.0dev2.r{sequence}.gaaaaaaaaaaaa"
-        self.archive("nacre", version + "-1", ("orient=0.1.0dev7",))
+        self.archive("nacre", version + "-1", ("orient=0.1.0dev7", "nacre-keyring"))
+        self.archive("nacre-keyring", version + "-1")
         for name in (
             "nacre-ai",
             "nacre-brain",
@@ -194,6 +195,82 @@ class RepositoryTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "separately tested Orient"):
             repository.verify_artifacts(self.root, self.artifacts)
+
+    def test_core_requires_the_keyring_of_its_own_cut(self):
+        _, records, _ = repository.verify_artifacts(self.root, self.artifacts)
+        self.assertIn("nacre-keyring", records)
+        self.archive("nacre-keyring", "0.1.0dev2.r0.gaaaaaaaaaaaa-1")
+        (
+            self.artifacts
+            / "nacre/nacre-keyring-0.1.0dev2.r1.gaaaaaaaaaaaa-1-x86_64.pkg.tar.zst"
+        ).unlink()
+        with self.assertRaisesRegex(ValueError, "nacre-keyring of its own cut"):
+            repository.verify_artifacts(self.root, self.artifacts)
+        self.make_packages(1)
+        self.archive("nacre", "0.1.0dev2.r1.gaaaaaaaaaaaa-1", ("orient=0.1.0dev7",))
+        with self.assertRaisesRegex(ValueError, "nacre-keyring of its own cut"):
+            repository.verify_artifacts(self.root, self.artifacts)
+
+    def test_publication_refuses_a_signing_subkey_near_its_published_expiry(self):
+        gnupg = self.base / "expiry-gnupg"
+        gnupg.mkdir(mode=0o700)
+        key = self.root / "packaging/keys/nacre-repo.asc"
+
+        def gpg(*args):
+            return repository.run(
+                "gpg",
+                "--batch",
+                "--pinentry-mode",
+                "loopback",
+                "--passphrase",
+                "",
+                *args,
+            )
+
+        with patch.dict(os.environ, {"GNUPGHOME": str(gnupg)}):
+            try:
+                # Same shape as the real key: certify-only primary, signing subkey.
+                gpg(
+                    "--quick-generate-key",
+                    "Expiry fixture <fixture@example.invalid>",
+                    "ed25519",
+                    "cert",
+                    "2y",
+                )
+                listing = gpg("--with-colons", "--list-keys")
+                primary = next(
+                    line.split(":")[9]
+                    for line in listing.splitlines()
+                    if line.startswith("fpr:")
+                )
+                gpg("--quick-add-key", primary, "ed25519", "sign", "30d")
+                listing = gpg(
+                    "--with-colons", "--with-subkey-fingerprint", "-k", primary
+                )
+                subkey = [
+                    line.split(":")[9]
+                    for line in listing.splitlines()
+                    if line.startswith("fpr:")
+                ][-1]
+                key.write_text(gpg("--armor", "--export", primary))
+                with self.assertRaisesRegex(ValueError, subkey + " is valid .*90 days"):
+                    repository.check_signing_expiry(self.root, primary)
+                # Renewing only the signing keyring is not enough: users verify
+                # with the published key, so the shipped copy must be renewed too.
+                gpg("--quick-set-expire", primary, "1y", subkey)
+                with self.assertRaisesRegex(ValueError, "90 days"):
+                    repository.check_signing_expiry(self.root, primary)
+                key.write_text(gpg("--armor", "--export", primary))
+                repository.check_signing_expiry(self.root, primary)
+                gpg("--quick-set-expire", primary, "30d")
+                key.write_text(gpg("--armor", "--export", primary))
+                with self.assertRaisesRegex(ValueError, "90 days"):
+                    repository.check_signing_expiry(self.root, primary)
+                key.write_text((ROOT / "packaging/keys/nacre-repo.asc").read_text())
+                with self.assertRaisesRegex(ValueError, "is not in packaging"):
+                    repository.check_signing_expiry(self.root, primary)
+            finally:
+                subprocess.run(["gpgconf", "--kill", "gpg-agent"], capture_output=True)
 
     def test_fork_recipe_must_keep_the_reviewed_pin(self):
         (self.artifacts / "niri/PKGBUILD").write_text("_commit=" + "b" * 40 + "\n")

@@ -12,6 +12,7 @@ import re
 import shutil
 import shlex
 import subprocess
+import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -41,9 +42,14 @@ def package_info(path):
 
 def verify_artifacts(root, artifacts):
     sessions = json.loads((root / "packaging/sessions.json").read_text())
-    expected = {"nacre", "nacre-ai", "nacre-brain", "orient", "nacre-niri"} | {
-        definition["package"] for definition in sessions.values()
-    }
+    expected = {
+        "nacre",
+        "nacre-ai",
+        "nacre-brain",
+        "nacre-keyring",
+        "orient",
+        "nacre-niri",
+    } | {definition["package"] for definition in sessions.values()}
     lock = json.loads((root / "dependencies.lock.json").read_text())["orient"]
     recipe = artifacts / "nacre/PKGBUILD"
     source = re.search(
@@ -106,7 +112,13 @@ def verify_artifacts(root, artifacts):
         != required_orient.split("=", 1)[1]
     ):
         raise ValueError("Orient package and Core engine lock disagree")
-    for name in expected - {"nacre", "orient", "nacre-niri"}:
+    # Every Core update must also carry the current public key (key renewal).
+    if (
+        "nacre-keyring" not in core["dependencies"]
+        or records["nacre-keyring"]["version"] != core["version"]
+    ):
+        raise ValueError("Core must depend on the nacre-keyring of its own cut")
+    for name in expected - {"nacre", "nacre-keyring", "orient", "nacre-niri"}:
         if (
             "nacre=" + core["version"].rsplit("-", 1)[0]
             not in records[name]["dependencies"]
@@ -135,6 +147,53 @@ def sign(path, fingerprint):
         str(path),
     )
     run("gpg", "--batch", "--verify", str(path) + ".sig", str(path))
+
+
+def check_signing_expiry(root, fingerprint, days=90):
+    """Refuse to sign with a subkey whose published expiry is near."""
+    probe = subprocess.run(
+        ["gpg", "--batch", "--status-fd=2", "--local-user", fingerprint, "-b"],
+        input=b"",
+        capture_output=True,
+        check=True,
+    )
+    signer = next(
+        line.split()[7]
+        for line in probe.stderr.decode().splitlines()
+        if line.startswith("[GNUPG:] SIG_CREATED ")
+    )
+    # Users verify with the shipped public key, so its expiry is what counts.
+    listing = run(
+        "gpg",
+        "--batch",
+        "--with-colons",
+        "--with-subkey-fingerprint",
+        "--show-keys",
+        str(root / "packaging/keys/nacre-repo.asc"),
+    )
+    rows = [line.split(":") for line in listing.splitlines()]
+    expiry = next(
+        (
+            key[6]
+            for key, fpr in zip(rows, rows[1:], strict=False)
+            if key[0] in ("pub", "sub") and fpr[0] == "fpr" and fpr[9] == signer
+        ),
+        None,
+    )
+    if expiry is None:
+        raise ValueError(
+            f"Signing key {signer} is not in packaging/keys/nacre-repo.asc"
+        )
+    # An expired primary key also invalidates its subkeys.
+    primary = next(row[6] for row in rows if row[0] == "pub")
+    expiry = min((int(value) for value in (expiry, primary) if value), default=None)
+    if expiry is not None and expiry < time.time() + days * 86400:
+        raise ValueError(
+            f"Signing key {signer} is valid only until "
+            + time.strftime("%Y-%m-%d", time.gmtime(expiry))
+            + f", within {days} days. Extend it and publish the renewed"
+            " packaging/keys/nacre-repo.asc first (docs/specs/0412-keyring-package.md)."
+        )
 
 
 def fetch_previous(destination):
@@ -172,7 +231,14 @@ def fetch_previous(destination):
     fingerprint = (ROOT / "packaging/keys/nacre-repo.fingerprint").read_text().strip()
     if previous["schema"] != 1 or previous["fingerprint"] != fingerprint:
         raise ValueError("Repository signing identity changed")
-    names = {"nacre", "nacre-ai", "nacre-brain", "nacre-niri", "orient"} | {
+    names = {
+        "nacre",
+        "nacre-ai",
+        "nacre-brain",
+        "nacre-keyring",
+        "nacre-niri",
+        "orient",
+    } | {
         item["package"]
         for item in json.loads((ROOT / "packaging/sessions.json").read_text()).values()
     }
@@ -366,6 +432,7 @@ def main():
         fingerprint = (
             (ROOT / "packaging/keys/nacre-repo.fingerprint").read_text().strip()
         )
+        check_signing_expiry(ROOT, fingerprint)
         build(
             ROOT,
             args.artifacts,
