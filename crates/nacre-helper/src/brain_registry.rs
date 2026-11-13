@@ -10,7 +10,7 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use unicode_casefold::UnicodeCaseFold;
 use unicode_normalization::UnicodeNormalization;
 
@@ -132,6 +132,21 @@ fn similarity(a: &str, b: &str) -> bool {
     }
     !ta.is_empty() && !tb.is_empty() && (ta.is_subset(&tb) || tb.is_subset(&ta))
 }
+static RESERVED_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(topics|worlds|areas|project|review|source|recorded|unsorted|low[- ]confidence|needs[- ]grouping):?$").unwrap()
+});
+static DATE_OR_VERSION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b|\bv?\d+\.\d+(?:\.\d+)?\b|[0-9a-f]{16,})")
+        .unwrap()
+});
+static HASH_OR_VERSION: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:[0-9a-f]{7,}|v?\d+(?:\.\d+){0,2})$").unwrap());
+static YEAR_OR_RELEASE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\b(?:(?:19|20)\d{2}|[vr] *\d+|(?:version|release) +\d+)\b").unwrap()
+});
+static MONTH_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:\d{1,2}(?:st|nd|rd|th)?[ -]+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:[ -]+\d{1,4}(?:st|nd|rd|th)?){0,2}$").unwrap()
+});
 pub fn valid_name(name: &str) -> bool {
     let s = name.trim();
     let words: Vec<_> = s.split_whitespace().collect();
@@ -147,31 +162,13 @@ pub fn valid_name(name: &str) -> bool {
     {
         return false;
     }
-    if Regex::new(r"(?i)^(topics|worlds|areas|project|review|source|recorded|unsorted|low[- ]confidence|needs[- ]grouping):?$")
-        .unwrap()
-        .is_match(s)
-    {
+    if RESERVED_LABEL.is_match(s) || DATE_OR_VERSION.is_match(s) || HASH_OR_VERSION.is_match(s) {
         return false;
     }
-    if Regex::new(r"(?i)(\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b|\bv?\d+\.\d+(?:\.\d+)?\b|[0-9a-f]{16,})")
-        .unwrap()
-        .is_match(s)
-    {
-        return false;
-    }
-    if Regex::new(r"(?i)^(?:[0-9a-f]{7,}|v?\d+(?:\.\d+){0,2})$")
-        .unwrap()
-        .is_match(s)
-    {
-        return false;
-    }
-    if s.chars().all(|c| c.is_ascii_digit() || c == '-' || c == ' ')
-        || Regex::new(r"(?i)\b(?:(?:19|20)\d{2}|[vr] *\d+|(?:version|release) +\d+)\b")
-            .unwrap()
-            .is_match(s)
-        || Regex::new(r"(?i)^(?:\d{1,2}(?:st|nd|rd|th)?[ -]+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:[ -]+\d{1,4}(?:st|nd|rd|th)?){0,2}$")
-            .unwrap()
-            .is_match(s)
+    if s.chars()
+        .all(|c| c.is_ascii_digit() || c == '-' || c == ' ')
+        || YEAR_OR_RELEASE.is_match(s)
+        || MONTH_NAME.is_match(s)
     {
         return false;
     }
