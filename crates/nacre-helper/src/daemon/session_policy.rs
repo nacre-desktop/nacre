@@ -443,6 +443,121 @@ async fn observe(hub: Shared, paths: Paths, control: Control) -> Result<()> {
     }
 }
 
+const LOGIN1: &str = "org.freedesktop.login1";
+const LOGIN1_PATH: &str = "/org/freedesktop/login1";
+/// N0317: what `session.state` subscribers get until logind has been read.
+pub fn initial_state(hub: &Shared) -> Result<()> {
+    let state = nacre_protocol::session::SessionState::default();
+    hub.borrow_mut().publish(
+        nacre_protocol::session::STATE_TOPIC,
+        serde_json::to_value(state)?,
+    )?;
+    Ok(())
+}
+/// Publish with the next revision, unless nothing changed since the last logind reading.
+fn publish_state(hub: &Shared, locked: bool, sleeping: bool) -> Result<()> {
+    use nacre_protocol::session::{SessionState, STATE_TOPIC};
+    let last: SessionState = hub
+        .borrow()
+        .snapshot(STATE_TOPIC)
+        .and_then(|data| serde_json::from_value(data).ok())
+        .unwrap_or_default();
+    if last.revision > 0 && (last.locked, last.sleeping) == (locked, sleeping) {
+        return Ok(());
+    }
+    let next = SessionState {
+        locked,
+        sleeping,
+        preparing_sleep: sleeping,
+        revision: last.revision + 1,
+    };
+    hub.borrow_mut()
+        .publish(STATE_TOPIC, serde_json::to_value(next)?)?;
+    Ok(())
+}
+/// `LockedHint` of the user's display session, as the wallpaper-media watcher reads it.
+async fn display_locked(connection: &zbus::Connection) -> Result<bool> {
+    use super::behaviours::proxy;
+    let manager = proxy(
+        connection,
+        LOGIN1,
+        LOGIN1_PATH,
+        "org.freedesktop.login1.Manager",
+    )
+    .await?;
+    let user: zbus::zvariant::OwnedObjectPath = manager
+        .call("GetUser", &(nix::unistd::getuid().as_raw(),))
+        .await?;
+    let user = proxy(
+        connection,
+        LOGIN1,
+        user.as_str(),
+        "org.freedesktop.login1.User",
+    )
+    .await?;
+    let (id, session): (String, zbus::zvariant::OwnedObjectPath) =
+        user.get_property("Display").await?;
+    if id.is_empty() {
+        return Ok(false);
+    }
+    let session = proxy(
+        connection,
+        LOGIN1,
+        session.as_str(),
+        "org.freedesktop.login1.Session",
+    );
+    Ok(session.await?.get_property("LockedHint").await?)
+}
+/// N0317: logind's lock and sleep flags as `session.state`, published on change.
+pub async fn state(hub: Shared) -> Result<()> {
+    let connection = zbus::connection::Builder::system()?
+        .method_timeout(Duration::from_secs(5))
+        .build()
+        .await?;
+    let rule = zbus::MatchRule::builder()
+        .msg_type(zbus::message::Type::Signal)
+        .sender(LOGIN1)?
+        .path_namespace(LOGIN1_PATH)?
+        .build();
+    let mut signals = zbus::MessageStream::for_match_rule(rule, &connection, Some(64)).await?;
+    let manager = super::behaviours::proxy(
+        &connection,
+        LOGIN1,
+        LOGIN1_PATH,
+        "org.freedesktop.login1.Manager",
+    )
+    .await?;
+    let mut sleeping: bool = manager.get_property("PreparingForSleep").await?;
+    let mut locked = display_locked(&connection).await?;
+    publish_state(&hub, locked, sleeping)?;
+    hub.borrow_mut().service("session-state", "running", 0)?;
+    loop {
+        let message = signals.next().await.ok_or("Session state stream ended")??;
+        match message.header().member().map(|member| member.as_str()) {
+            Some("PrepareForSleep") => sleeping = message.body().deserialize::<(bool,)>()?.0,
+            Some("PropertiesChanged") => {
+                let (interface, changed, invalidated): (
+                    String,
+                    std::collections::HashMap<String, zbus::zvariant::OwnedValue>,
+                    Vec<String>,
+                ) = message.body().deserialize()?;
+                let key = match interface.as_str() {
+                    "org.freedesktop.login1.Session" => "LockedHint",
+                    // The display session itself changed.
+                    "org.freedesktop.login1.User" => "Display",
+                    _ => continue,
+                };
+                if !changed.contains_key(key) && !invalidated.iter().any(|name| name == key) {
+                    continue;
+                }
+                locked = display_locked(&connection).await?;
+            }
+            _ => continue,
+        }
+        publish_state(&hub, locked, sleeping)?;
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -527,5 +642,44 @@ mod tests {
                 Err(mpsc::error::TryRecvError::Empty)
             ));
         }
+    }
+
+    #[test]
+    fn session_state_starts_unread_and_publishes_only_changes() -> Result<()> {
+        use nacre_protocol::session::{SessionState, STATE_TOPIC};
+        let hub = super::super::hub::Hub::new("fixture".into(), false, Duration::from_millis(16))
+            .shared();
+        initial_state(&hub)?;
+        let (client, _) = hub.borrow_mut().add_client()?;
+        hub.borrow_mut()
+            .subscribe(client, &[STATE_TOPIC.to_owned()], false)?;
+        let unread = serde_json::to_value(SessionState::default())?;
+        let packet = hub
+            .borrow_mut()
+            .next(client, std::time::Instant::now())
+            .0
+            .ok_or("Missing session.state snapshot")?;
+        assert!(matches!(
+            &packet.message,
+            nacre_protocol::Message::Snap { topic, data, .. }
+                if topic == STATE_TOPIC && *data == unread
+        ));
+        let read = |hub: &Shared| -> SessionState {
+            serde_json::from_value(hub.borrow().snapshot(STATE_TOPIC).unwrap()).unwrap()
+        };
+        let seq = || hub.borrow().topic_seq(STATE_TOPIC);
+        // The first logind reading publishes even when every flag is still false.
+        publish_state(&hub, false, false)?;
+        assert_eq!((read(&hub).revision, seq()), (1, Some(1)));
+        publish_state(&hub, false, false)?;
+        assert_eq!(seq(), Some(1));
+        publish_state(&hub, true, true)?;
+        let asleep = read(&hub);
+        assert!(asleep.locked && asleep.sleeping && asleep.preparing_sleep);
+        publish_state(&hub, true, false)?;
+        let resumed = read(&hub);
+        assert!(resumed.locked && !resumed.sleeping && !resumed.preparing_sleep);
+        assert_eq!((resumed.revision, seq()), (3, Some(3)));
+        Ok(())
     }
 }

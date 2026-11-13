@@ -19,6 +19,7 @@ pub mod notifications;
 pub mod osd;
 pub mod patch;
 pub mod pill_controls;
+pub mod session;
 pub mod settings;
 pub mod settings_asks;
 pub mod shell_actions;

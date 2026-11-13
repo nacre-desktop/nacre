@@ -238,6 +238,11 @@ old JSON shape and files. Its `watch` mode exits after acknowledgement instead
 of keeping another process alive; the on-failure compatibility unit remains for
 one release. A missing default/older daemon uses the direct runtime; explicit
 overrides never fall back, and safe mode never starts a second observer.
+`session.state` v1 (N0317, [spec](../specs/0317-daemon-start-hygiene.md)) is
+`{locked, sleeping, preparing_sleep, revision}` from logind: the display session's
+`LockedHint` and the `PrepareForSleep` window (`preparing_sleep` falling to false is a
+resume). It is published on change and snapshotted on subscribe; `revision` is 0 until
+logind is read.
 These are intended lifecycle differences. Resume and output settling delays
 remain 500 and 300 ms, respectively, using the same policy as direct mode.
 The service reads login1 and Secret Service asynchronously, consumes the existing

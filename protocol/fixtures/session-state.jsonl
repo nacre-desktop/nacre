@@ -1,0 +1,7 @@
+{"t":"sub","topics":["session.state"]}
+{"t":"snap","topic":"session.state","seq":0,"data":{"locked":false,"sleeping":false,"preparing_sleep":false,"revision":0}}
+{"t":"patch","topic":"session.state","base":0,"seq":1,"data":{"revision":1}}
+{"t":"patch","topic":"session.state","base":1,"seq":2,"data":{"locked":true,"revision":2}}
+{"t":"patch","topic":"session.state","base":2,"seq":3,"data":{"sleeping":true,"preparing_sleep":true,"revision":3}}
+{"t":"patch","topic":"session.state","base":3,"seq":4,"data":{"sleeping":false,"preparing_sleep":false,"revision":4}}
+{"t":"patch","topic":"session.state","base":4,"seq":5,"data":{"locked":false,"revision":5}}

@@ -25,6 +25,7 @@ All messages are exact JSONL wire objects; names and content are synthetic.
 | shell-actions | Output-scoped workspace activation/scroll/window focus and confirmed session execution |
 | bar-services | Current-owner tray actions and output-scoped brightness updates |
 | pill-controls | Default-sink volume/mute and default-controller Bluetooth power |
+| session-state | `session.state` lock/sleep flags across a lock, sleep, resume and unlock |
 
 For state replay, a wrong base must not mutate the last snapshot. `base` matches
 the last delivered sequence even when coalescing skips source revisions. A new

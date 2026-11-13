@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SessionState",
+  "description": "`locked` is logind's `LockedHint` for the user's display session. `preparing_sleep` is\ntrue from logind's `PrepareForSleep(true)` until `PrepareForSleep(false)`, so its fall\nto false marks a resume. `sleeping` carries the same window (nothing runs while the\nsystem is suspended, so the daemon cannot tell the two apart). `revision` is 0 until\nlogind has been read, then increases by one with every change.",
+  "type": "object",
+  "properties": {
+    "locked": {
+      "type": "boolean"
+    },
+    "sleeping": {
+      "type": "boolean"
+    },
+    "preparing_sleep": {
+      "type": "boolean"
+    },
+    "revision": {
+      "type": "integer",
+      "format": "uint64",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "locked",
+    "sleeping",
+    "preparing_sleep",
+    "revision"
+  ]
+}

@@ -176,21 +176,25 @@ async fn serve(
         hub.borrow_mut().service("session-watch", "starting", 0)?;
         hub.borrow_mut()
             .publish("session", json!({"available":false,"record":null}))?;
+        session_policy::initial_state(&hub)?;
         let service_hub = hub.clone();
         let factory_hub = hub.clone();
-        Some(tokio::task::spawn_local(supervisor::run(
-            "session-watch",
-            service_hub,
-            move || {
+        let state_hub = hub.clone();
+        vec![
+            tokio::task::spawn_local(supervisor::run("session-watch", service_hub, move || {
                 session_policy::run(
                     factory_hub.clone(),
                     session_paths.clone(),
                     session_control.clone(),
                 )
-            },
-        )))
+            })),
+            // N0317: lock/sleep flags apart from the policy checks, which can take seconds.
+            tokio::task::spawn_local(supervisor::run("session-state", hub.clone(), move || {
+                session_policy::state(state_hub.clone())
+            })),
+        ]
     } else {
-        None
+        Vec::new()
     };
     if !counter.safe {
         hub.borrow_mut().service("helper-lanes", "running", 0)?;
@@ -787,7 +791,7 @@ async fn serve(
             }
         }
     }
-    if let Some(service) = session_service {
+    for service in session_service {
         service.abort();
         if let Err(error) = service.await {
             if !error.is_cancelled() {
