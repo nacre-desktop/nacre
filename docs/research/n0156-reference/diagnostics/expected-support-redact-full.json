@@ -1,0 +1,23 @@
+{
+  "stdout": {
+    "value": {
+      "username": "[redacted]",
+      "hostname": "[redacted]",
+      "SSID": "[redacted]",
+      "accessToken": "[redacted]",
+      "private_key": "[redacted]",
+      "message": "[account][redacted sensitive value]\n[identity]\n[redacted sensitive value]\n[redacted sensitive value]\n[redacted URL]\n[token-like value]",
+      "nested": [
+        {
+          "[home]/key": "[identity]"
+        }
+      ]
+    },
+    "calls": []
+  },
+  "exit": 0,
+  "files": {},
+  "deleted": [],
+  "effects": [],
+  "ipc": []
+}
