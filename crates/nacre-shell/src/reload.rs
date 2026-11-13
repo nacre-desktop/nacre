@@ -6542,9 +6542,14 @@ impl SceneSource for Runtime {
             }
             if let UiEvent::Key { text, .. } = &event {
                 if text == " "
-                    && self.session.focused_action().is_some_and(|(_, action, _)| {
+                    && self.session.focused_action().is_some_and(|(_, action, argument)| {
                         action == "launcher.quick"
-                            || (self.launcher.is_some() && action == "select_app")
+                            || (action == "select_app"
+                                && matches!(argument, bead::core::Value::Text(id)
+                                    if matches!(self.session.stores.get("launcher.chooser"),
+                                        Some(bead::core::Value::Text(open)) if !open.is_empty())
+                                        || self.launcher.as_ref().is_some_and(|menu|
+                                            menu.is_toggle(&id) || menu.is_value_group(&id))))
                     })
                 {
                     event = UiEvent::Command {

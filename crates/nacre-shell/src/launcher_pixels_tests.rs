@@ -612,6 +612,36 @@ fn launcher_rail_arrows_scroll_categories_into_view_before_entering_content() ->
 }
 
 #[test]
+fn space_on_a_regular_result_still_edits_the_search_field() -> Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut runtime = keyboard_runtime("a")?;
+    let app = runtime
+        .session
+        .view_nodes()
+        .iter()
+        .find(|node| {
+            node.action.as_deref() == Some("select_app")
+                && node.action_arg == Some(Value::Text("key-0".into()))
+        })
+        .expect("regular app result")
+        .id
+        .clone();
+    keyboard_focus(&mut runtime, &app)?;
+    runtime.stage(UiEvent::Key {
+        text: " ".into(),
+        backspace: false,
+    })?;
+    runtime.commit();
+
+    assert_eq!(
+        runtime.session.stores.get("bead.focused"),
+        Some(&Value::Text("launcher.search".into()))
+    );
+    assert!(runtime.session.surrounding_text().unwrap().0.ends_with(' '));
+    Ok(())
+}
+
+#[test]
 fn launcher_typing_reaches_search_from_each_zone_and_arrows_respect_the_caret() -> Result<()> {
     use bead::wayland::{SceneSource, UiEvent};
     let mut runtime = keyboard_runtime("")?;

@@ -1306,6 +1306,12 @@ impl Menu {
         })
     }
 
+    pub(crate) fn is_toggle(&self, id: &str) -> bool {
+        self.view.borrow().rows.iter().any(|row| {
+            row["id"] == id && row["toggle"] == true && row["disabled"] != true
+        })
+    }
+
     fn activate_choice(&self, group: &str, id: &str) -> source::Result<MenuActivated> {
         self.activation_request(group)?;
         let source = self.source.as_ref().ok_or_else(invalid_menu)?;

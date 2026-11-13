@@ -104,7 +104,7 @@ mod tests {
             }
         }
         let palette =
-            bead::render::Palette(std::sync::Arc::new(std::collections::BTreeMap::from([
+            bead::render::Palette(std::sync::Arc::new(std::collections::HashMap::from([
                 ("onSurfaceVariant".into(), [120, 120, 120, 255]),
                 ("primary".into(), [255, 255, 255, 255]),
                 ("surface".into(), [255, 255, 255, 255]),

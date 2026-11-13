@@ -2605,7 +2605,7 @@ async fn picker_preferences_use_provider_lane_and_preserve_the_document() {
     let wallpaper = Extras::new(Kind::Wallpaper, lab.client.clone()).unwrap();
     let wake: CallWake = Arc::new(|| {});
     for _ in 0..200 {
-        if wallpaper.wallpaper_preference("kind", "dynamic").is_some() {
+        if wallpaper.wallpaper_preference("kind", |_| json!("dynamic")).is_some() {
             break;
         }
         tokio::time::sleep(Duration::from_millis(5)).await;
