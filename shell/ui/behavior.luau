@@ -5,6 +5,7 @@ return {
     ["launcher.mode"]="apps", ["launcher.error"]="", ["launcher.pending"]=false, ["launcher.icon_placeholder"]=false, ["launcher.result_count"]=0, ["launcher.total_count"]=0,
     ["launcher.rail.scroll"]=0, ["launcher.rail.order"]={}, ["launcher.rail.hidden"]={}, ["launcher.groups"]={},
     ["launcher.selection"] = "", ["launcher.route"] = "apps", ["launcher.engine_route"]="",
+    ["launcher.focus_zone"]="search",
     ["launcher.search.text"] = "", ["launcher.result_query"] = "", ["launcher.scroll.y"] = 0,
     ["launcher.conversion.value"]="", ["launcher.conversion.description"]="",
     ["launcher.conversion.error"]="", ["launcher.message"]="",

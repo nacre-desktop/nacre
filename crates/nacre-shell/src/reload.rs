@@ -19,6 +19,9 @@ fn consume_pending_owner_dismiss(
 
 #[path = "reload/bar_daemon.rs"]
 mod bar_daemon;
+mod launcher_input;
+#[cfg(test)]
+mod launcher_quick_keyboard_tests;
 fn scope_recovery(session: &mut bead::ui::Session, output: Option<&str>) {
     if let Ok(path) = crate::state::File::path()
         && let Some(parent) = path.parent()
@@ -4844,6 +4847,15 @@ impl Runtime {
         Ok(self)
     }
     fn finish_scene(&mut self, mut scene: Option<Scene>) -> Result<Option<Scene>, Box<dyn Error>> {
+        // A completed asynchronous query/navigation can replace the focused row.
+        if self.launcher.is_some()
+            && self.session.stores.get("launcher.focus_zone") == Some(&bead::core::Value::Text("content".into()))
+            && self.session.surrounding_text().is_none()
+            && self.session.focused_action().is_none_or(|(_, action, arg)|
+                action == "select_app" && Some(&arg) != self.session.stores.get("launcher.selection"))
+        {
+            scene = self.launcher_content_focus(false)?.or(scene);
+        }
         if std::mem::take(&mut self.host_release_pending) {
             // Native host handlers own this release. Re-stage from their
             // latest candidate so the final scene includes both the side
@@ -6459,6 +6471,28 @@ impl SceneSource for Runtime {
             && !widget_drag_targets_output(argument, self.output.as_deref())
         {
             return self.retire_widget_drag_on_other_output();
+        }
+        if self.launcher.is_some()
+            && self.session.stores.get("launcher.form.kind")
+                == Some(&bead::core::Value::Text(String::new()))
+        {
+            if let UiEvent::Key { text, .. } = &event {
+                if text == " " && self.session.focused_action()
+                    .is_some_and(|(_, action, _)| action == "launcher.quick")
+                {
+                    event = UiEvent::Command { command: "enter".into(), shift: false };
+                } else {
+                    self.session.focus_id("launcher.search")?;
+                    self.session.stores.commit(BTreeMap::from([("launcher.focus_zone".into(), bead::core::Value::Text("search".into()))]))?;
+                }
+            }
+            if let UiEvent::Command { command, shift } = &event
+                && (matches!(command.as_str(), "up" | "down" | "left" | "right")
+                    || (command == "enter" && self.launcher_rail_focused()))
+            {
+                let scene = self.launcher_key(command, *shift)?;
+                return self.finish_scene(scene);
+            }
         }
         let mut host_action = match &event {
             UiEvent::Action { name, argument } | UiEvent::MotionAction { name, argument } => {
@@ -8121,55 +8155,6 @@ impl SceneSource for Runtime {
             };
             let scene = self.session.update(changes)?;
             return self.finish_scene(scene);
-        }
-        if let (Some(menu), UiEvent::Command { command, .. }) = (&self.launcher, &event)
-            && (self.session.surrounding_text().is_some()
-                || host_action
-                    .as_ref()
-                    .is_some_and(|(_, name, _)| name == "select_app"))
-            && matches!(command.as_str(), "up" | "down" | "left" | "right")
-        {
-            let buttons: Vec<_> = self
-                .session
-                .view_nodes()
-                .iter()
-                .filter(|node| node.action.as_deref() == Some("select_app"))
-                .collect();
-            if let Some(first) = buttons.first() {
-                let first_rect = bead::ui::rect(&first.draw);
-                let columns = buttons
-                    .iter()
-                    .filter(|node| (bead::ui::rect(&node.draw).y - first_rect.y).abs() < 0.5)
-                    .count()
-                    .max(1);
-                let pitch = buttons
-                    .iter()
-                    .map(|node| f64::from(bead::ui::rect(&node.draw).y - first_rect.y))
-                    .filter(|distance| *distance > 0.5)
-                    .min_by(f64::total_cmp)
-                    .unwrap_or(f64::from(first_rect.h));
-                let viewport_height = self
-                    .session
-                    .view_nodes()
-                    .iter()
-                    .find(|node| node.scroll_store.as_deref() == Some("launcher.scroll.y"))
-                    .map(|node| bead::ui::rect(&node.draw).h)
-                    .unwrap_or_else(|| first.clip.map_or(first_rect.h, |clip| clip.h));
-                let geometry = crate::launcher::NavigationGeometry {
-                    columns,
-                    pitch,
-                    row_height: f64::from(first_rect.h),
-                    viewport_height: f64::from(viewport_height),
-                };
-                if let Some(changes) = menu.navigate(&self.session.stores, command, geometry) {
-                    let scene = self.session.update(changes)?;
-                    let scene = self.finish_scene(scene)?;
-                    if bead::core::profile::enabled() {
-                        println!("MENU_NAV_DONE changed={}", scene.is_some());
-                    }
-                    return Ok(scene);
-                }
-            }
         }
         // The launcher's inline form (B0199): its buttons, and Enter in a one-line field.
         if let Some(menu) = &self.launcher {
