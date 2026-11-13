@@ -3,14 +3,17 @@ use crate::{files, light_devices, paths::Paths, process, Result};
 use serde_json::{json, Value};
 use std::{fs, path::Path, time::Duration};
 
+fn connected(root: &Path, connector: &str) -> bool {
+    fs::read_to_string(root.join("class/drm").join(connector).join("status"))
+        .is_ok_and(|s| s.trim() == "connected")
+}
+
 fn screens(root: &Path) -> Vec<Value> {
     fs::read_dir(root.join("class/drm"))
         .into_iter()
         .flatten()
         .flatten()
-        .filter(|entry| {
-            fs::read_to_string(entry.path().join("status")).is_ok_and(|s| s.trim() == "connected")
-        })
+        .filter(|entry| connected(root, &entry.file_name().to_string_lossy()))
         .filter_map(|entry| {
             entry
                 .file_name()
@@ -34,6 +37,12 @@ fn apply(
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Vec::new(),
         Err(error) => return Err(error.into()),
     };
+    // A saved level for an unplugged display would override brightness set after it returns.
+    saved.retain(|d| {
+        d["connector"]
+            .as_str()
+            .is_none_or(|connector| connected(root, connector))
+    });
     let devices = if dim {
         let found = light_devices::discover(&screens(root), root, run)?;
         let devices: Vec<Value> = std::iter::once(&found["backlight"])
@@ -184,7 +193,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn disconnected_display_waiting_for_restore_does_not_block_other_screens() -> Result<()> {
+    fn disconnected_display_is_forgotten_instead_of_blocking_other_screens() -> Result<()> {
         let home = tempfile::tempdir()?;
         let paths = Paths::new(home.path());
         let device = home.path().join("class/backlight/panel");
@@ -206,8 +215,11 @@ mod tests {
             Ok(String::new())
         };
         apply(&paths, home.path(), true, &mut run)?;
-        assert!(apply(&paths, home.path(), false, &mut run).is_err());
+        apply(&paths, home.path(), false, &mut run)?;
         assert_eq!(calls, ["10", "70"]);
+        let saved: Vec<Value> =
+            serde_json::from_slice(&fs::read(paths.state.join("idle-brightness.json"))?)?;
+        assert!(saved.is_empty());
         Ok(())
     }
     #[test]

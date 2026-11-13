@@ -228,8 +228,19 @@ pub fn render_monitors(monitors: &Value) -> Result<String> {
             .filter(|value| truthy(value) && **value != "none")
             .cloned()
             .unwrap_or(json!(""));
+        // Live rows carry VRR and the current format; keep them so a mode change
+        // does not reset them. shortcut: hyprctl rows report VRR only as on/off
+        // and no HDR state, extend when Hyprland exposes the configured values.
+        let mut kept = String::new();
+        if let Some(vrr) = monitor.get("vrr").and_then(Value::as_bool) {
+            kept.push_str(&format!(",vrr={}", u8::from(vrr)));
+        }
+        if let Some(format) = monitor.get("currentFormat").and_then(Value::as_str) {
+            let deep = format.contains("2101010") || format.contains("16161616");
+            kept.push_str(&format!(",bitdepth={}", if deep { 10 } else { 8 }));
+        }
         lines.push(format!(
-            "hl.monitor({{output={},mode={},scale={scale},position={},transform={},mirror={}}})",
+            "hl.monitor({{output={},mode={},scale={scale},position={},transform={},mirror={}{kept}}})",
             lua(get("name")?)?,
             lua(&json!(format!(
                 "{}x{}@{:.3}",
@@ -716,6 +727,15 @@ impl<T: Transport> Backend<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn live_monitor_rows_keep_vrr_and_bit_depth_across_a_mode_change() {
+        let row = json!({"name":"DP-1","width":1920,"height":1080,"refreshRate":60.0,"scale":1.0,
+            "x":0,"y":0,"transform":0,"vrr":true,"currentFormat":"XRGB2101010"});
+        assert_eq!(
+            render_monitors(&json!([row])).unwrap(),
+            "hl.monitor({output=\"DP-1\",mode=\"1920x1080@60.000\",scale=1.0,position=\"0x0\",transform=0,mirror=\"\",vrr=1,bitdepth=10})"
+        );
+    }
     #[test]
     fn advertised_capability_bits_match_reviewed_hyprland_snapshot() {
         // Snapshot only: when a bit changes, verify its implementation in crates/nacre-shell/src/backends/hyprland.rs.

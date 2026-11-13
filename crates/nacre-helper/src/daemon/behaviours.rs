@@ -776,13 +776,12 @@ pub async fn power_profile(
                     .as_ref()
                     .is_some_and(|p| p["saver"]["enabled"] == true);
             let key = (saver, battery_saver::output_key(&hub));
+            // Retry only when the inputs change: this loop also wakes on every compositor notice.
             if saver_applied.as_ref() != Some(&key) {
-                match battery_saver::update(&hub, paths, saver).await {
-                    Ok(()) => saver_applied = Some(key),
-                    Err(error) => {
-                        tracing::warn!(%error, "Battery saver output preference could not be applied")
-                    }
+                if let Err(error) = battery_saver::update(&hub, paths, saver).await {
+                    tracing::warn!(%error, "Battery saver output preference could not be applied");
                 }
+                saver_applied = Some(key);
             }
         }
         let desired = desired_profile(preferences.as_ref(), battery);
