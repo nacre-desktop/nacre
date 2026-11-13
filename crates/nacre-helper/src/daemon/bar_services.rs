@@ -98,8 +98,11 @@ impl Drop for TrayCleanup {
 }
 
 async fn run_tray_inner(hub: Shared) -> Result<()> {
+    serve_tray(hub, zbus::Connection::session().await?).await
+}
+
+async fn serve_tray(hub: Shared, connection: zbus::Connection) -> Result<()> {
     use futures_lite::StreamExt;
-    let connection = zbus::Connection::session().await?;
     // The watcher's owner changes, and names leaving the bus (registered items).
     let bus = zbus::fdo::DBusProxy::new(&connection).await?;
     let mut owners = bus
@@ -137,41 +140,53 @@ async fn run_tray_inner(hub: Shared) -> Result<()> {
         if name_owner(&connection, WATCHER).await.ok().as_deref() != Some(watcher_owner.as_str()) {
             continue;
         }
-        register_tray_host(&connection, &watcher_owner).await?;
-        hub.borrow_mut().service("tray", "running", 0)?;
-        let mut tray = Tray::default();
-        publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
-        loop {
-            tokio::select! {
-                signal = signals.next() => {
-                    let _signal = signal.ok_or("Tray watcher signal stream closed")??;
-                    publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
-                }
-                signal = item_signals.next() => {
-                    let signal = signal.ok_or("Tray item signal stream closed")??;
-                    // One GetAll for the signalling item only; the rest keep their rows.
-                    let sender = signal.header().sender().map(|sender| sender.to_string()).unwrap_or_default();
-                    if let Some(rows) = tray.items.get(&sender).cloned() {
-                        for (id, path) in rows {
-                            tray.rows.insert(id, item_row(&connection, &sender, &path).await);
-                        }
-                        tray.publish(&hub)?;
-                    }
-                }
-                owner = owners.next() => {
-                    owner.ok_or("Tray watcher owner stream closed")?;
-                    hub.borrow_mut().service("tray", "waiting", 0)?;
-                    hub.borrow_mut().publish("tray", empty_tray(false))?;
-                    break;
-                }
-                gone = lost.next() => {
-                    let gone = gone.ok_or("Tray owner stream closed")?;
-                    if tray.names.contains(gone.args()?.name().as_str()) {
+        let served = async {
+            register_tray_host(&connection, &watcher_owner).await?;
+            hub.borrow_mut().service("tray", "running", 0)?;
+            let mut tray = Tray::default();
+            publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
+            loop {
+                tokio::select! {
+                    signal = signals.next() => {
+                        let _signal = signal.ok_or("Tray watcher signal stream closed")??;
                         publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
+                    }
+                    signal = item_signals.next() => {
+                        let signal = signal.ok_or("Tray item signal stream closed")??;
+                        // One GetAll for the signalling item only; the rest keep their rows.
+                        let sender = signal.header().sender().map(|sender| sender.to_string()).unwrap_or_default();
+                        if let Some(rows) = tray.items.get(&sender).cloned() {
+                            for (id, path) in rows {
+                                tray.rows.insert(id, item_row(&connection, &sender, &path).await);
+                            }
+                            tray.publish(&hub)?;
+                        }
+                    }
+                    owner = owners.next() => {
+                        owner.ok_or("Tray watcher owner stream closed")?;
+                        return Ok::<(), crate::Error>(());
+                    }
+                    gone = lost.next() => {
+                        let gone = gone.ok_or("Tray owner stream closed")?;
+                        if tray.names.contains(gone.args()?.name().as_str()) {
+                            publish_tray(&hub, &connection, &watcher_owner, &mut tray).await?;
+                        }
                     }
                 }
             }
         }
+        .await;
+        // N0317: a watcher that leaves mid-query (a shell's own watcher exits with the shell,
+        // and its registered names can drop first) is a handover, not a failure.
+        if let Err(error) = served {
+            if name_owner(&connection, WATCHER).await.ok().as_deref()
+                == Some(watcher_owner.as_str())
+            {
+                return Err(error);
+            }
+        }
+        hub.borrow_mut().service("tray", "waiting", 0)?;
+        hub.borrow_mut().publish("tray", empty_tray(false))?;
     }
 }
 
@@ -1403,6 +1418,79 @@ mod tests {
             .ok_or("Owner stream closed")?;
         assert_eq!(gone.args()?.name().as_str(), "org.example.Bar");
         Ok(())
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn a_watcher_leaving_mid_refresh_is_a_handover_not_a_failure() -> crate::Result<()> {
+        let (home, _bus, fixture_watcher, _item, client, _) = private_fixture().await?;
+        fixture_watcher.close().await?;
+        let address = format!("unix:path={}", home.path().join("bus").display());
+        // Like a shell that hosts the watcher: a second (registered) name on the same
+        // connection, released first when it exits (dbus-daemon drops the newest name first).
+        let watcher = |extra: Option<&'static str>| {
+            let address = address.clone();
+            async move {
+                let items = [
+                    "org.example.Bar/StatusNotifierItem",
+                    "org.example.Host/StatusNotifierItem",
+                ];
+                let connection = zbus::connection::Builder::address(address.as_str())?
+                    .name(WATCHER)?
+                    .serve_at(
+                        WATCHER_PATH,
+                        Watcher {
+                            items: items.map(String::from).to_vec(),
+                            hosts: Mutex::new(Vec::new()),
+                        },
+                    )?
+                    .build()
+                    .await?;
+                if let Some(name) = extra {
+                    connection.request_name(name).await?;
+                }
+                Ok::<_, crate::Error>(connection)
+            }
+        };
+        let hub = crate::daemon::hub::Hub::new("fixture".into(), false, Duration::from_millis(1))
+            .shared();
+        let status = |hub: &Shared| {
+            hub.borrow()
+                .services
+                .get("tray")
+                .map(|s| s["status"].clone())
+        };
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let tray = tokio::task::spawn_local(serve_tray(hub.clone(), client.clone()));
+                let wait = |state: &'static str| {
+                    let hub = hub.clone();
+                    async move {
+                        for _ in 0..250 {
+                            if status(&hub) == Some(json!(state)) {
+                                return true;
+                            }
+                            tokio::time::sleep(Duration::from_millis(20)).await;
+                        }
+                        false
+                    }
+                };
+                assert!(wait("waiting").await);
+                let shell = watcher(Some("org.example.Host")).await?;
+                assert!(wait("running").await);
+                shell.close().await?;
+                assert!(wait("waiting").await);
+                assert!(
+                    !tray.is_finished(),
+                    "a watcher handover must not end the tray service"
+                );
+                let next = watcher(None).await?;
+                assert!(wait("running").await);
+                assert!(!tray.is_finished());
+                tray.abort();
+                drop(next);
+                Ok::<(), crate::Error>(())
+            })
+            .await
     }
 
     /// Fake sysfs plus a fake `brightnessctl` that only writes the fixture's brightness file.
