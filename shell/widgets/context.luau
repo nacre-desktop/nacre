@@ -32,6 +32,7 @@ local dash_on=ui.resolve_for_check(ui.bind("bar.dashboard.enabled"))
 local focus_on=ui.resolve_for_check(ui.bind("bar.window.focus.enabled"))
 local updates_on=ui.resolve_for_check(ui.bind("bar.updates.enabled"))
 local updates_n=ui.resolve_for_check(ui.bind("bar.updates.count"))
+local badges_on=ui.resolve_for_check(ui.bind("bar.status.badges"))~=false
 local header=ui.resolve_for_check(ui.bind("bar.height"))
 local title=ui.bind("bar.title")
 local title_width=math.min(t.title_max_width,math.ceil(ui.text_width(title,"IBM Plex Sans",t.title_font))+kit.tokens.spacing.hairline/2)
@@ -52,10 +53,11 @@ local function glyph(id,text,color)
 end
 -- D1 (spec 0237): one 20 px glyph in a 24 px box; `active` picks onSurface, idle/off onSurfaceVariant,
 -- and `color` overrides both for attention states (warn/error/success). `badge` is a 15 px primary
--- count pill at the box's top-right corner (hidden when empty); `kind` is kept for callers' ids.
+-- count pill at the box's top-right corner (hidden when empty or when Settings turns badges off);
+-- `kind` is kept for callers' ids.
 local function status_glyph(id,text,_kind,color,badge,active)
     local box=t.icon_font*t.line_height
-    local count=badge and tostring(ui.resolve_for_check(badge) or "") or ""
+    local count=badge and badges_on and tostring(ui.resolve_for_check(badge) or "") or ""
     local badge_width=count~="" and math.max(t.badge_size,math.ceil(ui.text_width(count,"IBM Plex Sans",t.badge_font))+2*t.badge_pad) or 0
     return ui.Row{id=id,width=t.icon_width,height=box,shrink=0,align="center",justify="center",
         ui.Text{id="ink",width=t.icon_width,height=box,shrink=0,

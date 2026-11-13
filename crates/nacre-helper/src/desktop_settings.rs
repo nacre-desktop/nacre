@@ -1115,12 +1115,13 @@ mod legacy_status_output_tests {
 #[cfg(test)]
 mod registry_fallback_tests {
     #[test]
-    fn registry_only_lip_size_uses_its_range_contract() {
+    fn registry_only_hold_time_uses_its_range_contract() {
         assert_eq!(
-            super::validate("lipSize", &serde_json::json!(48), false).unwrap(),
-            serde_json::json!(48)
+            super::validate("innerEdgeHoldTime", &serde_json::json!(180), false).unwrap(),
+            serde_json::json!(180)
         );
-        assert!(super::validate("lipSize", &serde_json::json!(20), false).is_err());
-        assert!(super::validate("lipSize", &serde_json::json!(48.5), false).is_err());
+        assert!(super::validate("innerEdgeHoldTime", &serde_json::json!(20), false).is_err());
+        assert!(super::validate("innerEdgeHoldTime", &serde_json::json!(180.5), false).is_err());
+        assert!(super::validate("edgeHandleStyle", &serde_json::json!("pearls"), false).is_err());
     }
 }

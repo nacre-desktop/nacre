@@ -123,7 +123,44 @@ const PINNED_WINDOW_RULES: &str = concat!(
     "window-rule {\n    match title=\"^[Pp]icture[ -]?[Ii]n[ -]?[Pp]icture.*$\"\n    open-pinned true\n}\n",
 );
 
-pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
+/// D6 / N0239: the `inner-edge-push` block from the desktop store, only the keys the user changed
+/// (nacre-niri's defaults apply with no config; a per-output override replaces the whole block).
+pub(crate) fn inner_edge_push_config(desktop: &Value) -> String {
+    // Off clears every edge rather than writing `off`: `off` drops the capability, which would hide
+    // the very row that turns it back on.
+    if desktop.get("innerEdgePush") == Some(&Value::Bool(false)) {
+        return "    inner-edge-push { left false; right false; top false; bottom false; }\n"
+            .into();
+    }
+    let changed = |key: &str, default: u64, range: std::ops::RangeInclusive<u64>| {
+        desktop
+            .get(key)
+            .and_then(Value::as_u64)
+            .filter(|value| range.contains(value) && *value != default)
+    };
+    let mut keys = Vec::new();
+    if let Some(ms) = changed("innerEdgeHoldTime", 180, 60..=600) {
+        keys.push(format!("hold-time-ms {ms}"));
+    }
+    if let Some(px) = changed("innerEdgePushDistance", 64, 16..=240) {
+        keys.push(format!("cross-distance {px}"));
+    }
+    for (edge, key) in [
+        ("left", "edgeHandleLeft"),
+        ("right", "edgeHandleRight"),
+        ("top", "edgeHandleTop"),
+    ] {
+        if desktop.get(key) == Some(&Value::Bool(false)) {
+            keys.push(format!("{edge} false"));
+        }
+    }
+    if keys.is_empty() {
+        String::new()
+    } else {
+        format!("    inner-edge-push {{ {}; }}\n", keys.join("; "))
+    }
+}
+pub(crate) fn collection_overlay(delay_ms: u64, inner_edge_push: &str) -> String {
     let delay_ms = delay_ms.min(800);
     let collection_actions = COLLECTION_ACTIONS
         .strip_prefix("binds {\n")
@@ -131,7 +168,7 @@ pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
         .unwrap_or(COLLECTION_ACTIONS);
     format!(
         "include \"config.kdl\"\n\n// Generated offline for nacre-niri; native feature flags default on.\nbinds {{\n{collection_actions}{SCRATCHPAD_PIN_ACTIONS}    Super+Ctrl+Shift+Q repeat=false hotkey-overlay-title=\"Nacre:force-close\" {{ force-close-window; }}\n    Super+Alt+H repeat=false hotkey-overlay-title=\"Nacre:restore-current\" {{ restore-current-workspace-hidden-windows; }}\n}}\n{PINNED_WINDOW_RULES}{}",
-        edge_trigger_config(delay_ms)
+        edge_trigger_config(delay_ms, inner_edge_push)
     )
 }
 
@@ -176,9 +213,9 @@ pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
         .map(|value| value + "\n")
         .map_err(|error| invalid(error.to_string()))
 }
-fn edge_trigger_config(delay_ms: u64) -> String {
+fn edge_trigger_config(delay_ms: u64, inner_edge_push: &str) -> String {
     format!(
-        "edge-triggers {{\n    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
+        "edge-triggers {{\n{inner_edge_push}    left {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    right {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    top {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n    bottom {{ action {{ event; }}; dwell-time-ms {delay_ms}; }}\n}}\n"
     )
 }
 fn shell_quote(text: &str) -> String {

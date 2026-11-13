@@ -201,7 +201,7 @@ fn flags_follow_the_compositor_and_the_stores() {
         .unwrap();
     let niri = flags(&probe, &hub.borrow());
     assert!(!niri.contains_key("workspaceCollections"));
-    assert!(!niri["cursorShake"]);
+    assert!(!niri["cursorShake"] && !niri["innerEdgePush"]);
     assert!(niri["niriWorkspaces"] && niri["niriFixedWorkspaces"] && niri["input.touchpadSpeed"]);
     assert!(niri["input.controls"] && niri["ai"] && !niri["brain"]);
     assert!(!niri["powerIdle"]);
@@ -220,9 +220,11 @@ fn flags_follow_the_compositor_and_the_stores() {
     let mut fork_niri = compositor("niri", json!(["gapsIn", "blur"]));
     fork_niri["capabilities"]["workspaceCollections"] = json!(true);
     fork_niri["capabilities"]["cursorShake"] = json!(true);
+    fork_niri["capabilities"]["innerEdgePush"] = json!(true);
     hub.borrow_mut().publish("compositor", fork_niri).unwrap();
     let fork_flags = flags(&probe, &hub.borrow());
     assert!(fork_flags["workspaceCollections"] && fork_flags["cursorShake"]);
+    assert!(fork_flags["innerEdgePush"]);
 
     hub.borrow_mut()
         .publish("compositor", compositor("hyprland", json!(["shadow"])))
@@ -255,6 +257,7 @@ fn flags_follow_the_compositor_and_the_stores() {
         "input.controls",
         "input.touchpadSpeed",
         "cursorShake",
+        "innerEdgePush",
         "bluetooth",
         "battery",
         "batterySaver",
@@ -276,7 +279,7 @@ fn flags_follow_the_compositor_and_the_stores() {
     );
     assert!(!hypr["batterySaver"]);
     assert!(flags(&battery, &hub.borrow())["batterySaver"]);
-    assert_eq!(hypr.len(), 26);
+    assert_eq!(hypr.len(), 27);
 }
 
 #[test]

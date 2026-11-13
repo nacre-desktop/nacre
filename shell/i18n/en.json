@@ -1040,6 +1040,8 @@
   "bead.brain.unfiled": "Unfiled",
   "bead.brain.worlds": "Worlds",
   "bead.brain.your-brain": "Your brain",
+  "bead.settings.ai-accounts-detail": "Projects, assistant accounts and usage in the Nacre AI workspace.",
+  "bead.settings.ai-open-detail": "Open the AI panel at the left edge of the desktop.",
   "bead.widgets.drag-to-bar": "Drag onto the bar",
   "bead.widgets.drag-to-desktop": "Drag onto the desktop",
   "bead.widgets.add-bar": "Add to bar",

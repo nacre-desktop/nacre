@@ -5,6 +5,60 @@
 use bead::wayland::{EdgeArt, LipState, intent::Lip};
 use bead::{core::Edge, render::Palette};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering::SeqCst};
+
+/// D6 (spec 0237): `desktop.edgeHandleStyle` `"arrows"` draws the chevron tab; the default is the
+/// pearl grabber. Set by the shell gate when the preference changes.
+pub static ARROWS: AtomicBool = AtomicBool::new(false);
+
+/// The handle for a side lip in the configured style; other edges draw nothing.
+pub fn handle(
+    lip: &Lip,
+    size: (f32, f32),
+    state: LipState,
+    accent: [u8; 4],
+    secondary: [u8; 4],
+    arrows: bool,
+) -> Option<String> {
+    if arrows {
+        edge_tab(lip, size, state, accent, secondary)
+    } else {
+        grabber(lip, size, state, accent, secondary)
+    }
+}
+/// The pearl grabber (design review D6): a rounded bar in primary centred on the lip, 6 x 56 at
+/// rest, 8 x 72 while the dwell charges; the charge fills it top-down in the secondary role.
+pub fn grabber(
+    lip: &Lip,
+    (width, height): (f32, f32),
+    state: LipState,
+    accent: [u8; 4],
+    secondary: [u8; 4],
+) -> Option<String> {
+    if !matches!(lip.edge, Edge::Left | Edge::Right) {
+        return None;
+    }
+    let charging = !state.active && state.progress > 0. && state.progress < 1.;
+    let (thick, long): (f32, f32) = if charging { (8., 72.) } else { (6., 56.) };
+    let thick = thick.min((width - 2.).max(2.));
+    let (x, y) = ((width - thick) / 2., (height - long) / 2.);
+    let r = thick / 2.;
+    let mut body = format!(
+        r#"<rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{r}" fill="{}" opacity="{}"/>"#,
+        rgb(accent),
+        if charging { 1. } else { 0.9 }
+    );
+    if charging {
+        body.push_str(&format!(
+            r#"<rect x="{x}" y="{y}" width="{thick}" height="{}" rx="{r}" fill="{}" clip-path="url(#bar)"/>"#,
+            long * state.progress.clamp(0., 1.),
+            rgb(secondary)
+        ));
+    }
+    Some(format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}"><defs><clipPath id="bar"><rect x="{x}" y="{y}" width="{thick}" height="{long}" rx="{r}"/></clipPath></defs>{body}</svg>"#
+    ))
+}
 
 fn rgb(c: [u8; 4]) -> String {
     format!("rgb({},{},{})", c[0], c[1], c[2])
@@ -71,7 +125,7 @@ pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
     let (accent, secondary) = (colors.get("primary")?, colors.get("secondary")?);
     let surface = rgb(colors.get("surface")?);
     Ok(Arc::new(move |lip, size, state| {
-        edge_tab(lip, size, state, accent, secondary).map(|svg| {
+        handle(lip, size, state, accent, secondary, ARROWS.load(SeqCst)).map(|svg| {
             // Popup films leave this stable surface uncovered, including its material.
             Arc::from(format!(
                 r#"<svg xmlns="http://www.w3.org/2000/svg" width="{}" height="{}"><rect width="100%" height="100%" fill="{surface}"/>{svg}</svg>"#,
@@ -127,6 +181,42 @@ mod tests {
         )
         .unwrap();
         assert_eq!(&bytes[..4], &surface);
+    }
+    #[test]
+    fn the_grabber_is_a_centred_bar_that_grows_and_charges_with_the_dwell() {
+        assert!(grabber(&lip(Edge::Top), (208., 50.), idle(), A, S).is_none());
+        let rest = grabber(&lip(Edge::Left), (10., 144.), idle(), A, S).unwrap();
+        assert!(
+            rest.contains(r#"<rect x="2" y="44" width="6" height="56" rx="3""#),
+            "{rest}"
+        );
+        assert!(
+            !rest.contains("clip-path=\"url(#bar)\""),
+            "no charge at rest"
+        );
+        let half = LipState {
+            progress: 0.5,
+            active: false,
+        };
+        let charging = grabber(&lip(Edge::Right), (10., 144.), half, A, S).unwrap();
+        assert!(
+            charging.contains(r#"<rect x="1" y="36" width="8" height="72" rx="4""#),
+            "{charging}"
+        );
+        assert!(
+            charging.contains(r#"height="36" rx="4" fill="rgb(40,50,60)" clip-path="url(#bar)""#),
+            "{charging}"
+        );
+        assert!(
+            handle(&lip(Edge::Left), (10., 144.), idle(), A, S, true)
+                .unwrap()
+                .contains("<path")
+        );
+        assert!(
+            !handle(&lip(Edge::Left), (10., 144.), idle(), A, S, false)
+                .unwrap()
+                .contains("<path")
+        );
     }
     #[test]
     fn only_side_lips_have_a_tab() {

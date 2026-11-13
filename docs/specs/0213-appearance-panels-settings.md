@@ -6,7 +6,8 @@ the existing settings writer. Power settings are outside this unit.
 - Automatic palette mode uses sunrise/sunset from the configured weather location,
   falling back to 07:00–19:00. The daemon switches the existing light/dark mode;
   a manual change lasts until the next schedule boundary. No separate service.
-- Edge handle length is `desktop.lipSize`, in pixels, default 48, clamped to 24–96.
+- Edge handle length was `desktop.lipSize` (24–96 px); N0239 (spec 0237) replaced it with the
+  per-edge handle rows, and a saved `lipSize` is ignored.
   Top-bar `desktop.modules` selects individual default widget instances; empty means
   the defaults. Both update live.
 - One list editor supports module choices and installed startup apps, including

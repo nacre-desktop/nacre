@@ -53,6 +53,8 @@ pub struct NacreCapabilities {
     pub launch_workspace: bool,
     pub cursor_shake: bool,
     pub keyboard_lock_state: bool,
+    /// NN0041 / D6: sticky inner monitor edges with push-to-cross (`inner-edge-push` config).
+    pub inner_edge_push: bool,
 }
 impl NacreCapabilities {
     fn parse(response: &Value) -> Option<Self> {
@@ -106,6 +108,10 @@ impl NacreCapabilities {
                 .unwrap_or(false),
             cursor_shake: features
                 .get("cursor_shake")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            inner_edge_push: features
+                .get("inner_edge_push")
                 .and_then(Value::as_bool)
                 .unwrap_or(false),
             keyboard_lock_state: features
@@ -484,7 +490,8 @@ mod tests {
             "window_restore": true,
             "launch_workspace": true,
             "cursor_shake": true,
-            "keyboard_lock_state": true
+            "keyboard_lock_state": true,
+            "inner_edge_push": true
         }});
         assert_eq!(
             NacreCapabilities::parse(&active),
@@ -502,6 +509,7 @@ mod tests {
                 launch_workspace: true,
                 cursor_shake: true,
                 keyboard_lock_state: true,
+                inner_edge_push: true,
             })
         );
         assert_eq!(

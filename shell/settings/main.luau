@@ -3,6 +3,7 @@
 -- plain data from the adapter; this file only maps a row kind to a kit component.
 local ui=require("bead.ui")
 local kit=require("bead.kit")
+local segment=require("../widgets/segment")(ui,kit)
 local sp=kit.tokens.spacing
 local tx=kit.tokens.text
 local writable=ui.resolve_for_check(ui.bind("settings.writable"))
@@ -45,7 +46,7 @@ local function section(item)
     children[2]=ui.Text{id="detail",text=item.description or "",visible=(item.description or "")~="",height=16,font_size=tx.caption*4/3,color="onSurfaceVariant"}
     -- Kit rows use fixed child ids, so each row sits in its own uniquely named wrapper.
     for i,child in ipairs(item.rows or {}) do
-        table.insert(children,ui.Column{id="r"..i,width="fill",shrink=0,row(child)})
+        table.insert(children,ui.Column{id="r"..i,width="fill",shrink=0,row(child,true)})
     end
     return ui.Column(children)
 end
@@ -56,7 +57,7 @@ local function unavailable(item)
         ui.Text{id="description",text=item.description or "",visible=(item.description or "")~="",height=16,font_size=tx.caption*4/3,color="onSurfaceVariant"},
         ui.Text{id="note",text=item.note,height=16,font_size=tx.caption*4/3,color="onSurfaceVariant"}}
 end
-function row(item)
+function row(item,inside)
     local on=item.enabled and (writable or item.own)
     local id=item.id
     local k=item.kind
@@ -65,12 +66,18 @@ function row(item)
     elseif k=="help" and item.note then return unavailable(item)
     elseif k=="help" then return kit.HelpText{id="help",text=item.label}
     elseif k=="link" then
-        local link=ui.Button{id="link",width="fill",height=56,shrink=0,radius=kit.tokens.radii.small,padding_left=sp.md,
-            fill="surfaceContainer",hover_fill="surfaceContainerHigh",aria_label=item.label,on_activate=act("page:"..item.page),
-            ui.Column{grow=1,justify="center",gap=sp.hairline,
-                ui.Text{id="label",text=item.label,height=20,font_size=tx.body*4/3,color="onSurface"},
-                ui.Text{id="detail",text=item.description,height=16,font_size=tx.caption*4/3,color="onSurfaceVariant"}}}
-        return link
+        -- A row that opens a page or a tool (D12): title and description like every row, a chevron at the
+        -- right. Inside a section card the row is flat; at the top of a page it is its own card.
+        local live=item.enabled~=false
+        local glyph=kit.tokens.icons.medium*4/3
+        return ui.Button{id="link",width="fill",height=56,shrink=0,radius=kit.tokens.radii.small,padding_left=inside and sp.sm or sp.md,padding_right=sp.sm,
+            fill=inside and "transparent" or "surfaceContainer",hover_fill=live and (inside and ui.alpha("onSurface",.08) or "surfaceContainerHigh") or nil,
+            aria_label=item.label,on_activate=live and act(item.action or "page:"..item.page) or nil,
+            ui.Row{width="fill",height="fill",align="center",gap=sp.md,
+                ui.Column{grow=1,justify="center",gap=sp.hairline,
+                    ui.Text{id="label",text=item.label,height=20,font_size=tx.body*4/3,color=live and "onSurface" or "onSurfaceVariant"},
+                    ui.Text{id="detail",text=item.description or "",visible=(item.description or "")~="",height=16,font_size=tx.caption*4/3,color="onSurfaceVariant"}},
+                ui.Text{id="chevron",text="chevron_right",family="Material Symbols Rounded",width=glyph,height=glyph,shrink=0,font_size=glyph,color="onSurfaceVariant"}}}
     elseif k=="info" then
         return kit.InfoRow{id="info",label=item.label,description=item.description,value=item.value}
     elseif k=="wallpaper-scene" then
@@ -132,7 +139,7 @@ function row(item)
     elseif k=="toggle" then
         node=kit.ToggleRow{id="toggle",label=item.label,description=item.description,checked=item.checked,enabled=on,on_activate=act("set:"..id)}
     elseif k=="choice" then
-        node=kit.ChoiceRow{id="choice",label=item.label,description=item.description,enabled=on,options=item.options,on_change="settings.do"}
+        node=segment.Row{id="choice",label=item.label,description=item.description,enabled=on,options=item.options,on_change="settings.do"}
     elseif k=="select" then
         -- A drop-down (QML NacreSelect): a field with the current choice; the list opens under it. `filter` rows
         -- (many options) carry the page's shared search field and only the matching options.
@@ -207,4 +214,4 @@ return ui.Column{id="settings",width="100%",height="100%",fill="surface",
         ui.Text{id="empty",text=ui.tr("bead.settings.no-results"),visible=ui.bind("settings.empty"),height=20,font_size=tx.body*4/3,color="onSurfaceVariant"},
         ui.Scroll{id="items-scroll",scroll=ui.bind("settings.scroll"),grow=1,
             ui.Column{id="items",width="fill",gap=searching and sp.xs or sp.xl,
-                ui.Repeat{id="rows",model=ui.bind("settings.items"),key="id",render=row}}}}}}
+                ui.Repeat{id="rows",model=ui.bind("settings.items"),key="id",render=function(item) return row(item) end}}}}}}

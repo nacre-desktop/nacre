@@ -106,8 +106,9 @@ pub fn lua_value(value: &Value) -> Result<String> {
 pub fn runtime_lua_value(value: &Value) -> Result<String> {
     lua(value, false)
 }
-pub(crate) fn collection_overlay_with_delay(delay_ms: u64) -> String {
-    niri::collection_overlay_with_delay(delay_ms)
+/// The nacre-niri overlay for a desktop store: edge dwell plus the inner-edge push keys.
+pub(crate) fn collection_overlay(delay_ms: u64, desktop: &Value) -> String {
+    niri::collection_overlay(delay_ms, &niri::inner_edge_push_config(desktop))
 }
 pub(crate) fn native_unsupported_report(text: &str) -> Result<String> {
     niri::native_unsupported_report(text)
@@ -576,7 +577,7 @@ mod tests {
         ] {
             assert!(!stock_bindings.contains(action), "stock emitted {action}");
         }
-        let native = niri::collection_overlay_with_delay(350);
+        let native = niri::collection_overlay(350, "");
         let expected = [
             ("Super+Ctrl+Tab", "focus-collection-next"),
             ("Super+Ctrl+Shift+Tab", "focus-collection-previous"),
@@ -626,9 +627,34 @@ mod tests {
                 "stock emitted edge triggers in {path}"
             );
         }
-        let delayed = collection_overlay_with_delay(800);
+        let delayed = collection_overlay(800, &json!({}));
         assert!(delayed.contains("left { action { event; }; dwell-time-ms 800; }"));
-        assert!(collection_overlay_with_delay(0)
+        assert!(
+            !delayed.contains("inner-edge-push"),
+            "defaults write no push block"
+        );
+        let pushed = collection_overlay(
+            350,
+            &json!({"innerEdgeHoldTime": 240, "innerEdgePushDistance": 64, "edgeHandleRight": false, "edgeHandleTop": true}),
+        );
+        assert!(
+            pushed.contains("edge-triggers {\n    inner-edge-push { hold-time-ms 240; right false; }\n    left {"),
+            "{pushed}"
+        );
+        assert!(collection_overlay(
+            350,
+            &json!({"innerEdgePush": false, "innerEdgeHoldTime": 240})
+        )
+        .contains(
+            "    inner-edge-push { left false; right false; top false; bottom false; }\n    left {"
+        ));
+        assert!(
+            !collection_overlay(350, &json!({"innerEdgeHoldTime": 5000}))
+                .contains("inner-edge-push")
+        );
+        let document: kdl::KdlDocument = pushed.parse()?;
+        assert!(document.get("edge-triggers").is_some());
+        assert!(collection_overlay(0, &json!({}))
             .contains("bottom { action { event; }; dwell-time-ms 0; }"));
         let document: kdl::KdlDocument = native.parse()?;
         let block = document

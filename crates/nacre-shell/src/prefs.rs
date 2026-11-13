@@ -63,8 +63,13 @@ pub struct Prefs {
     pub ai_sidebar_enabled: bool,
     pub lip_hover_delay: u32,
     pub click_edge_menus: bool,
-    /// N0213 `lipSize`: every edge handle's length along its edge in pixels (24..96, else 48).
-    pub lip_size: u32,
+    /// D6 (spec 0237): `edgeHandleStyle` `"arrows"` keeps the chevrons; anything else is the pearl grabber.
+    pub edge_arrows: bool,
+    /// `edgeHandleLeft` / `edgeHandleRight` / `edgeHandleTop` (`!== false`): an edge whose handle is
+    /// off shows no lip (the bar offers a button instead, N0247).
+    pub edge_handles: EdgeHandles,
+    /// `statusBadges` (`!== false`): counts on the bar's status icons.
+    pub status_badges: bool,
     /// N0213 `modules`: the default top-bar instances to show; empty shows them all.
     pub bar_modules: Vec<String>,
     /// `interfaceFont` / `monoFont`: empty means Nacre's default family.
@@ -105,6 +110,32 @@ fn strings(value: Option<&Json>, keep_empty: bool) -> Vec<String> {
                 .collect()
         })
         .unwrap_or_default()
+}
+/// Which desktop edges carry a panel handle (the bottom edge has none).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EdgeHandles {
+    pub left: bool,
+    pub right: bool,
+    pub top: bool,
+}
+impl Default for EdgeHandles {
+    fn default() -> Self {
+        Self {
+            left: true,
+            right: true,
+            top: true,
+        }
+    }
+}
+impl EdgeHandles {
+    pub fn allows(&self, edge: bead::core::Edge) -> bool {
+        match edge {
+            bead::core::Edge::Left => self.left,
+            bead::core::Edge::Right => self.right,
+            bead::core::Edge::Top => self.top,
+            bead::core::Edge::Bottom => true,
+        }
+    }
 }
 impl Default for Prefs {
     fn default() -> Self {
@@ -192,7 +223,13 @@ impl Prefs {
                 .filter(|v| v.fract() == 0.)
                 .map_or(350, |v| v.clamp(0., 800.) as u32),
             click_edge_menus: flag("clickEdgeMenus") == Some(true),
-            lip_size: number("lipSize", 48, 24, 96) as u32,
+            edge_arrows: desktop.get("edgeHandleStyle").and_then(Json::as_str) == Some("arrows"),
+            edge_handles: EdgeHandles {
+                left: on("edgeHandleLeft"),
+                right: on("edgeHandleRight"),
+                top: on("edgeHandleTop"),
+            },
+            status_badges: on("statusBadges"),
             bar_modules: strings(desktop.get("modules"), false),
             interface_font: family("interfaceFont"),
             mono_font: family("monoFont"),
@@ -272,6 +309,7 @@ impl Prefs {
             ("bar.dashboard.enabled".into(), Bool(self.dashboard_enabled)),
             ("bar.updates.enabled".into(), Bool(self.bar_updates_enabled)),
             ("bar.tray.visible".into(), Bool(self.tray_visible)),
+            ("bar.status.badges".into(), Bool(self.status_badges)),
             // The header: the bar's own height plus the top frame edge (`NacreFrame`).
             (
                 "bar.height".into(),
@@ -598,7 +636,8 @@ mod tests {
         assert!(d.frame_left && d.frame_right && d.frame_bottom && d.frame_top);
         assert!(d.ai_sidebar_enabled && !d.click_edge_menus);
         assert_eq!(d.lip_hover_delay, 350);
-        assert_eq!(d.lip_size, 48);
+        assert!(!d.edge_arrows && d.status_badges);
+        assert_eq!(d.edge_handles, EdgeHandles::default());
         assert_eq!(d.frame_settings().width, 10.);
         // Wrong types and non-integer delays mean unset; toggles are `!== false`.
         let odd = Prefs::decode(
@@ -618,21 +657,18 @@ mod tests {
         assert!(!set.frame_left && !set.frame_right && !set.frame_bottom && !set.frame_top);
         assert_eq!(set.lip_hover_delay, 0);
         assert!(set.click_edge_menus && !set.ai_sidebar_enabled);
-        assert_eq!(
-            Prefs::decode(&json!({"lipSize": 72}), &Json::Null).lip_size,
-            72
+        let handles = Prefs::decode(
+            &json!({"edgeHandleStyle": "arrows", "edgeHandleRight": false, "edgeHandleTop": 0, "statusBadges": false}),
+            &Json::Null,
         );
-        assert_eq!(
-            Prefs::decode(&json!({"lipSize": 12}), &Json::Null).lip_size,
-            24
+        assert!(handles.edge_arrows && !handles.status_badges);
+        assert!(
+            handles.edge_handles.left && !handles.edge_handles.right && handles.edge_handles.top
         );
+        assert!(!Prefs::decode(&json!({"edgeHandleStyle": "pearls"}), &Json::Null).edge_arrows);
         assert_eq!(
-            Prefs::decode(&json!({"lipSize": 140}), &Json::Null).lip_size,
-            96
-        );
-        assert_eq!(
-            Prefs::decode(&json!({"lipSize": "wide"}), &Json::Null).lip_size,
-            48
+            handles.bar_stores()["bar.status.badges"],
+            bead::core::Value::Bool(false)
         );
         // The delay is clamped to 0..800 and the sizes to sane bounds.
         let extreme = Prefs::decode(

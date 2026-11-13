@@ -1278,7 +1278,7 @@ async fn power_page_refreshes_and_starts_the_service_with_the_packages_menu_as_f
         "do:refresh-caps"
     );
     assert_eq!(
-        row(&rows, "power.profiles.fix")["options"][0]["id"],
+        row(&rows, "power.profiles.fix")["action"],
         "do:open|power-service"
     );
     settings.act("do:refresh-caps", "", wake());
@@ -1339,7 +1339,7 @@ async fn system_page_shows_the_status_and_launches_the_aur_policy_and_setup() {
     assert_eq!(row(&rows, "status.updates")["value"], "2 h ago");
     // Read-only: the status rows have no button, and the AUR policy shows its provenance.
     let aur = row(&rows, "system.packages.aurProvenance");
-    assert_eq!(aur["options"][0]["id"], "do:open|aur-review-policy");
+    assert_eq!(aur["action"], "do:open|aur-review-policy");
     assert!(aur["description"].as_str().unwrap().contains("required"));
     settings.act("do:open|aur-review-policy", "", wake());
     assert_eq!(
@@ -1348,10 +1348,7 @@ async fn system_page_shows_the_status_and_launches_the_aur_policy_and_setup() {
     );
     settle_calls(&settings, &at).await;
     // Welcome is a route to the shell; the updates view does not exist in Bead.
-    assert_eq!(
-        row(&rows, "system.welcome")["options"][0]["id"],
-        "do:open|welcome"
-    );
+    assert_eq!(row(&rows, "system.welcome")["action"], "do:open|welcome");
     assert!(rows.iter().all(|r| r["id"] != "system.updates"));
     settings.act("do:open|welcome", "", wake());
     assert_eq!(
@@ -1367,10 +1364,7 @@ async fn system_page_shows_the_status_and_launches_the_aur_policy_and_setup() {
     // N0234: without Nacre AI its pages are not reachable by id either.
     assert_eq!(settings.page_for("nacre-ai"), "addons");
     assert_eq!(settings.page_for("panels/ai-sidebar"), "panels");
-    assert_eq!(
-        row(&addons, "addon.brain")["options"][0]["id"],
-        "do:open|setup"
-    );
+    assert_eq!(row(&addons, "addon.brain")["action"], "do:open|setup");
     settings.act("do:open|setup", "", wake());
     assert_eq!(
         l.call().await,
@@ -1403,11 +1397,8 @@ async fn app_launch_buttons_use_the_closed_set_and_stay_dim_without_the_method()
     .await;
     let settings = Settings::new(Some(l.client.clone()), &root()).unwrap();
     let ai = items(&until(&settings, &stores("nacre-ai"), has("ai.open")).await);
-    assert_eq!(row(&ai, "ai.open")["options"][0]["id"], "do:open|sidebar");
-    assert_eq!(
-        row(&ai, "ai.accounts")["options"][0]["id"],
-        "do:open|ai-workspace"
-    );
+    assert_eq!(row(&ai, "ai.open")["action"], "do:open|sidebar");
+    assert_eq!(row(&ai, "ai.accounts")["action"], "do:open|ai-workspace");
     settings.act("do:open|sidebar", "", wake());
     assert_eq!(
         l.call().await,
@@ -1426,7 +1417,7 @@ async fn app_launch_buttons_use_the_closed_set_and_stay_dim_without_the_method()
     settle_calls(&settings, &at).await;
     let sound = items(&until(&settings, &stores("sound"), has("sound.routing")).await);
     assert_eq!(
-        row(&sound, "sound.routing")["options"][0]["id"],
+        row(&sound, "sound.routing")["action"],
         "do:open|audio-manager"
     );
     settings.act("do:open|audio-manager", "", wake());
@@ -1437,7 +1428,7 @@ async fn app_launch_buttons_use_the_closed_set_and_stay_dim_without_the_method()
     settle_calls(&settings, &at).await;
     let net = items(&until(&settings, &stores("network"), has("network.editor")).await);
     assert_eq!(
-        row(&net, "network.editor")["options"][0]["id"],
+        row(&net, "network.editor")["action"],
         "do:open|connection-editor"
     );
     settings.act("do:open|connection-editor", "", wake());
@@ -1457,7 +1448,7 @@ async fn app_launch_buttons_use_the_closed_set_and_stay_dim_without_the_method()
     .await;
     let settings = Settings::new(Some(l2.client.clone()), &root()).unwrap();
     let ai = items(&until(&settings, &stores("nacre-ai"), has("ai.open")).await);
-    assert_eq!(row(&ai, "ai.accounts")["options"][0]["enabled"], false);
+    assert_eq!(row(&ai, "ai.accounts")["enabled"], false);
     settings.act("do:open|ai-workspace", "", wake());
     assert!(l2.quiet());
     let _ = &mut l;

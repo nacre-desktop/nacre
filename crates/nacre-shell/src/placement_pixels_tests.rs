@@ -330,7 +330,7 @@ fn compose(
     for (lip, state) in lips {
         let rect = lip.rect((w, h));
         if let Some(svg) =
-            crate::frame_art::edge_tab(lip, (rect.w, rect.h), *state, accent, secondary)
+            crate::frame_art::handle(lip, (rect.w, rect.h), *state, accent, secondary, false)
         {
             tile(&mut pixels, rect, svg.as_bytes(), SCALE)?;
         }

@@ -30,6 +30,13 @@
       "order": 0
     },
     {
+      "id": "panels/top-bar.status",
+      "page": "panels/top-bar",
+      "labelId": "settings.registry.panels.top-bar.status.label",
+      "descriptionId": "settings.registry.panels.top-bar.status.description",
+      "order": 1
+    },
+    {
       "id": "panels/dashboard.panel",
       "page": "panels/dashboard",
       "labelId": "settings.registry.panels.dashboard.panel.label",
@@ -652,29 +659,90 @@
       }
     },
     {
-      "id": "panels.lips.lipSize",
+      "id": "panels.lips.handleStyle",
       "page": "panels",
       "section": "panels.lips",
-      "key": "lipSize",
-      "labelId": "settings.registry.panels.lips.lipSize.label",
-      "descriptionId": "settings.registry.panels.lips.lipSize.description",
-      "type": "integer",
+      "key": "handleStyle",
+      "labelId": "settings.registry.panels.lips.handleStyle.label",
+      "descriptionId": "settings.registry.panels.lips.handleStyle.description",
+      "type": "enum",
       "store": {
         "id": "desktop",
         "key": [
-          "lipSize"
+          "edgeHandleStyle"
         ]
       },
-      "default": 48,
+      "default": "grabber",
       "apply": "instant",
       "synonyms": [],
       "advanced": false,
-      "range": {
-        "min": 24,
-        "max": 96,
-        "step": 4
+      "options": [
+        {
+          "value": "grabber",
+          "labelId": "settings.registry.panels.lips.handleStyle.option.grabber"
+        },
+        {
+          "value": "arrows",
+          "labelId": "settings.registry.panels.lips.handleStyle.option.arrows"
+        }
+      ]
+    },
+    {
+      "id": "panels.lips.leftHandle",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "leftHandle",
+      "labelId": "settings.registry.panels.lips.leftHandle.label",
+      "descriptionId": "settings.registry.panels.lips.leftHandle.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "edgeHandleLeft"
+        ]
       },
-      "unit": "px"
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels.lips.rightHandle",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "rightHandle",
+      "labelId": "settings.registry.panels.lips.rightHandle.label",
+      "descriptionId": "settings.registry.panels.lips.rightHandle.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "edgeHandleRight"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels.lips.topHandle",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "topHandle",
+      "labelId": "settings.registry.panels.lips.topHandle.label",
+      "descriptionId": "settings.registry.panels.lips.topHandle.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "edgeHandleTop"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false
     },
     {
       "id": "panels.lips.hoverDelay",
@@ -702,6 +770,86 @@
       "unit": "ms"
     },
     {
+      "id": "panels.lips.innerEdgePush",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "innerEdgePush",
+      "labelId": "settings.registry.panels.lips.innerEdgePush.label",
+      "descriptionId": "settings.registry.panels.lips.innerEdgePush.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "innerEdgePush"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "visibleWhen": {
+        "capability": "innerEdgePush"
+      }
+    },
+    {
+      "id": "panels.lips.innerEdgeHoldTime",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "innerEdgeHoldTime",
+      "labelId": "settings.registry.panels.lips.innerEdgeHoldTime.label",
+      "descriptionId": "settings.registry.panels.lips.innerEdgeHoldTime.description",
+      "type": "integer",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "innerEdgeHoldTime"
+        ]
+      },
+      "default": 180,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 60,
+        "max": 600,
+        "step": 20
+      },
+      "unit": "ms",
+      "dependsOn": "panels.lips.innerEdgePush",
+      "visibleWhen": {
+        "capability": "innerEdgePush"
+      }
+    },
+    {
+      "id": "panels.lips.innerEdgePushDistance",
+      "page": "panels",
+      "section": "panels.lips",
+      "key": "innerEdgePushDistance",
+      "labelId": "settings.registry.panels.lips.innerEdgePushDistance.label",
+      "descriptionId": "settings.registry.panels.lips.innerEdgePushDistance.description",
+      "type": "integer",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "innerEdgePushDistance"
+        ]
+      },
+      "default": 64,
+      "apply": "instant",
+      "synonyms": [],
+      "advanced": false,
+      "range": {
+        "min": 16,
+        "max": 240,
+        "step": 8
+      },
+      "unit": "px",
+      "dependsOn": "panels.lips.innerEdgePush",
+      "visibleWhen": {
+        "capability": "innerEdgePush"
+      }
+    },
+    {
       "id": "panels/top-bar.panel.enabled",
       "page": "panels/top-bar",
       "section": "panels/top-bar.panel",
@@ -718,6 +866,28 @@
       "default": true,
       "apply": "instant",
       "synonyms": [],
+      "advanced": false
+    },
+    {
+      "id": "panels/top-bar.status.badges",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.status",
+      "key": "badges",
+      "labelId": "settings.registry.panels.top-bar.status.badges.label",
+      "descriptionId": "settings.registry.panels.top-bar.status.badges.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "statusBadges"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "badge",
+        "count"
+      ],
       "advanced": false
     },
     {

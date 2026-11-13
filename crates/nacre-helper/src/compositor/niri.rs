@@ -48,6 +48,9 @@ pub fn capabilities_with_native(native: niri_transport::NacreCapabilities) -> Va
     if native.cursor_shake {
         result["cursorShake"] = json!(true);
     }
+    if native.inner_edge_push {
+        result["innerEdgePush"] = json!(true);
+    }
     result
 }
 pub fn capabilities_for_socket(socket: &Path) -> Value {
@@ -550,6 +553,7 @@ mod tests {
             window_restore: true,
             launch_workspace: true,
             cursor_shake: true,
+            inner_edge_push: true,
             ..Default::default()
         });
         let mut advertised = capabilities
@@ -574,6 +578,7 @@ mod tests {
             "monitorWorkspaceActions",
             "launchWorkspace",
             "cursorShake",
+            "innerEdgePush",
         ];
         implemented.sort_unstable();
         assert_eq!(advertised, implemented);

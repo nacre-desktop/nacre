@@ -25,7 +25,8 @@ struct FrameState {
     ai: bool,
     delay: u32,
     click: bool,
-    lip_size: u32,
+    arrows: bool,
+    handles: crate::prefs::EdgeHandles,
     config: FrameConfig,
     /// The parent owns these lips; child app backdrops only preserve their input.
     parent_lips: Option<Vec<LipConfig>>,
@@ -364,7 +365,6 @@ impl Gate {
             frame: Mutex::new(FrameState {
                 ai: true,
                 delay: 350,
-                lip_size: 48,
                 ..Default::default()
             }),
             watchers: Mutex::new(Vec::new()),
@@ -395,16 +395,13 @@ impl Gate {
             .unwrap_or(&frame.config.lips)
             .iter()
             .filter(|l| {
-                self.panel_allowed(&l.opens)
+                frame.handles.allows(l.edge)
+                    && self.panel_allowed(&l.opens)
                     && (frame.parent_lips.is_some()
                         || frame.views.contains(&l.opens)
                         || (l.opens == "assistant" && crate::app::configured()))
             })
             .cloned()
-            .map(|mut lip| {
-                lip.length = frame.lip_size as f32;
-                lip
-            })
             .collect()
     }
     fn frame_lock(&self) -> std::sync::MutexGuard<'_, FrameState> {
@@ -432,14 +429,17 @@ impl Gate {
         let settings = p.frame_settings();
         let frame_changed = {
             let mut frame = self.frame_lock();
-            let moved = frame.settings != Some(settings) || frame.lip_size != p.lip_size;
+            // The handle style lives in the lip art: open panels carry their own copy.
+            let moved = frame.settings != Some(settings) || frame.arrows != p.edge_arrows;
             frame.settings = Some(settings);
             frame.ai = p.ai_sidebar_enabled;
-            let lips = (frame.delay, frame.click, frame.lip_size)
-                != (p.lip_hover_delay, p.click_edge_menus, p.lip_size);
+            let lips = (frame.delay, frame.click, frame.handles)
+                != (p.lip_hover_delay, p.click_edge_menus, p.edge_handles);
             frame.delay = p.lip_hover_delay;
             frame.click = p.click_edge_menus;
-            frame.lip_size = p.lip_size;
+            frame.handles = p.edge_handles;
+            frame.arrows = p.edge_arrows;
+            crate::frame_art::ARROWS.store(p.edge_arrows, SeqCst);
             changed |= lips;
             moved
         };
@@ -543,17 +543,13 @@ impl ShellControl for Gate {
             .config
             .lips
             .iter()
-            .cloned()
-            .map(|mut lip| {
-                lip.length = frame.lip_size as f32;
-                lip
-            })
             .filter(|l| {
-                (frame.views.contains(&l.opens)
-                    || (l.opens == "assistant" && crate::app::configured()))
+                frame.handles.allows(l.edge)
+                    && (frame.views.contains(&l.opens)
+                        || (l.opens == "assistant" && crate::app::configured()))
                     && self.panel_allowed(&l.opens)
             })
-            .filter_map(|l| configured_lip(&l, geometry))
+            .filter_map(|l| configured_lip(l, geometry))
             .collect();
         EdgeChrome {
             reserved: [
@@ -575,13 +571,8 @@ impl ShellControl for Gate {
             EdgeChrome {
                 lips: lips
                     .iter()
-                    .cloned()
-                    .map(|mut lip| {
-                        lip.length = frame.lip_size as f32;
-                        lip
-                    })
-                    .filter(|l| self.panel_allowed(&l.opens))
-                    .filter_map(|l| configured_lip(&l, geometry))
+                    .filter(|l| frame.handles.allows(l.edge) && self.panel_allowed(&l.opens))
+                    .filter_map(|l| configured_lip(l, geometry))
                     .collect(),
                 external_source: self.native_edge_source.load(SeqCst) && !frame.click,
                 ..Default::default()
@@ -702,7 +693,9 @@ mod tests {
         // The assistant lip is hidden: no such view exists yet.
         assert_eq!(ids(&chrome), [("dashboard", 50.), ("controls", 10.)]);
         assert_eq!((chrome.hover_delay_ms, chrome.click_to_open), (350, false));
-        assert!(chrome.lips.iter().all(|l| l.length == 48.));
+        // Lengths come from the frame config (the old `lipSize` override is gone).
+        let lengths: Vec<f32> = chrome.lips.iter().map(|l| l.length).collect();
+        assert_eq!(lengths, [208., 144.]);
     }
 
     #[test]
@@ -731,15 +724,21 @@ mod tests {
     }
 
     #[test]
-    fn lip_size_updates_edge_handle_lengths_live() {
-        let gate = gate_with(json!({"lipSize": 72}));
-        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 72.));
+    fn edge_handles_switch_off_per_edge_and_restyle_live() {
+        // (The assistant lip needs its view; the default gate shows dashboard and controls.)
+        let gate = gate_with(json!({"edgeHandleRight": false}));
+        assert_eq!(ids(&gate.edge_chrome()), [("dashboard", 50.)]);
         let variant = gate.decoration_variant();
-        gate.apply(&Prefs::decode(&json!({"lipSize": 24}), &json!(null)));
-        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 24.));
-        assert_ne!(gate.decoration_variant(), variant);
-        gate.apply(&Prefs::decode(&json!({"lipSize": 96}), &json!(null)));
-        assert!(gate.edge_chrome().lips.iter().all(|lip| lip.length == 96.));
+        gate.apply(&Prefs::decode(
+            &json!({"edgeHandleTop": false, "edgeHandleStyle": "arrows"}),
+            &json!(null),
+        ));
+        assert_eq!(ids(&gate.edge_chrome()), [("controls", 10.)]);
+        assert!(gate.frame_lock().arrows);
+        assert_ne!(gate.decoration_variant(), variant, "the lip art changed");
+        gate.apply(&Prefs::decode(&json!({}), &json!(null)));
+        assert!(!gate.frame_lock().arrows);
+        assert_eq!(gate.edge_chrome().lips.len(), 2);
     }
 
     #[test]

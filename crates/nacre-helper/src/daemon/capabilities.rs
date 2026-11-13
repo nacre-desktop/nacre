@@ -196,6 +196,7 @@ fn flags(probe: &Probe, hub: &Hub) -> BTreeMap<String, bool> {
         ),
         ("input.touchpadSpeed".into(), niri),
         ("cursorShake".into(), capability("cursorShake")),
+        ("innerEdgePush".into(), capability("innerEdgePush")),
     ]);
     if capability("workspaceCollections") {
         flags.insert("workspaceCollections".into(), true);

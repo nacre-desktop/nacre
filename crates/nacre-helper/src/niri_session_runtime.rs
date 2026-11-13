@@ -603,7 +603,7 @@ window-rule {
     fs::write(config.join("config.kdl"), &text)?;
     fs::write(
         config.join("nacre-niri.kdl"),
-        crate::compositor_config::collection_overlay_with_delay(lip_hover_delay(&desktop)),
+        crate::compositor_config::collection_overlay(lip_hover_delay(&desktop), &desktop),
     )?;
     for file in fs::read_dir(&config)? {
         fs::set_permissions(file?.path(), fs::Permissions::from_mode(0o600))?;

@@ -657,10 +657,18 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     let (settings, _) =
         fixture(json!({"topBarEnabled": false, "frameWidth": 12, "language": "nb"}));
     let panels = items(&settings.project(&stores("panels", "")));
-    let lip_size = row(&panels, "panels.lips.lipSize");
-    assert_eq!(lip_size["kind"], "number");
-    assert_eq!(lip_size["number"], 48);
-    assert_eq!(lip_size["unit"], "px");
+    let style = row(&panels, "panels.lips.handleStyle");
+    assert_eq!(style["kind"], "choice");
+    assert_eq!(
+        style["options"][0]["selected"], true,
+        "pearl grabber by default"
+    );
+    assert_eq!(row(&panels, "panels.lips.topHandle")["checked"], true);
+    let hold = row(&panels, "panels.lips.innerEdgeHoldTime");
+    assert_eq!(
+        (hold["kind"].as_str(), hold["number"].as_i64()),
+        (Some("number"), Some(180))
+    );
     assert_eq!(
         row(&panels, "panels.lips.detachablePanels")["kind"],
         "toggle"
@@ -690,6 +698,7 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
             .any(|r| r["id"] == "panels/top-bar.panel.clockFormat")
     );
     assert!(top.iter().any(|r| r["id"] == "panels/top-bar.panel.tray"));
+    assert_eq!(row(&top, "panels/top-bar.status.badges")["checked"], true);
     let win = items(&settings.project(&stores("windows-workspaces", "")));
     assert!(
         win.iter()

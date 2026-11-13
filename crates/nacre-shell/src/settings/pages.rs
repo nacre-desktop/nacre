@@ -415,19 +415,12 @@ impl Settings {
         Some(row)
     }
 
-    /// A button that starts one of the closed set of `launch` targets; the daemon method must be
-    /// advertised.
+    /// A row that opens one of the closed set of `launch` targets (D12: a titled link); the
+    /// daemon method must be advertised, else the row is dim.
     fn launch_row(&self, id: &str, label: &str, description: &str, key: &str) -> Json {
         let can = launch(key).is_some_and(|(method, ..)| self.can(method));
-        let mut row = actions(
-            id,
-            "",
-            description,
-            vec![opt(format!("do:open|{key}"), label, false, can)],
-            can,
-        );
-        row["own"] = json!(true);
-        row
+        json!({"id": id, "kind": "link", "label": label, "description": description,
+            "action": format!("do:open|{key}"), "enabled": can, "own": true})
     }
     /// The AUR review policy: the daemon's provenance when `system.status` has it, and the
     /// button that opens the policy view.
@@ -757,14 +750,24 @@ impl Settings {
         rows
     }
     fn assistant_rows(&self) -> Vec<Json> {
+        let sidebar = self
+            .registry
+            .page("panels/ai-sidebar")
+            .map(|p| self.registry.text(p, "descriptionId"))
+            .unwrap_or_default();
         vec![
             json!({"id": "ai.sidebar", "kind": "link", "page": "panels/ai-sidebar",
-                "label": tr("bead.settings.ai-sidebar", &[]), "description": ""}),
-            self.launch_row("ai.open", &tr("bead.settings.ai-open", &[]), "", "sidebar"),
+                "label": tr("bead.settings.ai-sidebar", &[]), "description": sidebar}),
+            self.launch_row(
+                "ai.open",
+                &tr("bead.settings.ai-open", &[]),
+                &tr("bead.settings.ai-open-detail", &[]),
+                "sidebar",
+            ),
             self.launch_row(
                 "ai.accounts",
                 &tr("bead.settings.ai-accounts", &[]),
-                "",
+                &tr("bead.settings.ai-accounts-detail", &[]),
                 "ai-workspace",
             ),
         ]

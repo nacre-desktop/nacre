@@ -220,3 +220,101 @@ Strings: new `bead.panel.{chat-ask,chat-phone,launcher-today,launcher-earlier,la
 launcher-new-in-project}`; removed with their controls `bead.panel.{chat-you,chat-latest,chat-screenshot,
 launcher-resume,launcher-quick-chat}` (shell catalog + context; no registry ids, `nacre/shell-tools/i18n`
 untouched).
+
+## N0239 — D12 Settings controls
+
+Segment control, link rows with titles, the Edge handles rows and the Top bar status rows.
+
+### What changed
+
+- **Pill segment control** (`shell/widgets/segment.luau`, a stand-in for a kit `Segment`; kit ask
+  recorded in the unit's `.lead/kit-asks.md`): a `surfaceContainerHigh` pill (34 px, radius full,
+  padding xs, gap hairline) with one full-radius option each (caption text at weight 500, padding
+  md); the selected option is `primary` / `onPrimary`, the others `onSurfaceVariant` with the kit
+  hover tint (`onSurface` .08, .12 while pressed) and a focus ring per option. `segment.Segment`
+  is the bare control (D13 Orient tabs, AI panel), `segment.Row` the `kit.FormRow` shape every
+  Settings enum row (`kind == "choice"`, up to four options) now uses instead of `kit.ChoiceRow`.
+- **Link rows with titles**: every row that opens a page or a tool (`kind == "link"`) shows a
+  title, a description and a `chevron_right` glyph; inside a section card the row is flat with the
+  row hover tint, at the top of a page it keeps its own card. Tool rows (`launch_row`: open sidebar,
+  accounts and usage, power service, AUR policy, Welcome, `nacre setup`, audio manager, connection
+  editor) are links with an `action` (`do:open|<key>`) instead of a bare button beside an empty
+  label; a missing daemon method dims the row. The AI page rows gained descriptions
+  (`bead.settings.ai-open-detail`, `bead.settings.ai-accounts-detail`) and the sidebar link reuses
+  its page description.
+- **Edge handles** (Panels page, section `panels.lips`, relabelled "Edge handles"): `Handle style`
+  (segment: Pearl grabber, the default, or Arrows → `desktop.edgeHandleStyle`), `Left edge`,
+  `Right edge`, `Top edge` toggles (`desktop.edgeHandleLeft/Right/Top`, default on; an edge whose
+  handle is off has no lip, the bar button fallback is N0247). The old `panels.lips.lipSize` row,
+  its strings, `Prefs::lip_size` and the lip-length override are gone (a saved `lipSize` is ignored).
+  Readers: `Prefs::edge_arrows` / `Prefs::edge_handles`; `ShellGate::apply` filters the frame's lips
+  per edge and switches the lip art live (`frame_art::ARROWS`, a process-wide flag the one gate
+  sets; a decoration variant bump repaints open panels' art too). The pearl grabber art (`frame_art::grabber`) is the minimal D6 handle: a
+  6 × 56 rounded bar in `primary` at .9 centred on the lip, 8 × 72 while the dwell charges with the
+  charge filling it top-down in `secondary`; N0247 adds the 16 px hit target and the hover growth
+  (the framework's `LipState` has no hover flag yet, kit ask 3).
+- **Inner edge push** (nacre-niri only, rows gated by the new `innerEdgePush` capability): `Push
+  through shared edges` (`desktop.innerEdgePush`, default on), `Hold time` (`innerEdgeHoldTime`,
+  60–600 ms, default 180) and `Push distance` (`innerEdgePushDistance`, 16–240 px, default 64).
+  The helper writes nacre-niri's `edge-triggers { inner-edge-push { … } }` block into
+  `nacre-niri.kdl` with only the keys the user changed (`hold-time-ms`, `cross-distance`, `<edge>
+  false` for an edge whose handle is off; nothing at the defaults, NN0041 interface). Turning push
+  off writes all four edges `false`, not `off`: `off` makes nacre-niri report the capability as
+  false, which would hide the row that turns it back on. The overlay is written when the session is
+  prepared, so these three rows apply at the next sign-in (the toggle's description says so).
+  Capability chain: `NacreCapabilities.inner_edge_push` → compositor snapshot `innerEdgePush` →
+  daemon flag `innerEdgePush` → registry `visibleWhen`.
+- **Top bar status** (Top bar page, new section `panels/top-bar.status`): `Badges`
+  (`desktop.statusBadges`, default on → `bar.status.badges`; N0237's `status_glyph` in
+  `shell/widgets/context.luau` hides every count pill when it is off).
+  The status order stays the existing Modules list; the section description points there, so there
+  is one ordering control.
+
+### Motion
+
+No new transitions: the segment and link rows use the kit hover/pressed fills (the framework's
+state motion, `kit.motion.state` 120 ms) and the existing focus ring. The handle style change
+repaints the lip art through the decoration variant (no animation; the lip is 10 px wide). The
+grabber's charge is the existing dwell fill. Nothing allocates per frame. No panel motion changed,
+so there is no nested PANEL_SLIDE capture for this unit; reduced motion is unaffected.
+
+### Evidence
+
+- Goldens updated (looked at each): every Settings page with an enum row now draws the segment and
+  every link row its chevron: `settings-{addons,brain,date-time-language,launcher,nacre-ai,panels,
+  power,search,windows-workspaces}-1`, `settings-kit-1` (the kit gallery), and
+  `frame/frame-lips-{idle,dwell,open}` (grabber instead of chevron). `settings-panels-top-bar-1`
+  is unchanged (the Status section is below its fold; asserted in `settings_tests`).
+- Before/after real-renderer PNGs (bead_test CPU harness, 960 px, dark and an Orient light scheme):
+  Panels (edge handles, arrows + top off, push rows, segment hover / pressed / focus), AI page
+  (segment, link hover / pressed / focus), Top bar (Status). Kept with a README in the unit
+  worktree's `.lead/renders/` (not committed).
+- Checks on dev-2 (arch-nacre image, rustfmt 1.10): `cargo fmt --all --check`, clippy `-p nacre-shell` and
+  `-p nacre-helper --all-targets -D warnings`, the whole `nacre-shell` test binary (929 passed, 4
+  ignored), all `nacre-helper` test targets (1320 passed), Luau analyzer `--check-generated` (186
+  modules), i18n coverage (1705 messages), compositor boundary; run on origin/main 2770bb45b, then
+  fast-forwarded over two commits that touch none of these files.
+
+### Kit asks (forwarded by the lead)
+
+1. `kit.Segment` (Luau component; stand-in `shell/widgets/segment.luau`, `ChoiceRow` should adopt it).
+2. `kit.LinkRow` (title + description + chevron, row-wide hover; stand-in: the `link` branch in
+   `shell/settings/main.luau`).
+3. `LipState.hovered` (bead-wayland edges): the grabber's 6 → 8 px hover growth before the dwell.
+4. Edge art repaint on demand: switching grabber ↔ arrows bumps the decoration variant (full chrome
+   rebuild) today.
+
+### Known gaps
+
+- Grabber hover growth before the dwell, the 16 px hit target and the inner-edge hint style: N0247
+  (kit ask 3). N0247 also owns the bar buttons shown when a handle is off.
+- The inner-edge push rows apply at the next sign-in: `nacre-niri.kdl` is written when the session
+  is prepared, and a live rewrite would be a new daemon path (not built).
+- A vertically stacked monitor's bottom inner edge stays sticky (default `bottom true`) though
+  Nacre's default frame has no bottom lip; left to N0247 with the rest of the inner-edge behaviour.
+- The stepper value column stays the kit's 64 px (the review's 48 px tabular column is a kit
+  `NumberRow` change). N0237's Stack style description is clipped beside the wider segment at
+  960 px; shorten it with the next string pass.
+- Light goldens for Settings: D17 (N0249); this unit's light evidence is the renders above.
+- Delete `shell/widgets/segment.luau` and the `link` branch's chevron when `kit.Segment` /
+  `kit.LinkRow` land (asks 1 and 2).
