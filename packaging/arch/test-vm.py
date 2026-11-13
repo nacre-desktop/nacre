@@ -244,6 +244,7 @@ export GNUPGHOME=/tmp/repo-key
                 "grep -q 'non-interactive setup requires --plan or --yes' /tmp/bootstrap.log; }; pacman -Q nacre",
                 timeout=600,
             )
+            guest("sudo pacman-key --list-keys " + FINGERPRINT)  # from nacre-keyring
             finish("setup")
             guest(
                 f"printf 'y\\n' | nacre setup --non-interactive --profile default --layout us --compositor {args.tier} --yes --install-deps",
@@ -297,6 +298,11 @@ systemctl --user is-active nacre-shell.service
             finish("update")
             update = guest(
                 "if nacre --help 2>&1 | grep -qw update; then nacre update; else echo 'SKIP: update absent in candidate'; fi"
+            )
+            # The default profile keeps AUR review on.
+            guest(
+                "~/.local/share/nacre/shell/tools/nacre-helper aur-review policy"
+                " | tee /dev/stderr | jq -e '.mode == \"required\"'"
             )
             finish("uninstall")
             if "SKIP: update absent" in update:
