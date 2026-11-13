@@ -1,6 +1,7 @@
-//! N0072: a lease-only default-output monitor. Reuses OSD's audio backend for
-//! sink-change signals. No capture, FFT plan, polling or audio connection at READY.
-use super::hub::{failure, Notice, Shared};
+//! N0072: a lease-only default-output monitor. The PipeWire client (`audio`) captures the
+//! default sink's monitor only while a client subscribes and feeds the analysis here. No FFT
+//! plan, polling or capture at READY.
+use super::hub::{failure, Shared};
 use crate::Result;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use nacre_protocol::{
@@ -9,31 +10,14 @@ use nacre_protocol::{
 };
 use rustfft::{num_complex::Complex, Fft, FftPlanner};
 use serde_json::{json, Value};
-use std::{collections::BTreeMap, ffi::OsString, process::Stdio, sync::Arc, time::Duration};
-use tokio::{io::AsyncReadExt, process::Command};
+use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 pub const TOPIC: &str = "audio.spectrum";
-pub(super) const CLIENT: &str = "nacre-spectrum";
-const RATE: usize = 48000;
-const HOP: usize = RATE / 60;
+pub(super) const RATE: usize = 48000;
+/// Samples per analysis step: one sixtieth of a second.
+pub(super) const HOP: usize = RATE / 60;
 const SIZE: usize = 4096;
 const SILENCE: f32 = 0.0001;
-
-#[derive(Clone)]
-pub struct Env {
-    pub parec: OsString,
-    pub retry: Duration,
-    pub silence_after: Duration,
-}
-impl Env {
-    pub fn production() -> Self {
-        Self {
-            parec: "parec".into(),
-            retry: Duration::from_secs(2),
-            silence_after: Duration::from_secs(3),
-        }
-    }
-}
 
 pub fn methods() -> BTreeMap<String, Method> {
     let schema: Value = serde_json::from_str(include_str!(
@@ -101,7 +85,7 @@ fn empty(available: bool) -> AudioSpectrumState {
         paused: true,
     }
 }
-fn publish(hub: &Shared, state: &AudioSpectrumState) -> Result<()> {
+pub(super) fn publish(hub: &Shared, state: &AudioSpectrumState) -> Result<()> {
     hub.borrow_mut()
         .publish(TOPIC, serde_json::to_value(state)?)?;
     Ok(())
@@ -110,7 +94,7 @@ pub fn initial(hub: &Shared) -> Result<()> {
     publish(hub, &empty(false))
 }
 
-struct Analyzer {
+pub(super) struct Analyzer {
     fft: Arc<dyn Fft<f32>>,
     scratch: Vec<Complex<f32>>,
     buffer: Vec<Complex<f32>>,
@@ -124,7 +108,7 @@ struct Analyzer {
     state: AudioSpectrumState,
 }
 impl Analyzer {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let fft = FftPlanner::new().plan_fft_forward(SIZE);
         let bins = std::array::from_fn(|i| {
             let edge = |i: usize| {
@@ -150,7 +134,28 @@ impl Analyzer {
             state: empty(false),
         }
     }
-    fn ingest(&mut self, bytes: &[u8], silence_after: Duration) {
+    /// The onset counter survives a release and a restart of the daemon's capture.
+    pub(super) fn set_onset(&mut self, onset: u64) {
+        self.state.onset = onset;
+    }
+    /// The unavailable state a released lease publishes, onset kept.
+    pub(super) fn released(&self) -> AudioSpectrumState {
+        let mut state = empty(false);
+        state.onset = self.state.onset;
+        state
+    }
+    /// A monitor that stopped sending PCM: clear the display and the baselines.
+    pub(super) fn stall(&mut self, silence_after: Duration) -> &AudioSpectrumState {
+        self.samples.fill(0.0);
+        self.quiet = silence_after;
+        self.floor = 0.0;
+        self.state.level = 0.0;
+        self.state.peak = 0.0;
+        self.state.beat = false;
+        self.state.paused = true;
+        self.analyze(Duration::ZERO)
+    }
+    pub(super) fn ingest(&mut self, bytes: &[u8], silence_after: Duration) {
         self.state.health.available = true;
         self.samples.copy_within(HOP.., 0);
         let mut energy = 0.0;
@@ -191,7 +196,7 @@ impl Analyzer {
         }
         self.floor += (rms - self.floor) * 0.05;
     }
-    fn analyze(&mut self, period: Duration) -> &AudioSpectrumState {
+    pub(super) fn analyze(&mut self, period: Duration) -> &AudioSpectrumState {
         if self.state.paused {
             self.smooth.fill(0.0);
             self.state.bands = STANDARD.encode([0; 64]);
@@ -219,124 +224,6 @@ impl Analyzer {
         }
         self.state.bands = STANDARD.encode(bytes);
         &self.state
-    }
-}
-
-fn sink(hub: &Shared) -> Option<String> {
-    hub.borrow()
-        .snapshot_ref("audio")
-        .and_then(|s| s["default_output"].as_str())
-        .map(str::to_owned)
-}
-async fn capture(hub: &Shared, env: &Env, onset: &mut u64) -> Result<()> {
-    let mut changes = hub.borrow().observe();
-    let mut current_sink = sink(hub);
-    let mut child = Command::new(&env.parec)
-        .args([
-            "--device=@DEFAULT_MONITOR@",
-            "--raw",
-            "--format=s16le",
-            "--rate=48000",
-            "--channels=1",
-            "--latency-msec=10",
-            "--process-time-msec=10",
-            &format!("--client-name={CLIENT}"),
-            &format!("--stream-name={CLIENT}"),
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .kill_on_drop(true)
-        .spawn()?;
-    let mut stdout = child.stdout.take().ok_or("capture stdout missing")?;
-    let mut analyzer = Analyzer::new();
-    analyzer.state.onset = *onset;
-    let mut bytes = [0; HOP * 2];
-    let mut filled = 0;
-    let mut elapsed = Duration::ZERO;
-    let mut idle_at = tokio::time::Instant::now() + env.silence_after;
-    let mut stalled = false;
-    loop {
-        tokio::select! {
-            result = stdout.read(&mut bytes[filled..]) => {
-                let count = result?;
-                if count == 0 { return Err("Spectrum capture ended".into()); }
-                filled += count;
-                if filled != bytes.len() { continue; }
-                filled = 0;
-                idle_at = tokio::time::Instant::now() + env.silence_after;
-                stalled = false;
-                analyzer.ingest(&bytes, env.silence_after);
-                *onset = analyzer.state.onset;
-                elapsed += Duration::from_secs_f64(1.0 / 60.0);
-                let period = hub.borrow().spectrum_period();
-                if elapsed >= period {
-                    publish(hub, analyzer.analyze(elapsed))?;
-                    elapsed = Duration::ZERO;
-                }
-            }
-            _ = tokio::time::sleep_until(idle_at), if !stalled => {
-                // Suspended monitors may stop sending PCM entirely. Clear the
-                // display once, then wait without a timer until audio resumes.
-                stalled = true;
-                analyzer.samples.fill(0.0);
-                analyzer.quiet = env.silence_after;
-                analyzer.floor = 0.0;
-                analyzer.state.level = 0.0;
-                analyzer.state.peak = 0.0;
-                analyzer.state.beat = false;
-                analyzer.state.paused = true;
-                publish(hub, analyzer.analyze(Duration::ZERO))?;
-            }
-            notice = changes.recv() => {
-                if matches!(notice, Ok(Notice::Changed { ref topic, .. }) if topic == "audio") || notice.is_err() {
-                    let next = sink(hub);
-                    if next != current_sink {
-                        // A stream binds its initial default. Reopen after a backend sink change.
-                        return Ok(());
-                    }
-                    current_sink = next;
-                }
-            }
-        }
-    }
-}
-async fn keep_capturing(hub: &Shared, env: &Env, onset: &mut u64) -> Result<()> {
-    loop {
-        match capture(hub, env, onset).await {
-            Ok(()) => {} // A sink switch restarts immediately.
-            Err(error) => {
-                tracing::debug!(%error, "Spectrum capture unavailable");
-                let mut state = empty(false);
-                state.onset = *onset;
-                publish(hub, &state)?;
-                tokio::time::sleep(env.retry).await;
-            }
-        }
-    }
-}
-pub async fn run(hub: Shared, env: Env) -> Result<()> {
-    let mut onset = hub
-        .borrow()
-        .snapshot_ref(TOPIC)
-        .and_then(|s| s["onset"].as_u64())
-        .unwrap_or(0);
-    let mut interest = hub.borrow_mut().watch_interest(TOPIC);
-    hub.borrow_mut().service("audio-spectrum", "running", 0)?;
-    loop {
-        while !*interest.borrow() {
-            interest.changed().await?;
-        }
-        let unwanted = async {
-            while *interest.borrow() {
-                interest.changed().await?;
-            }
-            Result::Ok(())
-        };
-        tokio::select! { result = keep_capturing(&hub, &env, &mut onset) => result?, result = unwanted => result? }
-        let mut state = empty(false);
-        state.onset = onset;
-        publish(&hub, &state)?;
     }
 }
 

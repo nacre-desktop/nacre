@@ -8,6 +8,8 @@ use tokio::task::LocalSet;
 struct Fixture {
     dir: tempfile::TempDir,
     hub: Shared,
+    /// What the fake PipeWire client was asked to do.
+    audio: Arc<std::sync::Mutex<Vec<String>>>,
     missing: std::rc::Rc<RefCell<Vec<String>>>,
     _sockets: Vec<UnixListener>,
 }
@@ -53,22 +55,6 @@ impl Fixture {
         }
         write(&root.join("profile"), "balanced\n");
         write(&root.join("night"), "false");
-        write(
-            &root.join("pw.json"),
-            r#"[{"id":42,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"alsa_output.fake","media.class":"Audio/Sink"}}},
-               {"id":43,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"video.fake","media.class":"Video/Source"}}},
-               {"id":44,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"alsa_input.fake","media.class":"Audio/Source"}}},
-               {"id":45,"type":"PipeWire:Interface:Node","info":{"props":{"node.name":"stream.fake","media.class":"Stream/Output/Audio"}}}]"#,
-        );
-        script(
-            &root.join("wpctl"),
-            &format!("[ -f '{d}/gone' ] && exit 1\ncase \"$1\" in get-volume) echo 'Volume: 0.50';; *) echo \"$@\" >> '{d}/wpctl.log';; esac\n"),
-        );
-        script(
-            &root.join("pactl"),
-            &format!("[ -f '{d}/gone' ] && exit 1\n[ \"$2\" = 99 ] && exit 1\necho \"$@\" >> '{d}/pactl.log'\n"),
-        );
-        script(&root.join("pw-dump"), &format!("cat '{d}/pw.json'\n"));
         script(
             &root.join("rfkill"),
             &format!(
@@ -111,10 +97,13 @@ esac
             ),
         );
         let hub = Hub::new("fixture".into(), false, Duration::from_millis(1)).shared();
+        let (client, audio) = crate::daemon::audio::Handle::fake(|_| Ok(()));
+        hub.borrow_mut().audio = Some(client);
         let missing = std::rc::Rc::new(RefCell::new(Vec::<String>::new()));
         let fixture = Self {
             dir,
             hub,
+            audio,
             missing,
             _sockets: vec![pipewire, system_bus, user_bus],
         };
@@ -129,9 +118,6 @@ esac
         let p = |name: &str| self.path(name).display().to_string();
         Env {
             engine: self.path("engine"),
-            wpctl: p("wpctl"),
-            pactl: p("pactl"),
-            pw_dump: p("pw-dump"),
             rfkill: p("rfkill"),
             powerprofilesctl: p("powerprofilesctl"),
             systemctl: p("systemctl"),
@@ -173,13 +159,6 @@ async fn released() {
     panic!("the capture lane was not released");
 }
 
-/// The audio lane is one process-wide lock: tests that use it take turns instead of racing.
-fn audio_turn() -> std::sync::MutexGuard<'static, ()> {
-    static TURN: std::sync::Mutex<()> = std::sync::Mutex::new(());
-    TURN.lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-}
-
 /// `collect` with a synchronous light scan, as `scan_lights` would provide.
 fn collect_now(f: &Fixture, probe: &Probe, prior: &ControlsState) -> ControlsState {
     let env = f.env();
@@ -201,8 +180,7 @@ fn run<F: std::future::Future>(future: F) -> F::Output {
 }
 
 #[test]
-fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
-    let _turn = audio_turn();
+fn audio_actions_reach_the_pipewire_client_with_linear_values() {
     run(async {
         let f = Fixture::new();
         f.call("audio.set_volume", json!({"target":"sink","value":0.125}))
@@ -214,42 +192,16 @@ fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
         f.call("audio.set_mute", json!({"target":"sink","muted":true}))
             .await
             .unwrap();
-        f.call("audio.set_mute", json!({"target":"source","muted":false}))
-            .await
-            .unwrap();
         f.call(
             "audio.set_volume",
             json!({"target":"node","node":"alsa_output.fake","value":0.0}),
         )
         .await
         .unwrap();
+        // N0061: application streams by their topic id, kind and numeric index only.
         f.call(
-            "audio.set_mute",
-            json!({"target":"node","node":"alsa_output.fake","muted":true}),
-        )
-        .await
-        .unwrap();
-        assert_eq!(
-            f.text("wpctl.log"),
-            "set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.5000\n\
-             set-volume -l 1.0 @DEFAULT_AUDIO_SOURCE@ 1.0000\n\
-             set-mute @DEFAULT_AUDIO_SINK@ 1\n\
-             set-mute @DEFAULT_AUDIO_SOURCE@ 0\n\
-             set-volume -l 1.0 42 0.0000\n\
-             set-mute 42 1\n"
-        );
-        // N0061: application streams go to pactl by numeric index only.
-        for (node, value) in [("sink-input:7", 0.125), ("source-output:12", 1.0)] {
-            f.call(
-                "audio.set_volume",
-                json!({"target":"stream","node":node,"value":value}),
-            )
-            .await
-            .unwrap();
-        }
-        f.call(
-            "audio.set_mute",
-            json!({"target":"stream","node":"sink-input:7","muted":true}),
+            "audio.set_volume",
+            json!({"target":"stream","node":"sink-input:7","value":0.125}),
         )
         .await
         .unwrap();
@@ -259,13 +211,27 @@ fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
         )
         .await
         .unwrap();
+        for node in ["alsa_output.fake", "alsa_input.fake"] {
+            let reply = f
+                .call("audio.set_default", json!({ "node": node }))
+                .await
+                .unwrap();
+            assert_eq!(reply, json!({"changed":true}));
+        }
         assert_eq!(
-            f.text("pactl.log"),
-            "set-sink-input-volume 7 32768\n\
-             set-source-output-volume 12 65536\n\
-             set-sink-input-mute 7 1\n\
-             set-source-output-mute 12 0\n"
+            f.audio.lock().unwrap().as_slice(),
+            [
+                "volume sink 0.125",
+                "volume source 1",
+                "mute sink true",
+                "volume alsa_output.fake 0",
+                "volume sink-input:7 0.125",
+                "mute source-output:12 false",
+                "default alsa_output.fake",
+                "default alsa_input.fake",
+            ]
         );
+        // Bad ids and parameters never reach the client.
         for node in [
             "sink-input:7;id",
             "sink:7",
@@ -281,141 +247,56 @@ fn volume_is_linear_on_the_wire_and_cubic_for_wpctl() {
                 .unwrap_err();
             assert_eq!(error.code, ErrorCode::Validation, "{node}");
         }
-        // A stream that ended (pactl refuses the index) is unavailable.
-        let error = f
-            .call(
-                "audio.set_mute",
-                json!({"target":"stream","node":"sink-input:99","muted":true}),
-            )
-            .await
-            .unwrap_err();
-        assert_eq!(error.code, ErrorCode::Unavailable);
-        assert_eq!(f.text("pactl.log").lines().count(), 4);
-    });
-}
-
-#[test]
-fn absolute_volume_write_does_not_publish_an_optimistic_audio_level() {
-    let _turn = audio_turn();
-    run(async {
-        let f = Fixture::new();
-        f.hub
-            .borrow_mut()
-            .publish(
-                "audio",
-                json!({
-                    "default_output": "alsa_output.fake",
-                    "nodes": {
-                        "items": {"alsa_output.fake": {"volume": 1.0}},
-                        "order": ["alsa_output.fake"]
-                    }
-                }),
-            )
-            .unwrap();
-        let before = f.hub.borrow().snapshot("audio").unwrap();
-        let mut notices = f.hub.borrow().observe();
-
-        f.call("audio.set_volume", json!({"target":"sink","value":0.008}))
-            .await
-            .unwrap();
-
-        assert_eq!(
-            f.text("wpctl.log"),
-            "set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 0.2000\n"
-        );
-        assert_eq!(f.hub.borrow().snapshot("audio").unwrap(), before);
-        let audio_changed = std::iter::from_fn(|| notices.try_recv().ok()).any(|notice| {
-            matches!(
-                notice,
-                crate::daemon::hub::Notice::Changed { topic, .. } if topic == "audio"
-            )
-        });
-        assert!(!audio_changed);
-    });
-}
-
-#[test]
-fn audio_refuses_bad_targets_missing_nodes_and_vanished_devices() {
-    let _turn = audio_turn();
-    run(async {
-        let f = Fixture::new();
-        for params in [
-            json!({"target":"sink","value":1.5}),
-            json!({"target":"sink","value":-0.1}),
-            json!({"target":"node","value":0.5}),
-            json!({"target":"sink","node":"x","value":0.5}),
-            json!({"target":"node","node":"a b","value":0.5}),
-            json!({"target":"node","node":"$(id)","value":0.5}),
-            json!({"target":"sink","value":0.5,"extra":1}),
+        for (method, params) in [
+            ("audio.set_volume", json!({"target":"sink","value":1.5})),
+            ("audio.set_volume", json!({"target":"sink","value":-0.1})),
+            ("audio.set_volume", json!({"target":"node","value":0.5})),
+            (
+                "audio.set_volume",
+                json!({"target":"sink","node":"x","value":0.5}),
+            ),
+            (
+                "audio.set_volume",
+                json!({"target":"node","node":"a b","value":0.5}),
+            ),
+            (
+                "audio.set_volume",
+                json!({"target":"node","node":"$(id)","value":0.5}),
+            ),
+            (
+                "audio.set_volume",
+                json!({"target":"sink","value":0.5,"extra":1}),
+            ),
+            ("audio.set_default", json!({})),
+            ("audio.set_default", json!({"node":""})),
+            ("audio.set_default", json!({"node":"a b"})),
+            ("audio.set_default", json!({"node":"$(id)"})),
+            (
+                "audio.set_default",
+                json!({"node":"alsa_output.fake","target":"sink"}),
+            ),
         ] {
-            let error = f
-                .call("audio.set_volume", params.clone())
-                .await
-                .unwrap_err();
+            let error = f.call(method, params.clone()).await.unwrap_err();
             assert_eq!(error.code, ErrorCode::Validation, "{params}");
             assert_eq!(error.dispatched, Some(false));
         }
-        // Unknown node and a non-audio node.
-        for name in ["nope", "video.fake"] {
-            let error = f
-                .call(
-                    "audio.set_mute",
-                    json!({"target":"node","node":name,"muted":true}),
-                )
-                .await
-                .unwrap_err();
-            assert_eq!(error.code, ErrorCode::Unavailable, "{name}");
-        }
-        write(&f.path("gone"), "");
+        assert_eq!(f.audio.lock().unwrap().len(), 8, "nothing else written");
+        // What the client refuses (a vanished device or stream) is unavailable; no client at
+        // all means the methods are not offered.
+        let (refusing, _) =
+            crate::daemon::audio::Handle::fake(|_| Err(unavailable("Audio device is unavailable")));
+        f.hub.borrow_mut().audio = Some(refusing);
         let error = f
             .call("audio.set_volume", json!({"target":"sink","value":0.5}))
             .await
             .unwrap_err();
         assert_eq!(error.code, ErrorCode::Unavailable);
-        assert!(f.text("wpctl.log").is_empty(), "nothing was written");
-    });
-}
-
-#[test]
-fn the_default_device_is_a_named_sink_or_source_and_nothing_else() {
-    let _turn = audio_turn();
-    run(async {
-        let f = Fixture::new();
-        for node in ["alsa_output.fake", "alsa_input.fake"] {
-            let reply = f
-                .call("audio.set_default", json!({ "node": node }))
-                .await
-                .unwrap();
-            assert_eq!(reply, json!({"changed":true}));
-        }
-        assert_eq!(f.text("wpctl.log"), "set-default 42\nset-default 44\n");
-        // A stream, a video node and an unknown name are unavailable; bad names never get that far.
-        for node in ["stream.fake", "video.fake", "nope"] {
-            let error = f
-                .call("audio.set_default", json!({ "node": node }))
-                .await
-                .unwrap_err();
-            assert_eq!(error.code, ErrorCode::Unavailable, "{node}");
-        }
-        for params in [
-            json!({}),
-            json!({"node":""}),
-            json!({"node":"a b"}),
-            json!({"node":"$(id)"}),
-            json!({"node":"alsa_output.fake","target":"sink"}),
-        ] {
-            let error = f
-                .call("audio.set_default", params.clone())
-                .await
-                .unwrap_err();
-            assert_eq!(error.code, ErrorCode::Validation, "{params}");
-            assert_eq!(error.dispatched, Some(false));
-        }
-        assert_eq!(
-            f.text("wpctl.log").lines().count(),
-            2,
-            "nothing else written"
-        );
+        f.hub.borrow_mut().audio = None;
+        let error = f
+            .call("audio.set_mute", json!({"target":"sink","muted":true}))
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, ErrorCode::Unavailable);
     });
 }
 
@@ -1011,8 +892,8 @@ fn methods_are_advertised_only_with_their_backend_and_never_in_safe_mode() {
         for name in ["airplane.set", "stay_awake.set", "recorder.start"] {
             assert!(!bare.iter().any(|m| m == name), "{name}");
         }
-        // PipeWire socket gone: audio disappears.
-        std::fs::remove_file(f.path("run/pipewire-0")).unwrap();
+        // No PipeWire client: audio disappears.
+        f.hub.borrow_mut().audio = None;
         assert!(!all(&f).iter().any(|m| m == "audio.set_mute"));
         f.hub.borrow_mut().safe = true;
         assert!(available_methods(&f.hub.borrow()).is_empty());

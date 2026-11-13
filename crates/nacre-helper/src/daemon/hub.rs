@@ -116,6 +116,8 @@ pub struct Hub {
     pub caps_lock: tokio::sync::watch::Sender<Option<bool>>,
     pub settings: Option<Rc<super::settings::Service>>,
     pub ai_chat: Option<Rc<super::ai_chat::Host>>,
+    /// N0314: the PipeWire client every audio action goes through.
+    pub audio: Option<super::audio::Handle>,
     /// QML's bounded previous-wallpaper stack, updated only when the active
     /// wallpaper producer observes a successful selection.
     pub(super) wallpaper_history: super::behaviours::WallpaperHistory,
@@ -192,6 +194,7 @@ impl Hub {
             caps_lock: tokio::sync::watch::channel(None).0,
             settings: None,
             ai_chat: None,
+            audio: None,
             wallpaper_history: super::behaviours::WallpaperHistory::default(),
         }
     }

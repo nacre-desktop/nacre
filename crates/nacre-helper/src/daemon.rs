@@ -1,6 +1,7 @@
 //! The persistent desktop service. Tasks run on one current-thread runtime.
 pub mod active_wallpaper;
 pub mod ai_chat;
+pub mod audio;
 pub mod audio_peak;
 pub mod audio_spectrum;
 pub mod bar_services;
@@ -81,15 +82,13 @@ async fn serve(
     let fast_listener = socket::FastListener::acquire(&listener.path)?;
     let listener_socket = tokio::net::UnixListener::from_std(listener.take()?)?;
     let (fast_requests, mut fast_rx) = tokio::sync::mpsc::channel(256);
-    let (audio_step_events, mut audio_step_rx) = tokio::sync::mpsc::unbounded_channel();
-    let audio_step_worker = pill_controls::AudioStepWorker::start(audio_step_events)?;
-    let audio_available = pill_controls::fast_backend_present("audio.step");
+    // N0314: the one PipeWire client; the fast lane sends key steps straight to it.
+    let (audio_handle, audio_events, audio_client) = audio::spawn()?;
     let fast_server = fast::Server::start(
         fast_listener,
         fast_requests,
-        audio_step_worker.sender(),
+        audio_handle.clone(),
         counter.safe,
-        audio_available,
     )?;
     let brain_git_task = tokio::task::spawn_local(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(30));
@@ -108,6 +107,7 @@ async fn serve(
     });
     helpers::cleanup()?;
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
+    hub.borrow_mut().audio = Some(audio_handle.clone());
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
     let status = hub.borrow().status();
     hub.borrow_mut().publish("daemon", status)?;
@@ -335,7 +335,6 @@ async fn serve(
     } else {
         None
     };
-    // N0043/N0059: one audio subscription serves both OSD and audio state leases.
     let osd_service = if !counter.safe {
         osd::initial(&hub)?;
         let (osd_hub, osd_paths) = (hub.clone(), paths.clone());
@@ -347,26 +346,24 @@ async fn serve(
     } else {
         None
     };
-    // N0061: the microphone peak capture runs only while `audio.peak` has a subscriber.
-    let audio_peak_service = if !counter.safe {
-        audio_peak::initial(&hub)?;
-        let peak_hub = hub.clone();
-        Some(tokio::task::spawn_local(supervisor::run(
-            "audio-peak",
-            hub.clone(),
-            move || audio_peak::run(peak_hub.clone(), audio_peak::Env::production()),
-        )))
-    } else {
-        None
-    };
-    let spectrum_service = if !counter.safe {
-        audio_spectrum::initial(&hub)?;
-        let spectrum_hub = hub.clone();
-        Some(tokio::task::spawn_local(supervisor::run(
-            "audio-spectrum",
-            hub.clone(),
-            move || audio_spectrum::run(spectrum_hub.clone(), audio_spectrum::Env::production()),
-        )))
+    // N0314: one PipeWire client feeds `audio`, `audio.peak`, `audio.spectrum` and the audio OSD.
+    audio::initial(&hub)?;
+    audio_peak::initial(&hub)?;
+    audio_spectrum::initial(&hub)?;
+    let audio_service = if !counter.safe {
+        let (audio_hub, audio_handle) = (hub.clone(), audio_handle.clone());
+        Some(tokio::task::spawn_local(async move {
+            if let Err(error) = audio::run(
+                audio_hub,
+                audio_handle,
+                audio_events,
+                Duration::from_secs(3),
+            )
+            .await
+            {
+                tracing::error!(%error, "Audio service ended");
+            }
+        }))
     } else {
         None
     };
@@ -586,11 +583,6 @@ async fn serve(
     let mut fast_calls = tokio::task::JoinSet::new();
     let watchdog = notify::watchdog();
     tokio::pin!(watchdog);
-    // N0102: the audio step worker keeps the default sink's level from the `audio` topic.
-    let audio_observer = audio_step_worker.sender();
-    let mut audio_notices = hub.borrow().observe();
-    let mut observed_audio = None;
-    let mut observing_audio = true;
     loop {
         tokio::select! {
             result=&mut ready,if !is_ready=>{result?;is_ready=true;tracing::info!("Daemon ready");},
@@ -608,29 +600,6 @@ async fn serve(
                     }
                 });
             },
-            notice=audio_notices.recv(),if observing_audio=>match notice {
-                Ok(hub::Notice::Changed{topic,..}) if topic=="audio"=>{
-                    let observation=pill_controls::audio_observation(&hub);
-                    if observation.is_some() && observation!=observed_audio {
-                        observed_audio=observation.clone();
-                        if let Some(observation)=observation {
-                            let _=audio_observer.try_send(pill_controls::AudioStepCommand::Observe(observation));
-                        }
-                    }
-                },
-                Err(tokio::sync::broadcast::error::RecvError::Closed)=>observing_audio=false,
-                _=>{},
-            },
-            Some(completion)=audio_step_rx.recv()=>{
-                match completion.result {
-                    Ok(outcome)=>{
-                        if let Err(error)=pill_controls::publish_audio_step(&hub,&outcome,completion.key_ms) {
-                            tracing::warn!(code=?error.code,"Completed audio step could not be published");
-                        }
-                    },
-                    Err(error)=>tracing::warn!(code=?error.code,"Queued audio step failed"),
-                }
-            },
             result=fast_calls.join_next(),if !fast_calls.is_empty()=>match result {
                 Some(Ok(()))=>{},
                 Some(Err(_))=>tracing::error!("Queued one-shot daemon call task failed"),
@@ -647,8 +616,6 @@ async fn serve(
     drop(fast_server);
     brain_git_task.abort();
     let _ = brain_git_task.await;
-    drop(audio_observer);
-    drop(audio_step_worker);
     fast_calls.abort_all();
     while fast_calls.join_next().await.is_some() {}
     clients.abort_all();
@@ -763,14 +730,11 @@ async fn serve(
             }
         }
     }
-    if let Some(service) = audio_peak_service {
+    if let Some(service) = audio_service {
         service.abort();
         let _ = service.await;
     }
-    if let Some(service) = spectrum_service {
-        service.abort();
-        let _ = service.await;
-    }
+    drop(audio_client);
     if let Some(service) = controls_service {
         service.abort();
         if let Err(error) = service.await {

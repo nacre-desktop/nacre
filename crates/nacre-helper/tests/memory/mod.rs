@@ -219,8 +219,6 @@ fn catalogue_and_lock_raster_bursts_settle_below_sixty_mib() -> Result<()> {
     )?;
     let bin = root.join("bin");
     fs::create_dir(&bin)?;
-    fs::write(bin.join("parec"), "#!/usr/bin/python\nimport sys,time\nwhile True:\n sys.stdout.buffer.write(b'\\x01\\x10'*800); sys.stdout.buffer.flush(); time.sleep(1/60)\n")?;
-    fs::set_permissions(bin.join("parec"), fs::Permissions::from_mode(0o755))?;
     let mut record: Value = serde_json::from_str(include_str!(
         "../../../../nacre/shell-tools/reference-style.json"
     ))?;
@@ -286,22 +284,24 @@ fn catalogue_and_lock_raster_bursts_settle_below_sixty_mib() -> Result<()> {
         "{}",
         json!({"t":"sub","topics":["wallpaper.active","audio.spectrum"]})
     )?;
+    // N0314: the capture is a PipeWire stream; without a server here the lease stays an
+    // honest unavailable snapshot (the live capture cost is measured in the N0314 container).
     let spectrum_deadline = Instant::now() + Duration::from_secs(15);
     loop {
         if Instant::now() >= spectrum_deadline {
-            return Err("spectrum did not receive PCM".into());
+            return Err("spectrum lease never answered".into());
         }
         let mut line = String::new();
         if reader.read_line(&mut line)? == 0 {
             return Err("spectrum lease disconnected".into());
         }
         let message: Value = serde_json::from_str(&line)?;
-        if message["topic"] == "audio.spectrum" && message["data"]["health"]["available"] == true {
+        if message["topic"] == "audio.spectrum" {
             break;
         }
     }
     eprintln!(
-        "N0076 spectrum phase RSS/anon KiB: {:?}",
+        "N0076 spectrum phase (lease only) RSS/anon KiB: {:?}",
         memory(child.0.id())?
     );
     let catalog = call(&mut reader, 1, "wallpaper.catalogue", json!({"ids":[]}))?;

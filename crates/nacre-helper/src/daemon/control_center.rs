@@ -1,17 +1,18 @@
 //! N0046: control-centre actions and the `controls` state topic.
 //!
-//! Every action reuses the tool the QML control centre ran: `wpctl`, `brightnessctl` through
-//! `light_devices`, `powerprofilesctl`, `rfkill`, and the helper's own `control-tools`,
-//! `menu-backend` and `wallpaper-media` commands (the daemon's executable, fixed argv). Callers
-//! choose a value from a closed set; no caller text reaches a command line except a validated
-//! PipeWire node name that is resolved to a numeric id first.
+//! Audio actions go to the daemon's PipeWire client (`audio`, N0314). Every other action reuses
+//! the tool the QML control centre ran: `brightnessctl` through `light_devices`,
+//! `powerprofilesctl`, `rfkill`, and the helper's own `control-tools`, `menu-backend` and
+//! `wallpaper-media` commands (the daemon's executable, fixed argv). Callers choose a value from
+//! a closed set; no caller text reaches a command line.
 //!
 //! The state topic is produced only while a client subscribes (like `osd`); nothing polls
 //! otherwise. A method is advertised only while its backend is present (`available_methods`).
 use super::{
+    audio::{Action, Target},
     bar_services, behaviours,
     hub::{failure, Hub, Shared},
-    osd, pill_controls,
+    osd,
 };
 use crate::{light_devices, paths::Paths, process, Result};
 use nacre_protocol::{
@@ -28,8 +29,6 @@ use std::{
     time::Duration,
 };
 
-const SINK: &str = "@DEFAULT_AUDIO_SINK@";
-const SOURCE: &str = "@DEFAULT_AUDIO_SOURCE@";
 const STAY_AWAKE_UNIT: &str = "nacre-stay-awake.service";
 const RECORDING_UNIT: &str = "nacre-screen-recording.service";
 /// Output cap for tools whose output is parsed.
@@ -43,9 +42,6 @@ const CAPTURE_LIMIT: Duration = Duration::from_secs(200);
 pub struct Env {
     /// The daemon's own executable, which hosts the `control-tools`/`menu-backend` commands.
     pub engine: PathBuf,
-    pub wpctl: String,
-    pub pactl: String,
-    pub pw_dump: String,
     pub rfkill: String,
     pub powerprofilesctl: String,
     pub systemctl: String,
@@ -67,9 +63,6 @@ impl Env {
     pub fn production() -> Result<Self> {
         Ok(Self {
             engine: std::env::current_exe()?,
-            wpctl: "wpctl".into(),
-            pactl: "pactl".into(),
-            pw_dump: "pw-dump".into(),
             rfkill: "rfkill".into(),
             powerprofilesctl: "powerprofilesctl".into(),
             systemctl: "systemctl".into(),
@@ -161,12 +154,11 @@ fn action_error() -> Failure {
 
 // ------------------------------------------------------------- availability
 
-fn pipewire(env: &Env) -> bool {
-    env.has(&env.wpctl)
-        && env
-            .runtime
-            .as_ref()
-            .is_some_and(|runtime| socket_present(&runtime.join("pipewire-0")))
+/// The daemon's PipeWire client is connected.
+fn pipewire(hub: &Hub) -> bool {
+    hub.audio
+        .as_ref()
+        .is_some_and(super::audio::Handle::connected)
 }
 /// Radios that can be switched: the tool, the control device and a managed radio.
 fn rfkill_present(env: &Env) -> bool {
@@ -191,7 +183,7 @@ fn backend_present(hub: &Hub, env: &Env, method: &str) -> bool {
             .is_some_and(|state| !state[member].is_null())
     };
     match method {
-        "audio.set_volume" | "audio.set_mute" | "audio.set_default" => pipewire(env),
+        "audio.set_volume" | "audio.set_mute" | "audio.set_default" => pipewire(hub),
         "keyboard_light.set" => keyboard_present(env),
         "power.set_profile" => env.has(&env.powerprofilesctl) && socket_present(&env.system_bus),
         "airplane.set" => rfkill_present(env),
@@ -310,10 +302,10 @@ pub async fn dispatch(
             let request: AudioSetVolume = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
             audio(
-                env,
+                &hub,
                 request.target,
                 request.node,
-                Audio::Volume(request.value),
+                Action::Volume(request.value),
             )
             .await?;
             json!({"changed":true})
@@ -322,10 +314,10 @@ pub async fn dispatch(
             let request: AudioSetMute = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
             audio(
-                env,
+                &hub,
                 request.target,
                 request.node,
-                Audio::Mute(request.muted),
+                Action::Mute(request.muted),
             )
             .await?;
             json!({"changed":true})
@@ -333,7 +325,7 @@ pub async fn dispatch(
         "audio.set_default" => {
             let request: AudioSetDefault = serde_json::from_value(params).map_err(|_| invalid())?;
             request.validate()?;
-            set_default(env, request.node).await?;
+            audio_handle(&hub)?.set_default(request.node).await?;
             json!({"changed":true})
         }
         "keyboard_light.set" => {
@@ -462,129 +454,33 @@ pub async fn dispatch(
 
 // ------------------------------------------------------------------- audio
 
-enum Audio {
-    Volume(f64),
-    Mute(bool),
+fn audio_handle(hub: &Shared) -> std::result::Result<super::audio::Handle, Failure> {
+    hub.borrow()
+        .audio
+        .clone()
+        .ok_or_else(|| unavailable("Audio is unavailable"))
 }
+/// Every write goes to the daemon's PipeWire client; the contract value is linear. A stream is
+/// addressed by its `audio` topic id, a device or stream otherwise by its `node.name`.
 async fn audio(
-    env: Env,
+    hub: &Shared,
     target: AudioTarget,
     node: Option<String>,
-    action: Audio,
+    action: Action,
 ) -> std::result::Result<(), Failure> {
-    let guard = pill_controls::audio_lock()
-        .try_lock_owned()
-        .map_err(|_| busy("Audio control is busy"))?;
-    blocking(move || {
-        let _guard = guard;
-        let selector = match target {
-            AudioTarget::Sink => SINK.to_owned(),
-            AudioTarget::Source => SOURCE.to_owned(),
-            AudioTarget::Node => resolve_node(&env, node.as_deref().unwrap_or_default(), false)?,
-            AudioTarget::Stream => {
-                return set_stream(&env, node.as_deref().unwrap_or_default(), &action)
+    let target = match target {
+        AudioTarget::Sink => Target::DefaultSink,
+        AudioTarget::Source => Target::DefaultSource,
+        AudioTarget::Node => Target::Node(node.unwrap_or_default()),
+        AudioTarget::Stream => {
+            let (kind, id) = stream_id(node.as_deref().unwrap_or_default()).ok_or_else(invalid)?;
+            Target::Stream {
+                playback: kind == "sink-input",
+                id,
             }
-        };
-        // A missing target is "unavailable", not a failed write.
-        tool(
-            &env.wpctl,
-            &["get-volume", &selector],
-            Duration::from_secs(5),
-        )
-        .filter(|out| out.starts_with("Volume:"))
-        .ok_or_else(|| unavailable("Audio device is unavailable"))?;
-        let done = match action {
-            // wpctl takes the cubic (perceptual) scale; the contract value is linear.
-            Audio::Volume(value) => tool(
-                &env.wpctl,
-                &[
-                    "set-volume",
-                    "-l",
-                    "1.0",
-                    &selector,
-                    &format!("{:.4}", value.cbrt()),
-                ],
-                Duration::from_secs(5),
-            ),
-            Audio::Mute(muted) => tool(
-                &env.wpctl,
-                &["set-mute", &selector, if muted { "1" } else { "0" }],
-                Duration::from_secs(5),
-            ),
-        };
-        done.map(|_| ()).ok_or_else(action_error)
-    })
-    .await
-}
-/// N0061: one application stream, addressed by its `audio` topic id. Only the numeric pactl
-/// index reaches the command line. pactl takes raw volume units (65536 = 100 % of the
-/// perceptual scale), so the contract's linear value is converted with a cube root.
-fn set_stream(env: &Env, id: &str, action: &Audio) -> std::result::Result<(), Failure> {
-    let (kind, index) = stream_id(id).ok_or_else(invalid)?;
-    let index = index.to_string();
-    let done = match action {
-        Audio::Volume(value) => {
-            let raw = (value.cbrt() * 65536.0).round().to_string();
-            tool(
-                &env.pactl,
-                &[&format!("set-{kind}-volume"), &index, &raw],
-                Duration::from_secs(5),
-            )
         }
-        Audio::Mute(muted) => tool(
-            &env.pactl,
-            &[
-                &format!("set-{kind}-mute"),
-                &index,
-                if *muted { "1" } else { "0" },
-            ],
-            Duration::from_secs(5),
-        ),
     };
-    // A stream that ended is the usual failure: report it as unavailable, not as a bad write.
-    done.map(|_| ())
-        .ok_or_else(|| unavailable("Audio stream is unavailable"))
-}
-/// N0051: make a device the default output or input. The name must be a PipeWire `Audio/Sink` or
-/// `Audio/Source` node; only its numeric id reaches `wpctl`.
-async fn set_default(env: Env, node: String) -> std::result::Result<(), Failure> {
-    let guard = pill_controls::audio_lock()
-        .try_lock_owned()
-        .map_err(|_| busy("Audio control is busy"))?;
-    blocking(move || {
-        let _guard = guard;
-        let id = resolve_node(&env, &node, true)?;
-        tool(&env.wpctl, &["set-default", &id], Duration::from_secs(5))
-            .map(|_| ())
-            .ok_or_else(action_error)
-    })
-    .await
-}
-/// The numeric PipeWire id of an audio node named `name` (nothing else is ever passed on).
-/// `device` narrows it to a sink or source, the only nodes that can be a default.
-fn resolve_node(env: &Env, name: &str, device: bool) -> std::result::Result<String, Failure> {
-    let dump = tool(&env.pw_dump, &[], Duration::from_secs(5))
-        .and_then(|text| serde_json::from_str::<Value>(&text).ok())
-        .ok_or_else(|| unavailable("Audio devices are unavailable"))?;
-    dump.as_array()
-        .into_iter()
-        .flatten()
-        .find(|object| {
-            object["type"] == "PipeWire:Interface:Node"
-                && object["info"]["props"]["node.name"] == name
-                && object["info"]["props"]["media.class"]
-                    .as_str()
-                    .is_some_and(|class| {
-                        if device {
-                            matches!(class, "Audio/Sink" | "Audio/Source")
-                        } else {
-                            class.starts_with("Audio/") || class.contains("/Audio")
-                        }
-                    })
-        })
-        .and_then(|object| object["id"].as_u64())
-        .map(|id| id.to_string())
-        .ok_or_else(|| unavailable("Audio device is unavailable"))
+    audio_handle(hub)?.apply(target, action).await
 }
 
 // ---------------------------------------------------- brightness and keyboard

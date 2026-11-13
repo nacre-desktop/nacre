@@ -2519,6 +2519,7 @@ dependencies = [
  "nvml-wrapper",
  "orient-core",
  "orient-decoder",
+ "pipewire",
  "regex",
  "roxmltree 0.21.1",
  "rustfft",

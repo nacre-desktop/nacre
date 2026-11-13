@@ -9,7 +9,6 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        mpsc::SyncSender,
         Arc,
     },
     thread::{self, JoinHandle},
@@ -27,9 +26,8 @@ impl Server {
     pub(super) fn start(
         mut listener: socket::FastListener,
         requests: mpsc::Sender<Message>,
-        audio_steps: SyncSender<super::pill_controls::AudioStepCommand>,
+        audio: super::audio::Handle,
         safe_mode: bool,
-        audio_available: bool,
     ) -> crate::Result<Self> {
         let path = listener.path.clone();
         let stop = Arc::new(AtomicBool::new(false));
@@ -39,14 +37,7 @@ impl Server {
             .stack_size(512 * 1024)
             .spawn(move || {
                 let listener = listener.take()?;
-                run(
-                    listener,
-                    thread_stop,
-                    requests,
-                    audio_steps,
-                    safe_mode,
-                    audio_available,
-                )
+                run(listener, thread_stop, requests, audio, safe_mode)
             })?;
         Ok(Self {
             stop,
@@ -80,9 +71,8 @@ fn run(
     listener: UnixListener,
     stop: Arc<AtomicBool>,
     requests: mpsc::Sender<Message>,
-    audio_steps: SyncSender<super::pill_controls::AudioStepCommand>,
+    audio: super::audio::Handle,
     safe_mode: bool,
-    audio_available: bool,
 ) -> crate::Result<()> {
     loop {
         let (mut stream, _) = match listener.accept() {
@@ -95,13 +85,7 @@ fn run(
         }
         let _ = stream.set_read_timeout(Some(Duration::from_millis(250)));
         let _ = stream.set_write_timeout(Some(Duration::from_millis(250)));
-        let response = handle(
-            &mut stream,
-            &requests,
-            &audio_steps,
-            safe_mode,
-            audio_available,
-        );
+        let response = handle(&mut stream, &requests, &audio, safe_mode);
         if let Err(error) = response {
             tracing::debug!(%error, "One-shot daemon request failed");
         }
@@ -112,9 +96,8 @@ fn run(
 fn handle(
     stream: &mut UnixStream,
     requests: &mpsc::Sender<Message>,
-    audio_steps: &SyncSender<super::pill_controls::AudioStepCommand>,
+    audio: &super::audio::Handle,
     safe_mode: bool,
-    audio_available: bool,
 ) -> crate::Result<()> {
     let started = Instant::now();
     let peer = nix::sys::socket::getsockopt(stream, nix::sys::socket::sockopt::PeerCredentials)?;
@@ -141,7 +124,7 @@ fn handle(
                     "Hardware actions are disabled in safe mode",
                     false,
                 ))
-            } else if m == "audio.step" && !audio_available {
+            } else if m == "audio.step" && !audio.connected() {
                 Some(Failure::new(
                     ErrorCode::Unavailable,
                     "Audio backend is unavailable",
@@ -165,37 +148,30 @@ fn handle(
                     nacre_protocol::pill_controls::VolumeDirection::Up => 0.05,
                     nacre_protocol::pill_controls::VolumeDirection::Down => -0.05,
                 };
-                match audio_steps.try_send(super::pill_controls::AudioStepCommand::Apply(
-                    super::pill_controls::FastAudioStep {
-                        delta,
-                        key_ms: step.key_ms,
-                    },
-                )) {
-                    Ok(()) => (
+                if audio.send(super::audio::Command::Step {
+                    delta,
+                    key_ms: step.key_ms,
+                    reply: None,
+                }) {
+                    (
                         id,
                         Reply::Ok {
                             ok: json!({"changed":true}),
                         },
                         method,
-                    ),
-                    Err(std::sync::mpsc::TrySendError::Full(_)) => (
-                        id,
-                        Reply::Err {
-                            err: Failure::new(ErrorCode::Busy, "Audio step queue is full", true),
-                        },
-                        method,
-                    ),
-                    Err(std::sync::mpsc::TrySendError::Disconnected(_)) => (
+                    )
+                } else {
+                    (
                         id,
                         Reply::Err {
                             err: Failure::new(
                                 ErrorCode::Unavailable,
-                                "Audio step worker is stopping",
+                                "Audio client is stopping",
                                 true,
                             ),
                         },
                         method,
-                    ),
+                    )
                 }
             } else {
                 match requests.try_send(request) {
@@ -303,8 +279,8 @@ mod tests {
         let fast_path = socket::fast_path_for(&main_path)?;
         let listener = socket::FastListener::acquire(&main_path)?;
         let (send, mut receive) = mpsc::channel(4);
-        let (audio_send, audio_receive) = std::sync::mpsc::sync_channel(4);
-        let server = Server::start(listener, send, audio_send, false, true)?;
+        let (audio, commands) = super::super::audio::Handle::fake(|_| Ok(()));
+        let server = Server::start(listener, send, audio, false)?;
 
         assert_eq!(
             exchange(
@@ -354,13 +330,7 @@ mod tests {
                 },
             }
         );
-        let Ok(crate::daemon::pill_controls::AudioStepCommand::Apply(queued)) =
-            audio_receive.try_recv()
-        else {
-            panic!("queued audio step");
-        };
-        assert_eq!(queued.delta, 0.05);
-        assert_eq!(queued.key_ms, Some(99));
+        assert_eq!(commands.lock().unwrap().as_slice(), ["step 0.05"]);
         drop(server);
         assert!(!fast_path.exists());
         Ok(())

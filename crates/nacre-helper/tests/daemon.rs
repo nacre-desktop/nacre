@@ -3267,17 +3267,15 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
             "READY latency gate exceeded two seconds: {ready_latency:?}"
         );
     }
-    // N0072: no capture subprocess on the readiness path or while unleased.
+    // N0072/N0314: no audio subprocess on the readiness path, ever (the daemon is a PipeWire
+    // client); without a server the topics are honest unavailable snapshots.
     assert!(!spectrum_started.exists());
     let spectrum_status = status(home.path(), &source_path, &endpoint)?;
     assert!(spectrum_status["topics"]
         .as_array()
         .unwrap()
         .contains(&json!("audio.spectrum")));
-    assert_eq!(
-        spectrum_status["services"]["audio-spectrum"]["status"],
-        "running"
-    );
+    assert_eq!(spectrum_status["services"]["audio"]["status"], "running");
     assert!(
         !check_started.exists(),
         "N0095: no update check runs while nobody subscribes to dashboard.updates"
@@ -3298,8 +3296,8 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
             "{service} must not claim health while its backend hangs"
         );
     }
-    // N0059: leasing audio starts the same hung pactl used by OSD. All three
-    // topics remain honest unavailable snapshots, and the hub still serves status.
+    // N0059: leasing audio spawns nothing (N0314). All three topics remain honest
+    // unavailable snapshots, and the hub still serves status.
     let raw = UnixStream::connect(&endpoint)?;
     raw.set_read_timeout(Some(Duration::from_secs(2)))?;
     let mut reader = BufReader::new(raw);
@@ -3337,13 +3335,9 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
         check_started.exists(),
         "The hanging update check must start once dashboard.updates is subscribed"
     );
-    let deadline = Instant::now() + Duration::from_secs(8);
-    while !audio_started.exists() && Instant::now() < deadline {
-        thread::sleep(Duration::from_millis(10));
-    }
     assert!(
-        audio_started.exists(),
-        "audio lease must start the hanging pactl"
+        !audio_started.exists() && !spectrum_started.exists(),
+        "N0314: an audio lease never spawns pactl or parec"
     );
     let responsive = Instant::now();
     assert_eq!(
