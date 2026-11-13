@@ -452,7 +452,6 @@ explicit N0157 exclusion rather than silently treating it as deleted.
 - `docs/research/n0156-reference/diagnostics/expected-support-markdown.json`
 - `docs/research/n0156-reference/launcher-base-menu.json`
 - `docs/research/n0156-reference/launcher-reference.md`
-- `docs/research/n0156-reference/qt-translation.json`
 - `docs/specs/0007-f4-qml-memory-fix.md`
 - `docs/specs/0011-f4-qml-residency-investigation.md`
 - `docs/specs/0019-weather-updates-workers.md`

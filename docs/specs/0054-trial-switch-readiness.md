@@ -156,7 +156,7 @@ and keeps its journal rather than claiming success.
   Both sessions used private HOME/runtime/bus. The outer headless labwc used
   pixman; Bead used its default renderer selection. No physical display, memory
   or visual-parity claim is made.
-- Full desktop CI: **passed, exit 0**; [command/result summary](../evidence/n0054/ci.txt).
+- N0054 full desktop CI replication passed with exit 0; product/test source hashes matched the worktree.
   Tools 491 (one existing skip), AI 120, Brain 52, shell-tools 487; helper parity
   534 cases with zero failures. Native gallery 244 states/language, wider-font
   gallery 185 states/language and AUR pager capture all passed. Product/test
