@@ -277,12 +277,18 @@ class RepositoryTests(unittest.TestCase):
                 )
                 # The next publication must accept every family build() retains.
                 served = second / "arch/dev/x86_64"
-                with patch.object(
-                    repository,
-                    "urlopen",
-                    lambda request, timeout: (
-                        served / request.full_url.rsplit("/", 1)[1]
-                    ).open("rb"),
+                (self.root / "packaging/keys/nacre-repo.fingerprint").write_text(
+                    fingerprint + "\n"
+                )
+                with (
+                    patch.object(repository, "ROOT", self.root),
+                    patch.object(
+                        repository,
+                        "urlopen",
+                        lambda request, timeout: (
+                            served / request.full_url.rsplit("/", 1)[1]
+                        ).open("rb"),
+                    ),
                 ):
                     self.assertTrue(repository.fetch_previous(self.base / "fetched"))
                 self.make_packages(3, "0.1.0")
