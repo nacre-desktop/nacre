@@ -61,31 +61,36 @@ pub fn by_id(id: &str) -> Result<&'static Schema> {
         .find(|schema| schema.id == id)
         .ok_or_else(|| "Unknown state schema".into())
 }
+/// The longest registry pattern that matches the whole path or a tail after a `/`.
 pub fn schema(path: &Path) -> Option<&'static Schema> {
-    static MATCHERS: OnceLock<Vec<(usize, usize, regex::Regex)>> = OnceLock::new();
-    let matchers = MATCHERS.get_or_init(|| {
-        schemas()
-            .iter()
-            .enumerate()
-            .flat_map(|(index, schema)| {
-                schema.paths.iter().map(move |pattern| {
-                    let expression =
-                        format!("(?:^|/){}$", regex::escape(pattern).replace("\\*", ".*"));
-                    (
-                        index,
-                        pattern.len(),
-                        regex::Regex::new(&expression).expect("valid state pattern"),
-                    )
-                })
-            })
-            .collect()
-    });
     let path = path.to_string_lossy();
-    matchers
+    let tails: Vec<&str> = std::iter::once(&*path)
+        .chain(path.match_indices('/').map(|(i, _)| &path[i + 1..]))
+        .collect();
+    schemas()
         .iter()
-        .filter(|(_, _, expression)| expression.is_match(&path))
-        .max_by_key(|(_, length, _)| length)
-        .map(|(index, _, _)| &schemas()[*index])
+        .flat_map(|schema| schema.paths.iter().map(move |pattern| (schema, pattern)))
+        .filter(|(_, pattern)| tails.iter().any(|tail| wildcard(pattern, tail)))
+        .max_by_key(|(_, pattern)| pattern.len())
+        .map(|(schema, _)| schema)
+}
+/// `*` matches any run of characters, `/` included.
+fn wildcard(pattern: &str, text: &str) -> bool {
+    let mut parts = pattern.split('*');
+    let Some(mut rest) = text.strip_prefix(parts.next().unwrap_or_default()) else {
+        return false;
+    };
+    let mut parts: Vec<&str> = parts.collect();
+    let Some(last) = parts.pop() else {
+        return rest.is_empty();
+    };
+    for part in parts {
+        let Some(index) = rest.find(part) else {
+            return false;
+        };
+        rest = &rest[index + part.len()..];
+    }
+    rest.ends_with(last)
 }
 
 fn regular(path: &Path) -> Result<()> {
@@ -1478,6 +1483,46 @@ mod tests {
             assert_eq!(saved["version"], schema.version);
         }
         Ok(())
+    }
+    #[test]
+    fn schema_paths_match_whole_components_and_wildcards() {
+        let id = |path: &str| super::schema(Path::new(path)).map(|schema| schema.id.as_str());
+        for schema in schemas() {
+            for pattern in &schema.paths {
+                let name = pattern.replace('*', "x");
+                for path in [name.clone(), format!("/home/u/.config/{name}")] {
+                    assert_eq!(id(path.as_str()), Some(schema.id.as_str()), "{path}");
+                }
+            }
+        }
+        for (path, expected) in [
+            (
+                "/home/u/.local/state/nacre/brain-sync.json",
+                Some("brain-sync-status"),
+            ),
+            (
+                "/home/u/.config/nacre/brain-sync.json",
+                Some("brain-sync-config"),
+            ),
+            ("/v/.brain-state/capture-.json", Some("brain-captures")),
+            (
+                "/h/.local/state/nacre/backups/a/b/manifest.json",
+                Some("install-backups"),
+            ),
+            (
+                "/h/nacre/ai/chat-titles/directories/a.json",
+                Some("chat-directories"),
+            ),
+            ("/h/nacre/ai/chat-titles/a.json", Some("chat-titles")),
+            ("/h/.config/xnacre/launcher.json", None),
+            ("/h/.config/nacre/launcher.json.bak", None),
+            ("/h/.config/nacre/launcher.jsonx", None),
+            ("/h/.local/state/nacre/releases/release.json", None),
+            ("/v/.brain-state/capture.json", None),
+            ("/h/.config/nacre", None),
+        ] {
+            assert_eq!(id(path), expected, "{path}");
+        }
     }
     #[test]
     fn linked_backup_or_destination_prevents_replacement() -> Result<()> {
