@@ -471,6 +471,49 @@ fn clock_detail_stage_and_style_previews_keep_all_content_inside_their_clips() {
 }
 
 #[test]
+fn pill_detail_builds_with_two_pill_copies_on_the_bar() {
+    // N0233 B7: the preview bar must scope copies like the live bar, or the second
+    // pill's fixed `system-pill` id collides and the detail page fails to build.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
+    let mut doc: Json =
+        serde_json::from_str(include_str!("../../tests/widgets-default.json")).unwrap();
+    doc["hosts"]["top_bar"]["instances"]
+        .as_array_mut()
+        .unwrap()
+        .push(
+            json!({"iid":"pill-2","widget":"pill","group":"pill-2","host":"top_bar","style":"pill",
+            "slot":{"region":"right","start":1,"span":1},"children":[]}),
+        );
+    let mut stores = crate::desktop::values(&Default::default(), "");
+    stores.insert("widgets.selected".into(), Value::Text("pill".into()));
+    stores.insert("widgets.layout".into(), Value::list(vec![doc]));
+    let harness = Harness::load(
+        &root,
+        Path::new("widgets/app/main.luau"),
+        &root.join("palette.json"),
+        stores,
+        Config {
+            width: 1200,
+            height: 800,
+            scale: 1.5,
+        },
+    )
+    .expect("pill detail builds with two pill copies");
+    let ids: Vec<&str> = harness
+        .session
+        .view_nodes()
+        .iter()
+        .map(|node| node.id.as_str())
+        .filter(|id| id.contains("instance-options.instance-"))
+        .collect();
+    assert!(
+        ids.iter().any(|id| id.ends_with("instance-status-pill"))
+            && ids.iter().any(|id| id.ends_with("instance-pill-2")),
+        "the detail lists both pill copies: {ids:?}"
+    );
+}
+
+#[test]
 fn widget_app_stage_uses_the_settings_wallpaper_thumbnail() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell");
     let dir = std::env::temp_dir().join(format!("widget-app-wallpaper-{}", std::process::id()));

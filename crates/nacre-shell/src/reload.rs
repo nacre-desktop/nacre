@@ -7245,9 +7245,11 @@ impl SceneSource for Runtime {
                         .unwrap_or_default(),
                     _ => "",
                 };
+                // N0233: B0198 replaced toggle-form with add/remove; keep this list in step
+                // with the ops in widgets/app/behavior.luau or their drafts never persist.
                 let persistent = matches!(
                     operation,
-                    "toggle-form" | "style" | "setting" | "undo" | "reset" | "default-trigger"
+                    "add" | "remove" | "style" | "setting" | "undo" | "reset" | "default-trigger"
                 );
                 let old_layout = self
                     .session

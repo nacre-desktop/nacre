@@ -2851,6 +2851,74 @@ fn widget_app_runtime() -> Runtime {
 }
 
 #[test]
+fn widgets_app_add_and_remove_commit_the_layout_store() {
+    // N0233 B6: "Add to bar" in the app is the non-drag `add` op; it (and `remove`)
+    // must write the store like the other persistent ops.
+    let dir = std::env::temp_dir().join(format!("widget-app-add-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("widgets.json");
+    let mut runtime = widget_app_runtime();
+    runtime.widgets_file = Some(file.clone());
+    runtime.warm_frame().unwrap();
+    let clocks = |doc: &Json| -> Vec<Json> {
+        let mut found = Vec::new();
+        fn walk(items: &Json, found: &mut Vec<Json>) {
+            for item in items.as_array().into_iter().flatten() {
+                if item["widget"] == "clock" {
+                    found.push(item.clone());
+                }
+                walk(&item["children"], found);
+            }
+        }
+        walk(&doc["hosts"]["top_bar"]["instances"], &mut found);
+        found
+    };
+    runtime
+        .stage(UiEvent::Action {
+            name: "widgets.edit".into(),
+            argument: Value::list(vec![
+                json!({"op":"add","widget":"clock","form":"bar","style":"time"}),
+            ]),
+        })
+        .unwrap();
+    assert!(runtime.commit(), "the post-write scene is committed");
+    let saved: Json = serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+    let added = clocks(&saved);
+    assert_eq!(added.len(), 2, "the add is written to the store: {saved}");
+    assert_eq!(
+        runtime.session.stores.get("widgets.rev"),
+        Some(&Value::Number(1.))
+    );
+    assert!(
+        matches!(runtime.session.stores.get("widgets.draft"),Some(Value::List(rows)) if rows.is_empty())
+    );
+    let copy = added
+        .iter()
+        .find(|item| item["iid"] != "clock")
+        .expect("the copy has its own iid");
+    runtime
+        .stage(UiEvent::Action {
+            name: "widgets.edit".into(),
+            argument: Value::list(vec![json!({"op":"remove","widget":"clock",
+                "group":copy["group"],"iid":copy["iid"],"form":"bar"})]),
+        })
+        .unwrap();
+    assert!(runtime.commit());
+    let saved: Json = serde_json::from_slice(&std::fs::read(&file).unwrap()).unwrap();
+    assert_eq!(
+        clocks(&saved).len(),
+        1,
+        "the remove is written too: {saved}"
+    );
+    assert_eq!(
+        runtime.session.stores.get("widgets.rev"),
+        Some(&Value::Number(2.))
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn temporary_widget_warm_runtime_is_side_effect_free_and_real_commit_announces_once() {
     let mut warm = widget_app_runtime();
     warm.warm_frame().unwrap();

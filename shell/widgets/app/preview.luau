@@ -104,6 +104,7 @@ function M.render_bar(document,width,height,factor,selected,selected_group)
         table.insert(instances,copy_item(item))
     end
     local placement={instances=instances}
+    local copies={}
     local render
     render=function(item,variant)
         local package=registry.catalogue[item.widget]
@@ -119,6 +120,9 @@ function M.render_bar(document,width,height,factor,selected,selected_group)
             node.props.border_color="primary"
             node.props.radius=kit.tokens.radii.small
         end
+        -- N0233: like the live bar (registry.renderer), copies get their own id scope.
+        if node and copies[item.widget] then node.scope="widget."..item.iid.."." end
+        copies[item.widget]=true
         return node
     end
     local flow
