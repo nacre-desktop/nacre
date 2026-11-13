@@ -54,3 +54,11 @@ Recommendation: D1 for the grid and results, D2 for the rail's selected entry on
 ### Next unit
 
 After the owner picks: implement (a)+(b)+(d) in one unit with the catalogue `status` change in the daemon, goldens updated after a visual check, parity screenshots against the QML launcher, no temporary render code (this unit's render harness stays in `.lead/render-src/` and is not committed).
+
+## N0221e
+
+Owner choice (2026-11-13): A1 + B1 + D1-tinted. Style › Wallpapers opens the existing Extras picker directly; shuffle activates a catalogue entry through the existing wallpaper method, and play/pause is available only for an animated current wallpaper. Launcher toggles show On/Off and the kit switch; value groups show their current value and open a checked option list. Glyphs blend `onSurfaceVariant` with 35% `primary`, with less accent when necessary to retain 3:1 contrast; the selected rail glyph uses `primary`. Application images keep their original colours.
+
+The implementation reuses the picker, kit controls, menu activation tickets and bounded launcher worker. New always-on memory budget: ≤1 MiB; no additional service or worker thread. The demo-palette contrast test covers both modes and every personality. Planned before/after real-renderer evidence and its index belong in `.lead/renders/`; temporary harnesses remain untracked.
+
+Acceptance pending: required container checks and real-renderer PNG review have not run.
