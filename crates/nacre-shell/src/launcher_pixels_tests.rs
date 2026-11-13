@@ -52,6 +52,35 @@ fn harness_at_scale(query: &str, scroll: f64, scale: f32) -> Result<Harness> {
 }
 
 #[test]
+fn files_hint_keeps_first_result_at_the_same_pixel_row() -> Result<()> {
+    for scale in [1., 1.5] {
+        let mut h = harness_at_scale("", 0., scale)?;
+        let mut first_y = None;
+        for (query, message) in [
+            ("", ""),
+            (":", "Search these folders; type two or more characters to find files"),
+            (":ab", ""),
+        ] {
+            h.update(BTreeMap::from([
+                ("launcher.search.text".into(), Value::Text(query.into())),
+                ("launcher.message".into(), Value::Text(message.into())),
+            ]))?;
+            h.render()?;
+            let row = h.session.view_nodes().iter()
+                .find(|node| node.action.as_deref() == Some("select_app"))
+                .expect("first rendered result");
+            let y = (bead::ui::rect(&row.draw).y * scale).round() as i32;
+            assert_eq!(*first_y.get_or_insert(y), y, "{query:?} at scale {scale}");
+            if !message.is_empty() {
+                assert!(h.scene().primitives.iter().any(|draw| matches!(draw,
+                    bead::render::Primitive::Text { text, .. } if text == message)));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[test]
 fn quick_buttons_keep_their_control_ids_and_unknown_updates_stay_hidden() -> Result<()> {
     let mut h = harness("", 0.)?;
     let ids = h

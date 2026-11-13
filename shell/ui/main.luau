@@ -38,7 +38,7 @@ if has_detail then
         ui.Text{id="conversion-value",text=value,visible=value~="",font_size=24,height=72},
         ui.Text{text=description,visible=description~="",font_size=13.333,height=20,color="onSurfaceVariant"},
         ui.Text{text=error,visible=error~="",font_size=13.333,height=40,color="error"},
-        ui.Text{id="engine-guidance",text=message,visible=message~="",font_size=13.333,height=40,color="onSurfaceVariant"},
+        ui.Text{id="engine-guidance",text=message,visible=message~="" and ui.resolve_for_check(ui.bind("launcher.result_count"))==0,font_size=13.333,height=40,color="onSurfaceVariant"},
     }
 end
 local panel={edge="bottom",id="launcher",width=1100,height=590,max_width="90%",max_height="90%",
