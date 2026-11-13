@@ -1,14 +1,14 @@
 # Optional AI and Brain
 
-Core Nacre works without AI or Brain. Install either or both matching binary
-packages, then select them in setup:
+Core Nacre works without AI or Brain. Install either or both packages from the
+Nacre repository, then select them in setup:
 
 ```sh
-sudo pacman -U nacre-ai-*.pkg.tar.zst nacre-brain-*.pkg.tar.zst
+sudo pacman -S nacre-ai nacre-brain
 nacre setup --with ai --with brain
 ```
 
-For one app, install its archive and pass only its `--with` option. Source
+For one app, install its package and pass only its `--with` option. Source
 installs use `./install.sh --with ai --with brain --apply` after reviewing the
 plan. See [installation](installation.md) for prerequisites and package availability.
 

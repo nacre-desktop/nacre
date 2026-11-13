@@ -47,8 +47,7 @@ A TTY is a text console that works independently of the graphical desktop.
 Press Ctrl+Alt+F3 and log in. First inspect the session rather than restarting it:
 
 ```sh
-systemctl --user is-active wayland-wm@hyprland.desktop.service
-systemctl --user is-active wayland-wm@niri.desktop.service
+systemctl --user list-units 'wayland-wm@*'
 journalctl --user -u nacre-shell.service --no-pager -n 50
 nacre doctor --report
 ```
@@ -62,10 +61,10 @@ uwsm stop
 ```
 
 This ends the current UWSM-managed session and its applications. At the greeter,
-choose **Nacre (Hyprland)** / the existing UWSM-managed Hyprland entry, or a
-previously prepared **Nacre (niri)** session. When niri fails, use the working
-Hyprland fallback while investigating. If the greeter does not return, and your
-system uses the `display-manager.service` alias:
+choose a Nacre session you prepared (nacre-niri, niri or Hyprland). If one
+compositor fails and you prepared another (`nacre setup --also-compositor
+NAME`), use that one while investigating. If the greeter does not return, and
+your system uses the `display-manager.service` alias:
 
 ```sh
 sudo systemctl restart display-manager.service
@@ -75,14 +74,12 @@ Restarting the login manager ends graphical sessions. As a temporary fallback
 from the TTY, after the failed session is stopped:
 
 ```sh
-# Choose one installed, configured session:
-exec uwsm start -e -D Hyprland hyprland.desktop
-# Or, only if Nacre's niri preparation has completed:
-exec uwsm start -e -D niri niri.desktop
+# Choose one prepared session:
+nacre session nacre-niri
+# or: nacre session niri / nacre session hyprland
 ```
 
-`exec` replaces the TTY shell so closing the desktop does not leave that shell
-open. `nacre rollback` can restore a failed managed update; it refuses later
+`nacre rollback` can restore a failed managed update; it refuses later
 local edits.
 
 ## How do I collect a support report?

@@ -219,7 +219,7 @@ switched off; the rest of the shell keeps running.
 NAME` and `nacre module disable NAME` take `--plan` to preview. `nacre status
 --files` lists every file Nacre owns and its module, and `nacre uninstall --plan`
 shows what removing Nacre would do (it keeps your own Nacre settings unless
-you add `--purge`). See [installation](installation.md#modules-what-setup-touches).
+you add `--purge`). See [installation](installation.md).
 
 ## Shortcut reference
 

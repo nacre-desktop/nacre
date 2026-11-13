@@ -1,6 +1,6 @@
 # Structure and licensing
 
-Accepted owner direction (2026-10-21): Bead remains MIT OR Apache-2.0 as a
+Accepted owner direction (2026-10-21): Bead remains MIT (its `LICENSE` file) as a
 permissive general framework; Nacre remains GPL-3.0-only as the flagship desktop
 built on Bead; Orient remains MIT. The daemon and Nacre-specific integrations
 (including compositor bindings, media backends, and daemon implementation) stay
