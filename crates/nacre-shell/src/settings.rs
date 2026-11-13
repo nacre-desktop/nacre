@@ -1312,15 +1312,24 @@ impl Settings {
 
     /// The page shown for `settings.page`, or the registry default for anything unknown. QML
     /// page ids (`desktop`, `lock`, `time`, ...) resolve through the registry's `aliases` (B0197).
+    /// A page its capability hides (an absent add-on) opens its group's first shown page (N0234).
     pub fn page_for(&self, requested: &str) -> String {
         let resolved = self.registry.navigation["aliases"][requested]
             .as_str()
             .unwrap_or(requested);
         let page = resolved.split('#').next().unwrap_or_default();
-        if self.registry.page(page).is_some() {
-            page.into()
-        } else {
-            self.registry.first_page()
+        match self.registry.page(page) {
+            Some(found) if self.allowed(found.get("visibleWhen")) => page.into(),
+            Some(found) => self
+                .registry
+                .groups()
+                .into_iter()
+                .filter(|(group, _)| group["id"] == found["group"])
+                .flat_map(|(_, pages)| pages)
+                .find(|p| self.allowed(p.get("visibleWhen")))
+                .and_then(|p| p["id"].as_str())
+                .map_or_else(|| self.registry.first_page(), String::from),
+            None => self.registry.first_page(),
         }
     }
 
@@ -1329,7 +1338,6 @@ impl Settings {
             Some(Value::Text(t)) => t.clone(),
             _ => String::new(),
         };
-        let page = self.page_for(&text("settings.page"));
         let query = text("settings.search");
         let searching = !query.trim().is_empty();
         let ready = self.ready().is_some();
@@ -1337,6 +1345,7 @@ impl Settings {
         // Which topics the page reads decides the leases; rows are built after they open. The
         // capability flags stay followed.
         self.refresh_caps();
+        let page = self.page_for(&text("settings.page"));
         let mut wanted = if searching {
             Vec::new()
         } else {

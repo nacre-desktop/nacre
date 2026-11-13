@@ -28,7 +28,10 @@ local function button(id,x,y,w,h,label,icon,action,selected,size,aria)
         label=label,label_width=labels[label] and (size==CAPTION and labels[label].caption or labels[label].body) or nil,glyph=icon,on_activate=action,selected=selected,compact=size==CAPTION,aria_label=aria or label}
 end
 local function action(name) return ui.action("chat.do",name) end
-if section=="chat" and get("launcher.quick_chat") then
+-- N0234: without the optional AI package the panel only says so (no provider or chat controls).
+local missing=get("chat.missing")
+local quick=section=="chat" and get("launcher.quick_chat") and not missing
+if quick then
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=HEADER_H,gap=T.spacing.xs/4,align="center",
         button("back",nil,nil,BTN,HEADER_H,"","arrow_back",action("launcher:back"),false,CAPTION,ui.tr("bead.panel.launcher-back")),
         ui.Column{id="heading",width=0,grow=1,justify="center",gap=T.spacing.xs/4,
@@ -39,12 +42,18 @@ else
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=T.icons.hero,gap=T.spacing.xs,align="center",
         ui.Image{id="logo",width=T.icons.hero-T.spacing.xs,height=T.icons.hero-T.spacing.xs,path="chat/assets/nacre-ai.themed.svg",aria_label=ui.tr("bead.panel.chat-title")},
         ui.Text{id="title",width=0,grow=1,text=ui.tr("bead.panel.chat-title"),font_size=BODY,color="onSurface"},
-        ui.Row{id="provider",width=T.spacing.huge*5,height=BTN,gap=T.spacing.xs,
+        ui.Row{id="provider",width=T.spacing.huge*5,height=BTN,gap=T.spacing.xs,visible=not missing,
             button("claude",nil,nil,(T.spacing.huge*5-T.spacing.xs)/2, BTN,ui.tr("bead.panel.chat-claude"),"",action("launcher:provider:claude"),get("launcher.provider")=="claude",CAPTION),
             button("codex",nil,nil,(T.spacing.huge*5-T.spacing.xs)/2,BTN,ui.tr("bead.panel.chat-codex"),"",action("launcher:provider:codex"),get("launcher.provider")=="codex",CAPTION)},
         not get("view.detached") and button("pin",nil,nil,BTN,BTN,"","push_pin",action("pin"),get("chat.pinned"),CAPTION,ui.tr("bead.panel.chat-pin")) or nil})
 end
-if section=="chat" and get("launcher.quick_chat") then
+if missing then
+    local top=(H-HEADER_TITLE_H-T.spacing.xs-HEADER_META_H)/2
+    add(ui.Text{id="missing-title",position="absolute",left=E,top=top,width=INNER,height=HEADER_TITLE_H,text=ui.tr("bead.panel.chat-missing"),
+        font_size=BODY,text_align="center",color="onSurface"})
+    add(ui.Text{id="missing-hint",position="absolute",left=E,top=top+HEADER_TITLE_H+T.spacing.xs,width=INNER,height=HEADER_META_H,text=ui.tr("bead.panel.chat-missing-hint"),
+        font_size=CAPTION,text_align="center",color="onSurfaceVariant"})
+elseif quick then
     local TT,TH=get("chat.transcript_top"),get("chat.transcript_height")
     local cells=get("chat.cells") or {}
     local hovered=ui.resolve_for_check(ui.bind("bead.hovered")) or ""

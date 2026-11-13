@@ -457,6 +457,8 @@
   "bead.panel.chat-copy-code": "Copy code",
   "bead.panel.chat-empty": "Start a conversation",
   "bead.panel.chat-latest": "Latest",
+  "bead.panel.chat-missing": "Nacre AI is not installed",
+  "bead.panel.chat-missing-hint": "To add it, install the nacre-ai package and run Nacre setup.",
   "bead.panel.chat-new": "New chat",
   "bead.panel.chat-placeholder": "Message Nacre AI",
   "bead.panel.chat-placeholder-busy": "Add a message while I work",

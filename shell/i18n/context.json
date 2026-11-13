@@ -430,6 +430,8 @@
   "bead.panel.chat-copy-code": "AI sidebar: button under a message that copies one code block.",
   "bead.panel.chat-empty": "AI sidebar: placeholder shown in an empty transcript.",
   "bead.panel.chat-latest": "AI sidebar: button that scrolls the transcript to the newest message.",
+  "bead.panel.chat-missing": "AI sidebar: title shown instead of the chat controls when the optional Nacre AI package is not installed.",
+  "bead.panel.chat-missing-hint": "AI sidebar: one-line hint under the not-installed title saying how to add the optional AI package.",
   "bead.panel.chat-new": "AI sidebar: button that starts a fresh conversation.",
   "bead.panel.chat-placeholder": "AI sidebar: hint inside the empty message box.",
   "bead.panel.chat-placeholder-busy": "AI sidebar: hint inside the empty message box while an answer is running.",

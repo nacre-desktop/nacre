@@ -255,6 +255,8 @@ pub struct Chat {
     texts: RefCell<BTreeMap<String, String>>,
     memory: Option<crate::popouts::ChatMemory>,
     launcher_cache_path: Option<std::path::PathBuf>,
+    /// The daemon's `capabilities` flags; `ai` absent or false: the optional package is missing.
+    capabilities: Option<Arc<dyn Source>>,
 }
 
 /// What a view action asks the host to do besides updating stores.
@@ -465,6 +467,7 @@ impl Chat {
             texts: Default::default(),
             memory: None,
             launcher_cache_path,
+            capabilities: None,
         }
     }
     /// Feed an unbounded synthetic channel into projection tests without weakening the
@@ -477,6 +480,19 @@ impl Chat {
             available: true,
             channel: Some(Arc::new(channel)),
         });
+    }
+    pub fn with_capabilities(mut self, capabilities: Option<Arc<dyn Source>>) -> Self {
+        self.capabilities = capabilities;
+        self
+    }
+    /// N0234: published flags without `ai` mean Nacre AI is not installed (unknown: assume it is).
+    fn missing(&self) -> bool {
+        self.capabilities.as_ref().is_some_and(|source| {
+            let snapshot = source.snapshot();
+            snapshot.connected
+                && snapshot.data["flags"].is_object()
+                && snapshot.data["flags"]["ai"] != true
+        })
     }
     /// Process-local keep of the draft and section while the panel is closed.
     pub fn with_memory(mut self, memory: crate::popouts::ChatMemory) -> Self {
@@ -521,6 +537,9 @@ impl Chat {
             Arc::new(move |_| notify(bead::wayland::UiEvent::Model(BTreeMap::new())))
         };
         let mut subscriptions = vec![self.source.subscribe(callback.clone())?];
+        if let Some(capabilities) = &self.capabilities {
+            subscriptions.push(capabilities.subscribe(callback.clone())?);
+        }
         if let Some(client) = &self.client {
             subscriptions.push(client.subscribe(callback)?);
         }
@@ -528,6 +547,9 @@ impl Chat {
     }
 
     fn ready(&self, method: &str) -> Option<(String, Duration)> {
+        if self.missing() {
+            return None;
+        }
         let client = self.client.as_ref()?;
         let status = client.status();
         let advertised = status.methods.get(method).filter(|m| m.v == 1)?;
@@ -760,6 +782,7 @@ impl Chat {
         };
         let wake = self.waker();
         let mut out = BTreeMap::new();
+        out.insert("chat.missing".into(), Value::Bool(self.missing()));
         if handoff {
             out.insert("bead.focused".into(), text(""));
             if stores.get("view.detached") != Some(&Value::Bool(true))

@@ -580,7 +580,9 @@ impl Extras {
                             .app_glyph(window["app_id"].as_str().unwrap_or_default())
                             .into();
                     }
-                    let open = matches!(stores.get("panel.open"), Some(Value::Bool(true)));
+                    // N0234: no capture without the backend's `windowCapture` bit (Hyprland v0.1).
+                    let open = matches!(stores.get("panel.open"), Some(Value::Bool(true)))
+                        && data["capabilities"]["windowCapture"] == true;
                     self.attach_previews(&mut windows, open, wake.clone());
                 } else if self.kind == Kind::Keybindings {
                     rows = shortcut_rows(data);

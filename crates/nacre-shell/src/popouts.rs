@@ -574,6 +574,7 @@ pub fn chat(
                 Arc::new(topic),
                 crate::chat::system_meter,
             )
+            .with_capabilities(client.view_topic("capabilities").ok())
             .with_memory(memory.clone());
             crate::reload::Runtime::panel_session(session, open)
                 .with_trace(trace)

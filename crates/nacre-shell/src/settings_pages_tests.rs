@@ -472,6 +472,11 @@ async fn capability_flags_hide_and_disable_registry_entries() {
     assert!(nav.contains(&"bluetooth".to_string()));
     // `addons` shows while either add-on is missing.
     assert!(nav.contains(&"addons".to_string()));
+    // N0234: a hidden page asked for by id (`nacre settings brain`) opens Add-ons instead.
+    let addons = until(&settings, &stores("brain"), has("addon.brain")).await;
+    assert!(!has("section:brain.knowledge")(&addons));
+    assert_eq!(settings.page_for("brain"), "addons");
+    assert_eq!(settings.page_for("nacre-ai"), "nacre-ai");
     let windows = items(
         &until(&settings, &stores("windows-workspaces"), |m| {
             has("windows-workspaces.windows.gapsIn")(m)
@@ -557,7 +562,7 @@ async fn lock_login_privacy_and_power_pages_write_the_stores_and_call_the_lock()
         vec![
             (
                 "capabilities",
-                caps(json!({"powerProfiles": true, "packages": true})),
+                caps(json!({"powerProfiles": true, "powerIdle": true, "packages": true})),
             ),
             ("settings.store.desktop", desktop()),
             ("settings.store.power", store("power", 2, json!({}))),
@@ -1359,6 +1364,9 @@ async fn system_page_shows_the_status_and_launches_the_aur_policy_and_setup() {
     settle_calls(&settings, &at).await;
     // Add-ons: `nacre setup` for each missing one; Brain opens through its own method.
     let addons = items(&until(&settings, &stores("addons"), has("addon.ai")).await);
+    // N0234: without Nacre AI its pages are not reachable by id either.
+    assert_eq!(settings.page_for("nacre-ai"), "addons");
+    assert_eq!(settings.page_for("panels/ai-sidebar"), "panels");
     assert_eq!(
         row(&addons, "addon.brain")["options"][0]["id"],
         "do:open|setup"

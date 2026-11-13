@@ -2542,7 +2542,7 @@ async fn previews_lease_only_while_open_and_with_the_setting_and_attach_the_newe
     let lab = lab().await;
     let dir = lab.dir.join("capture");
     let hub = CaptureHub::test_hub(dir.clone());
-    let extras = Extras::new(Kind::Overview, lab.client.clone())
+    let mut extras = Extras::new(Kind::Overview, lab.client.clone())
         .unwrap()
         .with_capture(hub.clone());
     let with_open = |open: bool| {
@@ -2555,6 +2555,16 @@ async fn previews_lease_only_while_open_and_with_the_setting_and_attach_the_newe
         Value::List(rows) => rows.clone(),
         other => panic!("{other:?}"),
     };
+    // N0234: windowCapture=false (Hyprland v0.1): open shows icon tiles and leases nothing.
+    let compositor = Arc::new(bead_test::source::FakeSource::new(fixture()).unwrap());
+    extras.topic = Some(compositor.clone() as Arc<dyn Source>);
+    let model = extras.project(&with_open(true), Some(wake.clone()));
+    assert_eq!(model["extras.available"], Value::Bool(true));
+    assert_eq!(hub.lease_count(), 0, "no windowCapture: nothing leased");
+    assert!(rows(&model).iter().all(|row| row.get("preview").is_none()));
+    let mut capable = fixture();
+    capable["capabilities"]["windowCapture"] = json!(true);
+    compositor.publish(capable).unwrap();
     for _ in 0..200 {
         if extras.project(&with_open(false), None)["extras.available"] == Value::Bool(true) {
             break;

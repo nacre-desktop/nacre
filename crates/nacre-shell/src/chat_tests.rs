@@ -1244,6 +1244,51 @@ async fn launcher_matches_scale_and_detached_goldens() -> bead_test::Result<()> 
     Ok(())
 }
 
+#[tokio::test(flavor = "current_thread")]
+async fn missing_ai_shows_the_not_installed_state_and_calls_nothing() -> bead_test::Result<()> {
+    // N0234: `ai: false` in the capability flags (package absent) replaces a failing sidebar.
+    let _guard = serial();
+    let mut lab = lab(topic(&[], state(false, "", None))).await;
+    let flags = Arc::new(FakeSource::new(json!({"flags": {"ai": false, "brain": false}})).unwrap());
+    let chat = chat_for(&lab).await.with_capabilities(Some(flags));
+    let quick = stores(&[("launcher.quick_chat", Value::Bool(true))]);
+    for at in [&quick, &launcher_stores(&[])] {
+        assert_eq!(chat.project(at)["chat.missing"], Value::Bool(true));
+        chat.act("launcher:new", at);
+    }
+    assert!(
+        tokio::time::timeout(Duration::from_millis(200), lab.calls.recv())
+            .await
+            .is_err(),
+        "no ai.* call without Nacre AI"
+    );
+    let mut projected = chat.project(&launcher_stores(&[]));
+    projected.insert("panel.open".into(), Value::Bool(true));
+    for scale in [1., 1.5] {
+        let mut h = harness(projected.clone(), scale)?;
+        let layers = &h.scene().layers;
+        let shown = |id: &str| layers.iter().any(|layer| layer.id.starts_with(id));
+        for id in [
+            "chat.header.logo",
+            "chat.header.pin",
+            "chat.missing-title",
+            "chat.missing-hint",
+        ] {
+            assert!(shown(id), "missing {id}");
+        }
+        for id in [
+            "chat.header.provider",
+            "chat.search",
+            "chat.start-actions",
+            "chat.secondary",
+        ] {
+            assert!(!shown(id), "{id} needs Nacre AI");
+        }
+        golden("missing", &mut h, scale)?;
+    }
+    Ok(())
+}
+
 #[test]
 fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::Result<()> {
     let _guard = serial();
