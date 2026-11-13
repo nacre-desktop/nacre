@@ -161,6 +161,7 @@ jobs:
                 /work/nacre/nacre-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst \
+                /work/nacre/nacre-keyring-[0-9]*.pkg.tar.zst \
                 /work/nacre/nacre-session-{nacre-niri,niri,hyprland}-[0-9]*.pkg.tar.zst \
                 /work/niri/nacre-niri-[0-9]*.pkg.tar.zst
               for backend in nacre-niri niri hyprland both; do

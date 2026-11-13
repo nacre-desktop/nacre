@@ -50,7 +50,8 @@ jobs:
             pacman-key --lsign-key "$(cat /work/nacre-repo.fingerprint)"
             pacman -U --noconfirm /work/orient/orient-[0-9]*.pkg.tar.zst \
               /work/nacre/nacre-[0-9]*.pkg.tar.zst /work/nacre/nacre-ai-[0-9]*.pkg.tar.zst \
-              /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst /work/nacre/nacre-session-{niri,hyprland,nacre-niri}-[0-9]*.pkg.tar.zst \
+              /work/nacre/nacre-brain-[0-9]*.pkg.tar.zst /work/nacre/nacre-keyring-[0-9]*.pkg.tar.zst \
+              /work/nacre/nacre-session-{niri,hyprland,nacre-niri}-[0-9]*.pkg.tar.zst \
               /work/niri/nacre-niri-[0-9]*.pkg.tar.zst
             for backend in nacre-niri niri hyprland both; do
               useradd -m "nacre-package-test-$backend"
