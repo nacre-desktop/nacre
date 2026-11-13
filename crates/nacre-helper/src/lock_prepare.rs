@@ -1,7 +1,7 @@
 //! Prepare the existing private lock artifacts outside the lock startup path.
 use crate::{json, lock_dashboard, lock_info::Info, Result};
 use serde_json::{json, Value};
-use std::{fs, io::Write, os::unix::fs::PermissionsExt, path::Path};
+use std::{fs, os::unix::fs::PermissionsExt, path::Path};
 
 pub fn atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     let parent = path.parent().ok_or("Missing lock preparation directory")?;
@@ -9,11 +9,7 @@ pub fn atomic(path: &Path, bytes: &[u8]) -> Result<()> {
         fs::create_dir_all(parent)?;
         fs::set_permissions(parent, fs::Permissions::from_mode(0o700))?;
     }
-    let mut temporary = tempfile::NamedTempFile::new_in(parent)?;
-    temporary.write_all(bytes)?;
-    fs::set_permissions(temporary.path(), fs::Permissions::from_mode(0o600))?;
-    temporary.persist(path)?;
-    Ok(())
+    crate::files::atomic(path, bytes)
 }
 
 pub fn prepare(

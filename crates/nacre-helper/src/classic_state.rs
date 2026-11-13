@@ -1,5 +1,5 @@
 //! The existing paired wallpaper/palette publication transaction.
-use crate::{i18n::tr, json, paths::Paths, state, Result};
+use crate::{files, i18n::tr, json, paths::Paths, state, Result};
 use serde_json::{json, Map, Value};
 use sha2::Digest;
 use std::{
@@ -124,18 +124,7 @@ pub fn validated_colors(data: &Value, assets: &Path) -> Result<Map<String, Value
 }
 pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
     if !state::write_text(path, text)? {
-        let parent = path.parent().ok_or("Invalid publication path")?;
-        fs::create_dir_all(parent)?;
-        let mut temporary = tempfile::Builder::new()
-            .prefix(&format!(
-                ".{}",
-                path.file_name()
-                    .ok_or("Missing filename")?
-                    .to_string_lossy()
-            ))
-            .tempfile_in(parent)?;
-        temporary.write_all(text.as_bytes())?;
-        temporary.persist(path)?;
+        files::atomic(path, text.as_bytes())?;
     }
     if path
         .file_name()
@@ -148,21 +137,6 @@ pub fn atomic_write(path: &Path, text: &str) -> Result<()> {
         );
         std::io::stdout().flush()?;
     }
-    Ok(())
-}
-fn atomic_write_bytes(path: &Path, bytes: &[u8]) -> Result<()> {
-    let parent = path.parent().ok_or("Invalid publication path")?;
-    fs::create_dir_all(parent)?;
-    let mut temporary = tempfile::Builder::new()
-        .prefix(&format!(
-            ".{}",
-            path.file_name()
-                .ok_or("Missing filename")?
-                .to_string_lossy()
-        ))
-        .tempfile_in(parent)?;
-    temporary.write_all(bytes)?;
-    temporary.persist(path)?;
     Ok(())
 }
 
@@ -408,7 +382,7 @@ fn restore_target_outputs(snapshot: &[(PathBuf, TargetOutputState)]) -> Result<(
                 Err(error) => return Err(error.into()),
             },
             TargetOutputState::File(bytes, mode) => {
-                atomic_write_bytes(path, bytes)?;
+                files::atomic(path, bytes)?;
                 fs::set_permissions(path, fs::Permissions::from_mode(*mode))?;
             }
             TargetOutputState::Link(target) => atomic_symlink(path, target)?,
