@@ -16,7 +16,10 @@ pub(super) fn handle(command: &Value, shared: &Arc<Mutex<Shared>>) {
 }
 
 fn records_path() -> Result<PathBuf> {
-    Ok(home()?.join(".local/state/nacre/shell/extras/chats.json"))
+    // Same file as desktop_extras' chat list and resume, which honour XDG_STATE_HOME.
+    Ok(crate::paths::Paths::environment()?
+        .state
+        .join("shell/extras/chats.json"))
 }
 
 fn records(path: &Path) -> Result<Value> {
