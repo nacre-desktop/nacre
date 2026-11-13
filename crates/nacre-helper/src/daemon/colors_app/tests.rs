@@ -44,30 +44,47 @@ impl Fixture {
         let dir = tempfile::tempdir().unwrap();
         std::fs::set_permissions(dir.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
         let root = dir.path();
-        let d = root.display();
         let paths = Paths::new(root.join("home"));
         std::fs::create_dir_all(paths.state.join("wallpaper")).unwrap();
         std::fs::create_dir_all(&paths.config).unwrap();
         std::fs::write(
             root.join("engine"),
-            format!(
-                r#"#!/bin/sh
-d='{d}'
-echo "$@" >> $d/engine.log
-case "$1 $2" in
- "colors catalog") cat $d/catalog.json;;
- "colors preview") read line; echo "$line" >> $d/preview.log
-   if [ -f $d/slow-once ]; then rm $d/slow-once; sleep 6; fi
-   if [ -f $d/refuse ]; then printf 'Could not read that image %0400d\n' 0 >&2; exit 1; fi
-   cat $d/preview.json;;
- "colors apply") read line; echo "$line" > $d/apply.log; [ -f $d/hold ] && sleep 0.6
-   echo '{{"applied":true,"name":"lake"}}';;
- "colors export") read line; echo "$line" > $d/export.log
-   echo '{{"directory":"/x","files":["/x/palette.json"]}}';;
- "app-theme "*) echo "$@" > $d/app-theme.log; [ -f $d/refuse ] && exit 1; exit 0;;
-esac
-"#
-            ),
+            r#"#!/usr/bin/env python3
+import json
+from pathlib import Path
+import sys
+import time
+
+d = Path(__file__).parent
+args = sys.argv[1:]
+with (d / "engine.log").open("a") as log:
+    log.write(" ".join(args) + "\n")
+if args[:2] == ["colors", "catalog"]:
+    print((d / "catalog.json").read_text())
+elif args[:2] == ["colors", "preview"]:
+    line = sys.stdin.readline()
+    with (d / "preview.log").open("a") as log:
+        log.write(line)
+    if (d / "slow-once").exists():
+        (d / "slow-once").unlink()
+        # Sleep in this process: cancellation must not leave a pipe-owning child.
+        time.sleep(6)
+    if (d / "refuse").exists():
+        print("Could not read that image " + "0" * 400, file=sys.stderr)
+        sys.exit(1)
+    print((d / "preview.json").read_text())
+elif args[:2] == ["colors", "apply"]:
+    (d / "apply.log").write_text(sys.stdin.readline())
+    if (d / "hold").exists():
+        time.sleep(0.6)
+    print(json.dumps({"applied": True, "name": "lake"}))
+elif args[:2] == ["colors", "export"]:
+    (d / "export.log").write_text(sys.stdin.readline())
+    print(json.dumps({"directory": "/x", "files": ["/x/palette.json"]}))
+elif args[:1] == ["app-theme"]:
+    (d / "app-theme.log").write_text(" ".join(args) + "\n")
+    sys.exit(1 if (d / "refuse").exists() else 0)
+"#,
         )
         .unwrap();
         std::fs::set_permissions(root.join("engine"), std::fs::Permissions::from_mode(0o755))
@@ -296,8 +313,13 @@ fn the_newest_preview_wins_and_only_one_runs_at_a_time() {
             "colors.preview",
             json!({"request":{"image":"/w/a.png","hour":1}}),
         ));
-        tokio::time::sleep(Duration::from_millis(300)).await;
-        assert!(f.text("preview.log").contains("\"hour\":1"));
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !f.text("preview.log").contains("\"hour\":1") || f.path("slow-once").exists() {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
         let started = std::time::Instant::now();
         let new = f
             .call(

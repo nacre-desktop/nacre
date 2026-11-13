@@ -60,7 +60,8 @@ const OUTPUT_WIDTH: i32 = 1920;
 const OUTPUT_HEIGHT: i32 = 1200;
 const FRAME_PERIOD: Duration = Duration::from_nanos(8_333_333);
 const QUIET_WINDOW: Duration = Duration::from_millis(200);
-const HARNESS_TIMEOUT: Duration = Duration::from_secs(8);
+// Allow cold debug startup and resize/close phases on a shared CI host.
+const HARNESS_TIMEOUT: Duration = Duration::from_secs(30);
 const IDENT: &str = "0123456789abcdef0123456789abcdef";
 const PROMPT_NAMESPACE: &str = "nacre-prompt-layer-motion-wire-test";
 
