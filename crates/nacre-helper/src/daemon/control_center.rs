@@ -361,6 +361,7 @@ pub async fn dispatch(
         "stay_awake.set" => {
             let request: EnabledSet = serde_json::from_value(params).map_err(|_| invalid())?;
             let changed = blocking(move || set_stay_awake(&env, request.enabled)).await?;
+            publish_units(&hub, Some(request.enabled), None);
             json!({"changed":changed})
         }
         "recorder.start" => {
@@ -389,9 +390,10 @@ pub async fn dispatch(
                             if screen { "screen" } else { "area" },
                         ],
                         Some(json!({ "audio": audio }).to_string()),
+                        Some(hub.clone()),
                     )?;
                 }
-                _ => spawn_capture(
+                _ => spawn_capture_with(
                     &env,
                     &[
                         "menu-backend",
@@ -402,6 +404,8 @@ pub async fn dispatch(
                             "record-start"
                         },
                     ],
+                    None,
+                    Some(hub.clone()),
                 )?,
             }
             json!({"changed":true})
@@ -409,6 +413,7 @@ pub async fn dispatch(
         "recorder.stop" => {
             let _: PillEmpty = serde_json::from_value(params).map_err(|_| invalid())?;
             let changed = blocking(move || stop_recording(&env)).await?;
+            publish_units(&hub, None, Some(false));
             json!({"changed":changed})
         }
         "screenshot.capture" => {
@@ -725,13 +730,15 @@ fn set_night_light(env: &Env, enabled: bool) -> std::result::Result<bool, Failur
 /// user: the reply means "started"; the tool notifies the user itself and is stopped after
 /// `CAPTURE_LIMIT`. One at a time. The caller closes its own panels first.
 fn spawn_capture(env: &Env, args: &[&str]) -> std::result::Result<(), Failure> {
-    spawn_capture_with(env, args, None)
+    spawn_capture_with(env, args, None, None)
 }
-/// `spawn_capture` with one JSON document on the tool's stdin (the helper's `input`).
+/// `spawn_capture` with one JSON document on the tool's stdin (the helper's `input`). A
+/// recorder start passes `recorder`: the unit state is published as soon as the tool exits.
 fn spawn_capture_with(
     env: &Env,
     args: &[&str],
     input: Option<String>,
+    recorder: Option<Shared>,
 ) -> std::result::Result<(), Failure> {
     if CAPTURE_BUSY.with(|busy| busy.replace(true)) {
         return Err(busy("A capture tool is already running"));
@@ -757,6 +764,7 @@ fn spawn_capture_with(
         }
     };
     let stdin = child.stdin.take();
+    let env = env.clone();
     tokio::task::spawn_local(async move {
         if let (Some(text), Some(mut stdin)) = (input, stdin) {
             use tokio::io::AsyncWriteExt;
@@ -768,6 +776,11 @@ fn spawn_capture_with(
             .is_err()
         {
             let _ = child.kill().await;
+        }
+        if let Some(hub) = recorder {
+            if let Ok(recording) = crate::process::offload(move || units(&env).1).await {
+                publish_units(&hub, None, recording);
+            }
         }
         CAPTURE_BUSY.with(|busy| busy.set(false));
         changed();
@@ -1304,6 +1317,25 @@ fn publish(hub: &Shared, state: &ControlsState) -> Result<()> {
         .publish(TOPIC, serde_json::to_value(state)?)?;
     Ok(())
 }
+/// A Nacre toggle's known unit state, published at once instead of on the next slow read.
+/// Only members already shown change; the next full read confirms them.
+fn publish_units(hub: &Shared, stay: Option<bool>, recording: Option<bool>) {
+    let published = hub.borrow().snapshot(TOPIC);
+    let Some(mut state) =
+        published.and_then(|data| serde_json::from_value::<ControlsState>(data).ok())
+    else {
+        return;
+    };
+    if let (Some(toggle), Some(enabled)) = (state.stay_awake.as_mut(), stay) {
+        toggle.enabled = enabled;
+    }
+    if let (Some(recorder), Some(recording)) = (state.recorder.as_mut(), recording) {
+        recorder.recording = recording;
+    }
+    if publish(hub, &state).is_err() {
+        tracing::warn!("Cannot publish the control unit state");
+    }
+}
 
 /// The registry-relevant members (night light) need one read before any client subscribes.
 pub async fn initial(hub: &Shared) -> Result<()> {
@@ -1343,6 +1375,15 @@ async fn session(hub: Shared, env: Env) -> Result<()> {
         let lights = scan_lights(&env, &probe).await;
         let (read_env, prior) = (env.clone(), state.clone());
         state = crate::process::offload(move || collect(&read_env, &probe, &prior, lights)).await?;
+        if !slow {
+            // Unit states are slow members: keep what a toggle published during this read.
+            let published = hub.borrow().snapshot(TOPIC);
+            if let Some(published) =
+                published.and_then(|data| serde_json::from_value::<ControlsState>(data).ok())
+            {
+                (state.stay_awake, state.recorder) = (published.stay_awake, published.recorder);
+            }
+        }
         if slow {
             state.appearance = read_appearance(&hub).await;
         }

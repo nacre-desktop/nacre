@@ -490,6 +490,42 @@ fn stay_awake_and_recorder_follow_the_unit_state() {
 }
 
 #[test]
+fn toggles_publish_their_unit_state_without_waiting_for_a_read() {
+    run(async {
+        let f = Fixture::new();
+        initial(&f.hub).await.unwrap();
+        // No subscriber, so no producer is reading: only the methods can change the topic.
+        let shown = |f: &Fixture| -> (Option<Toggle>, Option<Recorder>) {
+            let state: ControlsState =
+                serde_json::from_value(f.hub.borrow().snapshot(TOPIC).unwrap()).unwrap();
+            (state.stay_awake, state.recorder)
+        };
+        assert_eq!(
+            shown(&f),
+            (
+                Some(Toggle { enabled: false }),
+                Some(Recorder { recording: false })
+            )
+        );
+        f.call("stay_awake.set", json!({"enabled":true}))
+            .await
+            .unwrap();
+        assert_eq!(shown(&f).0, Some(Toggle { enabled: true }));
+        f.call("recorder.start", json!({"mode":"region"}))
+            .await
+            .unwrap();
+        released().await;
+        assert_eq!(shown(&f).1, Some(Recorder { recording: true }));
+        f.call("recorder.stop", json!({})).await.unwrap();
+        assert_eq!(shown(&f).1, Some(Recorder { recording: false }));
+        f.call("stay_awake.set", json!({"enabled":false}))
+            .await
+            .unwrap();
+        assert_eq!(shown(&f).0, Some(Toggle { enabled: false }));
+    });
+}
+
+#[test]
 fn recorder_start_with_sound_uses_the_launcher_recorder() {
     run(async {
         let f = Fixture::new();
