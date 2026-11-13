@@ -129,9 +129,10 @@ fn draw_due(stale: bool, pending: bool, shown: bool, callback: bool) -> bool {
     stale && !pending && (!shown || callback)
 }
 
-/// Empty callbacks do not advance video; only undrawn work needs another slot.
-fn request_due(stale: bool, pending: bool, playing: bool, wanted: bool) -> bool {
-    stale && !pending && playing && wanted
+/// Empty callbacks do not advance video; only undrawn work needs another slot. A GL
+/// opacity fade step is undrawn work even while the decoder is paused.
+fn request_due(stale: bool, pending: bool, playing: bool, fading: bool, wanted: bool) -> bool {
+    stale && !pending && (playing || fading) && wanted
 }
 
 struct Out {
@@ -484,6 +485,7 @@ impl Engine {
                 out.stale,
                 out.pending.is_some(),
                 self.decoder == Decoder::Play,
+                out.fade.is_some(),
                 wants(&self.render, &out.name),
             )
         {
@@ -666,7 +668,9 @@ impl Engine {
     fn update_fades(&mut self) -> bool {
         let now = Instant::now();
         let mut active = false;
-        for out in &mut self.outs {
+        let gl = self.player.as_ref().is_some_and(mpv::Player::is_gl);
+        for index in 0..self.outs.len() {
+            let out = &mut self.outs[index];
             let Some((started, generation)) = out.fade else {
                 continue;
             };
@@ -683,18 +687,15 @@ impl Engine {
             } else {
                 out.opacity = factor;
                 out.stale = true;
-            }
-            if progress >= 1.0 {
-                out.fade = None;
-            } else {
-                active = true;
-            }
-        }
-        if self.player.as_ref().is_some_and(mpv::Player::is_gl) {
-            for index in 0..self.outs.len() {
-                if self.outs[index].alpha.is_none() && self.outs[index].stale {
+                if gl {
+                    // Request while `fade` is set, so a paused decoder also draws the last step.
                     self.schedule(index);
                 }
+            }
+            if progress >= 1.0 {
+                self.outs[index].fade = None;
+            } else {
+                active = true;
             }
         }
         active
@@ -1242,17 +1243,36 @@ mod tests {
 
     #[test]
     fn callbacks_are_requested_only_for_undrawn_visible_playback() {
-        assert!(request_due(true, false, true, true));
+        assert!(request_due(true, false, true, false, true));
         assert!(
-            !request_due(true, true, true, true),
+            !request_due(true, true, true, false, true),
             "one pending slot is enough"
         );
-        assert!(!request_due(true, false, false, true), "paused");
-        assert!(!request_due(true, false, true, false), "covered");
+        assert!(!request_due(true, false, false, false, true), "paused");
+        assert!(!request_due(true, false, true, false, false), "covered");
         // A callback draws the latest frame and clears stale; its acknowledgement
         // must not start a perpetual frame/empty-commit loop.
         assert!(draw_due(true, false, true, true));
-        assert!(!request_due(false, false, true, true), "no new frame");
+        assert!(
+            !request_due(false, false, true, false, true),
+            "no new frame"
+        );
+    }
+
+    #[test]
+    fn a_paused_fade_requests_each_step_until_it_ends() {
+        // Each GL opacity fade tick marks the output stale; the decoder is paused.
+        assert!(request_due(true, false, false, true, true), "fade step");
+        assert!(
+            !request_due(true, true, false, true, true),
+            "one pending slot"
+        );
+        assert!(
+            !request_due(false, false, false, true, true),
+            "step already drawn"
+        );
+        assert!(!request_due(true, false, false, true, false), "covered");
+        assert!(!request_due(true, false, false, false, true), "fade ended");
     }
 
     fn parse(args: &[&str]) -> Result<Options, &'static str> {
