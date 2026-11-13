@@ -33,11 +33,11 @@ This file tracks current and historical Nacre work units. Add one row per unit: 
 | N0405 | [User docs and compatibility matrix](0405-user-docs-matrix.md) | Done 2026-11-12; b: 2026-11-13 | docs/compatibility.md, installation.md; N0405b landed Platform's first-boot, widgets, switching and troubleshooting pages plus Orient docs/cli.md and nacre-niri differences page. |
 | N0406 | [Tier 1 nacre-niri package and setup choice](0406-tier1-nacre-niri-package.md) | Integrated 2026-11-12; package runtime proof waits for N0408 | Builds the fork at r3079 from its own recipe, retires the upstream-niri hover companion (about −2,390 lines), and setup offers nacre-niri first. |
 | N0407 | [Package dependency review](0407-package-dependency-review.md) | Done; 2026-11-13 | Reduce core hard deps from 58 to 28, make apps/integrations optional, move session tools, and document the conditional AI proof plus niri VM update PASS. |
-| N0408 |  | Owner-approved; publish blocked on the org Actions token permission | Orient fffb58c recipe ships only orient; dispatch native-arch.yml publish=true after the org setting changes. |
+| N0408 | Orient release matching the engine lock | Owner-approved; publish blocked on the org Actions token permission | Orient fffb58c recipe ships only orient; dispatch native-arch.yml publish=true after the org setting changes. |
 | N0409 | [Updater follows aurReview](0409-updater-aur-review.md) | Done 2026-11-12 | Review on by default; native keeps paru -Syu --skipreview. |
 | N0410 | [v0.1.0 cut readiness](0410-v0-1-0-cut.md) | Done 2026-11-12 | Non-dev pkgver and release tags accepted; no VERSION bump or tag until the owner cuts. |
 | N0411 | [Pre-cut fixes](0411-pre-cut-fixes.md) | Done 2026-11-13 (02fdb00a) | Cut-rehearsal F1–F4 and installer hardening H1–H9 (single pinned key, undo steps, piped input approves only the transaction, review on for every profile). |
-| N0412 |  | In progress | nacre-keyring re-delivers a renewed signing key; publish fails within 90 days of subkey expiry (expires 2027-10-14). |
+| N0412 | [Keyring package](0412-keyring-package.md) | Done 2026-11-13 (35973074) | nacre-keyring re-delivers a renewed signing key; publish fails within 90 days of subkey expiry (expires 2027-10-14). |
 | N0413 | [Branding assets](0413-branding-assets.md) | Done 2026-11-13 (3c387912) | Owner-picked logo in assets/branding, README headers (Nacre, Orient, nacre-niri), social preview PNG for the owner; in-product branding is Platform's N0315. |
 
 ## Historical units
@@ -67,7 +67,7 @@ This file tracks current and historical Nacre work units. Add one row per unit: 
 | B0171 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | B0190 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | B0199 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
-| B0214 |  | Imported; archive retired by N0157 | Product lives in crates/nacre-shell/ and shell/; framework stays pinned in Cargo. |
+| B0214 | Bead framework split step 3 | Imported; archive retired by N0157 | Product lives in crates/nacre-shell/ and shell/; framework stays pinned in Cargo. |
 | B0226 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | B0228 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
 | B0233 |  | Historical reference | Mentioned in the earlier queue or handoff notes. |
