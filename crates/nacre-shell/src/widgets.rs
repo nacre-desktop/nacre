@@ -11,7 +11,7 @@ fn window_state_path() -> Option<std::path::PathBuf> {
         .map(|state| state.join("widgets-window.json"))
 }
 
-fn restored_window_size(path: &std::path::Path) -> Option<(u32, u32)> {
+pub(crate) fn restored_window_size(path: &std::path::Path) -> Option<(u32, u32)> {
     let value: serde_json::Value = serde_json::from_slice(&std::fs::read(path).ok()?).ok()?;
     if value.get("version")?.as_u64()? != 1 {
         return None;
@@ -23,7 +23,7 @@ fn restored_window_size(path: &std::path::Path) -> Option<(u32, u32)> {
 
 fn save_window_size(path: &std::path::Path, (width, height): (u32, u32)) -> std::io::Result<()> {
     if !(420..=4096).contains(&width) || !(360..=4096).contains(&height) {
-        return Err(std::io::Error::other("invalid Widgets window size"));
+        return Err(std::io::Error::other("invalid window size"));
     }
     let parent = path
         .parent()
@@ -53,6 +53,34 @@ fn presentation_wallpaper_path_from(state: &std::path::Path) -> Option<String> {
 
 #[path = "widget_drag.rs"]
 pub mod widget_drag;
+
+/// A debounced writer of the last window size, shared by the Widgets and Brain windows.
+pub(crate) fn window_size_saver(
+    path: std::path::PathBuf,
+    thread: &str,
+) -> std::sync::Arc<dyn Fn((u32, u32)) + Send + Sync> {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::Builder::new()
+        .name(thread.into())
+        .spawn(move || {
+            while let Ok(mut size) = receiver.recv() {
+                loop {
+                    match receiver.recv_timeout(std::time::Duration::from_millis(300)) {
+                        Ok(next) => size = next,
+                        Err(std::sync::mpsc::RecvTimeoutError::Timeout) => break,
+                        Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+                    }
+                }
+                if let Err(error) = save_window_size(&path, size) {
+                    eprintln!("WINDOW_SIZE_SAVE_ERROR {error}");
+                }
+            }
+        })
+        .expect("window size writer starts");
+    std::sync::Arc::new(move |size| {
+        let _ = sender.send(size);
+    })
+}
 
 /// The catalogue and the user's canonical layout share the standalone app's warm first frame.
 pub fn window_spec(
@@ -153,29 +181,7 @@ pub fn window_spec(
                     .min(size.1),
             )
         })),
-        on_resize: state_path.map(|path| {
-            let (sender, receiver) = std::sync::mpsc::channel();
-            std::thread::Builder::new()
-                .name("nacre-widgets-size-save".into())
-                .spawn(move || {
-                    while let Ok(mut size) = receiver.recv() {
-                        loop {
-                            match receiver.recv_timeout(std::time::Duration::from_millis(300)) {
-                                Ok(next) => size = next,
-                                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => break,
-                                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
-                            }
-                        }
-                        if let Err(error) = save_window_size(&path, size) {
-                            eprintln!("WIDGET_WINDOW_SIZE_SAVE_ERROR {error}");
-                        }
-                    }
-                })
-                .expect("Widgets window size writer starts");
-            Arc::new(move |size| {
-                let _ = sender.send(size);
-            }) as Arc<dyn Fn((u32, u32)) + Send + Sync>
-        }),
+        on_resize: state_path.map(|path| window_size_saver(path, "nacre-widgets-size-save")),
         fallback,
         factory,
         model: Arc::new(|args| open_model(args.first())),

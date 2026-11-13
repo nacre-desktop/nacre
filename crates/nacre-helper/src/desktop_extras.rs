@@ -1031,8 +1031,9 @@ pub fn run(args: &[String]) -> Result<i32> {
                             &json!({"path":file.strip_prefix(&root)?.to_string_lossy(),"token":token,"created":SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs_f64()}),
                         )?;
                         crate::process::launch_app_detached(&[
-                            "nacre-shell".into(),
-                            "brain".into(),
+                            "nacre-brain".into(),
+                            "open".into(),
+                            file.strip_prefix(&root)?.to_string_lossy().into_owned(),
                         ])?;
                     }
                     Ok(json!(true))

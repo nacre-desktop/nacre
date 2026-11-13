@@ -51,16 +51,46 @@ impl Response {
     }
 }
 
+/// Open clients and the last activity, shared with the app socket (N0217): the worker exits
+/// `idle_timeout` after the last HTTP request or app connection.
+#[derive(Default)]
+pub struct Activity {
+    pub active: AtomicUsize,
+    last: Mutex<Option<Instant>>,
+}
+
+impl Activity {
+    pub fn touch(&self) {
+        *self.last.lock().unwrap_or_else(|e| e.into_inner()) = Some(Instant::now());
+    }
+    fn idle(&self, timeout: Duration) -> bool {
+        self.active.load(Ordering::Acquire) == 0
+            && self
+                .last
+                .lock()
+                .unwrap_or_else(|e| e.into_inner())
+                .is_none_or(|last| last.elapsed() >= timeout)
+    }
+}
+
 pub fn serve<F>(
     listener: TcpListener,
     state: &Path,
     idle_timeout: Duration,
+    activity: Arc<Activity>,
     callback: F,
 ) -> io::Result<()>
 where
     F: Fn(Request) -> Response + Send + Sync + 'static,
 {
-    serve_inner(listener, state, idle_timeout, CONNECTION_DEADLINE, callback)
+    serve_inner(
+        listener,
+        state,
+        idle_timeout,
+        CONNECTION_DEADLINE,
+        activity,
+        callback,
+    )
 }
 
 fn serve_inner<F>(
@@ -68,6 +98,7 @@ fn serve_inner<F>(
     state: &Path,
     idle_timeout: Duration,
     connection_deadline: Duration,
+    activity: Arc<Activity>,
     callback: F,
 ) -> io::Result<()>
 where
@@ -84,25 +115,24 @@ where
     let port = address.port();
     let auth = Arc::new(Mutex::new(BrowserAuth::open(state, port)?));
     let callback = Arc::new(callback);
-    let active = Arc::new(AtomicUsize::new(0));
-    let mut last_activity = Instant::now();
+    activity.touch();
     loop {
         match listener.accept() {
             Ok((stream, peer)) => {
-                last_activity = Instant::now();
+                activity.touch();
                 if !peer.ip().is_loopback() {
                     drop(stream);
                     continue;
                 }
-                if active.fetch_add(1, Ordering::AcqRel) >= CLIENT_LIMIT {
-                    active.fetch_sub(1, Ordering::AcqRel);
+                if activity.active.fetch_add(1, Ordering::AcqRel) >= CLIENT_LIMIT {
+                    activity.active.fetch_sub(1, Ordering::AcqRel);
                     drop(stream);
                     continue;
                 }
                 let watchdog_stream = match stream.try_clone() {
                     Ok(value) => value,
                     Err(_) => {
-                        active.fetch_sub(1, Ordering::AcqRel);
+                        activity.active.fetch_sub(1, Ordering::AcqRel);
                         drop(stream);
                         continue;
                     }
@@ -113,10 +143,10 @@ where
                 });
                 let auth = Arc::clone(&auth);
                 let callback = Arc::clone(&callback);
-                let active = Arc::clone(&active);
+                let activity = Arc::clone(&activity);
                 std::thread::spawn(move || {
                     let _guard = ClientGuard {
-                        active,
+                        activity,
                         done: done_tx,
                     };
                     let mut stream = stream;
@@ -141,7 +171,7 @@ where
                 });
             }
             Err(error) if error.kind() == io::ErrorKind::WouldBlock => {
-                if active.load(Ordering::Acquire) == 0 && last_activity.elapsed() >= idle_timeout {
+                if activity.idle(idle_timeout) {
                     return Ok(());
                 }
                 std::thread::sleep(Duration::from_millis(20));
@@ -153,13 +183,14 @@ where
 }
 
 struct ClientGuard {
-    active: Arc<AtomicUsize>,
+    activity: Arc<Activity>,
     done: mpsc::Sender<()>,
 }
 
 impl Drop for ClientGuard {
     fn drop(&mut self) {
-        self.active.fetch_sub(1, Ordering::AcqRel);
+        self.activity.active.fetch_sub(1, Ordering::AcqRel);
+        self.activity.touch();
         let _ = self.done.send(());
     }
 }
@@ -790,13 +821,19 @@ mod tests {
         let nonce = crate::brain_auth::readiness_challenge().unwrap();
         let expected_proof = auth.readiness_proof(&nonce).unwrap();
         let server = std::thread::spawn(move || {
-            serve(listener, &state, Duration::from_millis(400), |_request| {
-                Response::new(
-                    200,
-                    "application/json",
-                    br#"{"ready":true,"authVersion":1}"#.to_vec(),
-                )
-            })
+            serve(
+                listener,
+                &state,
+                Duration::from_millis(400),
+                Default::default(),
+                |_request| {
+                    Response::new(
+                        200,
+                        "application/json",
+                        br#"{"ready":true,"authVersion":1}"#.to_vec(),
+                    )
+                },
+            )
             .unwrap()
         });
 
@@ -900,9 +937,13 @@ mod tests {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
         let server = std::thread::spawn(move || {
-            serve(listener, &state, Duration::from_secs(10), |_| {
-                Response::new(404, "application/json", b"{}".to_vec())
-            })
+            serve(
+                listener,
+                &state,
+                Duration::from_secs(10),
+                Default::default(),
+                |_| Response::new(404, "application/json", b"{}".to_vec()),
+            )
             .unwrap()
         });
         wait_for_server(port);
@@ -949,9 +990,13 @@ mod tests {
     fn refuses_non_loopback_listener_and_caps_responses() {
         let dir = tempfile::tempdir().unwrap();
         let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
-        assert!(serve(listener, dir.path(), Duration::ZERO, |_request| {
-            Response::new(200, "text/plain", Vec::new())
-        })
+        assert!(serve(
+            listener,
+            dir.path(),
+            Duration::ZERO,
+            Default::default(),
+            |_request| { Response::new(200, "text/plain", Vec::new()) }
+        )
         .is_err());
 
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
@@ -979,9 +1024,13 @@ mod tests {
         let auth = BrowserAuth::open(&state, port).unwrap();
         let cookie = format!("{}={}", auth.cookie_name(), auth.cookie_value());
         let server = std::thread::spawn(move || {
-            serve(victim, &state, Duration::from_millis(300), |_request| {
-                Response::new(200, "application/json", b"{}".to_vec())
-            })
+            serve(
+                victim,
+                &state,
+                Duration::from_millis(300),
+                Default::default(),
+                |_request| Response::new(200, "application/json", b"{}".to_vec()),
+            )
             .unwrap()
         });
 
@@ -1021,9 +1070,13 @@ mod tests {
         let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
         let port = listener.local_addr().unwrap().port();
         let server = std::thread::spawn(move || {
-            serve(listener, &state, Duration::from_millis(200), |_request| {
-                Response::new(200, "text/plain", b"ok".to_vec())
-            })
+            serve(
+                listener,
+                &state,
+                Duration::from_millis(200),
+                Default::default(),
+                |_request| Response::new(200, "text/plain", b"ok".to_vec()),
+            )
             .unwrap()
         });
         wait_for_server(port);
@@ -1068,6 +1121,7 @@ mod tests {
                 &state,
                 Duration::from_millis(200),
                 Duration::from_secs(1),
+                Arc::default(),
                 move |_request| {
                     let _ = started_tx.send(());
                     let _ = release_rx.lock().unwrap().recv();

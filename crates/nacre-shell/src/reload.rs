@@ -689,6 +689,7 @@ pub struct Runtime {
     chat_subscription: Vec<bead::core::source::Subscription>,
     settings: Option<std::rc::Rc<crate::settings::Settings>>,
     colors: Option<std::rc::Rc<crate::colors::Colors>>,
+    brain: Option<std::rc::Rc<crate::brain::Brain>>,
     welcome: Option<std::rc::Rc<crate::welcome::Welcome>>,
     control: Option<std::rc::Rc<crate::control_center::ControlCenter>>,
     control_subscription: Vec<bead::core::source::Subscription>,
@@ -2640,6 +2641,7 @@ impl Runtime {
             chat_subscription: Vec::new(),
             settings: None,
             colors: None,
+            brain: None,
             welcome: None,
             control: None,
             control_subscription: Vec::new(),
@@ -3641,6 +3643,20 @@ impl Runtime {
         self.actions.register("colors.do", "colors.control")?;
         self.actions.grant("colors.control");
         self.colors = Some(colors);
+        Ok(self)
+    }
+    /// N0217 Brain window: the adapter over the on-demand worker socket.
+    pub fn with_brain(mut self, brain: crate::brain::Brain) -> Result<Self, Box<dyn Error>> {
+        if self.brain.is_some() {
+            return Err("one data projector per panel".into());
+        }
+        let brain = std::rc::Rc::new(brain);
+        let projector = brain.clone();
+        self.session
+            .set_projector(Box::new(move |stores| Ok(projector.project(stores))));
+        self.actions.register("brain.do", "brain.control")?;
+        self.actions.grant("brain.control");
+        self.brain = Some(brain);
         Ok(self)
     }
     /// B0059 Welcome window: app availability, shortcut rows and the window size over the tour view.
@@ -5857,6 +5873,12 @@ impl SceneSource for Runtime {
                 wakeup(bead::wayland::UiEvent::Model(BTreeMap::new()));
             }));
         }
+        if let Some(brain) = &self.brain {
+            let wakeup = wakeup.clone();
+            brain.subscribe(std::sync::Arc::new(move || {
+                wakeup(bead::wayland::UiEvent::Model(BTreeMap::new()));
+            }));
+        }
         if let Some(welcome) = &self.welcome {
             let wakeup = wakeup.clone();
             welcome.subscribe(std::sync::Arc::new(move || {
@@ -6045,6 +6067,9 @@ impl SceneSource for Runtime {
         }
         if let Some(colors) = &self.colors {
             colors.set_viewport(width);
+        }
+        if let Some(brain) = &self.brain {
+            brain.set_viewport(width);
         }
         if let Some(welcome) = &self.welcome {
             welcome.set_viewport(width, height);
@@ -6662,6 +6687,7 @@ impl SceneSource for Runtime {
                     || name == "chat.do"
                     || name == "settings.do"
                     || name == "colors.do"
+                    || name == "brain.do"
                     || name == "welcome.do"
                     || name == "prompt.do"
                     || name == "extras.do"
@@ -7985,6 +8011,17 @@ impl SceneSource for Runtime {
                 Some(Ok(scene)) => scene,
                 _ => self.session.update(changes)?,
             };
+            return self.finish_scene(scene);
+        }
+        if let (Some(brain), Some((_, name, bead::core::Value::Text(arg)))) =
+            (&self.brain, &host_action)
+            && name == "brain.do"
+            && (matches!(&event, UiEvent::Click { .. } | UiEvent::Release)
+                || matches!(&event, UiEvent::Command { command, .. } if command == "enter"))
+        {
+            self.actions.authorize(name)?;
+            let changes = brain.act(arg, &self.session.stores);
+            let scene = self.session.update(changes)?;
             return self.finish_scene(scene);
         }
         if let (Some(welcome), Some((_, name, bead::core::Value::Text(arg)))) =
@@ -9561,6 +9598,8 @@ impl SceneSource for Runtime {
             }
             // The Colors view sizes its pieces from the window width: project again.
             UiEvent::Relayout if self.colors.is_some() => self.session.update(BTreeMap::new())?,
+            // So does the Brain window (rail, page and reader widths).
+            UiEvent::Relayout if self.brain.is_some() => self.session.update(BTreeMap::new())?,
             // The Welcome layout reads the window size: a resize projects it again.
             UiEvent::Relayout if self.welcome.is_some() => self.session.update(BTreeMap::new())?,
             UiEvent::Relayout => self.session.relayout()?,

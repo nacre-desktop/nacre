@@ -23,6 +23,7 @@ pub mod brain_loops;
 pub mod brain_migrate;
 pub mod brain_registry;
 pub mod brain_search;
+pub mod brain_socket;
 pub mod brain_web;
 pub mod brain_wiki;
 pub mod branding;

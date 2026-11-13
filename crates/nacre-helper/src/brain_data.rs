@@ -438,12 +438,21 @@ fn brain(args: &[String]) -> Result<i32> {
     if args.is_empty() || ["open", "brain", "capture"].contains(&args[0].as_str()) {
         let a = args.first().map(String::as_str).unwrap_or("brain");
         let a = if a == "open" { "brain" } else { a };
+        // `nacre-brain open --web` keeps the browser UI until phase 3 retires it (N0217).
+        let a = if a == "brain" && args.get(1).is_some_and(|flag| flag == "--web") {
+            "brain-web"
+        } else {
+            a
+        };
+        // `nacre-brain open <note-id-or-path>` deep-links the app.
+        let note = args.get(1).filter(|v| !v.starts_with("--"));
         use std::os::unix::process::CommandExt;
         return Err(Command::new(
             PathBuf::from(env::var_os("HOME").ok_or("HOME is not set")?)
                 .join(".local/bin/nacre-brain-ui"),
         )
         .arg(a)
+        .args(note)
         .exec()
         .into());
     }

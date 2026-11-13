@@ -1,11 +1,14 @@
 # N0217 Brain as a standalone Bead app
 
-Status: design (two directions rendered, nothing integrated). Owner 2026-11-12: the Brain should be
-"an actual standalone app instead of a Brave thing, maybe built with Bead", and Connections should
-become "a gigantic internet of nodes": an Obsidian-style force-directed graph of all ~2,000 notes
-and their ~10,000 links. The graph is designed against Bead's planned `kit.GraphCanvas` (B0232,
-`docs/specs/0232-graph-canvas.md` on Bead main 84513eec, not built yet); everything else uses
-today's kit.
+Status: phase 1 implemented locally (section 7). The graph screen waits for a Bead pin that
+contains `kit.GraphCanvas`: N0236's pin a6fbc10f predates it (it is on Bead main 790d6d2f).
+Design: two directions rendered, owner chose the mix (section 5).
+
+Owner 2026-11-12: the Brain should be "an actual standalone app instead of a Brave thing, maybe
+built with Bead", and Connections should become "a gigantic internet of nodes": an Obsidian-style
+force-directed graph of all ~2,000 notes and their ~10,000 links. The graph is designed against
+Bead's `kit.GraphCanvas` (B0232, `docs/specs/0232-graph-canvas.md`); everything else uses today's
+kit.
 
 ## 1. Inventory of the web Brain
 
@@ -187,7 +190,7 @@ the semantic search worker stays optional and off by default.
 5. The graph shows notes only, coloured by world; worlds and areas are the filter and legend, not
    hub nodes.
 
-## 6. Evidence (design only)
+## 6. Evidence (design)
 
 - Renders: `.lead/renders/n0217-{A,B}-{overview,graph,local,note,search}-{1,1.5}.png` (20 files,
   1280x800 logical, dark palette) from one dev-1 container with the bead-test harness. Synthetic
@@ -198,3 +201,61 @@ the semantic search worker stays optional and off by default.
   PNG was reviewed at both scales (`.lead/renders/README.md`).
 - Nothing is integrated: the mock views (`shell/brain-n0217/`), the render test and the fixture
   script stay untracked in the worktree; only this spec is committed.
+
+## 7. Phase 1 implementation (2026-11-13)
+
+- **App.** `nacre-shell` app `brain` (`app::APPS`, window app taking `bead.window open`),
+  `app_id = "nacre-brain"`; size stores in `shell/brain/behavior.luau`, last size in
+  `~/.local/state/nacre/shell/brain-window.json` through the Widgets app's debounced writer
+  (`widgets::window_size_saver`, now shared). Route `nacrectl ui nacre brain [note-id|vault-path]`
+  (`commands::map_views`, command catalog entry `nacre brain [note]`).
+- **Launch paths.** `brain_launch::action("brain")` opens the app route first (deep-linked to the
+  note), then the daemon / web fallback, so Super+B, the launcher and Settings rows, the desktop
+  entry and `nacre-brain open [note]` all reach the app without a daemon change; the browser stays
+  behind `nacre-brain open --web` (`brain-web`). Opening a note from the launcher/dashboard
+  (`desktop_extras` focus) deep-links the app by vault path. Risk to check in a nested session: the
+  daemon worker's `brain.open` now calls `nacrectl ui` (3 s timeout, then the web fallback).
+- **Worker socket.** `nacre-helper/src/brain_socket.rs`: `$XDG_RUNTIME_DIR/nacre/brain.sock`, 0600,
+  SO_PEERCRED same uid, 64 KiB request lines, at most 8 clients; ops map 1:1 to `/api/*` and call
+  the same `brain_web::route` handlers (HTTP auth is not involved: the socket is the boundary).
+  Each request runs on its own thread, so a slow Ask never holds up page loads. The worker pushes
+  `{"event":"revision"}` when the graph build revision changes; an open app connection counts as
+  activity (`brain_http::Activity`, shared with HTTP), so the worker idles out 300 s after the last
+  window closes. There is no `navigate` event: deep links arrive through the route instead of the
+  web app's 1 s poll.
+- **Adapter.** `nacre-shell/src/brain.rs` (one connection per window, started with the same
+  `brain-control serve` worker when the socket is absent; Retry reconnects) projects `brain.*`
+  stores and handles one host action `brain.do` (`screen`, `open id|path`, `back`, `world`, `ask`,
+  `ask.toggle`, allow-listed `action:*`, `web`, `refresh`). It holds no index; a `revision` event
+  refetches what the open screen shows; searches are coalesced to one in flight. The reader renders
+  Markdown-lite (headings, bullets, paragraphs; links and marks reduced to text; generated blocks
+  and leading `Key: value` fields skipped).
+- **Views.** `shell/brain/main.luau`: rail (Overview, Graph, Reader, Search, Loops; worlds with
+  counts as the filter; index status), toolbar (search, Ask, Capture, New), Overview (stat tiles,
+  world cards, recent knowledge, open loops), Search (world chips, results, the Ask card with the
+  in-app opt-in switch, owner decision 4), note reader (facts with stale/superseded, body, Open in
+  editor, backlinks and links out beside it), Loops, and an unavailable state with Retry. Worlds
+  take palette roles by world order.
+- **Graph.** Nacre's Bead pin (a6fbc10f after N0236) has no `kit.GraphCanvas` yet, so there is
+  no native graph screen and no fake one:
+  `brain.graph_available` is false and the rail's Graph entry opens the web Brain's graph
+  (`nacre-brain open --web`), as the phase 1 row in section 4 planned. The layout store is in place
+  for phase 2: `brain::{load_layout, save_layout}` (temp file + rename, 0600, a node set more than
+  25 % different is discarded).
+- **Temporary duplicates.** The shell catalog's `bead.brain.*` ids (54) duplicate part of the web
+  app's `brain.ui.*` ids while both UIs exist; the `brain.ui.*` ids go with the web UI in phase 3
+  (14 days after phase 2 is trusted, section 4).
+- **Known gaps (phase 1).** Keyboard: Enter/Tab work through kit focus; `/`, Ctrl K, Alt+1..5 and
+  Esc-back are not wired (Bead windows expose no app key bindings beyond focus commands yet).
+  Search has the world filter only (kind/since/archive filters and the review focus stay in the
+  web app), results are capped at 100 (no `VirtualGrid` needed at that size). Code blocks and
+  images in notes are not rendered. No paired QML/web parity captures yet (the Brain has no QML
+  surface; the comparison is the web app, open item).
+
+- **Evidence.** Goldens at scale 1, 1280x800, synthetic fixture (3 worlds, 10 notes, 3 loops),
+  each reviewed: `shell/tests/goldens/brain-{overview,search,note,loops,unavailable}-1.png`.
+  View-model tests per screen, the adapter against a fake worker socket (requests, pushed
+  revision, Ask opt-in and question, reader fetches, allow-listed action), a missing worker,
+  the layout store, and the socket's op mapping and summary projection (`brain_socket` tests).
+  Not yet checked: a nested session against a real worker (Super+B through the daemon path,
+  deep links, memory of the open window).

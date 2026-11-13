@@ -140,7 +140,7 @@ pub(crate) fn browser_running() -> bool {
     !profile_pids().is_empty()
 }
 
-fn percent_encode(value: &str) -> String {
+pub(crate) fn percent_encode(value: &str) -> String {
     let mut result = String::new();
     for byte in value.bytes() {
         if byte.is_ascii_alphanumeric() || b"-_.~".contains(&byte) {
@@ -653,12 +653,30 @@ fn via_daemon(name: &str) -> Result<bool> {
     })
 }
 
+fn open_app(note: &str) -> bool {
+    let mut argv = vec![
+        "nacrectl".to_owned(),
+        "ui".into(),
+        "nacre".into(),
+        "brain".into(),
+    ];
+    if !note.is_empty() {
+        argv.push(note.to_owned());
+    }
+    run_output(&argv, None, Duration::from_secs(3)).is_ok_and(|output| output.status.success())
+}
+
 pub fn action(name: &str, value: &str) -> Result<()> {
+    // N0217: the Bead app first, deep-linked to the note (the daemon's `brain.open` takes no
+    // note); the web UI only when no shell answers the route or on `--web` (`brain-web`).
+    if name == "brain" && open_app(value) {
+        return Ok(());
+    }
     if matches!(name, "brain" | "capture") && via_daemon(name)? {
         return Ok(());
     }
     match name {
-        "brain" => ensure_brain(true).map_err(|error| {
+        "brain" | "brain-web" => ensure_brain(true).map_err(|error| {
             eprintln!("nacre-brain: could not open Brain: {error}");
             notify_launch_failure(&format!("Could not open Brain: {error}"));
             error
@@ -789,13 +807,19 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let url = format!("http://127.0.0.1:{port}/api/health");
         let server = std::thread::spawn(move || {
-            crate::brain_http::serve(listener, &state, Duration::from_millis(300), |_| {
-                crate::brain_http::Response::new(
-                    200,
-                    "application/json",
-                    br#"{"ready":true,"authVersion":1}"#.to_vec(),
-                )
-            })
+            crate::brain_http::serve(
+                listener,
+                &state,
+                Duration::from_millis(300),
+                Default::default(),
+                |_| {
+                    crate::brain_http::Response::new(
+                        200,
+                        "application/json",
+                        br#"{"ready":true,"authVersion":1}"#.to_vec(),
+                    )
+                },
+            )
             .unwrap()
         });
         let deadline = std::time::Instant::now() + Duration::from_secs(15);

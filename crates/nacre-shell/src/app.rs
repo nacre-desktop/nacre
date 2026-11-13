@@ -28,7 +28,9 @@ use std::{
 
 /// Apps the shell can start. A third-party app adds a branch to [`run`] and a route in
 /// `commands::map_views`; the launch, single-instance and exit rules are shared.
-pub const APPS: [&str; 6] = ["settings", "chat", "colors", "welcome", "prompt", "widgets"];
+pub const APPS: [&str; 7] = [
+    "settings", "chat", "colors", "welcome", "prompt", "widgets", "brain",
+];
 
 /// Topics every app follows: Nacre's text catalog and the settings that shape the look.
 const TOPICS: [&str; 7] = [
@@ -503,7 +505,10 @@ impl Host {
         }
         // Windows take the open call (a second open deep-links the running one); panels the
         // given panel method (`toggle` closes the running sidebar).
-        let (target, method) = if matches!(name, "settings" | "colors" | "welcome" | "widgets") {
+        let (target, method) = if matches!(
+            name,
+            "settings" | "colors" | "welcome" | "widgets" | "brain"
+        ) {
             ("bead.window", "open")
         } else {
             ("bead.panel", method)
@@ -934,6 +939,9 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
                 client.clone(),
                 false,
             )?);
+        }
+        "brain" => {
+            options.window = Some(crate::brain::window_spec(root, palette, colors, false)?);
         }
         "prompt" => {
             let ident = args

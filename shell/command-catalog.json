@@ -229,6 +229,25 @@
           "dynamic": false
         }
       ],
+      "method": "brain",
+      "parameters": [
+        {
+          "name": "note",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "returns": "void",
+      "source": "Nacre N0217"
+    },
+    {
+      "target_expression": "\"nacre\"",
+      "patterns": [
+        {
+          "prefix": "nacre",
+          "dynamic": false
+        }
+      ],
       "method": "left",
       "parameters": [],
       "returns": "void",

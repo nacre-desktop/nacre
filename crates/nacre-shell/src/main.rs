@@ -4,6 +4,7 @@ mod backends;
 mod bar_recording;
 mod bar_routes;
 mod bar_updates;
+mod brain;
 mod calendar;
 mod chat;
 mod colors;

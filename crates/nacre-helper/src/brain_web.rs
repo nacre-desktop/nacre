@@ -1470,7 +1470,16 @@ fn json_response(value: Value) -> Result<brain_http::Response> {
         serde_json::to_vec(&value)?,
     ))
 }
-fn route(request: brain_http::Request) -> brain_http::Response {
+/// The graph build revision the app socket pushes as `revision` events.
+pub(crate) fn graph_revision() -> Option<String> {
+    GRAPH
+        .lock()
+        .ok()?
+        .as_ref()
+        .filter(|_| GRAPH_READY.load(std::sync::atomic::Ordering::Acquire))
+        .map(|(revision, _)| revision.clone())
+}
+pub(crate) fn route(request: brain_http::Request) -> brain_http::Response {
     let status = if request.method == "POST" { 400 } else { 404 };
     route_checked(request).unwrap_or_else(|_| response(status, "application/json", b"{}".to_vec()))
 }
@@ -1765,8 +1774,8 @@ fn route_checked(request: brain_http::Request) -> Result<brain_http::Response> {
 pub fn run(tool: &str, args: &[String]) -> Result<i32> {
     if tool == "brain-launch" {
         let action = args.first().map(String::as_str).unwrap_or("brain");
-        if !["brain", "capture", "notes"].contains(&action) {
-            eprintln!("Usage: nacre-brain-ui [brain|capture|notes]");
+        if !["brain", "brain-web", "capture", "notes"].contains(&action) {
+            eprintln!("Usage: nacre-brain-ui [brain|brain-web|capture|notes]");
             return Ok(2);
         }
         brain_launch::action(action, args.get(1).map(String::as_str).unwrap_or(""))?;
@@ -1806,7 +1815,25 @@ pub fn run(tool: &str, args: &[String]) -> Result<i32> {
                     let _ = brain_launch::migrate_existing_browser();
                 });
             }
-            let result = brain_http::serve(listener, &state()?, Duration::from_secs(idle), route);
+            let activity = std::sync::Arc::new(brain_http::Activity::default());
+            let socket = crate::brain_socket::path();
+            // The app socket is optional for the web UI: a bind failure only costs the app.
+            if let Some(Err(error)) = socket
+                .as_ref()
+                .map(|socket| crate::brain_socket::listen(socket, activity.clone()))
+            {
+                eprintln!("BRAIN_SOCKET_ERROR {error}");
+            }
+            let result = brain_http::serve(
+                listener,
+                &state()?,
+                Duration::from_secs(idle),
+                activity,
+                route,
+            );
+            if let Some(socket) = &socket {
+                let _ = std::fs::remove_file(socket);
+            }
             {
                 let (signal, cv) = &*WATCH_SIGNAL;
                 let _guard = signal.lock().unwrap_or_else(|e| e.into_inner());
