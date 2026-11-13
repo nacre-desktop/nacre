@@ -104,6 +104,7 @@ fn the_topic_lists_devices_then_streams_minus_our_own_captures() {
     let state = graph.state();
     assert_eq!((state.default_output, state.default_input), (None, None));
     assert!(!Graph::default().state().health.available);
+    assert_eq!(Class::parse("Audio/Source/Virtual"), Some(Class::Source));
 }
 
 #[test]

@@ -300,7 +300,8 @@ impl Class {
     fn parse(media_class: &str) -> Option<Self> {
         Some(match media_class {
             "Audio/Sink" => Self::Sink,
-            "Audio/Source" => Self::Source,
+            // A virtual source (EasyEffects, noise suppression) can be the default, as in pactl.
+            "Audio/Source" | "Audio/Source/Virtual" => Self::Source,
             "Stream/Output/Audio" => Self::Playback,
             "Stream/Input/Audio" => Self::Capture,
             _ => return None,
