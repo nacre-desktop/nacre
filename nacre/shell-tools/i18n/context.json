@@ -1750,5 +1750,9 @@
   "settings.registry.panels.top-bar.modules.title": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.modules.updates": "Settings registry/prototype; portable schema label or description.",
   "settings.registry.panels.top-bar.modules.wifi": "Settings registry/prototype; portable schema label or description.",
-  "settings.registry.panels.top-bar.modules.workspaces": "Settings registry/prototype; portable schema label or description."
+  "settings.registry.panels.top-bar.modules.workspaces": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.panel.stackStyle.label": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.panel.stackStyle.description": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.panel.stackStyle.option.pearls": "Settings registry/prototype; portable schema label or description.",
+  "settings.registry.panels.top-bar.panel.stackStyle.option.name": "Settings registry/prototype; portable schema label or description."
 }

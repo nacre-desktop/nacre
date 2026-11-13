@@ -453,32 +453,37 @@ fn drag_visuals_are_quiet_and_drag_surfaces_are_layer_canvases() {
 
 #[test]
 fn the_owner_layout_migrates_pixel_identically() {
-    // Geometry from B0210; the pixel hash includes the deliberately recentered B0216 glyphs.
+    // Geometry from N0237 (D1 status cluster, power outside the pill); the hash pins the pixels.
     let expected = [
         ("launcher", 15., 32.),
         ("workspaces", 59., 10.),
-        ("title", 923., 75.),
-        ("status-pill", 1570., 335.),
-        ("updates", 1576., 34.),
-        ("sound", 1622., 21.),
-        ("wifi", 1655., 24.),
-        ("bluetooth", 1691., 16.),
-        ("battery", 1719., 26.),
-        ("notifications", 1757., 31.),
-        ("clock", 1800., 65.),
-        ("power", 1877., 22.),
+        ("title", 928., 65.),
+        ("status-pill", 1548., 311.),
+        ("updates", 1553., 38.),
+        ("sound", 1591., 38.),
+        ("wifi", 1629., 38.),
+        ("bluetooth", 1667., 38.),
+        ("battery", 1705., 38.),
+        ("notifications", 1743., 38.),
+        ("clock", 1781., 73.),
+        ("power", 1871., 34.),
     ];
     let mut harness = bar_harness(&owner_layout(), false);
     let rects = instance_rects(&harness);
-    for (iid, x, w) in expected {
-        assert_eq!((rects[iid].x, rects[iid].w), (x, w), "{iid}");
-    }
+    let actual: Vec<_> = expected
+        .iter()
+        .map(|(iid, _, _)| (*iid, rects[*iid].x, rects[*iid].w))
+        .collect();
     let pixels = harness.render().unwrap().pixels;
     let hash = pixels.iter().fold(0u64, |hash, byte| {
         hash.wrapping_mul(1099511628211)
             .wrapping_add(u64::from(*byte))
     });
-    assert_eq!(hash, 18423201540532204938, "B0216 icon-centred bar pixels");
+    assert_eq!(
+        (actual, hash),
+        (expected.to_vec(), 10663196099157510909),
+        "N0237 bar geometry and pixels"
+    );
 }
 
 #[test]

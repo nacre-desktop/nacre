@@ -103,8 +103,8 @@ fn overview_hover_title_and_app_glyph_render_through_topic_projection_at_both_sc
         );
         assert_ne!(shown, long_title, "long hovered title should be ellipsized");
         assert!(
-            shown.ends_with('…'),
-            "long hovered title should end with an ellipsis: {shown}"
+            shown.contains('…') && !shown.ends_with('…'),
+            "long hovered title should ellipsize in the middle: {shown}"
         );
         assert_eq!(
             band(&h).ok_or("bar title band missing after long title")?,
@@ -584,26 +584,27 @@ fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it(
         time.y >= clock.y && time.y + time.h <= clock.y + clock.h,
         "time must fit vertically inside the bar clock button"
     );
-    let calendar_icon = h
+    // D1: a 1 px separator stands where the calendar glyph was.
+    let separator = h
         .scene()
         .layers
         .iter()
-        .find(|layer| layer.id.ends_with(".clock.calendar.ink"))
+        .find(|layer| layer.id.ends_with(".clock.separator"))
         .and_then(|layer| {
             h.scene().primitives[layer.own.clone()]
                 .iter()
                 .find_map(|p| {
-                    if let bead::render::Primitive::Text { rect, .. } = p {
+                    if let bead::render::Primitive::Rounded { rect, .. } = p {
                         Some(*rect)
                     } else {
                         None
                     }
                 })
         })
-        .ok_or("calendar icon geometry missing")?;
+        .ok_or("clock separator geometry missing")?;
     assert!(
-        time.x + 0.01 >= calendar_icon.x + calendar_icon.w,
-        "time must follow the calendar icon horizontally"
+        time.x + 0.01 >= separator.x + separator.w,
+        "time must follow the separator horizontally"
     );
     let host = bead::services::Desktop::start_config(bead::services::Config {
         tray_watcher: false,
@@ -774,24 +775,71 @@ fn real_bar_equal_width_title_spinner_patches_only_the_text_primitive() -> Resul
     Ok(())
 }
 
+/// The parity fixture: the owner's bar at a glance (updates 9, Wi-Fi on, Bluetooth off, battery 56 %,
+/// 15 notifications, 11:02).
+fn parity_models() -> BTreeMap<String, Value> {
+    BTreeMap::from([
+        ("bar.popouts".into(), Value::Bool(true)),
+        ("bar.launcher".into(), Value::Bool(true)),
+        ("bar.updates.count".into(), Value::Number(9.)),
+        ("bar.notifications.count".into(), Value::Number(15.)),
+        (
+            "bead.desktop.battery".into(),
+            Value::Text("battery_android_full".into()),
+        ),
+        ("bead.desktop.network".into(), Value::Text("wifi".into())),
+        (
+            "bead.desktop.battery.value".into(),
+            Value::Text("56".into()),
+        ),
+        ("bead.desktop.clock".into(), Value::Text("11:02".into())),
+        (
+            "bead.desktop.battery.value.width".into(),
+            Value::Number(30.),
+        ),
+        (
+            "bead.workspaces".into(),
+            Value::list(vec![
+                serde_json::json!({"id":"one","index":1,"label":"1","active":true,"hinted":true,"shown":1,"app1":"terminal"}),
+                serde_json::json!({"id":"two","index":2,"label":"2","occupied":true}),
+                serde_json::json!({"id":"three","index":3,"label":"3"}),
+            ]),
+        ),
+    ])
+}
+
+fn bar_golden(frame: &bead_test::Frame, name: &str) -> Result<()> {
+    let golden = root().join("tests/goldens").join(format!("{name}.png"));
+    if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
+        frame.save(&golden)?;
+    }
+    frame.compare(
+        &golden,
+        bead_test::Tolerance::default(),
+        &std::env::temp_dir().join(format!("bead-{name}")),
+    )
+}
+
+fn bar_texts(h: &Harness) -> Vec<(String, bead::render::Rect)> {
+    let mut texts = Vec::new();
+    for layer in &h.scene().layers {
+        for primitive in &h.scene().primitives[layer.own.clone()] {
+            if let bead::render::Primitive::Text { rect, text, .. } = primitive {
+                texts.push((text.clone(), *rect));
+            }
+        }
+    }
+    texts
+}
+
+/// D1 (spec 0237): the status cluster tiles its hit targets without seams, centres each 24 px glyph
+/// box in its target, badges the two inbox counts, separates the clock, and keeps the power
+/// button outside the pill; dark and light goldens.
 #[test]
 fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
     for scale in [1., 1.5] {
         let mut values = super::initial_models()?;
-        values.extend(BTreeMap::from([
-            ("bar.popouts".into(), Value::Bool(true)),
-            ("bar.launcher".into(), Value::Bool(true)),
-            ("bar.updates.count".into(), Value::Number(9.)),
-            ("bar.notifications.count".into(), Value::Number(15.)),
-            ("bead.desktop.battery.value".into(), Value::Text("56".into())),
-            ("bead.desktop.clock".into(), Value::Text("11:02".into())),
-            ("bead.desktop.battery.value.width".into(), Value::Number(30.)),
-            ("bead.workspaces".into(), Value::list(vec![
-                serde_json::json!({"id":"one","index":1,"label":"1","active":true,"hinted":true,"shown":1,"app1":"terminal"}),
-                serde_json::json!({"id":"two","index":2,"label":"2","occupied":true}),
-                serde_json::json!({"id":"three","index":3,"label":"3"}),
-            ])),
-        ]));
+        values.extend(parity_models());
         let mut h = Harness::load(
             &root(),
             Path::new("bar/main.luau"),
@@ -809,7 +857,7 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             "bar geometry must be at its authored animation endpoint before golden capture"
         );
         assert!(crate::icon_centre_tests::assert_buttons(&h, scale, false)? >= 2);
-        // The pill's buttons tile its full width, while their glyphs retain the old inset.
+        // The pill's buttons tile its full width.
         let mut targets: Vec<_> = h
             .session
             .view_nodes()
@@ -832,7 +880,11 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             .collect();
         targets.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
         targets.dedup_by(|a, b| a.1.x == b.1.x);
-        assert_eq!(targets.len(), 8, "every status widget owns one hit target");
+        assert_eq!(
+            targets.len(),
+            7,
+            "every status widget owns one hit target; power sits outside the pill"
+        );
         let pill = h
             .scene()
             .layers
@@ -846,117 +898,136 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
                 _ => None,
             })
             .ok_or("status pill background missing")?;
+        // The pill keeps a 5 px end pad (12 px from the pill edge to the first glyph box).
         assert!(
-            (targets[0].1.x - pill_rect.x).abs() < 0.01,
-            "first hit area starts at pill left edge"
+            (targets[0].1.x - pill_rect.x - 5.).abs() < 0.01,
+            "first hit area starts at the pill's end pad: {:?} in {pill_rect:?}",
+            targets[0].1
         );
         let last = targets.last().ok_or("status targets missing")?.1;
         assert!(
-            (last.x + last.w - (pill_rect.x + pill_rect.w)).abs() < 0.01,
-            "last hit area ends at pill right edge"
+            (last.x + last.w + 5. - (pill_rect.x + pill_rect.w)).abs() < 0.01,
+            "last hit area ends at the pill's end pad"
         );
-        {
-            for pair in targets.windows(2) {
-                assert!(
-                    (pair[0].1.x + pair[0].1.w - pair[1].1.x).abs() < 0.01,
-                    "pill buttons must not leave a gap: {pair:?}"
-                );
-                let x = pair[1].1.x;
-                assert!(
-                    h.session.action_at(x, 25.).is_some(),
-                    "the seam between two pill buttons is a hit target"
-                );
-            }
+        for pair in targets.windows(2) {
             assert!(
-                h.session.action_at(pill_rect.x - 2., 25.).is_none(),
-                "space outside the pill is inert"
+                (pair[0].1.x + pair[0].1.w - pair[1].1.x).abs() < 0.01,
+                "pill buttons must not leave a gap: {pair:?}"
+            );
+            assert!(
+                h.session.action_at(pair[1].1.x, 25.).is_some(),
+                "the seam between two pill buttons is a hit target"
             );
         }
-        // Optical widths still define spacing; a centred row places the full glyph
-        // box without a manually calculated per-icon position.
-        let optical_width = |text: &str| match text {
-            "package_2" | "volume_up" | "volume_mute" | "volume_off" | "calendar_month" => {
-                Some(44. / 3.)
-            }
-            "wifi" => Some(16.),
-            "wifi_off" => Some(56. / 3.),
-            "bluetooth" | "bluetooth_disabled" => Some(10.),
-            "battery_5_bar" | "battery_full" | "battery_charging_full" => Some(8.),
-            "battery_unknown" => Some(16.),
-            "notifications" => Some(40. / 3.),
-            "power_settings_new" => Some(52. / 3.),
-            _ => None,
-        };
-        let mut status_glyphs = Vec::new();
-        for layer in &h.scene().layers {
-            for primitive in &h.scene().primitives[layer.own.clone()] {
-                if let bead::render::Primitive::Text {
-                    rect: glyph, text, ..
-                } = primitive
-                    && optical_width(text).is_some()
-                {
-                    status_glyphs.push((text.clone(), *glyph));
-                }
-            }
-        }
-        status_glyphs.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
-        assert_eq!(status_glyphs.len(), 8, "every status glyph is present");
-        for ((text, glyph), (_, target)) in status_glyphs.iter().zip(&targets) {
-            assert!((glyph.w - 24.).abs() < 0.01);
-            let hit_inset = 9.;
-            let expected =
-                target.x + hit_inset + optical_width(text).expect("recognized status glyph") / 2.;
+        assert!(
+            h.session.action_at(pill_rect.x - 2., 25.).is_none(),
+            "space outside the pill is inert"
+        );
+        // One 20 px glyph in a 24 px box, centred in each of the six icon targets; the clock has a
+        // separator and the time instead.
+        let texts = bar_texts(&h);
+        let mut glyphs: Vec<_> = texts
+            .iter()
+            .filter(|(text, rect)| {
+                matches!(
+                    text.as_str(),
+                    "deployed_code_update"
+                        | "volume_up"
+                        | "volume_mute"
+                        | "volume_off"
+                        | "wifi"
+                        | "wifi_off"
+                        | "bluetooth"
+                        | "bluetooth_disabled"
+                        | "battery_android_full"
+                        | "notifications"
+                ) && rect.x >= pill_rect.x
+            })
+            .collect();
+        glyphs.sort_by(|a, b| a.1.x.total_cmp(&b.1.x));
+        assert_eq!(glyphs.len(), 6, "every status glyph is present: {glyphs:?}");
+        for ((text, glyph), (_, target)) in glyphs.iter().zip(&targets) {
+            assert!((glyph.w - 24.).abs() < 0.01, "{text} box is 24 px");
             assert!(
-                (glyph.x + glyph.w / 2. - expected).abs() < 1.,
-                "status glyph {text} box is not centred in its optical cell: expected {expected}, got {}",
-                glyph.x + glyph.w / 2.,
+                (glyph.x + glyph.w / 2. - (target.x + target.w / 2.)).abs() < 0.51,
+                "status glyph {text} is not centred in its target {target:?}: {glyph:?}"
             );
         }
-        for (suffix, action) in [
-            ("updates.count", "status.pill.open"),
-            ("battery.battery-value", "status.pill.open"),
-            ("notifications.notifications-count", "status.pill.open"),
+        // The inbox counts are 15 px primary badges lifted above the glyph's top-right corner.
+        for (suffix, count) in [
+            ("updates.package.badge", "9"),
+            ("notifications.glyph.badge", "15"),
         ] {
             let layer = h
                 .scene()
                 .layers
                 .iter()
                 .find(|l| l.id.ends_with(suffix))
-                .ok_or("count layer missing")?;
-            let rect = h.scene().primitives[layer.own.clone()]
+                .ok_or("badge layer missing")?;
+            let badge = h.scene().primitives[layer.own.clone()]
                 .iter()
-                .find_map(|p| {
-                    if let bead::render::Primitive::Text { rect, .. } = p {
-                        Some(*rect)
-                    } else {
-                        None
-                    }
+                .find_map(|p| match p {
+                    bead::render::Primitive::Rounded { rect, .. } => Some(*rect),
+                    _ => None,
                 })
-                .ok_or("count text missing")?;
-            let (_, name, _) = h
-                .session
-                .action_at(rect.x + rect.w / 2., rect.y + rect.h / 2.)
-                .ok_or("count hit missing")?;
-            assert_eq!(name, action);
+                .ok_or("badge background missing")?;
             assert!(
-                (rect.y + rect.h / 2. - 25.).abs() < 0.1,
-                "count line box must be centered in pill: {rect:?}"
+                (badge.h - 15.).abs() < 0.01 && badge.w >= 15.,
+                "{suffix}: {badge:?}"
+            );
+            let (glyph_text, glyph) = glyphs
+                .iter()
+                .find(|(_, glyph)| glyph.x < badge.x && badge.x < glyph.x + glyph.w)
+                .ok_or("badge sits over no glyph")?;
+            assert!(
+                badge.y < glyph.y + 2. && badge.x + badge.w > glyph.x + glyph.w,
+                "{suffix} overhangs {glyph_text}'s top-right corner: {badge:?} over {glyph:?}"
+            );
+            assert!(
+                texts.iter().any(|(text, rect)| text == count
+                    && rect.x >= badge.x - 0.01
+                    && rect.x + rect.w <= badge.x + badge.w + 0.01),
+                "{suffix} shows {count}"
             );
         }
+        let separator = h
+            .scene()
+            .layers
+            .iter()
+            .find(|l| l.id.ends_with("clock.separator"))
+            .ok_or("clock separator missing")?;
+        assert!(!separator.own.is_empty(), "the clock separator paints");
+        assert!(
+            texts.iter().any(|(text, _)| text == "11:02"),
+            "the clock is the only text in the pill"
+        );
+        let power = h
+            .session
+            .view_nodes()
+            .iter()
+            .find(|node| node.id.ends_with(".power") && node.action.is_some())
+            .map(|node| bead::ui::rect(&node.draw))
+            .ok_or_else(|| {
+                format!(
+                    "power button missing among {:?}",
+                    h.session
+                        .view_nodes()
+                        .iter()
+                        .filter(|node| node.action.is_some())
+                        .map(|node| (node.id.clone(), node.action.clone(), node.action_arg.clone()))
+                        .collect::<Vec<_>>()
+                )
+            })?;
+        assert!(
+            (power.w - 34.).abs() < 0.01
+                && (power.h - 34.).abs() < 0.01
+                && power.x >= pill_rect.x + pill_rect.w + 12. - 0.01,
+            "power is a 34 px round button 12 px after the pill: {power:?} vs {pill_rect:?}"
+        );
         assert_eq!(h.session.pointer_cursor(960., 25.), "pointer");
         assert!(h.session.allows_edge_hover(960., 25.));
         let frame = h.pose((0., 0.), 1.)?;
-        let golden = root()
-            .join("tests/goldens")
-            .join(format!("bar-parity-{scale}.png"));
-        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-            frame.save(&golden)?;
-        }
-        frame.compare(
-            &golden,
-            bead_test::Tolerance::default(),
-            &std::env::temp_dir().join(format!("bead-bar-parity-{scale}")),
-        )?;
+        bar_golden(&frame, &format!("bar-parity-{scale}"))?;
         h.script([Input::Pointer { x: 960., y: 25. }])?;
         assert_eq!(
             h.session.stores.get("bead.hovered"),
@@ -975,20 +1046,10 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             .ok_or("title underline missing")?;
         assert!(
             !trace.own.is_empty(),
-            "the title underline must paint while the dwell fills"
+            "the title trace must paint while the dwell fills"
         );
         let hover = h.pose((0., 0.), 1.)?;
-        let golden = root()
-            .join("tests/goldens")
-            .join(format!("bar-parity-hover-{scale}.png"));
-        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-            hover.save(&golden)?;
-        }
-        hover.compare(
-            &golden,
-            bead_test::Tolerance::default(),
-            &std::env::temp_dir().join(format!("bead-bar-hover-{scale}")),
-        )?;
+        bar_golden(&hover, &format!("bar-parity-hover-{scale}"))?;
 
         let first = targets[0].1;
         h.script([Input::Pointer {
@@ -996,17 +1057,125 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             y: first.y + first.h / 2.,
         }])?;
         let status_hover = h.pose((0., 0.), 1.)?;
-        let golden = root()
-            .join("tests/goldens")
-            .join(format!("status-pill-hover-{scale}.png"));
-        if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-            status_hover.save(&golden)?;
+        bar_golden(&status_hover, &format!("status-pill-hover-{scale}"))?;
+        // The power button turns error-red only under the pointer.
+        h.script([Input::Pointer {
+            x: power.x + power.w / 2.,
+            y: power.y + power.h / 2.,
+        }])?;
+        let power_hover = h.pose((0., 0.), 1.)?;
+        assert_ne!(
+            power_hover.pixels, frame.pixels,
+            "power hover changes pixels"
+        );
+        if scale == 1. {
+            bar_golden(&power_hover, "bar-power-hover-1")?;
         }
-        status_hover.compare(
-            &golden,
-            bead_test::Tolerance::default(),
-            &std::env::temp_dir().join(format!("bead-status-pill-hover-{scale}")),
+    }
+    // Light scheme (D17 lands the rest): the same bar on the Orient light fixture.
+    let mut values = super::initial_models()?;
+    values.extend(parity_models());
+    let mut light = Harness::load(
+        &root(),
+        Path::new("bar/main.luau"),
+        &root().join("tests/fixtures/palette-light.json"),
+        values,
+        Config {
+            width: 1920,
+            height: 50,
+            scale: 1.,
+        },
+    )?;
+    settle_harness_animations(&mut light)?;
+    bar_golden(&light.pose((0., 0.), 1.)?, "bar-parity-light-1")
+}
+
+/// D1/D2/D3 (spec 0237): every attention state the bar can show at once: Ethernet + VPN lock,
+/// a connected Bluetooth device with its battery, a low battery with its percent, headphones,
+/// Do Not Disturb (badge hidden), a running recording, the named stack cap, a real app icon
+/// fallback glyph and a middle-ellipsized title; dark and light.
+#[test]
+fn bar_status_states_render_every_attention_state() -> Result<()> {
+    let groups = Value::list(vec![
+        serde_json::json!({"id":"niri-collection:1","label":"Personal","name":"Personal","index":1,"active":true}),
+        serde_json::json!({"id":"niri-collection:2","label":"Research","name":"Research","index":2,"active":false}),
+        serde_json::json!({"id":"niri-collection:3","label":"3","index":3,"active":false}),
+    ]);
+    for (palette, suffix) in [
+        ("palette.json", ""),
+        ("tests/fixtures/palette-light.json", "-light"),
+    ] {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        values.extend(BTreeMap::from([
+            ("bar.updates.count".into(), Value::Number(0.)),
+            ("bar.dnd".into(), Value::Bool(true)),
+            ("bead.desktop.network".into(), Value::Text("lan".into())),
+            ("bead.desktop.network.vpn".into(), Value::Bool(true)),
+            ("bead.desktop.bluetooth".into(), Value::Text("bluetooth_connected".into())),
+            ("bead.desktop.bluetooth.value".into(), Value::Text("72".into())),
+            ("bead.desktop.battery".into(), Value::Text("battery_android_alert".into())),
+            ("bead.desktop.battery.value".into(), Value::Text("18".into())),
+            ("bead.desktop.audio".into(), Value::Text("headphones".into())),
+            ("bar.recording".into(), Value::Bool(true)),
+            ("bar.recording.elapsed".into(), Value::Text("00:42".into())),
+            ("bar.stack.style".into(), Value::Text("name".into())),
+            ("bar.collections".into(), groups.clone()),
+            ("bar.collection.current".into(), Value::Text("niri-collection:1".into())),
+            ("bead.title.app_glyph".into(), Value::Text("terminal".into())),
+            (
+                "bead.focused_title".into(),
+                Value::Text(
+                    "kitty · ~/Projects/nacre/crates/nacre-shell/src/service_views_tests.rs · nacre-shell"
+                        .into(),
+                ),
+            ),
+        ]));
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join(palette),
+            values,
+            Config {
+                width: 1920,
+                height: 50,
+                scale: 1.,
+            },
         )?;
+        settle_harness_animations(&mut h)?;
+        let texts: Vec<String> = bar_texts(&h).into_iter().map(|(text, _)| text).collect();
+        for expected in [
+            "lan",
+            "lock",
+            "bluetooth_connected",
+            "72 %",
+            "battery_android_alert",
+            "18 %",
+            "headphones",
+            "do_not_disturb_on",
+            "radio_button_checked",
+            "00:42",
+            "stacks",
+            "Personal",
+            "terminal",
+            "11:02",
+        ] {
+            assert!(
+                texts.iter().any(|t| t == expected),
+                "{expected} missing from {texts:?}"
+            );
+        }
+        assert!(
+            !texts.iter().any(|t| t == "15" || t == "0"),
+            "Do Not Disturb hides the count and 0 updates show no badge: {texts:?}"
+        );
+        assert!(
+            texts
+                .iter()
+                .any(|t| t.starts_with("kitty") && t.contains('…') && t.ends_with("nacre-shell")),
+            "the title ellipsizes in the middle: {texts:?}"
+        );
+        bar_golden(&h.pose((0., 0.), 1.)?, &format!("bar-states{suffix}-1"))?;
     }
     Ok(())
 }
@@ -1464,6 +1633,7 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .map(|(_, action, _)| action),
                     Some("collection.switcher.open".into())
                 );
+                // D2: the strand of pearls replaces the chip; no icon, name or chevron in the pill.
                 let texts: Vec<_> = bar
                     .scene()
                     .primitives
@@ -1473,19 +1643,10 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         _ => None,
                     })
                     .collect();
-                assert!(texts.contains(&"layers"), "stack icon at {scale}: {name}");
                 assert!(
-                    texts.contains(&"expand_more"),
-                    "stack chevron at {scale}: {name}"
+                    !texts.contains(&"layers") && !texts.contains(&"expand_more"),
+                    "no chip at {scale}: {name}"
                 );
-                if name == "number" {
-                    assert!(texts.contains(&"2"), "stack name at {scale}: {name}");
-                } else {
-                    assert!(
-                        texts.iter().any(|text| text.contains('…')),
-                        "long stack name must ellipsize at {scale}: {name}"
-                    );
-                }
                 let bounds = |id: &str| -> Result<(f32, f32)> {
                     let layer = bar
                         .scene()
@@ -1502,11 +1663,18 @@ fn collection_switcher_badge_and_bounded_rename_menu_render() -> Result<()> {
                         .ok_or_else(|| "stack geometry missing".into())
                 };
                 let active_rect = bounds("active-capsule")?;
-                let divider_rect = bounds("collection-divider")?;
+                let bright = bounds("stack-pearl-1")?;
                 assert!(
-                    divider_rect.0 > rect.x + rect.w
-                        && active_rect.0 > divider_rect.0 + divider_rect.1,
-                    "workspace capsule must follow stack segment and divider: {scale}: {active_rect:?} after {divider_rect:?}"
+                    (bright.1 - 11.).abs() < 0.01 && active_rect.0 > bright.0 + bright.1,
+                    "the current pearl follows the strand: {scale}: {active_rect:?} after {bright:?}"
+                );
+                let pearls = (1..=3)
+                    .filter(|i| bounds(&format!("stack-pearl-{i}")).is_ok())
+                    .count();
+                assert_eq!(
+                    pearls,
+                    if single { 1 } else { 3 },
+                    "one pearl per stack at {scale}: {name}"
                 );
             }
             let frame = bar.pose((0., 0.), 1.)?;
@@ -3369,7 +3537,7 @@ fn assert_bar_label_whole(bar: &mut Harness, scale: f32, label: &str, case: &str
 #[test]
 fn bar_counts_stay_whole_on_every_output_scale_and_after_hotplug() -> Result<()> {
     for (width, scale) in [(3440, 1.), (1920, 1.5)] {
-        for (count, label) in [(7, "7"), (34, "34"), (154, "154"), (1000, "999…")] {
+        for (count, label) in [(7, "7"), (34, "34"), (154, "154"), (1000, "999+")] {
             let mut bar = n0147_bar(width, scale, count, count)?;
             let case = format!("{width}@{scale} count {count}");
             assert_bar_label_whole(&mut bar, scale, label, &case)?;

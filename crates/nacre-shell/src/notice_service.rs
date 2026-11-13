@@ -657,7 +657,8 @@ struct Inner {
     /// Bar sessions offering the panel views; the lowest id leads.
     drivers: BTreeMap<u64, Wakeup>,
     /// The retained count last sent to the bars (None until a bar is driven).
-    bar_count: Option<u64>,
+    /// The bar's (history count, Do Not Disturb) as last published.
+    bar_count: Option<(u64, bool)>,
     next: u64,
     /// Another view (launcher, dashboard, popout) is shown: popups are suppressed.
     other_panel: bool,
@@ -740,8 +741,9 @@ fn publish(shared: &Shared) {
                         .count()) as u64
             })
         });
-        let count = (g.bar_count != Some(retained)).then_some(retained);
-        g.bar_count = Some(retained);
+        let dnd = g.good.as_ref().is_some_and(|state| state.do_not_disturb);
+        let count = (g.bar_count != Some((retained, dnd))).then_some((retained, dnd));
+        g.bar_count = Some((retained, dnd));
         (
             values,
             want.map(|v| (v, true)).or(close.map(|v| (v, false))),
@@ -754,9 +756,9 @@ fn publish(shared: &Shared) {
     for wakeup in wakeups {
         wakeup(UiEvent::Model(values.clone()));
     }
-    if let Some(count) = count {
+    if let Some((count, dnd)) = count {
         for driver in &drivers {
-            driver(UiEvent::Model(bar_count(count)));
+            driver(UiEvent::Model(bar_count(count, dnd)));
         }
     }
     if let (Some(driver), Some((view, open))) = (drivers.first(), offer) {
@@ -767,11 +769,14 @@ fn publish(shared: &Shared) {
         });
     }
 }
-fn bar_count(count: u64) -> BTreeMap<String, Value> {
-    BTreeMap::from([(
-        "bar.notifications.count".into(),
-        Value::Number(count as f64),
-    )])
+fn bar_count(count: u64, dnd: bool) -> BTreeMap<String, Value> {
+    BTreeMap::from([
+        (
+            "bar.notifications.count".into(),
+            Value::Number(count as f64),
+        ),
+        ("bar.dnd".into(), Value::Bool(dnd)),
+    ])
 }
 
 /// Whether panel view `view` suppresses popups: every view outside the coexisting
@@ -1099,9 +1104,8 @@ impl Notices for Service {
             id
         };
         // A new bar starts from the current count.
-        wakeup(UiEvent::Model(bar_count(
-            self.shared.lock().bar_count.unwrap_or(0),
-        )));
+        let (count, dnd) = self.shared.lock().bar_count.unwrap_or((0, false));
+        wakeup(UiEvent::Model(bar_count(count, dnd)));
         publish(&self.shared);
         Box::new(Lease(id, Arc::downgrade(&self.shared)))
     }

@@ -432,10 +432,6 @@ fn clock_detail_stage_and_style_previews_keep_all_content_inside_their_clips() {
         text("Your screen"),
         "clock detail stage caption was omitted"
     );
-    assert!(
-        text("calendar_month"),
-        "the mini bar did not render its clock/calendar glyph"
-    );
 
     for expected in ["09:08:07", "2026-10-25"] {
         let matches: Vec<_> = scene

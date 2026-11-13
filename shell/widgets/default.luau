@@ -14,7 +14,6 @@ return function(width, selected_modules, source_document)
         instance("battery","battery","status-pill","centre",3),
         instance("notifications","notifications","status-pill","centre",4),
         instance("clock","clock","status-pill","right",0),
-        instance("power","power","status-pill","right",1),
     }
     pill.children=children
     local defaults={
@@ -22,9 +21,42 @@ return function(width, selected_modules, source_document)
         instance("workspaces","workspaces","top_bar","left",1),
         instance("title","title","top_bar","centre",0),
     }
+    -- D1 (spec 0237): the power button sits outside the pill, after it.
+    local power=instance("power","power","top_bar","right",1)
     local default_instances=table.clone(defaults)
     table.insert(default_instances,pill)
+    table.insert(default_instances,power)
     local document=source_document or {version=1,preset="Nacre default",hosts={top_bar={tiles=tiles,mode="content",regions={left={start=0,span=tiles},centre={start=0,span=tiles},right={start=0,span=tiles}},instances=default_instances}}}
+    -- D1 migration: a saved layout's stock power button leaves the pill and follows it (its own
+    -- settings travel with it). Shallow copies only (store tables cannot be table.clone'd); the
+    -- saved document is never mutated.
+    local function copy(source)
+        local out={}
+        for key,value in source do out[key]=value end
+        return out
+    end
+    for i,item in ipairs(document.hosts.top_bar.instances) do
+        if item.iid==pill.iid and type(item.children)=="table" then
+            for at,child in ipairs(item.children) do
+                if child.iid==power.iid then
+                    document=copy(document)
+                    document.hosts=copy(document.hosts)
+                    document.hosts.top_bar=copy(document.hosts.top_bar)
+                    local instances=copy(document.hosts.top_bar.instances)
+                    local moved=copy(child)
+                    moved.host="top_bar"
+                    moved.slot={region="right",start=1,span=1}
+                    local stripped=copy(item)
+                    stripped.children=copy(item.children)
+                    table.remove(stripped.children,at)
+                    instances[i]=stripped
+                    table.insert(instances,moved)
+                    document.hosts.top_bar.instances=instances
+                    break
+                end
+            end
+        end
+    end
     if type(selected_modules)~="table" or #selected_modules==0 then
         return document
     end
@@ -35,6 +67,7 @@ return function(width, selected_modules, source_document)
     local known={}
     for _,item in ipairs(defaults) do known[item.iid]=true end
     known[pill.iid]=true
+    known[power.iid]=true
     for _,item in ipairs(children) do known[item.iid]=true end
     local copy=table.clone(document)
     copy.hosts=table.clone(document.hosts)

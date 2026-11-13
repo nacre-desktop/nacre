@@ -1699,5 +1699,9 @@
   "settings.registry.panels.top-bar.modules.title": "Window title",
   "settings.registry.panels.top-bar.modules.updates": "Updates",
   "settings.registry.panels.top-bar.modules.wifi": "Wi-Fi",
-  "settings.registry.panels.top-bar.modules.workspaces": "Workspaces"
+  "settings.registry.panels.top-bar.modules.workspaces": "Workspaces",
+  "settings.registry.panels.top-bar.panel.stackStyle.label": "Stack style",
+  "settings.registry.panels.top-bar.panel.stackStyle.description": "How the workspace stack shows in the top bar: a strand of pearls (name on hover) or the stack's name.",
+  "settings.registry.panels.top-bar.panel.stackStyle.option.pearls": "Pearls",
+  "settings.registry.panels.top-bar.panel.stackStyle.option.name": "Name"
 }

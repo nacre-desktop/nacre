@@ -6,7 +6,6 @@ local measure=require("bead.widgets.measure")
 local status_text=c.status_text
 local popouts=c.popouts
 local t=c.t
-local status_glyph=c.status_glyph
 local visual=require("../desktop-visuals")
 local clock_font="IBM Plex Sans"
 local display_font=visual.display_font
@@ -16,9 +15,10 @@ local time_max=math.ceil(math.max(t.clock_min_width,ui.text_width("23:59",clock_
 local seconds_max=math.ceil(math.max(ui.text_width("23:59:59",clock_font,t.clock_font),ui.text_width("12:59:59 PM",clock_font,t.clock_font)))
 local date_max=math.ceil(math.max(ui.text_width("9999-12-31",clock_font,t.detail_font),ui.text_width("8888-88-88",clock_font,t.detail_font),ui.text_width("0000-00-00",clock_font,t.detail_font)))+kit.tokens.spacing.hairline
 local date_content_max=time_max+t.item_gap+date_max
+-- D1: a 1 px separator, then the time in onSurface 500; no calendar glyph in the pill.
+local separator_gap=t.status_gap+2
 local function reserve_clock(content_width)
-    local hit_pad=popouts and t.status_hit_pad or 0
-    return t.status_padding+t.status_count_padding+2*hit_pad+t.status_ink.calendar+t.item_gap+content_width
+    return t.status_padding+t.status_count_padding+1+separator_gap+content_width
 end
 local function clock_with_seconds(time,seconds)
     local suffix=string.match(seconds,"^%d%d:%d%d:(%d%d)$")
@@ -88,7 +88,7 @@ local function clock_content(style,instance_id,available_width)
         local natural=math.min(time_capacity,math.max(math.min(t.clock_min_width,time_capacity),
             ui.text_width(shown,clock_font,t.clock_font)))
         ui.animate("clock-date-width:"..tostring(instance_id or "clock"),natural,0,"out-cubic")
-        return status_text{id="time",text=shown,width=natural,max_width=time_capacity,shrink=0,font_size=t.clock_font,color="tertiary"}
+        return status_text{id="time",text=shown,width=natural,max_width=time_capacity,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
     elseif style=="seconds" then
         local seconds=ui.resolve_for_check(ui.bind("bead.desktop.clock.seconds")) or ""
         local capacity=math.min(seconds_max,available_width or seconds_max)
@@ -97,7 +97,7 @@ local function clock_content(style,instance_id,available_width)
         local width=preview and natural or math.min(capacity,
             ui.animate("clock-seconds-width:"..tostring(instance_id or "clock"),natural,.18,"out-cubic"))
         local shown=measure.ellipsize(value,width,clock_font,t.clock_font)
-        return status_text{id="time-seconds",text=shown,width=width,max_width=capacity,shrink=0,font_size=t.clock_font,color="tertiary"}
+        return status_text{id="time-seconds",text=shown,width=width,max_width=capacity,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
     end
     local date=ui.resolve_for_check(ui.bind("bead.desktop.clock.date")) or ""
     local capacity=math.min(date_content_max,available_width or date_content_max)
@@ -112,17 +112,15 @@ local function clock_content(style,instance_id,available_width)
     local date_width=math.min(date_natural,math.max(0,width-time_width-(time_width>0 and t.item_gap or 0)))
     local gap=date_width>0 and time_width>0 and t.item_gap or 0
     local date_node=status_text{id="date",text=measure.ellipsize(date,date_width,clock_font,t.detail_font),width=date_width,max_width=date_width,shrink=0,font_size=t.detail_font,color="secondary"}
-    local time_node=status_text{id="time",text=measure.ellipsize(time,time_width,clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,color="tertiary"}
+    local time_node=status_text{id="time",text=measure.ellipsize(time,time_width,clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
     return ui.Row{id="time-date",width=width,height=t.status_height,radius=t.status_radius,gap=gap,align="center",time_node,date_node}
 end
 local function bar(props,settings,_data)
-    local hit_pad=popouts and t.status_hit_pad or 0
     local style=props.form_style
-    local inner_capacity=props.available_width and math.max(0,props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
-        -t.status_ink.calendar-t.item_gap) or nil
+    local inner_capacity=props.available_width and math.max(0,props.available_width-t.status_padding-t.status_count_padding-1-separator_gap) or nil
     local content=clock_content(style,props.instance and props.instance.iid,inner_capacity)
-    return (popouts and kit.Button or ui.Row){id="clock",height=t.status_height,direction=popouts and "row" or nil,gap=t.item_gap,padding=0,padding_left=t.status_padding+hit_pad,padding_right=t.status_count_padding+hit_pad,align="center",fill=popouts and "transparent" or nil,aria_label=popouts and ui.tr("bead.bar.open-calendar") or nil,on_activate=popouts and ui.action("view.open","calendar") or nil,
-        status_glyph("calendar","calendar_month","calendar","tertiary"),content,
+    return (popouts and kit.Button or ui.Row){id="clock",height=t.status_height,direction=popouts and "row" or nil,gap=separator_gap,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,align="center",justify="start",fill="transparent",hover_fill="surfaceContainerHigh",radius=t.status_radius,aria_label=popouts and ui.tr("bead.bar.open-calendar") or nil,on_activate=popouts and ui.action("view.open","calendar") or nil,
+        ui.Box{id="separator",width=1,height=t.separator_height,shrink=0,fill="outlineVariant"},content,
     }
 end
 local function desktop(props,_settings,_data)

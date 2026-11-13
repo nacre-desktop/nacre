@@ -55,12 +55,14 @@ pub fn values(s: &Snapshot, menu_item: &str) -> BTreeMap<String, Value> {
         ),
         ("bead.desktop.audio".into(), Value::Text(audio.into())),
         ("bead.desktop.audio.available".into(), Value::Bool(s.audio.volume.is_some())),
-        ("bead.desktop.battery".into(), Value::Text(if !s.battery.available { "battery_unknown" } else if s.battery.charging { "battery_charging_full" } else { "battery_full" }.into())),
+        ("bead.desktop.battery".into(), Value::Text(if !s.battery.available { "battery_unknown" } else { crate::reload::bar_daemon::battery_glyph(s.battery.charging, s.battery.percentage) }.into())),
         ("bead.desktop.battery.value".into(), Value::Text(s.battery.percentage.map_or(String::new(), |n| format!("{n:.0}")))),
         // QML detail text sits 4 px after the glyph; the cell's 3 px padding closes it (none without a value).
         ("bead.desktop.battery.value.width".into(), Value::Number(s.battery.percentage.map_or(3., |n| 7. + 7.5 * format!("{n:.0}").len() as f32 as f64))),
         ("bead.desktop.network".into(), Value::Text(if s.network.connected { "wifi" } else { "wifi_off" }.into())),
         ("bead.desktop.bluetooth".into(), Value::Text(if s.bluetooth.powered { "bluetooth" } else { "bluetooth_disabled" }.into())),
+        ("bead.desktop.network.vpn".into(), Value::Bool(false)),
+        ("bead.desktop.bluetooth.value".into(), Value::Text(String::new())),
         ("bead.desktop.tray".into(), Value::list(s.tray.iter().filter(|t| t.visible).map(|t|serde_json::json!({"id":t.id,"title":t.title,"icon":format!("tray:{}",t.id),"attention":t.attention})).collect())),
         ("bead.desktop.menu".into(), Value::list(menu)),
         ("bead.desktop.tray.tooltip".into(),Value::Text(String::new())),
@@ -346,9 +348,13 @@ mod tests {
             vec![serde_json::json!({"id":"fixture-stable-id","name":"1","index":1,"active":true})];
         for count in [0., 4.] {
             let (mut session, scene) = bar_session_with_updates(rows.clone(), true, count);
-            assert!(scene.primitives.iter().any(|draw| matches!(draw,
-                bead::render::Primitive::Text { text, .. } if text == &count.to_string()
-            )));
+            // D1: the count is a badge that hides at zero.
+            assert_eq!(
+                scene.primitives.iter().any(|draw| matches!(draw,
+                    bead::render::Primitive::Text { text, .. } if text == &count.to_string()
+                )),
+                count > 0.
+            );
             session.commit(scene);
             assert!(
                 session.view_nodes().iter().any(|node| {
@@ -387,7 +393,7 @@ mod tests {
                 |draw| matches!(draw, bead::render::Primitive::Text { text, .. } if text == wanted),
             )
         };
-        assert!(drawn(&scene, "1:15") && drawn(&scene, "stop_circle"));
+        assert!(drawn(&scene, "1:15") && drawn(&scene, "radio_button_checked"));
         session.commit(scene);
         assert_eq!(stop(&session), 1);
         let scene = session

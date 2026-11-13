@@ -2237,7 +2237,23 @@ fn passive_workspace_ghost_has_collection_defaults_and_accepts_projection() {
             _ => None,
         })
         .collect();
-    assert!(texts.contains(&"B"), "{texts:?}");
+    // D2: the stack is a strand of tiny pearls (the ghost draws the preview at its own scale);
+    // the name is a hover tooltip, not text.
+    assert!(!texts.contains(&"B"), "{texts:?}");
+    assert!(
+        scene.primitives.iter().any(|primitive| matches!(primitive,
+            bead::render::Primitive::Rounded { rect, .. } if rect.w <= 11. && (rect.w - rect.h).abs() < 0.01
+        )),
+        "strand pearl missing: {:?}",
+        scene
+            .primitives
+            .iter()
+            .filter_map(|primitive| match primitive {
+                bead::render::Primitive::Rounded { rect, .. } => Some((rect.w, rect.h)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    );
     assert!(ghost.input_regions().is_empty());
 }
 

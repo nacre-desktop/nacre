@@ -674,6 +674,11 @@ fn panels_windows_date_and_lock_pages_follow_the_registry() {
     );
     let top = items(&settings.project(&stores("panels/top-bar", "")));
     assert_eq!(row(&top, "panels/top-bar.panel.modules")["kind"], "list");
+    // D2 (spec 0237): the stack style is a two-option segment, Pearls by default.
+    let stack = row(&top, "panels/top-bar.panel.stackStyle");
+    assert_eq!(stack["kind"], "choice");
+    assert_eq!(stack["options"][0]["label"], "Pearls");
+    assert_eq!(stack["options"][0]["selected"], true);
     assert_eq!(
         row(&top, "panels/top-bar.panel.modules")["choice_editor"],
         true

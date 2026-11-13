@@ -18,7 +18,7 @@ fn consume_pending_owner_dismiss(
 }
 
 #[path = "reload/bar_daemon.rs"]
-mod bar_daemon;
+pub(crate) mod bar_daemon;
 mod launcher_input;
 #[cfg(test)]
 mod launcher_quick_keyboard_tests;
@@ -405,6 +405,7 @@ fn is_bar_widget_context(key: &str) -> bool {
                 | "bead.overview.has_window"
                 | "bead.title.app_id"
                 | "bead.title.app_glyph"
+                | "bead.title.app_icon"
                 | "bead.viewport.width"
                 | "bead.viewport.height"
         )
@@ -1230,7 +1231,9 @@ impl Runtime {
             "bead.desktop.battery.value",
             "bead.desktop.battery.value.width",
             "bead.desktop.network",
+            "bead.desktop.network.vpn",
             "bead.desktop.bluetooth",
+            "bead.desktop.bluetooth.value",
             "bead.desktop.tray",
             "bead.desktop.menu",
             "bead.desktop.tray.tooltip",
@@ -1263,6 +1266,7 @@ impl Runtime {
                             | "bead.overview.has_window"
                             | "bead.title.app_id"
                             | "bead.title.app_glyph"
+                            | "bead.title.app_icon"
                             | "bead.viewport.width"
                             | "bead.viewport.height"
                     )
@@ -5731,6 +5735,7 @@ impl SceneSource for Runtime {
                     "overview_has_window": title_bool("bead.overview.has_window"),
                     "title_app_id": title_text("bead.title.app_id"),
                     "title_app_glyph": title_text("bead.title.app_glyph"),
+                    "title_app_icon": title_text("bead.title.app_icon"),
                 });
                 let mut last = last.lock().unwrap_or_else(|e| e.into_inner());
                 if *last != signature {
@@ -10542,6 +10547,13 @@ pub(crate) fn overview_title_values(
                     workspaces.app_glyph(app_id)
                 }
                 .to_owned(),
+            ),
+        ),
+        // D3 (spec 0237): the real themed app icon from the desktop entry, when there is one.
+        (
+            "bead.title.app_icon".into(),
+            bead::core::Value::Text(
+                crate::workspace_rows::desktop_icon_name(app_id).unwrap_or_default(),
             ),
         ),
     ])

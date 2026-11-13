@@ -9,15 +9,18 @@ local status_text=c.status_text
 local visual=require("../desktop-visuals")
 local function bar(props,settings,_data)
     local glyph=ui.resolve_for_check(ui.bind("bead.desktop.network")) or "wifi_off"
-    local value=glyph=="wifi" and "Connected" or "Offline"
+    local active=glyph=="wifi" or glyph=="lan"
+    local value=active and "Connected" or "Offline"
     local style=props.form_style
     local content=style=="icon+value" and value or style=="icon+text" and "Wi-Fi" or nil
-    local width=content and ui.text_width(content,"IBM Plex Sans",t.detail_font) or 0
-    local hit_pad=popouts and t.status_hit_pad or 0
-    return (popouts and kit.StatusIcon or ui.Row){id="network",direction="row",height=t.status_height,radius=t.status_radius,gap=style~="icon" and t.item_gap or nil,padding=0,padding_left=t.status_padding+hit_pad,padding_right=t.status_padding+hit_pad,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
+    local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
+    local box=t.icon_font*t.line_height
+    return (popouts and kit.StatusIcon or ui.Row){id="network",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or nil,padding=0,padding_left=t.status_padding,padding_right=t.status_padding,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-network"),on_activate=popouts and ui.action("status.pill.open","network") or nil,
-        status_glyph("glyph",ui.bind("bead.desktop.network"),"network"),
-        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color="secondary"} or nil,
+        status_glyph("glyph",ui.bind("bead.desktop.network"),"network",nil,nil,active),
+        -- D1: a VPN shows as a small primary lock at the glyph's corner.
+        ui.Text{id="vpn",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-12,width=12,height=12,visible=ui.bind("bead.desktop.network.vpn"),text="lock",family="Material Symbols Rounded",font_size=10,text_align="center",color="primary"},
+        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
     }
 end
 local function desktop(props,_settings,_data)

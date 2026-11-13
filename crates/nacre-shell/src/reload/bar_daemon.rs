@@ -9,7 +9,7 @@ use nacre_protocol::core_services::{
 };
 use std::{collections::BTreeMap, sync::Arc};
 
-const KEYS: [&str; 10] = [
+const KEYS: [&str; 12] = [
     "bead.desktop.network",
     "bead.desktop.bluetooth",
     "bead.desktop.battery",
@@ -20,13 +20,18 @@ const KEYS: [&str; 10] = [
     "bead.desktop.audio.device",
     "bead.desktop.audio.label",
     "bead.desktop.audio.available",
+    "bead.desktop.network.vpn",
+    "bead.desktop.bluetooth.value",
 ];
 
 fn unavailable() -> BTreeMap<String, Value> {
     BTreeMap::from([
         (KEYS[0].into(), Value::Text("wifi_off".into())),
         (KEYS[1].into(), Value::Text("bluetooth_disabled".into())),
-        (KEYS[2].into(), Value::Text("battery_unknown".into())),
+        (
+            KEYS[2].into(),
+            Value::Text("battery_unknown".into()),
+        ),
         (KEYS[3].into(), Value::Text(String::new())),
         (KEYS[4].into(), Value::Number(3.)),
         (KEYS[5].into(), Value::Text("volume_mute".into())),
@@ -34,41 +39,89 @@ fn unavailable() -> BTreeMap<String, Value> {
         (KEYS[7].into(), Value::Text("Output unavailable".into())),
         (KEYS[8].into(), Value::Text("Unavailable".into())),
         (KEYS[9].into(), Value::Bool(false)),
+        (KEYS[10].into(), Value::Bool(false)),
+        (KEYS[11].into(), Value::Text(String::new())),
     ])
 }
 
-fn network(snapshot: &Snapshot) -> Value {
-    let state = serde_json::from_value::<NetworkState>((*snapshot.data).clone()).ok();
-    let connected = snapshot.connected
-        && state.as_ref().is_some_and(|state| {
-            state.health.available
-                && !state.health.stale
-                && CoreSnapshot::Network(state.clone()).valid()
-                && state.wireless_enabled
-                && state.devices.items.values().any(|device| {
-                    device.connected && matches!(device.kind.as_str(), "wifi" | "wireless")
-                })
-        });
-    Value::Text(if connected { "wifi" } else { "wifi_off" }.into())
-}
-
-fn bluetooth(snapshot: &Snapshot) -> Value {
-    let state = serde_json::from_value::<BluetoothState>((*snapshot.data).clone()).ok();
-    let powered = snapshot.connected
-        && state.as_ref().is_some_and(|state| {
-            CoreSnapshot::Bluetooth(state.clone()).valid()
+fn network(snapshot: &Snapshot) -> BTreeMap<String, Value> {
+    let state = serde_json::from_value::<NetworkState>((*snapshot.data).clone())
+        .ok()
+        .filter(|state| {
+            snapshot.connected
                 && state.health.available
                 && !state.health.stale
-                && state.adapters.items.values().any(|adapter| adapter.powered)
+                && CoreSnapshot::Network(state.clone()).valid()
         });
-    Value::Text(
-        if powered {
-            "bluetooth"
-        } else {
-            "bluetooth_disabled"
-        }
-        .into(),
-    )
+    let connected = |kinds: &[&str]| {
+        state.as_ref().is_some_and(|state| {
+            state
+                .devices
+                .items
+                .values()
+                .any(|device| device.connected && kinds.contains(&device.kind.as_str()))
+        })
+    };
+    let wifi = state.as_ref().is_some_and(|state| state.wireless_enabled)
+        && connected(&["wifi", "wireless"]);
+    // D1 (spec 0237): a cable shows `lan` even with Wi-Fi off; an active VPN is a lock on the glyph.
+    let glyph = if wifi {
+        "wifi"
+    } else if connected(&["ethernet", "wired"]) {
+        "lan"
+    } else {
+        "wifi_off"
+    };
+    let vpn = state.as_ref().is_some_and(|state| {
+        state.connections.items.values().any(|connection| {
+            connection.active && matches!(connection.kind.as_str(), "vpn" | "wireguard")
+        })
+    });
+    BTreeMap::from([
+        (KEYS[0].into(), Value::Text(glyph.into())),
+        (KEYS[10].into(), Value::Bool(vpn)),
+    ])
+}
+
+fn bluetooth(snapshot: &Snapshot) -> BTreeMap<String, Value> {
+    let state = serde_json::from_value::<BluetoothState>((*snapshot.data).clone())
+        .ok()
+        .filter(|state| {
+            snapshot.connected
+                && CoreSnapshot::Bluetooth(state.clone()).valid()
+                && state.health.available
+                && !state.health.stale
+        });
+    let powered = state
+        .as_ref()
+        .is_some_and(|state| state.adapters.items.values().any(|adapter| adapter.powered));
+    // The connected device's battery, when one reports it (D1 "bluetooth_connected 72 %").
+    let device = state.as_ref().and_then(|state| {
+        state
+            .devices
+            .items
+            .values()
+            .filter(|device| device.connected)
+            .max_by_key(|device| device.battery.is_some())
+    });
+    let glyph = if device.is_some() {
+        "bluetooth_connected"
+    } else if powered {
+        "bluetooth"
+    } else {
+        "bluetooth_disabled"
+    };
+    BTreeMap::from([
+        (KEYS[1].into(), Value::Text(glyph.into())),
+        (
+            KEYS[11].into(),
+            Value::Text(
+                device
+                    .and_then(|device| device.battery)
+                    .map_or(String::new(), |battery| battery.to_string()),
+            ),
+        ),
+    ])
 }
 
 fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
@@ -92,14 +145,7 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     BTreeMap::from([
         (
             KEYS[2].into(),
-            Value::Text(
-                if state.charging == Some(true) {
-                    "battery_charging_full"
-                } else {
-                    "battery_full"
-                }
-                .into(),
-            ),
+            Value::Text(battery_glyph(state.charging == Some(true), state.percentage).into()),
         ),
         (KEYS[3].into(), Value::Text(value.clone())),
         (
@@ -111,6 +157,19 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
             }),
         ),
     ])
+}
+
+/// D1 icon family: bolt while charging, alert at <= 20 %, empty at <= 8 %, full otherwise.
+pub(crate) fn battery_glyph(charging: bool, percentage: Option<f64>) -> &'static str {
+    if charging {
+        "battery_android_bolt"
+    } else if percentage.is_some_and(|value| value <= 8.) {
+        "battery_android_0"
+    } else if percentage.is_some_and(|value| value <= 20.) {
+        "battery_android_alert"
+    } else {
+        "battery_android_full"
+    }
 }
 
 fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
@@ -154,12 +213,23 @@ fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
         || "Unavailable".into(),
         |value| format!("{:.0}%", value * 100.),
     );
+    // D1: a headset sink shows the headphones glyph.
+    let headset = node.is_some_and(|node| {
+        [node.icon.as_deref().unwrap_or_default(), node.name.as_str()]
+            .iter()
+            .any(|text| {
+                let text = text.to_ascii_lowercase();
+                text.contains("headphone") || text.contains("headset")
+            })
+    });
     let icon = if muted == Some(true) {
         "volume_off"
-    } else if level.is_some() {
-        "volume_up"
-    } else {
+    } else if level.is_none() {
         "volume_mute"
+    } else if headset {
+        "headphones"
+    } else {
+        "volume_up"
     };
     BTreeMap::from([
         (KEYS[5].into(), Value::Text(icon.into())),
@@ -184,8 +254,8 @@ fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
 
 fn project(name: &str, snapshot: &Snapshot) -> BTreeMap<String, Value> {
     match name {
-        "network" => BTreeMap::from([(KEYS[0].into(), network(snapshot))]),
-        "bluetooth" => BTreeMap::from([(KEYS[1].into(), bluetooth(snapshot))]),
+        "network" => network(snapshot),
+        "bluetooth" => bluetooth(snapshot),
         "battery" => battery(snapshot),
         "audio" => audio(snapshot),
         _ => BTreeMap::new(),
@@ -249,26 +319,48 @@ mod tests {
             "primary_connection":"wifi-connection"
         });
         assert_eq!(
-            super::network(&snapshot(network.clone(), false)),
+            super::network(&snapshot(network.clone(), false))[KEYS[0]],
             Value::Text("wifi_off".into())
         );
+        let live = super::network(&snapshot(network.clone(), true));
+        assert_eq!(live[KEYS[0]], Value::Text("wifi".into()));
+        assert_eq!(live[KEYS[10]], Value::Bool(false));
+        let mut vpn = network;
+        vpn["connections"]["items"]["tunnel"] =
+            serde_json::json!({"name":"Office","kind":"wireguard","active":true});
+        vpn["connections"]["order"] = serde_json::json!(["wifi-connection", "tunnel"]);
         assert_eq!(
-            super::network(&snapshot(network, true)),
-            Value::Text("wifi".into())
+            super::network(&snapshot(vpn, true))[KEYS[10]],
+            Value::Bool(true)
         );
 
         let battery_data = serde_json::json!({
             "health":{"available":true,"stale":false}, "percentage":83.0, "charging":true,
             "state":1, "time_to_full_seconds":5400, "on_battery":false
         });
+        let charging = battery(&snapshot(battery_data.clone(), true));
+        assert_eq!(charging[KEYS[3]], Value::Text("83".into()));
         assert_eq!(
-            battery(&snapshot(battery_data.clone(), true))[KEYS[3]],
-            Value::Text("83".into())
+            charging[KEYS[2]],
+            Value::Text("battery_android_bolt".into())
         );
         assert_eq!(
             battery(&snapshot(battery_data, false))[KEYS[2]],
             Value::Text("battery_unknown".into())
         );
+        // D1 icon family: alert at <= 20 %, empty at <= 8 %, full otherwise.
+        for (percentage, charging, glyph) in [
+            (56., false, "battery_android_full"),
+            (20., false, "battery_android_alert"),
+            (8., false, "battery_android_0"),
+            (8., true, "battery_android_bolt"),
+        ] {
+            assert_eq!(
+                super::battery_glyph(charging, Some(percentage)),
+                glyph,
+                "{percentage} % charging={charging}"
+            );
+        }
     }
 
     #[test]
@@ -281,28 +373,34 @@ mod tests {
             "connections":{"items":{},"order":[]}, "primary_connection":null
         });
         assert_eq!(
-            super::network(&snapshot(data.clone(), true)),
+            super::network(&snapshot(data.clone(), true))[KEYS[0]],
             Value::Text("wifi".into())
         );
-        for (field, value) in [
-            ("wireless_enabled", serde_json::json!(false)),
-            ("health", serde_json::json!({"available":true,"stale":true})),
+        for (field, value, glyph) in [
+            ("wireless_enabled", serde_json::json!(false), "wifi_off"),
+            (
+                "health",
+                serde_json::json!({"available":true,"stale":true}),
+                "wifi_off",
+            ),
+            // D1: a cable shows `lan` even with Wi-Fi off.
             (
                 "devices",
                 serde_json::json!({"items":{"eth0":{"name":"Wired","kind":"ethernet","connected":true}},"order":["eth0"]}),
+                "lan",
             ),
         ] {
             let mut off = data.clone();
             off[field] = value;
             assert_eq!(
-                super::network(&snapshot(off, true)),
-                Value::Text("wifi_off".into())
+                super::network(&snapshot(off, true))[KEYS[0]],
+                Value::Text(glyph.into())
             );
         }
         let mut disconnected = data;
         disconnected["devices"]["items"]["wlan0"]["connected"] = serde_json::json!(false);
         assert_eq!(
-            super::network(&snapshot(disconnected, true)),
+            super::network(&snapshot(disconnected, true))[KEYS[0]],
             Value::Text("wifi_off".into())
         );
     }
@@ -310,9 +408,12 @@ mod tests {
     #[test]
     fn absent_or_stale_topics_project_unavailable_icons() {
         let unavailable = snapshot(serde_json::json!({}), false);
-        assert_eq!(super::network(&unavailable), Value::Text("wifi_off".into()));
         assert_eq!(
-            bluetooth(&unavailable),
+            super::network(&unavailable)[KEYS[0]],
+            Value::Text("wifi_off".into())
+        );
+        assert_eq!(
+            bluetooth(&unavailable)[KEYS[1]],
             Value::Text("bluetooth_disabled".into())
         );
         assert_eq!(
@@ -329,13 +430,22 @@ mod tests {
             "devices":{"items":{},"order":[]}
         });
         assert_eq!(
-            bluetooth(&snapshot(bluetooth_data.clone(), true)),
+            bluetooth(&snapshot(bluetooth_data.clone(), true))[KEYS[1]],
             Value::Text("bluetooth".into())
         );
         assert_eq!(
-            bluetooth(&snapshot(bluetooth_data, false)),
+            bluetooth(&snapshot(bluetooth_data.clone(), false))[KEYS[1]],
             Value::Text("bluetooth_disabled".into())
         );
+        // D1: a connected device shows bluetooth_connected and its battery when it reports one.
+        let mut with_device = bluetooth_data;
+        with_device["devices"] = serde_json::json!({"items":{"buds":{"adapter":"adapter","name":"Buds","connected":true,"paired":true,"trusted":true,"pairing":false,"battery":72}},"order":["buds"]});
+        let connected = bluetooth(&snapshot(with_device, true));
+        assert_eq!(
+            connected[KEYS[1]],
+            Value::Text("bluetooth_connected".into())
+        );
+        assert_eq!(connected[KEYS[11]], Value::Text("72".into()));
 
         let audio_data = serde_json::json!({
             "health":{"available":true,"stale":false}, "default_output":"out",
@@ -347,6 +457,12 @@ mod tests {
         assert_eq!(fresh[KEYS[6]], Value::Number(50.));
         assert_eq!(fresh[KEYS[7]], Value::Text("Studio speakers".into()));
         assert_eq!(fresh[KEYS[9]], Value::Bool(true));
+        let mut headset = audio_data.clone();
+        headset["nodes"]["items"]["out"]["name"] = serde_json::json!("WH-1000 headphones");
+        assert_eq!(
+            audio(&snapshot(headset, true))[KEYS[5]],
+            Value::Text("headphones".into())
+        );
         let down = audio(&snapshot(audio_data, false));
         assert_eq!(down[KEYS[5]], Value::Text("volume_mute".into()));
         assert_eq!(down[KEYS[8]], Value::Text("Unavailable".into()));

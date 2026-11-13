@@ -256,7 +256,7 @@ return {
         ["status.hovered"]="",["status.peek.visible"]=false,["status.peek.kind"]="",["status.panel.kind"]="",
         ["bead.focused_title"]="",["bead.windows"]={},["bead.workspaces"]={},
         ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
-        ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",
+        ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",["bar.dnd"]=false,["bar.stack.style"]="pearls",["bead.desktop.network.vpn"]=false,["bead.desktop.bluetooth.value"]="",
         ["bead.desktop.audio.percent"]=0,["bead.desktop.audio.device"]="Output unavailable",
         ["bead.desktop.audio.label"]="Unavailable",["bead.desktop.titlevisible"]=true,
         ["bead.desktop.clock"]="",["bead.desktop.clock.seconds"]="",["bead.desktop.clock.date"]="",["bead.desktop.wallpaper.luma"]={},["bead.desktop.covered"]=false,

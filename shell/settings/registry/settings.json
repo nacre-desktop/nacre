@@ -3055,6 +3055,41 @@
       "advanced": false
     },
     {
+      "id": "panels/top-bar.panel.stackStyle",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.panel",
+      "key": "stackStyle",
+      "labelId": "settings.registry.panels.top-bar.panel.stackStyle.label",
+      "descriptionId": "settings.registry.panels.top-bar.panel.stackStyle.description",
+      "type": "enum",
+      "default": "pearls",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "stackStyle"
+        ]
+      },
+      "apply": "instant",
+      "synonyms": [
+        "stack",
+        "collection",
+        "desk",
+        "pearls"
+      ],
+      "unavailableId": "settings.registry.ui.unavailable",
+      "advanced": false,
+      "options": [
+        {
+          "value": "pearls",
+          "labelId": "settings.registry.panels.top-bar.panel.stackStyle.option.pearls"
+        },
+        {
+          "value": "name",
+          "labelId": "settings.registry.panels.top-bar.panel.stackStyle.option.name"
+        }
+      ]
+    },
+    {
       "id": "panels/top-bar.panel.tray",
       "page": "panels/top-bar",
       "section": "panels/top-bar.panel",

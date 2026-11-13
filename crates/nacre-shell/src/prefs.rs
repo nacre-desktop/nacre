@@ -34,6 +34,8 @@ pub struct Prefs {
     pub fahrenheit: bool,
     /// `desktop.clockFormat == "12-hour"`: the bar and dashboard clocks show AM/PM.
     pub clock_12h: bool,
+    /// `desktop.stackStyle` (D2, spec 0237): the bar's workspace-stack cap, `"pearls"` (default) or `"name"`.
+    pub stack_style: String,
     /// `dashboard.tabs` filtered to the core pages, in the owner's order.
     pub core_tabs: Vec<String>,
     /// `dashboardEnabled`, `controlCenterEnabled`, `topBarEnabled`, `frameSheen`:
@@ -198,6 +200,12 @@ impl Prefs {
             reduce_motion: flag("reduceMotion") == Some(true) || flag("animations") == Some(false),
             fahrenheit: flag("weatherFahrenheit") == Some(true),
             clock_12h: desktop.get("clockFormat").and_then(Json::as_str) == Some("12-hour"),
+            stack_style: if desktop.get("stackStyle").and_then(Json::as_str) == Some("name") {
+                "name"
+            } else {
+                "pearls"
+            }
+            .into(),
             core_tabs: core,
             // JS `value || 6`: zero and non-numbers fall back to six.
             workspace_count: profile
@@ -287,6 +295,10 @@ impl Prefs {
                 Bool(self.collection_wallpapers_enabled),
             ),
             ("bar.clock.twelve".into(), Bool(self.clock_12h)),
+            (
+                "bar.stack.style".into(),
+                bead::core::Value::Text(self.stack_style.clone()),
+            ),
             (
                 "bar.modules".into(),
                 bead::core::Value::list(
@@ -679,6 +691,14 @@ mod tests {
         let bar = set.bar_stores();
         assert_eq!(bar["bar.workspace.count"], bead::core::Value::Number(4.));
         assert_eq!(bar["bar.workspace.hints"], bead::core::Value::Bool(false));
+        assert_eq!(
+            bar["bar.stack.style"],
+            bead::core::Value::Text("pearls".into())
+        );
+        assert_eq!(
+            Prefs::decode(&json!({"stackStyle": "name"}), &Json::Null).bar_stores()["bar.stack.style"],
+            bead::core::Value::Text("name".into())
+        );
         assert_eq!(
             bar["bar.workspace.icons"],
             bead::core::Value::list(vec![

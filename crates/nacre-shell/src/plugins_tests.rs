@@ -100,7 +100,10 @@ fn saved_updates_timeout_does_not_hide_the_bundled_widget_on_next_start() {
     .unwrap();
     plugins::configure(&root, config.clone());
     let detail = texts(&app(&root, "updates"));
-    assert!(detail.iter().any(|t| t == "package_2"), "{detail:?}");
+    assert!(
+        detail.iter().any(|t| t == "deployed_code_update"),
+        "{detail:?}"
+    );
     assert!(
         plugins::State::load(config.state.as_deref())
             .faults

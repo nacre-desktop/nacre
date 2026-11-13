@@ -12,39 +12,18 @@ local updates_on=c.updates_on
 local status_glyph=c.status_glyph
 local visual=api.app.visual
 local font="IBM Plex Sans"
--- Whole pixels, as the drawn box (see context.whole_width): the reservation fits the widest count.
-local count_max=math.ceil(ui.text_width("999…",font,t.clock_font))
-local function fit_count(value,width)
-    return measure.ellipsize(value,math.min(count_max,width or count_max),font,t.clock_font)
-end
-local function count_reservation()
-    local hit_pad=popouts and t.status_hit_pad or 0
-    return t.status_padding+t.status_count_padding+2*hit_pad+t.status_ink.package+t.item_gap+count_max
-end
+local item_width=t.status_padding+t.icon_width+t.status_count_padding
 local function bar(props,settings,_data)
-    local hit_pad=popouts and t.status_hit_pad or 0
     local style=props.form_style
-    -- A label is fitted to whole pixels, so its capacity is too.
-    local available=props.available_width and math.max(0,math.floor(props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
-        -(t.status_symbol_ink.package_2 or t.status_ink.package)-t.item_gap))
-    local count_capacity=math.min(count_max,available or count_max)
-    local text_capacity=available or ui.text_width("Updates",font,t.clock_font)
-    local content_capacity=style=="icon+value" and count_capacity or text_capacity
-    local raw_count=ui.resolve_for_check(ui.bind("bar.updates.text")) or "0"
-    local count=tonumber(raw_count)
-    local bounded=count and count>999 and "999…" or tostring(raw_count)
-    local content=style=="icon+value" and fit_count(bounded,count_capacity)
-        or style=="icon+text" and "Updates" or nil
-    if content and style=="icon+text" then content=measure.ellipsize(content,text_capacity,font,t.clock_font) end
-    local width=content and ui.text_width(content,font,t.clock_font) or 0
-    if content then
-        width=ui.animate("updates-width:"..tostring(props.instance and props.instance.iid or "preview"),width,.18,"out-cubic")
-        width=math.min(width,content_capacity)
-    end
+    -- D1: deployed_code_update in the variant tone with a primary count badge (hidden at 0).
+    local count=tonumber(ui.resolve_for_check(ui.bind("bar.updates.text")) or "0") or 0
+    local badge=style~="icon+text" and count>0 and (count>999 and "999+" or ui.bind("bar.updates.text")) or nil
+    local text=style=="icon+text" and measure.ellipsize("Updates",props.available_width and math.max(0,props.available_width-item_width-t.item_gap) or ui.text_width("Updates",font,t.detail_font),font,t.detail_font) or nil
+    local width=text and math.ceil(ui.text_width(text,font,t.detail_font)) or 0
     local action=popouts and ui.action("status.pill.open","updates") or nil
-    return updates_on and kit.Button{id="updates",width=content and props.available_width or nil,direction="row",padding=0,fill="transparent",hover_fill="surfaceContainerHigh",on_activate=action,height=t.status_height,radius=t.status_radius,gap=t.item_gap,shrink=0,padding_left=t.status_padding+hit_pad,padding_right=t.status_count_padding+hit_pad,align="center",justify=content and "start" or "center",
-        status_glyph("package","package_2","package","primary"),
-        content and status_text{id="count",text=content,width=width,max_width=content_capacity,font_size=t.clock_font,color="primary"} or nil,
+    return updates_on and kit.Button{id="updates",width=text and props.available_width or nil,direction="row",padding=0,fill="transparent",hover_fill="surfaceContainerHigh",on_activate=action,height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding_left=t.status_padding,padding_right=t.status_count_padding,align="center",justify=text and "start" or "center",
+        status_glyph("package","deployed_code_update","package",nil,badge,false),
+        text and status_text{id="label",text=text,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
     } or ui.Box{id="updates",width=0,height=0,shrink=0,visible=false}
 end
 local function desktop(props,_settings,_data)
@@ -70,12 +49,12 @@ local function style(title,preferred,render)
 end
 local function count_style(title,preferred)
     local descriptor=style(title,preferred,bar)
-    descriptor.reserve_width=function(_) return count_reservation() end
+    descriptor.reserve_width=function(_) return item_width end
     return descriptor
 end
-return {id="updates",title="Updates",icon="package_2",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
+return {id="updates",title="Updates",icon="deployed_code_update",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},
     forms={bar={default_style="icon+value",styles={
-        icon=style("Icon",1,bar),["icon+value"]=count_style("Icon + value",2),["icon+text"]=style("Icon + text",3,bar),
+        icon=style("Icon",1,bar),["icon+value"]=count_style("Icon + value",1),["icon+text"]=style("Icon + text",3,bar),
     }},desktop={default_style="card",styles={
         summary={title="Legacy update summary",min_span=1,max_span=1200,preferred_span=280,preferred_height=80,hidden=true,render=desktop},
         card={title="Update card",min_span=1,max_span=1200,preferred_span=320,preferred_height=160,render=desktop},

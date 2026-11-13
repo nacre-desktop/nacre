@@ -9,36 +9,20 @@ local popouts=c.popouts
 local status_glyph=c.status_glyph
 local visual=require("../desktop-visuals")
 local font="IBM Plex Sans"
--- Whole pixels, as the drawn box (see context.whole_width): the reservation fits the widest count.
-local count_max=math.ceil(ui.text_width("999…",font,t.detail_font))
-local function count_reservation()
-    local hit_pad=popouts and t.status_hit_pad or 0
-    return t.status_padding+t.status_count_padding+2*hit_pad+t.status_ink.notifications+t.item_gap+count_max
-end
+local item_width=t.status_padding+t.icon_width+t.status_count_padding
 local function bar(props,settings,_data)
-    local hit_pad=popouts and t.status_hit_pad or 0
     local style=props.form_style
-    -- A label is fitted to whole pixels, so its capacity is too.
-    local available=props.available_width and math.max(0,math.floor(props.available_width-t.status_padding-t.status_count_padding-2*hit_pad
-        -(t.status_symbol_ink.notifications or t.status_ink.notifications)-t.item_gap))
-    local value_capacity=math.min(count_max,available or count_max)
-    local text_capacity=available or ui.text_width("Notifications",font,t.detail_font)
-    local content_capacity=style=="icon+value" and value_capacity or text_capacity
-    local count=ui.bind("bar.notifications.text")
-    local current=ui.resolve_for_check(count) or "0"
-    local raw_count=tonumber(ui.resolve_for_check(ui.bind("bar.notifications.count")) or current)
-    local bounded=raw_count and raw_count>999 and "999…" or current
-    local text=style=="icon+value" and measure.ellipsize(bounded,value_capacity,font,t.detail_font)
-        or style=="icon+text" and measure.ellipsize("Notifications",text_capacity,font,t.detail_font) or nil
-    local width=text and ui.text_width(text,font,t.detail_font) or 0
-    if text then
-        width=ui.animate("notifications-width:"..tostring(props.instance and props.instance.iid or "preview"),width,.18,"out-cubic")
-        width=math.min(width,style=="icon+value" and value_capacity or text_capacity)
-    end
-    return (popouts and kit.StatusIcon or ui.Row){id="notifications",width=text and props.available_width or nil,direction="row",height=t.status_height,radius=t.status_radius,gap=style~="icon" and t.item_gap or 0,padding=0,padding_left=t.status_padding+hit_pad,padding_right=t.status_count_padding+hit_pad,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify=text and "start" or "center",
+    -- D1: the count is a 15 px primary badge on the bell; Do Not Disturb swaps the bell for
+    -- do_not_disturb_on and hides the badge.
+    local dnd=ui.resolve_for_check(ui.bind("bar.dnd"))==true
+    local count=ui.resolve_for_check(ui.bind("bar.notifications.count")) or 0
+    local badge=not dnd and style~="icon+text" and count>0 and (count>999 and "999+" or ui.bind("bar.notifications.text")) or nil
+    local text=style=="icon+text" and measure.ellipsize("Notifications",props.available_width and math.max(0,props.available_width-item_width-t.item_gap) or ui.text_width("Notifications",font,t.detail_font),font,t.detail_font) or nil
+    local width=text and math.ceil(ui.text_width(text,font,t.detail_font)) or 0
+    return (popouts and kit.StatusIcon or ui.Row){id="notifications",width=text and props.available_width or nil,direction="row",height=t.status_height,radius=t.status_radius,gap=text and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify=text and "start" or "center",
         aria_label=ui.tr("bead.bar.open-notifications"),on_activate=popouts and ui.action("status.pill.open","notifications") or nil,
-        status_glyph("glyph","notifications","notifications"),
-        text and status_text{id="notifications-count",text=text,width=width,max_width=content_capacity,font_size=t.detail_font,color="secondary"} or nil,
+        status_glyph("glyph",dnd and "do_not_disturb_on" or "notifications","notifications",nil,badge,false),
+        text and status_text{id="notifications-label",text=text,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
     }
 end
 local function desktop(props,_settings,_data)
@@ -69,8 +53,8 @@ local function desktop(props,_settings,_data)
 end
 local function style(title,preferred,render) return {title=title,min_span=1,max_span=60,preferred_span=preferred,render=render} end
 local function count_style()
-    local descriptor=style("Icon + value",2,bar)
-    descriptor.reserve_width=function(_) return count_reservation() end
+    local descriptor=style("Icon + value",1,bar)
+    descriptor.reserve_width=function(_) return item_width end
     return descriptor
 end
 return {id="notifications",title="Notifications",icon="notifications",category="bar",data={topics={},actions={}},settings={},defaults={},budget={fps_active=0,fps_idle=0,pause_on={"fullscreen","lock","battery_saver"}},

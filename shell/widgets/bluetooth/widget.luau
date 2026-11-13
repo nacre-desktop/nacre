@@ -9,15 +9,17 @@ local status_text=c.status_text
 local visual=require("../desktop-visuals")
 local function bar(props,settings,_data)
     local glyph=ui.resolve_for_check(ui.bind("bead.desktop.bluetooth")) or "bluetooth_disabled"
-    local value=glyph=="bluetooth" and "On" or "Off"
+    local active=glyph=="bluetooth_connected"
+    local device=ui.resolve_for_check(ui.bind("bead.desktop.bluetooth.value")) or ""
     local style=props.form_style
-    local content=style=="icon+value" and value or style=="icon+text" and "Bluetooth" or nil
-    local width=content and ui.text_width(content,"IBM Plex Sans",t.detail_font) or 0
-    local hit_pad=popouts and t.status_hit_pad or 0
-    return (popouts and kit.StatusIcon or ui.Row){id="bluetooth",direction="row",height=t.status_height,radius=t.status_radius,gap=style~="icon" and t.item_gap or nil,padding=0,padding_left=t.status_padding+hit_pad,padding_right=t.status_padding+hit_pad,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
+    -- D1: the connected device's battery (only when it reports one) in the variant tone.
+    local content=style=="icon+value" and (glyph=="bluetooth_disabled" and "Off" or "On") or style=="icon+text" and "Bluetooth"
+        or active and device~="" and device.." %" or nil
+    local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
+    return (popouts and kit.StatusIcon or ui.Row){id="bluetooth",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or nil,padding=0,padding_left=t.status_padding,padding_right=t.status_padding,fill="transparent",hover_fill="surfaceContainerHigh",align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-bluetooth"),on_activate=popouts and ui.action("status.pill.open","bluetooth") or nil,
-        status_glyph("glyph",ui.bind("bead.desktop.bluetooth"),"bluetooth"),
-        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color="secondary"} or nil,
+        status_glyph("glyph",ui.bind("bead.desktop.bluetooth"),"bluetooth",nil,nil,active),
+        content and status_text{id="value",text=content,width=width,font_size=t.detail_font,color="onSurfaceVariant"} or nil,
     }
 end
 local function desktop(props,_settings,_data)
