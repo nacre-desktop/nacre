@@ -34,7 +34,7 @@ const STAY_AWAKE_UNIT: &str = "nacre-stay-awake.service";
 const RECORDING_UNIT: &str = "nacre-screen-recording.service";
 /// Output cap for tools whose output is parsed.
 const OUTPUT_LIMIT: usize = 8 * 1024 * 1024;
-/// Slow members (night light, appearance) are re-read on every fifth tick.
+/// Slow members (night light, appearance, unit states) are re-read on every fifth tick.
 const SLOW_EVERY: u32 = 5;
 /// An interactive capture tool (area selection, picker) never runs longer than this.
 const CAPTURE_LIMIT: Duration = Duration::from_secs(200);
@@ -1228,7 +1228,7 @@ struct Probe {
     outputs: Vec<String>,
     /// Read external (DDC) outputs too.
     ddc: bool,
-    /// Re-read night light.
+    /// Re-read the slow members (night light, unit states).
     slow: bool,
 }
 fn light_externals(env: &Env, probe: &Probe) -> Vec<Value> {
@@ -1337,7 +1337,16 @@ fn collect(
             enabled: present.iter().all(|radio| radio.soft),
         });
     }
-    let (stay, recording) = units(env);
+    // This daemon's toggles request a full refresh; unit changes made elsewhere
+    // (a launcher recording) show within one slow tick, one systemctl child.
+    let (stay, recording) = if probe.slow {
+        units(env)
+    } else {
+        (
+            prior.stay_awake.as_ref().map(|toggle| toggle.enabled),
+            prior.recorder.as_ref().map(|recorder| recorder.recording),
+        )
+    };
     if systemd_present(env) {
         state.stay_awake = stay.map(|enabled| Toggle { enabled });
     }

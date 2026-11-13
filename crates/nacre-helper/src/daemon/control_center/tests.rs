@@ -1064,20 +1064,17 @@ fn state_reads_every_backend_and_omits_the_missing_ones() {
     );
     assert_eq!(state.stay_awake, Some(Toggle { enabled: false }));
     assert_eq!(state.recorder, Some(Recorder { recording: false }));
-    // A slow member keeps its prior value between slow reads.
+    // Slow members (night light, units) keep their prior value between slow reads.
     write(&f.path("night"), "true");
     write(&f.path("rec"), "");
     write(&f.path("sys/class/rfkill/rfkill0/soft"), "1\n");
     let next = collect_now(&f, &probe(false), &state);
     assert_eq!(next.night_light, state.night_light);
-    assert_eq!(next.recorder, Some(Recorder { recording: true }));
+    assert_eq!(next.recorder, state.recorder);
     assert_eq!(next.airplane, Some(Toggle { enabled: true }));
-    assert!(
-        collect_now(&f, &probe(true), &next)
-            .night_light
-            .unwrap()
-            .enabled
-    );
+    let slow = collect_now(&f, &probe(true), &next);
+    assert!(slow.night_light.unwrap().enabled);
+    assert_eq!(slow.recorder, Some(Recorder { recording: true }));
 
     // Two internal panels cannot be mapped to the one backlight.
     let two = Probe {

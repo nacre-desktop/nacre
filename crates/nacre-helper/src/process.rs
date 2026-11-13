@@ -426,14 +426,47 @@ pub async fn offload<T: Send + 'static>(
     static SLOTS: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(OFFLOAD_LIMIT);
     let permit = SLOTS.acquire().await.map_err(|_| Offloaded)?;
     let (send, receive) = tokio::sync::oneshot::channel();
+    run_offloaded(Box::new(move || {
+        let _ = send.send(work());
+    }))?;
+    let result = receive.await.map_err(|_| Offloaded);
+    drop(permit);
+    result
+}
+
+type Job = Box<dyn FnOnce() + Send>;
+/// Hand `job` to an idle offload thread, or start one. A thread stays for
+/// `IDLE_FOR` after its job so periodic callers (control-centre polls) stop
+/// paying a thread spawn and a fresh malloc arena per call.
+fn run_offloaded(job: Job) -> std::result::Result<(), Offloaded> {
+    use std::sync::{mpsc, Mutex};
+    const IDLE_FOR: std::time::Duration = std::time::Duration::from_secs(30);
+    static IDLE: Mutex<Vec<mpsc::SyncSender<Job>>> = Mutex::new(Vec::new());
+    let mut job = job;
+    while let Some(idle) = IDLE.lock().map_err(|_| Offloaded)?.pop() {
+        // A rendezvous send succeeds only when that thread is waiting in recv.
+        match idle.try_send(job) {
+            Ok(()) => return Ok(()),
+            Err(mpsc::TrySendError::Full(j) | mpsc::TrySendError::Disconnected(j)) => job = j,
+        }
+    }
     thread::Builder::new()
         .name("nacre-offload".into())
         .stack_size(512 * 1024)
         .spawn(move || {
-            let _ = send.send(work());
+            job();
+            loop {
+                let (sender, receiver) = mpsc::sync_channel::<Job>(0);
+                match IDLE.lock() {
+                    Ok(mut idle) => idle.push(sender),
+                    Err(_) => return,
+                }
+                match receiver.recv_timeout(IDLE_FOR) {
+                    Ok(job) => job(),
+                    Err(_) => return,
+                }
+            }
         })
         .map_err(|_| Offloaded)?;
-    let result = receive.await.map_err(|_| Offloaded);
-    drop(permit);
-    result
+    Ok(())
 }
