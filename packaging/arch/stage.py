@@ -82,7 +82,6 @@ def stage(root, destination, component, build):
                 / "usr/share/licenses/nacre/ui-shell"
                 / (vendor + "-LICENSE"),
             )
-        copy(root / "bin/nacre_state.py", shared / "bin/nacre_state.py")
         for name in (
             "config/hypr",
             "config/kitty",
