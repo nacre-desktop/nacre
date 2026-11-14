@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Recorder",
+  "type": "object",
+  "properties": {
+    "recording": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "recording"
+  ]
+}

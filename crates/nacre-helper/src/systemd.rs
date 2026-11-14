@@ -30,7 +30,7 @@ impl<'de> serde::Deserialize<'de> for OrderedProperties {
         deserializer.deserialize_map(Visitor)
     }
 }
-fn unit_path(name: &str) -> String {
+pub(crate) fn unit_path(name: &str) -> String {
     let mut encoded = String::new();
     for (index, byte) in name.bytes().enumerate() {
         if byte.is_ascii_alphabetic() || (index > 0 && byte.is_ascii_digit()) {
@@ -183,10 +183,10 @@ impl Status {
 fn absent(error: &zbus::Error) -> bool {
     matches!(error,zbus::Error::MethodError(name,_,_) if name.as_str()=="org.freedesktop.systemd1.NoSuchUnit")
 }
-fn is_active_state(state: &str) -> bool {
+pub(crate) fn is_active_state(state: &str) -> bool {
     matches!(state, "active" | "reloading" | "refreshing")
 }
-async fn query_active(connection: &zbus::Connection, name: &str) -> Result<bool> {
+pub(crate) async fn query_active(connection: &zbus::Connection, name: &str) -> Result<bool> {
     let manager = zbus::Proxy::new(
         connection,
         "org.freedesktop.systemd1",

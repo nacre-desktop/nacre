@@ -1,0 +1,4 @@
+{"t":"sub","topics":["recorder"]}
+{"t":"snap","topic":"recorder","seq":0,"data":{"recording":false}}
+{"t":"patch","topic":"recorder","base":0,"seq":1,"data":{"recording":true}}
+{"t":"patch","topic":"recorder","base":1,"seq":2,"data":{"recording":false}}

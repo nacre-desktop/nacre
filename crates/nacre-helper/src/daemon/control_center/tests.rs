@@ -1156,3 +1156,113 @@ fn lock_wallpaper_refresh_tracks_only_the_selected_image() {
         "/home/user/Pictures/lock.png"
     );
 }
+
+#[test]
+fn recorder_follows_the_user_manager_without_polling() {
+    use std::io::{BufRead, BufReader};
+    use std::sync::atomic::AtomicBool;
+    use zbus::zvariant::{OwnedObjectPath, Value as Variant};
+    struct Unit(Arc<AtomicBool>);
+    #[zbus::interface(name = "org.freedesktop.systemd1.Unit")]
+    impl Unit {
+        #[zbus(property)]
+        fn active_state(&self) -> String {
+            if self.0.load(SeqCst) {
+                "active"
+            } else {
+                "inactive"
+            }
+            .into()
+        }
+    }
+    struct Manager;
+    #[zbus::interface(name = "org.freedesktop.systemd1.Manager")]
+    impl Manager {
+        fn subscribe(&self) {}
+        fn get_unit(&self, name: &str) -> OwnedObjectPath {
+            OwnedObjectPath::try_from(crate::systemd::unit_path(name).as_str()).expect("unit path")
+        }
+    }
+    let root = tempfile::tempdir().unwrap();
+    let mut bus = std::process::Command::new("dbus-daemon")
+        .args(["--session", "--nofork", "--print-address"])
+        .arg(format!(
+            "--address=unix:path={}",
+            root.path().join("bus").display()
+        ))
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    let mut address = String::new();
+    BufReader::new(bus.stdout.take().unwrap())
+        .read_line(&mut address)
+        .unwrap();
+    let address = address.trim().to_owned();
+    run(async move {
+        let hub = Hub::new("fixture".into(), false, Duration::from_millis(16)).shared();
+        initial_recorder(&hub).unwrap();
+        let recording = |hub: &Shared| {
+            let data = hub.borrow().snapshot(nacre_protocol::recorder::TOPIC);
+            data.is_some_and(|data| data["recording"] == true)
+        };
+        let until = |hub: Shared, want: bool| async move {
+            for _ in 0..100 {
+                if recording(&hub) == want {
+                    return true;
+                }
+                tokio::time::sleep(Duration::from_millis(20)).await;
+            }
+            false
+        };
+        let watcher = zbus::connection::Builder::address(address.as_str())
+            .unwrap()
+            .build()
+            .await
+            .unwrap();
+        let h = hub.clone();
+        let task = tokio::task::spawn_local(async move { follow_recorder(&h, &watcher).await });
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!recording(&hub), "no user manager, no recording");
+        // The manager's arrival is a name-owner change; the unit is read then.
+        let active = Arc::new(AtomicBool::new(true));
+        let path = crate::systemd::unit_path(RECORDING_UNIT);
+        let manager = zbus::connection::Builder::address(address.as_str())
+            .unwrap()
+            .name("org.freedesktop.systemd1")
+            .unwrap()
+            .serve_at("/org/freedesktop/systemd1", Manager)
+            .unwrap()
+            .serve_at(path.as_str(), Unit(active.clone()))
+            .unwrap()
+            .build()
+            .await
+            .unwrap();
+        assert!(
+            until(hub.clone(), true).await,
+            "a running recording is read"
+        );
+        active.store(false, SeqCst);
+        manager
+            .emit_signal(
+                None::<&str>,
+                path.as_str(),
+                "org.freedesktop.DBus.Properties",
+                "PropertiesChanged",
+                &(
+                    "org.freedesktop.systemd1.Unit",
+                    HashMap::from([("ActiveState", Variant::from("inactive"))]),
+                    Vec::<String>::new(),
+                ),
+            )
+            .await
+            .unwrap();
+        assert!(
+            until(hub.clone(), false).await,
+            "the stop arrives as a signal"
+        );
+        task.abort();
+    });
+    let _ = bus.kill();
+    let _ = bus.wait();
+}

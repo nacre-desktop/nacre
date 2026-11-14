@@ -25,7 +25,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     process::Stdio,
-    sync::Arc,
+    sync::{atomic::Ordering::SeqCst, Arc},
     time::Duration,
 };
 
@@ -1157,29 +1157,64 @@ fn light_externals(env: &Env, probe: &Probe) -> Vec<Value> {
 /// thread, one scan at a time: while a scan is still stuck the next ones are skipped (`None`, the
 /// prior values stay), and a scan that takes longer than the bound is abandoned by the caller.
 async fn scan_lights(env: &Env, probe: &Probe) -> Option<Value> {
-    static BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-    use std::sync::atomic::Ordering::SeqCst;
-    if BUSY.swap(true, SeqCst) {
+    if SCAN_BUSY.swap(true, SeqCst) {
         return None;
     }
     let externals = light_externals(env, probe);
     let bound = Duration::from_secs(if externals.is_empty() { 2 } else { 8 });
     let env = env.clone();
-    let scan = crate::process::offload(move || {
-        let found = light_devices::discover(
-            &externals,
-            &env.sys,
-            Some(&env.paths.state),
-            &mut light_run(&env),
-        )
-        .ok();
-        if let Some(found) = &found {
-            light_devices::note_keyboard(&env.sys, !found["keyboard"].is_null());
+    let job = crate::process::offload(move || scan(&env, &externals));
+    tokio::time::timeout(bound, job).await.ok()?.ok()?
+}
+static SCAN_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// One light scan on the calling thread; the caller has set `SCAN_BUSY`.
+fn scan(env: &Env, externals: &[Value]) -> Option<Value> {
+    let found = light_devices::discover(
+        externals,
+        &env.sys,
+        Some(&env.paths.state),
+        &mut light_run(env),
+    )
+    .ok();
+    if let Some(found) = &found {
+        light_devices::note_keyboard(&env.sys, !found["keyboard"].is_null());
+    }
+    SCAN_BUSY.store(false, SeqCst);
+    found
+}
+/// N0325: up to `ticks` ticks on one offload thread. The fast members are read on every tick but
+/// the last; the first change returns its tick and state, the last tick returns `prior` (the slow
+/// read is due), and a dropped `stop` sender (the session moved on or ended) returns `None`.
+fn fast_ticks(
+    env: &Env,
+    outputs: Vec<String>,
+    prior: ControlsState,
+    ticks: u32,
+    stop: std::sync::mpsc::Receiver<()>,
+) -> Option<(u32, ControlsState)> {
+    use std::sync::mpsc::RecvTimeoutError;
+    let probe = Probe {
+        outputs,
+        ddc: false,
+        slow: false,
+    };
+    for done in 1..=ticks {
+        if !matches!(stop.recv_timeout(env.tick), Err(RecvTimeoutError::Timeout)) {
+            return None;
         }
-        BUSY.store(false, SeqCst);
-        found
-    });
-    tokio::time::timeout(bound, scan).await.ok()?.ok()?
+        if done == ticks {
+            return Some((done, prior));
+        }
+        // A scan still stuck elsewhere keeps the prior lights, as in `scan_lights`.
+        let lights = (!SCAN_BUSY.swap(true, SeqCst))
+            .then(|| scan(env, &[]))
+            .flatten();
+        let state = collect(env, &probe, &prior, lights);
+        if state != prior {
+            return Some((done, state));
+        }
+    }
+    None
 }
 
 /// One read of everything but `appearance` (settings, async). Members whose backend is absent
@@ -1255,7 +1290,8 @@ fn collect(
     }
     // This daemon's toggles request a full refresh; unit changes made elsewhere
     // (a launcher recording) show within one slow tick, one systemctl child.
-    let (stay, recording) = if probe.slow {
+    let systemd = systemd_present(env);
+    let (stay, recording) = if probe.slow && systemd {
         units(env)
     } else {
         (
@@ -1263,10 +1299,10 @@ fn collect(
             prior.recorder.as_ref().map(|recorder| recorder.recording),
         )
     };
-    if systemd_present(env) {
+    if systemd {
         state.stay_awake = stay.map(|enabled| Toggle { enabled });
     }
-    if systemd_present(env) && env.has("wf-recorder") && env.has("slurp") {
+    if systemd && env.has("wf-recorder") && env.has("slurp") {
         state.recorder = recording.map(|recording| Recorder { recording });
     }
     if probe.slow {
@@ -1354,44 +1390,167 @@ pub async fn initial(hub: &Shared) -> Result<()> {
     publish(hub, &state)
 }
 
-/// One subscribed period: read now, then on each tick and each `changed()`.
+/// One subscribed period: a full read now and after each `changed()`, the slow members every
+/// `SLOW_EVERY` ticks and the fast ones on every tick.
 async fn session(hub: Shared, env: Env) -> Result<()> {
     let refresh = REFRESH.with(std::rc::Rc::clone);
-    let mut ticker = tokio::time::interval(env.tick);
-    ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-    let (mut count, mut full) = (0u32, true);
+    let mut notices = hub.borrow().observe();
+    let mut full = true;
     let mut state = hub
         .borrow()
         .snapshot(TOPIC)
         .and_then(|data| serde_json::from_value::<ControlsState>(data).ok())
         .unwrap_or_else(empty_state);
     loop {
-        let slow = full || count.is_multiple_of(SLOW_EVERY);
+        let outputs = output_names(&hub);
         let probe = Probe {
-            outputs: output_names(&hub),
+            outputs: outputs.clone(),
             ddc: full,
-            slow,
+            slow: true,
         };
         let lights = scan_lights(&env, &probe).await;
         let (read_env, prior) = (env.clone(), state.clone());
         state = crate::process::offload(move || collect(&read_env, &probe, &prior, lights)).await?;
-        if !slow {
-            // Unit states are slow members: keep what a toggle published during this read.
-            let published = hub.borrow().snapshot(TOPIC);
-            if let Some(published) =
-                published.and_then(|data| serde_json::from_value::<ControlsState>(data).ok())
-            {
-                (state.stay_awake, state.recorder) = (published.stay_awake, published.recorder);
-            }
-        }
-        if slow {
-            state.appearance = read_appearance(&hub).await;
-        }
+        state.appearance = read_appearance(&hub).await;
         publish(&hub, &state)?;
         full = false;
+        // N0325: the fast ticks up to the next slow read run on one offload thread that returns
+        // only on a change, so an unchanged tick no longer wakes this thread (and its timer).
+        let mut left = SLOW_EVERY;
+        while left > 0 {
+            let (_stop, stopped) = std::sync::mpsc::channel();
+            let (job_env, job_outputs, prior) = (env.clone(), outputs.clone(), state.clone());
+            let job = crate::process::offload(move || {
+                fast_ticks(&job_env, job_outputs, prior, left, stopped)
+            });
+            // A stuck light scan holds the job: do the slow read after the scan bound instead.
+            let wait = tokio::time::timeout(env.tick * left + Duration::from_secs(2), job);
+            tokio::pin!(wait);
+            let next = loop {
+                tokio::select! {
+                    result = &mut wait => break result.ok().and_then(|job| job.ok()).flatten(),
+                    () = refresh.notified() => {
+                        full = true;
+                        break None;
+                    }
+                    result = behaviours::changed(&mut notices, &["compositor"]) => {
+                        result?;
+                        if output_names(&hub) != outputs {
+                            break None;
+                        }
+                    }
+                }
+            };
+            let Some((done, mut next)) = next else {
+                break;
+            };
+            left -= done;
+            if left > 0 {
+                // Unit states are slow members: keep what a toggle published during this read.
+                let published = hub.borrow().snapshot(TOPIC);
+                if let Some(published) =
+                    published.and_then(|data| serde_json::from_value::<ControlsState>(data).ok())
+                {
+                    (next.stay_awake, next.recorder) = (published.stay_awake, published.recorder);
+                }
+                state = next;
+                publish(&hub, &state)?;
+            }
+        }
+    }
+}
+/// N0325: what `recorder` subscribers get until the user manager has been read.
+pub fn initial_recorder(hub: &Shared) -> Result<()> {
+    publish_recorder(hub, false)
+}
+fn publish_recorder(hub: &Shared, recording: bool) -> Result<()> {
+    hub.borrow_mut().publish(
+        nacre_protocol::recorder::TOPIC,
+        serde_json::to_value(Recorder { recording })?,
+    )?;
+    Ok(())
+}
+/// N0325: the `recorder` topic, read only while a client subscribes.
+pub async fn run_recorder(hub: Shared) -> Result<()> {
+    let mut interest = hub
+        .borrow_mut()
+        .watch_interest(nacre_protocol::recorder::TOPIC);
+    loop {
+        while !*interest.borrow() {
+            interest.changed().await?;
+        }
+        let session = async {
+            let connection = zbus::connection::Builder::session()?
+                .method_timeout(Duration::from_secs(5))
+                .build()
+                .await?;
+            follow_recorder(&hub, &connection).await
+        };
         tokio::select! {
-            _ = ticker.tick() => count = count.wrapping_add(1),
-            () = refresh.notified() => full = true,
+            result = session => result?,
+            result = idle(&mut interest) => result?,
+        }
+    }
+}
+/// One subscribed period: the recording unit's state now and after each of its
+/// `PropertiesChanged` signals. Nothing polls; without a user manager it stays false until one
+/// owns its name.
+async fn follow_recorder(hub: &Shared, connection: &zbus::Connection) -> Result<()> {
+    use futures_util::StreamExt;
+    const SYSTEMD: &str = "org.freedesktop.systemd1";
+    let dbus = zbus::fdo::DBusProxy::new(connection).await?;
+    let mut owners = dbus
+        .receive_name_owner_changed_with_args(&[(0, SYSTEMD)])
+        .await?;
+    // The transient unit's path is fixed by its name, also while it is not loaded.
+    let unit = crate::systemd::unit_path(RECORDING_UNIT);
+    let rule = zbus::MatchRule::builder()
+        .msg_type(zbus::message::Type::Signal)
+        .path(unit.as_str())?
+        .interface("org.freedesktop.DBus.Properties")?
+        .member("PropertiesChanged")?
+        .build();
+    let mut changes = zbus::MessageStream::for_match_rule(rule, connection, Some(16)).await?;
+    let systemd = zbus::names::BusName::try_from(SYSTEMD)?;
+    loop {
+        let recording = if dbus.name_has_owner(systemd.clone()).await? {
+            let manager = zbus::Proxy::new(
+                connection,
+                SYSTEMD,
+                "/org/freedesktop/systemd1",
+                "org.freedesktop.systemd1.Manager",
+            )
+            .await?;
+            // The user manager sends unit signals only to subscribed clients.
+            let _: () = manager.call("Subscribe", &()).await?;
+            crate::systemd::query_active(connection, RECORDING_UNIT).await?
+        } else {
+            false
+        };
+        publish_recorder(hub, recording)?;
+        loop {
+            tokio::select! {
+                change = changes.next() => {
+                    let message = change.ok_or("Recorder signals ended")??;
+                    let (interface, changed, _): (
+                        String,
+                        HashMap<String, zbus::zvariant::OwnedValue>,
+                        Vec<String>,
+                    ) = message.body().deserialize()?;
+                    // The signal carries the new state; the unit may be collected right after.
+                    if let (true, Some(state)) = (
+                        interface == "org.freedesktop.systemd1.Unit",
+                        changed.get("ActiveState"),
+                    ) {
+                        let state = String::try_from(state.try_clone()?)?;
+                        publish_recorder(hub, crate::systemd::is_active_state(&state))?;
+                    }
+                }
+                owner = owners.next() => {
+                    owner.ok_or("User manager watch ended")?;
+                    break;
+                }
+            }
         }
     }
 }

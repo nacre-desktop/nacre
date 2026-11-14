@@ -387,22 +387,25 @@ async fn serve(
     } else {
         None
     };
-    // N0046: the `controls` topic; producers run only while a client subscribes.
+    // N0046: the `controls` topic and N0325's `recorder`; producers run only while a client
+    // subscribes.
     let controls_service = if !counter.safe {
-        let controls_hub = hub.clone();
-        Some(tokio::task::spawn_local(supervisor::run(
-            "controls",
-            hub.clone(),
-            move || {
+        let (controls_hub, recorder_hub) = (hub.clone(), hub.clone());
+        control_center::initial_recorder(&hub)?;
+        vec![
+            tokio::task::spawn_local(supervisor::run("controls", hub.clone(), move || {
                 let hub = controls_hub.clone();
                 async move {
                     control_center::initial(&hub).await?;
                     control_center::run(hub).await
                 }
-            },
-        )))
+            })),
+            tokio::task::spawn_local(supervisor::run("recorder", hub.clone(), move || {
+                control_center::run_recorder(recorder_hub.clone())
+            })),
+        ]
     } else {
-        None
+        Vec::new()
     };
     // N0049: the `time` and `capabilities` topics for the Settings pages.
     let settings_page_services = if !counter.safe {
@@ -744,7 +747,7 @@ async fn serve(
         let _ = service.await;
     }
     drop(audio_client);
-    if let Some(service) = controls_service {
+    for service in controls_service {
         service.abort();
         if let Err(error) = service.await {
             if !error.is_cancelled() {

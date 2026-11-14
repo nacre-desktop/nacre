@@ -242,6 +242,10 @@ overrides never fall back, and safe mode never starts a second observer.
 `LockedHint` and the `PrepareForSleep` window (`preparing_sleep` falling to false is a
 resume). It is published on change and snapshotted on subscribe; `revision` is 0 until
 logind is read.
+`recorder` v1 (N0325, [spec](../specs/0325-daemon-idle-wakeups-r3.md)) is `{recording}`,
+the `nacre-screen-recording.service` unit's state alone (the `controls.recorder` member is
+unchanged). The daemon reads it from the user manager's `PropertiesChanged` signals only while a
+client subscribes; nothing polls, and it stays false while no user manager owns its bus name.
 These are intended lifecycle differences. Resume and output settling delays
 remain 500 and 300 ms, respectively, using the same policy as direct mode.
 The service reads login1 and Secret Service asynchronously, consumes the existing
