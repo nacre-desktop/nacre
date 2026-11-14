@@ -27,7 +27,11 @@ pub fn exchange(
     let mut pending = command;
     while !pending.is_empty() {
         stream.set_write_timeout(Some(remaining()?))?;
-        let count = stream.write(pending)?;
+        // SIGCHLD handlers (wait-timeout, tokio) interrupt timed socket I/O.
+        let count = match stream.write(pending) {
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            count => count?,
+        };
         if count == 0 {
             return Err("Compositor socket write failed".into());
         }
@@ -38,7 +42,10 @@ pub fn exchange(
     let mut buffer = [0; 8192];
     loop {
         stream.set_read_timeout(Some(remaining()?))?;
-        let count = stream.read(&mut buffer)?;
+        let count = match stream.read(&mut buffer) {
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            count => count?,
+        };
         if count == 0 {
             break;
         }

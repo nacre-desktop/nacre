@@ -39,10 +39,13 @@ impl Drop for PythonLease {
     }
 }
 
+// wait-timeout installs a process-wide SIGCHLD handler (SA_RESTART), but poll and
+// reads on sockets with SO_RCVTIMEO are never restarted: every blocking wait in
+// this binary goes through here so a child exit in another test is not a failure.
 fn poll_until_ready(
     descriptors: &mut [rustix::event::PollFd<'_>],
     deadline: Instant,
-) -> Result<bool> {
+) -> std::io::Result<bool> {
     loop {
         let remaining = deadline.saturating_duration_since(Instant::now());
         if remaining.is_zero() {
@@ -60,66 +63,34 @@ fn poll_until_ready(
     }
 }
 
-fn read_until_complete(
-    mut read: impl FnMut(&mut [u8], Duration) -> std::io::Result<usize>,
-    deadline: Instant,
-) -> Result<usize> {
-    let mut response = [0];
-    loop {
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        if remaining.is_zero() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::TimedOut,
-                "activated daemon response deadline expired",
-            )
-            .into());
-        }
-        match read(&mut response, remaining) {
-            Ok(bytes) => return Ok(bytes),
-            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
-            Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => return Ok(0),
-            Err(error) => {
-                return Err(std::io::Error::new(
-                    error.kind(),
-                    format!("reading activated daemon response: {error}"),
-                )
-                .into());
-            }
-        }
+/// `recv` bounded by the socket's read timeout, waiting through `poll_until_ready`.
+fn recv(socket: &UnixDatagram, packet: &mut [u8]) -> std::io::Result<usize> {
+    let timeout = socket
+        .read_timeout()?
+        .expect("test datagram has a read timeout");
+    let mut descriptors = [rustix::event::PollFd::new(
+        socket,
+        rustix::event::PollFlags::IN,
+    )];
+    if !poll_until_ready(&mut descriptors, Instant::now() + timeout)? {
+        return Err(std::io::ErrorKind::WouldBlock.into());
     }
+    socket.recv(packet)
 }
 
 #[test]
-fn activated_daemon_response_retries_only_interrupted_reads_with_deadline() {
-    let mut calls = 0;
-    let bytes = read_until_complete(
-        |_, _| {
-            calls += 1;
-            if calls == 1 {
-                Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
-            } else {
-                Ok(0)
-            }
-        },
-        Instant::now() + Duration::from_secs(1),
-    )
-    .unwrap();
-    assert_eq!(bytes, 0);
-    assert_eq!(calls, 2);
-
-    let mut interrupted_calls = 0;
-    let persistent = read_until_complete(
-        |_, _| {
-            interrupted_calls += 1;
-            Err(std::io::Error::from(std::io::ErrorKind::Interrupted))
-        },
-        Instant::now() + Duration::from_millis(2),
-    );
-    assert!(
-        persistent.is_err(),
-        "persistent EINTR must exhaust its deadline"
-    );
-    assert!(interrupted_calls > 0);
+fn blocking_waits_survive_sigchld_from_wait_timeout() -> Result<()> {
+    let mut child = Command::new("sleep").arg("0.1").spawn()?;
+    // Installs the handler; the child then exits while this thread (its parent) polls.
+    assert!(child.wait_timeout(Duration::ZERO)?.is_none());
+    let (socket, _peer) = UnixDatagram::pair()?;
+    socket.set_read_timeout(Some(Duration::from_millis(400)))?;
+    let started = Instant::now();
+    let error = recv(&socket, &mut [0; 1]).expect_err("nothing was sent");
+    assert_eq!(error.kind(), std::io::ErrorKind::WouldBlock);
+    assert!(started.elapsed() >= Duration::from_millis(400));
+    child.wait()?;
+    Ok(())
 }
 
 fn hold_python_lease(config: &Path) -> Result<PythonLease> {
@@ -373,15 +344,8 @@ fn provider_boot_change_and_lost_mutation_reply_never_start_a_disk_writer() -> R
                     &listener,
                     rustix::event::PollFlags::IN,
                 )];
-                assert_eq!(
-                    rustix::event::poll(
-                        &mut incoming,
-                        Some(&rustix::event::Timespec {
-                            tv_sec: 5,
-                            tv_nsec: 0
-                        })
-                    )?,
-                    1,
+                assert!(
+                    poll_until_ready(&mut incoming, Instant::now() + Duration::from_secs(5))?,
                     "Provider did not connect"
                 );
                 let (stream, _) = listener.accept()?;
@@ -491,7 +455,7 @@ fn settings_writer_preserves_developer_pseudo_language_without_enabling_it_norma
                 .stderr(Stdio::null())
                 .spawn()?,
         );
-        notifications.recv(&mut [0; 256])?;
+        recv(&notifications, &mut [0; 256])?;
         let read = || -> Result<Value> {
             let output = command(home.path(), &source_path, &endpoint)
                 .args(["ctl", "call", "settings.get", r#"{"store":"desktop"}"#])
@@ -585,7 +549,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
             .spawn()?,
     );
     let mut packet = [0; 256];
-    notifications.recv(&mut packet)?;
+    recv(&notifications, &mut packet)?;
     let mut first = link(&endpoint)?;
     let mut second = link(&endpoint)?;
     let desktop = command(home.path(), &source_path, &endpoint)
@@ -769,7 +733,7 @@ fn settings_writer_native_concurrency_hand_edits_and_killed_publication_keep_val
             .stderr(Stdio::null())
             .spawn()?,
     );
-    notifications.recv(&mut packet)?;
+    recv(&notifications, &mut packet)?;
     let snapshot = get(&mut link(&endpoint)?)?;
     assert_eq!(snapshot["data"]["unknown"], 42);
     assert_eq!(snapshot["dirty"], false);
@@ -799,21 +763,11 @@ fn next_line(reader: &mut BufReader<ChildStdout>) -> Result<Vec<u8>> {
     let mut line = Vec::new();
     loop {
         if reader.buffer().is_empty() {
-            let remaining = deadline
-                .checked_duration_since(Instant::now())
-                .ok_or("Native watch response timed out")?;
-            let timeout = rustix::event::Timespec {
-                tv_sec: remaining.as_secs() as i64,
-                tv_nsec: i64::from(remaining.subsec_nanos()),
-            };
-            let ready = {
-                let mut fds = [rustix::event::PollFd::new(
-                    reader.get_ref(),
-                    rustix::event::PollFlags::IN,
-                )];
-                rustix::event::poll(&mut fds, Some(&timeout))?
-            };
-            if ready == 0 {
+            let mut fds = [rustix::event::PollFd::new(
+                reader.get_ref(),
+                rustix::event::PollFlags::IN,
+            )];
+            if !poll_until_ready(&mut fds, deadline)? {
                 return Err("Native watch response timed out".into());
             }
         }
@@ -860,7 +814,7 @@ fn actual_daemon_ready_native_client_restart_safe_mode_and_cleanup() -> Result<(
             .stderr(fs::File::create(&log)?);
         let mut child = Process(child.spawn()?);
         let mut packet = [0; 256];
-        let size = notifications.recv(&mut packet)?;
+        let size = recv(&notifications, &mut packet)?;
         assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
         let value = status(home.path(), &source_path, &endpoint)?;
         assert_eq!(value["safe"], generation == 3);
@@ -970,7 +924,7 @@ fn session_policy_uses_private_bus_shared_transport_and_existing_cli_records() -
         .stderr(fs::File::create(home.path().join("daemon.log"))?);
     let daemon = Process(launch.spawn()?);
     let mut bytes = [0; 256];
-    notify.recv(&mut bytes)?;
+    recv(&notify, &mut bytes)?;
     let stream = UnixStream::connect(&endpoint)?;
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     let control = stream.try_clone()?;
@@ -1177,7 +1131,7 @@ fn native_niri_event_clients_share_daemon_stream_and_shutdown_without_a_timer() 
         .stderr(Stdio::null());
     let _daemon = Process(daemon.spawn()?);
     let mut packet = [0; 256];
-    let size = notifications.recv(&mut packet)?;
+    let size = recv(&notifications, &mut packet)?;
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
     let environment = command(home.path(), &source_path, &endpoint)
         .get_envs()
@@ -1585,18 +1539,14 @@ fn inherited_systemd_socket_is_adopted_and_preserved_without_a_live_manager() ->
         &changes,
         rustix::event::PollFlags::IN,
     )];
-    let timeout = rustix::event::Timespec {
-        tv_sec: 10,
-        tv_nsec: 0,
-    };
     assert!(
-        rustix::event::poll(&mut descriptors, Some(&timeout))? > 0,
+        poll_until_ready(&mut descriptors, Instant::now() + Duration::from_secs(10))?,
         "Activation did not create its private socket"
     );
     fs::set_permissions(&endpoint, fs::Permissions::from_mode(0o600))?;
     assert!(status(home.path(), &source_path, &endpoint)?["boot"].is_string());
     let mut packet = [0; 256];
-    let size = notifications.recv(&mut packet)?;
+    let size = recv(&notifications, &mut packet)?;
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
     nix::sys::signal::kill(
         nix::unistd::Pid::from_raw(daemon.0.id() as i32),
@@ -1639,7 +1589,7 @@ fn python_writer_lease_blocks_normal_daemon_startup_for_each_endpoint() -> Resul
             .spawn()?,
     );
     let mut ready_message = [0; 256];
-    let ready_size = ready.recv(&mut ready_message)?;
+    let ready_size = recv(&ready, &mut ready_message)?;
     assert!(std::str::from_utf8(&ready_message[..ready_size])?.contains("READY=1"));
     assert!(status(home.path(), &source_path, &baseline_endpoint).is_ok());
     nix::sys::signal::kill(
@@ -1785,13 +1735,24 @@ fn python_writer_lease_blocks_activated_daemon_before_service_publication() -> R
             }
         }
     };
-    let bytes = read_until_complete(
-        |response, remaining| {
-            client.set_read_timeout(Some(remaining))?;
-            client.read(response)
-        },
+    if !poll_until_ready(
+        &mut [rustix::event::PollFd::new(
+            &client,
+            rustix::event::PollFlags::IN,
+        )],
         Instant::now() + Duration::from_secs(5),
-    )?;
+    )? {
+        return Err("activated daemon response deadline expired".into());
+    }
+    let bytes = match client.read(&mut [0]) {
+        Err(error) if error.kind() == std::io::ErrorKind::ConnectionReset => 0,
+        bytes => bytes.map_err(|error| {
+            std::io::Error::new(
+                error.kind(),
+                format!("reading activated daemon response: {error}"),
+            )
+        })?,
+    };
     assert_eq!(
         bytes, 0,
         "busy daemon published a service ({bytes} response bytes)"
@@ -1964,7 +1925,7 @@ fn daemon_serve_replays_frozen_dialogue_and_large_packets_without_an_interpreter
         .stderr(fs::File::create(home.path().join("daemon.log"))?);
     let mut daemon = Process(launch.spawn()?);
     let mut bytes = [0; 256];
-    notify.recv(&mut bytes)?;
+    recv(&notify, &mut bytes)?;
     let deadline = Instant::now() + Duration::from_secs(10);
     loop {
         let output = command(home.path(), &source_path, &endpoint)
@@ -2255,7 +2216,7 @@ printf '{}\n'
     ready.clear();
     assert_eq!(connected_output.read_line(&mut ready)?, 0);
     let _restarted = Process(launch.spawn()?);
-    notify.recv(&mut bytes)?;
+    recv(&notify, &mut bytes)?;
     assert!(!fs::read_dir(home.path())?.filter_map(|e| e.ok()).any(|e| e
         .file_name()
         .to_string_lossy()
@@ -2304,7 +2265,7 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
                 )
                 .spawn()?,
         );
-        notify.recv(&mut [0; 256])?;
+        recv(&notify, &mut [0; 256])?;
         let deadline = Instant::now() + Duration::from_secs(10);
         while status(home.path(), &source_path, &endpoint)?["services"]["wallpaper-watch"]["status"]
             != "running"
@@ -2335,11 +2296,8 @@ fn wallpaper_watch_shares_inotify_preserves_frozen_lines_and_never_replays_after
             reader.get_ref(),
             rustix::event::PollFlags::IN,
         )];
-        let timeout = rustix::event::Timespec {
-            tv_sec: 0,
-            tv_nsec: 800_000_000,
-        };
-        Ok(!reader.buffer().is_empty() || rustix::event::poll(&mut fds, Some(&timeout))? > 0)
+        Ok(!reader.buffer().is_empty()
+            || poll_until_ready(&mut fds, Instant::now() + Duration::from_millis(800))?)
     }
     #[track_caller]
     fn quiet(reader: &BufReader<ChildStdout>) -> Result<()> {
@@ -2558,7 +2516,7 @@ fn wallpaper_active_publishes_atomic_pair_and_retains_stale_revision() -> Result
             )
             .spawn()?,
     );
-    notify.recv(&mut [0; 256])?;
+    recv(&notify, &mut [0; 256])?;
     let deadline = Instant::now() + Duration::from_secs(10);
     while status(home.path(), &source_path, &endpoint)?["services"]["wallpaper-watch"]["status"]
         != "running"
@@ -2777,7 +2735,7 @@ emit({'type':'assistant','message':{'content':[{'type':'text','text':'daemon hos
             )
             .spawn()?,
     );
-    notify.recv(&mut [0; 256])?;
+    recv(&notify, &mut [0; 256])?;
 
     let stream = UnixStream::connect(&endpoint)?;
     stream.set_read_timeout(Some(Duration::from_secs(20)))?;
@@ -2943,7 +2901,7 @@ fn i18n_topic_and_catalog_follow_the_desktop_language_setting() -> Result<()> {
             .stderr(Stdio::null())
             .spawn()?,
     );
-    notifications.recv(&mut [0; 256])?;
+    recv(&notifications, &mut [0; 256])?;
     let call = |method: &str, params: Value| -> Result<Option<Value>> {
         let output = command(home.path(), &source_path, &endpoint)
             .args(["ctl", "call", method, &params.to_string()])
@@ -3065,8 +3023,7 @@ fn lock_content_behaviour_keeps_daemon_ready_with_hung_bus() -> Result<()> {
         .stderr(Stdio::null());
     let _child = Process(child.spawn()?);
     let mut packet = [0; 256];
-    let size = notifications
-        .recv(&mut packet)
+    let size = recv(&notifications, &mut packet)
         .map_err(|_| "No READY within the 30-second hang guard with lock content enabled")?;
     let ready_latency = started.elapsed();
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
@@ -3237,8 +3194,7 @@ fn daemon_ready_while_every_external_backend_hangs() -> Result<()> {
         .stderr(fs::File::create(&log)?);
     let _child = Process(child.spawn()?);
     let mut packet = [0; 256];
-    let size = notifications
-        .recv(&mut packet)
+    let size = recv(&notifications, &mut packet)
         .map_err(|_| "No READY within the 30-second hang guard while backends hang")?;
     let ready_latency = started.elapsed();
     assert!(std::str::from_utf8(&packet[..size])?.contains("READY=1"));
@@ -3482,7 +3438,7 @@ fn calendar_fifo_never_blocks_daemon_ready() -> Result<()> {
             .spawn()?,
     );
     let mut packet = [0; 256];
-    let size = notifications.recv(&mut packet).map_err(|error| {
+    let size = recv(&notifications, &mut packet).map_err(|error| {
         format!(
             "READY failed after {:?}: {error}; {}",
             start.elapsed(),

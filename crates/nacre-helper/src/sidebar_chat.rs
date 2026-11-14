@@ -220,7 +220,11 @@ fn read_frame_limit<R: BufRead>(
 ) -> std::io::Result<usize> {
     line.clear();
     loop {
-        let buf = reader.fill_buf()?;
+        // serve_client's SO_RCVTIMEO read is not restarted after wait-timeout's SIGCHLD.
+        let buf = match reader.fill_buf() {
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            buf => buf?,
+        };
         if buf.is_empty() {
             return Ok(line.len());
         }

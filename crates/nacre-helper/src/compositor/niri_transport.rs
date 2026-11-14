@@ -287,7 +287,11 @@ impl Connection {
                     .get_mut()
                     .set_write_timeout(Some(remaining))
                     .map_err(io_error)?;
-                let written = stream.get_mut().write(pending).map_err(io_error)?;
+                // SIGCHLD handlers (wait-timeout, tokio) interrupt timed socket I/O.
+                let written = match stream.get_mut().write(pending) {
+                    Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+                    written => written.map_err(io_error)?,
+                };
                 if written == 0 {
                     return Err(invalid("Truncated or oversized niri reply"));
                 }
@@ -422,7 +426,10 @@ pub(super) fn read_line(
             .get_mut()
             .set_read_timeout(Some(remaining(deadline)?))
             .map_err(io_error)?;
-        let available = stream.fill_buf().map_err(io_error)?;
+        let available = match stream.fill_buf() {
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            available => available.map_err(io_error)?,
+        };
         if available.is_empty() {
             return Err(invalid(message));
         }

@@ -264,7 +264,7 @@ fn catalogue_and_lock_raster_bursts_settle_below_sixty_mib() -> Result<()> {
             .spawn()?,
     );
     let samples = Samples::start(child.0.id());
-    notifications.recv(&mut [0; 256])?;
+    recv(&notifications, &mut [0; 256])?;
     let startup = memory(child.0.id())?;
     eprintln!("N0076 startup phase RSS/anon KiB: {startup:?}");
     wait_lock(root, &image)?;

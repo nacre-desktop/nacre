@@ -77,7 +77,7 @@ impl NiriSource {
                                     };
                                     if writeln!(reader.get_mut(), "{response}").is_err() { break; }
                                 }
-                                Err(error) if matches!(error.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut | std::io::ErrorKind::Interrupted) => continue,
+                                Err(error) if matches!(error.kind(), std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut) => continue,
                                 Err(_) => break,
                             }
                         }
