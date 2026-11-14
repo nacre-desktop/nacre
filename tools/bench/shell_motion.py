@@ -148,7 +148,7 @@ class Capture:
                 lambda: (self.at(1917, 540), time.sleep(0.9)),
                 lambda: (self.at(960, 600), d("nacre", "close")),
             ),
-            # A bar status icon: hover shows its peek ("open"), a click grows it ("grow").
+            # A bar status icon: hover ("open"), then a click opens the panel ("grow").
             "control-click": (
                 lambda: (
                     self.at(a.icon_x, a.bar_y),
@@ -157,7 +157,8 @@ class Capture:
                     self.phase(f"control-click grow {self.i}"),
                     self.pt("click"),
                 ),
-                lambda: (self.pt("click"), time.sleep(0.3), self.at(960, 600)),
+                # A second click keeps the docked panel open on main: close it as a key would.
+                lambda: (self.at(960, 600), d("nacre", "close")),
             ),
             "chat": (lambda: d("nacre", "left"), lambda: d("nacre", "left")),
             # The OSD shows daemon osd events only: a volume change through the daemon.
@@ -243,7 +244,9 @@ def kv(line):
 
 def pct(values, q):
     values = sorted(values)
-    return values[min(len(values) - 1, round(q * (len(values) - 1)))] if values else 0.0
+    return (
+        values[min(len(values) - 1, round(q * (len(values) - 1)))] if values else None
+    )
 
 
 def analyze(out):
@@ -283,6 +286,8 @@ def analyze(out):
             continue
         end = phases[i + 1][1]
         moving = [d for ns, d in frames if start <= ns < end and d["motion"] != "-"]
+        if parts[0] in AUTO_HIDE:  # overlays are not in the UI_FRAME trace
+            moving = []
         gaps = [float(d["gap_ms"]) for d in moving[1:] if float(d["gap_ms"]) > 0]
         rows.setdefault((parts[0], parts[1]), []).append(
             {
@@ -330,9 +335,9 @@ def table(outs):
         for key, reps in analyze(out).items():
             merged.setdefault(key, []).append(reps)
     lines = [
-        "| panel | dir | warm+cold n | shell frames | shell p50 | p95 | max | cold max | cold first | warm first | "
-        "niri p50 | p95 | max | cold max | cold first | warm first | PANEL_SLIDE max |",
-        "| --- " * 17 + "|",
+        "| panel | dir | warm+cold n | shell frames | shell p50 | p95 | max | max before last | cold max | "
+        "cold first | warm first | niri p50 | p95 | max | cold max | cold first | warm first | PANEL_SLIDE max |",
+        "| --- " * 18 + "|",
     ]
     for (panel, way), runs in sorted(
         merged.items(), key=lambda kv: (PANELS.index(kv[0][0]), kv[0][1] != "open")
@@ -353,7 +358,13 @@ def table(outs):
             cells += [
                 f(pct(gaps, 0.5)),
                 f(pct(gaps, 0.95)),
-                f(max(gaps, default=0)),
+                f(max(gaps, default=None)),
+                # The last frame of a transition is the final pose, often committed late (Bead).
+                *(
+                    [f(max((g for r in warm for g in r["gaps"][:-1]), default=None))]
+                    if len(cells) == 4
+                    else []
+                ),
                 f(max((g for r in cold for g in gaps_of(r)), default=None)),
                 "/".join(f(first_of(r)) for r in cold),
                 f(statistics.median(firsts) if firsts else None),
@@ -367,7 +378,9 @@ def table(outs):
 
 
 assert (
-    pct([1, 2, 3, 4, 100], 0.5) == 3 and pct([5.0], 0.95) == 5.0 and pct([], 0.5) == 0.0
+    pct([1, 2, 3, 4, 100], 0.5) == 3
+    and pct([5.0], 0.95) == 5.0
+    and pct([], 0.5) is None
 )
 
 
