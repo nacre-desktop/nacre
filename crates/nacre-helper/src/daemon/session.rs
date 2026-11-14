@@ -483,6 +483,14 @@ mod tests {
             .unwrap();
         hub.shared()
     }
+    /// The recorded Welcome plus the `daemon` topic every hub now carries (N0332).
+    fn welcome() -> Message {
+        let mut welcome = transcript("handshake")[1].clone();
+        if let Message::Welcome { topics, .. } = &mut welcome {
+            topics.insert("daemon".into(), 1);
+        }
+        welcome
+    }
     fn transcript(name: &str) -> Vec<Message> {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../protocol/fixtures");
         std::fs::read_to_string(root.join(format!("{name}.jsonl")))
@@ -593,7 +601,7 @@ mod tests {
         framing::write(&mut write, &transcript("handshake")[0])
             .await
             .unwrap();
-        assert_eq!(receive(&mut read).await, transcript("handshake")[1]);
+        assert_eq!(receive(&mut read).await, welcome());
         (write, read, task)
     }
     #[tokio::test(flavor = "current_thread")]
@@ -716,7 +724,7 @@ mod tests {
                     .unwrap(),
                 );
                 write.write_all(&wire).await.unwrap();
-                assert_eq!(receive(&mut read).await, transcript("handshake")[1]);
+                assert_eq!(receive(&mut read).await, welcome());
                 assert_eq!(
                     receive(&mut read).await,
                     Message::Ret {

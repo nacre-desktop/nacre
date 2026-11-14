@@ -259,7 +259,9 @@ the shell supervisor's exported environment are preserved.
 
 `daemon.status` returns boot, safe-mode, client and service status.
 `daemon.ping` returns null without outside work. `daemon` is the service-health
-topic; safe mode also exposes one stable record on `daemon.notice`.
+topic (`boot`, `safe`, `services`, `topics`, `generation`; N0332): `generation` changes on every
+method-set change, and the methods themselves come from Welcome and `daemon.status`. Safe mode also
+exposes one stable record on `daemon.notice`.
 Settings and other desktop services arrive in F2–F4; the launcher engine now
 precedes the remaining F2 fold-ins. Notification hosting remains deferred. Wire schemas cover structural shapes/ranges;
 the decoder also enforces UTF-8 byte bounds and cross-field constraints.

@@ -113,8 +113,7 @@ async fn serve(
     let hub = hub::Hub::new(uuid::Uuid::new_v4().to_string(), counter.safe, frame).shared();
     hub.borrow_mut().audio = Some(audio_handle.clone());
     hub.borrow_mut().publish("compositor",json!({"available":false,"error":"Connecting to compositor","outputs":{},"outputOrder":[],"workspaces":{},"workspaceOrder":[],"windows":{},"windowOrder":[]}))?;
-    let status = hub.borrow().status();
-    hub.borrow_mut().publish("daemon", status)?;
+    hub.borrow_mut().registry_changed()?;
     let environment: std::collections::BTreeMap<String, String> = std::env::vars().collect();
     let control = compositor_control::Control::new(paths.clone(), environment.clone());
     hub.borrow_mut().compositor = Some(control.clone());

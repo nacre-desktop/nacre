@@ -86,6 +86,8 @@ pub struct Hub {
     next_client: u64,
     event_seq: BTreeMap<String, u64>,
     pub services: BTreeMap<String, Value>,
+    /// N0332: `(generation, fingerprint)` of the method set last announced on `daemon`.
+    registry: (u64, u64),
     provider: Option<(u64, BTreeMap<String, u16>)>,
     /// Calls the current provider let reach their deadline since its last reply.
     provider_misses: u32,
@@ -121,6 +123,23 @@ pub struct Hub {
     /// QML's bounded previous-wallpaper stack, updated only when the active
     /// wallpaper producer observes a successful selection.
     pub(super) wallpaper_history: super::behaviours::WallpaperHistory,
+}
+/// N0332: `daemon.generation` changes exactly when this hash of the serialized registry does.
+fn fingerprint(methods: &BTreeMap<String, Method>) -> u64 {
+    use std::hash::Hasher;
+    struct Hash(std::collections::hash_map::DefaultHasher);
+    impl std::io::Write for Hash {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0.write(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+    let mut hash = Hash(Default::default());
+    serde_json::to_writer(&mut hash, methods).expect("method registry serializes");
+    hash.0.finish()
 }
 /// N0332: the topic fields `fixed_methods` gates on (besides topic presence and `services`).
 /// Keep in step with the `available_methods` gates; a missed field only delays the republish.
@@ -184,6 +203,7 @@ impl Hub {
             next_client: 0,
             event_seq: BTreeMap::new(),
             services: BTreeMap::new(),
+            registry: (0, 0),
             provider: None,
             provider_misses: 0,
             routes: BTreeMap::new(),
@@ -269,7 +289,8 @@ impl Hub {
             return Ok(());
         }
         // N0332: a new topic or a changed method gate republishes the registry below.
-        let registry = topic != "daemon" && old.is_none_or(|old| gates_methods(topic, &old.data, &data));
+        let registry =
+            topic != "daemon" && old.is_none_or(|old| gates_methods(topic, &old.data, &data));
         let seq = old.map_or(Ok(0), |old| {
             old.seq
                 .checked_add(1)
@@ -550,8 +571,17 @@ impl Hub {
     }
     /// N0332: the method set may have changed; republish `daemon` (deduplicated when it did not).
     /// Every state change that gates `methods()` outside `service()` and topic publishes calls this.
+    /// The topic carries no methods: `generation` changes with the set, Welcome and `daemon.status`
+    /// carry it.
     pub fn registry_changed(&mut self) -> Result<(), Failure> {
-        self.publish("daemon", self.status())
+        let fingerprint = fingerprint(&self.methods());
+        if fingerprint != self.registry.1 {
+            self.registry = (self.registry.0 + 1, fingerprint);
+        }
+        self.publish(
+            "daemon",
+            json!({"boot":self.boot,"safe":self.safe,"services":self.services,"topics":self.topics.keys().collect::<Vec<_>>(),"generation":self.registry.0}),
+        )
     }
     pub fn subscribe(&mut self, id: u64, topics: &[String], resync: bool) -> Result<(), Failure> {
         if topics.iter().any(|topic| !self.topics.contains_key(topic)) {
@@ -1123,9 +1153,7 @@ mod tests {
         hub.service("compositor", "starting", 0).unwrap();
         let built = REBUILDS.with(std::cell::Cell::get);
         let seq = hub.topic_seq("daemon").unwrap();
-        let compositor = |available: bool, window: u64| {
-            json!({"available":available,"backend":"niri","outputs":{"DP-1":{}},"capabilities":{},"windows":[window]})
-        };
+        let compositor = |available: bool, window: u64| json!({"available":available,"backend":"niri","outputs":{"DP-1":{}},"capabilities":{},"windows":[window]});
         // Scripted: the compositor producer calls service() after each of its publishes; nacrectl connects once.
         for window in 0..50 {
             hub.publish("compositor", compositor(true, window)).unwrap();
@@ -1139,25 +1167,28 @@ mod tests {
         eprintln!("N0332 registry: {built} builds, {published} daemon publishes");
         // New topic, compositor running, welcome; before N0332 every service() call built (51).
         assert_eq!((built, published), (3, 2));
-        // A gate change (compositor availability drops the display methods) still republishes.
-        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
-            .get("display.apply")
-            .is_some());
+        let daemon = |hub: &Hub| hub.snapshot_ref("daemon").unwrap().clone();
+        let generation = |hub: &Hub| daemon(hub)["generation"].as_u64().unwrap();
+        assert!(daemon(&hub).get("methods").is_none() && daemon(&hub).get("clients").is_none());
+        // A service change that leaves the method set alone keeps the generation.
+        let (seq, before) = (hub.topic_seq("daemon"), generation(&hub));
+        hub.service("tray", "waiting", 0).unwrap();
+        assert!(hub.topic_seq("daemon") > seq);
+        assert_eq!(generation(&hub), before);
+        // A gate change (compositor availability drops the display methods) bumps it.
+        assert!(hub.status()["methods"].get("display.apply").is_some());
         hub.publish("compositor", compositor(false, 0)).unwrap();
-        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
-            .get("display.apply")
-            .is_none());
+        assert!(hub.status()["methods"].get("display.apply").is_none());
+        assert_eq!(generation(&hub), before + 1);
         // So do provider registration and retirement.
         let (provider, _) = hub.add_client().unwrap();
-        hub.register(provider, BTreeMap::from([("ui.dispatch".to_owned(), 1)]))
+        hub.register(provider, BTreeMap::from([("ui.method0".to_owned(), 1)]))
             .unwrap();
-        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
-            .get("ui.dispatch")
-            .is_some());
+        assert!(hub.status()["methods"].get("ui.method0").is_some());
+        assert_eq!(generation(&hub), before + 2);
         hub.remove_client(provider);
-        assert!(hub.snapshot_ref("daemon").unwrap()["methods"]
-            .get("ui.dispatch")
-            .is_none());
+        assert!(hub.status()["methods"].get("ui.method0").is_none());
+        assert_eq!(generation(&hub), before + 3);
     }
     #[test]
     fn status_reports_methods_added_after_service_readiness() {
@@ -1558,7 +1589,8 @@ mod tests {
     #[test]
     fn registry_and_topic_caps_keep_welcome_encodable_and_large_calls_get_typed_errors() {
         let (mut hub, id, now) = fixture();
-        for n in 0..127 {
+        // `x` and `daemon` already hold two of the 128 topic slots.
+        for n in 0..126 {
             hub.publish(&format!("topic-{n}"), json!({})).unwrap();
         }
         assert_eq!(
