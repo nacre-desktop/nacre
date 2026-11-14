@@ -34,7 +34,9 @@ round (265e4a9ad) go away: the panel node is the body.
   `PanelVisibility(false)`), so there is one rule, not a per-opener special case.
 - Status icon click (Wi-Fi, Bluetooth, sound, battery/power, updates, notifications): opens the panel
   and selects that section (`CompanionSelect` then `CompanionModel` with `cc.page=detail`,
-  `cc.detail=<section>`). Hover on an icon stays a peek.
+  `cc.detail=<section>`). Hover on an icon stays a peek. A second click on the icon of the section
+  that is already on screen closes the panel; a click on another icon switches to that section. The
+  bar cannot see the dock's page, so the dock judges the repeat (`reload.rs`, the dock's model arm).
 - Overview tile chevron, the volume end button, the battery header, the Notifications heading: open
   the detail page in place (`detail` action). The panel does not move or resize.
 - Back arrow or Escape on a detail page: back to the overview. Escape on the overview: close.

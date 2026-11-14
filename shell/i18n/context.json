@@ -505,8 +505,6 @@
   "bead.panel.control-reset": "Bead control center: label and accessible name of the editor button that restores the default tile set and order.",
   "bead.panel.control-screenshot": "Bead control center: name of the screenshot action tile, shown under its icon and in the edit lists.",
   "bead.panel.control-settings": "Bead control center: accessible name of the header button that opens the Settings window.",
-  "bead.panel.control-turn-off": "Bead control center: label of the button on a detail page that switches the feature off.",
-  "bead.panel.control-turn-on": "Bead control center: label of the button on a detail page that switches the feature on.",
   "bead.panel.control-updates": "Bead control center: name of the updates tile that opens the system page, shown under its icon and in the edit lists.",
   "bead.panel.control-updates-pending": "Control panel Updates section: how many package updates wait; {count} is the number.",
   "bead.panel.control-updates-none": "Control panel Updates section: nothing to update.",

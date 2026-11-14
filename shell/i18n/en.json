@@ -533,8 +533,6 @@
   "bead.panel.control-reset": "Reset",
   "bead.panel.control-screenshot": "Screenshot",
   "bead.panel.control-settings": "Settings",
-  "bead.panel.control-turn-off": "Turn off",
-  "bead.panel.control-turn-on": "Turn on",
   "bead.panel.control-updates": "Updates",
   "bead.panel.control-updates-pending": "{count} updates pending",
   "bead.panel.control-updates-none": "Everything is up to date",

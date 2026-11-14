@@ -8773,6 +8773,14 @@ impl SceneSource for Runtime {
                 {
                     self.leave_docked_flow();
                     values.extend(Self::cleared_docked_secrets());
+                    // 0280: the status icon of the section already on screen closes the panel
+                    // (the bar cannot see the dock's page, so the second click is judged here).
+                    if self.session.stores.get("panel.open") == Some(&bead::core::Value::Bool(true))
+                        && values.get("cc.page") == self.session.stores.get("cc.page")
+                        && values.get("cc.detail") == self.session.stores.get("cc.detail")
+                    {
+                        values.insert("panel.open".into(), bead::core::Value::Bool(false));
+                    }
                 }
 
                 if self.workspaces.view.follow(&values)

@@ -26,7 +26,7 @@ const FILM_STRETCH: f64 = 170.;
 /// View-owned state only: never providers, results, credentials or image data.
 pub fn capture_state(stores: &bead::core::Stores) -> serde_json::Value {
     let mut values = crate::launcher::remember(stores);
-    for key in ["dashboard.page", "cc.page", "chat.mode", "chat.page"] {
+    for key in ["dashboard.page", "cc.page", "cc.detail", "chat.mode", "chat.page"] {
         if let Some(bead::core::Value::Text(value)) = stores.get(key)
             && value.len() <= 256
         {

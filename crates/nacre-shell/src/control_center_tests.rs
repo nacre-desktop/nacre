@@ -3358,3 +3358,97 @@ async fn a_closed_dock_reopens_on_the_overview_after_a_status_click() -> bead_te
     drop(lab);
     Ok(())
 }
+
+/// 0280: the dock keeps the frame height on every page, and `cc.page=detail` with an empty or
+/// unknown `cc.detail` renders the overview, so a bare back row cannot occur.
+#[test]
+fn the_dock_keeps_one_height_and_never_renders_a_bare_back_row() -> bead_test::Result<()> {
+    let panel_height = |h: &Harness| {
+        let node = h
+            .session
+            .view_nodes()
+            .iter()
+            .find(|n| n.id == "control-center")
+            .cloned()
+            .expect("panel node");
+        bead::ui::rect(&node.draw).h
+    };
+    // base() publishes cc.max_height 640: the frame height the dock fills
+    let max = panel_height(&harness(base(), "home", 1.)?);
+    assert_eq!(max, 640.);
+    for detail in ["dnd", "updates", "", "nonsense"] {
+        let mut out = base();
+        out.insert("cc.detail".into(), Value::Text(detail.into()));
+        let h = harness(out, "detail", 1.)?;
+        assert_eq!(panel_height(&h), max, "{detail}");
+        let ids = node_ids(&h);
+        let back = ids.iter().any(|id| id.contains("detail.header.back"));
+        let overview = ids.iter().any(|id| id.contains("home.status"));
+        assert_eq!(back, matches!(detail, "dnd" | "updates"), "{detail}: {ids:?}");
+        assert_ne!(overview, back, "{detail}");
+    }
+    Ok(())
+}
+
+/// 0280: the dock declares no close-on-leave of its own (the grace timer and the pin are Bead's edge
+/// controller), so a pointer leave never closes it from the view side: a page opened by a click stays.
+#[tokio::test]
+async fn a_pointer_leave_never_closes_the_dock_by_itself() -> bead_test::Result<()> {
+    use bead::wayland::{SceneSource, UiEvent};
+    let mut methods = ALL.to_vec();
+    methods.push("power.set_profile");
+    let lab = lab(&methods).await;
+    let control = control_for(&lab).await;
+    let palette_path = root().join("palette.json");
+    let colors = bead::render::Palette::read(&palette_path)?;
+    let cold = crate::sound::fallback(colors.get("surface")?);
+    let session = bead::ui::Session::new(
+        root(),
+        "control/main.luau".into(),
+        palette_path,
+        colors,
+        cold,
+    );
+    let mut runtime = crate::reload::Runtime::new(session)
+        .with_control_center(control)?
+        .with_docked_details(lab.client.clone())?;
+    runtime.isolate_state(&lab.dir.join("dock-leave"));
+    runtime.services(Box::new(|_| {}));
+    runtime.stage(UiEvent::Reload)?;
+    runtime.commit();
+    runtime.stage(UiEvent::PanelVisibility(true))?;
+    runtime.stage(UiEvent::PointerRegion(true))?;
+    runtime.commit();
+    // The Bluetooth chevron: a click inside, which pins the panel.
+    runtime.stage(UiEvent::Model(BTreeMap::from([
+        ("cc.page".into(), Value::Text("detail".into())),
+        ("cc.detail".into(), Value::Text("bluetooth".into())),
+    ])))?;
+    runtime.stage(UiEvent::PointerRegion(false))?;
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(true))
+    );
+    assert!(runtime.session.hover_close_deadline().is_none());
+    assert!(
+        runtime
+            .session
+            .view_nodes()
+            .iter()
+            .any(|node| node.id.contains("detail.header.back")),
+        "the page the click opened is still shown"
+    );
+    // A second click on the same status icon (the same model again) closes the panel.
+    runtime.stage(UiEvent::Model(BTreeMap::from([
+        ("cc.page".into(), Value::Text("detail".into())),
+        ("cc.detail".into(), Value::Text("bluetooth".into())),
+    ])))?;
+    runtime.commit();
+    assert_eq!(
+        runtime.session.stores.get("panel.open"),
+        Some(&Value::Bool(false))
+    );
+    drop(lab);
+    Ok(())
+}

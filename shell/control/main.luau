@@ -402,29 +402,8 @@ local function detail()
         table.insert(items,{row_button("updates-open","system_update",ui.tr("bead.panel.control-updates-open"),"chevron_right",ui.action("view.open","dashboard-system")),ROW})
         return stack("detail",items)
     end
-    local t=reg.by_id[id]
-    local s=t and t.source and src[t.source] or {}
-    local items={header(t and ui.tr(t.label) or "",ui.action("page","home"))}
-    if t and t.page then
-        table.insert(items,{ui.Text{id="description",text=ui.tr(t.page),width=INNER,height=BODY*4.5,font_size=BODY,color="onSurfaceVariant"},BODY*4.5})
-    end
-    if t and s.toggle then
-        table.insert(items,{kit.Button{id="switch",width=INNER,height=HEAD+T.spacing.sm,padding=0,radius=T.radii.full,fill=s.on and "surfaceContainerHigh" or "primary",
-            aria_label=s.on and ui.tr("bead.panel.control-turn-off") or ui.tr("bead.panel.control-turn-on"),on_activate=ui.action("cc.do","toggle:"..t.source),
-            ui.Row{id="switch-row",width=INNER,height=HEAD+T.spacing.sm,align="center",justify="center",
-                ui.Text{id="switch-label",text=s.on and ui.tr("bead.panel.control-turn-off") or ui.tr("bead.panel.control-turn-on"),
-                    width=INNER-T.spacing.lg*2,height=22,text_align="center",font_size=BODY,color=s.on and "onSurface" or "onPrimary"}}},HEAD+T.spacing.sm})
-    end
-    for _,c in ipairs(s.choices or {}) do
-        table.insert(items,{row_button("choice-"..c.id,t.icon,c.name,c.active and "radio_button_checked" or "radio_button_unchecked",
-            ui.action("cc.do","choose:"..t.source..":"..c.id)),ROW})
-    end
-    if t and s.choices and views[t.view or ""] then
-        table.insert(items,{row_button("details","battery_full",ui.tr("bead.panel.control-battery-details"),"chevron_right",ui.action("view.open",t.view)),ROW})
-    end
-    local note=message()
-    if note then table.insert(items,note) end
-    return stack("detail",items)
+    -- 0280: an unknown or empty id (a remembered or routed page) is the overview, never a bare back row.
+    return home()
 end
 local body,content
 if popup then
@@ -448,18 +427,12 @@ else body,content=home() end
 local max=get("cc.max_height")
 -- D16: "ease" is the kit's EaseOut, the closest curve to the review's out-cubic open / in-cubic close until the
 -- named easing tokens land (Bead B0263); D5 retargets the peek into this surface.
--- Owner 2026-11-14: the dock sizes to its content too (it used to keep the full frame height).
-local height=math.min(max,content+TOP+PAD)
+-- 0280: the dock keeps the frame height on every page. Its body is its hit region, so a body that shrank under
+-- the pointer handed it to the click-outside catcher and the hover close fired. Long pages scroll inside.
+local height=popup and math.min(max,content+TOP+PAD) or max
 local inner=body
 if content+TOP+PAD>max then
     inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=height-TOP-PAD,body}
 end
-local edge,open,detached=get("view.edge"),ui.bind("panel.open"),ui.resolve_for_check(ui.bind("view.detached"))
-if popup then
-    return kit.Panel{id="control-center",edge=edge,open=open,duration=.23,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not detached,width=W,height=height,padding=PAD,padding_top=TOP,
-        gap=GAP,radius=T.radii.medium,fill="surface",inner}
-end
--- Owner 2026-11-14 round 3: the dock's surface keeps the frame height (its hover region, so the pointer can
--- travel from the lip into it without closing it) while the visible body sizes to the content.
-return kit.Panel{edge=edge,open=open,duration=.28,return_duration=.18,return_transition="ease",transition="ease",fade=false,reveal=not detached,slide_distance=W,width=W,height=max,padding=0,fill="transparent",shadow=false,body="control-center",
-    ui.Column{id="control-center",position="absolute",left=0,top=0,width=W,height=height,padding=PAD,padding_top=TOP,gap=GAP,radius=T.radii.medium,fill="surface",inner}}
+return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),duration=popup and .23 or .28,return_duration=.18,return_transition="ease",transition=popup and "ease-in-out" or "ease",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=not popup and W or nil,width=W,height=height,padding=PAD,padding_top=TOP,
+    gap=GAP,radius=T.radii.medium,fill="surface",inner}
