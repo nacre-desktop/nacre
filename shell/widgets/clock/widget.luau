@@ -88,7 +88,7 @@ local function clock_content(style,instance_id,available_width)
         local natural=math.min(time_capacity,math.max(math.min(t.clock_min_width,time_capacity),
             ui.text_width(shown,clock_font,t.clock_font)))
         ui.animate("clock-date-width:"..tostring(instance_id or "clock"),natural,0,"out-cubic")
-        return status_text{id="time",text=shown,width=natural,max_width=time_capacity,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
+        return status_text{id="time",text=shown,width=natural,max_width=time_capacity,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     elseif style=="seconds" then
         local seconds=ui.resolve_for_check(ui.bind("bead.desktop.clock.seconds")) or ""
         local capacity=math.min(seconds_max,available_width or seconds_max)
@@ -97,7 +97,7 @@ local function clock_content(style,instance_id,available_width)
         local width=preview and natural or math.min(capacity,
             ui.animate("clock-seconds-width:"..tostring(instance_id or "clock"),natural,.18,"out-cubic"))
         local shown=measure.ellipsize(value,width,clock_font,t.clock_font)
-        return status_text{id="time-seconds",text=shown,width=width,max_width=capacity,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
+        return status_text{id="time-seconds",text=shown,width=width,max_width=capacity,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     end
     local date=ui.resolve_for_check(ui.bind("bead.desktop.clock.date")) or ""
     local capacity=math.min(date_content_max,available_width or date_content_max)
@@ -112,7 +112,7 @@ local function clock_content(style,instance_id,available_width)
     local date_width=math.min(date_natural,math.max(0,width-time_width-(time_width>0 and t.item_gap or 0)))
     local gap=date_width>0 and time_width>0 and t.item_gap or 0
     local date_node=status_text{id="date",text=measure.ellipsize(date,date_width,clock_font,t.detail_font),width=date_width,max_width=date_width,shrink=0,font_size=t.detail_font,color="secondary"}
-    local time_node=status_text{id="time",text=measure.ellipsize(time,time_width,clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,font_weight=500,color="onSurface"}
+    local time_node=status_text{id="time",text=measure.ellipsize(time,time_width,clock_font,t.clock_font),width=time_width,max_width=time_width,shrink=0,font_size=t.clock_font,font_weight=500,color=t.clock_tone}
     return ui.Row{id="time-date",width=width,height=t.status_height,radius=t.status_radius,gap=gap,align="center",time_node,date_node}
 end
 local function bar(props,settings,_data)

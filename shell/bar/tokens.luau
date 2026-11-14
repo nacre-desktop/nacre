@@ -7,8 +7,9 @@ return {
     -- D1 (spec 0237): 20 px glyphs in 24 px boxes, 14 px between boxes, 12 px to the pill ends.
     -- The 7 px padding is each item's half of the gap, so the buttons tile with no seam.
     status_gap=12, status_padding=7, status_count_padding=7, status_hit_pad=0, status_end_padding=5,
-    -- Owner 2026-11-14: active glyphs take the accent again (the pre-D1 look); hover is an onSurface wash.
-    status_active="primary", status_hover=.1,
+    -- Owner 2026-11-14: the pre-N0237 scheme, one role per group: icons secondary (active or idle), the
+    -- clock tertiary, the power button error; attention states override. Hover is an onSurface wash.
+    status_tone="secondary", clock_tone="tertiary", power_tone="error", status_hover=.1,
     badge_size=15, badge_font=10, badge_pad=4, badge_lift=5, badge_overhang=7, separator_height=16,
     status_text_offset=0, clock_text_offset=2/3,
     pill_height=34, pill_radius=17, pill_gap=0, power_size=34,
