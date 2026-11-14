@@ -1,9 +1,7 @@
 # N0401 — Fresh-Arch VM install gate
 
-Status: done 2026-11-13. Phase A 2026-11-11; phase B harness on main 2026-11-12.
-The purge failure below is fixed by N0402; with the N0407 package set all three
-tiers pass install, session, render and purge. `nacre update` passes on niri; the
-nacre-niri and Hyprland runs predate the help fix and skipped it. Rerun all tiers at the cut.
+Status: done; all three tiers pass every stage at main b94eba50 (2026-11-14 rerun below).
+Rerun at the cut.
 
 v0.1 ships only when a fresh Arch Linux VM can install Nacre from a signed repository,
 start a working session on each tier, and remove it again. This unit builds that check.
@@ -96,3 +94,19 @@ this unit passed Ruff and 12 focused driver/repository tests in a fresh Arch
 container. Mirror timeouts required an isolated Niri retry; the VM fixture uses
 alternate official mirrors and serial package downloads, with signature checks
 unchanged.
+
+## Rerun 2026-11-14 (N0417)
+
+Packages built from main `b94eba50` (core r3282+, nacre-keyring, Orient d2cf2da, nacre-niri r3079),
+fresh overlays on dev-1 with KVM/virgl. The first rerun found two release bugs, both fixed before this run:
+core lacked `libpipewire`, which the helper and shell link, so setup failed on a fresh system (85f66126);
+and `--purge` kept theme outputs that the palette had rewritten, such as `~/.config/hypr/hyprlock.conf` (b94eba50).
+
+| Tier | Every stage (prepare → leftovers) | update | keyring populated | Time |
+|---|---|---|---|---|
+| nacre-niri | PASS | PASS | PASS | 2m47s |
+| niri | PASS | PASS | PASS | 2m04s |
+| hyprland | PASS | PASS | PASS | 2m50s |
+
+The packages and the stage log are kept on dev-1 under `~/nacre-lead/release-packages/b94eba50…` for the cut.
+
