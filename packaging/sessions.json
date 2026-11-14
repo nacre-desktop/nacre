@@ -4,23 +4,20 @@
     "module": "package_niri",
     "package": "nacre-session-nacre-niri",
     "dependencies": "session_nacre_niri",
-    "desktop": "config/uwsm/sessions/nacre-niri-managed.desktop",
-    "experimental": false
+    "desktop": "config/uwsm/sessions/nacre-niri-managed.desktop"
   },
   "niri": {
     "label": "Niri",
     "module": "package_niri",
     "package": "nacre-session-niri",
     "dependencies": "session_niri",
-    "desktop": "config/uwsm/sessions/nacre-niri-package.desktop",
-    "experimental": true
+    "desktop": "config/uwsm/sessions/nacre-niri-package.desktop"
   },
   "hyprland": {
     "label": "Hyprland",
     "module": "package_hyprland",
     "package": "nacre-session-hyprland",
     "dependencies": "session_hyprland",
-    "desktop": "config/uwsm/sessions/nacre-hyprland-package.desktop",
-    "experimental": false
+    "desktop": "config/uwsm/sessions/nacre-hyprland-package.desktop"
   }
 }
