@@ -5,22 +5,43 @@
 //! behaviour builds the same presentation from daemon topics and calls the helper's own
 //! `lock_prepare::prepare` in-process (no CLI), so the files, modes and privacy rules are the
 //! helper's. Part of the N0039 `behaviours` bundle: QML stands down through `behavioursHeld`.
-use super::{behaviours::changed, hub::Shared, menu};
+//!
+//! N0321: wallpaper and settings changes prepare at once; notices, media and weather only mark
+//! the content stale until it is about to be seen: Hyprlock reads the prepared files (its
+//! start and its 2 s `reload_cmd`), or logind reports a lock or a suspend (`session.state`).
+//! Without an inotify watch every change prepares at once, as before.
+use super::{
+    behaviours::{changed, changed_topic},
+    dashboard_extras::watch::Watch,
+    hub::Shared,
+    menu,
+    osd::next_watch,
+};
 use crate::{
     image_text::FontBook, lock_dashboard, lock_info::Info, lock_prepare, paths::Paths, Result,
 };
 use chrono::{TimeZone, Utc};
 use serde_json::{json, Map, Value};
-use std::{path::PathBuf, time::Duration};
+use std::{
+    os::unix::ffi::OsStrExt,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
-const TOPICS: [&str; 5] = [
+/// The presentation's topics, and `session.state`, which only says when it is seen.
+const TOPICS: [&str; 6] = [
     "wallpaper.active",
     "dashboard.player",
     "dashboard.weather",
     "notifications",
     "settings.store.desktop",
+    nacre_protocol::session::STATE_TOPIC,
 ];
 const SYSTEM: &str = "dashboard.system";
+/// Prepared as soon as they settle; the other topics wait until the content is seen.
+const PROMPT: [&str; 2] = ["wallpaper.active", "settings.store.desktop"];
+/// Hyprlock `cat`s the dashboard pointer every 2 s while it runs.
+const READ_WINDOW: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
 pub struct Options {
@@ -272,15 +293,31 @@ fn prepare(
     Ok(Some(key))
 }
 
+/// logind locked the session or is about to suspend it.
+fn locking(hub: &Shared) -> bool {
+    use nacre_protocol::session::{SessionState, STATE_TOPIC};
+    hub.borrow()
+        .snapshot(STATE_TOPIC)
+        .and_then(|data| serde_json::from_value::<SessionState>(data).ok())
+        .is_some_and(|state| state.locked || state.preparing_sleep)
+}
+
 pub async fn lock_content(hub: Shared, paths: Paths, options: Options) -> Result<()> {
+    use nacre_protocol::session::STATE_TOPIC;
     let mut notices = hub.borrow().observe();
     let mut last: Option<String> = None;
+    let ready = paths.cache.join("lock-ready");
+    let mut readers: Option<Watch> = None;
+    let mut read_at: Option<Instant> = None;
+    let mut settle = true; // the first pass is the startup run
     loop {
-        // Restart the quiet period on every relevant change (the first pass is the startup run).
-        while let Ok(result) =
-            tokio::time::timeout(options.debounce, changed(&mut notices, &TOPICS)).await
-        {
-            result?;
+        if settle {
+            // Restart the quiet period on every relevant change.
+            while let Ok(result) =
+                tokio::time::timeout(options.debounce, changed(&mut notices, &TOPICS)).await
+            {
+                result?;
+            }
         }
         let (inputs, work_paths, previous) = (Inputs::read(&hub), paths.clone(), last.clone());
         let work_options = options.clone();
@@ -309,11 +346,51 @@ pub async fn lock_content(hub: Shared, paths: Paths, options: Options) -> Result
             }
             Err(_) => return Err("Lock preparation task failed".into()),
         }
-        // A change that arrived during the run is already queued and wakes this at once.
-        tokio::select! {
-            result = changed(&mut notices, &TOPICS) => result?,
-            _ = tokio::time::sleep(options.tick) => {}
+        if readers.is_none() && ready.is_dir() {
+            // Hyprlock opens the initial image and `cat`s the pointer; this daemon never opens them.
+            readers = Watch::new(vec![(ready.clone(), rustix::fs::inotify::WatchFlags::OPEN)]).ok();
         }
+        // A change that arrived during the run is already queued and wakes this at once.
+        let mut stale = false;
+        let tick = tokio::time::sleep(options.tick);
+        tokio::pin!(tick);
+        settle = loop {
+            tokio::select! {
+                topic = changed_topic(&mut notices, &TOPICS) => {
+                    let topic = topic?;
+                    let seen = readers.is_none()
+                        || read_at.is_some_and(|at| at.elapsed() < READ_WINDOW)
+                        || locking(&hub)
+                        || !ready.is_dir();
+                    if topic == STATE_TOPIC {
+                        if stale && seen {
+                            break false;
+                        }
+                    } else if topic.is_empty() || PROMPT.contains(&topic.as_str()) || seen {
+                        break true;
+                    } else {
+                        stale = true;
+                    }
+                }
+                names = next_watch(&mut readers) => match names {
+                    Ok(names) => {
+                        if names.iter().any(|name| name.as_bytes().starts_with(b"dashboard-")) {
+                            read_at = Some(Instant::now());
+                            if stale {
+                                break false;
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        readers = None;
+                        if stale {
+                            break false;
+                        }
+                    }
+                },
+                _ = &mut tick => break false,
+            }
+        };
     }
 }
 

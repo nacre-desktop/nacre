@@ -128,7 +128,8 @@ pub(super) async fn changed(
     }
 }
 
-async fn changed_topic(
+/// The topic that changed; empty after a lagged receiver ("re-read everything").
+pub(super) async fn changed_topic(
     notices: &mut tokio::sync::broadcast::Receiver<Notice>,
     topics: &[&str],
 ) -> Result<String> {

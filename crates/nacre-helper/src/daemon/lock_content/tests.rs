@@ -90,6 +90,41 @@ async fn eventually(mut check: impl FnMut() -> bool) {
     }
     panic!("condition not reached");
 }
+/// The dashboard pointers Hyprlock's `reload_cmd` reads (`cat`) every 2 s while it runs.
+fn pointers(paths: &Paths) -> Vec<PathBuf> {
+    let ready = paths.cache.join("lock-ready");
+    let mut out: Vec<_> = fs::read_dir(ready)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| {
+            let name = path.file_name().unwrap().to_string_lossy();
+            name.starts_with("dashboard-") && name.ends_with(".txt")
+        })
+        .collect();
+    out.sort();
+    out
+}
+fn hyprlock_reads(paths: &Paths) {
+    for pointer in pointers(paths) {
+        fs::read_to_string(pointer).unwrap();
+    }
+}
+/// Without opening it: the pointer is replaced atomically on every new image.
+fn pointer_inode(paths: &Paths) -> Option<u64> {
+    use std::os::unix::fs::MetadataExt;
+    Some(fs::metadata(pointers(paths).first()?).ok()?.ino())
+}
+/// The snapshot is written before the dashboard image; wait for the whole run, then for
+/// the reader watch the run arms.
+async fn prepared(paths: &Paths, title: &str) {
+    eventually(|| {
+        snapshot_title(paths).as_deref() == Some(title) && pointer_inode(paths).is_some()
+    })
+    .await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+}
 fn snapshot_title(paths: &Paths) -> Option<String> {
     let raw = fs::read(paths.cache.join("lock-ready/snapshot.json")).ok()?;
     serde_json::from_slice::<Value>(&raw).ok()?["media"]["title"]
@@ -212,8 +247,11 @@ async fn changes_are_debounced_and_followed() {
         .run_until(async {
             let task =
                 tokio::task::spawn_local(lock_content(hub.clone(), paths.clone(), options(250)));
-            eventually(|| snapshot_title(&paths).as_deref() == Some("first")).await;
-            // A burst of changes inside the quiet period renders only its last state.
+            prepared(&paths, "first").await;
+            // While Hyprlock runs (it read the pointer), a burst of changes inside the quiet
+            // period renders only its last state.
+            hyprlock_reads(&paths);
+            tokio::time::sleep(Duration::from_millis(50)).await;
             let seen = Rc::new(std::cell::RefCell::new(BTreeSet::new()));
             let watcher = {
                 let (seen, paths) = (seen.clone(), paths.clone());
@@ -239,6 +277,67 @@ async fn changes_are_debounced_and_followed() {
                 "intermediate states were rendered: {seen:?}"
             );
             assert!(!leaked(&paths.cache));
+            task.abort();
+        })
+        .await;
+}
+
+/// N0321: unlocked, notices, media and weather only mark the content stale; Hyprlock's first
+/// read of the prepared files prepares the fresh image at once, and its next reload shows it.
+#[tokio::test(flavor = "current_thread")]
+async fn a_stale_dashboard_is_prepared_when_hyprlock_reads_it() {
+    let (_home, paths, image) = home();
+    let hub = Hub::new("fixture".into(), false, Duration::from_millis(1)).shared();
+    publish_all(&hub, &image, "first", false);
+    LocalSet::new()
+        .run_until(async {
+            let task =
+                tokio::task::spawn_local(lock_content(hub.clone(), paths.clone(), options(50)));
+            prepared(&paths, "first").await;
+            publish_all(&hub, &image, "second", false);
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            assert_eq!(snapshot_title(&paths).as_deref(), Some("first"));
+            let before = pointer_inode(&paths);
+            let read = std::time::Instant::now();
+            hyprlock_reads(&paths);
+            eventually(|| pointer_inode(&paths) != before).await;
+            eprintln!(
+                "N0321 hyprlock read to fresh dashboard: {:?}",
+                read.elapsed()
+            );
+            assert_eq!(snapshot_title(&paths).as_deref(), Some("second"));
+            task.abort();
+        })
+        .await;
+}
+
+/// N0321: logind's lock or suspend prepares stale content at once; settings still prepare
+/// without any reader.
+#[tokio::test(flavor = "current_thread")]
+async fn logind_lock_or_suspend_and_settings_prepare_without_a_reader() {
+    use nacre_protocol::session::STATE_TOPIC;
+    let (_home, paths, image) = home();
+    let hub = Hub::new("fixture".into(), false, Duration::from_millis(1)).shared();
+    publish_all(&hub, &image, "first", false);
+    let state = |sleeping: bool, revision: u64| json!({"locked":false,"sleeping":sleeping,"preparing_sleep":sleeping,"revision":revision});
+    LocalSet::new()
+        .run_until(async {
+            let task =
+                tokio::task::spawn_local(lock_content(hub.clone(), paths.clone(), options(50)));
+            prepared(&paths, "first").await;
+            publish_all(&hub, &image, "second", false);
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            assert_eq!(snapshot_title(&paths).as_deref(), Some("first"));
+            hub.borrow_mut()
+                .publish(STATE_TOPIC, state(true, 1))
+                .unwrap();
+            eventually(|| snapshot_title(&paths).as_deref() == Some("second")).await;
+            hub.borrow_mut()
+                .publish(STATE_TOPIC, state(false, 2))
+                .unwrap();
+            assert!(!leaked(&paths.cache));
+            publish_all(&hub, &image, "second", true);
+            eventually(|| leaked(&paths.cache)).await;
             task.abort();
         })
         .await;
