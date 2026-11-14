@@ -406,6 +406,7 @@ fn is_bar_widget_context(key: &str) -> bool {
                 | "bead.title.app_id"
                 | "bead.title.app_glyph"
                 | "bead.title.app_icon"
+                | "bead.title.rev"
                 | "bead.viewport.width"
                 | "bead.viewport.height"
         )
@@ -668,6 +669,8 @@ pub struct Runtime {
     detached: bool,
     launcher: Option<std::rc::Rc<crate::launcher::Menu>>,
     launcher_initial_projection: std::rc::Rc<std::cell::Cell<bool>>,
+    /// D3: (hash of the title stores, revision); the bar's trace regrows on each revision.
+    title_rev: std::cell::Cell<(u64, f64)>,
     launcher_subscription: Option<bead::core::source::Subscription>,
     launcher_quick: Option<std::rc::Rc<crate::launcher_quick::Quick>>,
     launcher_quick_subscription: Vec<bead::core::source::Subscription>,
@@ -1183,7 +1186,28 @@ impl Runtime {
             .iter()
             .filter(|(key, _)| key.starts_with("widgets.") || is_bar_widget_context(key))
             .map(|(key, value)| (key.clone(), value.clone()))
+            .chain(std::iter::once(self.title_rev()))
             .collect()
+    }
+    /// `bead.title.rev` counts bar title changes. A fresh `ui.animate` key snaps to its target (kit
+    /// ask, spec 0237), so the title trace animates on a stable key that retargets to this counter.
+    fn title_rev(&self) -> (String, bead::core::Value) {
+        use std::hash::{Hash, Hasher};
+        let values = self.session.stores.values();
+        let mut hasher = std::hash::DefaultHasher::new();
+        for key in [
+            "bead.focused_title",
+            "bead.overview.open",
+            "bead.overview.title",
+            "bead.title.app_id",
+        ] {
+            format!("{:?}", values.get(key)).hash(&mut hasher);
+        }
+        let hash = hasher.finish();
+        let (last, rev) = self.title_rev.get();
+        let rev = if hash == last { rev } else { rev + 1. };
+        self.title_rev.set((hash, rev));
+        ("bead.title.rev".into(), bead::core::Value::Number(rev))
     }
     /// Common display data shared by the desktop canvas and the passive drag preview.
     fn widget_surface_values(&self, include_status: bool) -> BTreeMap<String, bead::core::Value> {
@@ -1273,6 +1297,7 @@ impl Runtime {
                     )
             })
             .map(|(key, value)| (key.clone(), value.clone()))
+            .chain(std::iter::once(self.title_rev()))
             .collect()
     }
     /// Values that the desktop canvas is allowed to receive from its host.
@@ -2620,6 +2645,7 @@ impl Runtime {
             detached: false,
             launcher: None,
             launcher_initial_projection: std::rc::Rc::new(std::cell::Cell::new(true)),
+            title_rev: std::cell::Cell::new((0, 0.)),
             launcher_subscription: None,
             launcher_quick: None,
             launcher_quick_subscription: Vec::new(),

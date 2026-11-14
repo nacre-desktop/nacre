@@ -12,7 +12,7 @@ return {stores={["bead.desktop.wallpaper.luma"]={},["widgets.undo"]={},["widgets
     ["bar.tray.visible"]=false,["bar.workspace.count"]=6,["bar.workspace.icons"]={},["bar.workspace.hints"]=true,["bar.clock.twelve"]=false,["bar.updates.count"]=0,["bar.updates.enabled"]=true,["bar.modules"]={},["bar.dnd"]=false,["bar.stack.style"]="pearls",["bar.status.badges"]=true,
     ["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
     ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
-    ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",
+    ["bead.title.app_id"]="",["bead.title.rev"]=0,["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",
     ["bead.desktop.network.vpn"]=false,["bead.desktop.bluetooth.value"]="",
     ["status.hovered"]="",["status.peek.visible"]=false,["status.peek.kind"]="",
     ["status.panel.kind"]=""},actions={["launcher.open"]=function(_) end,["bar.recording.stop"]=function(_) end,["widgets.snapshot"]=function(_) end,["widgets.edit"]=function(_) end,["widgets.drag"]=function(_) end,

@@ -937,7 +937,7 @@ return {
         ["bar.notifications.count"]=2,["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
         ["bead.windows"]={},["bead.workspaces"]={},["bead.focused_title"]="",
         ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
-        ["bead.title.app_id"]="",["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",["bar.dnd"]=false,["bar.stack.style"]="pearls",["bar.status.badges"]=true,["bead.desktop.network.vpn"]=false,["bead.desktop.bluetooth.value"]="",
+        ["bead.title.app_id"]="",["bead.title.rev"]=0,["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",["bar.dnd"]=false,["bar.stack.style"]="pearls",["bar.status.badges"]=true,["bead.desktop.network.vpn"]=false,["bead.desktop.bluetooth.value"]="",
         ["bead.desktop.audio.percent"]=0,["bead.desktop.audio.device"]="Output unavailable",
         ["bead.desktop.audio.label"]="Unavailable",["bead.desktop.titlevisible"]=true,
         ["bead.desktop.clock"]="",["bead.desktop.clock.seconds"]="",["bead.desktop.clock.date"]="",["bead.desktop.wallpaper.luma"]={},

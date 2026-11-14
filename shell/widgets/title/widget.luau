@@ -35,7 +35,7 @@ local function trace_accent()
     return "primary"
 end
 -- Icon (the real themed app icon from the desktop entry, else the category glyph in secondary) and the
--- onSurface 500 title; `text_width` is the animated label box.
+-- accent title (t.title_ink, owner 2026-11-14); `text_width` is the animated label box.
 local function title_children(shown,text_width,show_icon,show_text)
     local kids={}
     local visible=ui.bind("bead.desktop.titlevisible")
@@ -46,16 +46,17 @@ local function title_children(shown,text_width,show_icon,show_text)
             or centered_text{id="title-icon",visible=visible,text=ui.bind("bead.title.app_glyph"),width=t.title_icon,shrink=0,family="Material Symbols Rounded",font_size=t.title_icon,color="secondary",text_align="center"}
     end
     if show_text then
-        kids[#kids+1]=centered_text{id="title",visible=visible,text=shown,height=24,width=text_width,max_width=text_width,family=font,font_size=t.title_font,color="onSurface",text_align="center"}
+        kids[#kids+1]=centered_text{id="title",visible=visible,text=shown,height=24,width=text_width,max_width=text_width,family=font,font_size=t.title_font,color=t.title_ink,text_align="center"}
     end
     return kids
 end
--- The 2 px trace under the title, centred in the band 5 px above the bar's bottom edge.
--- D16: a fresh animation key snaps to its target (kit ask 4), so the trace follows the title width
--- retarget instead: it collapses while the width is in flight and re-extends as the width settles.
-local function trace(animated_width,target_width)
-    local flight=math.min(1,math.abs(animated_width-target_width)/24)
-    local width=t.title_trace_width*(1-flight)
+-- The 2 px trace under the title, centred in the band 5 px above the bar's bottom edge. It regrows from
+-- zero on every title change (120 ms, the review's focus-change motion): a fresh animation key snaps to
+-- its target (kit ask 4), so a stable key chases `bead.title.rev`, the host's title change counter.
+local function trace(iid)
+    local rev=ui.resolve_for_check(ui.bind("bead.title.rev")) or 0
+    local phase=ui.animate("title.trace."..iid,rev,.12,"out-cubic")
+    local width=t.title_trace_width*(1-math.clamp(rev-phase,0,1))
     return ui.Row{id="title-trace-row",position="absolute",left=0,right=0,top=header-t.title_trace_inset-t.title_trace_height-(header-t.title_height)/2,height=t.title_trace_height,justify="center",visible=ui.bind("bead.desktop.titlevisible"),
         ui.Box{id="title-trace",width=width,height=t.title_trace_height,radius=1,fill=ui.alpha(trace_accent(),.9)}}
 end
@@ -115,7 +116,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
         ui.Row{id="title-content",width=animated_width+t.title_icon+t.title_gap,height=t.title_height,justify="center",align="center",gap=t.title_gap,drag_payload=props.instance.iid,edge_hover=true,
             table.unpack(title_children(shown,animated_width,true,true)),
         },
-        trace(animated_width,title_width),
+        trace(props.instance.iid),
         title_tooltip(full,type(shown)=="string" and shown or full),
         kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
             ui.Text{text=ui.bind("bead.desktop.tray.tooltip"),height=24,width="100%",font_size=13,color="onSurface"},
@@ -169,7 +170,7 @@ return {id="title",title="Title",icon="title",category="bar",data={topics={},act
             else row.width=content_width end
             table.insert(row,ui.Row(content))
             if centered and show_text then
-                table.insert(row,trace(animated_text_width,natural_width))
+                table.insert(row,trace(props.instance.iid))
                 table.insert(row,title_tooltip(title_text,shown))
             end
             table.insert(row,kit.Tooltip{id="tray-tooltip",edge="top",bar_size=-8,left=0,width="100%",height=30,padding=3,visible=ui.bind("bead.desktop.tray.tooltip.visible"),
