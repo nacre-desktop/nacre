@@ -416,13 +416,6 @@ impl Status {
         if control.pending.is_some() || control.link.is_some() {
             return;
         }
-        if control
-            .last_boot
-            .as_deref()
-            .is_some_and(|previous| previous != boot)
-        {
-            control.message = None;
-        }
         control.last_boot = Some(boot.clone());
         control.message = None;
         match client.begin_call(
@@ -514,13 +507,6 @@ impl Status {
         let mut control = control.borrow_mut();
         if control.pending.is_some() {
             return;
-        }
-        if control
-            .last_boot
-            .as_deref()
-            .is_some_and(|previous| previous != boot)
-        {
-            control.message = None;
         }
         control.last_boot = Some(boot.clone());
         control.message = None;
