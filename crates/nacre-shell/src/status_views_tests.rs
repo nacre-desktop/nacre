@@ -12,25 +12,23 @@ fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell")
 }
 fn data() -> serde_json::Value {
-    let snapshot = bead::services::Snapshot {
-        network: bead::services::Network {
-            available: true,
-            connected: true,
-            wireless_enabled: true,
-            name: "Fixture network".into(),
-            strength: Some(86),
-        },
-        bluetooth: bead::services::Bluetooth {
-            available: true,
-            powered: true,
-            connected_devices: vec!["Fixture headphones".into(), "Fixture keyboard".into()],
-        },
-        battery: bead::services::Battery {
-            available: true,
-            percentage: Some(83.),
-            charging: true,
-            ..Default::default()
-        },
+    let mut snapshot = bead::services::Snapshot::default();
+    snapshot.network = bead::services::Network {
+        available: true,
+        connected: true,
+        wireless_enabled: true,
+        name: "Fixture network".into(),
+        strength: Some(86),
+    };
+    snapshot.bluetooth = bead::services::Bluetooth {
+        available: true,
+        powered: true,
+        connected_devices: vec!["Fixture headphones".into(), "Fixture keyboard".into()],
+    };
+    snapshot.battery = bead::services::Battery {
+        available: true,
+        percentage: Some(83.),
+        charging: true,
         ..Default::default()
     };
     serde_json::to_value(snapshot).unwrap()

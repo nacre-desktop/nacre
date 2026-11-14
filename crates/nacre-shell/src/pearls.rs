@@ -644,6 +644,8 @@ fn asset(scene: &mut Scene, name: &str, rect: Rect, svg: String) {
         blur: 0.,
         fit: bead::render::ImageFit::Fill,
         clip_polygon: None,
+        radius: 0.,
+        tint: None,
         rect,
         path,
     });

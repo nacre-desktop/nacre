@@ -1202,14 +1202,7 @@ fn bar_hover_prewarms_once_retires_on_leave_and_reuses_the_warm_destination() {
     let file = dir.join("widgets.json");
     let mut runtime = real_bar_runtime(file.clone());
     runtime = runtime
-        .with_shared_desktop(
-            bead::services::Desktop::start_config(bead::services::Config {
-                tray_watcher: false,
-                audio: false,
-                bus: false,
-            }),
-            true,
-        )
+        .with_shared_desktop(crate::desktop::start_services(), true)
         .unwrap();
     let initial_document = hover_prewarm_document();
     if runtime
@@ -1468,14 +1461,7 @@ fn completed_drag_retirement_rearms_hover_after_pointer_leaves_drop_bounds() {
     std::fs::create_dir_all(&dir).unwrap();
     let mut runtime = real_bar_runtime(dir.join("widgets.json"));
     runtime = runtime
-        .with_shared_desktop(
-            bead::services::Desktop::start_config(bead::services::Config {
-                tray_watcher: false,
-                audio: false,
-                bus: false,
-            }),
-            true,
-        )
+        .with_shared_desktop(crate::desktop::start_services(), true)
         .unwrap();
     let document = hover_prewarm_document();
     if runtime

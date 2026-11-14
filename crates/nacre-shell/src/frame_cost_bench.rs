@@ -157,21 +157,6 @@ fn p(values: &[f64], q: f64) -> f64 {
     sorted[((sorted.len() as f64 * q).ceil() as usize).clamp(1, sorted.len()) - 1]
 }
 
-/// `Animations::value`'s curves (bead-core), sampled at normalized time `t`.
-fn ease(curve: bead::core::animation::Curve, t: f32) -> f32 {
-    use bead::core::animation::Curve;
-    match curve {
-        Curve::EaseOut => 1. - (1. - t).powi(3),
-        Curve::EaseInOut if t < 0.5 => 4. * t.powi(3),
-        Curve::EaseInOut => 1. - (-2. * t + 2.).powi(3) / 2.,
-        Curve::EmphasizedAccelerate => t.powi(4),
-        Curve::Spring => {
-            let x = 8. * t;
-            (1. - (1. + x) * (-x).exp()) / (1. - 9. * (-8_f32).exp())
-        }
-    }
-}
-
 /// One slide as `draw_current` poses it, timing each UI-thread step per frame.
 fn slide(open_scene: &Scene, opening: bool) -> Steps {
     let motion = open_scene.motion.as_ref().expect("panel motion");
@@ -242,7 +227,7 @@ fn slide(open_scene: &Scene, opening: bool) -> Steps {
                 .insert(SCALE.to_bits(), cache.frame.clone().expect("baked frame"));
         }
         let t = frame as f32 / frames.max(1) as f32;
-        let eased = ease(curve, t);
+        let eased = curve.ease(t);
         let progress = if opening { eased } else { 1. - eased };
         let mut scene = base.clone();
         let start = Instant::now();

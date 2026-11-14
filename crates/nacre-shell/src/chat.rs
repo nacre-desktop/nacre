@@ -72,8 +72,6 @@ impl CompactTranscript {
         self.inner.layout(entries);
         let scale = &self.inner.style().scale;
         let (gap, strip) = (scale.md, scale.xxl + 3.5 * scale.xs);
-        // D7: a message without a label has no label band either (kit ask 1).
-        let band = scale.md + scale.xs + 1.;
         let (mut original, mut compact) = (0., 0.);
         self.rows.clear();
         for entry in entries {
@@ -94,12 +92,7 @@ impl CompactTranscript {
             if cached.0 != hash {
                 let height = self.measure.layout(std::slice::from_ref(entry));
                 let code = entry.markdown && !markdown::code_blocks(&entry.text).is_empty();
-                let unlabeled = if entry.label.is_empty() { band } else { 0. };
-                *cached = (
-                    hash,
-                    height,
-                    height - if code { 0. } else { strip } - unlabeled,
-                );
+                *cached = (hash, height, height - if code { 0. } else { strip });
             }
             self.rows
                 .insert(entry.key.clone(), (original, compact, cached.2));
@@ -126,12 +119,12 @@ impl CompactTranscript {
             .map(|(key, (original, _, _))| original + self.heights[key].1)
             .reduce(f32::max)
             .unwrap_or(first);
-        // D7 stand-ins until the kit transcript aligns and labels per entry (kit ask 1):
-        // an unlabeled message (the user's own) drops its label band, and a one-line one
-        // hugs the right edge; code blocks sit in a `surface` block; captions are variant.
-        let (width, pad, xs, band) = {
+        // D7 stand-ins until the shell sets `align_end` (kit ask 1): a one-line unlabeled
+        // message (the user's own) hugs the right edge; code blocks sit in a `surface` block;
+        // captions are variant.
+        let (width, pad, xs) = {
             let s = &self.inner.style().scale;
-            (self.inner.style().width, s.md, s.xs, s.md + s.xs + 1.)
+            (self.inner.style().width, s.md, s.xs)
         };
         // Only the window's own user messages are measured, not the whole history.
         let narrow: BTreeMap<&str, Option<f32>> = entries
@@ -169,18 +162,9 @@ impl CompactTranscript {
                 return false;
             }
             let unlabeled = narrow.get(key).copied();
-            let (bubble, label) = (index == "0", index == "1");
-            if unlabeled.is_some() && label {
-                return false;
-            }
+            let (bubble, label) = (index == "0", index == "1" && unlabeled.is_none());
             let key = key.to_owned();
-            let lift = if unlabeled.is_some() && !bubble {
-                band
-            } else {
-                0.
-            };
-            cell["y"] =
-                json!(cell["y"].as_f64().unwrap_or_default() + f64::from(top - original - lift));
+            cell["y"] = json!(cell["y"].as_f64().unwrap_or_default() + f64::from(top - original));
             cell["message"] = json!(key);
             if bubble {
                 cell["h"] = json!(h);
@@ -1241,6 +1225,8 @@ impl Chat {
                     markdown: !user,
                     actions: Vec::new(),
                     code_action: Some((tr("bead.panel.chat-copy-code", &[]), "code".into())),
+                    align_end: false,
+                    max_width: 0.,
                 });
             }
         }

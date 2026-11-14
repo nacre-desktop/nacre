@@ -606,11 +606,7 @@ fn real_bar_calendar_action_enqueues_a_view_and_audio_scroll_does_not_toggle_it(
         time.x + 0.01 >= separator.x + separator.w,
         "time must follow the separator horizontally"
     );
-    let host = bead::services::Desktop::start_config(bead::services::Config {
-        tray_watcher: false,
-        audio: false,
-        bus: false,
-    });
+    let host = crate::desktop::start_services();
     let mut runtime = crate::reload::Runtime::new(h.session)
         .with_shared_desktop(host.clone(), true)?
         .with_popout_trigger()?;
@@ -1923,11 +1919,7 @@ fn status_pill_click_routes_switch_escape_and_reopen() -> Result<()> {
     };
     let network = target("Open network status")?;
     let bluetooth = target("Open Bluetooth status")?;
-    let host = bead::services::Desktop::start_config(bead::services::Config {
-        tray_watcher: false,
-        audio: false,
-        bus: false,
-    });
+    let host = crate::desktop::start_services();
     let mut runtime = crate::reload::Runtime::new(h.session)
         .with_shared_desktop(host.clone(), true)?
         .with_popout_trigger()?;

@@ -880,21 +880,19 @@ pub fn run(cli: &[String]) -> Result<(), Box<dyn Error>> {
     {
         motion_policy.bind(power, battery);
     }
-    let mut options = Options {
-        namespace: format!("nacre-app-{name}"),
-        command_socket,
-        // A panel app keeps every output eligible and opens its first panel on the one it was
-        // started for (B0194); a window app is restricted to it.
-        output: output.clone().filter(|_| name != "chat"),
-        panel_output: output.filter(|_| name == "chat"),
-        interactive: true,
-        keyboard_focus: true,
-        trace_state: cfg!(feature = "trace")
-            && std::env::var("BEAD_TRACE_STATE").is_ok_and(|value| value == "1"),
-        app: Some(args.clone()),
-        app_as_pearl: pearl,
-        ..Options::default()
-    };
+    let mut options = Options::default();
+    options.namespace = format!("nacre-app-{name}");
+    options.command_socket = command_socket;
+    // A panel app keeps every output eligible and opens its first panel on the one it was
+    // started for (B0194); a window app is restricted to it.
+    options.output = output.clone().filter(|_| name != "chat");
+    options.panel_output = output.filter(|_| name == "chat");
+    options.interactive = true;
+    options.keyboard_focus = true;
+    options.trace_state = cfg!(feature = "trace")
+        && std::env::var("BEAD_TRACE_STATE").is_ok_and(|value| value == "1");
+    options.app = Some(args.clone());
+    options.app_as_pearl = pearl;
     let fill = colors.get("surface")?;
     // B0068: the live palette at start and on every change (the file above only covers a start
     // after the shell saw the first palette).

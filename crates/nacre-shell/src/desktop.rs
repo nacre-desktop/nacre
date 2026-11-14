@@ -9,11 +9,11 @@ use std::collections::BTreeMap;
 /// N0250: lock, sleep and battery also come from daemon topics, so Bead's system-bus lane
 /// stays off (`bus: false`); the shell keeps no second system-bus connection.
 pub fn start_services() -> std::sync::Arc<bead::services::Desktop> {
-    bead::services::Desktop::start_config(bead::services::Config {
-        audio: false,
-        bus: false,
-        tray_watcher: false,
-    })
+    let mut config = bead::services::Config::default();
+    config.audio = false;
+    config.bus = false;
+    config.tray_watcher = false;
+    bead::services::Desktop::start_config(config)
 }
 
 /// The daemon's `session.state`; unlocked and awake until the topic publishes.
@@ -318,16 +318,14 @@ mod tests {
     }
     #[test]
     fn clock_style_projection_exposes_seconds_and_iso_local_date() {
-        let snapshot = Snapshot {
-            clock: "09:08".into(),
-            clock_seconds: "09:08:07".into(),
-            date: Some(bead::services::LocalDate {
-                year: 2026,
-                month: 10,
-                day: 25,
-            }),
-            ..Default::default()
-        };
+        let mut snapshot = Snapshot::default();
+        snapshot.clock = "09:08".into();
+        snapshot.clock_seconds = "09:08:07".into();
+        snapshot.date = Some(bead::services::LocalDate {
+            year: 2026,
+            month: 10,
+            day: 25,
+        });
         let state = values(&snapshot, "");
         assert_eq!(
             state["bead.desktop.clock.seconds"],
@@ -573,16 +571,14 @@ mod tests {
     }
     #[test]
     fn unavailable_audio_and_bad_tray_pixels_do_not_become_valid_ui_state() {
-        let s = Snapshot {
-            tray: vec![bead::services::TrayItem {
-                id: "bad".into(),
-                visible: true,
-                icon_name: "application-x-executable".into(),
-                icon_pixmap: vec![(512, 512, vec![0; 4])],
-                ..Default::default()
-            }],
+        let mut s = Snapshot::default();
+        s.tray = vec![bead::services::TrayItem {
+            id: "bad".into(),
+            visible: true,
+            icon_name: "application-x-executable".into(),
+            icon_pixmap: vec![(512, 512, vec![0; 4])],
             ..Default::default()
-        };
+        }];
         let state = values(&s, "stale-id");
         assert_eq!(state["bead.desktop.audio.available"], Value::Bool(false));
         assert_eq!(
@@ -632,13 +628,13 @@ mod tests {
             blur: 0.,
             fit: bead::render::ImageFit::Fill,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
             path: "@icon:tray:fixture".into(),
             rect: bead::render::Rect::new(0., 0., 24., 24.),
         });
-        let snapshot = Snapshot {
-            tray: vec![item.clone()],
-            ..Default::default()
-        };
+        let mut snapshot = Snapshot::default();
+        snapshot.tray = vec![item.clone()];
         icons(&mut scene, &snapshot).unwrap();
         assert!(scene.asset_data.contains_key(&named));
         let nested = dir.join("24x24/status");
@@ -656,37 +652,27 @@ mod tests {
             blur: 0.,
             fit: bead::render::ImageFit::Fill,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
             path: "@icon:tray:fixture".into(),
             rect: bead::render::Rect::new(0., 0., 24., 24.),
         };
-        icons(
-            &mut scene,
-            &Snapshot {
-                tray: vec![item],
-                ..Default::default()
-            },
-        )
-        .unwrap();
+        icons(&mut scene, &snapshot).unwrap();
         let png = &scene.asset_data[&std::path::PathBuf::from("@tray-pixmap/fixture.png")];
         let decoded = image::load_from_memory(png).unwrap().to_rgba8();
         assert_eq!(decoded.get_pixel(0, 0).0, [20, 40, 60, 128]);
-        let mut missing = snapshot.tray[0].clone();
-        missing.icon_name = "bead-nonexistent-icon-7832".into();
+        let mut missing = snapshot.clone();
+        missing.tray[0].icon_name = "bead-nonexistent-icon-7832".into();
         scene.primitives[0] = bead::render::Primitive::Image {
             blur: 0.,
             fit: bead::render::ImageFit::Fill,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
             path: "@icon:tray:fixture".into(),
             rect: bead::render::Rect::new(0., 0., 24., 24.),
         };
-        icons(
-            &mut scene,
-            &Snapshot {
-                tray: vec![missing],
-                ..Default::default()
-            },
-        )
-        .unwrap();
+        icons(&mut scene, &missing).unwrap();
         assert!(
             matches!(&scene.primitives[0],bead::render::Primitive::Image {path,..} if path.to_string_lossy().starts_with("@tray-pixmap/"))
         );
@@ -694,34 +680,32 @@ mod tests {
     }
     #[test]
     fn tray_menu_excludes_disabled_hidden_and_separator_entries() {
-        let s = Snapshot {
-            tray: vec![bead::services::TrayItem {
-                id: "item".into(),
-                menu: vec![
-                    bead::services::MenuEntry {
-                        id: 1,
-                        label: "_Open".into(),
-                        enabled: true,
-                        visible: true,
-                        ..Default::default()
-                    },
-                    bead::services::MenuEntry {
-                        id: 2,
-                        label: "Hidden".into(),
-                        enabled: true,
-                        ..Default::default()
-                    },
-                    bead::services::MenuEntry {
-                        id: 3,
-                        label: "Disabled".into(),
-                        visible: true,
-                        ..Default::default()
-                    },
-                ],
-                ..Default::default()
-            }],
+        let mut s = Snapshot::default();
+        s.tray = vec![bead::services::TrayItem {
+            id: "item".into(),
+            menu: vec![
+                bead::services::MenuEntry {
+                    id: 1,
+                    label: "_Open".into(),
+                    enabled: true,
+                    visible: true,
+                    ..Default::default()
+                },
+                bead::services::MenuEntry {
+                    id: 2,
+                    label: "Hidden".into(),
+                    enabled: true,
+                    ..Default::default()
+                },
+                bead::services::MenuEntry {
+                    id: 3,
+                    label: "Disabled".into(),
+                    visible: true,
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
-        };
+        }];
         let state = values(&s, "item");
         let Value::List(menu) = &state["bead.desktop.menu"] else {
             panic!()

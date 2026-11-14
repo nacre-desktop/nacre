@@ -227,17 +227,15 @@ fn run_prompt_client() -> Result<(), Box<dyn Error>> {
     let fallback = spec.fallback.clone();
     let panels =
         bead::wayland::Panels::new("prompt".into(), BTreeMap::from([("prompt".into(), spec)]))?;
-    let options = bead::wayland::Options {
-        namespace: PROMPT_NAMESPACE.into(),
-        panels: Some(panels),
-        app: Some(vec![serde_json::Value::String(IDENT.into())]),
-        panel_output: Some("NACRE-TEST-0".into()),
-        seconds: None,
-        renderer: bead::render::RendererKind::Cpu,
-        interactive: true,
-        keyboard_focus: true,
-        ..bead::wayland::Options::default()
-    };
+    let mut options = bead::wayland::Options::default();
+    options.namespace = PROMPT_NAMESPACE.into();
+    options.panels = Some(panels);
+    options.app = Some(vec![serde_json::Value::String(IDENT.into())]);
+    options.panel_output = Some("NACRE-TEST-0".into());
+    options.seconds = None;
+    options.renderer = bead::render::RendererKind::Cpu;
+    options.interactive = true;
+    options.keyboard_focus = true;
     let renderer = bead::render::renderer(bead::render::RendererKind::Cpu)?;
     bead::wayland::run_runtime(options, fallback, renderer, None)?;
     Ok(())

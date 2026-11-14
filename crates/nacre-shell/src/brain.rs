@@ -834,17 +834,12 @@ pub fn window_spec(
     fallback.width = size.0 as f32;
     fallback.bounds = bead::render::Rect::new(0., 0., size.0 as f32, size.1 as f32);
     let cold = fallback.clone();
-    Ok(bead::wayland::WindowSpec {
-        command_targets: Vec::new(),
-        app_id: "nacre-brain".into(),
-        title: crate::i18n::tr("bead.brain.title", &[]),
+    let mut spec = bead::wayland::WindowSpec::new(
+        "nacre-brain",
+        crate::i18n::tr("bead.brain.title", &[]),
         size,
-        size_for_output: None,
-        on_resize: state_path
-            .map(|path| crate::widgets::window_size_saver(path, "nacre-brain-size-save")),
-        min_size,
         fallback,
-        factory: Arc::new(move |_| {
+        Arc::new(move |_| {
             let mut session = bead::ui::Session::new(
                 root.clone(),
                 "brain/main.luau".into(),
@@ -859,14 +854,18 @@ pub fn window_spec(
                 .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
                 .map_err(|e| e.to_string())
         }),
-        model: Arc::new(|args| {
-            args.first()
-                .and_then(Json::as_str)
-                .filter(|s| !s.is_empty())
-                .map(|note| BTreeMap::from([("brain.open".into(), Value::Text(note.into()))]))
-                .unwrap_or_default()
-        }),
-    })
+    );
+    spec.min_size = min_size;
+    spec.on_resize =
+        state_path.map(|path| crate::widgets::window_size_saver(path, "nacre-brain-size-save"));
+    spec.model = Arc::new(|args| {
+        args.first()
+            .and_then(Json::as_str)
+            .filter(|s| !s.is_empty())
+            .map(|note| BTreeMap::from([("brain.open".into(), Value::Text(note.into()))]))
+            .unwrap_or_default()
+    });
+    Ok(spec)
 }
 
 #[cfg(test)]

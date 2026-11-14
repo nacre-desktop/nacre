@@ -746,6 +746,8 @@ impl Chrome {
                 blur: 0.,
                 fit: bead::render::ImageFit::Fill,
                 clip_polygon: None,
+                radius: 0.,
+                tint: None,
                 rect: Rect::new(body.x + piece.x, body.y + piece.y, piece.w, piece.h),
                 path,
             });
@@ -833,6 +835,8 @@ impl Chrome {
                     blur: 0.,
                     fit: bead::render::ImageFit::Fill,
                     clip_polygon: None,
+                    radius: 0.,
+                    tint: None,
                     rect: Rect::new(
                         body.x - 32.,
                         body.y - top_inset,

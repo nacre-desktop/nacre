@@ -5963,7 +5963,8 @@ impl SceneSource for Runtime {
                     | bead::render::Primitive::Image { rect, .. }
                     | bead::render::Primitive::Shadow { rect, .. }
                     | bead::render::Primitive::Arc { rect, .. }
-                    | bead::render::Primitive::Polyline { rect, .. } => *rect,
+                    | bead::render::Primitive::Polyline { rect, .. }
+                    | bead::render::Primitive::Graph { rect, .. } => *rect,
                 };
                 bead::wayland::InputRegion {
                     include_in_bounds: node.action.is_some()

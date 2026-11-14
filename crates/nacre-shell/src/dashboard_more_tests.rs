@@ -2448,6 +2448,8 @@ fn weather_photo_placeholder_is_swapped_for_the_held_bytes() {
             blur: 0.,
             fit: bead::render::ImageFit::Fill,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
         }],
         offset: (0., 0.),
         bounds: bead::render::Rect::new(0., 0., 100., 100.),

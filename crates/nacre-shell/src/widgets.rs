@@ -165,27 +165,23 @@ pub fn window_spec(
             .map(|runtime| Box::new(runtime) as Box<dyn bead::wayland::SceneSource>)
             .map_err(|error| error.to_string())
     });
-    Ok(bead::wayland::WindowSpec {
-        command_targets: vec!["bead.widgets".into()],
-        app_id: "nacre-widgets".into(),
-        title: "Nacre Widgets".into(),
-        size,
-        min_size,
-        size_for_output: Some(Arc::new(move |output| {
-            (
-                ((f64::from(output.0) * fraction.0) as u32)
-                    .max(min_size.0)
-                    .min(size.0),
-                ((f64::from(output.1) * fraction.1) as u32)
-                    .max(min_size.1)
-                    .min(size.1),
-            )
-        })),
-        on_resize: state_path.map(|path| window_size_saver(path, "nacre-widgets-size-save")),
-        fallback,
-        factory,
-        model: Arc::new(|args| open_model(args.first())),
-    })
+    let mut spec =
+        bead::wayland::WindowSpec::new("nacre-widgets", "Nacre Widgets", size, fallback, factory);
+    spec.command_targets = vec!["bead.widgets".into()];
+    spec.min_size = min_size;
+    spec.size_for_output = Some(Arc::new(move |output| {
+        (
+            ((f64::from(output.0) * fraction.0) as u32)
+                .max(min_size.0)
+                .min(size.0),
+            ((f64::from(output.1) * fraction.1) as u32)
+                .max(min_size.1)
+                .min(size.1),
+        )
+    }));
+    spec.on_resize = state_path.map(|path| window_size_saver(path, "nacre-widgets-size-save"));
+    spec.model = Arc::new(|args| open_model(args.first()));
+    Ok(spec)
 }
 /// An open request: a gallery search string, or (B0208 edit mode) the placed instance the user
 /// clicked, `{widget, group}`, which opens that widget's page on that copy.

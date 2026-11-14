@@ -1667,25 +1667,12 @@ pub fn window_spec(
     fallback.width = 800.;
     fallback.bounds = bead::render::Rect::new(0., 0., 800., 600.);
     let cold = fallback.clone();
-    Ok(bead::wayland::WindowSpec {
-        command_targets: Vec::new(),
-        app_id: "nacre-settings".into(),
-        title: tr("bead.settings.title", &[]),
+    let mut spec = bead::wayland::WindowSpec::new(
+        "nacre-settings",
+        tr("bead.settings.title", &[]),
         size,
-        min_size,
-        size_for_output: Some(Arc::new(move |output| {
-            (
-                ((f64::from(output.0) * fraction.0) as u32)
-                    .max(preferred_min.0)
-                    .min(size.0),
-                ((f64::from(output.1) * fraction.1) as u32)
-                    .max(preferred_min.1)
-                    .min(size.1),
-            )
-        })),
-        on_resize: None,
         fallback,
-        factory: Arc::new(move |_| {
+        Arc::new(move |_| {
             let session = bead::ui::Session::new(
                 root.clone(),
                 "settings/main.luau".into(),
@@ -1699,16 +1686,28 @@ pub fn window_spec(
                 .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
                 .map_err(|e| e.to_string())
         }),
-        model: Arc::new(|args| {
-            args.first()
-                .and_then(Json::as_str)
-                .map(|page| {
-                    BTreeMap::from([
-                        ("settings.page".into(), Value::Text(page.into())),
-                        ("settings.search".into(), Value::Text(String::new())),
-                    ])
-                })
-                .unwrap_or_default()
-        }),
-    })
+    );
+    spec.min_size = min_size;
+    spec.size_for_output = Some(Arc::new(move |output| {
+        (
+            ((f64::from(output.0) * fraction.0) as u32)
+                .max(preferred_min.0)
+                .min(size.0),
+            ((f64::from(output.1) * fraction.1) as u32)
+                .max(preferred_min.1)
+                .min(size.1),
+        )
+    }));
+    spec.model = Arc::new(|args| {
+        args.first()
+            .and_then(Json::as_str)
+            .map(|page| {
+                BTreeMap::from([
+                    ("settings.page".into(), Value::Text(page.into())),
+                    ("settings.search".into(), Value::Text(String::new())),
+                ])
+            })
+            .unwrap_or_default()
+    });
+    Ok(spec)
 }

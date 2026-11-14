@@ -674,25 +674,6 @@ fn interpolate_rect(
     )
 }
 
-fn eased_progress(curve: bead::core::animation::Curve, t: f32) -> f32 {
-    use bead::core::animation::Curve;
-    match curve {
-        Curve::EaseOut => 1. - (1. - t).powi(3),
-        Curve::EaseInOut => {
-            if t < 0.5 {
-                4. * t.powi(3)
-            } else {
-                1. - (-2. * t + 2.).powi(3) / 2.
-            }
-        }
-        Curve::EmphasizedAccelerate => t.powi(4),
-        Curve::Spring => {
-            let x = 8. * t;
-            (1. - (1. + x) * (-x).exp()) / (1. - 9. * (-8_f32).exp())
-        }
-    }
-}
-
 fn opening_reveal_contour(
     scene: &bead::render::Scene,
 ) -> &bead::render::layer_motion::RevealContour {
@@ -1154,7 +1135,21 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                             !closing.atlas.pixels.is_empty(),
                             "{name}: closing atlas contains the complete surface"
                         );
-                        for close_progress in [1., 0.75, 0.5, 0.25, 0.] {
+                        // B0277: a stationary reveal closes through its reveal contour (the open in
+                        // reverse), which the plane pixels below do not include.
+                        let reshapes = scene
+                            .motion
+                            .as_ref()
+                            .is_some_and(|m| m.reveal && m.slide_distance.is_none());
+                        if reshapes {
+                            assert!(closing.reveal.as_ref().is_some_and(|c| c.valid()));
+                        }
+                        let steps: &[f32] = if reshapes {
+                            &[]
+                        } else {
+                            &[1., 0.75, 0.5, 0.25, 0.]
+                        };
+                        for &close_progress in steps {
                             let legacy = render_legacy_close(
                                 &scene,
                                 close_progress,
@@ -1200,7 +1195,7 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     let root_origin = surface_global_origin(name, &scene);
                     for scale in [1., 1.5] {
                         for timeline_t in [0., 0.25, 0.5, 0.75, 1.] {
-                            let progress = eased_progress(curve, timeline_t);
+                            let progress = curve.ease(timeline_t);
                             let (width, height, pixels) =
                                 render_legacy_reveal(&scene, progress, scale);
                             let plan_metadata = format!("{name}-s{scale:.1}-plan.json");

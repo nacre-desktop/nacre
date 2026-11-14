@@ -369,6 +369,8 @@ fn current_scene_attaches_bounded_catalogue_thumbnail_bytes() {
             blur: 0.,
             fit: ImageFit::Cover,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
             rect: Rect::new(0., 0., 320., 180.),
             path: format!("@icon:wallpaper:current:{}", thumbnail.display()).into(),
         }],

@@ -190,10 +190,8 @@ fn start(
     };
     let mut panel_renderer = None;
     let wallpaper_preview = std::sync::Arc::new(wallpaper::Preview::default());
-    let mut options = Options {
-        command_map: Some(std::sync::Arc::new(commands::map)),
-        ..Options::default()
-    };
+    let mut options = Options::default();
+    options.command_map = Some(std::sync::Arc::new(commands::map));
     select_renderer(&mut options, "auto")?;
     let mut ui: Option<std::path::PathBuf> = None;
     let mut menu_fixture: Option<PathBuf> = None;
@@ -425,6 +423,7 @@ fn start(
             curve: None,
             edge: panel_edge,
             slide_distance: None,
+            body: None,
             fade: true,
             reveal: false,
             progress: 1.,
@@ -1445,6 +1444,8 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
         blur: 0.,
         fit: bead::render::ImageFit::Fill,
         clip_polygon: None,
+        radius: 0.,
+        tint: None,
         rect: Rect::new(28., 422., 48., 48.),
         path: assets.join("sample.svg"),
     });
@@ -1452,6 +1453,8 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
         blur: 0.,
         fit: bead::render::ImageFit::Fill,
         clip_polygon: None,
+        radius: 0.,
+        tint: None,
         rect: Rect::new(96., 422., 48., 48.),
         path: assets.join("sample.png"),
     });
@@ -1479,6 +1482,8 @@ fn panel(p: &Palette, assets: &Path) -> Result<Scene, Box<dyn std::error::Error>
             blur: 0.,
             fit: bead::render::ImageFit::Fill,
             clip_polygon: None,
+            radius: 0.,
+            tint: None,
             rect: Rect::new(62., 490., 48., 48.),
             path,
         });

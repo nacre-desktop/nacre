@@ -191,37 +191,35 @@ mod tests {
             enabled: true,
             ..Default::default()
         };
-        let mut snapshot = Snapshot {
-            tray: vec![bead::services::TrayItem {
-                id: "item".into(),
-                visible: true,
-                menu: vec![
-                    MenuEntry {
-                        id: 1,
-                        label: "Parent".into(),
-                        visible: true,
-                        enabled: false,
-                        children: vec![leaf],
-                        ..Default::default()
-                    },
-                    MenuEntry {
-                        id: 3,
-                        visible: true,
-                        separator: true,
-                        ..Default::default()
-                    },
-                    MenuEntry {
-                        id: 4,
-                        visible: true,
-                        enabled: true,
-                        checked: Some(true),
-                        ..Default::default()
-                    },
-                ],
-                ..Default::default()
-            }],
+        let mut snapshot = Snapshot::default();
+        snapshot.tray = vec![bead::services::TrayItem {
+            id: "item".into(),
+            visible: true,
+            menu: vec![
+                MenuEntry {
+                    id: 1,
+                    label: "Parent".into(),
+                    visible: true,
+                    enabled: false,
+                    children: vec![leaf],
+                    ..Default::default()
+                },
+                MenuEntry {
+                    id: 3,
+                    visible: true,
+                    separator: true,
+                    ..Default::default()
+                },
+                MenuEntry {
+                    id: 4,
+                    visible: true,
+                    enabled: true,
+                    checked: Some(true),
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
-        };
+        }];
         let mut menu = Menu::new(Arc::new(Mutex::new("item".into())));
         let values = menu.values(&snapshot);
         let Value::List(rows) = &values["tray.rows"] else {
@@ -258,11 +256,7 @@ mod view_tests {
         let fallback = crate::sound::fallback(colors.get("surface").unwrap());
         let session =
             bead::ui::Session::new(root, "tray/main.luau".into(), palette, colors, fallback);
-        let desktop = bead::services::Desktop::start_config(bead::services::Config {
-            tray_watcher: false,
-            audio: false,
-            bus: false,
-        });
+        let desktop = crate::desktop::start_services();
         let mut runtime = crate::reload::Runtime::panel_session(session, true)
             .with_shared_desktop(desktop.clone(), false)
             .unwrap()
@@ -272,24 +266,23 @@ mod view_tests {
         runtime.stage(UiEvent::Reload).unwrap();
         runtime.commit();
         assert_eq!(desktop.subscription_count(), 1);
-        let snapshot = Arc::new(Snapshot {
-            tray: vec![bead::services::TrayItem {
-                id: "item".into(),
-                visible: true,
-                title: "Fixture".into(),
-                menu: (1..=40)
-                    .map(|id| MenuEntry {
-                        id,
-                        label: format!("Entry {id}"),
-                        enabled: true,
-                        visible: true,
-                        ..Default::default()
-                    })
-                    .collect(),
-                ..Default::default()
-            }],
+        let mut snapshot = Snapshot::default();
+        snapshot.tray = vec![bead::services::TrayItem {
+            id: "item".into(),
+            visible: true,
+            title: "Fixture".into(),
+            menu: (1..=40)
+                .map(|id| MenuEntry {
+                    id,
+                    label: format!("Entry {id}"),
+                    enabled: true,
+                    visible: true,
+                    ..Default::default()
+                })
+                .collect(),
             ..Default::default()
-        });
+        }];
+        let snapshot = Arc::new(snapshot);
         runtime.stage(UiEvent::PanelVisibility(true)).unwrap();
         runtime.commit();
         runtime.stage(UiEvent::Desktop(snapshot.clone())).unwrap();
@@ -341,29 +334,24 @@ mod view_tests {
             runtime.session.stores.get("panel.open"),
             Some(&Value::Bool(true))
         );
+        let mut next = Snapshot::default();
+        next.revision = 3;
         runtime
-            .stage(UiEvent::Desktop(Arc::new(Snapshot {
-                revision: 3,
-                ..Default::default()
-            })))
+            .stage(UiEvent::Desktop(Arc::new(next.clone())))
             .unwrap();
         runtime.commit();
         assert_eq!(
             runtime.session.stores.get("panel.open"),
             Some(&Value::Bool(false))
         );
-        runtime
-            .stage(UiEvent::Desktop(Arc::new(Snapshot {
-                revision: 2,
-                tray: vec![bead::services::TrayItem {
-                    id: "item".into(),
-                    title: "Late stale callback".into(),
-                    visible: true,
-                    ..Default::default()
-                }],
-                ..Default::default()
-            })))
-            .unwrap();
+        next.revision = 2;
+        next.tray = vec![bead::services::TrayItem {
+            id: "item".into(),
+            title: "Late stale callback".into(),
+            visible: true,
+            ..Default::default()
+        }];
+        runtime.stage(UiEvent::Desktop(Arc::new(next))).unwrap();
         runtime.commit();
         assert_eq!(
             runtime.session.stores.get("tray.title"),
@@ -381,39 +369,37 @@ mod view_tests {
         let fallback = crate::sound::fallback(colors.get("surface").unwrap());
         let mut session =
             bead::ui::Session::new(root, "tray/main.luau".into(), palette, colors, fallback);
-        let snapshot = Snapshot {
-            tray: vec![bead::services::TrayItem {
-                id: "item".into(),
-                title: "Fixture tray".into(),
-                visible: true,
-                menu: vec![
-                    MenuEntry {
-                        id: 1,
-                        label: "Enabled".into(),
-                        visible: true,
-                        enabled: true,
-                        ..Default::default()
-                    },
-                    MenuEntry {
-                        id: 2,
-                        label: "Disabled".into(),
-                        visible: true,
-                        enabled: false,
-                        ..Default::default()
-                    },
-                    MenuEntry {
-                        id: 3,
-                        label: "Submenu".into(),
-                        visible: true,
-                        enabled: true,
-                        children: vec![MenuEntry::default()],
-                        ..Default::default()
-                    },
-                ],
-                ..Default::default()
-            }],
+        let mut snapshot = Snapshot::default();
+        snapshot.tray = vec![bead::services::TrayItem {
+            id: "item".into(),
+            title: "Fixture tray".into(),
+            visible: true,
+            menu: vec![
+                MenuEntry {
+                    id: 1,
+                    label: "Enabled".into(),
+                    visible: true,
+                    enabled: true,
+                    ..Default::default()
+                },
+                MenuEntry {
+                    id: 2,
+                    label: "Disabled".into(),
+                    visible: true,
+                    enabled: false,
+                    ..Default::default()
+                },
+                MenuEntry {
+                    id: 3,
+                    label: "Submenu".into(),
+                    visible: true,
+                    enabled: true,
+                    children: vec![MenuEntry::default()],
+                    ..Default::default()
+                },
+            ],
             ..Default::default()
-        };
+        }];
         let mut menu = Menu::new(Arc::new(Mutex::new("item".into())));
         session.stores = session.stores.reconcile(&menu.values(&snapshot)).unwrap();
         session.set_viewport(300, 464);

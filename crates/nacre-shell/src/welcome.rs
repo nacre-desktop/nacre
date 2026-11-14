@@ -261,16 +261,12 @@ pub fn window_spec(
     fallback.width = 1100.;
     fallback.bounds = bead::render::Rect::new(0., 0., 1100., 800.);
     let cold = fallback.clone();
-    Ok(bead::wayland::WindowSpec {
-        command_targets: Vec::new(),
-        app_id: "nacre-welcome".into(),
-        title: crate::i18n::tr("bead.welcome.title", &[]),
-        size: (1100, 800),
-        size_for_output: None,
-        on_resize: None,
-        min_size: (1100, 800),
+    let mut spec = bead::wayland::WindowSpec::new(
+        "nacre-welcome",
+        crate::i18n::tr("bead.welcome.title", &[]),
+        (1100, 800),
         fallback,
-        factory: Arc::new(move |_| {
+        Arc::new(move |_| {
             let session = bead::ui::Session::new(
                 root.clone(),
                 "welcome/main.luau".into(),
@@ -288,17 +284,18 @@ pub fn window_spec(
                 .map(|r| Box::new(r) as Box<dyn bead::wayland::SceneSource>)
                 .map_err(|e| e.to_string())
         }),
-        model: Arc::new(|args| {
-            // `nacre welcome [home|colors|shortcuts|apps|ready|help]`; anything else shows the first page.
-            let page = args
-                .first()
-                .and_then(Json::as_str)
-                .filter(|p| ["colors", "shortcuts", "apps", "ready", "help"].contains(p))
-                .unwrap_or("welcome");
-            BTreeMap::from([
-                ("welcome.step".into(), Value::Text(page.into())),
-                ("welcome.guide".into(), Value::Text(String::new())),
-            ])
-        }),
-    })
+    );
+    spec.model = Arc::new(|args| {
+        // `nacre welcome [home|colors|shortcuts|apps|ready|help]`; anything else shows the first page.
+        let page = args
+            .first()
+            .and_then(Json::as_str)
+            .filter(|p| ["colors", "shortcuts", "apps", "ready", "help"].contains(p))
+            .unwrap_or("welcome");
+        BTreeMap::from([
+            ("welcome.step".into(), Value::Text(page.into())),
+            ("welcome.guide".into(), Value::Text(String::new())),
+        ])
+    });
+    Ok(spec)
 }
