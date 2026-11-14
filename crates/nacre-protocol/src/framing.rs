@@ -133,25 +133,6 @@ impl<R: AsyncBufRead + Unpin> Reader<R> {
             complete: false,
         }
     }
-    /// Capacity of this reader's line buffer, excluding the underlying reader.
-    pub fn retained_bytes(&self) -> usize {
-        self.line.capacity()
-    }
-    /// Release a completed/empty frame's allocation when above the ceiling.
-    /// A cancelled, unfinished frame is never discarded. Completed raw bytes
-    /// can be released only after their borrow ends. This does not promise an
-    /// allocator or process RSS reduction.
-    pub fn trim_idle(&mut self, max_bytes: usize) -> bool {
-        if !self.complete && !self.line.is_empty() {
-            return false;
-        }
-        if self.line.capacity() <= max_bytes {
-            return false;
-        }
-        self.line = Vec::new();
-        self.complete = false;
-        true
-    }
     async fn line(&mut self) -> Result<bool, Failure> {
         if self.complete {
             self.line.clear();
