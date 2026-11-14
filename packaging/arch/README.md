@@ -255,12 +255,28 @@ from the fork; stock sessions use the existing protocol fallback.
 
 ## Namcap diagnostic review
 
+The package workflow gates namcap in the runtime container, after every runtime
+package is installed: namcap maps linked libraries to packages through the local
+pacman database, so the build container's logs report every library, missing or
+not, only as an uninstalled dependency. The job fails on any `E:` line, on
+`Dependency … detected and implicitly satisfied but optional (libraries …)` (a
+linked library that only an optional package brings, as libpipewire did after
+N0407), and on `Referenced library '….so…' is an uninstalled dependency`. The
+allowlist is empty; add an exact pattern here and in the workflow only for a
+reviewed false positive. `Dependency … detected but optional` stays a warning:
+the Dolphin and Thunar style plugins link kconfig, kcolorscheme and gtk3, and
+only those optional file managers load them. nacre-debug and the separately
+released Orient package are not gated.
+
 The runtime packages must have no unresolved errors. Script/config-launched
 programs can be reported as unused dependencies; retain dependencies evidenced
 by the installed entry points, Lua config and subprocess calls. Python helpers
 under the shared `tools`/`shell-tools` directories use explicit local import paths. These are
 not missing distro packages. The Orient imports and CLI are covered by an
-installed-package smoke test.
+installed-package smoke test. The check and benchmark scripts shipped under
+`tools/` (`tools/bench`, `tools/wallpaper_video_smoke.py`) import python-dbus,
+python-gobject and python-pillow; namcap reports these as dependencies, but no
+installed entry point runs those scripts.
 
 `claude_agent_sdk` and `fastembed` belong to optional, separately provisioned
 provider/semantic runtimes; package setup does not install providers/models.

@@ -169,6 +169,13 @@ jobs:
                 useradd -m "$account"
                 runuser -u "$account" -- python /work/test-installed.py --compositor "$backend"
               done
+              # Namcap maps linked libraries to packages through the local pacman database, so only
+              # this root, with every runtime package installed, shows a missing library dependency.
+              pacman -S --noconfirm --needed namcap
+              namcap $(ls /work/nacre/*.pkg.tar.zst | grep -v -- -debug-) /work/niri/nacre-niri-[0-9]*.pkg.tar.zst > /tmp/namcap.log 2>&1
+              cat /tmp/namcap.log
+              # Gate (no allowlist yet): packaging/arch/README.md, "Namcap diagnostic review".
+              if grep -E " E: | detected and implicitly satisfied but optional \(libraries | W: Referenced library [^ ]+\.so[^ ]* is an uninstalled dependency" /tmp/namcap.log; then exit 1; fi
             ' 2>&1 | tee "$work/installed-runtime.log"
           fi
           python3 - <<'PY'
