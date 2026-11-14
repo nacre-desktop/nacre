@@ -437,10 +437,10 @@ elseif page=="catalog" then body,content=catalog()
 elseif page=="detail" then body,content=detail()
 else body,content=home() end
 local max=get("cc.max_height")
--- B0067: the dock is as tall as the framed viewport (the QML sidebar keeps the full frame height); long pages scroll.
 -- D16: "ease" is the kit's EaseOut, the closest curve to the review's out-cubic open / in-cubic close until the
 -- named easing tokens land (Bead B0263); D5 retargets the peek into this surface.
-local height=popup and math.min(max,content+TOP+PAD) or max
+-- Owner 2026-11-14: the dock sizes to its content too (it used to keep the full frame height).
+local height=math.min(max,content+TOP+PAD)
 local inner=body
 if content+TOP+PAD>max then
     inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=height-TOP-PAD,body}

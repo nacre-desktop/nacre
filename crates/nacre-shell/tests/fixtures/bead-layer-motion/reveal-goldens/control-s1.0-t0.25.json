@@ -1,7 +1,7 @@
 {
   "content_atlas": "control-s1.0-atlas.png",
   "crop": {
-    "height": 1174.0,
+    "height": 587.0,
     "width": 488.0,
     "x": -32.0,
     "y": -2.0
@@ -10,15 +10,15 @@
   "duration_ms": 280.000001,
   "eased_progress": 0.578125,
   "format": "RGBA8",
-  "height": 1204,
-  "logical_height": 1204.0,
+  "height": 617,
+  "logical_height": 617.0,
   "logical_width": 488.0,
   "plan_metadata": "control-s1.0-plan.json",
   "route": "control",
   "sample_time_ms": 70.00000025,
   "scale": 1.0,
   "scene_bounds": {
-    "h": 1204.0,
+    "h": 617.0,
     "w": 488.0,
     "x": -32.0,
     "y": -32.0
