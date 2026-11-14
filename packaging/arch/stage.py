@@ -54,6 +54,19 @@ def stage(root, destination, component, build):
             target.write_text(body)
         target.chmod(0o755 if executable else 0o644)
 
+    def commands(pattern):
+        """Public /usr/bin links plus private ~/.local/bin wrappers."""
+        for source in (root / "bin").glob(pattern):
+            copy(source, shared / "bin" / source.name)
+            public = destination / "usr/bin" / source.name
+            public.parent.mkdir(parents=True, exist_ok=True)
+            public.symlink_to("../share/nacre/bin/" + source.name)
+            text(
+                ".local/bin/" + source.name,
+                f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
+                True,
+            )
+
     tools = root / "nacre/shell-tools"
     if component == "core":
         stage_ui_shell(
@@ -314,16 +327,7 @@ def stage(root, destination, component, build):
         application.mkdir(parents=True)
         (application / "ai").symlink_to("../../ai")
         (application / "bin").symlink_to("../../bin")
-        for source in (root / "bin").glob("nacre-ai*"):
-            copy(source, shared / "bin" / source.name)
-            public = destination / "usr/bin" / source.name
-            public.parent.mkdir(parents=True, exist_ok=True)
-            public.symlink_to("../share/nacre/bin/" + source.name)
-            text(
-                ".local/bin/" + source.name,
-                f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
-                True,
-            )
+        commands("nacre-ai*")
         copy(
             root / "nacre/desktop/nacre-ai.desktop",
             shared / "nacre/desktop/nacre-ai.desktop",
@@ -332,16 +336,7 @@ def stage(root, destination, component, build):
         copy(root / "brain", shared / "brain")
         copy(root / "ai/brain", shared / "brain/templates")
         copy(root / "ai/brain", shared / "ai/brain")
-        for source in (root / "bin").glob("nacre-brain*"):
-            copy(source, shared / "bin" / source.name)
-            public = destination / "usr/bin" / source.name
-            public.parent.mkdir(parents=True, exist_ok=True)
-            public.symlink_to("../share/nacre/bin/" + source.name)
-            text(
-                ".local/bin/" + source.name,
-                f'#!/bin/sh\nexec /usr/share/nacre/bin/{source.name} "$@"\n',
-                True,
-            )
+        commands("nacre-brain*")
         copy(root / "brain/launch.sh", deploy / ".local/bin/nacre-brain-ui")
         (destination / "usr/bin/nacre-brain-ui").symlink_to(
             "../share/nacre/brain/launch.sh"

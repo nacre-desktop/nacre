@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def array(values):
-    return "(" + " ".join("'" + value + "'" for value in values) + ")"
+    # Only the split packages' "nacre=$pkgver" pin must expand.
+    return "(" + " ".join(f'"{v}"' if "$" in v else f"'{v}'" for v in values) + ")"
 
 
 def render(root, revision, sequence=None):
@@ -41,14 +42,13 @@ def render(root, revision, sequence=None):
         "orient=" + lock["version"].replace("-dev.", "dev") if v == "orient" else v
         for v in mapping["core"]
     ]
-    all_runtime = list(dict.fromkeys([*core, *mapping["ai"], *mapping["brain"]]))
     sessions = json.loads((root / "packaging/sessions.json").read_text())
-    for definition in sessions.values():
-        all_runtime += [
-            value
-            for value in mapping[definition["dependencies"]]
-            if value not in all_runtime
-        ]
+    all_runtime = list(
+        dict.fromkeys(
+            [*core, *mapping["ai"], *mapping["brain"]]
+            + [v for d in sessions.values() for v in mapping[d["dependencies"]]]
+        )
+    )
     package_names = [
         "nacre",
         "nacre-ai",
@@ -58,9 +58,7 @@ def render(root, revision, sequence=None):
     ]
     session_functions = ""
     for name, definition in sessions.items():
-        depends = array(
-            ["nacre=$pkgver", *mapping[definition["dependencies"]]]
-        ).replace("'nacre=$pkgver'", '"nacre=$pkgver"')
+        depends = array(["nacre=$pkgver", *mapping[definition["dependencies"]]])
         session_functions += f"""
 package_{definition["package"]}() {{
   pkgdesc='Nacre session integration for {definition["label"]}'
@@ -132,7 +130,7 @@ package_nacre() {{
 package_nacre-ai() {{
   pkgdesc='Optional assistant workspace (no bundled providers or accounts)'
   arch=('any')
-  depends={array(["nacre=$pkgver", *mapping["ai"]]).replace("'nacre=$pkgver'", '"nacre=$pkgver"')}
+  depends={array(["nacre=$pkgver", *mapping["ai"]])}
   optdepends={array(mapping["ai_optional"])}
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" ai "$srcdir/artifacts"
@@ -141,7 +139,7 @@ package_nacre-ai() {{
 package_nacre-brain() {{
   pkgdesc='Optional private Markdown knowledge library'
   arch=('any')
-  depends={array(["nacre=$pkgver", *mapping["brain"]]).replace("'nacre=$pkgver'", '"nacre=$pkgver"')}
+  depends={array(["nacre=$pkgver", *mapping["brain"]])}
   optdepends={array(mapping["brain_optional"])}
   cd "$srcdir/nacre"
   python packaging/arch/stage.py "$PWD" "$pkgdir" brain "$srcdir/artifacts"
