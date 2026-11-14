@@ -1315,10 +1315,12 @@ fn collect(
     }
     state
 }
+/// Borrowed: the session checks this on every compositor change.
 fn output_names(hub: &Shared) -> Vec<String> {
-    let snapshot = hub.borrow().snapshot("compositor").unwrap_or(Value::Null);
-    let mut names = snapshot["outputs"]
-        .as_object()
+    let hub = hub.borrow();
+    let mut names = hub
+        .snapshot_ref("compositor")
+        .and_then(|snapshot| snapshot["outputs"].as_object())
         .into_iter()
         .flatten()
         .filter_map(|(key, row)| {
