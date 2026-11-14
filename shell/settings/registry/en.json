@@ -195,7 +195,6 @@
  "settings.registry.keyboard-mouse.pointer.label": "Pointer",
  "settings.registry.keyboard-mouse.pointer.naturalScroll.description": "Move touchpad content with your fingers.",
  "settings.registry.keyboard-mouse.pointer.naturalScroll.label": "Natural scrolling",
- "settings.registry.keyboard-mouse.shake-planned": "Pointer enlargement needs a supported compositor backend.",
  "settings.registry.keyboard-mouse.shortcuts.label": "Keyboard shortcuts",
  "settings.registry.keyboard-mouse.touchpad.label": "Touchpad",
  "settings.registry.keyboard-mouse.touchpad.scrollSpeed.description": "Adjust touchpad scrolling speed.",

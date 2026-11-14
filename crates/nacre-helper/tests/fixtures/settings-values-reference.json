@@ -3308,11 +3308,9 @@
         "find pointer",
         "cursor enlargement"
       ],
-      "backend": "planned",
       "visibleWhen": {
         "capability": "cursorShake"
-      },
-      "unavailableId": "settings.registry.keyboard-mouse.shake-planned"
+      }
     },
     {
       "id": "system.packages.aurReview",
