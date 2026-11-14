@@ -59,6 +59,19 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(result.returncode, 5, result.stdout + result.stderr)
             self.assertEqual((home / "updater-ran").read_text(), "\n")
 
+    def test_options_before_update_are_refused_without_a_rollback(self):
+        with (
+            tempfile.TemporaryDirectory() as folder,
+            patch.object(m, "STATE", Path(folder)),
+            patch.object(m.sys, "argv", ["nacre", "--migrate-owned", "update"]),
+            patch.object(m, "restore") as restore,
+            redirect_stderr(StringIO()),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                m.main()
+        self.assertEqual(raised.exception.code, 2)
+        restore.assert_not_called()
+
     def test_update_without_setup_helper_prints_setup_hint(self):
         with tempfile.TemporaryDirectory() as directory:
             errors = StringIO()

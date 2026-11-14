@@ -948,6 +948,9 @@ def main():
         "--json", action="store_true", help="Redacted JSON support report"
     )
     a = p.parse_args()
+    if a.action == "update":
+        # Only the bare form dispatches above; anything else would fall through to rollback.
+        p.error("nacre update takes no options")
     if (a.report or a.json) and a.action != "doctor":
         p.error("--report and --json are only valid for doctor")
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
