@@ -50,15 +50,16 @@ local function title_children(shown,text_width,show_icon,show_text)
     end
     return kids
 end
--- The 2 px trace under the title, centred in the band 5 px above the bar's bottom edge. It regrows from
--- zero on every title change (120 ms, the review's focus-change motion): a fresh animation key snaps to
--- its target (kit ask 4), so a stable key chases `bead.title.rev`, the host's title change counter.
+-- The 2 px trace under the title, centred in the band 5 px above the bar's bottom edge. Owner 2026-11-14:
+-- transient, never a standing underline. Two stable keys chase `bead.title.rev` (the host's title change
+-- counter): on each change the trace grows in over 120 ms and fades out over 400 ms (in-cubic, so it holds
+-- first). A fresh key or reduced motion snaps to the target, i.e. draws nothing.
 local function trace(iid)
     local rev=ui.resolve_for_check(ui.bind("bead.title.rev")) or 0
-    local phase=ui.animate("title.trace."..iid,rev,.12,"out-cubic")
-    local width=t.title_trace_width*(1-math.clamp(rev-phase,0,1))
+    local width=t.title_trace_width*(1-math.clamp(rev-ui.animate("title.trace.w."..iid,rev,.12,"out-cubic"),0,1))
+    local alpha=.9*math.clamp(rev-ui.animate("title.trace.a."..iid,rev,.4,"in-cubic"),0,1)
     return ui.Row{id="title-trace-row",position="absolute",left=0,right=0,top=header-t.title_trace_inset-t.title_trace_height-(header-t.title_height)/2,height=t.title_trace_height,justify="center",visible=ui.bind("bead.desktop.titlevisible"),
-        ui.Box{id="title-trace",width=width,height=t.title_trace_height,radius=1,fill=ui.alpha(trace_accent(),.9)}}
+        ui.Box{id="title-trace",width=width,height=t.title_trace_height,radius=1,fill=ui.alpha(trace_accent(),alpha)}}
 end
 -- Hover shows the full title when it is truncated.
 -- Hover shows the full title when it is truncated; the node only exists then, so an ordinary

@@ -1044,9 +1044,10 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
             .iter()
             .find(|l| l.id.ends_with("title-trace"))
             .ok_or("title underline missing")?;
+        // Owner 2026-11-14: the trace is transient (it flashes on a title change), never a standing line.
         assert!(
-            !trace.own.is_empty(),
-            "the title trace must paint while the dwell fills"
+            trace.own.is_empty(),
+            "the title trace must not paint without a title change"
         );
         let hover = h.pose((0., 0.), 1.)?;
         bar_golden(&hover, &format!("bar-parity-hover-{scale}"))?;
