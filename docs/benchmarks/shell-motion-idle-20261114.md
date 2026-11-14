@@ -29,7 +29,7 @@ no capture hit the 8 MiB / busy-host void rule; the owner's tty1 session stayed 
   `max_gap_ms` useless as a gate and leaves a full repaint pending for seconds.
 - **Mid-motion misses are rare**: 6 single-vblank gaps (16 ms) in 236 transitions, all in the
   dashboard (5) and the edge-hover open (1).
-- **Cold first open** costs 35-50 ms more first-frame latency than warm (dashboard 62 vs 13 ms,
+- **Cold first open** costs 28-50 ms more first-frame latency than warm (dashboard 62 vs 13 ms,
   launcher 55 vs 13, control 48 vs 14, control-click 38 vs 10); the cold dashboard also settles
   108-495 ms late. Attribution: **shell/Bead** view build on first open.
 - **OSD and toasts pass** (shell PANEL_SLIDE max 9.1-10.9 ms). The OSD appears ~39 ms after the
@@ -40,21 +40,21 @@ no capture hit the 8 MiB / busy-host void rule; the owner's tty1 session stayed 
 
 ## Frame gaps
 
-Two runs of 10 opens and closes per panel (18 warm + 2 cold transitions per row; chat's cold opens are untraced),
-each panel first opened in a fresh session. Shell columns
-are the shell's committed frames (UI_FRAME), niri columns what the nested compositor composited.
+Two runs of 10 opens and closes per panel (18 warm + 2 cold transitions per row; chat's cold
+opens are untraced), each panel first opened in a fresh session. Shell columns are the shell's
+committed frames (UI_FRAME), niri columns what the nested compositor composited.
 "Start" is the largest gap among the first six frames, "mid" the largest after that up to the
 settle, "late settle" the gaps over 25 ms that end a transition. Bold = over the 12 ms gate.
 
 | panel | dir | shell p50 / p95 / max ms | start max (share > 12 ms) | mid max | late settle | first frame cold / warm ms | niri p50 / p95 / max | attribution of the over-gate value |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| dashboard (top) | open | 8.0 / 8.3 / **761.4** | **19.9** (20/20) | **16.2** | **11/20: 34-761 ms**; cold 108, 495 | 63.9, 61.1 / 12.8 | 8.0 / 8.2 / 16.6 | Bead start pacing; Bead final-pose frame waits for the 2 s gauge tick |
+| dashboard (top) | open | 8.0 / 8.3 / **761.4** | **19.9** (20/20) | **16.2** | **11/20: 34-761 ms**; cold 108, 495 | 63.9, 61.1 / 12.8 | 8.0 / 8.2 / 16.6 | Bead start pacing; Bead late last frame (no new pixels) waits for the 2 s gauge tick; 2 mid-motion misses |
 | dashboard | close | 8.0 / 11.6 / **16.0** | **16.0** (19/20) | **16.0** | 0/20 | 10.8, 10.4 / 11.2 | 8.0 / 8.2 / 8.3 | Bead start pacing |
-| launcher | open | 8.0 / 8.3 / **16.2** | **16.2** (20/20) | 8.6 | final pose ~5 s late (held opens) | 54.1, 55.2 / 12.9 | 8.0 / 8.2 / 21.9 | Bead start pacing; Bead final-pose frame |
+| launcher | open | 8.0 / 8.3 / **16.2** | **16.2** (20/20) | 8.6 | final pose ~5 s late (held opens) | 54.1, 55.2 / 12.9 | 8.0 / 8.2 / 21.9 | Bead start pacing; Bead late last frame (no new pixels) |
 | launcher | close | 8.0 / 8.4 / **16.1** | **16.1** (20/20) | 8.5 | 0/20 | 13.2, 13.9 / 12.8 | 8.0 / 8.2 / 8.4 | Bead start pacing |
-| control, key/IPC (right) | open | 8.0 / 9.0 / **15.5** | **15.5** (18/20) | 9.5 | final pose ~5 s late (held opens) | 48.0, 48.9 / 13.6 | 8.0 / 8.2 / 8.4 | Bead start pacing; Bead final-pose frame |
+| control, key/IPC (right) | open | 8.0 / 9.0 / **15.5** | **15.5** (18/20) | 9.5 | final pose ~5 s late (held opens) | 48.0, 48.9 / 13.6 | 8.0 / 8.2 / 8.4 | Bead start pacing; Bead late last frame (no new pixels) |
 | control, key/IPC | close | 8.0 / 8.4 / **16.1** | **16.1** (20/20) | 10.1 | 0/20 | 12.3, 12.4 / 11.1 | 8.0 / 8.2 / 8.4 | Bead start pacing |
-| control, edge hover | open | 8.0 / 8.4 / **16.1** | **15.5** (17/20) | **16.1** | 0/20 | 430.9, 432.3 / 392.4 (incl. 0.9 s dwell request) | pointer frames | Bead start pacing |
+| control, edge hover | open | 8.0 / 8.4 / **16.1** | **15.5** (17/20) | **16.1** | 0/20 | 430.9, 432.3 / 392.4 (includes the product's ~0.38 s hover dwell) | pointer frames | Bead start pacing |
 | control, edge hover | close | 8.0 / 8.4 / **16.1** | **16.1** (20/20) | 8.4 | 0/20 | 43.1, 42.4 / 42.0 | pointer frames | Bead start pacing |
 | control, bar click | open (click) | 8.0 / 8.3 / **15.1** | **15.1** (20/20) | 8.7 | 0/20 | 37.6, 38.0 / 10.0 | pointer frames | Bead start pacing |
 | control, bar click | close (key) | 8.0 / 8.3 / **17.9** | **17.9** (20/20) | 8.4 | 0/20 | 41.1, 41.3 / 41.5 | pointer frames | Bead start pacing |
@@ -75,7 +75,7 @@ rows. The edge-hover first frame includes the 0.9 s dwell the harness waits befo
 | launcher | 54.7 ms | 12.9 ms | +42 ms | - |
 | control (key) | 48.5 ms | 13.6 ms | +35 ms | - |
 | control (click) | 37.8 ms | 10.0 ms | +28 ms | - |
-| control (edge hover) | 431.6 ms | 392.4 ms | +39 ms | - |
+| control (edge hover, incl. ~0.38 s dwell) | 431.6 ms | 392.4 ms | +39 ms | - |
 | chat / AI | not traced (app trace starts 2 s after spawn); niri 18.5 ms | 12.2 ms | ~+7 ms to first composited frame | - |
 | OSD | 38.0 ms | 38.2 ms | none | - |
 | toast | 4.3 ms | 4.4 ms | none | - |
