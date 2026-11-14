@@ -9,7 +9,7 @@ use nacre_protocol::core_services::{
 };
 use std::{collections::BTreeMap, sync::Arc};
 
-const KEYS: [&str; 12] = [
+const KEYS: [&str; 13] = [
     "bead.desktop.network",
     "bead.desktop.bluetooth",
     "bead.desktop.battery",
@@ -22,6 +22,7 @@ const KEYS: [&str; 12] = [
     "bead.desktop.audio.available",
     "bead.desktop.network.vpn",
     "bead.desktop.bluetooth.value",
+    "bead.desktop.battery.plugged",
 ];
 
 fn unavailable() -> BTreeMap<String, Value> {
@@ -31,6 +32,7 @@ fn unavailable() -> BTreeMap<String, Value> {
         (KEYS[2].into(), Value::Text("battery_unknown".into())),
         (KEYS[3].into(), Value::Text(String::new())),
         (KEYS[4].into(), Value::Number(3.)),
+        (KEYS[12].into(), Value::Bool(false)),
         (KEYS[5].into(), Value::Text("volume_mute".into())),
         (KEYS[6].into(), Value::Number(0.)),
         (KEYS[7].into(), Value::Text("Output unavailable".into())),
@@ -133,23 +135,20 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     let Some(state) = state else {
         return unavailable()
             .into_iter()
-            .filter(|(key, _)| KEYS[2..5].contains(&key.as_str()))
+            .filter(|(key, _)| KEYS[2..5].contains(&key.as_str()) || key == KEYS[12])
             .collect();
     };
     let value = state
         .percentage
         .map_or(String::new(), |percentage| format!("{percentage:.0}"));
+    // Plugged in: charging, or on AC at full / a charge threshold (UPower reports those as not charging).
+    let plugged = state.charging == Some(true) || state.on_battery == Some(false);
     BTreeMap::from([
         (
             KEYS[2].into(),
-            Value::Text(
-                battery_glyph(
-                    state.charging == Some(true) || state.on_battery == Some(false),
-                    state.percentage,
-                )
-                .into(),
-            ),
+            Value::Text(battery_glyph(state.percentage).into()),
         ),
+        (KEYS[12].into(), Value::Bool(plugged)),
         (KEYS[3].into(), Value::Text(value.clone())),
         (
             KEYS[4].into(),
@@ -162,27 +161,27 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     ])
 }
 
-/// The glyph shows the level and the plugged state together (owner 2026-11-14): the Material Symbols
-/// Rounded `battery_charging_*` steps while plugged in (charging, or on AC at full / a charge threshold,
-/// which UPower reports as not charging) and the `battery_*_bar` steps on battery; `battery_0_bar` at
-/// <= 8 %. Unknown levels read as full.
-pub(crate) fn battery_glyph(plugged: bool, percentage: Option<f64>) -> &'static str {
-    const STEPS: [(f64, &str, &str); 8] = [
-        (95., "battery_charging_full", "battery_full"),
-        (85., "battery_charging_90", "battery_6_bar"),
-        (70., "battery_charging_80", "battery_5_bar"),
-        (55., "battery_charging_60", "battery_4_bar"),
-        (40., "battery_charging_50", "battery_3_bar"),
-        (25., "battery_charging_30", "battery_2_bar"),
-        (8., "battery_charging_20", "battery_1_bar"),
-        (f64::MIN, "battery_charging_20", "battery_0_bar"),
+/// The level glyph (owner 2026-11-14 round 4): the Material Symbols Rounded `battery_*_bar` steps and
+/// `battery_full`, whose outlined forms show the fill; the charger is a separate bolt the widget lays
+/// over it (`bead.desktop.battery.plugged`), so full + charging reads as full. The outlined
+/// `battery_charging_*` family draws an empty case, which is why it is not used. Unknown levels read
+/// as full.
+pub(crate) fn battery_glyph(percentage: Option<f64>) -> &'static str {
+    const STEPS: [(f64, &str); 8] = [
+        (95., "battery_full"),
+        (85., "battery_6_bar"),
+        (70., "battery_5_bar"),
+        (55., "battery_4_bar"),
+        (40., "battery_3_bar"),
+        (25., "battery_2_bar"),
+        (8., "battery_1_bar"),
+        (f64::MIN, "battery_0_bar"),
     ];
     let level = percentage.unwrap_or(100.);
-    let (_, charging, draining) = STEPS
+    STEPS
         .iter()
-        .find(|(floor, _, _)| level > *floor)
-        .unwrap_or(&STEPS[7]);
-    if plugged { charging } else { draining }
+        .find(|(floor, _)| level > *floor)
+        .map_or("battery_0_bar", |(_, glyph)| glyph)
 }
 
 fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
@@ -353,44 +352,47 @@ mod tests {
         });
         let charging = battery(&snapshot(battery_data.clone(), true));
         assert_eq!(charging[KEYS[3]], Value::Text("83".into()));
-        assert_eq!(charging[KEYS[2]], Value::Text("battery_charging_80".into()));
+        assert_eq!(charging[KEYS[2]], Value::Text("battery_5_bar".into()));
+        assert_eq!(charging[KEYS[12]], Value::Bool(true));
         // Full or threshold-held on AC: UPower says "not charging", the bar still shows the bolt.
         let mut held = battery_data.clone();
         held["charging"] = false.into();
         held["state"] = 4.into();
+        let held = battery(&snapshot(held, true));
         assert_eq!(
-            battery(&snapshot(held, true))[KEYS[2]],
-            Value::Text("battery_charging_80".into())
+            (&held[KEYS[2]], &held[KEYS[12]]),
+            (&Value::Text("battery_5_bar".into()), &Value::Bool(true))
         );
+        let mut draining = battery_data.clone();
+        draining["charging"] = false.into();
+        draining["state"] = 2.into();
+        draining["on_battery"] = true.into();
         assert_eq!(
-            battery(&snapshot(battery_data, false))[KEYS[2]],
-            Value::Text("battery_unknown".into())
+            battery(&snapshot(draining, true))[KEYS[12]],
+            Value::Bool(false)
         );
-        // Level and plugged state together, one case per step and side.
-        for (percentage, charging, glyph) in [
-            (100., true, "battery_charging_full"),
-            (100., false, "battery_full"),
-            (90., true, "battery_charging_90"),
-            (90., false, "battery_6_bar"),
-            (75., true, "battery_charging_80"),
-            (75., false, "battery_5_bar"),
-            (60., true, "battery_charging_60"),
-            (60., false, "battery_4_bar"),
-            (45., true, "battery_charging_50"),
-            (45., false, "battery_3_bar"),
-            (30., true, "battery_charging_30"),
-            (30., false, "battery_2_bar"),
-            (20., true, "battery_charging_20"),
-            (20., false, "battery_1_bar"),
-            (8., true, "battery_charging_20"),
-            (8., false, "battery_0_bar"),
+        let unknown = battery(&snapshot(battery_data, false));
+        assert_eq!(unknown[KEYS[2]], Value::Text("battery_unknown".into()));
+        assert_eq!(unknown[KEYS[12]], Value::Bool(false));
+        // One level glyph per step; the charger is the widget's bolt overlay, not a glyph change.
+        for (percentage, glyph) in [
+            (100., "battery_full"),
+            (96., "battery_full"),
+            (90., "battery_6_bar"),
+            (75., "battery_5_bar"),
+            (60., "battery_4_bar"),
+            (45., "battery_3_bar"),
+            (30., "battery_2_bar"),
+            (20., "battery_1_bar"),
+            (8., "battery_0_bar"),
         ] {
             assert_eq!(
-                super::battery_glyph(charging, Some(percentage)),
+                super::battery_glyph(Some(percentage)),
                 glyph,
-                "{percentage} % charging={charging}"
+                "{percentage} %"
             );
         }
+        assert_eq!(super::battery_glyph(None), "battery_full");
     }
 
     #[test]

@@ -13,7 +13,7 @@ return {stores={["bead.desktop.wallpaper.luma"]={},["widgets.undo"]={},["widgets
     ["bead.edge.dwell"]=0,["bead.edge.fade"]=0,
     ["bead.overview.open"]=false,["bead.overview.title"]="",["bead.overview.has_window"]=false,
     ["bead.title.app_id"]="",["bead.title.rev"]=0,["bead.title.app_glyph"]="desktop_windows",["bead.title.app_icon"]="",
-    ["bead.desktop.network.vpn"]=false,["bead.desktop.bluetooth.value"]="",
+    ["bead.desktop.network.vpn"]=false,["bead.desktop.battery.plugged"]=false,["bead.desktop.bluetooth.value"]="",
     ["status.hovered"]="",["status.peek.visible"]=false,["status.peek.kind"]="",
     ["status.panel.kind"]=""},actions={["launcher.open"]=function(_) end,["bar.recording.stop"]=function(_) end,["widgets.snapshot"]=function(_) end,["widgets.edit"]=function(_) end,["widgets.drag"]=function(_) end,
     ["collection.switcher.open"]=function(_) end,["collection.switch"]=function(_) end,["collection.begin-create"]=function(_) end,["collection.begin-rename"]=function(_) end,["collection.commit"]=function(_) end,["collection.cancel"]=function(_) end,["collection.wallpaper.set"]=function(_) end,["collection.accent.use"]=function(_) end,["collection.accent.clear"]=function(_) end},computed={

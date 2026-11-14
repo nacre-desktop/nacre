@@ -14,13 +14,17 @@ local function bar(props,settings,_data)
     -- D1 colour rule while on battery: warn (peach stands in for the Orient warn role, kit ask 6) at <= 20 %,
     -- error at <= 8 %; the percent appears only in those two states (and the value styles).
     local level=tonumber(value)
-    local draining=level and string.find(glyph,"battery_charging",1,true)==nil
+    local plugged=ui.resolve_for_check(ui.bind("bead.desktop.battery.plugged"))==true
+    local draining=level and not plugged
     local tone=draining and (level<=8 and "error" or level<=20 and "peach") or nil
+    local box=t.icon_font*t.line_height
     local content=(tone or style=="icon+value") and value~="" and value.." %" or style=="icon+text" and "Battery" or nil
     local width=content and math.ceil(ui.text_width(content,"IBM Plex Sans",t.detail_font)) or 0
     return (popouts and kit.StatusIcon or ui.Row){id="battery",direction="row",height=t.status_height,radius=t.status_radius,gap=content and t.item_gap or 0,padding=0,padding_left=t.status_padding,padding_right=t.status_count_padding,fill="transparent",hover_fill=ui.alpha("onSurface",t.status_hover),align="center",justify="center",
         aria_label=ui.tr("bead.bar.open-battery"),on_activate=popouts and ui.action("status.pill.open","battery") or nil,
         status_glyph("glyph",ui.bind("bead.desktop.battery"),"battery",tone,nil,glyph~="battery_unknown"),
+        -- Round 4: the level glyph keeps its fill in every state; the charger is a small bolt over its corner.
+        ui.Text{id="bolt",position="absolute",left=t.status_padding+t.icon_width-10,top=(t.status_height-box)/2+box-13,width=12,height=12,visible=ui.bind("bead.desktop.battery.plugged"),text="bolt",family="Material Symbols Rounded",font_size=11,text_align="center",color="primary"},
         content and status_text{id="battery-value",text=content,width=width,font_size=t.detail_font,color=tone or "onSurface"} or nil,
     }
 end
