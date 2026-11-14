@@ -109,6 +109,32 @@ fn private_rows_are_bounded() {
     };
     assert!(brain(5).validate().is_ok());
     assert!(brain(6).validate().is_err());
+    let mut full = serde_json::to_value(brain(1)).unwrap();
+    full["path"] = json!("/v");
+    full["notes"]["items"]["n0"]["world"] = json!("Nacre");
+    full["notes"]["items"]["n0"]["modified_ms"] = json!(1);
+    let brain_valid = |v: &serde_json::Value| {
+        serde_json::from_value::<BrainRecentState>(v.clone())
+            .unwrap()
+            .validate()
+            .is_ok()
+    };
+    assert!(brain_valid(&full));
+    for (key, value) in [
+        ("world", json!("")),
+        ("world", json!("x".repeat(65))),
+        ("world", json!("a\tb")),
+        ("modified_ms", json!(9007199254740992_u64)),
+    ] {
+        let mut state = full.clone();
+        state["notes"]["items"]["n0"][key] = value;
+        assert!(!brain_valid(&state), "{key}");
+    }
+    for path in ["relative", "/v/../etc"] {
+        let mut state = full.clone();
+        state["path"] = json!(path);
+        assert!(!brain_valid(&state), "{path}");
+    }
 }
 
 #[test]

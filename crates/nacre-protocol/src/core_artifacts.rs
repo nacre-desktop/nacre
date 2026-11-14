@@ -271,7 +271,7 @@ pub(crate) fn transcripts() -> BTreeMap<String, String> {
             json!({"health":health,"active":"player-1","players":entities(json!({
                 "player-1":{"identity":"Fixture Player","status":"playing","title":"Fixture track","artist":"Fixture artist","album":"Fixture album",
                     "art_path":"/tmp/nacre-fixtures/art/track-1.img","position_ms":42000,"position_updated_ms":1800000000000_u64,"length_ms":180000,
-                    "can_control":true,"can_play_pause":true,"can_next":true,"can_previous":true,"can_seek":true},
+                    "can_control":true,"can_play_pause":true,"can_next":true,"can_previous":true,"can_seek":true,"desktop_entry":"org.fixture.Player"},
                 "player-2":{"identity":"Fixture Stream","status":"stopped","title":"","artist":"","album":"",
                     "can_control":true,"can_play_pause":true,"can_next":false,"can_previous":false,"can_seek":false}}))}),
             vec![

@@ -996,6 +996,11 @@ pub struct Player {
     pub can_next: bool,
     pub can_previous: bool,
     pub can_seek: bool,
+    /// MPRIS `DesktopEntry` as the player reports it: a desktop file basename
+    /// without `.desktop` (N0323). Untrusted: resolve it against installed entries.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 255))]
+    pub desktop_entry: Option<String>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct PlayerState {
@@ -1055,6 +1060,11 @@ pub fn uuid_valid(value: &str) -> bool {
             8 | 13 | 18 | 23 => byte == b'-',
             _ => byte.is_ascii_hexdigit(),
         })
+}
+
+/// A desktop file basename: one path component, no control characters.
+pub fn desktop_entry_valid(value: &str) -> bool {
+    (1..=255).contains(&value.len()) && !value.contains('/') && !value.chars().any(char::is_control)
 }
 
 impl CoreSnapshot {
@@ -1332,6 +1342,7 @@ impl CoreSnapshot {
                             && text(&p.title, 512)
                             && text(&p.artist, 512)
                             && text(&p.album, 512)
+                            && p.desktop_entry.as_deref().is_none_or(desktop_entry_valid)
                             && p.art_path.as_ref().is_none_or(|path| {
                                 path.starts_with('/')
                                     && path.len() <= 4096

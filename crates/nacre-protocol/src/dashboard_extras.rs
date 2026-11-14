@@ -221,6 +221,14 @@ pub struct BrainNote {
     pub title: String,
     #[schemars(length(min = 1, max = 4096))]
     pub path: String,
+    /// The first world in the note's `Worlds:` header (N0323); absent when it has none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 64))]
+    pub world: Option<String>,
+    /// File modification time, Unix milliseconds (N0323).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(range(min = 0, max = 9007199254740991_u64))]
+    pub modified_ms: Option<u64>,
 }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BrainTask {
@@ -233,6 +241,10 @@ pub struct BrainTask {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct BrainRecentState {
     pub health: Health,
+    /// Absolute vault root (N0323); absent until the vault location is known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[schemars(length(min = 1, max = 4096))]
+    pub path: Option<String>,
     pub notes: Entities<BrainNote>,
     pub tasks: Entities<BrainTask>,
 }
@@ -242,11 +254,15 @@ impl BrainRecentState {
             || !self.tasks.valid()
             || self.notes.items.len() > MAX_BRAIN_NOTES
             || self.tasks.items.len() > MAX_BRAIN_TASKS
-            || self
-                .notes
-                .items
-                .values()
-                .any(|n| !text_valid(&n.title, 100) || !path_valid(&n.path))
+            || self.path.as_deref().is_some_and(|p| !path_valid(p))
+            || self.notes.items.values().any(|n| {
+                !text_valid(&n.title, 100)
+                    || !path_valid(&n.path)
+                    || n.world
+                        .as_deref()
+                        .is_some_and(|w| w.is_empty() || !text_valid(w, 64))
+                    || n.modified_ms.is_some_and(|t| !time_valid(t))
+            })
             || self
                 .tasks
                 .items
@@ -500,7 +516,7 @@ pub(crate) fn exports() -> BTreeMap<String, String> {
         lines(&frames),
     );
 
-    let brain = json!({"health":health,"notes":entities(json!({"n0a1b2c3d4e5f6071":{"title":"Public fixture note","path":"/home/user/Documents/Nacre-Brain/projects/fixture.md"}})),"tasks":entities(json!({"t0a1b2c3d4e5f6071":{"text":"Public fixture task","path":"/home/user/Documents/Nacre-Brain/projects/fixture.md"}}))});
+    let brain = json!({"health":health,"path":"/home/user/Documents/Nacre-Brain","notes":entities(json!({"n0a1b2c3d4e5f6071":{"title":"Public fixture note","path":"/home/user/Documents/Nacre-Brain/projects/fixture.md","world":"Nacre","modified_ms":1800000000000_u64}})),"tasks":entities(json!({"t0a1b2c3d4e5f6071":{"text":"Public fixture task","path":"/home/user/Documents/Nacre-Brain/projects/fixture.md"}}))});
     typed("brain.recent", &brain);
     let frames = [
         json!({"t":"snap","topic":"brain.recent","seq":0,"data":brain}),

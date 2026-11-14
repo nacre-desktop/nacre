@@ -332,7 +332,8 @@ pub fn brain_context_at(root: &Path) -> Result<Value> {
     let mut recent = Vec::new();
     let mut tasks = Vec::new();
     for note in notes {
-        if fs::metadata(&note)?.len() > 128_000 {
+        let metadata = fs::metadata(&note)?;
+        if metadata.len() > 128_000 {
             continue;
         }
         let text = fs::read_to_string(&note)?;
@@ -341,7 +342,17 @@ pub fn brain_context_at(root: &Path) -> Result<Value> {
             .find(|line| line.starts_with("# "))
             .map(|line| line.trim_start_matches(['#', ' ']).trim())
             .unwrap_or_else(|| note.file_stem().and_then(|v| v.to_str()).unwrap_or(""));
-        recent.push(json!({"title":title.chars().take(100).collect::<String>(),"path":note}));
+        let header = crate::brain_discovery::header_fields(&text);
+        let world = header["worlds"]
+            .as_str()
+            .and_then(|w| w.split(',').map(str::trim).find(|w| !w.is_empty()))
+            .filter(|w| w.chars().count() <= 64 && !w.chars().any(char::is_control));
+        let modified_ms = metadata
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64);
+        recent.push(json!({"title":title.chars().take(100).collect::<String>(),"path":note,"world":world,"modified_ms":modified_ms}));
         for line in text.lines() {
             if let Some(text) = line.strip_prefix("- [ ] ") {
                 tasks.push(

@@ -335,7 +335,9 @@ fn dashboard_metrics_and_player_reject_impossible_values() {
         old.as_object_mut().unwrap().remove(key);
     }
     assert!(valid("dashboard.system", old), "Older producers stay valid");
-    let player = compatibility_states("player-lifecycle")[0].clone();
+    let mut player = compatibility_states("player-lifecycle")[0].clone();
+    assert!(valid("dashboard.player", player.clone()));
+    player["players"]["items"]["player-1"]["desktop_entry"] = json!("com.spotify.Client");
     assert!(valid("dashboard.player", player.clone()));
     for (key, value) in [
         ("art_path", json!("https://example.invalid/art.png")),
@@ -346,6 +348,9 @@ fn dashboard_metrics_and_player_reject_impossible_values() {
         ("length_ms", json!(0)),
         ("identity", json!("x".repeat(257))),
         ("title", json!("x".repeat(513))),
+        ("desktop_entry", json!("")),
+        ("desktop_entry", json!("../spotify")),
+        ("desktop_entry", json!("x".repeat(256))),
     ] {
         let mut state = player.clone();
         state["players"]["items"]["player-1"][key] = value;

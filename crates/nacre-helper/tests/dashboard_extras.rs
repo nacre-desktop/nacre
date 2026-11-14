@@ -886,7 +886,7 @@ fn brain_recent_lists_regular_notes_only_and_follows_changes() -> Result {
         fs::create_dir_all(vault.join(".git")).unwrap();
         fs::write(
             vault.join("projects/a.md"),
-            "# Alpha note\n- [ ] first task\n- [x] done\n",
+            "# Alpha note\nWorlds: Fixture world, Other\n- [ ] first task\n- [x] done\n",
         )
         .unwrap();
         fs::write(vault.join(".git/hidden.md"), "# Hidden\n- [ ] no\n").unwrap();
@@ -904,6 +904,13 @@ fn brain_recent_lists_regular_notes_only_and_follows_changes() -> Result {
         .as_str()
         .unwrap()
         .ends_with("projects/a.md"));
+    assert_eq!(state["notes"]["items"][id]["world"], "Fixture world");
+    assert!(state["notes"]["items"][id]["modified_ms"].as_u64().unwrap() > 0);
+    let vault = state["path"].as_str().unwrap();
+    assert!(
+        vault.starts_with('/') && vault.ends_with("/Brain"),
+        "{vault}"
+    );
     let task = state["tasks"]["order"][0].as_str().unwrap();
     assert_eq!(state["tasks"]["items"][task]["text"], "first task");
     assert!(
@@ -915,9 +922,16 @@ fn brain_recent_lists_regular_notes_only_and_follows_changes() -> Result {
         daemon.root().join("Brain/projects/b.md"),
         "# Beta note\n- [ ] second task\n",
     )?;
-    client.until("brain.recent", "new note", |s| {
+    let state = client.until("brain.recent", "new note", |s| {
         s["notes"]["order"].as_array().is_some_and(|o| o.len() == 2)
     })?;
+    let beta = state["notes"]["items"]
+        .as_object()
+        .unwrap()
+        .values()
+        .find(|n| n["title"] == "Beta note")
+        .unwrap();
+    assert!(beta.get("world").is_none(), "no Worlds header, no world");
     Ok(())
 }
 

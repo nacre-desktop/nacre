@@ -73,6 +73,7 @@ pub fn methods() -> BTreeMap<String, Method> {
 #[derive(Clone, Debug, Default, PartialEq)]
 struct Raw {
     identity: String,
+    desktop_entry: Option<String>,
     status: Option<PlayerStatus>,
     title: String,
     artist: String,
@@ -296,6 +297,7 @@ impl Model {
                     can_next: r.can_control && r.can_next,
                     can_previous: r.can_control && r.can_previous,
                     can_seek: r.can_seek() && length_ms.is_some(),
+                    desktop_entry: r.desktop_entry.clone(),
                 },
             );
             order.push(t.id.clone());
@@ -384,16 +386,17 @@ async fn properties(
         .deserialize()
 }
 
+/// Every signal from the player's owner (root or player PropertiesChanged) re-reads both.
 async fn read_player(connection: &zbus::Connection, owner: &str) -> zbus::Result<Raw> {
-    let identity = match properties(connection, owner, ROOT).await {
-        Ok(root) => root
-            .get("Identity")
-            .and_then(|v| text(v))
-            .unwrap_or_default(),
-        Err(_) => String::new(),
-    };
+    let root = properties(connection, owner, ROOT)
+        .await
+        .unwrap_or_default();
+    let root_text = |name: &str| root.get(name).and_then(|v| text(v));
     let player = properties(connection, owner, PLAYER).await?;
-    Ok(Raw::read(identity, &player))
+    let mut raw = Raw::read(root_text("Identity").unwrap_or_default(), &player);
+    raw.desktop_entry =
+        root_text("DesktopEntry").filter(|e| nacre_protocol::core_services::desktop_entry_valid(e));
+    Ok(raw)
 }
 
 /// Art arrives as a local file, a data URI or an https URL; only a re-encoded
@@ -843,14 +846,19 @@ mod tests {
         art: String,
         position: i64,
         can_next: bool,
+        entry: String,
         calls: Vec<String>,
     }
-    struct FakeRoot(String);
+    struct FakeRoot(String, Arc<Mutex<FakeState>>);
     #[zbus::interface(name = "org.mpris.MediaPlayer2")]
     impl FakeRoot {
         #[zbus(property)]
         fn identity(&self) -> String {
             self.0.clone()
+        }
+        #[zbus(property)]
+        fn desktop_entry(&self) -> String {
+            self.1.lock().unwrap().entry.clone()
         }
     }
     struct FakePlayer(Arc<Mutex<FakeState>>);
@@ -927,7 +935,7 @@ mod tests {
     async fn fake(name: &str, state: Arc<Mutex<FakeState>>) -> zbus::Result<zbus::Connection> {
         zbus::connection::Builder::session()?
             .name(format!("{PREFIX}{name}"))?
-            .serve_at(PATH, FakeRoot(format!("Fake {name}")))?
+            .serve_at(PATH, FakeRoot(format!("Fake {name}"), state.clone()))?
             .serve_at(PATH, FakePlayer(state))?
             .build()
             .await
@@ -939,6 +947,7 @@ mod tests {
             art: art.into(),
             position: 30_000_000,
             can_next,
+            entry: "org.fixture.Player".into(),
             calls: Vec::new(),
         }))
     }
@@ -1037,6 +1046,7 @@ mod tests {
                     ("Loud", PlayerStatus::Playing)
                 );
                 assert_eq!(current.identity, "Fake loud");
+                assert_eq!(current.desktop_entry.as_deref(), Some("org.fixture.Player"));
                 assert_eq!(current.length_ms, Some(100_000));
                 let cached = current.art_path.clone().unwrap();
                 assert!(cached.starts_with(paths.state.join("shell/player-art").to_str().unwrap()));
@@ -1117,6 +1127,23 @@ mod tests {
                 })
                 .await;
                 assert!(state.players.items.values().all(|p| p.art_path.is_none()));
+                // A root-interface change alone re-reads DesktopEntry; a path-like value is dropped.
+                loud.lock().unwrap().entry = "../x".into();
+                {
+                    let interface = loud_bus
+                        .object_server()
+                        .interface::<_, FakeRoot>(PATH)
+                        .await?;
+                    let emitter = interface.signal_emitter();
+                    interface.get().await.desktop_entry_changed(emitter).await?;
+                }
+                wait_for(&hub, "root change", |s| {
+                    s.players
+                        .items
+                        .values()
+                        .any(|p| p.title == "Changed" && p.desktop_entry.is_none())
+                })
+                .await;
                 assert!(
                     std::fs::read_dir(paths.state.join("shell/player-art"))?
                         .filter_map(|e| e.ok())

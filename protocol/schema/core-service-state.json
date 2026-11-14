@@ -2910,6 +2910,15 @@
         },
         "can_seek": {
           "type": "boolean"
+        },
+        "desktop_entry": {
+          "description": "MPRIS `DesktopEntry` as the player reports it: a desktop file basename\nwithout `.desktop` (N0323). Untrusted: resolve it against installed entries.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 255
         }
       },
       "required": [

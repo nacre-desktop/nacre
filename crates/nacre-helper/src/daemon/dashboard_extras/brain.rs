@@ -23,6 +23,7 @@ fn empty<T>() -> Entities<T> {
 pub fn initial() -> BrainRecentState {
     BrainRecentState {
         health: down(false, None),
+        path: None,
         notes: empty(),
         tasks: empty(),
     }
@@ -59,6 +60,8 @@ fn load(root: &std::path::Path) -> Result<BrainRecentState> {
                 BrainNote {
                     title: title.into(),
                     path: path.into(),
+                    world: row["world"].as_str().map(Into::into),
+                    modified_ms: row["modified_ms"].as_u64(),
                 },
             );
         }
@@ -87,6 +90,7 @@ fn load(root: &std::path::Path) -> Result<BrainRecentState> {
     }
     Ok(BrainRecentState {
         health: ok(),
+        path: root.to_str().map(Into::into),
         notes,
         tasks,
     })

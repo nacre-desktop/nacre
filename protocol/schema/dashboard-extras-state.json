@@ -489,6 +489,15 @@
         "health": {
           "$ref": "#/$defs/Health"
         },
+        "path": {
+          "description": "Absolute vault root (N0323); absent until the vault location is known.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 4096
+        },
         "notes": {
           "$ref": "#/$defs/Entities_BrainNote"
         },
@@ -541,6 +550,25 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 4096
+        },
+        "world": {
+          "description": "The first world in the note's `Worlds:` header (N0323); absent when it has none.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "modified_ms": {
+          "description": "File modification time, Unix milliseconds (N0323).",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "uint64",
+          "minimum": 0,
+          "maximum": 9007199254740991
         }
       },
       "required": [
