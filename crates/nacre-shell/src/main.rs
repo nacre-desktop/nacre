@@ -675,6 +675,9 @@ fn start(
     let battery_status = _ui_provider
         .as_ref()
         .and_then(|client| client.view_topic("battery").ok());
+    let session_state = _ui_provider
+        .as_ref()
+        .and_then(|client| client.view_topic(nacre_protocol::session::STATE_TOPIC).ok());
     {
         let gate = gate.clone();
         placement::on_external_change(Box::new(move || gate.notify()));
@@ -1127,10 +1130,14 @@ fn start(
         app::set_focused_output(focused.clone());
         options.focused_output = Some(focused);
     }
-    let shared_desktop = options.bar.then(|| desktop::start_services(true));
+    let shared_desktop = options.bar.then(desktop::start_services);
     if let Some(desktop) = &shared_desktop {
         let _ = desktop_owner.set(desktop.clone());
     }
+    let _session_resume = session_state
+        .as_deref()
+        .zip(shared_desktop.clone())
+        .and_then(|(session, desktop)| desktop::watch_resume(session, desktop));
     if let (Some(power), Some(battery)) = (&power_settings, &battery_status) {
         motion_policy.bind(power.clone(), battery.clone());
     }
@@ -1148,7 +1155,8 @@ fn start(
             backend: shared_backend
                 .clone()
                 .map(|b| b as std::sync::Arc<dyn bead::backends::Backend>),
-            desktop: shared_desktop.clone(),
+            session: session_state.clone(),
+            battery: battery_status.clone(),
             overview,
         });
     }

@@ -206,6 +206,27 @@ impl Routes {
     }
 }
 
+/// SNI tooltip text may carry markup: drop tags, decode the basic entities, cap the length.
+fn plain_text(text: &str) -> String {
+    let mut out = String::new();
+    let mut tag = false;
+    for c in text.chars() {
+        match c {
+            '<' => tag = true,
+            '>' if tag => tag = false,
+            c if !tag => out.push(c),
+            _ => {}
+        }
+    }
+    let out = out
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&#39;", "'")
+        .replace("&amp;", "&");
+    out.trim().chars().take(200).collect()
+}
+
 /// Daemon `tray` topic rows as the bar's existing tray model. Rows without a
 /// valid ID, hidden rows and rows past the cap are dropped; the daemon's
 /// decoded icon file (absolute path) wins over the theme icon name.
@@ -231,9 +252,14 @@ pub fn tray_items(data: &serde_json::Value) -> Vec<TrayItem> {
                 .or_else(|| row["icon"].as_str())
                 .unwrap_or_default()
                 .to_owned();
+            // N0317: the hover text is the tooltip description, else its title, else the name.
+            let tip = |key| plain_text(row["tooltip"][key].as_str().unwrap_or_default());
+            let hover = Some(tip("description"))
+                .filter(|text| !text.is_empty())
+                .or_else(|| Some(tip("title")).filter(|text| !text.is_empty()));
             Some(TrayItem {
                 id: id.to_owned(),
-                tooltip_title: title.clone(),
+                tooltip_title: hover.unwrap_or_else(|| title.clone()),
                 title,
                 visible: true,
                 item_is_menu: row["item_is_menu"] == true,
@@ -258,6 +284,20 @@ pub fn tray_rows(items: &[TrayItem]) -> Vec<serde_json::Value> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn tray_tooltips_are_plain_capped_text() {
+        assert_eq!(
+            plain_text("<b>Mail</b> &lt;3 &amp;amp; &quot;a&quot; &#39;b&#39;"),
+            "Mail <3 &amp; \"a\" 'b'"
+        );
+        assert_eq!(plain_text(&"x".repeat(300)).len(), 200);
+        let row = |tooltip| json!({"items":{"order":["a"],"items":{"a":{"title":"App","visible":true,"tooltip":tooltip}}}});
+        let tip = |tooltip| tray_items(&row(tooltip))[0].tooltip_title.clone();
+        assert_eq!(tip(json!({"title":"T","description":"<i>D</i>"})), "D");
+        assert_eq!(tip(json!({"title":"T","description":""})), "T");
+        assert_eq!(tip(json!({"title":"","description":""})), "App");
+    }
 
     #[test]
     fn params_follow_the_published_schemas() {

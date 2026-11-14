@@ -8,7 +8,7 @@
 use bead::{
     backends::{Backend, Snapshot as Windows},
     core::source::Source,
-    services::{Desktop, Snapshot as Services},
+    services::Snapshot as Services,
 };
 use bead_wallpaper::{
     policy::{Config, Group, Inputs},
@@ -193,7 +193,10 @@ pub(crate) struct Deps {
     /// `settings.store.power`; absent means battery saver is disabled.
     pub power: Option<Arc<dyn Source>>,
     pub backend: Option<Arc<dyn Backend>>,
-    pub desktop: Option<Arc<Desktop>>,
+    /// Daemon `session.state` (lock and sleep); absent means unlocked and awake.
+    pub session: Option<Arc<dyn Source>>,
+    /// Daemon `battery` topic; absent means on AC.
+    pub battery: Option<Arc<dyn Source>>,
     /// Niri overview state; absent on compositors without an overview.
     pub overview: Option<Arc<dyn Source>>,
 }
@@ -249,9 +252,11 @@ impl Controller {
             let poke = poke.clone();
             subscriptions.push(Box::new(backend.subscribe(Box::new(move |_| poke()))));
         }
-        if let Some(desktop) = &deps.desktop {
+        for source in [&deps.session, &deps.battery].into_iter().flatten() {
             let poke = poke.clone();
-            subscriptions.push(Box::new(desktop.subscribe(move |_| poke())));
+            if let Ok(sub) = source.subscribe(Arc::new(move |_| poke())) {
+                subscriptions.push(Box::new(sub));
+            }
         }
         if let Some(overview) = &deps.overview {
             let poke = poke.clone();
@@ -343,11 +348,16 @@ fn run(deps: Deps, supervisor: supervisor::Supervisor, receiver: mpsc::Receiver<
                 .as_ref()
                 .map(|b| b.snapshot())
                 .unwrap_or_default();
-            let services = deps
-                .desktop
-                .as_ref()
-                .map(|d| d.snapshot())
-                .unwrap_or_default();
+            let mut services = Services::default();
+            if let Some(battery) = &deps.battery {
+                services.battery.on_battery =
+                    battery.snapshot().data["on_battery"].as_bool() == Some(true);
+            }
+            if let Some(session) = &deps.session {
+                let state = crate::desktop::session_state(&session.snapshot().data);
+                services.session.locked = state.locked;
+                services.session.sleeping = state.sleeping;
+            }
             let overview_open = deps.overview.as_ref().is_some_and(|source| {
                 source.snapshot().data["overviewOpen"].as_bool() == Some(true)
             });
@@ -775,7 +785,8 @@ mod tests {
                 picker: None,
                 power: None,
                 backend: None,
-                desktop: None,
+                session: None,
+                battery: None,
                 overview: None,
             },
             move || {

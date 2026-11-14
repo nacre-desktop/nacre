@@ -1,18 +1,57 @@
 // SPDX-License-Identifier: GPL-3.0-only
-use bead::core::Value;
+use bead::core::{Value, source::Source};
 use bead::services::Snapshot;
+use nacre_protocol::session::SessionState;
 use std::collections::BTreeMap;
 
 /// N0227: the daemon owns the PipeWire, NetworkManager, UPower and BlueZ clients; the bar
 /// pills read its topics (`reload/bar_daemon.rs`). The clock has its own Bead worker (B0251).
-/// `bus` keeps Bead's system-bus lane only for wallpaper motion's login1 lock/sleep and
-/// on-battery gates, until the daemon publishes lock/sleep (spec 0227 P1, spec 0236).
-pub fn start_services(bus: bool) -> std::sync::Arc<bead::services::Desktop> {
+/// N0250: lock, sleep and battery also come from daemon topics, so Bead's system-bus lane
+/// stays off (`bus: false`); the shell keeps no second system-bus connection.
+pub fn start_services() -> std::sync::Arc<bead::services::Desktop> {
     bead::services::Desktop::start_config(bead::services::Config {
         audio: false,
-        bus,
+        bus: false,
         tray_watcher: false,
     })
+}
+
+/// The daemon's `session.state`; unlocked and awake until the topic publishes.
+pub fn session_state(data: &serde_json::Value) -> SessionState {
+    serde_json::from_value(data.clone()).unwrap_or_default()
+}
+
+/// Tracks `session.state` revisions: a revision not above the last seen is stale or a
+/// repeat, and revision 0 is a daemon restart (the counter starts over).
+#[derive(Default)]
+pub struct Resume(SessionState);
+impl Resume {
+    /// True once per resume (`preparing_sleep` true -> false).
+    pub fn step(&mut self, now: SessionState) -> bool {
+        if now.revision == 0 || now.revision > self.0.revision {
+            let resumed = now.revision != 0 && self.0.preparing_sleep && !now.preparing_sleep;
+            self.0 = now;
+            return resumed;
+        }
+        false
+    }
+}
+
+/// Resync Bead's clock on resume. Its worker notices the suspend gap, but sleeps on a
+/// monotonic deadline; taking and dropping a lease wakes it now.
+pub fn watch_resume(
+    session: &dyn Source,
+    desktop: std::sync::Arc<bead::services::Desktop>,
+) -> Option<bead::core::source::Subscription> {
+    let resume = std::sync::Mutex::new(Resume::default());
+    session
+        .subscribe(std::sync::Arc::new(move |snapshot| {
+            let state = session_state(&snapshot.data);
+            if resume.lock().unwrap_or_else(|e| e.into_inner()).step(state) {
+                drop(desktop.clock_seconds_lease());
+            }
+        }))
+        .ok()
 }
 
 pub fn values(s: &Snapshot, menu_item: &str) -> BTreeMap<String, Value> {
@@ -250,6 +289,33 @@ pub fn icons(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn session_state_drives_lock_sleep_and_one_resume_per_wake() {
+        let state = |locked, sleeping, revision| {
+            session_state(
+                &serde_json::json!({"locked":locked,"sleeping":sleeping,"preparing_sleep":sleeping,"revision":revision}),
+            )
+        };
+        assert_eq!(
+            session_state(&serde_json::Value::Null),
+            SessionState::default()
+        );
+        assert!(state(true, false, 2).locked);
+        let mut resume = Resume::default();
+        for (now, resumed) in [
+            (state(false, false, 1), false),
+            (state(false, true, 3), false),
+            (state(false, false, 2), false), // stale: an older revision never counts
+            (state(false, false, 4), true),
+            (state(false, false, 4), false), // repeat
+            (state(false, true, 5), false),
+            (state(false, false, 0), false), // daemon restart resets the counter
+            (state(false, true, 1), false),
+            (state(false, false, 2), true),
+        ] {
+            assert_eq!(resume.step(now), resumed, "{now:?}");
+        }
+    }
     #[test]
     fn clock_style_projection_exposes_seconds_and_iso_local_date() {
         let snapshot = Snapshot {
