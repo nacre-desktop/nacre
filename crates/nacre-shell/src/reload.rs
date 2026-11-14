@@ -8902,6 +8902,13 @@ impl SceneSource for Runtime {
                     && self.session.stores.get("panel.hover_opened").is_some()
                 {
                     values.insert("panel.hover_opened".into(), bead::core::Value::Bool(opened));
+                    // Owner 2026-11-14: a hover-opened dock shows the overview, not the page a
+                    // click left behind (which could be an empty detail with only its back row).
+                    if opened && !self.dock_status.is_empty() {
+                        values.insert("cc.page".into(), bead::core::Value::Text("home".into()));
+                        values.insert("cc.detail".into(), bead::core::Value::Text(String::new()));
+                        values.insert("cc.scroll".into(), bead::core::Value::Number(0.));
+                    }
                 }
                 if let Some(opened) = opened {
                     if self.chat.is_some() {

@@ -3256,3 +3256,38 @@ async fn local_slider_ticks_send_latest_level_while_held_and_after_release() {
         "settled level has no duplicate write"
     );
 }
+
+/// Owner 2026-11-14: the hover-opened dock shows the whole overview, sized to its real content.
+#[test]
+fn hover_opened_dock_shows_the_full_overview() {
+    crate::i18n::init();
+    let h = Harness::load(
+        &root(),
+        Path::new("control/main.luau"),
+        &root().join("palette.json"),
+        std::collections::BTreeMap::from([
+            ("view.edge".into(), bead::core::Value::Text("right".into())),
+            ("cc.page".into(), bead::core::Value::Text("home".into())),
+        ]),
+        bead_test::Config {
+            width: 1920,
+            height: 1200,
+            scale: 1.,
+        },
+    )
+    .unwrap();
+    let nodes = h.session.view_nodes();
+    let bottom = nodes
+        .iter()
+        .map(|node| bead::ui::rect(&node.draw))
+        .map(|rect| rect.y + rect.h)
+        .fold(0., f32::max);
+    assert!(bottom >= 400., "the overview is sized to its content, not a stub: {bottom}");
+    for section in ["home.status", "tile-network", "tile-battery", "chips"] {
+        assert!(
+            nodes.iter().any(|node| node.id.contains(section)),
+            "overview section {section} missing among {:?}",
+            nodes.iter().map(|node| node.id.as_str()).collect::<Vec<_>>()
+        );
+    }
+}

@@ -445,5 +445,12 @@ local inner=body
 if content+TOP+PAD>max then
     inner=ui.Scroll{id="scroll",scrollbar=false,scroll=ui.bind("cc.scroll"),width=INNER,height=height-TOP-PAD,body}
 end
-return kit.Panel{id="control-center",edge=get("view.edge"),open=ui.bind("panel.open"),duration=popup and .23 or .28,return_duration=.18,return_transition="ease",transition=popup and "ease-in-out" or "ease",fade=false,reveal=not ui.resolve_for_check(ui.bind("view.detached")),slide_distance=not popup and W or nil,width=W,height=height,padding=PAD,padding_top=TOP,
-    gap=GAP,radius=T.radii.medium,fill="surface",inner}
+local edge,open,detached=get("view.edge"),ui.bind("panel.open"),ui.resolve_for_check(ui.bind("view.detached"))
+if popup then
+    return kit.Panel{id="control-center",edge=edge,open=open,duration=.23,return_duration=.18,return_transition="ease",transition="ease-in-out",fade=false,reveal=not detached,width=W,height=height,padding=PAD,padding_top=TOP,
+        gap=GAP,radius=T.radii.medium,fill="surface",inner}
+end
+-- Owner 2026-11-14 round 3: the dock's surface keeps the frame height (its hover region, so the pointer can
+-- travel from the lip into it without closing it) while the visible body sizes to the content.
+return kit.Panel{edge=edge,open=open,duration=.28,return_duration=.18,return_transition="ease",transition="ease",fade=false,reveal=not detached,slide_distance=W,width=W,height=max,padding=0,fill="transparent",shadow=false,body="control-center",
+    ui.Column{id="control-center",position="absolute",left=0,top=0,width=W,height=height,padding=PAD,padding_top=TOP,gap=GAP,radius=T.radii.medium,fill="surface",inner}}

@@ -10,15 +10,15 @@
   "duration_ms": 280.000001,
   "eased_progress": 1.0,
   "format": "RGBA8",
-  "height": 617,
-  "logical_height": 617.0,
+  "height": 1204,
+  "logical_height": 1204.0,
   "logical_width": 488.0,
   "plan_metadata": "control-s1.0-plan.json",
   "route": "control",
   "sample_time_ms": 280.000001,
   "scale": 1.0,
   "scene_bounds": {
-    "h": 617.0,
+    "h": 1204.0,
     "w": 488.0,
     "x": -32.0,
     "y": -32.0
