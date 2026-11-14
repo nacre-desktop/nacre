@@ -3333,89 +3333,12 @@ async fn battery_lease_without_advertised_topic_stays_unavailable() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn audio_core_unadvertised_topic_has_no_fallback() {
-    let lab = Lab::new();
-    let listener = lab.bind();
-    let server = tokio::spawn(async move {
-        let (stream, _) = listener.accept().await.unwrap();
-        let (r, mut w) = stream.into_split();
-        let mut reader = framing::Reader::new(BufReader::new(r));
-        assert!(matches!(next(&mut reader).await, Message::Hello { .. }));
-        framing::write(&mut w, &welcome()).await.unwrap();
-        framing::write(
-            &mut w,
-            &Message::Ping {
-                id: Id::Integer(704),
-            },
-        )
-        .await
-        .unwrap();
-        loop {
-            match next(&mut reader).await {
-                Message::Pong {
-                    id: Id::Integer(704),
-                } => break,
-                Message::Call { id, m, .. } => {
-                    assert_eq!(m, "daemon.ping");
-                    framing::write(
-                        &mut w,
-                        &Message::Ret {
-                            id,
-                            reply: Reply::Ok { ok: Value::Null },
-                        },
-                    )
-                    .await
-                    .unwrap();
-                }
-                Message::Ping { id } => {
-                    framing::write(&mut w, &Message::Pong { id }).await.unwrap();
-                }
-                message => panic!("unexpected frame during shared-link proof: {message:?}"),
-            }
-        }
-        loop {
-            match tokio::time::timeout(Duration::from_secs(5), reader.next()).await {
-                Ok(Ok(Some(Message::Call { id, m, .. }))) => {
-                    assert_eq!(m, "daemon.ping");
-                    framing::write(
-                        &mut w,
-                        &Message::Ret {
-                            id,
-                            reply: Reply::Ok { ok: Value::Null },
-                        },
-                    )
-                    .await
-                    .unwrap();
-                }
-                Ok(Ok(Some(Message::Sub { topics }))) => {
-                    panic!("unadvertised Audio topic must not be subscribed: {topics:?}")
-                }
-                Ok(Ok(None) | Err(_)) => break,
-                Err(_) => panic!("shared link did not close after client stop"),
-                Ok(Ok(Some(message))) => panic!("unexpected frame: {message:?}"),
-            }
-        }
-    });
-
-    let client = Client::start(Config::new(lab.socket(), vec![])).unwrap();
-    tokio::time::timeout(Duration::from_secs(5), async {
-        while client.status().boot.is_none() {
-            tokio::time::sleep(Duration::from_millis(2)).await;
-        }
-    })
-    .await
-    .unwrap();
-    let topic = client.lease_topic("audio").unwrap();
-    assert!(!topic.snapshot().connected);
-    let values = crate::status_views::Status::core_audio(Arc::new(topic.clone())).project();
-    assert_eq!(values["status.ready"], bead::core::Value::Bool(false));
-    let bead::core::Value::Text(primary) = &values["status.primary"] else {
-        panic!("Audio primary must be text")
-    };
-    assert_eq!(primary, "Audio unavailable");
-    topic.stop().await.unwrap();
-    assert!(!client.0.shared.leases.has_topic("audio"));
-    Source::stop(&client).await.unwrap();
-    server.await.unwrap();
+    lease_without_advertised_topic_stays_unavailable(
+        "audio",
+        "Audio",
+        crate::status_views::Status::core_audio,
+    )
+    .await;
 }
 
 #[tokio::test(flavor = "current_thread")]
