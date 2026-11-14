@@ -458,3 +458,91 @@ Strings and settings: none added or removed. Kit asks (forwarded by the lead; un
 1 a close longer than 0.75 x open (`Motion::transition` cap), 2 `shadow=true` on any surface node, 3 hover-only
 children, 4 caller-supplied shadow prewarm (replaces the hard-coded OSD shapes in bead-render), 5 animated list
 reflow for the toast stack, 6 press feedback on kit buttons.
+
+## D9 dashboard pages (N0242)
+
+Scope: the top panel's Media, AI usage, Brain, Notifications, System and Weather pages in `shell/dashboard/`
+(Luau on Bead kit, palette roles and size tokens), two shared components in `shell/ui/components/`, and the
+projections that feed them (`dashboard.rs`, `dashboard_controls.rs`). The panel's slide/peek mechanics, the tab
+strip and Today are untouched (N0246 owns the motion; the review keeps Today).
+
+What changed
+- Shared empty state `ui/components/empty-state.luau`: a hero-size outline glyph in `outline`, one line in
+  onSurface (500), one line in onSurfaceVariant, at most one compact pill chip, centred in the given box. Media,
+  AI usage, Brain (both cards) and Notifications use it; any surface can require it.
+- Shared notification row `ui/components/notice-row.luau`: the D4 row (72 px, 28 px icon tile, "app · time",
+  600 title, one body line, × dismiss) moved out of `control/main.luau`, which now requires it; the dashboard's
+  Notifications page renders the same row on its card (`surfaceContainerHigh`).
+- Media: an art-led card. The backdrop is `kit.Fill` from a 35 % secondary tint of the container into the
+  container; with album art the blurred art (`kit.BlurredArtwork`, clipped to the card radius) sits under a 72 %
+  container scrim. 120 px art, player caption, 20/600 title, "artist · album", the transport row (±10 s,
+  previous, 44 px primary pause, next; gated by the topic's `can_*` flags as before) and an 8 px meter with the
+  position left and the duration right. The lyrics card renders only while lyrics exist (7 + 5 columns, 14 px
+  gutter); otherwise the player spans the page. Without a player the shared empty state says "Nothing playing".
+  The identity pill, the "Track details" column and the 84 px note placeholder are gone.
+- AI usage: one ring per quota window the provider reports (`ai.usage` windows, Platform N0319): a 96 px arc,
+  primary for the first provider and secondary for the rest, the percent inside, "provider · window" under it
+  and "Resets in 3h" from `resetsMs` against the shell clock (absent when the provider reports no reset). A
+  provider without windows keeps its text lines; nothing is estimated. Refresh is the card's icon action and,
+  before the first read, the empty state's chip. The preview fixture gives Claude two windows.
+- Brain: a "Brain" card (7 columns) with an "Open Brain" chip (`ui.dispatch` → `nacre brain`, the route
+  `nacrectl ui nacre brain` takes, N0217), "Recent notes" rows that open the note by id (ids are checked against
+  the topic before anything is sent), and an "Open loops" card (5 columns) with checkbox rows. World dots and
+  dates are not drawn: `brain.recent` carries neither (platform ask below; nothing is invented).
+- Notifications: one card with the title, an All | DND segment (the D12 `widgets/segment` pill; the selected
+  option is a no-op, the other toggles `notifications.dnd`), the shared rows in the existing virtual list (same
+  scroll store and `notif.*` actions), a "Clear history" chip bottom-right and the stored-count note beside it.
+  The Status column and the "DND on/off", "Dismiss" and "Forget" text buttons are gone.
+- System: an unavailable gauge keeps its track and says "Not available on this device" once (no "—" readings,
+  no second "Unavailable"); the Network card is drawn only with samples or a rate, otherwise Top processes
+  spans the row.
+- Weather: the 24-hour line and its area follow a monotone cubic (Fritsch–Carlson, 8 samples per hourly step),
+  so the chart curves without overshooting; labels keep the reading positions.
+- AI usage reads the typed `AiProvider::windows` (the shell uses the workspace nacre-protocol by path since N0252),
+  so the raw-topic read and its `shortcut:` note are gone.
+- Test clock: the dashboard goldens' `view()` helper now uses a fixed clock (`fixed_now`, as the extras tests
+  already did), so "Mail · now" does not drift into "988d" as the calendar moves; the Notifications goldens
+  were re-recorded with it.
+
+Motion
+D9 changes no transition: static page layouts only; kit hover/press uses `kit.motion.state`; the panel slide
+and tab strip belong to N0246. No `-- D16:` literal was added. `frame_cost_bench` dashboard route (release,
+dev-2, Today page, 1572x1071; the bench opens the panel on Today, which this unit does not change), total_p50 /
+total_p95 / total_max in ms, base then candidate: open 0.176 / 0.822 / 5.579 vs 0.171 / 0.795 / 5.543; close
+0.599 / 0.687 / 0.793 vs 0.585 / 0.631 / 0.754. No change beyond noise.
+
+Evidence (dev-2, `nacre-ci/arch-nacre:current`, rustfmt 1.10, whole shell binary built against the vendored
+cache; Bead pin unchanged)
+- `cargo fmt --all --check` clean; `cargo clippy -p nacre-shell --all-targets -D warnings` clean.
+- `cargo test -p nacre-shell --bin nacre-shell`: 931 passed, 0 failed, 4 ignored.
+- Luau analyzer (`tools/check_luau.py --check-generated`), `tools/i18n/check.py` (1705 owned messages) and
+  `tools/compositor_boundary.py` pass.
+- Renders of every changed state (dark and light; hover, pressed, focus; with and without data) were looked at
+  next to the review's mockups: Media (art, player, empty), AI usage (rings, empty, hover/pressed refresh),
+  Brain (cards, empty, hover note), Notifications (rows, empty, focus, hover dismiss), System (gauges with and
+  without readings, Network card present/absent), Weather. Today's goldens are untouched (main's are kept
+  and pass; an update run re-records them with a small shift of the wallpaper-strip icon only, not from this unit).
+- New goldens: `dashboard-{ai-usage,brain,media,media-art-seek,media-player,notifications,system,system-gauges,
+  weather}-{1,1.5}.png`.
+
+Known gaps
+- Brain notes carry no world dot or relative date, and the empty state does not name the vault path
+  (`brain.recent` has no such fields; kit asks 4).
+- Media empty state has no "Open Spotify" chip (no launchable player identity; kit asks 5).
+- Chip labels ("Open Brain", "Clear history") sit about 2 px above their icon's centre: the kit button's label
+  baseline, shared with every compact chip; left to the kit.
+- The Weather fixture's three readings are collinear, so the golden line is straight; the curve is covered by
+  the 24-sample unit test.
+- Stand-ins awaiting kit homes (EmptyState, NoticeRow, rounded image clip): `shell/ui/components/empty-state.luau`,
+  `notice-row.luau`, `rounded_clip()` in `dashboard/media/page.luau`. Delete each when the kit component lands
+  (asks 1 to 3 below).
+
+Kit and platform asks (forwarded by the lead)
+1. `kit.EmptyState{glyph,title,detail?,chip?,on_chip?,width,height}`: the shared empty card (stand-in above).
+2. `kit.NoticeRow{id,icon,caption,title,body,on_dismiss,width,fill}`: the D4 row, shared by control panel and
+   dashboard (stand-in above); a kit home lets D10 toasts reuse it.
+3. Framework: `clip_children="radius"` (clip to the box's rounded rect); the stand-in is a 32-point
+   `clip_polygon` on the blurred backdrop and the 120 px art.
+4. Platform: optional `world` and `modified_ms` on `BrainNote`, vault path on `BrainRecentState`.
+5. Platform: a launchable player identity (`desktop_entry` or a `dashboard.media.player` setting) for an
+   "Open Spotify" chip.
