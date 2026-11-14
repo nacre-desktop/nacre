@@ -146,6 +146,10 @@ fn page_choice_and_fine_tune_are_view_state_and_unknown_input_is_ignored() {
     assert!(colors.act("page:nope", &at).is_empty());
     assert_eq!(colors.act("fine:", &at)["colors.fine"], Value::Bool(true));
     assert_eq!(
+        colors.act("picker:", &at)["colors.picker"],
+        Value::Bool(true)
+    );
+    assert_eq!(
         colors.act("vision:tritan", &at)["colors.vision"],
         Value::Text("tritan".into())
     );
@@ -377,7 +381,12 @@ async fn the_explorer_loads_previews_one_at_a_time_and_applies_over_the_wire() {
     .await;
     assert_eq!(v["samples"].as_array().unwrap().len(), 5);
     assert_eq!(v["samples"][0]["caption"], "42%");
-    assert_eq!(v["other"], "Other shades: 12%");
+    assert_eq!(
+        v["coverage"],
+        "42 · 21 · 14 · 6 · 5 % of the image, 12 % other shades"
+    );
+    assert_eq!(v["samples"][0]["coverage"], 0.42);
+    assert_eq!(v["targets"][2]["detail"], "Clock · readable 7.12:1");
     assert_eq!(v["compare"][0]["contrast"], "Text contrast 7.12");
     assert_eq!(v["status"], "Preview only — Apply when you're ready");
     assert_eq!(v["can_apply"], true);

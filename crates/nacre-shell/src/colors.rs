@@ -67,20 +67,24 @@ const CARD_ROLES: [&str; 17] = [
     "primaryContainer",
     "onPrimaryContainer",
 ];
-const ACCENTS: [(&str, &str, &str); 3] = [
+/// The three overridable roles, named by their job in the bar (D13): role, name, job, lock label.
+const ACCENTS: [(&str, &str, &str, &str); 3] = [
     (
         "primary",
         "bead.colors.target-main",
+        "bead.colors.role-accent-detail",
         "bead.colors.lock-main",
     ),
     (
         "secondary",
         "bead.colors.target-second",
+        "bead.colors.role-shell-detail",
         "bead.colors.lock-second",
     ),
     (
         "tertiary",
         "bead.colors.target-third",
+        "bead.colors.role-text-detail",
         "bead.colors.lock-third",
     ),
 ];
@@ -781,6 +785,7 @@ impl Colors {
         let overrides = &options["overrides"];
         // Samples: the image's colour families, or the active palette's accents without a preview.
         let mut samples = Vec::new();
+        let mut percents = Vec::new();
         let mut other = 0.;
         if let Some(p) = preview {
             for (i, item) in p["imageColors"]
@@ -794,8 +799,10 @@ impl Colors {
                     continue;
                 };
                 let coverage = item["coverage"].as_f64().unwrap_or(0.);
-                let percent = format!("{}%", (coverage * 1000.).round() / 10.);
-                samples.push(json!({"id": format!("s{i}"), "color": color, "caption": percent,
+                let share = (coverage * 1000.).round() / 10.;
+                let percent = format!("{share}%");
+                percents.push(share.to_string());
+                samples.push(json!({"id": format!("s{i}"), "color": color, "caption": percent, "coverage": coverage,
                     "aria_label": tr("bead.colors.sample-aria", &[("hex", item["hex"].as_str().unwrap_or("")), ("percent", &percent)]),
                     "action": format!("sample:{}", item["hex"].as_str().and_then(hex6).unwrap_or_default())}));
             }
@@ -806,17 +813,32 @@ impl Colors {
                 .enumerate()
             {
                 if let Some(color) = active_colours[*role].as_str().and_then(rgba) {
-                    samples.push(json!({"id": format!("s{i}"), "color": color, "caption": *role, "aria_label": *role}));
+                    samples.push(json!({"id": format!("s{i}"), "color": color, "caption": *role, "coverage": 0, "aria_label": *role}));
                 }
             }
         }
+        let audit = preview.map_or(&Json::Null, |p| &p["audit"]);
+        let contrast = audit["minimumTextContrast"]
+            .as_f64()
+            .map(|v| format!("{}", (v * 100.).round() / 100.))
+            .unwrap_or_else(|| "0".into());
+        let readable = audit["textPasses"] == json!(true);
         let targets: Vec<Json> = ACCENTS
             .iter()
-            .filter_map(|(role, label, lock)| {
+            .filter_map(|(role, label, job, lock)| {
                 let hex = colours[*role].as_str().and_then(hex6)?;
                 let pinned = overrides[*role].is_string();
-                Some(json!({"id": *role, "label": tr(label, &[]), "value": format!("#{hex}"),
-                    "color": rgba(&hex), "locked": pinned, "armed": st.armed.as_deref() == Some(*role),
+                let armed = st.armed.as_deref() == Some(*role);
+                // The text row also carries the audit's verdict (the old separate "Readable" line).
+                let detail = match *role {
+                    _ if armed => tr("bead.colors.role-armed", &[]),
+                    "tertiary" if audit.is_null() => tr(job, &[]),
+                    "tertiary" if readable => tr("bead.colors.role-text-readable", &[("contrast", &contrast)]),
+                    "tertiary" => tr("bead.colors.role-text-low", &[("contrast", &contrast)]),
+                    _ => tr(job, &[]),
+                };
+                Some(json!({"id": *role, "label": tr(label, &[]), "detail": detail, "value": format!("#{hex}"),
+                    "color": rgba(&hex), "locked": pinned, "armed": armed,
                     "lock_label": tr(lock, &[]),
                     "arm": format!("arm:{role}"), "lock": format!("lock:{role}")}))
             })
@@ -834,7 +856,6 @@ impl Colors {
                 || tr("bead.colors.style-tide-text", &[]),
                 |(.., text)| tr(text, &[]),
             );
-        let audit = preview.map_or(&Json::Null, |p| &p["audit"]);
         let sim = |role: &str| {
             if role == "normal" || audit["simulated"][role].is_null() {
                 colour_map(colours, &CARD_ROLES)
@@ -873,10 +894,6 @@ impl Colors {
                     ("ratio", &ratio)])})
             })
             .collect();
-        let contrast = audit["minimumTextContrast"]
-            .as_f64()
-            .map(|v| format!("{}", (v * 100.).round() / 100.))
-            .unwrap_or_else(|| "0".into());
         let warnings: Vec<Json> = audit["warnings"]
             .as_array()
             .into_iter()
@@ -909,10 +926,10 @@ impl Colors {
         json!({
             "id": "view", "available": explorer, "title": name, "subtitle": subtitle,
             "has_photo": has_photo, "samples": samples,
-            "other": if other > 0.005 { tr("bead.colors.other-shades", &[("percent", &format!("{}", (other * 100.).round()))]) } else { String::new() },
+            "coverage": if percents.is_empty() { String::new() } else {
+                tr("bead.colors.strand-coverage", &[("percents", &percents.join(" · ")), ("other", &format!("{}", (other * 100.).round()))]) },
             "styles": styles, "style_text": style_text,
             "colors": colour_map(colours, &CARD_ROLES),
-            "readable": tr(if audit["textPasses"] == json!(true) { "bead.colors.readable" } else { "bead.colors.check-readability" }, &[]),
             "targets": targets, "fine": fine,
             "tint_wallpaper": options["backgroundFromWallpaper"] == json!(true),
             "tint_wallpaper_enabled": personality != "pearl",
@@ -989,9 +1006,10 @@ impl Colors {
             "vision" => {
                 changes.insert("colors.vision".into(), Value::Text(payload.into()));
             }
-            "fine" => {
-                let on = matches!(stores.get("colors.fine"), Some(Value::Bool(true)));
-                changes.insert("colors.fine".into(), Value::Bool(!on));
+            "fine" | "picker" => {
+                let key = format!("colors.{op}");
+                let on = matches!(stores.get(&key), Some(Value::Bool(true)));
+                changes.insert(key, Value::Bool(!on));
             }
             "mode" if payload == "dark" || payload == "light" => {
                 self.change(st, &[("mode", payload.into()), ("autoMode", false.into())]);
@@ -1048,6 +1066,7 @@ impl Colors {
                     let compare =
                         matches!(stores.get("colors.page"), Some(Value::Text(p)) if p == "compare");
                     self.choose(st, &path, compare);
+                    changes.insert("colors.picker".into(), Value::Bool(false));
                 }
             }
             "sample" => {

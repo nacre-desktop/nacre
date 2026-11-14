@@ -662,3 +662,84 @@ Known gaps (next units):
    (kit attention pulse, N0237 kit ask 3); no light golden (D17, N0249).
 5. Motion: the window opens as a compositor window (no panel growth applies); page switches are
    instant. `nacre-ai --tui` is not a helper flag yet (Platform ask: alias it to `dashboard`).
+
+## D13 Orient studio (N0245)
+
+Scope: the Nacre Colors window (`shell/colors/`), Luau on Bead kit components with palette roles and tokens;
+Rust (`crates/nacre-shell/src/colors.rs`) only for the data the view needs.
+
+What changed
+- Header: the wordmark (24 px mark, "Nacre Colors" 17 px/600), the pages as one `kit.Segment` (Studio |
+  Compare | Accessibility, the N0239 segment that has landed in the kit), and the dark/light preview switch as
+  an icon-only segment in the same track (stand-in `modes()`, kit ask 1). The rule under the header is gone.
+- Studio is two columns (`1fr 300px`, 14 px apart; stacked below a 720 px canvas). Left: the wallpaper
+  (`kit.ImagePick`, half as tall as it is wide), a name row (16 px/500 name, the hint caption, a
+  `Wallpapers` chip), the pigments as a strand of pearls sized by image area (18 px at none to 28 px for the
+  largest family, overlapping by the bar's `strand_overlap`, 2 px `surface` border; each pearl is the sample
+  button) with "42 · 21 · 14 · 6 · 5 % of the image, 12 % other shades" beside it, the style chips
+  (`kit.Chip`, wrapped by measured width) plus the Fine-tune chip, and the style's one-line description.
+  Fine-tune opens under the chips in the left column (tint chips, the two sliders, the time-of-day and
+  workspace-colour switches as `kit.ToggleRow`s, a Reset chip).
+- Right column: a miniature of the bar drawn in the previewed palette from `shell/bar/tokens.luau` at 70 %
+  (the workspace pill with the current pearl in primary, an occupied pearl in secondary and an empty
+  pearl ringed in tertiary, joined by secondary traces; the status pill with secondary icons and the
+  tertiary clock), then three role rows named by their job: Accent ("Pearls, active tiles"), Shell
+  ("Status icons, traces"), Text ("Clock · readable 7.12:1", the audit's verdict that used to be a separate
+  line). Row = 56 px, radius 12, `surfaceContainer`, 14 px/500 name over a 12 px caption, a 26 px swatch and
+  the pin button; clicking the row arms it (2 px `primary` border, caption "Now click a color in the image").
+  The hex values left the rows (they stay in the accessible name). Export and Apply (`kit.PillButton`,
+  34 px) sit right-aligned under the rows with the status line above them: where the eye ends.
+- The permanent wallpaper rail is gone: the `Wallpapers` chip swaps the image for a picker (search field
+  over a `kit.VirtualGrid` of thumbnails, `surfaceContainer`, radius 18); choosing a wallpaper closes it
+  (`colors.picker` view state, `picker` action).
+- Compare keeps its layout; Accessibility keeps its layout with the vision choice as a `kit.Segment`. Both end
+  with the same status + Export/Apply block, so Apply is reachable from every page.
+- The old miniature desktop card no longer appears in Studio (Compare and Accessibility still use it).
+- Strings: role names re-texted in place (`target-main/second/third` = Accent/Shell/Text, pin labels), new
+  `role-*-detail`, `role-text-readable`, `role-text-low`, `role-armed`, `strand-coverage`, `wallpapers`,
+  `sample-time`, `bar-preview`; removed `families`, `grouped-note`, `color-style`, `desktop-preview`,
+  `readable`, `check-readability`, `other-shades` (shell catalog + context; the Colors strings live only there).
+
+Primary container (the D4 follow-up, an Orient tone, not a Nacre change)
+- Proposed Orient commit: `crates/orient-core/src/palette.rs`, in the accent-role loop,
+  `let container = color(if self.dark { 0.35 } else { 0.88 }, container_chroma, h);` becomes
+  `color(if self.dark { 0.40 } else { 0.88 }, container_chroma, h)`. It lifts every dark accent container
+  (primary, secondary, tertiary) by one step; the on-container ink is derived from it, so cream text stays
+  (the review measured 8.7:1 for #f6f0d2 on #4c4523). Then a `deps/orient` bump, a `shell/palette.json`
+  refresh and the goldens that draw containers. Nacre stays token-based: tiles and chips already fill
+  `primaryContainer`, so nothing in the shell changes.
+
+Motion
+- The Colors window is a toplevel, not a panel: no edge growth, detach or dock applies. Every state change
+  uses the kit's state motion (hover/pressed fills, 120 ms `kit.motion.state`) and the existing focus ring;
+  the picker swap and page changes are instant rebuilds (no transition was there before; none was added).
+  Nothing animates per frame, so there is no PANEL_SLIDE capture for this unit; reduced motion is unaffected.
+
+Evidence
+- dev-2, `nacre-ci/arch-nacre:current`, `--network none` with the read-only vendor cache: `cargo fmt --all` and
+  `--check` (rustfmt 1.10), `cargo clippy -p nacre-shell --all-targets -D warnings`, the whole `nacre-shell` test
+  binary (937 passed, 0 failed, 4 ignored), `tools/check_luau.py --check-generated`, `tools/i18n/check.py`
+  (1710 messages). Goldens re-recorded and looked at: `colors-{studio-1,studio-1.5,studio-tall-1,fine-1,compare-1,
+  access-1,narrow-1,unavailable-1}`.
+- Real-renderer PNGs, dark and an Orient light scheme (studio, fine-tune, compare, accessibility, narrow, picker
+  open; hover and pressed on Apply, a role row, a segment option, a pearl, a style chip; keyboard focus on a role
+  row, Apply and the preview switch) next to the mockup: kept with a README in the unit worktree's
+  `.lead/renders/` (not committed).
+
+Kit asks (forwarded by the lead)
+1. `kit.Segment` option `glyph` (icon-only option, `label` stays the accessible name); stand-in `modes()` in
+   `shell/colors/main.luau`, delete when it lands.
+2. `kit.ImagePick` forwards `radius` to its image (the photo keeps square corners until then).
+3. A hover ring for buttons filled with a data colour (`hover_border_color`): the strand's pearls have no hover
+   change beyond the focus ring.
+4. `kit.Chip` measures its label at weight 400 and draws 500, so long labels wrap.
+
+Known gaps
+- Photo corners (ask 2) and pearl hover (ask 3) as above.
+- `shell/widgets/segment.luau` (N0239's stand-in) is now duplicated by `kit.Segment` at the pinned Bead; Colors
+  uses the kit one. Settings and the dashboard still import the stand-in (other units' files): delete it there.
+- Without a daemon the strand shows the active palette's five roles at one size; the `surface` pearl is drawn on
+  the surface and reads as a gap.
+- The bar miniature is a schematic of the real bar (pearls, traces, status icons, clock) from the bar's tokens, not
+  the live bar widgets: the window's theme is the applied palette, the miniature draws the previewed one.
+- Light goldens: D17 (N0249); this unit's light evidence is the renders above.
