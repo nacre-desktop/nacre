@@ -142,7 +142,13 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     BTreeMap::from([
         (
             KEYS[2].into(),
-            Value::Text(battery_glyph(state.charging == Some(true), state.percentage).into()),
+            Value::Text(
+                battery_glyph(
+                    state.charging == Some(true) || state.on_battery == Some(false),
+                    state.percentage,
+                )
+                .into(),
+            ),
         ),
         (KEYS[3].into(), Value::Text(value.clone())),
         (
@@ -156,9 +162,10 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     ])
 }
 
-/// D1 icon family: bolt while charging, alert at <= 20 %, empty at <= 8 %, full otherwise.
-pub(crate) fn battery_glyph(charging: bool, percentage: Option<f64>) -> &'static str {
-    if charging {
+/// D1 icon family: bolt while plugged in (charging, or on AC at full / a charge threshold, which UPower
+/// reports as not charging), alert at <= 20 %, empty at <= 8 %, full otherwise.
+pub(crate) fn battery_glyph(plugged: bool, percentage: Option<f64>) -> &'static str {
+    if plugged {
         "battery_android_bolt"
     } else if percentage.is_some_and(|value| value <= 8.) {
         "battery_android_0"
@@ -339,6 +346,14 @@ mod tests {
         assert_eq!(charging[KEYS[3]], Value::Text("83".into()));
         assert_eq!(
             charging[KEYS[2]],
+            Value::Text("battery_android_bolt".into())
+        );
+        // Full or threshold-held on AC: UPower says "not charging", the bar still shows the bolt.
+        let mut held = battery_data.clone();
+        held["charging"] = false.into();
+        held["state"] = 4.into();
+        assert_eq!(
+            battery(&snapshot(held, true))[KEYS[2]],
             Value::Text("battery_android_bolt".into())
         );
         assert_eq!(

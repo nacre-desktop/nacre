@@ -94,7 +94,7 @@ pub fn values(s: &Snapshot, menu_item: &str) -> BTreeMap<String, Value> {
         ),
         ("bead.desktop.audio".into(), Value::Text(audio.into())),
         ("bead.desktop.audio.available".into(), Value::Bool(s.audio.volume.is_some())),
-        ("bead.desktop.battery".into(), Value::Text(if !s.battery.available { "battery_unknown" } else { crate::reload::bar_daemon::battery_glyph(s.battery.charging, s.battery.percentage) }.into())),
+        ("bead.desktop.battery".into(), Value::Text(if !s.battery.available { "battery_unknown" } else { crate::reload::bar_daemon::battery_glyph(s.battery.charging || !s.battery.on_battery, s.battery.percentage) }.into())),
         ("bead.desktop.battery.value".into(), Value::Text(s.battery.percentage.map_or(String::new(), |n| format!("{n:.0}")))),
         // QML detail text sits 4 px after the glyph; the cell's 3 px padding closes it (none without a value).
         ("bead.desktop.battery.value.width".into(), Value::Number(s.battery.percentage.map_or(3., |n| 7. + 7.5 * format!("{n:.0}").len() as f32 as f64))),
