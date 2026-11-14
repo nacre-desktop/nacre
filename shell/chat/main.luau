@@ -73,6 +73,8 @@ else
     add(ui.Row{id="header",position="absolute",left=E,top=E,width=INNER,height=BTN,gap=T.spacing.sm,align="center",
         ui.Image{id="logo",width=T.icons.xlarge,height=T.icons.xlarge,path="chat/assets/nacre-ai.themed.svg",aria_label=ui.tr("bead.panel.chat-title")},
         ui.Text{id="title",width=0,grow=1,text=ui.tr("bead.panel.chat-title"),font_size=BODY,font_weight=600,color="onSurface"},
+        -- Owner 2026-11-14: the terminal chat is one click at the top, a round icon button like the pin.
+        icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,ui.tr("bead.panel.launcher-terminal")),
         -- Segmented provider switch: one pill, the chosen provider filled.
         ui.Row{id="provider",height=BTN,gap=T.spacing.hairline,padding=T.spacing.hairline+1,radius=T.radii.full,fill="surfaceContainerHigh",align="center",visible=not missing,
             button("codex",nil,nil,nil,BTN-2*(T.spacing.hairline+1),ui.tr("bead.panel.chat-codex"),"",action("launcher:provider:codex"),get("launcher.provider")=="codex",CAPTION),
@@ -179,10 +181,8 @@ else
     local FIELD=TITLE_H+2*T.spacing.xs
     local COMPOSE_H=T.spacing.sm+FIELD+T.spacing.xs+BTN+T.spacing.sm
     local compose_top=E+BTN+GAP
-    -- Owner 2026-11-14: send opens the quick chat even with an empty draft, and a terminal button beside it
-    -- starts a terminal chat with the header's provider (the pre-D7 one-click New chat).
-    compose(compose_top,FIELD,ask,action("launcher:quick-chat"),true,{icon_button("attach","attach_file",nil,ui.tr("bead.panel.chat-attach"))},
-        {icon_button("terminal","terminal",get("launcher.can_new") and action("launcher:new") or nil,ui.tr("bead.panel.launcher-terminal"))})
+    -- Owner 2026-11-14: send opens the quick chat even with an empty draft (the terminal chat moved to the header).
+    compose(compose_top,FIELD,ask,action("launcher:quick-chat"),true,{icon_button("attach","attach_file",nil,ui.tr("bead.panel.chat-attach"))},{})
     local search_top=compose_top+COMPOSE_H+GAP
     add(kit.TextInput{id="search",position="absolute",left=E,top=search_top,width=INNER,height=BTN,
         text=ui.bind("launcher.search"),placeholder=ui.tr("bead.panel.launcher-search"),padding=T.spacing.sm,padding_left=T.spacing.lg,padding_right=BTN,
