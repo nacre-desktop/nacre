@@ -400,20 +400,28 @@ def files(root, home, profile, keyboard, destination, common, *, validate_config
         + str(root / "tools/package_niri.py")
         + " finalize\n",
     )
-    # Handle explicit loginctl lock requests only. Like source niri (the
-    # niri-session-gate idle condition), sleep-lock and idle listeners wait for
-    # the owner's verified password unlock on the real hardware.
-    add(
-        config / "hypridle.conf",
+    # Owner 2026-11-15: packaged niri always locks before suspend. Only the idle
+    # listeners (hypridle-idle.conf) wait for the niri-session-gate idle condition,
+    # the same check that shows the idle controls.
+    general = (
         "general {\n    lock_cmd = pidof hyprlock || hyprlock -c "
         + shlex.quote(str(home / lock))
-        + "\n}\n",
+        + "\n    before_sleep_cmd = loginctl lock-session\n}\n"
     )
+    add(config / "hypridle.conf", general)
+    add(
+        config / "hypridle-idle.conf",
+        general + "source = ~/.config/nacre/power-idle.conf\n",
+    )
+    # The gate is read at every start: each login and each idle-policy restart.
     add(
         ".config/systemd/user/nacre-niri-lock.service",
-        "[Unit]\nDescription=Nacre Niri manual screen locking\n"
+        "[Unit]\nDescription=Nacre Niri screen locking\n"
         "PartOf=graphical-session.target\nAfter=graphical-session.target\n"
-        "[Service]\nExecStart=/usr/bin/hypridle -c %h/.config/nacre/niri/hypridle.conf\n"
+        "[Service]\nExecStart=/bin/sh -c 'if XDG_CURRENT_DESKTOP=niri "
+        '"%h/.local/share/nacre/shell/tools/nacre-helper" niri-session-gate idle; '
+        'then exec /usr/bin/hypridle -c "%h/.config/nacre/niri/hypridle-idle.conf"; '
+        'fi; exec /usr/bin/hypridle -c "%h/.config/nacre/niri/hypridle.conf"\'\n'
         "Restart=on-failure\nRestartSec=3\n",
     )
     return result

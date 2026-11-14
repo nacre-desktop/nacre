@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import tempfile
 from types import SimpleNamespace
@@ -56,11 +57,11 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertNotIn('spawn "systemctl" "suspend"', safe_policy)
             idle_path = Path(".config/nacre/power-idle.conf")
             self.assertEqual(generated[idle_path].read_text(), "")
-            # Packaged niri must remain manual-lock-only before unlock acceptance.
+            # Without unlock acceptance packaged niri locks (also before suspend) but never idles.
             idle_config = generated[
                 Path(".config/nacre/niri/hypridle.conf")
             ].read_text()
-            self.assertNotIn("before_sleep_cmd", idle_config)
+            self.assertIn("before_sleep_cmd = loginctl lock-session", idle_config)
             self.assertNotIn("source =", idle_config)
             self.assertIn("lock_cmd =", idle_config)
 
@@ -99,6 +100,72 @@ class NacreNiriSessionTests(unittest.TestCase):
             self.assertEqual(
                 preserved_hypr[hypr_idle_path].read_text(), configured_hypr_idle
             )
+
+    def test_lock_service_adds_idle_listeners_only_when_the_gate_allows(self):
+        profile = {
+            "workspaceCount": 1,
+            "workspaceNames": ["one"],
+            "routes": [],
+            "brainWorkspace": None,
+            "windowTrashBindings": False,
+        }
+        keyboard = {"layout": "us", "model": "", "variant": "", "options": ""}
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            home = base / "home"
+            home.mkdir()
+            generated = package_niri.files(
+                ROOT, home, profile, keyboard, base / "out", {}, validate_config=False
+            )
+            unit = generated[
+                Path(".config/systemd/user/nacre-niri-lock.service")
+            ].read_text()
+            start = next(
+                line for line in unit.splitlines() if line.startswith("ExecStart=")
+            )
+            receipt = base / "receipt"
+            hypridle = base / "hypridle"
+            hypridle.write_text('#!/bin/sh\nprintf %s "$2" > "$RECEIPT"\n')
+            hypridle.chmod(0o755)
+            argv = shlex.split(
+                start.removeprefix("ExecStart=")
+                .replace("%h", str(home))
+                .replace("/usr/bin/hypridle", str(hypridle))
+            )
+            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
+
+            def selected(gate):
+                if gate is not None:
+                    helper.parent.mkdir(parents=True, exist_ok=True)
+                    # Exit 0 only for the daemon's exact gate query in niri context.
+                    helper.write_text(
+                        '#!/bin/sh\n[ "$XDG_CURRENT_DESKTOP $*" = '
+                        '"niri niri-session-gate idle" ] || exit 2\nexit ' + gate + "\n"
+                    )
+                    helper.chmod(0o755)
+                subprocess.run(
+                    argv,
+                    env={
+                        **os.environ,
+                        "RECEIPT": str(receipt),
+                        "XDG_CURRENT_DESKTOP": "Hyprland",
+                    },
+                    check=True,
+                    timeout=10,
+                )
+                return generated[
+                    Path(receipt.read_text()).relative_to(home)
+                ].read_text()
+
+            for gate in (None, "1"):
+                denied = selected(gate)
+                self.assertIn("lock_cmd = pidof hyprlock", denied)
+                self.assertIn("before_sleep_cmd = loginctl lock-session", denied)
+                self.assertNotIn("source =", denied)
+            allowed = selected("0")
+            self.assertIn("lock_cmd = pidof hyprlock", allowed)
+            self.assertIn("before_sleep_cmd = loginctl lock-session", allowed)
+            self.assertIn("source = ~/.config/nacre/power-idle.conf", allowed)
 
     def test_prepared_wrapper_keeps_fork_selected_for_offline_queries(self):
         wrapper = (ROOT / "config/uwsm/niri-session-bin/niri").read_text()
