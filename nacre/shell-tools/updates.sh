@@ -71,28 +71,10 @@ if command -v flatpak >/dev/null; then
     printf 'Starting flatpak for the explicitly confirmed Flatpak update.\n' >&2
     flatpak update
 fi
-step="Nacre setup plan"
+step="Nacre setup"
 if pacman -Qq nacre >/dev/null 2>&1; then
-    nacre setup --plan
-    if command -v gum >/dev/null; then
-        palette="$HOME/.config/nacre/colors"
-        accent=$(cat "$palette/primary" 2>/dev/null || printf '#808080')
-        text=$(cat "$palette/onprimary" 2>/dev/null || printf '#ffffff')
-        if gum confirm --selected.background="$accent" --selected.foreground="$text" 'Apply these setup changes?'; then
-            step="Nacre setup apply"
-            nacre setup
-        else
-            printf 'Setup changes were left for later. Run nacre setup to apply them.\n'
-        fi
-    else
-        read -r -p 'Apply these setup changes? [y/N] ' answer
-        if [[ "$answer" == [yY] ]]; then
-            step="Nacre setup apply"
-            nacre setup
-        else
-            printf 'Setup changes were left for later. Run nacre setup to apply them.\n'
-        fi
-    fi
+    # One run shows its plan and asks once, so the reviewed plan is the applied one.
+    nacre setup
 else
     printf 'Nacre is not installed from its package; skipping the setup review.\n'
 fi

@@ -59,7 +59,7 @@ class UpdateFailureTests(unittest.TestCase):
                 "gum": "exit 0",
                 "python3": '[[ "$*" == *--needs-host ]] && exit 1; [[ "$*" == *--preflight* ]] && exit 0; exec /usr/bin/python3 "$@"',
                 "paru": 'printf "%s\\n" "$*"; exit 7',
-                "nacre-helper": 'echo \'{"mode":"native"}\'',
+                "nacre-helper": '[[ "$*" == "aur-review policy" ]] || exit 2; echo \'{"mode":"native"}\'',
                 "pacman": '[[ "$1" == -Qq ]] && echo nacre || echo "nacre 1"',
                 "nacre": 'echo "$*" >> "$CALL_LOG"',
                 "flatpak": "exit 0",
@@ -101,7 +101,6 @@ class UpdateFailureTests(unittest.TestCase):
 class UpdateSetupFlowTests(unittest.TestCase):
     def run_script(
         self,
-        decline_setup=False,
         fail_packages=False,
         nacre_installed=True,
         aur_mode='{"mode":"required"}',
@@ -118,22 +117,19 @@ class UpdateSetupFlowTests(unittest.TestCase):
         counter = root / "package-queries"
         bodies = {
             "python3": 'case "$*" in *--needs-host) exit 1;; *--preflight*|*--refresh*) exit 0;; esac; exec /usr/bin/python3 "$@"',
-            "gum": (
-                f'echo "gum:$*" >> "{log}"\n'
-                f'if [[ "{int(decline_setup)}" == 1 && "$*" == *"Apply these setup changes?"* ]]; then exit 1; fi\n'
-                "exit 0"
-            ),
+            "gum": f'echo "gum:$*" >> "{log}"',
             "paru": (f'echo "paru:$*" >> "{log}"\nexit {7 if fail_packages else 0}'),
             "pacman": (
                 f'echo "pacman:$*" >> "{log}"\n'
-                'if [[ "$1" == -Qq ]]; then\n'
-                '  if [[ "${2:-}" == nacre ]]; then\n'
-                '    [[ "${NO_NACRE:-}" != 1 ]] || exit 1\n'
-                "    echo nacre; exit 0\n"
-                "  fi\n"
+                'if [[ "$*" == "-Qq nacre" ]]; then\n'
+                '  [[ "${NO_NACRE:-}" != 1 ]] || exit 1\n'
+                "  echo nacre; exit 0\n"
+                "fi\n"
+                'if [[ "$*" == -Qq ]]; then\n'
                 '  [[ "${NO_NACRE:-}" == 1 ]] || printf "nacre\\n"\n'
                 '  printf "niri\\norient\\n"; exit 0\n'
                 "fi\n"
+                '[[ "$1" == -Q && $# -gt 1 ]] || { echo "error: unexpected call" >&2; exit 1; }\n'
                 f'count=$(cat "{counter}" 2>/dev/null || echo 0); count=$((count + 1)); echo "$count" > "{counter}"\n'
                 'for package in "${@:2}"; do\n'
                 '  if [[ "$package" == nacre && "${NO_NACRE:-}" == 1 ]]; then continue; fi\n'
@@ -142,7 +138,8 @@ class UpdateSetupFlowTests(unittest.TestCase):
             ),
             "nacre": (
                 f'echo "nacre:$*" >> "{log}"\n'
-                'if [[ "$*" == "setup --plan" ]]; then echo "plan shown"; else echo "setup applied"; fi'
+                '[[ "$*" == setup ]] || { echo "unexpected nacre call" >&2; exit 2; }\n'
+                'echo "setup applied"'
             ),
             "flatpak": "exit 0",
             "nacre-helper": (
@@ -190,18 +187,13 @@ class UpdateSetupFlowTests(unittest.TestCase):
             timeout=10,
         ), log
 
-    def test_setup_plan_precedes_apply_and_compositor_change_prompts_relogin(self):
+    def test_one_setup_run_reviews_and_applies_and_prompts_relogin(self):
         result, log = self.run_script()
         self.assertEqual(result.returncode, 0, result.stderr)
         calls = log.read_text().splitlines()
-        plan = calls.index("nacre:setup --plan")
-        prompt = next(
-            i for i, line in enumerate(calls) if "Apply these setup changes?" in line
-        )
-        apply = calls.index("nacre:setup")
-        self.assertLess(plan, prompt)
-        self.assertLess(prompt, apply)
-        self.assertIn("plan shown", result.stdout)
+        # setup shows its plan and asks once; updates.sh adds no second question.
+        self.assertEqual([c for c in calls if c.startswith("nacre:")], ["nacre:setup"])
+        self.assertFalse(any("setup" in c for c in calls if c.startswith("gum:")))
         self.assertIn("setup applied", result.stdout)
         self.assertIn(
             "Changed packages:\nnacre 1 -> 2\nniri 1 -> 2\norient 1 -> 2",
@@ -210,14 +202,6 @@ class UpdateSetupFlowTests(unittest.TestCase):
         self.assertIn(
             "Log out and back in to use the updated compositor.", result.stdout
         )
-
-    def test_declined_setup_plan_does_not_apply(self):
-        result, log = self.run_script(decline_setup=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        calls = log.read_text().splitlines()
-        self.assertIn("nacre:setup --plan", calls)
-        self.assertNotIn("nacre:setup", calls)
-        self.assertIn("left for later", result.stdout)
 
     def test_package_failure_skips_setup(self):
         result, log = self.run_script(fail_packages=True)
