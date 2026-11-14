@@ -175,10 +175,14 @@ fn count_result(command: &str, code: i32, stdout: &str, stderr: &str) -> Result<
     if !allowed || (code == 1 && !stderr.trim().is_empty()) {
         return Err("Update check failed".into());
     }
-    Ok(stdout
+    Ok(pending_rows(stdout).count())
+}
+/// Pending rows. `pacman -Qu` marks IgnorePkg rows with a localized "[ignored]" suffix;
+/// skip them as checkupdates does.
+fn pending_rows(stdout: &str) -> impl Iterator<Item = &str> {
+    stdout
         .lines()
-        .filter(|line| !line.trim().is_empty())
-        .count())
+        .filter(|line| !line.trim().is_empty() && !line.trim_end().ends_with(']'))
 }
 fn parse_package_line(line: &str, aur: bool) -> Result<UpdatePackage> {
     let fields = line.split_whitespace().collect::<Vec<_>>();
@@ -236,7 +240,7 @@ fn collect_counts(
             &String::from_utf8_lossy(&out.stderr),
         )?;
         let aur = cmd.get(1).is_some_and(|arg| arg == "-Qua");
-        for line in stdout.lines().filter(|line| !line.trim().is_empty()) {
+        for line in pending_rows(&stdout) {
             if packages.len() < MAX_DASHBOARD_PACKAGES {
                 packages.push(parse_package_line(line, aur)?);
             }
@@ -595,6 +599,18 @@ mod count_worker_tests {
         assert_eq!(result["packages"][2]["repo"], "aur");
         assert_eq!(result["packages"][2]["name"], "ripgrep");
         assert_eq!(result["truncated"], false);
+    }
+
+    #[test]
+    fn ignored_pacman_rows_are_skipped_like_checkupdates() {
+        let command = vec![vec!["pacman".into(), "-Qu".into()]];
+        let rows = "linux 1 -> 2 [ignored]\nfirefox 1 -> 2\nmesa 1 -> 2 [ignoriert]\n";
+        let result = collect_counts(&command, |_| Ok(output(0, rows, ""))).unwrap();
+        assert_eq!(result["count"], 1);
+        assert_eq!(
+            result["packages"],
+            json!([{"name":"firefox","old":"1","new":"2","repo":""}])
+        );
     }
 
     #[test]
