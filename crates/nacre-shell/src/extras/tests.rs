@@ -639,6 +639,19 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
         .contains(&params["id"].as_str().unwrap()),
         "shuffle activates a catalogue entry"
     );
+    // The shuffle's reply confirms revision 18; selecting before it lands would race it.
+    let confirmed = || {
+        let queue = wallpaper.wallpaper_actions.as_ref().unwrap();
+        let queue = queue.lock().unwrap_or_else(|e| e.into_inner());
+        queue.confirmed_revision("extras-boot")
+    };
+    for _ in 0..400 {
+        if confirmed() == Some(18) {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    assert_eq!(confirmed(), Some(18));
     wallpaper.act("wallpaper:activate:/fixture/next.mp4", &stores, wake);
     assert_eq!(
         tokio::time::timeout(Duration::from_secs(2), lab.calls.recv())
@@ -647,7 +660,7 @@ async fn wallpaper_catalogue_projects_and_selection_calls_revision_fenced_activa
             .unwrap(),
         (
             "wallpaper.activate".into(),
-            json!({"revision":17,"id":"/fixture/next.mp4"})
+            json!({"revision":18,"id":"/fixture/next.mp4"})
         )
     );
 
