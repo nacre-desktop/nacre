@@ -887,36 +887,14 @@ impl Status {
             );
         }
 
-        let cached = self.last_good.borrow().clone();
-        let mut display = cached.clone().unwrap_or_else(|| {
-            BTreeMap::from([
-                (
-                    "status.primary".into(),
-                    Value::Text(tr("bead.panel.network-unavailable", &[])),
-                ),
-                ("status.detail".into(), Value::Text(String::new())),
-                ("status.active".into(), Value::Bool(false)),
-            ])
-        });
-        display.insert("status.ready".into(), Value::Bool(false));
-        display.insert(
-            "status.secondary".into(),
-            Value::Text(tr(
-                if cached.is_some() {
-                    "bead.panel.status-stale"
-                } else {
-                    "bead.panel.status-data-unavailable"
-                },
-                &[],
-            )),
-        );
-        display.insert(
-            "status.heading".into(),
-            Value::Text(tr("bead.panel.network-title", &[])),
-        );
-        display.insert("status.icon".into(), Value::Text("wifi".into()));
-        display.insert("status.kind".into(), Value::Text("network".into()));
-        display
+        stale_display(
+            self.last_good.borrow().clone(),
+            "bead.panel.network-unavailable",
+            "bead.panel.network-title",
+            "wifi",
+            "network",
+        )
+        .0
     }
 
     fn project_core_network_control(&self) -> BTreeMap<String, Value> {
@@ -1209,42 +1187,13 @@ impl Status {
             return core_bluetooth_values(display, true, &secondary);
         }
 
-        let cached = self.last_good.borrow().clone();
-        let mut display = cached.clone().unwrap_or_else(|| {
-            BTreeMap::from([
-                (
-                    "status.primary".into(),
-                    Value::Text(tr("bead.panel.bluetooth-unavailable", &[])),
-                ),
-                ("status.detail".into(), Value::Text(String::new())),
-                ("status.active".into(), Value::Bool(false)),
-            ])
-        });
-        display.insert("status.ready".into(), Value::Bool(false));
-        display.insert(
-            "status.secondary".into(),
-            Value::Text(tr(
-                if cached.is_some() {
-                    "bead.panel.status-stale"
-                } else {
-                    "bead.panel.status-data-unavailable"
-                },
-                &[],
-            )),
+        let (display, secondary) = stale_display(
+            self.last_good.borrow().clone(),
+            "bead.panel.bluetooth-unavailable",
+            "bead.panel.bluetooth",
+            "bluetooth",
+            "bluetooth",
         );
-        display.insert(
-            "status.heading".into(),
-            Value::Text(tr("bead.panel.bluetooth", &[])),
-        );
-        display.insert("status.icon".into(), Value::Text("bluetooth".into()));
-        display.insert("status.kind".into(), Value::Text("bluetooth".into()));
-        let secondary = display
-            .get("status.secondary")
-            .and_then(|value| match value {
-                Value::Text(text) => Some(text.clone()),
-                _ => None,
-            })
-            .unwrap_or_default();
         core_bluetooth_values(display, false, &secondary)
     }
 
@@ -1355,42 +1304,13 @@ impl Status {
             return core_battery_values(display, true, &secondary);
         }
 
-        let cached = self.last_good.borrow().clone();
-        let mut display = cached.clone().unwrap_or_else(|| {
-            BTreeMap::from([
-                (
-                    "status.primary".into(),
-                    Value::Text(tr("bead.panel.battery-unavailable", &[])),
-                ),
-                ("status.detail".into(), Value::Text(String::new())),
-                ("status.active".into(), Value::Bool(false)),
-            ])
-        });
-        display.insert("status.ready".into(), Value::Bool(false));
-        display.insert(
-            "status.secondary".into(),
-            Value::Text(tr(
-                if cached.is_some() {
-                    "bead.panel.status-stale"
-                } else {
-                    "bead.panel.status-data-unavailable"
-                },
-                &[],
-            )),
+        let (display, secondary) = stale_display(
+            self.last_good.borrow().clone(),
+            "bead.panel.battery-unavailable",
+            "bead.panel.battery-title",
+            "battery_full",
+            "battery",
         );
-        display.insert(
-            "status.heading".into(),
-            Value::Text(tr("bead.panel.battery-title", &[])),
-        );
-        display.insert("status.icon".into(), Value::Text("battery_full".into()));
-        display.insert("status.kind".into(), Value::Text("battery".into()));
-        let secondary = display
-            .get("status.secondary")
-            .and_then(|value| match value {
-                Value::Text(text) => Some(text.clone()),
-                _ => None,
-            })
-            .unwrap_or_default();
         core_battery_values(display, false, &secondary)
     }
 
@@ -1490,6 +1410,38 @@ impl Status {
             .unwrap_or_default();
         core_audio_values(display, false, &health)
     }
+}
+
+/// The last good display, or an unavailable placeholder, marked not ready under the card's
+/// heading, icon and kind; also returns the stale/unavailable note it set as the secondary line.
+fn stale_display(
+    cached: Option<BTreeMap<String, Value>>,
+    unavailable: &str,
+    heading: &str,
+    icon: &str,
+    kind: &str,
+) -> (BTreeMap<String, Value>, String) {
+    let secondary = tr(
+        if cached.is_some() {
+            "bead.panel.status-stale"
+        } else {
+            "bead.panel.status-data-unavailable"
+        },
+        &[],
+    );
+    let mut display = cached.unwrap_or_else(|| {
+        BTreeMap::from([
+            ("status.primary".into(), Value::Text(tr(unavailable, &[]))),
+            ("status.detail".into(), Value::Text(String::new())),
+            ("status.active".into(), Value::Bool(false)),
+        ])
+    });
+    display.insert("status.ready".into(), Value::Bool(false));
+    display.insert("status.secondary".into(), Value::Text(secondary.clone()));
+    display.insert("status.heading".into(), Value::Text(tr(heading, &[])));
+    display.insert("status.icon".into(), Value::Text(icon.into()));
+    display.insert("status.kind".into(), Value::Text(kind.into()));
+    (display, secondary)
 }
 
 fn updates_route(action: &str) -> Option<(&'static str, serde_json::Value)> {
