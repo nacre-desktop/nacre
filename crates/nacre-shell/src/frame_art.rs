@@ -27,21 +27,25 @@ pub fn handle(
     }
 }
 /// The pearl grabber (design review D6): a rounded bar in primary centred on the lip, 6 x 56 at
-/// rest. While the dwell charges it swells from its centre to 8 x 72 and a soft accent glow the
-/// width of the lip grows around it (owner 2026-11-14: no top-down fill). With reduced motion the
-/// charging look is static.
+/// rest. While the dwell charges it swells from its centre to 8 x 72 and a soft glow the width of
+/// the lip grows around it, in the same accent so the handle only ever brightens (owner 2026-11-14:
+/// no top-down fill, no dark halo). It stays swollen while its panel is open, so the hand-over from
+/// the dwell to the open panel changes nothing but the glow. With reduced motion the charging look
+/// is static.
 pub fn grabber(
     lip: &Lip,
     (width, height): (f32, f32),
     state: LipState,
     accent: [u8; 4],
-    secondary: [u8; 4],
+    _secondary: [u8; 4],
 ) -> Option<String> {
     if !matches!(lip.edge, Edge::Left | Edge::Right) {
         return None;
     }
     let charging = !state.active && state.progress > 0. && state.progress < 1.;
-    let charge = if !charging {
+    let charge = if state.active {
+        1.
+    } else if !charging {
         0.
     } else if bead::core::animation::reduced_motion() {
         1.
@@ -52,14 +56,14 @@ pub fn grabber(
     let thick = thick.min((width - 2.).max(2.));
     let (x, y) = ((width - thick) / 2., (height - long) / 2.);
     let mut body = String::new();
-    if charge > 0. {
+    if charging {
         body.push_str(&format!(
             r#"<rect x="0" y="{}" width="{width}" height="{}" rx="{}" fill="{}" opacity="{}"/>"#,
             y - 4.,
             long + 8.,
             width / 2.,
-            rgb(secondary),
-            0.35 * charge
+            rgb(accent),
+            0.3 * charge
         ));
     }
     body.push_str(&format!(
@@ -215,10 +219,33 @@ mod tests {
             "{charging}"
         );
         assert!(
-            charging.contains(r#"<rect x="0" y="36" width="10" height="72" rx="5" fill="rgb(40,50,60)" opacity="0.175""#),
+            charging.contains(r#"<rect x="0" y="36" width="10" height="72" rx="5" fill="rgb(10,20,30)" opacity="0.15""#),
             "{charging}"
         );
         assert!(!charging.contains("clip-path"), "{charging}");
+        // Open: the swollen bar stays, only the glow goes, so the hand-over never draws a dark frame.
+        let open = LipState {
+            progress: 0.,
+            active: true,
+        };
+        let opened = grabber(&lip(Edge::Right), (10., 144.), open, A, S).unwrap();
+        assert!(
+            opened.contains(r#"<rect x="1" y="36" width="8" height="72" rx="4" fill="rgb(10,20,30)" opacity="1""#),
+            "{opened}"
+        );
+        assert_eq!(opened.matches("<rect").count(), 1, "{opened}");
+        let done = LipState {
+            progress: 1.,
+            active: false,
+        };
+        assert_eq!(
+            grabber(&lip(Edge::Right), (10., 144.), done, A, S)
+                .unwrap()
+                .matches("<rect")
+                .count(),
+            1,
+            "a completed dwell draws no glow"
+        );
         assert!(
             handle(&lip(Edge::Left), (10., 144.), idle(), A, S, true)
                 .unwrap()
