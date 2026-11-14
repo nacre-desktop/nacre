@@ -3,6 +3,7 @@
 //! the adapter over a fake worker socket, the reader's markdown-lite, the layout store and
 //! the screen goldens.
 use super::*;
+use crate::settings_tests::golden;
 use bead_test::{Config as HarnessConfig, Harness};
 use std::path::Path;
 
@@ -577,20 +578,6 @@ fn harness(model: BTreeMap<String, Value>, width: u32, height: u32, scale: f32) 
         BTreeMap::new(),
     )
     .unwrap()
-}
-fn golden(name: &str, h: &mut Harness) {
-    let frame = h.pose((0., 0.), 1.).unwrap();
-    let path = root().join(format!("tests/goldens/{name}.png"));
-    if std::env::var("BEAD_UPDATE_GOLDENS").as_deref() == Ok("1") {
-        frame.save(&path).unwrap();
-    }
-    frame
-        .compare(
-            &path,
-            Default::default(),
-            &std::env::temp_dir().join(format!("bead-{name}-diff")),
-        )
-        .unwrap_or_else(|error| panic!("{name}: {error}"));
 }
 
 #[test]
