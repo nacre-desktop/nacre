@@ -19,7 +19,7 @@ on:
       orient_recipe_revision:
         description: Exact Orient commit containing the package recipe to verify
         required: true
-        default: 81cdf445454647ef41a65c67a7ea90c193c2b1e5
+        default: 08bd52e339f89ecc40fda7833c938db242813855
         type: string
       use_released_orient:
         description: Consume the signed independent Orient release (required for publication)
@@ -64,7 +64,7 @@ jobs:
         env:
           PACKAGE_COMPONENT: ${{ inputs.component || 'core' }}
           USE_RELEASED_ORIENT: ${{ github.event_name == 'workflow_run' || inputs.use_released_orient }}
-          ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision || '81cdf445454647ef41a65c67a7ea90c193c2b1e5' }}
+          ORIENT_RECIPE_REVISION: ${{ inputs.orient_recipe_revision || '08bd52e339f89ecc40fda7833c938db242813855' }}
           GH_TOKEN: ${{ github.token }}
           PACKAGE_SOURCE: ${{ inputs.source_revision || github.event.workflow_run.head_sha || github.sha }}
         run: |
