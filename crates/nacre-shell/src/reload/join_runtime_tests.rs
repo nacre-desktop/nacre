@@ -171,7 +171,7 @@ fn click(runtime: &mut Runtime, id: &str) {
     runtime.commit();
 }
 /// Type into the focused input; returns the text the staged scene draws.
-fn type_text(runtime: &mut Runtime, text: &str) -> Vec<String> {
+pub(super) fn type_text(runtime: &mut Runtime, text: &str) -> Vec<String> {
     let scene = runtime
         .stage(UiEvent::Key {
             text: text.into(),
@@ -189,7 +189,7 @@ fn type_text(runtime: &mut Runtime, text: &str) -> Vec<String> {
         })
         .collect()
 }
-fn enter(runtime: &mut Runtime) {
+pub(super) fn enter(runtime: &mut Runtime) {
     runtime
         .stage(UiEvent::Command {
             command: "enter".into(),

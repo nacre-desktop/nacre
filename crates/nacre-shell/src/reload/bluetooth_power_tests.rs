@@ -1,42 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-only
+use super::wifi_runtime_tests::Lab;
 use super::*;
 use crate::nacre_source::{Client, Config};
 use bead::core::source::Source;
 use nacre_protocol::{Capability, Message, Reply, framing};
-use std::{
-    collections::BTreeMap, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc, time::Duration,
-};
+use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
     io::BufReader,
-    net::UnixListener,
     sync::{mpsc, oneshot},
 };
 
-struct Lab(PathBuf);
-impl Lab {
-    fn new() -> Self {
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "bluetooth-power-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
-        std::fs::create_dir(&path).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
-        Self(path)
-    }
-    fn bind(&self) -> UnixListener {
-        let socket = self.0.join("daemon.sock");
-        let listener = UnixListener::bind(&socket).unwrap();
-        std::fs::set_permissions(socket, std::fs::Permissions::from_mode(0o600)).unwrap();
-        listener
-    }
-}
-impl Drop for Lab {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
 fn state(powered: bool) -> serde_json::Value {
     serde_json::json!({
         "health":{"available":true,"stale":false},

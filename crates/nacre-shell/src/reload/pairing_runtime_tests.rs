@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! B0055: Bluetooth device list and pairing against a fake daemon, through the real Bluetooth
 //! popout template and its input events (one test per prompt kind of N0045).
+use super::join_runtime_tests::{enter, type_text};
+use super::wifi_runtime_tests::{Lab, project};
 use super::*;
 use crate::nacre_source::{Client, Config};
 use bead::core::{Value, source::Source};
@@ -11,26 +13,6 @@ use std::{
 use tokio::{io::BufReader, net::UnixListener, sync::mpsc};
 
 const PIN: &str = "Zx9-secret-PIN";
-
-struct Lab(PathBuf);
-impl Lab {
-    fn new() -> Self {
-        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
-            "bluetooth-pairing-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
-        std::fs::create_dir(&path).unwrap();
-        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
-        Self(path)
-    }
-}
-impl Drop for Lab {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
 
 fn devices() -> serde_json::Value {
     serde_json::json!({
@@ -246,11 +228,6 @@ fn controlled_runtime(
     runtime.commit();
     Ok(runtime)
 }
-
-fn project(runtime: &mut Runtime) {
-    runtime.stage(UiEvent::Model(BTreeMap::new())).unwrap();
-    runtime.commit();
-}
 async fn until(runtime: &mut Runtime, predicate: impl Fn(&Runtime) -> bool) {
     let waited = tokio::time::timeout(Duration::from_secs(5), async {
         loop {
@@ -302,33 +279,6 @@ fn click_node(runtime: &mut Runtime, pick: impl Fn(&bead::ui::Node) -> bool) {
 fn click(runtime: &mut Runtime, id: &str) {
     let full = format!("status-popout.{id}");
     click_node(runtime, |n| n.id == full);
-}
-fn type_text(runtime: &mut Runtime, text: &str) -> Vec<String> {
-    let scene = runtime
-        .stage(UiEvent::Key {
-            text: text.into(),
-            backspace: false,
-        })
-        .unwrap()
-        .expect("typing repaints");
-    runtime.commit();
-    scene
-        .primitives
-        .iter()
-        .filter_map(|p| match p {
-            bead::render::Primitive::Text { text, .. } => Some(text.clone()),
-            _ => None,
-        })
-        .collect()
-}
-fn enter(runtime: &mut Runtime) {
-    runtime
-        .stage(UiEvent::Command {
-            command: "enter".into(),
-            shift: false,
-        })
-        .unwrap();
-    runtime.commit();
 }
 fn press_pair(runtime: &mut Runtime) {
     click_node(runtime, |n| n.action.as_deref() == Some("bluetooth.pair"));
