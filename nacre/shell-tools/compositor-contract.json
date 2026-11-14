@@ -1037,7 +1037,9 @@
         "parameters": {
           "command": "nacrectl ui drawers toggle dashboard"
         },
-        "options": {}
+        "options": {
+          "description": "Nacre:dashboard"
+        }
       },
       {
         "kind": "binding",

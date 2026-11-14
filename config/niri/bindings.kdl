@@ -68,7 +68,7 @@ binds {
     Super+W repeat=false hotkey-overlay-title="Nacre:wallpaper" { spawn "nacrectl" "ui" "nacre" "launcher" ">wallpaper "; }
     Super+Shift+W repeat=false hotkey-overlay-title="Nacre:widgets" { spawn "nacrectl" "ui" "widgets" "open"; }
     Super+Z repeat=false { spawn "nacrectl" "ui" "nacre" "hide"; }
-    Super+O repeat=false { spawn "nacrectl" "ui" "drawers" "toggle" "dashboard"; }
+    Super+O repeat=false hotkey-overlay-title="Nacre:dashboard" { spawn "nacrectl" "ui" "drawers" "toggle" "dashboard"; }
     Super+I repeat=false hotkey-overlay-title="Nacre:settings" { spawn-sh "~/.local/bin/nacre-settings"; }
     Super+Ctrl+C repeat=false { spawn "nacrectl" "ui" "nacre" "menu" "actions.capture" ""; }
     Super+X repeat=false hotkey-overlay-title="Nacre:power" { spawn "nacrectl" "ui" "nacre" "menu" "power" ""; }

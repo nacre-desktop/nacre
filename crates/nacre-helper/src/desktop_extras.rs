@@ -923,6 +923,7 @@ fn translated_collection_description(description: &str) -> String {
         "clipboard" => "Open clipboard history".into(),
         "close" => "Close window".into(),
         "cycle-window" => "Cycle windows".into(),
+        "dashboard" => "Open the dashboard".into(),
         "detach-panel" => "Detach panel".into(),
         "emoji" => "Choose emoji".into(),
         "files" => "Open files".into(),

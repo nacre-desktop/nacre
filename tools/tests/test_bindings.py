@@ -35,6 +35,7 @@ class BindingContractTests(unittest.TestCase):
                 "XF86MonBrightnessUp",
                 "XF86KbdBrightnessDown",
                 "XF86KbdBrightnessUp",
+                "SUPER + O",
             }
         }
 
@@ -42,7 +43,8 @@ class BindingContractTests(unittest.TestCase):
             return sorted(json.dumps(row, sort_keys=True) for row in rows)
 
         # The frozen defaults remain the reference; the six hardware steps
-        # migrate to the current daemon commands in the neutral contract.
+        # migrate to the current daemon commands in the neutral contract, and
+        # Super+O to its titled dashboard toggle (Welcome's panel keys).
         migrated = json.loads(json.dumps(expected["hypr/conf/keybinding.lua"]))
         shell_ui = {
             "launcher": ["nacre", "launcher", ""],
@@ -78,7 +80,7 @@ class BindingContractTests(unittest.TestCase):
             if arguments is not None:
                 row["action"]["args"][0] = "nacrectl ui " + shlex.join(arguments)
                 changed += 1
-        self.assertEqual(changed, 11)
+        self.assertEqual(changed, 10)
         self.assertEqual(normalize(actual), normalize(migrated))
         self.assertEqual(len(actual), 94)
 
