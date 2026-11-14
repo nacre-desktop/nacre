@@ -124,9 +124,15 @@ return {id="workspaces",title="Workspaces",icon="view_carousel",category="bar",d
                     local more=item.overflow or ""
                     local hinted=item.hinted==true
                     local apps={}
-                    for slot=1,3 do
+                    -- Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" shows the real app icons
+                    -- (the title's lookup, category glyph when an app has none); "Show all" lifts the three-hint cap.
+                    for slot=1,math.max(3,shown) do
                         local glyph_name=item["app"..slot]
-                        if glyph_name and glyph_name~="" then
+                        local icon_name=item["icon"..slot] or ""
+                        if icon_name~="" then
+                            apps[#apps+1]=ui.Box{id="app"..slot,width=15,height=28,shrink=0,
+                                ui.Image{id="icon",position="absolute",left=(15-t.hint_icon)/2,top=(28-t.hint_icon)/2,icon=icon_name,width=t.hint_icon,height=t.hint_icon}}
+                        elseif glyph_name and glyph_name~="" then
                             apps[#apps+1]=centered_text{id="app"..slot,text=glyph_name,width=15,height=28,shrink=0,family="Material Symbols Rounded",font_size=t.app_font,text_align="center",color="onSurface"}
                             -- Clicking a glyph focuses its window (window.focus); a sibling, as a button cannot nest in a button.
                             local window=item["win"..slot]

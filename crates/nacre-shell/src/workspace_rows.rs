@@ -16,6 +16,10 @@ pub struct View {
     pub count: u32,
     pub icons: Vec<String>,
     pub hints: bool,
+    /// Owner 2026-11-14: hints as real app icons (`bar.workspace.style == "icons"`).
+    pub app_icons: bool,
+    /// Owner 2026-11-14: no three-hint cap and no "+N" (`bar.workspace.overflow == false`).
+    pub show_all: bool,
     /// The daemon `compositor` topic's niri origin fields (N0040); empty on Hyprland.
     pub origins: Vec<Origin>,
 }
@@ -36,6 +40,8 @@ impl Default for View {
             count: 6,
             icons: Vec::new(),
             hints: true,
+            app_icons: false,
+            show_all: false,
             origins: Vec::new(),
         }
     }
@@ -156,6 +162,12 @@ impl View {
         }
         if let Some(Value::Bool(hints)) = values.get("bar.workspace.hints") {
             next.hints = *hints;
+        }
+        if let Some(Value::Text(style)) = values.get("bar.workspace.style") {
+            next.app_icons = style == "icons";
+        }
+        if let Some(Value::Bool(overflow)) = values.get("bar.workspace.overflow") {
+            next.show_all = !overflow;
         }
         if let Some(Value::List(origins)) = values.get("bar.workspace.origins") {
             next.origins = origins
@@ -458,7 +470,8 @@ impl Rows {
                 let base = shown.len() as f64 * CELL
                     + shown.len().saturating_sub(1) as f64 * 2.
                     + if count > 0 { 4. } else { 0. };
-                let mut fit = MAX_HINTS
+                let cap = if view.show_all { count } else { MAX_HINTS };
+                let mut fit = cap
                     .min(count)
                     .min((((available - base) / HINT).floor()).max(0.) as usize);
                 while hinted
@@ -485,15 +498,22 @@ impl Rows {
                 row["urgent"] = json!(w.urgent || windows.iter().any(|win| win.urgent));
                 row["shown"] = json!(fit);
                 row["hinted"] = json!(hinted && count > 0);
-                row["overflow"] = json!(if hinted && count > fit {
+                row["overflow"] = json!(if hinted && count > fit && !view.show_all {
                     format!("+{}", count - fit)
                 } else {
                     String::new()
                 });
-                for slot in 0..MAX_HINTS {
+                for slot in 0..fit.max(MAX_HINTS) {
                     let shown_window = windows.get(slot).filter(|_| slot < fit);
                     row[format!("app{}", slot + 1)] =
                         json!(shown_window.map_or("", |win| self.glyph(&win.app_id, dirs)));
+                    // The real themed icon (the title's lookup) when the style asks for app icons.
+                    row[format!("icon{}", slot + 1)] = json!(
+                        shown_window
+                            .filter(|_| view.app_icons)
+                            .and_then(|win| desktop_icon_name(&win.app_id))
+                            .unwrap_or_default()
+                    );
                     // The local id; the focus route maps it to the daemon's.
                     row[format!("win{}", slot + 1)] =
                         json!(shown_window.map_or("", |win| win.id.0.as_str()));
@@ -826,6 +846,33 @@ mod tests {
         );
     }
 
+    #[test]
+    fn show_all_lifts_the_cap_and_app_icons_add_icon_fields() {
+        // Owner 2026-11-14: Workspace style "App icons" + overflow off.
+        let mut rows = Rows::default();
+        rows.view.app_icons = true;
+        rows.view.show_all = true;
+        let windows = (0..5).map(|i| window(i, 1, "Foo")).collect();
+        let snap = snapshot(
+            vec![
+                workspace(1, "1", false, true),
+                workspace(2, "2", false, false),
+            ],
+            windows,
+            true,
+        );
+        let out = rows.rows_with(&snap, Some("out"), &no_dirs);
+        assert_eq!(
+            (out[0]["shown"].as_u64(), out[0]["overflow"].as_str()),
+            (Some(5), Some(""))
+        );
+        assert_eq!(out[0]["app5"], "apps");
+        // The icon field is present per shown slot (empty when no desktop entry resolves here).
+        assert!(out[0]["icon1"].is_string() && out[0]["icon5"].is_string());
+        let capped = Rows::default().rows_with(&snap, Some("out"), &no_dirs);
+        assert_eq!(capped[0]["overflow"], "+2");
+        assert!(capped[0].get("icon1").is_some_and(|v| v == ""));
+    }
     #[test]
     fn narrow_bars_allocate_fewer_hints_by_the_qml_width_rule() {
         let rows = Rows::default();

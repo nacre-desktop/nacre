@@ -3225,6 +3225,63 @@
       "advanced": false
     },
     {
+      "id": "panels/top-bar.panel.workspaceStyle",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.panel",
+      "key": "workspaceStyle",
+      "labelId": "settings.registry.panels.top-bar.panel.workspaceStyle.label",
+      "descriptionId": "settings.registry.panels.top-bar.panel.workspaceStyle.description",
+      "type": "enum",
+      "default": "pearls",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "workspaceStyle"
+        ]
+      },
+      "apply": "instant",
+      "synonyms": [
+        "workspace",
+        "apps",
+        "icons"
+      ],
+      "unavailableId": "settings.registry.ui.unavailable",
+      "advanced": false,
+      "options": [
+        {
+          "value": "pearls",
+          "labelId": "settings.registry.panels.top-bar.panel.workspaceStyle.option.pearls"
+        },
+        {
+          "value": "icons",
+          "labelId": "settings.registry.panels.top-bar.panel.workspaceStyle.option.icons"
+        }
+      ]
+    },
+    {
+      "id": "panels/top-bar.panel.workspaceOverflow",
+      "page": "panels/top-bar",
+      "section": "panels/top-bar.panel",
+      "key": "workspaceOverflow",
+      "labelId": "settings.registry.panels.top-bar.panel.workspaceOverflow.label",
+      "descriptionId": "settings.registry.panels.top-bar.panel.workspaceOverflow.description",
+      "type": "boolean",
+      "store": {
+        "id": "desktop",
+        "key": [
+          "workspaceOverflow"
+        ]
+      },
+      "default": true,
+      "apply": "instant",
+      "synonyms": [
+        "overflow",
+        "+N"
+      ],
+      "advanced": false,
+      "dependsOn": "panels/top-bar.panel.enabled"
+    },
+    {
       "id": "panels/top-bar.panel.stackStyle",
       "page": "panels/top-bar",
       "section": "panels/top-bar.panel",

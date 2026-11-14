@@ -1100,6 +1100,60 @@ fn bar_counts_share_icon_hit_areas_and_centered_line_boxes() -> Result<()> {
     bar_golden(&light.pose((0., 0.), 1.)?, "bar-parity-light-1")
 }
 
+/// Owner 2026-11-14: Settings > Top bar > Workspace style "App icons" with the +N fold off: the active
+/// workspace lists every window. The harness has no deterministic desktop-icon fixtures, so the rows
+/// carry empty icon names and the goldens show the category-glyph fallback of that style.
+#[test]
+fn workspace_app_icons_style_shows_every_window() -> Result<()> {
+    for (name, palette) in [
+        ("bar-workspace-icons-1", "palette.json"),
+        (
+            "bar-workspace-icons-light-1",
+            "tests/fixtures/palette-light.json",
+        ),
+    ] {
+        let mut values = super::initial_models()?;
+        values.extend(parity_models());
+        values.insert("bar.workspace.style".into(), Value::Text("icons".into()));
+        values.insert("bar.workspace.overflow".into(), Value::Bool(false));
+        values.insert(
+            "bead.workspaces".into(),
+            Value::list(vec![
+                serde_json::json!({"id":"one","index":1,"label":"1","active":true,"hinted":true,"shown":5,"overflow":"",
+                    "app1":"terminal","icon1":"","app2":"language","icon2":"","app3":"code","icon3":"",
+                    "app4":"mail","icon4":"","app5":"apps","icon5":""}),
+                serde_json::json!({"id":"two","index":2,"label":"2","occupied":true}),
+                serde_json::json!({"id":"three","index":3,"label":"3"}),
+            ]),
+        );
+        let mut h = Harness::load(
+            &root(),
+            Path::new("bar/main.luau"),
+            &root().join(palette),
+            values,
+            Config {
+                width: 1920,
+                height: 50,
+                scale: 1.,
+            },
+        )?;
+        settle_harness_animations(&mut h)?;
+        let texts = bar_texts(&h);
+        assert!(
+            ["language", "code", "mail", "apps"]
+                .iter()
+                .all(|glyph| texts.iter().any(|(t, _)| t == glyph)),
+            "every window shows: {texts:?}"
+        );
+        assert!(
+            !texts.iter().any(|(t, _)| t.starts_with('+')),
+            "no +N with the fold off"
+        );
+        bar_golden(&h.pose((0., 0.), 1.)?, name)?;
+    }
+    Ok(())
+}
+
 /// D1/D2/D3 (spec 0237): every attention state the bar can show at once: Ethernet + VPN lock,
 /// a connected Bluetooth device with its battery, a low battery with its percent, headphones,
 /// Do Not Disturb (badge hidden), a running recording, the named stack cap, a real app icon

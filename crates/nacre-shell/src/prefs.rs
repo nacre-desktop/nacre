@@ -36,6 +36,11 @@ pub struct Prefs {
     pub clock_12h: bool,
     /// `desktop.stackStyle` (D2, spec 0237): the bar's workspace-stack cap, `"pearls"` (default) or `"name"`.
     pub stack_style: String,
+    /// `desktop.workspaceStyle` (owner 2026-11-14): the active workspace's windows as category glyphs
+    /// (`"pearls"`, default) or real app icons (`"icons"`).
+    pub workspace_style: String,
+    /// `desktop.workspaceOverflow` (default true): cap the hints at three with a "+N" tail.
+    pub workspace_overflow: bool,
     /// `dashboard.tabs` filtered to the core pages, in the owner's order.
     pub core_tabs: Vec<String>,
     /// `dashboardEnabled`, `controlCenterEnabled`, `topBarEnabled`, `frameSheen`:
@@ -243,6 +248,15 @@ impl Prefs {
                 "pearls"
             }
             .into(),
+            workspace_style: if desktop.get("workspaceStyle").and_then(Json::as_str)
+                == Some("icons")
+            {
+                "icons"
+            } else {
+                "pearls"
+            }
+            .into(),
+            workspace_overflow: on("workspaceOverflow"),
             core_tabs: core,
             // JS `value || 6`: zero and non-numbers fall back to six.
             workspace_count: profile
@@ -336,6 +350,14 @@ impl Prefs {
             (
                 "bar.stack.style".into(),
                 bead::core::Value::Text(self.stack_style.clone()),
+            ),
+            (
+                "bar.workspace.style".into(),
+                bead::core::Value::Text(self.workspace_style.clone()),
+            ),
+            (
+                "bar.workspace.overflow".into(),
+                Bool(self.workspace_overflow),
             ),
             (
                 "bar.modules".into(),
