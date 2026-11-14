@@ -139,9 +139,12 @@ pub fn edge_tab(
     ))
 }
 pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
-    let (accent, secondary) = (colors.get("primary")?, colors.get("secondary")?);
-    let surface = rgb(colors.get("surface")?);
+    let startup = [colors.get("surface")?, colors.get("primary")?, colors.get("secondary")?];
     Ok(Arc::new(move |lip, size, state| {
+        // Owner 2026-11-14: the handle follows the wallpaper palette (the live primary), not the
+        // palette the shell started with.
+        let [surface, accent, secondary] = crate::placement::live_colors().unwrap_or(startup);
+        let surface = rgb(surface);
         handle(lip, size, state, accent, secondary, ARROWS.load(SeqCst)).map(|svg| {
             // Popup films leave this stable surface uncovered, including its material.
             Arc::from(format!(

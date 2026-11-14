@@ -69,6 +69,10 @@ pub(crate) fn set_frame_lips(lips: &[crate::frame_config::LipConfig]) {
 }
 
 static LIVE_COLORS: std::sync::Mutex<Option<[[u8; 4]; 3]>> = std::sync::Mutex::new(None);
+/// The live `[surface, primary, secondary]`, once a live palette has been published.
+pub(crate) fn live_colors() -> Option<[[u8; 4]; 3]> {
+    *LIVE_COLORS.lock().unwrap_or_else(|p| p.into_inner())
+}
 /// Publish the live presentation palette; true when the frame art colours changed.
 pub fn set_live_palette(palette: &std::collections::BTreeMap<String, [u8; 4]>) -> bool {
     let (Some(fill), Some(primary), Some(secondary)) = (
