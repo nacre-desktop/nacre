@@ -49,6 +49,10 @@ Net across the five code commits (without this spec): +61 / -4,448 lines over 32
 (`nacre-helper/src` +44 / -1,314; tests, examples, fixtures and Python tests the rest; Cargo.lock
 +14 / -45).
 
+Follow-up (N0310b): `kde-palette` was restored (`kde_palette::run`, its dispatch arm, `native_kde_palette.py`,
+`tests/kde_palette.rs` + fixture, two `test_file_manager_style.py` tests) because `test_dolphin_style` needs it:
++192 / -2 lines over 6 files, so the net across N0310 is about +253 / -4,450. The other removed subcommands have no remaining caller.
+
 Duplicate crate names in Cargo.lock (names with more than one version): 41 -> 38 for this unit alone (`toml`,
 `toml_datetime`, `winnow`); 37 after the rebase onto main, which also dropped the git copy of
 `nacre-protocol`. `cargo tree -d --workspace` before the rebase: 42 names.

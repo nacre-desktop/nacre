@@ -308,6 +308,9 @@ fn run() -> Result<i32> {
     if tool == "terminal-branding" {
         return nacre_helper::terminal_branding::run(&arguments);
     }
+    if tool == "kde-palette" {
+        return nacre_helper::kde_palette::run(&arguments);
+    }
     if tool == "compositor-compat" {
         return nacre_helper::compositor_compat::run(&arguments);
     }

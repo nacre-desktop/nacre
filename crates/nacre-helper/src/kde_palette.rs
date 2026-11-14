@@ -1,7 +1,7 @@
 //! Publish existing KDE roles, preserving unrelated ordered INI settings.
 use crate::{files, paths::Paths, Result};
 use serde_json::Value;
-use std::{fs, path::Path};
+use std::{fs, io::Read, path::Path};
 
 type Entries = Vec<(String, String)>;
 #[derive(Default)]
@@ -188,6 +188,31 @@ pub fn publish(paths: &Paths, colors: &Value, icon_theme: &str) -> Result<()> {
         &paths.home.join(".local/share/color-schemes/Nacre.colors"),
         scheme.write().as_bytes(),
     )
+}
+pub fn run(arguments: &[String]) -> Result<i32> {
+    // The former module had no command-line entry point: no arguments is a no-op.
+    if arguments != ["--publish"] {
+        return Ok(0);
+    }
+    let mut text = String::new();
+    std::io::stdin()
+        .take(16 * 1024 * 1024 + 1)
+        .read_to_string(&mut text)?;
+    if text.len() > 16 * 1024 * 1024 {
+        return Err("KDE palette input is too large".into());
+    }
+    let request: Value = serde_json::from_str(&text)?;
+    let paths = if let Some(home) = request["home"].as_str() {
+        Paths::for_home(Path::new(home))?
+    } else {
+        Paths::environment()?
+    };
+    publish(
+        &paths,
+        &request["colors"],
+        request["icon_theme"].as_str().unwrap_or(""),
+    )?;
+    Ok(0)
 }
 #[cfg(test)]
 mod tests {
