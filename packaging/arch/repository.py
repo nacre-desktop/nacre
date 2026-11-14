@@ -40,16 +40,32 @@ def package_info(path):
     return values
 
 
-def verify_artifacts(root, artifacts):
+def families(root):
+    """Every package name the repository may publish or retain."""
     sessions = json.loads((root / "packaging/sessions.json").read_text())
-    expected = {
+    names = (
         "nacre",
         "nacre-ai",
         "nacre-brain",
         "nacre-keyring",
-        "orient",
         "nacre-niri",
-    } | {definition["package"] for definition in sessions.values()}
+        "orient",
+    )
+    return {*names, *(definition["package"] for definition in sessions.values())}
+
+
+def retained_archive(name, record):
+    filename = record["filename"]
+    if not re.fullmatch(
+        re.escape(name) + r"-[a-zA-Z0-9_.+:-]+-(?:any|x86_64)\.pkg\.tar\.zst",
+        filename,
+    ):
+        raise ValueError("Invalid retained archive name")
+    return filename
+
+
+def verify_artifacts(root, artifacts):
+    expected = families(root)
     lock = json.loads((root / "dependencies.lock.json").read_text())["orient"]
     recipe = artifacts / "nacre/PKGBUILD"
     source = re.search(
@@ -231,27 +247,12 @@ def fetch_previous(destination):
     fingerprint = (ROOT / "packaging/keys/nacre-repo.fingerprint").read_text().strip()
     if previous["schema"] != 1 or previous["fingerprint"] != fingerprint:
         raise ValueError("Repository signing identity changed")
-    names = {
-        "nacre",
-        "nacre-ai",
-        "nacre-brain",
-        "nacre-keyring",
-        "nacre-niri",
-        "orient",
-    } | {
-        item["package"]
-        for item in json.loads((ROOT / "packaging/sessions.json").read_text()).values()
-    }
+    names = families(ROOT)
     for name, records in previous["retained"].items():
         if name not in names or len(records) > 3:
             raise ValueError("Unexpected retained package family")
         for record in records:
-            filename = record["filename"]
-            if not re.fullmatch(
-                re.escape(name) + r"-[a-zA-Z0-9_.+:-]+-(?:any|x86_64)\.pkg\.tar\.zst",
-                filename,
-            ):
-                raise ValueError("Invalid retained archive name")
+            filename = retained_archive(name, record)
             download(filename, 256 * 1024 * 1024)
             download(filename + ".sig", 65536)
             if digest(destination / filename) != record["sha256"]:
@@ -315,13 +316,7 @@ def build(root, artifacts, output, fingerprint, revision, run_id, previous=None)
                     continue
                 if len(retained[name]) >= 3:
                     break
-                filename = record["filename"]
-                if not re.fullmatch(
-                    re.escape(name)
-                    + r"-[a-zA-Z0-9_.+:-]+-(?:any|x86_64)\.pkg\.tar\.zst",
-                    filename,
-                ):
-                    raise ValueError("Invalid retained archive name")
+                filename = retained_archive(name, record)
                 archive = previous / filename
                 if digest(archive) != record["sha256"]:
                     raise ValueError("Retained package checksum changed")
