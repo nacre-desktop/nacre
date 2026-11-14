@@ -282,18 +282,15 @@ impl Warmer {
                             continue;
                         };
                         let mut catalogue = entries;
-                        let Some(mut result) = warm_catalogue(
-                            &root,
-                            &palette,
-                            &catalogue,
-                            kind,
-                            layout,
-                            WarmGeometry {
-                                viewport: (w, h),
-                                inner: (inner_w, inner_h),
-                                scale: s,
-                            },
-                        ) else {
+                        let geometry = WarmGeometry {
+                            viewport: (w, h),
+                            inner: (inner_w, inner_h),
+                            scale: s,
+                        };
+                        let warm = |entries: &[Json]| {
+                            warm_catalogue(&root, &palette, entries, kind, layout, geometry)
+                        };
+                        let Some(mut result) = warm(&catalogue) else {
                             warmed = None;
                             continue;
                         };
@@ -334,18 +331,7 @@ impl Warmer {
                                     }
                                 }
                             }
-                            let Some(hydrated_result) = warm_catalogue(
-                                &root,
-                                &palette,
-                                &catalogue,
-                                kind,
-                                layout,
-                                WarmGeometry {
-                                    viewport: (w, h),
-                                    inner: (inner_w, inner_h),
-                                    scale: s,
-                                },
-                            ) else {
+                            let Some(hydrated_result) = warm(&catalogue) else {
                                 warmed = None;
                                 continue;
                             };
