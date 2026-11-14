@@ -6,7 +6,7 @@ return {
     clock_font=15, clock_min_width=44, status_height=34, status_radius=17, item_gap=3,
     -- D1 (spec 0237): 20 px glyphs in 24 px boxes, 14 px between boxes, 12 px to the pill ends.
     -- The 7 px padding is each item's half of the gap, so the buttons tile with no seam.
-    status_gap=12, status_padding=7, status_count_padding=7, status_hit_pad=0, status_end_padding=5,
+    status_gap=12, power_gap=9, status_padding=7, status_count_padding=7, status_hit_pad=0, status_end_padding=5,
     -- Owner 2026-11-14: the pre-N0237 scheme, one role per group: icons secondary (active or idle), the
     -- clock tertiary, the power button error; attention states override. Hover is an onSurface wash.
     status_tone="secondary", clock_tone="tertiary", power_tone="error", status_hover=.1,
@@ -14,7 +14,7 @@ return {
     status_text_offset=0, clock_text_offset=2/3,
     pill_height=34, pill_radius=17, pill_gap=0, power_size=34,
     workspace_height=30, workspace_radius=15, workspace_number_font=11,
-    active_height=28, active_radius=14, app_font=14,
+    active_height=28, active_radius=14, app_font=14, hint_icon=16,
     -- D2 stack: strand of tiny pearls (current 11 px, others 9 px, overlapping 4 px) or a named 28 px cap.
     strand_current=11, strand_other=9, strand_overlap=4, strand_border=1.5, strand_pad=4, strand_max=3,
     cap_height=28, cap_radius=14, cap_font=12, cap_icon=14, cap_gap=5, cap_pad_left=6, cap_pad_right=8, cap_chars=12,

@@ -458,14 +458,14 @@ fn the_owner_layout_migrates_pixel_identically() {
         ("launcher", 15., 32.),
         ("workspaces", 59., 10.),
         ("title", 928., 65.),
-        ("status-pill", 1548., 311.),
-        ("updates", 1553., 38.),
-        ("sound", 1591., 38.),
-        ("wifi", 1629., 38.),
-        ("bluetooth", 1667., 38.),
-        ("battery", 1705., 38.),
-        ("notifications", 1743., 38.),
-        ("clock", 1781., 73.),
+        ("status-pill", 1551., 311.),
+        ("updates", 1556., 38.),
+        ("sound", 1594., 38.),
+        ("wifi", 1632., 38.),
+        ("bluetooth", 1670., 38.),
+        ("battery", 1708., 38.),
+        ("notifications", 1746., 38.),
+        ("clock", 1784., 73.),
         ("power", 1871., 34.),
     ];
     let mut harness = bar_harness(&owner_layout(), false);
@@ -481,7 +481,7 @@ fn the_owner_layout_migrates_pixel_identically() {
     });
     assert_eq!(
         (actual, hash),
-        (expected.to_vec(), 9758756418994341851),
+        (expected.to_vec(), 6075998822023385403),
         "N0237 bar geometry and pixels"
     );
 }

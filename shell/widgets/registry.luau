@@ -288,7 +288,8 @@ function M.bar_regions(layout)
     for name,region in layout.regions do regions[name]=table.clone(region) end
     regions.left.props={id="left",height=34,gap=12,shrink=1,align="center"}
     regions.centre.inline=true
-    regions.right.props={id="right",height=34,gap=12,shrink=0,align="center"}
+    -- Owner 2026-11-14: the right strip (tray, pill, power) packs a little tighter (t.power_gap).
+    regions.right.props={id="right",height=34,gap=context.t.power_gap or 12,shrink=0,align="center"}
     return regions
 end
 local function title_reserve(item)
