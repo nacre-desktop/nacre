@@ -35,9 +35,11 @@ pub(crate) fn root() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../shell")
 }
 pub(crate) fn meter() -> Meter {
-    Meter::fixed(vec![
-        Path::new(env!("BEAD_FRAMEWORK_ROOT")).join("crates/bead-test/fonts/IBMPlexSans.ttf"),
-    ])
+    let font =
+        Path::new(env!("BEAD_FRAMEWORK_ROOT")).join("crates/bead-test/fonts/IBMPlexSans.ttf");
+    // A missing font silently falls back to another face and shifts every golden.
+    assert!(font.is_file(), "test font missing: {}", font.display());
+    Meter::fixed(vec![font])
 }
 pub(crate) fn state(busy: bool, status: &str, question: Option<Json>) -> Json {
     let mut s = json!({"defaultProvider":"claude","inWorkspace":false,"provider":"claude","account":"Default","title":"Fix the build","threadId":"t1","model":"","features":[],"composerKey":"k","busy":busy,"status":status,"error":""});

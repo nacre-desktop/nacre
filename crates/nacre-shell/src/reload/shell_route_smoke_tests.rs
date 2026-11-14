@@ -973,6 +973,9 @@ fn real_shell_panel_routes_open_and_close_with_prepared_scenes() {
                     test_fonts.join("IBMPlexSans.ttf"),
                     test_fonts.join("FixtureSymbols.ttf"),
                 ];
+                for font in &scene.font_files {
+                    assert!(font.is_file(), "test font missing: {}", font.display());
+                }
                 for primitive in &mut scene.primitives {
                     if let bead::render::Primitive::Text { family, .. } = primitive {
                         *family = if family.contains("Symbols") {
