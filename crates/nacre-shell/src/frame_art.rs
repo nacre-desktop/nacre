@@ -139,7 +139,11 @@ pub fn edge_tab(
     ))
 }
 pub fn art(colors: &Palette) -> Result<EdgeArt, Box<dyn std::error::Error>> {
-    let startup = [colors.get("surface")?, colors.get("primary")?, colors.get("secondary")?];
+    let startup = [
+        colors.get("surface")?,
+        colors.get("primary")?,
+        colors.get("secondary")?,
+    ];
     Ok(Arc::new(move |lip, size, state| {
         // Owner 2026-11-14: the handle follows the wallpaper palette (the live primary), not the
         // palette the shell started with.

@@ -7648,7 +7648,10 @@ impl SceneSource for Runtime {
             && let Some(page) = crate::widgets::control_page(kind)
         {
             self.actions.authorize("view.open")?;
-            let wakeup = self.wakeup.as_ref().ok_or("control event channel unavailable")?;
+            let wakeup = self
+                .wakeup
+                .as_ref()
+                .ok_or("control event channel unavailable")?;
             wakeup(UiEvent::CompanionSelect {
                 view: "control".into(),
                 output: self.output.clone(),
@@ -7659,7 +7662,10 @@ impl SceneSource for Runtime {
                 ("cc.page".into(), bead::core::Value::Text("detail".into())),
                 ("cc.detail".into(), bead::core::Value::Text(page.into())),
                 ("cc.scroll".into(), bead::core::Value::Number(0.)),
-                ("bead.focused".into(), bead::core::Value::Text(String::new())),
+                (
+                    "bead.focused".into(),
+                    bead::core::Value::Text(String::new()),
+                ),
             ])));
             return Ok(None);
         }

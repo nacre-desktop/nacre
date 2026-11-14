@@ -3282,12 +3282,18 @@ fn hover_opened_dock_shows_the_full_overview() {
         .map(|node| bead::ui::rect(&node.draw))
         .map(|rect| rect.y + rect.h)
         .fold(0., f32::max);
-    assert!(bottom >= 400., "the overview is sized to its content, not a stub: {bottom}");
+    assert!(
+        bottom >= 400.,
+        "the overview is sized to its content, not a stub: {bottom}"
+    );
     for section in ["home.status", "tile-network", "tile-battery", "chips"] {
         assert!(
             nodes.iter().any(|node| node.id.contains(section)),
             "overview section {section} missing among {:?}",
-            nodes.iter().map(|node| node.id.as_str()).collect::<Vec<_>>()
+            nodes
+                .iter()
+                .map(|node| node.id.as_str())
+                .collect::<Vec<_>>()
         );
     }
 }
