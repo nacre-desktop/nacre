@@ -8,6 +8,11 @@ impl LoginManager {
     fn get_user(&self, _uid: u32) -> zvariant::OwnedObjectPath {
         "/org/freedesktop/login1/user/fixture".try_into().unwrap()
     }
+    // The session-state service reads this before the photo lease unpauses.
+    #[zbus(property)]
+    fn preparing_for_sleep(&self) -> bool {
+        false
+    }
 }
 struct LoginUser;
 #[zbus::interface(name = "org.freedesktop.login1.User")]
