@@ -1,7 +1,7 @@
 -- SPDX-License-Identifier: GPL-3.0-only
--- Media (design review D9): an art-led player card (secondary tint, the album art blurred as the
--- backdrop, 120 px art, 20/600 title, 44 px primary pause), the lyrics card only while lyrics
--- exist, and the shared empty state when nothing is playing. Timed lyric cues and shuffle/repeat
+-- Media (design review D9): an art-led player card (the album art blurred as the backdrop and its
+-- colour through a light scrim, up to 320 px art, headline/600 title, a large primary pause), the
+-- lyrics card only while lyrics exist, and the shared empty state when nothing is playing. Timed lyric cues and shuffle/repeat
 -- await published player fields.
 local ui=require("bead.ui")
 local kit=require("bead.kit")
@@ -33,46 +33,52 @@ return function()
             hover_fill=primary and ui.tint("primary","onSurface",.08) or ui.alpha("onSurface",.08),on_activate=action,
             color=primary and "onPrimary" or (action and "onSurface" or "onSurfaceVariant")}
     end
-    -- a flat secondary tint of the container (kit.Fill's stepped blend bands over a card this wide)
-    local backdrop={ui.Box{id="tint",position="absolute",left=0,top=0,width=cardW,height=H,radius=RADIUS,fill=ui.tint("surfaceContainer","secondary",.2)}}
+    -- Owner 2026-11-14 (D9 art-led card): the blurred art colours the whole card through a light scrim;
+    -- without art the accent tints it (no colour extraction in the kit yet).
+    local backdrop={ui.Box{id="tint",position="absolute",left=0,top=0,width=cardW,height=H,radius=RADIUS,fill=ui.tint("surfaceContainer","primary",art and .2 or .12)}}
     if art then
-        -- the blurred art is the backdrop (an October owner request); the overlay keeps text readable
         backdrop[#backdrop+1]=kit.BlurredArtwork{id="backdrop",position="absolute",left=0,top=0,width=cardW,height=H,icon="player-art",
             image_fit="cover",clip_polygon=rounded_clip(cardW,H,RADIUS)}
-        backdrop[#backdrop+1]=ui.Box{id="scrim",position="absolute",left=0,top=0,width=cardW,height=H,radius=RADIUS,fill=ui.alpha("surfaceContainer",.72)}
+        backdrop[#backdrop+1]=ui.Box{id="scrim",position="absolute",left=0,top=0,width=cardW,height=H,radius=RADIUS,fill=ui.alpha("surfaceContainer",.5)}
     end
     local content
     if player=="" then
         content={empty{top=0,width=cardW,height=H,glyph="music_note",title=ui.tr("bead.dashboard.media-empty"),
             detail=ui.tr("bead.dashboard.playback-unavailable-detail")}}
     else
-        local ART=120
+        -- The art leads (up to 320 px); the text block and the transport share its height, the seek bar
+        -- and clock run under both, and the whole block is centred in the card.
+        local ART=math.min(320,math.floor(inner*.4))
         local textW=inner-ART-T.spacing.xl
+        local TITLE=T.text.headline*4/3
         local clock=get("dashboard.metric")
         local position,duration=string.match(clock,"^(.-) / (.+)$")
+        local glyph=T.icons.hero*4/3*2
         local artwork=ui.Box{id="artwork",width=ART,height=ART,radius=T.spacing.lg,fill="surfaceContainerHigh",shrink=0,
             art and ui.Image{position="absolute",left=0,top=0,icon="player-art",width=ART,height=ART,image_fit="cover",
                 clip_polygon=rounded_clip(ART,ART,T.spacing.lg),aria_label=ui.tr("bead.dashboard.media-art")}
-                or ui.Text{position="absolute",left=(ART-48)/2,top=(ART-48)/2,width=48,height=48,text="music_note",
-                    family=T.fonts.icon,font_size=48,text_align="center",color="primary"}}
-        local transport=ui.Row{id="transport",width=textW,height=44,gap=T.spacing.compact,align="center",
-            iconButton("seek-back","replay_10",ui.tr("bead.dashboard.media-seek-back"),op("player.seek:-10","dashboard.can_seek"),36),
-            iconButton("previous","skip_previous",ui.tr("bead.dashboard.media-previous"),op("player.previous","dashboard.can_previous"),36),
+                or ui.Text{position="absolute",left=(ART-glyph)/2,top=(ART-glyph)/2,width=glyph,height=glyph,text="music_note",
+                    family=T.fonts.icon,font_size=glyph,text_align="center",color="primary"}}
+        local BIG,SMALL=T.spacing.huge+T.spacing.md,T.spacing.huge
+        local transport=ui.Row{id="transport",position="absolute",left=0,top=ART-BIG,width=textW,height=BIG,gap=T.spacing.md,align="center",
+            iconButton("seek-back","replay_10",ui.tr("bead.dashboard.media-seek-back"),op("player.seek:-10","dashboard.can_seek"),SMALL),
+            iconButton("previous","skip_previous",ui.tr("bead.dashboard.media-previous"),op("player.previous","dashboard.can_previous"),SMALL),
             iconButton("toggle",state=="playing" and "pause" or "play_arrow",
                 state=="playing" and ui.tr("bead.dashboard.pause") or ui.tr("bead.dashboard.media-play"),
-                op("player.play_pause","dashboard.can_toggle"),44,true),
-            iconButton("next","skip_next",ui.tr("bead.dashboard.media-next"),op("player.next","dashboard.can_next"),36),
-            iconButton("seek-forward","forward_10",ui.tr("bead.dashboard.media-seek-forward"),op("player.seek:10","dashboard.can_seek"),36)}
-        local metadata=ui.Column{id="metadata",width=textW,height=ART,gap=T.spacing.xs,justify="center",
-            ui.Text{id="player",text=player,width=textW,height=16,font_size=CAPTION,color="onSurfaceVariant"},
-            ui.Text{id="title",text=ui.bind("dashboard.track"),width=textW,height=26,font_size=20,font_weight=600,color="onSurface"},
-            ui.Text{id="description",text=ui.bind("dashboard.track_detail"),width=textW,height=20,font_size=BODY,color="onSurfaceVariant"},
-            ui.Box{id="spacer",width=textW,height=T.spacing.xs},
+                op("player.play_pause","dashboard.can_toggle"),BIG,true),
+            iconButton("next","skip_next",ui.tr("bead.dashboard.media-next"),op("player.next","dashboard.can_next"),SMALL),
+            iconButton("seek-forward","forward_10",ui.tr("bead.dashboard.media-seek-forward"),op("player.seek:10","dashboard.can_seek"),SMALL)}
+        local metadata=ui.Box{id="metadata",width=textW,height=ART,
+            ui.Column{id="text",width=textW,gap=T.spacing.sm,padding_top=T.spacing.sm,
+                ui.Text{id="player",text=player,width=textW,height=18,font_size=CAPTION,font_weight=500,color="primary"},
+                ui.Text{id="title",text=ui.bind("dashboard.track"),width=textW,height=TITLE*1.3,font_size=TITLE,font_weight=600,color="onSurface"},
+                ui.Text{id="description",text=ui.bind("dashboard.track_detail"),width=textW,height=BODY*1.4,font_size=BODY,color="onSurfaceVariant"}},
             transport}
-        local blockH=ART+T.spacing.xl+T.spacing.sm+T.spacing.xl+18
-        content={ui.Column{id="player",position="absolute",left=PAD,top=(H-blockH)/2,width=inner,gap=T.spacing.xl,
+        local blockH=ART+T.spacing.xl+T.spacing.sm+T.spacing.sm+18
+        content={ui.Column{id="player",position="absolute",left=PAD,top=(H-blockH)/2,width=inner,gap=T.spacing.sm,
             ui.Row{id="now-playing",width=inner,height=ART,gap=T.spacing.xl,align="center",artwork,metadata},
-            kit.LevelMeter{id="seek",value=progress,width=inner,height=T.spacing.sm,track="surfaceContainerHigh",ink="primary"},
+            ui.Box{id="gap",width=inner,height=T.spacing.xl-T.spacing.sm},
+            kit.LevelMeter{id="seek",value=progress,width=inner,height=T.spacing.sm,track=ui.alpha("onSurface",.12),ink="primary"},
             ui.Row{id="clock",width=inner,height=18,justify="space-between",
                 ui.Text{id="position",text=position or clock,width=inner/2,height=18,font_size=CAPTION,color="onSurfaceVariant"},
                 ui.Text{id="duration",text=duration or "",width=inner/2,height=18,font_size=CAPTION,text_align="right",color="onSurfaceVariant"}}}}
