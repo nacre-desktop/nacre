@@ -77,11 +77,16 @@ remembering `cc.page`); it is outside this unit's files and is asked of the lead
 
 ## Mock renders
 
-Rendered through the shell's own test harness (`control_center_pages_match_goldens`, 488 x 704 at
-scale 1) after the change:
+SVG mocks (the build hosts were saturated on the night of 2026-11-14, so the real-renderer goldens
+follow in a later commit): drawn at the shell's real geometry (424 px wide, frame-high at 1040 px,
+`size-scale.json` spacing, text and radii, `shell/palette.json` colours, the shell's fonts and Material
+Symbols glyphs), converted with rsvg-convert:
 
-- Overview: `assets/0280/overview.png`
-- Bluetooth detail page: `assets/0280/bluetooth.png`
+- Overview: `assets/0280/overview-mock.png`
+- Bluetooth detail page: `assets/0280/bluetooth-mock.png`
+
+Real renders through the shell's harness (`control_center_pages_match_goldens`, 488 x 704 at scale 1)
+replace them as `assets/0280/overview.png` and `assets/0280/bluetooth.png` when the dev-1 run lands.
 
 ## Tests (phase 2)
 
