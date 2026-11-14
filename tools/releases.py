@@ -858,7 +858,9 @@ def main():
         if not helper.is_file():
             print("Run nacre setup first; then nacre update.", file=sys.stderr)
             raise SystemExit(1)
-        raise SystemExit(subprocess.call([str(helper), "menu-cli", "tool", "updates"]))
+        raise SystemExit(
+            subprocess.call([str(helper), "menu-backend", "tool", "updates"])
+        )
     if len(sys.argv) > 1 and sys.argv[1] == "f4":
         import f4_switch
 

@@ -3,6 +3,7 @@ import fcntl
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import nullcontext, redirect_stderr, redirect_stdout
@@ -30,28 +31,33 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 0)
         self.assertIn("update", output.getvalue())
 
-    def test_update_dispatches_through_the_existing_updates_tool_route(self):
+    @unittest.skipUnless(
+        Path(os.environ.get("NACRE_HELPER_BINARY", "/nonexistent")).is_file(),
+        "Candidate native helper required",
+    )
+    def test_update_reaches_the_updater_through_the_real_helper(self):
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
-            helper = home / ".local/share/nacre/shell/tools/nacre-helper"
-            helper.parent.mkdir(parents=True)
-            helper.touch()
-            with (
-                patch.object(m, "HOME", home),
-                patch.object(m.sys, "argv", ["nacre", "update"]),
-                patch.object(m.subprocess, "call", return_value=0) as call,
-            ):
-                with self.assertRaises(SystemExit) as raised:
-                    m.main()
-            self.assertEqual(raised.exception.code, 0)
-            call.assert_called_once_with(
-                [
-                    str(home / ".local/share/nacre/shell/tools/nacre-helper"),
-                    "menu-cli",
-                    "tool",
-                    "updates",
-                ]
+            tools = home / ".local/share/nacre/shell/tools"
+            tools.mkdir(parents=True)
+            (tools / "nacre-helper").symlink_to(
+                Path(os.environ["NACRE_HELPER_BINARY"]).resolve()
             )
+            (tools / "updates.sh").write_text(
+                'echo "$*" > "$HOME/updater-ran"\nexit 5\n'
+            )
+            env = dict(os.environ, HOME=str(home))
+            env.pop("NACRE_HELPER_TOOLS", None)
+            result = subprocess.run(
+                [sys.executable, str(Path(m.__file__)), "update"],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 5, result.stdout + result.stderr)
+            self.assertEqual((home / "updater-ran").read_text(), "\n")
 
     def test_update_without_setup_helper_prints_setup_hint(self):
         with tempfile.TemporaryDirectory() as directory:
