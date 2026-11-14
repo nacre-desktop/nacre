@@ -550,11 +550,15 @@ impl Chat {
     }
     /// N0234: published flags without `ai` mean Nacre AI is not installed (unknown: assume it is).
     fn missing(&self) -> bool {
+        self.lacks("ai")
+    }
+    /// Published capability flags without `flag` (unknown: assume the package is installed).
+    fn lacks(&self, flag: &str) -> bool {
         self.capabilities.as_ref().is_some_and(|source| {
             let snapshot = source.snapshot();
             snapshot.connected
                 && snapshot.data["flags"].is_object()
-                && snapshot.data["flags"]["ai"] != true
+                && snapshot.data["flags"][flag] != true
         })
     }
     /// Process-local keep of the draft and section while the panel is closed.
@@ -846,6 +850,8 @@ impl Chat {
         let wake = self.waker();
         let mut out = BTreeMap::new();
         out.insert("chat.missing".into(), Value::Bool(self.missing()));
+        // N0206: the launcher's Brain button opens an app that the optional Brain package installs.
+        out.insert("chat.brain".into(), Value::Bool(!self.lacks("brain")));
         if handoff {
             out.insert("bead.focused".into(), text(""));
             if stores.get("view.detached") != Some(&Value::Bool(true))

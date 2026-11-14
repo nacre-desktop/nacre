@@ -249,12 +249,14 @@ else
     local empty=get("launcher.empty_state")
     if empty~="" then add(ui.Text{id="launcher-message",position="absolute",left=E,top=rows_top+math.max(0,(list_h-META_H)/2),width=INNER,height=META_H,text=empty,font_size=CAPTION,text_align="center",color="onSurfaceVariant"}) end
     local new_label=ui.tr("bead.panel.launcher-new-in-project")
+    -- N0206: the Brain button only with the Brain package (a list: a nil would end the row early).
+    local tools={icon_button("settings","settings",action("launcher:settings"),ui.tr("bead.panel.chat-tab-settings"))}
+    if get("chat.brain") then table.insert(tools,1,icon_button("brain","neurology",action("launcher:brain"),ui.tr("bead.panel.launcher-brain"))) end
     add(ui.Row{id="secondary",position="absolute",left=E,top=footer_top,width=INNER,height=BTN,gap=T.spacing.xs,align="center",
         kit.PillButton{id="new-chat",height=BTN,label=new_label,label_width=labels[new_label] and labels[new_label].caption or nil,glyph="add_comment",compact=true,
             on_activate=get("launcher.can_new") and action("launcher:new") or nil,aria_label=new_label},
         ui.Box{id="spacer",width=0,grow=1,height=1},
-        icon_button("brain","neurology",action("launcher:brain"),ui.tr("bead.panel.launcher-brain")),
-        icon_button("settings","settings",action("launcher:settings"),ui.tr("bead.panel.chat-tab-settings"))})
+        table.unpack(tools)})
     if cued("secondary.brain") then tooltip("footer-tooltip",ui.tr("bead.panel.launcher-brain"),E+INNER-BTN-T.spacing.xs,footer_top-tooltip_height-2*T.spacing.sm) end
     if cued("secondary.settings") then tooltip("footer-tooltip",ui.tr("bead.panel.chat-tab-settings"),E+INNER,footer_top-tooltip_height-2*T.spacing.sm) end
     if cued("refresh") then tooltip("refresh-tooltip",refresh_label,E+INNER,search_top-tooltip_height-2*T.spacing.sm) end

@@ -1332,6 +1332,26 @@ async fn missing_ai_shows_the_not_installed_state_and_calls_nothing() -> bead_te
 }
 
 #[test]
+fn missing_brain_hides_the_launcher_brain_button() -> bead_test::Result<()> {
+    // N0206: Nacre AI without the Brain package draws no Brain button (it would exec a missing app).
+    let _guard = serial();
+    for brain in [false, true] {
+        let flags = json!({"flags": {"ai": true, "brain": brain}});
+        let (_, chat) = offline(topic(&[], state(false, "", None)));
+        let chat = chat.with_capabilities(Some(Arc::new(FakeSource::new(flags).unwrap())));
+        let mut projected = chat.project(&launcher_stores(&[]));
+        assert_eq!(projected["chat.brain"], Value::Bool(brain));
+        projected.insert("panel.open".into(), Value::Bool(true));
+        let h = harness(projected, 1.)?;
+        let layers = &h.scene().layers;
+        let shown = |id: &str| layers.iter().any(|layer| layer.id == id);
+        assert_eq!(shown("chat.secondary.brain"), brain);
+        assert!(shown("chat.secondary.settings"));
+    }
+    Ok(())
+}
+
+#[test]
 fn compact_conversation_menu_and_hover_copy_fit_without_reflow() -> bead_test::Result<()> {
     let _guard = serial();
     let (_, chat) = offline(topic(
