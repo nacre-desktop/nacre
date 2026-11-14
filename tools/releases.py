@@ -952,16 +952,16 @@ def main():
         p.error("--report and --json are only valid for doctor")
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     if a.action in ("doctor", "profile", "session", "restart"):
-        subprocess.run(
-            [
-                str(HOME / ".local/share/nacre/shell/tools/nacre-helper"),
-                "maintenance",
-                a.action,
-                *(["--report"] if a.report else ["--json"] if a.json else []),
-            ],
-            check=True,
+        raise SystemExit(
+            subprocess.call(
+                [
+                    str(HOME / ".local/share/nacre/shell/tools/nacre-helper"),
+                    "maintenance",
+                    a.action,
+                    *(["--report"] if a.report else ["--json"] if a.json else []),
+                ]
+            )
         )
-        return
     if a.action == "deploy":
         print(
             json.dumps(

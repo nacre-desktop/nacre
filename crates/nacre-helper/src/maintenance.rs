@@ -204,7 +204,16 @@ pub fn run(args: &[String]) -> Result<i32> {
                 "{}",
                 crate::json::encode(&json!({"error":error.to_string()}))?
             );
-            Ok(0)
+            Ok(1)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn a_failed_action_prints_its_error_and_exits_non_zero() {
+        let args = ["profile", "--seconds", "0"].map(String::from);
+        assert_eq!(super::run(&args).unwrap(), 1);
     }
 }

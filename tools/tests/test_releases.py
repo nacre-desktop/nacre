@@ -638,17 +638,18 @@ class ReleaseTests(unittest.TestCase):
         with (
             tempfile.TemporaryDirectory() as folder,
             patch.object(m, "STATE", Path(folder)),
-            patch.object(m.subprocess, "run") as run,
+            patch.object(m.subprocess, "call", return_value=3) as call,
         ):
             for flag in ("--report", "--json"):
                 with (
                     patch.object(sys, "argv", ["nacre", "doctor", flag]),
                     redirect_stdout(io.StringIO()) as output,
+                    self.assertRaises(SystemExit) as raised,
                 ):
                     m.main()
                 self.assertEqual(output.getvalue(), "")
-                self.assertEqual(run.call_args.args[0][-2:], ["doctor", flag])
-                self.assertTrue(run.call_args.kwargs["check"])
+                self.assertEqual(call.call_args.args[0][-2:], ["doctor", flag])
+                self.assertEqual(raised.exception.code, 3)
 
     def test_failed_release_restores_complete_software_and_preserves_account_state(
         self,
