@@ -1739,44 +1739,6 @@ impl bead::wayland::PaletteFeed for Feed {
     }
 }
 
-/// Select an applicable topic revision; unavailable input never erases a good
-/// displayed pair. Activation results are accepted only if still current.
-#[cfg(test)]
-#[derive(Default)]
-pub(crate) struct CommitState {
-    pub pending_revision: u64,
-    pub displayed: Option<ActiveWallpaper>,
-}
-#[cfg(test)]
-impl CommitState {
-    pub fn observe(&mut self, state: &WallpaperActive) -> Option<u64> {
-        if state.validate().is_err() || !state.available || state.stale {
-            return None;
-        }
-        let pair = state.current.as_ref()?;
-        if self
-            .displayed
-            .as_ref()
-            .is_some_and(|shown| shown.revision == pair.revision)
-        {
-            return None;
-        }
-        self.pending_revision = pair.revision;
-        Some(pair.revision)
-    }
-    pub fn activate(&mut self, revision: u64, pair: ActiveWallpaper) -> bool {
-        if revision != self.pending_revision
-            || pair.revision != revision
-            || pair.palette_revision != revision
-            || pair.validate().is_err()
-        {
-            return false;
-        }
-        self.displayed = Some(pair);
-        true
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1785,47 +1747,6 @@ mod tests {
     use nacre_protocol::{Capability, Message, Method, Reply, framing};
     use std::os::unix::fs::PermissionsExt;
 
-    #[test]
-    fn stale_unavailable_and_superseded_activation_keep_last_good_pair() {
-        let mut state = CommitState::default();
-        let first = pair(1);
-        state.pending_revision = 1;
-        assert!(state.activate(1, first.clone()));
-        assert_eq!(state.displayed.as_ref().unwrap().palette, first.palette);
-        let second = pair(2);
-        let active = WallpaperActive {
-            available: true,
-            stale: false,
-            previous_available: false,
-            revision: 2,
-            current: Some(second.clone()),
-            outputs: BTreeMap::from([("DP-1".into(), second.clone())]),
-            focused_accent: None,
-            error: None,
-        };
-        assert_eq!(state.observe(&active), Some(2));
-        // A failed activation has no commit call, so both image token and palette stay old.
-        assert_eq!(state.displayed.as_ref().unwrap().revision, 1);
-        assert!(!state.activate(3, second.clone()));
-        assert_eq!(state.displayed, Some(first));
-        assert!(
-            state
-                .observe(&WallpaperActive {
-                    available: false,
-                    stale: true,
-                    previous_available: false,
-                    revision: 1,
-                    current: None,
-                    outputs: Default::default(),
-                    focused_accent: None,
-                    error: None
-                })
-                .is_none()
-        );
-        assert_eq!(state.displayed.as_ref().unwrap().revision, 1);
-        assert!(state.activate(2, second.clone()));
-        assert_eq!(state.displayed, Some(second));
-    }
     #[test]
     fn runtime_pixbuf_modules_cover_every_contract_codec() {
         let available: Vec<String> = gdk_pixbuf::Pixbuf::formats()
