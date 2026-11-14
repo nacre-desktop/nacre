@@ -48,6 +48,57 @@ Open: wait-timeout installs a process-wide SIGCHLD handler (`SA_RESTART`), but
 `recv` on sockets with `SO_RCVTIMEO` and `poll` are never restarted, so a child exit in
 one test thread can fail another thread's `notify.recv` or `next_line` poll with EINTR.
 `poll_until_ready` already retries EINTR. It showed once in 20 base runs at 8 threads (CI
-uses 2), so it is left for a separate unit.
+uses 2), so it is left for a separate unit. Fixed by N0324 below.
 
 Lines: product +3/−1 (widths shutdown), tests +59/−45.
+
+## N0324: EINTR from the SIGCHLD handler
+
+Root cause: wait-timeout 0.2.1 installs one process-wide SIGCHLD handler on its first
+call (`SA_NOCLDSTOP | SA_RESTART | SA_SIGINFO`). `SA_RESTART` never restarts `poll`, nor a
+socket read or write with `SO_RCVTIMEO`/`SO_SNDTIMEO` (signal(7)); they fail with EINTR
+when a child exit is delivered to the waiting thread. SIGCHLD goes to the thread that
+spawned the child, or to another thread when that one cannot take it, so a parallel
+test's child can interrupt any thread. std's `read_line`, `read_to_end`, `read_exact`,
+`write_all`, `Command::output` and `Child::wait` retry EINTR; raw `recv`, `read`,
+`write`, `fill_buf` and `poll` do not.
+
+Tests: every blocking wait in `tests/daemon.rs` and `tests/memory` now goes through
+`poll_until_ready`, the one helper that retries EINTR against its deadline: the 18 READY
+datagram receives (a `recv` helper polls up to the socket's own read timeout, then
+receives), `next_line`, the wallpaper-watch `pending` check, the provider and activation
+polls, and the activated-daemon response read (it replaces `read_until_complete` and its
+injected-EINTR unit test). The new `blocking_waits_survive_sigchld_from_wait_timeout`
+installs the handler and lets its own child exit during a 400 ms wait; with the retry
+removed it fails with `Interrupted` after 0.10 s in 3 of 3 runs. `daemon_notice.rs` needs
+nothing: one test, std-retried reads, and the handler is installed only at its last wait.
+`daemon_notifications.rs` loses a dead `Interrupted` arm (`read_line` retries it).
+
+Production: the daemon has SIGCHLD handlers anyway (wait-timeout through
+`process::capture`, and tokio::process through signal-hook-registry, also `SA_RESTART`),
+so replacing wait-timeout would not help. Timed blocking socket I/O outside tokio that
+could see EINTR, now retried: the niri IPC transport (request write and `read_line`) and
+the Hyprland `exchange`, which run on `spawn_blocking` threads in the daemon and in helper
+commands (both loops re-arm the socket timeout from their deadline, so it holds), and
+sidebar chat's `read_frame_limit`, whose `serve_client` read has a 30 s `SO_RCVTIMEO` (an
+EINTR dropped the client). Checked and already safe: brain_http, ai_rpc, ai_claude,
+wallpaper_watch, menu_actions, menu_worker, daemon/fast, wayland_registry and niri_widths
+retry or are non-blocking; `colors serve` and the nacre-ai TUI install no SIGCHLD
+handler; x11rb, wayland-client, notify and PipeWire's main loop retry internally;
+everything else uses std's retrying reads.
+
+Widths note ("3.4-4.8 s against a 4 s bound"): the 3.4-4.8 s is the whole X11 test
+(Xvfb start-up, the 140 ms one-shot and 200 ms quiet windows); the 4 s bound covers only
+`Shutdown::finish`. With N0322's `notify_one`, `finish` took 41-80 µs in 6 runs under
+load (whole test 3.4-3.8 s), so the bound stays.
+
+Validation (dev-2, `nacre-ci/arch-nacre:current`, read-only cargo cache, `--network none`,
+6-CPU containers): rustfmt 1.10.0 clean; `cargo clippy -p nacre-helper --all-targets --
+-D warnings` clean; every nacre-helper test target with RUST_TEST_THREADS=2 passed (lib
+1071, `daemon` 23, `daemon_notice` 1, `daemon_notifications` 2, `sidebar_chat` 15) except
+`lock_dashboard`'s two frozen-font tests, whose renderer bootstrap needs the network
+(unrelated); CI's ignored `memory::` step passed. Stress: the `tests/daemon.rs` binary
+10/10 at `--test-threads=8` (23 passed each, 38.7-40.4 s) beside a looping `-j3` release
+build of nacre-helper in the same container.
+
+Lines: product +23/-5 (three retry arms and their comments), tests +74/-118.
