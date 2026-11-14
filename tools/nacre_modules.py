@@ -617,8 +617,9 @@ def main(argv, home, root):
             return 0
         uninstall(home, apply=True, **options)
         print(
-            "Removed. Run systemctl --user daemon-reload, then remove the packages"
-            " with your package manager (for example: sudo pacman -R nacre)."
+            "Removed. Remove the packages, then reload your user units:\n"
+            "  sudo pacman -Rns $(pacman -Qq | grep -E '^(nacre|orient$)')\n"
+            "  systemctl --user daemon-reload"
         )
         return 0
     if args.action == "list":
