@@ -162,18 +162,27 @@ fn battery(snapshot: &Snapshot) -> BTreeMap<String, Value> {
     ])
 }
 
-/// D1 icon family: bolt while plugged in (charging, or on AC at full / a charge threshold, which UPower
-/// reports as not charging), alert at <= 20 %, empty at <= 8 %, full otherwise.
+/// The glyph shows the level and the plugged state together (owner 2026-11-14): the Material Symbols
+/// Rounded `battery_charging_*` steps while plugged in (charging, or on AC at full / a charge threshold,
+/// which UPower reports as not charging) and the `battery_*_bar` steps on battery; `battery_0_bar` at
+/// <= 8 %. Unknown levels read as full.
 pub(crate) fn battery_glyph(plugged: bool, percentage: Option<f64>) -> &'static str {
-    if plugged {
-        "battery_android_bolt"
-    } else if percentage.is_some_and(|value| value <= 8.) {
-        "battery_android_0"
-    } else if percentage.is_some_and(|value| value <= 20.) {
-        "battery_android_alert"
-    } else {
-        "battery_android_full"
-    }
+    const STEPS: [(f64, &str, &str); 8] = [
+        (95., "battery_charging_full", "battery_full"),
+        (85., "battery_charging_90", "battery_6_bar"),
+        (70., "battery_charging_80", "battery_5_bar"),
+        (55., "battery_charging_60", "battery_4_bar"),
+        (40., "battery_charging_50", "battery_3_bar"),
+        (25., "battery_charging_30", "battery_2_bar"),
+        (8., "battery_charging_20", "battery_1_bar"),
+        (f64::MIN, "battery_charging_20", "battery_0_bar"),
+    ];
+    let level = percentage.unwrap_or(100.);
+    let (_, charging, draining) = STEPS
+        .iter()
+        .find(|(floor, _, _)| level > *floor)
+        .unwrap_or(&STEPS[7]);
+    if plugged { charging } else { draining }
 }
 
 fn audio(snapshot: &Snapshot) -> BTreeMap<String, Value> {
@@ -344,28 +353,37 @@ mod tests {
         });
         let charging = battery(&snapshot(battery_data.clone(), true));
         assert_eq!(charging[KEYS[3]], Value::Text("83".into()));
-        assert_eq!(
-            charging[KEYS[2]],
-            Value::Text("battery_android_bolt".into())
-        );
+        assert_eq!(charging[KEYS[2]], Value::Text("battery_charging_80".into()));
         // Full or threshold-held on AC: UPower says "not charging", the bar still shows the bolt.
         let mut held = battery_data.clone();
         held["charging"] = false.into();
         held["state"] = 4.into();
         assert_eq!(
             battery(&snapshot(held, true))[KEYS[2]],
-            Value::Text("battery_android_bolt".into())
+            Value::Text("battery_charging_80".into())
         );
         assert_eq!(
             battery(&snapshot(battery_data, false))[KEYS[2]],
             Value::Text("battery_unknown".into())
         );
-        // D1 icon family: alert at <= 20 %, empty at <= 8 %, full otherwise.
+        // Level and plugged state together, one case per step and side.
         for (percentage, charging, glyph) in [
-            (56., false, "battery_android_full"),
-            (20., false, "battery_android_alert"),
-            (8., false, "battery_android_0"),
-            (8., true, "battery_android_bolt"),
+            (100., true, "battery_charging_full"),
+            (100., false, "battery_full"),
+            (90., true, "battery_charging_90"),
+            (90., false, "battery_6_bar"),
+            (75., true, "battery_charging_80"),
+            (75., false, "battery_5_bar"),
+            (60., true, "battery_charging_60"),
+            (60., false, "battery_4_bar"),
+            (45., true, "battery_charging_50"),
+            (45., false, "battery_3_bar"),
+            (30., true, "battery_charging_30"),
+            (30., false, "battery_2_bar"),
+            (20., true, "battery_charging_20"),
+            (20., false, "battery_1_bar"),
+            (8., true, "battery_charging_20"),
+            (8., false, "battery_0_bar"),
         ] {
             assert_eq!(
                 super::battery_glyph(charging, Some(percentage)),
